@@ -63,3 +63,15 @@ UI actions send `inspect.enter`, `inspect.exit`, `select`, `clear`, `override`,
 `reset`, and `capture` requests. Log and event requests depend on the capabilities
 advertised by the target. Capture polling continues until the target returns
 `pending: false`.
+
+## Hot reload integration
+
+Goo handles the standard .NET metadata-update callbacks. `UpdateApplication`
+queues rebuilds for all mounted Cells on each open window's UI thread, including
+direct Cell wrappers and typed Cells whose inputs have not changed. Existing
+Cells and native windows remain mounted. Diagnostics are optional.
+
+This requires a G# runtime that dispatches `MetadataUpdateHandlerAttribute`
+callbacks after applying deltas. The released G# SDK 0.4.1 does not dispatch
+them. See the [local integration test](../../tests/Goo.HotReloadSmoke/README.md)
+for the runtime override, package setup and state-preservation checks.

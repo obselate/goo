@@ -1,0 +1,22 @@
+{
+  "name": "goo",
+  "version": "0.1.0+codex.20260906062106",
+  "description": "G# Goo authoring, API lookup, live UI snapshots and screenshots.",
+  "author": {
+    "name": "Xaz"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Goo",
+    "shortDescription": "Build and inspect G# Goo apps.",
+    "longDescription": "Authoring guidance and MCP tools for source-aware API search, starter projects, live retained UI snapshots, and Vulkan screenshots.",
+    "developerName": "Xaz",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": "Build a Goo desktop app and verify its live UI."
+  },
+  "mcpServers": "./.mcp.json",
+  "license": "MIT"
+}

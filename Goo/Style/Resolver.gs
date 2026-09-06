@@ -299,11 +299,7 @@ internal class Resolver {
       e.Field = styleFieldForNode(n, e.Field)
       m = styleMaskWith(m, e.Field)
       if !styleMaskHas(shadow, e.Field) {
-        if logical {
-          writeSnapField(n, e)
-        } else {
-          writeField(n, e, initial)
-        }
+        writeField(n, e, initial || logical)
       }
     }
     return m
@@ -386,42 +382,21 @@ internal class Resolver {
       writeBoxShadows(n, e, initial)
       return
     }
+    let cur = readField(n, e.Field)
+    if sameStyleEntry(cur, e) {
+      finishTransition(n, e.Field)
+      return
+    }
     if initial || n.TransitionMs <= 0.0 || !lerpable(e.Field)
-      || !transitionSelected(n.TransitionSelection, e.Field) {
-        if sameStyleEntry(readField(n, e.Field), e) {
-          finishTransition(n, e.Field)
-          return
-        }
+      || !transitionSelected(n.TransitionSelection, e.Field)
+      || (fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B) {
         finishTransition(n, e.Field)
         if writeDirectWithInvalidation(n, e, invalidationFor(e.Field)) {
           recordResolvedChange(e.Field)
         }
         return
       }
-    let cur = readField(n, e.Field)
-    if cur.A == e.A && cur.B == e.B && cur.C == e.C && cur.D == e.D {
-      finishTransition(n, e.Field)
-      return
-    }
-    if fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B {
-      finishTransition(n, e.Field)
-      if writeDirectWithInvalidation(n, e, invalidationFor(e.Field)) {
-        recordResolvedChange(e.Field)
-      }
-      return
-    }
     startOrRetarget(n, e, cur)
-  }
-
-  internal func writeSnapField(n Node, e StyleEntry) {
-    if sameStyleEntry(readField(n, e.Field), e) {
-      finishTransition(n, e.Field)
-      return
-    }
-    finishTransition(n, e.Field)
-    if writeDirectWithInvalidation(n, e, invalidationFor(e.Field)) {
-      recordResolvedChange(e.Field)
-    }
   }
 
   internal func writeBoxShadows(n Node, e StyleEntry, initial bool) {

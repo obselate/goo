@@ -23,6 +23,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="Assets/Icons/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <ProjectReference Include="../../Goo.Svg/Goo.Svg.csproj" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />

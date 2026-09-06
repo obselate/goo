@@ -182,6 +182,12 @@ func PaddingEdgeValidateScale(result VulkanReadbackResult, metrics WindowMetrics
   name string) {
     let pixels = result.Pixels
     let width = result.Width
+    PrimitiveRequirePixelNear(pixels, width, metrics,
+      73.0, 9.0, uint8(12), uint8(20), uint8(32), 1,
+      name + "_rounded_outside_top_left")
+    PrimitiveRequirePixelNear(pixels, width, metrics,
+      118.0, 9.0, uint8(12), uint8(20), uint8(32), 1,
+      name + "_rounded_outside_top_right")
     PaddingEdgeRequirePair(pixels, width, metrics, 8.0, 8.0, 72.0, 8.0,
       3.5, 3.5, name + "_rounded_top_left")
     PaddingEdgeRequirePair(pixels, width, metrics, 8.0, 8.0, 72.0, 8.0,
@@ -312,5 +318,5 @@ func RunPaddingEdgeOverflowSmoke() {
       && !diagnostics.Contains("\"event\":326"),
     "Padding-edge gate emitted unsupported-scene diagnostics")
   Console.WriteLine("padding-edge-overflow-smoke: paths=rounded,rect,mixed_x,mixed_y"
-    +" scales=1,1.25 samples=32 readbacks=2 close=1")
+    +" scales=1,1.25 samples=36 readbacks=2 close=1")
 }

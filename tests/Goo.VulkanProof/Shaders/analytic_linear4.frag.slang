@@ -94,7 +94,8 @@ float roundedCoverage()
 {
     float2 point = uv * pc.rect.zw;
     float distance = roundedDistance(point, pc.rect.zw, pc.radii);
-    return 1.0 - smoothstep(0.0, max(fwidth(distance), 0.0001), distance);
+    float aa = max(length(float2(ddx(distance), ddy(distance))), 0.0001);
+    return 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distance);
 }
 
 void shade()

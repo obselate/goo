@@ -12,7 +12,7 @@ internal class GooMetadataUpdateHandler {
     }
 
     public func UpdateApplication(updatedTypes([]Type)?) {
-      DevTools.MetadataUpdated()
+      Window.RequestHotReload()
     }
   }
 }

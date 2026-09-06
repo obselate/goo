@@ -1,0 +1,9 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)*.gs"
+             Exclude="$(MSBuildThisFileDirectory)VulkanProofLauncher.gs"
+             Link="VulkanProof/%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/WindowReadbackFixture.gs"
+             Link="VulkanProof/WindowReadbackFixture.gs" />
+  </ItemGroup>
+</Project>

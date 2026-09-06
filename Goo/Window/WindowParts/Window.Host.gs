@@ -10,6 +10,7 @@ internal class WindowScheduler {
   private const EventBudget int32 = 64
   private const DefaultWaitMs int32 = 250
   private let windows List[Window] = List[Window]()
+  private let windowsGate object = Object()
   private var snapshot []Window = []Window{}
   private var snapshotCount int32
   private var nextWindow int32
@@ -49,22 +50,32 @@ internal class WindowScheduler {
   }
 
   internal func Register(window Window) {
-    if !windows.Contains(window) {
-      windows.Add(window)
+    lock windowsGate {
+      if !windows.Contains(window) {
+        windows.Add(window)
+      }
     }
   }
 
   internal func Unregister(window Window) {
-    let index = windows.IndexOf(window)
-    if index < 0 {
-      return
+    lock windowsGate {
+      let index = windows.IndexOf(window)
+      if index < 0 {
+        return
+      }
+      windows.RemoveAt(index)
+      if windows.Count == 0 {
+        nextWindow = 0
+      } else if nextWindow >= windows.Count {
+        nextWindow = 0
+      }
     }
-    windows.RemoveAt(index)
-    if windows.Count == 0 {
-      nextWindow = 0
-    } else if nextWindow >= windows.Count {
-      nextWindow = 0
-    }
+  }
+
+  internal func RequestHotReload() {
+    let pending = List[Window]()
+    lock windowsGate { pending.AddRange(windows) }
+    for window in pending { window.TryPost(window.RebuildAfterHotReload) }
   }
 
   internal func Run() {
@@ -145,6 +156,24 @@ public partial class Window {
   private var schedulerLastTicks float64
   private var schedulerSimulationBank float64
 
+  internal func RebuildAfterHotReload() {
+    if !IsOpen { return }
+    Root?.Rebuild()
+    if let tree = node {
+      let pending = Stack[Node]()
+      pending.Push(tree)
+      while pending.Count != 0 {
+        let current = pending.Pop()
+        var cell = current.Fiber
+        while let mounted = cell {
+          mounted.Rebuild()
+          cell = mounted.directChild
+        }
+        for child in current.Children { pending.Push(child) }
+      }
+    }
+  }
+
   shared {
     private let scheduler WindowScheduler = WindowScheduler()
 
@@ -166,6 +195,10 @@ public partial class Window {
 
     internal func RunLiveWindowScheduler() {
       scheduler.Run()
+    }
+
+    internal func RequestHotReload() {
+      scheduler.RequestHotReload()
     }
 
   }

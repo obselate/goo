@@ -55,9 +55,12 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private var imageLayout VkImageLayout
   private var state VulkanOffscreenState
   private var imageReferencesReserved bool
-  private var reservedImageIds([]ResourceId)? = nil
-  private var reservedTextAtlasIds([]ResourceId)? = nil
-  private var reservedPathIds([]ResourceId)? = nil
+  private var reservedImageIds []ResourceId
+  private var reservedTextAtlasIds []ResourceId
+  private var reservedPathIds []ResourceId
+  private var reservedImageIdCount int32
+  private var reservedTextAtlasIdCount int32
+  private var reservedPathIdCount int32
   private var imageAccounted bool
   private var imageViewAccounted bool
   private var stagingBufferAccounted bool
@@ -283,9 +286,12 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       imageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
       state = VulkanOffscreenState.Idle
       imageReferencesReserved = false
-      reservedImageIds = nil
-      reservedTextAtlasIds = nil
-      reservedPathIds = nil
+      reservedImageIds = Array.Empty[ResourceId]()
+      reservedTextAtlasIds = Array.Empty[ResourceId]()
+      reservedPathIds = Array.Empty[ResourceId]()
+      reservedImageIdCount = 0
+      reservedTextAtlasIdCount = 0
+      reservedPathIdCount = 0
       commandPool = 0uL
       commandPoolAccounted = false
       timestampQueryPool = 0uL
@@ -315,7 +321,23 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if imageReferencesReserved {
       return
     }
-    let imageIds = [frame.CachedImageCount]ResourceId
+    if frame.CachedImageCount < 0 || frame.CachedImageCount > frame.CachedImages.Length {
+      throw ArgumentOutOfRangeException("CachedImageCount")
+    }
+    if frame.AnalyticPathBandCount < 0
+      || frame.AnalyticPathBandCount > frame.AnalyticPathBands.Length{
+        throw ArgumentOutOfRangeException("AnalyticPathBandCount")
+      }
+    if frame.ClipMaskCount < 0 || frame.ClipMaskCount > frame.ClipMasks.Length {
+      throw ArgumentOutOfRangeException("ClipMaskCount")
+    }
+    if frame.AnalyticPathBandCount > Int32.MaxValue - frame.ClipMaskCount {
+      throw OverflowException("pathCount overflow")
+    }
+    if reservedImageIds.Length < frame.CachedImageCount {
+      reservedImageIds = [frame.CachedImageCount]ResourceId
+    }
+    let imageIds = reservedImageIds
     var imageIndex int32 = 0
     while imageIndex < frame.CachedImageCount {
       imageIds[imageIndex] = frame.CachedImages[imageIndex].ImageId
@@ -343,7 +365,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       textAtlasCount = textAtlasCount + segment.RunCount
       segmentScanIndex = segmentScanIndex + 1
     }
-    let textAtlasIds = [textAtlasCount]ResourceId
+    if reservedTextAtlasIds.Length < textAtlasCount {
+      reservedTextAtlasIds = [textAtlasCount]ResourceId
+    }
+    let textAtlasIds = reservedTextAtlasIds
     var textAtlasIndex int32 = 0
     var segmentIndex int32 = 0
     while segmentIndex < frame.CachedTextSegmentCount {
@@ -372,7 +397,11 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if textAtlasIndex != textAtlasCount {
       throw InvalidOperationException("text atlas count mismatch")
     }
-    let pathIds = [frame.AnalyticPathBandCount + frame.ClipMaskCount]ResourceId
+    let pathCount = frame.AnalyticPathBandCount + frame.ClipMaskCount
+    if reservedPathIds.Length < pathCount {
+      reservedPathIds = [pathCount]ResourceId
+    }
+    let pathIds = reservedPathIds
     var pathIndex int32 = 0
     while pathIndex < frame.AnalyticPathBandCount {
       pathIds[pathIndex] = frame.AnalyticPathBands[pathIndex].PathId
@@ -386,7 +415,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     }
     var reservedCount int32 = 0
     try {
-      while reservedCount < imageIds.Length {
+      while reservedCount < frame.CachedImageCount {
         let imageId = imageIds[reservedCount]
         if imageId.IsValid {
           imageResources.ReserveRecording(imageId, resourceGeneration)
@@ -404,9 +433,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       }
       throw error
     }
-    reservedImageIds = imageIds
-    reservedTextAtlasIds = textAtlasIds
-    reservedPathIds = pathIds
+    reservedImageIdCount = frame.CachedImageCount
+    reservedTextAtlasIdCount = textAtlasCount
+    reservedPathIdCount = pathCount
     imageReferencesReserved = true
   }
 
@@ -857,6 +886,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     primitiveFrameSubmissionReconcilePending = false
     layerSubmissionReconcilePending = false
     unsafeTeardown = false
+    reservedImageIds = Array.Empty[ResourceId]()
+    reservedTextAtlasIds = Array.Empty[ResourceId]()
+    reservedPathIds = Array.Empty[ResourceId]()
     disposed = true
   }
 
@@ -969,6 +1001,9 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         commandPoolAccounted = false
       }
     }
+    reservedImageIds = Array.Empty[ResourceId]()
+    reservedTextAtlasIds = Array.Empty[ResourceId]()
+    reservedPathIds = Array.Empty[ResourceId]()
     disposed = true
   }
 
@@ -1179,20 +1214,18 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if !imageReferencesReserved {
       return
     }
-    let imageIds = reservedImageIds
-    reservedImageIds = nil
-    reservedTextAtlasIds = nil
-    reservedPathIds = nil
+    let imageCount = reservedImageIdCount
+    reservedImageIdCount = 0
+    reservedTextAtlasIdCount = 0
+    reservedPathIdCount = 0
     imageReferencesReserved = false
-    if let ids = imageIds {
-      var index int32 = 0
-      while index < ids.Length {
-        let imageId = ids[index]
-        if imageId.IsValid {
-          try { imageResources.ReleaseRecording(imageId, resourceGeneration) } catch (cleanup Exception) { }
-        }
-        index = index + 1
+    var index int32 = 0
+    while index < imageCount {
+      let imageId = reservedImageIds[index]
+      if imageId.IsValid {
+        try { imageResources.ReleaseRecording(imageId, resourceGeneration) } catch (cleanup Exception) { }
       }
+      index = index + 1
     }
   }
 
@@ -1200,17 +1233,15 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if !imageReferencesReserved {
       return
     }
-    guard let imageIds = reservedImageIds,
-    let textAtlasIds = reservedTextAtlasIds,
-    let pathIds = reservedPathIds else {
-      throw InvalidOperationException("Vulkan offscreen resource snapshot is incomplete")
-    }
+    let imageIds = reservedImageIds
+    let textAtlasIds = reservedTextAtlasIds
+    let pathIds = reservedPathIds
     let imageMark = imageResources.MarkSubmitted(commandBuffer, submissionSerial, resourceGeneration)
     if imageMark < 0 {
       throw InvalidOperationException("Vulkan offscreen image upload submission is invalid")
     }
     var imageIndex int32 = 0
-    while imageIndex < imageIds.Length {
+    while imageIndex < reservedImageIdCount {
       let imageId = imageIds[imageIndex]
       if imageId.IsValid {
         imageResources.MarkUsed(imageId, resourceGeneration, submissionSerial)
@@ -1220,7 +1251,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if let atlases = textAtlases {
       atlases.MarkSubmitted(commandBuffer, submissionSerial)
       var textAtlasIndex int32 = 0
-      while textAtlasIndex < textAtlasIds.Length {
+      while textAtlasIndex < reservedTextAtlasIdCount {
         let atlasId = textAtlasIds[textAtlasIndex]
         if atlasId.IsValid {
           atlases.MarkUsed(atlasId, submissionSerial)
@@ -1229,10 +1260,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       }
     }
     pathResources.MarkSubmitted(commandBuffer, submissionSerial)
-    pathResources.MarkPathUsage(pathIds, pathIds.Length, submissionSerial)
-    reservedImageIds = nil
-    reservedTextAtlasIds = nil
-    reservedPathIds = nil
+    pathResources.MarkPathUsage(pathIds, reservedPathIdCount, submissionSerial)
+    reservedImageIdCount = 0
+    reservedTextAtlasIdCount = 0
+    reservedPathIdCount = 0
     imageReferencesReserved = false
   }
 

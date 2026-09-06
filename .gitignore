@@ -85,6 +85,11 @@
 
 !/integrations/
 !/integrations/**
+
+!/plugins/
+/plugins/*
+!/plugins/goo/
+!/plugins/goo/**
 !/templates/
 !/templates/**
 

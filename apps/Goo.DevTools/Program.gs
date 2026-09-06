@@ -28,9 +28,12 @@ func Main() {
     Title: "Goo DevTools",
     Width: 1540,
     Height: 960,
+    Decorated: false,
+    Transparent: true,
+    ResizeBand: 8.0F,
     Resizable: true,
     VSync: true,
-    Background: DevToolsTheme.Background,
+    Background: Color.Transparent,
     Root: root,
   }
   root.AttachWindow(window)

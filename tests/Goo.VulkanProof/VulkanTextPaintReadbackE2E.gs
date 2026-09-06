@@ -2,6 +2,7 @@ package Goo.VulkanProof
 
 import System
 import System.IO
+import Goo
 
 internal class VulkanTextPaintReadbackContract {
   const Width uint32 = 64u
@@ -23,22 +24,21 @@ internal data struct VulkanTextPaintReadbackResult {
 internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
   private var firstFont VulkanTextFont? = nil
   private var secondFont VulkanTextFont? = nil
-  private var atlas VulkanTextAtlas? = nil
+  private let atlasId ResourceId
+  private let atlasGeneration uint64
   private var frame SceneFrame? = nil
   private var firstEncoding VulkanTextPaintEncoding
   private var secondEncoding VulkanTextPaintEncoding
-  private var firstGlyphId uint32
-  private var secondGlyphId uint32
   private var disposed bool
 
-  internal prop Atlas VulkanTextAtlas{ get -> atlas!! }
   internal prop Frame SceneFrame{ get -> frame!! }
 
   internal init(
-    nativeDevice VkDevice,
-    nativeDispatch VkDeviceDispatch,
-    nativeAllocator VulkanMemoryAllocator,
-    maxTexelBufferElements uint32) {
+    nativeAtlas VulkanTextAtlas,
+    nativeAtlasId ResourceId,
+    nativeAtlasGeneration uint64) {
+      atlasId = nativeAtlasId
+      atlasGeneration = nativeAtlasGeneration
       try {
         let firstPath = Path.Combine(AppContext.BaseDirectory, "HarfBuzz-chromacheck-colr.ttf")
         let secondPath = Path.Combine(AppContext.BaseDirectory, "HarfBuzz-adwaita-colrv1.ttf")
@@ -50,8 +50,8 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
         }
         firstFont = LoadVulkanTextFont(firstPath, 16u)
         secondFont = LoadVulkanTextFont(secondPath, 16u)
-        firstGlyphId = 1u
-        secondGlyphId = 2u
+        let firstGlyphId = 1u
+        let secondGlyphId = 2u
         if !firstFont!!.HasColorLayers()
           || firstFont!!.HasColorPaint()
           || !secondFont!!.HasColorPaint()
@@ -79,10 +79,9 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
           combined[firstEncoding.Bytes.Length + index] = secondEncoding.Bytes[index]
           index++
         }
-        atlas = VulkanTextAtlas(nativeDevice, nativeDispatch, nativeAllocator,
-          VkDeviceSize(totalBytes), maxTexelBufferElements)
-        QueueVulkanTextPaintAtlasUpload(atlas!!, combined)
+        QueueVulkanTextPaintAtlasUpload(nativeAtlas, combined)
         frame = SceneFrame(2)
+        frame!!.ResetForReuse()
         BuildFrame(frame!!, uint32(firstTexelCount))
       } catch (error Exception) {
         Dispose()
@@ -90,34 +89,11 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
       }
     }
 
-  internal func FlushBeforeSubmit() VkResult -> atlas!!.FlushBeforeSubmit()
-
-  internal func MarkSubmitted(commandBuffer VkCommandBuffer, fence uint64) {
-    atlas!!.MarkSubmitted(commandBuffer, fence)
-  }
-
-  internal func Collect(completedFence uint64) bool -> atlas!!.Collect(completedFence)
-
-  internal func AbortUpload(commandBuffer VkCommandBuffer) bool {
-    if atlas == nil {
-      return false
-    }
-    return atlas!!.AbortUpload(commandBuffer)
-  }
-
   public func Dispose() {
     if disposed {
       return
     }
     var firstError Exception? = nil
-    if atlas != nil {
-      try {
-        atlas!!.Dispose()
-        atlas = nil
-      } catch (error Exception) {
-        firstError = error
-      }
-    }
     if firstFont != nil {
       try {
         firstFont!!.Dispose()
@@ -157,7 +133,7 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
     let secondBounds = PaintBounds(secondEncoding.Extents)
     target.BeginChunk(0x544558545041494EuL, 1uL,
       ConservativeBounds{ X: 0.0F, Y: -250.0F, Width: 1300.0F, Height: 1250.0F }, true)
-    let firstTransform = target.AddTransform(TransformRecord{
+    let firstTransform = TransformRecord{
       A: 0.025F,
       B: 0.0F,
       C: 0.0F,
@@ -165,8 +141,8 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
       TX: 4.0F,
       TY: 54.0F,
       ParentIndex: -1,
-    })
-    let secondTransform = target.AddTransform(TransformRecord{
+    }
+    let secondTransform = TransformRecord{
       A: 0.025F,
       B: 0.0F,
       C: 0.0F,
@@ -174,37 +150,16 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
       TX: 29.0F,
       TY: 54.0F,
       ParentIndex: -1,
-    })
-    target.AddCachedGlyphRun(CachedGlyphRunRefRecord{
-      Bounds: firstBounds,
-      GlyphRunId: ProofResource(SceneResourceKind.GlyphRun, 9701uL),
-      AtlasId: ProofResource(SceneResourceKind.Atlas, 9703uL),
-      GlyphId: firstGlyphId,
-      AtlasTexelOffset: 0u,
-      AtlasTexelCount: uint32(firstEncoding.Bytes.Length / 8),
-      GlyphMinX: float32(firstEncoding.Extents.XBearing),
-      GlyphMinY: float32(firstEncoding.Extents.YBearing + firstEncoding.Extents.Height),
-      GlyphMaxX: float32(firstEncoding.Extents.XBearing + firstEncoding.Extents.Width),
-      GlyphMaxY: float32(firstEncoding.Extents.YBearing),
-      Color: 0xFFFFFFFFu,
-      RenderMode: 3u,
-      TransformIndex: firstTransform,
-    })
-    target.AddCachedGlyphRun(CachedGlyphRunRefRecord{
-      Bounds: secondBounds,
-      GlyphRunId: ProofResource(SceneResourceKind.GlyphRun, 9702uL),
-      AtlasId: ProofResource(SceneResourceKind.Atlas, 9703uL),
-      GlyphId: secondGlyphId,
-      AtlasTexelOffset: secondAtlasTexelOffset,
-      AtlasTexelCount: uint32(secondEncoding.Bytes.Length / 8),
-      GlyphMinX: float32(secondEncoding.Extents.XBearing),
-      GlyphMinY: float32(secondEncoding.Extents.YBearing + secondEncoding.Extents.Height),
-      GlyphMaxX: float32(secondEncoding.Extents.XBearing + secondEncoding.Extents.Width),
-      GlyphMaxY: float32(secondEncoding.Extents.YBearing),
-      Color: 0xFFFFFFFFu,
-      RenderMode: 3u,
-      TransformIndex: secondTransform,
-    })
+    }
+    AppendVulkanProofGlyph(target, 9701uL, atlasId, atlasGeneration,
+      firstTransform, firstBounds.X, firstBounds.Y,
+      firstBounds.X + firstBounds.Width, firstBounds.Y + firstBounds.Height,
+      0u, uint32(firstEncoding.Bytes.Length / 8), 0xFFFFFFFFu, 3u, 0u, 0.0F)
+    AppendVulkanProofGlyph(target, 9702uL, atlasId, atlasGeneration,
+      secondTransform, secondBounds.X, secondBounds.Y,
+      secondBounds.X + secondBounds.Width, secondBounds.Y + secondBounds.Height,
+      secondAtlasTexelOffset, uint32(secondEncoding.Bytes.Length / 8),
+      0xFFFFFFFFu, 3u, 0u, 0.0F)
     target.EndChunk()
   }
 
@@ -224,7 +179,7 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
 
 internal unsafe func QueueVulkanTextPaintAtlasUpload(atlas VulkanTextAtlas, bytes []uint8) {
   fixed source * uint8 = bytes{
-    if !atlas.QueueUpload(source, VkDeviceSize(bytes.Length)) {
+    if !atlas.QueueUpload(source, 0uL, VkDeviceSize(bytes.Length)) {
       throw InvalidOperationException("Vulkan COLR paint atlas upload did not queue")
     }
   }
@@ -310,3 +265,47 @@ internal unsafe func VerifyVulkanTextPaintReadback(
       }
     return result.BackgroundPixels + result.InkPixels == totalPixels
   }
+
+internal unsafe func RunProductionTextPaintReadback() {
+  let window = OpenVulkanProductionProofWindow()
+  var fixture VulkanTextPaintReadbackFixture? = nil
+  var capture VulkanProductionReadbackCapture? = nil
+  try {
+    guard let atlases = VulkanProductionReadbackFixture.TextAtlases(window) else {
+      throw InvalidOperationException("Vulkan production text atlases are unavailable")
+    }
+    let atlasIndex = atlases.CurrentAtlasIndex
+    let atlas = atlases.AtlasAt(atlasIndex)
+    let activeFixture = VulkanTextPaintReadbackFixture(
+      atlas, atlases.IdentityAt(atlasIndex), atlases.Generation)
+    fixture = activeFixture
+    PublishVulkanProofTextAtlasUpload(window, atlases, atlas)
+    let activeCapture = VulkanProductionReadbackFixture.Open(window,
+      VulkanTextPaintReadbackContract.Width, VulkanTextPaintReadbackContract.Height)
+    capture = activeCapture
+    var clearColor = VkClearColorValue{}
+    clearColor.float32.values[3] = 1.0F
+    let warmSubmit = activeCapture.Request(activeFixture.Frame, clearColor)
+    if warmSubmit != VkConstants.VK_SUCCESS {
+      throw InvalidOperationException("Vulkan production text paint warm submission failed: "
+        +warmSubmit.ToString())
+    }
+    AwaitVulkanProductionReadback(activeCapture)
+    let result = RequestVulkanProductionReadback(activeCapture, activeFixture.Frame, clearColor)
+    fixed readback * uint8 = result.Pixels{
+      let analyzed = AnalyzeVulkanTextPaintReadback(readback, result.Width, result.Height)
+      Console.WriteLine("Text paint readback: digest=${analyzed.Digest} ink=${analyzed.InkPixels} background=${analyzed.BackgroundPixels} colored=${analyzed.ColoredPixels} leftColored=${analyzed.LeftColoredPixels} rightColored=${analyzed.RightColoredPixels} opaque=${analyzed.OpaquePixels} allocated=${activeCapture.LastRequestAllocatedBytes}")
+      if !VerifyVulkanTextPaintReadback(readback, result.Width, result.Height, analyzed) {
+        throw InvalidOperationException("Vulkan text paint readback pixels are invalid")
+      }
+    }
+  } finally {
+    if let active = capture {
+      active.Dispose()
+    }
+    if let active = fixture {
+      active.Dispose()
+    }
+    CloseVulkanProductionProofWindow(window)
+  }
+}

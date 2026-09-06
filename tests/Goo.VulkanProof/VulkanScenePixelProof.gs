@@ -3,7 +3,7 @@ package Goo.VulkanProof
 internal class PixelSceneContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
-  const ExpectedDigest uint64 = 13605107734007775944uL
+  const ExpectedDigest uint64 = 15681727139808264939uL
   const ClearColor uint32 = 0x0000FFFFu
   const BackgroundColor uint32 = 0x000000FFu
   const SolidColor uint32 = 0xFF0000FFu

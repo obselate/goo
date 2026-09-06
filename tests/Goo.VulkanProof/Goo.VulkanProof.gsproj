@@ -9,24 +9,14 @@
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="**/*.gs" />
+    <Compile Include="VulkanProofLauncher.gs" />
+    <ProjectReference Include="../../Goo/Goo.gsproj"
+                      AdditionalProperties="Configuration=VulkanProofTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.VulkanProofFixtures.props" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="Generated/Shaders/solid_quad.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Generated/Shaders/solid_quad.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_solid.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_shadow.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_border.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_linear4.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_radial4.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_sampled_image.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/analytic_blend.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/path_band.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/path_band.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/clip_mask.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/clip_mask.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/hb_gpu.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/hb_gpu_draw.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/hb_gpu_paint.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/lava.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans.provenance.json" Link="VendSans.provenance.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />

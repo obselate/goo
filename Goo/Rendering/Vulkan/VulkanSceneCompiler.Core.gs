@@ -1000,6 +1000,10 @@ internal partial class VulkanSceneCompiler {
         }
       }
       frame.SetActiveClipChain(paintPathClipChainId)
+      let contentOpacity = isolates ? 1.0F : opacity
+      if node.Kind != NodeKind.Shape {
+        PaintNodeBackground(node, bounds, contentOpacity, transform.Index)
+      }
       var clipIndex int32 = -1
       var childClipDepth = parentClipDepth
       if clipsX || clipsY {
@@ -1062,7 +1066,6 @@ internal partial class VulkanSceneCompiler {
           }
         }
       }
-      let contentOpacity = isolates ? 1.0F : opacity
       var textComplete bool
       PaintNode(node, bounds, contentOpacity, transform.Index, axisAligned, childClipDepth,
         shapePaintClip, nodeContentClipChainId, overflowPathClipChainId, out textComplete)
@@ -1164,6 +1167,16 @@ internal partial class VulkanSceneCompiler {
         }
         frame.EndChunk()
       }
+      if node.Kind != NodeKind.Shape && (HasBorderWidth(node, bounds)
+          || (node.Kind == NodeKind.Image && boxShadowCount(node.BoxShadows) != 0)) {
+            frame.SetActiveClipChain(activePathClipChainId)
+            frame.BeginChunk(ownerId, frameVersion, bounds, true)
+            if node.Kind == NodeKind.Image {
+              PaintBoxShadows(node, bounds, contentOpacity, transform.Index, true)
+            }
+            PaintBorder(node, bounds, contentOpacity, transform.Index)
+            frame.EndChunk()
+          }
       if HasScrollBars(node) {
         frame.SetActiveClipChain(activePathClipChainId)
         frame.BeginChunk(ownerId, frameVersion, bounds, true)

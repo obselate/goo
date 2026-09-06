@@ -1,7 +1,7 @@
 package Goo.VulkanProof
 
 import System.Runtime.InteropServices
-import Goo.Vulkan.Generated
+import Goo
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
 type VulkanValidationCallback = delegate func(

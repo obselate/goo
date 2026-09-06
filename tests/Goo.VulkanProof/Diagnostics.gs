@@ -4,7 +4,7 @@ import System
 import System.IO
 import System.Text
 import System.Threading
-import Goo.Vulkan.Generated
+import Goo
 
 internal data struct VulkanTraceRecord {
   var run uint64

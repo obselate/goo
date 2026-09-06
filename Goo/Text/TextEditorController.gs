@@ -66,12 +66,9 @@ public data struct TextComposition(Range TextRange, Text string, SelectionStart 
 internal data struct TextEditorControllerState {
   internal var Selection TextSelection
   internal var Composition TextComposition?
-  internal var DesiredHorizontalPosition float64
-  internal var HasDesiredHorizontalPosition bool
   internal var ScrollTargetX float64
   internal var ScrollTargetY float64
   internal var Focused bool
-  internal var Overwrite bool
 }
 
 /// Owns editing state and semantic commands for one text document view.
@@ -311,12 +308,9 @@ public class TextEditorController : IDisposable {
   internal func State() TextEditorControllerState -> TextEditorControllerState {
     Selection: selection,
     Composition: composition,
-    DesiredHorizontalPosition: desiredHorizontalPosition,
-    HasDesiredHorizontalPosition: hasDesiredHorizontalPosition,
     ScrollTargetX: scrollTargetX,
     ScrollTargetY: scrollTargetY,
     Focused: focused,
-    Overwrite: overwrite,
   }
 
   private func beginCommand(command TextCommand) bool {

@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "goo": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--project",
+        "/home/xaz/plugins/goo",
+        "--locked",
+        "python",
+        "/home/xaz/plugins/goo/scripts/server.py"
+      ],
+      "env": {
+        "UV_PROJECT_ENVIRONMENT": "/home/xaz/.cache/goo-agent-tools/runtime-venv"
+      }
+    }
+  }
+}

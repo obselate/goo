@@ -287,9 +287,8 @@ float endpointDirection(QuadraticCurve curve, float root, bool vertical)
     if (abs(direction) <= tolerance && parameter >= 1.0)
     {
         float previous = max(0.0, 1.0 - EndpointParameterStep);
-        float currentValue = vertical ? curveX(curve, 1.0) : curveY(curve, 1.0);
-        float previousValue = vertical ? curveX(curve, previous) : curveY(curve, previous);
-        direction = currentValue - previousValue;
+        direction = vertical ? curveXDerivative(curve, previous)
+            : curveYDerivative(curve, previous);
     }
     return direction;
 }

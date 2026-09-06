@@ -3,7 +3,7 @@ package Goo.VulkanProof
 import System
 import System.IO
 import System.Runtime.InteropServices
-import Goo.Vulkan.Generated
+import Goo
 
 internal unsafe class VulkanSolidQuad : IDisposable {
   private let device VkDevice

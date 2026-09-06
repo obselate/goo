@@ -1,7 +1,7 @@
 package Goo.VulkanProof
 
 import System
-import Goo.Vulkan.Generated
+import Goo
 
 internal unsafe class VulkanFrameSlot : IDisposable {
   private let device VkDevice

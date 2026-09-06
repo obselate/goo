@@ -58,13 +58,10 @@ internal class TextEditorInputAdapter {
         if !p0.Valid || !p1.Valid || !p2.Valid || !p3.Valid {
           return
         }
-        var minX = p0.X
-        var minY = p0.Y
-        var maxX = p0.X
-        var maxY = p0.Y
-        applyImePoint(p1, ref minX, ref minY, ref maxX, ref maxY)
-        applyImePoint(p2, ref minX, ref minY, ref maxX, ref maxY)
-        applyImePoint(p3, ref minX, ref minY, ref maxX, ref maxY)
+        let minX = TransformGeometry.min4(p0.X, p1.X, p2.X, p3.X)
+        let minY = TransformGeometry.min4(p0.Y, p1.Y, p2.Y, p3.Y)
+        let maxX = TransformGeometry.max4(p0.X, p1.X, p2.X, p3.X)
+        let maxY = TransformGeometry.max4(p0.Y, p1.Y, p2.Y, p3.Y)
         let left = MathF.Floor(minX)
         let top = MathF.Floor(minY)
         let right = MathF.Ceiling(maxX)
@@ -108,12 +105,5 @@ internal class TextEditorInputAdapter {
         ApplyImeArea(host, p0, p1, p2, p3)
       }
 
-    private func applyImePoint(point TransformPoint, ref minX float32, ref minY float32,
-      ref maxX float32, ref maxY float32) {
-        if point.X < minX { minX = point.X }
-        if point.Y < minY { minY = point.Y }
-        if point.X > maxX { maxX = point.X }
-        if point.Y > maxY { maxY = point.Y }
-      }
   }
 }

@@ -4,7 +4,7 @@ import System
 import System.Diagnostics
 import System.Threading
 import System.Runtime.InteropServices
-import Goo.Vulkan.Generated
+import Goo
 
 @DllImport("SDL3", EntryPoint: "SDL_Init", CallingConvention: CallingConvention.Cdecl)
 unsafe func SDL_Init(flags uint32) uint8;
@@ -380,7 +380,7 @@ unsafe func QuerySwapchainSelection(
     return result
   }
 
-unsafe func Main() int32 {
+internal unsafe func RunVulkanProof() int32 {
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_E2E") == "1" {
     RunVulkanTextE2E()
     return 0
@@ -391,6 +391,30 @@ unsafe func Main() int32 {
   }
   if Environment.GetEnvironmentVariable("GOO_VK_SCENE_PLAN") == "1" {
     RunScenePlanProof()
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_SCENE_READBACK") == "1" {
+    RunProductionSceneReadback(false)
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_SHADOW_READBACK") == "1" {
+    RunProductionSceneReadback(true)
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_IMAGE_READBACK") == "1" {
+    RunProductionImageReadback()
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_TEXT_READBACK") == "1" {
+    RunProductionTextReadback(false)
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1" {
+    RunProductionTextReadback(true)
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_TEXT_PAINT_READBACK") == "1" {
+    RunProductionTextPaintReadback()
     return 0
   }
   var diagnostics VulkanDiagnostics? = nil
@@ -432,51 +456,16 @@ unsafe func Main() int32 {
   var queryPoolCreated = false
   var destroyQueryPoolAddress nint = nint(0)
   var debugExtensionNameStorage nint = nint(0)
-  var imageResources VulkanImageResources? = nil
-  var imageUploadCommandBuffer VkCommandBuffer = nint(0)
-  var imageUploadFence VkFence = uint64(0)
-  var imageUploadFenceCreated = false
-  var imageUploadQueueAccepted = false
-  var imageUploadTrackingCommitted = false
-  var imageUploadTrackingCommandBuffer VkCommandBuffer = nint(0)
-  var imageUploadTrackingFenceSerial uint64 = 0uL
-  var imageUploadTrackingGeneration uint64 = 0uL
-  var imageGeneration uint64 = 1uL
   var solidQuad VulkanSolidQuad? = nil
   var swapchainGeneration VulkanSwapchainGeneration? = nil
   var frameSlot0 VulkanFrameSlot? = nil
   var frameSlot1 VulkanFrameSlot? = nil
   var presentationRetirement VulkanPresentationRetirement? = nil
-  let sceneReadbackRequested = Environment.GetEnvironmentVariable("GOO_VK_SCENE_READBACK") == "1"
-  let shadowReadbackRequested = Environment.GetEnvironmentVariable("GOO_VK_SHADOW_READBACK") == "1"
-  let imageReadbackRequested = Environment.GetEnvironmentVariable("GOO_VK_IMAGE_READBACK") == "1"
-  let textReadbackRequested = Environment.GetEnvironmentVariable("GOO_VK_TEXT_READBACK") == "1"
-  let textEffectReadbackRequested = Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1"
-  let textPaintReadbackRequested = Environment.GetEnvironmentVariable("GOO_VK_TEXT_PAINT_READBACK") == "1"
-  let readbackRequested = sceneReadbackRequested || shadowReadbackRequested || imageReadbackRequested || textReadbackRequested
-    || textEffectReadbackRequested || textPaintReadbackRequested
-    || Environment.GetEnvironmentVariable("GOO_VK_READBACK") == "1"
+  let readbackRequested = Environment.GetEnvironmentVariable("GOO_VK_READBACK") == "1"
   var readbackMemoryProperties = VkPhysicalDeviceMemoryProperties{}
   var readbackAllocator VulkanMemoryAllocator? = nil
-  var offscreenTarget VulkanOffscreenTarget? = nil
-  var sceneFrame SceneFrame? = nil
-  var textFixture VulkanTextReadbackFixture? = nil
-  var textPaintFixture VulkanTextPaintReadbackFixture? = nil
-  var sceneDigest uint64 = 0uL
-  var imageDigest uint64 = 0uL
-  var imagePreflightHandlesBefore uint64 = 0uL
-  var imagePreflightHandlesAfter uint64 = 0uL
-  var imagePreflightLiveAllocationsBefore uint64 = 0uL
-  var imagePreflightLiveAllocationsAfter uint64 = 0uL
-  var imagePreflightLiveBytesBefore uint64 = 0uL
-  var imagePreflightLiveBytesAfter uint64 = 0uL
-  var imageSourcePixels * uint8 = nil
-  var imageSourceProvider VulkanImageSourceProvider? = nil
-  var imageSourceLease VulkanImageSourceLease? = nil
-  var imageSource VulkanResourceSource
-  var imageLinearDigest uint64 = 0uL
-  let imageSourceStorage * uint32 = stackalloc[4]uint32
-  imageSourcePixels = *uint8(imageSourceStorage)
+  var readbackDispatch VulkanReadbackDispatch? = nil
+  var offscreenTarget VulkanSolidQuadReadbackTarget? = nil
   var offscreenCommandBuffer VkCommandBuffer = nint(0)
   var offscreenCommandBufferNeedsReset = false
   var offscreenQueueAccepted = false
@@ -1033,24 +1022,13 @@ unsafe func Main() int32 {
         }
         instanceDispatch.vkGetPhysicalDeviceMemoryProperties2 = getMemoryProperties2Nullable!!
       }
-      let readbackUsesBlending = sceneReadbackRequested || shadowReadbackRequested || imageReadbackRequested
-        || textReadbackRequested || textEffectReadbackRequested || textPaintReadbackRequested
-      let readbackFormat = if readbackUsesBlending {
-        VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-      } else {
-        VkConstants.VK_FORMAT_R8G8B8A8_UNORM
-      }
+      let readbackFormat = VkConstants.VK_FORMAT_R8G8B8A8_UNORM
       var readbackFormatProperties = VkFormatProperties{}
       getPhysicalDeviceFormatProperties(selectedPhysicalDevice, readbackFormat, &readbackFormatProperties)
       let requiredReadbackFeatures = uint32(VkConstants.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
       | uint32(VkConstants.VK_FORMAT_FEATURE_TRANSFER_SRC_BIT)
-      var requiredOffscreenFeatures = requiredReadbackFeatures
-      if readbackUsesBlending {
-        requiredOffscreenFeatures = requiredOffscreenFeatures
-        | uint32(VkConstants.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)
-      }
-      if (readbackFormatProperties.optimalTilingFeatures & requiredOffscreenFeatures) != requiredOffscreenFeatures {
-        throw InvalidOperationException("Vulkan offscreen target format lacks the required optimal color attachment, transfer source, or blend support")
+      if (readbackFormatProperties.optimalTilingFeatures & requiredReadbackFeatures) != requiredReadbackFeatures {
+        throw InvalidOperationException("Vulkan offscreen target format lacks color attachment or transfer source support")
       }
       let getMemoryProperties = instanceDispatch.vkGetPhysicalDeviceMemoryProperties
       getMemoryProperties(selectedPhysicalDevice, &readbackMemoryProperties)
@@ -1301,9 +1279,8 @@ unsafe func Main() int32 {
     deviceDispatch.vkResetFences = resetFencesNullable!!
     if readbackRequested {
       let copyImageToBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdCopyImageToBuffer")
-      let copyImageToBufferNullable = copyImageToBufferAddress as (unmanaged[Cdecl](VkCommandBuffer, VkImage, VkImageLayout, VkBuffer, uint32, *VkBufferImageCopy) -> void)?
-      if copyImageToBufferNullable == nil { throw InvalidOperationException("vkCmdCopyImageToBuffer is unavailable") }
-      deviceDispatch.vkCmdCopyImageToBuffer = copyImageToBufferNullable!!
+      if copyImageToBufferAddress == nint(0) { throw InvalidOperationException("vkCmdCopyImageToBuffer is unavailable") }
+      readbackDispatch = VulkanReadbackDispatch(copyImageToBufferAddress)
       let createImageAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateImage")
       let createImageNullable = createImageAddress as (unmanaged[Cdecl](VkDevice, *VkImageCreateInfo, *VkAllocationCallbacks, *VkImage) -> VkResult)?
       if createImageNullable == nil { throw InvalidOperationException("vkCreateImage is unavailable") }
@@ -1356,66 +1333,6 @@ unsafe func Main() int32 {
       let invalidateMappedMemoryRangesNullable = invalidateMappedMemoryRangesAddress as (unmanaged[Cdecl](VkDevice, uint32, *VkMappedMemoryRange) -> VkResult)?
       if invalidateMappedMemoryRangesNullable == nil { throw InvalidOperationException("vkInvalidateMappedMemoryRanges is unavailable") }
       deviceDispatch.vkInvalidateMappedMemoryRanges = invalidateMappedMemoryRangesNullable!!
-      if imageReadbackRequested || textReadbackRequested || textEffectReadbackRequested
-        || textPaintReadbackRequested
-        || sceneReadbackRequested || shadowReadbackRequested{
-          let flushMappedMemoryRangesAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkFlushMappedMemoryRanges")
-          let flushMappedMemoryRangesNullable = flushMappedMemoryRangesAddress as (unmanaged[Cdecl](VkDevice, uint32, *VkMappedMemoryRange) -> VkResult)?
-          if flushMappedMemoryRangesNullable == nil { throw InvalidOperationException("vkFlushMappedMemoryRanges is unavailable") }
-          deviceDispatch.vkFlushMappedMemoryRanges = flushMappedMemoryRangesNullable!!
-          let copyBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdCopyBuffer")
-          let copyBufferNullable = copyBufferAddress as (unmanaged[Cdecl](VkCommandBuffer, VkBuffer, VkBuffer, uint32, *VkBufferCopy) -> void)?
-          if copyBufferNullable == nil { throw InvalidOperationException("vkCmdCopyBuffer is unavailable") }
-          deviceDispatch.vkCmdCopyBuffer = copyBufferNullable!!
-          let createBufferViewAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateBufferView")
-          let createBufferViewNullable = createBufferViewAddress as (unmanaged[Cdecl](VkDevice, *VkBufferViewCreateInfo, *VkAllocationCallbacks, *VkBufferView) -> VkResult)?
-          if createBufferViewNullable == nil { throw InvalidOperationException("vkCreateBufferView is unavailable") }
-          deviceDispatch.vkCreateBufferView = createBufferViewNullable!!
-          let destroyBufferViewAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyBufferView")
-          let destroyBufferViewNullable = destroyBufferViewAddress as (unmanaged[Cdecl](VkDevice, VkBufferView, *VkAllocationCallbacks) -> void)?
-          if destroyBufferViewNullable == nil { throw InvalidOperationException("vkDestroyBufferView is unavailable") }
-          deviceDispatch.vkDestroyBufferView = destroyBufferViewNullable!!
-          let copyBufferToImageAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdCopyBufferToImage")
-          let copyBufferToImageNullable = copyBufferToImageAddress as (unmanaged[Cdecl](VkCommandBuffer, VkBuffer, VkImage, VkImageLayout, uint32, *VkBufferImageCopy) -> void)?
-          if copyBufferToImageNullable == nil { throw InvalidOperationException("vkCmdCopyBufferToImage is unavailable") }
-          deviceDispatch.vkCmdCopyBufferToImage = copyBufferToImageNullable!!
-          let createSamplerAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateSampler")
-          let createSamplerNullable = createSamplerAddress as (unmanaged[Cdecl](VkDevice, *VkSamplerCreateInfo, *VkAllocationCallbacks, *VkSampler) -> VkResult)?
-          if createSamplerNullable == nil { throw InvalidOperationException("vkCreateSampler is unavailable") }
-          deviceDispatch.vkCreateSampler = createSamplerNullable!!
-          let destroySamplerAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroySampler")
-          let destroySamplerNullable = destroySamplerAddress as (unmanaged[Cdecl](VkDevice, VkSampler, *VkAllocationCallbacks) -> void)?
-          if destroySamplerNullable == nil { throw InvalidOperationException("vkDestroySampler is unavailable") }
-          deviceDispatch.vkDestroySampler = destroySamplerNullable!!
-          let createDescriptorSetLayoutAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateDescriptorSetLayout")
-          let createDescriptorSetLayoutNullable = createDescriptorSetLayoutAddress as (unmanaged[Cdecl](VkDevice, *VkDescriptorSetLayoutCreateInfo, *VkAllocationCallbacks, *VkDescriptorSetLayout) -> VkResult)?
-          if createDescriptorSetLayoutNullable == nil { throw InvalidOperationException("vkCreateDescriptorSetLayout is unavailable") }
-          deviceDispatch.vkCreateDescriptorSetLayout = createDescriptorSetLayoutNullable!!
-          let destroyDescriptorSetLayoutAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyDescriptorSetLayout")
-          let destroyDescriptorSetLayoutNullable = destroyDescriptorSetLayoutAddress as (unmanaged[Cdecl](VkDevice, VkDescriptorSetLayout, *VkAllocationCallbacks) -> void)?
-          if destroyDescriptorSetLayoutNullable == nil { throw InvalidOperationException("vkDestroyDescriptorSetLayout is unavailable") }
-          deviceDispatch.vkDestroyDescriptorSetLayout = destroyDescriptorSetLayoutNullable!!
-          let createDescriptorPoolAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateDescriptorPool")
-          let createDescriptorPoolNullable = createDescriptorPoolAddress as (unmanaged[Cdecl](VkDevice, *VkDescriptorPoolCreateInfo, *VkAllocationCallbacks, *VkDescriptorPool) -> VkResult)?
-          if createDescriptorPoolNullable == nil { throw InvalidOperationException("vkCreateDescriptorPool is unavailable") }
-          deviceDispatch.vkCreateDescriptorPool = createDescriptorPoolNullable!!
-          let destroyDescriptorPoolAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyDescriptorPool")
-          let destroyDescriptorPoolNullable = destroyDescriptorPoolAddress as (unmanaged[Cdecl](VkDevice, VkDescriptorPool, *VkAllocationCallbacks) -> void)?
-          if destroyDescriptorPoolNullable == nil { throw InvalidOperationException("vkDestroyDescriptorPool is unavailable") }
-          deviceDispatch.vkDestroyDescriptorPool = destroyDescriptorPoolNullable!!
-          let allocateDescriptorSetsAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkAllocateDescriptorSets")
-          let allocateDescriptorSetsNullable = allocateDescriptorSetsAddress as (unmanaged[Cdecl](VkDevice, *VkDescriptorSetAllocateInfo, *VkDescriptorSet) -> VkResult)?
-          if allocateDescriptorSetsNullable == nil { throw InvalidOperationException("vkAllocateDescriptorSets is unavailable") }
-          deviceDispatch.vkAllocateDescriptorSets = allocateDescriptorSetsNullable!!
-          let updateDescriptorSetsAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkUpdateDescriptorSets")
-          let updateDescriptorSetsNullable = updateDescriptorSetsAddress as (unmanaged[Cdecl](VkDevice, uint32, *VkWriteDescriptorSet, uint32, *VkCopyDescriptorSet) -> void)?
-          if updateDescriptorSetsNullable == nil { throw InvalidOperationException("vkUpdateDescriptorSets is unavailable") }
-          deviceDispatch.vkUpdateDescriptorSets = updateDescriptorSetsNullable!!
-          let bindDescriptorSetsAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdBindDescriptorSets")
-          let bindDescriptorSetsNullable = bindDescriptorSetsAddress as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineBindPoint, VkPipelineLayout, uint32, uint32, *VkDescriptorSet, uint32, *uint32) -> void)?
-          if bindDescriptorSetsNullable == nil { throw InvalidOperationException("vkCmdBindDescriptorSets is unavailable") }
-          deviceDispatch.vkCmdBindDescriptorSets = bindDescriptorSetsNullable!!
-        }
     }
 
     if diagnostics != nil && selectedTimestampValidBits != 0u {
@@ -1487,9 +1404,7 @@ unsafe func Main() int32 {
     }
     commandPoolCreated = true
 
-    let commandBufferCount uint32 = if imageReadbackRequested {
-      4u
-    } else if readbackRequested {
+    let commandBufferCount uint32 = if readbackRequested {
       3u
     } else {
       2u
@@ -1507,17 +1422,6 @@ unsafe func Main() int32 {
     allocatedCommandBufferCount = commandBufferCount
     if readbackRequested {
       offscreenCommandBuffer = commandBufferStorage[2]
-    }
-    if imageReadbackRequested {
-      imageUploadCommandBuffer = commandBufferStorage[3]
-      var imageUploadFenceCreateInfo = VkFenceCreateInfo{}
-      imageUploadFenceCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-      let createFence = deviceDispatch.vkCreateFence
-      if TrackResult(diagnostics, 39uL, createFence(device, &imageUploadFenceCreateInfo, nil, &imageUploadFence)) != VkConstants.VK_SUCCESS
-        || imageUploadFence == 0uL {
-          throw InvalidOperationException("vkCreateFence failed for image upload")
-        }
-      imageUploadFenceCreated = true
     }
     frameSlot0 = VulkanFrameSlot(device, deviceDispatch, commandBufferStorage[0])
     frameSlot1 = VulkanFrameSlot(device, deviceDispatch, commandBufferStorage[1])
@@ -2183,24 +2087,8 @@ unsafe func Main() int32 {
       presentInfo.pSwapchains = &swapchain
       presentInfo.pImageIndices = &imageIndex
       presentAttemptCount = presentAttemptCount + 1uL
-      let measureScenePresent = (sceneReadbackRequested || shadowReadbackRequested)
-        && diagnostics != nil && frameNumber == 0uL
-      let presentStartTicks int64 = if measureScenePresent {
-        Stopwatch.GetTimestamp()
-      } else {
-        0L
-      }
       let rawPresentResult = queuePresent(queue, &presentInfo)
-      let presentEndTicks int64 = if measureScenePresent {
-        Stopwatch.GetTimestamp()
-      } else {
-        0L
-      }
       let presentResult = TrackResult(diagnostics, 42uL + frameNumber * 20uL, rawPresentResult)
-      if measureScenePresent {
-        RecordSceneCpuStage(diagnostics, VulkanSceneStageEvents.Present, rawPresentResult,
-          presentEndTicks - presentStartTicks)
-      }
       presentResultCount = presentResultCount + 1uL
       var presentId uint64 = 0uL
       if presentResult == VkConstants.VK_SUCCESS || presentResult == VkConstants.VK_SUBOPTIMAL_KHR {
@@ -2338,1044 +2226,85 @@ unsafe func Main() int32 {
         selectedPhysicalDeviceProperties.limits.maxMemoryAllocationCount,
         selectedPhysicalDeviceProperties.limits.nonCoherentAtomSize,
         selectedPhysicalDeviceProperties.limits.bufferImageGranularity,
-        readbackBudget)
+        readbackBudget,
+        nil)
       readbackAllocator = readbackAllocatorValue
-      var offscreenExtent = VkExtent2D{}
-      offscreenExtent.width = 64u
-      offscreenExtent.height = 64u
-      let sceneOffscreenRequested = sceneReadbackRequested || shadowReadbackRequested || imageReadbackRequested
-        || textReadbackRequested || textEffectReadbackRequested || textPaintReadbackRequested
-      if textReadbackRequested || textEffectReadbackRequested || textPaintReadbackRequested {
-        if sceneReadbackRequested || shadowReadbackRequested || imageReadbackRequested
-          || (textReadbackRequested && textEffectReadbackRequested)
-          || (textReadbackRequested && textPaintReadbackRequested)
-          || (textEffectReadbackRequested && textPaintReadbackRequested) {
-            throw InvalidOperationException("Vulkan text readback modes cannot be combined with another scene readback mode")
-          }
-      }
-      if textReadbackRequested {
-        let textFixtureValue = VulkanTextReadbackFixture(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          selectedPhysicalDeviceProperties.limits.maxTexelBufferElements,
-          false)
-        textFixture = textFixtureValue
-        sceneFrame = textFixtureValue.Frame
-      } else if textEffectReadbackRequested {
-        let textFixtureValue = VulkanTextReadbackFixture(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          selectedPhysicalDeviceProperties.limits.maxTexelBufferElements,
-          true)
-        textFixture = textFixtureValue
-        sceneFrame = textFixtureValue.Frame
-      } else if textPaintReadbackRequested {
-        let textPaintFixtureValue = VulkanTextPaintReadbackFixture(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          selectedPhysicalDeviceProperties.limits.maxTexelBufferElements)
-        textPaintFixture = textPaintFixtureValue
-        sceneFrame = textPaintFixtureValue.Frame
-      }
-      if sceneOffscreenRequested {
-        RecordSceneStage(diagnostics, VulkanSceneStageEvents.Tree, VkConstants.VK_SUCCESS, 0uL, 0uL)
-        let planStartTicks int64 = if diagnostics != nil {
-          Stopwatch.GetTimestamp()
-        } else {
-          0L
-        }
-        if imageReadbackRequested {
-          sceneFrame = SceneFrame(2)
-          BuildVulkanImageScene(sceneFrame!!, 0u)
-          if sceneFrame!!.DrawRefCount != 2 || sceneFrame!!.CachedImageCount != 1 {
-            throw InvalidOperationException("Vulkan image scene plan is invalid")
-          }
-        } else if shadowReadbackRequested {
-          sceneFrame = SceneFrame(4)
-          BuildShadowPixelScene(sceneFrame!!, 1uL)
-          sceneDigest = ShadowPixelSceneSemanticDigest(sceneFrame!!)
-          if ShadowPixelSceneContract.ExpectedDigest != 0uL
-            && sceneDigest != ShadowPixelSceneContract.ExpectedDigest{
-              throw InvalidOperationException("Vulkan shadow scene semantic digest does not match the fixed contract")
-            }
-        } else if !textReadbackRequested && !textEffectReadbackRequested
-          && !textPaintReadbackRequested{
-            sceneFrame = SceneFrame(16)
-            BuildPixelScene(sceneFrame!!, 1uL)
-            sceneDigest = PixelSceneSemanticDigest(sceneFrame!!)
-            if sceneDigest != PixelSceneContract.ExpectedDigest {
-              throw InvalidOperationException("Vulkan scene semantic digest does not match the fixed contract")
-            }
-          }
-        let planEndTicks int64 = if diagnostics != nil {
-          Stopwatch.GetTimestamp()
-        } else {
-          0L
-        }
-        RecordSceneCpuStage(diagnostics, VulkanSceneStageEvents.Plan, VkConstants.VK_SUCCESS,
-          planEndTicks - planStartTicks)
-      }
-      if imageReadbackRequested {
-        let imageAllocator = readbackAllocatorValue
-        let imageResourceValue = VulkanImageResources(
-          device,
-          deviceDispatch,
-          imageAllocator,
-          4,
-          4,
-          4096uL,
-          4096uL,
-          1024uL,
-          4,
-          imageGeneration)
-        imageResources = imageResourceValue
-        let imageId = VulkanImageResourceId()
-        let imageSourceProviderValue = VulkanImageSourceProvider(9911uL, 4, 4, 1024uL)
-        imageSourceProvider = imageSourceProviderValue
-        imageSource = VulkanResourceSource{
-          ProviderId: imageSourceProviderValue.ProviderId,
-          SourceId: VulkanImageE2EContract.ImageLogicalId,
-          Version: 2uL,
-          Bytes: 16uL,
-        }
-        let registration = imageResourceValue.RegisterImage(
-          imageId,
-          2u,
-          2u,
-          imageSource,
-          true,
-          VulkanImageSamplerId(),
-          VulkanImageSamplerMode.Nearest)
-        if !registration.Found {
-          throw InvalidOperationException("Vulkan image registration failed")
-        }
-        if !imageSourceProviderValue.Begin(VulkanImageE2EContract.ImageLogicalId, 1uL) {
-          throw InvalidOperationException("Vulkan image source pending begin failed")
-        }
-        let staleLease = imageSourceProviderValue.Acquire(
-          VulkanImageE2EContract.ImageLogicalId, 1uL)
-        if staleLease == nil || !staleLease!!.IsValid || staleLease!!.IsReady {
-          throw InvalidOperationException("Vulkan pending image source became ready")
-        }
-        let pendingImageStats = imageResourceValue.Stats
-        if pendingImageStats.Upload.ActiveRanges != 0
-          || pendingImageStats.Upload.SubmittedRanges != 0 {
-            throw InvalidOperationException("Vulkan pending image source queued upload work")
-          }
-        if !imageSourceProviderValue.Begin(VulkanImageE2EContract.ImageLogicalId, 2uL) {
-          throw InvalidOperationException("Vulkan image source replacement begin failed")
-        }
-        let stalePixels = [16]uint8
-        stalePixels[0] = uint8(255)
-        stalePixels[1] = uint8(0)
-        stalePixels[2] = uint8(0)
-        stalePixels[3] = uint8(255)
-        stalePixels[4] = uint8(128)
-        stalePixels[5] = uint8(64)
-        stalePixels[6] = uint8(0)
-        stalePixels[7] = uint8(128)
-        stalePixels[8] = uint8(0)
-        stalePixels[9] = uint8(255)
-        stalePixels[10] = uint8(0)
-        stalePixels[11] = uint8(255)
-        stalePixels[12] = uint8(0)
-        stalePixels[13] = uint8(0)
-        stalePixels[14] = uint8(0)
-        stalePixels[15] = uint8(0)
-        if imageSourceProviderValue.CompletePremultipliedRgba(
-          VulkanImageE2EContract.ImageLogicalId,
-          1uL,
-          2u,
-          2u,
-          stalePixels) {
-            throw InvalidOperationException("Vulkan stale image source completion was accepted")
-          }
-        let staleLookup = imageSourceProviderValue.Lookup(
-          VulkanImageE2EContract.ImageLogicalId, 1uL)
-        if !staleLookup.Found || staleLookup.State != VulkanImageSourceState.Failed {
-          throw InvalidOperationException("Vulkan stale image source state is invalid")
-        }
-        let replacementPixels = [16]uint8
-        replacementPixels[0] = uint8(0)
-        replacementPixels[1] = uint8(0)
-        replacementPixels[2] = uint8(255)
-        replacementPixels[3] = uint8(255)
-        replacementPixels[4] = uint8(128)
-        replacementPixels[5] = uint8(64)
-        replacementPixels[6] = uint8(0)
-        replacementPixels[7] = uint8(128)
-        replacementPixels[8] = uint8(0)
-        replacementPixels[9] = uint8(255)
-        replacementPixels[10] = uint8(0)
-        replacementPixels[11] = uint8(255)
-        replacementPixels[12] = uint8(0)
-        replacementPixels[13] = uint8(0)
-        replacementPixels[14] = uint8(0)
-        replacementPixels[15] = uint8(0)
-        if !imageSourceProviderValue.CompletePremultipliedRgba(
-          VulkanImageE2EContract.ImageLogicalId,
-          2uL,
-          2u,
-          2u,
-          replacementPixels) {
-            throw InvalidOperationException("Vulkan replacement image source completion failed")
-          }
-        let replacementLease = imageSourceProviderValue.Acquire(
-          VulkanImageE2EContract.ImageLogicalId, 2uL)
-        if replacementLease == nil || !replacementLease!!.IsValid || !replacementLease!!.IsReady {
-          throw InvalidOperationException("Vulkan replacement image source lease is invalid")
-        }
-        staleLease!!.Dispose()
-        imageSourceProviderValue.Dispose()
-        imageSourceLease = replacementLease
-        if !imageSourceLease!!.IsValid || !imageSourceLease!!.IsReady {
-          throw InvalidOperationException("Vulkan source lease did not survive provider disposal")
-        }
-        if !imageSourceLease!!.CopyPixelsTo(imageSourcePixels, 16uL) {
-          throw InvalidOperationException("Vulkan retained image source copy failed")
-        }
-        let resetUploadCommandBuffer = deviceDispatch.vkResetCommandBuffer
-        let resetUploadResult = TrackResult(diagnostics, 40uL,
-          resetUploadCommandBuffer(imageUploadCommandBuffer, VkCommandBufferResetFlags(0u)))
-        if resetUploadResult != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("vkResetCommandBuffer failed for image upload")
-        }
-        imageUploadTrackingCommandBuffer = imageUploadCommandBuffer
-        imageUploadTrackingFenceSerial = 1uL
-        imageUploadTrackingGeneration = imageGeneration
-        imageUploadTrackingCommitted = false
-        var imageUploadSubmitAccepted = false
-        try {
-          var uploadBeginInfo = VkCommandBufferBeginInfo{}
-          uploadBeginInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-          uploadBeginInfo.flags = uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-          if TrackResult(diagnostics, 41uL, beginCommandBuffer(imageUploadCommandBuffer, &uploadBeginInfo)) != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("vkBeginCommandBuffer failed for image upload")
-          }
-          let queued = imageResourceValue.QueueUpload(imageId, imageSourcePixels, 16uL, imageGeneration)
-          if !queued {
-            throw InvalidOperationException("Vulkan image upload did not queue")
-          }
-          if imageResourceValue.RecordUploads(imageUploadCommandBuffer, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan image upload recording count is invalid")
-          }
-          if imageResourceValue.ValidateUploadSubmission(imageUploadCommandBuffer, 1uL, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan image upload submission state is invalid")
-          }
-          let flushResult = TrackResult(diagnostics, 42uL, imageResourceValue.FlushBeforeSubmit())
-          if flushResult != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("Vulkan image upload flush failed")
-          }
-          if TrackResult(diagnostics, 43uL, endCommandBuffer(imageUploadCommandBuffer)) != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("vkEndCommandBuffer failed for image upload")
-          }
-          var uploadCommandBufferSubmitInfo = VkCommandBufferSubmitInfo{}
-          uploadCommandBufferSubmitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
-          uploadCommandBufferSubmitInfo.commandBuffer = imageUploadCommandBuffer
-          var uploadSubmitInfo = VkSubmitInfo2{}
-          uploadSubmitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
-          uploadSubmitInfo.commandBufferInfoCount = 1u
-          uploadSubmitInfo.pCommandBufferInfos = &uploadCommandBufferSubmitInfo
-          let uploadSubmitResult = TrackResult(diagnostics, 44uL,
-            queueSubmit(queue, 1u, &uploadSubmitInfo, imageUploadFence))
-          if uploadSubmitResult != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("vkQueueSubmit2 failed for image upload")
-          }
-          imageUploadQueueAccepted = true
-          imageUploadSubmitAccepted = true
-          if imageResourceValue.MarkSubmitted(imageUploadCommandBuffer, 1uL, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan image upload submission count is invalid")
-          }
-          imageUploadTrackingCommitted = true
-        } catch (error Exception) {
-          if imageUploadSubmitAccepted {
-            CompleteAcceptedVulkanImageUpload(
-              deviceDispatch,
-              device,
-              imageUploadFence,
-              imageUploadTrackingCommandBuffer,
-              imageResourceValue,
-              imageUploadTrackingFenceSerial,
-              imageUploadTrackingGeneration,
-              diagnostics,
-              45uL)
-            imageUploadTrackingCommitted = true
-          } else {
-            AbortVulkanImageUploads(
-              deviceDispatch,
-              imageUploadCommandBuffer,
-              imageResourceValue,
-              imageGeneration,
-              diagnostics,
-              46uL)
-          }
-          throw error
-        }
-        let preflightStats = imageResourceValue.Stats
-        let preflightAllocator = imageAllocator.Counters
-        if !imageResourceValue.Retire(imageId, imageGeneration, 1uL) {
-          throw InvalidOperationException("Vulkan pending image retirement was not accepted")
-        }
-        if imageResourceValue.Collect(0uL) != 0 {
-          throw InvalidOperationException("Vulkan pending image retired before its upload fence")
-        }
-        let pendingStats = imageResourceValue.Stats
-        let pendingAllocator = imageAllocator.Counters
-        if pendingStats.LiveObjectCount != preflightStats.LiveObjectCount
-          || pendingAllocator.liveAllocations != preflightAllocator.liveAllocations
-          || pendingAllocator.liveBytes != preflightAllocator.liveBytes
-          || pendingAllocator.residentAllocations != preflightAllocator.residentAllocations
-          || pendingAllocator.residentBytes != preflightAllocator.residentBytes{
-            throw InvalidOperationException("Vulkan pending image retirement released resources early")
-          }
-        let uploadDeadline = Environment.TickCount64 + 5000L
-        let getUploadFenceStatus = deviceDispatch.vkGetFenceStatus
-        var uploadCompletion = getUploadFenceStatus(device, imageUploadFence)
-        while uploadCompletion == VkConstants.VK_NOT_READY && Environment.TickCount64 < uploadDeadline {
-          Thread.Sleep(1)
-          uploadCompletion = getUploadFenceStatus(device, imageUploadFence)
-        }
-        if TrackResult(diagnostics, 49uL, uploadCompletion) != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("Vulkan image upload did not complete")
-        }
-        if imageResourceValue.Collect(1uL) <= 0 {
-          throw InvalidOperationException("Vulkan pending image retirement did not collect")
-        }
-        let preflightReleasedStats = imageResourceValue.Stats
-        let preflightReleasedAllocator = imageAllocator.Counters
-        if preflightReleasedStats.LiveObjectCount >= pendingStats.LiveObjectCount
-          || preflightReleasedAllocator.liveAllocations >= pendingAllocator.liveAllocations
-          || preflightReleasedAllocator.liveBytes >= pendingAllocator.liveBytes{
-            throw InvalidOperationException("Vulkan pending image retirement did not release resources")
-          }
-        imagePreflightHandlesBefore = pendingStats.LiveObjectCount
-        imagePreflightHandlesAfter = preflightReleasedStats.LiveObjectCount
-        imagePreflightLiveAllocationsBefore = pendingAllocator.liveAllocations
-        imagePreflightLiveAllocationsAfter = preflightReleasedAllocator.liveAllocations
-        imagePreflightLiveBytesBefore = pendingAllocator.liveBytes
-        imagePreflightLiveBytesAfter = preflightReleasedAllocator.liveBytes
-        let normalRegistration = imageResourceValue.RegisterImage(
-          imageId,
-          2u,
-          2u,
-          imageSource,
-          true,
-          VulkanImageSamplerId(),
-          VulkanImageSamplerMode.Nearest)
-        if !normalRegistration.Found {
-          throw InvalidOperationException("Vulkan normal image registration failed")
-        }
-        let resetNormalCommandBuffer = deviceDispatch.vkResetCommandBuffer
-        if TrackResult(diagnostics, 46uL,
-          resetNormalCommandBuffer(imageUploadCommandBuffer, VkCommandBufferResetFlags(0u))) != VkConstants.VK_SUCCESS{
-            throw InvalidOperationException("vkResetCommandBuffer failed for normal image upload")
-          }
-        let resetNormalFence = deviceDispatch.vkResetFences
-        if TrackResult(diagnostics, 47uL,
-          resetNormalFence(device, 1u, &imageUploadFence)) != VkConstants.VK_SUCCESS{
-            throw InvalidOperationException("vkResetFences failed for normal image upload")
-          }
-        imageUploadQueueAccepted = false
-        imageUploadTrackingCommandBuffer = imageUploadCommandBuffer
-        imageUploadTrackingFenceSerial = 2uL
-        imageUploadTrackingGeneration = imageGeneration
-        imageUploadTrackingCommitted = false
-        var normalUploadSubmitAccepted = false
-        try {
-          var normalUploadBeginInfo = VkCommandBufferBeginInfo{}
-          normalUploadBeginInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-          normalUploadBeginInfo.flags = uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-          if TrackResult(diagnostics, 48uL,
-            beginCommandBuffer(imageUploadCommandBuffer, &normalUploadBeginInfo)) != VkConstants.VK_SUCCESS{
-              throw InvalidOperationException("vkBeginCommandBuffer failed for normal image upload")
-            }
-          if !imageResourceValue.QueueUpload(imageId, imageSourcePixels, 16uL, imageGeneration) {
-            throw InvalidOperationException("Vulkan normal image upload did not queue")
-          }
-          if imageResourceValue.RecordUploads(imageUploadCommandBuffer, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan normal image upload recording count is invalid")
-          }
-          if imageResourceValue.ValidateUploadSubmission(imageUploadCommandBuffer, 2uL, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan normal image upload submission state is invalid")
-          }
-          if TrackResult(diagnostics, 50uL,
-            imageResourceValue.FlushBeforeSubmit()) != VkConstants.VK_SUCCESS{
-              throw InvalidOperationException("Vulkan normal image upload flush failed")
-            }
-          if TrackResult(diagnostics, 51uL,
-            endCommandBuffer(imageUploadCommandBuffer)) != VkConstants.VK_SUCCESS{
-              throw InvalidOperationException("vkEndCommandBuffer failed for normal image upload")
-            }
-          var normalUploadCommandInfo = VkCommandBufferSubmitInfo{}
-          normalUploadCommandInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
-          normalUploadCommandInfo.commandBuffer = imageUploadCommandBuffer
-          var normalUploadSubmitInfo = VkSubmitInfo2{}
-          normalUploadSubmitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
-          normalUploadSubmitInfo.commandBufferInfoCount = 1u
-          normalUploadSubmitInfo.pCommandBufferInfos = &normalUploadCommandInfo
-          let normalUploadSubmit = deviceDispatch.vkQueueSubmit2
-          if TrackResult(diagnostics, 52uL,
-            normalUploadSubmit(queue, 1u, &normalUploadSubmitInfo, imageUploadFence)) != VkConstants.VK_SUCCESS{
-              throw InvalidOperationException("vkQueueSubmit2 failed for normal image upload")
-            }
-          imageUploadQueueAccepted = true
-          normalUploadSubmitAccepted = true
-          if imageResourceValue.MarkSubmitted(imageUploadCommandBuffer, 2uL, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan normal image upload submission count is invalid")
-          }
-          imageUploadTrackingCommitted = true
-        } catch (error Exception) {
-          if normalUploadSubmitAccepted {
-            CompleteAcceptedVulkanImageUpload(
-              deviceDispatch,
-              device,
-              imageUploadFence,
-              imageUploadTrackingCommandBuffer,
-              imageResourceValue,
-              imageUploadTrackingFenceSerial,
-              imageUploadTrackingGeneration,
-              diagnostics,
-              53uL)
-            imageUploadTrackingCommitted = true
-          } else {
-            AbortVulkanImageUploads(
-              deviceDispatch,
-              imageUploadCommandBuffer,
-              imageResourceValue,
-              imageGeneration,
-              diagnostics,
-              54uL)
-          }
-          throw error
-        }
-        let normalUploadDeadline = Environment.TickCount64 + 5000L
-        let normalUploadFenceStatus = deviceDispatch.vkGetFenceStatus
-        var normalUploadCompletion = normalUploadFenceStatus(device, imageUploadFence)
-        while normalUploadCompletion == VkConstants.VK_NOT_READY
-          && Environment.TickCount64 < normalUploadDeadline{
-            Thread.Sleep(1)
-            normalUploadCompletion = normalUploadFenceStatus(device, imageUploadFence)
-          }
-        if TrackResult(diagnostics, 54uL, normalUploadCompletion) != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("Vulkan normal image upload did not complete")
-        }
-        if imageResourceValue.Collect(2uL) <= 0 {
-          throw InvalidOperationException("Vulkan normal image upload did not collect")
-        }
-        let uploadedLookup = imageResourceValue.Lookup(imageId, imageGeneration)
-        if !uploadedLookup.Renderable {
-          throw InvalidOperationException("Vulkan image upload is not renderable")
-        }
-      }
-      let offscreenMode = if sceneOffscreenRequested {
-        VulkanOffscreenMode.Scene
-      } else {
-        VulkanOffscreenMode.SolidQuad
-      }
-      let offscreenFormat = if sceneOffscreenRequested {
-        VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-      } else {
-        VkConstants.VK_FORMAT_R8G8B8A8_UNORM
-      }
-      let offscreenTargetValue = if imageReadbackRequested {
-        VulkanOffscreenTarget(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          offscreenExtent,
-          offscreenMode,
-          offscreenFormat,
-          imageResources,
-          imageGeneration)
-      } else if textReadbackRequested {
-        VulkanOffscreenTarget(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          offscreenExtent,
-          offscreenMode,
-          offscreenFormat,
-          nil,
-          0uL,
-          textFixture!!.Atlas)
-      } else if textEffectReadbackRequested {
-        VulkanOffscreenTarget(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          offscreenExtent,
-          offscreenMode,
-          offscreenFormat,
-          nil,
-          0uL,
-          textFixture!!.Atlas)
-      } else if textPaintReadbackRequested {
-        VulkanOffscreenTarget(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          offscreenExtent,
-          offscreenMode,
-          offscreenFormat,
-          nil,
-          0uL,
-          textPaintFixture!!.Atlas)
-      } else {
-        VulkanOffscreenTarget(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          offscreenExtent,
-          offscreenMode,
-          offscreenFormat,
-          nil,
-          0uL)
-      }
-      offscreenTarget = offscreenTargetValue
-      if sceneOffscreenRequested {
-        RecordSceneStage(diagnostics, VulkanSceneStageEvents.Upload, VkConstants.VK_SUCCESS, 0uL, 0uL)
-      }
-
+      let offscreenExtent = VkExtent2D{ width: 64u, height: 64u }
+      let target = VulkanSolidQuadReadbackTarget(
+        device,
+        deviceDispatch,
+        readbackAllocatorValue,
+        readbackDispatch!!,
+        offscreenExtent,
+        VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
+      offscreenTarget = target
       let resetCommandBuffer = deviceDispatch.vkResetCommandBuffer
-      let resetResult = TrackResult(diagnostics, 45uL, resetCommandBuffer(offscreenCommandBuffer, VkCommandBufferResetFlags(0u)))
-      if resetResult != VkConstants.VK_SUCCESS {
-        throw InvalidOperationException("vkResetCommandBuffer failed")
+      let resetResult = resetCommandBuffer(
+        offscreenCommandBuffer, VkCommandBufferResetFlags(0u))
+      if TrackResult(diagnostics, 45uL, resetResult) != VkConstants.VK_SUCCESS {
+        throw InvalidOperationException("vkResetCommandBuffer failed for direct quad readback")
       }
-      let prepareResult = offscreenTargetValue.PrepareSubmit()
-      if prepareResult != VkConstants.VK_SUCCESS {
-        throw InvalidOperationException("Vulkan offscreen fence preparation failed")
+      if target.PrepareSubmit() != VkConstants.VK_SUCCESS {
+        throw InvalidOperationException("Vulkan direct quad readback preparation failed")
       }
-      let recordStartTicks int64 = if sceneOffscreenRequested && diagnostics != nil {
-        Stopwatch.GetTimestamp()
-      } else {
-        0L
-      }
-      try {
-        var offscreenCommandBufferBeginInfo = VkCommandBufferBeginInfo{}
-        offscreenCommandBufferBeginInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-        offscreenCommandBufferBeginInfo.flags = uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-        if TrackResult(diagnostics, 46uL, beginCommandBuffer(offscreenCommandBuffer, &offscreenCommandBufferBeginInfo)) != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("vkBeginCommandBuffer failed for offscreen readback")
+      var beginInfo = VkCommandBufferBeginInfo{}
+      beginInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+      beginInfo.flags = uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+      let beginCommandBuffer = deviceDispatch.vkBeginCommandBuffer
+      if TrackResult(diagnostics, 46uL,
+        beginCommandBuffer(offscreenCommandBuffer, &beginInfo)) != VkConstants.VK_SUCCESS{
+          throw InvalidOperationException("vkBeginCommandBuffer failed for direct quad readback")
         }
-        offscreenCommandBufferNeedsReset = true
-        if sceneOffscreenRequested && queryPoolCreated {
-          let resetQueryPool = deviceDispatch.vkCmdResetQueryPool
-          resetQueryPool(offscreenCommandBuffer, queryPool, 0u, 2u)
-          let writeTimestamp = deviceDispatch.vkCmdWriteTimestamp2
-          writeTimestamp(offscreenCommandBuffer, VkConstants.VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, queryPool, 0u)
+      offscreenCommandBufferNeedsReset = true
+      target.Record(offscreenCommandBuffer, clearColor, pushConstants)
+      let endCommandBuffer = deviceDispatch.vkEndCommandBuffer
+      if TrackResult(diagnostics, 47uL,
+        endCommandBuffer(offscreenCommandBuffer)) != VkConstants.VK_SUCCESS{
+          throw InvalidOperationException("vkEndCommandBuffer failed for direct quad readback")
         }
-        if sceneOffscreenRequested {
-          var sceneClearColor = VkClearColorValue{}
-          sceneClearColor.float32.values[0] = 0.0F
-          sceneClearColor.float32.values[1] = 0.0F
-          sceneClearColor.float32.values[2] = if imageReadbackRequested
-            || textReadbackRequested || textEffectReadbackRequested
-            || textPaintReadbackRequested{ 0.0F } else { 1.0F }
-          sceneClearColor.float32.values[3] = if imageReadbackRequested { 0.0F } else { 1.0F }
-          offscreenTargetValue.RecordScene(offscreenCommandBuffer, sceneFrame!!, sceneClearColor)
-        } else {
-          offscreenTargetValue.Record(offscreenCommandBuffer, clearColor, pushConstants)
-        }
-        if sceneOffscreenRequested && queryPoolCreated {
-          let writeTimestamp = deviceDispatch.vkCmdWriteTimestamp2
-          writeTimestamp(offscreenCommandBuffer, VkConstants.VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, queryPool, 1u)
-        }
-        if TrackResult(diagnostics, 47uL, endCommandBuffer(offscreenCommandBuffer)) != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("vkEndCommandBuffer failed for offscreen readback")
-        }
-        if textReadbackRequested || textEffectReadbackRequested || textPaintReadbackRequested {
-          let flushResult = if textReadbackRequested || textEffectReadbackRequested {
-            TrackResult(diagnostics, 49uL, textFixture!!.FlushBeforeSubmit())
-          } else {
-            TrackResult(diagnostics, 49uL, textPaintFixture!!.FlushBeforeSubmit())
-          }
-          if flushResult != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("Vulkan text atlas flush failed")
-          }
-        }
-        if sceneOffscreenRequested {
-          let recordEndTicks int64 = if diagnostics != nil {
-            Stopwatch.GetTimestamp()
-          } else {
-            0L
-          }
-          RecordSceneCpuStage(diagnostics, VulkanSceneStageEvents.Record, VkConstants.VK_SUCCESS,
-            recordEndTicks - recordStartTicks)
-        }
-      } catch (error Exception) {
-        if offscreenCommandBufferNeedsReset {
-          let resetResult = resetCommandBuffer(offscreenCommandBuffer, VkCommandBufferResetFlags(0u))
-          if resetResult == VkConstants.VK_SUCCESS {
-            offscreenCommandBufferNeedsReset = false
-          } else {
-            Console.Error.WriteLine("Vulkan cleanup offscreen command buffer reset failed: " + resetResult.ToString())
-          }
-        }
-        offscreenTargetValue.AbortPrepared()
-        if (textReadbackRequested || textEffectReadbackRequested) && textFixture != nil {
-          let atlasStats = textFixture!!.Atlas.Stats
-          if atlasStats.UploadPending && !atlasStats.UploadSubmitted {
-            textFixture!!.AbortUpload(offscreenCommandBuffer)
-          }
-        } else if textPaintReadbackRequested && textPaintFixture != nil {
-          let atlasStats = textPaintFixture!!.Atlas.Stats
-          if atlasStats.UploadPending && !atlasStats.UploadSubmitted {
-            textPaintFixture!!.AbortUpload(offscreenCommandBuffer)
-          }
-        }
-        throw error
-      }
-
-      var offscreenCommandBufferSubmitInfo = VkCommandBufferSubmitInfo{}
-      offscreenCommandBufferSubmitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
-      offscreenCommandBufferSubmitInfo.commandBuffer = offscreenCommandBuffer
-      var offscreenSubmitInfo = VkSubmitInfo2{}
-      offscreenSubmitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
-      offscreenSubmitInfo.commandBufferInfoCount = 1u
-      offscreenSubmitInfo.pCommandBufferInfos = &offscreenCommandBufferSubmitInfo
-      let submitStartTicks int64 = if sceneOffscreenRequested && diagnostics != nil {
-        Stopwatch.GetTimestamp()
-      } else {
-        0L
-      }
-      let rawOffscreenSubmitResult = queueSubmit(queue, 1u, &offscreenSubmitInfo, offscreenTargetValue.CompletionFence)
-      let submitEndTicks int64 = if sceneOffscreenRequested && diagnostics != nil {
-        Stopwatch.GetTimestamp()
-      } else {
-        0L
-      }
-      let trackedOffscreenSubmitResult = TrackResult(diagnostics, 48uL, rawOffscreenSubmitResult)
-      if sceneOffscreenRequested {
-        RecordSceneCpuStage(diagnostics, VulkanSceneStageEvents.Submit, rawOffscreenSubmitResult,
-          submitEndTicks - submitStartTicks)
-      }
-      if trackedOffscreenSubmitResult == VkConstants.VK_SUCCESS {
+      var commandInfo = VkCommandBufferSubmitInfo{}
+      commandInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
+      commandInfo.commandBuffer = offscreenCommandBuffer
+      var submitInfo = VkSubmitInfo2{}
+      submitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
+      submitInfo.commandBufferInfoCount = 1u
+      submitInfo.pCommandBufferInfos = &commandInfo
+      let queueSubmit = deviceDispatch.vkQueueSubmit2
+      let submitResult = TrackResult(diagnostics, 48uL,
+        queueSubmit(queue, 1u, &submitInfo, target.CompletionFence))
+      if submitResult == VkConstants.VK_SUCCESS {
         offscreenQueueAccepted = true
       }
-      offscreenTargetValue.MarkSubmitted(trackedOffscreenSubmitResult)
-      if trackedOffscreenSubmitResult != VkConstants.VK_SUCCESS {
-        throw InvalidOperationException("vkQueueSubmit2 failed for offscreen readback")
+      target.MarkSubmitted(submitResult)
+      if submitResult != VkConstants.VK_SUCCESS {
+        throw InvalidOperationException("vkQueueSubmit2 failed for direct quad readback")
       }
-      if textReadbackRequested || textEffectReadbackRequested {
-        textFixture!!.MarkSubmitted(offscreenCommandBuffer, uint64(offscreenTargetValue.CompletionFence))
-      } else if textPaintReadbackRequested {
-        textPaintFixture!!.MarkSubmitted(offscreenCommandBuffer, uint64(offscreenTargetValue.CompletionFence))
-      }
-      if imageReadbackRequested {
-        imageResources!!.MarkUsed(VulkanImageResourceId(), imageGeneration, 3uL)
-      }
-
       let deadline = Environment.TickCount64 + 5000L
-      var offscreenCompletionResult = offscreenTargetValue.PollCompletion()
-      while offscreenCompletionResult == VkConstants.VK_NOT_READY && Environment.TickCount64 < deadline {
+      var completion = target.PollCompletion()
+      while completion == VkConstants.VK_NOT_READY && Environment.TickCount64 < deadline {
         Thread.Sleep(1)
-        offscreenCompletionResult = offscreenTargetValue.PollCompletion()
+        completion = target.PollCompletion()
       }
-      if offscreenCompletionResult != VkConstants.VK_SUCCESS {
-        if !sceneOffscreenRequested {
-          Console.WriteLine("Offscreen clear/quad readback: false")
-        }
-        throw InvalidOperationException("Vulkan offscreen readback did not complete")
+      if completion != VkConstants.VK_SUCCESS {
+        Console.WriteLine("Offscreen clear/quad readback: false")
+        throw InvalidOperationException("Vulkan direct quad readback did not complete")
       }
-      if textReadbackRequested || textEffectReadbackRequested {
-        let atlasStats = textFixture!!.Atlas.Stats
-        if !atlasStats.UploadSubmitted || !textFixture!!.Collect(atlasStats.UploadFence) {
-          throw InvalidOperationException("Vulkan text atlas upload did not collect")
-        }
-      } else if textPaintReadbackRequested {
-        let atlasStats = textPaintFixture!!.Atlas.Stats
-        if !atlasStats.UploadSubmitted || !textPaintFixture!!.Collect(atlasStats.UploadFence) {
-          throw InvalidOperationException("Vulkan COLR paint atlas upload did not collect")
-        }
+      let readback = *uint8(target.ReadbackPointer)
+      let clearPixelOffset int32 = 0
+      let quadPixelOffset = int32((32u * offscreenExtent.width + 32u) * 4u)
+      let clearPixelOk = ByteNear(readback[clearPixelOffset], 8)
+        && ByteNear(readback[clearPixelOffset + 1], 10)
+        && ByteNear(readback[clearPixelOffset + 2], 20)
+        && ByteNear(readback[clearPixelOffset + 3], 255)
+      let quadPixelOk = ByteNear(readback[quadPixelOffset], 224)
+        && ByteNear(readback[quadPixelOffset + 1], 46)
+        && ByteNear(readback[quadPixelOffset + 2], 166)
+        && ByteNear(readback[quadPixelOffset + 3], 255)
+      if !clearPixelOk || !quadPixelOk {
+        Console.WriteLine("Offscreen clear/quad readback: false")
+        throw InvalidOperationException("Vulkan direct quad readback pixels are invalid")
       }
-      if sceneOffscreenRequested {
-        var sceneGpuResult VkResult = VkConstants.VK_NOT_READY
-        var sceneGpuDelta uint64 = 0uL
-        var sceneGpuNanoseconds uint64 = 0uL
-        if queryPoolCreated {
-          let sceneTimestampValues * uint64 = stackalloc[2]uint64
-          let getQueryPoolResults = deviceDispatch.vkGetQueryPoolResults
-          sceneGpuResult = getQueryPoolResults(
-            device,
-            queryPool,
-            0u,
-            2u,
-            nuint(16),
-            *void(sceneTimestampValues),
-            VkDeviceSize(8),
-            uint32(VkConstants.VK_QUERY_RESULT_64_BIT))
-          if sceneGpuResult == VkConstants.VK_SUCCESS {
-            if sceneTimestampValues[1] < sceneTimestampValues[0]
-              || selectedPhysicalDeviceProperties.limits.timestampPeriod <= 0.0F {
-                throw InvalidOperationException("Vulkan scene timestamp range is invalid")
-              }
-            sceneGpuDelta = sceneTimestampValues[1] - sceneTimestampValues[0]
-            let sceneGpuDeltaFloat64 = float64(sceneGpuDelta)
-            let sceneTimestampPeriodFloat64 = float64(selectedPhysicalDeviceProperties.limits.timestampPeriod)
-            let sceneGpuNanosecondsFloat64 = sceneGpuDeltaFloat64 * sceneTimestampPeriodFloat64
-            sceneGpuNanoseconds = uint64(sceneGpuNanosecondsFloat64)
-          } else if sceneGpuResult != VkConstants.VK_NOT_READY {
-            throw InvalidOperationException("vkGetQueryPoolResults failed for Vulkan scene")
-          }
-        }
-        RecordSceneStage(diagnostics, VulkanSceneStageEvents.Gpu, sceneGpuResult,
-          sceneGpuDelta, sceneGpuNanoseconds)
-      }
-      let readbackBytes = *uint8(offscreenTargetValue.ReadbackPointer)
-      if textReadbackRequested {
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan text recording allocated managed bytes")
-        }
-        let textReadback = AnalyzeVulkanTextReadback(readbackBytes, offscreenExtent.width, offscreenExtent.height)
-        Console.WriteLine("Text readback: digest=${textReadback.Digest} ink=${textReadback.InkPixels} background=${textReadback.BackgroundPixels} bounds=${textReadback.MinInkX},${textReadback.MinInkY}-${textReadback.MaxInkX},${textReadback.MaxInkY} opaque=${textReadback.OpaquePixels} nongray=${textReadback.NonGrayPixels} allocated=${offscreenTargetValue.LastRecordAllocatedBytes}")
-        if !VerifyVulkanTextReadback(readbackBytes, offscreenExtent.width, offscreenExtent.height, textReadback) {
-          throw InvalidOperationException("Vulkan text readback ink or background pixels are invalid")
-        }
-      } else if textEffectReadbackRequested {
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan text effect recording allocated managed bytes")
-        }
-        let textEffectReadback = AnalyzeVulkanTextReadback(readbackBytes,
-          offscreenExtent.width, offscreenExtent.height)
-        Console.WriteLine("Text effect readback: digest=${textEffectReadback.Digest} ink=${textEffectReadback.InkPixels} background=${textEffectReadback.BackgroundPixels} bounds=${textEffectReadback.MinInkX},${textEffectReadback.MinInkY}-${textEffectReadback.MaxInkX},${textEffectReadback.MaxInkY} opaque=${textEffectReadback.OpaquePixels} nongray=${textEffectReadback.NonGrayPixels} red=${textEffectReadback.RedDominantPixels} green=${textEffectReadback.GreenDominantPixels} gray=${textEffectReadback.GrayInkPixels} allocated=${offscreenTargetValue.LastRecordAllocatedBytes}")
-        if !VerifyVulkanTextEffectReadback(textEffectReadback) {
-          throw InvalidOperationException("Vulkan text effect readback pixels are invalid")
-        }
-      } else if textPaintReadbackRequested {
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan COLR paint recording allocated managed bytes")
-        }
-        let paintReadback = AnalyzeVulkanTextPaintReadback(readbackBytes,
-          offscreenExtent.width, offscreenExtent.height)
-        Console.WriteLine("Text paint readback: digest=${paintReadback.Digest} ink=${paintReadback.InkPixels} background=${paintReadback.BackgroundPixels} colored=${paintReadback.ColoredPixels} leftColored=${paintReadback.LeftColoredPixels} rightColored=${paintReadback.RightColoredPixels} opaque=${paintReadback.OpaquePixels} allocated=${offscreenTargetValue.LastRecordAllocatedBytes}")
-        if !VerifyVulkanTextPaintReadback(readbackBytes,
-          offscreenExtent.width, offscreenExtent.height, paintReadback) {
-            throw InvalidOperationException("Vulkan COLR paint readback pixels are invalid")
-          }
-      } else if imageReadbackRequested {
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan image recording allocated managed bytes: "
-            +offscreenTargetValue.LastRecordAllocatedBytes.ToString())
-        }
-        if !VerifyVulkanImageReadback(readbackBytes, offscreenExtent.width, offscreenExtent.height) {
-          throw InvalidOperationException("Vulkan sampled image readback pixels are invalid")
-        }
-        imageDigest = VulkanImageReadbackDigest(readbackBytes, offscreenExtent.width, offscreenExtent.height)
-        Console.WriteLine("Image readback: digest=${imageDigest} allocated=${offscreenTargetValue.LastRecordAllocatedBytes}")
-      } else if shadowReadbackRequested {
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan shadow recording allocated managed bytes")
-        }
-        if !VerifyShadowPixelSceneReadback(readbackBytes, offscreenExtent.width, offscreenExtent.height) {
-          throw InvalidOperationException("Vulkan shadow scene readback pixels are invalid")
-        }
-        Console.WriteLine("Shadow scene readback: digest=${sceneDigest} draws=${sceneFrame!!.DrawRefCount} shadows=${sceneFrame!!.ShadowCount} allocated=${offscreenTargetValue.LastRecordAllocatedBytes}")
-      } else if sceneReadbackRequested {
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan scene primitive recording allocated managed bytes")
-        }
-        if !VerifyPixelSceneReadback(readbackBytes, offscreenExtent.width, offscreenExtent.height) {
-          throw InvalidOperationException("Vulkan scene readback pixels are invalid")
-        }
-        Console.WriteLine("Scene readback: digest=${sceneDigest} allocated=${offscreenTargetValue.LastRecordAllocatedBytes}")
-      } else {
-        let clearPixelOffset int32 = 0
-        let quadPixelOffset = int32((32u * offscreenExtent.width + 32u) * 4u)
-        let clearPixelOk = ByteNear(readbackBytes[clearPixelOffset], 8)
-          && ByteNear(readbackBytes[clearPixelOffset + 1], 10)
-          && ByteNear(readbackBytes[clearPixelOffset + 2], 20)
-          && ByteNear(readbackBytes[clearPixelOffset + 3], 255)
-        let quadPixelOk = ByteNear(readbackBytes[quadPixelOffset], 224)
-          && ByteNear(readbackBytes[quadPixelOffset + 1], 46)
-          && ByteNear(readbackBytes[quadPixelOffset + 2], 166)
-          && ByteNear(readbackBytes[quadPixelOffset + 3], 255)
-        if !clearPixelOk || !quadPixelOk {
-          Console.WriteLine("Offscreen clear/quad readback: false")
-          throw InvalidOperationException("Vulkan offscreen clear/quad pixels are invalid")
-        }
-        Console.WriteLine("Offscreen clear/quad readback: true")
-      }
-      if imageReadbackRequested {
-        let imageId = VulkanImageResourceId()
-        let imageClearColor = VkClearColorValue{}
-        imageClearColor.float32.values[0] = 0.0F
-        imageClearColor.float32.values[1] = 0.0F
-        imageClearColor.float32.values[2] = 0.0F
-        imageClearColor.float32.values[3] = 0.0F
-        let plateauStatsBefore = imageResources!!.Stats
-        let plateauUploadBefore = plateauStatsBefore.Upload
-        let plateauAllocatorBefore = readbackAllocatorValue.Counters
-        if imageResources!!.QueueUpload(imageId, imageSourcePixels, 16uL, imageGeneration) {
-          throw InvalidOperationException("Vulkan unchanged image upload was queued")
-        }
-        let linearRegistration = imageResources!!.RegisterImage(
-          imageId,
-          2u,
-          2u,
-          imageSource,
-          true,
-          VulkanImageSamplerId(),
-          VulkanImageSamplerMode.Linear)
-        if !linearRegistration.Found {
-          throw InvalidOperationException("Vulkan linear image registration failed")
-        }
-        BuildVulkanImageScene(sceneFrame!!, 1u)
-        RecordVulkanImageFrame(
-          deviceDispatch,
-          queue,
-          offscreenTargetValue,
-          offscreenCommandBuffer,
-          sceneFrame!!,
-          imageClearColor,
-          imageResources!!,
-          imageId,
-          imageGeneration,
-          4uL,
-          diagnostics)
-        if !imageResources!!.Retire(imageId, imageGeneration, 4uL) {
-          throw InvalidOperationException("Vulkan image retirement was not accepted")
-        }
-        let retainedStatsBeforeCollect = imageResources!!.Stats
-        if imageResources!!.Collect(3uL) != 0 {
-          throw InvalidOperationException("Vulkan image retired before its fence completed")
-        }
-        let retainedStatsAfterCollect = imageResources!!.Stats
-        let retainedAllocator = readbackAllocatorValue.Counters
-        if retainedStatsAfterCollect.LiveObjectCount != retainedStatsBeforeCollect.LiveObjectCount
-          || retainedStatsAfterCollect.Registry.RetiringCount != 1
-          || retainedStatsAfterCollect.Registry.RetiredBytes == 0uL
-          || retainedAllocator.liveAllocations != plateauAllocatorBefore.liveAllocations
-          || retainedAllocator.liveBytes != plateauAllocatorBefore.liveBytes
-          || retainedAllocator.residentAllocations != plateauAllocatorBefore.residentAllocations
-          || retainedAllocator.residentBytes != plateauAllocatorBefore.residentBytes{
-            throw InvalidOperationException("Vulkan retired image released before its fence completed")
-          }
-        WaitVulkanImageFrame(offscreenTargetValue)
-        if offscreenTargetValue.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan warm sampled image recording allocated managed bytes")
-        }
-        let secondReadback = *uint8(offscreenTargetValue.ReadbackPointer)
-        if !VerifyVulkanImageLinearReadback(secondReadback, offscreenExtent.width, offscreenExtent.height) {
-          throw InvalidOperationException("Vulkan linear sampled image readback pixels are invalid")
-        }
-        imageLinearDigest = VulkanImageReadbackDigest(secondReadback, offscreenExtent.width, offscreenExtent.height)
-        if imageLinearDigest == imageDigest {
-          throw InvalidOperationException("Vulkan nearest and linear image readbacks are identical")
-        }
-        let plateauStatsAfter = imageResources!!.Stats
-        let plateauAllocatorAfter = readbackAllocatorValue.Counters
-        if !VulkanImageUploadStatsEqual(plateauUploadBefore, plateauStatsAfter.Upload)
-          || plateauStatsBefore.LiveObjectCount != plateauStatsAfter.LiveObjectCount
-          || plateauAllocatorBefore.liveAllocations != plateauAllocatorAfter.liveAllocations
-          || plateauAllocatorBefore.liveBytes != plateauAllocatorAfter.liveBytes
-          || plateauAllocatorBefore.residentAllocations != plateauAllocatorAfter.residentAllocations
-          || plateauAllocatorBefore.residentBytes != plateauAllocatorAfter.residentBytes{
-            throw InvalidOperationException("Vulkan unchanged image render changed resource plateau")
-          }
-        if imageResources!!.Collect(4uL) <= 0 {
-          throw InvalidOperationException("Vulkan image retirement did not collect")
-        }
-        let releasedStats = imageResources!!.Stats
-        let releasedAllocator = readbackAllocatorValue.Counters
-        if releasedStats.LiveObjectCount >= retainedStatsAfterCollect.LiveObjectCount
-          || releasedStats.Registry.RetiringCount != 0
-          || releasedAllocator.liveAllocations >= retainedAllocator.liveAllocations
-          || releasedAllocator.liveBytes >= retainedAllocator.liveBytes{
-            throw InvalidOperationException("Vulkan image retirement did not release GPU resources: handles="
-              +retainedStatsAfterCollect.LiveObjectCount.ToString() + "->" + releasedStats.LiveObjectCount.ToString()
-              +" allocations=" + retainedAllocator.liveAllocations.ToString() + "->" + releasedAllocator.liveAllocations.ToString()
-              +" bytes=" + retainedAllocator.liveBytes.ToString() + "->" + releasedAllocator.liveBytes.ToString())
-          }
-        let logicalResources = [1]VulkanLogicalResource
-        if imageResources!!.CopyLogicalResources(logicalResources) != 1 {
-          throw InvalidOperationException("Vulkan logical image source copy failed")
-        }
-        offscreenTargetValue.Dispose()
-        offscreenTarget = nil
-        offscreenQueueAccepted = false
-        let staleGeneration = imageGeneration
-        let nextImageGeneration = imageGeneration + 1uL
-        imageResources!!.SetGeneration(nextImageGeneration, 4uL)
-        var staleRecordRejected = false
-        try {
-          imageResources!!.RecordUploads(imageUploadCommandBuffer, staleGeneration)
-        } catch (error Exception) {
-          staleRecordRejected = true
-        }
-        if !staleRecordRejected {
-          throw InvalidOperationException("Vulkan stale image generation was accepted")
-        }
-        imageGeneration = nextImageGeneration
-        let logicalImage = logicalResources[0]
-        let rehydratedRegistration = imageResources!!.RegisterImage(
-          logicalImage.Id,
-          2u,
-          2u,
-          logicalImage.Source,
-          logicalImage.Cacheable,
-          VulkanImageSamplerId(),
-          VulkanImageSamplerMode.Linear)
-        if !rehydratedRegistration.Found {
-          throw InvalidOperationException("Vulkan logical image re-registration failed")
-        }
-        let resetUploadCommandBuffer = deviceDispatch.vkResetCommandBuffer
-        if TrackResult(diagnostics, 50uL,
-          resetUploadCommandBuffer(imageUploadCommandBuffer, VkCommandBufferResetFlags(0u))) != VkConstants.VK_SUCCESS{
-            throw InvalidOperationException("vkResetCommandBuffer failed for rehydrated image upload")
-          }
-        let resetUploadFence = deviceDispatch.vkResetFences
-        if TrackResult(diagnostics, 51uL, resetUploadFence(device, 1u, &imageUploadFence)) != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("vkResetFences failed for rehydrated image upload")
-        }
-        var imageSourceIndex int32 = 0
-        while imageSourceIndex < 16 {
-          imageSourcePixels[imageSourceIndex] = uint8(0)
-          imageSourceIndex++
-        }
-        if imageSourceLease == nil || !imageSourceLease!!.IsValid
-          || !imageSourceLease!!.CopyPixelsTo(imageSourcePixels, 16uL) {
-            throw InvalidOperationException("Vulkan rehydrated image source copy failed")
-          }
-        imageUploadQueueAccepted = false
-        imageUploadTrackingCommandBuffer = imageUploadCommandBuffer
-        imageUploadTrackingFenceSerial = 5uL
-        imageUploadTrackingGeneration = imageGeneration
-        imageUploadTrackingCommitted = false
-        var rehydratedUploadSubmitAccepted = false
-        try {
-          if !imageResources!!.QueueUpload(logicalImage.Id, imageSourcePixels, 16uL, imageGeneration) {
-            throw InvalidOperationException("Vulkan rehydrated image upload did not queue")
-          }
-          var rehydratedUploadBeginInfo = VkCommandBufferBeginInfo{}
-          rehydratedUploadBeginInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-          rehydratedUploadBeginInfo.flags = uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
-          let rehydratedUploadBegin = deviceDispatch.vkBeginCommandBuffer
-          if TrackResult(diagnostics, 52uL,
-            rehydratedUploadBegin(imageUploadCommandBuffer, &rehydratedUploadBeginInfo)) != VkConstants.VK_SUCCESS{
-              throw InvalidOperationException("vkBeginCommandBuffer failed for rehydrated image upload")
-            }
-          if imageResources!!.RecordUploads(imageUploadCommandBuffer, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan rehydrated image recording count is invalid")
-          }
-          if imageResources!!.ValidateUploadSubmission(imageUploadCommandBuffer, 5uL, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan rehydrated image submission state is invalid")
-          }
-          if TrackResult(diagnostics, 53uL, imageResources!!.FlushBeforeSubmit()) != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("Vulkan rehydrated image upload flush failed")
-          }
-          let rehydratedUploadEnd = deviceDispatch.vkEndCommandBuffer
-          if TrackResult(diagnostics, 54uL, rehydratedUploadEnd(imageUploadCommandBuffer)) != VkConstants.VK_SUCCESS {
-            throw InvalidOperationException("vkEndCommandBuffer failed for rehydrated image upload")
-          }
-          var rehydratedUploadCommandInfo = VkCommandBufferSubmitInfo{}
-          rehydratedUploadCommandInfo.sType = VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
-          rehydratedUploadCommandInfo.commandBuffer = imageUploadCommandBuffer
-          var rehydratedUploadSubmitInfo = VkSubmitInfo2{}
-          rehydratedUploadSubmitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
-          rehydratedUploadSubmitInfo.commandBufferInfoCount = 1u
-          rehydratedUploadSubmitInfo.pCommandBufferInfos = &rehydratedUploadCommandInfo
-          let rehydratedUploadSubmit = deviceDispatch.vkQueueSubmit2
-          if TrackResult(diagnostics, 55uL,
-            rehydratedUploadSubmit(queue, 1u, &rehydratedUploadSubmitInfo, imageUploadFence)) != VkConstants.VK_SUCCESS{
-              throw InvalidOperationException("vkQueueSubmit2 failed for rehydrated image upload")
-            }
-          imageUploadQueueAccepted = true
-          rehydratedUploadSubmitAccepted = true
-          if imageResources!!.MarkSubmitted(imageUploadCommandBuffer, 5uL, imageGeneration) != 1 {
-            throw InvalidOperationException("Vulkan rehydrated image submission count is invalid")
-          }
-          imageUploadTrackingCommitted = true
-        } catch (error Exception) {
-          if rehydratedUploadSubmitAccepted {
-            CompleteAcceptedVulkanImageUpload(
-              deviceDispatch,
-              device,
-              imageUploadFence,
-              imageUploadTrackingCommandBuffer,
-              imageResources!!,
-              imageUploadTrackingFenceSerial,
-              imageUploadTrackingGeneration,
-              diagnostics,
-              57uL)
-            imageUploadTrackingCommitted = true
-          } else {
-            AbortVulkanImageUploads(
-              deviceDispatch,
-              imageUploadCommandBuffer,
-              imageResources!!,
-              imageGeneration,
-              diagnostics,
-              58uL)
-          }
-          throw error
-        }
-        let rehydratedUploadFenceStatus = deviceDispatch.vkGetFenceStatus
-        let rehydratedUploadDeadline = Environment.TickCount64 + 5000L
-        var rehydratedUploadCompletion = rehydratedUploadFenceStatus(device, imageUploadFence)
-        while rehydratedUploadCompletion == VkConstants.VK_NOT_READY
-          && Environment.TickCount64 < rehydratedUploadDeadline{
-            Thread.Sleep(1)
-            rehydratedUploadCompletion = rehydratedUploadFenceStatus(device, imageUploadFence)
-          }
-        if TrackResult(diagnostics, 56uL, rehydratedUploadCompletion) != VkConstants.VK_SUCCESS {
-          throw InvalidOperationException("Vulkan rehydrated image upload did not complete")
-        }
-        if imageResources!!.Collect(5uL) <= 0 {
-          throw InvalidOperationException("Vulkan rehydrated image upload did not collect")
-        }
-        let rehydratedTarget = VulkanOffscreenTarget(
-          device,
-          deviceDispatch,
-          readbackAllocatorValue,
-          offscreenExtent,
-          VulkanOffscreenMode.Scene,
-          VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
-          imageResources,
-          imageGeneration)
-        offscreenTarget = rehydratedTarget
-        RecordVulkanImageFrame(
-          deviceDispatch,
-          queue,
-          rehydratedTarget,
-          offscreenCommandBuffer,
-          sceneFrame!!,
-          imageClearColor,
-          imageResources!!,
-          imageId,
-          imageGeneration,
-          6uL,
-          diagnostics)
-        if !imageResources!!.Retire(imageId, imageGeneration, 6uL) {
-          throw InvalidOperationException("Vulkan rehydrated image retirement was not accepted")
-        }
-        if imageResources!!.Collect(5uL) != 0 {
-          throw InvalidOperationException("Vulkan rehydrated image retired before its fence completed")
-        }
-        WaitVulkanImageFrame(rehydratedTarget)
-        let thirdReadback = *uint8(rehydratedTarget.ReadbackPointer)
-        if rehydratedTarget.LastRecordAllocatedBytes != 0L {
-          throw InvalidOperationException("Vulkan rehydrated image recording allocated managed bytes")
-        }
-        if !VerifyVulkanImageLinearReadback(thirdReadback, offscreenExtent.width, offscreenExtent.height) {
-          throw InvalidOperationException("Vulkan rehydrated image readback pixels are invalid")
-        }
-        let thirdDigest = VulkanImageReadbackDigest(thirdReadback, offscreenExtent.width, offscreenExtent.height)
-        if thirdDigest != imageLinearDigest {
-          throw InvalidOperationException("Vulkan rehydrated image readback digest changed")
-        }
-        if imageResources!!.Collect(6uL) <= 0 {
-          throw InvalidOperationException("Vulkan rehydrated image retirement did not collect")
-        }
-        rehydratedTarget.Dispose()
-        offscreenTarget = nil
-        offscreenQueueAccepted = false
-        imageResources!!.Dispose()
-        imageResources = nil
-        Console.WriteLine("Image E2E: nearestDigest=${imageDigest} linearDigest=${imageLinearDigest} plateau=true handles=${plateauStatsBefore.LiveObjectCount} residentAllocations=${plateauAllocatorBefore.residentAllocations} residentBytes=${plateauAllocatorBefore.residentBytes} retirement=true handles=${retainedStatsAfterCollect.LiveObjectCount}->${releasedStats.LiveObjectCount} liveAllocations=${retainedAllocator.liveAllocations}->${releasedAllocator.liveAllocations} preflight=true handles=${imagePreflightHandlesBefore}->${imagePreflightHandlesAfter} liveAllocations=${imagePreflightLiveAllocationsBefore}->${imagePreflightLiveAllocationsAfter} liveBytes=${imagePreflightLiveBytesBefore}->${imagePreflightLiveBytesAfter} rehydration=true allocated=0")
-      }
+      Console.WriteLine("Offscreen clear/quad readback: true")
     }
     if let diagnostics = diagnostics {
       diagnostics.CaptureWsiFacts(uint64(window), surface, swapchain, frameIndex, generation)
@@ -3385,11 +2314,6 @@ unsafe func Main() int32 {
         offscreenTargetValue.LiveObjectCount
       } else {
         0u
-      }
-      let imageResourceHandleCount uint64 = if let imageResourcesValue = imageResources {
-        imageResourcesValue.Stats.LiveObjectCount
-      } else {
-        0uL
       }
       var liveObjects = CountLiveObjects(
         window,
@@ -3403,8 +2327,8 @@ unsafe func Main() int32 {
         liveFrameSlotCount,
         solidQuadHandleCount,
         offscreenTargetHandleCount,
-        imageResourceHandleCount,
-        imageUploadFence,
+        0uL,
+        0uL,
         validationMessenger,
         queryPool)
       var heapAllocated uint64 = 0uL
@@ -3454,11 +2378,6 @@ unsafe func Main() int32 {
       } else {
         0u
       }
-      let imageResourceHandleCount uint64 = if let imageResourcesValue = imageResources {
-        imageResourcesValue.Stats.LiveObjectCount
-      } else {
-        0uL
-      }
       var liveObjects = CountLiveObjects(
         window,
         instance,
@@ -3471,8 +2390,8 @@ unsafe func Main() int32 {
         liveFrameSlotCount,
         solidQuadHandleCount,
         offscreenTargetHandleCount,
-        imageResourceHandleCount,
-        imageUploadFence,
+        0uL,
+        0uL,
         validationMessenger,
         queryPool)
       var heapAllocated uint64 = 0uL
@@ -3530,138 +2449,12 @@ unsafe func Main() int32 {
     }
 
     try {
-      if textFixture != nil {
-        var atlasStats = textFixture!!.Atlas.Stats
-        if atlasStats.UploadPending {
-          if atlasStats.UploadSubmitted {
-            if !offscreenQueueAccepted || !offscreenSubmissionCompleted {
-              throw InvalidOperationException("Vulkan text atlas upload is submitted without a completed offscreen fence")
-            }
-            if !textFixture!!.Collect(atlasStats.UploadFence) {
-              throw InvalidOperationException("Vulkan text atlas upload did not collect during cleanup")
-            }
-          } else if offscreenQueueAccepted {
-            if !offscreenSubmissionCompleted || offscreenTarget == nil {
-              throw InvalidOperationException("Vulkan accepted text upload has no completed offscreen fence")
-            }
-            textFixture!!.MarkSubmitted(
-              offscreenCommandBuffer,
-              uint64(offscreenTarget!!.CompletionFence))
-            atlasStats = textFixture!!.Atlas.Stats
-            if !atlasStats.UploadSubmitted
-              || !textFixture!!.Collect(atlasStats.UploadFence) {
-                throw InvalidOperationException("Vulkan accepted text atlas upload did not collect during cleanup")
-              }
-          } else {
-            textFixture!!.AbortUpload(offscreenCommandBuffer)
-          }
-        }
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup text upload failed: " + error.ToString())
-    }
-
-    try {
-      if textPaintFixture != nil {
-        var atlasStats = textPaintFixture!!.Atlas.Stats
-        if atlasStats.UploadPending {
-          if atlasStats.UploadSubmitted {
-            if !offscreenQueueAccepted || !offscreenSubmissionCompleted {
-              throw InvalidOperationException("Vulkan COLR paint atlas upload is submitted without a completed offscreen fence")
-            }
-            if !textPaintFixture!!.Collect(atlasStats.UploadFence) {
-              throw InvalidOperationException("Vulkan COLR paint atlas upload did not collect during cleanup")
-            }
-          } else if offscreenQueueAccepted {
-            if !offscreenSubmissionCompleted || offscreenTarget == nil {
-              throw InvalidOperationException("Vulkan accepted COLR paint upload has no completed offscreen fence")
-            }
-            textPaintFixture!!.MarkSubmitted(
-              offscreenCommandBuffer,
-              uint64(offscreenTarget!!.CompletionFence))
-            atlasStats = textPaintFixture!!.Atlas.Stats
-            if !atlasStats.UploadSubmitted
-              || !textPaintFixture!!.Collect(atlasStats.UploadFence) {
-                throw InvalidOperationException("Vulkan accepted COLR paint atlas upload did not collect during cleanup")
-              }
-          } else {
-            textPaintFixture!!.AbortUpload(offscreenCommandBuffer)
-          }
-        }
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup COLR paint upload failed: " + error.ToString())
-    }
-
-    try {
       if offscreenTarget != nil {
         offscreenTarget!!.Dispose()
         offscreenTarget = nil
       }
     } catch (error Exception) {
       Console.Error.WriteLine("Vulkan cleanup offscreen target failed: " + error.ToString())
-    }
-
-    try {
-      if textFixture != nil {
-        textFixture!!.Dispose()
-        textFixture = nil
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup text fixture failed: " + error.ToString())
-    }
-
-    try {
-      if textPaintFixture != nil {
-        textPaintFixture!!.Dispose()
-        textPaintFixture = nil
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup COLR paint fixture failed: " + error.ToString())
-    }
-
-    try {
-      if imageResources != nil {
-        if imageUploadFenceCreated && imageUploadQueueAccepted && device != nint(0) {
-          if !imageUploadTrackingCommitted {
-            CompleteAcceptedVulkanImageUpload(
-              deviceDispatch,
-              device,
-              imageUploadFence,
-              imageUploadTrackingCommandBuffer,
-              imageResources!!,
-              imageUploadTrackingFenceSerial,
-              imageUploadTrackingGeneration,
-              diagnostics,
-              59uL)
-            imageUploadTrackingCommitted = true
-          } else {
-            let waitForFences = deviceDispatch.vkWaitForFences
-            let waitResult = waitForFences(device, 1u, &imageUploadFence, VkConstants.VK_TRUE, VkConstants.VK_WHOLE_SIZE)
-            if waitResult != VkConstants.VK_SUCCESS {
-              throw InvalidOperationException("vkWaitForFences failed for image upload cleanup")
-            }
-          }
-        }
-        imageResources!!.Collect(uint64.MaxValue)
-        imageResources!!.Dispose()
-        imageResources = nil
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup image resources failed: " + error.ToString())
-    }
-
-    try {
-      if imageSourceLease != nil {
-        imageSourceLease!!.Dispose()
-        imageSourceLease = nil
-      }
-      if imageSourceProvider != nil {
-        imageSourceProvider!!.Dispose()
-        imageSourceProvider = nil
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup image source failed: " + error.ToString())
     }
 
     if offscreenTarget == nil {
@@ -3781,23 +2574,6 @@ unsafe func Main() int32 {
     commandPoolCreated = false
     allocatedCommandBufferCount = 0u
     offscreenCommandBuffer = nint(0)
-    imageUploadCommandBuffer = nint(0)
-
-    try {
-      if imageUploadFenceCreated && imageUploadFence != 0uL {
-        let destroyFence = deviceDispatch.vkDestroyFence
-        destroyFence(device, imageUploadFence, nil)
-      }
-    } catch (error Exception) {
-      Console.Error.WriteLine("Vulkan cleanup image upload fence failed: " + error.ToString())
-    }
-    imageUploadFence = uint64(0)
-    imageUploadFenceCreated = false
-    imageUploadQueueAccepted = false
-    imageUploadTrackingCommitted = false
-    imageUploadTrackingCommandBuffer = nint(0)
-    imageUploadTrackingFenceSerial = 0uL
-    imageUploadTrackingGeneration = 0uL
 
     try {
       if deviceCreated && destroyDeviceAddress != nint(0) {

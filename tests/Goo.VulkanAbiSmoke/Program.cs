@@ -18,6 +18,10 @@ internal static class Program
         }
 
 
+        RunOverflowBorderGate();
+        if (Environment.GetEnvironmentVariable("GOO_VK_OVERFLOW_BORDER") == "1")
+            return 0;
+
         var fontPath = Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf");
         if (!File.Exists(fontPath))
         {
@@ -582,6 +586,55 @@ internal static class Program
         Console.WriteLine("VULKAN_SCENE_ALLOC allocated=" + allocated
             + " draws=" + result.DrawCount + " visibleNodes=" + result.VisibleNodeCount);
         return allocated == 0 ? 0 : 1;
+    }
+
+    private static void RunOverflowBorderGate()
+    {
+        foreach (var radius in new[] { 0, 8 })
+        {
+            Node Box(int size) => new Node
+            {
+                Kind = NodeKind.Container,
+                Rect = new Rect { X = 0, Y = 0, W = size, H = size },
+                BackgroundColor = Color.Rgb(30, 30, 34),
+                BorderRadius = radius,
+                BorderTopWidth = 1,
+                BorderRightWidth = 1,
+                BorderBottomWidth = 1,
+                BorderLeftWidth = 1,
+                BorderTopColor = Color.White,
+                BorderRightColor = Color.White,
+                BorderBottomColor = Color.White,
+                BorderLeftColor = Color.White,
+                OverflowX = Overflow.Hidden,
+                OverflowY = Overflow.Hidden,
+            };
+            var root = Box(100);
+            var child = Box(80);
+            child.Parent = root;
+            root.Children.Add(child);
+            var compiler = new VulkanSceneCompiler(8);
+            compiler.Compile(root, Color.Transparent, 100, 100);
+            var depth = 0;
+            var borders = 0;
+            for (var i = 0; i < compiler.Frame.DrawRefCount; i++)
+            {
+                var draw = compiler.Frame.DrawRefs[i];
+                if (draw.Kind == SceneDrawKind.RectClipBegin)
+                    depth++;
+                else if (draw.Kind == SceneDrawKind.RectClipEnd)
+                    depth--;
+                else if (draw.Kind == SceneDrawKind.PerEdgeBorder)
+                {
+                    if (depth != 1 - borders)
+                        throw new InvalidOperationException("Border clipped by its own overflow scissor");
+                    borders++;
+                }
+            }
+            if (depth != 0 || borders != 2)
+                throw new InvalidOperationException("Nested overflow border scene is incomplete");
+        }
+        Console.WriteLine("VULKAN_OVERFLOW_BORDER PASS square and rounded nested borders");
     }
 
     private static void RunRetainedPrimitiveSpanGate()

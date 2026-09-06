@@ -1,9 +1,11 @@
 package Goo.VulkanProof
 
+import Goo
+
 internal class ShadowPixelSceneContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
-  const ExpectedDigest uint64 = 9103897119602688643uL
+  const ExpectedDigest uint64 = 8328706597962574643uL
   const ClearColor uint32 = 0x0000FFFFu
   const FillColor uint32 = 0xE09040FFu
 }
@@ -41,6 +43,7 @@ internal func BuildShadowPixelScene(frame SceneFrame, version uint64) {
     Blur: 4.0F,
     Color: 0x000000C0u,
     MaskId: ResourceId{ Kind: SceneResourceKind.None, LogicalId: 0uL, Version: 0uL },
+    MaskIndex: -1,
     Inset: false,
     TransformIndex: -1,
   })

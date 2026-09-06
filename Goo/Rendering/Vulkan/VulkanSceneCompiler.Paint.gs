@@ -262,28 +262,9 @@ internal partial class VulkanSceneCompiler {
     || ResolveLength(node.BorderBottomWidth, MinDimension(bounds)) > 0.0F
     || ResolveLength(node.BorderLeftWidth, MinDimension(bounds)) > 0.0F
 
-  private func PaintNode(
-    node Node,
-    bounds ConservativeBounds,
-    opacity float32,
-    transformIndex int32,
-    axisAligned bool,
-    clipDepth int32,
-    shapePaintClip bool,
-    shapePaintParentChainId int32,
-    contentPathClipChainId int32,
-    out textComplete bool) {
-      textComplete = node.Kind != NodeKind.Text
-      if node.Kind != NodeKind.Shape {
-        PaintBoxShadows(node, bounds, opacity, transformIndex, false)
-      }
-      if node.Kind == NodeKind.Shape {
-        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, false)
-        PaintShape(node, bounds, opacity, transformIndex, shapePaintClip,
-          shapePaintParentChainId)
-        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, true)
-        return
-      }
+  private func PaintNodeBackground(node Node, bounds ConservativeBounds,
+    opacity float32, transformIndex int32) {
+      PaintBoxShadows(node, bounds, opacity, transformIndex, false)
       if let gradient = node.BackgroundGradient {
         PaintGradient(node, gradient, bounds, opacity, transformIndex)
       } else {
@@ -298,6 +279,30 @@ internal partial class VulkanSceneCompiler {
           opacity,
           transformIndex)
       }
+      if node.Kind != NodeKind.Image {
+        PaintBoxShadows(node, bounds, opacity, transformIndex, true)
+      }
+    }
+
+  private func PaintNode(
+    node Node,
+    bounds ConservativeBounds,
+    opacity float32,
+    transformIndex int32,
+    axisAligned bool,
+    clipDepth int32,
+    shapePaintClip bool,
+    shapePaintParentChainId int32,
+    contentPathClipChainId int32,
+    out textComplete bool) {
+      textComplete = node.Kind != NodeKind.Text
+      if node.Kind == NodeKind.Shape {
+        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, false)
+        PaintShape(node, bounds, opacity, transformIndex, shapePaintClip,
+          shapePaintParentChainId)
+        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, true)
+        return
+      }
       if node.Kind == NodeKind.Image {
         if let scene = imageScene {
           frame.SetActiveClipChain(contentPathClipChainId)
@@ -311,8 +316,6 @@ internal partial class VulkanSceneCompiler {
           frame.SetActiveClipChain(shapePaintParentChainId)
         }
       }
-      PaintBoxShadows(node, bounds, opacity, transformIndex, true)
-      PaintBorder(node, bounds, opacity, transformIndex)
       frame.SetActiveClipChain(contentPathClipChainId)
       if node.Kind == NodeKind.Text {
         if let renderer = textScene {
