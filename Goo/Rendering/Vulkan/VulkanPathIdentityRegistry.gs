@@ -19,6 +19,8 @@ internal data struct VulkanPathResourceIdentity {
 
 private sealed class VulkanPathIdentityRecord {
   internal let Reference WeakReference
+  // Equal authored paths share this representative while the GPU resource is resident.
+  internal var ResidentData VectorPathData?
   internal var Identity VulkanPathResourceIdentity
   internal var Hash uint64
   internal var ResidencyCount int32
@@ -67,9 +69,8 @@ internal sealed class VulkanPathIdentityRegistry {
       var ownerIndex int32 = 0
       while ownerIndex < records.Count {
         let ownerRecord = records[ownerIndex]
-        let ownerData = ownerRecord.Reference.Target as VectorPathData?
-        if ownerRecord.Reference.IsAlive && ownerData != nil
-          && Object.ReferenceEquals(ownerData!!.NormalizedOwner, owner) {
+        if let ownerData = ownerRecord.Reference.Target as VectorPathData {
+          if Object.ReferenceEquals(ownerData.NormalizedOwner, owner) {
             if ownerRecord.Identity.GeometryRevision != data.GeometryRevision {
               ownerRecord.Identity = VulkanPathResourceIdentity{
                 PathId: ResourceId{
@@ -83,6 +84,7 @@ internal sealed class VulkanPathIdentityRegistry {
             }
             return ownerRecord.Identity
           }
+        }
         ownerIndex++
       }
     }
@@ -90,10 +92,8 @@ internal sealed class VulkanPathIdentityRegistry {
       var index int32 = 0
       while index < bucket.Count {
         let existing = bucket[index]
-        let existingData = existing.Reference.Target as VectorPathData?
-        if existing.Reference.IsAlive
-          && existingData != nil
-          && (Object.ReferenceEquals(existingData, data) || existingData!!.Equals(data)) {
+        if let existingData = existing.Reference.Target as VectorPathData {
+          if Object.ReferenceEquals(existingData, data) || existingData.Equals(data) {
             if existing.Identity.GeometryRevision != data.GeometryRevision {
               existing.Identity = VulkanPathResourceIdentity{
                 PathId: ResourceId{
@@ -107,6 +107,7 @@ internal sealed class VulkanPathIdentityRegistry {
             }
             return existing.Identity
           }
+        }
         index++
       }
     }
@@ -143,32 +144,34 @@ internal sealed class VulkanPathIdentityRegistry {
     if !identity.IsValid {
       throw ArgumentException("Vulkan path identity is invalid", "identity")
     }
-    let record = Find(identity.PathId.LogicalId)
-    if record == nil {
-      return
-    }
-    if record!!.ResidencyCount == Int32.MaxValue {
+    guard let record = Find(identity.PathId.LogicalId) else { return }
+    if record.ResidencyCount == Int32.MaxValue {
       throw OverflowException("Vulkan path identity residency overflow")
     }
-    record!!.ResidencyCount = record!!.ResidencyCount + 1
+    if record.ResidencyCount == 0 {
+      record.ResidentData = record.Reference.Target as VectorPathData?
+    }
+    record.ResidencyCount = record.ResidencyCount + 1
   }
 
   internal func Release(identity VulkanPathResourceIdentity) {
     if disposed || !identity.IsValid {
       return
     }
-    let record = Find(identity.PathId.LogicalId)
-    if record == nil || record!!.ResidencyCount <= 0 {
-      return
+    guard let record = Find(identity.PathId.LogicalId) else { return }
+    if record.ResidencyCount <= 0 { return }
+    record.ResidencyCount = record.ResidencyCount - 1
+    if record.ResidencyCount == 0 {
+      record.ResidentData = nil
     }
-    record!!.ResidencyCount = record!!.ResidencyCount - 1
-    if record!!.ResidencyCount == 0
-      && (!record!!.Reference.IsAlive || record!!.Reference.Target == nil) {
-        RemoveRecord(record!!)
+    if record.ResidencyCount == 0
+      && (!record.Reference.IsAlive || record.Reference.Target == nil) {
+        RemoveRecord(record)
         count = count - 1
       }
   }
 
+  /// Releases the registry and any resident geometry representatives.
   public func Dispose() {
     if disposed {
       return
@@ -195,12 +198,13 @@ internal sealed class VulkanPathIdentityRegistry {
     var index int32 = 0
     while index < records.Count {
       let record = records[index]
-      if !record.Reference.IsAlive || record.Reference.Target == nil {
-        RemoveRecord(record)
-        count = count - 1
-      } else {
-        index++
-      }
+      if record.ResidencyCount == 0
+        && (!record.Reference.IsAlive || record.Reference.Target == nil) {
+          RemoveRecord(record)
+          count = count - 1
+        } else {
+          index++
+        }
     }
   }
 

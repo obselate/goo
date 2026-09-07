@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Goo;
 using Xunit;
 
@@ -87,6 +88,137 @@ public sealed class PathIdentityTests
         {
             registry.Dispose();
         }
+    }
+
+    [Fact]
+    public void ResidentSharedIdentitySurvivesCollectionOfOriginalAuthor()
+    {
+        var registry = new VulkanPathIdentityRegistry();
+        try
+        {
+            var (identity, original) = CreateIdentity(registry, retainCount: 2);
+
+            Collect();
+            Assert.True(original.IsAlive);
+            Assert.Equal(identity, registry.Resolve(Path(2)));
+            Assert.Equal(1, registry.Count);
+
+            registry.Release(identity);
+            Collect();
+            Assert.True(original.IsAlive);
+            Assert.Equal(identity, registry.Resolve(Path(2)));
+        }
+        finally
+        {
+            registry.Dispose();
+        }
+    }
+
+    [Fact]
+    public void FinalReleaseAllowsRepresentativeAndIdentityToBeCollected()
+    {
+        var registry = new VulkanPathIdentityRegistry();
+        try
+        {
+            var (identity, original) = CreateIdentity(registry, retainCount: 1);
+            registry.Release(identity);
+
+            Collect();
+            Assert.False(original.IsAlive);
+            var replacement = registry.Resolve(Path(2));
+            Assert.NotEqual(identity.PathId.LogicalId, replacement.PathId.LogicalId);
+            Assert.Equal(1, registry.Count);
+        }
+        finally
+        {
+            registry.Dispose();
+        }
+    }
+
+    [Fact]
+    public void UnretainedIdentitiesRemainWeak()
+    {
+        var registry = new VulkanPathIdentityRegistry();
+        try
+        {
+            var (identity, original) = CreateIdentity(registry, retainCount: 0);
+
+            Collect();
+            Assert.False(original.IsAlive);
+            Assert.NotEqual(identity.PathId.LogicalId, registry.Resolve(Path(2)).PathId.LogicalId);
+            Assert.Equal(1, registry.Count);
+        }
+        finally
+        {
+            registry.Dispose();
+        }
+    }
+
+    [Fact]
+    public void DisposeReleasesResidentRepresentatives()
+    {
+        var registry = new VulkanPathIdentityRegistry();
+        var (_, original) = CreateIdentity(registry, retainCount: 1);
+        registry.Dispose();
+
+        Collect();
+        Assert.False(original.IsAlive);
+        GC.KeepAlive(registry);
+    }
+
+    [Fact]
+    public void ResidentMutableOwnerKeepsIdentityAcrossCollectionAndRevision()
+    {
+        var registry = new VulkanPathIdentityRegistry();
+        try
+        {
+            var owner = new VectorPathNormalizedOwner(1, 1, 0, 0, 10, 10);
+            owner.Update(new[] { PathGeometry.Quadratic(0, 0, 1, 0, 2, 0) }, 1,
+                new[] { PathGeometry.Contour(0, 1, false) }, 1);
+            var identity = RetainMutableIdentity(registry, owner);
+            Collect();
+
+            owner.Update(new[] { PathGeometry.Quadratic(0, 0, 2, 0, 4, 0) }, 1,
+                new[] { PathGeometry.Contour(0, 1, false) }, 1);
+            var updated = registry.Resolve(new VectorPathData(owner, 0, 0, 10, 10));
+            Assert.Equal(identity.PathId.LogicalId, updated.PathId.LogicalId);
+            Assert.Equal(identity.GeometryRevision + 1, updated.GeometryRevision);
+            Assert.Equal(updated.GeometryRevision, updated.PathId.Version);
+            Assert.Equal(1, registry.Count);
+            registry.Release(updated);
+        }
+        finally
+        {
+            registry.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static (VulkanPathResourceIdentity, WeakReference) CreateIdentity(
+        VulkanPathIdentityRegistry registry, int retainCount)
+    {
+        var data = Path(2);
+        var identity = registry.Resolve(data);
+        for (var index = 0; index < retainCount; index++)
+            registry.Retain(identity);
+        return (identity, new WeakReference(data));
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static VulkanPathResourceIdentity RetainMutableIdentity(
+        VulkanPathIdentityRegistry registry, VectorPathNormalizedOwner owner)
+    {
+        var data = new VectorPathData(owner, 0, 0, 10, 10);
+        var identity = registry.Resolve(data);
+        registry.Retain(identity);
+        return identity;
+    }
+
+    private static void Collect()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
     }
 
     private static VectorPathData Path(double end)
