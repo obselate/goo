@@ -5,18 +5,32 @@ import Goo
 
 class GalleryMathAssets : IDisposable {
   /// Gets the generated Mandelbrot image source.
-  public let Mandelbrot ImageSource
+  public prop Mandelbrot ImageSource{
+    get {
+      if disposed { throw ObjectDisposedException("GalleryMathAssets") }
+      if let existing = mandelbrot { return existing }
+      let created = buildMandelbrot()
+      mandelbrot = created
+      return created
+    }
+  }
   /// Gets the harmonograph curve vector path.
   public let Harmonograph VectorPath
+  private var mandelbrot ImageSource?
+  private var disposed bool
 
   public init() {
-    Mandelbrot = buildMandelbrot()
+    mandelbrot = nil
     Harmonograph = buildHarmonograph()
+    disposed = false
   }
 
   /// Releases owned image and math resources.
   public func Dispose() {
-    Mandelbrot.Dispose()
+    if disposed { return }
+    disposed = true
+    mandelbrot?.Dispose()
+    mandelbrot = nil
   }
 
   private func buildMandelbrot() ImageSource {
@@ -71,7 +85,7 @@ class GalleryMathAssets : IDisposable {
       }
       y = y + 1
     }
-    return ImageSource(640, 360, pixels)
+    return ImageSource.Transfer(640, 360, pixels, () -> { })
   }
 
   private func gammaByte(linear float64) uint8 {
