@@ -936,6 +936,10 @@ internal partial class VulkanSceneCompiler {
 
   private func TextEffectChunkPad(node Node) float32 {
     var result = textPaintPad(node.TextStrokeWidth.Px, node.TextShadows)
+    if node.Kind == NodeKind.Entry { return result }
+    if node.Kind == NodeKind.Text && PassiveTextPresentations.Read(node) == nil {
+      return result
+    }
     if node.Kind == NodeKind.Editor {
       let layout = TextEditorLayouts.For(node, TextLayouts.ContentWidth(node),
         TextLayouts.ContentHeight(node))
