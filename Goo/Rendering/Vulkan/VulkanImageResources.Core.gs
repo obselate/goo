@@ -6,6 +6,9 @@ import System.Collections.Generic
 internal unsafe partial class VulkanImageResources : IDisposable {
   internal prop HasUnsubmittedRecordedUpload bool{
     get {
+      if uploadRing.Stats.ActiveRanges == 0 {
+        return false
+      }
       var index int32 = 0
       while index < entries.Length {
         let entry = entries[index]

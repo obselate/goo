@@ -9,6 +9,12 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       highestCompletedFence = completedFence
     }
     let effectiveCompletedFence = highestCompletedFence
+    let uploadStats = uploadRing.Stats
+    let registryStats = registry.Stats
+    if uploadStats.ActiveRanges == 0 && registryStats.RetiringCount == 0
+      && liveCount == registryStats.ResidentCount{
+        return 0
+      }
     var completedUploads int32 = 0
     var index int32 = 0
     while index < entries.Length {

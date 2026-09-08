@@ -192,6 +192,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       recordedBytes = 0uL
       recordedBarriers = 0
+      if uploadRing.Stats.ActiveRanges == 0 {
+        return 0
+      }
       var recorded int32 = 0
       var index int32 = 0
       while index < entries.Length {
@@ -247,6 +250,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     if stagingAllocation == nil {
       return VkConstants.VK_SUCCESS
     }
+    if uploadRing.Stats.ActiveRanges == 0 {
+      flushPrepared = false
+      return VkConstants.VK_SUCCESS
+    }
     var flushed bool = false
     var index int32 = 0
     while index < entries.Length {
@@ -272,6 +279,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     ValidateGeneration(expectedGeneration)
     if commandBuffer == nint(0) {
       throw ArgumentException("Command buffer is null", "commandBuffer")
+    }
+    if uploadRing.Stats.ActiveRanges == 0 {
+      flushPrepared = false
+      return 0
     }
     var aborted int32 = 0
     var index int32 = 0
@@ -322,6 +333,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   internal func AbortUnrecordedUploads(expectedGeneration uint64) int32 {
     EnsureOpen()
     ValidateGeneration(expectedGeneration)
+    if uploadRing.Stats.ActiveRanges == 0 {
+      flushPrepared = false
+      return 0
+    }
     var index int32 = 0
     while index < entries.Length {
       let entry = entries[index]
@@ -378,6 +393,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       if fence == 0uL {
         throw ArgumentOutOfRangeException("fence")
+      }
+      if uploadRing.Stats.ActiveRanges == 0 {
+        return 0
       }
       var index int32 = 0
       var tracked int32 = 0
