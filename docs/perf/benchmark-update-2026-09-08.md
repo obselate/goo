@@ -1,5 +1,7 @@
 # Updated benchmark chart
 
+> Historical measurements: the lazy Gallery asset change included here was subsequently reverted at the user’s request. The six retained changes and current validation are listed in [optimization status](optimization-status-2026-09-08.md). These aggregate measurements do not describe the post-rollback tree.
+
 ![Updated frame costs and memory](evidence/benchmark-update-2026-09-08/full-cost-breakdown-updated.png)
 
 The original four-panel format is retained. The upper panels show the completed changes. The lower panels compare fresh measurements before and after all seven changes. The [original chart](evidence/benchmark-update-2026-09-08/original-chart.png) is preserved separately.

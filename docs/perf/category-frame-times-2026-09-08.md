@@ -1,5 +1,7 @@
 # Component category frame-time reduction
 
+> Reverted experiment: all Gallery card-region and retention changes measured here were removed at the user’s request. This report and its evidence are retained as historical results, not as the current implementation. See [optimization status](optimization-status-2026-09-08.md).
+
 ## Result
 
 The retained category implementation reduces measured CPU work and managed

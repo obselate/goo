@@ -6,91 +6,74 @@ import System.Numerics
 import Goo
 
 class GalleryShaderPrograms {
-  private let programs[11]ShaderEffectProgram?
-  private let lab[11]ShaderEffect?
-  private let studio[11]ShaderEffect?
-  private var hero ShaderEffect?
-  private var motionRipple ShaderEffect?
-  private var motionRadial ShaderEffect?
+  private let lab[11]ShaderEffect
+  private let studio[11]ShaderEffect
   /// Gets the radial light shader effect used by the hero header.
-  public prop Hero ShaderEffect{
-    get {
-      if let existing = hero { return existing }
-      let created = createEffect(3)
-      hero = created
-      return created
-    }
-  }
+  public let Hero ShaderEffect
   /// Gets the ripple shader effect used by Motion & Dynamics.
-  public prop MotionRipple ShaderEffect{
-    get {
-      if let existing = motionRipple { return existing }
-      let created = createEffect(4)
-      motionRipple = created
-      return created
-    }
-  }
+  public let MotionRipple ShaderEffect
   /// Gets the radial light shader effect used by Motion & Dynamics.
-  public prop MotionRadial ShaderEffect{
-    get {
-      if let existing = motionRadial { return existing }
-      let created = createEffect(3)
-      motionRadial = created
-      return created
-    }
-  }
+  public let MotionRadial ShaderEffect
 
   public init() {
-    programs = [11]ShaderEffectProgram?
-    lab = [11]ShaderEffect?
-    studio = [11]ShaderEffect?
-    hero = nil
-    motionRipple = nil
-    motionRadial = nil
+    let wolfenstein = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "wolfenstein.goo-effect"))
+    let chrome = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "chrome_sdf.goo-effect"))
+    let corridor = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "corridor.goo-effect"))
+    let radial = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "radial_light.goo-effect"))
+    let ripple = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "ripple.goo-effect"))
+    let glass = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "terminal_glass.goo-effect"))
+    let volumetric = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "volumetric.goo-effect"))
+    let dither = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "dither.goo-effect"))
+    let aurora = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "aurora.goo-effect"))
+    let silk = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "iridescent_silk.goo-effect"))
+    let crt = ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "Shaders", "crt.goo-effect"))
+
+    lab = [11]ShaderEffect
+    studio = [11]ShaderEffect
+    lab[0] = ShaderEffect(wolfenstein, samplesBackdrop: false)
+    lab[1] = ShaderEffect(chrome, samplesBackdrop: false)
+    lab[2] = ShaderEffect(corridor, samplesBackdrop: false)
+    lab[3] = ShaderEffect(radial, samplesBackdrop: false)
+    lab[4] = ShaderEffect(ripple, samplesBackdrop: false)
+    lab[5] = ShaderEffect(glass, samplesBackdrop: true, backdropOutset: 24.0F)
+    lab[6] = ShaderEffect(volumetric, samplesBackdrop: false)
+    lab[7] = ShaderEffect(dither, samplesBackdrop: false)
+    lab[8] = ShaderEffect(aurora, samplesBackdrop: false)
+    lab[9] = ShaderEffect(silk, samplesBackdrop: false)
+    lab[10] = ShaderEffect(crt, samplesBackdrop: false)
+
+    studio[0] = ShaderEffect(wolfenstein, samplesBackdrop: false)
+    studio[1] = ShaderEffect(chrome, samplesBackdrop: false)
+    studio[2] = ShaderEffect(corridor, samplesBackdrop: false)
+    studio[3] = ShaderEffect(radial, samplesBackdrop: false)
+    studio[4] = ShaderEffect(ripple, samplesBackdrop: false)
+    studio[5] = ShaderEffect(glass, samplesBackdrop: true, backdropOutset: 24.0F)
+    studio[6] = ShaderEffect(volumetric, samplesBackdrop: false)
+    studio[7] = ShaderEffect(dither, samplesBackdrop: false)
+    studio[8] = ShaderEffect(aurora, samplesBackdrop: false)
+    studio[9] = ShaderEffect(silk, samplesBackdrop: false)
+    studio[10] = ShaderEffect(crt, samplesBackdrop: false)
+
+    Hero = ShaderEffect(radial, samplesBackdrop: false)
+    MotionRipple = ShaderEffect(ripple, samplesBackdrop: false)
+    MotionRadial = ShaderEffect(radial, samplesBackdrop: false)
+    lab[7].SetParameter(2, Vector4(0.0F, 0.5F, 1.0F, 0.0F))
   }
 
   /// Gets the Shader Lab effect instance for the specified program index.
-  public func Lab(index int32) ShaderEffect {
-    if let existing = lab[index] { return existing }
-    let created = createEffect(index)
-    if index == 7 {
-      created.SetParameter(2, Vector4(0.0F, 0.5F, 1.0F, 0.0F))
-    }
-    lab[index] = created
-    return created
-  }
+  public func Lab(index int32) ShaderEffect -> lab[index]
 
   /// Gets the Final Synthesis studio effect instance for the specified program index.
-  public func Studio(index int32) ShaderEffect {
-    if let existing = studio[index] { return existing }
-    let created = createEffect(index)
-    studio[index] = created
-    return created
-  }
-
-  private func createEffect(index int32) ShaderEffect -> ShaderEffect(
-    program(index),
-    samplesBackdrop: index == 5,
-    backdropOutset: if index == 5 { 24.0F } else { 0.0F })
-
-  private func program(index int32) ShaderEffectProgram {
-    if let existing = programs[index] { return existing }
-    let name = switch index {
-      case 0: "wolfenstein.goo-effect"
-      case 1: "chrome_sdf.goo-effect"
-      case 2: "corridor.goo-effect"
-      case 3: "radial_light.goo-effect"
-      case 4: "ripple.goo-effect"
-      case 5: "terminal_glass.goo-effect"
-      case 6: "volumetric.goo-effect"
-      case 7: "dither.goo-effect"
-      case 8: "aurora.goo-effect"
-      case 9: "iridescent_silk.goo-effect"
-      default: "crt.goo-effect"
-    }
-    let created = ShaderEffectProgram.Load(
-      Path.Combine(AppContext.BaseDirectory, "Shaders", name))
-    programs[index] = created
-    return created
-  }
+  public func Studio(index int32) ShaderEffect -> studio[index]
 }
