@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Removed the four-stop rendering limit for linear and radial gradients. Longer gradients use GPU buffer storage with binary stop lookup, preserving alpha, opacity, and hard color edges.
+- Fixed custom titlebar double-click maximize/restore and live resizing of idle windows on Wayland in Goo's bundled SDL runtime.
 
 ## 0.5.0 - 2026-09-05
 

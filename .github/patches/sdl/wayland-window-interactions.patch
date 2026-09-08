@@ -1,0 +1,106 @@
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -891,7 +891,7 @@
+     Wayland_SeatUpdatePointerCursor(seat);
+ }
+ 
+-static bool Wayland_ProcessHitTest(SDL_WaylandSeat *seat, Uint32 serial)
++static bool Wayland_ProcessHitTest(SDL_WaylandSeat *seat, Uint32 serial, Uint64 timestamp, bool down)
+ {
+     // Pointer is immobilized, do nothing.
+     if (seat->pointer.locked_pointer) {
+@@ -918,8 +918,33 @@
+         };
+ #endif
+ 
++        // Goo: releases must not initiate another compositor move/resize.
++        if (window_data->hit_test_result != SDL_HITTEST_NORMAL && !down) {
++            return true;
++        }
++        if (window_data->hit_test_result != SDL_HITTEST_DRAGGABLE) {
++            seat->pointer.titlebar_click_window = 0;
++        }
++
+         switch (window_data->hit_test_result) {
+-        case SDL_HITTEST_DRAGGABLE:
++        case SDL_HITTEST_DRAGGABLE: {
++            SDL_Mouse *mouse = SDL_GetMouse();
++            const bool double_click = seat->pointer.titlebar_click_window == window->id &&
++                timestamp >= seat->pointer.titlebar_click_timestamp &&
++                timestamp - seat->pointer.titlebar_click_timestamp <= SDL_MS_TO_NS(mouse->double_click_time) &&
++                SDL_abs(seat->pointer.last_motion.x - seat->pointer.titlebar_click_position.x) <= mouse->double_click_radius &&
++                SDL_abs(seat->pointer.last_motion.y - seat->pointer.titlebar_click_position.y) <= mouse->double_click_radius;
++            seat->pointer.titlebar_click_window = double_click ? 0 : window->id;
++            seat->pointer.titlebar_click_timestamp = timestamp;
++            seat->pointer.titlebar_click_position = seat->pointer.last_motion;
++            if (double_click && (window->flags & SDL_WINDOW_RESIZABLE) && !(window->flags & SDL_WINDOW_FULLSCREEN)) {
++                if (window->flags & SDL_WINDOW_MAXIMIZED) {
++                    SDL_RestoreWindow(window);
++                } else {
++                    SDL_MaximizeWindow(window);
++                }
++                return true;
++            }
+ #ifdef HAVE_LIBDECOR_H
+             if (window_data->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_LIBDECOR) {
+                 if (window_data->shell_surface.libdecor.frame) {
+@@ -937,6 +962,7 @@
+                 }
+             }
+             return true;
++        }
+ 
+         case SDL_HITTEST_RESIZE_TOPLEFT:
+         case SDL_HITTEST_RESIZE_TOP:
+@@ -1007,7 +1033,10 @@
+             seat->pointer.buttons_pressed &= ~(SDL_BUTTON_MASK(sdl_button));
+         }
+ 
+-        if (sdl_button == SDL_BUTTON_LEFT && Wayland_ProcessHitTest(seat, serial)) {
++        if (down && sdl_button != SDL_BUTTON_LEFT) {
++            seat->pointer.titlebar_click_window = 0;
++        }
++        if (sdl_button == SDL_BUTTON_LEFT && Wayland_ProcessHitTest(seat, serial, nsTimestamp, down)) {
+             return; // don't pass this event on to app.
+         }
+ 
+--- a/src/video/wayland/SDL_waylandevents_c.h
++++ b/src/video/wayland/SDL_waylandevents_c.h
+@@ -195,6 +195,11 @@
+         Uint32 enter_serial;
+         SDL_MouseButtonFlags buttons_pressed;
+         SDL_Point last_motion;
++
++        // Goo: titlebar clicks are consumed before SDL mouse click tracking.
++        SDL_WindowID titlebar_click_window;
++        Uint64 titlebar_click_timestamp;
++        SDL_Point titlebar_click_position;
+         bool is_confined;
+ 
+         SDL_MouseID sdl_id;
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -750,8 +750,10 @@
+         wind->pending_config_ack = false;
+         ConfigureWindowGeometry(window);
+         xdg_surface_ack_configure(xdg, serial);
+-    } else {
++    } else if (!wind->pending_config_ack) {
+         wind->pending_config_ack = true;
++        // Goo: wake render-on-demand clients so the next frame can acknowledge this resize.
++        SDL_SendWindowEvent(window, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
+     }
+ 
+     if (wind->shell_surface_status == WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE) {
+@@ -1447,6 +1449,11 @@
+         struct libdecor_state *state = libdecor_state_new(wind->current.logical_width, wind->current.logical_height);
+         libdecor_frame_commit(frame, state, configuration);
+         libdecor_state_free(state);
++
++        // Goo: keep idle clients presenting while interactive configurations are throttled.
++        if (started_resize) {
++            SDL_SendWindowEvent(window, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
++        }
+     }
+ 
+     if (wind->shell_surface_status == WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE) {

@@ -10,7 +10,7 @@ wayland_version="1.18.0"
 wayland_sha256="4675a79f091020817a98fd0484e7208c8762242266967f55a67776936c2e294d"
 work="$(mktemp -d)"
 trap 'rm -rf -- "$work"' EXIT
-for command_name in curl meson ninja pkg-config readelf sha256sum tar; do
+for command_name in curl meson ninja patch pkg-config python3 readelf sha256sum tar; do
   command -v "$command_name" >/dev/null || {
     printf 'required command missing: %s\n' "$command_name" >&2
     exit 1
@@ -44,6 +44,9 @@ curl -fsSL "https://github.com/libsdl-org/SDL/releases/download/release-${versio
 printf '%s  %s\n' "$sha256" "$work/SDL3.tar.gz" | sha256sum -c -
 mkdir "$work/src"
 tar -xzf "$work/SDL3.tar.gz" -C "$work/src" --strip-components=1
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-window-interactions.patch"
+python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
 find "$work/src/wayland-protocols" -type f -name '*.xml' \

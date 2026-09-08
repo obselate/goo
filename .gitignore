@@ -14,6 +14,8 @@
 !/.github/dependabot.yml
 !/.github/RELEASING.md
 !/.github/scripts/
+!/.github/patches/
+!/.github/patches/**
 /.github/scripts/*
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
