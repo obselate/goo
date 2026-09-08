@@ -5,6 +5,103 @@ import System.Collections.Generic
 import System.Numerics
 import Goo
 
+class MotionComponentRegionCell : Cell {
+  internal var Content Func[Blob]?
+  private var revision int64
+
+  public init() {
+    Content = nil
+    revision = 0L
+  }
+
+  internal func SetRevision(value int64) {
+    if revision == value {
+      return
+    }
+    revision = value
+    Rebuild()
+  }
+
+  override func Build() Blob {
+    guard let content = Content else { return Container{} }
+    return content()
+  }
+}
+
+class MotionComponentSlotCell : Cell {
+  private var title string
+  private var visible bool
+  private var revision int64
+  private var content Func[Blob]?
+  private var region MotionComponentRegionCell?
+
+  public init() {
+    title = ""
+    visible = false
+    revision = 0L
+    content = nil
+    region = nil
+  }
+
+  internal func Initialize(value string, builder Func[Blob], shown bool) {
+    title = value
+    content = builder
+    visible = shown
+  }
+
+  internal func SetVisible(value bool) {
+    if visible == value {
+      return
+    }
+    visible = value
+    Rebuild()
+  }
+
+  internal func InvalidateContent() {
+    revision++
+    if visible {
+      region?.SetRevision(revision)
+    }
+  }
+
+  override func Build() Blob -> Container {
+    Display: if visible { Display.Flex } else { Display.None },
+    FlexGrow: 1.0,
+    FlexShrink: 0.0,
+    FlexBasis: Length.Percent(48),
+    MinWidth: 340,
+    Padding: 16,
+    BorderRadius: 6,
+    BorderWidth: 1,
+    BorderColor: GalleryTheme.Border,
+    BackgroundColor: GalleryTheme.SurfaceRaised,
+    FlexDirection: FlexDirection.Column,
+    Gap: 12,
+    Children: {
+      Container{
+        Key: "header",
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Children: {
+          Text{
+            Content: title,
+            FontSize: 12,
+            FontWeight: 700,
+            Color: GalleryTheme.Ink,
+          },
+        },
+      },
+      Cell.Mount[MotionComponentRegionCell](
+        "content",
+        (cell MotionComponentRegionCell) -> {
+          cell.Content = content
+          cell.SetRevision(revision)
+          region = cell
+        }),
+    },
+  }
+}
+
 class MotionChapter : Cell {
   /// Gets or sets the pre-generated mathematical vector and image assets.
   public var Assets GalleryMathAssets?
@@ -98,6 +195,11 @@ class MotionChapter : Cell {
   private var showAlertBanner bool
   private var isAccordionOpen bool
   private var feedbackToastText string
+  private var formsSlot MotionComponentSlotCell?
+  private var selectionSlot MotionComponentSlotCell?
+  private var buttonsSlot MotionComponentSlotCell?
+  private var displaySlot MotionComponentSlotCell?
+  private var statusRegion MotionComponentRegionCell?
 
   public init() {
     Compact = false
@@ -142,6 +244,11 @@ class MotionChapter : Cell {
     // Exhibit 1: UI Component Gallery
     compSliderTrackHandle = ElementHandle{}
     sliderDragging = false
+    formsSlot = nil
+    selectionSlot = nil
+    buttonsSlot = nil
+    displaySlot = nil
+    statusRegion = nil
     compCategory = 0
     inputHandleText = "@goo_developer"
     searchFilterText = "Vulkan Pipeline"
@@ -149,12 +256,12 @@ class MotionChapter : Cell {
     switchAutosave = true
     switchHardware = true
     switchTelemetry = false
-    switchAutosaveThumbX = Animate(23.0)
-    switchAutosaveTrackColor = Animate(GalleryTheme.Accent)
-    switchHardwareThumbX = Animate(23.0)
-    switchHardwareTrackColor = Animate(GalleryTheme.Accent)
-    switchTelemetryThumbX = Animate(3.0)
-    switchTelemetryTrackColor = Animate(Color.Rgb(39, 39, 42))
+    switchAutosaveThumbX = Animate(23.0, (value float64) -> invalidateSelectionRegion())
+    switchAutosaveTrackColor = Animate(GalleryTheme.Accent, (value Color) -> invalidateSelectionRegion())
+    switchHardwareThumbX = Animate(23.0, (value float64) -> invalidateSelectionRegion())
+    switchHardwareTrackColor = Animate(GalleryTheme.Accent, (value Color) -> invalidateSelectionRegion())
+    switchTelemetryThumbX = Animate(3.0, (value float64) -> invalidateSelectionRegion())
+    switchTelemetryTrackColor = Animate(Color.Rgb(39, 39, 42), (value Color) -> invalidateSelectionRegion())
     checkDigest = true
     check2Fa = true
     selectedRadioTier = 1
@@ -1006,6 +1113,22 @@ class MotionChapter : Cell {
 
   // --- Exhibit 1: UI Component Gallery ---
 
+  private func invalidateSelectionRegion() {
+    selectionSlot?.InvalidateContent()
+  }
+
+  private func invalidateComponentRegions() {
+    formsSlot?.InvalidateContent()
+    selectionSlot?.InvalidateContent()
+    buttonsSlot?.InvalidateContent()
+    displaySlot?.InvalidateContent()
+  }
+
+  private func setFeedbackToast(value string) {
+    feedbackToastText = value
+    statusRegion?.Rebuild()
+  }
+
   private func resetComponentGalleryDefaults() {
     compCategory = 0
     inputHandleText = "@goo_developer"
@@ -1029,59 +1152,51 @@ class MotionChapter : Cell {
     isFollowingUser = false
     showAlertBanner = true
     isAccordionOpen = false
-    feedbackToastText = "Reset to defaults"
-    Rebuild()
+    setFeedbackToast("Reset to defaults")
+    invalidateComponentRegions()
   }
 
   private func handleInputHandleChanged(val string) {
     inputHandleText = val
-    feedbackToastText = "Typed: " + val
-    Rebuild()
+    setFeedbackToast("Typed: " + val)
   }
 
   private func handleSearchFilterChanged(val string) {
     searchFilterText = val
-    feedbackToastText = "Filter: " + val
-    Rebuild()
+    setFeedbackToast("Filter: " + val)
   }
 
   private func clearInputHandle() {
     inputHandleText = ""
-    feedbackToastText = "Cleared handle"
-    Rebuild()
+    setFeedbackToast("Cleared handle")
   }
 
   private func setInputHandle(val string) {
     inputHandleText = val
-    feedbackToastText = "Selected " + val
-    Rebuild()
+    setFeedbackToast("Selected " + val)
   }
 
   private func clearSearchFilter() {
     searchFilterText = ""
-    feedbackToastText = "Cleared search"
-    Rebuild()
+    setFeedbackToast("Cleared search")
   }
 
   private func setSearchFilter(val string) {
     searchFilterText = val
-    feedbackToastText = "Filter: " + val
-    Rebuild()
+    setFeedbackToast("Filter: " + val)
   }
 
   private func decrementStepper() {
     if stepperCount > 1 {
       stepperCount = stepperCount - 1
-      feedbackToastText = "Count: " + stepperCount.ToString()
-      Rebuild()
+      setFeedbackToast("Count: " + stepperCount.ToString())
     }
   }
 
   private func incrementStepper() {
     if stepperCount < 99 {
       stepperCount = stepperCount + 1
-      feedbackToastText = "Count: " + stepperCount.ToString()
-      Rebuild()
+      setFeedbackToast("Count: " + stepperCount.ToString())
     }
   }
 
@@ -1089,48 +1204,41 @@ class MotionChapter : Cell {
     switchAutosave = !switchAutosave
     switchAutosaveThumbX.To(if switchAutosave { 23.0 } else { 3.0 }, GalleryPosterReflowSpec)
     switchAutosaveTrackColor.To(if switchAutosave { GalleryTheme.Accent } else { Color.Rgb(39, 39, 42) }, GalleryPosterReflowSpec)
-    feedbackToastText = "Auto-save: " + if switchAutosave { "ON" } else { "OFF" }
-    Rebuild()
+    setFeedbackToast("Auto-save: " + if switchAutosave { "ON" } else { "OFF" })
   }
 
   private func toggleSwitchHardware() {
     switchHardware = !switchHardware
     switchHardwareThumbX.To(if switchHardware { 23.0 } else { 3.0 }, GalleryPosterReflowSpec)
     switchHardwareTrackColor.To(if switchHardware { GalleryTheme.Accent } else { Color.Rgb(39, 39, 42) }, GalleryPosterReflowSpec)
-    feedbackToastText = "Hardware Accel: " + if switchHardware { "ON" } else { "OFF" }
-    Rebuild()
+    setFeedbackToast("Hardware Accel: " + if switchHardware { "ON" } else { "OFF" })
   }
 
   private func toggleSwitchTelemetry() {
     switchTelemetry = !switchTelemetry
     switchTelemetryThumbX.To(if switchTelemetry { 23.0 } else { 3.0 }, GalleryPosterReflowSpec)
     switchTelemetryTrackColor.To(if switchTelemetry { GalleryTheme.Accent } else { Color.Rgb(39, 39, 42) }, GalleryPosterReflowSpec)
-    feedbackToastText = "Telemetry: " + if switchTelemetry { "ON" } else { "OFF" }
-    Rebuild()
+    setFeedbackToast("Telemetry: " + if switchTelemetry { "ON" } else { "OFF" })
   }
 
   private func toggleCheckDigest() {
     checkDigest = !checkDigest
-    feedbackToastText = "Email digest: " + checkDigest.ToString()
-    Rebuild()
+    setFeedbackToast("Email digest: " + checkDigest.ToString())
   }
 
   private func toggleCheck2Fa() {
     check2Fa = !check2Fa
-    feedbackToastText = "2FA: " + check2Fa.ToString()
-    Rebuild()
+    setFeedbackToast("2FA: " + check2Fa.ToString())
   }
 
   private func selectTier(tier int32) {
     selectedRadioTier = tier
-    feedbackToastText = "Selected tier: " + tier.ToString()
-    Rebuild()
+    setFeedbackToast("Selected tier: " + tier.ToString())
   }
 
   private func selectViewMode(mode int32) {
     selectedViewMode = mode
-    feedbackToastText = "View mode: " + mode.ToString()
-    Rebuild()
+    setFeedbackToast("View mode: " + mode.ToString())
   }
 
   private func updateCompSliderFromPointer(e PointerEvent) {
@@ -1138,59 +1246,49 @@ class MotionChapter : Cell {
     if width > 0.0 {
       let part = Math.Clamp(e.Position.X / width, 0.0, 1.0)
       sliderValue = Math.Round(part * 100.0)
-      feedbackToastText = "Scale set to " + sliderValue.ToString("F0") + "%"
-      Rebuild()
+      setFeedbackToast("Scale set to " + sliderValue.ToString("F0") + "%")
     }
   }
 
   private func setSliderScale(v float64) {
     sliderValue = v
-    feedbackToastText = "Scale set to " + v.ToString("F0") + "%"
-    Rebuild()
+    setFeedbackToast("Scale set to " + v.ToString("F0") + "%")
   }
 
   private func advanceProgress() {
     progressValue = if progressValue >= 100.0 { 15.0 } else { progressValue + 15.0 }
-    feedbackToastText = "Progress: " + progressValue.ToString("F0") + "%"
-    Rebuild()
+    setFeedbackToast("Progress: " + progressValue.ToString("F0") + "%")
   }
 
   private func clickPrimaryAction() {
-    feedbackToastText = "Clicked Primary Action"
-    Rebuild()
+    setFeedbackToast("Clicked Primary Action")
   }
 
   private func clickSecondaryAction() {
-    feedbackToastText = "Clicked Secondary Action"
-    Rebuild()
+    setFeedbackToast("Clicked Secondary Action")
   }
 
   private func clickOutlineAction() {
-    feedbackToastText = "Clicked Outline Action"
-    Rebuild()
+    setFeedbackToast("Clicked Outline Action")
   }
 
   private func clickDestructiveAction() {
-    feedbackToastText = "Clicked Destructive Action"
-    Rebuild()
+    setFeedbackToast("Clicked Destructive Action")
   }
 
   private func toggleUserFollow() {
     isFollowingUser = !isFollowingUser
-    feedbackToastText = if isFollowingUser { "Now following Alex Vance" } else { "Unfollowed Alex Vance" }
-    Rebuild()
+    setFeedbackToast(if isFollowingUser { "Now following Alex Vance" } else { "Unfollowed Alex Vance" })
   }
 
   private func toggleAlertBanner() {
     showAlertBanner = !showAlertBanner
-    feedbackToastText = if showAlertBanner { "Restored banner" } else { "Dismissed banner" }
-    Rebuild()
+    setFeedbackToast(if showAlertBanner { "Restored banner" } else { "Dismissed banner" })
   }
 
   private func toggleAccordion() {
     isAccordionOpen = !isAccordionOpen
-    feedbackToastText = if isAccordionOpen { "Expanded disclosure" } else { "Collapsed disclosure" }
-    Rebuild()
+    setFeedbackToast(if isAccordionOpen { "Expanded disclosure" } else { "Collapsed disclosure" })
   }
 
   private func compCategoryBtn(label string, cat int32) Button {
@@ -1213,7 +1311,6 @@ class MotionChapter : Cell {
       Focus: Style{ OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong },
       OnClick: () -> {
         compCategory = cat
-        Rebuild()
       },
       Children: {
         Text{
@@ -1226,37 +1323,10 @@ class MotionChapter : Cell {
     }
   }
 
-  private func compCard(title string, children List[Blob]) Container -> Container {
-    FlexGrow: 1.0,
-    FlexShrink: 0.0,
-    FlexBasis: Length.Percent(48),
-    MinWidth: 340,
-    Padding: 16,
-    BorderRadius: 6,
-    BorderWidth: 1,
-    BorderColor: GalleryTheme.Border,
-    BackgroundColor: GalleryTheme.SurfaceRaised,
+  private func compCardContent(children List[Blob]) Container -> Container {
     FlexDirection: FlexDirection.Column,
-    Gap: 12,
-    Children: {
-      Container{
-        FlexDirection: FlexDirection.Row,
-        AlignItems: AlignItems.Center,
-        Children: {
-          Text{
-            Content: title,
-            FontSize: 12,
-            FontWeight: 700,
-            Color: GalleryTheme.Ink,
-          },
-        },
-      },
-      Container{
-        FlexDirection: FlexDirection.Column,
-        Gap: 10,
-        Children: children,
-      },
-    },
+    Gap: 10,
+    Children: children,
   }
 
   private func compSwitch(label string, subtitle string, thumbX float64, trackColor Color, onToggle Action) Container -> Container {
@@ -1969,97 +2039,156 @@ class MotionChapter : Cell {
     },
   }
 
+  private func buildFormsRegion() Blob {
+    let children = List[Blob]()
+    children.Add(compTextInput(
+      "comp-handle-entry",
+      "User Handle",
+      inputHandleText,
+      "Enter handle...",
+      (val string) -> handleInputHandleChanged(val),
+      () -> clearInputHandle(),
+      () -> setInputHandle("@dev"),
+      () -> setInputHandle("@wayland"),
+      () -> setInputHandle("@gsharp")))
+    children.Add(compTextInput(
+      "comp-filter-entry",
+      "Filter Query",
+      searchFilterText,
+      "Search components...",
+      (val string) -> handleSearchFilterChanged(val),
+      () -> clearSearchFilter(),
+      () -> setSearchFilter("Button"),
+      () -> setSearchFilter("Input"),
+      () -> setSearchFilter("Modal")))
+    children.Add(compStepper(
+      "Batch Instance Count",
+      stepperCount,
+      () -> decrementStepper(),
+      () -> incrementStepper()))
+    return compCardContent(children)
+  }
+
+  private func buildSelectionRegion() Blob {
+    let children = List[Blob]()
+    children.Add(compSwitch("Auto-save revisions", "Persist changes instantly", switchAutosaveThumbX.Value, switchAutosaveTrackColor.Value, () -> toggleSwitchAutosave()))
+    children.Add(compSwitch("Hardware acceleration", "Vulkan pipeline rasterization", switchHardwareThumbX.Value, switchHardwareTrackColor.Value, () -> toggleSwitchHardware()))
+    children.Add(compSwitch("Telemetry diagnostics", "Anonymous performance traces", switchTelemetryThumbX.Value, switchTelemetryTrackColor.Value, () -> toggleSwitchTelemetry()))
+    children.Add(compCheckbox("Email digest updates", checkDigest, () -> toggleCheckDigest()))
+    children.Add(compCheckbox("Require two-factor auth", check2Fa, () -> toggleCheck2Fa()))
+    children.Add(compRadio("Standard Plan (Free)", "Community access, 5 projects", selectedRadioTier == 0, () -> selectTier(0)))
+    children.Add(compRadio("Pro Developer ($19/mo)", "Unlimited pipelines, priority SLA", selectedRadioTier == 1, () -> selectTier(1)))
+    children.Add(compRadio("Enterprise Dedicated ($99/mo)", "Custom hardware, air-gapped nodes", selectedRadioTier == 2, () -> selectTier(2)))
+    return compCardContent(children)
+  }
+
+  private func buildButtonsRegion() Blob {
+    let children = List[Blob]()
+    children.Add(Container{
+      FlexDirection: FlexDirection.Row,
+      BorderRadius: 6,
+      Padding: 3,
+      BackgroundColor: Color.FromNormalized(0.08F, 0.08F, 0.10F, 0.9F),
+      BorderWidth: 1,
+      BorderColor: GalleryTheme.BorderStrong,
+      Children: {
+        compSegmentBtn(GalleryTheme.IconGridView, "Grid", selectedViewMode == 0, () -> selectViewMode(0)),
+        compSegmentBtn(GalleryTheme.IconViewList, "List", selectedViewMode == 1, () -> selectViewMode(1)),
+        compSegmentBtn(GalleryTheme.IconVerticalSplit, "Split", selectedViewMode == 2, () -> selectViewMode(2)),
+      },
+    })
+    children.Add(Container{
+      FlexDirection: FlexDirection.Row,
+      Gap: 6,
+      FlexWrap: FlexWrap.Wrap,
+      Children: {
+        actionBtn("Primary Action", true, () -> clickPrimaryAction()),
+        actionBtn("Secondary", false, () -> clickSecondaryAction()),
+        compOutlineBtn("Outline", () -> clickOutlineAction()),
+        compDangerBtn("Destructive", () -> clickDestructiveAction()),
+      },
+    })
+    children.Add(compAvatarCard("Alex Vance", "@avantgarde", isFollowingUser, () -> toggleUserFollow()))
+    return compCardContent(children)
+  }
+
+  private func buildDisplayRegion() Blob {
+    let children = List[Blob]()
+    children.Add(compSlider("Render Viewport Scale", sliderValue))
+    children.Add(compProgressBar("Sync Asset Cache", progressValue, () -> advanceProgress()))
+    children.Add(compAlertBanner(
+      "Vulkan swapchain initialized at 144 Hz with zero mailbox latency.",
+      showAlertBanner,
+      () -> toggleAlertBanner()))
+    children.Add(compAccordion("System Architecture & Pipeline", isAccordionOpen, () -> toggleAccordion()))
+    return compCardContent(children)
+  }
+
+  private func buildStatusRegion() Blob -> Text {
+    Content: feedbackToastText,
+    FontSize: 10,
+    FontWeight: 700,
+    Color: GalleryTheme.AccentStrong,
+  }
+
+  private func mountFormsSlot() Blob -> Cell.MountSeeded[MotionComponentSlotCell](
+    "component-card-forms",
+    (cell MotionComponentSlotCell) -> {
+      cell.Initialize(
+        "Text Inputs & Steppers",
+        () -> buildFormsRegion(),
+        compCategory == 0 || compCategory == 1)
+      formsSlot = cell
+    },
+    (cell MotionComponentSlotCell) -> cell.SetVisible(compCategory == 0 || compCategory == 1))
+
+  private func mountSelectionSlot() Blob -> Cell.MountSeeded[MotionComponentSlotCell](
+    "component-card-selection",
+    (cell MotionComponentSlotCell) -> {
+      cell.Initialize(
+        "Switches, checks & radios",
+        () -> buildSelectionRegion(),
+        compCategory == 0 || compCategory == 2)
+      selectionSlot = cell
+    },
+    (cell MotionComponentSlotCell) -> cell.SetVisible(compCategory == 0 || compCategory == 2))
+
+  private func mountButtonsSlot() Blob -> Cell.MountSeeded[MotionComponentSlotCell](
+    "component-card-buttons",
+    (cell MotionComponentSlotCell) -> {
+      cell.Initialize(
+        "Buttons, actions & identity",
+        () -> buildButtonsRegion(),
+        compCategory == 0 || compCategory == 3)
+      buttonsSlot = cell
+    },
+    (cell MotionComponentSlotCell) -> cell.SetVisible(compCategory == 0 || compCategory == 3))
+
+  private func mountDisplaySlot() Blob -> Cell.MountSeeded[MotionComponentSlotCell](
+    "component-card-display",
+    (cell MotionComponentSlotCell) -> {
+      cell.Initialize(
+        "Range, progress & feedback",
+        () -> buildDisplayRegion(),
+        compCategory == 0 || compCategory == 4)
+      displaySlot = cell
+    },
+    (cell MotionComponentSlotCell) -> cell.SetVisible(compCategory == 0 || compCategory == 4))
+
+  private func mountStatusRegion() Blob -> Cell.MountSeeded[MotionComponentRegionCell](
+    "component-status",
+    (cell MotionComponentRegionCell) -> {
+      cell.Content = () -> buildStatusRegion()
+      statusRegion = cell
+    },
+    nil)
+
   private func buildComponentGalleryContent() Blob {
     let cards = List[Blob]()
-
-    // Group 1: Inputs & Forms
-    if compCategory == 0 || compCategory == 1 {
-      let formChildren = List[Blob]()
-      formChildren.Add(compTextInput(
-        "comp-handle-entry",
-        "User Handle",
-        inputHandleText,
-        "Enter handle...",
-        (val string) -> handleInputHandleChanged(val),
-        () -> clearInputHandle(),
-        () -> setInputHandle("@dev"),
-        () -> setInputHandle("@wayland"),
-        () -> setInputHandle("@gsharp")))
-      formChildren.Add(compTextInput(
-        "comp-filter-entry",
-        "Filter Query",
-        searchFilterText,
-        "Search components...",
-        (val string) -> handleSearchFilterChanged(val),
-        () -> clearSearchFilter(),
-        () -> setSearchFilter("Button"),
-        () -> setSearchFilter("Input"),
-        () -> setSearchFilter("Modal")))
-      formChildren.Add(compStepper(
-        "Batch Instance Count",
-        stepperCount,
-        () -> decrementStepper(),
-        () -> incrementStepper()))
-      cards.Add(compCard("Text Inputs & Steppers", formChildren))
-    }
-
-    // Group 2: Selection & Toggles
-    if compCategory == 0 || compCategory == 2 {
-      let selectChildren = List[Blob]()
-      selectChildren.Add(compSwitch("Auto-save revisions", "Persist changes instantly", switchAutosaveThumbX.Value, switchAutosaveTrackColor.Value, () -> toggleSwitchAutosave()))
-      selectChildren.Add(compSwitch("Hardware acceleration", "Vulkan pipeline rasterization", switchHardwareThumbX.Value, switchHardwareTrackColor.Value, () -> toggleSwitchHardware()))
-      selectChildren.Add(compSwitch("Telemetry diagnostics", "Anonymous performance traces", switchTelemetryThumbX.Value, switchTelemetryTrackColor.Value, () -> toggleSwitchTelemetry()))
-      selectChildren.Add(compCheckbox("Email digest updates", checkDigest, () -> toggleCheckDigest()))
-      selectChildren.Add(compCheckbox("Require two-factor auth", check2Fa, () -> toggleCheck2Fa()))
-      selectChildren.Add(compRadio("Standard Plan (Free)", "Community access, 5 projects", selectedRadioTier == 0, () -> selectTier(0)))
-      selectChildren.Add(compRadio("Pro Developer ($19/mo)", "Unlimited pipelines, priority SLA", selectedRadioTier == 1, () -> selectTier(1)))
-      selectChildren.Add(compRadio("Enterprise Dedicated ($99/mo)", "Custom hardware, air-gapped nodes", selectedRadioTier == 2, () -> selectTier(2)))
-      cards.Add(compCard("Switches, checks & radios", selectChildren))
-    }
-
-    // Group 3: Buttons & Actions
-    if compCategory == 0 || compCategory == 3 {
-      let btnChildren = List[Blob]()
-      btnChildren.Add(Container{
-        FlexDirection: FlexDirection.Row,
-        BorderRadius: 6,
-        Padding: 3,
-        BackgroundColor: Color.FromNormalized(0.08F, 0.08F, 0.10F, 0.9F),
-        BorderWidth: 1,
-        BorderColor: GalleryTheme.BorderStrong,
-        Children: {
-          compSegmentBtn(GalleryTheme.IconGridView, "Grid", selectedViewMode == 0, () -> selectViewMode(0)),
-          compSegmentBtn(GalleryTheme.IconViewList, "List", selectedViewMode == 1, () -> selectViewMode(1)),
-          compSegmentBtn(GalleryTheme.IconVerticalSplit, "Split", selectedViewMode == 2, () -> selectViewMode(2)),
-        },
-      })
-      btnChildren.Add(Container{
-        FlexDirection: FlexDirection.Row,
-        Gap: 6,
-        FlexWrap: FlexWrap.Wrap,
-        Children: {
-          actionBtn("Primary Action", true, () -> clickPrimaryAction()),
-          actionBtn("Secondary", false, () -> clickSecondaryAction()),
-          compOutlineBtn("Outline", () -> clickOutlineAction()),
-          compDangerBtn("Destructive", () -> clickDestructiveAction()),
-        },
-      })
-      btnChildren.Add(compAvatarCard("Alex Vance", "@avantgarde", isFollowingUser, () -> toggleUserFollow()))
-      cards.Add(compCard("Buttons, actions & identity", btnChildren))
-    }
-
-    // Group 4: Sliders, Progress & Feedback
-    if compCategory == 0 || compCategory == 4 {
-      let displayChildren = List[Blob]()
-      displayChildren.Add(compSlider("Render Viewport Scale", sliderValue))
-      displayChildren.Add(compProgressBar("Sync Asset Cache", progressValue, () -> advanceProgress()))
-      displayChildren.Add(compAlertBanner(
-        "Vulkan swapchain initialized at 144 Hz with zero mailbox latency.",
-        showAlertBanner,
-        () -> toggleAlertBanner()))
-      displayChildren.Add(compAccordion("System Architecture & Pipeline", isAccordionOpen, () -> toggleAccordion()))
-      cards.Add(compCard("Range, progress & feedback", displayChildren))
-    }
+    cards.Add(mountFormsSlot())
+    cards.Add(mountSelectionSlot())
+    cards.Add(mountButtonsSlot())
+    cards.Add(mountDisplaySlot())
 
     return Container{
       Width: Length.Percent(100),
@@ -2145,17 +2274,13 @@ class MotionChapter : Cell {
           JustifyContent: JustifyContent.SpaceBetween,
           Children: {
             Text{
+              Key: "component-capabilities",
               Content: "Text input · switches · selection · stepper · range · progress · disclosure",
               FontSize: 10,
               FontWeight: 600,
               Color: GalleryTheme.InkMuted,
             },
-            Text{
-              Content: feedbackToastText,
-              FontSize: 10,
-              FontWeight: 700,
-              Color: GalleryTheme.AccentStrong,
-            },
+            mountStatusRegion(),
           },
         },
       },
