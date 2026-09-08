@@ -965,18 +965,12 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
         }
       let destinationBase = nint(slot.Mapped)
       +nint(uint64(destinationFirst) * RecordBytes)
-      var recordIndex int32 = 0
-      while recordIndex < recordCount {
-        let source = *uint32(nint(&segment.Records[recordIndex]))
-        let destination = *uint32(destinationBase
-          +nint(uint64(recordIndex) * RecordBytes))
-        var wordIndex int32 = 0
-        while wordIndex < 32 {
-          destination[wordIndex] = source[wordIndex]
-          wordIndex = wordIndex + 1
-        }
-        recordIndex = recordIndex + 1
-      }
+      let copyBytes = uint64(recordCount) * RecordBytes
+      System.Buffer.MemoryCopy(
+        *void(nint(&segment.Records[0])),
+        *void(destinationBase),
+        copyBytes,
+        copyBytes)
     }
 
   private func AppendRange(slot VulkanTextFrameSlot, firstRecord int32,
