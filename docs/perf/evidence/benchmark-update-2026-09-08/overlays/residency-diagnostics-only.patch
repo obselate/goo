@@ -1,0 +1,218 @@
+--- /dev/null
++++ b/Goo/Rendering/Vulkan/VulkanMemory.Snapshot.gs
+@@ -0,0 +1,131 @@
++package Goo
++
++import System
++
++internal data struct VulkanMemoryBlockSnapshot {
++  internal var Memory uint64
++  internal var MemoryTypeIndex uint32
++  internal var HeapIndex uint32
++  internal var PropertyFlags uint32
++  internal var HeapSize VkDeviceSize
++  internal var HeapFlags uint32
++  internal var ResourceClass VulkanMemoryResourceClass
++  internal var ResidentBlockBytes VkDeviceSize
++  internal var AllocatedPayloadBytes VkDeviceSize
++  internal var LivePayloadBytes VkDeviceSize
++  internal var RetiredBytes VkDeviceSize
++  internal var AllocatedSpanBytes VkDeviceSize
++  internal var FreeSpanBytes VkDeviceSize
++  internal var AllocationCount uint32
++  internal var LiveAllocationCount uint32
++  internal var RetiredAllocationCount uint32
++  internal var Dedicated bool
++  internal var HostVisible bool
++  internal var HostCoherent bool
++  internal var MappedAddress uint64
++  internal var MappedBytes VkDeviceSize
++}
++
++internal data struct VulkanFrameMemoryCapacitySnapshot {
++  internal var SlotCount int32
++  internal var DeviceBytes VkDeviceSize
++  internal var StagingBytes VkDeviceSize
++  internal var HostBufferBytes VkDeviceSize
++  internal var HistoryBytes uint64
++}
++
++internal data struct VulkanImageMemoryCapacitySnapshot {
++  internal var ResidentBytes VkDeviceSize
++  internal var StagingConfiguredBytes VkDeviceSize
++  internal var StagingAllocatedBytes VkDeviceSize
++  internal var StagingPlacementBytes VkDeviceSize
++  internal var StagingMapped bool
++}
++
++internal data struct VulkanMemoryOwnerCapacitySnapshot {
++  internal var SwapchainWidth uint32
++  internal var SwapchainHeight uint32
++  internal var SwapchainImageCount uint32
++  internal var SwapchainRawRgbaBytes uint64
++  internal var ImageResidentBytes VkDeviceSize
++  internal var ImageStagingConfiguredBytes VkDeviceSize
++  internal var ImageStagingAllocatedBytes VkDeviceSize
++  internal var ImageStagingPlacementBytes VkDeviceSize
++  internal var ImageStagingMapped bool
++  internal var PrimitiveFrame VulkanFrameMemoryCapacitySnapshot
++  internal var TextFrame VulkanFrameMemoryCapacitySnapshot
++  internal var ClipFrame VulkanFrameMemoryCapacitySnapshot
++  internal var TextAtlasCount int32
++  internal var TextAtlasPerBufferBytes VkDeviceSize
++  internal var PathAtlasPerBufferBytes VkDeviceSize
++  internal var PathCpuShadowBytes uint64
++  internal var ClipAtlasResidentBytes VkDeviceSize
++  internal var LayerResidentBytes VkDeviceSize
++  internal var LayerTargetCount int32
++  internal var ReadbackResidentResourceBytes VkDeviceSize
++}
++
++internal unsafe partial class VulkanMemoryAllocator {
++  internal func SnapshotBlocks() []VulkanMemoryBlockSnapshot {
++    EnsureOpen()
++    let result = [blockCount]VulkanMemoryBlockSnapshot
++    var blockIndex int32 = 0
++    while blockIndex < blockCount {
++      guard let block = blocks[blockIndex] else {
++        throw InvalidOperationException("Vulkan memory block metadata is missing")
++      }
++      var allocatedPayload VkDeviceSize
++      var livePayload VkDeviceSize
++      var retiredPayload VkDeviceSize
++      var allocatedSpan VkDeviceSize
++      var liveAllocations uint32
++      var retiredAllocations uint32
++      var allocationIndex int32 = 0
++      while allocationIndex < activeCount {
++        if let allocation = activeAllocations[allocationIndex] {
++          if allocation.block == block {
++            allocatedPayload += allocation.size
++            allocatedSpan += allocation.placementSpan
++            if allocation.state == VulkanMemoryAllocationState.Live {
++              livePayload += allocation.size
++              liveAllocations++
++            } else if allocation.state == VulkanMemoryAllocationState.Retired {
++              retiredPayload += allocation.size
++              retiredAllocations++
++            }
++          }
++        }
++        allocationIndex++
++      }
++      if allocatedSpan > block.size {
++        throw InvalidOperationException("Vulkan memory block placement exceeds resident bytes")
++      }
++      let heap = MemoryHeap(memoryProperties, block.heapIndex)
++      result[blockIndex] = VulkanMemoryBlockSnapshot{
++        Memory: block.memory,
++        MemoryTypeIndex: block.memoryTypeIndex,
++        HeapIndex: block.heapIndex,
++        PropertyFlags: uint32(block.propertyFlags),
++        HeapSize: heap.size,
++        HeapFlags: uint32(heap.flags),
++        ResourceClass: block.resourceClass,
++        ResidentBlockBytes: block.size,
++        AllocatedPayloadBytes: allocatedPayload,
++        LivePayloadBytes: livePayload,
++        RetiredBytes: retiredPayload,
++        AllocatedSpanBytes: allocatedSpan,
++        FreeSpanBytes: block.size - allocatedSpan,
++        AllocationCount: block.allocationCount,
++        LiveAllocationCount: liveAllocations,
++        RetiredAllocationCount: retiredAllocations,
++        Dedicated: block.dedicated,
++        HostVisible: block.hostVisible,
++        HostCoherent: block.hostCoherent,
++        MappedAddress: if block.mapped == nil { 0uL } else { uint64(nint(block.mapped)) },
++        MappedBytes: if block.mapped == nil { 0uL } else { block.size },
++      }
++      blockIndex++
++    }
++    return result
++  }
++}
+--- a/Goo/Rendering/Vulkan/VulkanClipMaskFrameData.gs
++++ b/Goo/Rendering/Vulkan/VulkanClipMaskFrameData.gs
+@@ -236,6 +236,20 @@
+         index++
+       }
+       return count
++    }
++  }
++
++  internal func MemoryCapacitySnapshotForTest() VulkanFrameMemoryCapacitySnapshot {
++    var hostBufferBytes VkDeviceSize
++    var index int32 = 0
++    while index < slots.Length {
++      let slot = slots[index]
++      if slot.Buffer != 0uL { hostBufferBytes += slot.Capacity }
++      index++
++    }
++    return VulkanFrameMemoryCapacitySnapshot{
++      SlotCount: slots.Length,
++      HostBufferBytes: hostBufferBytes,
+     }
+   }
+ 
+--- a/Goo/Rendering/Vulkan/VulkanPrimitiveFrameData.gs
++++ b/Goo/Rendering/Vulkan/VulkanPrimitiveFrameData.gs
+@@ -393,6 +393,26 @@
+     }
+   }
+ 
++  internal func MemoryCapacitySnapshotForTest() VulkanFrameMemoryCapacitySnapshot {
++    var deviceBytes VkDeviceSize
++    var stagingBytes VkDeviceSize
++    var historyBytes uint64
++    var index int32 = 0
++    while index < slots.Length {
++      let slot = slots[index]
++      if slot.Buffer != 0uL { deviceBytes += slot.Capacity }
++      if slot.StagingBuffer != 0uL { stagingBytes += slot.Capacity }
++      historyBytes += uint64(slot.HistoryWords.Length) * 4uL
++      index++
++    }
++    return VulkanFrameMemoryCapacitySnapshot{
++      SlotCount: slots.Length,
++      DeviceBytes: deviceBytes,
++      StagingBytes: stagingBytes,
++      HistoryBytes: historyBytes,
++    }
++  }
++
+   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
+     nativeAllocator VulkanMemoryAllocator, nativeDescriptorSetLayout VkDescriptorSetLayout,
+     nativeEffectDataDescriptorSetLayout VkDescriptorSetLayout,
+--- a/Goo/Rendering/Vulkan/VulkanTextFrameData.gs
++++ b/Goo/Rendering/Vulkan/VulkanTextFrameData.gs
+@@ -418,6 +418,29 @@
+         index = index + 1
+       }
+       return count
++    }
++  }
++
++  internal func MemoryCapacitySnapshotForTest() VulkanFrameMemoryCapacitySnapshot {
++    var deviceBytes VkDeviceSize
++    var stagingBytes VkDeviceSize
++    var historyBytes uint64
++    var index int32 = 0
++    while index < slots.Length {
++      let slot = slots[index]
++      if slot.Buffer != 0uL { deviceBytes += slot.Capacity }
++      if slot.StagingBuffer != 0uL { stagingBytes += slot.Capacity }
++      historyBytes += uint64(slot.HistoryIds.Length) * 8uL
++      historyBytes += uint64(slot.HistoryVersions.Length) * 8uL
++      historyBytes += uint64(slot.HistoryFirstInstances.Length) * 4uL
++      historyBytes += uint64(slot.HistoryRecordCounts.Length) * 4uL
++      index++
++    }
++    return VulkanFrameMemoryCapacitySnapshot{
++      SlotCount: slots.Length,
++      DeviceBytes: deviceBytes,
++      StagingBytes: stagingBytes,
++      HistoryBytes: historyBytes,
+     }
+   }
+ 

@@ -1,0 +1,21 @@
+[
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "opening",
+    "exit": 0,
+    "wall_seconds": 11.1815087089999,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/validation/0-baseline/opening.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "VK_INSTANCE_LAYERS": "VK_LAYER_KHRONOS_validation",
+      "GOO_GALLERY_REVIEW_STATE": "opening"
+    }
+  }
+]

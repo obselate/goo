@@ -1,0 +1,33 @@
+<Project Sdk="Gsharp.NET.Sdk/0.4.1">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GooGallery</RootNamespace>
+    <AssemblyName>Goo.AsyncReadbackSmoke</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Goo/Goo.gsproj"
+                      AdditionalProperties="Configuration=ConsumerReviewRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../../tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackFixtures.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets/MaterialSymbolsRounded.ttf" Link="MaterialSymbolsRounded.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="Assets/SpaceGrotesk-Variable.ttf" Link="SpaceGrotesk-Variable.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="Assets/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+  <ItemGroup>
+    <GooShaderEffect Include="Shaders/wolfenstein.frag.slang" TargetPath="Shaders/wolfenstein.goo-effect" />
+    <GooShaderEffect Include="Shaders/chrome_sdf.frag.slang" TargetPath="Shaders/chrome_sdf.goo-effect" />
+    <GooShaderEffect Include="Shaders/corridor.frag.slang" TargetPath="Shaders/corridor.goo-effect" />
+    <GooShaderEffect Include="Shaders/radial_light.frag.slang" TargetPath="Shaders/radial_light.goo-effect" />
+    <GooShaderEffect Include="Shaders/ripple.frag.slang" TargetPath="Shaders/ripple.goo-effect" />
+    <GooShaderEffect Include="Shaders/terminal_glass.frag.slang" TargetPath="Shaders/terminal_glass.goo-effect" />
+    <GooShaderEffect Include="Shaders/liquid_glass.frag.slang" TargetPath="Shaders/liquid_glass.goo-effect" />
+    <GooShaderEffect Include="Shaders/volumetric.frag.slang" TargetPath="Shaders/volumetric.goo-effect" />
+    <GooShaderEffect Include="Shaders/dither.frag.slang" TargetPath="Shaders/dither.goo-effect" />
+    <GooShaderEffect Include="Shaders/aurora.frag.slang" TargetPath="Shaders/aurora.goo-effect" />
+    <GooShaderEffect Include="Shaders/iridescent_silk.frag.slang" TargetPath="Shaders/iridescent_silk.goo-effect" />
+    <GooShaderEffect Include="Shaders/crt.frag.slang" TargetPath="Shaders/crt.goo-effect" />
+  </ItemGroup>
+  <Import Project="../../Goo/Goo.targets" />
+</Project>

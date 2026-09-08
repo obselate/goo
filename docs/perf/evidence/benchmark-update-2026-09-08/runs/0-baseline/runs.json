@@ -1,0 +1,128 @@
+[
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "text-preset",
+    "exit": 0,
+    "wall_seconds": 11.538470620002045,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/text-preset.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "text-preset"
+    }
+  },
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "layout-reflow",
+    "exit": 0,
+    "wall_seconds": 11.136911448000319,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/layout-reflow.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "layout-reflow"
+    }
+  },
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "list-category",
+    "exit": 0,
+    "wall_seconds": 11.988836138996703,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/list-category.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "list-category"
+    }
+  },
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "opening",
+    "exit": 0,
+    "wall_seconds": 10.886754020000808,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/opening.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_STATE": "opening"
+    }
+  },
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "image-upload",
+    "exit": 0,
+    "wall_seconds": 10.836721142000897,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/image-upload.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "image-upload"
+    }
+  },
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "shader-radial-light",
+    "exit": 0,
+    "wall_seconds": 10.836480067002412,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/shader-radial-light.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_STATE": "shader-radial-light"
+    }
+  },
+  {
+    "round": 0,
+    "variant": "baseline",
+    "workload": "shader-dither",
+    "exit": 0,
+    "wall_seconds": 11.037890552001045,
+    "binary_sha256": "cce043837205848933ab65ec8dddcd5242781cbb2e3e748b9f9b5ac9939d0c2c",
+    "log": "/tmp/goo-chart-update-20260908/runs/0-baseline/shader-dither.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-chart-update-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_STATE": "shader-dither"
+    }
+  }
+]
