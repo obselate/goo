@@ -1,0 +1,56 @@
+[
+  {
+    "round": 2,
+    "variant": "candidate",
+    "workload": "list-category",
+    "exit": 0,
+    "wall_seconds": 11.437830036000378,
+    "binary_sha256": "cde03671b66b97a6db406dd2370773085617c40a0d72c4f898f870eac8fdff35",
+    "log": "/tmp/goo-category-frame-times-20260908/final/runs/2-candidate/list-category.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-category-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "list-category"
+    }
+  },
+  {
+    "round": 2,
+    "variant": "candidate",
+    "workload": "text-preset",
+    "exit": 0,
+    "wall_seconds": 11.437315266000951,
+    "binary_sha256": "cde03671b66b97a6db406dd2370773085617c40a0d72c4f898f870eac8fdff35",
+    "log": "/tmp/goo-category-frame-times-20260908/final/runs/2-candidate/text-preset.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-category-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "text-preset"
+    }
+  },
+  {
+    "round": 2,
+    "variant": "candidate",
+    "workload": "layout-reflow",
+    "exit": 0,
+    "wall_seconds": 11.03602206099822,
+    "binary_sha256": "cde03671b66b97a6db406dd2370773085617c40a0d72c4f898f870eac8fdff35",
+    "log": "/tmp/goo-category-frame-times-20260908/final/runs/2-candidate/layout-reflow.log",
+    "environment": {
+      "WAYLAND_DISPLAY": "goo-category-nested",
+      "SDL_VIDEODRIVER": "wayland",
+      "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+      "GOO_VK_DIAGNOSTICS": "1",
+      "GOO_GALLERY_REVIEW_BENCH": "1",
+      "GOO_GALLERY_REVIEW_PACE16MS": "1",
+      "GOO_GALLERY_REVIEW_WORKLOAD": "layout-reflow"
+    }
+  }
+]

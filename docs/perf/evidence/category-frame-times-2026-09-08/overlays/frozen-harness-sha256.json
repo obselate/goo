@@ -1,0 +1,13 @@
+{
+  "apps/Goo.Gallery/CategoryGate.gs": "149a3f3da384e22af85b3b1367360973472c223c3ed0edd55c43c903dc383292",
+  "apps/Goo.Gallery/GalleryCategoryFrameTimes.gs": "8f4768bfd01c7aaca7dee358c62aba0fffadf76c8db9b610d3dd21334428b9d7",
+  "apps/Goo.Gallery/Goo.Gallery.gsproj": "09b9990f468b0f951b197300658ac794dd377f3de05d7464d29ff78cc7260594",
+  "apps/Goo.Gallery/Program.gs": "b03e78f71a15d468134e56c0c63ce893b170e516c352967b89626eb04cc43892",
+  "apps/Goo.Gallery/ReviewBench.gs": "af85791af893cc38392c4d19e629d1cb440ff33099d8fdfe95be3f7576fe2258",
+  "apps/Goo.Gallery/ReviewMemoryOwners.gs": "921e84cf7c1d54a8ed7c97613813094c137899d4076e5b5d301f251a293f5990",
+  "apps/Goo.Gallery/ReviewProfile.gs": "13a5699047588e777e2afd56169168c50ab6e9e1008a1a86717ec1f0230f4f91",
+  "apps/Goo.Gallery/Views/GalleryStageView.gs": "59ed165f69c4d503cc06c35017c21f1bd923d1b9503804d6702a8a16c0de70d0",
+  "tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackFixtures.props": "158b91230bc65887356424263d4333255ed4cc230266c4803574b15b7e324132",
+  "tests/Goo.AsyncReadbackSmoke/WindowReadbackFixture.gs": "c458c5ae302c310e42a86e34553179229bef17688049796e15ab15d6e2fd05e9",
+  "tests/Shared/FixtureAssemblyInfo.gs": "4d504e08eaed9358e6e3d04809fd0c84bf42ed246bf9f6489bd1c451d55624a1"
+}

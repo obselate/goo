@@ -1,0 +1,9 @@
+variant,phase,metric,n,p50_ms,p95_ms,p99_ms
+baseline,first-cycle,injection_to_handoff_ns,10,5.2186325,8.352496949999999,8.86392339
+baseline,first-cycle,injection_to_completion_observed_ns,10,20.591977,25.684960399999994,27.26205848
+baseline,repeated,injection_to_handoff_ns,200,6.8463755,8.0419204,8.894908209999949
+baseline,repeated,injection_to_completion_observed_ns,200,20.473083000000003,27.488804049999995,48.90330088999993
+candidate,first-cycle,injection_to_handoff_ns,10,5.311838,8.503292199999999,8.55352084
+candidate,first-cycle,injection_to_completion_observed_ns,10,20.8773245,26.121644999999994,27.8248842
+candidate,repeated,injection_to_handoff_ns,200,6.569719,7.978093599999999,8.14213992
+candidate,repeated,injection_to_completion_observed_ns,200,26.877555,28.47977215,41.80835206999988

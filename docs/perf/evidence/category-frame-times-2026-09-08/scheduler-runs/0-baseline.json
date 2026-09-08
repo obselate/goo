@@ -1,0 +1,16 @@
+{
+  "round": 0,
+  "variant": "baseline",
+  "binary_sha256": "5095fe1caa491aec4d3a956dd1a0f6ffb10b3ecfc8f47767e3495b0c59942879",
+  "exit": 0,
+  "wall_seconds": 3.425544749999972,
+  "log": "/tmp/goo-category-frame-times-20260908/final/scheduler-runs/0-baseline.log",
+  "environment": {
+    "WAYLAND_DISPLAY": "goo-category-nested",
+    "SDL_VIDEODRIVER": "wayland",
+    "VK_LOADER_LAYERS_DISABLE": "~implicit~",
+    "GOO_VK_DIAGNOSTICS": "1",
+    "GOO_GALLERY_CATEGORY_FRAME_TIMES": "1",
+    "GOO_CATEGORY_FRAME_TIMES_LABEL": "0-baseline"
+  }
+}

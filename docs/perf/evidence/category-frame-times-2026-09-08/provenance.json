@@ -1,0 +1,29 @@
+{
+  "baseline_commit": "5d4b36011f5da693115f184a0ad2e318d5d99be0",
+  "candidate_commit": "fd104fa6bf4ed9cac34c3c4708c50e3e418c5b26",
+  "production_delta": [
+    "apps/Goo.Gallery/Views/MotionChapter.gs"
+  ],
+  "layout": "Yoga.Net default",
+  "dotnet_sdk": "10.0.302",
+  "gsharp_sdk": "0.4.1",
+  "slang": "2026.16",
+  "sdl": "3.4.16 system /usr/lib/libSDL3.so",
+  "gpu": "NVIDIA GeForce RTX 3080",
+  "nativeaot": true,
+  "optimization": "Speed",
+  "event_source_support": true,
+  "physical_extent": [
+    2160,
+    1350
+  ],
+  "swapchain_images": 3,
+  "binary_sha256": {
+    "baseline": "5095fe1caa491aec4d3a956dd1a0f6ffb10b3ecfc8f47767e3495b0c59942879",
+    "candidate": "cde03671b66b97a6db406dd2370773085617c40a0d72c4f898f870eac8fdff35"
+  },
+  "source_provenance": "646 matching source inputs per variant reconstructed from baseline plus common overlays, with only MotionChapter.gs differing",
+  "build_source": "/tmp/goo-category-frame-times-20260908/candidate",
+  "publish_command": "env SLANG_SDK=/tmp/goo-gpu-toolchain/slang-2026.16 dotnet publish apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -r linux-x64 -p:PublishAot=true -p:OptimizationPreference=Speed -p:EventSourceSupport=true -p:GooLinuxSdlPath=/usr/lib/libSDL3.so -o <published-variant>",
+  "candidate_rebuild": "MotionChapter.gs timestamp refreshed before final candidate publish to prevent incremental reuse of baseline. Final binaries differ. Initial identical candidate binary rejected before timing."
+}
