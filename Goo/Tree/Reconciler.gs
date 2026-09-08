@@ -358,17 +358,24 @@ internal class Reconciler {
   }
 
   internal func applyButton(n Node, b Button, initial bool) {
-    let entries = StyleEntries{}
-    entries.Add(StyleEntry{
+    let justify = StyleEntry{
       Field: StyleField.JustifyContent,
       A: float32(int32(JustifyContent.Center)),
-    })
-    entries.Add(StyleEntry{
+    }
+    let align = StyleEntry{
       Field: StyleField.AlignItems,
       A: float32(int32(AlignItems.Center)),
-    })
-    if let author = b.Entries() {
-      for i in 0 ... author.Count { entries.Add(author.At(i)) }
+    }
+    let author = b.Entries()
+    var entries = n.BaseStyle
+    if !sameButtonStyleEntries(entries, justify, align, author) {
+      let changed = StyleEntries{}
+      changed.Add(justify)
+      changed.Add(align)
+      if let authored = author {
+        changed.AddRange(authored)
+      }
+      entries = changed
     }
     applyStyleEntries(n, b, entries, true, initial)
   }
@@ -1401,6 +1408,37 @@ internal func sameStyleEntries(a StyleEntries?, b StyleEntries?) bool {
   }
   return true
 }
+
+internal func sameButtonStyleEntries(entries StyleEntries?, justify StyleEntry,
+  align StyleEntry, author StyleEntries?) bool{
+    guard let current = entries else {
+      return false
+    }
+    let authorCount = if let authored = author { authored.Count } else { 0 }
+    if current.Count != authorCount + 2 {
+      return false
+    }
+    let currentJustify = current.At(0)
+    if currentJustify.Field != justify.Field || !sameStyleEntry(currentJustify, justify) {
+      return false
+    }
+    let currentAlign = current.At(1)
+    if currentAlign.Field != align.Field || !sameStyleEntry(currentAlign, align) {
+      return false
+    }
+    guard let authored = author else {
+      return true
+    }
+    for i in 0 ... authored.Count {
+      let currentEntry = current.At(i + 2)
+      let authoredEntry = authored.At(i)
+      if currentEntry.Field != authoredEntry.Field
+        || !sameStyleEntry(currentEntry, authoredEntry) {
+          return false
+        }
+    }
+    return true
+  }
 
 internal func sameDashPattern(a DashPattern?, b DashPattern?) bool {
   if a == b {

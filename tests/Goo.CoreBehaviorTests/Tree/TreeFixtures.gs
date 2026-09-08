@@ -345,23 +345,66 @@ internal class TreeFixtures {
   }
 
   func ButtonStyleSpillContract() bool {
-    let node = Reconciler{ Res: Resolver{} }.Mount(Button{
+    let reconciler = Reconciler{ Res: Resolver{} }
+    let node = reconciler.Mount(Button{
       Width: 100,
       Height: 40,
       Gap: 8,
       BackgroundColor: Color.Rgb(41, 41, 51),
       Color: Color.White,
+      JustifyContent: JustifyContent.FlexEnd,
     })
     guard let entries = node.BaseStyle else { return false }
-    return entries.Count == 7
-      && entries.At(0).Field == StyleField.JustifyContent
-      && entries.At(1).Field == StyleField.AlignItems
-      && entries.At(2).Field == StyleField.Width
-      && entries.At(6).Field == StyleField.Color
-      && node.JustifyContent == JustifyContent.Center && node.AlignItems == AlignItems.Center
-      && node.Width.Value == 100.0F && node.Height.Value == 40.0F
-      && node.Gap.Value == 8.0F && node.BackgroundColor == Color.Rgb(41, 41, 51)
-      && node.Color == Color.White
+    if entries.Count != 8
+      || entries.At(0).Field != StyleField.JustifyContent
+      || entries.At(1).Field != StyleField.AlignItems
+      || entries.At(2).Field != StyleField.Width
+      || entries.At(6).Field != StyleField.Color
+      || entries.At(7).Field != StyleField.JustifyContent
+      || node.JustifyContent != JustifyContent.FlexEnd || node.AlignItems != AlignItems.Center
+      || node.Width.Value != 100.0F || node.Height.Value != 40.0F
+      || node.Gap.Value != 8.0F || node.BackgroundColor != Color.Rgb(41, 41, 51)
+      || node.Color != Color.White{
+        return false
+      }
+    var clicked = false
+    reconciler.Diff(node, Button{
+      Width: 100,
+      Height: 40,
+      Gap: 8,
+      BackgroundColor: Color.Rgb(41, 41, 51),
+      Color: Color.White,
+      JustifyContent: JustifyContent.FlexEnd,
+      Hover: Style{ BackgroundColor: Color.Rgb(51, 51, 61) },
+      Active: Style{ BackgroundColor: Color.Rgb(31, 31, 41) },
+      Focus: Style{ OutlineWidth: 1 },
+      DisabledStyle: Style{ Opacity: 0.5 },
+      Disabled: true,
+      OnClick: () -> { clicked = true },
+    })
+    if !Object.ReferenceEquals(entries, node.BaseStyle)
+      || node.HoverStyle == nil || node.ActiveStyle == nil
+      || node.FocusStyle == nil || node.DisabledStyle == nil
+      || !node.Disabled || node.Focusable{
+        return false
+      }
+    guard let click = node.OnClick else { return false }
+    click()
+    if !clicked { return false }
+    reconciler.Diff(node, Button{
+      Width: 120,
+      Height: 40,
+      Gap: 8,
+      BackgroundColor: Color.Rgb(41, 41, 51),
+      Color: Color.White,
+      JustifyContent: JustifyContent.FlexEnd,
+    })
+    return !Object.ReferenceEquals(entries, node.BaseStyle)
+      && node.Width.Value == 120.0F
+      && node.JustifyContent == JustifyContent.FlexEnd
+      && node.HoverStyle == nil && node.ActiveStyle == nil
+      && node.FocusStyle == nil && node.DisabledStyle == nil
+      && !node.Disabled && node.Focusable
   }
 
   func TextEntryControlledValueContract() bool {

@@ -22,6 +22,14 @@ public sealed class ReconciliationTests
     }
 
     [Fact]
+    public void ButtonStylesReuseEquivalentCompositionAndRefreshChangedState()
+    {
+        var fixtures = new TreeFixtures();
+        Assert.True(fixtures.ButtonSemanticPrimitiveContract());
+        Assert.True(fixtures.ButtonStyleSpillContract());
+    }
+
+    [Fact]
     public void RejectsMixedAndDuplicateKeys()
     {
         var fixtures = new TreeFixtures();
