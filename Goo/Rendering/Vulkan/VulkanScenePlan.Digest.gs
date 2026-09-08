@@ -770,7 +770,7 @@ internal partial class SceneFrame {
   }
 
   private func ValidateGradientRange(start int32, count int32) {
-    if start < 0 || count < 2 || count > 4
+    if start < 0 || count < 2
       || start > gradientStopCount || count > gradientStopCount - start{
         throw ArgumentOutOfRangeException("gradient stop range")
       }

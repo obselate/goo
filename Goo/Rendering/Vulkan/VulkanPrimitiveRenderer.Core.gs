@@ -14,7 +14,6 @@ internal data struct VulkanPrimitiveRecordResult {
 
 internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private const DefaultClipDepth int32 = 64
-  private const MaxGradientStops int32 = 4
   private const PathPushConstantSize uint32 = 80u
   private const TextPushConstantSize uint32 = 32u
   private const MaxLayerDepth int32 = 32
@@ -863,8 +862,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         case SceneDrawKind.SolidBox { count = 1uL }
         case SceneDrawKind.RoundedBox { count = 1uL }
         case SceneDrawKind.PerEdgeBorder { count = 4uL }
-        case SceneDrawKind.LinearGradient { count = 1uL }
-        case SceneDrawKind.RadialGradient { count = 1uL }
+        case SceneDrawKind.LinearGradient {
+          RequireRecordIndex(frame.DrawRefs[index].Index, frame.LinearGradientCount, "linear gradient index")
+          let value = frame.LinearGradients[frame.DrawRefs[index].Index]
+          ValidateGradientStops(frame, value.StopStart, value.StopCount)
+          count = GradientRecordCount(value.StopCount)
+        }
+        case SceneDrawKind.RadialGradient {
+          RequireRecordIndex(frame.DrawRefs[index].Index, frame.RadialGradientCount, "radial gradient index")
+          let value = frame.RadialGradients[frame.DrawRefs[index].Index]
+          ValidateGradientStops(frame, value.StopStart, value.StopCount)
+          count = GradientRecordCount(value.StopCount)
+        }
         case SceneDrawKind.Underline { count = 1uL }
         case SceneDrawKind.LayerEnd { count = 1uL }
         case SceneDrawKind.CachedImage { count = 1uL }

@@ -171,7 +171,7 @@ internal sealed class VulkanPathIdentityRegistry {
       }
   }
 
-  /// Releases the registry and any resident geometry representatives.
+  // Releases the registry and any resident geometry representatives.
   public func Dispose() {
     if disposed {
       return

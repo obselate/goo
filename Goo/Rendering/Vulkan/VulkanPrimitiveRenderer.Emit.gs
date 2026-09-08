@@ -37,38 +37,17 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
 
   private func ValidateGradientStops(frame SceneFrame, start int32, count int32) {
-    if count < 2 || count > MaxGradientStops || start < 0
-      || start > frame.GradientStopCount - count{
-        throw NotSupportedException("Vulkan primitive renderer requires two to four gradient stops")
-      }
-    let first = frame.GradientStops[start]
-    let second = frame.GradientStops[start + 1]
-    ValidateFinite(first.Offset, "gradient stop offset")
-    ValidateFinite(second.Offset, "gradient stop offset")
-    if first.Offset < 0.0F || first.Offset > 1.0F
-      || second.Offset < 0.0F || second.Offset > 1.0F
-      || first.Offset > second.Offset{
-        throw ArgumentOutOfRangeException("gradient stop range")
-      }
-    if count >= 3 {
-      let third = frame.GradientStops[start + 2]
-      ValidateFinite(third.Offset, "gradient stop offset")
-      if third.Offset < 0.0F || third.Offset > 1.0F || second.Offset > third.Offset {
-        throw ArgumentOutOfRangeException("gradient stop range")
-      }
+    if count < 2 || start < 0 || start > frame.GradientStopCount - count {
+      throw ArgumentOutOfRangeException("gradient stop range")
     }
-    if count >= 4 {
-      let fourth = frame.GradientStops[start + 3]
-      ValidateFinite(fourth.Offset, "gradient stop offset")
-      if fourth.Offset < 0.0F || fourth.Offset > 1.0F {
+    var previous float32 = 0.0F
+    for index in 0 ... count {
+      let offset = frame.GradientStops[start + index].Offset
+      ValidateFinite(offset, "gradient stop offset")
+      if offset < previous || offset > 1.0F {
         throw ArgumentOutOfRangeException("gradient stop range")
       }
-      if count >= 3 {
-        let third = frame.GradientStops[start + 2]
-        if third.Offset > fourth.Offset {
-          throw ArgumentOutOfRangeException("gradient stop range")
-        }
-      }
+      previous = offset
     }
   }
 
@@ -432,6 +411,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_w = (value.EndY - value.Bounds.Y) / height
       FillLinearStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
       BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push))
+      WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
 
   private func EmitRadial(
@@ -469,6 +449,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_w = MathF.Max(value.RadiusY / height, 0.0001F)
       FillRadialStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
       BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push))
+      WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
 
   private func EmitImage(
@@ -1058,6 +1039,22 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push -> transform1_w = 0.0F
     }
 
+  private func GradientRecordCount(count int32) uint64 -> if count <= 4 { 1uL } else { 1uL + (uint64(count) + 3uL) / 4uL }
+
+  // Long gradients store packed stop groups after their draw record in the same SSBO.
+  private func WriteGradientStopRecords(frame SceneFrame, start int32, count int32, opacity float32) {
+    if !primitivePrepass || count <= 4 { return }
+    var offset int32 = 0
+    while offset < count {
+      let groupCount = Math.Min(4, count - offset)
+      var group = AnalyticLinear4PushConstants{}
+      FillLinearStops(&group, frame, start + offset, groupCount, opacity)
+      primitiveFrameData.WriteRecord(primitiveRecordCount, *void(&group))
+      primitiveRecordCount++
+      offset += groupCount
+    }
+  }
+
   private func FillLinearStops(
     push * AnalyticLinear4PushConstants,
     frame SceneFrame,
@@ -1065,7 +1062,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     count int32,
     opacity float32) {
       let first = frame.GradientStops[start]
-      let second = frame.GradientStops[start + 1]
+      let second = frame.GradientStops[start + Math.Min(1, count - 1)]
       var third = second
       var fourth = second
       if count >= 3 {
@@ -1089,7 +1086,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push -> packedColorsExtra_x = packedFourth.Rgb
       push -> packedColorsExtra_y = packedFourth.Alpha
       push -> packedColorsExtra_z = uint32(count)
-      push -> packedColorsExtra_w = 0u
+      push -> packedColorsExtra_w = if count > 4 { uint32(primitiveRecordCount + 1) } else { 0u }
     }
 
   private func FillRadialStops(
@@ -1099,7 +1096,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     count int32,
     opacity float32) {
       let first = frame.GradientStops[start]
-      let second = frame.GradientStops[start + 1]
+      let second = frame.GradientStops[start + Math.Min(1, count - 1)]
       var third = second
       var fourth = second
       if count >= 3 {
@@ -1123,7 +1120,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push -> packedColorsExtra_x = packedFourth.Rgb
       push -> packedColorsExtra_y = packedFourth.Alpha
       push -> packedColorsExtra_z = uint32(count)
-      push -> packedColorsExtra_w = 0u
+      push -> packedColorsExtra_w = if count > 4 { uint32(primitiveRecordCount + 1) } else { 0u }
     }
 
   private func BindAndDraw(commandBuffer VkCommandBuffer, pipeline VkPipeline, pushData * void) {

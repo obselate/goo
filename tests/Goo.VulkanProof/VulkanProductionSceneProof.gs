@@ -235,6 +235,7 @@ internal unsafe func RunProductionSceneReadback(shadow bool) {
         }
       }
       Console.WriteLine("Scene readback: digest=${digest} allocated=0")
+      VerifyLongGradientReadbacks(capture!!)
     }
   } finally {
     if let active = capture {

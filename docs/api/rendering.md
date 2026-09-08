@@ -388,3 +388,11 @@ Gets the view-box x origin.
 ### `ViewBoxY`
 
 Gets the view-box y origin.
+
+## Gradient stops
+
+Linear and radial gradients accept two or more ordered stops, including repeated
+positions for hard color edges. There is no fixed four-stop limit. Larger stop
+lists use Goo-owned GPU storage and remain a single gradient draw; device storage
+limits still apply. Interpolation uses premultiplied linear color, including
+per-stop alpha and element opacity.

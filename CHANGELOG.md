@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Removed the four-stop rendering limit for linear and radial gradients. Longer gradients use GPU buffer storage with binary stop lookup, preserving alpha, opacity, and hard color edges.
+
 ## 0.5.0 - 2026-09-05
 
 ### Added

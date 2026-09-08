@@ -1095,7 +1095,7 @@ internal partial class VulkanSceneCompiler {
           VulkanSceneUnsupportedField.BackgroundGradient, primitive)
         return
       }
-      if stops.Count < 2 || stops.Count > 4 {
+      if stops.Count < 2 {
         MarkUnsupported(node, VulkanSceneUnsupportedKind.Gradient,
           VulkanSceneUnsupportedField.BackgroundGradient, primitive)
         return
