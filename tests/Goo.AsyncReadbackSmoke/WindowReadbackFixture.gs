@@ -235,6 +235,17 @@ internal data struct VulkanWindowFramebufferExtentTestSnapshot {
   internal var Width int32
   internal var Height int32
 }
+internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
+  internal var ActiveLayerCount uint32
+  internal var MaximumLayerCount uint32
+  internal var UniqueLayerMask uint32
+  internal var IncrementalGrowth bool
+  internal var GenerationPreserved bool
+  internal var ImagePreserved bool
+  internal var Reacquired bool
+  internal var FailureObserved bool
+  internal var PressureFailureCount uint64
+}
 
 internal partial class VulkanWindowTarget {
   internal func MaterializePipelineCacheForTest() VulkanPipelineCacheMetrics {
@@ -691,6 +702,70 @@ internal partial class VulkanWindowTarget {
 
   internal func SetExactTextClipCullForTest(value bool) {
     sceneCompiler.SetExactTextClipCullEnabled(value)
+  }
+
+  internal func VerifyClipMaskAtlasGrowthForTest()
+  VulkanClipMaskAtlasGrowthTestSnapshot{
+    guard let activeRuntime = runtime else {
+      return VulkanClipMaskAtlasGrowthTestSnapshot{}
+    }
+    guard let activeAllocator = memoryAllocator else {
+      return VulkanClipMaskAtlasGrowthTestSnapshot{}
+    }
+    let atlas = VulkanClipMaskAtlas(
+      device,
+      dispatch,
+      activeAllocator,
+      32u,
+      32u,
+      clipMaskFormatSupport,
+      32768uL,
+      activeRuntime.Generation,
+      nil)
+    try {
+      atlas.BeginUsageBatch()
+      var key uint64 = 1uL
+      var incrementalGrowth = true
+      while key <= 8uL {
+        atlas.Acquire(key, 0, 0, 32u, 32u)
+        if atlas.Stats.ActiveLayerCount != uint32(key) {
+          incrementalGrowth = false
+        }
+        key++
+      }
+      let grown = atlas.Stats
+      var uniqueLayerMask uint32 = 0u
+      key = 1uL
+      while key <= 8uL {
+        let region = atlas.Acquire(key, 0, 0, 32u, 32u)
+        if region.Generation == grown.Generation && region.Layer < 32u {
+          uniqueLayerMask = uniqueLayerMask | (1u << int32(region.Layer))
+        }
+        key++
+      }
+      var failureObserved = false
+      try {
+        atlas.Acquire(9uL, 0, 0, 32u, 32u)
+      } catch (error InvalidOperationException) {
+        failureObserved = true
+      }
+      let afterFailure = atlas.Stats
+      let recovered = atlas.Acquire(1uL, 0, 0, 32u, 32u)
+      return VulkanClipMaskAtlasGrowthTestSnapshot{
+        ActiveLayerCount: grown.ActiveLayerCount,
+        MaximumLayerCount: grown.MaximumLayerCount,
+        UniqueLayerMask: uniqueLayerMask,
+        IncrementalGrowth: incrementalGrowth,
+        GenerationPreserved: afterFailure.Generation == grown.Generation,
+        ImagePreserved: afterFailure.Image == grown.Image,
+        Reacquired: recovered.Generation == grown.Generation && recovered.Layer == 0u,
+        FailureObserved: failureObserved,
+        PressureFailureCount: afterFailure.PressureFailureCount,
+      }
+    } finally {
+      atlas.AbortUsageBatch()
+      atlas.Dispose()
+    }
   }
 }
 
@@ -1253,6 +1328,13 @@ internal class WindowReadbackTestFixture {
     internal func DiagnosticCounters(window Window) VulkanDiagnosticCounterSnapshot -> window.DiagnosticCountersSnapshotForTest()
     internal func ImageResourceStats(window Window) VulkanImageResourceStats ->
     window.ImageResourceStatsForTest()
+    internal func VerifyClipMaskAtlasGrowth(window Window)
+    VulkanClipMaskAtlasGrowthTestSnapshot{
+      guard let target = window.CaptureTargetForTest() else {
+        return VulkanClipMaskAtlasGrowthTestSnapshot{}
+      }
+      return target.VerifyClipMaskAtlasGrowthForTest()
+    }
     internal func TargetDiagnosticCounters(target VulkanWindowTarget?) VulkanDiagnosticCounterSnapshot {
       guard let active = target else { return VulkanDiagnosticCounterSnapshot{} }
       return active.DiagnosticCountersSnapshotForTest()

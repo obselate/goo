@@ -573,11 +573,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
             existing.ContentWidth = screenWidth
             existing.ContentHeight = screenHeight
             try {
-              let targetLayerCount = if activeLayerCount < maximumLayerCount {
-                maximumLayerCount
-              } else {
-                activeLayerCount
-              }
+              let targetLayerCount = RequiredGrowthLayerCount(0u, 0u, false)
               ReplaceGeneration(targetLayerCount, width, height)
               placement = VulkanClipMaskRegionPlacement{
                 Layer: existing.Layer,
@@ -649,12 +645,14 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
           MarkDirty(record)
           return BuildRegion(record)
         }
-        let targetLayerCount = if activeLayerCount < maximumLayerCount {
-          maximumLayerCount
-        } else {
-          activeLayerCount
+        try {
+          let targetLayerCount = RequiredGrowthLayerCount(
+            screenWidth, screenHeight, true)
+          ReplaceGeneration(targetLayerCount, width, height)
+        } catch (error Exception) {
+          IncrementPressureFailureCount()
+          throw error
         }
-        ReplaceGeneration(targetLayerCount, width, height)
         if !TryPlace(screenWidth, screenHeight, ref placement) {
           IncrementPressureFailureCount()
           throw InvalidOperationException("Vulkan clip mask atlas region budget is exhausted")
@@ -1276,16 +1274,44 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   }
 
   private func RequiredLayerCount(targetWidth uint32, targetHeight uint32,
-    targetMaximumLayers uint32) uint32{
+    targetMaximumLayers uint32) uint32 -> PackedLayerCount(
+      targetWidth, targetHeight, targetMaximumLayers, 0u, 0u, false)
+
+  private func RequiredGrowthLayerCount(pendingWidth uint32, pendingHeight uint32,
+    includePending bool) uint32{
+      let required = PackedLayerCount(
+        width, height, maximumLayerCount, pendingWidth, pendingHeight, includePending)
+      let incremental = if activeLayerCount < maximumLayerCount {
+        activeLayerCount + 1u
+      } else {
+        activeLayerCount
+      }
+      return if required > incremental { required } else { incremental }
+    }
+
+  private func PackedLayerCount(targetWidth uint32, targetHeight uint32,
+    targetMaximumLayers uint32, pendingWidth uint32, pendingHeight uint32,
+    includePending bool) uint32{
       let cursors = [int32(VulkanClipMaskAtlasContract.MaxDepth)]VulkanClipMaskLayerCursor
       var required uint32 = 1u
+      let recordCount = regionOrder.Count
+      let totalCount = recordCount + if includePending { 1 } else { 0 }
       var index int32 = 0
-      while index < regionOrder.Count {
-        let record = regionOrder[index]
-        let padding = EffectivePadding(record.ContentWidth, record.ContentHeight,
+      while index < totalCount {
+        let contentWidth = if index < recordCount {
+          regionOrder[index].ContentWidth
+        } else {
+          pendingWidth
+        }
+        let contentHeight = if index < recordCount {
+          regionOrder[index].ContentHeight
+        } else {
+          pendingHeight
+        }
+        let padding = EffectivePadding(contentWidth, contentHeight,
           targetWidth, targetHeight)
-        let paddedWidth = record.ContentWidth + padding * 2u
-        let paddedHeight = record.ContentHeight + padding * 2u
+        let paddedWidth = contentWidth + padding * 2u
+        let paddedHeight = contentHeight + padding * 2u
         var placed = false
         var layer uint32 = 0u
         while layer < required {
