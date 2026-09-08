@@ -104,7 +104,7 @@ class ShaderLabCell : Cell {
     showcase = 0
     Compact = false
     active = false
-    clock = Animate(0.0)
+    clock = Animate(0.0, updateClock)
     ChromeCanvas = ElementHandle{}
     RadialCanvas = ElementHandle{}
     RippleCanvas = ElementHandle{}
@@ -152,6 +152,24 @@ class ShaderLabCell : Cell {
     fov = 1.0
     contrast = 1.0
     fog = 0.35
+  }
+
+  private func updateClock(time float64) {
+    if Active {
+      if let programs = Programs {
+        if Showcase == 3 {
+          writeFrame(programs.Lab(3), RadialCanvas, time, radialPointerX,
+            radialPointerY, radialPointerPressure, radialPointerDown)
+          return
+        }
+        if Showcase == 7 {
+          writeFrame(programs.Lab(7), DitherCanvas, time, ditherPointerX,
+            ditherPointerY, 0.0, ditherPointerDown)
+          return
+        }
+      }
+    }
+    Rebuild()
   }
 
   private func frameValue() float32 -> if Playing { 1.0F } else { 0.0F }
