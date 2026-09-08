@@ -102,12 +102,19 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if entry.UploadCompletedRows == entry.Height {
         return false
       }
-      EnsureStagingBuffer()
       let rowBytes = VkDeviceSize(entry.Width) * 4uL
-      if rowBytes == 0uL || rowBytes > stagingByteCapacity
+      if rowBytes == 0uL || rowBytes > stagingMaximumByteCapacity
         || rowBytes > VkDeviceSize(Int32.MaxValue) {
           throw InvalidOperationException("Vulkan image row exceeds staging capacity")
         }
+      let remainingBytes = VkDeviceSize(entry.Height - entry.UploadCompletedRows) * rowBytes
+      EnsureStagingBuffer(remainingBytes)
+      if rowBytes > stagingByteCapacity {
+        if let currentDiagnostics = diagnostics {
+          currentDiagnostics.AddImageUploadDeferred(1uL)
+        }
+        return false
+      }
       let remainingRows = entry.Height - entry.UploadCompletedRows
       let freeBytes = uploadRing.Stats.FreeBytes
       var rowCount = uint32(freeBytes / rowBytes)

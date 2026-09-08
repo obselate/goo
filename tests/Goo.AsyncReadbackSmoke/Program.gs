@@ -3371,6 +3371,10 @@ if Environment.GetEnvironmentVariable("GOO_RETENTION_SMOKE") == "1" {
   RunRetentionSmoke()
   return
 }
+if Environment.GetEnvironmentVariable("GOO_IMAGE_STAGING_SMOKE") == "1" {
+  RunImageStagingSmoke()
+  return
+}
 if Environment.GetEnvironmentVariable("GOO_IMAGE_RETENTION_SMOKE") == "1" {
   RunImageRetentionSmoke()
   return

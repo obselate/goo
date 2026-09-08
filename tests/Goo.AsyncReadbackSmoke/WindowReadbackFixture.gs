@@ -256,6 +256,8 @@ internal partial class VulkanWindowTarget {
     }
     return VulkanDiagnosticCounterSnapshot{}
   }
+  internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
+  imageResources?.Stats ?? VulkanImageResourceStats{}
   internal func TimestampSupportedForTest() bool {
     if let current = timestampState {
       return current.TimestampQueriesSupported
@@ -706,6 +708,9 @@ public partial class Window {
     }
     return target.MaterializePipelineCacheForTest()
   }
+
+  internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
+  VulkanTargetForTest()?.ImageResourceStatsForTest() ?? VulkanImageResourceStats{}
 
   internal func RuntimeHoldNextQueueSubmitForTest() {
     VulkanTargetForTest()?.HoldNextQueueSubmitForTest()
@@ -1246,6 +1251,8 @@ internal class WindowReadbackTestFixture {
     }
 
     internal func DiagnosticCounters(window Window) VulkanDiagnosticCounterSnapshot -> window.DiagnosticCountersSnapshotForTest()
+    internal func ImageResourceStats(window Window) VulkanImageResourceStats ->
+    window.ImageResourceStatsForTest()
     internal func TargetDiagnosticCounters(target VulkanWindowTarget?) VulkanDiagnosticCounterSnapshot {
       guard let active = target else { return VulkanDiagnosticCounterSnapshot{} }
       return active.DiagnosticCountersSnapshotForTest()

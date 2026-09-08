@@ -8,6 +8,7 @@ internal data struct VulkanResourcePolicy {
   internal let ImageResidentHardBytes VkDeviceSize
   internal let ImageLogicalSourceHardBytes VkDeviceSize
   internal let ImageStagingInitialBytes VkDeviceSize
+  internal let ImageStagingHardBytes VkDeviceSize
   internal let ImageUploadInitialRangeCapacity int32
   internal let ImageIdentityInitialCapacity int32
   internal let PathAtlasInitialBytes VkDeviceSize
@@ -52,7 +53,8 @@ internal func CreateVulkanResourcePolicy(memoryProperties VkPhysicalDeviceMemory
       ImageInitialLogicalCapacity: 512,
       ImageResidentHardBytes: imageResidentBytes,
       ImageLogicalSourceHardBytes: imageLogicalBytes,
-      ImageStagingInitialBytes: 16777216uL,
+      ImageStagingInitialBytes: 65536uL,
+      ImageStagingHardBytes: 16777216uL,
       ImageUploadInitialRangeCapacity: 64,
       ImageIdentityInitialCapacity: 4096,
       PathAtlasInitialBytes: 262144uL,

@@ -42,7 +42,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private let uploadRing VulkanUploadRing
   private let diagnostics VulkanDiagnostics?
   private let objectAccounting VulkanObjectAccounting?
-  private let stagingByteCapacity VkDeviceSize
+  private let stagingMaximumByteCapacity VkDeviceSize
+  private var stagingByteCapacity VkDeviceSize
   private let stagingGate object
   private var stagingBuffer VkBuffer
   private var stagingAllocation VulkanMemoryAllocation? = nil
@@ -97,7 +98,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     logicalResourceCapacity int32,
     maximumResidentBytes VkDeviceSize,
     maximumLogicalSourceBytes VkDeviceSize,
-    stagingBytes VkDeviceSize,
+    stagingInitialBytes VkDeviceSize,
+    maximumStagingBytes VkDeviceSize,
     uploadRangeCapacity int32,
     nativeDiagnostics VulkanDiagnostics?,
     initialGeneration uint64,
@@ -117,9 +119,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if maximumLogicalSourceBytes == 0uL {
         throw ArgumentOutOfRangeException("maximumLogicalSourceBytes")
       }
-      if stagingBytes == 0uL || stagingBytes > MaxStagingBytes {
-        throw ArgumentOutOfRangeException("stagingBytes")
-      }
+      if stagingInitialBytes == 0uL || stagingInitialBytes > MaxStagingBytes
+        || maximumStagingBytes < stagingInitialBytes
+        || maximumStagingBytes > MaxStagingBytes{
+          throw ArgumentOutOfRangeException("stagingInitialBytes")
+        }
       if uploadRangeCapacity <= 0 || uploadRangeCapacity > MaxCapacity {
         throw ArgumentOutOfRangeException("uploadRangeCapacity")
       }
@@ -133,7 +137,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       objectAccounting = nativeObjectAccounting
       capacity = imageCapacity
       residentByteBudget = maximumResidentBytes
-      stagingByteCapacity = stagingBytes
+      stagingByteCapacity = stagingInitialBytes
+      stagingMaximumByteCapacity = maximumStagingBytes
       stagingGate = Object()
       entries = [imageCapacity]VulkanImageResourceEntry
       logicalRecords = [logicalResourceCapacity]VulkanLogicalResource
@@ -149,7 +154,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       nextTouch = 1uL
       registry = VulkanResourceRegistry(logicalResourceCapacity, maximumResidentBytes,
         maximumLogicalSourceBytes)
-      uploadRing = VulkanUploadRing(stagingBytes, uploadRangeCapacity, initialGeneration)
+      uploadRing = VulkanUploadRing(stagingInitialBytes, uploadRangeCapacity, initialGeneration)
       registry.SetGpuGeneration(initialGeneration)
       flushPrepared = false
       try {

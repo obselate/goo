@@ -83,37 +83,81 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return sampler
   }
 
-  private func EnsureStagingBuffer() {
-    if stagingBuffer != 0uL && stagingAllocation != nil {
-      return
+  private func EnsureStagingBuffer(requiredBytes VkDeviceSize) {
+    let demand = if requiredBytes < stagingMaximumByteCapacity {
+      requiredBytes
+    } else {
+      stagingMaximumByteCapacity
     }
-    lock (stagingGate) {
-      if stagingBuffer != 0uL && stagingAllocation != nil {
+    if stagingBuffer != 0uL && stagingAllocation != nil
+      && stagingByteCapacity >= demand{
         return
       }
-      if stagingBuffer != 0uL || stagingAllocation != nil {
+    lock (stagingGate) {
+      if stagingBuffer != 0uL && stagingAllocation != nil
+        && stagingByteCapacity >= demand{
+          return
+        }
+      if (stagingBuffer != 0uL) != (stagingAllocation != nil) {
         throw InvalidOperationException("Vulkan image staging state is incomplete")
       }
-      try {
-        CreateStagingBuffer()
-      } catch (error Exception) {
-        DestroyStagingBuffer()
-        throw error
+      if uploadRing.Stats.ActiveRanges == 0 && stagingByteCapacity < demand {
+        var grown = stagingByteCapacity
+        while grown < demand {
+          if grown > stagingMaximumByteCapacity / 2uL {
+            grown = stagingMaximumByteCapacity
+          } else {
+            grown = grown * 2uL
+          }
+        }
+        GrowStagingBuffer(grown)
+      } else if stagingBuffer == 0uL {
+        try {
+          CreateStagingBuffer(stagingByteCapacity)
+        } catch (error Exception) {
+          DestroyStagingBuffer()
+          throw error
+        }
       }
     }
   }
 
-  private func CreateStagingBuffer() {
+  private func CreateStagingBuffer(byteCapacity VkDeviceSize) {
     let creation = VulkanBufferFactory.CreateMapped(
       device,
       dispatch,
       allocator,
       objectAccounting,
-      stagingByteCapacity,
+      byteCapacity,
       uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT),
       VulkanMemoryPolicy.HostVisibleCoherentCached)
     stagingBuffer = creation.Buffer
     stagingAllocation = creation.Allocation
+  }
+
+  private func GrowStagingBuffer(byteCapacity VkDeviceSize) {
+    let creation = VulkanBufferFactory.CreateMapped(
+      device,
+      dispatch,
+      allocator,
+      objectAccounting,
+      byteCapacity,
+      uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT),
+      VulkanMemoryPolicy.HostVisibleCoherentCached)
+    try {
+      uploadRing.GrowCapacity(byteCapacity)
+    } catch (error Exception) {
+      ReleaseStagingBuffer(creation.Buffer, creation.Allocation)
+      throw error
+    }
+    let staleBuffer = stagingBuffer
+    let staleAllocation = stagingAllocation
+    stagingBuffer = creation.Buffer
+    stagingAllocation = creation.Allocation
+    stagingByteCapacity = byteCapacity
+    if let allocation = staleAllocation {
+      ReleaseStagingBuffer(staleBuffer, allocation)
+    }
   }
 
   private func CreateImage(

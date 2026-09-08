@@ -200,19 +200,24 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   }
 
   private func DestroyStagingBuffer() {
-    if stagingBuffer != 0uL {
-      let staleBuffer = stagingBuffer
-      stagingBuffer = 0uL
+    let staleBuffer = stagingBuffer
+    let staleAllocation = stagingAllocation
+    stagingBuffer = 0uL
+    stagingAllocation = nil
+    if let allocation = staleAllocation {
+      ReleaseStagingBuffer(staleBuffer, allocation)
+    }
+  }
+
+  private func ReleaseStagingBuffer(buffer VkBuffer, allocation VulkanMemoryAllocation) {
+    if buffer != 0uL {
       let destroyBuffer = dispatch.vkDestroyBuffer
-      try { destroyBuffer(device, staleBuffer, nil) } catch (cleanup Exception) { }
+      try { destroyBuffer(device, buffer, nil) } catch (cleanup Exception) { }
       if let accounting = objectAccounting {
         try { accounting.Release() } catch (cleanup Exception) { }
       }
     }
-    if let allocation = stagingAllocation {
-      stagingAllocation = nil
-      try { allocator.Release(allocation) } catch (cleanup Exception) { }
-    }
+    try { allocator.Release(allocation) } catch (cleanup Exception) { }
   }
 
   private func FindEmptyIndex() int32 {

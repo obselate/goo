@@ -259,6 +259,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             createdResourcePolicy.ImageResidentHardBytes,
             createdResourcePolicy.ImageLogicalSourceHardBytes,
             createdResourcePolicy.ImageStagingInitialBytes,
+            createdResourcePolicy.ImageStagingHardBytes,
             createdResourcePolicy.ImageUploadInitialRangeCapacity,
             nativeDiagnostics,
             generationSeed,

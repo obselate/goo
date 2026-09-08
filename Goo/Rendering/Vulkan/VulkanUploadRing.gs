@@ -43,7 +43,7 @@ internal data struct VulkanUploadRingStats {
 }
 
 internal unsafe class VulkanUploadRing {
-  private let capacity VkDeviceSize
+  private var capacity VkDeviceSize
   private var segments []VulkanUploadSegment
   private var generation uint64
   private var head VkDeviceSize
@@ -148,6 +148,19 @@ internal unsafe class VulkanUploadRing {
         Sequence: serial,
       }
     }
+
+  internal func GrowCapacity(nextCapacity VkDeviceSize) {
+    EnsureOpen()
+    if nextCapacity <= capacity {
+      return
+    }
+    if activeRanges != 0 || submittedRanges != 0 || usedBytes != 0uL {
+      throw InvalidOperationException("Vulkan upload ring cannot grow with active ranges")
+    }
+    capacity = nextCapacity
+    head = 0uL
+    tail = 0uL
+  }
 
   internal func CanMarkSubmitted(reservation VulkanUploadReservation, fence uint64) bool {
     EnsureOpen()
