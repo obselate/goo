@@ -424,6 +424,13 @@ public partial class Window {
         return
       }
       consumeNativeMetrics()
+      if !IsOpen {
+        if profiling {
+          profiler.Record(FrameProfileStage.Events, eventsProfile)
+          profiler.EndFrame(frameProfile, false)
+        }
+        return
+      }
       native.ClearPendingEvents()
       if profiling {
         profiler.Record(FrameProfileStage.Events, eventsProfile)
