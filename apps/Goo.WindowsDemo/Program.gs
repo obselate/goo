@@ -187,7 +187,7 @@ func DemoCard(label string, value string, detail string, accent Color) Container
 func Main() {
   let processStart = Process.GetCurrentProcess().StartTime.ToUniversalTime()
   let mainEntered = DateTime.UtcNow
-  Window.ConfigureApplication("Goo Windows Demo", "0.6.0", "io.github.obselate.goo.windows-demo")
+  Window.ConfigureApplication("Goo Windows Demo", "0.5.1", "io.github.obselate.goo.windows-demo")
   let window = Window{
     Title: "Goo Windows Demo",
     Width: 1180,

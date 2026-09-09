@@ -49,7 +49,8 @@ def expected_literal_text(path: Path, version: str) -> str:
     text = path.read_text(encoding="utf-8")
     if INLINE_VERSION.search(text) is None:
         fail(f"{path.relative_to(ROOT)}: no synchronized release version found")
-    return INLINE_VERSION.sub(version, text)
+    text = INLINE_VERSION.sub(version, text)
+    return re.sub(r"(?<=/releases/download/v)0\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?", version, text)
 
 
 def expected_template_project(version: str) -> str:

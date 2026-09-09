@@ -1,14 +1,11 @@
 # Changelog
 
-## 0.6.0 - 2026-09-09
-
-### Added
-
-- Added support for linear and radial gradients with more than four stops, preserving alpha, opacity, and hard color edges.
-- Added the Goo authoring plugin with API lookup, runtime inspection, capture, and starter tools.
+## 0.5.1 - 2026-09-09
 
 ### Changed
 
+- Removed the four-stop limit for linear and radial gradients, preserving alpha, opacity, and hard color edges.
+- Included the Goo authoring plugin with API lookup, runtime inspection, capture, and starter tools.
 - Simplified the DevTools inspector and refreshed mounted cells after supported hot reload updates.
 - Reused resident path identities across garbage collection and equivalent default button styles.
 - Grew image staging buffers and clip atlas layers on demand, skipped empty image bookkeeping, and avoided unnecessary text layout scans for paint padding.

@@ -2,7 +2,7 @@
   "name": "goo-devtools",
   "displayName": "Goo DevTools",
   "description": "Launch, attach, inspect, capture, and navigate Goo applications through the goo CLI.",
-  "version": "0.6.0",
+  "version": "0.5.1",
   "publisher": "goo",
   "license": "MIT",
   "repository": {

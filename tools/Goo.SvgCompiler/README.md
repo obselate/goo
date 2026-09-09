@@ -5,7 +5,7 @@
 Install the framework-dependent .NET tool:
 
 ```text
-dotnet tool install --global Goo.SvgCompiler --version 0.6.0
+dotnet tool install --global Goo.SvgCompiler --version 0.5.1
 goo-svgc --check input.svg
 goo-svgc input.svg output.gcv1
 ```
