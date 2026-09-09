@@ -940,7 +940,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     }
   }
 
-  private func Handshake() string -> "{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\",\"client\":\"goo-devtools\",\"version\":\"0.5.2\",\"capabilities\":[\"tree\",\"properties\",\"layout\",\"events\",\"logs\",\"accessibility\",\"capture\",\"source-navigation\",\"hot-reload\"]}"
+  private func Handshake() string -> "{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\",\"client\":\"goo-devtools\",\"version\":\"0.5.3\",\"capabilities\":[\"tree\",\"properties\",\"layout\",\"events\",\"logs\",\"accessibility\",\"capture\",\"source-navigation\",\"hot-reload\"]}"
 
   private func RequestLine(command string, payload string) string {
     requestSequence = requestSequence + 1

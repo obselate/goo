@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.3 - 2026-09-09
+
+### Added
+
+- Added a Cell factory overload for constructor dependencies and F# object expressions, with stable mounted identity and Goo-owned disposal.
+
+### Fixed
+
+- Recovered shared Vulkan device loss before resizing and stopped frame processing when recovery closes the window.
+- Preserved accepted close requests during GPU teardown so `OnClosing` runs once while vetoed requests can still be retried.
+
 ## 0.5.2 - 2026-09-09
 
 ### Fixed

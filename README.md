@@ -20,7 +20,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.5.2
+dotnet new install Goo.Templates@0.5.3
 
 mkdir hello-goo
 cd hello-goo
@@ -50,7 +50,7 @@ git clone https://github.com/obselate/goo.git
 cd goo
 ```
 
-Download [Goo.0.5.2.nupkg](https://github.com/obselate/goo/releases/download/v0.5.2/Goo.0.5.2.nupkg)
+Download [Goo.0.5.3.nupkg](https://github.com/obselate/goo/releases/download/v0.5.3/Goo.0.5.3.nupkg)
 and extract it as a ZIP archive into `artifacts/gallery-native` inside the
 checkout. This supplies the released native libraries without compiling them
 yourself. Keep the archive's directory structure intact.
