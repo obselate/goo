@@ -170,7 +170,7 @@ Gets the most recent adapter exception. Failed delivery retries on the next UI-t
 
 ### `OnClosing`
 
-Gets or sets the close-request handler; return false to veto closure.
+Gets or sets the close-request handler. Return false to veto closure. Accepted requests do not invoke the handler again while teardown finishes.
 
 ### `Resizable`
 

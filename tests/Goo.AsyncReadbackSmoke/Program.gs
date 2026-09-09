@@ -742,6 +742,17 @@ func RunOffscreenFailureSmoke() {
     let followup = WindowReadbackTestFixture.Request(opened, 64u, 64u)
     Require(followup != WindowReadbackRequestStatus.Busy,
       "D02 offscreen failure left a readback request Busy")
+    guard let target = WindowReadbackTestFixture.CaptureTarget(opened) else {
+      throw InvalidOperationException("D02 offscreen failure lost the window target")
+    }
+    let metrics = WindowReadbackTestFixture.Metrics(opened)
+    let recoveriesBefore = WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount
+    Require(!target.Resize(-1, metrics.FramebufferHeight)
+        && WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount == recoveriesBefore,
+      "D02 invalid resize attempted device recovery")
+    Require(target.Resize(metrics.FramebufferWidth, metrics.FramebufferHeight)
+        && WindowReadbackTestFixture.DiagnosticCounters(opened).deviceRecoveryCount > recoveriesBefore,
+      "D02 resize did not recover the lost device")
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(opened.IsOpen,
       "D02 offscreen failure window did not recover before close")

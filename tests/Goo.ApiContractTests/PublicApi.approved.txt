@@ -575,6 +575,7 @@ method|Goo.Cell|Animate|instance|public|generic:|(initial:System.Double)->Goo.An
 method|Goo.Cell|Animate|instance|public|generic:|(initial:System.Double,onChange:System.Action`1<System.Double>)->Goo.Anim`1<System.Double>
 method|Goo.Cell|Build|virtual|public|generic:|()->Goo.Blob
 method|Goo.Cell|MountSeeded|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String,seed:System.Action`1<!!0>,configure:System.Action`1<!!0>)->Goo.Blob
+method|Goo.Cell|Mount|static|public|generic:TCell[attrs:0,constraints:Goo.Cell]|(factory:System.Func`1<!!0>,key:System.String)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TCell[attrs:16,constraints:Goo.Cell]|(key:System.String,configure:System.Action`1<!!0>)->Goo.Blob
 method|Goo.Cell|Mount|static|public|generic:TInput[attrs:0,constraints:];TCell[attrs:16,constraints:Goo.Cell`1<!!0>]|(key:System.String,input:!!0)->Goo.Blob

@@ -1182,16 +1182,19 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   }
 
   public func Resize(width int32, height int32) bool {
-    if disposed {
+    if disposed || width < 0 || height < 0 {
       return false
     }
-    if let activeRuntime = runtime {
-      if activeRuntime.DeviceLost || activeRuntime.Terminal {
+    guard let activeRuntime = runtime else {
+      return false
+    }
+    if activeRuntime.Terminal {
+      return false
+    }
+    if activeRuntime.DeviceLost {
+      if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {
         return false
       }
-    }
-    if width < 0 || height < 0 {
-      return false
     }
     requestedWidth = width
     requestedHeight = height

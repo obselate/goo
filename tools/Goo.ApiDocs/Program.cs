@@ -109,6 +109,8 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
         AppendStyleCompositionGuide(text);
     if (directory == "Cell")
         AppendCellInputGuide(text);
+    if (directory == "Cell")
+        AppendCellFactoryGuide(text);
     if (directory == "Tree")
         AppendVirtualizationGuide(text);
     if (directory == "Tree")
@@ -207,6 +209,51 @@ static void AppendCellInputGuide(StringBuilder text)
     text.AppendLine("Store local Cell state in ordinary fields. Goo rebuilds the owning Cell after its input callbacks. Call `Rebuild()` after mutations outside Goo input dispatch.");
     text.AppendLine();
     text.AppendLine("A packaged G# component derived from `Cell<TInput>` should be an `open class` and override `protected Build(input TInput) Blob`. G# requires the inheritable class declaration because the override is protected. Goo passes the stored immutable snapshot through this typed dispatch path. Existing same-assembly components that override parameterless `Build()` remain valid. If a component overrides both overloads, the typed overload takes precedence. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the component's rebuild policy.");
+}
+
+static void AppendCellFactoryGuide(StringBuilder text)
+{
+    text.AppendLine();
+    text.AppendLine("""
+        ## Mount with a factory
+
+        `Cell.Mount<TCell>(factory, key)` accepts a `System.Func<TCell>` and does not require a parameterless constructor. The factory can supply constructor dependencies or create an F# object expression. The existing mounts with configuration, seeding, or typed inputs remain available.
+
+        ```gsharp
+        Cell.Mount[Counter](() -> Counter(store), "counter")
+        ```
+
+        ```csharp
+        Cell.Mount(() => new Counter(store), "counter")
+        ```
+
+        A mounted Cell is retained by its declared `TCell` and sibling key. The factory runs only when a new mount is needed. Rebuilding the parent, replacing its factory delegate, or changing values captured by the factory does not recreate the retained Cell. Use a different key when a different instance is required. When several factories return the base `Cell` type, give their distinct components distinct stable keys.
+
+        Goo owns the returned Cell and disposes it when removed. Each factory invocation must return a fresh, unmounted, undisposed instance. Do not return one instance for multiple mounts or return a disposed instance after removal. A null factory or result is rejected.
+
+        Constructor arguments are initialization, not changing input snapshots. For later updates, use typed inputs, configuration, or an external store read by `Build()`. Call the mounted Cell's `Rebuild()` after changes outside Goo input callbacks. Read changing values from the store or a getter instead of capturing a copied scalar. Calling a Cell's `Build()` directly only returns its Blob tree and does not mount that Cell.
+
+        F# can call the CLR overload directly or through a helper:
+
+        ```fsharp
+        open System
+        open Goo
+
+        let mount key (create: unit -> Cell) =
+            Cell.Mount<Cell>(Func<Cell>(create), key)
+
+        let counter (value: int ref) =
+            { new Cell() with
+                override _.Build() =
+                    Text(Content = $"Count: {value.Value}") :> Blob }
+
+        let value = ref 0
+        let direct = Cell.Mount<Cell>(Func<Cell>(fun () -> counter value), "direct")
+        let throughHelper = mount "helper" (fun () -> counter value)
+        ```
+
+        Creating a capturing factory inside every parent build can allocate a new delegate and closure even when the Cell is reused. Cache the factory when its dependencies are stable. Goo does not invoke a factory merely to discover the created Cell's runtime type.
+        """);
 }
 
 static void AppendStyleCompositionGuide(StringBuilder text)

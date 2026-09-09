@@ -260,7 +260,8 @@ public partial class Window {
       notifications.RemoveKeyPressed(value)
     }
   }
-  /// Gets or sets the close-request handler; return false to veto closure.
+  /// Gets or sets the close-request handler. Return false to veto closure.
+  /// Accepted requests do not invoke the handler again while teardown finishes.
   public prop OnClosing(() -> bool)? {
     get -> onClosing
     set(v) {

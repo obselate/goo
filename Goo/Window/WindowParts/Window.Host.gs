@@ -299,7 +299,7 @@ public partial class Window {
       requestRender()
     }
     native.CloseRequested += () -> {
-      Interlocked.Exchange(&closeRequested, 1)
+      Interlocked.CompareExchange(&closeRequested, 1, 0)
     }
   }
 
@@ -317,21 +317,26 @@ public partial class Window {
 
   /// Queues an idempotent close request. This is safe from any thread.
   public func RequestClose() {
-    if Interlocked.Exchange(&closeRequested, 1) == 0 {
+    if Interlocked.CompareExchange(&closeRequested, 1, 0) == 0 {
       host?.Wake()
     }
   }
 
-  // One decision per queued request: native close, Alt+F4, and RequestClose
-  // all land here; nil OnClosing closes, false vetoes.
   internal func drainCloseRequest() bool {
-    if Interlocked.Exchange(&closeRequested, 0) == 0 {
-      return false
-    }
-    guard let handler = OnClosing else {
+    let state = Interlocked.CompareExchange(&closeRequested, 0, 1)
+    if state == 2 {
       return true
     }
-    return handler()
+    if state != 1 {
+      return false
+    }
+    if let handler = OnClosing {
+      if !handler() {
+        return false
+      }
+    }
+    Interlocked.Exchange(&closeRequested, 2)
+    return true
   }
 
   /// Processes one frame with the specified elapsed time.
@@ -405,9 +410,7 @@ public partial class Window {
       }
       let repeatStartTicks = Stopwatch.GetTimestamp()
       if !native.IsClosing && drainCloseRequest() {
-        if windowTarget?.PrepareClose() == false {
-          Interlocked.Exchange(&closeRequested, 1)
-        } else {
+        if windowTarget?.PrepareClose() != false {
           stopPosts()
           native.BeginClose()
         }
@@ -424,6 +427,13 @@ public partial class Window {
         return
       }
       consumeNativeMetrics()
+      if !IsOpen {
+        if profiling {
+          profiler.Record(FrameProfileStage.Events, eventsProfile)
+          profiler.EndFrame(frameProfile, false)
+        }
+        return
+      }
       native.ClearPendingEvents()
       if profiling {
         profiler.Record(FrameProfileStage.Events, eventsProfile)
