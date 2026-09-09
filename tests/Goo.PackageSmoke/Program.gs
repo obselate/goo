@@ -2020,8 +2020,10 @@ func Main() {
     second.Background = Color.Rgb(20, 28, 40)
     var secondScheduled int32 = 0
     var thirdScheduled int32 = 0
-    first.OnClosing = func() bool {
-      third.Post(func() {
+    var closingCount int32 = 0
+    first.OnClosing = () -> {
+      Interlocked.Increment(&closingCount)
+      third.Post(() -> {
         Interlocked.Exchange(&thirdScheduled, 1)
         second.RequestClose()
         third.RequestClose()
@@ -2057,6 +2059,10 @@ func Main() {
     if first.IsOpen || second.IsOpen || third.IsOpen {
       throw InvalidOperationException("Native multi-window smoke windows did not close")
     }
+    if closingCount != 1 {
+      throw InvalidOperationException("Native multi-window close callback ran " + closingCount.ToString() + " times")
+    }
+    Console.WriteLine("multi-window: closing=1 siblings=2 close=3")
     return
   }
   let nativeSmoke = Environment.GetEnvironmentVariable("GOO_WINDOW_SMOKE") == "1"
