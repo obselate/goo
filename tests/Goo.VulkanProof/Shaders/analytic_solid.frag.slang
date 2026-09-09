@@ -5,6 +5,7 @@ static uint gooPrimitiveRecordOrdinal;
 static float4 gooFragmentPosition;
 static float4 outColor;
 #include "clip_chain.slang"
+#include "rounded_rect.slang"
 
 #define pc gooPrimitiveBuffer[gooPrimitiveRecordOrdinal]
 
@@ -31,10 +32,35 @@ float roundedDistance(float2 point, float2 size, float4 cornerRadii)
 void shade()
 {
     float2 point = uv * pc.rect.zw;
-    float distance = roundedDistance(point, pc.rect.zw, pc.radii);
+    float distance = pc.params.x > 0.0 && pc.params.y > 0.0
+        ? gooRoundedRectDistance(point, pc.rect.zw, gooNormalizeRadii(pc.rect.zw, pc.radii))
+        : roundedDistance(point, pc.rect.zw, pc.radii);
     float aa = max(length(float2(ddx(distance), ddy(distance))), 0.0001);
     float coverage = 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distance);
-    outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u) * coverage * gooClipCoverage();
+    float backgroundCoverage = coverage;
+    if (pc.params.x > 0.0 && pc.params.y > 0.0)
+    {
+        float2 inset = pc.params.xy;
+        float2 innerSize = max(pc.rect.zw - inset * 2.0, float2(0.0));
+        float innerCoverage = 1.0;
+        if (innerSize.x > 0.0 && innerSize.y > 0.0)
+        {
+            float4 outerRadii = gooNormalizeRadii(pc.rect.zw, pc.radii);
+            float4 innerRadii = gooNormalizeRadii(innerSize,
+                max(outerRadii - float4(max(inset.x, inset.y)), float4(0.0)));
+            float innerDistance = gooRoundedRectDistance(
+                point - inset, innerSize, innerRadii);
+            float innerAa = max(length(float2(ddx(innerDistance), ddy(innerDistance))), 0.0001);
+            innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
+        }
+        float borderCoverage = coverage * innerCoverage;
+        float remaining = 1.0 - borderCoverage;
+        backgroundCoverage = remaining > 0.00001
+            ? coverage * (1.0 - innerCoverage) / remaining
+            : 1.0;
+    }
+    outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u)
+        * backgroundCoverage * gooClipCoverage();
 }
 
 #include "analytic_fragment_entry.slang"

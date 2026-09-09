@@ -5,6 +5,7 @@ static uint gooPrimitiveRecordOrdinal;
 static float4 gooFragmentPosition;
 static float4 outColor;
 #include "clip_chain.slang"
+#include "rounded_rect.slang"
 
 #define pc gooPrimitiveBuffer[gooPrimitiveRecordOrdinal]
 
@@ -177,53 +178,6 @@ void renderRectangular(float2 point, float2 size)
     outColor = edgeColor(edge) * edgeCoverage * patternCoverage;
 }
 
-float4 normalizeRadii(float2 size, float4 source)
-{
-    float4 result = max(source, float4(0.0));
-    float scale = 1.0;
-    float sum = result.x + result.y;
-    if (sum > size.x && sum > 0.0)
-    {
-        scale = min(scale, size.x / sum);
-    }
-    sum = result.w + result.z;
-    if (sum > size.x && sum > 0.0)
-    {
-        scale = min(scale, size.x / sum);
-    }
-    sum = result.x + result.w;
-    if (sum > size.y && sum > 0.0)
-    {
-        scale = min(scale, size.y / sum);
-    }
-    sum = result.y + result.z;
-    if (sum > size.y && sum > 0.0)
-    {
-        scale = min(scale, size.y / sum);
-    }
-    return result * scale;
-}
-
-float roundedRectDistance(float2 point, float2 size, float4 cornerRadii)
-{
-    if (size.x <= 0.0 || size.y <= 0.0)
-    {
-        return 1000000.0;
-    }
-    float2 centered = point - size * 0.5;
-    float radius;
-    if (centered.x < 0.0)
-    {
-        radius = centered.y < 0.0 ? cornerRadii.x : cornerRadii.w;
-    }
-    else
-    {
-        radius = centered.y < 0.0 ? cornerRadii.y : cornerRadii.z;
-    }
-    float2 q = abs(centered) - size * 0.5 + float2(radius);
-    return length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - radius;
-}
-
 uint roundedEdge(float2 point, float2 size)
 {
     float top = min(max(pc.radii.x, 0.0), size.y);
@@ -269,12 +223,12 @@ void shade()
         return;
     }
 
-    float4 outerRadii = normalizeRadii(size, pc.stopPositions);
+    float4 outerRadii = gooNormalizeRadii(size, pc.stopPositions);
     float top = min(max(pc.radii.x, 0.0), size.y);
     float right = min(max(pc.radii.y, 0.0), size.x);
     float bottom = min(max(pc.radii.z, 0.0), max(size.y - top, 0.0));
     float left = min(max(pc.radii.w, 0.0), max(size.x - right, 0.0));
-    float outerDistance = roundedRectDistance(point, size, outerRadii);
+    float outerDistance = gooRoundedRectDistance(point, size, outerRadii);
     float outerAa = max(length(float2(ddx(outerDistance), ddy(outerDistance))), 0.0001);
     float outerCoverage = 1.0 - smoothstep(-0.5 * outerAa, 0.5 * outerAa, outerDistance);
     float2 innerSize = max(size - float2(left + right, top + bottom), float2(0.0));
@@ -284,8 +238,8 @@ void shade()
     {
         float4 innerRadii = max(outerRadii - float4(max(top, left), max(top, right),
             max(bottom, right), max(bottom, left)), float4(0.0));
-        innerRadii = normalizeRadii(innerSize, innerRadii);
-        float innerDistance = roundedRectDistance(point - float2(left, top), innerSize, innerRadii);
+        innerRadii = gooNormalizeRadii(innerSize, innerRadii);
+        float innerDistance = gooRoundedRectDistance(point - float2(left, top), innerSize, innerRadii);
         float innerAa = max(length(float2(ddx(innerDistance), ddy(innerDistance))), 0.0001);
         innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
     }

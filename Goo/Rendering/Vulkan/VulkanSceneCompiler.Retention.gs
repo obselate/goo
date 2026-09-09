@@ -794,6 +794,8 @@ internal partial class VulkanSceneCompiler {
     && ExactFloat(left.RadiusTopRight, right.RadiusTopRight)
     && ExactFloat(left.RadiusBottomRight, right.RadiusBottomRight)
     && ExactFloat(left.RadiusBottomLeft, right.RadiusBottomLeft)
+    && ExactFloat(left.OpaqueBorderWidth, right.OpaqueBorderWidth)
+    && ExactFloat(left.OpaqueBorderHeight, right.OpaqueBorderHeight)
     && left.Color == right.Color
     && ExactFloat(left.Opacity, right.Opacity)
     && left.TransformIndex == right.TransformIndex

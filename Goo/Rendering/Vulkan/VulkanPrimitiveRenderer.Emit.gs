@@ -115,6 +115,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     radiusTopRight float32,
     radiusBottomRight float32,
     radiusBottomLeft float32,
+    opaqueBorderWidth float32,
+    opaqueBorderHeight float32,
     color uint32,
     opacity float32,
     transformIndex int32,
@@ -124,6 +126,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       ValidateRadius(radiusTopRight)
       ValidateRadius(radiusBottomRight)
       ValidateRadius(radiusBottomLeft)
+      ValidateRadius(opaqueBorderWidth)
+      ValidateRadius(opaqueBorderHeight)
       ValidateOpacity(opacity)
       ValidateTransformIndex(frame, transformIndex)
       let transform = ResolveTransform(frame, transformIndex)
@@ -131,7 +135,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       EmitSolidResolved(commandBuffer, extent, bounds, radiusTopLeft, radiusTopRight,
-        radiusBottomRight, radiusBottomLeft, color, opacity, transform)
+        radiusBottomRight, radiusBottomLeft, opaqueBorderWidth, opaqueBorderHeight,
+        color, opacity, transform)
     }
 
   private func EmitSolidResolved(
@@ -142,19 +147,23 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     radiusTopRight float32,
     radiusBottomRight float32,
     radiusBottomLeft float32,
+    opaqueBorderWidth float32,
+    opaqueBorderHeight float32,
     color uint32,
     opacity float32,
     transform PrimitiveTransform) {
       var push = AnalyticSolidPushConstants{}
       FillTransform(&push, bounds, transform, extent)
       if radiusTopLeft > 0.0F || radiusTopRight > 0.0F
-        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F{
+        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F {
           push.transform1_w = 1.0F
         }
       push.radii_x = radiusTopLeft
       push.radii_y = radiusTopRight
       push.radii_z = radiusBottomRight
       push.radii_w = radiusBottomLeft
+      push.params_x = opaqueBorderWidth
+      push.params_y = opaqueBorderHeight
       let packed = PackColor(color, opacity)
       push.packedColors_x = packed.Rgb
       push.packedColors_w = packed.Alpha
@@ -353,7 +362,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y,
           Width: bounds.Width,
           Height: topWidth,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, value.TopColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.TopColor, 1.0F, transform)
       }
       if rightWidth > 0.0F && interiorHeight > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -361,7 +370,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y + topWidth,
           Width: rightWidth,
           Height: interiorHeight,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, value.RightColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.RightColor, 1.0F, transform)
       }
       if bottomWidth > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -369,7 +378,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y + bounds.Height - bottomWidth,
           Width: bounds.Width,
           Height: bottomWidth,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, value.BottomColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.BottomColor, 1.0F, transform)
       }
       if leftWidth > 0.0F && interiorHeight > 0.0F {
         EmitSolidResolved(commandBuffer, extent, ConservativeBounds{
@@ -377,7 +386,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           Y: bounds.Y + topWidth,
           Width: leftWidth,
           Height: interiorHeight,
-        }, 0.0F, 0.0F, 0.0F, 0.0F, value.LeftColor, 1.0F, transform)
+        }, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, value.LeftColor, 1.0F, transform)
       }
     }
 
@@ -405,7 +414,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var push = AnalyticLinear4PushConstants{}
       FillTransform(&push, value.Bounds, transform, extent)
       if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
-        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F{
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F {
           push.transform1_w = 1.0F
         }
       push.radii_x = value.RadiusTopLeft
@@ -447,7 +456,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var push = AnalyticRadial4PushConstants{}
       FillTransform(&push, value.Bounds, transform, extent)
       if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
-        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F{
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F {
           push.transform1_w = 1.0F
         }
       push.radii_x = value.RadiusTopLeft

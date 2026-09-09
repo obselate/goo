@@ -46,6 +46,8 @@ internal partial class VulkanWindowTarget {
         RadiusTopRight: ScaleRadius(value.RadiusTopRight, scaleX, scaleY),
         RadiusBottomRight: ScaleRadius(value.RadiusBottomRight, scaleX, scaleY),
         RadiusBottomLeft: ScaleRadius(value.RadiusBottomLeft, scaleX, scaleY),
+        OpaqueBorderWidth: value.OpaqueBorderWidth * scaleX,
+        OpaqueBorderHeight: value.OpaqueBorderHeight * scaleY,
         Color: value.Color,
         Opacity: value.Opacity,
         TransformIndex: value.TransformIndex,

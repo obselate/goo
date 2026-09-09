@@ -5,6 +5,7 @@
 ### Fixed
 
 - Preserved rounded primitive edge coverage at fractional pixel positions.
+- Removed bright fringes from opaque rounded fills beneath uniform opaque borders.
 
 ## 0.5.1 - 2026-09-09
 

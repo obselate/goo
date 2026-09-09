@@ -413,14 +413,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
               RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
               let value = frame.SolidBoxes[reference.Index]
               EmitSolid(nint(0), activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                value.Color, value.Opacity, value.TransformIndex, frame)
+                0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame)
             }
             case SceneDrawKind.RoundedBox {
               RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
               let value = frame.RoundedBoxes[reference.Index]
               EmitSolid(nint(0), activeExtent, value.Bounds, value.RadiusTopLeft,
                 value.RadiusTopRight, value.RadiusBottomRight, value.RadiusBottomLeft,
-                value.Color, value.Opacity, value.TransformIndex, frame)
+                value.OpaqueBorderWidth, value.OpaqueBorderHeight, value.Color, value.Opacity,
+                value.TransformIndex, frame)
             }
             case SceneDrawKind.PerEdgeBorder {
               RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
@@ -448,7 +449,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
               let value = frame.Underlines[reference.Index]
               ValidateRadius(value.Thickness)
               EmitSolid(nint(0), activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                value.Color, 1.0F, value.TransformIndex, frame)
+                0.0F, 0.0F, value.Color, 1.0F, value.TransformIndex, frame)
             }
             case SceneDrawKind.LayerBegin {
               RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
@@ -708,14 +709,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
               RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
               let value = frame.SolidBoxes[reference.Index]
               EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                value.Color, value.Opacity, value.TransformIndex, frame)
+                0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame)
             }
             case SceneDrawKind.RoundedBox {
               RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
               let value = frame.RoundedBoxes[reference.Index]
               EmitSolid(commandBuffer, activeExtent, value.Bounds, value.RadiusTopLeft,
                 value.RadiusTopRight, value.RadiusBottomRight, value.RadiusBottomLeft,
-                value.Color, value.Opacity, value.TransformIndex, frame)
+                value.OpaqueBorderWidth, value.OpaqueBorderHeight, value.Color, value.Opacity,
+                value.TransformIndex, frame)
             }
             case SceneDrawKind.PerEdgeBorder {
               RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
@@ -747,7 +749,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
               let value = frame.Underlines[reference.Index]
               ValidateRadius(value.Thickness)
               EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                value.Color, 1.0F, value.TransformIndex, frame)
+                0.0F, 0.0F, value.Color, 1.0F, value.TransformIndex, frame)
             }
             case SceneDrawKind.LayerBegin {
               RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")

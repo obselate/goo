@@ -329,6 +329,8 @@ internal struct RoundedBoxRecord {
   internal var RadiusTopRight float32
   internal var RadiusBottomRight float32
   internal var RadiusBottomLeft float32
+  internal var OpaqueBorderWidth float32
+  internal var OpaqueBorderHeight float32
   internal var Color uint32
   internal var Opacity float32
   internal var TransformIndex int32

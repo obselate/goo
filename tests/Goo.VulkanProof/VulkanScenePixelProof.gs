@@ -3,11 +3,13 @@ package Goo.VulkanProof
 internal class PixelSceneContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
-  const ExpectedDigest uint64 = 13590187435474851814uL
+  const ExpectedDigest uint64 = 15749474316140239807uL
   const ClearColor uint32 = 0x0000FFFFu
   const BackgroundColor uint32 = 0x000000FFu
   const SolidColor uint32 = 0xFF0000FFu
   const RoundedColor uint32 = 0x00FF00FFu
+  const CompensatedFillColor uint32 = 0xFFFFFFFFu
+  const CompensatedBorderColor uint32 = 0x202020FFu
   const BorderTopColor uint32 = 0xFF0000FFu
   const BorderRightColor uint32 = 0x00FF00FFu
   const BorderBottomColor uint32 = 0x0000FFFFu
@@ -86,6 +88,93 @@ internal func BuildPixelScene(frame SceneFrame, version uint64) {
     RadiusBottomLeft: 3.0F,
     Color: PixelSceneContract.RoundedColor,
     Opacity: 1.0F,
+    TransformIndex: -1,
+  })
+  frame.AddRoundedBox(RoundedBoxRecord{
+    Bounds: ConservativeBounds{ X: 18.75F, Y: 17.75F, Width: 6.0F, Height: 6.0F },
+    RadiusTopLeft: 3.0F,
+    RadiusTopRight: 3.0F,
+    RadiusBottomRight: 3.0F,
+    RadiusBottomLeft: 3.0F,
+    OpaqueBorderWidth: 1.5F,
+    OpaqueBorderHeight: 1.5F,
+    Color: PixelSceneContract.CompensatedFillColor,
+    Opacity: 1.0F,
+    TransformIndex: -1,
+  })
+  frame.AddPerEdgeBorder(PerEdgeBorderRecord{
+    Bounds: ConservativeBounds{ X: 18.75F, Y: 17.75F, Width: 6.0F, Height: 6.0F },
+    TopWidth: 1.5F,
+    RightWidth: 1.5F,
+    BottomWidth: 1.5F,
+    LeftWidth: 1.5F,
+    RadiusTopLeft: 3.0F,
+    RadiusTopRight: 3.0F,
+    RadiusBottomRight: 3.0F,
+    RadiusBottomLeft: 3.0F,
+    TopColor: PixelSceneContract.CompensatedBorderColor,
+    RightColor: PixelSceneContract.CompensatedBorderColor,
+    BottomColor: PixelSceneContract.CompensatedBorderColor,
+    LeftColor: PixelSceneContract.CompensatedBorderColor,
+    Style: 0u,
+    TransformIndex: -1,
+  })
+  frame.AddRoundedBox(RoundedBoxRecord{
+    Bounds: ConservativeBounds{ X: 31.75F, Y: 17.75F, Width: 8.0F, Height: 8.0F },
+    RadiusTopLeft: 4.0F,
+    RadiusTopRight: 4.0F,
+    RadiusBottomRight: 4.0F,
+    RadiusBottomLeft: 4.0F,
+    OpaqueBorderWidth: 3.0F,
+    OpaqueBorderHeight: 3.0F,
+    Color: PixelSceneContract.CompensatedFillColor,
+    Opacity: 1.0F,
+    TransformIndex: -1,
+  })
+  frame.AddPerEdgeBorder(PerEdgeBorderRecord{
+    Bounds: ConservativeBounds{ X: 31.75F, Y: 17.75F, Width: 8.0F, Height: 8.0F },
+    TopWidth: 3.0F,
+    RightWidth: 3.0F,
+    BottomWidth: 3.0F,
+    LeftWidth: 3.0F,
+    RadiusTopLeft: 4.0F,
+    RadiusTopRight: 4.0F,
+    RadiusBottomRight: 4.0F,
+    RadiusBottomLeft: 4.0F,
+    TopColor: PixelSceneContract.CompensatedBorderColor,
+    RightColor: PixelSceneContract.CompensatedBorderColor,
+    BottomColor: PixelSceneContract.CompensatedBorderColor,
+    LeftColor: PixelSceneContract.CompensatedBorderColor,
+    Style: 0u,
+    TransformIndex: -1,
+  })
+  frame.AddRoundedBox(RoundedBoxRecord{
+    Bounds: ConservativeBounds{ X: 48.75F, Y: 26.75F, Width: 6.0F, Height: 10.0F },
+    RadiusTopLeft: 3.0F,
+    RadiusTopRight: 3.0F,
+    RadiusBottomRight: 3.0F,
+    RadiusBottomLeft: 3.0F,
+    OpaqueBorderWidth: 1.5F,
+    OpaqueBorderHeight: 2.0F,
+    Color: PixelSceneContract.CompensatedFillColor,
+    Opacity: 1.0F,
+    TransformIndex: -1,
+  })
+  frame.AddPerEdgeBorder(PerEdgeBorderRecord{
+    Bounds: ConservativeBounds{ X: 48.75F, Y: 26.75F, Width: 6.0F, Height: 10.0F },
+    TopWidth: 2.0F,
+    RightWidth: 1.5F,
+    BottomWidth: 2.0F,
+    LeftWidth: 1.5F,
+    RadiusTopLeft: 3.0F,
+    RadiusTopRight: 3.0F,
+    RadiusBottomRight: 3.0F,
+    RadiusBottomLeft: 3.0F,
+    TopColor: PixelSceneContract.CompensatedBorderColor,
+    RightColor: PixelSceneContract.CompensatedBorderColor,
+    BottomColor: PixelSceneContract.CompensatedBorderColor,
+    LeftColor: PixelSceneContract.CompensatedBorderColor,
+    Style: 0u,
     TransformIndex: -1,
   })
   frame.AddPerEdgeBorder(PerEdgeBorderRecord{
@@ -263,9 +352,11 @@ internal unsafe func VerifyPixelSceneReadbackWithClear(
     if !ExactPixel(readback, width, 28, 12, PixelSceneContract.RoundedColor) {
       return false
     }
-    if !FractionalRoundedEdge(readback, width) {
-      return false
-    }
+    if !FractionalRoundedEdge(readback, width)
+      || !CompensatedFractionalCircles(readback, width)
+      || !CompensatedAsymmetricRoundedRect(readback, width) {
+        return false
+      }
     if !ExactPixel(readback, width, 47, 8, PixelSceneContract.BorderTopColor) {
       return false
     }
@@ -365,6 +456,48 @@ private unsafe func RoundedBorderCornerAntialias(
       && readback[innerEdgeOffset] >= 240u
       && readback[innerEdgeOffset + 1] >= 240u
       && readback[innerEdgeOffset + 2] >= 240u
+  }
+
+private unsafe func CompensatedFractionalCircles(
+  readback * uint8,
+  width uint32) bool{
+    let trackExterior = PixelOffset(width, 21, 17)
+    let trackInterior = PixelOffset(width, 21, 20)
+    let sliderExterior = PixelOffset(width, 35, 17)
+    let sliderInterior = PixelOffset(width, 35, 21)
+    return readback[trackExterior] > 0u
+      && readback[trackExterior] <= 32u
+      && readback[trackExterior + 1] <= 32u
+      && readback[trackExterior + 2] <= 32u
+      && readback[trackInterior] >= 240u
+      && readback[trackInterior + 1] >= 240u
+      && readback[trackInterior + 2] >= 240u
+      && readback[sliderExterior] > 0u
+      && readback[sliderExterior] <= 32u
+      && readback[sliderExterior + 1] <= 32u
+      && readback[sliderExterior + 2] <= 32u
+      && readback[sliderInterior] >= 240u
+      && readback[sliderInterior + 1] >= 240u
+      && readback[sliderInterior + 2] >= 240u
+  }
+
+private unsafe func CompensatedAsymmetricRoundedRect(
+  readback * uint8,
+  width uint32) bool{
+    let topExterior = PixelOffset(width, 51, 26)
+    let sideExterior = PixelOffset(width, 48, 31)
+    let interior = PixelOffset(width, 51, 31)
+    return readback[topExterior] > 0u
+      && readback[topExterior] <= 32u
+      && readback[topExterior + 1] <= 32u
+      && readback[topExterior + 2] <= 32u
+      && readback[sideExterior] > 0u
+      && readback[sideExterior] <= 32u
+      && readback[sideExterior + 1] <= 32u
+      && readback[sideExterior + 2] <= 32u
+      && readback[interior] >= 240u
+      && readback[interior + 1] >= 240u
+      && readback[interior + 2] >= 240u
   }
 
 private unsafe func FractionalRoundedEdge(

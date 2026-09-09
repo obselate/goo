@@ -891,11 +891,11 @@ internal partial class VulkanSceneCompiler {
       }
       var result = if node.Kind != NodeKind.Shape && HasRadius(node, bounds)
         && (node.BackgroundColor.A > 0.0F || node.BackgroundGradient != nil
-            || HasBorderWidth(node, bounds)){
-          bounds.Inflate(1.0F)
-        } else {
-          bounds
-        }
+            || HasBorderWidth(node, bounds)) {
+              bounds.Inflate(1.0F)
+            } else {
+              bounds
+            }
       let outlineBounds = OutlineBounds(node, bounds)
       if !outlineBounds.IsEmpty {
         result = unionVulkanSceneBounds(result, outlineBounds)
@@ -1026,12 +1026,15 @@ internal partial class VulkanSceneCompiler {
         return
       }
       if HasRadius(node, bounds) {
+        let opaqueBorderWidth = OpaqueRoundedBorderCompensationWidth(node, bounds, opacity)
         frame.AddRoundedBox(RoundedBoxRecord{
           Bounds: bounds,
           RadiusTopLeft: Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
           RadiusTopRight: Radius(node.BorderTopRightRadius, node.BorderRadius, bounds),
           RadiusBottomRight: Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds),
           RadiusBottomLeft: Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds),
+          OpaqueBorderWidth: opaqueBorderWidth,
+          OpaqueBorderHeight: opaqueBorderWidth,
           Color: color.ToPackedRgba(),
           Opacity: opacity,
           TransformIndex: transformIndex,
@@ -1044,6 +1047,50 @@ internal partial class VulkanSceneCompiler {
           TransformIndex: transformIndex,
         })
       }
+    }
+
+  private func OpaqueRoundedBorderCompensationWidth(
+    node Node,
+    bounds ConservativeBounds,
+    opacity float32) float32{
+      if (node.Kind != NodeKind.Container && node.Kind != NodeKind.Button)
+        || bounds.IsEmpty
+        || opacity != 1.0F
+        || node.Opacity != 1.0
+        || node.BackgroundColor.A != 1.0F
+        || node.BackgroundGradient != nil
+        || node.HasBackgroundImageState
+        || boxShadowCount(node.BoxShadows) != 0
+        || node.BorderStyle != BorderStyle.Solid{
+          return 0.0F
+        }
+      let basis = MinDimension(bounds)
+      let top = ResolveLength(node.BorderTopWidth, basis)
+      let right = ResolveLength(node.BorderRightWidth, basis)
+      let bottom = ResolveLength(node.BorderBottomWidth, basis)
+      let left = ResolveLength(node.BorderLeftWidth, basis)
+      if top <= 0.0F || right != top || bottom != top || left != top {
+        return 0.0F
+      }
+      let radiusTopLeft = Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)
+      let radiusTopRight = Radius(node.BorderTopRightRadius, node.BorderRadius, bounds)
+      let radiusBottomRight = Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds)
+      let radiusBottomLeft = Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)
+      if radiusTopLeft < top || radiusTopRight != radiusTopLeft
+        || radiusBottomRight != radiusTopLeft || radiusBottomLeft != radiusTopLeft{
+          return 0.0F
+        }
+      let color = node.BorderTopColor.ToPackedRgba()
+      if node.BorderTopColor.A != 1.0F
+        || node.BorderRightColor.A != 1.0F
+        || node.BorderBottomColor.A != 1.0F
+        || node.BorderLeftColor.A != 1.0F
+        || node.BorderRightColor.ToPackedRgba() != color
+        || node.BorderBottomColor.ToPackedRgba() != color
+        || node.BorderLeftColor.ToPackedRgba() != color{
+          return 0.0F
+        }
+      return top
     }
 
   private func PaintBorder(
