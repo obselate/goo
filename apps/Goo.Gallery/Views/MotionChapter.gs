@@ -70,7 +70,6 @@ class MotionChapter : Cell {
   private let segmentPillX Anim[float64]
 
   private var impulseStep int32
-  private let impulseScale Anim[float64]
 
   // --- Exhibit 1: UI Component Gallery ---
   private let compSliderTrackHandle ElementHandle
@@ -137,7 +136,6 @@ class MotionChapter : Cell {
     segmentPillX = Animate(0.0)
 
     impulseStep = 0
-    impulseScale = Animate(1.0)
 
     // Exhibit 1: UI Component Gallery
     compSliderTrackHandle = ElementHandle{}
@@ -305,7 +303,6 @@ class MotionChapter : Cell {
   }
 
   private func fireImpulseDirection(dx float64, dy float64) {
-    impulseScale.To(0.85, GallerySnappySpringSpec)
     let current = physicsPuckPos.Value
     let (w, h) = getArenaSize()
     let target = clampArenaPoint(Point{
@@ -928,6 +925,7 @@ class MotionChapter : Cell {
         Children: {
           Text{ Content: "Elastic Momentum", FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink },
           Container{
+            FontFamily: GalleryTheme.GalleryFontFamily,
             FlexDirection: FlexDirection.Row,
             Gap: 4,
             Children: {
@@ -950,7 +948,6 @@ class MotionChapter : Cell {
         JustifyContent: JustifyContent.Center,
         Cursor: Cursor.Pointer,
         Focusable: true,
-        Transform: PanelTransform{ Scale: Math.Max(impulseScale.Value, 0.5) },
         TransitionMs: 80.0,
         Hover: Style{ BackgroundColor: GalleryTheme.AccentStrong },
         OnClick: () -> triggerImpulse(),
