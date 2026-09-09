@@ -2,7 +2,7 @@
 
 Standalone G# Goo authoring skill plus six stdio MCP tools: context, search, read, starter, snapshot, and capture. Requires Python 3.11+, uv, and .NET 10 for applications. The server uses the [official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk/tree/v1.x).
 
-Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.5.1`. `GOO_CLI` can select an executable or built Goo.DevTools.Cli.dll. Set `GOO_DEVTOOLS_DIR` in both the app and MCP server environments if using a custom descriptor directory.
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.5.2`. `GOO_CLI` can select an executable or built Goo.DevTools.Cli.dll. Set `GOO_DEVTOOLS_DIR` in both the app and MCP server environments if using a custom descriptor directory.
 
 The generated starter adds an explicit G# source Watch item. The bundled guides and official starter have commit and per-file SHA-256 provenance in `reference/manifest.json`. Pass `repository` to tools or set `GOO_SOURCE_ROOT` to read current checkout docs. The bundle is a reference snapshot, not a claim that a dirty checkout equals its HEAD commit.
 

@@ -6,7 +6,7 @@ import System.IO
 import Goo
 
 func Main() {
-  Window.ConfigureApplication("Goo Gallery", "0.5.1", "io.github.obselate.goo.gallery")
+  Window.ConfigureApplication("Goo Gallery", "0.5.2", "io.github.obselate.goo.gallery")
   let iconPath = Path.Combine(AppContext.BaseDirectory, "MaterialSymbolsRounded.ttf")
   using let iconFont = FontSource(
     GalleryTheme.IconFamily,

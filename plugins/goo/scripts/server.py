@@ -40,7 +40,7 @@ def document(root: Path, path: str) -> Path:
 def goo_context(repository: str = "") -> dict:
     """List available API guides, template files, source provenance and runtime tool setup. Pass a Goo checkout for current docs."""
     root = source(repository)
-    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": sorted(MANIFEST["files"]), "runtime": "Install Goo.DevTools 0.5.1 and launch with goo dev --project App.gsproj. Snapshot/capture require the app PID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll."}
+    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": sorted(MANIFEST["files"]), "runtime": "Install Goo.DevTools 0.5.2 and launch with goo dev --project App.gsproj. Snapshot/capture require the app PID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll."}
 
 
 @mcp.tool(annotations=READ)
