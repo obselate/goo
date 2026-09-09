@@ -428,6 +428,202 @@ internal class CellFixtures {
       && !flushThrew
       && !secondCloseThrew
   }
+
+  func FactorySubtypeRetainsAcrossKeyedReorderAndIndependentRebuild() bool {
+    FactorySubtypeCell.Reset()
+    let first = FactorySubtypeCell("first")
+    let second = FactorySubtypeCell("second")
+    let rec = Reconciler{ Res: Resolver{} }
+    var root = rec.Mount(Container{ Children: {
+      Cell.Mount[FactoryBaseCell](() -> {
+        FactorySubtypeCell.InitialFactoryCalls++
+        return first
+      }, "first"),
+      Cell.Mount[FactoryBaseCell](() -> {
+        FactorySubtypeCell.InitialFactoryCalls++
+        return second
+      }, "second"),
+    } })
+    root = rec.Diff(root, Container{ Children: {
+      Cell.Mount[FactoryBaseCell](() -> {
+        FactorySubtypeCell.ReplacementFactoryCalls++
+        return FactorySubtypeCell("unused")
+      }, "second"),
+      Cell.Mount[FactoryBaseCell](() -> {
+        FactorySubtypeCell.ReplacementFactoryCalls++
+        return FactorySubtypeCell("unused")
+      }, "first"),
+    } })
+    if FactorySubtypeCell.InitialFactoryCalls != 2
+      || FactorySubtypeCell.ReplacementFactoryCalls != 0
+      || root.Children[0].Fiber != second
+      || root.Children[1].Fiber != first{
+        return false
+      }
+    first.Change()
+    rec.RebuildFiber(root.Children[1], first)
+    return root.Children[0].Content == "second:0"
+      && root.Children[1].Content == "first:1"
+      && first.Builds == 2
+      && second.Builds == 1
+  }
+
+  func FactoryKeyChangeRemountsAndDisposes() bool {
+    FactorySubtypeCell.Reset()
+    let rec = Reconciler{ Res: Resolver{} }
+    var node = rec.Mount(Cell.Mount[FactoryBaseCell](() -> FactorySubtypeCell("first"), "first"))
+    let first = node.Fiber
+    node = rec.Diff(node, Cell.Mount[FactoryBaseCell](() -> FactorySubtypeCell("second"), "second"))
+    return first != node.Fiber
+      && node.Content == "second:0"
+      && FactorySubtypeCell.Disposals == 1
+  }
+
+  func FactoryRejectsReusedAndDisposedInstancesWithoutCorruption() bool {
+    FactorySubtypeCell.Reset()
+    let rec = Reconciler{ Res: Resolver{} }
+    let shared = FactorySubtypeCell("shared")
+    let mounted = rec.Mount(Cell.Mount[FactoryBaseCell](() -> shared, "shared"))
+    var reusedRejected = false
+    try {
+      rec.Mount(Cell.Mount[FactoryBaseCell](() -> shared, "other"))
+    } catch (error InvalidOperationException) {
+      reusedRejected = true
+    }
+    if !reusedRejected || shared.disposed || mounted.Fiber != shared || mounted.Content != "shared:0" {
+      return false
+    }
+    rec.Diff(mounted, Text{ Content: "retired" })
+    if !shared.disposed || FactorySubtypeCell.Disposals != 1 {
+      return false
+    }
+    var disposedRejected = false
+    try {
+      rec.Mount(Cell.Mount[FactoryBaseCell](() -> shared, "disposed"))
+    } catch (error InvalidOperationException) {
+      disposedRejected = true
+    }
+    return disposedRejected && FactorySubtypeCell.Disposals == 1
+  }
+
+  func FactoryBuildFailurePreservesPriorMount() bool {
+    FactorySubtypeCell.Reset()
+    FactoryThrowCell.Disposals = 0
+    let rec = Reconciler{ Res: Resolver{} }
+    let prior = FactorySubtypeCell("prior")
+    let node = rec.Mount(Cell.Mount[FactoryBaseCell](() -> prior, "prior"))
+    var threw = false
+    try {
+      rec.Diff(node, Cell.Mount[FactoryBaseCell](() -> FactoryThrowCell{}, "replacement"))
+    } catch (error InvalidOperationException) {
+      threw = error.Message == "factory build failure"
+    }
+    return threw
+      && node.Fiber == prior
+      && node.Content == "prior:0"
+      && !prior.disposed
+      && FactorySubtypeCell.Disposals == 0
+      && FactoryThrowCell.Disposals == 1
+  }
+
+  func MountFactoryBlob(blob Blob) {
+    let rec = Reconciler{ Res: Resolver{} }
+    rec.Mount(blob)
+  }
+
+  func RootMountRetriesAfterInitialBuildFailure() bool {
+    let root = FactoryRootRetryCell{}
+    let window = Window{ Root: root, Width: 100, Height: 100 }
+    var threw = false
+    try {
+      window.UpdateTree()
+    } catch (error InvalidOperationException) {
+      threw = error.Message == "root build failure"
+    }
+    if !threw || window.Tree != nil { return false }
+    window.UpdateTree()
+    return window.Tree?.Content == "recovered" && root.Builds == 2
+  }
+
+  func FactoryRejectsCurrentlyBuildingRootWithoutCorruption() bool {
+    let root = FactoryRecursiveRootCell{}
+    let window = Window{ Root: root, Width: 100, Height: 100 }
+    var failures int32
+    for _ in 0 ... 2 {
+      try {
+        window.UpdateTree()
+      } catch (error InvalidOperationException) {
+        if error.Message == "Cell instance is already mounted or being mounted" {
+          failures++
+        }
+      }
+    }
+    return failures == 2 && root.Builds == 2 && !root.disposed && window.Tree == nil
+  }
+}
+
+internal open class FactoryBaseCell : Cell {
+}
+
+internal class FactorySubtypeCell : FactoryBaseCell, IDisposable {
+  shared {
+    internal var InitialFactoryCalls int32
+    internal var ReplacementFactoryCalls int32
+    internal var Disposals int32
+
+    internal func Reset() {
+      InitialFactoryCalls = 0
+      ReplacementFactoryCalls = 0
+      Disposals = 0
+    }
+  }
+
+  private let label string
+  private var count int32
+  internal var Builds int32
+
+  init(label string) { this.label = label }
+
+  internal func Change() {
+    count++
+    Rebuild()
+  }
+
+  func Dispose() { Disposals++ }
+
+  override func Build() Blob {
+    Builds++
+    return Text{ Content: "$label:$count" }
+  }
+}
+
+internal class FactoryThrowCell : FactoryBaseCell, IDisposable {
+  shared { internal var Disposals int32 }
+  func Dispose() { Disposals++ }
+  override func Build() Blob {
+    throw InvalidOperationException("factory build failure")
+  }
+}
+
+internal class FactoryRootRetryCell : Cell {
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    if Builds == 1 {
+      throw InvalidOperationException("root build failure")
+    }
+    return Text{ Content: "recovered" }
+  }
+}
+
+internal class FactoryRecursiveRootCell : FactoryBaseCell {
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return Cell.Mount[FactoryBaseCell](() -> this, nil)
+  }
 }
 
 internal data struct CellInputFixtureValue {

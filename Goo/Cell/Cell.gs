@@ -10,6 +10,7 @@ public open class Cell {
   internal var dirty bool
   internal var directChild Cell?
   internal var mountKey string?
+  internal var mountType Type?
   internal var outputKey string?
   internal var building bool
   internal var disposed bool
@@ -145,6 +146,26 @@ public open class Cell {
       mountedNode = n
       mountedOwner = owner
       mountGeneration++
+    }
+  }
+
+  internal func ClaimMount(declaredType Type) {
+    lock rebuildGate {
+      if disposed {
+        throw InvalidOperationException("Cannot mount a disposed Cell")
+      }
+      if mountType != nil || mountedNode != nil {
+        throw InvalidOperationException("Cell instance is already mounted or being mounted")
+      }
+      mountType = declaredType
+    }
+  }
+
+  internal func ReleaseMountClaim() {
+    lock rebuildGate {
+      if mountedNode == nil {
+        mountType = nil
+      }
     }
   }
 
@@ -382,6 +403,20 @@ public open class Cell {
   }
 
   shared {
+    /// Describes a child component mount created by a factory.
+    /// @typeparam TCell declared child component type
+    /// @param factory creates a fresh child component when the mount has no retained instance
+    /// @param key stable sibling key, or nil for positional identity
+    /// @returns a blob that mounts the child component
+    public func Mount[TCell Cell](factory Func[TCell], key string?) Blob {
+      if factory == nil { throw ArgumentNullException("factory") }
+      return CellElement{
+        Key: key,
+        CellType: typeof(TCell),
+        Factory: factory as Func[Cell]?,
+      }
+    }
+
     /// Describes a child component mount.
     /// @typeparam TCell child component type
     /// @param key stable sibling key, or nil for positional identity
@@ -400,10 +435,9 @@ public open class Cell {
     /// @param input immutable input snapshot
     /// @returns a blob that mounts the child component
     public func Mount[TInput any, TCell Cell[TInput]init()](key string?, input TInput) Blob ->
-    CellInputElement[TInput]{
+    CellInputElement[TInput, TCell]{
       Key: key,
       CellType: typeof(TCell),
-      UseActivator: true,
       Input: input,
     }
 

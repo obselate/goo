@@ -130,13 +130,19 @@ internal class Reconciler {
   }
 
   internal func MountRoot(cell Cell) Node {
-    if let pump = Pump {
-      cell.BindPump(pump)
+    cell.ClaimMount(cell.GetType())
+    try {
+      if let pump = Pump {
+        cell.BindPump(pump)
+      }
+      cell.SetRetainedMotionInvalidation(RetainedInvalidated)
+      cell.SetRebuildSubmission(CellInvalidated)
+      cell.mountKey = nil
+      return rebuildMounted(nil, cell, nil)
+    } catch (error Exception) {
+      cell.ReleaseMountClaim()
+      throw error
     }
-    cell.SetRetainedMotionInvalidation(RetainedInvalidated)
-    cell.SetRebuildSubmission(CellInvalidated)
-    cell.mountKey = nil
-    return rebuildMounted(nil, cell, nil)
   }
 
   internal func mountContainer(c Container) Node {
@@ -686,17 +692,18 @@ internal class Reconciler {
   expandCellAt(existing, e, existing?.Fiber, nil)
 
   internal func createCell(e CellElement) Cell {
-    if let factory = e.Factory {
-      return factory()
+    let cell = e.CreateCell()
+    if Object.ReferenceEquals(cell, nil) {
+      throw InvalidOperationException("Cell factory returned nil")
     }
-    guard let cell = Activator.CreateInstance(e.CellType) as Cell else {
-      throw InvalidOperationException("Cell type did not create a Cell")
-    }
+    cell.ClaimMount(e.CellType)
     return cell
   }
 
+  private func mountType(cell Cell) Type -> cell.mountType ?? cell.GetType()
+
   internal func expandCellAt(existing Node?, e CellElement, prior Cell?, owner Cell?) Node {
-    let reused Cell? = if let old = prior && old.GetType() == e.CellType && old.mountKey == e.Key && !old.disposed { old } else { nil }
+    let reused Cell? = if let old = prior && mountType(old) == e.CellType && old.mountKey == e.Key && !old.disposed { old } else { nil }
 
     if let cell = reused {
       if let pump = Pump {
@@ -1062,7 +1069,7 @@ internal class Reconciler {
       }
       case e is CellElement {
         if let cell = n.Fiber {
-          return cell.GetType() == e.CellType && cell.mountKey == e.Key && !cell.disposed
+          return mountType(cell) == e.CellType && cell.mountKey == e.Key && !cell.disposed
         }
         return false
       }
