@@ -178,7 +178,18 @@ func RunImageStagingSmoke() {
         && pending.Upload.ActiveRanges > 0,
       "Large image did not retain an incomplete first upload chunk")
     let metrics = WindowReadbackTestFixture.Metrics(opened)
-    let early = PrimitiveReadback(opened, metrics)
+    let staged = WindowReadbackTestFixture.Request(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(staged == WindowReadbackRequestStatus.NotReady,
+      "Image staging unpublished frame was not staged: " + staged.ToString())
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    let accepted = WindowReadbackTestFixture.Request(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(accepted == WindowReadbackRequestStatus.Accepted,
+      "Image staging unpublished readback was not accepted: " + accepted.ToString())
+    ReadbackAwaitReadbackReady(opened, 10000)
+    let early = ReadbackTakeReadback(opened)
+    PrimitiveValidateResult(early, metrics)
     PrimitiveRequirePixelNear(early.Pixels, early.Width, metrics,
       48.0, 48.0, uint8(32), uint8(208), uint8(72), 2,
       "image_staging_unpublished")
