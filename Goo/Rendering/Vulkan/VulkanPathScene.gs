@@ -18,11 +18,14 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
   private var referencesCommitted bool
   private var redrawRequired bool
   private var observedRedrawSequence uint64
+  private var renderAfterPlannedUpload bool
+  private var resourceDeferred bool
   private var disposed bool
 
   internal prop Resources VulkanPathResources{ get -> resources }
   internal prop Atlas VulkanPathAtlas{ get -> resources.Atlas }
   internal prop AtlasId ResourceId{ get -> resources.AtlasId }
+  internal prop ResourceDeferred bool{ get -> resourceDeferred }
   internal prop CurrentPathCount int32{
     get {
       CommitCurrentReferences()
@@ -65,11 +68,13 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     currentPaths.Begin()
     referencesCommitted = false
     redrawRequired = sharedRedraw
+    renderAfterPlannedUpload = resources.CanRenderAfterPlannedUpload
+    resourceDeferred = false
   }
 
   internal func Emit(path VectorPath, fillRule FillRule) VulkanPathRenderable {
     EnsureOpen()
-    let renderable = resources.Register(path, fillRule)
+    let renderable = resources.Register(path, fillRule, renderAfterPlannedUpload)
     if renderable.PathId.IsValid {
       AddPendingPath(renderable.PathId)
       resources.MarkActive(sceneId, renderable.PathId)
@@ -77,6 +82,11 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
     if renderable.RedrawRequired {
       redrawRequired = true
     }
+    if renderable.PathId.IsValid && renderable.AtlasId.IsValid
+      && renderable.WordCount != 0u && !renderable.Renderable
+      && renderable.UploadPending{
+        resourceDeferred = true
+      }
     return renderable
   }
 

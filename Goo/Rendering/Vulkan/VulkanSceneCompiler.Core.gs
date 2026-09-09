@@ -298,6 +298,7 @@ internal partial class VulkanSceneCompiler {
       lastResult.PathClipCount = pathClipCount
       lastResult.ClipMaskCount = clipMaskCount
       lastResult.ClipChainCount = clipChainCount
+      lastResult.PathResourceDeferred = pathScene?.ResourceDeferred == true
       lastResult.TransformCount = transformCount
       lastResult.UnsupportedMask = unsupportedMask
       lastResult.UnsupportedDetails = unsupportedDetails

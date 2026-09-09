@@ -153,7 +153,11 @@ internal unsafe partial class VulkanWindowTarget {
           }
           Render(root, background, dpi)
           if !frameRendered {
-            return WindowReadbackRequestStatus.Failed
+            return if frameRenderDeferred {
+              WindowReadbackRequestStatus.NotReady
+            } else {
+              WindowReadbackRequestStatus.Failed
+            }
           }
           readbackTiming.RecordTicks = Stopwatch.GetTimestamp()
           Present()

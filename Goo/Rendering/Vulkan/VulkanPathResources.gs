@@ -158,6 +158,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   }
   internal prop UploadRecorded bool{ get -> atlas.UploadRecorded }
   internal prop UploadSubmitted bool{ get -> atlas.UploadSubmitted }
+  internal prop CanRenderAfterPlannedUpload bool{ get -> !uploadQueued && !atlas.UploadPending }
   internal prop RedrawRequired bool{ get -> redrawRequired || dirtyWordsPending || uploadQueued }
   internal prop Stats VulkanPathResourcesStats{
     get {
@@ -346,7 +347,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     }
   }
 
-  internal func Register(path VectorPath, fillRule FillRule) VulkanPathRenderable {
+  internal func Register(path VectorPath, fillRule FillRule, renderAfterPlannedUpload bool) VulkanPathRenderable {
     EnsureOpen()
     guard let data = path.payload else {
       return EmptyRenderable(fillRule)
@@ -357,7 +358,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     let identity = identities.Resolve(data)
     if records.TryGetValue(identity.PathId.LogicalId, out var existing)
       && existing.GeometryRevision == identity.GeometryRevision{
-        return BuildRenderable(existing, fillRule)
+        return BuildRenderable(existing, fillRule, renderAfterPlannedUpload)
       }
 
     let encoding = PathBandEncoder.Encode(path)
@@ -404,10 +405,11 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       identities.Retain(identity)
     }
     RequestRedraw()
-    return BuildRenderable(record, fillRule)
+    return BuildRenderable(record, fillRule, renderAfterPlannedUpload)
   }
 
-  internal func Resolve(path VectorPath, fillRule FillRule) VulkanPathRenderable -> Register(path, fillRule)
+  internal func Resolve(path VectorPath, fillRule FillRule) VulkanPathRenderable ->
+  Register(path, fillRule, false)
 
   internal func PublishCompletedUploads() bool {
     EnsureOpen()
@@ -635,7 +637,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   }
 
   private func BuildRenderable(record VulkanPathResourceRecord,
-    fillRule FillRule) VulkanPathRenderable{
+    fillRule FillRule) VulkanPathRenderable -> BuildRenderable(record, fillRule, false)
+
+  private func BuildRenderable(record VulkanPathResourceRecord,
+    fillRule FillRule, renderAfterPlannedUpload bool) VulkanPathRenderable{
       let fillRuleCode = if fillRule == FillRule.EvenOdd {
         FillRuleEvenOdd
       } else {
@@ -655,6 +660,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       let uploadPending = needsUpload
       let uploadRecorded = needsUpload && atlas.UploadRecorded
       let uploadSubmitted = needsUpload && atlas.UploadSubmitted
+      let submittedUploadCovers = SubmittedUploadCovers(record)
       return VulkanPathRenderable{
         PathId: record.Identity.PathId,
         GeometryRevision: record.GeometryRevision,
@@ -663,7 +669,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
         WordCount: record.WordCount,
         Bounds: record.Bounds,
         FillRule: fillRuleCode,
-        Renderable: published && supportsFill && !record.Bounds.IsEmpty,
+        Renderable: (published || submittedUploadCovers || renderAfterPlannedUpload)
+          && supportsFill && !record.Bounds.IsEmpty,
         Published: published,
         RedrawRequired: needsUpload,
         UploadPending: uploadPending,
@@ -671,6 +678,17 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
         UploadSubmitted: uploadSubmitted,
       }
     }
+
+  private func SubmittedUploadCovers(record VulkanPathResourceRecord) bool {
+    if !uploadQueued || !atlas.UploadSubmitted || record.WordCount == 0u
+      || queuedReuseRevision != dirtyReuseRevision{
+        return false
+      }
+    let recordStart = uint64(record.BaseWord)
+    let recordEnd = recordStart + uint64(record.WordCount)
+    return uint64(queuedUploadStart) <= recordStart
+      && recordEnd <= uint64(queuedUploadEnd)
+  }
 
   private func EmptyRenderable(fillRule FillRule) VulkanPathRenderable -> VulkanPathRenderable {
     PathId: ResourceId{},

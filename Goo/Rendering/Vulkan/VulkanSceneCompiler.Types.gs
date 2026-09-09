@@ -146,6 +146,7 @@ internal data struct VulkanSceneCompileResult {
   internal var PathClipCount int32
   internal var ClipMaskCount int32
   internal var ClipChainCount int32
+  internal var PathResourceDeferred bool
   internal var TransformCount int32
   internal var UnsupportedMask uint32
   internal var UnsupportedDetails []VulkanSceneUnsupportedDetail

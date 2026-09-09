@@ -100,6 +100,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var frameBegun bool
   private var renderingBegun bool
   private var frameRendered bool
+  private var frameRenderDeferred bool
   private var activeDamageRegion VulkanDamageRegion
   private var activePartialRedraw bool
   private var activeSceneVersion uint64
@@ -364,6 +365,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     activeFrameId = nextFrameId + 1uL
     nextFrameId = activeFrameId
     frameFailureRetryable = false
+    frameRenderDeferred = false
     RecordDiagnosticEvent(
       VulkanDiagnosticEventIds.FrameBegin,
       VulkanDiagnosticCategories.Timing,
@@ -525,6 +527,17 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       let compileResult = sceneCompiler.Compile(root, background, logicalWidth, logicalHeight)
       RecordDiagnosticPlan(planStart, compileResult,
         sceneCompiler.Frame.Counters, sceneCompiler.Frame)
+      if compileResult.PathResourceDeferred {
+        pathRedrawPending = true
+        AbortUnsubmittedTextUpload()
+        AbortUnsubmittedImageUploads()
+        AbandonRecordedFrameForRetry()
+        CloseDiagnosticFrame(false)
+        ClearActiveFrame()
+        frameRenderDeferred = true
+        host.Wake()
+        return
+      }
       if let debugOverlay = overlay {
         sceneCompiler.AppendDebugOverlay(debugOverlay, compileResult.FrameVersion,
           logicalWidth, logicalHeight)

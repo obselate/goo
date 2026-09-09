@@ -382,7 +382,7 @@ internal static class Program
         using (VulkanPathAtlas growthAtlas = new VulkanPathAtlas(1uL))
         using (VulkanPathResources growthResources = new VulkanPathResources(growthAtlas, new VulkanPathIdentityRegistry()))
         {
-            VulkanPathRenderable growthRenderable = growthResources.Register(path, FillRule.NonZero);
+            VulkanPathRenderable growthRenderable = growthResources.Register(path, FillRule.NonZero, false);
             growthResources.PrepareUpload();
             if (growthResources.Stats.GrowthCount != 1uL
                 || growthResources.Atlas.WordCapacity < growthRenderable.WordCount
@@ -401,7 +401,7 @@ internal static class Program
         }
         using VulkanPathAtlas vulkanPathAtlas = new VulkanPathAtlas(4096uL);
         using VulkanPathResources vulkanPathResources = new VulkanPathResources(vulkanPathAtlas, new VulkanPathIdentityRegistry());
-        VulkanPathRenderable vulkanPathRenderable = vulkanPathResources.Register(path, FillRule.NonZero);
+        VulkanPathRenderable vulkanPathRenderable = vulkanPathResources.Register(path, FillRule.NonZero, false);
         vulkanPathResources.PrepareUpload();
         if (vulkanPathResources.Atlas.UploadWordOffset != 0L || vulkanPathResources.Atlas.UploadWordCount != vulkanPathRenderable.WordCount || vulkanPathResources.Atlas.UploadWordCount > vulkanPathResources.Atlas.WordCapacity)
         {
@@ -409,9 +409,9 @@ internal static class Program
         }
         SubmitPathUpload(vulkanPathResources, 1uL);
         VulkanPathRenderable vulkanPathRenderable2 = vulkanPathResources.Resolve(path, FillRule.NonZero);
-        if (vulkanPathRenderable2.Published || vulkanPathRenderable2.Renderable)
+        if (vulkanPathRenderable2.Published || !vulkanPathRenderable2.Renderable)
         {
-            throw new InvalidOperationException("Path became renderable before upload completion");
+            throw new InvalidOperationException("Submitted path upload was not renderable before publication");
         }
         vulkanPathResources.Collect(1uL);
         VulkanPathRenderable vulkanPathRenderable3 = vulkanPathResources.Resolve(path, FillRule.NonZero);
@@ -424,7 +424,7 @@ internal static class Program
         {
             throw new InvalidOperationException("Path upload gate append update failed");
         }
-        VulkanPathRenderable vulkanPathRenderable4 = vulkanPathResources.Register(path, FillRule.NonZero);
+        VulkanPathRenderable vulkanPathRenderable4 = vulkanPathResources.Register(path, FillRule.NonZero, false);
         vulkanPathResources.PrepareUpload();
         if (vulkanPathResources.Atlas.UploadWordOffset != vulkanPathRenderable.WordCount || vulkanPathResources.Atlas.UploadWordCount != vulkanPathRenderable4.WordCount)
         {
@@ -441,7 +441,7 @@ internal static class Program
         {
             throw new InvalidOperationException("Path upload gate reuse update failed");
         }
-        VulkanPathRenderable vulkanPathRenderable5 = vulkanPathResources.Register(path, FillRule.NonZero);
+        VulkanPathRenderable vulkanPathRenderable5 = vulkanPathResources.Register(path, FillRule.NonZero, false);
         if (vulkanPathRenderable5.BaseWord != vulkanPathRenderable.BaseWord)
         {
             throw new InvalidOperationException("Path atlas did not reuse the retired range");
@@ -475,14 +475,14 @@ internal static class Program
         }
         array[0] = PathGeometry.Quadratic(0f, 0f, 53f, 0f, 100f, 0f);
         path.UpdateNormalized(array, 4, contours, 1);
-        vulkanPathResources.Register(path, FillRule.NonZero);
+        vulkanPathResources.Register(path, FillRule.NonZero, false);
         vulkanPathResources.PrepareUpload();
         SubmitPathUpload(vulkanPathResources, 4uL);
         vulkanPathResources.Collect(4uL);
         array[0] = PathGeometry.Quadratic(0f, 0f, 54f, 0f, 100f, 0f);
         path.UpdateNormalized(array, 4, contours, 1);
         long allocatedBytesForCurrentThread = GC.GetAllocatedBytesForCurrentThread();
-        vulkanPathResources.Register(path, FillRule.NonZero);
+        vulkanPathResources.Register(path, FillRule.NonZero, false);
         vulkanPathResources.PrepareUpload();
         long num = GC.GetAllocatedBytesForCurrentThread() - allocatedBytesForCurrentThread;
         if (num != 0L)

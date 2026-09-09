@@ -235,6 +235,11 @@ internal data struct VulkanWindowFramebufferExtentTestSnapshot {
   internal var Width int32
   internal var Height int32
 }
+internal data struct VulkanPathCompileProbeTestSnapshot {
+  internal var PathResourceDeferred bool
+  internal var PathClipCount int32
+  internal var ClipMaskCount int32
+}
 internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
   internal var ActiveLayerCount uint32
   internal var MaximumLayerCount uint32
@@ -269,6 +274,29 @@ internal partial class VulkanWindowTarget {
   }
   internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
   imageResources?.Stats ?? VulkanImageResourceStats{}
+  internal func PathResourceStatsForTest() VulkanPathResourcesStats ->
+  pathResources?.Stats ?? VulkanPathResourcesStats{}
+
+  internal func CompilePathProbeForTest(root Node?, viewportWidth float32,
+    viewportHeight float32) VulkanPathCompileProbeTestSnapshot{
+      guard let resources = pathResources else {
+        return VulkanPathCompileProbeTestSnapshot{}
+      }
+      let pathProbe = VulkanPathScene(resources)
+      try {
+        let compiler = VulkanSceneCompiler()
+        compiler.SetPathScene(pathProbe)
+        let result = compiler.Compile(root, Color.Rgb(12, 20, 32),
+          viewportWidth, viewportHeight)
+        return VulkanPathCompileProbeTestSnapshot{
+          PathResourceDeferred: result.PathResourceDeferred,
+          PathClipCount: result.PathClipCount,
+          ClipMaskCount: result.ClipMaskCount,
+        }
+      } finally {
+        pathProbe.Dispose()
+      }
+    }
   internal func TimestampSupportedForTest() bool {
     if let current = timestampState {
       return current.TimestampQueriesSupported
@@ -787,6 +815,13 @@ public partial class Window {
   internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
   VulkanTargetForTest()?.ImageResourceStatsForTest() ?? VulkanImageResourceStats{}
 
+  internal func PathResourceStatsForTest() VulkanPathResourcesStats {
+    return VulkanTargetForTest()?.PathResourceStatsForTest()
+      ?? VulkanPathResourcesStats{}
+  }
+
+  internal func PathProbeNodeForTest() Node? -> node
+
   internal func RuntimeHoldNextQueueSubmitForTest() {
     VulkanTargetForTest()?.HoldNextQueueSubmitForTest()
   }
@@ -913,6 +948,10 @@ public partial class Window {
 
   internal func PumpForTest(dt float64) {
     PumpScheduled(dt)
+  }
+
+  internal func UpdateTreeOnlyForTest(dt float64) {
+    UpdateTree(dt)
   }
 
   internal func RequestReadbackForTest(width uint32, height uint32)
@@ -1411,6 +1450,10 @@ internal class WindowReadbackTestFixture {
       window.PumpForTest(dt)
     }
 
+    internal func UpdateTreeOnly(window Window, dt float64) {
+      window.UpdateTreeOnlyForTest(dt)
+    }
+
     internal func SdlWindowId(window Window) uint32 -> window.SdlWindowIdForTest()
     internal func PumpNativeEvents() {
       SdlRuntime.PumpEvents(Int32.MaxValue)
@@ -1519,6 +1562,19 @@ internal class WindowReadbackTestFixture {
 
     internal func CompletionCount(window Window) uint64 -> window.ReadbackCompletionCountForTest()
 
+    internal func PathResources(window Window) VulkanPathResourcesStats ->
+    window.PathResourceStatsForTest()
+
+    internal func CompilePathProbe(resourcesWindow Window, treeWindow Window)
+    VulkanPathCompileProbeTestSnapshot{
+      guard let target = resourcesWindow.CaptureTargetForTest() else {
+        return VulkanPathCompileProbeTestSnapshot{}
+      }
+      let metrics = treeWindow.CurrentWindowMetricsForTest()
+      return target.CompilePathProbeForTest(treeWindow.PathProbeNodeForTest(),
+        float32(metrics.LogicalWidth), float32(metrics.LogicalHeight))
+    }
+
     internal func SubmissionReadyForReconcile(window Window) bool -> window.ReadbackSubmissionReadyForReconcileForTest()
 
     internal func ResidentResourceBytes(window Window) uint64 -> window.ReadbackResidentResourceBytesForTest()
@@ -1568,6 +1624,9 @@ internal class WindowReadbackTestFixture {
     }
 
     internal func RuntimeQueueWorkPending(window Window) bool -> window.RuntimeQueueWorkPendingForTest()
+
+    internal func PollQueueCompletion(window Window) bool ->
+    window.PollQueueCompletionForTest()
 
     internal func SchedulerWaitMs(window Window, nowTicks float64) int32 ->
     window.SchedulerWaitMsForTest(nowTicks)
