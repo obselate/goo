@@ -7,6 +7,13 @@ import xml.etree.ElementTree as element_tree
 ROOT = Path(__file__).resolve().parents[2]
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
 INLINE_VERSION = re.compile(r"\b0\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\b")
+PLUGIN_INSTALL_VERSION = re.compile(
+    r"(Install the runtime CLI with `dotnet tool install --global Goo\.DevTools --version )"
+    r"[^`]+(`\.)"
+)
+PLUGIN_RUNTIME_VERSION = re.compile(
+    r'("runtime": "Install Goo\.DevTools )[^" ]+( and launch with goo dev --project)'
+)
 LITERAL_VERSION_FILES = (
     "README.md",
     "apps/Goo.DevTools/DiagnosticWire.gs",
@@ -65,6 +72,24 @@ def expected_template_config(version: str) -> str:
     return expected
 
 
+def expected_plugin_readme(version: str) -> str:
+    path = ROOT / "plugins/goo/README.md"
+    text = path.read_text(encoding="utf-8")
+    expected, count = PLUGIN_INSTALL_VERSION.subn(rf"\g<1>{version}\g<2>", text)
+    if count != 1:
+        fail(f"{path.relative_to(ROOT)}: expected one current CLI install version")
+    return expected
+
+
+def expected_plugin_server(version: str) -> str:
+    path = ROOT / "plugins/goo/scripts/server.py"
+    text = path.read_text(encoding="utf-8")
+    expected, count = PLUGIN_RUNTIME_VERSION.subn(rf"\g<1>{version}\g<2>", text)
+    if count != 1:
+        fail(f"{path.relative_to(ROOT)}: expected one current runtime version")
+    return expected
+
+
 def synchronized_files(version: str) -> dict[Path, str]:
     expected = {
         ROOT / relative: expected_literal_text(ROOT / relative, version)
@@ -74,6 +99,8 @@ def synchronized_files(version: str) -> dict[Path, str]:
     template_config = ROOT / "templates/Goo.Templates/content/.template.config/template.json"
     expected[template_project] = expected_template_project(version)
     expected[template_config] = expected_template_config(version)
+    expected[ROOT / "plugins/goo/README.md"] = expected_plugin_readme(version)
+    expected[ROOT / "plugins/goo/scripts/server.py"] = expected_plugin_server(version)
     return expected
 
 

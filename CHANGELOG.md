@@ -1,9 +1,31 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 - 2026-09-09
 
-- Removed the four-stop rendering limit for linear and radial gradients. Longer gradients use GPU buffer storage with binary stop lookup, preserving alpha, opacity, and hard color edges.
+### Added
+
+- Added support for linear and radial gradients with more than four stops, preserving alpha, opacity, and hard color edges.
+- Added the Goo authoring plugin with API lookup, runtime inspection, capture, and starter tools.
+
+### Changed
+
+- Simplified the DevTools inspector and refreshed mounted cells after supported hot reload updates.
+- Reused resident path identities across garbage collection and equivalent default button styles.
+- Grew image staging buffers and clip atlas layers on demand, skipped empty image bookkeeping, and avoided unnecessary text layout scans for paint padding.
+- Updated Gallery shader parameters without rebuilding the Gallery cell.
+
+### Fixed
+
 - Fixed custom titlebar double-click maximize/restore and live resizing of idle windows on Wayland in Goo's bundled SDL runtime.
+- Fixed black resize frames by keeping submitted path uploads renderable and deferring frames whose path resources are incomplete.
+- Fixed retained text record copy bounds, border clipping, and corner coverage.
+- Fixed Gallery direction glyphs and removed redundant impulse scaling.
+
+### Verification
+
+- Replaced duplicated Vulkan proof implementations with checks against the production renderer.
+- Added regression coverage for rounded content in the first resize frame and pending path upload visibility.
+- Passed 325 core behavior tests, 12 API and documentation tests, 10 SVG tests, 9 CLI tests, strict source lint, Release builds, and local Vulkan regression checks. Rounded resize and image staging checks passed on NVIDIA and software Vulkan.
 
 ## 0.5.0 - 2026-09-05
 

@@ -64,6 +64,14 @@ Each `ShaderEffectData` publication is a complete replacement. The constructor a
 
 The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot currently share the same element with `ShaderEffect`.
 
+## Gradient stops
+
+Linear and radial gradients accept two or more ordered stops, including repeated
+positions for hard color edges. There is no fixed four-stop limit. Larger stop
+lists use Goo-owned GPU storage and remain a single gradient draw; device storage
+limits still apply. Interpolation uses premultiplied linear color, including
+per-stop alpha and element opacity.
+
 ## `CompiledVectorAsset`
 
 Source:
@@ -388,11 +396,3 @@ Gets the view-box x origin.
 ### `ViewBoxY`
 
 Gets the view-box y origin.
-
-## Gradient stops
-
-Linear and radial gradients accept two or more ordered stops, including repeated
-positions for hard color edges. There is no fixed four-stop limit. Larger stop
-lists use Goo-owned GPU storage and remain a single gradient draw; device storage
-limits still apply. Interpolation uses premultiplied linear color, including
-per-stop alpha and element opacity.

@@ -32,7 +32,7 @@ Messages are one JSON object per UTF-8 line. The client sends this first:
   "type": "hello",
   "protocol": "goo.devtools/1",
   "client": "goo-cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "capabilities": ["tree", "properties", "layout", "events", "logs", "accessibility", "capture", "source-navigation", "hot-reload"]
 }
 ```

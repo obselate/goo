@@ -60,7 +60,11 @@ def project_versions(version: str, files: list[str]) -> None:
         for reference in root.findall(".//PackageReference"):
             if reference.get("Include") != "Goo":
                 continue
-            expected = version if relative.startswith("templates/Goo.Templates/content/") else "$(GooReleaseVersion)"
+            standalone_template = (
+                relative.startswith("templates/Goo.Templates/content/")
+                or relative.startswith("plugins/goo/reference/templates/Goo.Templates/content/")
+            )
+            expected = version if standalone_template else "$(GooReleaseVersion)"
             if reference.get("Version") != expected:
                 fail(f"{relative}: Goo reference is {reference.get('Version')}, expected {expected}")
     if package_ids != EXPECTED_PACKAGE_IDS:
@@ -110,7 +114,7 @@ def markdown_links(files: list[str]) -> None:
     failures: list[str] = []
     pattern = re.compile(r"!?\[[^\]\n]*\]\(([^)\n]+)\)")
     for relative in files:
-        if not relative.endswith(".md") or relative.startswith("vendor/"):
+        if not relative.endswith(".md") or relative.startswith(("vendor/", "plugins/goo/reference/")):
             continue
         path = ROOT / relative
         text = markdown_prose(path.read_text(encoding="utf-8"))
