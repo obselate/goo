@@ -147,6 +147,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     transform PrimitiveTransform) {
       var push = AnalyticSolidPushConstants{}
       FillTransform(&push, bounds, transform, extent)
+      if radiusTopLeft > 0.0F || radiusTopRight > 0.0F
+        || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F{
+          push.transform1_w = 1.0F
+        }
       push.radii_x = radiusTopLeft
       push.radii_y = radiusTopRight
       push.radii_z = radiusBottomRight
@@ -314,6 +318,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.Style != uint32(int32(BorderStyle.Solid)) || rounded {
         var push = AnalyticBorderPushConstants{}
         FillTransform(&push, bounds, transform, extent)
+        if rounded { push.transform1_w = 1.0F }
         push.widths_x = topWidth
         push.widths_y = rightWidth
         push.widths_z = bottomWidth
@@ -399,6 +404,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       var push = AnalyticLinear4PushConstants{}
       FillTransform(&push, value.Bounds, transform, extent)
+      if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F{
+          push.transform1_w = 1.0F
+        }
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
       push.radii_z = value.RadiusBottomRight
@@ -437,6 +446,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       var push = AnalyticRadial4PushConstants{}
       FillTransform(&push, value.Bounds, transform, extent)
+      if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
+        || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F{
+          push.transform1_w = 1.0F
+        }
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
       push.radii_z = value.RadiusBottomRight

@@ -889,7 +889,13 @@ internal partial class VulkanSceneCompiler {
       if bounds.IsEmpty {
         return bounds
       }
-      var result = bounds
+      var result = if node.Kind != NodeKind.Shape && HasRadius(node, bounds)
+        && (node.BackgroundColor.A > 0.0F || node.BackgroundGradient != nil
+            || HasBorderWidth(node, bounds)){
+          bounds.Inflate(1.0F)
+        } else {
+          bounds
+        }
       let outlineBounds = OutlineBounds(node, bounds)
       if !outlineBounds.IsEmpty {
         result = unionVulkanSceneBounds(result, outlineBounds)

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserved rounded primitive edge coverage at fractional pixel positions.
+
 ## 0.5.1 - 2026-09-09
 
 ### Changed

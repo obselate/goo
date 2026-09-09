@@ -3,7 +3,7 @@ package Goo.VulkanProof
 internal class PixelSceneContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
-  const ExpectedDigest uint64 = 15681727139808264939uL
+  const ExpectedDigest uint64 = 13590187435474851814uL
   const ClearColor uint32 = 0x0000FFFFu
   const BackgroundColor uint32 = 0x000000FFu
   const SolidColor uint32 = 0xFF0000FFu
@@ -70,6 +70,16 @@ internal func BuildPixelScene(frame SceneFrame, version uint64) {
   })
   frame.AddRoundedBox(RoundedBoxRecord{
     Bounds: ConservativeBounds{ X: 21.0F, Y: 7.0F, Width: 14.0F, Height: 10.0F },
+    RadiusTopLeft: 3.0F,
+    RadiusTopRight: 3.0F,
+    RadiusBottomRight: 3.0F,
+    RadiusBottomLeft: 3.0F,
+    Color: PixelSceneContract.RoundedColor,
+    Opacity: 1.0F,
+    TransformIndex: -1,
+  })
+  frame.AddRoundedBox(RoundedBoxRecord{
+    Bounds: ConservativeBounds{ X: 7.75F, Y: 18.75F, Width: 6.0F, Height: 6.0F },
     RadiusTopLeft: 3.0F,
     RadiusTopRight: 3.0F,
     RadiusBottomRight: 3.0F,
@@ -253,6 +263,9 @@ internal unsafe func VerifyPixelSceneReadbackWithClear(
     if !ExactPixel(readback, width, 28, 12, PixelSceneContract.RoundedColor) {
       return false
     }
+    if !FractionalRoundedEdge(readback, width) {
+      return false
+    }
     if !ExactPixel(readback, width, 47, 8, PixelSceneContract.BorderTopColor) {
       return false
     }
@@ -352,6 +365,18 @@ private unsafe func RoundedBorderCornerAntialias(
       && readback[innerEdgeOffset] >= 240u
       && readback[innerEdgeOffset + 1] >= 240u
       && readback[innerEdgeOffset + 2] >= 240u
+  }
+
+private unsafe func FractionalRoundedEdge(
+  readback * uint8,
+  width uint32) bool{
+    let exterior = PixelOffset(width, 10, 18)
+    let interior = PixelOffset(width, 10, 19)
+    return readback[exterior] <= 8u
+      && readback[exterior + 1] >= 8u
+      && readback[exterior + 1] <= 240u
+      && readback[exterior + 2] <= 8u
+      && readback[interior + 1] >= 240u
   }
 
 private unsafe func Dominant(

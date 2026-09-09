@@ -285,9 +285,9 @@
       "source": "analytic.vert.slang",
       "output": "analytic.vert.spv",
       "entryPoint": "main",
-      "sourceSha256": "d8f61b9d48b9019064c70ea5a8c015f8c55a9bbef88f0e135371d85e4d37a337",
-      "outputSha256": "b7b1a75b9142cd82aefabad1a923080ea4e29dfb49476e050fdba8a9de71babd",
-      "outputBytes": 2528,
+      "sourceSha256": "bf393af83e1c615869163a94447866203c95609eccdd4df2fbfd466aa284f540",
+      "outputSha256": "49d9c005089d0ce8c3abba0e0d8b8ff31cd846260535b5098d392fc6a00e1707",
+      "outputBytes": 2872,
       "capabilities": [
         1
       ]
