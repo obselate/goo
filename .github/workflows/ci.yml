@@ -45,7 +45,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            .
+            Goo apps templates tests plugins/goo/reference/templates
 
       - name: Build Goo with warnings as errors
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true

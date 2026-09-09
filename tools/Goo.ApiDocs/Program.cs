@@ -66,6 +66,18 @@ if (unmatched.Length != 0)
 WriteIfChanged(Path.Combine(outputRoot, "README.md"), BuildIndex(sourceDirectories));
 Console.WriteLine($"Generated {sourceDirectories.Length} API pages in {outputRoot}.");
 
+static void AppendGradientStopsGuide(StringBuilder text)
+{
+    text.AppendLine();
+    text.AppendLine("## Gradient stops");
+    text.AppendLine();
+    text.AppendLine("Linear and radial gradients accept two or more ordered stops, including repeated");
+    text.AppendLine("positions for hard color edges. There is no fixed four-stop limit. Larger stop");
+    text.AppendLine("lists use Goo-owned GPU storage and remain a single gradient draw; device storage");
+    text.AppendLine("limits still apply. Interpolation uses premultiplied linear color, including");
+    text.AppendLine("per-stop alpha and element opacity.");
+}
+
 static string BuildPage(string directory, ApiType[] types, ApiMember[] members, HashSet<string> matched)
 {
     var text = new StringBuilder();
@@ -111,6 +123,8 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
         AppendTextInputAreaGuide(text);
     if (directory == "Rendering")
         AppendShaderEffectGuide(text);
+    if (directory == "Rendering")
+        AppendGradientStopsGuide(text);
 
     if (types.Length == 0)
     {

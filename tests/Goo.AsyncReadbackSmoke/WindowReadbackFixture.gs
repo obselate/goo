@@ -815,12 +815,10 @@ public partial class Window {
   internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
   VulkanTargetForTest()?.ImageResourceStatsForTest() ?? VulkanImageResourceStats{}
 
-  internal func PathResourceStatsForTest() VulkanPathResourcesStats {
-    return VulkanTargetForTest()?.PathResourceStatsForTest()
-      ?? VulkanPathResourcesStats{}
-  }
+  internal func PathResourceStatsForTest() VulkanPathResourcesStats -> VulkanTargetForTest()?.PathResourceStatsForTest()
+  ?? VulkanPathResourcesStats{}
 
-  internal func PathProbeNodeForTest() Node? -> node
+  internal func PathProbeNodeForTest() Node ? -> node
 
   internal func RuntimeHoldNextQueueSubmitForTest() {
     VulkanTargetForTest()?.HoldNextQueueSubmitForTest()

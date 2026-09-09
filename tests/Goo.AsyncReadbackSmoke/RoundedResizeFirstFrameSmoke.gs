@@ -11,12 +11,8 @@ class PendingPathReadinessCell : Cell {
   private let clip VectorPath
 
   shared {
-    let CoveredPath VectorPath = PathBuilder()
-      .MoveTo(0.5, 0.0).LineTo(1.0, 0.5)
-      .LineTo(0.5, 1.0).LineTo(0.0, 0.5).Close().Build()
-    let UncoveredPath VectorPath = PathBuilder()
-      .MoveTo(0.0, 0.0).LineTo(1.0, 0.0)
-      .LineTo(0.5, 1.0).Close().Build()
+    let CoveredPath VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 0.5).LineTo(0.5, 1.0).LineTo(0.0, 0.5).Close().Build()
+    let UncoveredPath VectorPath = PathBuilder().MoveTo(0.0, 0.0).LineTo(1.0, 0.0).LineTo(0.5, 1.0).Close().Build()
   }
 
   init(path VectorPath) {
@@ -192,7 +188,7 @@ func RunRoundedResizeFirstFrameSmoke() {
       let width = widths[iteration]
       let height = heights[iteration]
       Require(WindowReadbackTestFixture.Resize(
-          opened, width, height, width, height),
+        opened, width, height, width, height),
         "Rounded resize synthetic resize failed at " + iteration.ToString())
       WindowReadbackTestFixture.UpdateTreeOnly(opened, 0.0)
       let metrics = WindowReadbackTestFixture.Metrics(opened)
