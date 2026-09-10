@@ -1740,7 +1740,7 @@ internal class InputFixtures {
     if current.Focused
       || current.Pressed
       || current.Buffer != buffer
-      || current.Caret != caret {
+      || current.Caret != caret{
         return false
       }
     let queued = InputFixtureDriver(InputEntryCell{ value: "queued" }, 300, 100)

@@ -165,7 +165,7 @@ def macos_install_name(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True, type=Path)
-    parser.add_argument("--target", required=True, choices=("linux-x64", "osx-arm64", "win-x64"))
+    parser.add_argument("--target", required=True, choices=("linux-x64", "osx-arm64", "win-x64", "android-arm64", "android-x64"))
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--artifact", required=True, action="append", metavar="NAME=PATH")
     parser.add_argument("--tool-prefix", default="")
@@ -205,6 +205,29 @@ def main():
             if glibc_versions and tuple(int(item) for item in glibc_versions[-1].split(".")) > tuple(int(item) for item in maximum.split(".")):
                 raise SystemExit(f"{name} GLIBC drift: {glibc_versions[-1]}")
             image_name = None
+        elif args.target.startswith("android-"):
+            policy = manifest["build"]["android"]
+            symbols = linux_symbols(path)
+            needed = linux_needed(path)
+            dynamic_paths = linux_dynamic_paths(path)
+            image_format = linux_format(path)
+            if policy["requiredFormat"][args.target] not in image_format:
+                raise SystemExit(f"{path.name} Android format drift: {image_format}")
+            if needed != sorted(policy["requiredNeeded"][name]):
+                raise SystemExit(f"{name} Android dependency drift: {needed}")
+            if dynamic_paths["rpath"] != policy["requiredRpath"][name] or dynamic_paths["runpath"] != policy["requiredRunpath"][name]:
+                raise SystemExit(f"{name} Android loader path drift: {dynamic_paths}")
+            dynamic = subprocess.check_output(["readelf", "--dynamic", str(path)], text=True)
+            sonames = re.findall(r"Library soname: \[([^]]+)\]", dynamic)
+            if sonames != [path.name]:
+                raise SystemExit(f"{name} Android SONAME drift: {sonames}")
+            headers = subprocess.check_output(["readelf", "--program-headers", "--wide", str(path)], text=True)
+            alignments = [int(line.split()[-1], 16) for line in headers.splitlines() if line.strip().startswith("LOAD ")]
+            if not alignments or min(alignments) < policy["minimumPageAlignment"]:
+                raise SystemExit(f"{name} does not support 16 KB Android pages: {alignments}")
+            if linux_glibc_versions(path):
+                raise SystemExit(f"{name} unexpectedly uses glibc")
+            image_name = path.name
         elif args.target == "win-x64":
             if not args.tool_prefix:
                 raise SystemExit("Windows tool prefix is required")
@@ -253,6 +276,13 @@ def main():
             artifact["runpath"] = dynamic_paths["runpath"]
             artifact["glibcVersions"] = glibc_versions
             artifact["maxGlibc"] = glibc_versions[-1] if glibc_versions else None
+        elif args.target.startswith("android-"):
+            artifact["format"] = image_format
+            artifact["soname"] = image_name
+            artifact["rpath"] = dynamic_paths["rpath"]
+            artifact["runpath"] = dynamic_paths["runpath"]
+            artifact["loadAlignments"] = alignments
+            artifact["minimumApi"] = policy["minimumApi"]
         elif args.target == "win-x64":
             artifact["format"] = image_format
             artifact["imageName"] = image_name
@@ -270,6 +300,15 @@ def main():
             "ninja": command_text("ninja", ["--version"]),
             "cc": command_text(compiler, ["--version"]),
             "strip": command_text("strip", ["--version"]),
+        }
+    elif args.target.startswith("android-"):
+        toolchain = {
+            "meson": command_text("meson", ["--version"]),
+            "ninja": command_text("ninja", ["--version"]),
+            "cc": command_text(os.environ["CC"], ["--version"]),
+            "strip": command_text(os.environ["STRIP"], ["--version"]),
+            "ndk": manifest["build"]["android"]["ndkVersion"],
+            "minimumApi": manifest["build"]["android"]["minimumApi"],
         }
     elif args.target == "win-x64":
         toolchain = {

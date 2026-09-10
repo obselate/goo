@@ -4,7 +4,7 @@
 [![NuGet version](https://img.shields.io/nuget/v/Goo?style=flat-square)](https://www.nuget.org/packages/Goo/)
 [![MIT license](https://img.shields.io/github/license/obselate/goo?style=flat-square)](https://github.com/obselate/goo/blob/main/LICENSE)
 
-A retained desktop UI framework for G#, rendered directly with Vulkan.
+A retained UI framework for G#, rendered directly with Vulkan.
 
 Goo applications describe UI as ordinary G# objects. Goo retains mounted state, rebuilds only dirty `Cell` boundaries, lays out with Yoga, and renders through Vulkan 1.3.
 
@@ -14,7 +14,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.4.0
+dotnet new install Goo.Templates@0.5.3
 
 mkdir hello-goo
 cd hello-goo
@@ -77,7 +77,8 @@ func Main() {
 
 ## Platforms
 
-Goo ships runtime assets for Windows x64, Linux x64, and macOS arm64. The
+Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
+and Android x64. The
 renderer requires the Vulkan 1.3 feature set used by Goo.
 
 - Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The
@@ -88,10 +89,14 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
 - macOS arm64 requires macOS 14 or newer on Apple silicon. Goo bundles
   MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
   Vulkan SDK.
+- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
+  identity presentation support. Add the `Goo.Android` adapter to host the same
+  Window and Cell application in an Android activity or native view.
 
 ## Further reading
 
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
+- [Android integration](https://github.com/obselate/goo/blob/main/docs/android.md)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
 - [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
 - [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)

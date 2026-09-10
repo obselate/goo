@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/obselate/goo/main/docs/assets/goo-readme-banner.gif" alt="Goo" width="1200">
 </p>
 
-<p align="center">A retained desktop UI framework for G#, rendered directly with Vulkan.</p>
+<p align="center">A retained UI framework for G#, rendered directly with Vulkan.</p>
 
 <p align="center">
   <a href="https://github.com/obselate/goo/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/obselate/goo/ci.yml?branch=main&amp;style=flat-square&amp;label=ci" alt="CI status"></a>
@@ -174,7 +174,8 @@ func Main() {
 
 ## Platforms
 
-Goo ships runtime assets for Windows x64, Linux x64, and macOS arm64. The
+Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
+and Android x64. The
 renderer requires the Vulkan 1.3 feature set used by Goo.
 
 - Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The
@@ -185,6 +186,11 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
 - macOS arm64 requires macOS 14 or newer on Apple silicon. Goo bundles
   MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
   Vulkan SDK.
+
+- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device. The
+  `Goo.Android` adapter hosts the same Window, Cell, and Blob application in an
+  Android activity or native view. See [Android integration](docs/android.md)
+  for the shared smoke app, NDK builds, packaging, and lifecycle checks.
 
 ## Further reading
 

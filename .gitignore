@@ -22,6 +22,9 @@
 !/.github/scripts/build-text-native-linux-x64.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh
+!/.github/scripts/build-text-native-android.sh
+!/.github/scripts/validate-android-package.py
+!/.github/scripts/validate-text-native-rebuild.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
 !/.github/scripts/stage-macos-arm64.sh
@@ -36,6 +39,8 @@
 !/Goo/**
 !/Goo.Svg/
 !/Goo.Svg/**
+!/Goo.Android/
+!/Goo.Android/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -52,6 +57,7 @@
 !/docs/
 /docs/*
 !/docs/nuget-readme.md
+!/docs/android.md
 !/docs/assets/
 !/docs/assets/**
 !/docs/api/

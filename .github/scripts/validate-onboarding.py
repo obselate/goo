@@ -11,6 +11,7 @@ from release_version import read_release_version
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_PACKAGE_IDS = {
     "Goo",
+    "Goo.Android",
     "Goo.DevTools",
     "Goo.DevTools.App",
     "Goo.Svg",

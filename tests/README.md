@@ -193,3 +193,20 @@ test-fixture details, not support claims.
 - Enable Khronos validation for Vulkan correctness claims.
 - Do not describe software Vulkan results as hardware performance evidence.
 - Record hardware, driver, runtime, warmup, and sample counts for performance results.
+
+## Embedded host lifecycle
+
+`GOO_EMBEDDED_HOST_SMOKE=1` uses a host-owned native Vulkan surface with separate
+logical and framebuffer sizes. It verifies idle frame demand, suspension, queued
+updates, surface destruction and recreation, retained Cell state, captured pixels,
+and final disposal. Core behavior tests cover owner-thread rules, semantic platform
+input, composition, and touch scrolling without exposing retained nodes.
+
+## Android input connection
+
+The Android smoke APK can run real InputConnection regression checks against the
+shared retained scene. Start its activity with the boolean intent extra
+`goo.input_smoke=true`. Logcat tag `GooInputSmoke` reports `PASS` after checking
+sanitized cursor placement, composing regions, deletion, code points, batched
+edits, password privacy, stale connections, and multiline composition. A failed
+assertion terminates the smoke app with the failing operation.

@@ -25,9 +25,9 @@ endings to LF. Copyright (C) GSharp Authors. All rights reserved.
 
 ## HarfBuzz and hb-gpu text runtime
 
-Goo ships private Linux, Windows, and macOS native payloads built from the
+Goo ships private Linux, Windows, macOS, and Android native payloads built from the
 pinned HarfBuzz 14.3.1 upstream archive with `hb-gpu` enabled:
-`libgoo-harfbuzz.so` and `libgoo-harfbuzz-gpu.so` on Linux, with
+`libgoo-harfbuzz.so` and `libgoo-harfbuzz-gpu.so` on Linux and Android, with
 `goo-harfbuzz.dll` and `goo-harfbuzz-gpu.dll` on Windows, and
 `libgoo-harfbuzz.dylib` and `libgoo-harfbuzz-gpu.dylib` on macOS. They are
 private Goo artifacts, not system-library replacements or a runtime fallback.
