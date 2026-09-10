@@ -221,13 +221,11 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DisposeRetiredSwapchains() {
-    var presentCompletionResult VkResult? = nil
+    var presentCompletionResult VkResult = VkConstants.VK_SUCCESS
     while retiredSwapchains.TryWaitAndDisposeNext(
       presentationRetirement, out presentCompletionResult) {
-        if let result = presentCompletionResult {
-          if result != VkConstants.VK_SUCCESS {
-            RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
-          }
+        if presentCompletionResult != VkConstants.VK_SUCCESS {
+          RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, presentCompletionResult)
         }
       }
   }
