@@ -41,13 +41,15 @@ Sources:
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
 - [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
+- [`Window.Embedded.gs`](../../Goo/Window/WindowParts/Window.Embedded.gs)
 - [`Window.Frame.gs`](../../Goo/Window/WindowParts/Window.Frame.gs)
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
+- [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 
-Hosts a Goo tree on one process-wide UI thread. After Open, only Post and RequestClose are safe from another thread.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
 ### `FocusChanged`
 
@@ -68,6 +70,10 @@ Occurs after the native window reports a new window state.
 ### `new`
 
 Creates a window with default configuration.
+
+### `Attach(EmbeddedWindowHost)`
+
+Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
 
 ### `ConfigureApplication(string,string,string)`
 
@@ -171,6 +177,10 @@ Gets the most recent adapter exception. Failed delivery retries on the next UI-t
 ### `OnClosing`
 
 Gets or sets the close-request handler. Return false to veto closure. Accepted requests do not invoke the handler again while teardown finishes.
+
+### `PlatformInput`
+
+Gets the owner-thread platform input and focused-editor contract.
 
 ### `Resizable`
 

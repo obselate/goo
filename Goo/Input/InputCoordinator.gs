@@ -115,10 +115,16 @@ internal class InputCoordinator {
 
   internal func FocusLost(root Node?, resolver Resolver) {
     try {
+      text.SetNativeFocus(false)
       keyboard.Reset(resolver)
       text.SetFocus(resolver, nil)
-      pointer.FocusLost(root, resolver)
+      if root != nil {
+        pointer.Reset(root, resolver, text)
+      } else {
+        pointer.FocusLost(root, resolver)
+      }
     } finally {
+      text.SetNativeFocus(false)
       resolver.Flush()
     }
   }
@@ -126,6 +132,8 @@ internal class InputCoordinator {
   internal func FocusLost(resolver Resolver) {
     FocusLost(nil, resolver)
   }
+
+  internal func FocusGained() -> text.SetNativeFocus(true)
 
   internal func FocusElement(resolver Resolver, target Node) bool {
     if target.Retired || !target.Focusable || !canReceiveInput(target) {
@@ -136,6 +144,34 @@ internal class InputCoordinator {
   }
 
   internal func FocusedNode() Node ? -> text.FocusedNode()
+
+  internal func EditorSnapshot() FocusedEditorSnapshot ? -> text.EditorSnapshot()
+
+  internal func CommitEditorText(root Node?, value string) bool -> text.CommitPlatformText(root, value)
+
+  internal func ClearEditorFocus(resolver Resolver) -> text.ClearEditorFocus(resolver)
+
+  internal func MoveEditorFocus(root Node?, resolver Resolver, forward bool) bool ->
+  text.MoveEditorFocus(root, resolver, forward)
+
+  internal func SetEditorSelection(root Node?, start int32, end int32) bool ->
+  text.SetEditorSelection(root, start, end)
+
+  internal func SetEditorComposition(root Node?, value string, start int32, length int32) bool ->
+  text.HandleComposition(root, value, start, length)
+
+  internal func SetEditorCompositionRange(root Node?, start int32, end int32) bool ->
+  text.SetEditorCompositionRange(root, start, end)
+
+  internal func FinishEditorComposition(root Node?) bool -> text.FinishComposition(root)
+
+  internal func CancelEditorComposition(root Node?) bool -> text.HandleCompositionCancel(root)
+
+  internal func DeleteEditorSurroundingText(root Node?, before int32, after int32) bool ->
+  text.DeleteSurroundingText(root, before, after)
+
+  internal func ExecuteEditorCommand(root Node?, resolver Resolver, command TextCommand) bool ->
+  text.ExecuteEditorCommand(root, resolver, command)
 
   internal func BlurElement(resolver Resolver, target Node) bool {
     if target.Retired || text.FocusedNode() != target {

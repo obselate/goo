@@ -853,7 +853,6 @@ public partial class Window {
   internal func PollQueueCompletionForTest() bool {
     let completed = VulkanTargetForTest()?.PollQueueCompletion() == true
     if completed {
-      markFrameRendered()
       SdlHostForTest()?.FramePacing.MarkFrame(float64(Stopwatch.GetTimestamp()))
     }
     return completed

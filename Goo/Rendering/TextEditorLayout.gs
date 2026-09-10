@@ -762,6 +762,14 @@ internal class TextEditorLayouts {
       }
 
     internal func CompositionCaretRect(n Node, composition TextComposition) Rect {
+      if let selected = composition.EffectiveSelection {
+        let offset = selected.Active.Offset
+        let end = composition.Range.Start + composition.Text.Length
+        if offset < composition.Range.Start || offset > end {
+          let source = offset <= composition.Range.Start ? offset : offset - composition.Text.Length + composition.Range.Length
+          return CaretRect(n, TextPosition{ Offset: source, Affinity: selected.Active.Affinity })
+        }
+      }
       let width = TextLayouts.ContentWidth(n)
       let height = TextLayouts.ContentHeight(n)
       let layout = For(n, width, height)
@@ -799,7 +807,11 @@ internal class TextEditorLayouts {
         for segment in line.Paragraph.Segments {
           if !segment.Composition || segment.Source.Start != composition.Range.Start
             || segment.Source.Length != composition.Range.Length{ continue }
-          let absolute = segment.DisplayStart + segment.CompositionSelectionStart
+          let caretOffset = if let selected = composition.EffectiveSelection {
+            transformedCompositionOffset(composition.Text,
+              selected.Active.Offset - composition.Range.Start, segment.Style.Transform)
+          } else { segment.CompositionSelectionStart }
+          let absolute = segment.DisplayStart + caretOffset
           if absolute < line.DisplayStart
             || absolute > line.DisplayStart + line.DisplayLength{ return false }
           index = absolute - line.DisplayStart

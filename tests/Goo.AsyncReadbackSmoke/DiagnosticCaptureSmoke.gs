@@ -5,13 +5,29 @@ import System.Diagnostics
 import System.Text.Json
 import System.Threading
 
+internal class DiagnosticCaptureCell : Cell {
+  internal var Frame int32
+
+  override func Build() Blob -> Container {
+    Width: Length.Percent(100), Height: Length.Percent(100),
+    BackgroundColor: Color.Rgb(12, 20, 32),
+    Children: {
+      Container{
+        Width: 16, Height: 16, Margin: 8,
+        BackgroundColor: Color.Rgb(Frame % 256, 120, 200),
+      },
+    },
+  }
+}
+
 internal class DiagnosticCaptureFixture {
   shared {
     private func Require(condition bool, message string) {
       if !condition { throw InvalidOperationException(message) }
     }
 
-    internal func Run(root Cell) {
+    internal func Run() {
+      let root = DiagnosticCaptureCell{}
       let window = Window{
         Title: "Goo diagnostic capture Busy regression",
         Width: 64, Height: 64, Root: root,
@@ -55,6 +71,8 @@ internal class DiagnosticCaptureFixture {
               complete = true
               break
             }
+            root.Frame++
+            root.Rebuild()
             window.ForceRenderForTest(0.016)
             Thread.Sleep(1)
           }

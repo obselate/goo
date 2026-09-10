@@ -80,7 +80,8 @@ internal unsafe partial class VulkanWindowTarget {
       oldSwapchain,
       generationId,
       swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-      windowObjectAccounting)
+      windowObjectAccounting,
+      host.PreferRequestedFramebufferExtent)
     generation = next
     if let previous = old {
       InvalidateLastPresentedImageState()

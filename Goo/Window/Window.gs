@@ -52,7 +52,7 @@ internal struct WindowNotifications {
 }
 
 /// Hosts a Goo tree on one process-wide UI thread.
-/// After Open, only Post and RequestClose are safe from another thread.
+/// After Open or Attach, only Post and RequestClose are safe from another thread.
 public partial class Window {
   /// Gets or sets the window clear color.
   public prop Background Color{

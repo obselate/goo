@@ -280,6 +280,7 @@ internal partial class PointerInput {
       dragEditor = nil
       dragEditorStarted = false
       clearScrollDrag()
+      clearTouchPan()
       clickTarget = nil
       if isSemanticPrimary() {
         if let focusTarget = current.FocusTarget {
