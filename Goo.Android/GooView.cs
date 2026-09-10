@@ -43,12 +43,23 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         Focusable = true;
         FocusableInTouchMode = true;
         Clickable = true;
+        if (window.Transparent)
+        {
+            SetZOrderOnTop(true);
+            Holder!.SetFormat(Format.Translucent);
+        }
         Holder!.AddCallback(this);
         window.Attach(host);
         window.PlatformInput.EditorChanged += OnEditorChanged;
     }
 
     public global::Goo.Window Window { get; }
+    /// <summary>Reports changes in immediate frame demand on the Android UI thread.</summary>
+    public event Action<bool>? FrameDemandChanged;
+    /// <summary>Gets whether a frame is pending or another immediate frame is needed.</summary>
+    public bool HasFrameDemand { get; private set; }
+    /// <summary>Gets or sets whether the Done editor action hides the software keyboard.</summary>
+    public bool DismissKeyboardOnSubmit { get; set; } = true;
     internal float Density => Math.Max(Resources?.DisplayMetrics?.Density ?? 1f, 0.1f);
     internal PlatformInput Input => Window.PlatformInput;
 
@@ -137,6 +148,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (disposed || !resumed || !host.IsPresentationAttached || framePosted)
             return;
         framePosted = true;
+        SetFrameDemand(true);
         choreographer.PostFrameCallback(frameCallback);
     }
 
@@ -149,6 +161,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         lastFrameTime = frameTime;
         host.RenderFrame(dt);
         var delay = host.NextFrameDelaySeconds;
+        SetFrameDemand(delay <= 0);
         if (double.IsPositiveInfinity(delay))
             return;
         if (delay <= 0)
@@ -163,6 +176,15 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         choreographer.RemoveFrameCallback(frameCallback);
         framePosted = false;
         lastFrameTime = 0;
+        SetFrameDemand(false);
+    }
+
+    private void SetFrameDemand(bool value)
+    {
+        if (HasFrameDemand == value)
+            return;
+        HasFrameDemand = value;
+        FrameDemandChanged?.Invoke(value);
     }
 
     public override bool OnTouchEvent(MotionEvent? e)
@@ -239,18 +261,26 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             return false;
         var key = AndroidKeys.Map(keyCode);
         var handled = key != Key.Unknown;
-        if (handled && e.RepeatCount == 0)
-            Input.KeyPress(key, Modifiers(e.MetaState));
-        var scalar = e.UnicodeChar;
-        if (!e.IsCtrlPressed && !e.IsAltPressed && Rune.TryCreate(scalar, out var character) && !Rune.IsControl(character))
+        try
         {
-            Input.CommitText(character.ToString());
-            handled = true;
+            if (handled)
+                Input.KeyPress(key, Modifiers(e.MetaState));
+            var scalar = e.UnicodeChar;
+            if (!e.IsCtrlPressed && !e.IsAltPressed && Rune.TryCreate(scalar, out var character) && !Rune.IsControl(character))
+            {
+                Input.CommitText(character.ToString());
+                handled = true;
+            }
+            if (!handled)
+                return base.OnKeyDown(keyCode, e);
+            RequestFrame();
+            return true;
         }
-        if (!handled)
-            return base.OnKeyDown(keyCode, e);
-        RequestFrame();
-        return true;
+        finally
+        {
+            if (key != Key.Unknown)
+                Input.KeyRelease(key);
+        }
     }
 
     public override bool OnKeyUp(Keycode keyCode, AndroidKeyEvent? e)
@@ -260,8 +290,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         var key = AndroidKeys.Map(keyCode);
         if (key == Key.Unknown)
             return base.OnKeyUp(keyCode, e);
-        Input.KeyRelease(key);
-        RequestFrame();
         return true;
     }
 

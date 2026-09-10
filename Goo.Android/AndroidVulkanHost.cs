@@ -51,6 +51,7 @@ internal sealed class AndroidVulkanHost(GooView view) : EmbeddedWindowHost
 
     protected override nint GetNativeHandle() => nativeWindow;
     protected override bool PreferRequestedFramebufferExtent() => true;
+    protected override bool AllowInheritedCompositeAlpha() => true;
     protected override bool StartTextInput() => view.BeginTextInput();
     protected override void StopTextInput() => view.EndTextInput();
     protected override bool SetImeArea(int x, int y, int width, int height, int cursor) => view.SetImeArea(x, y, width, height);

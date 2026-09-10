@@ -115,6 +115,9 @@ public open class EmbeddedWindowHost : IDisposable {
   protected open func GetNativeHandle() nint -> nint(0)
   /// Uses the requested framebuffer extent when the native WSI permits scaling.
   protected open func PreferRequestedFramebufferExtent() bool -> false
+
+  /// Allows inherited Vulkan alpha when the native compositor has configured premultiplied transparency.
+  protected open func AllowInheritedCompositeAlpha() bool -> false
   /// Starts the platform text input session and reports whether it is active.
   protected open func StartTextInput() bool -> false
   /// Stops the platform text input session.
@@ -157,6 +160,7 @@ public open class EmbeddedWindowHost : IDisposable {
   internal func DestroySurface(instance nint, surface uint64) { DestroyVulkanSurface(instance, surface) }
   internal func NativeHandle() nint -> GetNativeHandle()
   internal func UsesRequestedFramebufferExtent() bool -> PreferRequestedFramebufferExtent()
+  internal func AllowsInheritedCompositeAlpha() bool -> AllowInheritedCompositeAlpha()
   internal func BeginTextInput() bool -> StartTextInput()
   internal func EndTextInput() { StopTextInput() }
   internal func SetTextArea(x int32, y int32, width int32, height int32, cursor int32) bool ->

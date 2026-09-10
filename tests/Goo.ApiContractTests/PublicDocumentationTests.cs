@@ -250,6 +250,7 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedProtectedMethodIds =
     {
+        "M:Goo.EmbeddedWindowHost.AllowInheritedCompositeAlpha",
         "M:Goo.EmbeddedWindowHost.CreateVulkanSurface(System.IntPtr,System.UInt64@)",
         "M:Goo.EmbeddedWindowHost.DestroyVulkanSurface(System.IntPtr,System.UInt64)",
         "M:Goo.EmbeddedWindowHost.GetClipboardText",

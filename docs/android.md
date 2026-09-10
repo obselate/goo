@@ -70,10 +70,51 @@ recreation persistence keep their data in their normal application state owner.
 
 Choreographer runs frames only on demand or at Goo's next animation/timer
 deadline. Pause cancels scheduling and transient input. Resume resets the frame
-clock. Touch IDs, mouse wheel, physical keys, focus, clipboard, UTF-16 selection,
+clock.
+
+`GooView.HasFrameDemand` is true while a Choreographer frame is pending or the
+renderer needs another immediate frame. `FrameDemandChanged` reports changes
+to that value on the Android UI thread. Read the property for the current
+value, then use the event to update native frame-rate hints or other host
+policy. A future animation/timer deadline leaves immediate demand false until
+the frame is scheduled. Pause, surface destruction, view detachment, and
+disposal cancel pending frames and clear demand. The event reports demand
+transitions, not every presented frame.
+
+## Input and keyboard policy
+
+Touch IDs, mouse wheel, physical keys, focus, clipboard, UTF-16 selection,
 composition, and semantic editor commands use shared Goo input. Stale IME
 connections cannot edit a different focused field. Password fields suppress
 surrounding and extracted text returned to the IME.
+
+`GooView.DismissKeyboardOnSubmit` defaults to `true`: the IME Done action sends
+the shared Submit command and hides the software keyboard. Set the property to
+`false` for a composer that should keep the keyboard open after submission.
+Submit still runs, and normal focus changes and lifecycle handling still
+control text input. Next and Previous actions continue to move focus.
+
+Android owns physical key repeat timing. GooView dispatches each native key-down
+event, including repeat events, and releases its mapped Goo key before the
+callback returns. A missing native key-up therefore cannot leave Goo's repeat
+state active or cause a command such as Backspace to repeat indefinitely.
+Mapped key-up events are consumed without issuing another edit. Printable
+characters are committed from each native key-down when Ctrl and Alt are not
+pressed.
+
+## Transparent surfaces
+
+Set `Window.Transparent` before constructing GooView. A transparent window uses
+a translucent SurfaceView placed above the native view hierarchy, allowing
+native content beneath it to show through transparent pixels.
+
+Vulkan presentation prefers premultiplied composite alpha. Android also permits
+inherited composite alpha when the surface exposes that mode, because GooView
+has configured the native compositor for premultiplied transparency. Other
+embedded hosts keep `EmbeddedWindowHost.AllowInheritedCompositeAlpha()` false
+by default; override it only when their native compositor provides that same
+contract. Transparent windows fail swapchain creation if neither a premultiplied
+mode nor explicitly permitted inherited mode is available.
 
 ## Assets and native payloads
 
@@ -126,9 +167,11 @@ adb shell am start -S -a android.intent.action.MAIN -c android.intent.category.L
 adb logcat -d -s GooInputSmoke:I
 ```
 
-The smoke logs `PASS` after exercising text and composition cursors, surrounding
-deletion, code points, context queries, batches, password privacy, stale focus,
-and multiline input through the Android input connection.
+Wait for the final `PASS` log after exercising text and composition cursors,
+surrounding deletion, code points, context queries, batches, password privacy,
+stale focus, and multiline input through the Android input connection. The
+last checks leave a Backspace key-up absent and deliver explicit native repeat
+events, then wait to verify that no additional deletion occurs.
 
 The package checker verifies both ABI payloads against build provenance, checks
 dependencies and page alignment, and rejects legacy native renderer libraries.

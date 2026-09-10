@@ -155,7 +155,7 @@ internal sealed class GooInputConnection(GooView view, long focusId) : BaseInput
         if (actionCode == ImeAction.Previous)
             return view.Input.MoveFocus(false);
         var result = view.Input.Execute(new TextCommand(TextCommandKind.Submit, "", false));
-        if (actionCode == ImeAction.Done)
+        if (actionCode == ImeAction.Done && view.DismissKeyboardOnSubmit)
             view.EndTextInput();
         return result;
     }

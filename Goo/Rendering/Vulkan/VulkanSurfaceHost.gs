@@ -7,6 +7,7 @@ internal interface VulkanSurfaceHost {
   prop VSync bool { get; }
   prop WindowHandle nint { get; }
   prop PreferRequestedFramebufferExtent bool { get; }
+  prop AllowInheritedCompositeAlpha bool { get; }
 
   func Wake();
   func RefreshDisplayPacing(reset bool);

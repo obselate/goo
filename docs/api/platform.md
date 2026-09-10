@@ -12,6 +12,10 @@ Source:
 
 Connects a host-owned viewport and frame loop to an ordinary Goo window. All calls except RequestFrame run on the thread that attaches the window.
 
+### `AllowInheritedCompositeAlpha`
+
+Allows inherited Vulkan alpha when the native compositor has configured premultiplied transparency.
+
 ### `AttachPresentation`
 
 Creates presentation resources for the current native surface without remounting Cells.

@@ -11,6 +11,7 @@ internal unsafe data struct SdlVulkanExtensionPointer {
 
 internal unsafe partial class SdlHost {
   public prop PreferRequestedFramebufferExtent bool{ get -> false }
+  public prop AllowInheritedCompositeAlpha bool{ get -> false }
   public func LoadVulkanLibrary() bool {
     ThrowIfDisposed()
     if vulkanOwned {

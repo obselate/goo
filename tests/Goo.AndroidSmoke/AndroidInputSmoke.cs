@@ -99,9 +99,43 @@ internal static class AndroidInputSmoke
         AssertEditor(input, "a\nX\nYb", 5, 5, 2, 5);
         Require(multiline.FinishComposingText(), "Multiline preedit finish failed.");
         AssertEditor(input, "a\nX\nYb", 5, 5, -1, -1);
-        input.ClearFocus();
-        Log.Info("GooInputSmoke", "PASS physical_printable sanitized_cursor region_bounds composition_deletion code_points context batches password stale_focus multiline");
+        VerifyIncompleteKeySequence(view);
         return true;
+    }
+
+    private static void VerifyIncompleteKeySequence(GooView view)
+    {
+        var input = view.Window.PlatformInput;
+        Require(Focus(input, editor => !editor.IsPassword && !editor.IsMultiline),
+            "Key-repeat editor did not focus.");
+        using var info = new EditorInfo();
+        using var connection = view.OnCreateInputConnection(info)
+            ?? throw new InvalidOperationException("Key-repeat input connection is missing.");
+        SetText(input, connection, "abcdef");
+        var downTime = Android.OS.SystemClock.UptimeMillis();
+        SendBackspaceDown(view, downTime, 0);
+        AssertEditor(input, "abcde", 5, 5, -1, -1);
+        Require(view.PostDelayed(() =>
+        {
+            AssertEditor(input, "abcde", 5, 5, -1, -1);
+            SendBackspaceDown(view, downTime, 1);
+            AssertEditor(input, "abcd", 4, 4, -1, -1);
+            SendBackspaceDown(view, downTime, 2);
+            AssertEditor(input, "abc", 3, 3, -1, -1);
+            Require(view.PostDelayed(() =>
+            {
+                AssertEditor(input, "abc", 3, 3, -1, -1);
+                input.ClearFocus();
+                Log.Info("GooInputSmoke", "PASS physical_printable sanitized_cursor region_bounds composition_deletion code_points context batches password stale_focus multiline incomplete_key_sequence native_key_repeat");
+            }, 650), "Final key-repeat check was not scheduled.");
+        }, 650), "Missing-key-up check was not scheduled.");
+    }
+
+    private static void SendBackspaceDown(GooView view, long downTime, int repeat)
+    {
+        using var key = new Android.Views.KeyEvent(downTime, Android.OS.SystemClock.UptimeMillis(),
+            Android.Views.KeyEventActions.Down, Android.Views.Keycode.Del, repeat);
+        Require(view.OnKeyDown(key.KeyCode, key), "Backspace down was not handled.");
     }
 
     private static void VerifyComposingDeletion(PlatformInput input, IInputConnection connection)
