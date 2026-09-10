@@ -540,6 +540,10 @@ internal sealed class TextEditorRenderState : IDisposable {
     let intrinsic = !sameEditorComposition(composition, current)
     let scrollChanged = scrollTargetX != controller.ScrollTargetX
       || scrollTargetY != controller.ScrollTargetY
+    if intrinsic {
+      if let previous = composition { InvalidateParagraphs(previous.Range) }
+      if let next = current { InvalidateParagraphs(next.Range) }
+    }
     composition = current
     scrollTargetX = controller.ScrollTargetX
     scrollTargetY = controller.ScrollTargetY

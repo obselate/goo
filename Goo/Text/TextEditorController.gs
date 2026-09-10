@@ -610,6 +610,7 @@ public class TextEditorController : IDisposable {
     applyTextChange(TextCommandKind.CommitComposition,
       TextChange{ Range: textRange, InsertedText: committed })
     composition = nil
+    changed()
     return true
   }
 

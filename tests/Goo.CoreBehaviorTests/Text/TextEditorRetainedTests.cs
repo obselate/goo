@@ -61,11 +61,25 @@ public sealed class TextEditorRetainedTests
                 new TextPosition(1, TextAffinity.Downstream)),
         };
         var node = Mount(new TextEditor(controller) { Width = 200.0, Height = 40.0 });
+        new Layout().Calculate(node, 200, 40);
+        Assert.Equal("ab", TextEditorLayouts.For(node, 200, 40).Lines[0].Paragraph.Text);
         controller.UpdateComposition("xy", 1, 1);
 
         var layout = TextEditorLayouts.For(node, 200, 40);
         Assert.Contains(layout.Lines[0].Paragraph.Segments, segment => segment.Composition);
+        Assert.Equal("axyb", layout.Lines[0].Paragraph.Text);
         Assert.Equal("ab", document.GetText());
+        controller.UpdateComposition("X\nY", 3, 0);
+        Assert.Equal("aX\nYb", TextEditorLayouts.For(node, 200, 40).Lines[0].Paragraph.Text);
+        Assert.Equal("ab", document.GetText());
+
+        Assert.True(controller.CommitComposition());
+        Assert.Null(controller.Composition);
+        Assert.Equal("aX\nYb", document.GetText());
+        var committed = TextEditorLayouts.For(node, 200, 40);
+        Assert.Equal(new[] { "aX", "Yb" }, committed.Lines.Select(line => line.Paragraph.Text));
+        Assert.DoesNotContain(committed.Lines.SelectMany(line => line.Paragraph.Segments),
+            segment => segment.Composition);
     }
 
     [Fact]
