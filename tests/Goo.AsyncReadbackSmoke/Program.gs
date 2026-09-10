@@ -3253,6 +3253,10 @@ func RunProtectedTextSmoke() {
 
 let managedEntryTimestamp = Stopwatch.GetTimestamp()
 Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
+if Environment.GetEnvironmentVariable("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE") == "1" {
+  DiagnosticCaptureFixture.Run(ReadbackSmokeCell{})
+  return
+}
 if Environment.GetEnvironmentVariable("GOO_ALL_BLOB_BENCHMARK") == "1" {
   RunAllBlobBenchmark()
   return

@@ -4,5 +4,6 @@
              Link="FixtureAssemblyInfo.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)WindowReadbackFixture.gs"
              Link="WindowReadbackFixture.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DiagnosticCaptureSmoke.gs" Link="DiagnosticCaptureSmoke.gs" />
   </ItemGroup>
 </Project>

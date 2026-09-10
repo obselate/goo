@@ -50,9 +50,10 @@ internal class DiagnosticCaptureTracker {
   internal func Observe(status WindowReadbackRequestStatus) {
     if status == WindowReadbackRequestStatus.Accepted {
       phase = DiagnosticCapturePhase.Accepted
-    } else if status == WindowReadbackRequestStatus.NotReady {
-      phase = DiagnosticCapturePhase.WaitingForFrame
-    }
+    } else if status == WindowReadbackRequestStatus.NotReady
+      || status == WindowReadbackRequestStatus.Busy{
+        phase = DiagnosticCapturePhase.WaitingForFrame
+      }
   }
 
   internal func Complete() {
@@ -302,12 +303,13 @@ internal class DevToolsSession : IDisposable {
     if captureTracker.NeedsRequest {
       let status = owner.RequestDiagnosticsCapture()
       if status != WindowReadbackRequestStatus.Accepted
-        && status != WindowReadbackRequestStatus.NotReady{
+        && status != WindowReadbackRequestStatus.NotReady
+        && status != WindowReadbackRequestStatus.Busy{
           captureTracker.Reset()
           throw InvalidOperationException("Goo capture request was not accepted: " + status.ToString())
         }
       captureTracker.Observe(status)
-      if status == WindowReadbackRequestStatus.NotReady {
+      if captureTracker.NeedsRequest {
         owner.RequestDiagnosticsFrame()
         return "{\"command\":\"capture\",\"pending\":true}"
       }

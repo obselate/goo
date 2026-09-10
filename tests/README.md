@@ -45,6 +45,13 @@ CI runs this gate in the portable Vulkan checks through the headless Wayland wra
 `PathIdentityTests` in the core behavior suite also checks allocation-free repeated
 source lookup, structural equality under hash collisions, and mutable path revisions.
 
+## Diagnostic capture retry
+
+`GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1` in `Goo.AsyncReadbackSmoke` holds a real
+Vulkan submission, checks that diagnostic capture reports pending during Busy,
+then releases the queue and verifies three image captures. The CLI test suite
+also checks pending retries and timeout without writing a partial image.
+
 ## Timeline completion
 
 Run the shared graphics timeline completion gate with diagnostics:
