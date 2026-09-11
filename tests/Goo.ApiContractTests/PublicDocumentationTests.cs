@@ -243,6 +243,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.Post(System.Action)",
         "M:Goo.Window.Open",
         "M:Goo.Window.Pump(System.Double)",
+        "M:Goo.Window.RequestActivation",
         "M:Goo.Window.RequestClose",
         "M:Goo.Window.Run",
         "M:Goo.Window.SetClipboardText(System.String)",

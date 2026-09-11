@@ -52,6 +52,15 @@ Vulkan submission, checks that diagnostic capture reports pending during Busy,
 then releases the queue and verifies three image captures. The CLI test suite
 also checks pending retries and timeout without writing a partial image.
 
+## Window activation
+
+`GOO_WINDOW_ACTIVATION_SMOKE=1` exercises repeated native activation requests,
+preserved editor state, minimized-window requests, and closed-window rejection.
+It checks that requests do not synthesize focus changes. The observed native
+focus and window state are reported separately because compositor policy can
+deny activation without reporting an error. Linux CI runs this with Vulkan
+diagnostics through the headless Wayland wrapper.
+
 ## Timeline completion
 
 Run the shared graphics timeline completion gate with diagnostics:
