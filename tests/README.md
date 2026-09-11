@@ -29,6 +29,15 @@ Shader and text proof build:
 dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
 ```
 
+## UI audio
+
+`Goo.CoreBehaviorTests` checks PCM ownership/validation and 8-bit/16-bit WAV
+decoding. `Goo.AudioSmoke` checks shared owners, 16 overlapping voices, budget
+rejection, stop, playback progress without frames, and reopening. Run it with
+`SDL_AUDIO_DRIVER=dummy`; use `SDL_AUDIO_DRIVER=goo-unavailable` together with
+`GOO_AUDIO_UNAVAILABLE_SMOKE=1` to check optional device failure. Linux and macOS CI
+publishes and runs both cases as NativeAOT with the packaged SDL payload.
+
 ## Native queue wake regression
 
 The native queue wake regression check runs the normal window scheduler while
