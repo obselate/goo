@@ -35,6 +35,11 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
   internal var Creates int32
   internal var Destroys int32
   internal var Wakes int32
+  private var serviceableSubmissionWakes int32
+
+  internal prop ServiceableSubmissionWakes int32{
+    get -> Interlocked.CompareExchange(ref serviceableSubmissionWakes, 0, 0)
+  }
 
   internal func CreateNative() {
     native = SdlHost("Goo embedded lifecycle", 64, 64, 0, 0, false,
@@ -46,7 +51,12 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
     native?.Dispose()
     native = nil
   }
-  protected override func RequestFrame() { Interlocked.Increment(ref Wakes) }
+  protected override func RequestFrame() {
+    if Window?.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest == true {
+      Interlocked.Increment(ref serviceableSubmissionWakes)
+    }
+    Interlocked.Increment(ref Wakes)
+  }
   protected override func LoadVulkanLibrary() bool -> native!!.LoadVulkanLibrary()
   protected override func GetVulkanGetInstanceProcAddr() nint -> native!!.GetVulkanGetInstanceProcAddr()
   protected override func UnloadVulkanLibrary() { native!!.UnloadVulkanLibrary() }
@@ -153,6 +163,7 @@ internal class EmbeddedHostSmoke {
       root EmbeddedSmokeCell) {
         Settle(host)
         let baselineBuilds = root.Builds
+        let baselineServiceableWakes = host.ServiceableSubmissionWakes
         WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
         try {
           WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
@@ -160,6 +171,12 @@ internal class EmbeddedHostSmoke {
             "Embedded frame did not reach held submission")
           WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
           let submitDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+          while host.ServiceableSubmissionWakes == baselineServiceableWakes
+            && Stopwatch.GetTimestamp() < submitDeadline{
+              Thread.Sleep(1)
+            }
+          Require(host.ServiceableSubmissionWakes > baselineServiceableWakes,
+            "Queue worker woke the embedded host before clearing outstanding work")
           while window.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest
           != true && Stopwatch.GetTimestamp() < submitDeadline{
             Thread.Sleep(1)
