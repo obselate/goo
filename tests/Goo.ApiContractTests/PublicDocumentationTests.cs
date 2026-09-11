@@ -91,6 +91,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.EmbeddedWindowHost.RenderFrame(System.Double)",
         "M:Goo.EmbeddedWindowHost.Resize(System.Int32,System.Int32,System.Int32,System.Int32)",
         "M:Goo.EmbeddedWindowHost.Resume",
+        "M:Goo.EmbeddedWindowHost.ServicePendingSubmission",
         "M:Goo.EmbeddedWindowHost.SetFocused(System.Boolean)",
         "M:Goo.EmbeddedWindowHost.Suspend",
         "M:Goo.ElementHandle.#ctor",

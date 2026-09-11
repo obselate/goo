@@ -72,6 +72,12 @@ Choreographer runs frames only on demand or at Goo's next animation/timer
 deadline. Pause cancels scheduling and transient input. Resume resets the frame
 clock.
 
+An embedded host may call `ServicePendingSubmission()` on its owner thread when
+a frame wake is delivered, before scheduling the next timed frame. The method
+only advances a completed graphics submission into presentation. It does not
+simulate or render a frame, and presentation completion remains part of the next
+normal frame pump. Goo's Android adapter performs this service automatically.
+
 `GooView.HasFrameDemand` is true while a Choreographer frame is pending or the
 renderer needs another immediate frame. `FrameDemandChanged` reports changes
 to that value on the Android UI thread. Read the property for the current

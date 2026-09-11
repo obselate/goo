@@ -5,6 +5,11 @@ import System.Diagnostics
 import System.Threading
 
 internal partial class VulkanWindowTarget {
+  internal prop EmbeddedSubmitCompletionServiceReadyForTest bool{
+    get -> queueStage == QueueStageSubmit
+      && queueMailbox?.Phase == VulkanQueueMailboxPhase.SubmitComplete
+      && runtime?.QueueWorker.HasOutstandingWork != true
+  }
   internal prop EmbeddedPresentCompletionReadyForTest bool{
     get -> queueMailbox?.Phase == VulkanQueueMailboxPhase.PresentComplete
   }
@@ -144,6 +149,59 @@ internal class EmbeddedHostSmoke {
         }
       }
 
+    private func VerifyPendingSubmissionService(window Window, host EmbeddedSmokeHost,
+      root EmbeddedSmokeCell) {
+        Settle(host)
+        let baselineBuilds = root.Builds
+        WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
+        try {
+          WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
+          Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 2000),
+            "Embedded frame did not reach held submission")
+          WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+          let submitDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+          while window.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest
+          != true && Stopwatch.GetTimestamp() < submitDeadline{
+            Thread.Sleep(1)
+          }
+          Require(window.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest
+            == true,
+            "Embedded submission did not become serviceable")
+          WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
+          let frameBeforeService = window.DiagnosticFrameIdForTest()
+          Require(host.ServicePendingSubmission(),
+            "Embedded host did not consume completed submission")
+          Require(window.DiagnosticFrameIdForTest() == frameBeforeService
+              && root.Builds == baselineBuilds,
+            "Submission service performed a frame pump")
+          Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 2000),
+            "Submission service did not enqueue presentation")
+          root.Red = !root.Red
+          root.Rebuild()
+          WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+          let presentDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+          while window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest
+          != true && Stopwatch.GetTimestamp() < presentDeadline{
+            Thread.Sleep(1)
+          }
+          Require(window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest == true,
+            "Embedded presentation did not complete")
+          Require(!host.ServicePendingSubmission()
+              && window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest == true,
+            "Submission service consumed presentation completion")
+          let frameBeforePump = window.DiagnosticFrameIdForTest()
+          host.RenderFrame(0.016)
+          Require(window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest != true,
+            "Normal embedded pump did not consume presentation completion")
+          Require(root.Builds == baselineBuilds + 1
+              && window.DiagnosticFrameIdForTest() > frameBeforePump,
+            "Normal embedded pump did not render pending invalidation")
+          Settle(host)
+        } finally {
+          WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+        }
+      }
+
     internal func Run() {
       let host = EmbeddedSmokeHost()
       let root = EmbeddedSmokeCell()
@@ -192,13 +250,14 @@ internal class EmbeddedHostSmoke {
         Capture(window, host, true)
         Require(root.Builds == 4 && root.Disposals == 0 && host.Creates == 2,
           "Presentation recreation remounted application state")
+        VerifyPendingSubmissionService(window, host, root)
         host.DetachPresentation()
         Require(host.Destroys == 2, "Replacement Vulkan surface was not released")
         host.DestroyNative()
         host.Dispose()
         Require(root.Disposals == 1 && !window.IsOpen,
           "Final host disposal did not dispose the retained Cell exactly once")
-        Console.WriteLine("embedded-host: density=verified idle=verified pending_invalidation=verified suspend=verified surfaces=2 retained_state=verified pixels=verified")
+        Console.WriteLine("embedded-host: density=verified idle=verified pending_invalidation=verified pending_submission_service=verified suspend=verified surfaces=2 retained_state=verified pixels=verified")
       } finally {
         host.Dispose()
         host.DestroyNative()

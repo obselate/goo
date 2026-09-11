@@ -870,6 +870,41 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     return true
   }
 
+  /// Advances a completed graphics submission into presentation.
+  public func ServicePendingSubmission() bool {
+    if queueStage != QueueStageSubmit {
+      return false
+    }
+    guard let mailbox = queueMailbox else {
+      return false
+    }
+    var submitResult VkResult = VkConstants.VK_NOT_READY
+    if !mailbox.TakeSubmitCompletion(out submitResult) {
+      return false
+    }
+    if submitResult != VkConstants.VK_SUCCESS {
+      mailbox.ResetSubmitCompletion()
+      if mailbox.SyntheticDrainPerformed {
+        RecordDiagnosticResult(
+          VulkanDiagnosticEventIds.PresentWait,
+          mailbox.SyntheticDrainResult)
+      }
+      let marked = activeFrameSlot?.MarkSubmitted(submitResult, pendingGlobalSubmissionSerial)
+      RecordDiagnosticResult(VulkanDiagnosticEventIds.Submit, marked ?? submitResult)
+      runtime?.MarkDeviceLost()
+      queueStage = QueueStageIdle
+      try {
+        HandleFrameFailure(VkConstants.VK_ERROR_DEVICE_LOST,
+          VulkanDiagnosticEventIds.Submit)
+      } finally {
+        FinishFailedFrame()
+      }
+      return true
+    }
+    CompleteQueueSubmit()
+    return true
+  }
+
   public func PollQueueCompletion() bool {
     if queueStage == QueueStageSubmitRetry {
       if !RetryQueueSubmit() {
@@ -880,30 +915,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       return false
     }
     if queueStage == QueueStageSubmit {
-      var submitResult VkResult = VkConstants.VK_NOT_READY
-      if !mailbox.TakeSubmitCompletion(out submitResult) {
-        return false
-      }
-      if submitResult != VkConstants.VK_SUCCESS {
-        mailbox.ResetSubmitCompletion()
-        if mailbox.SyntheticDrainPerformed {
-          RecordDiagnosticResult(
-            VulkanDiagnosticEventIds.PresentWait,
-            mailbox.SyntheticDrainResult)
-        }
-        let marked = activeFrameSlot?.MarkSubmitted(submitResult, pendingGlobalSubmissionSerial)
-        RecordDiagnosticResult(VulkanDiagnosticEventIds.Submit, marked ?? submitResult)
-        runtime?.MarkDeviceLost()
-        queueStage = QueueStageIdle
-        try {
-          HandleFrameFailure(VkConstants.VK_ERROR_DEVICE_LOST,
-            VulkanDiagnosticEventIds.Submit)
-        } finally {
-          FinishFailedFrame()
-        }
-        return false
-      }
-      CompleteQueueSubmit()
+      ServicePendingSubmission()
       return false
     }
     if queueStage == QueueStagePresentPrepare {

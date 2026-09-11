@@ -114,6 +114,7 @@ internal interface WindowRenderTarget {
   func BeginFrame();
   func Render(root Node?, background Color, dpi Vector2, overlay DiagnosticOverlay?);
   func Present();
+  func ServicePendingSubmission() bool;
   func PollQueueCompletion() bool;
   func Resize(width int32, height int32) bool;
   func RequestCapture(root Node?, background Color, dpi Vector2) WindowReadbackRequestStatus;

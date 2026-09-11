@@ -55,6 +55,14 @@ public open class EmbeddedWindowHost : IDisposable {
     Window?.DetachEmbeddedPresentation()
   }
 
+  /// Advances a completed graphics submission into presentation without
+  /// simulating, rendering, or consuming presentation completion.
+  /// Returns true when a completed submission was consumed.
+  public func ServicePendingSubmission() bool {
+    RequireOwnerThread()
+    return Window?.ServiceEmbeddedPendingSubmission() == true
+  }
+
   /// Processes queued work and one externally timed frame without polling native events.
   public func RenderFrame(dt float64) {
     RequireOwnerThread()

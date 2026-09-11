@@ -108,6 +108,9 @@ public partial class Window {
     requestRender()
   }
 
+  internal func ServiceEmbeddedPendingSubmission() bool ->
+  windowTarget?.ServicePendingSubmission() == true
+
   internal func PumpEmbedded(dt float64, suspended bool) {
     let simulationDt = if suspended || resumedFrame { 0.0 } else { dt }
     resumedFrame = false

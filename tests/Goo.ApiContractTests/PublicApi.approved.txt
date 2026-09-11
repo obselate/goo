@@ -632,6 +632,7 @@ method|Goo.EmbeddedWindowHost|Dispose|instance|public|generic:|()->System.Void
 method|Goo.EmbeddedWindowHost|RenderFrame|instance|public|generic:|(dt:System.Double)->System.Void
 method|Goo.EmbeddedWindowHost|Resize|instance|public|generic:|(width:System.Int32,height:System.Int32,pixelWidth:System.Int32,pixelHeight:System.Int32)->System.Void
 method|Goo.EmbeddedWindowHost|Resume|instance|public|generic:|()->System.Void
+method|Goo.EmbeddedWindowHost|ServicePendingSubmission|instance|public|generic:|()->System.Boolean
 method|Goo.EmbeddedWindowHost|SetFocused|instance|public|generic:|(value:System.Boolean)->System.Void
 method|Goo.EmbeddedWindowHost|Suspend|instance|public|generic:|()->System.Void
 method|Goo.FocusEvent|StopPropagation|instance|public|generic:|()->System.Void

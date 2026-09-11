@@ -137,6 +137,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
                 Interlocked.Exchange(ref wakePosted, 0);
                 if (disposed)
                     return;
+                if (resumed && host.IsPresentationAttached)
+                    host.ServicePendingSubmission();
                 handler.RemoveCallbacks(scheduleFrame);
                 ScheduleFrame();
             });
