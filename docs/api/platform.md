@@ -76,6 +76,10 @@ Reports content size in logical units and the corresponding framebuffer pixels.
 
 Resumes frame service without applying elapsed background time to animations.
 
+### `ServicePendingSubmission`
+
+Advances a completed graphics submission into presentation without simulating, rendering, or consuming presentation completion. Returns true when a completed submission was consumed.
+
 ### `SetClipboardText(string)`
 
 Stores plain text in the platform clipboard.

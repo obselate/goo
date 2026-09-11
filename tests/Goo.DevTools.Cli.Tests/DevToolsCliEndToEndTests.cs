@@ -346,7 +346,7 @@ public sealed class DevToolsCliEndToEndTests
             while (directory is not null)
             {
                 if (File.Exists(Path.Combine(directory.FullName, "LICENSE"))
-                    && Directory.Exists(Path.Combine(directory.FullName, ".git")))
+                    && Path.Exists(Path.Combine(directory.FullName, ".git")))
                     return directory.FullName;
                 directory = directory.Parent;
             }

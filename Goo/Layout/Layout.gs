@@ -45,7 +45,7 @@ internal class Layout {
       && width == lastWidth && height == lastHeight
       && !YGNodeAPI.YGNodeIsDirty(yg) {
         return
-    }
+      }
     let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
     ? Single.NaN : height
     YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))

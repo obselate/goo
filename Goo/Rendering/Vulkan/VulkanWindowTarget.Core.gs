@@ -870,7 +870,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     return true
   }
 
-  /// Advances a completed graphics submission into presentation.
+  // Advances a completed graphics submission into presentation.
   public func ServicePendingSubmission() bool {
     if queueStage != QueueStageSubmit {
       return false
