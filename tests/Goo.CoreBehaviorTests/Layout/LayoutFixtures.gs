@@ -236,6 +236,74 @@ internal class LayoutFixtures {
     return target.Rect.X == 100.0F
   }
 
+  func TextEntryUsesIntrinsicLineBoxHeight() bool {
+    let reconciler = Reconciler{ Res: Resolver{} }
+    var root = reconciler.Mount(Container{
+      Width: 200,
+      Children: {
+        TextEntry{
+          Key: "value", Value: "hello", FontSize: 16, LineHeight: 1.25,
+          Padding: 12, BorderWidth: 2,
+        },
+        TextEntry{
+          Key: "placeholder", Placeholder: "Search", FontSize: 16, LineHeight: 1.25,
+          PaddingTop: Length.Percent(5), PaddingBottom: Length.Percent(5), BorderWidth: 2,
+        },
+        TextEntry{
+          Key: "explicit", Value: "hello", Height: 31, FontSize: 16, LineHeight: 1.25,
+          Padding: 12, BorderWidth: 2,
+        },
+        TextEntry{
+          Key: "auto", Height: Length.Auto, FontSize: 16, LineHeight: 1.25,
+          Padding: 12, BorderWidth: 2,
+        },
+      },
+    })
+    let layout = Layout()
+    layout.Calculate(root, 200.0F, 300.0F)
+    if root.Children[0].Rect.H != 48.0F
+      || root.Children[1].Rect.H != 44.0F
+      || root.Children[2].Rect.H != 31.0F
+      || root.Children[3].Rect.H != 48.0F {
+        throw InvalidOperationException(root.Children[0].Rect.H.ToString() + ","
+          +root.Children[1].Rect.H.ToString() + "," + root.Children[2].Rect.H.ToString()
+          +"," + root.Children[3].Rect.H.ToString())
+      }
+
+    root = reconciler.Diff(root, Container{
+      Width: 200,
+      Children: {
+        TextEntry{
+          Key: "value", Value: "hello", FontSize: 20, LineHeight: 1.5,
+          Padding: 12, BorderWidth: 2,
+        },
+        TextEntry{
+          Key: "placeholder", Placeholder: "Search", FontSize: 16, LineHeight: 1.25,
+          PaddingTop: Length.Percent(5), PaddingBottom: Length.Percent(5), BorderWidth: 2,
+        },
+        TextEntry{
+          Key: "explicit", Value: "hello", Height: 31, FontSize: 20, LineHeight: 1.5,
+          Padding: 12, BorderWidth: 2,
+        },
+        TextEntry{
+          Key: "auto", Height: Length.Auto, FontSize: 16, LineHeight: 1.25,
+          Padding: 12, BorderWidth: 2,
+        },
+      },
+    })
+    layout.Calculate(root, 200.0F, 300.0F)
+    if root.Children[0].Rect.H != 58.0F || root.Children[2].Rect.H != 31.0F {
+      throw InvalidOperationException(root.Children[0].Rect.H.ToString() + ","
+        +root.Children[2].Rect.H.ToString())
+    }
+
+    let entryRoot = Reconciler{ Res: Resolver{} }.Mount(TextEntry{
+      Value: "hello", FontSize: 16, LineHeight: 1.25, Padding: 12, BorderWidth: 2,
+    })
+    Layout().Calculate(entryRoot, 200.0F, 300.0F)
+    return entryRoot.Rect.H == 48.0F
+  }
+
   private func layoutTransitionScene(firstWidth float64) Container -> Container {
     Width: 200,
     Height: 40,

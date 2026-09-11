@@ -45,8 +45,10 @@ internal class Layout {
       && width == lastWidth && height == lastHeight
       && !YGNodeAPI.YGNodeIsDirty(yg) {
         return
-      }
-    YGNodeAPI.YGNodeCalculateLayout(yg, width, height, yogaDirection(root.Direction))
+    }
+    let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
+    ? Single.NaN : height
+    YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
     lastRoot = root
     lastWidth = width
     lastHeight = height
@@ -114,6 +116,9 @@ internal class Layout {
       if n.Kind == NodeKind.Text {
         YGNodeAPI.YGNodeSetContext(yg, n)
         YGNodeAPI.YGNodeSetMeasureFunc(yg, TextLayouts.Measure)
+      } else if n.Kind == NodeKind.Entry {
+        YGNodeAPI.YGNodeSetContext(yg, n)
+        YGNodeAPI.YGNodeSetMeasureFunc(yg, EntryLayouts.Measure)
       } else if n.Kind == NodeKind.Editor {
         YGNodeAPI.YGNodeSetContext(yg, n)
         YGNodeAPI.YGNodeSetMeasureFunc(yg, TextEditorLayouts.Measure)
@@ -351,9 +356,6 @@ internal func syncYogaField(n Node, f StyleField) {
     case StyleField.Display { applyDisplay(yg, n) }
     case StyleField.OverflowX { applyDisplay(yg, n) }
     case StyleField.OverflowY { applyDisplay(yg, n) }
-    // Entry height derives from font metrics; text/editor measure runs via Invalidate.
-    case StyleField.FontSize { if n.Kind == NodeKind.Entry { applySize(yg, n) } }
-    case StyleField.LineHeight { if n.Kind == NodeKind.Entry { applySize(yg, n) } }
     default { }
   }
 }
@@ -404,10 +406,7 @@ internal func applySize(yg Facebook.Yoga.Node, n Node) {
       markYogaStyle(n, StyleField.Height)
     }
     default {
-      if n.Kind == NodeKind.Entry {
-        YGNodeStyleAPI.YGNodeStyleSetHeight(yg, n.FontSize.Value * float32(n.LineHeight))
-        markYogaStyle(n, StyleField.Height)
-      } else if clearYogaStyle(n, StyleField.Height) {
+      if clearYogaStyle(n, StyleField.Height) {
         YGNodeStyleAPI.YGNodeStyleSetHeightAuto(yg)
       }
     }
