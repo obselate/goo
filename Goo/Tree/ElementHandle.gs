@@ -418,26 +418,29 @@ internal class ElementHandles {
   }
 }
 
-internal class ElementMetricSubscription {
-  internal event Callbacks Action[ElementMetrics]
-  internal var Last ElementMetrics
-  internal var HasLast bool
-  internal var Registration ElementMetricRegistration?
+internal open class MetricSubscription[T] {
+  internal event Callbacks Action[T]
+  internal var Last T
 
   internal prop HasCallbacks bool{ get -> Callbacks != nil }
 
-  internal func AddCallback(callback Action[ElementMetrics]) {
+  internal func AddCallback(callback Action[T]) {
     Callbacks += callback
   }
 
-  internal func RemoveCallback(callback Action[ElementMetrics]) {
+  internal func RemoveCallback(callback Action[T]) {
     Callbacks -= callback
   }
 
-  internal func Notify(value ElementMetrics) {
+  internal func Notify(value T) {
     let callbacks = Callbacks
     callbacks?.Invoke(value)
   }
+}
+
+internal class ElementMetricSubscription : MetricSubscription[ElementMetrics] {
+  internal var HasLast bool
+  internal var Registration ElementMetricRegistration?
 }
 
 internal class ElementMetricRegistration {
@@ -449,9 +452,7 @@ internal class ElementMetricRegistration {
   }
 }
 
-internal class WindowMetricSubscription {
-  internal event Callbacks Action[WindowMetrics]
-  internal var Last WindowMetrics
+internal class WindowMetricSubscription : MetricSubscription[WindowMetrics] {
   internal var HasLast bool
   internal var Reported WindowMetrics
   internal var HasReported bool
@@ -460,21 +461,6 @@ internal class WindowMetricSubscription {
   internal var WindowPending bool
   internal var ElementsDelivering bool
   internal var ElementsNeedCompaction bool
-
-  internal prop HasCallbacks bool{ get -> Callbacks != nil }
-
-  internal func AddCallback(callback Action[WindowMetrics]) {
-    Callbacks += callback
-  }
-
-  internal func RemoveCallback(callback Action[WindowMetrics]) {
-    Callbacks -= callback
-  }
-
-  internal func Notify(value WindowMetrics) {
-    let callbacks = Callbacks
-    callbacks?.Invoke(value)
-  }
 }
 
 internal class MetricSubscriptions {
@@ -1007,18 +993,14 @@ internal class TextGeometryQueries {
           while rectOffset < rectCount {
             let copied = shape.CopySelectionRects(lineStart - geometryLine.DisplayStart,
               lineEnd - geometryLine.DisplayStart, rectOffset, values)
-            var value int32 = 0
-            while value + 1 < copied {
-              let raw = Rect{ X: contentX + TextLayouts.lineOffset(n, line, TextLayouts.ContentWidth(n))
-                +values[value], Y: contentY + float32(i) * height,
-                W: values[value + 1] - values[value], H: height }
-              if !appendRect(n, raw, space, destination, required) {
-                required = 0
-                return false
-              }
-              required++
-              value = value + 2
+            let appended = appendSelectionRects(n, values, copied,
+              contentX + TextLayouts.lineOffset(n, line, TextLayouts.ContentWidth(n)),
+              contentY + float32(i) * height, height, space, destination, required)
+            if appended < 0 {
+              required = 0
+              return false
             }
+            required = required + appended
             if copied == 0 { break }
             rectOffset = rectOffset + copied / 2
           }
@@ -1043,17 +1025,13 @@ internal class TextGeometryQueries {
         let values = stackalloc[64]float32
         while rectOffset < rectCount {
           let copied = shape.CopySelectionRects(start, end, rectOffset, values)
-          var value int32 = 0
-          while value + 1 < copied {
-            let raw = Rect{ X: x + values[value], Y: top,
-              W: values[value + 1] - values[value], H: height }
-            if !appendRect(n, raw, space, destination, required) {
-              required = 0
-              return false
-            }
-            required++
-            value = value + 2
+          let appended = appendSelectionRects(n, values, copied, x, top, height,
+            space, destination, required)
+          if appended < 0 {
+            required = 0
+            return false
           }
+          required = required + appended
           if copied == 0 { break }
           rectOffset = rectOffset + copied / 2
         }
@@ -1090,17 +1068,13 @@ internal class TextGeometryQueries {
           while rectOffset < rectCount || rectOffset == 0 {
             let copied = TextEditorLayouts.CopySelectionRectsForGeometry(line, displayStart,
               displayEnd, rectOffset, values, out rectCount)
-            var value int32 = 0
-            while value + 1 < copied {
-              let raw = Rect{ X: x + values[value], Y: contentY + line.Top - scrollY,
-                W: values[value + 1] - values[value], H: line.Height }
-              if !appendRect(n, raw, space, destination, required) {
-                required = 0
-                return false
-              }
-              required++
-              value = value + 2
+            let appended = appendSelectionRects(n, values, copied, x,
+              contentY + line.Top - scrollY, line.Height, space, destination, required)
+            if appended < 0 {
+              required = 0
+              return false
             }
+            required = required + appended
             if copied == 0 { break }
             rectOffset = rectOffset + copied / 2
           }
@@ -1159,6 +1133,19 @@ internal class TextGeometryQueries {
         if !convertRect(n, raw, space, out converted) { return false }
         if index < destination.Length { destination[index] = converted }
         return true
+      }
+
+    private func appendSelectionRects(n Node, values Span[float32], copied int32,
+      baseX float32, baseY float32, height float32, space TextCoordinateSpace,
+      destination Span[ElementRect], offset int32) int32{
+        var value int32 = 0
+        while value + 1 < copied {
+          let raw = Rect{ X: baseX + values[value], Y: baseY,
+            W: values[value + 1] - values[value], H: height }
+          if !appendRect(n, raw, space, destination, offset + value / 2) { return -1 }
+          value = value + 2
+        }
+        return value / 2
       }
 
     private func staticLineForDisplay(layout TextLayout, geometry TextLayoutGeometry, display int32,
