@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from provenance import target_snapshot
 
 
 def command_text(name, args):
@@ -347,7 +348,7 @@ def main():
     manifest["buildEvidence"] = build
     manifest["artifacts"] = artifacts
     args.output.mkdir(parents=True, exist_ok=True)
-    (args.output / "text-native-build.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (args.output / "text-native-build.json").write_text(json.dumps(target_snapshot(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

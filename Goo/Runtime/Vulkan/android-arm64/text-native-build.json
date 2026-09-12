@@ -661,30 +661,6 @@
         "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384",
         "SOURCE_DATE_EPOCH": "0"
-      },
-      "android-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384",
-        "SOURCE_DATE_EPOCH": "0"
-      },
-      "linux-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--build-id=none",
-        "SOURCE_DATE_EPOCH": "0"
-      },
-      "osx-arm64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,-dead_strip",
-        "SOURCE_DATE_EPOCH": "0"
-      },
-      "win-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++",
-        "SOURCE_DATE_EPOCH": "0"
       }
     },
     "harfbuzzOptions": [
@@ -718,55 +694,6 @@
       "-Dgpu_demo=disabled",
       "-Dwith_libstdcxx=false"
     ],
-    "linux": {
-      "maxGlibc": "2.27",
-      "requiredFormat": "ELF 64-bit LSB shared object, x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "libc.so.6",
-          "libgoo-harfbuzz.so",
-          "libm.so.6"
-        ],
-        "harfbuzz": [
-          "libc.so.6",
-          "libm.so.6",
-          "libpthread.so.0"
-        ]
-      },
-      "requiredRpath": {
-        "gpu": [],
-        "harfbuzz": []
-      },
-      "requiredRunpath": {
-        "gpu": [
-          "$ORIGIN/"
-        ],
-        "harfbuzz": []
-      }
-    },
-    "macos": {
-      "forbiddenDependencyPrefixes": [
-        "/opt/homebrew/",
-        "/usr/local/"
-      ],
-      "requiredArchitectures": [
-        "arm64"
-      ],
-      "requiredFormat": "Mach-O 64-bit dynamically linked shared library arm64",
-      "requiredInstallName": {
-        "gpu": "@rpath/libgoo-harfbuzz-gpu.dylib",
-        "harfbuzz": "@rpath/libgoo-harfbuzz.dylib"
-      },
-      "requiredNeeded": {
-        "gpu": [
-          "/usr/lib/libSystem.B.dylib",
-          "@rpath/libgoo-harfbuzz.dylib"
-        ],
-        "harfbuzz": [
-          "/usr/lib/libSystem.B.dylib"
-        ]
-      }
-    },
     "soname": {
       "gpu": "libgoo-harfbuzz-gpu.so",
       "harfbuzz": "libgoo-harfbuzz.so"
@@ -783,188 +710,16 @@
         "upstreamSha256": "78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463"
       }
     ],
-    "system": "Meson and Ninja",
-    "windows": {
-      "forbiddenImports": [
-        "libstdc++",
-        "libgcc",
-        "winpthread",
-        "libstdc++-6.dll",
-        "libgcc_s_seh-1.dll",
-        "libwinpthread-1.dll",
-        "winpthread-1.dll",
-        "freetype",
-        "glib",
-        "icu",
-        "graphite",
-        "zlib",
-        "png"
-      ],
-      "gpuImport": "goo-harfbuzz.dll",
-      "linkerFlags": [
-        "-static-libgcc",
-        "-static-libstdc++",
-        "-Wl,--no-insert-timestamp"
-      ],
-      "requiredFormat": "PE32+ x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "KERNEL32.dll",
-          "goo-harfbuzz.dll",
-          "msvcrt.dll"
-        ],
-        "harfbuzz": [
-          "KERNEL32.dll",
-          "msvcrt.dll"
-        ]
-      },
-      "sourcePatch": "Rename the core and GPU targets to goo-harfbuzz.dll and goo-harfbuzz-gpu.dll, remove Meson version suffixes, and keep hb-gpu's core import as goo-harfbuzz.dll.",
-      "target": "x86_64-w64-mingw32"
-    }
+    "system": "Meson and Ninja"
   },
   "buildEvidence": {
-    "android": {
-      "minimumApi": 33,
-      "minimumPageAlignment": 16384,
-      "minimumVulkan": "1.3",
-      "ndkVersion": "27.2.12479018",
-      "requiredFormat": {
-        "android-arm64": "ELF 64-bit LSB shared object, ARM aarch64",
-        "android-x64": "ELF 64-bit LSB shared object, x86-64"
-      },
-      "requiredNeeded": {
-        "gpu": [
-          "libc.so",
-          "libgoo-harfbuzz.so",
-          "libm.so"
-        ],
-        "harfbuzz": [
-          "libc.so",
-          "libm.so"
-        ]
-      },
-      "requiredRpath": {
-        "gpu": [],
-        "harfbuzz": []
-      },
-      "requiredRunpath": {
-        "gpu": [
-          "$ORIGIN/"
-        ],
-        "harfbuzz": []
-      }
-    },
-    "commonOptions": [
-      "--prefix=/usr",
-      "--libdir=lib",
-      "--buildtype=release",
-      "--default-library=shared",
-      "--wrap-mode=nodownload"
-    ],
     "environment": {
       "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
       "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
       "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384",
       "SOURCE_DATE_EPOCH": "0"
     },
-    "harfbuzzOptions": [
-      "-Dglib=disabled",
-      "-Dgobject=disabled",
-      "-Dcairo=disabled",
-      "-Dchafa=disabled",
-      "-Dpng=disabled",
-      "-Dzlib=disabled",
-      "-Dicu=disabled",
-      "-Dgraphite=disabled",
-      "-Dgraphite2=disabled",
-      "-Dfreetype=disabled",
-      "-Dfontations=disabled",
-      "-Dgdi=disabled",
-      "-Ddirectwrite=disabled",
-      "-Dcoretext=disabled",
-      "-Dharfrust=disabled",
-      "-Dkbts=disabled",
-      "-Dwasm=disabled",
-      "-Draster=disabled",
-      "-Dvector=disabled",
-      "-Dgpu=enabled",
-      "-Dsubset=disabled",
-      "-Dtests=disabled",
-      "-Dintrospection=disabled",
-      "-Ddocs=disabled",
-      "-Ddoc_tests=false",
-      "-Dutilities=disabled",
-      "-Dbenchmark=disabled",
-      "-Dgpu_demo=disabled",
-      "-Dwith_libstdcxx=false"
-    ],
-    "linux": {
-      "maxGlibc": "2.27",
-      "requiredFormat": "ELF 64-bit LSB shared object, x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "libc.so.6",
-          "libgoo-harfbuzz.so",
-          "libm.so.6"
-        ],
-        "harfbuzz": [
-          "libc.so.6",
-          "libm.so.6",
-          "libpthread.so.0"
-        ]
-      },
-      "requiredRpath": {
-        "gpu": [],
-        "harfbuzz": []
-      },
-      "requiredRunpath": {
-        "gpu": [
-          "$ORIGIN/"
-        ],
-        "harfbuzz": []
-      }
-    },
-    "macos": {
-      "forbiddenDependencyPrefixes": [
-        "/opt/homebrew/",
-        "/usr/local/"
-      ],
-      "requiredArchitectures": [
-        "arm64"
-      ],
-      "requiredFormat": "Mach-O 64-bit dynamically linked shared library arm64",
-      "requiredInstallName": {
-        "gpu": "@rpath/libgoo-harfbuzz-gpu.dylib",
-        "harfbuzz": "@rpath/libgoo-harfbuzz.dylib"
-      },
-      "requiredNeeded": {
-        "gpu": [
-          "/usr/lib/libSystem.B.dylib",
-          "@rpath/libgoo-harfbuzz.dylib"
-        ],
-        "harfbuzz": [
-          "/usr/lib/libSystem.B.dylib"
-        ]
-      }
-    },
-    "soname": {
-      "gpu": "libgoo-harfbuzz-gpu.so",
-      "harfbuzz": "libgoo-harfbuzz.so"
-    },
     "sourceDirectory": "temporary",
-    "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs, macOS keeps private @rpath install names, and Windows uses unversioned DLL names.",
-    "sourcePatches": [
-      {
-        "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding.",
-        "name": "cpal-linear-light",
-        "patchedSha256": "b2cc4e10551ff8e49c0e801c5aea1a7886e7468c5e61770df0804ac322de191c",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-14.3.1-cpal-linear-light.patch",
-        "sha256": "225d5b7e5a656e96ee850f41c662e625d9c29ac518c1b834b3c53b7949358b67",
-        "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463"
-      }
-    ],
-    "system": "Meson and Ninja",
     "target": "android-arm64",
     "toolchain": {
       "cc": "Android (12470979, +pgo, +bolt, +lto, +mlgo, based on r522817c) clang version 18.0.3 (https://android.googlesource.com/toolchain/llvm-project d8003a456d14a3deb8054cdaa529ffbf02d9b262)",
@@ -973,43 +728,6 @@
       "ndk": "27.2.12479018",
       "ninja": "1.13.2",
       "strip": "llvm-strip, compatible with GNU strip"
-    },
-    "windows": {
-      "forbiddenImports": [
-        "libstdc++",
-        "libgcc",
-        "winpthread",
-        "libstdc++-6.dll",
-        "libgcc_s_seh-1.dll",
-        "libwinpthread-1.dll",
-        "winpthread-1.dll",
-        "freetype",
-        "glib",
-        "icu",
-        "graphite",
-        "zlib",
-        "png"
-      ],
-      "gpuImport": "goo-harfbuzz.dll",
-      "linkerFlags": [
-        "-static-libgcc",
-        "-static-libstdc++",
-        "-Wl,--no-insert-timestamp"
-      ],
-      "requiredFormat": "PE32+ x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "KERNEL32.dll",
-          "goo-harfbuzz.dll",
-          "msvcrt.dll"
-        ],
-        "harfbuzz": [
-          "KERNEL32.dll",
-          "msvcrt.dll"
-        ]
-      },
-      "sourcePatch": "Rename the core and GPU targets to goo-harfbuzz.dll and goo-harfbuzz-gpu.dll, remove Meson version suffixes, and keep hb-gpu's core import as goo-harfbuzz.dll.",
-      "target": "x86_64-w64-mingw32"
     }
   },
   "name": "Goo.TextNative",
@@ -1017,22 +735,6 @@
     "android-arm64": {
       "gpu": "libgoo-harfbuzz-gpu.so",
       "harfbuzz": "libgoo-harfbuzz.so"
-    },
-    "android-x64": {
-      "gpu": "libgoo-harfbuzz-gpu.so",
-      "harfbuzz": "libgoo-harfbuzz.so"
-    },
-    "linux-x64": {
-      "gpu": "libgoo-harfbuzz-gpu.so",
-      "harfbuzz": "libgoo-harfbuzz.so"
-    },
-    "osx-arm64": {
-      "gpu": "libgoo-harfbuzz-gpu.dylib",
-      "harfbuzz": "libgoo-harfbuzz.dylib"
-    },
-    "win-x64": {
-      "gpu": "goo-harfbuzz-gpu.dll",
-      "harfbuzz": "goo-harfbuzz.dll"
     }
   },
   "requiredExports": {
