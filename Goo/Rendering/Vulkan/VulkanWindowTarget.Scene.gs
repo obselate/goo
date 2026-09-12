@@ -8,266 +8,112 @@ internal partial class VulkanWindowTarget {
       return
     }
     frame.InvalidateRetainedPrimitiveSpans()
-    var index int32 = 0
-    while index < frame.ChunkCount {
-      let value = frame.Chunks[index]
-      frame.Chunks[index] = SceneChunk{
-        OwnerId: value.OwnerId,
-        Version: value.Version,
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        FirstDraw: value.FirstDraw,
-        DrawCount: value.DrawCount,
-        FirstResource: value.FirstResource,
-        ResourceCount: value.ResourceCount,
-        ContentKey: value.ContentKey,
-        TopologyKey: value.TopologyKey,
-        Dirty: value.Dirty,
-        RetentionState: value.RetentionState,
-      }
-      index = index + 1
+    for index in 0 ... frame.ChunkCount {
+      frame.Chunks[index].Bounds = ScaleBounds(frame.Chunks[index].Bounds, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.SolidBoxCount {
-      let value = frame.SolidBoxes[index]
-      frame.SolidBoxes[index] = SolidBoxRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        Color: value.Color,
-        Opacity: value.Opacity,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    for index in 0 ... frame.SolidBoxCount {
+      frame.SolidBoxes[index].Bounds = ScaleBounds(frame.SolidBoxes[index].Bounds, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.RoundedBoxCount {
-      let value = frame.RoundedBoxes[index]
-      frame.RoundedBoxes[index] = RoundedBoxRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        RadiusTopLeft: ScaleRadius(value.RadiusTopLeft, scaleX, scaleY),
-        RadiusTopRight: ScaleRadius(value.RadiusTopRight, scaleX, scaleY),
-        RadiusBottomRight: ScaleRadius(value.RadiusBottomRight, scaleX, scaleY),
-        RadiusBottomLeft: ScaleRadius(value.RadiusBottomLeft, scaleX, scaleY),
-        OpaqueBorderWidth: value.OpaqueBorderWidth * scaleX,
-        OpaqueBorderHeight: value.OpaqueBorderHeight * scaleY,
-        Color: value.Color,
-        Opacity: value.Opacity,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let roundedBoxes = frame.RoundedBoxes
+    for index in 0 ... frame.RoundedBoxCount {
+      roundedBoxes[index].Bounds = ScaleBounds(roundedBoxes[index].Bounds, scaleX, scaleY)
+      roundedBoxes[index].RadiusTopLeft = ScaleRadius(roundedBoxes[index].RadiusTopLeft, scaleX, scaleY)
+      roundedBoxes[index].RadiusTopRight = ScaleRadius(roundedBoxes[index].RadiusTopRight, scaleX, scaleY)
+      roundedBoxes[index].RadiusBottomRight = ScaleRadius(roundedBoxes[index].RadiusBottomRight, scaleX, scaleY)
+      roundedBoxes[index].RadiusBottomLeft = ScaleRadius(roundedBoxes[index].RadiusBottomLeft, scaleX, scaleY)
+      roundedBoxes[index].OpaqueBorderWidth = roundedBoxes[index].OpaqueBorderWidth * scaleX
+      roundedBoxes[index].OpaqueBorderHeight = roundedBoxes[index].OpaqueBorderHeight * scaleY
     }
-    index = 0
-    while index < frame.PerEdgeBorderCount {
-      let value = frame.PerEdgeBorders[index]
-      frame.PerEdgeBorders[index] = PerEdgeBorderRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        TopWidth: value.TopWidth * scaleY,
-        RightWidth: value.RightWidth * scaleX,
-        BottomWidth: value.BottomWidth * scaleY,
-        LeftWidth: value.LeftWidth * scaleX,
-        RadiusTopLeft: ScaleRadius(value.RadiusTopLeft, scaleX, scaleY),
-        RadiusTopRight: ScaleRadius(value.RadiusTopRight, scaleX, scaleY),
-        RadiusBottomRight: ScaleRadius(value.RadiusBottomRight, scaleX, scaleY),
-        RadiusBottomLeft: ScaleRadius(value.RadiusBottomLeft, scaleX, scaleY),
-        TopColor: value.TopColor,
-        RightColor: value.RightColor,
-        BottomColor: value.BottomColor,
-        LeftColor: value.LeftColor,
-        Style: value.Style,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let borders = frame.PerEdgeBorders
+    for index in 0 ... frame.PerEdgeBorderCount {
+      borders[index].Bounds = ScaleBounds(borders[index].Bounds, scaleX, scaleY)
+      borders[index].TopWidth = borders[index].TopWidth * scaleY
+      borders[index].RightWidth = borders[index].RightWidth * scaleX
+      borders[index].BottomWidth = borders[index].BottomWidth * scaleY
+      borders[index].LeftWidth = borders[index].LeftWidth * scaleX
+      borders[index].RadiusTopLeft = ScaleRadius(borders[index].RadiusTopLeft, scaleX, scaleY)
+      borders[index].RadiusTopRight = ScaleRadius(borders[index].RadiusTopRight, scaleX, scaleY)
+      borders[index].RadiusBottomRight = ScaleRadius(borders[index].RadiusBottomRight, scaleX, scaleY)
+      borders[index].RadiusBottomLeft = ScaleRadius(borders[index].RadiusBottomLeft, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.LinearGradientCount {
-      let value = frame.LinearGradients[index]
-      frame.LinearGradients[index] = LinearGradientRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        RadiusTopLeft: ScaleRadius(value.RadiusTopLeft, scaleX, scaleY),
-        RadiusTopRight: ScaleRadius(value.RadiusTopRight, scaleX, scaleY),
-        RadiusBottomRight: ScaleRadius(value.RadiusBottomRight, scaleX, scaleY),
-        RadiusBottomLeft: ScaleRadius(value.RadiusBottomLeft, scaleX, scaleY),
-        StartX: value.StartX * scaleX,
-        StartY: value.StartY * scaleY,
-        EndX: value.EndX * scaleX,
-        EndY: value.EndY * scaleY,
-        StopStart: value.StopStart,
-        StopCount: value.StopCount,
-        Opacity: value.Opacity,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let linearGradients = frame.LinearGradients
+    for index in 0 ... frame.LinearGradientCount {
+      linearGradients[index].Bounds = ScaleBounds(linearGradients[index].Bounds, scaleX, scaleY)
+      linearGradients[index].RadiusTopLeft = ScaleRadius(linearGradients[index].RadiusTopLeft, scaleX, scaleY)
+      linearGradients[index].RadiusTopRight = ScaleRadius(linearGradients[index].RadiusTopRight, scaleX, scaleY)
+      linearGradients[index].RadiusBottomRight = ScaleRadius(linearGradients[index].RadiusBottomRight, scaleX, scaleY)
+      linearGradients[index].RadiusBottomLeft = ScaleRadius(linearGradients[index].RadiusBottomLeft, scaleX, scaleY)
+      linearGradients[index].StartX = linearGradients[index].StartX * scaleX
+      linearGradients[index].StartY = linearGradients[index].StartY * scaleY
+      linearGradients[index].EndX = linearGradients[index].EndX * scaleX
+      linearGradients[index].EndY = linearGradients[index].EndY * scaleY
     }
-    index = 0
-    while index < frame.RadialGradientCount {
-      let value = frame.RadialGradients[index]
-      frame.RadialGradients[index] = RadialGradientRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        RadiusTopLeft: ScaleRadius(value.RadiusTopLeft, scaleX, scaleY),
-        RadiusTopRight: ScaleRadius(value.RadiusTopRight, scaleX, scaleY),
-        RadiusBottomRight: ScaleRadius(value.RadiusBottomRight, scaleX, scaleY),
-        RadiusBottomLeft: ScaleRadius(value.RadiusBottomLeft, scaleX, scaleY),
-        CenterX: value.CenterX * scaleX,
-        CenterY: value.CenterY * scaleY,
-        RadiusX: value.RadiusX * scaleX,
-        RadiusY: value.RadiusY * scaleY,
-        StopStart: value.StopStart,
-        StopCount: value.StopCount,
-        Opacity: value.Opacity,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let radialGradients = frame.RadialGradients
+    for index in 0 ... frame.RadialGradientCount {
+      radialGradients[index].Bounds = ScaleBounds(radialGradients[index].Bounds, scaleX, scaleY)
+      radialGradients[index].RadiusTopLeft = ScaleRadius(radialGradients[index].RadiusTopLeft, scaleX, scaleY)
+      radialGradients[index].RadiusTopRight = ScaleRadius(radialGradients[index].RadiusTopRight, scaleX, scaleY)
+      radialGradients[index].RadiusBottomRight = ScaleRadius(radialGradients[index].RadiusBottomRight, scaleX, scaleY)
+      radialGradients[index].RadiusBottomLeft = ScaleRadius(radialGradients[index].RadiusBottomLeft, scaleX, scaleY)
+      radialGradients[index].CenterX = radialGradients[index].CenterX * scaleX
+      radialGradients[index].CenterY = radialGradients[index].CenterY * scaleY
+      radialGradients[index].RadiusX = radialGradients[index].RadiusX * scaleX
+      radialGradients[index].RadiusY = radialGradients[index].RadiusY * scaleY
     }
-    index = 0
-    while index < frame.CachedImageCount {
-      let value = frame.CachedImages[index]
-      frame.CachedImages[index] = CachedImageRefRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        ImageId: value.ImageId,
-        SamplerId: value.SamplerId,
-        SourceX: value.SourceX,
-        SourceY: value.SourceY,
-        SourceWidth: value.SourceWidth,
-        SourceHeight: value.SourceHeight,
-        Opacity: value.Opacity,
-        Sampling: value.Sampling,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    for index in 0 ... frame.CachedImageCount {
+      frame.CachedImages[index].Bounds = ScaleBounds(frame.CachedImages[index].Bounds, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.AnalyticPathBandCount {
-      let value = frame.AnalyticPathBands[index]
-      frame.AnalyticPathBands[index] = AnalyticPathBandRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        PathId: value.PathId,
-        AtlasId: value.AtlasId,
-        AtlasWordOffset: value.AtlasWordOffset,
-        AtlasWordCount: value.AtlasWordCount,
-        FillColor: value.FillColor,
-        FillRule: value.FillRule,
-        Opacity: value.Opacity,
-        ScaleX: value.ScaleX * scaleX,
-        ScaleY: value.ScaleY * scaleY,
-        TranslateX: value.TranslateX * scaleX,
-        TranslateY: value.TranslateY * scaleY,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let paths = frame.AnalyticPathBands
+    for index in 0 ... frame.AnalyticPathBandCount {
+      paths[index].Bounds = ScaleBounds(paths[index].Bounds, scaleX, scaleY)
+      paths[index].ScaleX = paths[index].ScaleX * scaleX
+      paths[index].ScaleY = paths[index].ScaleY * scaleY
+      paths[index].TranslateX = paths[index].TranslateX * scaleX
+      paths[index].TranslateY = paths[index].TranslateY * scaleY
     }
-    index = 0
-    while index < frame.TransformCount {
-      let value = frame.Transforms[index]
-      frame.Transforms[index] = TransformRecord{
-        A: value.A,
-        B: value.B,
-        C: value.C,
-        D: value.D,
-        TX: value.TX * scaleX,
-        TY: value.TY * scaleY,
-        ParentIndex: value.ParentIndex,
-      }
-      index = index + 1
+    for index in 0 ... frame.TransformCount {
+      frame.Transforms[index].TX = frame.Transforms[index].TX * scaleX
+      frame.Transforms[index].TY = frame.Transforms[index].TY * scaleY
     }
-    index = 0
-    while index < frame.RectClipCount {
-      let value = frame.RectClips[index]
-      frame.RectClips[index] = RectClipRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        TransformIndex: value.TransformIndex,
-        ParentIndex: value.ParentIndex,
-      }
-      index = index + 1
+    for index in 0 ... frame.RectClipCount {
+      frame.RectClips[index].Bounds = ScaleBounds(frame.RectClips[index].Bounds, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.ClipMaskCount {
-      let value = frame.ClipMasks[index]
-      frame.ClipMasks[index] = ClipMaskRecord{
-        StableId: value.StableId,
-        PathId: value.PathId,
-        AtlasId: value.AtlasId,
-        AtlasWordOffset: value.AtlasWordOffset,
-        AtlasWordCount: value.AtlasWordCount,
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        PathBounds: ScaleBounds(value.PathBounds, scaleX, scaleY),
-        Fit: value.Fit,
-        FillRule: value.FillRule,
-        ScaleX: value.ScaleX * scaleX,
-        ScaleY: value.ScaleY * scaleY,
-        TranslateX: value.TranslateX * scaleX,
-        TranslateY: value.TranslateY * scaleY,
-        TransformIndex: value.TransformIndex,
-        ContentKey: ScaleClipContentKey(value.ContentKey, scaleX, scaleY),
-      }
-      index = index + 1
+    let clipMasks = frame.ClipMasks
+    for index in 0 ... frame.ClipMaskCount {
+      clipMasks[index].Bounds = ScaleBounds(clipMasks[index].Bounds, scaleX, scaleY)
+      clipMasks[index].PathBounds = ScaleBounds(clipMasks[index].PathBounds, scaleX, scaleY)
+      clipMasks[index].ScaleX = clipMasks[index].ScaleX * scaleX
+      clipMasks[index].ScaleY = clipMasks[index].ScaleY * scaleY
+      clipMasks[index].TranslateX = clipMasks[index].TranslateX * scaleX
+      clipMasks[index].TranslateY = clipMasks[index].TranslateY * scaleY
+      clipMasks[index].ContentKey = ScaleClipContentKey(clipMasks[index].ContentKey, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.ShadowCount {
-      let value = frame.Shadows[index]
-      frame.Shadows[index] = ShadowRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        RadiusTopLeft: ScaleRadius(value.RadiusTopLeft, scaleX, scaleY),
-        RadiusTopRight: ScaleRadius(value.RadiusTopRight, scaleX, scaleY),
-        RadiusBottomRight: ScaleRadius(value.RadiusBottomRight, scaleX, scaleY),
-        RadiusBottomLeft: ScaleRadius(value.RadiusBottomLeft, scaleX, scaleY),
-        OffsetX: value.OffsetX * scaleX,
-        OffsetY: value.OffsetY * scaleY,
-        Spread: ScaleRadius(value.Spread, scaleX, scaleY),
-        Blur: ScaleRadius(value.Blur, scaleX, scaleY),
-        Color: value.Color,
-        MaskId: value.MaskId,
-        MaskIndex: value.MaskIndex,
-        Inset: value.Inset,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let shadows = frame.Shadows
+    for index in 0 ... frame.ShadowCount {
+      shadows[index].Bounds = ScaleBounds(shadows[index].Bounds, scaleX, scaleY)
+      shadows[index].RadiusTopLeft = ScaleRadius(shadows[index].RadiusTopLeft, scaleX, scaleY)
+      shadows[index].RadiusTopRight = ScaleRadius(shadows[index].RadiusTopRight, scaleX, scaleY)
+      shadows[index].RadiusBottomRight = ScaleRadius(shadows[index].RadiusBottomRight, scaleX, scaleY)
+      shadows[index].RadiusBottomLeft = ScaleRadius(shadows[index].RadiusBottomLeft, scaleX, scaleY)
+      shadows[index].OffsetX = shadows[index].OffsetX * scaleX
+      shadows[index].OffsetY = shadows[index].OffsetY * scaleY
+      shadows[index].Spread = ScaleRadius(shadows[index].Spread, scaleX, scaleY)
+      shadows[index].Blur = ScaleRadius(shadows[index].Blur, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.UnderlineCount {
-      let value = frame.Underlines[index]
-      frame.Underlines[index] = UnderlineRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        Thickness: ScaleRadius(value.Thickness, scaleX, scaleY),
-        Color: value.Color,
-        Mode: value.Mode,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    for index in 0 ... frame.UnderlineCount {
+      frame.Underlines[index].Bounds = ScaleBounds(frame.Underlines[index].Bounds, scaleX, scaleY)
+      frame.Underlines[index].Thickness = ScaleRadius(frame.Underlines[index].Thickness, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.LavaCount {
-      let value = frame.Lavas[index]
-      frame.Lavas[index] = LavaRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        Flow: value.Flow,
-        Form: value.Form,
-        Blend: value.Blend,
-        Light: value.Light,
-        Hue: value.Hue,
-        Rainbow: value.Rainbow,
-        Rotation: value.Rotation,
-        Seed: value.Seed,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    for index in 0 ... frame.LavaCount {
+      frame.Lavas[index].Bounds = ScaleBounds(frame.Lavas[index].Bounds, scaleX, scaleY)
     }
-    index = 0
-    while index < frame.LayerCount {
-      let value = frame.Layers[index]
-      frame.Layers[index] = LayerRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        OriginX: value.OriginX * scaleX,
-        OriginY: value.OriginY * scaleY,
-        ExtentWidth: uint32(MathF.Ceiling(float32(value.ExtentWidth) * scaleX)),
-        ExtentHeight: uint32(MathF.Ceiling(float32(value.ExtentHeight) * scaleY)),
-        Opacity: value.Opacity,
-        BlendMode: value.BlendMode,
-        OffscreenTargetId: value.OffscreenTargetId,
-        EffectProgramId: value.EffectProgramId,
-        EffectVersion: value.EffectVersion,
-        EffectIndex: value.EffectIndex,
-        Flags: value.Flags,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
+    let layers = frame.Layers
+    for index in 0 ... frame.LayerCount {
+      layers[index].Bounds = ScaleBounds(layers[index].Bounds, scaleX, scaleY)
+      layers[index].OriginX = layers[index].OriginX * scaleX
+      layers[index].OriginY = layers[index].OriginY * scaleY
+      layers[index].ExtentWidth = uint32(MathF.Ceiling(float32(layers[index].ExtentWidth) * scaleX))
+      layers[index].ExtentHeight = uint32(MathF.Ceiling(float32(layers[index].ExtentHeight) * scaleY))
     }
   }
 

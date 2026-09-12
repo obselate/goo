@@ -7,59 +7,34 @@ internal partial class SceneFrame {
     RequireClosedChunk()
     var hash = HashOffset
     hash = Mix(hash, uint64(chunkCount))
-    var index int32 = 0
-    while index < chunkCount {
+    for index in 0 ... chunkCount {
       let chunk = chunks[index]
       hash = HashBounds(hash, chunk.Bounds)
       hash = Mix(hash, uint64(chunk.DrawCount))
       hash = Mix(hash, uint64(chunk.ResourceCount))
-      index = index + 1
     }
     hash = Mix(hash, uint64(drawRefCount))
-    index = 0
-    while index < drawRefCount {
+    for index in 0 ... drawRefCount {
       let value = drawRefs[index]
       hash = Mix(hash, uint64(int32(value.Kind)))
       hash = Mix(hash, uint64(value.Index))
       hash = Mix(hash, uint64(value.Flags))
       hash = Mix(hash, uint64(value.ClipChainId))
-      index = index + 1
     }
     hash = Mix(hash, uint64(resourceRefCount))
-    index = 0
-    while index < resourceRefCount {
+    for index in 0 ... resourceRefCount {
       hash = HashResource(hash, resourceRefs[index])
-      index = index + 1
     }
     hash = Mix(hash, uint64(solidBoxCount))
-    index = 0
-    while index < solidBoxCount {
-      let value = solidBoxes[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = Mix(hash, uint64(value.Color))
-      hash = HashFloat(hash, value.Opacity)
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... solidBoxCount {
+      hash = HashSolidBox(hash, solidBoxes[index])
     }
     hash = Mix(hash, uint64(roundedBoxCount))
-    index = 0
-    while index < roundedBoxCount {
-      let value = roundedBoxes[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashFloat(hash, value.RadiusTopLeft)
-      hash = HashFloat(hash, value.RadiusTopRight)
-      hash = HashFloat(hash, value.RadiusBottomRight)
-      hash = HashFloat(hash, value.RadiusBottomLeft)
-      hash = HashFloat(hash, value.OpaqueBorderWidth)
-      hash = HashFloat(hash, value.OpaqueBorderHeight)
-      hash = Mix(hash, uint64(value.Color))
-      hash = HashFloat(hash, value.Opacity)
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... roundedBoxCount {
+      hash = HashRoundedBox(hash, roundedBoxes[index])
     }
     hash = Mix(hash, uint64(perEdgeBorderCount))
-    index = 0
-    while index < perEdgeBorderCount {
+    for index in 0 ... perEdgeBorderCount {
       let value = perEdgeBorders[index]
       hash = HashBounds(hash, value.Bounds)
       hash = HashFloat(hash, value.TopWidth)
@@ -80,19 +55,15 @@ internal partial class SceneFrame {
       hash = Mix(hash, uint64(value.LeftColor))
       hash = Mix(hash, uint64(value.Style))
       hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
     }
     hash = Mix(hash, uint64(gradientStopCount))
-    index = 0
-    while index < gradientStopCount {
+    for index in 0 ... gradientStopCount {
       let value = gradientStops[index]
       hash = HashFloat(hash, value.Offset)
       hash = Mix(hash, uint64(value.Color))
-      index = index + 1
     }
     hash = Mix(hash, uint64(linearGradientCount))
-    index = 0
-    while index < linearGradientCount {
+    for index in 0 ... linearGradientCount {
       let value = linearGradients[index]
       hash = HashBounds(hash, value.Bounds)
       hash = HashFloat(hash, value.RadiusTopLeft)
@@ -107,11 +78,9 @@ internal partial class SceneFrame {
       hash = Mix(hash, uint64(value.StopCount))
       hash = HashFloat(hash, value.Opacity)
       hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
     }
     hash = Mix(hash, uint64(radialGradientCount))
-    index = 0
-    while index < radialGradientCount {
+    for index in 0 ... radialGradientCount {
       let value = radialGradients[index]
       hash = HashBounds(hash, value.Bounds)
       hash = HashFloat(hash, value.RadiusTopLeft)
@@ -126,79 +95,29 @@ internal partial class SceneFrame {
       hash = Mix(hash, uint64(value.StopCount))
       hash = HashFloat(hash, value.Opacity)
       hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
     }
     hash = Mix(hash, uint64(cachedImageCount))
-    index = 0
-    while index < cachedImageCount {
-      let value = cachedImages[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashResource(hash, value.ImageId)
-      hash = HashResource(hash, value.SamplerId)
-      hash = HashFloat(hash, value.SourceX)
-      hash = HashFloat(hash, value.SourceY)
-      hash = HashFloat(hash, value.SourceWidth)
-      hash = HashFloat(hash, value.SourceHeight)
-      hash = HashFloat(hash, value.Opacity)
-      hash = Mix(hash, uint64(value.Sampling))
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... cachedImageCount {
+      hash = HashCachedImage(hash, cachedImages[index])
     }
     hash = Mix(hash, uint64(cachedTextSegmentCount))
-    index = 0
-    while index < cachedTextSegmentCount {
-      let value = cachedTextSegments[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = Mix(hash, value.SegmentId)
-      hash = Mix(hash, value.SegmentVersion)
-      hash = Mix(hash, uint64(value.GlyphCount))
-      hash = Mix(hash, uint64(value.ClipChainId))
-      index = index + 1
+    for index in 0 ... cachedTextSegmentCount {
+      hash = HashCachedTextSegment(hash, cachedTextSegments[index])
     }
     hash = Mix(hash, uint64(analyticPathBandCount))
-    index = 0
-    while index < analyticPathBandCount {
-      let value = analyticPathBands[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashResource(hash, value.PathId)
-      hash = HashResource(hash, value.AtlasId)
-      hash = Mix(hash, uint64(value.AtlasWordOffset))
-      hash = Mix(hash, uint64(value.AtlasWordCount))
-      hash = Mix(hash, uint64(value.FillColor))
-      hash = Mix(hash, uint64(value.FillRule))
-      hash = HashFloat(hash, value.Opacity)
-      hash = HashFloat(hash, value.ScaleX)
-      hash = HashFloat(hash, value.ScaleY)
-      hash = HashFloat(hash, value.TranslateX)
-      hash = HashFloat(hash, value.TranslateY)
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... analyticPathBandCount {
+      hash = HashAnalyticPathBand(hash, analyticPathBands[index])
     }
     hash = Mix(hash, uint64(transformCount))
-    index = 0
-    while index < transformCount {
-      let value = transforms[index]
-      hash = HashFloat(hash, value.A)
-      hash = HashFloat(hash, value.B)
-      hash = HashFloat(hash, value.C)
-      hash = HashFloat(hash, value.D)
-      hash = HashFloat(hash, value.TX)
-      hash = HashFloat(hash, value.TY)
-      hash = Mix(hash, uint64(value.ParentIndex))
-      index = index + 1
+    for index in 0 ... transformCount {
+      hash = HashTransform(hash, transforms[index])
     }
     hash = Mix(hash, uint64(rectClipCount))
-    index = 0
-    while index < rectClipCount {
-      let value = rectClips[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = Mix(hash, uint64(value.TransformIndex))
-      hash = Mix(hash, uint64(value.ParentIndex))
-      index = index + 1
+    for index in 0 ... rectClipCount {
+      hash = HashRectClip(hash, rectClips[index])
     }
     hash = Mix(hash, uint64(clipMaskCount))
-    index = 0
-    while index < clipMaskCount {
+    for index in 0 ... clipMaskCount {
       let value = clipMasks[index]
       hash = Mix(hash, value.StableId)
       hash = HashResource(hash, value.PathId)
@@ -215,11 +134,9 @@ internal partial class SceneFrame {
       hash = HashFloat(hash, value.TranslateY)
       hash = Mix(hash, uint64(value.TransformIndex))
       hash = Mix(hash, value.ContentKey)
-      index = index + 1
     }
     hash = Mix(hash, uint64(clipChainCount))
-    index = 0
-    while index < clipChainCount {
+    for index in 0 ... clipChainCount {
       let value = clipChains[index]
       hash = Mix(hash, value.StableId)
       hash = Mix(hash, uint64(value.ParentIndex))
@@ -227,59 +144,21 @@ internal partial class SceneFrame {
       hash = Mix(hash, uint64(value.Depth))
       hash = Mix(hash, uint64(value.Flags))
       hash = Mix(hash, value.ContentKey)
-      index = index + 1
     }
     hash = Mix(hash, uint64(shadowCount))
-    index = 0
-    while index < shadowCount {
-      let value = shadows[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashFloat(hash, value.RadiusTopLeft)
-      hash = HashFloat(hash, value.RadiusTopRight)
-      hash = HashFloat(hash, value.RadiusBottomRight)
-      hash = HashFloat(hash, value.RadiusBottomLeft)
-      hash = HashFloat(hash, value.OffsetX)
-      hash = HashFloat(hash, value.OffsetY)
-      hash = HashFloat(hash, value.Spread)
-      hash = HashFloat(hash, value.Blur)
-      hash = Mix(hash, uint64(value.Color))
-      hash = HashResource(hash, value.MaskId)
-      hash = Mix(hash, uint64(value.MaskIndex))
-      hash = Mix(hash, value.Inset ? 1uL : 0uL)
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... shadowCount {
+      hash = HashShadow(hash, shadows[index])
     }
     hash = Mix(hash, uint64(underlineCount))
-    index = 0
-    while index < underlineCount {
-      let value = underlines[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashFloat(hash, value.Thickness)
-      hash = Mix(hash, uint64(value.Color))
-      hash = Mix(hash, uint64(value.Mode))
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... underlineCount {
+      hash = HashUnderline(hash, underlines[index])
     }
     hash = Mix(hash, uint64(lavaCount))
-    index = 0
-    while index < lavaCount {
-      let value = lavas[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashFloat(hash, value.Flow)
-      hash = HashFloat(hash, value.Form)
-      hash = HashFloat(hash, value.Blend)
-      hash = HashFloat(hash, value.Light)
-      hash = HashFloat(hash, value.Hue)
-      hash = Mix(hash, uint64(value.Rainbow))
-      hash = HashFloat(hash, float32(value.Rotation.X))
-      hash = HashFloat(hash, float32(value.Rotation.Y))
-      hash = Mix(hash, uint64(value.Seed))
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
+    for index in 0 ... lavaCount {
+      hash = HashLava(hash, lavas[index])
     }
     hash = Mix(hash, uint64(layerCount))
-    index = 0
-    while index < layerCount {
+    for index in 0 ... layerCount {
       let value = layers[index]
       hash = HashBounds(hash, value.Bounds)
       hash = HashFloat(hash, value.OriginX)
@@ -291,7 +170,6 @@ internal partial class SceneFrame {
       hash = HashResource(hash, value.OffscreenTargetId)
       hash = Mix(hash, uint64(value.Flags))
       hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
     }
     return hash
   }
@@ -335,20 +213,14 @@ internal partial class SceneFrame {
     var hash = HashOffset
     hash = Mix(hash, uint64(chunk.DrawCount))
     hash = Mix(hash, uint64(chunk.ResourceCount))
-    var index = chunk.FirstDraw
-    let end = chunk.FirstDraw + chunk.DrawCount
-    while index < end {
+    for index in chunk.FirstDraw ... chunk.FirstDraw + chunk.DrawCount {
       let reference = drawRefs[index]
       hash = Mix(hash, uint64(int32(reference.Kind)))
       hash = Mix(hash, uint64(reference.Flags))
       hash = Mix(hash, uint64(reference.ClipChainId))
-      index = index + 1
     }
-    index = chunk.FirstResource
-    let resourceEnd = chunk.FirstResource + chunk.ResourceCount
-    while index < resourceEnd {
+    for index in chunk.FirstResource ... chunk.FirstResource + chunk.ResourceCount {
       hash = Mix(hash, uint64(int32(resourceRefs[index].Kind)))
-      index = index + 1
     }
     return hash
   }
@@ -363,21 +235,15 @@ internal partial class SceneFrame {
     hash = HashBounds(hash, chunk.Bounds)
     hash = Mix(hash, uint64(chunk.DrawCount))
     hash = Mix(hash, uint64(chunk.ResourceCount))
-    var index = chunk.FirstDraw
-    let end = chunk.FirstDraw + chunk.DrawCount
-    while index < end {
+    for index in chunk.FirstDraw ... chunk.FirstDraw + chunk.DrawCount {
       let reference = drawRefs[index]
       hash = Mix(hash, uint64(int32(reference.Kind)))
       hash = Mix(hash, uint64(reference.Flags))
       hash = Mix(hash, uint64(reference.ClipChainId))
       hash = HashDrawContent(hash, reference)
-      index = index + 1
     }
-    index = chunk.FirstResource
-    let resourceEnd = chunk.FirstResource + chunk.ResourceCount
-    while index < resourceEnd {
+    for index in chunk.FirstResource ... chunk.FirstResource + chunk.ResourceCount {
       hash = HashResource(hash, resourceRefs[index])
-      index = index + 1
     }
     return hash
   }
@@ -386,24 +252,10 @@ internal partial class SceneFrame {
     var result = hash
     switch reference.Kind {
       case SceneDrawKind.SolidBox {
-        let value = solidBoxes[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = Mix(result, uint64(value.Color))
-        result = HashFloat(result, value.Opacity)
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashSolidBox(result, solidBoxes[reference.Index])
       }
       case SceneDrawKind.RoundedBox {
-        let value = roundedBoxes[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashFloat(result, value.RadiusTopLeft)
-        result = HashFloat(result, value.RadiusTopRight)
-        result = HashFloat(result, value.RadiusBottomRight)
-        result = HashFloat(result, value.RadiusBottomLeft)
-        result = HashFloat(result, value.OpaqueBorderWidth)
-        result = HashFloat(result, value.OpaqueBorderHeight)
-        result = Mix(result, uint64(value.Color))
-        result = HashFloat(result, value.Opacity)
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashRoundedBox(result, roundedBoxes[reference.Index])
       }
       case SceneDrawKind.PerEdgeBorder {
         let value = perEdgeBorders[reference.Index]
@@ -454,96 +306,31 @@ internal partial class SceneFrame {
         return HashTransformIndex(result, value.TransformIndex)
       }
       case SceneDrawKind.CachedImage {
-        let value = cachedImages[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashResource(result, value.ImageId)
-        result = HashResource(result, value.SamplerId)
-        result = HashFloat(result, value.SourceX)
-        result = HashFloat(result, value.SourceY)
-        result = HashFloat(result, value.SourceWidth)
-        result = HashFloat(result, value.SourceHeight)
-        result = HashFloat(result, value.Opacity)
-        result = Mix(result, uint64(value.Sampling))
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashCachedImage(result, cachedImages[reference.Index])
       }
       case SceneDrawKind.CachedTextSegment {
-        let value = cachedTextSegments[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = Mix(result, value.SegmentId)
-        result = Mix(result, value.SegmentVersion)
-        result = Mix(result, uint64(value.GlyphCount))
-        return Mix(result, uint64(value.ClipChainId))
+        return HashCachedTextSegment(result, cachedTextSegments[reference.Index])
       }
       case SceneDrawKind.AnalyticPathBand {
-        let value = analyticPathBands[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashResource(result, value.PathId)
-        result = HashResource(result, value.AtlasId)
-        result = Mix(result, uint64(value.AtlasWordOffset))
-        result = Mix(result, uint64(value.AtlasWordCount))
-        result = Mix(result, uint64(value.FillColor))
-        result = Mix(result, uint64(value.FillRule))
-        result = HashFloat(result, value.Opacity)
-        result = HashFloat(result, value.ScaleX)
-        result = HashFloat(result, value.ScaleY)
-        result = HashFloat(result, value.TranslateX)
-        result = HashFloat(result, value.TranslateY)
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashAnalyticPathBand(result, analyticPathBands[reference.Index])
       }
       case SceneDrawKind.Transform {
-        let value = transforms[reference.Index]
-        result = HashFloat(result, value.A)
-        result = HashFloat(result, value.B)
-        result = HashFloat(result, value.C)
-        result = HashFloat(result, value.D)
-        result = HashFloat(result, value.TX)
-        result = HashFloat(result, value.TY)
-        return Mix(result, uint64(value.ParentIndex))
+        return HashTransform(result, transforms[reference.Index])
       }
       case SceneDrawKind.RectClipBegin {
-        return HashRectClipContent(result, reference.Index)
+        return HashRectClip(result, rectClips[reference.Index])
       }
       case SceneDrawKind.RectClipEnd {
-        return HashRectClipContent(result, reference.Index)
+        return HashRectClip(result, rectClips[reference.Index])
       }
       case SceneDrawKind.Shadow {
-        let value = shadows[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashFloat(result, value.RadiusTopLeft)
-        result = HashFloat(result, value.RadiusTopRight)
-        result = HashFloat(result, value.RadiusBottomRight)
-        result = HashFloat(result, value.RadiusBottomLeft)
-        result = HashFloat(result, value.OffsetX)
-        result = HashFloat(result, value.OffsetY)
-        result = HashFloat(result, value.Spread)
-        result = HashFloat(result, value.Blur)
-        result = Mix(result, uint64(value.Color))
-        result = HashResource(result, value.MaskId)
-        result = Mix(result, uint64(value.MaskIndex))
-        result = Mix(result, value.Inset ? 1uL : 0uL)
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashShadow(result, shadows[reference.Index])
       }
       case SceneDrawKind.Underline {
-        let value = underlines[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashFloat(result, value.Thickness)
-        result = Mix(result, uint64(value.Color))
-        result = Mix(result, uint64(value.Mode))
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashUnderline(result, underlines[reference.Index])
       }
       case SceneDrawKind.Lava {
-        let value = lavas[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashFloat(result, value.Flow)
-        result = HashFloat(result, value.Form)
-        result = HashFloat(result, value.Blend)
-        result = HashFloat(result, value.Light)
-        result = HashFloat(result, value.Hue)
-        result = Mix(result, uint64(value.Rainbow))
-        result = HashFloat(result, float32(value.Rotation.X))
-        result = HashFloat(result, float32(value.Rotation.Y))
-        result = Mix(result, uint64(value.Seed))
-        return HashTransformIndex(result, value.TransformIndex)
+        return HashLava(result, lavas[reference.Index])
       }
       case SceneDrawKind.LayerBegin {
         return HashLayerContent(result, reference.Index)
@@ -557,14 +344,119 @@ internal partial class SceneFrame {
     }
   }
 
-  private func HashTransformIndex(hash uint64, index int32) uint64 -> Mix(hash, uint64(index))
+  private func HashSolidBox(hash uint64, value SolidBoxRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = Mix(result, uint64(value.Color))
+    result = HashFloat(result, value.Opacity)
+    return HashTransformIndex(result, value.TransformIndex)
+  }
 
-  private func HashRectClipContent(hash uint64, index int32) uint64 {
-    let value = rectClips[index]
+  private func HashRoundedBox(hash uint64, value RoundedBoxRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = HashFloat(result, value.RadiusTopLeft)
+    result = HashFloat(result, value.RadiusTopRight)
+    result = HashFloat(result, value.RadiusBottomRight)
+    result = HashFloat(result, value.RadiusBottomLeft)
+    result = HashFloat(result, value.OpaqueBorderWidth)
+    result = HashFloat(result, value.OpaqueBorderHeight)
+    result = Mix(result, uint64(value.Color))
+    result = HashFloat(result, value.Opacity)
+    return HashTransformIndex(result, value.TransformIndex)
+  }
+
+  private func HashCachedImage(hash uint64, value CachedImageRefRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = HashResource(result, value.ImageId)
+    result = HashResource(result, value.SamplerId)
+    result = HashFloat(result, value.SourceX)
+    result = HashFloat(result, value.SourceY)
+    result = HashFloat(result, value.SourceWidth)
+    result = HashFloat(result, value.SourceHeight)
+    result = HashFloat(result, value.Opacity)
+    result = Mix(result, uint64(value.Sampling))
+    return HashTransformIndex(result, value.TransformIndex)
+  }
+
+  private func HashCachedTextSegment(hash uint64, value CachedTextSegmentRefRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = Mix(result, value.SegmentId)
+    result = Mix(result, value.SegmentVersion)
+    result = Mix(result, uint64(value.GlyphCount))
+    return Mix(result, uint64(value.ClipChainId))
+  }
+
+  private func HashAnalyticPathBand(hash uint64, value AnalyticPathBandRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = HashResource(result, value.PathId)
+    result = HashResource(result, value.AtlasId)
+    result = Mix(result, uint64(value.AtlasWordOffset))
+    result = Mix(result, uint64(value.AtlasWordCount))
+    result = Mix(result, uint64(value.FillColor))
+    result = Mix(result, uint64(value.FillRule))
+    result = HashFloat(result, value.Opacity)
+    result = HashFloat(result, value.ScaleX)
+    result = HashFloat(result, value.ScaleY)
+    result = HashFloat(result, value.TranslateX)
+    result = HashFloat(result, value.TranslateY)
+    return HashTransformIndex(result, value.TransformIndex)
+  }
+
+  private func HashTransform(hash uint64, value TransformRecord) uint64 {
+    var result = HashFloat(hash, value.A)
+    result = HashFloat(result, value.B)
+    result = HashFloat(result, value.C)
+    result = HashFloat(result, value.D)
+    result = HashFloat(result, value.TX)
+    result = HashFloat(result, value.TY)
+    return Mix(result, uint64(value.ParentIndex))
+  }
+
+  private func HashRectClip(hash uint64, value RectClipRecord) uint64 {
     var result = HashBounds(hash, value.Bounds)
     result = HashTransformIndex(result, value.TransformIndex)
     return Mix(result, uint64(value.ParentIndex))
   }
+
+  private func HashShadow(hash uint64, value ShadowRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = HashFloat(result, value.RadiusTopLeft)
+    result = HashFloat(result, value.RadiusTopRight)
+    result = HashFloat(result, value.RadiusBottomRight)
+    result = HashFloat(result, value.RadiusBottomLeft)
+    result = HashFloat(result, value.OffsetX)
+    result = HashFloat(result, value.OffsetY)
+    result = HashFloat(result, value.Spread)
+    result = HashFloat(result, value.Blur)
+    result = Mix(result, uint64(value.Color))
+    result = HashResource(result, value.MaskId)
+    result = Mix(result, uint64(value.MaskIndex))
+    result = Mix(result, value.Inset ? 1uL : 0uL)
+    return HashTransformIndex(result, value.TransformIndex)
+  }
+
+  private func HashUnderline(hash uint64, value UnderlineRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = HashFloat(result, value.Thickness)
+    result = Mix(result, uint64(value.Color))
+    result = Mix(result, uint64(value.Mode))
+    return HashTransformIndex(result, value.TransformIndex)
+  }
+
+  private func HashLava(hash uint64, value LavaRecord) uint64 {
+    var result = HashBounds(hash, value.Bounds)
+    result = HashFloat(result, value.Flow)
+    result = HashFloat(result, value.Form)
+    result = HashFloat(result, value.Blend)
+    result = HashFloat(result, value.Light)
+    result = HashFloat(result, value.Hue)
+    result = Mix(result, uint64(value.Rainbow))
+    result = HashFloat(result, float32(value.Rotation.X))
+    result = HashFloat(result, float32(value.Rotation.Y))
+    result = Mix(result, uint64(value.Seed))
+    return HashTransformIndex(result, value.TransformIndex)
+  }
+
+  private func HashTransformIndex(hash uint64, index int32) uint64 -> Mix(hash, uint64(index))
 
   private func HashLayerContent(hash uint64, index int32) uint64 {
     let value = layers[index]
@@ -605,13 +497,10 @@ internal partial class SceneFrame {
   private func HashGradientStops(hash uint64, start int32, count int32) uint64 {
     var result = Mix(hash, uint64(start))
     result = Mix(result, uint64(count))
-    var index = start
-    let end = start + count
-    while index < end {
+    for index in start ... start + count {
       let stop = gradientStops[index]
       result = HashFloat(result, stop.Offset)
       result = Mix(result, uint64(stop.Color))
-      index = index + 1
     }
     return result
   }

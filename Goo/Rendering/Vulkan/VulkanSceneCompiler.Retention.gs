@@ -521,19 +521,7 @@ internal partial class VulkanSceneCompiler {
         let prior = retainedChunks[index]
         if IsPlaceholderChunkTransition(current, prior) {
           journal.AddChange(prior.Bounds, true, current.Bounds, true)
-          frame.Chunks[index] = SceneChunk{
-            OwnerId: current.OwnerId,
-            Version: current.Version,
-            Bounds: current.Bounds,
-            FirstDraw: current.FirstDraw,
-            DrawCount: current.DrawCount,
-            FirstResource: current.FirstResource,
-            ResourceCount: current.ResourceCount,
-            ContentKey: current.ContentKey,
-            TopologyKey: current.TopologyKey,
-            Dirty: true,
-            RetentionState: current.RetentionState,
-          }
+          frame.Chunks[index].Dirty = true
         } else if current.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
           journal.AddChange(prior.Bounds, true, current.Bounds, true)
         } else if (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
@@ -542,19 +530,8 @@ internal partial class VulkanSceneCompiler {
               && ((current.RetentionState != SceneChunkRetentionState.Generic
                   && prior.RetentionState != SceneChunkRetentionState.Generic)
                   || ExactGenericChunkContent(index, prior))) {
-                    frame.Chunks[index] = SceneChunk{
-                      OwnerId: current.OwnerId,
-                      Version: prior.Version,
-                      Bounds: current.Bounds,
-                      FirstDraw: current.FirstDraw,
-                      DrawCount: current.DrawCount,
-                      FirstResource: current.FirstResource,
-                      ResourceCount: current.ResourceCount,
-                      ContentKey: current.ContentKey,
-                      TopologyKey: current.TopologyKey,
-                      Dirty: false,
-                      RetentionState: current.RetentionState,
-                    }
+                    frame.Chunks[index].Version = prior.Version
+                    frame.Chunks[index].Dirty = false
                   } else {
                     journal.AddChange(prior.Bounds, true, current.Bounds, true)
                   }

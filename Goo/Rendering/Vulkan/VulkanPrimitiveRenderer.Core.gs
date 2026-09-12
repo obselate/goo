@@ -408,85 +408,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           currentDrawOrdinal = uint32(drawIndex)
           primitiveRecordPlan[drawIndex] = uint32(primitiveRecordCount)
           let reference = frame.DrawRefs[drawIndex]
-          switch reference.Kind {
-            case SceneDrawKind.SolidBox {
-              RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
-              let value = frame.SolidBoxes[reference.Index]
-              EmitSolid(nint(0), activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame)
-            }
-            case SceneDrawKind.RoundedBox {
-              RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
-              let value = frame.RoundedBoxes[reference.Index]
-              EmitSolid(nint(0), activeExtent, value.Bounds, value.RadiusTopLeft,
-                value.RadiusTopRight, value.RadiusBottomRight, value.RadiusBottomLeft,
-                value.OpaqueBorderWidth, value.OpaqueBorderHeight, value.Color, value.Opacity,
-                value.TransformIndex, frame)
-            }
-            case SceneDrawKind.PerEdgeBorder {
-              RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
-              EmitBorder(nint(0), activeExtent, frame.PerEdgeBorders[reference.Index], frame)
-            }
-            case SceneDrawKind.LinearGradient {
-              RequireRecordIndex(reference.Index, frame.LinearGradientCount, "linear gradient index")
-              EmitLinear(nint(0), activeExtent, frame.LinearGradients[reference.Index], frame)
-            }
-            case SceneDrawKind.RadialGradient {
-              RequireRecordIndex(reference.Index, frame.RadialGradientCount, "radial gradient index")
-              EmitRadial(nint(0), activeExtent, frame.RadialGradients[reference.Index], frame)
-            }
-            case SceneDrawKind.RectClipBegin {
-              RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
-              PushClip(nint(0), ResolveRectClip(frame, frame.RectClips[reference.Index], activeExtent))
-            }
-            case SceneDrawKind.RectClipEnd {
-              RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
-              ValidateRectClip(frame, frame.RectClips[reference.Index], activeExtent)
-              PopClip(nint(0))
-            }
-            case SceneDrawKind.Underline {
-              RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
-              let value = frame.Underlines[reference.Index]
-              ValidateRadius(value.Thickness)
-              EmitSolid(nint(0), activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                0.0F, 0.0F, value.Color, 1.0F, value.TransformIndex, frame)
-            }
-            case SceneDrawKind.LayerBegin {
-              RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-              BeginLayer(nint(0), frame.Layers[reference.Index])
-            }
-            case SceneDrawKind.LayerEnd {
-              RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-              EndLayer(nint(0), frame.Layers[reference.Index], frame)
-            }
-            case SceneDrawKind.Transform {
-              RequireRecordIndex(reference.Index, frame.TransformCount, "transform index")
-              ResolveTransform(frame, reference.Index)
-            }
-            case SceneDrawKind.CachedImage {
-              RequireRecordIndex(reference.Index, frame.CachedImageCount, "cached image index")
-              EmitImage(nint(0), activeExtent, frame.CachedImages[reference.Index], frame)
-            }
-            case SceneDrawKind.CachedTextSegment {
-              RequireRecordIndex(reference.Index, frame.CachedTextSegmentCount, "cached text segment index")
-              let value = frame.CachedTextSegments[reference.Index]
-              EmitTextSegment(nint(0), activeExtent, value, reference.ClipChainId, frame)
-            }
-            case SceneDrawKind.AnalyticPathBand {
-              RequireRecordIndex(reference.Index, frame.AnalyticPathBandCount, "analytic path band index")
-            }
-            case SceneDrawKind.Shadow {
-              RequireRecordIndex(reference.Index, frame.ShadowCount, "shadow index")
-              EmitShadow(nint(0), activeExtent, frame.Shadows[reference.Index], frame)
-            }
-            case SceneDrawKind.Lava {
-              RequireRecordIndex(reference.Index, frame.LavaCount, "lava index")
-              EmitLava(nint(0), activeExtent, frame.Lavas[reference.Index], frame)
-            }
-            default {
-              throw NotSupportedException("Vulkan primitive renderer received an unknown draw kind")
-            }
-          }
+          ProcessDraw(nint(0), reference, frame)
           drawIndex = drawIndex + 1
         }
         if clipDepth != 0 || layerDepth != 0 || currentTarget != nil {
@@ -701,93 +623,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           primitiveRecordOrdinal = primitiveRecordPlan[drawIndex]
         }
         if emitDraw {
-          switch reference.Kind {
-            case SceneDrawKind.SolidBox {
-              RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
-              let value = frame.SolidBoxes[reference.Index]
-              EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame)
-            }
-            case SceneDrawKind.RoundedBox {
-              RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
-              let value = frame.RoundedBoxes[reference.Index]
-              EmitSolid(commandBuffer, activeExtent, value.Bounds, value.RadiusTopLeft,
-                value.RadiusTopRight, value.RadiusBottomRight, value.RadiusBottomLeft,
-                value.OpaqueBorderWidth, value.OpaqueBorderHeight, value.Color, value.Opacity,
-                value.TransformIndex, frame)
-            }
-            case SceneDrawKind.PerEdgeBorder {
-              RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
-              let value = frame.PerEdgeBorders[reference.Index]
-              EmitBorder(commandBuffer, activeExtent, value, frame)
-            }
-            case SceneDrawKind.LinearGradient {
-              RequireRecordIndex(reference.Index, frame.LinearGradientCount, "linear gradient index")
-              let value = frame.LinearGradients[reference.Index]
-              EmitLinear(commandBuffer, activeExtent, value, frame)
-            }
-            case SceneDrawKind.RadialGradient {
-              RequireRecordIndex(reference.Index, frame.RadialGradientCount, "radial gradient index")
-              let value = frame.RadialGradients[reference.Index]
-              EmitRadial(commandBuffer, activeExtent, value, frame)
-            }
-            case SceneDrawKind.RectClipBegin {
-              RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
-              let clip = ResolveRectClip(frame, frame.RectClips[reference.Index], activeExtent)
-              PushClip(commandBuffer, clip)
-            }
-            case SceneDrawKind.RectClipEnd {
-              RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
-              ValidateRectClip(frame, frame.RectClips[reference.Index], activeExtent)
-              PopClip(commandBuffer)
-            }
-            case SceneDrawKind.Underline {
-              RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
-              let value = frame.Underlines[reference.Index]
-              ValidateRadius(value.Thickness)
-              EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
-                0.0F, 0.0F, value.Color, 1.0F, value.TransformIndex, frame)
-            }
-            case SceneDrawKind.LayerBegin {
-              RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-              BeginLayer(commandBuffer, frame.Layers[reference.Index])
-            }
-            case SceneDrawKind.LayerEnd {
-              RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-              EndLayer(commandBuffer, frame.Layers[reference.Index], frame)
-            }
-            case SceneDrawKind.Transform {
-              RequireRecordIndex(reference.Index, frame.TransformCount, "transform index")
-              ResolveTransform(frame, reference.Index)
-            }
-            case SceneDrawKind.CachedImage {
-              RequireRecordIndex(reference.Index, frame.CachedImageCount, "cached image index")
-              let value = frame.CachedImages[reference.Index]
-              EmitImage(commandBuffer, activeExtent, value, frame)
-            }
-            case SceneDrawKind.CachedTextSegment {
-              RequireRecordIndex(reference.Index, frame.CachedTextSegmentCount, "cached text segment index")
-              let value = frame.CachedTextSegments[reference.Index]
-              EmitTextSegment(commandBuffer, activeExtent, value, reference.ClipChainId, frame)
-            }
-            case SceneDrawKind.AnalyticPathBand {
-              RequireRecordIndex(reference.Index, frame.AnalyticPathBandCount, "analytic path band index")
-              let value = frame.AnalyticPathBands[reference.Index]
-              EmitPath(commandBuffer, activeExtent, value, frame)
-            }
-            case SceneDrawKind.Shadow {
-              RequireRecordIndex(reference.Index, frame.ShadowCount, "shadow index")
-              let value = frame.Shadows[reference.Index]
-              EmitShadow(commandBuffer, activeExtent, value, frame)
-            }
-            case SceneDrawKind.Lava {
-              RequireRecordIndex(reference.Index, frame.LavaCount, "lava index")
-              EmitLava(commandBuffer, activeExtent, frame.Lavas[reference.Index], frame)
-            }
-            default {
-              throw NotSupportedException("Vulkan primitive renderer received an unknown draw kind")
-            }
-          }
+          ProcessDraw(commandBuffer, reference, frame)
         }
         drawIndex = drawIndex + 1
       }
@@ -810,6 +646,91 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         descriptorChangeCount: recordDescriptorChangeCount,
       }
     }
+
+  private func ProcessDraw(commandBuffer VkCommandBuffer, reference DrawRef, frame SceneFrame) {
+    switch reference.Kind {
+      case SceneDrawKind.SolidBox {
+        RequireRecordIndex(reference.Index, frame.SolidBoxCount, "solid box index")
+        let value = frame.SolidBoxes[reference.Index]
+        EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
+          0.0F, 0.0F, value.Color, value.Opacity, value.TransformIndex, frame)
+      }
+      case SceneDrawKind.RoundedBox {
+        RequireRecordIndex(reference.Index, frame.RoundedBoxCount, "rounded box index")
+        let value = frame.RoundedBoxes[reference.Index]
+        EmitSolid(commandBuffer, activeExtent, value.Bounds, value.RadiusTopLeft,
+          value.RadiusTopRight, value.RadiusBottomRight, value.RadiusBottomLeft,
+          value.OpaqueBorderWidth, value.OpaqueBorderHeight, value.Color, value.Opacity,
+          value.TransformIndex, frame)
+      }
+      case SceneDrawKind.PerEdgeBorder {
+        RequireRecordIndex(reference.Index, frame.PerEdgeBorderCount, "border index")
+        EmitBorder(commandBuffer, activeExtent, frame.PerEdgeBorders[reference.Index], frame)
+      }
+      case SceneDrawKind.LinearGradient {
+        RequireRecordIndex(reference.Index, frame.LinearGradientCount, "linear gradient index")
+        EmitLinear(commandBuffer, activeExtent, frame.LinearGradients[reference.Index], frame)
+      }
+      case SceneDrawKind.RadialGradient {
+        RequireRecordIndex(reference.Index, frame.RadialGradientCount, "radial gradient index")
+        EmitRadial(commandBuffer, activeExtent, frame.RadialGradients[reference.Index], frame)
+      }
+      case SceneDrawKind.RectClipBegin {
+        RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
+        PushClip(commandBuffer, ResolveRectClip(frame, frame.RectClips[reference.Index], activeExtent))
+      }
+      case SceneDrawKind.RectClipEnd {
+        RequireRecordIndex(reference.Index, frame.RectClipCount, "clip index")
+        ValidateRectClip(frame, frame.RectClips[reference.Index], activeExtent)
+        PopClip(commandBuffer)
+      }
+      case SceneDrawKind.Underline {
+        RequireRecordIndex(reference.Index, frame.UnderlineCount, "underline index")
+        let value = frame.Underlines[reference.Index]
+        ValidateRadius(value.Thickness)
+        EmitSolid(commandBuffer, activeExtent, value.Bounds, 0.0F, 0.0F, 0.0F, 0.0F,
+          0.0F, 0.0F, value.Color, 1.0F, value.TransformIndex, frame)
+      }
+      case SceneDrawKind.LayerBegin {
+        RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
+        BeginLayer(commandBuffer, frame.Layers[reference.Index])
+      }
+      case SceneDrawKind.LayerEnd {
+        RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
+        EndLayer(commandBuffer, frame.Layers[reference.Index], frame)
+      }
+      case SceneDrawKind.Transform {
+        RequireRecordIndex(reference.Index, frame.TransformCount, "transform index")
+        ResolveTransform(frame, reference.Index)
+      }
+      case SceneDrawKind.CachedImage {
+        RequireRecordIndex(reference.Index, frame.CachedImageCount, "cached image index")
+        EmitImage(commandBuffer, activeExtent, frame.CachedImages[reference.Index], frame)
+      }
+      case SceneDrawKind.CachedTextSegment {
+        RequireRecordIndex(reference.Index, frame.CachedTextSegmentCount, "cached text segment index")
+        EmitTextSegment(commandBuffer, activeExtent, frame.CachedTextSegments[reference.Index],
+          reference.ClipChainId, frame)
+      }
+      case SceneDrawKind.AnalyticPathBand {
+        RequireRecordIndex(reference.Index, frame.AnalyticPathBandCount, "analytic path band index")
+        if !primitivePrepass {
+          EmitPath(commandBuffer, activeExtent, frame.AnalyticPathBands[reference.Index], frame)
+        }
+      }
+      case SceneDrawKind.Shadow {
+        RequireRecordIndex(reference.Index, frame.ShadowCount, "shadow index")
+        EmitShadow(commandBuffer, activeExtent, frame.Shadows[reference.Index], frame)
+      }
+      case SceneDrawKind.Lava {
+        RequireRecordIndex(reference.Index, frame.LavaCount, "lava index")
+        EmitLava(commandBuffer, activeExtent, frame.Lavas[reference.Index], frame)
+      }
+      default {
+        throw NotSupportedException("Vulkan primitive renderer received an unknown draw kind")
+      }
+    }
+  }
 
   private func ChunkIntersectsDamage(chunk SceneChunk, damage VulkanDamageRegion) bool {
     if chunk.Bounds.IsEmpty {

@@ -283,36 +283,16 @@ internal partial class SceneFrame {
       throw InvalidOperationException("SceneFrame has no open chunk")
     }
     let completedChunk = activeChunk
-    let chunk = chunks[completedChunk]
-    chunks[completedChunk] = SceneChunk{
-      OwnerId: chunk.OwnerId,
-      Version: chunk.Version,
-      Bounds: chunk.Bounds,
-      FirstDraw: chunk.FirstDraw,
-      DrawCount: drawRefCount - chunk.FirstDraw,
-      FirstResource: chunk.FirstResource,
-      ResourceCount: resourceRefCount - chunk.FirstResource,
-      ContentKey: 0uL,
-      TopologyKey: 0uL,
-      Dirty: chunk.Dirty,
-      RetentionState: chunk.RetentionState,
-    }
+    chunks[completedChunk].DrawCount = drawRefCount - chunks[completedChunk].FirstDraw
+    chunks[completedChunk].ResourceCount = resourceRefCount - chunks[completedChunk].FirstResource
+    chunks[completedChunk].ContentKey = 0uL
+    chunks[completedChunk].TopologyKey = 0uL
     activeChunk = -1
-    let finalized = chunks[completedChunk]
-    chunks[completedChunk] = SceneChunk{
-      OwnerId: finalized.OwnerId,
-      Version: finalized.Version,
-      Bounds: finalized.Bounds,
-      FirstDraw: finalized.FirstDraw,
-      DrawCount: finalized.DrawCount,
-      FirstResource: finalized.FirstResource,
-      ResourceCount: finalized.ResourceCount,
-      ContentKey: chunk.RetentionState == SceneChunkRetentionState.ExactLeafHit
-      ? 0uL : ChunkContentDigest(completedChunk),
-      TopologyKey: chunk.RetentionState == SceneChunkRetentionState.ExactLeafHit
-      ? 0uL : ChunkTopologyDigest(completedChunk),
-      Dirty: finalized.Dirty,
-      RetentionState: finalized.RetentionState,
+    if chunks[completedChunk].RetentionState != SceneChunkRetentionState.ExactLeafHit {
+      let contentKey = ChunkContentDigest(completedChunk)
+      let topologyKey = ChunkTopologyDigest(completedChunk)
+      chunks[completedChunk].ContentKey = contentKey
+      chunks[completedChunk].TopologyKey = topologyKey
     }
   }
 
