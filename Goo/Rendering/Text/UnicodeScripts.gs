@@ -104,7 +104,7 @@ internal sealed class UnicodeTextAnalysisScratch {
         value = UnicodeTextAnalysisScratchScope()
         scopes[index] = value
       }
-      return value!!
+      return value
     }
     return UnicodeTextAnalysisScratchScope()
   }

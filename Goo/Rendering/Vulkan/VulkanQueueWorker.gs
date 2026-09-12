@@ -214,7 +214,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
           break
         }
         try {
-          let current = mailbox!!
+          let current = mailbox
           let phase = current.Phase
           if phase == VulkanQueueMailboxPhase.SubmitQueued {
             if Interlocked.CompareExchange(ref faulted, 0, 0) != 0 {

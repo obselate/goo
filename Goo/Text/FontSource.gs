@@ -238,7 +238,7 @@ internal sealed class FontRegistry {
           values = List[FontRegistration]()
           sources.Add(key, values)
         }
-        values.Add(registration!!)
+        values.Add(registration)
       }
     }
 
@@ -273,7 +273,7 @@ internal sealed class FontRegistry {
           let stylePenalty = if candidate.Italic == italic { 0L } else { 1000000L }
           let score = stylePenalty + distance
           if best == nil || score < bestScore
-            || (score == bestScore && candidate.SourceId < best!!.SourceId) {
+            || (score == bestScore && candidate.SourceId < best.SourceId) {
               best = candidate
               bestScore = score
             }

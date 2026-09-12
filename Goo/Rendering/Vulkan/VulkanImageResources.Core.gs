@@ -36,7 +36,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private var entries []VulkanImageResourceEntry
   private var logicalRecords []VulkanLogicalResource
   private var descriptorSets []VkDescriptorSet
-  private var descriptorLayouts []VkDescriptorSetLayout
   private let poolSizes []VkDescriptorPoolSize
   private var currentReferenceCounts []int32
   private let uploadRing VulkanUploadRing
@@ -144,7 +143,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       logicalRecords = [logicalResourceCapacity]VulkanLogicalResource
       descriptorCapacity = imageCapacity + imageCapacity
       descriptorSets = [descriptorCapacity]VkDescriptorSet
-      descriptorLayouts = [descriptorCapacity]VkDescriptorSetLayout
       poolSizes = [1]VkDescriptorPoolSize
       currentReferenceCounts = [imageCapacity]int32
       descriptorPools = List[VkDescriptorPool]()

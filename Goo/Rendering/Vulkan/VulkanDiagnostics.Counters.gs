@@ -353,39 +353,6 @@ internal class VulkanDiagnosticCounters {
   }
   internal func AddTextAtlasEviction(value uint64) { Interlocked.Add(ref textAtlasEvictionCount, value) }
   internal func AddTextAtlasRetirement(value uint64) { Interlocked.Add(ref textAtlasRetirementCount, value) }
-  internal func SetPathAtlasByteBudget(value uint64) {
-    Interlocked.Exchange(ref pathAtlasByteBudget, value)
-  }
-  internal func SetPathAtlasResidentWords(value uint64) {
-    Interlocked.Exchange(ref pathAtlasResidentWords, value)
-  }
-  internal func SetPathAtlasFreeWords(value uint64) {
-    Interlocked.Exchange(ref pathAtlasFreeWords, value)
-  }
-  internal func SetPathAtlasPathCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasPathCount, value)
-  }
-  internal func SetPathAtlasActiveReferenceCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasActiveReferenceCount, value)
-  }
-  internal func SetPathAtlasLiveObjectCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasLiveObjectCount, value)
-  }
-  internal func SetPathAtlasEvictionCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasEvictionCount, value)
-  }
-  internal func SetPathAtlasRetiredWords(value uint64) {
-    Interlocked.Exchange(ref pathAtlasRetiredWords, value)
-  }
-  internal func SetPathAtlasReuseCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasReuseCount, value)
-  }
-  internal func SetPathAtlasPressureEventCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasPressureEventCount, value)
-  }
-  internal func SetPathAtlasPressureFailureCount(value uint64) {
-    Interlocked.Exchange(ref pathAtlasPressureFailureCount, value)
-  }
   internal func SetClipMaskAtlasStats(stats VulkanClipMaskAtlasStats) {
     Interlocked.Exchange(ref clipMaskAtlasByteBudget, uint64(stats.ByteBudget))
     Interlocked.Exchange(ref clipMaskAtlasResidentBytes, uint64(stats.ResidentBytes))

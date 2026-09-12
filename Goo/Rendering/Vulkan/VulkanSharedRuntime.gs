@@ -771,7 +771,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if nullable == nil {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
-    let deviceWaitIdleFunction = nullable!!
+    let deviceWaitIdleFunction = nullable
     let result = deviceWaitIdleFunction(device)
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
       MarkDeviceLost()

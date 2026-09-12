@@ -212,8 +212,8 @@ internal unsafe func RunProductionSceneReadback(shadow bool) {
         throw InvalidOperationException("Vulkan production shadow scene semantic digest changed: "
           +digest.ToString())
       }
-      WarmVulkanProductionReadback(capture!!, frame, clearColor)
-      let result = RequestVulkanProductionReadback(capture!!, frame, clearColor)
+      WarmVulkanProductionReadback(capture, frame, clearColor)
+      let result = RequestVulkanProductionReadback(capture, frame, clearColor)
       fixed readback * uint8 = result.Pixels{
         if !VerifyShadowPixelSceneReadback(readback, result.Width, result.Height) {
           throw InvalidOperationException("Vulkan production shadow scene readback pixels are invalid")
@@ -227,15 +227,15 @@ internal unsafe func RunProductionSceneReadback(shadow bool) {
         throw InvalidOperationException("Vulkan production scene semantic digest changed: "
           +digest.ToString())
       }
-      WarmVulkanProductionReadback(capture!!, frame, clearColor)
-      let result = RequestVulkanProductionReadback(capture!!, frame, clearColor)
+      WarmVulkanProductionReadback(capture, frame, clearColor)
+      let result = RequestVulkanProductionReadback(capture, frame, clearColor)
       fixed readback * uint8 = result.Pixels{
         if !VerifyPixelSceneReadback(readback, result.Width, result.Height) {
           throw InvalidOperationException("Vulkan production scene readback pixels are invalid")
         }
       }
       Console.WriteLine("Scene readback: digest=${digest} allocated=0")
-      VerifyLongGradientReadbacks(capture!!)
+      VerifyLongGradientReadbacks(capture)
     }
   } finally {
     if let active = capture {

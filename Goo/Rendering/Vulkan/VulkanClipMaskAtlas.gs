@@ -397,7 +397,6 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   private var allocator VulkanMemoryAllocator
   private var objectAccounting VulkanObjectAccounting?
   private let byteBudget VkDeviceSize
-  private var formatSupport VulkanClipMaskFormatSupport
   private var width uint32
   private var height uint32
   private var format VulkanClipMaskFormat
@@ -508,7 +507,6 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       allocator = nativeAllocator
       objectAccounting = nativeObjectAccounting
       byteBudget = selectedBudget
-      formatSupport = nativeFormatSupport
       width = nativeWidth
       height = nativeHeight
       format = selectedFormat
@@ -941,7 +939,6 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       dispatch = nativeDispatch
       allocator = nativeAllocator
       objectAccounting = nativeObjectAccounting
-      formatSupport = nativeFormatSupport
       format = rebuiltFormat
       bytesPerPixel = rebuiltBytesPerPixel
       maximumLayerCount = rebuiltMaximumLayers

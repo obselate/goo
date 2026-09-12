@@ -194,7 +194,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     var index int32 = 0
     while index < descriptorSets.Length {
       descriptorSets[index] = 0uL
-      descriptorLayouts[index] = 0uL
       index++
     }
   }
@@ -266,17 +265,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     let previousEntries = entries
     let previousReferences = currentReferenceCounts
     let previousDescriptorSets = descriptorSets
-    let previousDescriptorLayouts = descriptorLayouts
     capacity = nextCapacity
     descriptorCapacity = nextCapacity * 2
     entries = [nextCapacity]VulkanImageResourceEntry
     currentReferenceCounts = [nextCapacity]int32
     descriptorSets = [descriptorCapacity]VkDescriptorSet
-    descriptorLayouts = [descriptorCapacity]VkDescriptorSetLayout
     Array.Copy(previousEntries, entries, previousEntries.Length)
     Array.Copy(previousReferences, currentReferenceCounts, previousReferences.Length)
     Array.Copy(previousDescriptorSets, descriptorSets, previousDescriptorSets.Length)
-    Array.Copy(previousDescriptorLayouts, descriptorLayouts, previousDescriptorLayouts.Length)
     try {
       CreateDescriptorBlock(nextCapacity - previousCapacity, previousCapacity)
     } catch (error Exception) {
@@ -285,7 +281,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       entries = previousEntries
       currentReferenceCounts = previousReferences
       descriptorSets = previousDescriptorSets
-      descriptorLayouts = previousDescriptorLayouts
       throw error
     }
   }
@@ -329,7 +324,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if !registry.DropLogical(id) {
         return false
       }
-      let prior = priorLogical!!
+      let prior = priorLogical
       let restored = registry.Register(prior.Id, prior.Bytes, prior.Source, prior.Cacheable)
       return restored.Accepted && !restored.Existing
     }

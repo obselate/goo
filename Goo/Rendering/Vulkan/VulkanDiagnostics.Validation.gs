@@ -3,11 +3,11 @@ package Goo
 import System.Runtime.InteropServices
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal type VulkanDiagnosticsValidationCallback = delegate func(
+internal delegate VulkanDiagnosticsValidationCallback(
   severity VkDebugUtilsMessageSeverityFlagBitsEXT,
   types VkDebugUtilsMessageTypeFlagsEXT,
   callbackData nint,
-  userData nint) VkBool32
+  userData nint) VkBool32;
 
 internal unsafe class VulkanDiagnosticsValidation {
   private let callback VulkanDiagnosticsValidationCallback
@@ -18,7 +18,7 @@ internal unsafe class VulkanDiagnosticsValidation {
       if !enabled || diagnostics == nil {
         return nil
       }
-      return VulkanDiagnosticsValidation(diagnostics!!)
+      return VulkanDiagnosticsValidation(diagnostics)
     }
   }
 

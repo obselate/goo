@@ -34,7 +34,7 @@ internal func RunVulkanTextE2E() {
   var collectionFont VulkanTextFont? = nil
   try {
     font = LoadVulkanTextFont(fontPath, VulkanTextE2EContract.PixelHeight)
-    let metrics = font!!.Metrics
+    let metrics = font.Metrics
     let options = VulkanTextShapingOptions{
       Direction: 4u,
       Script: VulkanTextTag("Latn"),
@@ -43,8 +43,8 @@ internal func RunVulkanTextE2E() {
       Flags: 0u,
       Features: nil,
     }
-    let run = font!!.Shape("office café", options)
-    let utf16Run = font!!.Shape("AéB", options)
+    let run = font.Shape("office café", options)
+    let utf16Run = font.Shape("AéB", options)
     if utf16Run.Count != 3 || utf16Run.GlyphAt(2).Cluster != 2u {
       throw InvalidOperationException("HarfBuzz UTF-16 cluster contract failed")
     }
@@ -70,7 +70,7 @@ internal func RunVulkanTextE2E() {
       throw InvalidOperationException("HarfBuzz glyph digest contract failed")
     }
     let firstGlyph = run.GlyphAt(0)
-    let encoded = font!!.EncodeGlyph(firstGlyph.GlyphId)
+    let encoded = font.EncodeGlyph(firstGlyph.GlyphId)
     if encoded.Scale != VulkanTextE2EContract.ExpectedScale {
       throw InvalidOperationException("HarfBuzz encoded scale contract failed")
     }
@@ -103,8 +103,8 @@ internal func RunVulkanTextE2E() {
       Flags: 0u,
       Features: featureSettings,
     }
-    let featureRun = font!!.Shape("office", featureOptions)
-    if featureRun.Count == 0 || VulkanTextRunDigest(featureRun) == VulkanTextRunDigest(font!!.Shape("office", options)) {
+    let featureRun = font.Shape("office", featureOptions)
+    if featureRun.Count == 0 || VulkanTextRunDigest(featureRun) == VulkanTextRunDigest(font.Shape("office", options)) {
       throw InvalidOperationException("HarfBuzz feature contract failed")
     }
     let variationSettings = [1]VulkanTextVariation
@@ -117,9 +117,9 @@ internal func RunVulkanTextE2E() {
       VulkanTextE2EContract.PixelHeight,
       0u,
       variationSettings)
-    let variationRun = variationFont!!.Shape("office café", options)
+    let variationRun = variationFont.Shape("office café", options)
     let variationRunDigest = VulkanTextRunDigest(variationRun)
-    let variationEncoded = variationFont!!.EncodeGlyph(variationRun.GlyphAt(0).GlyphId)
+    let variationEncoded = variationFont.EncodeGlyph(variationRun.GlyphAt(0).GlyphId)
     let variationEncodedDigest = VulkanTextEncodedDigest(variationEncoded.Bytes)
     if variationRunDigest == runDigest {
       throw InvalidOperationException("HarfBuzz variation did not change shaping")
@@ -136,9 +136,9 @@ internal func RunVulkanTextE2E() {
       VulkanTextE2EContract.PixelHeight,
       1u,
       nil)
-    if collectionFont!!.FaceCount != VulkanTextE2EContract.ExpectedCollectionFaceCount
-      || collectionFont!!.FaceIndex != 1u
-      || collectionFont!!.Metrics.GlyphCount != VulkanTextE2EContract.ExpectedCollectionGlyphCount{
+    if collectionFont.FaceCount != VulkanTextE2EContract.ExpectedCollectionFaceCount
+      || collectionFont.FaceIndex != 1u
+      || collectionFont.Metrics.GlyphCount != VulkanTextE2EContract.ExpectedCollectionGlyphCount{
         throw InvalidOperationException("HarfBuzz collection face contract failed")
       }
     var invalidFaceRejected bool = false
@@ -171,8 +171,8 @@ internal func RunVulkanTextE2E() {
       +" height=" + encoded.Extents.Height.ToString()
       +" variationRunDigest=" + variationRunDigest.ToString()
       +" variationEncodedDigest=" + variationEncodedDigest.ToString()
-      +" faceCount=" + collectionFont!!.FaceCount.ToString()
-      +" faceIndex=" + collectionFont!!.FaceIndex.ToString())
+      +" faceCount=" + collectionFont.FaceCount.ToString()
+      +" faceIndex=" + collectionFont.FaceIndex.ToString())
   } finally {
     if let value = font {
       value.Dispose()

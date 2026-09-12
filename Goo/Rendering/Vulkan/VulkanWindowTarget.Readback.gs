@@ -416,20 +416,6 @@ internal unsafe partial class VulkanWindowTarget {
       try { activePool.Release(activeRequest) } catch (cleanup Exception) { }
     }
 
-  private func AbandonReusableReadback(request VulkanAsyncReadback?,
-    pool VulkanReadbackPool?) {
-      guard let activeRequest = request else {
-        return
-      }
-      guard let activePool = pool else {
-        return
-      }
-      let liveBefore = CurrentObjectLiveCount()
-      try { activeRequest.AbandonAfterDeviceLoss() } catch (cleanup Exception) { }
-      try { activePool.Dispose() } catch (cleanup Exception) { }
-      RecordObjectDestroyDelta(liveBefore)
-    }
-
   private func EnsureReadbackDispatch() VulkanReadbackDispatch {
     if let current = readbackDispatch {
       return current

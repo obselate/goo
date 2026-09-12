@@ -421,7 +421,7 @@ internal unsafe func RunVulkanProof() int32 {
   var validation VulkanValidation? = nil
   if Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1" {
     diagnostics = VulkanDiagnostics()
-    validation = VulkanValidation(diagnostics!!)
+    validation = VulkanValidation(diagnostics)
   }
   var sdlInitialized = false
   var vulkanLoaded = false
@@ -517,21 +517,21 @@ internal unsafe func RunVulkanProof() int32 {
     if enumerateVersionNullable == nil {
       throw InvalidOperationException("vkEnumerateInstanceVersion is unavailable")
     }
-    let enumerateVersion = enumerateVersionNullable!!
+    let enumerateVersion = enumerateVersionNullable
 
     let enumerateExtensionsAddress = LoadGlobalProc(getProcAddress, nint(0), "vkEnumerateInstanceExtensionProperties")
     let enumerateExtensionsNullable = enumerateExtensionsAddress as (unmanaged[Cdecl](*int8, *uint32, *VkExtensionProperties) -> VkResult)?
     if enumerateExtensionsNullable == nil {
       throw InvalidOperationException("vkEnumerateInstanceExtensionProperties is unavailable")
     }
-    let enumerateExtensions = enumerateExtensionsNullable!!
+    let enumerateExtensions = enumerateExtensionsNullable
 
     let createInstanceAddress = LoadGlobalProc(getProcAddress, nint(0), "vkCreateInstance")
     let createInstanceNullable = createInstanceAddress as (unmanaged[Cdecl](*VkInstanceCreateInfo, *VkAllocationCallbacks, *VkInstance) -> VkResult)?
     if createInstanceNullable == nil {
       throw InvalidOperationException("vkCreateInstance is unavailable")
     }
-    let createInstance = createInstanceNullable!!
+    let createInstance = createInstanceNullable
 
     var apiVersion uint32 = 0u
     if TrackResult(diagnostics, 10uL, enumerateVersion(&apiVersion)) != VkConstants.VK_SUCCESS || apiVersion < VkConstants.VK_API_VERSION_1_3 {
@@ -627,7 +627,7 @@ internal unsafe func RunVulkanProof() int32 {
       debugMessengerCreateInfo.messageType = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
       | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
       | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-      debugMessengerCreateInfo.pfnUserCallback = callbackNullable!!
+      debugMessengerCreateInfo.pfnUserCallback = callbackNullable
       debugMessengerCreateInfo.pUserData = nil
     }
     let instanceExtensionNames * *int8 = &extensionNames[0].value
@@ -660,7 +660,7 @@ internal unsafe func RunVulkanProof() int32 {
     if destroyInstanceNullable == nil {
       throw InvalidOperationException("vkDestroyInstance is unavailable")
     }
-    instanceDispatch.vkDestroyInstance = destroyInstanceNullable!!
+    instanceDispatch.vkDestroyInstance = destroyInstanceNullable
     let destroyInstance = instanceDispatch.vkDestroyInstance
 
     if let validation = validation {
@@ -669,13 +669,13 @@ internal unsafe func RunVulkanProof() int32 {
       if createMessengerNullable == nil {
         throw InvalidOperationException("vkCreateDebugUtilsMessengerEXT is unavailable")
       }
-      instanceDispatch.vkCreateDebugUtilsMessengerEXT = createMessengerNullable!!
+      instanceDispatch.vkCreateDebugUtilsMessengerEXT = createMessengerNullable
       let destroyMessengerAddress = LoadGlobalProc(getProcAddress, instance, "vkDestroyDebugUtilsMessengerEXT")
       let destroyMessengerNullable = destroyMessengerAddress as (unmanaged[Cdecl](VkInstance, VkDebugUtilsMessengerEXT, *VkAllocationCallbacks) -> void)?
       if destroyMessengerNullable == nil {
         throw InvalidOperationException("vkDestroyDebugUtilsMessengerEXT is unavailable")
       }
-      instanceDispatch.vkDestroyDebugUtilsMessengerEXT = destroyMessengerNullable!!
+      instanceDispatch.vkDestroyDebugUtilsMessengerEXT = destroyMessengerNullable
       destroyValidationMessengerAddress = destroyMessengerAddress
       let createMessenger = instanceDispatch.vkCreateDebugUtilsMessengerEXT
       let createMessengerResult = createMessenger(instance, &debugMessengerCreateInfo, nil, &validationMessenger)
@@ -691,84 +691,84 @@ internal unsafe func RunVulkanProof() int32 {
     if enumeratePhysicalDevicesNullable == nil {
       throw InvalidOperationException("vkEnumeratePhysicalDevices is unavailable")
     }
-    let enumeratePhysicalDevices = enumeratePhysicalDevicesNullable!!
+    let enumeratePhysicalDevices = enumeratePhysicalDevicesNullable
 
     let queueFamilyPropertiesAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceQueueFamilyProperties")
     let queueFamilyPropertiesNullable = queueFamilyPropertiesAddress as (unmanaged[Cdecl](VkPhysicalDevice, *uint32, *VkQueueFamilyProperties) -> void)?
     if queueFamilyPropertiesNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceQueueFamilyProperties is unavailable")
     }
-    let queueFamilyProperties = queueFamilyPropertiesNullable!!
+    let queueFamilyProperties = queueFamilyPropertiesNullable
 
     let physicalDevicePropertiesAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceProperties")
     let physicalDevicePropertiesNullable = physicalDevicePropertiesAddress as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceProperties) -> void)?
     if physicalDevicePropertiesNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceProperties is unavailable")
     }
-    instanceDispatch.vkGetPhysicalDeviceProperties = physicalDevicePropertiesNullable!!
+    instanceDispatch.vkGetPhysicalDeviceProperties = physicalDevicePropertiesNullable
 
     let getPhysicalDeviceFormatPropertiesAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceFormatProperties")
     let getPhysicalDeviceFormatPropertiesNullable = getPhysicalDeviceFormatPropertiesAddress as (unmanaged[Cdecl](VkPhysicalDevice, VkFormat, *VkFormatProperties) -> void)?
     if getPhysicalDeviceFormatPropertiesNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceFormatProperties is unavailable")
     }
-    instanceDispatch.vkGetPhysicalDeviceFormatProperties = getPhysicalDeviceFormatPropertiesNullable!!
+    instanceDispatch.vkGetPhysicalDeviceFormatProperties = getPhysicalDeviceFormatPropertiesNullable
 
     let surfaceSupportAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceSurfaceSupportKHR")
     let surfaceSupportNullable = surfaceSupportAddress as (unmanaged[Cdecl](VkPhysicalDevice, uint32, VkSurfaceKHR, *VkBool32) -> VkResult)?
     if surfaceSupportNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceSurfaceSupportKHR is unavailable")
     }
-    let surfaceSupport = surfaceSupportNullable!!
+    let surfaceSupport = surfaceSupportNullable
 
     let getDeviceProcAddressAddress = LoadGlobalProc(getProcAddress, instance, "vkGetDeviceProcAddr")
     let getDeviceProcAddressNullable = getDeviceProcAddressAddress as (unmanaged[Cdecl](VkDevice, *int8) -> unmanaged[Cdecl]() -> void)?
     if getDeviceProcAddressNullable == nil {
       throw InvalidOperationException("vkGetDeviceProcAddr is unavailable")
     }
-    instanceDispatch.vkGetDeviceProcAddr = getDeviceProcAddressNullable!!
+    instanceDispatch.vkGetDeviceProcAddr = getDeviceProcAddressNullable
 
     let getPhysicalDeviceFeatures2Address = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceFeatures2")
     let getPhysicalDeviceFeatures2Nullable = getPhysicalDeviceFeatures2Address as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceFeatures2) -> void)?
     if getPhysicalDeviceFeatures2Nullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceFeatures2 is unavailable")
     }
-    instanceDispatch.vkGetPhysicalDeviceFeatures2 = getPhysicalDeviceFeatures2Nullable!!
+    instanceDispatch.vkGetPhysicalDeviceFeatures2 = getPhysicalDeviceFeatures2Nullable
 
     let enumerateDeviceExtensionsAddress = LoadGlobalProc(getProcAddress, instance, "vkEnumerateDeviceExtensionProperties")
     let enumerateDeviceExtensionsNullable = enumerateDeviceExtensionsAddress as (unmanaged[Cdecl](VkPhysicalDevice, *int8, *uint32, *VkExtensionProperties) -> VkResult)?
     if enumerateDeviceExtensionsNullable == nil {
       throw InvalidOperationException("vkEnumerateDeviceExtensionProperties is unavailable")
     }
-    instanceDispatch.vkEnumerateDeviceExtensionProperties = enumerateDeviceExtensionsNullable!!
+    instanceDispatch.vkEnumerateDeviceExtensionProperties = enumerateDeviceExtensionsNullable
 
     let getSurfaceCapabilitiesAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR")
     let getSurfaceCapabilitiesNullable = getSurfaceCapabilitiesAddress as (unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *VkSurfaceCapabilitiesKHR) -> VkResult)?
     if getSurfaceCapabilitiesNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceSurfaceCapabilitiesKHR is unavailable")
     }
-    instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR = getSurfaceCapabilitiesNullable!!
+    instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR = getSurfaceCapabilitiesNullable
 
     let getSurfaceFormatsAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceSurfaceFormatsKHR")
     let getSurfaceFormatsNullable = getSurfaceFormatsAddress as (unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *uint32, *VkSurfaceFormatKHR) -> VkResult)?
     if getSurfaceFormatsNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceSurfaceFormatsKHR is unavailable")
     }
-    instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR = getSurfaceFormatsNullable!!
+    instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR = getSurfaceFormatsNullable
 
     let getPresentModesAddress = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceSurfacePresentModesKHR")
     let getPresentModesNullable = getPresentModesAddress as (unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *uint32, *VkPresentModeKHR) -> VkResult)?
     if getPresentModesNullable == nil {
       throw InvalidOperationException("vkGetPhysicalDeviceSurfacePresentModesKHR is unavailable")
     }
-    instanceDispatch.vkGetPhysicalDeviceSurfacePresentModesKHR = getPresentModesNullable!!
+    instanceDispatch.vkGetPhysicalDeviceSurfacePresentModesKHR = getPresentModesNullable
 
     let createDeviceAddress = LoadGlobalProc(getProcAddress, instance, "vkCreateDevice")
     let createDeviceNullable = createDeviceAddress as (unmanaged[Cdecl](VkPhysicalDevice, *VkDeviceCreateInfo, *VkAllocationCallbacks, *VkDevice) -> VkResult)?
     if createDeviceNullable == nil {
       throw InvalidOperationException("vkCreateDevice is unavailable")
     }
-    instanceDispatch.vkCreateDevice = createDeviceNullable!!
+    instanceDispatch.vkCreateDevice = createDeviceNullable
 
     window = SDL_CreateWindow("Goo Vulkan Proof", 640, 480, uint64(0x0000000010000000))
     if window == nint(0) {
@@ -1013,14 +1013,14 @@ internal unsafe func RunVulkanProof() int32 {
       if getMemoryPropertiesNullable == nil {
         throw InvalidOperationException("vkGetPhysicalDeviceMemoryProperties is unavailable")
       }
-      instanceDispatch.vkGetPhysicalDeviceMemoryProperties = getMemoryPropertiesNullable!!
+      instanceDispatch.vkGetPhysicalDeviceMemoryProperties = getMemoryPropertiesNullable
       if selectedMemoryBudgetSupported {
         let getMemoryProperties2Address = LoadGlobalProc(getProcAddress, instance, "vkGetPhysicalDeviceMemoryProperties2")
         let getMemoryProperties2Nullable = getMemoryProperties2Address as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceMemoryProperties2) -> void)?
         if getMemoryProperties2Nullable == nil {
           throw InvalidOperationException("vkGetPhysicalDeviceMemoryProperties2 is unavailable")
         }
-        instanceDispatch.vkGetPhysicalDeviceMemoryProperties2 = getMemoryProperties2Nullable!!
+        instanceDispatch.vkGetPhysicalDeviceMemoryProperties2 = getMemoryProperties2Nullable
       }
       let readbackFormat = VkConstants.VK_FORMAT_R8G8B8A8_UNORM
       var readbackFormatProperties = VkFormatProperties{}
@@ -1131,152 +1131,152 @@ internal unsafe func RunVulkanProof() int32 {
     if destroyDeviceNullable == nil {
       throw InvalidOperationException("vkDestroyDevice is unavailable")
     }
-    deviceDispatch.vkDestroyDevice = destroyDeviceNullable!!
+    deviceDispatch.vkDestroyDevice = destroyDeviceNullable
     let getDeviceQueueAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkGetDeviceQueue")
     let getDeviceQueueNullable = getDeviceQueueAddress as (unmanaged[Cdecl](VkDevice, uint32, uint32, *VkQueue) -> void)?
     if getDeviceQueueNullable == nil { throw InvalidOperationException("vkGetDeviceQueue is unavailable") }
-    deviceDispatch.vkGetDeviceQueue = getDeviceQueueNullable!!
+    deviceDispatch.vkGetDeviceQueue = getDeviceQueueNullable
     let createSwapchainAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateSwapchainKHR")
     let createSwapchainNullable = createSwapchainAddress as (unmanaged[Cdecl](VkDevice, *VkSwapchainCreateInfoKHR, *VkAllocationCallbacks, *VkSwapchainKHR) -> VkResult)?
     if createSwapchainNullable == nil { throw InvalidOperationException("vkCreateSwapchainKHR is unavailable") }
-    deviceDispatch.vkCreateSwapchainKHR = createSwapchainNullable!!
+    deviceDispatch.vkCreateSwapchainKHR = createSwapchainNullable
     let destroySwapchainAddressLoaded = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroySwapchainKHR")
     let destroySwapchainNullable = destroySwapchainAddressLoaded as (unmanaged[Cdecl](VkDevice, VkSwapchainKHR, *VkAllocationCallbacks) -> void)?
     if destroySwapchainNullable == nil { throw InvalidOperationException("vkDestroySwapchainKHR is unavailable") }
-    deviceDispatch.vkDestroySwapchainKHR = destroySwapchainNullable!!
+    deviceDispatch.vkDestroySwapchainKHR = destroySwapchainNullable
     let getSwapchainImagesAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkGetSwapchainImagesKHR")
     let getSwapchainImagesNullable = getSwapchainImagesAddress as (unmanaged[Cdecl](VkDevice, VkSwapchainKHR, *uint32, *VkImage) -> VkResult)?
     if getSwapchainImagesNullable == nil { throw InvalidOperationException("vkGetSwapchainImagesKHR is unavailable") }
-    deviceDispatch.vkGetSwapchainImagesKHR = getSwapchainImagesNullable!!
+    deviceDispatch.vkGetSwapchainImagesKHR = getSwapchainImagesNullable
     let createCommandPoolAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateCommandPool")
     let createCommandPoolNullable = createCommandPoolAddress as (unmanaged[Cdecl](VkDevice, *VkCommandPoolCreateInfo, *VkAllocationCallbacks, *VkCommandPool) -> VkResult)?
     if createCommandPoolNullable == nil { throw InvalidOperationException("vkCreateCommandPool is unavailable") }
-    deviceDispatch.vkCreateCommandPool = createCommandPoolNullable!!
+    deviceDispatch.vkCreateCommandPool = createCommandPoolNullable
     let destroyCommandPoolAddressLoaded = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyCommandPool")
     destroyCommandPoolAddress = destroyCommandPoolAddressLoaded
     let destroyCommandPoolNullable = destroyCommandPoolAddressLoaded as (unmanaged[Cdecl](VkDevice, VkCommandPool, *VkAllocationCallbacks) -> void)?
     if destroyCommandPoolNullable == nil { throw InvalidOperationException("vkDestroyCommandPool is unavailable") }
-    deviceDispatch.vkDestroyCommandPool = destroyCommandPoolNullable!!
+    deviceDispatch.vkDestroyCommandPool = destroyCommandPoolNullable
     let allocateCommandBuffersAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkAllocateCommandBuffers")
     let allocateCommandBuffersNullable = allocateCommandBuffersAddress as (unmanaged[Cdecl](VkDevice, *VkCommandBufferAllocateInfo, *VkCommandBuffer) -> VkResult)?
     if allocateCommandBuffersNullable == nil { throw InvalidOperationException("vkAllocateCommandBuffers is unavailable") }
-    deviceDispatch.vkAllocateCommandBuffers = allocateCommandBuffersNullable!!
+    deviceDispatch.vkAllocateCommandBuffers = allocateCommandBuffersNullable
     let createSemaphoreAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateSemaphore")
     let createSemaphoreNullable = createSemaphoreAddress as (unmanaged[Cdecl](VkDevice, *VkSemaphoreCreateInfo, *VkAllocationCallbacks, *VkSemaphore) -> VkResult)?
     if createSemaphoreNullable == nil { throw InvalidOperationException("vkCreateSemaphore is unavailable") }
-    deviceDispatch.vkCreateSemaphore = createSemaphoreNullable!!
+    deviceDispatch.vkCreateSemaphore = createSemaphoreNullable
     let destroySemaphoreAddressLoaded = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroySemaphore")
     let destroySemaphoreNullable = destroySemaphoreAddressLoaded as (unmanaged[Cdecl](VkDevice, VkSemaphore, *VkAllocationCallbacks) -> void)?
     if destroySemaphoreNullable == nil { throw InvalidOperationException("vkDestroySemaphore is unavailable") }
-    deviceDispatch.vkDestroySemaphore = destroySemaphoreNullable!!
+    deviceDispatch.vkDestroySemaphore = destroySemaphoreNullable
     let createFenceAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateFence")
     let createFenceNullable = createFenceAddress as (unmanaged[Cdecl](VkDevice, *VkFenceCreateInfo, *VkAllocationCallbacks, *VkFence) -> VkResult)?
     if createFenceNullable == nil { throw InvalidOperationException("vkCreateFence is unavailable") }
-    deviceDispatch.vkCreateFence = createFenceNullable!!
+    deviceDispatch.vkCreateFence = createFenceNullable
     let destroyFenceAddressLoaded = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyFence")
     let destroyFenceNullable = destroyFenceAddressLoaded as (unmanaged[Cdecl](VkDevice, VkFence, *VkAllocationCallbacks) -> void)?
     if destroyFenceNullable == nil { throw InvalidOperationException("vkDestroyFence is unavailable") }
-    deviceDispatch.vkDestroyFence = destroyFenceNullable!!
+    deviceDispatch.vkDestroyFence = destroyFenceNullable
     let waitForFencesAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkWaitForFences")
     let waitForFencesNullable = waitForFencesAddress as (unmanaged[Cdecl](VkDevice, uint32, *VkFence, VkBool32, uint64) -> VkResult)?
     if waitForFencesNullable == nil { throw InvalidOperationException("vkWaitForFences is unavailable") }
-    deviceDispatch.vkWaitForFences = waitForFencesNullable!!
+    deviceDispatch.vkWaitForFences = waitForFencesNullable
     let acquireNextImageAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkAcquireNextImageKHR")
     let acquireNextImageNullable = acquireNextImageAddress as (unmanaged[Cdecl](VkDevice, VkSwapchainKHR, uint64, VkSemaphore, VkFence, *uint32) -> VkResult)?
     if acquireNextImageNullable == nil { throw InvalidOperationException("vkAcquireNextImageKHR is unavailable") }
-    deviceDispatch.vkAcquireNextImageKHR = acquireNextImageNullable!!
+    deviceDispatch.vkAcquireNextImageKHR = acquireNextImageNullable
     let beginCommandBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkBeginCommandBuffer")
     let beginCommandBufferNullable = beginCommandBufferAddress as (unmanaged[Cdecl](VkCommandBuffer, *VkCommandBufferBeginInfo) -> VkResult)?
     if beginCommandBufferNullable == nil { throw InvalidOperationException("vkBeginCommandBuffer is unavailable") }
-    deviceDispatch.vkBeginCommandBuffer = beginCommandBufferNullable!!
+    deviceDispatch.vkBeginCommandBuffer = beginCommandBufferNullable
     let endCommandBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkEndCommandBuffer")
     let endCommandBufferNullable = endCommandBufferAddress as (unmanaged[Cdecl](VkCommandBuffer) -> VkResult)?
     if endCommandBufferNullable == nil { throw InvalidOperationException("vkEndCommandBuffer is unavailable") }
-    deviceDispatch.vkEndCommandBuffer = endCommandBufferNullable!!
+    deviceDispatch.vkEndCommandBuffer = endCommandBufferNullable
     let pipelineBarrierAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdPipelineBarrier2")
     let pipelineBarrierNullable = pipelineBarrierAddress as (unmanaged[Cdecl](VkCommandBuffer, *VkDependencyInfo) -> void)?
     if pipelineBarrierNullable == nil { throw InvalidOperationException("vkCmdPipelineBarrier2 is unavailable") }
-    deviceDispatch.vkCmdPipelineBarrier2 = pipelineBarrierNullable!!
+    deviceDispatch.vkCmdPipelineBarrier2 = pipelineBarrierNullable
     let queueSubmitAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkQueueSubmit2")
     let queueSubmitNullable = queueSubmitAddress as (unmanaged[Cdecl](VkQueue, uint32, *VkSubmitInfo2, VkFence) -> VkResult)?
     if queueSubmitNullable == nil { throw InvalidOperationException("vkQueueSubmit2 is unavailable") }
-    deviceDispatch.vkQueueSubmit2 = queueSubmitNullable!!
+    deviceDispatch.vkQueueSubmit2 = queueSubmitNullable
     let queuePresentAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkQueuePresentKHR")
     let queuePresentNullable = queuePresentAddress as (unmanaged[Cdecl](VkQueue, *VkPresentInfoKHR) -> VkResult)?
     if queuePresentNullable == nil { throw InvalidOperationException("vkQueuePresentKHR is unavailable") }
-    deviceDispatch.vkQueuePresentKHR = queuePresentNullable!!
+    deviceDispatch.vkQueuePresentKHR = queuePresentNullable
     let createImageViewAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateImageView")
     let createImageViewNullable = createImageViewAddress as (unmanaged[Cdecl](VkDevice, *VkImageViewCreateInfo, *VkAllocationCallbacks, *VkImageView) -> VkResult)?
     if createImageViewNullable == nil { throw InvalidOperationException("vkCreateImageView is unavailable") }
-    deviceDispatch.vkCreateImageView = createImageViewNullable!!
+    deviceDispatch.vkCreateImageView = createImageViewNullable
     let destroyImageViewAddressLoaded = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyImageView")
     let destroyImageViewNullable = destroyImageViewAddressLoaded as (unmanaged[Cdecl](VkDevice, VkImageView, *VkAllocationCallbacks) -> void)?
     if destroyImageViewNullable == nil { throw InvalidOperationException("vkDestroyImageView is unavailable") }
-    deviceDispatch.vkDestroyImageView = destroyImageViewNullable!!
+    deviceDispatch.vkDestroyImageView = destroyImageViewNullable
     let createShaderModuleAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateShaderModule")
     let createShaderModuleNullable = createShaderModuleAddress as (unmanaged[Cdecl](VkDevice, *VkShaderModuleCreateInfo, *VkAllocationCallbacks, *VkShaderModule) -> VkResult)?
     if createShaderModuleNullable == nil { throw InvalidOperationException("vkCreateShaderModule is unavailable") }
-    deviceDispatch.vkCreateShaderModule = createShaderModuleNullable!!
+    deviceDispatch.vkCreateShaderModule = createShaderModuleNullable
     let destroyShaderModuleAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyShaderModule")
     let destroyShaderModuleNullable = destroyShaderModuleAddress as (unmanaged[Cdecl](VkDevice, VkShaderModule, *VkAllocationCallbacks) -> void)?
     if destroyShaderModuleNullable == nil { throw InvalidOperationException("vkDestroyShaderModule is unavailable") }
-    deviceDispatch.vkDestroyShaderModule = destroyShaderModuleNullable!!
+    deviceDispatch.vkDestroyShaderModule = destroyShaderModuleNullable
     let createPipelineLayoutAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreatePipelineLayout")
     let createPipelineLayoutNullable = createPipelineLayoutAddress as (unmanaged[Cdecl](VkDevice, *VkPipelineLayoutCreateInfo, *VkAllocationCallbacks, *VkPipelineLayout) -> VkResult)?
     if createPipelineLayoutNullable == nil { throw InvalidOperationException("vkCreatePipelineLayout is unavailable") }
-    deviceDispatch.vkCreatePipelineLayout = createPipelineLayoutNullable!!
+    deviceDispatch.vkCreatePipelineLayout = createPipelineLayoutNullable
     let destroyPipelineLayoutAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyPipelineLayout")
     let destroyPipelineLayoutNullable = destroyPipelineLayoutAddress as (unmanaged[Cdecl](VkDevice, VkPipelineLayout, *VkAllocationCallbacks) -> void)?
     if destroyPipelineLayoutNullable == nil { throw InvalidOperationException("vkDestroyPipelineLayout is unavailable") }
-    deviceDispatch.vkDestroyPipelineLayout = destroyPipelineLayoutNullable!!
+    deviceDispatch.vkDestroyPipelineLayout = destroyPipelineLayoutNullable
     let createGraphicsPipelinesAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateGraphicsPipelines")
     let createGraphicsPipelinesNullable = createGraphicsPipelinesAddress as (unmanaged[Cdecl](VkDevice, VkPipelineCache, uint32, *VkGraphicsPipelineCreateInfo, *VkAllocationCallbacks, *VkPipeline) -> VkResult)?
     if createGraphicsPipelinesNullable == nil { throw InvalidOperationException("vkCreateGraphicsPipelines is unavailable") }
-    deviceDispatch.vkCreateGraphicsPipelines = createGraphicsPipelinesNullable!!
+    deviceDispatch.vkCreateGraphicsPipelines = createGraphicsPipelinesNullable
     let destroyPipelineAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyPipeline")
     let destroyPipelineNullable = destroyPipelineAddress as (unmanaged[Cdecl](VkDevice, VkPipeline, *VkAllocationCallbacks) -> void)?
     if destroyPipelineNullable == nil { throw InvalidOperationException("vkDestroyPipeline is unavailable") }
-    deviceDispatch.vkDestroyPipeline = destroyPipelineNullable!!
+    deviceDispatch.vkDestroyPipeline = destroyPipelineNullable
     let beginRenderingAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdBeginRendering")
     let beginRenderingNullable = beginRenderingAddress as (unmanaged[Cdecl](VkCommandBuffer, *VkRenderingInfo) -> void)?
     if beginRenderingNullable == nil { throw InvalidOperationException("vkCmdBeginRendering is unavailable") }
-    deviceDispatch.vkCmdBeginRendering = beginRenderingNullable!!
+    deviceDispatch.vkCmdBeginRendering = beginRenderingNullable
     let endRenderingAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdEndRendering")
     let endRenderingNullable = endRenderingAddress as (unmanaged[Cdecl](VkCommandBuffer) -> void)?
     if endRenderingNullable == nil { throw InvalidOperationException("vkCmdEndRendering is unavailable") }
-    deviceDispatch.vkCmdEndRendering = endRenderingNullable!!
+    deviceDispatch.vkCmdEndRendering = endRenderingNullable
     let bindPipelineAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdBindPipeline")
     let bindPipelineNullable = bindPipelineAddress as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineBindPoint, VkPipeline) -> void)?
     if bindPipelineNullable == nil { throw InvalidOperationException("vkCmdBindPipeline is unavailable") }
-    deviceDispatch.vkCmdBindPipeline = bindPipelineNullable!!
+    deviceDispatch.vkCmdBindPipeline = bindPipelineNullable
     let pushConstantsAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdPushConstants")
     let pushConstantsNullable = pushConstantsAddress as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineLayout, VkShaderStageFlags, uint32, uint32, *void) -> void)?
     if pushConstantsNullable == nil { throw InvalidOperationException("vkCmdPushConstants is unavailable") }
-    deviceDispatch.vkCmdPushConstants = pushConstantsNullable!!
+    deviceDispatch.vkCmdPushConstants = pushConstantsNullable
     let drawAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdDraw")
     let drawNullable = drawAddress as (unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, uint32, uint32) -> void)?
     if drawNullable == nil { throw InvalidOperationException("vkCmdDraw is unavailable") }
-    deviceDispatch.vkCmdDraw = drawNullable!!
+    deviceDispatch.vkCmdDraw = drawNullable
     let setViewportAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdSetViewport")
     let setViewportNullable = setViewportAddress as (unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, *VkViewport) -> void)?
     if setViewportNullable == nil { throw InvalidOperationException("vkCmdSetViewport is unavailable") }
-    deviceDispatch.vkCmdSetViewport = setViewportNullable!!
+    deviceDispatch.vkCmdSetViewport = setViewportNullable
     let setScissorAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdSetScissor")
     let setScissorNullable = setScissorAddress as (unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, *VkRect2D) -> void)?
     if setScissorNullable == nil { throw InvalidOperationException("vkCmdSetScissor is unavailable") }
-    deviceDispatch.vkCmdSetScissor = setScissorNullable!!
+    deviceDispatch.vkCmdSetScissor = setScissorNullable
     resetCommandBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkResetCommandBuffer")
     let resetCommandBufferNullable = resetCommandBufferAddress as (unmanaged[Cdecl](VkCommandBuffer, VkCommandBufferResetFlags) -> VkResult)?
     if resetCommandBufferNullable == nil { throw InvalidOperationException("vkResetCommandBuffer is unavailable") }
-    deviceDispatch.vkResetCommandBuffer = resetCommandBufferNullable!!
+    deviceDispatch.vkResetCommandBuffer = resetCommandBufferNullable
     let getFenceStatusAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkGetFenceStatus")
     let getFenceStatusNullable = getFenceStatusAddress as (unmanaged[Cdecl](VkDevice, VkFence) -> VkResult)?
     if getFenceStatusNullable == nil { throw InvalidOperationException("vkGetFenceStatus is unavailable") }
-    deviceDispatch.vkGetFenceStatus = getFenceStatusNullable!!
+    deviceDispatch.vkGetFenceStatus = getFenceStatusNullable
     let resetFencesAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkResetFences")
     let resetFencesNullable = resetFencesAddress as (unmanaged[Cdecl](VkDevice, uint32, *VkFence) -> VkResult)?
     if resetFencesNullable == nil { throw InvalidOperationException("vkResetFences is unavailable") }
-    deviceDispatch.vkResetFences = resetFencesNullable!!
+    deviceDispatch.vkResetFences = resetFencesNullable
     if readbackRequested {
       let copyImageToBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdCopyImageToBuffer")
       if copyImageToBufferAddress == nint(0) { throw InvalidOperationException("vkCmdCopyImageToBuffer is unavailable") }
@@ -1284,79 +1284,79 @@ internal unsafe func RunVulkanProof() int32 {
       let createImageAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateImage")
       let createImageNullable = createImageAddress as (unmanaged[Cdecl](VkDevice, *VkImageCreateInfo, *VkAllocationCallbacks, *VkImage) -> VkResult)?
       if createImageNullable == nil { throw InvalidOperationException("vkCreateImage is unavailable") }
-      deviceDispatch.vkCreateImage = createImageNullable!!
+      deviceDispatch.vkCreateImage = createImageNullable
       let destroyImageAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyImage")
       let destroyImageNullable = destroyImageAddress as (unmanaged[Cdecl](VkDevice, VkImage, *VkAllocationCallbacks) -> void)?
       if destroyImageNullable == nil { throw InvalidOperationException("vkDestroyImage is unavailable") }
-      deviceDispatch.vkDestroyImage = destroyImageNullable!!
+      deviceDispatch.vkDestroyImage = destroyImageNullable
       let getImageMemoryRequirements2Address = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkGetImageMemoryRequirements2")
       let getImageMemoryRequirements2Nullable = getImageMemoryRequirements2Address as (unmanaged[Cdecl](VkDevice, *VkImageMemoryRequirementsInfo2, *VkMemoryRequirements2) -> void)?
       if getImageMemoryRequirements2Nullable == nil { throw InvalidOperationException("vkGetImageMemoryRequirements2 is unavailable") }
-      deviceDispatch.vkGetImageMemoryRequirements2 = getImageMemoryRequirements2Nullable!!
+      deviceDispatch.vkGetImageMemoryRequirements2 = getImageMemoryRequirements2Nullable
       let allocateMemoryAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkAllocateMemory")
       let allocateMemoryNullable = allocateMemoryAddress as (unmanaged[Cdecl](VkDevice, *VkMemoryAllocateInfo, *VkAllocationCallbacks, *VkDeviceMemory) -> VkResult)?
       if allocateMemoryNullable == nil { throw InvalidOperationException("vkAllocateMemory is unavailable") }
-      deviceDispatch.vkAllocateMemory = allocateMemoryNullable!!
+      deviceDispatch.vkAllocateMemory = allocateMemoryNullable
       let freeMemoryAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkFreeMemory")
       let freeMemoryNullable = freeMemoryAddress as (unmanaged[Cdecl](VkDevice, VkDeviceMemory, *VkAllocationCallbacks) -> void)?
       if freeMemoryNullable == nil { throw InvalidOperationException("vkFreeMemory is unavailable") }
-      deviceDispatch.vkFreeMemory = freeMemoryNullable!!
+      deviceDispatch.vkFreeMemory = freeMemoryNullable
       let bindImageMemory2Address = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkBindImageMemory2")
       let bindImageMemory2Nullable = bindImageMemory2Address as (unmanaged[Cdecl](VkDevice, uint32, *VkBindImageMemoryInfo) -> VkResult)?
       if bindImageMemory2Nullable == nil { throw InvalidOperationException("vkBindImageMemory2 is unavailable") }
-      deviceDispatch.vkBindImageMemory2 = bindImageMemory2Nullable!!
+      deviceDispatch.vkBindImageMemory2 = bindImageMemory2Nullable
       let createBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateBuffer")
       let createBufferNullable = createBufferAddress as (unmanaged[Cdecl](VkDevice, *VkBufferCreateInfo, *VkAllocationCallbacks, *VkBuffer) -> VkResult)?
       if createBufferNullable == nil { throw InvalidOperationException("vkCreateBuffer is unavailable") }
-      deviceDispatch.vkCreateBuffer = createBufferNullable!!
+      deviceDispatch.vkCreateBuffer = createBufferNullable
       let destroyBufferAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyBuffer")
       let destroyBufferNullable = destroyBufferAddress as (unmanaged[Cdecl](VkDevice, VkBuffer, *VkAllocationCallbacks) -> void)?
       if destroyBufferNullable == nil { throw InvalidOperationException("vkDestroyBuffer is unavailable") }
-      deviceDispatch.vkDestroyBuffer = destroyBufferNullable!!
+      deviceDispatch.vkDestroyBuffer = destroyBufferNullable
       let getBufferMemoryRequirements2Address = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkGetBufferMemoryRequirements2")
       let getBufferMemoryRequirements2Nullable = getBufferMemoryRequirements2Address as (unmanaged[Cdecl](VkDevice, *VkBufferMemoryRequirementsInfo2, *VkMemoryRequirements2) -> void)?
       if getBufferMemoryRequirements2Nullable == nil { throw InvalidOperationException("vkGetBufferMemoryRequirements2 is unavailable") }
-      deviceDispatch.vkGetBufferMemoryRequirements2 = getBufferMemoryRequirements2Nullable!!
+      deviceDispatch.vkGetBufferMemoryRequirements2 = getBufferMemoryRequirements2Nullable
       let bindBufferMemory2Address = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkBindBufferMemory2")
       let bindBufferMemory2Nullable = bindBufferMemory2Address as (unmanaged[Cdecl](VkDevice, uint32, *VkBindBufferMemoryInfo) -> VkResult)?
       if bindBufferMemory2Nullable == nil { throw InvalidOperationException("vkBindBufferMemory2 is unavailable") }
-      deviceDispatch.vkBindBufferMemory2 = bindBufferMemory2Nullable!!
+      deviceDispatch.vkBindBufferMemory2 = bindBufferMemory2Nullable
       let mapMemoryAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkMapMemory")
       let mapMemoryNullable = mapMemoryAddress as (unmanaged[Cdecl](VkDevice, VkDeviceMemory, VkDeviceSize, VkDeviceSize, VkMemoryMapFlags, *void) -> VkResult)?
       if mapMemoryNullable == nil { throw InvalidOperationException("vkMapMemory is unavailable") }
-      deviceDispatch.vkMapMemory = mapMemoryNullable!!
+      deviceDispatch.vkMapMemory = mapMemoryNullable
       let unmapMemoryAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkUnmapMemory")
       let unmapMemoryNullable = unmapMemoryAddress as (unmanaged[Cdecl](VkDevice, VkDeviceMemory) -> void)?
       if unmapMemoryNullable == nil { throw InvalidOperationException("vkUnmapMemory is unavailable") }
-      deviceDispatch.vkUnmapMemory = unmapMemoryNullable!!
+      deviceDispatch.vkUnmapMemory = unmapMemoryNullable
       let invalidateMappedMemoryRangesAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkInvalidateMappedMemoryRanges")
       let invalidateMappedMemoryRangesNullable = invalidateMappedMemoryRangesAddress as (unmanaged[Cdecl](VkDevice, uint32, *VkMappedMemoryRange) -> VkResult)?
       if invalidateMappedMemoryRangesNullable == nil { throw InvalidOperationException("vkInvalidateMappedMemoryRanges is unavailable") }
-      deviceDispatch.vkInvalidateMappedMemoryRanges = invalidateMappedMemoryRangesNullable!!
+      deviceDispatch.vkInvalidateMappedMemoryRanges = invalidateMappedMemoryRangesNullable
     }
 
     if diagnostics != nil && selectedTimestampValidBits != 0u {
       let createQueryPoolAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCreateQueryPool")
       let createQueryPoolNullable = createQueryPoolAddress as (unmanaged[Cdecl](VkDevice, *VkQueryPoolCreateInfo, *VkAllocationCallbacks, *VkQueryPool) -> VkResult)?
       if createQueryPoolNullable == nil { throw InvalidOperationException("vkCreateQueryPool is unavailable") }
-      deviceDispatch.vkCreateQueryPool = createQueryPoolNullable!!
+      deviceDispatch.vkCreateQueryPool = createQueryPoolNullable
       let destroyQueryPoolAddressLoaded = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkDestroyQueryPool")
       destroyQueryPoolAddress = destroyQueryPoolAddressLoaded
       let destroyQueryPoolNullable = destroyQueryPoolAddressLoaded as (unmanaged[Cdecl](VkDevice, VkQueryPool, *VkAllocationCallbacks) -> void)?
       if destroyQueryPoolNullable == nil { throw InvalidOperationException("vkDestroyQueryPool is unavailable") }
-      deviceDispatch.vkDestroyQueryPool = destroyQueryPoolNullable!!
+      deviceDispatch.vkDestroyQueryPool = destroyQueryPoolNullable
       let getQueryPoolResultsAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkGetQueryPoolResults")
       let getQueryPoolResultsNullable = getQueryPoolResultsAddress as (unmanaged[Cdecl](VkDevice, VkQueryPool, uint32, uint32, nuint, *void, VkDeviceSize, VkQueryResultFlags) -> VkResult)?
       if getQueryPoolResultsNullable == nil { throw InvalidOperationException("vkGetQueryPoolResults is unavailable") }
-      deviceDispatch.vkGetQueryPoolResults = getQueryPoolResultsNullable!!
+      deviceDispatch.vkGetQueryPoolResults = getQueryPoolResultsNullable
       let resetQueryPoolAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdResetQueryPool")
       let resetQueryPoolNullable = resetQueryPoolAddress as (unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32, uint32) -> void)?
       if resetQueryPoolNullable == nil { throw InvalidOperationException("vkCmdResetQueryPool is unavailable") }
-      deviceDispatch.vkCmdResetQueryPool = resetQueryPoolNullable!!
+      deviceDispatch.vkCmdResetQueryPool = resetQueryPoolNullable
       let writeTimestampAddress = LoadDeviceProc(getDeviceProcAddressAddress, device, "vkCmdWriteTimestamp2")
       let writeTimestampNullable = writeTimestampAddress as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineStageFlags2, VkQueryPool, uint32) -> void)?
       if writeTimestampNullable == nil { throw InvalidOperationException("vkCmdWriteTimestamp2 is unavailable") }
-      deviceDispatch.vkCmdWriteTimestamp2 = writeTimestampNullable!!
+      deviceDispatch.vkCmdWriteTimestamp2 = writeTimestampNullable
       var queryPoolCreateInfo = VkQueryPoolCreateInfo{}
       queryPoolCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
       queryPoolCreateInfo.queryType = VkConstants.VK_QUERY_TYPE_TIMESTAMP
@@ -1505,15 +1505,15 @@ internal unsafe func RunVulkanProof() int32 {
           if pendingRetiredGeneration != nil {
             WaitForVulkanGenerationCompletion(
               generationValue,
-              frameSlot0!!,
-              frameSlot1!!,
-              presentationRetirement!!)
+              frameSlot0,
+              frameSlot1,
+              presentationRetirement)
             WaitForVulkanGenerationCompletion(
-              pendingRetiredGeneration!!,
-              frameSlot0!!,
-              frameSlot1!!,
-              presentationRetirement!!)
-            pendingRetiredGeneration!!.Dispose()
+              pendingRetiredGeneration,
+              frameSlot0,
+              frameSlot1,
+              presentationRetirement)
+            pendingRetiredGeneration.Dispose()
             pendingRetiredGeneration = nil
           }
           let originalLogicalWidth = lifecycleValue.LogicalWidth
@@ -1564,13 +1564,13 @@ internal unsafe func RunVulkanProof() int32 {
           pendingRetiredGeneration = previousGeneration
           WaitForVulkanGenerationCompletion(
             previousGeneration,
-            frameSlot0!!,
-            frameSlot1!!,
-            presentationRetirement!!)
+            frameSlot0,
+            frameSlot1,
+            presentationRetirement)
           let resizedFormatChanged = resizedSelection.format.format != selectedSurfaceFormat.format || resizedSelection.format.colorSpace != selectedSurfaceFormat.colorSpace
           if resizedFormatChanged {
             if solidQuad != nil {
-              solidQuad!!.Dispose()
+              solidQuad.Dispose()
             }
             solidQuad = VulkanSolidQuad(device, deviceDispatch, resizedSelection.format.format)
           }
@@ -1648,13 +1648,13 @@ internal unsafe func RunVulkanProof() int32 {
           pendingRetiredGeneration = previousGeneration
           WaitForVulkanGenerationCompletion(
             previousGeneration,
-            frameSlot0!!,
-            frameSlot1!!,
-            presentationRetirement!!)
+            frameSlot0,
+            frameSlot1,
+            presentationRetirement)
           let dpiFormatChanged = dpiSelection.format.format != selectedSurfaceFormat.format || dpiSelection.format.colorSpace != selectedSurfaceFormat.colorSpace
           if dpiFormatChanged {
             if solidQuad != nil {
-              solidQuad!!.Dispose()
+              solidQuad.Dispose()
             }
             solidQuad = VulkanSolidQuad(device, deviceDispatch, dpiSelection.format.format)
           }
@@ -1766,13 +1766,13 @@ internal unsafe func RunVulkanProof() int32 {
           pendingRetiredGeneration = previousGeneration
           WaitForVulkanGenerationCompletion(
             previousGeneration,
-            frameSlot0!!,
-            frameSlot1!!,
-            presentationRetirement!!)
+            frameSlot0,
+            frameSlot1,
+            presentationRetirement)
           let restoredFormatChanged = restoredSelection.format.format != selectedSurfaceFormat.format || restoredSelection.format.colorSpace != selectedSurfaceFormat.colorSpace
           if restoredFormatChanged {
             if solidQuad != nil {
-              solidQuad!!.Dispose()
+              solidQuad.Dispose()
             }
             solidQuad = VulkanSolidQuad(device, deviceDispatch, restoredSelection.format.format)
           }
@@ -1808,9 +1808,9 @@ internal unsafe func RunVulkanProof() int32 {
           let queueBeforeReopen = queue
           WaitForVulkanGenerationCompletion(
             generationValue,
-            frameSlot0!!,
-            frameSlot1!!,
-            presentationRetirement!!)
+            frameSlot0,
+            frameSlot1,
+            presentationRetirement)
           generationValue.Dispose()
           swapchainGeneration = nil
           swapchain = uint64(0)
@@ -1874,7 +1874,7 @@ internal unsafe func RunVulkanProof() int32 {
           compositeAlpha = reopenedCompositeAlpha
           if formatChanged {
             if solidQuad != nil {
-              solidQuad!!.Dispose()
+              solidQuad.Dispose()
             }
             solidQuad = VulkanSolidQuad(device, deviceDispatch, selectedSurfaceFormat.format)
           }
@@ -1920,12 +1920,12 @@ internal unsafe func RunVulkanProof() int32 {
         slot = frameSlot1
         slotIndex = 1u
       }
-      let activeSlot = slot!!
+      let activeSlot = slot
       let prepareAcquireResult = activeSlot.PrepareAcquire()
       if TrackResult(diagnostics, 36uL + frameNumber * 20uL, prepareAcquireResult) != VkConstants.VK_SUCCESS {
         throw InvalidOperationException("Vulkan frame-slot acquire preparation failed")
       }
-      presentationRetirement!!.CollectCompleted(slotIndex, activeSlot.LastCompletedSerial)
+      presentationRetirement.CollectCompleted(slotIndex, activeSlot.LastCompletedSerial)
       var imageIndex uint32 = 0u
       acquireAttemptCount = acquireAttemptCount + 1uL
       let acquireResult = TrackResult(
@@ -2063,7 +2063,7 @@ internal unsafe func RunVulkanProof() int32 {
       }
       submitSuccessCount = submitSuccessCount + 1uL
       if hadPriorPresentation {
-        presentationRetirement!!.BindPriorSameImageToProof(generationValue.Generation, imageIndex, slotIndex, activeSlot.SubmissionSerial)
+        presentationRetirement.BindPriorSameImageToProof(generationValue.Generation, imageIndex, slotIndex, activeSlot.SubmissionSerial)
       }
       if let diagnostics = diagnostics {
         diagnostics.CaptureSubmission(activeSlot.SubmissionSerial, uint64(queue), activeSlot.SubmissionFence)
@@ -2072,7 +2072,7 @@ internal unsafe func RunVulkanProof() int32 {
       var completedPresentId uint64 = 0uL
       var presentFence = generationValue.PreparePresent(imageIndex, out completedPresentId)
       if completedPresentId != 0uL {
-        presentationRetirement!!.CompletePresent(completedPresentId)
+        presentationRetirement.CompletePresent(completedPresentId)
       }
       var presentFenceInfo = VkSwapchainPresentFenceInfoEXT{}
       presentFenceInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT
@@ -2093,7 +2093,7 @@ internal unsafe func RunVulkanProof() int32 {
       var presentId uint64 = 0uL
       if presentResult == VkConstants.VK_SUCCESS || presentResult == VkConstants.VK_SUBOPTIMAL_KHR {
         presentSuccessCount = presentSuccessCount + 1uL
-        presentId = presentationRetirement!!.RecordPresent(generationValue.Generation, imageIndex)
+        presentId = presentationRetirement.RecordPresent(generationValue.Generation, imageIndex)
       }
       let markedPresentResult = generationValue.MarkPresented(imageIndex, presentResult, presentId)
       if markedPresentResult != VkConstants.VK_SUCCESS && markedPresentResult != VkConstants.VK_SUBOPTIMAL_KHR && markedPresentResult != VkConstants.VK_ERROR_OUT_OF_DATE_KHR {
@@ -2111,17 +2111,17 @@ internal unsafe func RunVulkanProof() int32 {
         lifecycleValue.MarkPresented()
         if pendingRetiredGeneration != nil {
           if presentResult == VkConstants.VK_SUCCESS || presentResult == VkConstants.VK_SUBOPTIMAL_KHR {
-            let completionResult = generationValue.WaitForPresentCompletion(presentationRetirement!!)
+            let completionResult = generationValue.WaitForPresentCompletion(presentationRetirement)
             if completionResult != VkConstants.VK_SUCCESS {
               throw InvalidOperationException("Vulkan lifecycle generation anchor completion failed")
             }
-            presentationRetirement!!.QueueRetiredGeneration(pendingRetiredGeneration!!.Generation)
-            presentationRetirement!!.AnchorRetiredGenerations(generationValue.Generation)
+            presentationRetirement.QueueRetiredGeneration(pendingRetiredGeneration.Generation)
+            presentationRetirement.AnchorRetiredGenerations(generationValue.Generation)
             var retiredGenerationId uint64 = 0uL
-            if !presentationRetirement!!.TryPopRetiredGeneration(out retiredGenerationId) {
+            if !presentationRetirement.TryPopRetiredGeneration(out retiredGenerationId) {
               throw InvalidOperationException("Vulkan lifecycle generation retirement is not proven")
             }
-            let retiredGeneration = pendingRetiredGeneration!!
+            let retiredGeneration = pendingRetiredGeneration
             if retiredGeneration.Generation != retiredGenerationId {
               throw InvalidOperationException("Vulkan lifecycle retired generation id mismatch")
             }
@@ -2130,9 +2130,9 @@ internal unsafe func RunVulkanProof() int32 {
           } else if presentResult == VkConstants.VK_ERROR_OUT_OF_DATE_KHR {
             WaitForVulkanGenerationCompletion(
               generationValue,
-              frameSlot0!!,
-              frameSlot1!!,
-              presentationRetirement!!)
+              frameSlot0,
+              frameSlot1,
+              presentationRetirement)
             pendingRetiredGeneration!!.Dispose()
             pendingRetiredGeneration = nil
           }
@@ -2174,19 +2174,19 @@ internal unsafe func RunVulkanProof() int32 {
       }
     }
 
-    let finalSlot0 = frameSlot0!!
-    let finalSlot1 = frameSlot1!!
+    let finalSlot0 = frameSlot0
+    let finalSlot1 = frameSlot1
     let finalSlot0Result = finalSlot0.PrepareAcquire()
     if TrackResult(diagnostics, 160uL, finalSlot0Result) != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan frame-slot 0 completion failed")
     }
-    presentationRetirement!!.CollectCompleted(0u, finalSlot0.LastCompletedSerial)
+    presentationRetirement.CollectCompleted(0u, finalSlot0.LastCompletedSerial)
     finalSlot0.AbortPrepared()
     let finalSlot1Result = finalSlot1.PrepareAcquire()
     if TrackResult(diagnostics, 161uL, finalSlot1Result) != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan frame-slot 1 completion failed")
     }
-    presentationRetirement!!.CollectCompleted(1u, finalSlot1.LastCompletedSerial)
+    presentationRetirement.CollectCompleted(1u, finalSlot1.LastCompletedSerial)
     finalSlot1.AbortPrepared()
 
     if queryPoolCreated {
@@ -2209,7 +2209,7 @@ internal unsafe func RunVulkanProof() int32 {
         throw InvalidOperationException("vkGetQueryPoolResults failed")
       }
     }
-    let presentCompletionResult = generationValue.WaitForPresentCompletion(presentationRetirement!!)
+    let presentCompletionResult = generationValue.WaitForPresentCompletion(presentationRetirement)
     if TrackResult(diagnostics, 162uL, presentCompletionResult) != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan swapchain presentation completion failed")
     }
@@ -2334,7 +2334,7 @@ internal unsafe func RunVulkanProof() int32 {
       var heapAllocated uint64 = 0uL
       var retiredBytes uint64 = 0uL
       if readbackAllocator != nil {
-        let counters = readbackAllocator!!.Counters
+        let counters = readbackAllocator.Counters
         heapAllocated = uint64(counters.residentBytes)
         retiredBytes = uint64(counters.retiredBytes)
         liveObjects = liveObjects + counters.residentAllocations
@@ -2397,7 +2397,7 @@ internal unsafe func RunVulkanProof() int32 {
       var heapAllocated uint64 = 0uL
       var retiredBytes uint64 = 0uL
       if readbackAllocator != nil {
-        let counters = readbackAllocator!!.Counters
+        let counters = readbackAllocator.Counters
         heapAllocated = uint64(counters.residentBytes)
         retiredBytes = uint64(counters.retiredBytes)
         liveObjects = liveObjects + counters.residentAllocations
@@ -2418,7 +2418,7 @@ internal unsafe func RunVulkanProof() int32 {
         if offscreenTarget == nil || device == nint(0) {
           throw InvalidOperationException("Vulkan cleanup lost the accepted offscreen submission fence")
         }
-        var completionFence = offscreenTarget!!.CompletionFence
+        var completionFence = offscreenTarget.CompletionFence
         let waitForFences = deviceDispatch.vkWaitForFences
         let waitResult = waitForFences(device, 1u, &completionFence,
           VkConstants.VK_TRUE, VkConstants.VK_WHOLE_SIZE)
@@ -2437,7 +2437,7 @@ internal unsafe func RunVulkanProof() int32 {
         if resetCommandBufferNullable == nil {
           throw InvalidOperationException("vkResetCommandBuffer is unavailable during offscreen cleanup")
         }
-        let resetCommandBuffer = resetCommandBufferNullable!!
+        let resetCommandBuffer = resetCommandBufferNullable
         let resetResult = resetCommandBuffer(offscreenCommandBuffer, VkCommandBufferResetFlags(0u))
         if resetResult != VkConstants.VK_SUCCESS {
           throw InvalidOperationException("vkResetCommandBuffer failed during offscreen cleanup")
@@ -2450,7 +2450,7 @@ internal unsafe func RunVulkanProof() int32 {
 
     try {
       if offscreenTarget != nil {
-        offscreenTarget!!.Dispose()
+        offscreenTarget.Dispose()
         offscreenTarget = nil
       }
     } catch (error Exception) {
@@ -2460,7 +2460,7 @@ internal unsafe func RunVulkanProof() int32 {
     if offscreenTarget == nil {
       try {
         if readbackAllocator != nil {
-          readbackAllocator!!.Dispose()
+          readbackAllocator.Dispose()
         }
         readbackAllocator = nil
       } catch (error Exception) {
@@ -2472,19 +2472,19 @@ internal unsafe func RunVulkanProof() int32 {
       if pendingRetiredGeneration != nil {
         if frameSlot0 != nil && frameSlot1 != nil && presentationRetirement != nil {
           WaitForVulkanGenerationCompletion(
-            pendingRetiredGeneration!!,
-            frameSlot0!!,
-            frameSlot1!!,
-            presentationRetirement!!)
+            pendingRetiredGeneration,
+            frameSlot0,
+            frameSlot1,
+            presentationRetirement)
         } else if presentationRetirement != nil {
-          let pendingResult = pendingRetiredGeneration!!.WaitForPresentCompletion(presentationRetirement!!)
+          let pendingResult = pendingRetiredGeneration.WaitForPresentCompletion(presentationRetirement)
           if pendingResult != VkConstants.VK_SUCCESS {
             throw InvalidOperationException("Vulkan cleanup retired swapchain wait failed")
           }
         } else {
           throw InvalidOperationException("Vulkan cleanup retired swapchain wait skipped because presentation retirement is unavailable")
         }
-        pendingRetiredGeneration!!.Dispose()
+        pendingRetiredGeneration.Dispose()
         pendingRetiredGeneration = nil
       }
     } catch (error Exception) {
@@ -2493,11 +2493,11 @@ internal unsafe func RunVulkanProof() int32 {
 
     try {
       if frameSlot0 != nil {
-        let completionResult = frameSlot0!!.PrepareAcquire()
+        let completionResult = frameSlot0.PrepareAcquire()
         if completionResult == VkConstants.VK_SUCCESS {
-          frameSlot0!!.AbortPrepared()
+          frameSlot0.AbortPrepared()
         }
-        frameSlot0!!.Dispose()
+        frameSlot0.Dispose()
       }
     } catch (error Exception) {
       Console.Error.WriteLine("Vulkan cleanup frame slot 0 failed: " + error.ToString())
@@ -2506,11 +2506,11 @@ internal unsafe func RunVulkanProof() int32 {
 
     try {
       if frameSlot1 != nil {
-        let completionResult = frameSlot1!!.PrepareAcquire()
+        let completionResult = frameSlot1.PrepareAcquire()
         if completionResult == VkConstants.VK_SUCCESS {
-          frameSlot1!!.AbortPrepared()
+          frameSlot1.AbortPrepared()
         }
-        frameSlot1!!.Dispose()
+        frameSlot1.Dispose()
       }
     } catch (error Exception) {
       Console.Error.WriteLine("Vulkan cleanup frame slot 1 failed: " + error.ToString())
@@ -2519,9 +2519,9 @@ internal unsafe func RunVulkanProof() int32 {
 
     try {
       if swapchainGeneration != nil && presentationRetirement != nil {
-        let presentationResult = swapchainGeneration!!.WaitForPresentCompletion(presentationRetirement!!)
+        let presentationResult = swapchainGeneration.WaitForPresentCompletion(presentationRetirement)
         if presentationResult == VkConstants.VK_SUCCESS {
-          swapchainGeneration!!.Dispose()
+          swapchainGeneration.Dispose()
         } else {
           Console.Error.WriteLine("Vulkan cleanup swapchain wait failed: " + presentationResult.ToString())
         }
@@ -2540,7 +2540,7 @@ internal unsafe func RunVulkanProof() int32 {
       if queryPoolCreated && destroyQueryPoolAddress != nint(0) {
         let destroyQueryPoolNullable = destroyQueryPoolAddress as (unmanaged[Cdecl](VkDevice, VkQueryPool, *VkAllocationCallbacks) -> void)?
         if destroyQueryPoolNullable != nil {
-          let destroyQueryPool = destroyQueryPoolNullable!!
+          let destroyQueryPool = destroyQueryPoolNullable
           destroyQueryPool(device, queryPool, nil)
         }
       }
@@ -2552,7 +2552,7 @@ internal unsafe func RunVulkanProof() int32 {
 
     try {
       if solidQuad != nil {
-        solidQuad!!.Dispose()
+        solidQuad.Dispose()
       }
     } catch (error Exception) {
       Console.Error.WriteLine("Vulkan cleanup solid quad failed: " + error.ToString())
@@ -2563,7 +2563,7 @@ internal unsafe func RunVulkanProof() int32 {
       if commandPoolCreated && destroyCommandPoolAddress != nint(0) {
         let destroyCommandPoolNullable = destroyCommandPoolAddress as (unmanaged[Cdecl](VkDevice, VkCommandPool, *VkAllocationCallbacks) -> void)?
         if destroyCommandPoolNullable != nil {
-          let destroyCommandPool = destroyCommandPoolNullable!!
+          let destroyCommandPool = destroyCommandPoolNullable
           destroyCommandPool(device, commandPool, nil)
         }
       }
@@ -2579,7 +2579,7 @@ internal unsafe func RunVulkanProof() int32 {
       if deviceCreated && destroyDeviceAddress != nint(0) {
         let destroyDeviceNullable = destroyDeviceAddress as (unmanaged[Cdecl](VkDevice, *VkAllocationCallbacks) -> void)?
         if destroyDeviceNullable != nil {
-          let destroyDevice = destroyDeviceNullable!!
+          let destroyDevice = destroyDeviceNullable
           destroyDevice(device, nil)
         }
       }
@@ -2667,7 +2667,7 @@ internal unsafe func RunVulkanProof() int32 {
       if validationMessengerCreated && destroyValidationMessengerAddress != nint(0) {
         let destroyValidationMessengerNullable = destroyValidationMessengerAddress as (unmanaged[Cdecl](VkInstance, VkDebugUtilsMessengerEXT, *VkAllocationCallbacks) -> void)?
         if destroyValidationMessengerNullable != nil {
-          let destroyValidationMessenger = destroyValidationMessengerNullable!!
+          let destroyValidationMessenger = destroyValidationMessengerNullable
           destroyValidationMessenger(instance, validationMessenger, nil)
           if let validation = validation {
             validation.KeepAlive()
@@ -2685,7 +2685,7 @@ internal unsafe func RunVulkanProof() int32 {
       if instance != nint(0) && destroyInstanceAddress != nint(0) {
         let destroyInstanceNullable = destroyInstanceAddress as (unmanaged[Cdecl](VkInstance, *VkAllocationCallbacks) -> void)?
         if destroyInstanceNullable != nil {
-          let destroyInstance = destroyInstanceNullable!!
+          let destroyInstance = destroyInstanceNullable
           destroyInstance(instance, nil)
         }
       }

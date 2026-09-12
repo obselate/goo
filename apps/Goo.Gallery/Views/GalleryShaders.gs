@@ -115,9 +115,6 @@ class ShaderLabCell : Cell {
     AuroraCanvas = ElementHandle{}
     SilkCanvas = ElementHandle{}
     CrtCanvas = ElementHandle{}
-    rippleY = [3]float64
-    rippleStart = [3]float64
-    rippleAmplitude = [3]float64
     baseTime = 0.0
     chromeYaw = 0.7
     chromePitch = 0.06

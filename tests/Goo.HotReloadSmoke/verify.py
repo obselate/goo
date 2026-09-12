@@ -23,7 +23,7 @@ def main():
     app = output / 'app'
     app.mkdir()
     shutil.copyfile(Path(__file__).with_name('Program.gs'), app / 'Program.gs')
-    (app / 'Smoke.gsproj').write_text(f'''<Project Sdk="Gsharp.NET.Sdk/0.4.1">
+    (app / 'Smoke.gsproj').write_text(f'''<Project Sdk="Gsharp.NET.Sdk/0.4.591">
   <PropertyGroup>
     <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
     <GsharpHotReloadRuntimeAssemblyFullPath>{runtime}</GsharpHotReloadRuntimeAssemblyFullPath>

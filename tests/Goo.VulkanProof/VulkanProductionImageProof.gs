@@ -305,13 +305,13 @@ private unsafe func VulkanProductionImageFirstPass(
       let frame = SceneFrame(4)
       let clearColor = VkClearColorValue{}
       BuildVulkanImageScene(frame, 0u)
-      let warmNearest = VulkanProductionImageWarmRequest(capture!!, frame, clearColor)
+      let warmNearest = VulkanProductionImageWarmRequest(capture, frame, clearColor)
       VulkanProductionImageVerify(warmNearest, false)
       frame.ResetForReuse()
-      let empty = VulkanProductionImageRequest(capture!!, frame, clearColor)
+      let empty = VulkanProductionImageRequest(capture, frame, clearColor)
       VulkanProductionImageVerifyEmpty(empty)
       BuildVulkanImageScene(frame, 0u)
-      let nearest = VulkanProductionImageRequest(capture!!, frame, clearColor)
+      let nearest = VulkanProductionImageRequest(capture, frame, clearColor)
       let nearestDigest = VulkanProductionImageVerify(nearest, false)
       let plateauStats = resources.Stats
       let plateauAllocator = allocator.Counters
@@ -322,7 +322,7 @@ private unsafe func VulkanProductionImageFirstPass(
       }
       VulkanProductionImageRegister(resources, logical, VulkanImageSamplerMode.Linear)
       BuildVulkanImageScene(frame, 1u)
-      let linear = VulkanProductionImageRequest(capture!!, frame, clearColor)
+      let linear = VulkanProductionImageRequest(capture, frame, clearColor)
       let linearDigest = VulkanProductionImageVerify(linear, true)
       if linearDigest == nearestDigest {
         throw InvalidOperationException("Vulkan production nearest and linear image readbacks are identical")
@@ -339,11 +339,11 @@ private unsafe func VulkanProductionImageFirstPass(
         }
 
       let completedBeforeRetire = VulkanProductionReadbackFixture.CompletedSubmissionSerial(window)
-      let retireSubmit = capture!!.Request(frame, clearColor)
-      if retireSubmit != VkConstants.VK_SUCCESS || capture!!.LastRequestAllocatedBytes != 0uL {
+      let retireSubmit = capture.Request(frame, clearColor)
+      if retireSubmit != VkConstants.VK_SUCCESS || capture.LastRequestAllocatedBytes != 0uL {
         throw InvalidOperationException("Vulkan production retirement request path failed or allocated managed bytes")
       }
-      let retireSerial = capture!!.SubmissionSerial
+      let retireSerial = capture.SubmissionSerial
       if !resources.Retire(logical.Id, generation, retireSerial) {
         throw InvalidOperationException("Vulkan production image retirement was not accepted")
       }
@@ -361,12 +361,12 @@ private unsafe func VulkanProductionImageFirstPass(
         || retainedAllocatorAfterCollect.residentBytes != retainedAllocator.residentBytes{
           throw InvalidOperationException("Vulkan production retired image released before its render fence")
         }
-      let retiredFrame = AwaitVulkanProductionReadback(capture!!)
+      let retiredFrame = AwaitVulkanProductionReadback(capture)
       if VulkanProductionImageVerify(retiredFrame, true) != linearDigest {
         throw InvalidOperationException("Vulkan production retirement frame digest changed")
       }
       frame.ResetForReuse()
-      let emptyAfterRetirement = VulkanProductionImageRequest(capture!!, frame, clearColor)
+      let emptyAfterRetirement = VulkanProductionImageRequest(capture, frame, clearColor)
       VulkanProductionImageVerifyEmpty(emptyAfterRetirement)
       let releasedStats = resources.Stats
       let releasedAllocator = allocator.Counters
@@ -439,24 +439,24 @@ private func VulkanProductionImageRehydrate(
       let frame = SceneFrame(4)
       let clearColor = VkClearColorValue{}
       BuildVulkanImageScene(frame, 1u)
-      let warmLinear = VulkanProductionImageWarmRequest(capture!!, frame, clearColor)
+      let warmLinear = VulkanProductionImageWarmRequest(capture, frame, clearColor)
       if VulkanProductionImageVerify(warmLinear, true) != proof.LinearDigest {
         throw InvalidOperationException("Vulkan warm rehydrated image readback digest changed")
       }
       let completedBeforeRetire = VulkanProductionReadbackFixture.CompletedSubmissionSerial(window)
       let retainedStats = resources.Stats
-      let submit = capture!!.Request(frame, clearColor)
-      if submit != VkConstants.VK_SUCCESS || capture!!.LastRequestAllocatedBytes != 0uL {
+      let submit = capture.Request(frame, clearColor)
+      if submit != VkConstants.VK_SUCCESS || capture.LastRequestAllocatedBytes != 0uL {
         throw InvalidOperationException("Vulkan rehydrated image request path failed or allocated managed bytes")
       }
-      let serial = capture!!.SubmissionSerial
+      let serial = capture.SubmissionSerial
       if !resources.Retire(proof.Logical.Id, generation, serial) {
         throw InvalidOperationException("Vulkan rehydrated image retirement was not accepted")
       }
       if resources.Collect(completedBeforeRetire) != 0 {
         throw InvalidOperationException("Vulkan rehydrated image retired before its render fence")
       }
-      let result = AwaitVulkanProductionReadback(capture!!)
+      let result = AwaitVulkanProductionReadback(capture)
       if VulkanProductionImageVerify(result, true) != proof.LinearDigest {
         throw InvalidOperationException("Vulkan rehydrated image readback digest changed")
       }
@@ -479,26 +479,26 @@ internal func RunProductionImageReadback() {
   var replacement ImageSourceLease? = nil
   try {
     stale = provider.Acquire()
-    if !stale!!.BindContentVersion(1uL, provider)
-      || stale!!.IsComplete || stale!!.IsFailed || stale!!.IsDisposed{
+    if !stale.BindContentVersion(1uL, provider)
+      || stale.IsComplete || stale.IsFailed || stale.IsDisposed{
         throw InvalidOperationException("Vulkan pending production image source state is invalid")
       }
     provider.Advance()
-    if stale!!.Complete(source) || stale!!.IsComplete {
+    if stale.Complete(source) || stale.IsComplete {
       throw InvalidOperationException("Vulkan stale production image source completion was accepted")
     }
     replacement = provider.Acquire()
-    if !replacement!!.BindContentVersion(2uL, provider)
-      || !replacement!!.Complete(source) {
+    if !replacement.BindContentVersion(2uL, provider)
+      || !replacement.Complete(source) {
         throw InvalidOperationException("Vulkan replacement production image source completion failed")
       }
     source.Dispose()
     provider.Dispose()
-    guard let decoded = replacement!!.Result(),
+    guard let decoded = replacement.Result(),
     let retainedPixels = decoded.Pixels() else {
       throw InvalidOperationException("Vulkan production image source lease did not retain pixels")
     }
-    if !replacement!!.IsComplete || replacement!!.IsFailed || replacement!!.IsDisposed
+    if !replacement.IsComplete || replacement.IsFailed || replacement.IsDisposed
       || retainedPixels.Length != pixels.Length{
         throw InvalidOperationException("Vulkan retained production image source state is invalid")
       }

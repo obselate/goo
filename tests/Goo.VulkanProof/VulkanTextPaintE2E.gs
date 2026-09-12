@@ -69,19 +69,19 @@ internal class VulkanTextPaintE2E {
       var font VulkanTextFont? = nil
       try {
         font = LoadVulkanTextFont(path, 16u)
-        if font!!.Metrics.Scale != ExpectedScale {
+        if font.Metrics.Scale != ExpectedScale {
           throw InvalidOperationException("HarfBuzz paint scale contract failed")
         }
-        if font!!.HasColorPaint() != expectedHasPaint {
+        if font.HasColorPaint() != expectedHasPaint {
           throw InvalidOperationException("HarfBuzz COLR paint table contract failed")
         }
-        if font!!.HasColorLayers() != expectedHasLayers {
+        if font.HasColorLayers() != expectedHasLayers {
           throw InvalidOperationException("HarfBuzz COLR layer table contract failed")
         }
-        if font!!.GlyphHasColorPaint(glyphId) != expectedGlyphPaint {
+        if font.GlyphHasColorPaint(glyphId) != expectedGlyphPaint {
           throw InvalidOperationException("HarfBuzz COLR glyph paint contract failed")
         }
-        let encoded = font!!.EncodePaintGlyph(glyphId, 0u)
+        let encoded = font.EncodePaintGlyph(glyphId, 0u)
         if encoded.Scale != ExpectedScale || encoded.Palette != 0u {
           throw InvalidOperationException("HarfBuzz paint encoding scale contract failed")
         }
@@ -99,9 +99,9 @@ internal class VulkanTextPaintE2E {
           throw InvalidOperationException("HarfBuzz paint encoding digest contract failed")
         }
         Console.WriteLine("TEXT_PAINT font=" + fileName
-          +" hasPaint=" + font!!.HasColorPaint().ToString()
-          +" hasLayers=" + font!!.HasColorLayers().ToString()
-          +" glyphPaint=" + font!!.GlyphHasColorPaint(glyphId).ToString()
+          +" hasPaint=" + font.HasColorPaint().ToString()
+          +" hasLayers=" + font.HasColorLayers().ToString()
+          +" glyphPaint=" + font.GlyphHasColorPaint(glyphId).ToString()
           +" bytes=" + encoded.Bytes.Length.ToString()
           +" digest=" + digest.ToString()
           +" xBearing=" + encoded.Extents.XBearing.ToString()

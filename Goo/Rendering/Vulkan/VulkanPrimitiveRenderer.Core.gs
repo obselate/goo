@@ -483,9 +483,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
               RequireRecordIndex(reference.Index, frame.LavaCount, "lava index")
               EmitLava(nint(0), activeExtent, frame.Lavas[reference.Index], frame)
             }
-            case SceneDrawKind.CustomMesh {
-              throw NotSupportedException("Vulkan primitive renderer does not support custom meshes")
-            }
             default {
               throw NotSupportedException("Vulkan primitive renderer received an unknown draw kind")
             }
@@ -786,9 +783,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
             case SceneDrawKind.Lava {
               RequireRecordIndex(reference.Index, frame.LavaCount, "lava index")
               EmitLava(commandBuffer, activeExtent, frame.Lavas[reference.Index], frame)
-            }
-            case SceneDrawKind.CustomMesh {
-              throw NotSupportedException("Vulkan primitive renderer does not support custom meshes")
             }
             default {
               throw NotSupportedException("Vulkan primitive renderer received an unknown draw kind")

@@ -627,15 +627,7 @@ public class GlassTerminalWindow {
       }
       window.Pump(1.0 / 60.0)
       window.Pump(1.0 / 60.0)
-      window.RequestClose()
-      var attempts int32 = 0
-      while window.IsOpen && attempts < 100 {
-        window.Pump(1.0 / 60.0)
-        attempts = attempts + 1
-      }
-      if window.IsOpen {
-        throw InvalidOperationException("Glass test window did not close cleanly")
-      }
+      CloseCleanly(window)
       Console.WriteLine("glass-pipeline-verified: square=ok rounded=ok opacity=ok tint=ok chrome=ok")
     }
   }

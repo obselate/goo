@@ -33,7 +33,6 @@ internal data struct VulkanResourceEntry {
   var UploadedVersion uint64
   var LastUseFence uint64
   var RetireFence uint64
-  var LastTouch uint64
   var Cacheable bool
 }
 
@@ -60,13 +59,6 @@ internal data struct VulkanLogicalResource {
   var Source VulkanResourceSource
   var Bytes VkDeviceSize
   var Cacheable bool
-}
-
-internal data struct VulkanResourceEviction {
-  var Found bool
-  var Id ResourceId
-  var Index int32
-  var RetireFence uint64
 }
 
 internal data struct VulkanResourceRegistryStats {
@@ -96,7 +88,6 @@ internal unsafe class VulkanResourceRegistry {
   private var retiredBytes VkDeviceSize
   private var logicalSourceBytes VkDeviceSize
   private var gpuGeneration uint64
-  private var nextTouch uint64
   private var disposed bool
 
   internal prop GpuGeneration uint64{ get -> gpuGeneration }
@@ -132,7 +123,6 @@ internal unsafe class VulkanResourceRegistry {
       entries = [capacity]VulkanResourceEntry
       byteBudget = maximumResidentBytes
       logicalSourceBudget = maximumLogicalSourceBytes
-      nextTouch = 1uL
     }
 
   internal func SetGpuGeneration(nextGeneration uint64) int32 {
@@ -195,7 +185,6 @@ internal unsafe class VulkanResourceRegistry {
           UploadedVersion: if existing.Id.Version == id.Version { existing.UploadedVersion } else { 0uL },
           LastUseFence: existing.LastUseFence,
           RetireFence: existing.RetireFence,
-          LastTouch: TouchValue(),
           Cacheable: cacheable,
         }
         entries[existingIndex] = updated
@@ -226,7 +215,6 @@ internal unsafe class VulkanResourceRegistry {
         UploadedVersion: 0uL,
         LastUseFence: 0uL,
         RetireFence: 0uL,
-        LastTouch: TouchValue(),
         Cacheable: cacheable,
       }
       entryCount++
@@ -259,8 +247,6 @@ internal unsafe class VulkanResourceRegistry {
           || entry.DescriptorSlot != descriptorSlot{
             throw InvalidOperationException("Vulkan resource GPU publication conflicts with resident binding")
           }
-        entry.LastTouch = TouchValue()
-        entries[index] = entry
         return
       }
       if entry.Bytes > byteBudget || residentBytes > byteBudget - entry.Bytes {
@@ -271,7 +257,6 @@ internal unsafe class VulkanResourceRegistry {
       entry.GpuHandle = gpuHandle
       entry.DescriptorSlot = descriptorSlot
       entry.UploadedVersion = 0uL
-      entry.LastTouch = TouchValue()
       entries[index] = entry
       logicalCount--
       residentCount++
@@ -292,7 +277,6 @@ internal unsafe class VulkanResourceRegistry {
         throw InvalidOperationException("Vulkan resource is not resident in the requested generation")
       }
     entry.UploadedVersion = id.Version
-    entry.LastTouch = TouchValue()
     entries[index] = entry
   }
 
@@ -369,7 +353,6 @@ internal unsafe class VulkanResourceRegistry {
     if fence > entry.LastUseFence {
       entry.LastUseFence = fence
     }
-    entry.LastTouch = TouchValue()
     entries[index] = entry
   }
 
@@ -401,35 +384,6 @@ internal unsafe class VulkanResourceRegistry {
     return true
   }
 
-  internal func EvictLeastRecentlyUsed(completedFence uint64) VulkanResourceEviction {
-    EnsureOpen()
-    var candidate int32 = -1
-    var candidateTouch uint64 = uint64.MaxValue
-    var index int32 = 0
-    while index < entries.Length {
-      let entry = entries[index]
-      if entry.State == VulkanResourceState.Resident
-        && entry.Cacheable
-        && entry.LastUseFence <= completedFence
-        && entry.LastTouch < candidateTouch{
-          candidate = index
-          candidateTouch = entry.LastTouch
-        }
-      index++
-    }
-    if candidate < 0 {
-      return VulkanResourceEviction{ Found: false, Index: -1 }
-    }
-    let entry = entries[candidate]
-    Retire(entry.Id, completedFence)
-    return VulkanResourceEviction{
-      Found: true,
-      Id: entry.Id,
-      Index: candidate,
-      RetireFence: if completedFence > entry.LastUseFence { completedFence } else { entry.LastUseFence },
-    }
-  }
-
   internal func Collect(completedFence uint64) int32 {
     EnsureOpen()
     var collected int32 = 0
@@ -451,7 +405,6 @@ internal unsafe class VulkanResourceRegistry {
             UploadedVersion: 0uL,
             LastUseFence: 0uL,
             RetireFence: 0uL,
-            LastTouch: TouchValue(),
             Cacheable: entry.Cacheable,
           }
           logicalCount++
@@ -525,7 +478,6 @@ internal unsafe class VulkanResourceRegistry {
           UploadedVersion: 0uL,
           LastUseFence: 0uL,
           RetireFence: 0uL,
-          LastTouch: TouchValue(),
           Cacheable: entry.Cacheable,
         }
         invalidated++
@@ -545,7 +497,6 @@ internal unsafe class VulkanResourceRegistry {
           UploadedVersion: 0uL,
           LastUseFence: 0uL,
           RetireFence: 0uL,
-          LastTouch: TouchValue(),
           Cacheable: entry.Cacheable,
         }
         invalidated++
@@ -607,16 +558,6 @@ internal unsafe class VulkanResourceRegistry {
     let next = [capacity]VulkanResourceEntry
     Array.Copy(entries, next, entries.Length)
     entries = next
-  }
-
-  private func TouchValue() uint64 {
-    let value = nextTouch
-    if nextTouch == uint64.MaxValue {
-      nextTouch = 1uL
-    } else {
-      nextTouch++
-    }
-    return value
   }
 
   private func ValidateId(id ResourceId) {

@@ -48,15 +48,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       return binding
     }
 
-  private func EnsureDescriptorsBound(entry VulkanImageResourceEntry) {
-    let nearest = DescriptorFor(entry, entry.SamplerId, VulkanImageSamplerMode.Nearest)
-    let linear = DescriptorFor(entry, entry.SamplerId, VulkanImageSamplerMode.Linear)
-    if nearest.State != VulkanImageDescriptorState.Bound
-      || linear.State != VulkanImageDescriptorState.Bound{
-        throw InvalidOperationException("Vulkan image descriptor is stale")
-      }
-  }
-
   private func RetireDescriptors(
     entry VulkanImageResourceEntry,
     fence uint64) VulkanImageResourceEntry{

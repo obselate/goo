@@ -212,7 +212,7 @@ internal class AccessibilityManager {
         return
       }
       let disabled = inheritedDisabled || n.Disabled
-      let hasExplicitName = declaration != nil && declaration!!.Name != ""
+      let hasExplicitName = declaration != nil && declaration.Name != ""
       let childValues = rentChildren()
       try {
         let suppressChildText = role == AccessibilityRole.Button && !hasExplicitName
@@ -469,11 +469,11 @@ internal class AccessibilityManager {
   private func rebuildOwner(n Node) {
     var current Node? = n
     while current != nil {
-      if let fiber = current!!.Fiber {
+      if let fiber = current.Fiber {
         fiber.Rebuild()
         return
       }
-      current = current!!.Parent
+      current = current.Parent
     }
   }
 }

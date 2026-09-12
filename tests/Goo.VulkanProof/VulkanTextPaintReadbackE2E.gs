@@ -116,7 +116,7 @@ internal unsafe sealed class VulkanTextPaintReadbackFixture : IDisposable {
     }
     frame = nil
     if firstError != nil {
-      throw firstError!!
+      throw firstError
     }
     disposed = true
   }

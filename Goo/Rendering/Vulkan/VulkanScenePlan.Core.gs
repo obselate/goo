@@ -45,8 +45,6 @@ internal partial class SceneFrame {
   private var underlineCount int32
   private var lavas []LavaRecord
   private var lavaCount int32
-  private var customMeshes []CustomMeshRecord
-  private var customMeshCount int32
   private var layers []LayerRecord
   private var layerCount int32
   private var shaderEffects []ShaderEffectRecord
@@ -90,7 +88,6 @@ internal partial class SceneFrame {
     shadows = [capacity]ShadowRecord
     underlines = [capacity]UnderlineRecord
     lavas = [capacity]LavaRecord
-    customMeshes = [capacity]CustomMeshRecord
     layers = [capacity]LayerRecord
     shaderEffects = [capacity]ShaderEffectRecord
     InitializeShaderEffectData()
@@ -136,8 +133,6 @@ internal partial class SceneFrame {
   internal prop UnderlineCount int32{ get -> underlineCount }
   internal prop Lavas []LavaRecord{ get -> lavas }
   internal prop LavaCount int32{ get -> lavaCount }
-  internal prop CustomMeshes []CustomMeshRecord{ get -> customMeshes }
-  internal prop CustomMeshCount int32{ get -> customMeshCount }
   internal prop Layers []LayerRecord{ get -> layers }
   internal prop LayerCount int32{ get -> layerCount }
   internal prop ShaderEffects []ShaderEffectRecord{ get -> shaderEffects }
@@ -196,7 +191,6 @@ internal partial class SceneFrame {
     shadowCount = 0
     underlineCount = 0
     lavaCount = 0
-    customMeshCount = 0
     layerCount = 0
     shaderEffectCount = 0
     activeChunk = -1
@@ -265,7 +259,7 @@ internal partial class SceneFrame {
     if version == 0uL {
       throw ArgumentOutOfRangeException("version")
     }
-    GrowChunks(NextCount(chunkCount))
+    Grow[SceneChunk](&chunks, chunkCount, NextCount(chunkCount))
     let index = chunkCount
     chunks[index] = SceneChunk{
       OwnerId: ownerId,
@@ -333,11 +327,7 @@ internal partial class SceneFrame {
   internal func AddSolidBox(value SolidBoxRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    GrowSolidBoxes(NextCount(solidBoxCount))
-    let index = solidBoxCount
-    solidBoxes[index] = value
-    solidBoxCount = NextCount(solidBoxCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&solidBoxes, &solidBoxCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.SolidBox, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
@@ -345,11 +335,7 @@ internal partial class SceneFrame {
   internal func AddRoundedBox(value RoundedBoxRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    GrowRoundedBoxes(NextCount(roundedBoxCount))
-    let index = roundedBoxCount
-    roundedBoxes[index] = value
-    roundedBoxCount = NextCount(roundedBoxCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&roundedBoxes, &roundedBoxCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.RoundedBox, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
@@ -408,22 +394,14 @@ internal partial class SceneFrame {
   internal func AddPerEdgeBorder(value PerEdgeBorderRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    GrowPerEdgeBorders(NextCount(perEdgeBorderCount))
-    let index = perEdgeBorderCount
-    perEdgeBorders[index] = value
-    perEdgeBorderCount = NextCount(perEdgeBorderCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&perEdgeBorders, &perEdgeBorderCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.PerEdgeBorder, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
 
   internal func AddGradientStop(value GradientStopRecord) int32 {
     RequireOpenChunk()
-    GrowGradientStops(NextCount(gradientStopCount))
-    let index = gradientStopCount
-    gradientStops[index] = value
-    gradientStopCount = NextCount(gradientStopCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&gradientStops, &gradientStopCount, value)
     return index
   }
 
@@ -431,11 +409,7 @@ internal partial class SceneFrame {
     RequireOpenChunk()
     ValidateGradientRange(value.StopStart, value.StopCount)
     ValidateTransformIndex(value.TransformIndex)
-    GrowLinearGradients(NextCount(linearGradientCount))
-    let index = linearGradientCount
-    linearGradients[index] = value
-    linearGradientCount = NextCount(linearGradientCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&linearGradients, &linearGradientCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.LinearGradient, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
@@ -444,11 +418,7 @@ internal partial class SceneFrame {
     RequireOpenChunk()
     ValidateGradientRange(value.StopStart, value.StopCount)
     ValidateTransformIndex(value.TransformIndex)
-    GrowRadialGradients(NextCount(radialGradientCount))
-    let index = radialGradientCount
-    radialGradients[index] = value
-    radialGradientCount = NextCount(radialGradientCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&radialGradients, &radialGradientCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.RadialGradient, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
@@ -456,11 +426,7 @@ internal partial class SceneFrame {
   internal func AddCachedImage(value CachedImageRefRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    GrowCachedImages(NextCount(cachedImageCount))
-    let index = cachedImageCount
-    cachedImages[index] = value
-    cachedImageCount = NextCount(cachedImageCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&cachedImages, &cachedImageCount, value)
     AppendResourceIfValid(value.ImageId)
     AppendResourceIfValid(value.SamplerId)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedImage, Index: index, Flags: 0u, ClipChainId: 0 })
@@ -524,11 +490,7 @@ internal partial class SceneFrame {
     if expectedFirst != segment.GlyphCount {
       throw ArgumentException("cached text segment run count is invalid")
     }
-    GrowCachedTextSegments(NextCount(cachedTextSegmentCount))
-    let index = cachedTextSegmentCount
-    cachedTextSegments[index] = value
-    cachedTextSegmentCount = NextCount(cachedTextSegmentCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&cachedTextSegments, &cachedTextSegmentCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedTextSegment, Index: index,
       Flags: 0u, ClipChainId: value.ClipChainId })
     return index
@@ -543,11 +505,7 @@ internal partial class SceneFrame {
     if value.ScaleX == 0.0F || value.ScaleY == 0.0F {
       throw ArgumentOutOfRangeException("path scale")
     }
-    GrowAnalyticPathBands(NextCount(analyticPathBandCount))
-    let index = analyticPathBandCount
-    analyticPathBands[index] = value
-    analyticPathBandCount = NextCount(analyticPathBandCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&analyticPathBands, &analyticPathBandCount, value)
     AppendResourceIfValid(value.PathId)
     AppendResourceIfValid(value.AtlasId)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.AnalyticPathBand, Index: index, Flags: 0u, ClipChainId: 0 })
@@ -557,11 +515,7 @@ internal partial class SceneFrame {
   internal func AddTransform(value TransformRecord) int32 {
     RequireOpenChunk()
     ValidateTransformParentIndex(value.ParentIndex)
-    GrowTransforms(NextCount(transformCount))
-    let index = transformCount
-    transforms[index] = value
-    transformCount = NextCount(transformCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&transforms, &transformCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Transform, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
@@ -576,11 +530,7 @@ internal partial class SceneFrame {
     if value.AtlasWordCount == 0u || !value.PathId.IsValid || !value.AtlasId.IsValid {
       throw ArgumentOutOfRangeException("clip mask resources")
     }
-    GrowClipMasks(NextCount(clipMaskCount))
-    let index = clipMaskCount
-    clipMasks[index] = value
-    clipMaskCount = NextCount(clipMaskCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&clipMasks, &clipMaskCount, value)
     AppendResourceIfValid(value.PathId)
     AppendResourceIfValid(value.AtlasId)
     return index
@@ -593,11 +543,7 @@ internal partial class SceneFrame {
       || value.MaskIndex < 0 || value.MaskIndex >= clipMaskCount{
         throw ArgumentOutOfRangeException("clip chain")
       }
-    GrowClipChains(NextCount(clipChainCount))
-    let index = clipChainCount
-    clipChains[index] = value
-    clipChainCount = NextCount(clipChainCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&clipChains, &clipChainCount, value)
     return index
   }
 
@@ -608,7 +554,7 @@ internal partial class SceneFrame {
     if parentDepth >= 8 {
       throw ArgumentOutOfRangeException("clip chain depth")
     }
-    GrowClipChains(NextCount(clipChainCount))
+    Grow[ClipChainRecord](&clipChains, clipChainCount, NextCount(clipChainCount))
     let index = clipChainCount
     clipChains[index] = ClipChainRecord{
       StableId: stableId,
@@ -634,11 +580,7 @@ internal partial class SceneFrame {
     if value.MaskIndex < -1 || value.MaskIndex >= clipMaskCount {
       throw ArgumentOutOfRangeException("shadow mask index")
     }
-    GrowShadows(NextCount(shadowCount))
-    let index = shadowCount
-    shadows[index] = value
-    shadowCount = NextCount(shadowCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&shadows, &shadowCount, value)
     AppendResourceIfValid(value.MaskId)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Shadow, Index: index, Flags: 0u,
       ClipChainId: activeClipChainId })
@@ -648,11 +590,7 @@ internal partial class SceneFrame {
   internal func AddUnderline(value UnderlineRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    GrowUnderlines(NextCount(underlineCount))
-    let index = underlineCount
-    underlines[index] = value
-    underlineCount = NextCount(underlineCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&underlines, &underlineCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Underline, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
@@ -660,27 +598,9 @@ internal partial class SceneFrame {
   internal func AddLava(value LavaRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
-    GrowLavas(NextCount(lavaCount))
-    let index = lavaCount
-    lavas[index] = value
-    lavaCount = NextCount(lavaCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&lavas, &lavaCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Lava, Index: index, Flags: 0u,
       ClipChainId: 0 })
-    return index
-  }
-
-  internal func AddCustomMesh(value CustomMeshRecord) int32 {
-    RequireOpenChunk()
-    ValidateTransformIndex(value.TransformIndex)
-    GrowCustomMeshes(NextCount(customMeshCount))
-    let index = customMeshCount
-    customMeshes[index] = value
-    customMeshCount = NextCount(customMeshCount)
-    recordOperations = recordOperations + 1uL
-    AppendResourceIfValid(value.MeshId)
-    AppendResourceIfValid(value.PipelineId)
-    AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CustomMesh, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
   }
 
@@ -695,7 +615,7 @@ internal partial class SceneFrame {
       throw ArgumentException("shader effect snapshot is invalid")
     }
     try {
-      GrowShaderEffects(NextCount(shaderEffectCount))
+      Grow[ShaderEffectRecord](&shaderEffects, shaderEffectCount, NextCount(shaderEffectCount))
     } catch (error Exception) {
       ReleaseShaderEffectDataCaptures(value)
       throw error
@@ -724,202 +644,22 @@ internal partial class SceneFrame {
     return index
   }
 
-  internal func GrowChunks(required int32) {
-    if required <= chunks.Length { return }
-    let next = GrowthCapacity(chunks.Length, required)
-    let expanded = [next]SceneChunk
-    Array.Copy(chunks, expanded, chunkCount)
-    chunks = expanded
+  private func Grow[T any](ref values []T, count int32, required int32) {
+    if required <= values.Length { return }
+    let expanded = [GrowthCapacity(values.Length, required)]T
+    Array.Copy(values, expanded, count)
+    values = expanded
     growthOperations = growthOperations + 1uL
   }
 
-  internal func GrowDrawRefs(required int32) {
-    if required <= drawRefs.Length { return }
-    let next = GrowthCapacity(drawRefs.Length, required)
-    let expanded = [next]DrawRef
-    Array.Copy(drawRefs, expanded, drawRefCount)
-    drawRefs = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowResourceRefs(required int32) {
-    if required <= resourceRefs.Length { return }
-    let next = GrowthCapacity(resourceRefs.Length, required)
-    let expanded = [next]ResourceId
-    Array.Copy(resourceRefs, expanded, resourceRefCount)
-    resourceRefs = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowSolidBoxes(required int32) {
-    if required <= solidBoxes.Length { return }
-    let next = GrowthCapacity(solidBoxes.Length, required)
-    let expanded = [next]SolidBoxRecord
-    Array.Copy(solidBoxes, expanded, solidBoxCount)
-    solidBoxes = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowRoundedBoxes(required int32) {
-    if required <= roundedBoxes.Length { return }
-    let next = GrowthCapacity(roundedBoxes.Length, required)
-    let expanded = [next]RoundedBoxRecord
-    Array.Copy(roundedBoxes, expanded, roundedBoxCount)
-    roundedBoxes = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowPerEdgeBorders(required int32) {
-    if required <= perEdgeBorders.Length { return }
-    let next = GrowthCapacity(perEdgeBorders.Length, required)
-    let expanded = [next]PerEdgeBorderRecord
-    Array.Copy(perEdgeBorders, expanded, perEdgeBorderCount)
-    perEdgeBorders = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowGradientStops(required int32) {
-    if required <= gradientStops.Length { return }
-    let next = GrowthCapacity(gradientStops.Length, required)
-    let expanded = [next]GradientStopRecord
-    Array.Copy(gradientStops, expanded, gradientStopCount)
-    gradientStops = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowLinearGradients(required int32) {
-    if required <= linearGradients.Length { return }
-    let next = GrowthCapacity(linearGradients.Length, required)
-    let expanded = [next]LinearGradientRecord
-    Array.Copy(linearGradients, expanded, linearGradientCount)
-    linearGradients = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowRadialGradients(required int32) {
-    if required <= radialGradients.Length { return }
-    let next = GrowthCapacity(radialGradients.Length, required)
-    let expanded = [next]RadialGradientRecord
-    Array.Copy(radialGradients, expanded, radialGradientCount)
-    radialGradients = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowCachedImages(required int32) {
-    if required <= cachedImages.Length { return }
-    let next = GrowthCapacity(cachedImages.Length, required)
-    let expanded = [next]CachedImageRefRecord
-    Array.Copy(cachedImages, expanded, cachedImageCount)
-    cachedImages = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowCachedTextSegments(required int32) {
-    if required <= cachedTextSegments.Length { return }
-    let next = GrowthCapacity(cachedTextSegments.Length, required)
-    let expanded = [next]CachedTextSegmentRefRecord
-    Array.Copy(cachedTextSegments, expanded, cachedTextSegmentCount)
-    cachedTextSegments = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowAnalyticPathBands(required int32) {
-    if required <= analyticPathBands.Length { return }
-    let next = GrowthCapacity(analyticPathBands.Length, required)
-    let expanded = [next]AnalyticPathBandRecord
-    Array.Copy(analyticPathBands, expanded, analyticPathBandCount)
-    analyticPathBands = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowTransforms(required int32) {
-    if required <= transforms.Length { return }
-    let next = GrowthCapacity(transforms.Length, required)
-    let expanded = [next]TransformRecord
-    Array.Copy(transforms, expanded, transformCount)
-    transforms = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowRectClips(required int32) {
-    if required <= rectClips.Length { return }
-    let next = GrowthCapacity(rectClips.Length, required)
-    let expanded = [next]RectClipRecord
-    Array.Copy(rectClips, expanded, rectClipCount)
-    rectClips = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowClipMasks(required int32) {
-    if required <= clipMasks.Length { return }
-    let next = GrowthCapacity(clipMasks.Length, required)
-    let expanded = [next]ClipMaskRecord
-    Array.Copy(clipMasks, expanded, clipMaskCount)
-    clipMasks = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowClipChains(required int32) {
-    if required <= clipChains.Length { return }
-    let next = GrowthCapacity(clipChains.Length, required)
-    let expanded = [next]ClipChainRecord
-    Array.Copy(clipChains, expanded, clipChainCount)
-    clipChains = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowShadows(required int32) {
-    if required <= shadows.Length { return }
-    let next = GrowthCapacity(shadows.Length, required)
-    let expanded = [next]ShadowRecord
-    Array.Copy(shadows, expanded, shadowCount)
-    shadows = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowUnderlines(required int32) {
-    if required <= underlines.Length { return }
-    let next = GrowthCapacity(underlines.Length, required)
-    let expanded = [next]UnderlineRecord
-    Array.Copy(underlines, expanded, underlineCount)
-    underlines = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowLavas(required int32) {
-    if required <= lavas.Length { return }
-    let next = GrowthCapacity(lavas.Length, required)
-    let expanded = [next]LavaRecord
-    Array.Copy(lavas, expanded, lavaCount)
-    lavas = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowCustomMeshes(required int32) {
-    if required <= customMeshes.Length { return }
-    let next = GrowthCapacity(customMeshes.Length, required)
-    let expanded = [next]CustomMeshRecord
-    Array.Copy(customMeshes, expanded, customMeshCount)
-    customMeshes = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowLayers(required int32) {
-    if required <= layers.Length { return }
-    let next = GrowthCapacity(layers.Length, required)
-    let expanded = [next]LayerRecord
-    Array.Copy(layers, expanded, layerCount)
-    layers = expanded
-    growthOperations = growthOperations + 1uL
-  }
-
-  internal func GrowShaderEffects(required int32) {
-    if required <= shaderEffects.Length { return }
-    let next = GrowthCapacity(shaderEffects.Length, required)
-    let expanded = [next]ShaderEffectRecord
-    Array.Copy(shaderEffects, expanded, shaderEffectCount)
-    shaderEffects = expanded
-    growthOperations = growthOperations + 1uL
+  private func AppendRecord[T any](ref values []T, ref count int32, value T) int32 {
+    let next = NextCount(count)
+    Grow[T](&values, count, next)
+    let index = count
+    values[index] = value
+    count = next
+    recordOperations = recordOperations + 1uL
+    return index
   }
 
   private func ValidateTextBounds(value ConservativeBounds) {

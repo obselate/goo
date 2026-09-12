@@ -90,7 +90,7 @@ internal unsafe sealed class VulkanReadbackPool : IDisposable {
     let created = creator()
     if created == nil || created.TargetResourceByteSize != resourceSlotBytes {
       if created != nil {
-        try { created!!.Dispose() } catch (cleanup Exception) { }
+        try { created.Dispose() } catch (cleanup Exception) { }
       }
       throw InvalidOperationException("Vulkan readback pool factory returned an invalid slot")
     }

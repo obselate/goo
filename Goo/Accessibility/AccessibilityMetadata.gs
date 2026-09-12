@@ -53,8 +53,8 @@ internal class AccessibilityMetadata {
 
 private func sameAccessibility(left Accessibility?, right Accessibility?) bool {
   if left == nil || right == nil { return left == right }
-  let a = left!!
-  let b = right!!
+  let a = left
+  let b = right
   return a.Role == b.Role && a.CustomRole == b.CustomRole && a.Name == b.Name
     && a.Description == b.Description && a.Value == b.Value && sameValue(a.Range, b.Range)
     && a.Checked == b.Checked && a.Selected == b.Selected && a.Expanded == b.Expanded
@@ -68,15 +68,15 @@ private func sameAccessibility(left Accessibility?, right Accessibility?) bool {
 
 private func sameValue(left AccessibilityValue?, right AccessibilityValue?) bool {
   if left == nil || right == nil { return left == right }
-  let a = left!!
-  let b = right!!
+  let a = left
+  let b = right
   return a.Now == b.Now && a.Minimum == b.Minimum && a.Maximum == b.Maximum && a.Text == b.Text
 }
 
 private func sameRelationships(left AccessibilityRelationships?, right AccessibilityRelationships?) bool {
   if left == nil || right == nil { return left == right }
-  let a = left!!
-  let b = right!!
+  let a = left
+  let b = right
   return sameArray(a.RawLabelledBy, b.RawLabelledBy)
     && sameArray(a.RawDescribedBy, b.RawDescribedBy)
     && sameArray(a.RawControls, b.RawControls) && sameArray(a.RawOwns, b.RawOwns)

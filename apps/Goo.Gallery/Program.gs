@@ -3,6 +3,7 @@ package GooGallery
 import System
 import System.Diagnostics
 import System.IO
+import System.Threading
 import Goo
 
 func Main() {
@@ -108,10 +109,10 @@ func PumpFrames(window Window, count int32) {
 
 func CloseCleanly(window Window) {
   window.RequestClose()
-  var attempts int32 = 0
-  while window.IsOpen && attempts < 600 {
+  let timeout = Stopwatch.StartNew()
+  while window.IsOpen && timeout.ElapsedMilliseconds < 5000 {
     window.Pump(1.0 / 60.0)
-    attempts = attempts + 1
+    if window.IsOpen { Thread.Sleep(1) }
   }
   if window.IsOpen {
     throw InvalidOperationException("Goo Gallery window did not close")
@@ -180,6 +181,11 @@ func RunSmoke() {
   if root.CurrentShowcase() != 1 {
     throw InvalidOperationException("Goo Gallery drag region blocked top-bar input")
   }
+  guard let workers = accessibility.FindExact("Go workers") else {
+    throw InvalidOperationException("Goo Gallery input smoke could not find the worker button")
+  }
+  GalleryPushClick(windowId, workers.Bounds)
+  PumpFrames(window, 4)
   root.OpenShowcase(5)
   PumpFrames(window, 8)
   guard let world = accessibility.FindContaining("3D World") else {
@@ -251,7 +257,7 @@ func RunSmoke() {
   CloseCleanly(glassWindow)
   GlassTerminalWindow.VerifyGlassPipeline()
 
-  Console.WriteLine("gallery-smoke: sizes=2 layout=fit input=topbar+rail showcases=9 pager=forward-back routes=4 shaderFrames=180 glassWindow=1 close=2")
+  Console.WriteLine("gallery-smoke: sizes=2 layout=fit input=topbar+workers+rail showcases=9 pager=forward-back routes=4 shaderFrames=180 glassWindow=1 close=2")
 }
 
 func RunBench() {
@@ -291,7 +297,7 @@ func RunBench() {
   Console.WriteLine("gallery-bench: passed=3")
 }
 
-func MeasureRun(window Window, samples[600]float64, spot string) int32 {
+func MeasureRun(window Window, samples []float64, spot string) int32 {
   PumpFrames(window, 120)
   let clock = Stopwatch()
   var index int32 = 0

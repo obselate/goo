@@ -735,11 +735,11 @@ internal sealed class PathStrokeCache {
           if state.On {
             if active == nil {
               active = scratch.AcquirePoints()
-              active!!.Add(start)
+              active.Add(start)
             } else {
-              AddPoint(active!!, start)
+              AddPoint(active, start)
             }
-            AddPoint(active!!, finish)
+            AddPoint(active, finish)
           } else {
             hadOffDistance = true
           }
@@ -753,7 +753,7 @@ internal sealed class PathStrokeCache {
             let wasOn = state.On
             state = AdvanceDash(state, intervals)
             if wasOn && !state.On && active != nil {
-              result.Add(scratch.AcquireSubpath(active!!, false))
+              result.Add(scratch.AcquireSubpath(active, false))
               active = nil
             }
           }
@@ -761,8 +761,8 @@ internal sealed class PathStrokeCache {
       }
       edgeIndex++
     }
-    if active != nil && active!!.Count > 1 {
-      result.Add(scratch.AcquireSubpath(active!!, false))
+    if active != nil && active.Count > 1 {
+      result.Add(scratch.AcquireSubpath(active, false))
     }
     if polyline.Closed && result.Count == 1 && !hadOffDistance {
       let only = result[0].Points

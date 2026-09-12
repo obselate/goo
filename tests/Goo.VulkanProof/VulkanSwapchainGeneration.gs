@@ -128,7 +128,7 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if storage == nil {
       throw InvalidOperationException("Vulkan swapchain images are unavailable")
     }
-    return storage!! [int32(index)]
+    return storage[int32(index)]
   }
 
   internal func ImageView(index uint32) VkImageView {
@@ -137,7 +137,7 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if storage == nil {
       throw InvalidOperationException("Vulkan swapchain image views are unavailable")
     }
-    return storage!! [int32(index)]
+    return storage[int32(index)]
   }
 
   internal func RenderSemaphore(index uint32) VkSemaphore {
@@ -146,7 +146,7 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if storage == nil {
       throw InvalidOperationException("Vulkan swapchain render semaphores are unavailable")
     }
-    return storage!! [int32(index)]
+    return storage[int32(index)]
   }
 
   internal func PreparePresent(index uint32, out completedPresentId uint64) VkFence {
@@ -159,27 +159,27 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if fences == nil || prepared == nil || pending == nil || presentIdsStorage == nil {
       throw InvalidOperationException("Vulkan swapchain present fences are unavailable")
     }
-    if prepared!! [int32(index)] || pending!! [int32(index)] {
-      if prepared!! [int32(index)] {
+    if prepared[int32(index)] || pending[int32(index)] {
+      if prepared[int32(index)] {
         throw InvalidOperationException("Vulkan swapchain present fence is still prepared")
       }
-      var pendingFence = fences!! [int32(index)]
+      var pendingFence = fences[int32(index)]
       let waitForFences = dispatch.vkWaitForFences
       let waitResult = waitForFences(device, 1u, &pendingFence, VkConstants.VK_TRUE, VkConstants.VK_WHOLE_SIZE)
       if waitResult != VkConstants.VK_SUCCESS {
         throw InvalidOperationException("vkWaitForFences failed for Vulkan swapchain present fence")
       }
-      completedPresentId = presentIdsStorage!! [int32(index)]
-      pending!! [int32(index)] = false
-      presentIdsStorage!! [int32(index)] = 0uL
+      completedPresentId = presentIdsStorage[int32(index)]
+      pending[int32(index)] = false
+      presentIdsStorage[int32(index)] = 0uL
     }
-    var fence = fences!! [int32(index)]
+    var fence = fences[int32(index)]
     let resetFences = dispatch.vkResetFences
     let resetResult = resetFences(device, 1u, &fence)
     if resetResult != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("vkResetFences failed for Vulkan swapchain present fence")
     }
-    prepared!! [int32(index)] = true
+    prepared[int32(index)] = true
     return fence
   }
 
@@ -191,30 +191,30 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if prepared == nil || pending == nil || presentIdsStorage == nil {
       throw InvalidOperationException("Vulkan swapchain present fences are unavailable")
     }
-    if !prepared!! [int32(index)] {
+    if !prepared[int32(index)] {
       throw InvalidOperationException("Vulkan swapchain present fence was not prepared")
     }
     if result == VkConstants.VK_SUCCESS || result == VkConstants.VK_SUBOPTIMAL_KHR {
       if presentId == 0uL {
         throw InvalidOperationException("Vulkan successful presentation must have a nonzero present id")
       }
-      pending!! [int32(index)] = true
-      presentIdsStorage!! [int32(index)] = presentId
+      pending[int32(index)] = true
+      presentIdsStorage[int32(index)] = presentId
     } else if result == VkConstants.VK_ERROR_OUT_OF_DATE_KHR
       || result == VkConstants.VK_ERROR_SURFACE_LOST_KHR{
         if presentId != 0uL {
           throw InvalidOperationException("Vulkan failed presentation must have a zero present id")
         }
-        pending!! [int32(index)] = true
-        presentIdsStorage!! [int32(index)] = 0uL
+        pending[int32(index)] = true
+        presentIdsStorage[int32(index)] = 0uL
       } else {
         if presentId != 0uL {
           throw InvalidOperationException("Vulkan failed presentation must have a zero present id")
         }
-        pending!! [int32(index)] = false
-        presentIdsStorage!! [int32(index)] = 0uL
+        pending[int32(index)] = false
+        presentIdsStorage[int32(index)] = 0uL
       }
-    prepared!! [int32(index)] = false
+    prepared[int32(index)] = false
     return result
   }
 
@@ -229,22 +229,22 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     }
     var index uint32 = 0u
     while index < imageCount {
-      if prepared!! [int32(index)] {
+      if prepared[int32(index)] {
         throw InvalidOperationException("Vulkan swapchain present fence is prepared but not submitted")
       }
-      if pending!! [int32(index)] {
+      if pending[int32(index)] {
         let waitForFences = dispatch.vkWaitForFences
-        var fence = fences!! [int32(index)]
+        var fence = fences[int32(index)]
         let result = waitForFences(device, 1u, &fence, VkConstants.VK_TRUE, VkConstants.VK_WHOLE_SIZE)
         if result != VkConstants.VK_SUCCESS {
           return result
         }
-        let completedPresentId = presentIdsStorage!! [int32(index)]
+        let completedPresentId = presentIdsStorage[int32(index)]
         if completedPresentId != 0uL {
           retirement.CompletePresent(completedPresentId)
         }
-        pending!! [int32(index)] = false
-        presentIdsStorage!! [int32(index)] = 0uL
+        pending[int32(index)] = false
+        presentIdsStorage[int32(index)] = 0uL
       }
       index++
     }
@@ -257,7 +257,7 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if storage == nil {
       throw InvalidOperationException("Vulkan swapchain image layouts are unavailable")
     }
-    return storage!! [int32(index)]
+    return storage[int32(index)]
   }
 
   internal func CommitLayout(index uint32, layout VkImageLayout) {
@@ -266,7 +266,7 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     if storage == nil {
       throw InvalidOperationException("Vulkan swapchain image layouts are unavailable")
     }
-    storage!! [int32(index)] = layout
+    storage[int32(index)] = layout
   }
 
   public func Dispose() {
@@ -277,8 +277,8 @@ internal unsafe class VulkanSwapchainGeneration : IDisposable {
     let pending = presentFencePending
     if prepared != nil && pending != nil {
       var index int32 = 0
-      while index < prepared!!.Length {
-        if prepared!! [index] || pending!! [index] {
+      while index < prepared.Length {
+        if prepared[index] || pending[index] {
           throw InvalidOperationException("Vulkan swapchain present fence is still in use")
         }
         index++

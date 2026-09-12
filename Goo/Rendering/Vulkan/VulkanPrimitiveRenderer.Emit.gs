@@ -152,11 +152,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     color uint32,
     opacity float32,
     transform PrimitiveTransform) {
-      var push = AnalyticSolidPushConstants{}
-      FillTransform(&push, bounds, transform, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, bounds, transform, extent)
       if radiusTopLeft > 0.0F || radiusTopRight > 0.0F
         || radiusBottomRight > 0.0F || radiusBottomLeft > 0.0F {
-          push.transform1_w = 1.0F
+          push.Geometry.transform1_w = 1.0F
         }
       push.radii_x = radiusTopLeft
       push.radii_y = radiusTopRight
@@ -196,8 +196,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       let transform = ResolveTransform(frame, value.TransformIndex)
-      var push = AnalyticSolidPushConstants{}
-      FillTransform(&push, value.Bounds, transform, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, transform, extent)
       push.radii_x = value.Flow
       push.radii_y = value.Form
       push.radii_z = value.Blend
@@ -258,8 +258,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if shadowBounds.IsEmpty {
         return
       }
-      var push = AnalyticSolidPushConstants{}
-      FillTransform(&push, shadowBounds, transform, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, shadowBounds, transform, extent)
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
       push.radii_z = value.RadiusBottomRight
@@ -326,8 +326,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F
       if value.Style != uint32(int32(BorderStyle.Solid)) || rounded {
         var push = AnalyticBorderPushConstants{}
-        FillTransform(&push, bounds, transform, extent)
-        if rounded { push.transform1_w = 1.0F }
+        FillTransform(&push.Geometry, bounds, transform, extent)
+        if rounded { push.Geometry.transform1_w = 1.0F }
         push.widths_x = topWidth
         push.widths_y = rightWidth
         push.widths_z = bottomWidth
@@ -411,11 +411,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.Bounds.IsEmpty {
         return
       }
-      var push = AnalyticLinear4PushConstants{}
-      FillTransform(&push, value.Bounds, transform, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, transform, extent)
       if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
         || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F {
-          push.transform1_w = 1.0F
+          push.Geometry.transform1_w = 1.0F
         }
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
@@ -427,7 +427,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_y = (value.StartY - value.Bounds.Y) / height
       push.params_z = (value.EndX - value.Bounds.X) / width
       push.params_w = (value.EndY - value.Bounds.Y) / height
-      FillLinearStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
+      FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
       BindAndDraw(commandBuffer, primitivePipelines.LinearPipeline, *void(&push))
       WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
@@ -453,11 +453,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.Bounds.IsEmpty {
         return
       }
-      var push = AnalyticRadial4PushConstants{}
-      FillTransform(&push, value.Bounds, transform, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, transform, extent)
       if value.RadiusTopLeft > 0.0F || value.RadiusTopRight > 0.0F
         || value.RadiusBottomRight > 0.0F || value.RadiusBottomLeft > 0.0F {
-          push.transform1_w = 1.0F
+          push.Geometry.transform1_w = 1.0F
         }
       push.radii_x = value.RadiusTopLeft
       push.radii_y = value.RadiusTopRight
@@ -469,7 +469,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_y = (value.CenterY - value.Bounds.Y) / height
       push.params_z = MathF.Max(value.RadiusX / width, 0.0001F)
       push.params_w = MathF.Max(value.RadiusY / height, 0.0001F)
-      FillRadialStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
+      FillGradientStops(&push, frame, value.StopStart, value.StopCount, value.Opacity)
       BindAndDraw(commandBuffer, primitivePipelines.RadialPipeline, *void(&push))
       WriteGradientStopRecords(frame, value.StopStart, value.StopCount, value.Opacity)
     }
@@ -518,8 +518,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         return
       }
       let transform = ResolveTransform(frame, value.TransformIndex)
-      var push = SampledImagePushConstants{}
-      FillTransform(&push, value.Bounds, transform, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, transform, extent)
       push.radii_x = value.Opacity
       push.params_x = value.SourceX
       push.params_y = value.SourceY
@@ -559,7 +559,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       ValidateOpacity(value.Opacity)
       ValidateFinite(value.OriginX, "layer origin x")
       ValidateFinite(value.OriginY, "layer origin y")
-      if !primitivePrepass && (target == nil || target!!.DescriptorSet == 0uL) {
+      if !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
         throw InvalidOperationException("Vulkan layer target descriptor is unavailable")
       }
       if value.Bounds.IsEmpty {
@@ -580,8 +580,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         EmitBlendLayer(commandBuffer, extent, value, target, backdropTarget)
         return
       }
-      var push = SampledImagePushConstants{}
-      FillTransform(&push, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
       push.radii_x = value.Opacity
       let targetWidth = float32(value.ExtentWidth)
       let targetHeight = float32(value.ExtentHeight)
@@ -629,16 +629,16 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.BlendMode != 0u {
         throw NotSupportedException("ShaderEffect cannot be combined with a non-normal BlendMode")
       }
-      if !primitivePrepass && (target == nil || target!!.DescriptorSet == 0uL) {
+      if !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
         throw InvalidOperationException("Vulkan shader effect source is unavailable")
       }
       if effect.SamplesBackdrop && !primitivePrepass
-        && (backdrop == nil || backdrop!!.DescriptorSet == 0uL) {
+        && (backdrop == nil || backdrop.DescriptorSet == 0uL) {
           throw InvalidOperationException("Vulkan shader effect backdrop is unavailable")
         }
       let effectPipeline = primitivePipelines.ResolveShaderEffectPipeline(program)
-      var primitive = SampledImagePushConstants{}
-      FillTransform(&primitive, value.Bounds,
+      var primitive = VulkanPrimitiveGpuRecord{}
+      FillTransform(&primitive.Geometry, value.Bounds,
         PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
       primitive.radii_x = value.Opacity
       let targetWidth = float32(value.ExtentWidth)
@@ -701,14 +701,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     target VulkanOffscreenLayerTarget?,
     backdrop VulkanOffscreenLayerTarget?) {
       if !primitivePrepass && (target == nil || backdrop == nil
-          || target!!.DescriptorSet == 0uL || backdrop!!.DescriptorSet == 0uL) {
+          || target.DescriptorSet == 0uL || backdrop.DescriptorSet == 0uL) {
             throw InvalidOperationException("Vulkan blend layer descriptor is unavailable")
           }
       if value.BlendMode > uint32(int32(BlendMode.Luminosity)) {
         throw NotSupportedException("Vulkan blend mode is unavailable")
       }
-      var push = SampledImagePushConstants{}
-      FillTransform(&push, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
       push.radii_x = value.Opacity
       let targetWidth = float32(value.ExtentWidth)
       let targetHeight = float32(value.ExtentHeight)
@@ -952,95 +952,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
 
   private func FillTransform(
-    push * AnalyticSolidPushConstants,
-    bounds ConservativeBounds,
-    transform PrimitiveTransform,
-    extent VkExtent2D) {
-      let localized = LocalizeTransform(transform)
-      push -> rect_x = bounds.X
-      push -> rect_y = bounds.Y
-      push -> rect_z = bounds.Width
-      push -> rect_w = bounds.Height
-      let width = float32(extent.width)
-      let height = float32(extent.height)
-      push -> transform0_x = 2.0F * localized.A / width
-      push -> transform0_y = 2.0F * localized.C / width
-      push -> transform0_z = 2.0F * localized.TX / width - 1.0F
-      push -> transform0_w = 0.0F
-      push -> transform1_x = 2.0F * localized.B / height
-      push -> transform1_y = 2.0F * localized.D / height
-      push -> transform1_z = 2.0F * localized.TY / height - 1.0F
-      push -> transform1_w = 0.0F
-    }
-
-  private func FillTransform(
-    push * AnalyticBorderPushConstants,
-    bounds ConservativeBounds,
-    transform PrimitiveTransform,
-    extent VkExtent2D) {
-      let localized = LocalizeTransform(transform)
-      push -> rect_x = bounds.X
-      push -> rect_y = bounds.Y
-      push -> rect_z = bounds.Width
-      push -> rect_w = bounds.Height
-      let width = float32(extent.width)
-      let height = float32(extent.height)
-      push -> transform0_x = 2.0F * localized.A / width
-      push -> transform0_y = 2.0F * localized.C / width
-      push -> transform0_z = 2.0F * localized.TX / width - 1.0F
-      push -> transform0_w = 0.0F
-      push -> transform1_x = 2.0F * localized.B / height
-      push -> transform1_y = 2.0F * localized.D / height
-      push -> transform1_z = 2.0F * localized.TY / height - 1.0F
-      push -> transform1_w = 0.0F
-    }
-
-  private func FillTransform(
-    push * AnalyticLinear4PushConstants,
-    bounds ConservativeBounds,
-    transform PrimitiveTransform,
-    extent VkExtent2D) {
-      let localized = LocalizeTransform(transform)
-      push -> rect_x = bounds.X
-      push -> rect_y = bounds.Y
-      push -> rect_z = bounds.Width
-      push -> rect_w = bounds.Height
-      let width = float32(extent.width)
-      let height = float32(extent.height)
-      push -> transform0_x = 2.0F * localized.A / width
-      push -> transform0_y = 2.0F * localized.C / width
-      push -> transform0_z = 2.0F * localized.TX / width - 1.0F
-      push -> transform0_w = 0.0F
-      push -> transform1_x = 2.0F * localized.B / height
-      push -> transform1_y = 2.0F * localized.D / height
-      push -> transform1_z = 2.0F * localized.TY / height - 1.0F
-      push -> transform1_w = 0.0F
-    }
-
-  private func FillTransform(
-    push * AnalyticRadial4PushConstants,
-    bounds ConservativeBounds,
-    transform PrimitiveTransform,
-    extent VkExtent2D) {
-      let localized = LocalizeTransform(transform)
-      push -> rect_x = bounds.X
-      push -> rect_y = bounds.Y
-      push -> rect_z = bounds.Width
-      push -> rect_w = bounds.Height
-      let width = float32(extent.width)
-      let height = float32(extent.height)
-      push -> transform0_x = 2.0F * localized.A / width
-      push -> transform0_y = 2.0F * localized.C / width
-      push -> transform0_z = 2.0F * localized.TX / width - 1.0F
-      push -> transform0_w = 0.0F
-      push -> transform1_x = 2.0F * localized.B / height
-      push -> transform1_y = 2.0F * localized.D / height
-      push -> transform1_z = 2.0F * localized.TY / height - 1.0F
-      push -> transform1_w = 0.0F
-    }
-
-  private func FillTransform(
-    push * SampledImagePushConstants,
+    push * VulkanPrimitiveGeometry,
     bounds ConservativeBounds,
     transform PrimitiveTransform,
     extent VkExtent2D) {
@@ -1069,50 +981,16 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     var offset int32 = 0
     while offset < count {
       let groupCount = Math.Min(4, count - offset)
-      var group = AnalyticLinear4PushConstants{}
-      FillLinearStops(&group, frame, start + offset, groupCount, opacity)
+      var group = VulkanPrimitiveGpuRecord{}
+      FillGradientStops(&group, frame, start + offset, groupCount, opacity)
       primitiveFrameData.WriteRecord(primitiveRecordCount, *void(&group))
       primitiveRecordCount++
       offset += groupCount
     }
   }
 
-  private func FillLinearStops(
-    push * AnalyticLinear4PushConstants,
-    frame SceneFrame,
-    start int32,
-    count int32,
-    opacity float32) {
-      let first = frame.GradientStops[start]
-      let second = frame.GradientStops[start + Math.Min(1, count - 1)]
-      var third = second
-      var fourth = second
-      if count >= 3 {
-        third = frame.GradientStops[start + 2]
-      }
-      if count >= 4 {
-        fourth = frame.GradientStops[start + 3]
-      }
-      push -> stopPositions_x = first.Offset
-      push -> stopPositions_y = second.Offset
-      push -> stopPositions_z = third.Offset
-      push -> stopPositions_w = fourth.Offset
-      let packedFirst = PackColor(first.Color, opacity)
-      let packedSecond = PackColor(second.Color, opacity)
-      let packedThird = PackColor(third.Color, opacity)
-      let packedFourth = PackColor(fourth.Color, opacity)
-      push -> packedColors_x = packedFirst.Rgb
-      push -> packedColors_y = packedSecond.Rgb
-      push -> packedColors_z = packedThird.Rgb
-      push -> packedColors_w = PackAlphaTriplet(packedFirst.Alpha, packedSecond.Alpha, packedThird.Alpha)
-      push -> packedColorsExtra_x = packedFourth.Rgb
-      push -> packedColorsExtra_y = packedFourth.Alpha
-      push -> packedColorsExtra_z = uint32(count)
-      push -> packedColorsExtra_w = if count > 4 { uint32(primitiveRecordCount + 1) } else { 0u }
-    }
-
-  private func FillRadialStops(
-    push * AnalyticRadial4PushConstants,
+  private func FillGradientStops(
+    push * VulkanPrimitiveGpuRecord,
     frame SceneFrame,
     start int32,
     count int32,

@@ -36,8 +36,8 @@ internal class TextInputCallbacks {
     internal func SetBlobTextInput(blob Blob, value Action[string]?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnTextInput = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnTextInput = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobTextInput(blob Blob) Action[string] ? -> blobCallbacks(blob, false)?.OnTextInput
@@ -45,8 +45,8 @@ internal class TextInputCallbacks {
     internal func SetBlobTextComposition(blob Blob, value((TextCompositionEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnTextComposition = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnTextComposition = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobTextComposition(blob Blob)((TextCompositionEvent) -> void) ? -> blobCallbacks(blob, false)?.OnTextComposition
@@ -54,8 +54,8 @@ internal class TextInputCallbacks {
     internal func SetBlobTextCompositionCancel(blob Blob, value Action?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnTextCompositionCancel = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnTextCompositionCancel = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobTextCompositionCancel(blob Blob) Action ? -> blobCallbacks(blob, false)?.OnTextCompositionCancel
@@ -63,8 +63,8 @@ internal class TextInputCallbacks {
     internal func SetBlobTextCandidates(blob Blob, value((TextCandidateEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnTextCandidates = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnTextCandidates = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobTextCandidates(blob Blob)((TextCandidateEvent) -> void) ? -> blobCallbacks(blob, false)?.OnTextCandidates
@@ -91,9 +91,9 @@ internal class TextInputCallbacks {
           nodeValues = ConditionalWeakTable[Node, TextInputCallbackSet]()
         }
         destination = TextInputCallbackSet()
-        nodeValues!!.Add(node, destination!!)
+        nodeValues!!.Add(node, destination)
       }
-      destination!!.OnTextInput = source!!.OnTextInput
+      destination.OnTextInput = source.OnTextInput
       destination.OnTextComposition = source.OnTextComposition
       destination.OnTextCompositionCancel = source.OnTextCompositionCancel
       destination.OnTextCandidates = source.OnTextCandidates
@@ -148,7 +148,7 @@ internal class TextInputCallbacks {
     private func presence(value TextInputCallbackSet?) int32 {
       if value == nil { return 0 }
       var result int32
-      if value!!.OnTextInput != nil { result = result | 1 }
+      if value.OnTextInput != nil { result = result | 1 }
       if value.OnTextComposition != nil { result = result | 2 }
       if value.OnTextCompositionCancel != nil { result = result | 4 }
       if value.OnTextCandidates != nil { result = result | 8 }

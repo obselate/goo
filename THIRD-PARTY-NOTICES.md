@@ -6,7 +6,7 @@ pinned to the source revision or release used by Goo.
 ## G# runtime support
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from
-Gsharp.NET.Sdk 0.4.1.
+Gsharp.NET.Sdk 0.4.591.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.

@@ -4,18 +4,7 @@ import System.Runtime.InteropServices
 
 @StructLayout(LayoutKind.Explicit, Size: 128)
 internal unsafe struct AnalyticBorderPushConstants {
-  @FieldOffset(0) var rect_x float32
-  @FieldOffset(4) var rect_y float32
-  @FieldOffset(8) var rect_z float32
-  @FieldOffset(12) var rect_w float32
-  @FieldOffset(16) var transform0_x float32
-  @FieldOffset(20) var transform0_y float32
-  @FieldOffset(24) var transform0_z float32
-  @FieldOffset(28) var transform0_w float32
-  @FieldOffset(32) var transform1_x float32
-  @FieldOffset(36) var transform1_y float32
-  @FieldOffset(40) var transform1_z float32
-  @FieldOffset(44) var transform1_w float32
+  @FieldOffset(0) var Geometry VulkanPrimitiveGeometry
   @FieldOffset(48) var widths_x float32
   @FieldOffset(52) var widths_y float32
   @FieldOffset(56) var widths_z float32

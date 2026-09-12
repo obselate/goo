@@ -16,4 +16,4 @@ internal func SDL_GetWindowFromIdRaw(windowId uint32) nint;
 internal func SDL_Vulkan_GetVkGetInstanceProcAddrRaw() nint;
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal type SdlHostRawHitTest = delegate func(nativeWindow nint, point nint, userData nint) SDLHitTestResult
+internal delegate SdlHostRawHitTest(nativeWindow nint, point nint, userData nint) SDLHitTestResult;

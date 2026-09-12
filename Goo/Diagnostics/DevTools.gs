@@ -155,10 +155,6 @@ internal class DevToolsSession : IDisposable {
     owner.RequestDiagnosticsFrame()
   }
 
-  internal func ToggleInspectMode() {
-    if inspecting { ExitInspectMode() } else { EnterInspectMode() }
-  }
-
   internal func ClearSelection() {
     owner.RequireElementHandleThread("DevToolsSession.ClearSelection")
     selected = nil

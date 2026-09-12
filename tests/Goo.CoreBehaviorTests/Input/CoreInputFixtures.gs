@@ -2200,7 +2200,7 @@ internal class InputFixtures {
     let third = reentrant.Children[2]
     text.SetFocus(resolver, first)
     text.SetFocus(resolver, third)
-    if first.Focused || !second!!.Focused || third.Focused { return false }
+    if first.Focused || !second.Focused || third.Focused { return false }
 
     let failing = Reconciler{ Res: Resolver{} }.Mount(Container{ Children: {
       Container{ Key: "a", Focusable: true, OnBlur: (e FocusEvent) -> {

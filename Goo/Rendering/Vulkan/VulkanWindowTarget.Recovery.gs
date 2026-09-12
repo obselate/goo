@@ -92,7 +92,7 @@ internal unsafe partial class VulkanWindowTarget {
         try {
           let nullable = ResolveGlobalProc(staleInstance, "vkDestroyDevice") as (unmanaged[Cdecl](VkDevice, *VkAllocationCallbacks) -> void)?
           if nullable != nil {
-            let destroyDevice = nullable!!
+            let destroyDevice = nullable
             destroyDevice(staleDevice, nil)
             destroyed = true
           }
@@ -118,7 +118,7 @@ internal unsafe partial class VulkanWindowTarget {
         try {
           let nullable = ResolveGlobalProc(staleInstance, "vkDestroyInstance") as (unmanaged[Cdecl](VkInstance, *VkAllocationCallbacks) -> void)?
           if nullable != nil {
-            let destroyInstance = nullable!!
+            let destroyInstance = nullable
             destroyInstance(staleInstance, nil)
             destroyed = true
           }

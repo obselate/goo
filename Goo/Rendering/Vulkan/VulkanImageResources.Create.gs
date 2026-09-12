@@ -49,7 +49,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     descriptorPools.Add(creation.Pool)
     trackedDescriptorPoolCount++
     Array.Copy(createdSets, 0, descriptorSets, setOffset, setCount)
-    Array.Copy(layouts, 0, descriptorLayouts, setOffset, setCount)
     if objectAccounting != nil {
       trackedDescriptorSetCount += int32(creation.SetCount)
     }

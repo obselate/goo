@@ -4,6 +4,58 @@ import System
 import System.IO
 import System.Runtime.CompilerServices
 
+internal unsafe class VulkanNativeHandleDestroyer {
+  shared {
+    internal func DestroyPipeline(
+      device VkDevice,
+      destroyPipeline unmanaged[Cdecl](VkDevice, VkPipeline, *VkAllocationCallbacks) -> void,
+      objectAccounting VulkanObjectAccounting?,
+      ref pipeline VkPipeline) {
+        if pipeline != 0uL {
+          destroyPipeline(device, pipeline, nil)
+          if let accounting = objectAccounting { accounting.Release() }
+          pipeline = 0uL
+        }
+      }
+
+    internal func DestroyPipelineLayout(
+      device VkDevice,
+      destroyPipelineLayout unmanaged[Cdecl](VkDevice, VkPipelineLayout, *VkAllocationCallbacks) -> void,
+      objectAccounting VulkanObjectAccounting?,
+      ref layout VkPipelineLayout) {
+        if layout != 0uL {
+          destroyPipelineLayout(device, layout, nil)
+          if let accounting = objectAccounting { accounting.Release() }
+          layout = 0uL
+        }
+      }
+
+    internal func DestroyDescriptorSetLayout(
+      device VkDevice,
+      destroyDescriptorSetLayout unmanaged[Cdecl](VkDevice, VkDescriptorSetLayout, *VkAllocationCallbacks) -> void,
+      objectAccounting VulkanObjectAccounting?,
+      ref layout VkDescriptorSetLayout) {
+        if layout != 0uL {
+          destroyDescriptorSetLayout(device, layout, nil)
+          if let accounting = objectAccounting { accounting.Release() }
+          layout = 0uL
+        }
+      }
+
+    internal func DestroyShaderModule(
+      device VkDevice,
+      destroyShaderModule unmanaged[Cdecl](VkDevice, VkShaderModule, *VkAllocationCallbacks) -> void,
+      objectAccounting VulkanObjectAccounting?,
+      ref module VkShaderModule) {
+        if module != 0uL {
+          destroyShaderModule(device, module, nil)
+          if let accounting = objectAccounting { accounting.Release() }
+          module = 0uL
+        }
+      }
+  }
+}
+
 internal sealed class VulkanShaderEffectPipelineEntry {
   internal let Digest []uint8
   internal let Spirv []uint8
@@ -64,70 +116,48 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   internal prop PathPipelineLayout VkPipelineLayout{ get -> pathPipelineLayout }
   internal prop TextPipelineLayout VkPipelineLayout{ get -> textPipelineLayout }
   internal prop SolidPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
+      pipelineLayout, true, true)
   }
   internal prop ShadowPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
+      pipelineLayout, true, true)
   }
   internal prop BorderPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref borderPipeline, analyticVertexModule, borderModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref borderPipeline, analyticVertexModule, borderModule,
+      pipelineLayout, true, true)
   }
   internal prop LinearPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref linearPipeline, analyticVertexModule, linearModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref linearPipeline, analyticVertexModule, linearModule,
+      pipelineLayout, true, true)
   }
   internal prop RadialPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref radialPipeline, analyticVertexModule, radialModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref radialPipeline, analyticVertexModule, radialModule,
+      pipelineLayout, true, true)
   }
   internal prop SampledPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref sampledPipeline, analyticVertexModule, sampledModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref sampledPipeline, analyticVertexModule, sampledModule,
+      pipelineLayout, true, true)
   }
   internal prop LavaPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref lavaPipeline, analyticVertexModule, lavaModule,
-        pipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref lavaPipeline, analyticVertexModule, lavaModule,
+      pipelineLayout, true, true)
   }
   internal prop BlendPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
-        blendPipelineLayout, true, true)
-    }
+    get -> ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
+      blendPipelineLayout, true, true)
   }
   internal prop PathPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref pathPipeline, pathVertexModule, pathFragmentModule,
-        pathPipelineLayout, true, false)
-    }
+    get -> ResolvePipeline(ref pathPipeline, pathVertexModule, pathFragmentModule,
+      pathPipelineLayout, true, false)
   }
   internal prop TextPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref textPipeline, textVertexModule, textFragmentModule,
-        textPipelineLayout, true, false)
-    }
+    get -> ResolvePipeline(ref textPipeline, textVertexModule, textFragmentModule,
+      textPipelineLayout, true, false)
   }
   internal prop TextPaintPipeline VkPipeline{
-    get {
-      return ResolvePipeline(ref textPaintPipeline, textVertexModule,
-        textPaintFragmentModule, textPipelineLayout, true, false)
-    }
+    get -> ResolvePipeline(ref textPaintPipeline, textVertexModule,
+      textPaintFragmentModule, textPipelineLayout, true, false)
   }
   internal prop LiveObjectCount uint64{
     get {
@@ -386,83 +416,28 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     }
     shaderEffectPipelineAliases.Clear()
     shaderEffectPipelineCount = 0
-    if textPaintPipeline != 0uL {
-      destroyPipeline(device, textPaintPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textPaintPipeline = 0uL
-    }
-    if textPipeline != 0uL {
-      destroyPipeline(device, textPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textPipeline = 0uL
-    }
-    if sampledPipeline != 0uL {
-      destroyPipeline(device, sampledPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      sampledPipeline = 0uL
-    }
-    if lavaPipeline != 0uL {
-      destroyPipeline(device, lavaPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      lavaPipeline = 0uL
-    }
-    if blendPipeline != 0uL {
-      destroyPipeline(device, blendPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      blendPipeline = 0uL
-    }
-    if pathPipeline != 0uL {
-      destroyPipeline(device, pathPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      pathPipeline = 0uL
-    }
-    if shadowPipeline != 0uL {
-      destroyPipeline(device, shadowPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      shadowPipeline = 0uL
-    }
-    if radialPipeline != 0uL {
-      destroyPipeline(device, radialPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      radialPipeline = 0uL
-    }
-    if linearPipeline != 0uL {
-      destroyPipeline(device, linearPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      linearPipeline = 0uL
-    }
-    if borderPipeline != 0uL {
-      destroyPipeline(device, borderPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      borderPipeline = 0uL
-    }
-    if solidPipeline != 0uL {
-      destroyPipeline(device, solidPipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      solidPipeline = 0uL
-    }
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref textPaintPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref textPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref sampledPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref lavaPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref blendPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref pathPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref shadowPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref radialPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref linearPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref borderPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref solidPipeline)
   }
 
   deinit{
@@ -523,16 +498,12 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
   internal prop ClipDescriptorSetLayout VkDescriptorSetLayout{ get -> clipDescriptorSetLayout }
   internal prop ClipMaskPipelineLayout VkPipelineLayout{ get -> clipMaskPipelineLayout }
   internal prop ClipMaskR8Pipeline VkPipeline{
-    get {
-      return ResolveClipMaskPipeline(ref clipMaskR8Pipeline,
-        VkConstants.VK_FORMAT_R8_UNORM)
-    }
+    get -> ResolveClipMaskPipeline(ref clipMaskR8Pipeline,
+      VkConstants.VK_FORMAT_R8_UNORM)
   }
   internal prop ClipMaskRgba8Pipeline VkPipeline{
-    get {
-      return ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline,
-        VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-    }
+    get -> ResolveClipMaskPipeline(ref clipMaskRgba8Pipeline,
+      VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
   }
   internal prop LiveObjectCount uint64{
     get {
@@ -943,215 +914,62 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       }
       index++
     }
-    if clipMaskR8Pipeline != 0uL {
-      let destroyPipeline = dispatch.vkDestroyPipeline
-      destroyPipeline(device, clipMaskR8Pipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      clipMaskR8Pipeline = 0uL
-    }
-    if clipMaskRgba8Pipeline != 0uL {
-      let destroyPipeline = dispatch.vkDestroyPipeline
-      destroyPipeline(device, clipMaskRgba8Pipeline, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      clipMaskRgba8Pipeline = 0uL
-    }
-    if pipelineLayout != 0uL {
-      let destroyPipelineLayout = dispatch.vkDestroyPipelineLayout
-      destroyPipelineLayout(device, pipelineLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      pipelineLayout = 0uL
-    }
-    if blendPipelineLayout != 0uL {
-      let destroyPipelineLayout = dispatch.vkDestroyPipelineLayout
-      destroyPipelineLayout(device, blendPipelineLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      blendPipelineLayout = 0uL
-    }
-    if pathPipelineLayout != 0uL {
-      let destroyPipelineLayout = dispatch.vkDestroyPipelineLayout
-      destroyPipelineLayout(device, pathPipelineLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      pathPipelineLayout = 0uL
-    }
-    if textPipelineLayout != 0uL {
-      let destroyPipelineLayout = dispatch.vkDestroyPipelineLayout
-      destroyPipelineLayout(device, textPipelineLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textPipelineLayout = 0uL
-    }
-    if clipMaskPipelineLayout != 0uL {
-      let destroyPipelineLayout = dispatch.vkDestroyPipelineLayout
-      destroyPipelineLayout(device, clipMaskPipelineLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      clipMaskPipelineLayout = 0uL
-    }
-    if pathDescriptorSetLayout != 0uL {
-      let destroyDescriptorSetLayout = dispatch.vkDestroyDescriptorSetLayout
-      destroyDescriptorSetLayout(device, pathDescriptorSetLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      pathDescriptorSetLayout = 0uL
-    }
-    if textDescriptorSetLayout != 0uL {
-      let destroyDescriptorSetLayout = dispatch.vkDestroyDescriptorSetLayout
-      destroyDescriptorSetLayout(device, textDescriptorSetLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textDescriptorSetLayout = 0uL
-    }
-    if primitiveDescriptorSetLayout != 0uL {
-      let destroyDescriptorSetLayout = dispatch.vkDestroyDescriptorSetLayout
-      destroyDescriptorSetLayout(device, primitiveDescriptorSetLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      primitiveDescriptorSetLayout = 0uL
-    }
-    if effectDataDescriptorSetLayout != 0uL {
-      let destroyDescriptorSetLayout = dispatch.vkDestroyDescriptorSetLayout
-      destroyDescriptorSetLayout(device, effectDataDescriptorSetLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      effectDataDescriptorSetLayout = 0uL
-    }
-    if clipDescriptorSetLayout != 0uL {
-      let destroyDescriptorSetLayout = dispatch.vkDestroyDescriptorSetLayout
-      destroyDescriptorSetLayout(device, clipDescriptorSetLayout, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      clipDescriptorSetLayout = 0uL
-    }
-    let destroyShaderModule = dispatch.vkDestroyShaderModule
-    if textPaintFragmentModule != 0uL {
-      destroyShaderModule(device, textPaintFragmentModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textPaintFragmentModule = 0uL
-    }
-    if textFragmentModule != 0uL {
-      destroyShaderModule(device, textFragmentModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textFragmentModule = 0uL
-    }
-    if textVertexModule != 0uL {
-      destroyShaderModule(device, textVertexModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      textVertexModule = 0uL
-    }
-    if sampledModule != 0uL {
-      destroyShaderModule(device, sampledModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      sampledModule = 0uL
-    }
-    if lavaModule != 0uL {
-      destroyShaderModule(device, lavaModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      lavaModule = 0uL
-    }
-    if blendModule != 0uL {
-      destroyShaderModule(device, blendModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      blendModule = 0uL
-    }
-    if pathFragmentModule != 0uL {
-      destroyShaderModule(device, pathFragmentModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      pathFragmentModule = 0uL
-    }
-    if pathVertexModule != 0uL {
-      destroyShaderModule(device, pathVertexModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      pathVertexModule = 0uL
-    }
-    if clipMaskFragmentModule != 0uL {
-      destroyShaderModule(device, clipMaskFragmentModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      clipMaskFragmentModule = 0uL
-    }
-    if clipMaskVertexModule != 0uL {
-      destroyShaderModule(device, clipMaskVertexModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      clipMaskVertexModule = 0uL
-    }
-    if shadowModule != 0uL {
-      destroyShaderModule(device, shadowModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      shadowModule = 0uL
-    }
-    if radialModule != 0uL {
-      destroyShaderModule(device, radialModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      radialModule = 0uL
-    }
-    if linearModule != 0uL {
-      destroyShaderModule(device, linearModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      linearModule = 0uL
-    }
-    if borderModule != 0uL {
-      destroyShaderModule(device, borderModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      borderModule = 0uL
-    }
-    if solidModule != 0uL {
-      destroyShaderModule(device, solidModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      solidModule = 0uL
-    }
-    if vertexModule != 0uL {
-      destroyShaderModule(device, vertexModule, nil)
-      if let accounting = objectAccounting {
-        accounting.Release()
-      }
-      vertexModule = 0uL
-    }
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref clipMaskR8Pipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref clipMaskRgba8Pipeline)
+    VulkanNativeHandleDestroyer.DestroyPipelineLayout(
+      device, dispatch.vkDestroyPipelineLayout, objectAccounting, ref pipelineLayout)
+    VulkanNativeHandleDestroyer.DestroyPipelineLayout(
+      device, dispatch.vkDestroyPipelineLayout, objectAccounting, ref blendPipelineLayout)
+    VulkanNativeHandleDestroyer.DestroyPipelineLayout(
+      device, dispatch.vkDestroyPipelineLayout, objectAccounting, ref pathPipelineLayout)
+    VulkanNativeHandleDestroyer.DestroyPipelineLayout(
+      device, dispatch.vkDestroyPipelineLayout, objectAccounting, ref textPipelineLayout)
+    VulkanNativeHandleDestroyer.DestroyPipelineLayout(
+      device, dispatch.vkDestroyPipelineLayout, objectAccounting, ref clipMaskPipelineLayout)
+    VulkanNativeHandleDestroyer.DestroyDescriptorSetLayout(
+      device, dispatch.vkDestroyDescriptorSetLayout, objectAccounting, ref pathDescriptorSetLayout)
+    VulkanNativeHandleDestroyer.DestroyDescriptorSetLayout(
+      device, dispatch.vkDestroyDescriptorSetLayout, objectAccounting, ref textDescriptorSetLayout)
+    VulkanNativeHandleDestroyer.DestroyDescriptorSetLayout(
+      device, dispatch.vkDestroyDescriptorSetLayout, objectAccounting, ref primitiveDescriptorSetLayout)
+    VulkanNativeHandleDestroyer.DestroyDescriptorSetLayout(
+      device, dispatch.vkDestroyDescriptorSetLayout, objectAccounting, ref effectDataDescriptorSetLayout)
+    VulkanNativeHandleDestroyer.DestroyDescriptorSetLayout(
+      device, dispatch.vkDestroyDescriptorSetLayout, objectAccounting, ref clipDescriptorSetLayout)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref textPaintFragmentModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref textFragmentModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref textVertexModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref sampledModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref lavaModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref blendModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref pathFragmentModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref pathVertexModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref clipMaskFragmentModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref clipMaskVertexModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref shadowModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref radialModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref linearModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref borderModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref solidModule)
+    VulkanNativeHandleDestroyer.DestroyShaderModule(
+      device, dispatch.vkDestroyShaderModule, objectAccounting, ref vertexModule)
   }
 
   private func EnsureOpen() {

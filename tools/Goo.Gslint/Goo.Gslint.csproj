@@ -9,7 +9,7 @@
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Gsharp.NET.Sdk" Version="0.4.1" GeneratePathProperty="true" PrivateAssets="all" ExcludeAssets="all" />
+    <PackageReference Include="Gsharp.NET.Sdk" Version="0.4.591" GeneratePathProperty="true" PrivateAssets="all" ExcludeAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="GSharp.Core">

@@ -85,11 +85,9 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
     Rebuild()
   }
 
-  private func runWorkers() {
-    workerGeneration = workerGeneration + 1
+  private async func rankTiles(generation int32) List[GalleryTileWorkerResult] {
     let count = tiles.Count
-    let generation = workerGeneration
-    let output = make(chan GalleryTileWorkerResult, count)
+    let output = chan [GalleryTileWorkerResult](count)
     scope {
       var index int32 = 0
       while index < count {
@@ -105,6 +103,13 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
       results.Add(<- output)
       received = received + 1
     }
+    return results
+  }
+
+  private func runWorkers() {
+    workerGeneration = workerGeneration + 1
+    // Finish the worker batch before updating tiles on the UI thread.
+    let results = rankTiles(workerGeneration).GetAwaiter().GetResult()
     var left int32 = 0
     while left < results.Count - 1 {
       var right = left + 1
@@ -121,7 +126,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
       left = left + 1
     }
 
-    let ordered = List[GallerySpecimenTile](count)
+    let ordered = List[GallerySpecimenTile](results.Count)
     for result in results {
       for tile in tiles {
         if tile.Index == result.Index {

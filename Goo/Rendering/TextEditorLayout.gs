@@ -328,14 +328,6 @@ internal sealed class TextEditorRenderState : IDisposable {
       return nil
     }
 
-  internal func ParagraphHeight(source TextRange, width float32, fingerprint int32,
-    lineHeight float32, ascent float32, descent float32) float32? {
-      if let value = Paragraph(source, width, fingerprint, lineHeight, ascent, descent) {
-        return value.Height
-      }
-      return nil
-    }
-
   internal func ParagraphHeightForLine(snapshot TextSnapshot, line int32, width float32,
     fingerprint int32, lineHeight float32, ascent float32, descent float32) float32? {
       for value in paragraphs {
@@ -587,7 +579,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   private func requestRebuild() {
     var current Node? = node
     while current != nil {
-      let value = current!!
+      let value = current
       if let cell = value.Fiber {
         cell.Rebuild()
         return
@@ -696,10 +688,6 @@ internal class TextEditorLayouts {
         state.Dispose()
       }
       n.EditorController = nil
-    }
-
-    internal func dispose(layout TextEditorVisualLayout?) {
-      if let value = layout { disposeLines(value.Lines) }
     }
 
     internal func disposeParagraph(value TextEditorParagraphLayout) {
@@ -1086,7 +1074,7 @@ internal class TextEditorLayouts {
             state.AddParagraph(value)
             cached = value
           }
-          let paragraphCache = cached!!
+          let paragraphCache = cached
           used.Add(paragraphCache)
           for visual in paragraphCache.Lines {
             visual.Top = top + visual.RelativeTop
@@ -1417,7 +1405,6 @@ internal class TextEditorLayouts {
       state TextEditorRenderState, fingerprint int32)
     TextEditorResolvedParagraph{
       let source = snapshot.GetLineRange(line)
-      let text = snapshot.GetText(source)
       let baseStyle = state.BaseStyle(n, fingerprint)
       let result = TextEditorResolvedParagraph{ Source: source, BaseStyle: baseStyle }
       var display = ""

@@ -348,7 +348,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     let block = allocation.block
     let removeBlock = allocation.dedicated || (allocation.pendingBind && allocation.blockFresh)
     if block != nil {
-      let owningBlock = block!!
+      let owningBlock = block
       if owningBlock.allocationCount == 0u {
         throw InvalidOperationException("Vulkan memory block allocation count underflow")
       }
@@ -365,9 +365,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     allocation.mapped = nil
     ResetAllocation(allocation)
     if removeBlock && block != nil {
-      RemoveBlock(block!!)
-    } else if block != nil && block!!.allocationCount == 0u {
-      TrimEmptyPooledBlocks(block!!)
+      RemoveBlock(block)
+    } else if block != nil && block.allocationCount == 0u {
+      TrimEmptyPooledBlocks(block)
     }
   }
 

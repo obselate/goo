@@ -250,21 +250,6 @@ internal partial class VulkanWindowTarget {
       index = index + 1
     }
     index = 0
-    while index < frame.CustomMeshCount {
-      let value = frame.CustomMeshes[index]
-      frame.CustomMeshes[index] = CustomMeshRecord{
-        Bounds: ScaleBounds(value.Bounds, scaleX, scaleY),
-        MeshId: value.MeshId,
-        PipelineId: value.PipelineId,
-        VertexCount: value.VertexCount,
-        IndexCount: value.IndexCount,
-        Topology: value.Topology,
-        Opacity: value.Opacity,
-        TransformIndex: value.TransformIndex,
-      }
-      index = index + 1
-    }
-    index = 0
     while index < frame.LayerCount {
       let value = frame.Layers[index]
       frame.Layers[index] = LayerRecord{

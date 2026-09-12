@@ -258,7 +258,7 @@ internal unsafe partial class VulkanWindowTarget {
         debugMessengerCreateInfo.messageType = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
         | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
         | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-        debugMessengerCreateInfo.pfnUserCallback = callback!!
+        debugMessengerCreateInfo.pfnUserCallback = callback
         debugMessengerCreateInfo.pUserData = nil
         createInfo.pNext = *void(&debugMessengerCreateInfo)
       }
@@ -273,7 +273,7 @@ internal unsafe partial class VulkanWindowTarget {
       if nullable == nil {
         throw InvalidOperationException("vkCreateInstance is unavailable")
       }
-      let createInstance = nullable!!
+      let createInstance = nullable
       var createdInstance VkInstance = nint(0)
       let result = createInstance(&createInfo, nil, &createdInstance)
       if result != VkConstants.VK_SUCCESS || createdInstance == nint(0) {
@@ -286,7 +286,7 @@ internal unsafe partial class VulkanWindowTarget {
       } catch (error Exception) {
         let destroyInstance = ResolveGlobalProc(createdInstance, "vkDestroyInstance") as (unmanaged[Cdecl](VkInstance, *VkAllocationCallbacks) -> void)?
         if destroyInstance != nil {
-          let destroyInstanceFunction = destroyInstance!!
+          let destroyInstanceFunction = destroyInstance
           destroyInstanceFunction(createdInstance, nil)
         }
         throw error
@@ -322,7 +322,7 @@ internal unsafe partial class VulkanWindowTarget {
     if nullable == nil {
       return VulkanSwapchainMaintenanceVariant.None
     }
-    let enumerate = nullable!!
+    let enumerate = nullable
     var count uint32 = 0u
     if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
       return VulkanSwapchainMaintenanceVariant.None
@@ -368,7 +368,7 @@ internal unsafe partial class VulkanWindowTarget {
     if nullable == nil {
       return false
     }
-    let enumerate = nullable!!
+    let enumerate = nullable
     var count uint32 = 0u
     if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
       return false
@@ -401,57 +401,57 @@ internal unsafe partial class VulkanWindowTarget {
   private func LoadInstanceDispatch() {
     let destroyInstance = ResolveGlobalProc(instance, "vkDestroyInstance") as (unmanaged[Cdecl](VkInstance, *VkAllocationCallbacks) -> void)?
     if destroyInstance == nil { throw InvalidOperationException("vkDestroyInstance is unavailable") }
-    instanceDispatch.vkDestroyInstance = destroyInstance!!
+    instanceDispatch.vkDestroyInstance = destroyInstance
     instanceDestroyAvailable = true
     let enumeratePhysicalDevices = ResolveGlobalProc(instance, "vkEnumeratePhysicalDevices") as (unmanaged[Cdecl](VkInstance, *uint32, *VkPhysicalDevice) -> VkResult)?
     if enumeratePhysicalDevices == nil { throw InvalidOperationException("vkEnumeratePhysicalDevices is unavailable") }
-    instanceDispatch.vkEnumeratePhysicalDevices = enumeratePhysicalDevices!!
+    instanceDispatch.vkEnumeratePhysicalDevices = enumeratePhysicalDevices
     let getPhysicalDeviceQueueFamilyProperties = ResolveGlobalProc(instance, "vkGetPhysicalDeviceQueueFamilyProperties") as (unmanaged[Cdecl](VkPhysicalDevice, *uint32, *VkQueueFamilyProperties) -> void)?
     if getPhysicalDeviceQueueFamilyProperties == nil { throw InvalidOperationException("vkGetPhysicalDeviceQueueFamilyProperties is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceQueueFamilyProperties = getPhysicalDeviceQueueFamilyProperties!!
+    instanceDispatch.vkGetPhysicalDeviceQueueFamilyProperties = getPhysicalDeviceQueueFamilyProperties
     let getPhysicalDeviceProperties = ResolveGlobalProc(instance, "vkGetPhysicalDeviceProperties") as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceProperties) -> void)?
     if getPhysicalDeviceProperties == nil { throw InvalidOperationException("vkGetPhysicalDeviceProperties is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceProperties = getPhysicalDeviceProperties!!
+    instanceDispatch.vkGetPhysicalDeviceProperties = getPhysicalDeviceProperties
     let getPhysicalDeviceSurfaceSupport = ResolveGlobalProc(instance, "vkGetPhysicalDeviceSurfaceSupportKHR") as (unmanaged[Cdecl](VkPhysicalDevice, uint32, VkSurfaceKHR, *VkBool32) -> VkResult)?
     if getPhysicalDeviceSurfaceSupport == nil { throw InvalidOperationException("vkGetPhysicalDeviceSurfaceSupportKHR is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR = getPhysicalDeviceSurfaceSupport!!
+    instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR = getPhysicalDeviceSurfaceSupport
     let getDeviceProcAddr = ResolveGlobalProc(instance, "vkGetDeviceProcAddr") as (unmanaged[Cdecl](VkDevice, *int8) -> unmanaged[Cdecl]() -> void)?
     if getDeviceProcAddr == nil { throw InvalidOperationException("vkGetDeviceProcAddr is unavailable") }
-    instanceDispatch.vkGetDeviceProcAddr = getDeviceProcAddr!!
+    instanceDispatch.vkGetDeviceProcAddr = getDeviceProcAddr
     let getPhysicalDeviceFeatures2 = ResolveGlobalProc(instance, "vkGetPhysicalDeviceFeatures2") as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceFeatures2) -> void)?
     if getPhysicalDeviceFeatures2 == nil { throw InvalidOperationException("vkGetPhysicalDeviceFeatures2 is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceFeatures2 = getPhysicalDeviceFeatures2!!
+    instanceDispatch.vkGetPhysicalDeviceFeatures2 = getPhysicalDeviceFeatures2
     let enumerateDeviceExtensionProperties = ResolveGlobalProc(instance, "vkEnumerateDeviceExtensionProperties") as (unmanaged[Cdecl](VkPhysicalDevice, *int8, *uint32, *VkExtensionProperties) -> VkResult)?
     if enumerateDeviceExtensionProperties == nil { throw InvalidOperationException("vkEnumerateDeviceExtensionProperties is unavailable") }
-    instanceDispatch.vkEnumerateDeviceExtensionProperties = enumerateDeviceExtensionProperties!!
+    instanceDispatch.vkEnumerateDeviceExtensionProperties = enumerateDeviceExtensionProperties
     let getPhysicalDeviceSurfaceCapabilities = ResolveGlobalProc(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR") as (unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *VkSurfaceCapabilitiesKHR) -> VkResult)?
     if getPhysicalDeviceSurfaceCapabilities == nil { throw InvalidOperationException("vkGetPhysicalDeviceSurfaceCapabilitiesKHR is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR = getPhysicalDeviceSurfaceCapabilities!!
+    instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR = getPhysicalDeviceSurfaceCapabilities
     let getPhysicalDeviceSurfaceFormats = ResolveGlobalProc(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR") as (unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *uint32, *VkSurfaceFormatKHR) -> VkResult)?
     if getPhysicalDeviceSurfaceFormats == nil { throw InvalidOperationException("vkGetPhysicalDeviceSurfaceFormatsKHR is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR = getPhysicalDeviceSurfaceFormats!!
+    instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR = getPhysicalDeviceSurfaceFormats
     let getPhysicalDeviceSurfacePresentModes = ResolveGlobalProc(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR") as (unmanaged[Cdecl](VkPhysicalDevice, VkSurfaceKHR, *uint32, *VkPresentModeKHR) -> VkResult)?
     if getPhysicalDeviceSurfacePresentModes == nil { throw InvalidOperationException("vkGetPhysicalDeviceSurfacePresentModesKHR is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceSurfacePresentModesKHR = getPhysicalDeviceSurfacePresentModes!!
+    instanceDispatch.vkGetPhysicalDeviceSurfacePresentModesKHR = getPhysicalDeviceSurfacePresentModes
     let getPhysicalDeviceMemoryProperties = ResolveGlobalProc(instance, "vkGetPhysicalDeviceMemoryProperties") as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceMemoryProperties) -> void)?
     if getPhysicalDeviceMemoryProperties == nil { throw InvalidOperationException("vkGetPhysicalDeviceMemoryProperties is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceMemoryProperties = getPhysicalDeviceMemoryProperties!!
+    instanceDispatch.vkGetPhysicalDeviceMemoryProperties = getPhysicalDeviceMemoryProperties
     let getPhysicalDeviceMemoryProperties2 = ResolveGlobalProc(instance, "vkGetPhysicalDeviceMemoryProperties2") as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceMemoryProperties2) -> void)?
     if getPhysicalDeviceMemoryProperties2 == nil { throw InvalidOperationException("vkGetPhysicalDeviceMemoryProperties2 is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceMemoryProperties2 = getPhysicalDeviceMemoryProperties2!!
+    instanceDispatch.vkGetPhysicalDeviceMemoryProperties2 = getPhysicalDeviceMemoryProperties2
     let getPhysicalDeviceFormatProperties = ResolveGlobalProc(instance, "vkGetPhysicalDeviceFormatProperties") as (unmanaged[Cdecl](VkPhysicalDevice, VkFormat, *VkFormatProperties) -> void)?
     if getPhysicalDeviceFormatProperties == nil { throw InvalidOperationException("vkGetPhysicalDeviceFormatProperties is unavailable") }
-    instanceDispatch.vkGetPhysicalDeviceFormatProperties = getPhysicalDeviceFormatProperties!!
+    instanceDispatch.vkGetPhysicalDeviceFormatProperties = getPhysicalDeviceFormatProperties
     let createDevice = ResolveGlobalProc(instance, "vkCreateDevice") as (unmanaged[Cdecl](VkPhysicalDevice, *VkDeviceCreateInfo, *VkAllocationCallbacks, *VkDevice) -> VkResult)?
     if createDevice == nil { throw InvalidOperationException("vkCreateDevice is unavailable") }
-    instanceDispatch.vkCreateDevice = createDevice!!
+    instanceDispatch.vkCreateDevice = createDevice
     if debugUtilsEnabled {
       let createMessenger = ResolveGlobalProc(instance, "vkCreateDebugUtilsMessengerEXT") as (unmanaged[Cdecl](VkInstance, *VkDebugUtilsMessengerCreateInfoEXT, *VkAllocationCallbacks, *VkDebugUtilsMessengerEXT) -> VkResult)?
       if createMessenger == nil { throw InvalidOperationException("vkCreateDebugUtilsMessengerEXT is unavailable") }
-      instanceDispatch.vkCreateDebugUtilsMessengerEXT = createMessenger!!
+      instanceDispatch.vkCreateDebugUtilsMessengerEXT = createMessenger
       let destroyMessenger = ResolveGlobalProc(instance, "vkDestroyDebugUtilsMessengerEXT") as (unmanaged[Cdecl](VkInstance, VkDebugUtilsMessengerEXT, *VkAllocationCallbacks) -> void)?
       if destroyMessenger == nil { throw InvalidOperationException("vkDestroyDebugUtilsMessengerEXT is unavailable") }
-      instanceDispatch.vkDestroyDebugUtilsMessengerEXT = destroyMessenger!!
+      instanceDispatch.vkDestroyDebugUtilsMessengerEXT = destroyMessenger
       CreateValidationMessenger()
     }
   }
@@ -473,7 +473,7 @@ internal unsafe partial class VulkanWindowTarget {
     createInfo.messageType = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
     | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
     | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-    createInfo.pfnUserCallback = callback!!
+    createInfo.pfnUserCallback = callback
     createInfo.pUserData = nil
     let createMessenger = instanceDispatch.vkCreateDebugUtilsMessengerEXT
     let result = createMessenger(instance, &createInfo, nil, &validationMessenger)
@@ -733,7 +733,7 @@ internal unsafe partial class VulkanWindowTarget {
       } catch (error Exception) {
         let destroyDevice = ResolveGlobalProc(instance, "vkDestroyDevice") as (unmanaged[Cdecl](VkDevice, *VkAllocationCallbacks) -> void)?
         if destroyDevice != nil {
-          let destroyDeviceFunction = destroyDevice!!
+          let destroyDeviceFunction = destroyDevice
           destroyDeviceFunction(createdDevice, nil)
         }
         throw error

@@ -334,19 +334,6 @@ internal class InputCoordinator {
     pointer.QueueCancel(pointerId, device)
   }
 
-  internal func DispatchKeyPress(root Node?, resolver Resolver, key Key, modifiers KeyModifiers,
-    onKeyPress Action[Key, KeyModifiers]?) bool{
-      try {
-        if let callback = onKeyPress {
-          callback(key, modifiers)
-        }
-        if pointer.HandleDragKey(root, key, modifiers) { return true }
-        return keyboard.HandleKey(root, resolver, text, key, modifiers)
-      } finally {
-        resolver.Flush()
-      }
-    }
-
   internal func StartKeyRepeat(key Key, modifiers KeyModifiers) {
     keyboard.StartKeyRepeat(key, modifiers)
   }

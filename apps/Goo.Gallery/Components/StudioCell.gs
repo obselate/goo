@@ -71,9 +71,6 @@ class StudioCell : Cell {
     pointerY = 0.5
     pointerPressure = 0.0
     pointerDown = false
-    ringX = [3]float64
-    ringY = [3]float64
-    ringStart = [3]float64
     ringCount = 0
     baseTime = 0.0
   }

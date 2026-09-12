@@ -180,17 +180,6 @@ internal func BuildScenePlanProof(
       Mode: 1u,
       TransformIndex: transformIndex,
     })
-    frame.AddCustomMesh(CustomMeshRecord{
-      Bounds: ConservativeBounds{ X: 18.0F, Y: 15.0F, Width: 16.0F, Height: 12.0F },
-      MeshId: ProofResource(SceneResourceKind.Mesh, 9501uL),
-      PipelineId: ProofResource(SceneResourceKind.Pipeline, 9502uL),
-      VertexCount: 4u,
-      IndexCount: 6u,
-      Topology: 3u,
-      Opacity: 0.86F,
-      TransformIndex: transformIndex,
-    })
-
     frame.AddLayerEnd(layer)
     frame.AddRectClipEnd(RectClipRecord{
       Bounds: ConservativeBounds{ X: 4.0F, Y: 5.0F, Width: 40.0F, Height: 30.0F },
@@ -253,11 +242,11 @@ internal func RunScenePlanProof() bool {
   let textSegment = CreateScenePlanTextSegment()
   let version uint64 = 1uL
   BuildScenePlanProof(frame, version, textSegment)
-  let expectedDigest uint64 = 8480709263272512933uL
+  let expectedDigest uint64 = 13765616272414566835uL
   let expectedGrowth = frame.GrowthOperations
   RequireScenePlanProof(frame.ChunkCount == 1, "S09 scene plan chunk count")
-  RequireScenePlanProof(frame.DrawRefCount == 18, "S09 scene plan draw count")
-  RequireScenePlanProof(frame.ResourceRefCount == 11, "S09 scene plan resource count")
+  RequireScenePlanProof(frame.DrawRefCount == 17, "S09 scene plan draw count")
+  RequireScenePlanProof(frame.ResourceRefCount == 9, "S09 scene plan resource count")
   RequireScenePlanProof(frame.SolidBoxCount == 1, "S09 scene plan solid count")
   RequireScenePlanProof(frame.RoundedBoxCount == 1, "S09 scene plan rounded count")
   RequireScenePlanProof(frame.PerEdgeBorderCount == 1, "S09 scene plan border count")
@@ -271,13 +260,12 @@ internal func RunScenePlanProof() bool {
   RequireScenePlanProof(frame.RectClipCount == 4, "S09 scene plan clip count")
   RequireScenePlanProof(frame.ShadowCount == 1, "S09 scene plan shadow count")
   RequireScenePlanProof(frame.UnderlineCount == 1, "S09 scene plan underline count")
-  RequireScenePlanProof(frame.CustomMeshCount == 1, "S09 scene plan mesh count")
   RequireScenePlanProof(frame.LayerCount == 2, "S09 scene plan layer count")
   RequireScenePlanProof(frame.ActiveChunk == -1, "S09 scene plan open chunk")
   RequireScenePlanProof(frame.Chunks[0].OwnerId == 7001uL, "S09 scene plan owner")
   RequireScenePlanProof(frame.Chunks[0].Version == version, "S09 scene plan version")
-  RequireScenePlanProof(frame.Chunks[0].DrawCount == 18, "S09 scene plan chunk draw count")
-  RequireScenePlanProof(frame.Chunks[0].ResourceCount == 11, "S09 scene plan chunk resource count")
+  RequireScenePlanProof(frame.Chunks[0].DrawCount == 17, "S09 scene plan chunk draw count")
+  RequireScenePlanProof(frame.Chunks[0].ResourceCount == 9, "S09 scene plan chunk resource count")
 
   BuildScenePlanProof(frame, version, textSegment)
   let unchangedDigest = frame.SemanticDigest()

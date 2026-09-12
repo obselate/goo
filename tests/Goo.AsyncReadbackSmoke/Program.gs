@@ -470,7 +470,7 @@ func EnvironmentCount(name string, fallback int32, maximum int32) int32 {
   }
   var value int32
   try {
-    value = int32(UInt64.Parse(text!!))
+    value = int32(UInt64.Parse(text))
   } catch (error Exception) {
     throw InvalidOperationException(name + " must be an integer")
   }
@@ -1463,17 +1463,17 @@ func RunRetentionSmoke() {
         && initialPrimitive.RetainedReuse == 0uL,
       "Retained first primitive frame did not force a full upload")
     initialResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(initialResult!!.Pixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialResult.Pixels, initialResult.Width, metrics,
       120.0, 24.0, uint8(220), uint8(40), uint8(64), 4, "initial_mutated_box")
-    PrimitiveRequirePixelNear(initialResult!!.Pixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialResult.Pixels, initialResult.Width, metrics,
       200.0, 9.0, uint8(232), uint8(96), uint8(72), 8, "initial_border_top")
-    PrimitiveRequirePixelNear(initialResult!!.Pixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialResult.Pixels, initialResult.Width, metrics,
       200.0, 9.0, uint8(232), uint8(96), uint8(72), 8, "initial_border_top")
-    PrimitiveRequirePixelNear(initialResult!!.Pixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialResult.Pixels, initialResult.Width, metrics,
       230.0, 24.0, uint8(96), uint8(224), uint8(128), 8, "initial_border_right")
-    PrimitiveRequirePixelNear(initialResult!!.Pixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialResult.Pixels, initialResult.Width, metrics,
       200.0, 38.0, uint8(72), uint8(144), uint8(232), 8, "initial_border_bottom")
-    PrimitiveRequirePixelNear(initialResult!!.Pixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialResult.Pixels, initialResult.Width, metrics,
       170.0, 24.0, uint8(224), uint8(184), uint8(72), 8, "initial_border_left")
 
     var sawPrimitiveSlot0 bool = false
@@ -1678,10 +1678,10 @@ func RunRetentionSmoke() {
         && mutatedState.PendingSceneVersion == mutatedState.ActiveSceneVersion,
       "Retained box mutation did not publish its scene version to the acquired image")
     mutatedResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(mutatedResult!!.Pixels, mutatedResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(mutatedResult.Pixels, mutatedResult.Width, metrics,
       120.0, 24.0, uint8(40), uint8(220), uint8(96), 4, "mutated_box")
-    RetainedRequireOutsideStable(initialResult!!.Pixels, mutatedResult!!.Pixels,
-      mutatedResult!!.Width, mutatedResult!!.Height,
+    RetainedRequireOutsideStable(initialResult.Pixels, mutatedResult.Pixels,
+      mutatedResult.Width, mutatedResult.Height,
       changedLeft, changedTop, changedRight, changedBottom)
 
     root.MutateBounds()
@@ -1755,12 +1755,12 @@ func RunRetentionSmoke() {
       +damageBottom.ToString() + " partial="
       +boundsState.PartialRedraw.ToString())
     boundsResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(boundsResult!!.Pixels, boundsResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(boundsResult.Pixels, boundsResult.Width, metrics,
       136.0, 24.0, uint8(40), uint8(220), uint8(96), 4, "bounds_mutated_box")
-    PrimitiveRequirePixelNear(boundsResult!!.Pixels, boundsResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(boundsResult.Pixels, boundsResult.Width, metrics,
       96.0, 24.0, uint8(12), uint8(20), uint8(32), 8, "bounds_old_only_background")
-    RetainedRequireOutsideStable(mutatedResult!!.Pixels, boundsResult!!.Pixels,
-      boundsResult!!.Width, boundsResult!!.Height,
+    RetainedRequireOutsideStable(mutatedResult.Pixels, boundsResult.Pixels,
+      boundsResult.Width, boundsResult.Height,
       damageLeft, damageTop, damageRight, damageBottom)
 
     root.ToggleUnsupportedFeature()
@@ -1880,7 +1880,7 @@ func RunRetentionSmoke() {
       -recapturedWarmState.RetainedLeafRebuildCount == 1uL,
       "Retained topology add did not force full damage")
     topologyAddResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(topologyAddResult!!.Pixels, topologyAddResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(topologyAddResult.Pixels, topologyAddResult.Width, metrics,
       200.0, 72.0, uint8(128), uint8(72), uint8(220), 6, "topology_added_box")
 
     root.ToggleExtra()
@@ -1922,7 +1922,7 @@ func RunRetentionSmoke() {
       "Retained topology remove did not retain the unchanged leaves")
 
     topologyRemoveResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(topologyRemoveResult!!.Pixels, topologyRemoveResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(topologyRemoveResult.Pixels, topologyRemoveResult.Width, metrics,
       200.0, 72.0, uint8(12), uint8(20), uint8(32), 8, "topology_removed_background")
 
     var borderWarmReady bool = false
@@ -2072,17 +2072,17 @@ func RunRetentionSmoke() {
       +" dirty=" + borderMutationState.DirtyChunkCount.ToString()
       +" reused=" + borderMutationState.ReusedChunkCount.ToString())
     borderMutationResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(borderMutationResult!!.Pixels, borderMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(borderMutationResult.Pixels, borderMutationResult.Width, metrics,
       200.0, 9.0, uint8(248), uint8(196), uint8(48), 8, "mutated_border_top")
-    PrimitiveRequirePixelNear(borderMutationResult!!.Pixels, borderMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(borderMutationResult.Pixels, borderMutationResult.Width, metrics,
       230.0, 24.0, uint8(96), uint8(224), uint8(128), 8, "mutated_border_right")
-    PrimitiveRequirePixelNear(borderMutationResult!!.Pixels, borderMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(borderMutationResult.Pixels, borderMutationResult.Width, metrics,
       200.0, 38.0, uint8(72), uint8(144), uint8(232), 8, "mutated_border_bottom")
-    PrimitiveRequirePixelNear(borderMutationResult!!.Pixels, borderMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(borderMutationResult.Pixels, borderMutationResult.Width, metrics,
       170.0, 24.0, uint8(224), uint8(184), uint8(72), 8, "mutated_border_left")
-    RetainedRequireOutsideStable(topologyRemoveResult!!.Pixels,
-      borderMutationResult!!.Pixels, borderMutationResult!!.Width,
-      borderMutationResult!!.Height, borderDamageLeft, borderDamageTop,
+    RetainedRequireOutsideStable(topologyRemoveResult.Pixels,
+      borderMutationResult.Pixels, borderMutationResult.Width,
+      borderMutationResult.Height, borderDamageLeft, borderDamageTop,
       borderDamageRight, borderDamageBottom)
 
     root.ToggleBorderUnsupportedFeature()
@@ -2175,15 +2175,15 @@ func RunRetentionSmoke() {
       == borderWarmState.RetainedBorderInvalidationCount,
       "Retained parent mutation did not rebuild one own box and continue exact children")
     parentMutationResult = PrimitiveReadback(opened, metrics)
-    PrimitiveRequirePixelNear(parentMutationResult!!.Pixels, parentMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(parentMutationResult.Pixels, parentMutationResult.Width, metrics,
       200.0, 72.0, uint8(18), uint8(30), uint8(48), 8, "parent_mutated_background")
-    PrimitiveRequirePixelNear(parentMutationResult!!.Pixels, parentMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(parentMutationResult.Pixels, parentMutationResult.Width, metrics,
       200.0, 9.0, uint8(248), uint8(196), uint8(48), 8, "recaptured_border_top")
-    PrimitiveRequirePixelNear(parentMutationResult!!.Pixels, parentMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(parentMutationResult.Pixels, parentMutationResult.Width, metrics,
       230.0, 24.0, uint8(96), uint8(224), uint8(128), 8, "recaptured_border_right")
-    PrimitiveRequirePixelNear(parentMutationResult!!.Pixels, parentMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(parentMutationResult.Pixels, parentMutationResult.Width, metrics,
       200.0, 38.0, uint8(72), uint8(144), uint8(232), 8, "recaptured_border_bottom")
-    PrimitiveRequirePixelNear(parentMutationResult!!.Pixels, parentMutationResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(parentMutationResult.Pixels, parentMutationResult.Width, metrics,
       170.0, 24.0, uint8(224), uint8(184), uint8(72), 8, "recaptured_border_left")
 
     root.ToggleParentUnsupportedFeature()
@@ -2417,52 +2417,52 @@ func RunPrimitivePixelSmoke() {
         && PrimitiveSmokeCell.ScrollLeaf.IsMounted,
       "Primitive pixel gate did not mount required handles")
     initialResult = PrimitiveReadback(opened, metrics)
-    let initialPixels = initialResult!!.Pixels
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    let initialPixels = initialResult.Pixels
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       30.0, 25.0, uint8(42), uint8(112), uint8(188), 4, "solid")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       130.0, 25.0, uint8(82), uint8(176), uint8(112), 4, "rounded")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       95.0, 11.0, uint8(12), uint8(20), uint8(32), 4, "rounded_corner")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       215.0, 11.0, uint8(232), uint8(96), uint8(72), 6, "solid_border_top")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       249.0, 25.0, uint8(96), uint8(224), uint8(128), 6, "solid_border_right")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       215.0, 45.0, uint8(72), uint8(144), uint8(232), 6, "solid_border_bottom")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       181.0, 25.0, uint8(224), uint8(184), uint8(72), 6, "solid_border_left")
-    PrimitiveRequireBorderPattern(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequireBorderPattern(initialPixels, initialResult.Width, metrics,
       266, 318, "dashed border")
-    PrimitiveRequireBorderPattern(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequireBorderPattern(initialPixels, initialResult.Width, metrics,
       336, 388, "dotted border")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       15.0, 80.0, uint8(27), uint8(75), uint8(140), 10, "linear_gradient_start")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       50.0, 80.0, uint8(46), uint8(126), uint8(196), 8, "linear_gradient_mid")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       95.0, 80.0, uint8(83), uint8(163), uint8(203), 8, "linear_gradient_stop")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       125.0, 80.0, uint8(44), uint8(102), uint8(159), 10, "linear_gradient_end")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       200.0, 86.0, uint8(232), uint8(178), uint8(78), 8, "radial_gradient_center")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       145.0, 86.0, uint8(137), uint8(64), uint8(91), 14, "radial_gradient_edge")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       276.0, 64.0, uint8(24), uint8(42), uint8(72), 8, "transform_outer")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       290.0, 78.0, uint8(196), uint8(224), uint8(88), 8, "transform_inner")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       30.0, 148.0, uint8(52), uint8(196), uint8(112), 8, "scroll_leaf")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       105.0, 148.0, uint8(12), uint8(20), uint8(32), 8, "rect_clip")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       120.0, 155.0, uint8(12), uint8(20), uint8(32), 8, "hidden_leaf")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       202.0, 142.0, uint8(36), uint8(76), uint8(208), 8, "back_stack")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       220.0, 165.0, uint8(220), uint8(48), uint8(48), 8, "front_stack")
-    PrimitiveRequireBlended(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequireBlended(initialPixels, initialResult.Width, metrics,
       160.0, 158.0, "opacity_leaf")
     let beforeOffset = PrimitiveSmokeCell.ScrollViewport.ScrollOffset.X
     Require(PrimitiveSmokeCell.ScrollViewport.ScrollTo(24.0, 0.0),
@@ -2472,16 +2472,16 @@ func RunPrimitivePixelSmoke() {
     Require(afterOffset > beforeOffset,
       "Primitive scroll offset did not advance")
     scrolledResult = PrimitiveReadback(opened, metrics)
-    let scrolledPixels = scrolledResult!!.Pixels
-    PrimitiveRequirePixelDifferent(scrolledPixels, scrolledResult!!.Width, metrics,
+    let scrolledPixels = scrolledResult.Pixels
+    PrimitiveRequirePixelDifferent(scrolledPixels, scrolledResult.Width, metrics,
       30.0, 148.0, uint8(52), uint8(196), uint8(112), 12, "scroll_leaf")
-    PrimitiveRequirePixelNear(scrolledPixels, scrolledResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(scrolledPixels, scrolledResult.Width, metrics,
       12.0, 148.0, uint8(52), uint8(196), uint8(112), 12, "scroll_clip_sliver")
     Require(WindowReadbackTestFixture.RequestCount(opened) == 2uL
         && WindowReadbackTestFixture.CompletionCount(opened) == 2uL,
       "Primitive readback lifecycle counts are incorrect")
     let residentBeforeClose = WindowReadbackTestFixture.ResidentResourceBytes(opened)
-    Require(residentBeforeClose >= uint64(scrolledResult!!.Pixels.Length),
+    Require(residentBeforeClose >= uint64(scrolledResult.Pixels.Length),
       "Primitive readback resources are not resident before close")
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
@@ -2576,58 +2576,58 @@ func RunRoundedOverflowSmoke() {
       > RoundedOverflowCell.RoundedScroll.BorderBox.Width,
       "Readback mixed-axis clip gate did not retain overflowing child geometry")
     initialResult = PrimitiveReadback(opened, metrics)
-    let initialPixels = initialResult!!.Pixels
+    let initialPixels = initialResult.Pixels
     let horizontalBounds = RoundedOverflowCell.HorizontalViewport.BorderBox
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       horizontalBounds.X - 1.0, horizontalBounds.Y - 1.0,
       uint8(12), uint8(20), uint8(32), 8, "horizontal_background")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       68.0, 30.0, uint8(52), uint8(196), uint8(112), 8, "horizontal_initial")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       20.0, 70.0, uint8(52), uint8(196), uint8(112), 8, "horizontal_vertical_visible")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       180.0, 30.0, uint8(228), uint8(160), uint8(64), 8, "vertical_initial")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       268.0, 30.0, uint8(228), uint8(160), uint8(64), 8, "vertical_horizontal_visible")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       9.0, 85.0, uint8(12), uint8(20), uint8(32), 8, "rounded_hidden_top_left")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       130.0, 85.0, uint8(12), uint8(20), uint8(32), 8, "rounded_hidden_top_right")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       9.0, 178.0, uint8(12), uint8(20), uint8(32), 8, "rounded_hidden_bottom_left")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       130.0, 178.0, uint8(12), uint8(20), uint8(32), 8, "rounded_hidden_bottom_right")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       24.0, 130.0, uint8(228), uint8(64), uint8(72), 8, "rounded_hidden_center")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       91.0, 141.0, uint8(248), uint8(72), uint8(72), 28, "image_top_left")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       120.0, 166.0, uint8(236), uint8(196), uint8(72), 28, "image_bottom_right")
-    RequireTextCoverage(initialPixels, initialResult!!.Width, metrics,
+    RequireTextCoverage(initialPixels, initialResult.Width, metrics,
       18, 96, 98, 128, "rounded_text")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       149.0, 85.0, uint8(12), uint8(20), uint8(32), 8, "rounded_scroll_top_left")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       270.0, 85.0, uint8(12), uint8(20), uint8(32), 8, "rounded_scroll_top_right")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       149.0, 178.0, uint8(12), uint8(20), uint8(32), 8, "rounded_scroll_bottom_left")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       270.0, 178.0, uint8(12), uint8(20), uint8(32), 8, "rounded_scroll_bottom_right")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       210.0, 130.0, uint8(52), uint8(196), uint8(112), 8, "rounded_scroll_initial")
     let outerBounds = RoundedOverflowCell.ClipOuter.BorderBox
     let innerBounds = RoundedOverflowCell.ClipInner.BorderBox
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       290.0, 86.0, uint8(12), uint8(20), uint8(32), 8, "outer_clip_corner")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       outerBounds.X + outerBounds.Width * 0.30,
       outerBounds.Y + outerBounds.Height * 0.25,
       uint8(32), uint8(96), uint8(144), 12, "inner_clip_outside")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       innerBounds.X + innerBounds.Width * 0.25,
       innerBounds.Y + innerBounds.Height * 0.75,
       uint8(160), uint8(64), uint8(192), 16, "inner_clip_inside")
-    PrimitiveRequirePixelNear(initialPixels, initialResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(initialPixels, initialResult.Width, metrics,
       340.0, 130.0, uint8(236), uint8(196), uint8(72), 24, "transformed_leaf")
     let horizontalBefore = RoundedOverflowCell.HorizontalViewport.ScrollOffset.X
     let roundedBefore = RoundedOverflowCell.RoundedScroll.ScrollOffset.X
@@ -2641,7 +2641,7 @@ func RunRoundedOverflowSmoke() {
     Require(horizontalAfter > horizontalBefore && roundedAfter > roundedBefore,
       "Readback horizontal scroll offsets did not advance")
     axisScrolledResult = PrimitiveReadback(opened, metrics)
-    let axisScrolledPixels = axisScrolledResult!!.Pixels
+    let axisScrolledPixels = axisScrolledResult.Pixels
     let horizontalViewportBoundsAfter = RoundedOverflowCell.HorizontalViewport.BorderBox
     let horizontalStripeBoundsAfter = RoundedOverflowCell.HorizontalStripe.BorderBox
     let horizontalStripeSampleX = if horizontalStripeBoundsAfter.X
@@ -2662,12 +2662,12 @@ func RunRoundedOverflowSmoke() {
     }
     let roundedStripeSampleY = roundedViewportBoundsAfter.Y
     +roundedViewportBoundsAfter.Height * 0.5
-    PrimitiveRequirePixelNear(axisScrolledPixels, axisScrolledResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(axisScrolledPixels, axisScrolledResult.Width, metrics,
       horizontalStripeSampleX, horizontalStripeSampleY,
       uint8(72), uint8(128), uint8(224), 8, "horizontal_scrolled")
-    PrimitiveRequirePixelNear(axisScrolledPixels, axisScrolledResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(axisScrolledPixels, axisScrolledResult.Width, metrics,
       20.0, 70.0, uint8(52), uint8(196), uint8(112), 8, "horizontal_y_visible_after")
-    PrimitiveRequirePixelNear(axisScrolledPixels, axisScrolledResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(axisScrolledPixels, axisScrolledResult.Width, metrics,
       roundedStripeSampleX, roundedStripeSampleY,
       uint8(72), uint8(128), uint8(224), 8, "rounded_scroll_after")
     let verticalBefore = RoundedOverflowCell.VerticalViewport.ScrollOffset.Y
@@ -2678,7 +2678,7 @@ func RunRoundedOverflowSmoke() {
     Require(verticalAfter > verticalBefore,
       "Readback vertical scroll offset did not advance")
     verticalScrolledResult = PrimitiveReadback(opened, metrics)
-    let verticalScrolledPixels = verticalScrolledResult!!.Pixels
+    let verticalScrolledPixels = verticalScrolledResult.Pixels
     let verticalViewportBoundsAfter = RoundedOverflowCell.VerticalViewport.BorderBox
     let verticalStripeBoundsAfter = RoundedOverflowCell.VerticalStripe.BorderBox
     let verticalStripeSampleX = verticalViewportBoundsAfter.X
@@ -2689,16 +2689,16 @@ func RunRoundedOverflowSmoke() {
     } else {
       verticalViewportBoundsAfter.Y + 4.0
     }
-    PrimitiveRequirePixelNear(verticalScrolledPixels, verticalScrolledResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(verticalScrolledPixels, verticalScrolledResult.Width, metrics,
       verticalStripeSampleX, verticalStripeSampleY,
       uint8(196), uint8(88), uint8(200), 8, "vertical_scrolled")
-    PrimitiveRequirePixelNear(verticalScrolledPixels, verticalScrolledResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(verticalScrolledPixels, verticalScrolledResult.Width, metrics,
       268.0, 30.0, uint8(228), uint8(160), uint8(64), 8, "vertical_x_visible_after")
     Require(WindowReadbackTestFixture.RequestCount(opened) == 3uL
         && WindowReadbackTestFixture.CompletionCount(opened) == 3uL,
       "Readback rounded overflow readback lifecycle counts are incorrect")
     let residentBeforeClose = WindowReadbackTestFixture.ResidentResourceBytes(opened)
-    Require(residentBeforeClose >= uint64(verticalScrolledResult!!.Pixels.Length),
+    Require(residentBeforeClose >= uint64(verticalScrolledResult.Pixels.Length),
       "Readback rounded overflow readback resources are not resident before close")
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
@@ -2792,46 +2792,46 @@ func RunEffectsSmoke() {
         && EffectsCell.ClipViewport.BorderBox.Height == 112.0,
       "Readback effects gate retained incorrect geometry")
     firstResult = PrimitiveReadback(opened, metrics)
-    let firstPixels = firstResult!!.Pixels
-    PrimitiveRequirePixelNear(firstPixels, firstResult!!.Width, metrics,
+    let firstPixels = firstResult.Pixels
+    PrimitiveRequirePixelNear(firstPixels, firstResult.Width, metrics,
       70.0, 60.0, uint8(44), uint8(92), uint8(132), 20, "container_fill")
-    PrimitiveRequirePixelNear(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(firstPixels, firstResult.Width, metrics,
       200.0, 60.0, uint8(36), uint8(116), uint8(84), 20, "button_fill")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       130.0, 76.0, uint8(12), uint8(20), uint8(32), 18, "container_outer_shadow")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       200.0, 108.0, uint8(12), uint8(20), uint8(32), 2, "button_outer_shadow")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       18.0, 60.0, uint8(44), uint8(92), uint8(132), 16, "container_inset_shadow")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       128.0, 119.0, uint8(12), uint8(20), uint8(32), 12, "shape_outer_shadow")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       70.0, 108.0, uint8(72), uint8(128), uint8(224), 12, "shape_inset_shadow")
-    PrimitiveRequirePixelNear(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(firstPixels, firstResult.Width, metrics,
       70.0, 9.0, uint8(232), uint8(196), uint8(72), 48, "container_outline")
-    let groupPixel = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 286.0, 42.0)
+    let groupPixel = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 286.0, 42.0)
     Require(groupPixel[0] > uint8(70) && groupPixel[2] < uint8(170),
       "Readback group opacity outer paint is missing: " + PrimitivePixelText(groupPixel))
-    let groupOverlap = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 330.0, 60.0)
+    let groupOverlap = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 330.0, 60.0)
     Require(groupOverlap[2] > groupOverlap[0]
         && groupOverlap[2] > uint8(48) && groupOverlap[0] > uint8(12),
       "Readback nested group opacity overlap is incorrect: " + PrimitivePixelText(groupOverlap))
-    PrimitiveRequirePixelNear(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelNear(firstPixels, firstResult.Width, metrics,
       15.0, 133.0, uint8(12), uint8(20), uint8(32), 20, "clip_corner")
-    let clipPixel = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 72.0, 188.0)
+    let clipPixel = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 72.0, 188.0)
     Require(clipPixel[0] > uint8(120) && clipPixel[1] > uint8(100)
         && clipPixel[2] < uint8(140),
       "Readback transformed clip leaf is missing: " + PrimitivePixelText(clipPixel))
-    RequireColorCoverage(firstPixels, firstResult!!.Width, metrics,
+    RequireColorCoverage(firstPixels, firstResult.Width, metrics,
       178, 144, 274, 230, "colr")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       310.0, 110.0, uint8(13), uint8(20), uint8(32), 2, "blurred_text_shadow")
-    PrimitiveRequirePixelDifferent(firstPixels, firstResult!!.Width, metrics,
+    PrimitiveRequirePixelDifferent(firstPixels, firstResult.Width, metrics,
       270.0, 123.0, uint8(12), uint8(20), uint8(32), 8, "text_box_shadow")
-    let multiplyPixel = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 44.0, 254.0)
-    let screenPixel = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 150.0, 254.0)
-    let overlayPixel = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 256.0, 254.0)
-    let differencePixel = PrimitiveLogicalPixel(firstPixels, firstResult!!.Width, metrics, 362.0, 254.0)
+    let multiplyPixel = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 44.0, 254.0)
+    let screenPixel = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 150.0, 254.0)
+    let overlayPixel = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 256.0, 254.0)
+    let differencePixel = PrimitiveLogicalPixel(firstPixels, firstResult.Width, metrics, 362.0, 254.0)
     Require(multiplyPixel[0] > uint8(40)
         && multiplyPixel[2] > uint8(40)
         && Math.Abs(int32(multiplyPixel[0]) - int32(multiplyPixel[2])) <= 8
@@ -2844,13 +2844,13 @@ func RunEffectsSmoke() {
       +" difference=" + PrimitivePixelText(differencePixel))
     WindowReadbackTestFixture.ForceRender(opened, 0.05)
     secondResult = PrimitiveReadback(opened, metrics)
-    Require(secondResult!!.Pixels.Length == firstResult!!.Pixels.Length,
+    Require(secondResult.Pixels.Length == firstResult.Pixels.Length,
       "Readback effects repeated readback extent changed")
     Require(WindowReadbackTestFixture.RequestCount(opened) == 2uL
         && WindowReadbackTestFixture.CompletionCount(opened) == 2uL,
       "Readback effects readback lifecycle counts are incorrect")
     let residentBeforeClose = WindowReadbackTestFixture.ResidentResourceBytes(opened)
-    Require(residentBeforeClose >= uint64(secondResult!!.Pixels.Length),
+    Require(residentBeforeClose >= uint64(secondResult.Pixels.Length),
       "Readback effects readback resources are not resident before close")
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)

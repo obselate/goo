@@ -115,7 +115,7 @@ internal class PassiveTextPresentations {
 
     internal func Apply(n Node, content string,
       ranges [] ? TextStyleRange) PassiveTextPresentationChange{
-        if ranges == nil || ranges!!.Length == 0 {
+        if ranges == nil || ranges.Length == 0 {
           if values.TryGetValue(n, out var prior) {
             values.Remove(n)
             return PassiveTextPresentationChange{ Changed: true,
@@ -124,17 +124,17 @@ internal class PassiveTextPresentations {
           return PassiveTextPresentationChange{}
         }
         if values.TryGetValue(n, out var current) && current.Content == content
-          && current.Transform == n.TextTransform && sameRanges(current.Ranges, ranges!!) {
+          && current.Transform == n.TextTransform && sameRanges(current.Ranges, ranges) {
             return PassiveTextPresentationChange{}
           }
-        validateRanges(content, ranges!!)
-        let displayRanges = mapDisplayRanges(n, content, ranges!!)
+        validateRanges(content, ranges)
+        let displayRanges = mapDisplayRanges(n, content, ranges)
         var oldFlow = false
         if values.TryGetValue(n, out var prior) { oldFlow = rangesAffectFlow(prior.Ranges) }
-        let flowChanged = rangesAffectFlow(ranges!!) || oldFlow
+        let flowChanged = rangesAffectFlow(ranges) || oldFlow
         values.Remove(n)
         values.Add(n, PassiveTextPresentation(content, n.TextTransform,
-          copyPassiveTextStyleRanges(ranges!!), displayRanges))
+          copyPassiveTextStyleRanges(ranges), displayRanges))
         return PassiveTextPresentationChange{ Changed: true, FlowChanged: flowChanged }
       }
 

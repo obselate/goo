@@ -21,7 +21,9 @@ public sealed class VulkanTextFrameDataCopyTests
         var recordsField = typeof(VulkanRetainedTextSegment).GetField(
             "Records", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
         var records = (Array)recordsField.GetValue(segment)!;
-        var allocationField = typeof(VulkanTextFrameSlot).GetField(
+        var buffersField = typeof(VulkanTextFrameSlot).GetField(
+            "Buffers", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        var allocationField = buffersField.FieldType.GetField(
             "StagingAllocation", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
         var mappedField = typeof(VulkanMemoryAllocation).GetField(
             "mapped", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
@@ -37,7 +39,9 @@ public sealed class VulkanTextFrameDataCopyTests
             Marshal.Copy(firstRecord, 0, source, recordBytes);
             Marshal.Copy(secondRecord, 0, IntPtr.Add(source, recordBytes), recordBytes);
             mappedField.SetValue(allocation, target);
-            allocationField.SetValue(slot, allocation);
+            var buffers = buffersField.GetValue(slot)!;
+            allocationField.SetValue(buffers, allocation);
+            buffersField.SetValue(slot, buffers);
             Marshal.Copy(new byte[targetBytes], 0, target, targetBytes);
             for (var index = recordBytes; index < targetBytes; index++)
             {

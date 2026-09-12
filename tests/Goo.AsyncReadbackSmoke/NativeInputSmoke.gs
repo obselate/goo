@@ -6,6 +6,20 @@ import System.Runtime.InteropServices
 import Goo
 import Hexa.NET.SDL3
 
+// SDK 0.4.591 nullable-wraps imported pointer fields. Use the native address
+// directly for this SDL event; RunNativeInputSmoke checks its ABI layout.
+@StructLayout(LayoutKind.Sequential, Size: 128)
+struct NativeTextInputEvent {
+  public var Type uint32
+  public var Reserved uint32
+  public var Timestamp uint64
+  public var WindowID uint32
+  public var Text nint
+}
+
+@DllImport("SDL3", EntryPoint: "SDL_PushEvent", CallingConvention: CallingConvention.Cdecl)
+func NativeInputPushTextEvent(ref event NativeTextInputEvent) uint8;
+
 class NativeInputAcceptanceCell : Cell {
   internal let Target ElementHandle = ElementHandle{}
   internal let Entry ElementHandle = ElementHandle{}
@@ -168,15 +182,12 @@ unsafe func NativeInputPushText(windowId uint32, value string, out polled int32)
   polled = 0
   let storage = Marshal.StringToCoTaskMemUTF8(value)
   try {
-    var event = SDLEvent{
+    var event = NativeTextInputEvent{
       Type: uint32(SDLEventType.TextInput),
-      Text: SDLTextInputEvent{
-        Type: SDLEventType.TextInput,
-        WindowID: windowId,
-        Text: *byte(storage),
-      },
+      WindowID: windowId,
+      Text: storage,
     }
-    let accepted = SDL.PushEvent(&event)
+    let accepted = NativeInputPushTextEvent(&event) != 0
     if accepted {
       polled = WindowReadbackTestFixture.PumpNativeEventsForTest()
     }
@@ -196,6 +207,10 @@ func NativeInputRequireInputFrame(before VulkanDiagnosticCounterSnapshot,
 func RunNativeInputSmoke() {
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
+  Require(Marshal.SizeOf[NativeTextInputEvent]() == 128
+      && Marshal.OffsetOf[NativeTextInputEvent]("WindowID") == Marshal.OffsetOf[SDLTextInputEvent]("WindowID")
+      && Marshal.OffsetOf[NativeTextInputEvent]("Text") == Marshal.OffsetOf[SDLTextInputEvent]("Text"),
+    "Native SDL text input event layout does not match the bindings")
   let root = NativeInputAcceptanceCell{}
   let capturedError = StringWriter()
   let originalError = Console.Error

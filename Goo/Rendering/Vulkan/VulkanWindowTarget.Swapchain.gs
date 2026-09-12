@@ -577,7 +577,7 @@ internal unsafe partial class VulkanWindowTarget {
     if nullable == nil {
       return VkConstants.VK_ERROR_INITIALIZATION_FAILED
     }
-    let deviceWaitIdleFunction = nullable!!
+    let deviceWaitIdleFunction = nullable
     return deviceWaitIdleFunction(device)
   }
 

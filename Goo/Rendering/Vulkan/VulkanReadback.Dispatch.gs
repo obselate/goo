@@ -15,7 +15,7 @@ internal unsafe sealed class VulkanReadbackDispatch {
     if copy == nil {
       throw InvalidOperationException("vkCmdCopyImageToBuffer has an invalid address")
     }
-    copyImageToBuffer = copy!!
+    copyImageToBuffer = copy
   }
 
   internal func CopyImageToBuffer(commandBuffer VkCommandBuffer, image VkImage,

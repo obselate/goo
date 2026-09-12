@@ -103,7 +103,7 @@ internal unsafe sealed class VulkanTextReadbackFixture : IDisposable {
     }
     frame = nil
     if firstError != nil {
-      throw firstError!!
+      throw firstError
     }
     disposed = true
   }

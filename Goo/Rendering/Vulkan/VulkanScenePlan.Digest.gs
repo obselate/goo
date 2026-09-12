@@ -277,20 +277,6 @@ internal partial class SceneFrame {
       hash = Mix(hash, uint64(value.TransformIndex))
       index = index + 1
     }
-    hash = Mix(hash, uint64(customMeshCount))
-    index = 0
-    while index < customMeshCount {
-      let value = customMeshes[index]
-      hash = HashBounds(hash, value.Bounds)
-      hash = HashResource(hash, value.MeshId)
-      hash = HashResource(hash, value.PipelineId)
-      hash = Mix(hash, uint64(value.VertexCount))
-      hash = Mix(hash, uint64(value.IndexCount))
-      hash = Mix(hash, uint64(value.Topology))
-      hash = HashFloat(hash, value.Opacity)
-      hash = Mix(hash, uint64(value.TransformIndex))
-      index = index + 1
-    }
     hash = Mix(hash, uint64(layerCount))
     index = 0
     while index < layerCount {
@@ -315,7 +301,7 @@ internal partial class SceneFrame {
     version uint64,
     bounds ConservativeBounds) int32{
       RequireClosedChunk()
-      GrowChunks(NextCount(chunkCount))
+      Grow[SceneChunk](&chunks, chunkCount, NextCount(chunkCount))
       let index = chunkCount
       var contentKey = HashBounds(HashOffset, bounds)
       contentKey = Mix(contentKey, 0uL)
@@ -559,17 +545,6 @@ internal partial class SceneFrame {
         result = Mix(result, uint64(value.Seed))
         return HashTransformIndex(result, value.TransformIndex)
       }
-      case SceneDrawKind.CustomMesh {
-        let value = customMeshes[reference.Index]
-        result = HashBounds(result, value.Bounds)
-        result = HashResource(result, value.MeshId)
-        result = HashResource(result, value.PipelineId)
-        result = Mix(result, uint64(value.VertexCount))
-        result = Mix(result, uint64(value.IndexCount))
-        result = Mix(result, uint64(value.Topology))
-        result = HashFloat(result, value.Opacity)
-        return HashTransformIndex(result, value.TransformIndex)
-      }
       case SceneDrawKind.LayerBegin {
         return HashLayerContent(result, reference.Index)
       }
@@ -645,11 +620,7 @@ internal partial class SceneFrame {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
     ValidateRectClipParentIndex(value.ParentIndex)
-    GrowRectClips(NextCount(rectClipCount))
-    let index = rectClipCount
-    rectClips[index] = value
-    rectClipCount = NextCount(rectClipCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&rectClips, &rectClipCount, value)
     AppendDrawRef(DrawRef{
       Kind: begin ? SceneDrawKind.RectClipBegin : SceneDrawKind.RectClipEnd,
       Index: index,
@@ -663,11 +634,7 @@ internal partial class SceneFrame {
     RequireOpenChunk()
     ValidateLayer(value)
     ValidateTransformIndex(value.TransformIndex)
-    GrowLayers(NextCount(layerCount))
-    let index = layerCount
-    layers[index] = value
-    layerCount = NextCount(layerCount)
-    recordOperations = recordOperations + 1uL
+    let index = AppendRecord(&layers, &layerCount, value)
     AppendResourceIfValid(value.OffscreenTargetId)
     if value.EffectIndex >= 0 {
       AppendResourceIfValid(ResourceId{
@@ -725,7 +692,7 @@ internal partial class SceneFrame {
 
   private func AppendDrawRef(value DrawRef) int32 {
     RequireOpenChunk()
-    GrowDrawRefs(NextCount(drawRefCount))
+    Grow[DrawRef](&drawRefs, drawRefCount, NextCount(drawRefCount))
     let index = drawRefCount
     drawRefs[index] = DrawRef{
       Kind: value.Kind,
@@ -740,7 +707,7 @@ internal partial class SceneFrame {
 
   private func AppendResourceReference(value ResourceId) int32 {
     RequireOpenChunk()
-    GrowResourceRefs(NextCount(resourceRefCount))
+    Grow[ResourceId](&resourceRefs, resourceRefCount, NextCount(resourceRefCount))
     let index = resourceRefCount
     resourceRefs[index] = value
     resourceRefCount = NextCount(resourceRefCount)

@@ -4,11 +4,11 @@ import System.Runtime.InteropServices
 import Goo
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-type VulkanValidationCallback = delegate func(
+delegate VulkanValidationCallback(
   severity VkDebugUtilsMessageSeverityFlagBitsEXT,
   types VkDebugUtilsMessageTypeFlagsEXT,
   callbackData nint,
-  userData nint) VkBool32
+  userData nint) VkBool32;
 
 internal unsafe class VulkanValidation {
   private let callback VulkanValidationCallback

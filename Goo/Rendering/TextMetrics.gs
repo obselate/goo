@@ -122,18 +122,6 @@ internal class TextMetrics {
     return cached.PlaceholderShape
   }
 
-  internal func CachedBufferShape(n Node) ShapedText? {
-    guard let cached = n.EntryShape, let shape = cached.Shape else { return nil }
-    if cached.Content != n.Buffer || cached.FontFamily != n.FontFamily
-      || cached.FontSize != TextLayouts.fontSize(n) || cached.FontWeight != n.FontWeight
-      || cached.Italic != (n.FontStyle == FontStyle.Italic)
-      || cached.Spacing != Spacing(n) || cached.Direction != int32(n.Direction)
-      || cached.Password != n.Password{
-        return nil
-      }
-    return shape
-  }
-
   internal func EntryOffset(n Node, shaped ShapedText) float32 {
     let free = TextLayouts.ContentWidth(n) - shaped.Width
     if free <= 0.0F { return 0.0F }

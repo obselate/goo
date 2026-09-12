@@ -1321,7 +1321,7 @@ internal unsafe sealed class VulkanTextScene {
       segment = created
     }
     cache.Cursor = cache.Cursor + 1
-    return segment!!
+    return segment
   }
   private func CommitSegment(segment VulkanRetainedTextSegment) {
     if segment.Id == 0uL {

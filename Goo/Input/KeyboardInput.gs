@@ -358,7 +358,7 @@ internal class KeyboardInput {
       try {
         var current Node? = start
         while current != nil {
-          let node = current!!
+          let node = current
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
             result.Routed = true

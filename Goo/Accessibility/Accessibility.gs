@@ -617,14 +617,14 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
       textSnapshot = nil
       return
     }
-    if textSnapshot == nil || textSnapshot!!.Version != document!!.Version {
-      textSnapshot = document!!.Snapshot()
+    if textSnapshot == nil || textSnapshot!!.Version != document.Version {
+      textSnapshot = document.Snapshot()
     }
   }
 
   private func snapshotMatches(document TextDocument?) bool {
     if document == nil { return textSnapshot == nil }
-    return textSnapshot != nil && textSnapshot!!.Version == document!!.Version
+    return textSnapshot != nil && textSnapshot!!.Version == document.Version
   }
 
   internal func SetChildren(values List[AccessibilityNode]) bool {
@@ -858,7 +858,7 @@ internal func sameArray[T](left []T, right []T) bool {
 
 private func sameOptionalId(left AccessibilityId?, right AccessibilityId?) bool {
   if left == nil || right == nil { return left == nil && right == nil }
-  return left!!.Value == right!!.Value
+  return left.Value == right.Value
 }
 
 private func sameAccessibilityRect(left ElementRect, right ElementRect) bool -> left.X == right.X && left.Y == right.Y && left.Width == right.Width
@@ -866,9 +866,9 @@ private func sameAccessibilityRect(left ElementRect, right ElementRect) bool -> 
 
 private func sameAccessibilityNodes(left List[AccessibilityNode]?, right List[AccessibilityNode]) bool {
   if left == nil { return right.Count == 0 }
-  if left!!.Count != right.Count { return false }
+  if left.Count != right.Count { return false }
   for i in 0 ... right.Count {
-    if left!! [i] != right[i] { return false }
+    if left[i] != right[i] { return false }
   }
   return true
 }

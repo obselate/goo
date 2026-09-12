@@ -113,7 +113,7 @@ public partial class Window {
     var subject = n
     var parent = n.Parent
     while parent != nil {
-      let ancestor = parent!!
+      let ancestor = parent
       if ancestor.Kind == NodeKind.Editor || ancestor.OverflowX == Overflow.Scroll
         || ancestor.OverflowY == Overflow.Scroll{
           scrollSubjectIntoAncestor(subject, ancestor)

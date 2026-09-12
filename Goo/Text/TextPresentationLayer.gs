@@ -430,7 +430,7 @@ public class TextPresentationLayer : IDisposable {
       if let current = mutation {
         if current.Kind == TextDocumentMutationKind.Undo {
           let history = styleHistoryFor(span.Key, current.Transaction)
-          if history != nil && !history!!.Active { restored = history }
+          if history != nil && !history.Active { restored = history }
         }
       }
       if let history = restored {

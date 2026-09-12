@@ -651,7 +651,7 @@ func VirtualTableTree() string {
     return "complete"
   }
   if value == "complete" || value == "virtualized" {
-    return value!!
+    return value
   }
   throw InvalidOperationException("GOO_VIRTUAL_TABLE_TREE must be complete or virtualized")
 }
@@ -662,7 +662,7 @@ func VirtualTableCull() string {
     return "enabled"
   }
   if value == "enabled" || value == "disabled" {
-    return value!!
+    return value
   }
   throw InvalidOperationException("GOO_VIRTUAL_TABLE_CULL must be enabled or disabled")
 }
@@ -672,7 +672,7 @@ func VirtualTableClip() string {
     return "legacy"
   }
   if value == "legacy" || value == "explicit" {
-    return value!!
+    return value
   }
   throw InvalidOperationException("GOO_VIRTUAL_TABLE_CLIP must be legacy or explicit")
 }
@@ -684,7 +684,7 @@ func VirtualTableOverscan() int32 {
   }
   var value int32
   try {
-    value = int32(UInt64.Parse(text!!))
+    value = int32(UInt64.Parse(text))
   } catch (error Exception) {
     throw InvalidOperationException("GOO_VIRTUAL_TABLE_OVERSCAN must be 0 or 1")
   }

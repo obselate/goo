@@ -264,7 +264,7 @@ internal class ShaderEffectStyles {
       }
       if effect == nil { return }
       if values == nil { values = ConditionalWeakTable[Node, ShaderEffectBinding]() }
-      let binding = ShaderEffectBinding(n, effect!!, invalidated)
+      let binding = ShaderEffectBinding(n, effect, invalidated)
       values?.Add(n, binding)
     }
 

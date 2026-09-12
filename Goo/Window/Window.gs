@@ -42,9 +42,6 @@ internal struct WindowNotifications {
   internal func AddKeyPressed(callback Action[Key, KeyModifiers]) { keyPressed += callback }
   internal func RemoveKeyPressed(callback Action[Key, KeyModifiers]) { keyPressed -= callback }
   internal prop KeyPressedCallbacks Action[Key, KeyModifiers]? { get -> keyPressed }
-  internal func RaiseKeyPressed(key Key, modifiers KeyModifiers) {
-    keyPressed?.Invoke(key, modifiers)
-  }
 
   internal func AddFocusChanged(callback Action[bool]) { focusChanged += callback }
   internal func RemoveFocusChanged(callback Action[bool]) { focusChanged -= callback }

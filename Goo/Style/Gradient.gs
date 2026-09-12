@@ -231,11 +231,3 @@ internal func computeGradientContentHash4(kind int32, a float64, b float64, c fl
     }
     return result
   }
-
-internal func gradientContentHash(value Gradient) int32 -> switch value {
-  case linear is LinearGradient: linear.ContentHashForCache
-  case radial is RadialGradient: radial.ContentHashForCache
-  case compiled is CompiledVectorLinearGradient: compiled.ContentHashForCache
-  case compiled is CompiledVectorRadialGradient: compiled.ContentHashForCache
-  case _: 0
-}

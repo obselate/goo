@@ -25,7 +25,7 @@ internal class BackgroundImageLayouts {
         if path == "" { return false }
         value = create(n)
       }
-      let current = value!!
+      let current = value
       let changed = current.Path != path
       current.Path = path
       current.Invalidated = invalidated
@@ -61,7 +61,7 @@ internal class BackgroundImageLayouts {
       }
       var value = state(n)
       if value == nil { value = create(n) }
-      let current = value!!
+      let current = value
       current.Invalidated = invalidated
       if current.Source == source { return Refresh(n) }
       releasePath(current)

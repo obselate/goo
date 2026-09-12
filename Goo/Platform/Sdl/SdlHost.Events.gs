@@ -176,18 +176,20 @@ internal unsafe partial class SdlHost {
     }
     if eventType == SDLEventType.TextInput {
       if nativeEvent.Text.WindowID == windowId {
-        let text = Marshal.PtrToStringUTF8(nint(nativeEvent.Text.Text))
-        if let value = text {
-          if value.Length != 0 {
-            TextEntered?.Invoke(value)
-          }
+        guard let pointer = nativeEvent.Text.Text else { return }
+        let text = Marshal.PtrToStringUTF8(nint(pointer)) ?? ""
+        if text.Length != 0 {
+          TextEntered?.Invoke(text)
         }
       }
       return
     }
     if eventType == SDLEventType.TextEditing {
       if nativeEvent.Edit.WindowID == windowId {
-        let editing = Marshal.PtrToStringUTF8(nint(nativeEvent.Edit.Text)) ?? ""
+        var editing = ""
+        if let pointer = nativeEvent.Edit.Text {
+          editing = Marshal.PtrToStringUTF8(nint(pointer)) ?? ""
+        }
         if editing.Length == 0 {
           TextCompositionCanceled?.Invoke()
         } else {
@@ -412,8 +414,9 @@ internal unsafe partial class SdlHost {
   }
 
   private func CopyCandidates(nativeEvent SDLTextEditingCandidatesEvent) []string {
-    if nativeEvent.Candidates == nil || nativeEvent.NumCandidates <= 0 { return []string{} }
-    let pointers = *SdlVulkanExtensionPointer(nativeEvent.Candidates)
+    guard let values = nativeEvent.Candidates else { return []string{} }
+    if nativeEvent.NumCandidates <= 0 { return []string{} }
+    let pointers = *SdlVulkanExtensionPointer(values)
     let candidates = [nativeEvent.NumCandidates]string
     var index int32 = 0
     while index < nativeEvent.NumCandidates {

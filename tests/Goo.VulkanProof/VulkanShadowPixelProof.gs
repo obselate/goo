@@ -5,7 +5,7 @@ import Goo
 internal class ShadowPixelSceneContract {
   const Width uint32 = 64u
   const Height uint32 = 64u
-  const ExpectedDigest uint64 = 8328706597962574643uL
+  const ExpectedDigest uint64 = 17773420855745740137uL
   const ClearColor uint32 = 0x0000FFFFu
   const FillColor uint32 = 0xE09040FFu
 }

@@ -220,7 +220,7 @@ internal class TextInput {
     try {
       var current Node? = target
       while current != nil {
-        let node = current!!
+        let node = current
         let callback = received ? InputCallbacks.Focus(node) : InputCallbacks.Blur(node)
         if let handler = callback {
           handler(FocusEvent{ Control: focusControl, Generation: generation })
@@ -732,10 +732,10 @@ internal class TextInput {
 internal func rebuildFiberOwner(node Node) {
   var current Node? = node
   while current != nil {
-    if let owner = current!!.Fiber {
+    if let owner = current.Fiber {
       owner.Rebuild()
       return
     }
-    current = current!!.Parent
+    current = current.Parent
   }
 }

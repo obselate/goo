@@ -101,8 +101,6 @@ internal class TextLayouts {
       return layout
     }
 
-    internal func HasCachedLayout(n Node) bool -> n.TextLayout != nil || n.TextLayoutCache != nil
-
     internal func CurrentForGeometry(n Node) TextLayout? {
       let width = ContentWidth(n)
       if let layout = n.TextLayout {
@@ -712,17 +710,5 @@ internal class TextLayouts {
     internal func isCjk(c char) bool -> (c >= 0x2E80 && c <= 0x9FFF) || (c >= 0xF900 && c <= 0xFAFF)
       || (c >= 0x3040 && c <= 0x30FF) || (c >= 0xAC00 && c <= 0xD7AF)
 
-    internal func isRtl(text string) bool {
-      for i in 0 ... text.Length {
-        let c = text[i]
-        if (c >= 0x0590 && c <= 0x08FF) || (c >= 0xFB1D && c <= 0xFEFC) {
-          return true
-        }
-        if Char.IsLetter(text, i) {
-          return false
-        }
-      }
-      return false
-    }
   }
 }

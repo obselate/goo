@@ -150,8 +150,6 @@ public sealed class VectorAsset {
 
   internal func PlayerMorphCurveAt(index int32) CompiledVectorMorphCurveView -> compiled().MorphCurveAt(index)
 
-  internal func PlayerPathForNode(index int32) VectorPath -> PathForNode(index)
-
   internal func PlayerMutablePathForNode(index int32) VectorPath {
     let path = compiled().MutablePathForNode(index)
     guard let owner = path.NormalizedOwner else { return path }

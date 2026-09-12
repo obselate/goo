@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "b78c3ba18ea4159fc3698411ce27f5fb661e5f7d",
+  "commit": "ec2161d88e8a2554158708d345b595441361c993",
   "files": {
     "README.md": "721766f2770c154cd2586c21f07b9a19dcfab493d67076284db849844095fd5e",
     "CONTRIBUTING.md": "034fb1640bfe9e6be9527d2ceefe63c8ad681750475c1c60b4c69de2c72d1b20",
@@ -24,6 +24,6 @@
     "docs/devtools/development.md": "bc90a98cd92b93a6cc45a4cb15f5ef058b02ca59d54857174fe0b19bcdb83ea1",
     "docs/devtools/protocol.md": "e38e8566cfeecf65ff4714cdb6e3fa3d1308b0c4615fcd8b9908b9011b61a201",
     "templates/Goo.Templates/content/Program.gs": "8b3fda42fe1761980616b1299dc35684c1b5868ba020665623123b07063498c0",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "364b947570123be827c3ac610e38f733395d2e9dff2df540cf52f7720f6839f4"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "de65f7668fa2ccaf1fd1f8ab32bba34f83a94ffe398a87461b48182074c63dfc"
   }
 }

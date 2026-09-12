@@ -258,6 +258,7 @@ func PumpRecoveryWindows(first Window, second Window, third Window, count int32)
     FailedIdleTestFixture.ForcePump(first)
     FailedIdleTestFixture.ForcePump(second)
     FailedIdleTestFixture.ForcePump(third)
+    DrainCanonicalRecoveryQueues(first, second, third)
     pump = pump + 1
   }
 }
@@ -956,22 +957,22 @@ func Main() {
     let uploadEvent = if recoveryWindowValue != nil {
       SuccessfulDiagnosticEventIndexForWindow(
         imageDiagnostics, VulkanDiagnosticEventIds.UploadStage,
-        VulkanDiagnosticCategories.Timing, recoveryWindowValue!!, recoveryEvent + 1)
+        VulkanDiagnosticCategories.Timing, recoveryWindowValue, recoveryEvent + 1)
     } else { -1 }
     let presentEvent = if recoveryWindowValue != nil {
       SuccessfulDiagnosticEventIndexForWindow(
         imageDiagnostics, VulkanDiagnosticEventIds.SwapchainPresent,
-        VulkanDiagnosticCategories.Timing, recoveryWindowValue!!, uploadEvent + 1)
+        VulkanDiagnosticCategories.Timing, recoveryWindowValue, uploadEvent + 1)
     } else { -1 }
     let effectsEvent = if recoveryWindowValue != nil {
       PositiveDiagnosticEventIndexForWindow(
         imageDiagnostics, VulkanDiagnosticEventIds.EffectsPass,
-        VulkanDiagnosticCategories.Timing, recoveryWindowValue!!, recoveryEvent + 1)
+        VulkanDiagnosticCategories.Timing, recoveryWindowValue, recoveryEvent + 1)
     } else { -1 }
     let offscreenEvent = if recoveryWindowValue != nil {
       SuccessfulDiagnosticEventIndexForWindow(
         imageDiagnostics, VulkanDiagnosticEventIds.OffscreenPass,
-        VulkanDiagnosticCategories.Timing, recoveryWindowValue!!, recoveryEvent + 1)
+        VulkanDiagnosticCategories.Timing, recoveryWindowValue, recoveryEvent + 1)
     } else { -1 }
     let effectsLine = DiagnosticEventLine(
       imageDiagnostics, VulkanDiagnosticEventIds.EffectsPass,
@@ -992,7 +993,7 @@ func Main() {
       imageDiagnostics, VulkanDiagnosticEventIds.ResourceUpload,
       VulkanDiagnosticCategories.Image, imageUploadEvent)
     let recoveryOrdered = deviceLostLine != nil && recoveryLine != nil
-      && recoveryEvent > 0 && recoveryEvent > imageDiagnostics.IndexOf(deviceLostLine!!)
+      && recoveryEvent > 0 && recoveryEvent > imageDiagnostics.IndexOf(deviceLostLine)
     if !recoveryOrdered {
       Console.SetError(originalError)
       Console.Error.Write(imageDiagnostics)
@@ -1080,8 +1081,8 @@ func Main() {
       && effectsFrameValue != nil && offscreenFrameValue != nil
       && effectsTicksValue != nil && offscreenTicksValue != nil
       && effectsNanosecondsValue != nil && offscreenNanosecondsValue != nil
-      && effectsLine!!.Contains("\"result\":0,")
-      && offscreenLine!!.Contains("\"result\":0,")
+      && effectsLine.Contains("\"result\":0,")
+      && offscreenLine.Contains("\"result\":0,")
       && effectsWindowValue!! == recoveryWindowValue!!
       && offscreenWindowValue!! == recoveryWindowValue!!
       && effectsFrameValue!! != 0uL && offscreenFrameValue!! != 0uL
@@ -1113,10 +1114,10 @@ func Main() {
       +imageUploadEvent.ToString() + " recovery=" + recoveryEvent.ToString()
       +" line=" + (imageUploadLine != nil).ToString()
       +" bytes=" + (if imageUploadBytesValue != nil {
-        imageUploadBytesValue!!.ToString()
+        imageUploadBytesValue.ToString()
       } else { "missing" })
       +" uploadGeneration=" + (if imageUploadGenerationValue != nil {
-        imageUploadGenerationValue!!.ToString()
+        imageUploadGenerationValue.ToString()
       } else { "missing" })
       +" recoveryGeneration=" + newGeneration.ToString()
       +" residentPeak=" + imagePeakResidentBytes.ToString()

@@ -1284,7 +1284,7 @@ func RunTextControlsSmoke() {
     if composition == nil {
       throw InvalidOperationException("Text controls smoke lost composition before pump")
     }
-    let activeComposition = composition!!
+    let activeComposition = composition
     if activeComposition.SelectionStart != 2 || activeComposition.SelectionLength != 3
       || activeComposition.Text != "compose" {
         throw InvalidOperationException("Text controls smoke lost composition selection")
@@ -2110,7 +2110,7 @@ func Main() {
   var pressureInitial PressureImageProvider?
   if pressureSmoke || chunkSmoke {
     pressureInitial = CreatePressureImage(1, 1, uint8(1))
-    smokeRoot.SetPressureSource(pressureInitial!!)
+    smokeRoot.SetPressureSource(pressureInitial)
   }
   let window = Window{
     Title: "Goo package smoke test",

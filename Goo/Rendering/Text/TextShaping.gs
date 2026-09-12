@@ -133,17 +133,6 @@ internal class TextShaping {
 
     internal func GlyphCount(shaped ShapedText) int32 -> shaped.GlyphCount
 
-    internal func HasFamily(family string) bool {
-      if family == nil { return false }
-      for name in SplitFamilies(family) {
-        if File.Exists(name) { return true }
-        if let path = SystemFontResolvers.Current().Find(name, 400, false) {
-          if path.Length != 0 { return true }
-        }
-      }
-      return false
-    }
-
     internal func PrimaryFaceCacheCountForTests() int32 {
       lock (PrimaryFacesLock) { return PrimaryFaces.Count }
     }

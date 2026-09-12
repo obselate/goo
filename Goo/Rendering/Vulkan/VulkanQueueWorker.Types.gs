@@ -91,11 +91,6 @@ internal unsafe sealed class VulkanQueueMailbox {
       VulkanQueueMailboxPhase.SubmitComplete)
   }
 
-  internal func CancelPresent() {
-    Interlocked.CompareExchange(ref phase, VulkanQueueMailboxPhase.Idle,
-      VulkanQueueMailboxPhase.PresentQueued)
-  }
-
   internal func RetryPresent() {
     Interlocked.CompareExchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete,
       VulkanQueueMailboxPhase.PresentQueued)

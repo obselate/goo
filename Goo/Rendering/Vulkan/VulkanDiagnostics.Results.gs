@@ -17,11 +17,5 @@ internal class VulkanDiagnosticResultClassifier {
       }
       return VulkanDiagnosticResultClass.NonSuccess
     }
-
-    internal func IsSuccess(result VkResult) bool -> Classify(result) == VulkanDiagnosticResultClass.Success
-
-    internal func IsRecoverableWsi(result VkResult) bool -> Classify(result) == VulkanDiagnosticResultClass.RecoverableWsi
-
-    internal func IsNonSuccess(result VkResult) bool -> Classify(result) == VulkanDiagnosticResultClass.NonSuccess
   }
 }

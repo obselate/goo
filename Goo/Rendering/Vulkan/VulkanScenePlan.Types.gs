@@ -176,8 +176,7 @@ internal enum SceneResourceKind {
   GlyphRun;
   Atlas;
   PathBand;
-  Mesh;
-  Brush;
+  Brush = 7;
   Mask;
   Pipeline;
   OffscreenTarget;
@@ -234,8 +233,7 @@ internal enum SceneDrawKind {
   Shadow;
   Underline;
   Lava;
-  CustomMesh;
-  LayerBegin;
+  LayerBegin = 15;
   LayerEnd;
 }
 
@@ -513,17 +511,6 @@ internal struct LavaRecord {
   internal var Rainbow uint32
   internal var Rotation Point
   internal var Seed uint32
-  internal var TransformIndex int32
-}
-
-internal struct CustomMeshRecord {
-  internal var Bounds ConservativeBounds
-  internal var MeshId ResourceId
-  internal var PipelineId ResourceId
-  internal var VertexCount uint32
-  internal var IndexCount uint32
-  internal var Topology uint32
-  internal var Opacity float32
   internal var TransformIndex int32
 }
 

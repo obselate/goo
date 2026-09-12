@@ -91,8 +91,8 @@ internal class InputCallbacks {
     internal func SetBlobKeyDown(blob Blob, value((KeyEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnKeyDown = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnKeyDown = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobKeyDown(blob Blob)((KeyEvent) -> void) ? -> blobCallbacks(blob, false)?.OnKeyDown
@@ -100,8 +100,8 @@ internal class InputCallbacks {
     internal func SetBlobKeyUp(blob Blob, value((KeyEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnKeyUp = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnKeyUp = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobKeyUp(blob Blob)((KeyEvent) -> void) ? -> blobCallbacks(blob, false)?.OnKeyUp
@@ -109,8 +109,8 @@ internal class InputCallbacks {
     internal func SetBlobFocus(blob Blob, value((FocusEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnFocus = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnFocus = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobFocus(blob Blob)((FocusEvent) -> void) ? -> blobCallbacks(blob, false)?.OnFocus
@@ -118,8 +118,8 @@ internal class InputCallbacks {
     internal func SetBlobBlur(blob Blob, value((FocusEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnBlur = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnBlur = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobBlur(blob Blob)((FocusEvent) -> void) ? -> blobCallbacks(blob, false)?.OnBlur
@@ -127,8 +127,8 @@ internal class InputCallbacks {
     internal func SetBlobPointerEnter(blob Blob, value((PointerEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnPointerEnter = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnPointerEnter = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobPointerEnter(blob Blob)((PointerEvent) -> void) ? -> blobCallbacks(blob, false)?.OnPointerEnter
@@ -136,8 +136,8 @@ internal class InputCallbacks {
     internal func SetBlobPointerLeave(blob Blob, value((PointerEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
       if callbacks == nil { return false }
-      callbacks!!.OnPointerLeave = value
-      return finishBlob(blob, callbacks!!)
+      callbacks.OnPointerLeave = value
+      return finishBlob(blob, callbacks)
     }
 
     internal func BlobPointerLeave(blob Blob)((PointerEvent) -> void) ? -> blobCallbacks(blob, false)?.OnPointerLeave
@@ -162,14 +162,14 @@ internal class InputCallbacks {
       }
       if destination == nil {
         destination = InputCallbackSet()
-        nodeValues.Add(node, destination!!)
+        nodeValues.Add(node, destination)
       }
-      destination!!.OnKeyDown = source!!.OnKeyDown
-      destination!!.OnKeyUp = source.OnKeyUp
-      destination!!.OnFocus = source.OnFocus
-      destination!!.OnBlur = source.OnBlur
-      destination!!.OnPointerEnter = source.OnPointerEnter
-      destination!!.OnPointerLeave = source.OnPointerLeave
+      destination.OnKeyDown = source.OnKeyDown
+      destination.OnKeyUp = source.OnKeyUp
+      destination.OnFocus = source.OnFocus
+      destination.OnBlur = source.OnBlur
+      destination.OnPointerEnter = source.OnPointerEnter
+      destination.OnPointerLeave = source.OnPointerLeave
       node.HasSparseInputState = true
       return sourcePresence != destinationPresence
     }
@@ -219,7 +219,7 @@ internal class InputCallbacks {
     private func presence(value InputCallbackSet?) int32 {
       if value == nil { return 0 }
       var result int32
-      if value!!.OnKeyDown != nil { result = result | 1 }
+      if value.OnKeyDown != nil { result = result | 1 }
       if value.OnKeyUp != nil { result = result | 2 }
       if value.OnFocus != nil { result = result | 4 }
       if value.OnBlur != nil { result = result | 8 }

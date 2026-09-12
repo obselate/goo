@@ -15,7 +15,7 @@ internal sealed class FileSystemFontResolver {
     var best string?
     var bestScore int32 = Int32.MinValue
     for file in FontFiles() {
-      guard let fileName = Path.GetFileNameWithoutExtension(file) else { continue }
+      let fileName = Path.GetFileNameWithoutExtension(file)
       let stem = normalize(fileName)
       var familyScore int32
       if aliases {

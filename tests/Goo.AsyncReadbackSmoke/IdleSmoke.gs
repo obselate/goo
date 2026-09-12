@@ -9,20 +9,20 @@ func IdleDelta(after uint64, before uint64) uint64 -> after >= before ? after - 
 
 func IdleDurationMs() int32 {
   let value = Environment.GetEnvironmentVariable("GOO_IDLE_DURATION_MS")
-  if value == nil || value!!.Length == 0 {
+  if value == nil || value.Length == 0 {
     return 60000
   }
-  let parsed = Int32.Parse(value!!)
+  let parsed = Int32.Parse(value)
   Require(parsed >= 1000, "GOO_IDLE_DURATION_MS must be at least 1000")
   return parsed
 }
 
 func IdleWarmupMs() int32 {
   let value = Environment.GetEnvironmentVariable("GOO_IDLE_WARMUP_MS")
-  if value == nil || value!!.Length == 0 {
+  if value == nil || value.Length == 0 {
     return 3000
   }
-  let parsed = Int32.Parse(value!!)
+  let parsed = Int32.Parse(value)
   Require(parsed >= 1000, "GOO_IDLE_WARMUP_MS must be at least 1000")
   return parsed
 }

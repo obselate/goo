@@ -39,8 +39,6 @@ class GalleryShaderPrograms {
     let crt = ShaderEffectProgram.Load(
       Path.Combine(AppContext.BaseDirectory, "Shaders", "crt.goo-effect"))
 
-    lab = [11]ShaderEffect
-    studio = [11]ShaderEffect
     lab[0] = ShaderEffect(wolfenstein, samplesBackdrop: false)
     lab[1] = ShaderEffect(chrome, samplesBackdrop: false)
     lab[2] = ShaderEffect(corridor, samplesBackdrop: false)

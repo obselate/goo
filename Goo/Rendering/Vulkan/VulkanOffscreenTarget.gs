@@ -17,7 +17,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private const TimestampQueryCount int32 = 4
   private let device VkDevice
   private let dispatch VkDeviceDispatch
-  private let queue VkQueue
   private let sharedLease VulkanSharedLease
   private let validateGraphicsSubmission Action[uint64]
   private let queueMailbox VulkanQueueMailbox
@@ -41,7 +40,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private let objectAccounting VulkanObjectAccounting?
   private let diagnostics VulkanDiagnostics?
   private var timestampEnabled bool
-  private let timestampValidBits uint32
   private let timestampMask uint64
   private let timestampPeriod float32
   private var image VkImage
@@ -236,7 +234,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         }
       device = nativeDevice
       dispatch = nativeDispatch
-      queue = nativeQueue
       sharedLease = nativeSharedLease
       validateGraphicsSubmission = (serial uint64) -> { ValidateGraphicsSubmission(serial) }
       queueMailbox = nativeQueueMailbox
@@ -280,7 +277,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
           }
       }
       timestampEnabled = selectedTimestampEnabled
-      timestampValidBits = selectedTimestampValidBits
       timestampMask = selectedTimestampMask
       timestampPeriod = selectedTimestampPeriod
       imageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
@@ -1153,20 +1149,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       timestampQueryPoolAccounted = false
     }
     timestampEnabled = false
-  }
-
-  private func AbandonTimestampQueryPool() {
-    timestampQueryPool = 0uL
-    if timestampQueryPoolAccounted {
-      if let accounting = objectAccounting {
-        try { accounting.Release() } catch (cleanup Exception) { }
-      }
-      timestampQueryPoolAccounted = false
-    }
-    timestampEnabled = false
-    gpuTimingAvailable = false
-    gpuSceneReplayNanoseconds = 0uL
-    gpuCopyNanoseconds = 0uL
   }
 
   private func WriteTimestamp(stage VkPipelineStageFlags2, query uint32) {

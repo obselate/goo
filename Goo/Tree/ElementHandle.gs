@@ -734,7 +734,7 @@ internal class MetricSubscriptions {
         registration = ElementMetricRegistration(handle)
         state.Registration = registration
       }
-      let entry = registration!!
+      let entry = registration
       let wasInactive = !entry.Active
       entry.Active = true
       if !elements.Contains(entry) { elements.Add(entry) }
