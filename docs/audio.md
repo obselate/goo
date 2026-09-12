@@ -11,7 +11,7 @@ using let file = File.OpenRead("notification.wav")
 let cue = SoundSource.LoadWav(file)
 using let audio = SoundPlayer.TryOpen()
 // In an application callback, after checking its mute/notification policy:
-audio?.Play(cue, 0.5F)
+audio?.TryPlay(cue, 0.5F)
 ```
 
 Prepare sources outside input callbacks and `Cell.Build`. WAV input and decoded
@@ -28,10 +28,10 @@ is optional: `TryOpen` returns nil when the audio subsystem/default device is
 unavailable, and on unsupported targets such as Android. Window creation does
 not depend on audio initialization.
 
-`Play` copies the prepared PCM into a native queue and returns immediately
+`TryPlay` copies the prepared PCM into a native queue and returns immediately
 without waiting for playback. The audio thread converts/mixes it independently
 of window frames. Cues overlap, with a process-wide limit of 16 queued streams
-and 32 MiB of queued PCM. `Play` returns nil if this budget is full or a native
+and 32 MiB of queued PCM. `TryPlay` returns nil if this budget is full or a native
 stream cannot be queued. Completed streams are reclaimed by the next play,
 status query, stop, or owner disposal; they never accumulate beyond that limit.
 

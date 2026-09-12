@@ -25,7 +25,7 @@ public class SoundPlayer : IDisposable {
   /// Cues overlap. Returns nil if the shared 16-voice/32-MiB queue budget is full
   /// or the native stream cannot be queued. Throws after disposal or for invalid input.
   /// Completed streams are reclaimed on the next play, status query, stop, or disposal.
-  public func Play(source SoundSource, volume float32 = 1.0F) SoundPlayback ? -> Runtime.Play(this, source, volume)
+  public func TryPlay(source SoundSource, volume float32 = 1.0F) SoundPlayback ? -> Runtime.TryPlay(this, source, volume)
 
   /// Stops all cues belonging to this owner, leaving other owners' playback intact.
   public func StopAll() { Runtime.StopAll(this) }

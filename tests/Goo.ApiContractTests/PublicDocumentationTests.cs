@@ -190,7 +190,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.SoundPlayback.Dispose",
         "M:Goo.SoundPlayback.Stop",
         "M:Goo.SoundPlayer.Dispose",
-        "M:Goo.SoundPlayer.Play(Goo.SoundSource,System.Single)",
+        "M:Goo.SoundPlayer.TryPlay(Goo.SoundSource,System.Single)",
         "M:Goo.SoundPlayer.StopAll",
         "M:Goo.SoundPlayer.TryOpen",
         "M:Goo.SoundSource.#ctor(System.Int32,System.Int32,System.Single[])",
