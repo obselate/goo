@@ -1783,13 +1783,12 @@ internal partial class VulkanSceneCompiler {
       }
       case NodeKind.Image {
         let source = node.ImageSource
-        if (node.ImagePath != "" && source == nil)
-          || (source != nil && imageScene == nil) {
-            MarkUnsupported(node, VulkanSceneUnsupportedKind.Image,
-              VulkanSceneUnsupportedField.None,
-              VulkanSceneUnsupportedPrimitive.Image)
-            unsupportedNodeCount = unsupportedNodeCount + 1
-          }
+        if source != nil && imageScene == nil {
+          MarkUnsupported(node, VulkanSceneUnsupportedKind.Image,
+            VulkanSceneUnsupportedField.None,
+            VulkanSceneUnsupportedPrimitive.Image)
+          unsupportedNodeCount = unsupportedNodeCount + 1
+        }
       }
       case NodeKind.Shape {
         if node.ShapePath.CommandCount != 0 && pathScene == nil {

@@ -53,7 +53,6 @@ internal enum VulkanSceneUnsupportedField {
   OverflowX = 28;
   OverflowY = 29;
   Content = 30;
-  ImagePath = 31;
   ImageSource = 32;
   ImageFit = 33;
   TextStyleRanges = 34;

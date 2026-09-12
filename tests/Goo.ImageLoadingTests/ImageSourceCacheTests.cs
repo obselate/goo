@@ -144,8 +144,31 @@ public sealed class ImageSourceCacheTests : IDisposable
     [Fact]
     public void LegacyPathFailsWithMigrationInstruction()
     {
-        var error = Assert.Throws<NotSupportedException>(() => ImageLayouts.ApplyPath(new Node(), "asset.png", ImageFit.Contain, null));
+        var error = Assert.Throws<NotSupportedException>(() => ImageLayouts.ApplyPath(new Node(), "asset.png", ImageFit.Contain));
         Assert.Contains("ImageSourceCache.LoadAsync", error.Message);
+    }
+
+    [Fact]
+    public void BackgroundPathChangesPreserveSourcePrecedenceAndOwnership()
+    {
+        var node = new Node();
+        using var source = new ImageSource(1, 1, new byte[] { 20, 40, 80, 255 });
+        BackgroundImageLayouts.SetPath(node, "asset.png", null);
+        Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node));
+        BackgroundImageLayouts.SetSource(node, source, null);
+        var decoded = BackgroundImageLayouts.Image(node);
+        Assert.True(decoded!.IsValid);
+        BackgroundImageLayouts.SetPath(node, "changed.png", null);
+        Assert.Same(decoded, BackgroundImageLayouts.Image(node));
+        BackgroundImageLayouts.SetSource(node, null, null);
+        Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node));
+        Assert.True(decoded.IsValid);
+        BackgroundImageLayouts.SetSource(node, source, null);
+        BackgroundImageLayouts.SetPath(node, "", null);
+        Assert.Same(decoded, BackgroundImageLayouts.Image(node));
+        BackgroundImageLayouts.SetSource(node, null, null);
+        Assert.Null(BackgroundImageLayouts.Image(node));
+        Assert.False(node.HasBackgroundImageState);
     }
 
     private string Write(string name, byte[] bytes)

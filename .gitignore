@@ -27,6 +27,7 @@
 !/.github/scripts/validate-text-native-rebuild.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
+!/.github/scripts/linux-bundle-files.txt
 !/.github/scripts/stage-macos-arm64.sh
 !/.github/scripts/validate-release.py
 !/.github/scripts/validate-onboarding.py
