@@ -127,5 +127,6 @@
 **/bin/
 **/obj/
 **/artifacts/
+**/__pycache__/
 *.user
 *.lscache
