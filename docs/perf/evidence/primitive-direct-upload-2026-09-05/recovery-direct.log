@@ -1,5 +1,0 @@
-Unhandled exception. System.InvalidOperationException: Retained device rebuild primitive rebuild did not reconstruct every record
-   at GooFailedIdleSmoke.<Program>.Require(Boolean condition, String message) in /home/xaz/Projects/goo-gsharp/tests/Goo.FailedIdleSmoke/Program.gs:line 10
-   at GooFailedIdleSmoke.<Program>.RequireFailedIdleCompleteRebuild(FailedIdlePrimitiveFrameTestSnapshot primitive, FailedIdleTextFrameTestSnapshot text, String label) in /home/xaz/Projects/goo-gsharp/tests/Goo.FailedIdleSmoke/Program.gs:line 441
-   at GooFailedIdleSmoke.<Program>.Main() in /home/xaz/Projects/goo-gsharp/tests/Goo.FailedIdleSmoke/Program.gs:line 775
-timeout: the monitored command dumped core

@@ -1,1 +1,0 @@
-shader-effect-smoke: control=button backdrop=1 blend=multiply combined=1 clip=rounded input=click data=retained transfer_releases=2 resize=1 dpi=1 device_recovery=1 parameter_alloc_B=0 warm_vk_objects=0 warm_device_memory=0 layerPassCount=60 layerCompositeCount=60 layerCreateCount=25 close=1

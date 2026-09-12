@@ -1,3 +1,0 @@
-
-(dotnet:3419756): Gdk-CRITICAL **: 00:58:28.756: gdk_seat_get_keyboard: assertion 'GDK_IS_SEAT (seat)' failed
-timeline-completion-smoke: deferred_no_hole=1 validation_rollback=1 fifo_window_offscreen=1 no_premature_completion=1 cpu_mailbox=1 pixels=1 cleanup=1

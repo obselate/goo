@@ -1,8 +1,0 @@
-<Project>
-  <Import Project="/home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackFixtures.props" />
-  <ItemGroup>
-    <Compile Remove="Style/StyleField.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)variants/style/Goo/Style/StyleField.gs"
-             Link="Style/StyleField.gs" />
-  </ItemGroup>
-</Project>

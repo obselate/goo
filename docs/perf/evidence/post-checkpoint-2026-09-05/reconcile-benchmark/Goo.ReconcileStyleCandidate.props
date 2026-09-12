@@ -1,9 +1,0 @@
-<Project>
-  <ItemGroup>
-    <Compile Remove="Style/StyleField.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)variants/style/Goo/Style/StyleField.gs"
-             Link="Style/StyleField.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)BenchmarkFixture.gs"
-             Link="ReconcileBenchmarkFixture.gs" />
-  </ItemGroup>
-</Project>

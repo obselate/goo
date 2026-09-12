@@ -1,9 +1,0 @@
-{
-  "baseline_note": "pre-task generated file was not captured; excluded from task.patch",
-  "byte_equal": true,
-  "current_path": "tests/Goo.VulkanProof/Generated/Vulkan.Generated.gs",
-  "current_sha256": "6c78fbec6e37b6b9b2b76a962a2762be278ba649effb7acf3aa6db1aa32f2fa0",
-  "proof_log": "logs/generator-check.log",
-  "regenerated_path": "/tmp/goo-timeline/Vulkan.Generated.check.gs",
-  "regenerated_sha256": "6c78fbec6e37b6b9b2b76a962a2762be278ba649effb7acf3aa6db1aa32f2fa0"
-}

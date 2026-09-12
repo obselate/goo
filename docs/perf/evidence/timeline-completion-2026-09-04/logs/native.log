@@ -1,5 +1,0 @@
-Unhandled exception. System.InvalidOperationException: Timeline deferred frame retry did not receive the next serial
-   at GooAsyncReadbackSmoke.<Program>.TimelineCompletionRequire(Boolean condition, String message) in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/TimelineCompletionSmoke.gs:line 29
-   at GooAsyncReadbackSmoke.<Program>.RunTimelineCompletionSmoke() in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/TimelineCompletionSmoke.gs:line 144
-   at GooAsyncReadbackSmoke.<Program>.<Main>$(String[] args) in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/Program.gs:line 3323
-timeout: the monitored command dumped core

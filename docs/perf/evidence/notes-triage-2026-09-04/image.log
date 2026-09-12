@@ -1,3 +1,0 @@
-COLD,image,0,12.512,4728
-COLD,image,1,33.271,988056
-WARM,image,samples=2000,p50_ms=1.115,p99_ms=4.070,p50_B=640,p99_B=640

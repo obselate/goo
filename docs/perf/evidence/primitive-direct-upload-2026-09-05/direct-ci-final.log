@@ -1,3 +1,0 @@
-
-(dotnet:3389151): Gdk-CRITICAL **: 00:25:21.214: gdk_seat_get_keyboard: assertion 'GDK_IS_SEAT (seat)' failed
-direct-primitive-upload-smoke: staged_resources=0 transfers=0 noncoherent=emulated abort_recovery=1 growth=1 pixels=1 fallback=hardware_unavailable allocation_failure=propagated cleanup=1

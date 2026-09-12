@@ -1,7 +1,0 @@
-FONT_CACHE_SMOKE defensiveCopy=1 cacheBytes=117564 budget=33554432 oversizedBypass=1 activeLease=1
-PATH_MORPH_GATE allocated=0 stableGeometry=1 stableEncoding=1 stableIdentity=1 versionedIdentity=1
-PATH_EVENODD_GATE holes=256 curves=1028 words=13508 warmAllocated=0 warmCalls=64
-PATH_UPLOAD_GATE atlasWords=4096 growthCount=0 reuseOffset=0 reuseWords=100 warmAllocated=0 abortRetained=1 unpublished=1 published=1
-UPLOAD_RING_GROWTH_GATE initialRanges=1 activeRanges=3 retired=3
-RETAINED_PRIMITIVE_SPAN_GATE stableWrites=0 invalidatedWrites=3 recoveredWrites=0 reorderedWrites=3 reorderedStableWrites=0
-TEXT_PROVIDER_ABI_SMOKE shapeRequired=9 glyphRequired=2880 warmReuse=1 disposed=1

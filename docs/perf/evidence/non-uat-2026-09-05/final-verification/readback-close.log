@@ -1,1 +1,0 @@
-readback: frames=9 width=64 height=64 row_bytes=256 bytes=16384 origin=top-left premultiplied=1 request_ready_ns=11254043 resource_resident_before_close=32768 resource_resident_after_close=0 cleanup=1 close=1

@@ -1,6 +1,0 @@
-{
-  "before/Goo/Rendering/Vulkan/VulkanOffscreenTarget.gs": "661fb7cdaf78f7290e8c3000797d16225d07a0fe2f57d181e68456de7d121df7",
-  "current/Goo/Rendering/Vulkan/VulkanOffscreenTarget.gs": "81c82ab8957108462eb4b5c939548e142e1d4860b9f5bcfaa7fc067294bfc344",
-  "before/tests/Goo.AsyncReadbackSmoke/ShaderEffectSmoke.gs": "492c45f5fd8e72fefe4651d17837e1a63b61e9c57ced6760d66fd9de1d0d6382",
-  "current/tests/Goo.AsyncReadbackSmoke/ShaderEffectSmoke.gs": "8a37a825b10721774275ffbf07e1341f748622651cddeb8e9a7dc835b7ece7d1"
-}

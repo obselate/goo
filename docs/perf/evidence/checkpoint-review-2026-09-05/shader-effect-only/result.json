@@ -1,7 +1,0 @@
-{
-  "marker": "fail-before:mounted-effect-unchanged",
-  "privateModeTerminal": true,
-  "beforeIsLiquid": true,
-  "afterIsLiquid": true,
-  "afterIsTerminal": false
-}

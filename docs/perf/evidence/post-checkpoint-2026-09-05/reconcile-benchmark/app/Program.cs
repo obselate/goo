@@ -1,3 +1,0 @@
-using Goo;
-
-ReconcileBenchmarkFixture.Run();

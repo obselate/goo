@@ -1,2 +1,0 @@
-  Yoga.Net -> /home/xaz/Projects/goo-gsharp/vendor/Yoga.Net/src/Yoga.Net/bin/CoreTestRelease/net10.0/Yoga.Net.dll
-/home/xaz/Projects/goo-gsharp/tests/Goo.CoreBehaviorTests/Input/DragDropFixtures.gs(435,29,435,43): error GS0296: The right-hand side of an 'if let'/'guard let'/'while let' binding 'coordinator' must be of nullable type, but its type is 'InputCoordinator'. Use a plain 'let coordinator = …' if no nullability strip is needed. [/home/xaz/Projects/goo-gsharp/Goo/Goo.gsproj]

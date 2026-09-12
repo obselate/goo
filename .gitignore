@@ -117,5 +117,8 @@
 **/bin/
 **/obj/
 **/artifacts/
+*.log
+*.binlog
+*.tlog
 *.user
 *.lscache

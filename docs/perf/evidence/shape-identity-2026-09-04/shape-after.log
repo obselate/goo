@@ -1,3 +1,0 @@
-COLD,shape,0,11.768,8896
-COLD,shape,1,10.631,764024
-WARM,shape,samples=2000,p50_ms=0.892,p99_ms=1.284,p50_B=2032,p99_B=2032

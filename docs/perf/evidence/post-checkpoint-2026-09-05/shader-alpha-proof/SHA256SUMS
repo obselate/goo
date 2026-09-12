@@ -1,6 +1,0 @@
-4c4cada0e4c08f21bdfd26edd9b5fdb7be02de8b93845d3f984458fd50100539  /tmp/goo-post-checkpoint/shader-alpha-proof/repro-command.sh
-55cc891eeecdecdd9aa4438a78ca5e67a91ac761c5ab9ddbd899b3faab929eda  /tmp/goo-post-checkpoint/shader-alpha-proof/preflight.json
-3e2175c320a61d4fd2e88af2f4b8485d76f3d8f174a20292b33ecb53b0696d90  /tmp/goo-post-checkpoint/shader-alpha-proof/analytic_sampled_image.dis
-f99aa181fb8402f4772c9455006eb80e7565f57b958b773b682e13812af4201c  /tmp/goo-post-checkpoint/shader-alpha-proof/native-failure.log
-e726b440cc164001999e718b51780d80314709efe06e7857282377be9111127b  /tmp/goo-post-checkpoint/shader-alpha-proof/native-exit.txt
-2955718945ee047edcd9ada5ef85363495726aa6d25e27cb0d4a1313ec9a54e9  /tmp/goo-post-checkpoint/shader-alpha-proof/result.json

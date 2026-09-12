@@ -1,6 +1,0 @@
-{
-  "uname": "Linux cos-xazdesktop 7.2.0-1-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 20 Aug 2026 16:18:38 +0000 x86_64 GNU/Linux",
-  "gpu": "name, driver_version, memory.total [MiB], utilization.gpu [%], temperature.gpu, clocks.current.graphics [MHz]\nNVIDIA GeForce RTX 3080, 610.57.04, 10240 MiB, 60 %, 69, 1950 MHz\n",
-  "wayland_display": "wayland-0",
-  "xdg_runtime_dir": "/run/user/1000"
-}

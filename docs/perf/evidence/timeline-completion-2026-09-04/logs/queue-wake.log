@@ -1,5 +1,0 @@
-
-(dotnet:3310877): Gdk-CRITICAL **: 23:12:54.126: gdk_seat_get_keyboard: assertion 'GDK_IS_SEAT (seat)' failed
-
-(dotnet:3310877): Gtk-WARNING **: 23:12:55.241: gtk_disable_setlocale() must be called before gtk_init()
-queue-wake-smoke: submit=1 present=1 frame_deadline_independent=1 blocking_wait=1

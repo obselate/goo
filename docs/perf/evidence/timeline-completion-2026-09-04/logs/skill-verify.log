@@ -1,3 +1,0 @@
-/home/xaz/Projects/goo-gsharp/Goo/Rendering/Vulkan/VulkanSharedRuntime.gs(725,42): warning GL0005: reserve !! for immediate-failure sites
-/home/xaz/Projects/goo-gsharp/Goo/Rendering/Vulkan/VulkanSharedRuntime.gs(850,15): warning GL0006: public func 'Dispose' has no leading /// documentation comment
-/home/xaz/Projects/goo-gsharp/Goo/Rendering/Vulkan/VulkanSharedRuntime.gs(958,15): warning GL0006: public func 'Dispose' has no leading /// documentation comment

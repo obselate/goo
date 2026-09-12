@@ -1,9 +1,0 @@
-<Project>
-  <ItemGroup>
-    <Compile Remove="Tree/Reconciler.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)variants/keyed/Goo/Tree/Reconciler.gs"
-             Link="Tree/Reconciler.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)BenchmarkFixture.gs"
-             Link="ReconcileBenchmarkFixture.gs" />
-  </ItemGroup>
-</Project>

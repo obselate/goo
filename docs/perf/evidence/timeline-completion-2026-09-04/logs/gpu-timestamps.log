@@ -1,4 +1,0 @@
-Unhandled exception. System.InvalidOperationException: Retained performance stage timestamp frame created a Vulkan object
-   at GooAsyncReadbackSmoke.<Program>.Require(Boolean condition, String message) in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/Program.gs:line 407
-   at GooAsyncReadbackSmoke.<Program>.RunGpuTimestampSmoke() in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/PerformanceWorkloads.gs:line 1567
-   at GooAsyncReadbackSmoke.<Program>.<Main>$(String[] args) in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/Program.gs:line 3254

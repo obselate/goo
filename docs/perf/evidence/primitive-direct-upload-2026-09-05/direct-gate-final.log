@@ -1,1 +1,0 @@
-direct-primitive-upload-smoke: staged_resources=0 transfers=0 noncoherent=emulated abort_recovery=1 growth=1 pixels=1 fallback=staged allocation_failure=propagated cleanup=1

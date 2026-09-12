@@ -1,2 +1,0 @@
-d4c2c4760b684bb1146117f08c80a8251b5f2dc4b821524c6e41436e1cc28477  /tmp/goo-nonuat-2026-09-05/shader-fixes/verification.json
-096c5ff710e7fdb1531aad130f9858b2faaa464861b7cc3f0fcb5f1659f2986d  /tmp/goo-nonuat-2026-09-05/shader-fixes/report.md

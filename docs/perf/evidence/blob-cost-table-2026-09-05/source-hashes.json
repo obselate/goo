@@ -1,5 +1,0 @@
-{
-  "tests/Goo.AsyncReadbackSmoke/AllBlobBenchmark.gs": "84a90bc325c446612eab25bf3a5ab8d49d1bf4b25018298d9e38c3dffa3336d3",
-  "tests/Goo.AsyncReadbackSmoke/Program.gs": "c29de0524b1879964aaf495ba162a3465ddd3da194b0fbf3d4fc372b1ed1c4b2",
-  "tests/Goo.AsyncReadbackSmoke/WindowReadbackFixture.gs": "8b759a5b44930668f1ccc7337c623788d0a34579f239415abd5aef5a2ff0bcc3"
-}

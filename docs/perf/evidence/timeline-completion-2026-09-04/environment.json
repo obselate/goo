@@ -1,9 +1,0 @@
-{
-  "kernel": "7.2.0-1-cachyos",
-  "gpu": "NVIDIA GeForce RTX 3080, 610.57.04",
-  "dotnet": "10.0.302",
-  "hardware_compositor": "KWin virtual goo-timeline-qa 1600x1000 scale1",
-  "software_compositor": "Weston15 headless kiosk +lavapipe",
-  "validation": "VK_LAYER_KHRONOS_validation",
-  "performance": "Broader before/after benchmarks deferred to pre-push by user, no FPS/frame-time claim."
-}

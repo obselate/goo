@@ -1,5 +1,0 @@
-dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release --nologo
-env SLANG_SDK=/tmp/goo-slang-2026.16 dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Release --nologo
-env WAYLAND_DISPLAY=goo-post-checkpoint GOO_VK_DIAGNOSTICS=1 GOO_SHADER_EFFECT_SMOKE=1 VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release --nologo
-dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll --strict --severity GL0005=none --severity GL0006=none .

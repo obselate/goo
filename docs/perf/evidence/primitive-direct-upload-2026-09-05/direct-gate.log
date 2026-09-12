@@ -1,5 +1,0 @@
-Unhandled exception. System.InvalidOperationException: Direct initial upload did not publish all records
-   at GooAsyncReadbackSmoke.<Program>.Require(Boolean condition, String message) in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/Program.gs:line 407
-   at GooAsyncReadbackSmoke.<Program>.RunDirectPrimitiveUploadSmoke() in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/DirectPrimitiveUploadSmoke.gs:line 100
-   at GooAsyncReadbackSmoke.<Program>.<Main>$(String[] args) in /home/xaz/Projects/goo-gsharp/tests/Goo.AsyncReadbackSmoke/Program.gs:line 3339
-timeout: the monitored command dumped core

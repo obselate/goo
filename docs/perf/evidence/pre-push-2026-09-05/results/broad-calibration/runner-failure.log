@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/goo-prepush/run-broad.py", line 306, in <module>
-    main()
-    ~~~~^^
-  File "/tmp/goo-prepush/run-broad.py", line 282, in main
-    raise ValueError(f"{run_id}: " + "; ".join(errors))
-ValueError: 001-p1-image-effects-A-pre-pipeline: vk_object_alloc_delta: expected 0, got 6560

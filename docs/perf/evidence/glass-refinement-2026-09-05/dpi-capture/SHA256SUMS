@@ -1,5 +1,0 @@
-0dfc7135c8eb63bb4bde0f74d31359f19ef100a96fd48a25430bc6d740f05370  docs/perf/evidence/glass-refinement-2026-09-05/dpi-capture/baseline-failure.log
-830744ad688ddebdbd3d9e7b960e747d75f65053c35717afb405fd54c232b277  docs/perf/evidence/glass-refinement-2026-09-05/dpi-capture/fixed-pass.log
-af6cb10895321a4ff810cc79eccf8b00849cd67041ee5bdd542aa2ecb990f522  docs/perf/evidence/glass-refinement-2026-09-05/dpi-capture/source-hashes.json
-dc5ab68875cb2a5af61b3409464d3dc1d20dabaccc2f0985e42388feed030f08  docs/perf/evidence/glass-refinement-2026-09-05/dpi-capture/task.patch
-aad2c9a9d5b5141ee7261e9668f594d502789604b13702d71919b97d2edd541b  docs/perf/evidence/glass-refinement-2026-09-05/dpi-capture/verification.json

@@ -1,9 +1,0 @@
-{
-  "Goo/Style/StyleField.gs": "9758b33fb464dc4467af7e846a20cc6d87c05149aa4253198c49b660e3ea8445",
-  "Goo/Style/Resolver.gs": "283fececd9713628cedc151758ceace9368222cacd1fc7066884e4e3241d0fb6",
-  "Goo/Tree/Reconciler.gs": "9905bf082d06dd3eb76ff1240614fdd46a5d85e8b0b44339992d1a29d2954107",
-  "Goo/Rendering/Vulkan/VulkanWindowTarget.Core.gs": "754399f33b235e1ffd72e8bd7e1198d0543e4b95994c375231c6577248ea60a3",
-  "Goo/Rendering/Vulkan/VulkanWindowTarget.Readback.gs": "f3afe9de7394b28be30d397adb4378713e10fdb4c1db41596f36ccb398bb48e0",
-  "tests/Goo.AsyncReadbackSmoke/ShaderEffectSmoke.gs": "01ed187b44b0f074739d3febca50740a8606396c2a780b34d301d995088f0a5a",
-  "tests/Goo.AsyncReadbackSmoke/AllBlobBenchmark.gs": "84a90bc325c446612eab25bf3a5ab8d49d1bf4b25018298d9e38c3dffa3336d3"
-}
