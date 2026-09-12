@@ -182,7 +182,14 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       let allocateResult = allocateMemory(device, &allocateInfo, nil, &memory)
       lastResult = allocateResult
       if allocateResult != VkConstants.VK_SUCCESS || memory == 0uL {
-        throw InvalidOperationException("vkAllocateMemory failed")
+        throw InvalidOperationException("vkAllocateMemory failed: result=" + allocateResult.ToString()
+          +", blockBytes=" + blockSize.ToString()
+          +", memoryTypeIndex=" + selection.memoryTypeIndex.ToString()
+          +", heapIndex=" + selection.heapIndex.ToString()
+          +", resourceClass=" + resourceClass.ToString()
+          +", dedicated=" + dedicated.ToString()
+          +", residentBytes=" + residentBytes.ToString()
+          +", liveBytes=" + liveBytes.ToString())
       }
       try {
         if let accounting = objectAccounting {
