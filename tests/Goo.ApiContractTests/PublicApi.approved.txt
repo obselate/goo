@@ -18,6 +18,7 @@ ctor|Goo.FocusedEditorSnapshot|public|(arg0:System.Int64,arg1:System.String,arg2
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[])
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[],faceIndex:System.UInt32,variations:Goo.FontVariation[])
 ctor|Goo.FontVariation|public|(arg0:System.String,arg1:System.Single)
+ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntries:System.Int32=128)
 ctor|Goo.ImageSourceLease|public|()
 ctor|Goo.ImageSource|public|(width:System.Int32,height:System.Int32,pixels:System.Byte[])
 ctor|Goo.Image|public|()
@@ -659,6 +660,9 @@ method|Goo.GradientStop|GetHashCode|instance|public|generic:|()->System.Int32
 method|Goo.GradientStop|ToString|instance|public|generic:|()->System.String
 method|Goo.GradientStop|op_Equality|static|public|generic:|(arg0:Goo.GradientStop,arg1:Goo.GradientStop)->System.Boolean
 method|Goo.GradientStop|op_Inequality|static|public|generic:|(arg0:Goo.GradientStop,arg1:Goo.GradientStop)->System.Boolean
+method|Goo.ImageSourceCache|Dispose|instance|public|generic:|()->System.Void
+method|Goo.ImageSourceCache|LoadAsync|instance|public|generic:|(path:System.String)->System.Threading.Tasks.Task`1<Goo.ImageSource>
+method|Goo.ImageSourceCache|LoadAsync|instance|public|generic:|(path:System.String,cancellationToken:System.Threading.CancellationToken)->System.Threading.Tasks.Task`1<Goo.ImageSource>
 method|Goo.ImageSourceLease|Complete|instance|public|generic:|(source:Goo.ImageSource)->System.Boolean
 method|Goo.ImageSourceLease|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSourceLease|Fail|instance|public|generic:|()->System.Boolean
@@ -1485,6 +1489,7 @@ type|Goo.FontVariation|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageFit|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.ImageSourceCache|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ImageSourceLease|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ImageSourceProvider|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageSource|sealed-class|public|base:System.Object|interfaces:Goo.ImageSourceProvider,System.IDisposable|generic:

@@ -29,6 +29,18 @@ Shader and text proof build:
 dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
 ```
 
+## Local PNG loading
+
+`Goo.ImageLoadingTests` verifies PNG color formats, premultiplication, file and
+decompression limits, error/retry behavior, shared pixels, independent owners,
+cache capacity, and cancellation. `Goo.ImageLoadingSmoke` loads a packaged PNG
+under Linux/macOS NativeAOT. Async decoder tests run separately from the SDL UI
+fixtures so test continuations cannot change their required main thread.
+`GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1` runs
+the actual Vulkan pixel/alpha/lifetime check in `Goo.AsyncReadbackSmoke`.
+The 2x2 `tests/Shared/Assets/local-rgba.png` fixture is generated for these tests
+and contains four known RGBA colors, including one half-transparent pixel.
+
 ## Native queue wake regression
 
 The native queue wake regression check runs the normal window scheduler while

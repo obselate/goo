@@ -91,6 +91,7 @@ BUNDLE_FILES = {
     "Hexa.NET.SDL3.dll",
     "HexaGen.Runtime.dll",
     "Unicode.Bidi.dll",
+    "StbImageSharp.dll",
     "Yoga.Net.dll",
     "libSDL3.so",
     "libgoo-harfbuzz-gpu.so",

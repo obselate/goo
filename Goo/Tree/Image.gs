@@ -17,7 +17,8 @@ public class Image : Blob {
   internal override func coreBlob() {
   }
 
-  /// Gets the local image path.
+  /// Legacy path metadata. A nonempty path without Source throws when mounted.
+  /// Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
   public prop Path string{ get; init; }
   /// Gets the owned or provider-backed image source. It wins over Path when set.
   public prop Source ImageSourceProvider? { get; init; }

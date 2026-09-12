@@ -58,6 +58,7 @@
 /docs/*
 !/docs/nuget-readme.md
 !/docs/android.md
+!/docs/images.md
 !/docs/assets/
 !/docs/assets/**
 !/docs/api/

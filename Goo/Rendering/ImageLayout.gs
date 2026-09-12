@@ -207,16 +207,7 @@ internal class ImageLayouts {
           Dispose(n)
           return
         }
-        let request = ImageDecoding.Request(path)
-        let intrinsicWidth = n.ImageIntrinsicWidth
-        let intrinsicHeight = n.ImageIntrinsicHeight
-        removeSource(n)
-        n.ImagePath = request.Path
-        n.ImageRequest = request
-        n.DecodedImage = nil
-        n.ImageIntrinsicWidth = intrinsicWidth
-        n.ImageIntrinsicHeight = intrinsicHeight
-        Refresh(n)
+        throw NotSupportedException("Image.Path does not decode files. Await ImageSourceCache.LoadAsync(path) outside Build and assign the result to Image.Source.")
       }
 
     internal func ApplySource(n Node, source ImageSourceProvider, fit ImageFit,

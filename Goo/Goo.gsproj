@@ -27,6 +27,7 @@
                       PrivateAssets="all" />
     <PackageReference Include="Hexa.NET.SDL3" ExcludeAssets="native" />
     <PackageReference Include="Unicode.Bidi" />
+    <PackageReference Include="StbImageSharp" />
   </ItemGroup>
   <Import Project="$(GooTestFixturesProps)"
           Condition="'$(IncludeTestFixtures)' == 'true' and '$(GooTestFixturesProps)' != ''" />

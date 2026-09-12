@@ -3,6 +3,14 @@
 Goo depends on the third-party software identified below. License links are
 pinned to the source revision or release used by Goo.
 
+## StbImageSharp PNG decoder
+
+Goo depends on the managed `StbImageSharp` 2.30.16 package. No additional native
+image-decoder library is required. The package declares `Unlicense OR MIT`.
+
+- Package repository commit: `125af70cb557033f2c46aec8e82eaaf72ac49817`.
+- [StbImageSharp source and license](https://github.com/StbSharp/StbImageSharp/blob/125af70cb557033f2c46aec8e82eaaf72ac49817/README.md)
+
 ## G# runtime support
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from

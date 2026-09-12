@@ -652,10 +652,12 @@ internal class AccessibilitySyntheticRootCell : Cell {
   }
 }
 
-internal class AccessibilityPrimitiveActionCell : Cell {
+internal class AccessibilityPrimitiveActionCell : Cell, IDisposable {
+  private let image ImageSource = ImageSource(1, 1, [4]uint8)
+  public func Dispose() { image.Dispose() }
   override func Build() Blob -> Container { Accessibility: Accessibility{ Role: AccessibilityRole.None }, Children: {
     Button{ Children: { Text{ Content: "Run" } } },
-    Image{ Path: "images/nonempty-name-must-not-leak.png" },
+    Image{ Path: "images/nonempty-name-must-not-leak.png", Source: image },
   } }
 }
 
