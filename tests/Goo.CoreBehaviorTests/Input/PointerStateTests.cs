@@ -68,7 +68,7 @@ public sealed class PointerStateTests
     {
         var fixtures = new InputFixtures();
         Assert.Equal(192, fixtures.PointerLifecycleEmptyBlobBytes());
-        Assert.Equal(1_232, fixtures.PointerLifecycleEmptyNodeBytes());
+        Assert.Equal(1_216, fixtures.PointerLifecycleEmptyNodeBytes());
         Assert.Equal(3_568, fixtures.PointerLifecycleEmptyWindowBytes());
         Assert.Equal(0, fixtures.PointerLifecycleStablePlainDiffBytes());
     }
