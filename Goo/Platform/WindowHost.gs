@@ -65,6 +65,7 @@ internal interface WindowHost {
   func SetSize(width int32, height int32);
   func SetPosition(x int32, y int32);
   func SetState(value WindowState);
+  func RequestActivation() WindowActivationResult;
   func SetBorder(decorated bool, resizable bool);
   func SetVSync(value bool);
   func SetCursor(value Cursor);

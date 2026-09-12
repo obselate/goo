@@ -129,6 +129,16 @@ jobs:
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
+      - name: Verify NativeAOT UI audio on macOS
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/audio-nativeaot
+          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
+
       - name: Fetch pinned Slang compiler
         run: |
           archive="$RUNNER_TEMP/slang-2026.16-macos-aarch64.tar.gz"
@@ -283,6 +293,7 @@ jobs:
               apt-get update
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                 binutils ca-certificates curl file g++-8 gcc-8 libdbus-1-dev \
+                libasound2-dev libpulse-dev \
                 libegl1-mesa-dev libexpat1-dev libffi-dev libfontconfig1-dev \
                 libibus-1.0-dev libwayland-dev libxkbcommon-dev libxml2-dev \
                 ninja-build patch pkg-config python3 python3-pip tar \
@@ -349,6 +360,16 @@ jobs:
             GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
+      - name: Verify shared UI audio without a hardware device
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/audio-nativeaot
+          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
+
       - name: Build Goo DevTools app
         run: |
           dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj \
@@ -399,6 +420,11 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \
             GOO_EMBEDDED_HOST_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_WINDOW_ACTIVATION_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \

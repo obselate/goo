@@ -36,6 +36,7 @@ ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[])
 ctor|Goo.ShaderEffect|public|(program:Goo.ShaderEffectProgram,samplesBackdrop:System.Boolean=false,backdropOutset:System.Single=0)
 ctor|Goo.Shape|public|()
 ctor|Goo.Simulation|public|()
+ctor|Goo.SoundSource|public|(sampleRate:System.Int32,channels:System.Int32,samples:System.Single[])
 ctor|Goo.Style|public|()
 ctor|Goo.TextCandidateEvent|public|(arg0:System.Collections.Generic.IReadOnlyList`1<System.String>,arg1:System.Int32,arg2:System.Boolean)
 ctor|Goo.TextChange|public|(arg0:Goo.TextRange,arg1:System.String)
@@ -111,6 +112,7 @@ enum-underlying|Goo.TextTrimming|System.Int32
 enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
+enum-underlying|Goo.WindowActivationResult|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
 enum|Goo.AccessibilityAction|Activate|1
 enum|Goo.AccessibilityAction|Collapse|9
@@ -526,6 +528,10 @@ enum|Goo.TransitionProperty|Transform|51
 enum|Goo.TransitionProperty|Width|1
 enum|Goo.Visibility|Hidden|1
 enum|Goo.Visibility|Visible|0
+enum|Goo.WindowActivationResult|Accepted|0
+enum|Goo.WindowActivationResult|Closed|1
+enum|Goo.WindowActivationResult|Failed|3
+enum|Goo.WindowActivationResult|Unsupported|2
 enum|Goo.WindowState|Fullscreen|3
 enum|Goo.WindowState|Maximized|2
 enum|Goo.WindowState|Minimized|1
@@ -743,6 +749,14 @@ method|Goo.ShaderEffect|SetParameter|instance|public|generic:|(slot:System.Int32
 method|Goo.Simulation|Done|abstract|public|generic:|(elapsed:System.Double)->System.Boolean
 method|Goo.Simulation|Position|abstract|public|generic:|(elapsed:System.Double)->System.Double
 method|Goo.Simulation|Velocity|abstract|public|generic:|(elapsed:System.Double)->System.Double
+method|Goo.SoundPlayback|Dispose|instance|public|generic:|()->System.Void
+method|Goo.SoundPlayback|Stop|instance|public|generic:|()->System.Void
+method|Goo.SoundPlayer|Dispose|instance|public|generic:|()->System.Void
+method|Goo.SoundPlayer|Play|instance|public|generic:|(source:Goo.SoundSource,volume:System.Single=1)->Goo.SoundPlayback
+method|Goo.SoundPlayer|StopAll|instance|public|generic:|()->System.Void
+method|Goo.SoundPlayer|TryOpen|static|public|generic:|()->Goo.SoundPlayer
+method|Goo.SoundSource|FromWav|static|public|generic:|(encoded:System.Byte[])->Goo.SoundSource
+method|Goo.SoundSource|LoadWav|static|public|generic:|(stream:System.IO.Stream)->Goo.SoundSource
 method|Goo.TextCandidateEvent|Deconstruct|instance|public|generic:|(out Candidates:System.Collections.Generic.IReadOnlyList`1<System.String>&,out SelectedCandidate:System.Int32&,out Horizontal:System.Boolean&)->System.Void
 method|Goo.TextCandidateEvent|Equals|instance|public|generic:|(arg0:Goo.TextCandidateEvent)->System.Boolean
 method|Goo.TextCandidateEvent|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
@@ -884,6 +898,7 @@ method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Void
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
+method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowActivationResult
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
@@ -1177,6 +1192,10 @@ property|Goo.Shape|MiterLimit|System.Double|instance|get:public,init:public|inde
 property|Goo.Shape|Path|Goo.VectorPath|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeCap|Goo.StrokeCap|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
+property|Goo.SoundPlayback|IsPlaying|System.Boolean|instance|get:public|index:()
+property|Goo.SoundSource|Channels|System.Int32|instance|get:public,set:private|index:()
+property|Goo.SoundSource|DurationSeconds|System.Double|instance|get:public|index:()
+property|Goo.SoundSource|SampleRate|System.Int32|instance|get:public,set:private|index:()
 property|Goo.Style|AlignContent|Goo.AlignContent|instance|init:public|index:()
 property|Goo.Style|AlignItems|Goo.AlignItems|instance|init:public|index:()
 property|Goo.Style|AlignSelf|Goo.AlignSelf|instance|init:public|index:()
@@ -1522,6 +1541,9 @@ type|Goo.ShaderEffect|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShapeFit|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Shape|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Simulation|abstract-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SoundPlayback|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.SoundPlayer|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.SoundSource|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.StrokeCap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:
@@ -1562,6 +1584,7 @@ type|Goo.VectorPath|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.VectorStroke|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.WindowActivationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Window|sealed-class|public|base:System.Object|interfaces:|generic:

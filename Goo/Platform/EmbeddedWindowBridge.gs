@@ -66,6 +66,7 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func SetSize(width int32, height int32) { }
   public func SetPosition(x int32, y int32) { }
   public func SetState(value WindowState) { }
+  public func RequestActivation() WindowActivationResult -> WindowActivationResult.Unsupported
   public func SetBorder(decorated bool, resizable bool) { }
   public func SetVSync(value bool) { }
   public func SetCursor(value Cursor) { host.ChangeCursor(value) }

@@ -38,6 +38,7 @@ Sources:
 
 - [`Window.gs`](../../Goo/Window/Window.gs)
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
+- [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
 - [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
@@ -121,6 +122,10 @@ Queues an action for the UI thread.
 Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
+
+### `RequestActivation`
+
+Requests restoration of a minimized window, raising, and keyboard activation. Call on the owning UI thread in response to a user action. Desktop policy controls the outcome; observe IsFocused and FocusChanged for actual focus. Maximized/fullscreen state and the focused Goo element are preserved. Returns Closed before Open or after close, Unsupported for embedded hosts, or Failed if the native request reports an immediate error. Asynchronous policy denials are not reported by the desktop backend. Wayland requests use SDL's xdg-activation token and recent input serial.
 
 ### `RequestClose`
 
@@ -221,6 +226,21 @@ Gets or sets the requested horizontal position.
 ### `Y`
 
 Gets or sets the requested vertical position.
+
+## `WindowActivationResult`
+
+Source:
+
+- [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
+
+Reports whether a native window activation request could be submitted. Accepted does not confirm focus; desktop policy may deny or ignore the request.
+
+### Values
+
+- `Accepted`
+- `Closed`
+- `Unsupported`
+- `Failed`
 
 ## `WindowMetrics`
 
