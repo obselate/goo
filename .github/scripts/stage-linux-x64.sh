@@ -13,6 +13,7 @@ runtime_files=(
   Gsharp.Extensions.dll
   Hexa.NET.SDL3.dll
   HexaGen.Runtime.dll
+  StbImageSharp.dll
   Unicode.Bidi.dll
   Yoga.Net.dll
   libSDL3.so
