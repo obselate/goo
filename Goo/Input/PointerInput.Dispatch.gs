@@ -8,38 +8,38 @@ import System.Runtime.ExceptionServices
 internal partial class PointerInput {
   private func nextDelta(x float32, y float32) Point {
     var delta Point
-    if lastEventValid {
-      delta = Point{ X: float64(x - lastEventX), Y: float64(y - lastEventY) }
+    if current.LastEventValid {
+      delta = Point{ X: float64(x - current.LastEventX), Y: float64(y - current.LastEventY) }
     }
-    lastEventX = x
-    lastEventY = y
-    lastEventValid = true
+    current.LastEventX = x
+    current.LastEventY = y
+    current.LastEventValid = true
     return delta
   }
 
   private func clearCapture() {
-    captureTarget = nil
-    captureButton = PointerButton.None
-    capturePath.Clear()
-    capturePositions.Clear()
+    current.CaptureTarget = nil
+    current.CaptureButton = PointerButton.None
+    current.CapturePath.Clear()
+    current.CapturePositions.Clear()
   }
 
   private func rebuildCapturePath(root Node) bool {
-    guard let target = captureTarget else { return false }
-    if !canReceiveInput(target) || !containsPath(root, target) { return false }
-    capturePath.Clear()
-    let rebuilt = appendPath(root, target, capturePath)
-    if rebuilt && !savePositions(capturePath, capturePositions) { capturePath.Clear() }
-    return rebuilt && capturePath.Count > 0
+    guard let target = current.CaptureTarget else { return false }
+    return rebuildPath(root, target, current.CapturePath, current.CapturePositions)
   }
 
   private func rebuildActivePath(root Node) bool {
-    guard let target = activeTarget else { return false }
+    guard let target = current.ActiveTarget else { return false }
+    return rebuildPath(root, target, current.ActivePath, current.ActivePositions)
+  }
+
+  private func rebuildPath(root Node, target Node, path List[Node], positions List[Point]) bool {
     if !canReceiveInput(target) || !containsPath(root, target) { return false }
-    activePath.Clear()
-    let rebuilt = appendPath(root, target, activePath)
-    if rebuilt && !savePositions(activePath, activePositions) { activePath.Clear() }
-    return rebuilt && activePath.Count > 0
+    path.Clear()
+    let rebuilt = appendPath(root, target, path)
+    if rebuilt && !savePositions(path, positions) { path.Clear() }
+    return rebuilt && path.Count > 0
   }
 
   private func appendPath(root Node, target Node, path List[Node]) bool {
@@ -54,47 +54,47 @@ internal partial class PointerInput {
 
   private func applyCaptureRequests(button PointerButton, route List[Node]) {
     if let requested = control.ReleaseTarget {
-      if let owner = captureTarget {
+      if let owner = current.CaptureTarget {
         if owner == requested { clearCapture() }
       }
     }
     if let requested = control.CaptureTarget {
-      capturePath.Clear()
-      captureTarget = requested
-      captureButton = button
+      current.CapturePath.Clear()
+      current.CaptureTarget = requested
+      current.CaptureButton = button
       for i in 0 ... route.Count {
         let n = route[i]
-        capturePath.Add(n)
+        current.CapturePath.Add(n)
         if n == requested { break }
       }
-      savePositions(capturePath, capturePositions)
+      savePositions(current.CapturePath, current.CapturePositions)
     }
   }
 
   private func releaseCaptureAfterUp(button PointerButton) {
-    if captureTarget == nil {
+    if current.CaptureTarget == nil {
       return
     }
-    if captureButton == button || (captureButton == PointerButton.None && heldButtons == PointerButtons.None) {
+    if current.CaptureButton == button || (current.CaptureButton == PointerButton.None && current.HeldButtons == PointerButtons.None) {
       clearCapture()
     }
   }
 
   private func rememberActiveRoute(route List[Node]) {
-    activePath.Clear()
-    activeTarget = nil
+    current.ActivePath.Clear()
+    current.ActiveTarget = nil
     for i in 0 ... route.Count {
       let n = route[i]
-      activePath.Add(n)
-      activeTarget = n
+      current.ActivePath.Add(n)
+      current.ActiveTarget = n
     }
-    savePositions(activePath, activePositions)
+    savePositions(current.ActivePath, current.ActivePositions)
   }
 
   private func clearActiveRoute() {
-    activeTarget = nil
-    activePath.Clear()
-    activePositions.Clear()
+    current.ActiveTarget = nil
+    current.ActivePath.Clear()
+    current.ActivePositions.Clear()
   }
 
   private func savePositions(route List[Node], positions List[Point]) bool {
@@ -103,13 +103,13 @@ internal partial class PointerInput {
       for i in 0 ... route.Count {
         let n = route[i]
         positions.Add(Point{
-          X: float64(lastEventX - n.Rect.X),
-          Y: float64(lastEventY - n.Rect.Y),
+          X: float64(current.LastEventX - n.Rect.X),
+          Y: float64(current.LastEventY - n.Rect.Y),
         })
       }
       return true
     }
-    return mapRoutePositions(route, lastEventX, lastEventY, positions)
+    return mapRoutePositions(route, current.LastEventX, current.LastEventY, positions)
   }
 
   private func mapRoutePositions(route List[Node], x float32, y float32,
@@ -178,7 +178,7 @@ internal partial class PointerInput {
     dx float64, dy float64, button PointerButton, modifiers KeyModifiers) bool{
       guard let tree = root else { return false }
       var captured = false
-      if (kind == PointerEventKind.Move || kind == PointerEventKind.Release) && captureTarget != nil {
+      if (kind == PointerEventKind.Move || kind == PointerEventKind.Release) && current.CaptureTarget != nil {
         if !rebuildCapturePath(tree) {
           clearCapture()
           return false
@@ -192,7 +192,7 @@ internal partial class PointerInput {
           return false
         }
       }
-      let route = captured ? capturePath : scratchChain
+      let route = captured ? current.CapturePath : scratchChain
       if kind == PointerEventKind.Press {
         rememberActiveRoute(route)
       }
@@ -204,22 +204,22 @@ internal partial class PointerInput {
       }
       dispatchGeneration++
       let generation = dispatchGeneration
-      control.Begin(generation, captureTarget)
+      control.Begin(generation, current.CaptureTarget)
       var prevented = false
       try {
         for var i = route.Count; i > 0; i-- {
           let n = route[i - 1]
           let event = PointerEvent{
-            Identity: currentDevice == PointerDevice.Mouse ? nil : current,
+            Identity: current.Device == PointerDevice.Mouse ? nil : current,
             IsPrimary: isSemanticPrimary(),
-            Pressure: float64(pressure),
+            Pressure: float64(current.Pressure),
             Position: transformed ? routePositions[i - 1] : Point{
               X: float64(x - n.Rect.X), Y: float64(y - n.Rect.Y),
             },
             WindowPosition: Point{ X: float64(x), Y: float64(y) },
             Delta: transformed ? routeDeltas[i - 1] : Point{ X: dx, Y: dy },
             Button: button,
-            Buttons: heldButtons,
+            Buttons: current.HeldButtons,
             Modifiers: modifiers,
             Control: control,
             Generation: generation,
@@ -255,12 +255,12 @@ internal partial class PointerInput {
     }
 
   private func cancelInteraction(root Node?, resolver Resolver, text TextInput) bool {
-    let hadInteraction = heldButtons != PointerButtons.None || pressChain.Count > 0
-      || dragEntry != nil || dragEditor != nil || hasScrollDrag()
-      || clickTarget != nil || captureTarget != nil || activeTarget != nil
+    let hadInteraction = current.HeldButtons != PointerButtons.None || current.PressChain.Count > 0
+      || current.DragEntry != nil || current.DragEditor != nil || hasScrollDrag()
+      || current.ClickTarget != nil || current.CaptureTarget != nil || current.ActiveTarget != nil
       || currentOwnsDragState()
     if !hadInteraction { return false }
-    let canceled = heldButtons
+    let canceled = current.HeldButtons
     var failure Exception?
     try {
       try {
@@ -274,13 +274,13 @@ internal partial class PointerInput {
         if failure == nil { failure = error }
       }
     } finally {
-      canceledButtons = PointerButtons(int32(canceledButtons) | int32(canceled))
+      current.CanceledButtons = PointerButtons(int32(current.CanceledButtons) | int32(canceled))
       clearPressChain(resolver)
-      dragEntry = nil
-      dragEditor = nil
-      dragEditorStarted = false
+      current.DragEntry = nil
+      current.DragEditor = nil
+      current.DragEditorStarted = false
       clearScrollDrag()
-      clickTarget = nil
+      current.ClickTarget = nil
       if isSemanticPrimary() {
         if let focusTarget = current.FocusTarget {
           if text.FocusedNode() == focusTarget { text.SetFocus(resolver, nil) }
@@ -289,10 +289,10 @@ internal partial class PointerInput {
       current.FocusTarget = nil
       clearCapture()
       clearActiveRoute()
-      heldButtons = PointerButtons.None
-      lastPressT = -10.0
-      lastPressNode = nil
-      lastPressCount = 0
+      current.HeldButtons = PointerButtons.None
+      current.LastPressT = -10.0
+      current.LastPressNode = nil
+      current.LastPressCount = 0
       if current.Device == PointerDevice.Touch && primaryTouch == current {
         primaryTouch = nil
       } else if current.Device == PointerDevice.Pen && primaryPen == current {
@@ -304,10 +304,10 @@ internal partial class PointerInput {
   }
 
   private func dispatchCancel() {
-    let captured = captureTarget != nil && capturePath.Count > 0
-    let route = captured ? capturePath : activePath
-    let positions = captured ? capturePositions : activePositions
-    if route.Count == 0 || !lastEventValid {
+    let captured = current.CaptureTarget != nil && current.CapturePath.Count > 0
+    let route = captured ? current.CapturePath : current.ActivePath
+    let positions = captured ? current.CapturePositions : current.ActivePositions
+    if route.Count == 0 || !current.LastEventValid {
       return
     }
     dispatchGeneration++
@@ -317,15 +317,15 @@ internal partial class PointerInput {
       for var i = route.Count; i > 0; i-- {
         let n = route[i - 1]
         let event = PointerEvent{
-          Identity: currentDevice == PointerDevice.Mouse ? nil : current,
+          Identity: current.Device == PointerDevice.Mouse ? nil : current,
           IsPrimary: isSemanticPrimary(),
-          Pressure: float64(pressure),
+          Pressure: float64(current.Pressure),
           Position: positions[i - 1],
-          WindowPosition: Point{ X: float64(lastEventX), Y: float64(lastEventY) },
+          WindowPosition: Point{ X: float64(current.LastEventX), Y: float64(current.LastEventY) },
           Delta: Point{},
           Button: PointerButton.None,
           Buttons: PointerButtons.None,
-          Modifiers: lastModifiers,
+          Modifiers: current.LastModifiers,
           Control: control,
           Generation: generation,
         }

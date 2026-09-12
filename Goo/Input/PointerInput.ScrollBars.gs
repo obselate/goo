@@ -92,10 +92,10 @@ internal partial class PointerInput {
   private func beginScrollDrag(n Node, vertical bool, grabOffset float32,
     resolver Resolver) {
       clearPressChain(resolver)
-      clickTarget = nil
-      dragEntry = nil
-      dragEditor = nil
-      dragEditorStarted = false
+      current.ClickTarget = nil
+      current.DragEntry = nil
+      current.DragEditor = nil
+      current.DragEditorStarted = false
       PointerScrollStates.Begin(current, n, vertical, grabOffset)
       n.ScrollIdle = 0.0F
       n.ScrollBarAlpha = 1.0F
