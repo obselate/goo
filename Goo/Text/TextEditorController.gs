@@ -61,7 +61,9 @@ public class TextCommandEvent {
 
 /// Describes preedit Range, Text, SelectionStart, and SelectionLength values.
 public data struct TextComposition(Range TextRange, Text string, SelectionStart int32,
-  SelectionLength int32) { }
+  SelectionLength int32) {
+    internal prop EffectiveSelection TextSelection? { get; init; }
+  }
 
 internal data struct TextEditorControllerState {
   internal var Selection TextSelection
@@ -311,6 +313,42 @@ public class TextEditorController : IDisposable {
     ScrollTargetX: scrollTargetX,
     ScrollTargetY: scrollTargetY,
     Focused: focused,
+  }
+
+  internal func SetEffectiveCompositionSelection(value TextSelection) {
+    guard let current = composition else { return }
+    composition = TextComposition{
+      Range: current.Range, Text: current.Text, SelectionStart: current.SelectionStart,
+      SelectionLength: current.SelectionLength, EffectiveSelection: value,
+    }
+    changed()
+  }
+
+  internal func SetPlatformCompositionRange(value TextRange) bool {
+    let text = document.GetText(value)
+    if !beginCommand(TextCommand { Kind: TextCommandKind.UpdateComposition, Text: text }) { return false }
+    composition = TextComposition{
+      Range: value, Text: text, SelectionStart: 0, SelectionLength: value.Length,
+      EffectiveSelection: selection,
+    }
+    breakUndoGroup()
+    changed()
+    return true
+  }
+
+  internal func ApplyPlatformCompositionDeletion(changes []TextChange) bool {
+    if !beginCommand(TextCommand { Kind: TextCommandKind.DeleteBackward }) { return false }
+    let group = beginEditGroup(TextCommandKind.DeleteBackward)
+    applyingDocumentEdit = true
+    try {
+      document.ApplyControllerTransaction(changes, group)
+    } finally {
+      applyingDocumentEdit = false
+    }
+    hasDesiredHorizontalPosition = false
+    followCaret()
+    changed()
+    return true
   }
 
   private func beginCommand(command TextCommand) bool {
@@ -572,6 +610,7 @@ public class TextEditorController : IDisposable {
     applyTextChange(TextCommandKind.CommitComposition,
       TextChange{ Range: textRange, InsertedText: committed })
     composition = nil
+    changed()
     return true
   }
 
@@ -681,16 +720,46 @@ public class TextEditorController : IDisposable {
       Active: snapRebasedPosition(rebaseTextPosition(selection.Active, change.Changes)),
     }
     if let current = composition {
+      let nextRange = rebaseTextRange(current.Range, change.Changes)
+      let effective TextSelection? = if let selected = current.EffectiveSelection {
+        TextSelection{
+          Anchor: rebaseCompositionPosition(selected.Anchor, current, nextRange, change.Changes),
+          Active: rebaseCompositionPosition(selected.Active, current, nextRange, change.Changes),
+        }
+      } else { nil }
       composition = TextComposition{
-        Range: rebaseTextRange(current.Range, change.Changes),
+        Range: nextRange,
         Text: current.Text,
         SelectionStart: current.SelectionStart,
         SelectionLength: current.SelectionLength,
+        EffectiveSelection: effective,
       }
     }
     breakUndoGroup()
     changed()
   }
+
+  private func rebaseCompositionPosition(position TextPosition, current TextComposition,
+    nextRange TextRange, changes IReadOnlyList[TextChange]) TextPosition{
+      let start = current.Range.Start
+      let end = start + current.Text.Length
+      if position.Offset >= start && position.Offset <= end {
+        return TextPosition{ Offset: nextRange.Start + position.Offset - start,
+          Affinity: position.Affinity }
+      }
+      let sourceOffset = position.Offset < start ? position.Offset : position.Offset - current.Text.Length + current.Range.Length
+      let source = snapRebasedPosition(rebaseTextPosition(TextPosition{
+        Offset: sourceOffset, Affinity: position.Affinity }, changes))
+      let nextEnd = nextRange.Start + nextRange.Length
+      var offset = source.Offset
+      if offset > nextEnd || (offset == nextEnd
+          && (nextRange.Length > 0 || source.Affinity == TextAffinity.Downstream)) {
+            offset = offset - nextRange.Length + current.Text.Length
+          } else if offset > nextRange.Start {
+            offset = source.Affinity == TextAffinity.Upstream ? nextRange.Start : nextRange.Start + current.Text.Length
+          }
+      return TextPosition{ Offset: offset, Affinity: source.Affinity }
+    }
 
   private func selectedRange() TextRange {
     let a = selection.Anchor.Offset

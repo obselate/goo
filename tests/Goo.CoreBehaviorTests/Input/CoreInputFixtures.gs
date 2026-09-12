@@ -1002,6 +1002,9 @@ internal class InputFixtures {
     }
     driver.FocusLost()
     driver.Update()
+    if focusedKey(driver.Window.Tree) != "" { return false }
+    driver.Input.FocusGained()
+    driver.Update()
     return focusedKey(driver.Window.Tree) == "first"
   }
 
@@ -1734,10 +1737,26 @@ internal class InputFixtures {
     driver.Input.QueuePointerMove(190.0F, 10.0F)
     driver.Drain()
     driver.Step(1.0)
-    return !current.Focused
-      && !current.Pressed
-      && current.Buffer == buffer
-      && current.Caret == caret
+    if current.Focused
+      || current.Pressed
+      || current.Buffer != buffer
+      || current.Caret != caret{
+        return false
+      }
+    let queued = InputFixtureDriver(InputEntryCell{ value: "queued" }, 300, 100)
+    queued.Input.QueuePointerPress(77, PointerDevice.Touch, 10.0F, 10.0F,
+      PointerButton.Primary, KeyModifiers{})
+    queued.Input.FocusLost(queued.Window.Tree, queued.Resolver)
+    queued.Drain()
+    let untouched = entry(queued)
+    if untouched.Focused || untouched.Pressed || queued.Input.FocusedNode() != nil {
+      return false
+    }
+    queued.Input.QueuePointerRelease(77, PointerDevice.Touch, 10.0F, 10.0F,
+      PointerButton.Primary, KeyModifiers{})
+    queued.Drain()
+    return !untouched.Focused && !untouched.Pressed
+      && queued.Input.FocusedNode() == nil
   }
 
   private func queuedPointerSelectionKeepsSdl3Order() bool {

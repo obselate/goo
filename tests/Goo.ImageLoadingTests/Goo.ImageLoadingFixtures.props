@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)../Shared/FixtureAssemblyInfo.gs" Link="FixtureAssemblyInfo.gs" />
+  </ItemGroup>
+</Project>

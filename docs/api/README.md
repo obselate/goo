@@ -3,6 +3,7 @@
 These pages are generated from the Release `Goo.xml` file.
 
 - [Accessibility](accessibility.md)
+- [Audio](audio.md)
 - [Cell](cell.md)
 - [Diagnostics](diagnostics.md)
 - [Input](input.md)

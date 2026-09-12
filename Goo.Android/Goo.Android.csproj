@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>$(GooReleaseVersion)</Version>
+    <PackageId>Goo.Android</PackageId>
+    <Description>Android presentation and input adapter for Goo's shared Vulkan UI runtime.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../docs/android.md" Pack="true" PackagePath="README.md" />
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+    <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-arm64/*.so" Abi="arm64-v8a" />
+    <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-x64/*.so" Abi="x86_64" />
+  </ItemGroup>
+  <Target Name="ExcludeGooAndroidProjectNativeArchive" AfterTargets="_IncludeAarInNuGetPackage">
+    <ItemGroup>
+      <TfmSpecificPackageFile Remove="$(_AarOutputPath)" />
+    </ItemGroup>
+  </Target>
+</Project>

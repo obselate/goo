@@ -102,7 +102,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     oldSwapchain VkSwapchainKHR,
     generationId uint64,
     enablePresentFence bool,
-    nativeObjectAccounting VulkanObjectAccounting?) {
+    nativeObjectAccounting VulkanObjectAccounting?,
+    preferRequestedExtent bool = false) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
@@ -125,7 +126,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         throw InvalidOperationException("Vulkan surface minimum image count cannot be incremented")
       }
 
-      let resolvedExtent = ResolveExtent(capabilities, desiredExtent)
+      let resolvedExtent = ResolveExtent(capabilities, desiredExtent, preferRequestedExtent)
       if resolvedExtent.width == 0u || resolvedExtent.height == 0u {
         throw ArgumentOutOfRangeException("desiredExtent")
       }
@@ -137,13 +138,16 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       if requestedImageCount == 0u || requestedImageCount > 2147483647u {
         throw InvalidOperationException("Vulkan surface image count cannot be represented by a managed array")
       }
+      if (capabilities.supportedTransforms & uint32(VkConstants.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)) == 0u {
+        throw InvalidOperationException("Vulkan surface does not support unrotated presentation")
+      }
 
       this.device = nativeDevice
       this.dispatch = nativeDispatch
       this.surface = nativeSurface
       this.surfaceFormat = chosenSurfaceFormat
       this.presentMode = chosenPresentMode
-      this.preTransform = capabilities.currentTransform
+      this.preTransform = VkConstants.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
       this.extent = resolvedExtent
       this.generation = generationId
       this.swapchainMaintenanceEnabled = enablePresentFence
@@ -219,23 +223,24 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     return storage
   }
 
-  private func ResolveExtent(capabilities VkSurfaceCapabilitiesKHR, desired VkExtent2D) VkExtent2D {
-    if capabilities.currentExtent.width != uint32.MaxValue {
-      return capabilities.currentExtent
+  private func ResolveExtent(capabilities VkSurfaceCapabilitiesKHR, desired VkExtent2D,
+    preferRequestedExtent bool) VkExtent2D{
+      if !preferRequestedExtent && capabilities.currentExtent.width != uint32.MaxValue {
+        return capabilities.currentExtent
+      }
+      var resolved = desired
+      if resolved.width < capabilities.minImageExtent.width {
+        resolved.width = capabilities.minImageExtent.width
+      } else if resolved.width > capabilities.maxImageExtent.width {
+        resolved.width = capabilities.maxImageExtent.width
+      }
+      if resolved.height < capabilities.minImageExtent.height {
+        resolved.height = capabilities.minImageExtent.height
+      } else if resolved.height > capabilities.maxImageExtent.height {
+        resolved.height = capabilities.maxImageExtent.height
+      }
+      return resolved
     }
-    var resolved = desired
-    if resolved.width < capabilities.minImageExtent.width {
-      resolved.width = capabilities.minImageExtent.width
-    } else if resolved.width > capabilities.maxImageExtent.width {
-      resolved.width = capabilities.maxImageExtent.width
-    }
-    if resolved.height < capabilities.minImageExtent.height {
-      resolved.height = capabilities.minImageExtent.height
-    } else if resolved.height > capabilities.maxImageExtent.height {
-      resolved.height = capabilities.maxImageExtent.height
-    }
-    return resolved
-  }
 
   private func Create(
     chosenPresentMode VkPresentModeKHR,

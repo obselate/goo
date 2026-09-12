@@ -394,9 +394,7 @@ internal class Node {
   internal prop ShapeCornerRadius float64{ get; set; }
   internal prop Dashes DashPattern? { get; set; }
   internal prop ShapeStrokeInset bool{ get; set; }
-  internal prop ImagePath string{ get; set; }
   internal prop ImageFit ImageFit{ get; set; }
-  internal prop ImageRequest ImageRequest? { get; set; }
   internal prop ImageSource ImageSourceProvider? { get -> ImageLayouts.Source(this) }
   internal prop ImageLease ImageSourceLease? { get -> ImageLayouts.Lease(this) }
   internal prop ImageSourceCompletion ImageSourceCompletion? {
@@ -445,7 +443,6 @@ internal class Node {
     EditorSlotKey = ""
     ShapePath = VectorPath.Empty
     ShapeFit = ShapeFit.Contain
-    ImagePath = ""
     ImageFit = ImageFit.Contain
     BackgroundImageFit = ImageFit.Cover
     ShapeFillRule = FillRule.NonZero

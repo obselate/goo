@@ -15,9 +15,14 @@
     <GooShaderEffect Include="../../apps/Goo.Gallery/Shaders/crt.frag.slang"
                      TargetPath="crt.frag.goo-effect" />
     <Compile Remove="WindowReadbackFixture.gs" />
+    <Compile Remove="DiagnosticCaptureSmoke.gs" />
+    <Compile Remove="EmbeddedHostSmoke.gs" />
+    <Compile Remove="WindowActivationSmoke.gs" />
     <Compile Include="../Shared/PrimitiveScene.gs" Link="PrimitiveScene.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
     <Compile Include="../Shared/EffectsScene.gs" Link="EffectsScene.gs" />
+    <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
+             CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
              Link="VendSans-VariableFont_wght.ttf"
              CopyToOutputDirectory="PreserveNewest" />

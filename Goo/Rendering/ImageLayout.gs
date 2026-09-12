@@ -191,33 +191,20 @@ internal class ImageLayouts {
     sourceState(n)?.SourceCompletion
     internal func CurrentToken(n Node) ImageSourceBindingToken ? -> sourceState(n)?.CurrentToken()
     internal func IsCurrent(n Node, token object) bool {
-      if Object.ReferenceEquals(n.ImageRequest, token) {
-        return true
-      }
       if let value = token as ImageSourceBindingToken? {
         return sourceState(n)?.IsCurrentToken(value) ?? false
       }
-      return Object.ReferenceEquals(sourceState(n), token)
+      return false
     }
 
-    internal func ApplyPath(n Node, path string, fit ImageFit,
-      completed((Node, object) -> void)?) {
-        n.ImageFit = fit
-        if path == "" {
-          Dispose(n)
-          return
-        }
-        let request = ImageDecoding.Request(path)
-        let intrinsicWidth = n.ImageIntrinsicWidth
-        let intrinsicHeight = n.ImageIntrinsicHeight
-        removeSource(n)
-        n.ImagePath = request.Path
-        n.ImageRequest = request
-        n.DecodedImage = nil
-        n.ImageIntrinsicWidth = intrinsicWidth
-        n.ImageIntrinsicHeight = intrinsicHeight
-        Refresh(n)
+    internal func ApplyPath(n Node, path string, fit ImageFit) {
+      n.ImageFit = fit
+      if path == "" {
+        Dispose(n)
+        return
       }
+      throw NotSupportedException("Image.Path does not decode files. Await ImageSourceCache.LoadAsync(path) outside Build and assign the result to Image.Source.")
+    }
 
     internal func ApplySource(n Node, source ImageSourceProvider, fit ImageFit,
       completed((Node, object) -> void)?) {
@@ -229,9 +216,7 @@ internal class ImageLayouts {
         }
         let intrinsicWidth = n.ImageIntrinsicWidth
         let intrinsicHeight = n.ImageIntrinsicHeight
-        n.ImageRequest = nil
         removeSource(n, prior)
-        n.ImagePath = ""
         n.DecodedImage = nil
         n.ImageIntrinsicWidth = intrinsicWidth
         n.ImageIntrinsicHeight = intrinsicHeight
@@ -252,16 +237,9 @@ internal class ImageLayouts {
       }
 
     internal func Refresh(n Node, known ImageSourceBinding? = nil) bool {
-      var decoded DecodedImage?
-      if let value = known ?? sourceState(n) {
-        guard let lease = value.Lease else { return false }
-        if !lease.IsComplete { return false }
-        decoded = value.CompletedResult()
-      } else if let request = n.ImageRequest {
-        decoded = request.Result
-      } else {
-        return false
-      }
+      guard let value = known ?? sourceState(n), let lease = value.Lease else { return false }
+      if !lease.IsComplete { return false }
+      let decoded = value.CompletedResult()
       let width = if let image = decoded {
         image.IsValid && image.Width > 0 ? float32(image.Width) : 0.0F
       } else { 0.0F }
@@ -286,11 +264,9 @@ internal class ImageLayouts {
       let hadDimensions = n.ImageIntrinsicWidth > 0.0F || n.ImageIntrinsicHeight > 0.0F
         || n.DecodedImage != nil
       removeSource(n)
-      n.ImageRequest = nil
       n.DecodedImage = nil
       n.ImageIntrinsicWidth = 0.0F
       n.ImageIntrinsicHeight = 0.0F
-      n.ImagePath = ""
       if hadDimensions {
         if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
       }
@@ -300,24 +276,10 @@ internal class ImageLayouts {
       height float32, heightMode MeasureMode) YGSize{
         let n = nodeFromYoga(yoga)
         Refresh(n)
-        var naturalWidth = 0.0F
-        var naturalHeight = 0.0F
-        if let image = n.DecodedImage {
-          if !image.IsValid || image.Width <= 0 || image.Height <= 0 {
-            return YGSize{}
-          }
-          naturalWidth = float32(image.Width)
-          naturalHeight = float32(image.Height)
-        } else {
-          if sourceState(n) != nil { return YGSize{} }
-          guard let request = n.ImageRequest else { return YGSize{} }
-          if !request.Result.IsValid { return YGSize{} }
-          if n.ImageIntrinsicWidth <= 0.0F || n.ImageIntrinsicHeight <= 0.0F {
-            return YGSize{}
-          }
-          naturalWidth = n.ImageIntrinsicWidth
-          naturalHeight = n.ImageIntrinsicHeight
-        }
+        guard let image = n.DecodedImage else { return YGSize{} }
+        if !image.IsValid || image.Width <= 0 || image.Height <= 0 { return YGSize{} }
+        let naturalWidth = float32(image.Width)
+        let naturalHeight = float32(image.Height)
         var measuredWidth = naturalWidth
         var measuredHeight = naturalHeight
         if widthMode == MeasureMode.Exactly && heightMode != MeasureMode.Exactly {

@@ -39,4 +39,10 @@ public sealed class LayoutIntegrationTests
         Assert.True(new LayoutFixtures().LayoutTransitionGlidesComputedPosition());
     }
 
+    [Fact]
+    public void TextEntryUsesIntrinsicLineBoxHeight()
+    {
+        Assert.True(new LayoutFixtures().TextEntryUsesIntrinsicLineBoxHeight());
+    }
+
 }

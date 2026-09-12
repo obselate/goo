@@ -29,6 +29,27 @@ Shader and text proof build:
 dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
 ```
 
+## Local PNG loading
+
+`Goo.ImageLoadingTests` verifies PNG color formats, premultiplication, file and
+decompression limits, error/retry behavior, shared pixels, independent owners,
+cache capacity, and cancellation. `Goo.ImageLoadingSmoke` loads a packaged PNG
+under Linux/macOS NativeAOT. Async decoder tests run separately from the SDL UI
+fixtures so test continuations cannot change their required main thread.
+`GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1` runs
+the actual Vulkan pixel/alpha/lifetime check in `Goo.AsyncReadbackSmoke`.
+The 2x2 `tests/Shared/Assets/local-rgba.png` fixture is generated for these tests
+and contains four known RGBA colors, including one half-transparent pixel.
+
+## UI audio
+
+`Goo.CoreBehaviorTests` checks PCM ownership/validation and 8-bit/16-bit WAV
+decoding. `Goo.AudioSmoke` checks shared owners, 16 overlapping voices, budget
+rejection, stop, playback progress without frames, and reopening. Run it with
+`SDL_AUDIO_DRIVER=dummy`; use `SDL_AUDIO_DRIVER=goo-unavailable` together with
+`GOO_AUDIO_UNAVAILABLE_SMOKE=1` to check optional device failure. Linux and macOS CI
+publishes and runs both cases as NativeAOT with the packaged SDL payload.
+
 ## Native queue wake regression
 
 The native queue wake regression check runs the normal window scheduler while
@@ -44,6 +65,22 @@ GOO_QUEUE_WAKE_SMOKE=1 dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/G
 CI runs this gate in the portable Vulkan checks through the headless Wayland wrapper.
 `PathIdentityTests` in the core behavior suite also checks allocation-free repeated
 source lookup, structural equality under hash collisions, and mutable path revisions.
+
+## Diagnostic capture retry
+
+`GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1` in `Goo.AsyncReadbackSmoke` holds a real
+Vulkan submission, checks that diagnostic capture reports pending during Busy,
+then releases the queue and verifies three image captures. The CLI test suite
+also checks pending retries and timeout without writing a partial image.
+
+## Window activation
+
+`GOO_WINDOW_ACTIVATION_SMOKE=1` exercises repeated native activation requests,
+preserved editor state, minimized-window requests, and closed-window rejection.
+It checks that requests do not synthesize focus changes. The observed native
+focus and window state are reported separately because compositor policy can
+deny activation without reporting an error. Linux CI runs this with Vulkan
+diagnostics through the headless Wayland wrapper.
 
 ## Timeline completion
 
@@ -186,3 +223,20 @@ test-fixture details, not support claims.
 - Enable Khronos validation for Vulkan correctness claims.
 - Do not describe software Vulkan results as hardware performance evidence.
 - Record hardware, driver, runtime, warmup, and sample counts for performance results.
+
+## Embedded host lifecycle
+
+`GOO_EMBEDDED_HOST_SMOKE=1` uses a host-owned native Vulkan surface with separate
+logical and framebuffer sizes. It verifies idle frame demand, suspension, queued
+updates, surface destruction and recreation, retained Cell state, captured pixels,
+and final disposal. Core behavior tests cover owner-thread rules, semantic platform
+input, composition, and touch scrolling without exposing retained nodes.
+
+## Android input connection
+
+The Android smoke APK can run real InputConnection regression checks against the
+shared retained scene. Start its activity with the boolean intent extra
+`goo.input_smoke=true`. Logcat tag `GooInputSmoke` reports `PASS` after checking
+sanitized cursor placement, composing regions, deletion, code points, batched
+edits, password privacy, stale connections, and multiline composition. A failed
+assertion terminates the smoke app with the failing operation.

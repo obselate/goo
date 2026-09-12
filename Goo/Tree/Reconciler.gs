@@ -940,14 +940,14 @@ internal class Reconciler {
     let sourceChanged = if let source = i.Source {
       initial || n.ImageSource != source
     } else {
-      initial || ImageLayouts.Source(n) != nil || !ImageDecoding.MatchesPath(n.ImageRequest, i.Path)
+      initial || ImageLayouts.Source(n) != nil || i.Path != ""
     }
     let fitChanged = n.ImageFit != i.Fit
     if sourceChanged {
       if let source = i.Source {
         ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted)
       } else {
-        ImageLayouts.ApplyPath(n, i.Path, i.Fit, ImageCompleted)
+        ImageLayouts.ApplyPath(n, i.Path, i.Fit)
       }
       MarkEffects(ReconcileEffects.Content)
       MarkEffects(ReconcileEffects.Layout)

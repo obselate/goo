@@ -251,6 +251,14 @@ Describes a non-cancelable focus lifecycle callback.
 
 Stops this lifecycle event before the next ancestor callback. Focus has already changed.
 
+## `FocusedEditorSnapshot`
+
+Source:
+
+- [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
+
+Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, and logical CaretArea for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
+
 ## `Key`
 
 Source:
@@ -435,6 +443,94 @@ Reports whether Shift is pressed.
 ### `Super`
 
 Reports whether Super is pressed.
+
+## `PlatformInput`
+
+Source:
+
+- [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
+
+Routes platform events and semantic editing through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
+
+### `EditorChanged`
+
+Reports settled focus, text, selection, composition, and caret-area changes.
+
+### `CancelComposition`
+
+Discards preedit and restores the committed value and selection.
+
+### `ClearFocus`
+
+Removes editor focus and cancels transient composition.
+
+### `CommitText(string)`
+
+Replaces the current selection or preedit with committed text.
+
+### `DeleteSurroundingText(int32,int32)`
+
+Deletes UTF-16 lengths outside the union of selection and composition, retaining both. Deletion expands to whole grapheme clusters without committing preedit.
+
+### `Execute(TextCommand)`
+
+Executes shared semantic navigation, editing, clipboard, or submit behavior.
+
+### `FinishComposition`
+
+Commits the existing preedit without changing its text.
+
+### `FocusLost`
+
+Clears editor focus, composition, pressed keys, and pointer capture.
+
+### `KeyPress(Key,KeyModifiers)`
+
+Dispatches a physical key press through the existing keyboard routing.
+
+### `KeyRelease(Key)`
+
+Releases a physical key and stops its repeat state.
+
+### `MoveFocus(bool)`
+
+Moves focus in the retained focus order, independent of editor indentation.
+
+### `PointerCancel(System.Int64,PointerDevice)`
+
+Cancels one pointer, releasing capture without generating a click.
+
+### `PointerMove(System.Int64,PointerDevice,float32,float32,KeyModifiers,float32)`
+
+Moves a platform pointer in window logical coordinates.
+
+### `PointerPress(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+
+Presses a platform pointer in window logical coordinates.
+
+### `PointerRelease(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+
+Releases a platform pointer in window logical coordinates.
+
+### `PointerWheel(float32,float32,float32,float32,KeyModifiers)`
+
+Dispatches wheel deltas at a window logical position.
+
+### `SetComposition(string,int32,int32)`
+
+Updates preedit and its selected UTF-16 segment without committing the value.
+
+### `SetCompositionRange(int32,int32)`
+
+Marks an existing effective UTF-16 range as composing text.
+
+### `SetSelection(int32,int32)`
+
+Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters. Selection direction and composing ranges remain independent.
+
+### `Editor`
+
+Gets a current immutable snapshot, or nil when no text editor has focus.
 
 ## `PointerButton`
 

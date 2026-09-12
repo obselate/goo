@@ -583,7 +583,7 @@ public partial class Window {
     if changed {
       requestRender()
     }
-    if windowTarget?.NeedsRender == true {
+    if windowTarget?.NeedsRender == true && windowTarget?.QueueWorkPending != true {
       requestRender()
     }
     return renderDirty
@@ -598,6 +598,7 @@ public partial class Window {
 
   private func requestRender() {
     renderDirty = true
+    embeddedHost?.Wake()
   }
 
 }

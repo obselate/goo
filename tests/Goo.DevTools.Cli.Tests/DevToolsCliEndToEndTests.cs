@@ -192,6 +192,40 @@ public sealed class DevToolsCliEndToEndTests
     }
 
     [Fact]
+    public async Task CapturePendingHonorsWaitBudgetWithoutWritingImage()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-test-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        var outputPath = Path.Combine(directory.Path, "frame.png");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var cliTask = RunCliAsync(directory.Path, "capture", "--latest", "--output", outputPath, "--wait", "1");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        var requests = 0;
+        while (await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) is { } request)
+        {
+            using var document = JsonDocument.Parse(request);
+            await writer.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                type = "response",
+                id = document.RootElement.GetProperty("id").GetString(),
+                payload = new { command = "capture", pending = true }
+            }));
+            requests++;
+        }
+
+        var result = await cliTask;
+        Assert.True(requests > 1);
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("wait expired", result.StandardError, StringComparison.Ordinal);
+        Assert.False(File.Exists(outputPath));
+    }
+
+    [Fact]
     public void InspectorUsesStandaloneAppOutputAndExpectedAttachArguments()
     {
         var candidates = InspectorLauncher.Candidates(RepositoryRoot);
@@ -312,7 +346,7 @@ public sealed class DevToolsCliEndToEndTests
             while (directory is not null)
             {
                 if (File.Exists(Path.Combine(directory.FullName, "LICENSE"))
-                    && Directory.Exists(Path.Combine(directory.FullName, ".git")))
+                    && Path.Exists(Path.Combine(directory.FullName, ".git")))
                     return directory.FullName;
                 directory = directory.Parent;
             }

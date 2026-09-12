@@ -153,12 +153,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
 
   private func ResolveCachePath(vendorId uint32, deviceId uint32,
     driverVersion uint32, uuid []uint8) string{
-      let manifestPath = Path.Combine(
-        AppContext.BaseDirectory, "Vulkan", "Shaders", "shader-manifest.json")
-      if !File.Exists(manifestPath) {
-        return ""
-      }
-      let manifestHash = SHA256.HashData(File.ReadAllBytes(manifestPath))
+      let manifestHash = SHA256.HashData(VulkanShaderAssets.Read("shader-manifest.json"))
       let directoryOverride = Environment.GetEnvironmentVariable("GOO_VK_PIPELINE_CACHE_DIR")
       let root = if directoryOverride != nil && directoryOverride != "" {
         directoryOverride

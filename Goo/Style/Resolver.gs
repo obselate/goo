@@ -645,7 +645,7 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
   if sameStyleEntry(readField(n, e.Field), e) {
     return false
   }
-  let tracksText = (n.Kind == NodeKind.Text || n.Kind == NodeKind.Editor)
+  let tracksText = (n.Kind == NodeKind.Text || n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor)
     && TextLayouts.IsShapingField(e.Field)
   switch e.Field {
     case StyleField.Direction { n.Direction = Direction(int32(e.A)) }

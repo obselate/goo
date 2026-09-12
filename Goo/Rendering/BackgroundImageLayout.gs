@@ -33,15 +33,13 @@ internal class BackgroundImageLayouts {
         return Refresh(n)
       }
       if !changed { return Refresh(n) }
-      releasePath(current)
-      current.Image = nil
-      current.Settled = false
       if path == "" {
         remove(n, current)
         return false
       }
-      startPath(n, current, path)
-      return Refresh(n)
+      current.Image = DecodedImage.Failed
+      current.Settled = true
+      return false
     }
 
     internal func SetSource(n Node, source ImageSourceProvider?, invalidated Action?) bool {
@@ -50,21 +48,19 @@ internal class BackgroundImageLayouts {
         current.Invalidated = invalidated
         if current.Source == nil { return Refresh(n) }
         current.ReleaseSource()
-        current.Image = nil
-        current.Settled = false
         if current.Path == "" {
           remove(n, current)
           return false
         }
-        startPath(n, current, current.Path)
-        return Refresh(n)
+        current.Image = DecodedImage.Failed
+        current.Settled = true
+        return false
       }
       var value = state(n)
       if value == nil { value = create(n) }
       let current = value!!
       current.Invalidated = invalidated
       if current.Source == source { return Refresh(n) }
-      releasePath(current)
       current.Image = nil
       current.Settled = false
       current.SetSourceChanged(() -> {
@@ -81,15 +77,9 @@ internal class BackgroundImageLayouts {
     internal func Refresh(n Node) bool {
       guard let value = state(n) else { return false }
       if value.Settled { return false }
-      var image DecodedImage?
-      if let lease = value.Lease {
-        if !lease.IsComplete { return false }
-        image = value.CompletedResult()
-      } else if let request = value.Request {
-        image = request.Result
-      } else {
-        return false
-      }
+      guard let lease = value.Lease else { return false }
+      if !lease.IsComplete { return false }
+      let image = value.CompletedResult()
       if value.Image == image {
         value.Settled = true
         return false
@@ -117,22 +107,11 @@ internal class BackgroundImageLayouts {
     private func remove(n Node, value BackgroundImageValue) {
       values?.Remove(n)
       n.HasBackgroundImageState = false
-      releasePath(value)
       value.ReleaseSource()
       value.Path = ""
       value.Image = nil
       value.Settled = false
       value.Invalidated = nil
-    }
-
-    private func startPath(n Node, value BackgroundImageValue, path string) {
-      let request = ImageDecoding.Request(path)
-      value.Request = request
-      Refresh(n)
-    }
-
-    private func releasePath(value BackgroundImageValue) {
-      value.Request = nil
     }
 
     private func state(n Node) BackgroundImageValue? {
@@ -188,7 +167,6 @@ internal class BackgroundImageLayouts {
 
 internal class BackgroundImageValue : ImageSourceBinding {
   internal var Path string
-  internal var Request ImageRequest?
   internal var Image DecodedImage?
   internal var Settled bool
   internal var Invalidated Action?

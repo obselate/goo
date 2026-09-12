@@ -21,10 +21,13 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json"
+                      LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
     <ProjectReference Include="$(MSBuildProjectDirectory)/../vendor/Yoga.Net/src/Yoga.Net/Yoga.Net.csproj"
                       PrivateAssets="all" />
     <PackageReference Include="Hexa.NET.SDL3" ExcludeAssets="native" />
     <PackageReference Include="Unicode.Bidi" />
+    <PackageReference Include="StbImageSharp" />
   </ItemGroup>
   <Import Project="$(GooTestFixturesProps)"
           Condition="'$(IncludeTestFixtures)' == 'true' and '$(GooTestFixturesProps)' != ''" />

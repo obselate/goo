@@ -213,10 +213,9 @@ internal class KeyboardInput {
     return changed
   }
 
-  // Returns the next repeat edge, or a value beyond Window's idle-wait ceiling.
   internal func RepeatDeadlineSeconds() float64 {
     if heldKey == Key.Unknown {
-      return 1.0
+      return Double.PositiveInfinity
     }
     if nextRepeatTicks != 0 {
       let remaining = nextRepeatTicks - Stopwatch.GetTimestamp()

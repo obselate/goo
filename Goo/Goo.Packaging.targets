@@ -8,6 +8,16 @@
     <GooEffectiveRuntimeIdentifier Condition="'$(GooEffectiveRuntimeIdentifier)' == '' and '$(NETCoreSdkRuntimeIdentifier)' != ''">$(NETCoreSdkRuntimeIdentifier)</GooEffectiveRuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
+    <GooNativePayload Include="$(GooNativeRuntimeRoot)/android-arm64/libgoo-harfbuzz.so;$(GooNativeRuntimeRoot)/android-arm64/libgoo-harfbuzz-gpu.so;$(GooNativeRuntimeRoot)/android-arm64/text-native-build.json">
+      <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+      <TargetFileName>%(Filename)%(Extension)</TargetFileName>
+      <Required>true</Required>
+    </GooNativePayload>
+    <GooNativePayload Include="$(GooNativeRuntimeRoot)/android-x64/libgoo-harfbuzz.so;$(GooNativeRuntimeRoot)/android-x64/libgoo-harfbuzz-gpu.so;$(GooNativeRuntimeRoot)/android-x64/text-native-build.json">
+      <RuntimeIdentifier>android-x64</RuntimeIdentifier>
+      <TargetFileName>%(Filename)%(Extension)</TargetFileName>
+      <Required>true</Required>
+    </GooNativePayload>
     <GooNativePayload Include="$(GooNativeRuntimeRoot)/linux-x64/libgoo-harfbuzz.so">
       <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
       <TargetFileName>libgoo-harfbuzz.so</TargetFileName>

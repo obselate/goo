@@ -7,13 +7,13 @@ internal unsafe partial class VulkanWindowTarget {
   private func Bootstrap() {
     if !vulkanLoaded {
       if !host.LoadVulkanLibrary() {
-        throw InvalidOperationException("SDL Vulkan loader initialization failed")
+        throw InvalidOperationException("Vulkan loader initialization failed")
       }
       vulkanLoaded = true
       getProcAddress = host.GetVulkanGetInstanceProcAddr()
     }
     if getProcAddress == nint(0) {
-      throw InvalidOperationException("SDL Vulkan global procedure lookup is unavailable")
+      throw InvalidOperationException("Vulkan global procedure lookup is unavailable")
     }
     if let shared = VulkanSharedRuntime.TryAcquire() {
       runtime = shared
@@ -86,7 +86,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func CreateSurface() {
     var createdSurface VkSurfaceKHR = 0uL
     if !host.CreateVulkanSurface(instance, out createdSurface) || createdSurface == 0uL {
-      throw InvalidOperationException("SDL Vulkan surface creation failed")
+      throw InvalidOperationException("Vulkan surface creation failed")
     }
     try {
       if let accounting = windowObjectAccounting {
@@ -143,7 +143,7 @@ internal unsafe partial class VulkanWindowTarget {
   private func CreateInstance() {
     let requiredExtensions = host.GetVulkanInstanceExtensions()
     if requiredExtensions.Length == 0 {
-      throw InvalidOperationException("SDL Vulkan instance extensions are unavailable")
+      throw InvalidOperationException("Vulkan instance extensions are unavailable")
     }
     instanceMaintenanceVariant = ResolveInstanceMaintenanceVariant()
     debugUtilsEnabled = diagnostics != nil

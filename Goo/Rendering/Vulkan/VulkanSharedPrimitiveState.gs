@@ -914,10 +914,9 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
   }
 
   private func LoadShaderCode(fileName string) []uint8 {
-    let path = Path.Combine(AppContext.BaseDirectory, "Vulkan", "Shaders", fileName)
-    let code = File.ReadAllBytes(path)
+    let code = VulkanShaderAssets.Read(fileName)
     if code.Length == 0 || (code.Length & 3) != 0 {
-      throw InvalidDataException("Invalid SPIR-V artifact: " + path)
+      throw InvalidDataException("Invalid SPIR-V artifact: " + fileName)
     }
     return code
   }

@@ -117,6 +117,11 @@ public class ImageSource : ImageSourceProvider, IDisposable {
     return nil
   }
 
+  internal func RetainSource() ImageSource {
+    guard let retained = retainImage() else { throw ObjectDisposedException("ImageSource") }
+    return ImageSource(width, height, retained)
+  }
+
 }
 
 /// Owns one provider result while it is mounted by Goo.
