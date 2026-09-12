@@ -2,19 +2,10 @@
 import argparse
 import json
 from pathlib import Path
+import sys
 
-
-def target_snapshot(value):
-    target = value["buildEvidence"]["target"]
-    platform = {"linux": "linux", "win": "windows", "osx": "macos", "android": "android"}[target.split("-")[0]]
-    unrelated = {"linux", "windows", "macos", "android"} - {platform}
-    snapshot = dict(value)
-    snapshot["outputs"] = {target: value["outputs"][target]}
-    for section in ("build", "buildEvidence"):
-        snapshot[section] = {key: item for key, item in value[section].items() if key not in unrelated}
-        if "environments" in snapshot[section]:
-            snapshot[section]["environments"] = {target: value[section]["environments"][target]}
-    return snapshot
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/Goo.TextNative"))
+from provenance import target_snapshot
 
 
 def main():

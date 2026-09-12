@@ -71,7 +71,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         lastFrameTime = 0;
         host.Resume();
         host.SetFocused(HasWindowFocus);
-        RequestFrame();
     }
 
     public void Pause()
@@ -100,7 +99,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Math.Max(1, (int)Math.Round(height / Density)), width, height);
         if (!host.IsPresentationAttached && width > 0 && height > 0)
             host.AttachPresentation();
-        RequestFrame();
     }
 
     public void SurfaceDestroyed(ISurfaceHolder holder)
@@ -231,7 +229,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             if (Input.Editor is { IsReadOnly: false })
                 inputMethod.ShowSoftInput(this, ShowFlags.Implicit);
         }
-        RequestFrame();
         return true;
     }
 
@@ -253,7 +250,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
                 e.GetY() / Density, Modifiers(e.MetaState), e.GetPressure(0));
         else
             return base.OnGenericMotionEvent(e);
-        RequestFrame();
         return true;
     }
 
@@ -275,7 +271,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             }
             if (!handled)
                 return base.OnKeyDown(keyCode, e);
-            RequestFrame();
             return true;
         }
         finally

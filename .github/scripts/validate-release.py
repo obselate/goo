@@ -297,7 +297,7 @@ def validate_macos_payloads(payloads: dict[str, bytes]) -> None:
     if evidence.get("deploymentTarget") != "14.0":
         raise SystemExit("packaged macOS text-native deployment target is stale")
     for field, expected in manifest["build"].items():
-        if field not in ("environments", "linux", "windows", "android") and evidence.get(field) != expected:
+        if field not in ("environments", "linux", "windows", "android") and evidence.get(field, recorded_build.get(field)) != expected:
             raise SystemExit(f"packaged macOS text-native build policy is stale: {field}")
     artifacts = recorded.get("artifacts", {})
     for role, name in manifest["outputs"]["osx-arm64"].items():
