@@ -748,9 +748,9 @@ method|Goo.Simulation|Velocity|abstract|public|generic:|(elapsed:System.Double)-
 method|Goo.SoundPlayback|Dispose|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayback|Stop|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayer|Dispose|instance|public|generic:|()->System.Void
-method|Goo.SoundPlayer|Play|instance|public|generic:|(source:Goo.SoundSource,volume:System.Single=1)->Goo.SoundPlayback
 method|Goo.SoundPlayer|StopAll|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayer|TryOpen|static|public|generic:|()->Goo.SoundPlayer
+method|Goo.SoundPlayer|TryPlay|instance|public|generic:|(source:Goo.SoundSource,volume:System.Single=1)->Goo.SoundPlayback
 method|Goo.SoundSource|FromWav|static|public|generic:|(encoded:System.Byte[])->Goo.SoundSource
 method|Goo.SoundSource|LoadWav|static|public|generic:|(stream:System.IO.Stream)->Goo.SoundSource
 method|Goo.TextCandidateEvent|Deconstruct|instance|public|generic:|(out Candidates:System.Collections.Generic.IReadOnlyList`1<System.String>&,out SelectedCandidate:System.Int32&,out Horizontal:System.Boolean&)->System.Void

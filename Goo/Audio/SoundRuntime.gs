@@ -67,7 +67,7 @@ internal class SoundRuntime {
     }
   }
 
-  internal func Play(owner SoundPlayer, source SoundSource, volume float32) SoundPlayback? {
+  internal func TryPlay(owner SoundPlayer, source SoundSource, volume float32) SoundPlayback? {
     if Object.ReferenceEquals(source, nil) { throw ArgumentNullException("source") }
     if !Single.IsFinite(volume) || volume < 0.0F || volume > 1.0F {
       throw ArgumentOutOfRangeException("volume")

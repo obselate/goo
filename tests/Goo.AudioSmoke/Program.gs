@@ -21,21 +21,21 @@ using let firstOwner = first
 guard let second = SoundPlayer.TryOpen() else { throw InvalidOperationException("Second audio owner did not open") }
 using let secondOwner = second
 let cue = SoundSource(8000, 1, [80000]float32)
-guard let firstCue = first.Play(cue), let secondCue = second.Play(cue) else {
+guard let firstCue = first.TryPlay(cue), let secondCue = second.TryPlay(cue) else {
   throw InvalidOperationException("Overlapping playback did not queue")
 }
 first.Dispose()
 Require(!firstCue.IsPlaying && secondCue.IsPlaying, "Disposing one owner affected another owner")
 let remaining = List[SoundPlayback]()
 for i in 0 ... 15 {
-  guard let voice = second.Play(cue) else { throw InvalidOperationException("Voice budget was exhausted early") }
+  guard let voice = second.TryPlay(cue) else { throw InvalidOperationException("Voice budget was exhausted early") }
   remaining.Add(voice)
 }
-Require(second.Play(cue) == nil, "Voice budget was not enforced")
+Require(second.TryPlay(cue) == nil, "Voice budget was not enforced")
 second.StopAll()
 Require(!secondCue.IsPlaying, "StopAll did not stop the first overlapping cue")
 for voice in remaining { Require(!voice.IsPlaying, "StopAll left an overlapping cue queued") }
-guard let shortCue = second.Play(SoundSource(8000, 1, [160]float32)) else {
+guard let shortCue = second.TryPlay(SoundSource(8000, 1, [160]float32)) else {
   throw InvalidOperationException("Stopped voice budget was not reclaimed")
 }
 let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 3

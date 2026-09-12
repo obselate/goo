@@ -36,10 +36,6 @@ Owns an application's UI cues using a process-shared default audio device. Open 
 
 Stops this owner's cues and releases its device reference on the UI thread. The last owner closes the shared device. Repeated disposal is harmless.
 
-### `Play(SoundSource,float32)`
-
-Queues a prepared cue with gain from zero through one, without waiting for playback. Cues overlap. Returns nil if the shared 16-voice/32-MiB queue budget is full or the native stream cannot be queued. Throws after disposal or for invalid input. Completed streams are reclaimed on the next play, status query, stop, or disposal.
-
 ### `StopAll`
 
 Stops all cues belonging to this owner, leaving other owners' playback intact.
@@ -47,6 +43,10 @@ Stops all cues belonging to this owner, leaving other owners' playback intact.
 ### `TryOpen`
 
 Opens an audio owner, or returns nil if desktop audio/device initialization fails. Multiple owners share one device; missing audio does not affect Goo windows.
+
+### `TryPlay(SoundSource,float32)`
+
+Queues a prepared cue with gain from zero through one, without waiting for playback. Cues overlap. Returns nil if the shared 16-voice/32-MiB queue budget is full or the native stream cannot be queued. Throws after disposal or for invalid input. Completed streams are reclaimed on the next play, status query, stop, or disposal.
 
 ## `SoundSource`
 
