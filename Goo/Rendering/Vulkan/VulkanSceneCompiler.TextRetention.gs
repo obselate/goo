@@ -154,30 +154,13 @@ internal partial class VulkanSceneCompiler {
 
   internal func ValidSegmentReference(
     value CachedTextSegmentRefRecord,
-    segment VulkanRetainedTextSegment) bool -> value.SegmentId != 0uL
-    && value.SegmentId == segment.Id
-    && value.SegmentVersion != 0uL
-    && value.SegmentVersion == segment.Version
-    && value.GlyphCount > 0
-    && value.GlyphCount == segment.GlyphCount
+    segment VulkanRetainedTextSegment) bool ->
+  VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
     && value.ClipChainId == segment.ClipChainId
     && value.FirstInstance == -1
     && segment.AtlasGeneration != 0uL
-    && segment.RecordCount == segment.GlyphCount
-    && segment.GlyphResourceCount == segment.GlyphCount
-    && segment.RunCount > 0
-    && segment.RunCount <= segment.Runs.Length
-    && segment.GlyphCount <= segment.Records.Length
-    && segment.GlyphCount <= segment.GlyphResources.Length
-    && segment.GlyphCount <= segment.GlyphAtlasTexelOffsets.Length
-    && segment.GlyphCount <= segment.GlyphAtlasTexelCounts.Length
-    && segment.GlyphCount <= segment.GlyphEffectAtlasTexelOffsets.Length
-    && segment.GlyphCount <= segment.GlyphEffectAtlasTexelCounts.Length
     && VulkanRetainedTextValidation.ValidBounds(value.Bounds)
-    && value.Bounds.X == segment.Bounds.X
-    && value.Bounds.Y == segment.Bounds.Y
-    && value.Bounds.Width == segment.Bounds.Width
-    && value.Bounds.Height == segment.Bounds.Height
+    && VulkanRetainedTextValidation.SameBounds(value.Bounds, segment.Bounds)
     && VulkanRetainedTextValidation.ValidRuns(segment)
 
   private func SameResource(left ResourceId, right ResourceId) bool -> left.Kind == right.Kind && left.LogicalId == right.LogicalId
@@ -218,13 +201,7 @@ internal partial class VulkanSceneCompiler {
     owner VulkanSceneOwnerId,
     bounds ConservativeBounds,
     opacity float32,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    activeClipBounds ConservativeBounds) bool -> textScene != nil
+    context VulkanSceneTraversalContext) bool -> textScene != nil
     && !bounds.IsEmpty
     && finiteVulkanSceneValue(opacity)
     && opacity > 0.0F
@@ -237,21 +214,13 @@ internal partial class VulkanSceneCompiler {
     && !styleMaskHas(node.AppliedMask, StyleField.ShaderEffect)
     && RetainedTextContentEligible(node, owner, bounds)
     && RetainedTextOwnRectClipSupported(
-      node, bounds, parentAxisAligned, parentClipDepth)
-    && RetainedTextContextSupported(parentTransformIndex, parentClipIndex,
-      parentOpacity, parentAxisAligned, parentClipDepth,
-      parentPathClipChainId, activeClipBounds)
+      node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
+    && RetainedTextContextSupported(context)
 
   private func RetainedTextContextSupported(
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    activeClipBounds ConservativeBounds) bool{
-      if !ExactFloat(parentOpacity, 1.0F) || !parentAxisAligned
-        || parentPathClipChainId != 0 {
+    context VulkanSceneTraversalContext) bool{
+      if !ExactFloat(context.ParentOpacity, 1.0F) || !context.ParentAxisAligned
+        || context.ParentPathClipChainId != 0 {
           return false
         }
       let viewport = ConservativeBounds{
@@ -260,21 +229,21 @@ internal partial class VulkanSceneCompiler {
         Width: clipViewportWidth,
         Height: clipViewportHeight,
       }
-      if parentClipDepth == 0 {
-        return parentTransformIndex == -1 && parentClipIndex == -1
-          && ExactBounds(activeClipBounds, viewport)
+      if context.ParentRectClipDepth == 0 {
+        return context.ParentTransformIndex == -1 && context.ParentRectClipIndex == -1
+          && ExactBounds(context.ActiveClipBounds, viewport)
       }
-      if parentClipDepth != 1 || parentClipIndex < 0
-        || parentClipIndex >= frame.RectClipCount
-        || parentTransformIndex < -1
-        || parentTransformIndex >= frame.TransformCount{
+      if context.ParentRectClipDepth != 1 || context.ParentRectClipIndex < 0
+        || context.ParentRectClipIndex >= frame.RectClipCount
+        || context.ParentTransformIndex < -1
+        || context.ParentTransformIndex >= frame.TransformCount{
           return false
         }
-      let parentTransform = ResolveCompilerFrameTransform(parentTransformIndex)
+      let parentTransform = ResolveCompilerFrameTransform(context.ParentTransformIndex)
       if !RetainedTextUnitTranslation(parentTransform) {
         return false
       }
-      let clip = frame.RectClips[parentClipIndex]
+      let clip = frame.RectClips[context.ParentRectClipIndex]
       if clip.ParentIndex != -1 {
         return false
       }
@@ -285,7 +254,7 @@ internal partial class VulkanSceneCompiler {
       let expectedClipBounds = IntersectBounds(viewport,
         TransformCompilerBounds(clip.Bounds, clipTransform))
       return !expectedClipBounds.IsEmpty
-        && ExactBounds(activeClipBounds, expectedClipBounds)
+        && ExactBounds(context.ActiveClipBounds, expectedClipBounds)
     }
 
   private func RetainedTextOwnRectClipSupported(

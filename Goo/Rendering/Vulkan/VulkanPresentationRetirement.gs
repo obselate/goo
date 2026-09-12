@@ -39,7 +39,7 @@ internal data struct VulkanRetiredGenerationRecord {
   var anchorCompleted bool
 }
 
-internal class VulkanPresentationRetirement {
+internal partial class VulkanPresentationRetirement {
   private let presentations [] ? VulkanPresentationRecord
   private let completedPresentations [] ? VulkanCompletedPresentationRecord
   private let retiredGenerations [] ? VulkanRetiredGenerationRecord

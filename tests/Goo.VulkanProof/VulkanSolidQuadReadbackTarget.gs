@@ -1,365 +1,367 @@
 package Goo.VulkanProof
 
 import System
+import System.Threading
 import Goo
 
-internal unsafe class VulkanSolidQuadReadbackTarget : IDisposable {
+internal unsafe sealed class VulkanSolidQuadReadbackTarget : IDisposable {
+  private const ByteSize VkDeviceSize = 64uL * 64uL * 4uL
+  private let lease VulkanSharedLease
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let allocator VulkanMemoryAllocator
   private let readbackDispatch VulkanReadbackDispatch
+  private let accounting VulkanObjectAccounting?
+  private let mailbox VulkanQueueMailbox
   private let extent VkExtent2D
-  private let byteSize VkDeviceSize
-  private let targetFormat VkFormat
+  private let acceptSubmission Action[uint64]
   private var image VkImage
   private var imageView VkImageView
   private var imageAllocation VulkanMemoryAllocation? = nil
   private var stagingBuffer VkBuffer
   private var stagingAllocation VulkanMemoryAllocation? = nil
-  private var completionFence VkFence
+  private var commandPool VkCommandPool
+  private var commandBuffer VkCommandBuffer
   private var solidQuad VulkanSolidQuad? = nil
-  private var imageLayout VkImageLayout
-  private var requestPrepared bool
-  private var commandRecorded bool
-  private var submissionPending bool
-  private var readbackComplete bool
+  private var commandPoolAccounted bool
+
+  private var recorded bool
+
+  private var queuePending bool
+  private var acceptedSerial uint64
+  private var complete bool
+  private var failure VkResult = VkConstants.VK_SUCCESS
   private var disposed bool
 
-  internal prop CompletionFence VkFence{ get -> completionFence }
+  internal prop AcceptedSerial uint64{ get -> acceptedSerial }
+  internal prop Extent VkExtent2D{ get -> extent }
   internal prop LiveObjectCount uint32{
     get {
-      var count uint32 = 0u
-      if image != 0uL { count = count + 1u }
-      if imageView != 0uL { count = count + 1u }
-      if stagingBuffer != 0uL { count = count + 1u }
-      if completionFence != 0uL { count = count + 1u }
+      var count uint32
+      if image != 0uL { count++ }
+      if imageView != 0uL { count++ }
+      if stagingBuffer != 0uL { count++ }
+      if commandPool != 0uL { count++ }
+      if commandBuffer != nint(0) { count++ }
       if solidQuad != nil { count = count + 2u }
       return count
     }
   }
   internal prop ReadbackPointer * void{
     get {
-      if !readbackComplete {
-        throw InvalidOperationException("Vulkan direct quad readback is not complete")
+      if disposed { throw ObjectDisposedException("VulkanSolidQuadReadbackTarget") }
+      if !complete {
+        throw InvalidOperationException("Vulkan direct UNORM readback is incomplete")
       }
-      return stagingAllocation!!.mapped
+      guard let allocation = stagingAllocation else {
+        throw InvalidOperationException("Vulkan direct UNORM staging allocation is unavailable")
+      }
+      return allocation.mapped
     }
   }
 
   internal init(
-    nativeDevice VkDevice,
-    nativeDispatch VkDeviceDispatch,
-    nativeAllocator VulkanMemoryAllocator,
-    nativeReadbackDispatch VulkanReadbackDispatch,
-    targetExtent VkExtent2D,
-    colorFormat VkFormat) {
-      if nativeDevice == nint(0) {
-        throw ArgumentException("Vulkan device is null", "nativeDevice")
+    nativeLease VulkanSharedLease,
+    nativeReadbackDispatch VulkanReadbackDispatch) {
+      if nativeLease == nil { throw ArgumentNullException("nativeLease") }
+      if nativeReadbackDispatch == nil {
+        throw ArgumentNullException("nativeReadbackDispatch")
       }
-      if targetExtent.width == 0u || targetExtent.height == 0u {
-        throw ArgumentOutOfRangeException("targetExtent")
-      }
-      if colorFormat != VkConstants.VK_FORMAT_R8G8B8A8_UNORM {
-        throw ArgumentException("SolidQuad readback requires R8G8B8A8_UNORM", "colorFormat")
-      }
-      if uint64(targetExtent.width) > uint64.MaxValue / 4uL {
-        throw OverflowException("Direct quad readback row byte size overflow")
-      }
-      let rowBytes = uint64(targetExtent.width) * 4uL
-      if uint64(targetExtent.height) > uint64.MaxValue / rowBytes {
-        throw OverflowException("Direct quad readback staging byte size overflow")
-      }
-      this.device = nativeDevice
-      this.dispatch = nativeDispatch
-      this.allocator = nativeAllocator
-      this.readbackDispatch = nativeReadbackDispatch
-      this.extent = targetExtent
-      this.byteSize = VkDeviceSize(rowBytes * uint64(targetExtent.height))
-      this.targetFormat = colorFormat
-      this.imageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
+      lease = nativeLease
+      device = nativeLease.Device
+      dispatch = nativeLease.Dispatch
+      allocator = nativeLease.MemoryAllocator
+      readbackDispatch = nativeReadbackDispatch
+      accounting = nativeLease.ObjectAccounting
+      mailbox = nativeLease.QueueWorker.CreateMailbox(nil)
+      extent = VkExtent2D{ width: 64u, height: 64u }
+      acceptSubmission = AcceptSubmission
       Create()
     }
 
-  internal func PrepareSubmit() VkResult {
-    if disposed {
-      throw ObjectDisposedException("VulkanSolidQuadReadbackTarget")
-    }
-    if submissionPending {
-      return VkConstants.VK_NOT_READY
-    }
-    if requestPrepared || commandRecorded {
-      throw InvalidOperationException("Vulkan direct quad readback is already prepared")
-    }
-    let resetFences = dispatch.vkResetFences
-    let result = resetFences(device, 1u, &completionFence)
-    if result == VkConstants.VK_SUCCESS {
-      requestPrepared = true
-      commandRecorded = false
-      readbackComplete = false
-    }
-    return result
-  }
-
   internal func Record(
-    commandBuffer VkCommandBuffer,
     clearColor VkClearColorValue,
-    pushConstants SolidQuadPushConstants) {
-      if disposed {
-        throw ObjectDisposedException("VulkanSolidQuadReadbackTarget")
+    pushConstants SolidQuadPushConstants) VkResult{
+      EnsureOpen()
+      if queuePending || acceptedSerial != 0uL || complete {
+        return VkConstants.VK_NOT_READY
       }
-      if commandBuffer == nint(0) {
-        throw ArgumentException("Command buffer is null", "commandBuffer")
+      let resetCommandBuffer = dispatch.vkResetCommandBuffer
+      let reset = resetCommandBuffer(
+        commandBuffer, VkCommandBufferResetFlags(0u))
+      if reset != VkConstants.VK_SUCCESS { return reset }
+      var beginInfo = VkCommandBufferBeginInfo{
+        sType: VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        flags: uint32(VkConstants.VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT),
       }
-      if !requestPrepared {
-        throw InvalidOperationException("PrepareSubmit must precede Record")
+      let beginCommandBuffer = dispatch.vkBeginCommandBuffer
+      let begin = beginCommandBuffer(commandBuffer, &beginInfo)
+      if begin != VkConstants.VK_SUCCESS { return begin }
+      VulkanTransitions.RecordImage(
+        commandBuffer,
+        dispatch.vkCmdPipelineBarrier2,
+        image,
+        VulkanTransitions.ColorSubresourceRange(),
+        VkConstants.VK_IMAGE_LAYOUT_UNDEFINED,
+        VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VkConstants.VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+        VkConstants.VK_ACCESS_2_NONE,
+        VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
+      guard let quad = solidQuad else {
+        throw InvalidOperationException("Vulkan direct UNORM pipeline is unavailable")
       }
-      if commandRecorded {
-        throw InvalidOperationException("Vulkan direct quad command buffer is already recorded")
+      quad.Record(commandBuffer, imageView, extent, clearColor, pushConstants)
+      VulkanTransitions.RecordImage(
+        commandBuffer,
+        dispatch.vkCmdPipelineBarrier2,
+        image,
+        VulkanTransitions.ColorSubresourceRange(),
+        VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT,
+        VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT)
+      let copyRegion = VkBufferImageCopy{
+        bufferOffset: 0uL,
+        imageSubresource: VkImageSubresourceLayers{
+          aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
+          layerCount: 1u,
+        },
+        imageExtent: VkExtent3D{ width: 64u, height: 64u, depth: 1u },
       }
-      BeginRecord(commandBuffer)
-      solidQuad!!.Record(commandBuffer, imageView, extent, clearColor, pushConstants)
-      FinishRecord(commandBuffer)
+      readbackDispatch.CopyImageToBuffer(commandBuffer, image,
+        VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingBuffer, copyRegion)
+      let endCommandBuffer = dispatch.vkEndCommandBuffer
+      let end = endCommandBuffer(commandBuffer)
+      if end == VkConstants.VK_SUCCESS { recorded = true }
+      return end
     }
 
-  internal func MarkSubmitted(result VkResult) VkResult {
-    if disposed {
-      throw ObjectDisposedException("VulkanSolidQuadReadbackTarget")
-    }
-    if !requestPrepared || !commandRecorded {
-      throw InvalidOperationException("Vulkan direct quad commands are not ready for submission")
-    }
-    requestPrepared = false
-    commandRecorded = false
-    if result == VkConstants.VK_SUCCESS {
-      submissionPending = true
-      imageLayout = VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-    }
-    return result
-  }
-
-  internal func PollCompletion() VkResult {
-    if disposed {
-      throw ObjectDisposedException("VulkanSolidQuadReadbackTarget")
-    }
-    if readbackComplete {
-      return VkConstants.VK_SUCCESS
-    }
-    if !submissionPending {
+  internal func Submit() VkResult {
+    EnsureOpen()
+    if !recorded { throw InvalidOperationException("Vulkan direct UNORM commands are not recorded") }
+    mailbox.PrepareSubmit(commandBuffer, 0uL, 0uL)
+    if !mailbox.BeginSubmit() { return VkConstants.VK_NOT_READY }
+    if !lease.EnqueueGraphicsSubmission(mailbox, acceptSubmission) {
+      mailbox.CancelSubmit()
       return VkConstants.VK_NOT_READY
     }
-    let getFenceStatus = dispatch.vkGetFenceStatus
-    let status = getFenceStatus(device, completionFence)
-    if status != VkConstants.VK_SUCCESS {
-      return status
-    }
-    let invalidateResult = allocator.InvalidateAfterFence(stagingAllocation!!, 0uL, byteSize)
-    if invalidateResult != VkConstants.VK_SUCCESS {
-      return invalidateResult
-    }
-    readbackComplete = true
-    submissionPending = false
+    queuePending = true
     return VkConstants.VK_SUCCESS
   }
 
+  internal func PollCompletion() VkResult {
+    EnsureOpen()
+    if queuePending {
+      var submitResult VkResult
+      if !mailbox.TakeSubmitCompletion(out submitResult) {
+        return VkConstants.VK_NOT_READY
+      }
+      queuePending = false
+      mailbox.ResetSubmitCompletion()
+      if submitResult != VkConstants.VK_SUCCESS {
+        failure = submitResult
+        if submitResult == VkConstants.VK_ERROR_DEVICE_LOST {
+          lease.MarkDeviceLost()
+          lease.QuiesceQueueAfterDeviceLoss()
+        }
+        return submitResult
+      }
+    }
+    if complete { return VkConstants.VK_SUCCESS }
+    if acceptedSerial == 0uL { return VkConstants.VK_NOT_READY }
+    let status = lease.PollGraphicsSubmission(acceptedSerial)
+    if status != VkConstants.VK_SUCCESS {
+      if status != VkConstants.VK_NOT_READY { failure = status }
+      if status == VkConstants.VK_ERROR_DEVICE_LOST {
+        lease.MarkDeviceLost()
+        lease.QuiesceQueueAfterDeviceLoss()
+      }
+      return status
+    }
+    guard let allocation = stagingAllocation else {
+      throw InvalidOperationException("Vulkan direct UNORM staging allocation is unavailable")
+    }
+    let invalidated = allocator.InvalidateAfterFence(allocation, 0uL, ByteSize)
+    if invalidated == VkConstants.VK_SUCCESS { complete = true }
+    else { failure = invalidated }
+    return invalidated
+  }
+
+  /// Releases the direct readback target after its accepted submission completes.
   public func Dispose() {
-    if disposed {
+    if disposed { return }
+    while failure == VkConstants.VK_SUCCESS
+      && (queuePending || (acceptedSerial != 0uL && !complete)) {
+        let result = PollCompletion()
+        if result == VkConstants.VK_NOT_READY {
+          Thread.Yield()
+        }
+      }
+    if failure != VkConstants.VK_SUCCESS {
+      let idle = lease.WaitDeviceIdleResult()
+      if idle != VkConstants.VK_SUCCESS {
+        lease.MarkTeardownFailed(idle)
+        if idle == VkConstants.VK_ERROR_DEVICE_LOST {
+          lease.QuiesceQueueAfterDeviceLoss()
+        } else {
+          throw InvalidOperationException("Vulkan direct UNORM cleanup could not prove device idle")
+        }
+      }
+      DestroyResources(idle != VkConstants.VK_SUCCESS)
       return
     }
-    if submissionPending {
-      let waitForFences = dispatch.vkWaitForFences
-      let waitResult = waitForFences(
-        device, 1u, &completionFence, VkConstants.VK_TRUE, VkConstants.VK_WHOLE_SIZE)
-      if waitResult != VkConstants.VK_SUCCESS {
-        throw InvalidOperationException("vkWaitForFences failed for Vulkan direct quad submission")
-      }
-      let completion = PollCompletion()
-      if completion != VkConstants.VK_SUCCESS {
-        throw InvalidOperationException("Vulkan direct quad submission is still pending")
+    if recorded && acceptedSerial == 0uL {
+      let resetCommandBuffer = dispatch.vkResetCommandBuffer
+      let reset = resetCommandBuffer(commandBuffer, VkCommandBufferResetFlags(0u))
+      if reset != VkConstants.VK_SUCCESS {
+        throw InvalidOperationException("Vulkan direct UNORM command reset failed")
       }
     }
-    disposed = true
-    if solidQuad != nil {
-      solidQuad!!.Dispose()
-      solidQuad = nil
-    }
-    if imageView != 0uL {
-      let destroyImageView = dispatch.vkDestroyImageView
-      destroyImageView(device, imageView, nil)
-      imageView = 0uL
-    }
-    if image != 0uL {
-      let destroyImage = dispatch.vkDestroyImage
-      destroyImage(device, image, nil)
-      image = 0uL
-    }
-    if imageAllocation != nil {
-      allocator.Release(imageAllocation!!)
-      imageAllocation = nil
-    }
-    if stagingBuffer != 0uL {
-      let destroyBuffer = dispatch.vkDestroyBuffer
-      destroyBuffer(device, stagingBuffer, nil)
-      stagingBuffer = 0uL
-    }
-    if stagingAllocation != nil {
-      allocator.Release(stagingAllocation!!)
-      stagingAllocation = nil
-    }
-    if completionFence != 0uL {
-      let destroyFence = dispatch.vkDestroyFence
-      destroyFence(device, completionFence, nil)
-      completionFence = 0uL
+    DestroyResources(false)
+  }
+
+  deinit{
+    if !disposed {
+      try { Dispose() } catch (cleanup Exception) {
+        if lease.DeviceLost {
+          try { lease.QuiesceQueueAfterDeviceLoss() } catch (quiesce Exception) { }
+          try { DestroyResources(true) } catch (destroy Exception) { }
+        }
+      }
     }
   }
 
-  private func BeginRecord(commandBuffer VkCommandBuffer) {
-    var subresourceRange = VkImageSubresourceRange{}
-    subresourceRange.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
-    subresourceRange.levelCount = 1u
-    subresourceRange.layerCount = 1u
-    var barrier = VkImageMemoryBarrier2{}
-    barrier.sType = VkConstants.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
-    if imageLayout == VkConstants.VK_IMAGE_LAYOUT_UNDEFINED {
-      barrier.srcStageMask = VkConstants.VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
-      barrier.srcAccessMask = VkConstants.VK_ACCESS_2_NONE
-    } else if imageLayout == VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL {
-      barrier.srcStageMask = VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT
-      barrier.srcAccessMask = VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT
-    } else {
-      throw InvalidOperationException("Vulkan direct quad image has an unsupported layout")
-    }
-    barrier.dstStageMask = VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-    barrier.dstAccessMask = VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-    barrier.oldLayout = imageLayout
-    barrier.newLayout = VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    barrier.srcQueueFamilyIndex = VkConstants.VK_QUEUE_FAMILY_IGNORED
-    barrier.dstQueueFamilyIndex = VkConstants.VK_QUEUE_FAMILY_IGNORED
-    barrier.image = image
-    barrier.subresourceRange = subresourceRange
-    var dependency = VkDependencyInfo{}
-    dependency.sType = VkConstants.VK_STRUCTURE_TYPE_DEPENDENCY_INFO
-    dependency.imageMemoryBarrierCount = 1u
-    dependency.pImageMemoryBarriers = &barrier
-    let pipelineBarrier = dispatch.vkCmdPipelineBarrier2
-    pipelineBarrier(commandBuffer, &dependency)
-  }
-
-  private func FinishRecord(commandBuffer VkCommandBuffer) {
-    var subresourceRange = VkImageSubresourceRange{}
-    subresourceRange.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
-    subresourceRange.levelCount = 1u
-    subresourceRange.layerCount = 1u
-    var barrier = VkImageMemoryBarrier2{}
-    barrier.sType = VkConstants.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
-    barrier.srcStageMask = VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-    barrier.srcAccessMask = VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-    barrier.dstStageMask = VkConstants.VK_PIPELINE_STAGE_2_COPY_BIT
-    barrier.dstAccessMask = VkConstants.VK_ACCESS_2_TRANSFER_READ_BIT
-    barrier.oldLayout = VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    barrier.newLayout = VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-    barrier.srcQueueFamilyIndex = VkConstants.VK_QUEUE_FAMILY_IGNORED
-    barrier.dstQueueFamilyIndex = VkConstants.VK_QUEUE_FAMILY_IGNORED
-    barrier.image = image
-    barrier.subresourceRange = subresourceRange
-    var dependency = VkDependencyInfo{}
-    dependency.sType = VkConstants.VK_STRUCTURE_TYPE_DEPENDENCY_INFO
-    dependency.imageMemoryBarrierCount = 1u
-    dependency.pImageMemoryBarriers = &barrier
-    let pipelineBarrier = dispatch.vkCmdPipelineBarrier2
-    pipelineBarrier(commandBuffer, &dependency)
-
-    var copyRegion = VkBufferImageCopy{}
-    copyRegion.imageSubresource = VkImageSubresourceLayers{}
-    copyRegion.imageSubresource.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
-    copyRegion.imageSubresource.layerCount = 1u
-    copyRegion.imageExtent = VkExtent3D{
-      width: extent.width,
-      height: extent.height,
-      depth: 1u,
-    }
-    readbackDispatch.CopyImageToBuffer(commandBuffer, image,
-      VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingBuffer, copyRegion)
-    commandRecorded = true
+  private func AcceptSubmission(serial uint64) {
+    if serial == 0uL { throw ArgumentOutOfRangeException("serial") }
+    acceptedSerial = serial
   }
 
   private func Create() {
     try {
-      var imageCreateInfo = VkImageCreateInfo{}
-      imageCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
-      imageCreateInfo.imageType = VkConstants.VK_IMAGE_TYPE_2D
-      imageCreateInfo.format = targetFormat
-      imageCreateInfo.extent = VkExtent3D{
-        width: extent.width,
-        height: extent.height,
-        depth: 1u,
-      }
-      imageCreateInfo.mipLevels = 1u
-      imageCreateInfo.arrayLayers = 1u
-      imageCreateInfo.samples = VkConstants.VK_SAMPLE_COUNT_1_BIT
-      imageCreateInfo.tiling = VkConstants.VK_IMAGE_TILING_OPTIMAL
-      imageCreateInfo.usage = uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-      | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-      imageCreateInfo.sharingMode = VkConstants.VK_SHARING_MODE_EXCLUSIVE
-      imageCreateInfo.initialLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
-      let createImage = dispatch.vkCreateImage
-      if createImage(device, &imageCreateInfo, nil, &image) != VkConstants.VK_SUCCESS
-        || image == 0uL {
-          throw InvalidOperationException("vkCreateImage failed")
-        }
-      imageAllocation = allocator.AllocateImage(
-        image,
-        VulkanMemoryPolicy(0u, uint32(VkConstants.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)))
-
-      var imageViewCreateInfo = VkImageViewCreateInfo{}
-      imageViewCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-      imageViewCreateInfo.image = image
-      imageViewCreateInfo.viewType = VkConstants.VK_IMAGE_VIEW_TYPE_2D
-      imageViewCreateInfo.format = targetFormat
-      imageViewCreateInfo.components = VkComponentMapping{
-        r: VkConstants.VK_COMPONENT_SWIZZLE_IDENTITY,
-        g: VkConstants.VK_COMPONENT_SWIZZLE_IDENTITY,
-        b: VkConstants.VK_COMPONENT_SWIZZLE_IDENTITY,
-        a: VkConstants.VK_COMPONENT_SWIZZLE_IDENTITY,
-      }
-      imageViewCreateInfo.subresourceRange = VkImageSubresourceRange{}
-      imageViewCreateInfo.subresourceRange.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
-      imageViewCreateInfo.subresourceRange.levelCount = 1u
-      imageViewCreateInfo.subresourceRange.layerCount = 1u
-      let createImageView = dispatch.vkCreateImageView
-      if createImageView(device, &imageViewCreateInfo, nil, &imageView) != VkConstants.VK_SUCCESS
-        || imageView == 0uL {
-          throw InvalidOperationException("vkCreateImageView failed")
-        }
-
-      var bufferCreateInfo = VkBufferCreateInfo{}
-      bufferCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
-      bufferCreateInfo.size = byteSize
-      bufferCreateInfo.usage = uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-      bufferCreateInfo.sharingMode = VkConstants.VK_SHARING_MODE_EXCLUSIVE
-      let createBuffer = dispatch.vkCreateBuffer
-      if createBuffer(device, &bufferCreateInfo, nil, &stagingBuffer) != VkConstants.VK_SUCCESS
-        || stagingBuffer == 0uL {
-          throw InvalidOperationException("vkCreateBuffer failed")
-        }
-      stagingAllocation = allocator.AllocateBuffer(
-        stagingBuffer,
+      let commands * VkCommandBuffer = stackalloc[1]VkCommandBuffer
+      let commandAllocation = VulkanCommandFactory.CreatePoolAndAllocate(
+        device,
+        dispatch,
+        accounting,
+        lease.GraphicsFamilyIndex,
+        uint32(VkConstants.VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
+        | uint32(VkConstants.VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
+        VkConstants.VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        1u,
+        commands)
+      commandPool = commandAllocation.Pool
+      commandBuffer = commands[0]
+      commandPoolAccounted = accounting != nil
+      let imageCreation = VulkanImageFactory.Create2D(
+        device,
+        dispatch,
+        allocator,
+        accounting,
+        extent,
+        VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
+        uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+        | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
+        uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
+        VulkanMemoryPolicy.DeviceLocalRequiredPreferred)
+      image = imageCreation.Image
+      imageView = imageCreation.ImageView
+      imageAllocation = imageCreation.Allocation
+      let stagingCreation = VulkanBufferFactory.CreateMapped(
+        device,
+        dispatch,
+        allocator,
+        accounting,
+        ByteSize,
+        uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT),
         VulkanMemoryPolicy.HostVisibleCoherentCached)
-      if allocator.Map(stagingAllocation!!) != VkConstants.VK_SUCCESS {
-        throw InvalidOperationException("vkMapMemory failed")
-      }
-
-      var fenceCreateInfo = VkFenceCreateInfo{}
-      fenceCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-      fenceCreateInfo.flags = uint32(VkConstants.VK_FENCE_CREATE_SIGNALED_BIT)
-      let createFence = dispatch.vkCreateFence
-      if createFence(device, &fenceCreateInfo, nil, &completionFence) != VkConstants.VK_SUCCESS
-        || completionFence == 0uL {
-          throw InvalidOperationException("vkCreateFence failed")
-        }
-      solidQuad = VulkanSolidQuad(device, dispatch, targetFormat)
+      stagingBuffer = stagingCreation.Buffer
+      stagingAllocation = stagingCreation.Allocation
+      solidQuad = VulkanSolidQuad(
+        device, dispatch, VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
     } catch (error Exception) {
-      Dispose()
+      try { DestroyResources(true) } catch (cleanup Exception) { }
       throw error
     }
+  }
+
+  private func DestroyResources(bestEffort bool) {
+    if disposed { return }
+    disposed = true
+    if let quad = solidQuad {
+      if bestEffort { try { quad.Dispose() } catch (cleanup Exception) { } }
+      else { quad.Dispose() }
+      solidQuad = nil
+    }
+    if stagingBuffer != 0uL {
+      let stale = stagingBuffer
+      stagingBuffer = 0uL
+      let destroyBuffer = dispatch.vkDestroyBuffer
+      if bestEffort { try { destroyBuffer(device, stale, nil) } catch (cleanup Exception) { } }
+      else { destroyBuffer(device, stale, nil) }
+      ReleaseAccounting(bestEffort)
+    }
+    if let allocation = stagingAllocation {
+      stagingAllocation = nil
+      if bestEffort { try { allocator.Release(allocation) } catch (cleanup Exception) { } }
+      else { allocator.Release(allocation) }
+    }
+    if imageView != 0uL {
+      let stale = imageView
+      imageView = 0uL
+      let destroyImageView = dispatch.vkDestroyImageView
+      if bestEffort { try { destroyImageView(device, stale, nil) } catch (cleanup Exception) { } }
+      else { destroyImageView(device, stale, nil) }
+      ReleaseAccounting(bestEffort)
+    }
+    if image != 0uL {
+      let stale = image
+      image = 0uL
+      let destroyImage = dispatch.vkDestroyImage
+      if bestEffort { try { destroyImage(device, stale, nil) } catch (cleanup Exception) { } }
+      else { destroyImage(device, stale, nil) }
+      ReleaseAccounting(bestEffort)
+    }
+    if let allocation = imageAllocation {
+      imageAllocation = nil
+      if bestEffort { try { allocator.Release(allocation) } catch (cleanup Exception) { } }
+      else { allocator.Release(allocation) }
+    }
+    if commandBuffer != nint(0) {
+      var stale = commandBuffer
+      commandBuffer = nint(0)
+      if commandPool != 0uL {
+        let freeCommandBuffers = dispatch.vkFreeCommandBuffers
+        if bestEffort { try { freeCommandBuffers(device, commandPool, 1u, &stale) } catch (cleanup Exception) { } }
+        else { freeCommandBuffers(device, commandPool, 1u, &stale) }
+      }
+      ReleaseAccounting(bestEffort)
+    }
+    if commandPool != 0uL {
+      let stale = commandPool
+      commandPool = 0uL
+      let destroyCommandPool = dispatch.vkDestroyCommandPool
+      if bestEffort { try { destroyCommandPool(device, stale, nil) } catch (cleanup Exception) { } }
+      else { destroyCommandPool(device, stale, nil) }
+      if commandPoolAccounted {
+        ReleaseAccounting(bestEffort)
+        commandPoolAccounted = false
+      }
+    }
+    if bestEffort { try { lease.Release() } catch (cleanup Exception) { } }
+    else { lease.Release() }
+  }
+
+  private func ReleaseAccounting(bestEffort bool) {
+    if let current = accounting {
+      if bestEffort { try { current.Release() } catch (cleanup Exception) { } }
+      else { current.Release() }
+    }
+  }
+
+  private func EnsureOpen() {
+    if disposed { throw ObjectDisposedException("VulkanSolidQuadReadbackTarget") }
   }
 }

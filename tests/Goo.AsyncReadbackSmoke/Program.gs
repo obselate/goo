@@ -729,7 +729,6 @@ func RunOffscreenFailureSmoke() {
       if Stopwatch.GetTimestamp() - start >= timeoutTicks {
         throw InvalidOperationException("D02 offscreen failure did not complete within the timeout")
       }
-      WindowReadbackTestFixture.Pump(opened, 0.0)
       Thread.Yield()
       result = WindowReadbackTestFixture.Poll(opened)
     }

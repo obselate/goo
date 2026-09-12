@@ -130,6 +130,18 @@ private sealed class VulkanRoundedOverflowPathCacheEntry {
     }
 }
 
+internal struct VulkanSceneTraversalContext {
+  internal var ParentTransformIndex int32
+  internal var ParentRectClipIndex int32
+  internal var ParentOpacity float32
+  internal var ParentAxisAligned bool
+  internal var ParentRectClipDepth int32
+  internal var ParentPathClipChainId int32
+  internal var ParentIsolation bool
+  internal var ExactCullContextSafe bool
+  internal var ActiveClipBounds ConservativeBounds
+}
+
 internal partial class VulkanSceneCompiler {
   private const BackgroundOwnerId uint64 = 1uL
   private const FirstNodeOwnerId uint64 = 2uL
@@ -279,7 +291,17 @@ internal partial class VulkanSceneCompiler {
       var rootOwnerId uint64 = 0uL
       if let node = root {
         rootOwnerId = OwnerId(node)
-        CompileNode(node, -1, -1, 1.0F, true, 0, 0, false, true, viewport)
+        CompileNode(node, VulkanSceneTraversalContext{
+          ParentTransformIndex: -1,
+          ParentRectClipIndex: -1,
+          ParentOpacity: 1.0F,
+          ParentAxisAligned: true,
+          ParentRectClipDepth: 0,
+          ParentPathClipChainId: 0,
+          ParentIsolation: false,
+          ExactCullContextSafe: true,
+          ActiveClipBounds: viewport,
+        })
       }
 
       ClassifyRetainedChunks()
@@ -699,41 +721,22 @@ internal partial class VulkanSceneCompiler {
 
   private func CompileRetainedParentChildren(
     node Node,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    exactCullContextSafe bool,
-    activeClipBounds ConservativeBounds) {
+    context VulkanSceneTraversalContext) {
       let children = Stacking.Children(node)
       var index int32 = 0
       while index < children.Count {
-        CompileNode(children[index], parentTransformIndex, parentClipIndex,
-          parentOpacity, parentAxisAligned, parentClipDepth,
-          parentPathClipChainId, parentIsolated, exactCullContextSafe,
-          activeClipBounds)
+        CompileNode(children[index], context)
         index = index + 1
       }
-      frame.SetActiveClipChain(parentPathClipChainId)
+      frame.SetActiveClipChain(context.ParentPathClipChainId)
     }
 
   private func CompileNode(
     node Node,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    exactCullContextSafe bool,
-    activeClipBounds ConservativeBounds) {
+    context VulkanSceneTraversalContext) {
       let owner = Owner(node)
       let ownerId = owner.Value
-      frame.SetActiveClipChain(parentPathClipChainId)
+      frame.SetActiveClipChain(context.ParentPathClipChainId)
       if node.Retired || node.Display == Display.None || node.Visibility == Visibility.Hidden {
         InvalidateRetainedBox(owner)
         InvalidateRetainedText(owner)
@@ -741,7 +744,7 @@ internal partial class VulkanSceneCompiler {
         return
       }
 
-      let opacity = EffectiveOpacity(parentOpacity, node.Opacity)
+      let opacity = EffectiveOpacity(context.ParentOpacity, node.Opacity)
       if opacity <= 0.0F {
         InvalidateRetainedBox(owner)
         InvalidateRetainedText(owner)
@@ -763,13 +766,13 @@ internal partial class VulkanSceneCompiler {
       }
       let bounds = NodeBounds(node)
       let earlyOverflowPreflight = PreflightRectOverflowClip(
-        node, bounds, parentAxisAligned, parentClipDepth)
+        node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
       let exactCandidate = ExactTextClipCullEligible(node, bounds,
-        exactCullContextSafe, parentAxisAligned, earlyOverflowPreflight)
+        context.ExactCullContextSafe, context.ParentAxisAligned, earlyOverflowPreflight)
       if exactCandidate {
         exactTextClipCandidateCount = exactTextClipCandidateCount + 1
         if exactTextClipCullEnabled
-          && IntersectBounds(bounds, activeClipBounds).IsEmpty{
+          && IntersectBounds(bounds, context.ActiveClipBounds).IsEmpty{
             InvalidateRetainedBox(owner)
             InvalidateRetainedText(owner)
             frame.AppendPlaceholderChunk(ownerId, frameVersion, bounds)
@@ -779,19 +782,17 @@ internal partial class VulkanSceneCompiler {
           }
       }
       let viewportCulled = StrictTextViewportCulled(
-        node, owner, bounds, activeClipBounds,
-        parentTransformIndex, parentAxisAligned, parentIsolated)
+        node, owner, bounds, context.ActiveClipBounds,
+        context.ParentTransformIndex, context.ParentAxisAligned, context.ParentIsolation)
       if viewportCulled {
         cachedTextPaintCullCount = cachedTextPaintCullCount + 1
         InvalidateRetainedBox(owner)
         if node.Kind == NodeKind.Text
-          && RetainedTextEligible(node, owner, bounds, opacity,
-            parentTransformIndex, parentClipIndex, parentOpacity, parentAxisAligned,
-            parentClipDepth, parentPathClipChainId, activeClipBounds) {
-              frame.AppendPlaceholderChunk(ownerId, frameVersion, bounds)
-              skippedNodeCount = skippedNodeCount + 1
-              return
-            }
+          && RetainedTextEligible(node, owner, bounds, opacity, context) {
+            frame.AppendPlaceholderChunk(ownerId, frameVersion, bounds)
+            skippedNodeCount = skippedNodeCount + 1
+            return
+          }
         InvalidateRetainedText(owner)
         skippedNodeCount = skippedNodeCount + 1
         return
@@ -800,7 +801,7 @@ internal partial class VulkanSceneCompiler {
         InvalidateRetainedBox(owner)
         InvalidateRetainedText(owner)
         frame.BeginChunk(ownerId, frameVersion, bounds, true)
-        let transform = AddNodeTransform(node, parentTransformIndex)
+        let transform = AddNodeTransform(node, context.ParentTransformIndex)
         transformCount = frame.TransformCount
         frame.AddLava(LavaRecord{
           Bounds: bounds,
@@ -823,13 +824,11 @@ internal partial class VulkanSceneCompiler {
       if node.Kind == NodeKind.Text || node.Kind == NodeKind.Entry {
         InvalidateRetainedBox(owner)
         IncrementSaturated(ref retainedText.Total)
-        retainedTextEligible = RetainedTextEligible(node, owner, bounds, opacity,
-          parentTransformIndex, parentClipIndex, parentOpacity, parentAxisAligned,
-          parentClipDepth, parentPathClipChainId, activeClipBounds)
+        retainedTextEligible = RetainedTextEligible(node, owner, bounds, opacity, context)
         if retainedTextEligible {
           if TryAppendRetainedText(node, owner, bounds, opacity,
-            parentTransformIndex, parentClipIndex, parentClipDepth,
-            activeClipBounds) {
+            context.ParentTransformIndex, context.ParentRectClipIndex, context.ParentRectClipDepth,
+            context.ActiveClipBounds) {
               emittedNodeCount = emittedNodeCount + 1
               return
             }
@@ -844,9 +843,7 @@ internal partial class VulkanSceneCompiler {
           IncrementSaturated(ref retainedBorder.Total)
           var retainedBorderRecord PerEdgeBorderRecord
           let retainedBorderEligible = RetainedBorderEligible(node, bounds, opacity,
-            parentTransformIndex, parentClipIndex, parentOpacity, parentAxisAligned,
-            parentClipDepth, parentPathClipChainId, parentIsolated, activeClipBounds,
-            out retainedBorderRecord)
+            context, out retainedBorderRecord)
           if retainedBorderEligible {
             if TryAppendRetainedBorderLeaf(node, owner, ownerId, bounds,
               retainedBorderRecord) {
@@ -862,9 +859,7 @@ internal partial class VulkanSceneCompiler {
           IncrementSaturated(ref retainedBorder.Fallback)
         } else {
           IncrementSaturated(ref retainedLeaf.Total)
-          retainedLeafEligible = RetainedLeafEligible(node, bounds, opacity,
-            parentTransformIndex, parentClipIndex, parentOpacity, parentAxisAligned,
-            parentClipDepth, parentPathClipChainId, parentIsolated, activeClipBounds)
+          retainedLeafEligible = RetainedLeafEligible(node, bounds, opacity, context)
           if retainedLeafEligible {
             if TryAppendRetainedLeaf(node, owner, ownerId, bounds, opacity) {
               emittedNodeCount = emittedNodeCount + 1
@@ -882,25 +877,18 @@ internal partial class VulkanSceneCompiler {
         }
       } else {
         InvalidateRetainedText(owner)
-        let retainedParentBoxEligible = RetainedParentBoxEligible(node, bounds, opacity,
-          parentTransformIndex, parentClipIndex, parentOpacity, parentAxisAligned,
-          parentClipDepth, parentPathClipChainId, parentIsolated, activeClipBounds)
+        let retainedParentBoxEligible = RetainedParentBoxEligible(
+          node, bounds, opacity, context)
         if retainedParentBoxEligible {
           IncrementSaturated(ref retainedParentBox.Total)
           if TryAppendRetainedBox(node, owner, ownerId, bounds, opacity, false) {
             emittedNodeCount = emittedNodeCount + 1
-            CompileRetainedParentChildren(node, parentTransformIndex,
-              parentClipIndex, parentOpacity, parentAxisAligned, parentClipDepth,
-              parentPathClipChainId, parentIsolated, exactCullContextSafe,
-              activeClipBounds)
+            CompileRetainedParentChildren(node, context)
             return
           }
           InvalidateRetainedBox(owner)
           AppendRetainedBoxRebuild(node, owner, ownerId, bounds, opacity, false)
-          CompileRetainedParentChildren(node, parentTransformIndex,
-            parentClipIndex, parentOpacity, parentAxisAligned, parentClipDepth,
-            parentPathClipChainId, parentIsolated, exactCullContextSafe,
-            activeClipBounds)
+          CompileRetainedParentChildren(node, context)
           return
         }
         if owner.RetainedLeafValid && !owner.RetainedBoxIsLeaf {
@@ -916,12 +904,12 @@ internal partial class VulkanSceneCompiler {
       RecordUnsupportedFields(node, bounds)
 
       let chunk = frame.BeginChunk(ownerId, frameVersion, chunkBounds, true)
-      let transform = AddNodeTransform(node, parentTransformIndex)
+      let transform = AddNodeTransform(node, context.ParentTransformIndex)
       transformCount = frame.TransformCount
-      let axisAligned = parentAxisAligned && transform.AxisAligned
+      let axisAligned = context.ParentAxisAligned && transform.AxisAligned
       let subtreeBounds = isolates
-      ? LayerSubtreeBounds(node, ResolveCompilerFrameTransform(parentTransformIndex),
-        activeClipBounds) : ConservativeBounds{}
+      ? LayerSubtreeBounds(node, ResolveCompilerFrameTransform(context.ParentTransformIndex),
+        context.ActiveClipBounds) : ConservativeBounds{}
       var layerRecord LayerRecord
       var outerLayerRecord LayerRecord
       var innerLayerRecord LayerRecord
@@ -943,7 +931,7 @@ internal partial class VulkanSceneCompiler {
           layerRecord = MakeLayerRecord(ownerId, subtreeBounds, localOpacity,
             isolatesBlend ? node.BlendMode : BlendMode.Normal, shaderEffect)
         }
-        frame.SetActiveClipChain(parentPathClipChainId)
+        frame.SetActiveClipChain(context.ParentPathClipChainId)
         if combinesEffectAndBlend {
           frame.AddLayerBegin(outerLayerRecord)
           frame.AddLayerBegin(innerLayerRecord)
@@ -951,8 +939,8 @@ internal partial class VulkanSceneCompiler {
           frame.AddLayerBegin(layerRecord)
         }
       }
-      let pathClip = ResolvePathClip(node, bounds, transform.Index, parentPathClipChainId)
-      var activePathClipChainId = parentPathClipChainId
+      let pathClip = ResolvePathClip(node, bounds, transform.Index, context.ParentPathClipChainId)
+      var activePathClipChainId = context.ParentPathClipChainId
       if node.HasClipPath && ClipPaths.Path(node).CommandCount != 0 {
         if pathClip.Emitted {
           activePathClipChainId = pathClip.ChainIndex
@@ -962,7 +950,7 @@ internal partial class VulkanSceneCompiler {
         }
       }
       let overflowPreflight = PreflightRectOverflowClip(
-        node, bounds, axisAligned, parentClipDepth)
+        node, bounds, axisAligned, context.ParentRectClipDepth)
       let clipsX = overflowPreflight.ClipsX
       let clipsY = overflowPreflight.ClipsY
       let bothAxes = overflowPreflight.BothAxes
@@ -1006,7 +994,7 @@ internal partial class VulkanSceneCompiler {
         PaintNodeBackground(node, bounds, contentOpacity, transform.Index)
       }
       var clipIndex int32 = -1
-      var childClipDepth = parentClipDepth
+      var childClipDepth = context.ParentRectClipDepth
       if clipsX || clipsY {
         if bothAxes {
           let depthExceeded = overflowPreflight.DepthExceeded
@@ -1018,11 +1006,11 @@ internal partial class VulkanSceneCompiler {
             let clip = RectClipRecord{
               Bounds: paddingEdgeBounds,
               TransformIndex: transform.Index,
-              ParentIndex: parentClipIndex,
+              ParentIndex: context.ParentRectClipIndex,
             }
             clipIndex = frame.AddRectClipBegin(clip)
             clipCount = clipCount + 1
-            childClipDepth = parentClipDepth + 1
+            childClipDepth = context.ParentRectClipDepth + 1
           }
           if !roundedOverflowClip && !axisAligned {
             MarkUnsupported(node, VulkanSceneUnsupportedKind.Clip,
@@ -1070,7 +1058,7 @@ internal partial class VulkanSceneCompiler {
       var textComplete bool
       PaintNode(node, bounds, contentOpacity, transform.Index, axisAligned, childClipDepth,
         shapePaintClip, nodeContentClipChainId, overflowPathClipChainId, out textComplete)
-      let inheritedChildClipIndex = clipIndex >= 0 ? clipIndex : parentClipIndex
+      let inheritedChildClipIndex = clipIndex >= 0 ? clipIndex : context.ParentRectClipIndex
       var editorContentClipIndex int32 = -1
       var editorContentBounds ConservativeBounds
       if node.Kind == NodeKind.Editor {
@@ -1093,7 +1081,7 @@ internal partial class VulkanSceneCompiler {
       if retainedTextEligible {
         if textComplete && CaptureRetainedTextSnapshot(owner, chunk) {
           StoreRetainedTextFingerprint(node, owner, bounds, opacity,
-            parentTransformIndex, parentClipDepth, activeClipBounds)
+            context.ParentTransformIndex, context.ParentRectClipDepth, context.ActiveClipBounds)
           frame.Chunks[chunk].RetentionState = SceneChunkRetentionState.ExactLeafRebuild
           IncrementSaturated(ref retainedText.Rebuild)
         } else {
@@ -1105,7 +1093,7 @@ internal partial class VulkanSceneCompiler {
 
       let childClipIndex = editorContentClipIndex >= 0
       ? editorContentClipIndex : inheritedChildClipIndex
-      var childClipBounds = activeClipBounds
+      var childClipBounds = context.ActiveClipBounds
       let resolvedTransform = ResolveCompilerFrameTransform(transform.Index)
       if clipIndex >= 0 {
         childClipBounds = IntersectBounds(childClipBounds,
@@ -1134,23 +1122,31 @@ internal partial class VulkanSceneCompiler {
           TransformCompilerBounds(editorContentBounds, resolvedTransform))
       }
       let childExactCullContextSafe = ExactCullContextForChildren(
-        exactCullContextSafe, node, isolates, axisAligned, overflowPreflight)
+        context.ExactCullContextSafe, node, isolates, axisAligned, overflowPreflight)
+      let childContext = VulkanSceneTraversalContext{
+        ParentTransformIndex: transform.Index,
+        ParentRectClipIndex: childClipIndex,
+        ParentOpacity: isolates ? 1.0F : opacity,
+        ParentAxisAligned: axisAligned,
+        ParentRectClipDepth: childClipDepth,
+        ParentPathClipChainId: overflowPathClipChainId,
+        ParentIsolation: context.ParentIsolation || isolates || node.HasTransformState
+          || node.HasClipPath || clipsX || clipsY || node.ScrollX != 0.0F
+          || node.ScrollY != 0.0F || node.BlendMode != BlendMode.Normal
+          || editorContentClipIndex >= 0,
+        ExactCullContextSafe: childExactCullContextSafe,
+        ActiveClipBounds: childClipBounds,
+      }
       let children = Stacking.Children(node)
       var index int32 = 0
       while index < children.Count
         && (node.Kind != NodeKind.Editor || editorContentClipIndex >= 0) {
-          CompileNode(children[index], transform.Index, childClipIndex,
-            isolates ? 1.0F : opacity, axisAligned,
-            childClipDepth, overflowPathClipChainId,
-            parentIsolated || isolates || node.HasTransformState || node.HasClipPath
-              || clipsX || clipsY || node.ScrollX != 0.0F || node.ScrollY != 0.0F
-              || node.BlendMode != BlendMode.Normal || editorContentClipIndex >= 0,
-            childExactCullContextSafe, childClipBounds)
+          CompileNode(children[index], childContext)
           index = index + 1
         }
 
       if editorContentClipIndex >= 0 || clipIndex >= 0 {
-        frame.SetActiveClipChain(parentPathClipChainId)
+        frame.SetActiveClipChain(context.ParentPathClipChainId)
         frame.BeginChunk(ownerId, frameVersion, bounds, false)
         if editorContentClipIndex >= 0 {
           frame.AddRectClipEnd(RectClipRecord{
@@ -1163,7 +1159,7 @@ internal partial class VulkanSceneCompiler {
           frame.AddRectClipEnd(RectClipRecord{
             Bounds: paddingEdgeBounds,
             TransformIndex: transform.Index,
-            ParentIndex: parentClipIndex,
+            ParentIndex: context.ParentRectClipIndex,
           })
         }
         frame.EndChunk()
@@ -1192,7 +1188,7 @@ internal partial class VulkanSceneCompiler {
         frame.EndChunk()
       }
       if isolates {
-        frame.SetActiveClipChain(parentPathClipChainId)
+        frame.SetActiveClipChain(context.ParentPathClipChainId)
         frame.BeginChunk(ownerId, frameVersion, subtreeBounds, false)
         if combinesEffectAndBlend {
           frame.AddLayerEnd(innerLayerRecord)
@@ -1202,7 +1198,7 @@ internal partial class VulkanSceneCompiler {
         }
         frame.EndChunk()
       }
-      frame.SetActiveClipChain(parentPathClipChainId)
+      frame.SetActiveClipChain(context.ParentPathClipChainId)
     }
 
   private func ShapePaintNeedsMask(node Node) bool {
@@ -1219,16 +1215,73 @@ internal partial class VulkanSceneCompiler {
       || BackgroundImageLayouts.Source(node) != nil
   }
 
+  private func TryResolvePathClipParentDepth(
+    parentChainId int32,
+    out parentDepth int32) bool{
+      parentDepth = 0
+      if parentChainId < 0 || parentChainId >= frame.ClipChainCount {
+        return false
+      }
+      parentDepth = parentChainId == 0 ? 0 : frame.ClipChains[parentChainId].Depth
+      return parentDepth < MaxPathClipDepth
+    }
+
+  private func AppendZeroPathClip(
+    parentChainId int32,
+    stableId uint64,
+    contentKey uint64) VulkanScenePathClipResult{
+      let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
+      clipChainCount = frame.ClipChainCount - 1
+      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+    }
+
+  private func PublishPathClip(
+    parentChainId int32,
+    parentDepth int32,
+    stableId uint64,
+    contentKey uint64,
+    path VulkanPathRenderable,
+    bounds ConservativeBounds,
+    mapping PathMapping,
+    fit ShapeFit,
+    fillRule uint32,
+    transformIndex int32) VulkanScenePathClipResult{
+      let mask = frame.AddClipMask(ClipMaskRecord{
+        StableId: stableId,
+        PathId: path.PathId,
+        AtlasId: path.AtlasId,
+        AtlasWordOffset: path.BaseWord,
+        AtlasWordCount: path.WordCount,
+        Bounds: bounds,
+        PathBounds: MappedPathBounds(path.Bounds, mapping),
+        Fit: fit,
+        FillRule: fillRule,
+        ScaleX: mapping.ScaleX,
+        ScaleY: mapping.ScaleY,
+        TranslateX: mapping.TranslateX,
+        TranslateY: mapping.TranslateY,
+        TransformIndex: transformIndex,
+        ContentKey: contentKey,
+      })
+      clipMaskCount = frame.ClipMaskCount
+      let chain = frame.AddClipChain(ClipChainRecord{
+        StableId: stableId,
+        ParentIndex: parentChainId,
+        MaskIndex: mask,
+        Depth: parentDepth + 1,
+        Flags: uint32(SceneClipChainFlags.None),
+        ContentKey: contentKey,
+      })
+      clipChainCount = frame.ClipChainCount - 1
+      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+    }
+
   private func ResolveShapePaintClip(
     node Node,
     bounds ConservativeBounds,
     transformIndex int32,
     parentChainId int32) VulkanScenePathClipResult{
-      if parentChainId < 0 || parentChainId >= frame.ClipChainCount {
-        return VulkanScenePathClipResult{}
-      }
-      let parentDepth = parentChainId == 0 ? 0 : frame.ClipChains[parentChainId].Depth
-      if parentDepth >= MaxPathClipDepth {
+      if !TryResolvePathClipParentDepth(parentChainId, out var parentDepth) {
         return VulkanScenePathClipResult{}
       }
       let strokeWidth = node.BorderLeftWidth.Px
@@ -1255,9 +1308,7 @@ internal partial class VulkanSceneCompiler {
       let geometry = PathGeometry.For(shapePath)
       let closedBounds = ClosedPathBounds(geometry)
       if !geometry.HasFillContour || closedBounds.IsEmpty {
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       guard let renderer = pathScene else {
         return VulkanScenePathClipResult{}
@@ -1266,40 +1317,12 @@ internal partial class VulkanSceneCompiler {
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{
-            let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-            clipChainCount = frame.ClipChainCount - 1
-            return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+            return AppendZeroPathClip(parentChainId, stableId, contentKey)
           }
         return VulkanScenePathClipResult{}
       }
-      let mask = frame.AddClipMask(ClipMaskRecord{
-        StableId: stableId,
-        PathId: path.PathId,
-        AtlasId: path.AtlasId,
-        AtlasWordOffset: path.BaseWord,
-        AtlasWordCount: path.WordCount,
-        Bounds: bounds,
-        PathBounds: MappedPathBounds(path.Bounds, mapping),
-        Fit: ShapeFit.Fill,
-        FillRule: path.FillRule,
-        ScaleX: mapping.ScaleX,
-        ScaleY: mapping.ScaleY,
-        TranslateX: mapping.TranslateX,
-        TranslateY: mapping.TranslateY,
-        TransformIndex: transformIndex,
-        ContentKey: contentKey,
-      })
-      clipMaskCount = frame.ClipMaskCount
-      let chain = frame.AddClipChain(ClipChainRecord{
-        StableId: stableId,
-        ParentIndex: parentChainId,
-        MaskIndex: mask,
-        Depth: parentDepth + 1,
-        Flags: uint32(SceneClipChainFlags.None),
-        ContentKey: contentKey,
-      })
-      clipChainCount = frame.ClipChainCount - 1
-      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+      return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
+        bounds, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
     }
 
   private func ShapePaintMaskId(node Node) uint64 -> OwnerId(node) | ShapePaintMaskBit
@@ -1310,20 +1333,17 @@ internal partial class VulkanSceneCompiler {
     clipBounds ConservativeBounds,
     transformIndex int32,
     parentChainId int32) VulkanScenePathClipResult{
-      if bounds.IsEmpty || parentChainId < 0 || parentChainId >= frame.ClipChainCount {
+      if bounds.IsEmpty {
         return VulkanScenePathClipResult{}
       }
-      let parentDepth = parentChainId == 0 ? 0 : frame.ClipChains[parentChainId].Depth
-      if parentDepth >= MaxPathClipDepth {
+      if !TryResolvePathClipParentDepth(parentChainId, out var parentDepth) {
         return VulkanScenePathClipResult{}
       }
       if clipBounds.IsEmpty {
         let stableId = OwnerId(node) | OverflowClipMaskBit
         var contentKey = HashPathBounds(stableId, clipBounds)
         contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       let entry = if roundedOverflowPaths.TryGetValue(node, out var existing) {
         existing
@@ -1352,9 +1372,7 @@ internal partial class VulkanSceneCompiler {
         uint32(FillRule.NonZero), clipBounds, transformIndex)
       contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
       if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       guard let renderer = pathScene else {
         return VulkanScenePathClipResult{}
@@ -1363,40 +1381,12 @@ internal partial class VulkanSceneCompiler {
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{
-            let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-            clipChainCount = frame.ClipChainCount - 1
-            return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+            return AppendZeroPathClip(parentChainId, stableId, contentKey)
           }
         return VulkanScenePathClipResult{}
       }
-      let mask = frame.AddClipMask(ClipMaskRecord{
-        StableId: stableId,
-        PathId: path.PathId,
-        AtlasId: path.AtlasId,
-        AtlasWordOffset: path.BaseWord,
-        AtlasWordCount: path.WordCount,
-        Bounds: clipBounds,
-        PathBounds: MappedPathBounds(path.Bounds, mapping),
-        Fit: ShapeFit.Fill,
-        FillRule: path.FillRule,
-        ScaleX: mapping.ScaleX,
-        ScaleY: mapping.ScaleY,
-        TranslateX: mapping.TranslateX,
-        TranslateY: mapping.TranslateY,
-        TransformIndex: transformIndex,
-        ContentKey: contentKey,
-      })
-      clipMaskCount = frame.ClipMaskCount
-      let chain = frame.AddClipChain(ClipChainRecord{
-        StableId: stableId,
-        ParentIndex: parentChainId,
-        MaskIndex: mask,
-        Depth: parentDepth + 1,
-        Flags: uint32(SceneClipChainFlags.None),
-        ContentKey: contentKey,
-      })
-      clipChainCount = frame.ClipChainCount - 1
-      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+      return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
+        clipBounds, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
     }
 
   private func ResolveMixedOverflowClip(
@@ -1405,11 +1395,7 @@ internal partial class VulkanSceneCompiler {
     transformIndex int32,
     parentChainId int32,
     clipsX bool) VulkanScenePathClipResult{
-      if parentChainId < 0 || parentChainId >= frame.ClipChainCount {
-        return VulkanScenePathClipResult{}
-      }
-      let parentDepth = parentChainId == 0 ? 0 : frame.ClipChains[parentChainId].Depth
-      if parentDepth >= MaxPathClipDepth {
+      if !TryResolvePathClipParentDepth(parentChainId, out var parentDepth) {
         return VulkanScenePathClipResult{}
       }
       if clipsX ? bounds.Width <= 0.0F : bounds.Height <= 0.0F {
@@ -1417,9 +1403,7 @@ internal partial class VulkanSceneCompiler {
         var contentKey = HashPathBounds(stableId, bounds)
         contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
         contentKey = MixPathHash(contentKey, clipsX ? 1uL : 2uL)
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       let clipBounds = MixedOverflowBounds(node, bounds, clipsX)
       if clipBounds.IsEmpty {
@@ -1442,9 +1426,7 @@ internal partial class VulkanSceneCompiler {
       contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
       contentKey = MixPathHash(contentKey, clipsX ? 1uL : 2uL)
       if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       guard let renderer = pathScene else {
         return VulkanScenePathClipResult{}
@@ -1453,47 +1435,17 @@ internal partial class VulkanSceneCompiler {
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{
-            let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-            clipChainCount = frame.ClipChainCount - 1
-            return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+            return AppendZeroPathClip(parentChainId, stableId, contentKey)
           }
         return VulkanScenePathClipResult{}
       }
       let geometry = PathGeometry.For(clipPath)
       let closedBounds = ClosedPathBounds(geometry)
       if !geometry.HasFillContour || closedBounds.IsEmpty {
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
-      let mask = frame.AddClipMask(ClipMaskRecord{
-        StableId: stableId,
-        PathId: path.PathId,
-        AtlasId: path.AtlasId,
-        AtlasWordOffset: path.BaseWord,
-        AtlasWordCount: path.WordCount,
-        Bounds: clipBounds,
-        PathBounds: MappedPathBounds(path.Bounds, mapping),
-        Fit: ShapeFit.Fill,
-        FillRule: path.FillRule,
-        ScaleX: mapping.ScaleX,
-        ScaleY: mapping.ScaleY,
-        TranslateX: mapping.TranslateX,
-        TranslateY: mapping.TranslateY,
-        TransformIndex: transformIndex,
-        ContentKey: contentKey,
-      })
-      clipMaskCount = frame.ClipMaskCount
-      let chain = frame.AddClipChain(ClipChainRecord{
-        StableId: stableId,
-        ParentIndex: parentChainId,
-        MaskIndex: mask,
-        Depth: parentDepth + 1,
-        Flags: uint32(SceneClipChainFlags.None),
-        ContentKey: contentKey,
-      })
-      clipChainCount = frame.ClipChainCount - 1
-      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+      return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
+        clipBounds, mapping, ShapeFit.Fill, path.FillRule, transformIndex)
     }
 
   private func MixedOverflowBounds(
@@ -1583,11 +1535,7 @@ internal partial class VulkanSceneCompiler {
       guard let clip = ClipPaths.Get(node) else {
         return VulkanScenePathClipResult{}
       }
-      if parentChainId < 0 || parentChainId >= frame.ClipChainCount {
-        return VulkanScenePathClipResult{}
-      }
-      let parentDepth = parentChainId == 0 ? 0 : frame.ClipChains[parentChainId].Depth
-      if parentDepth >= MaxPathClipDepth {
+      if !TryResolvePathClipParentDepth(parentChainId, out var parentDepth) {
         return VulkanScenePathClipResult{}
       }
       let contentKey = ClipContentKey(node, clip.Path, clip.Fit,
@@ -1596,9 +1544,7 @@ internal partial class VulkanSceneCompiler {
       let geometry = PathGeometry.For(clip.Path)
       let closedBounds = ClosedPathBounds(geometry)
       if !geometry.HasFillContour || closedBounds.IsEmpty {
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       guard let renderer = pathScene else {
         return VulkanScenePathClipResult{}
@@ -1606,48 +1552,18 @@ internal partial class VulkanSceneCompiler {
       let mapping = PathGeometry.Map(clip.Path, clip.Fit,
         bounds.X, bounds.Y, bounds.Width, bounds.Height)
       if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-        clipChainCount = frame.ClipChainCount - 1
-        return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+        return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
       let path = renderer.Emit(clip.Path, clip.FillRule)
       if !path.Renderable {
         if path.PathId.IsValid && path.AtlasId.IsValid && path.WordCount != 0u
           && path.UploadPending{
-            let chain = frame.AddZeroClipChain(parentChainId, stableId, contentKey)
-            clipChainCount = frame.ClipChainCount - 1
-            return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+            return AppendZeroPathClip(parentChainId, stableId, contentKey)
           }
         return VulkanScenePathClipResult{}
       }
-      let mask = frame.AddClipMask(ClipMaskRecord{
-        StableId: stableId,
-        PathId: path.PathId,
-        AtlasId: path.AtlasId,
-        AtlasWordOffset: path.BaseWord,
-        AtlasWordCount: path.WordCount,
-        Bounds: bounds,
-        PathBounds: MappedPathBounds(path.Bounds, mapping),
-        Fit: clip.Fit,
-        FillRule: uint32(clip.FillRule),
-        ScaleX: mapping.ScaleX,
-        ScaleY: mapping.ScaleY,
-        TranslateX: mapping.TranslateX,
-        TranslateY: mapping.TranslateY,
-        TransformIndex: transformIndex,
-        ContentKey: contentKey,
-      })
-      clipMaskCount = frame.ClipMaskCount
-      let chain = frame.AddClipChain(ClipChainRecord{
-        StableId: stableId,
-        ParentIndex: parentChainId,
-        MaskIndex: mask,
-        Depth: parentDepth + 1,
-        Flags: uint32(SceneClipChainFlags.None),
-        ContentKey: contentKey,
-      })
-      clipChainCount = frame.ClipChainCount - 1
-      return VulkanScenePathClipResult{ Emitted: true, ChainIndex: chain }
+      return PublishPathClip(parentChainId, parentDepth, stableId, contentKey, path,
+        bounds, mapping, clip.Fit, uint32(clip.FillRule), transformIndex)
     }
 
   private func MarkPathClipUnsupported(node Node) {

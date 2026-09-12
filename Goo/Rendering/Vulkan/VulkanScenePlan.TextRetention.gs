@@ -4,6 +4,28 @@ import System
 
 internal class VulkanRetainedTextValidation {
   shared {
+    internal func ValidReferenceStorage(value CachedTextSegmentRefRecord,
+      segment VulkanRetainedTextSegment) bool -> value.SegmentId != 0uL
+      && value.SegmentId == segment.Id
+      && value.SegmentVersion != 0uL
+      && value.SegmentVersion == segment.Version
+      && value.GlyphCount > 0
+      && value.GlyphCount == segment.GlyphCount
+      && segment.RecordCount == segment.GlyphCount
+      && segment.RecordCount <= segment.Records.Length
+      && segment.GlyphResourceCount == segment.GlyphCount
+      && segment.GlyphResourceCount <= segment.GlyphResources.Length
+      && segment.GlyphCount <= segment.GlyphAtlasTexelOffsets.Length
+      && segment.GlyphCount <= segment.GlyphAtlasTexelCounts.Length
+      && segment.GlyphCount <= segment.GlyphEffectAtlasTexelOffsets.Length
+      && segment.GlyphCount <= segment.GlyphEffectAtlasTexelCounts.Length
+      && segment.RunCount > 0
+      && segment.RunCount <= segment.Runs.Length
+
+    internal func SameBounds(left ConservativeBounds, right ConservativeBounds) bool ->
+    left.X == right.X && left.Y == right.Y
+      && left.Width == right.Width && left.Height == right.Height
+
     internal func ValidRuns(segment VulkanRetainedTextSegment) bool {
       var index int32 = 0
       var count int32 = 0
@@ -124,31 +146,13 @@ internal partial class SceneFrame {
 
   private func ValidRetainedTextSegment(
     value CachedTextSegmentRefRecord,
-    segment VulkanRetainedTextSegment) bool -> value.SegmentId != 0uL
-    && value.SegmentId == segment.Id
-    && value.SegmentVersion != 0uL
-    && value.SegmentVersion == segment.Version
-    && value.GlyphCount > 0
-    && value.GlyphCount == segment.GlyphCount
+    segment VulkanRetainedTextSegment) bool ->
+  VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
     && value.ClipChainId == activeClipChainId
     && value.FirstInstance == -1
     && segment.AtlasGeneration != 0uL
-    && segment.RecordCount == segment.GlyphCount
-    && segment.RecordCount > 0
-    && segment.RecordCount <= segment.Records.Length
-    && segment.GlyphResourceCount == segment.GlyphCount
-    && segment.GlyphResourceCount <= segment.GlyphResources.Length
-    && segment.GlyphCount <= segment.GlyphAtlasTexelOffsets.Length
-    && segment.GlyphCount <= segment.GlyphAtlasTexelCounts.Length
-    && segment.GlyphCount <= segment.GlyphEffectAtlasTexelOffsets.Length
-    && segment.GlyphCount <= segment.GlyphEffectAtlasTexelCounts.Length
-    && segment.RunCount > 0
-    && segment.RunCount <= segment.Runs.Length
     && VulkanRetainedTextValidation.ValidBounds(value.Bounds)
-    && value.Bounds.X == segment.Bounds.X
-    && value.Bounds.Y == segment.Bounds.Y
-    && value.Bounds.Width == segment.Bounds.Width
-    && value.Bounds.Height == segment.Bounds.Height
+    && VulkanRetainedTextValidation.SameBounds(value.Bounds, segment.Bounds)
     && VulkanRetainedTextValidation.ValidRuns(segment)
 
 }

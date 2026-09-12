@@ -22,12 +22,7 @@ internal struct VulkanTextSegmentRun {
   internal var ByteRangeEnd uint64
 }
 
-internal sealed class VulkanRetainedTextSegment {
-  internal var Id uint64
-  internal var Version uint64
-  internal var Bounds ConservativeBounds
-  internal var GlyphCount int32
-  internal var ClipChainId int32
+internal open class VulkanTextSegmentStorage {
   internal var Records []HbGpuTextInstanceRecord
   internal var RecordCount int32
   internal var Runs []VulkanTextSegmentRun
@@ -38,7 +33,58 @@ internal sealed class VulkanRetainedTextSegment {
   internal var GlyphAtlasTexelCounts []uint32
   internal var GlyphEffectAtlasTexelOffsets []uint32
   internal var GlyphEffectAtlasTexelCounts []uint32
+  internal var Bounds ConservativeBounds
+  internal var GlyphCount int32
+  internal var ClipChainId int32
   internal var AtlasGeneration uint64
+
+  internal func Initialize(capacity int32) {
+    var resolvedCapacity = capacity
+    if resolvedCapacity <= 0 { resolvedCapacity = 1 }
+    Records = [resolvedCapacity]HbGpuTextInstanceRecord
+    Runs = [resolvedCapacity]VulkanTextSegmentRun
+    GlyphResources = [resolvedCapacity]ResourceId
+    GlyphAtlasTexelOffsets = [resolvedCapacity]uint32
+    GlyphAtlasTexelCounts = [resolvedCapacity]uint32
+    GlyphEffectAtlasTexelOffsets = [resolvedCapacity]uint32
+    GlyphEffectAtlasTexelCounts = [resolvedCapacity]uint32
+  }
+
+  internal func EnsureRecordCapacity(required int32) {
+    if required <= Records.Length { return }
+    let next = VulkanTextSegmentGrowthCapacity(Records.Length, required)
+    let expandedRecords = [next]HbGpuTextInstanceRecord
+    let expandedResources = [next]ResourceId
+    let expandedOffsets = [next]uint32
+    let expandedCounts = [next]uint32
+    let expandedEffectOffsets = [next]uint32
+    let expandedEffectCounts = [next]uint32
+    Array.Copy(Records, expandedRecords, RecordCount)
+    Array.Copy(GlyphResources, expandedResources, GlyphResourceCount)
+    Array.Copy(GlyphAtlasTexelOffsets, expandedOffsets, GlyphResourceCount)
+    Array.Copy(GlyphAtlasTexelCounts, expandedCounts, GlyphResourceCount)
+    Array.Copy(GlyphEffectAtlasTexelOffsets, expandedEffectOffsets, GlyphResourceCount)
+    Array.Copy(GlyphEffectAtlasTexelCounts, expandedEffectCounts, GlyphResourceCount)
+    Records = expandedRecords
+    GlyphResources = expandedResources
+    GlyphAtlasTexelOffsets = expandedOffsets
+    GlyphAtlasTexelCounts = expandedCounts
+    GlyphEffectAtlasTexelOffsets = expandedEffectOffsets
+    GlyphEffectAtlasTexelCounts = expandedEffectCounts
+  }
+
+  internal func EnsureRunCapacity(required int32) {
+    if required <= Runs.Length { return }
+    let next = VulkanTextSegmentGrowthCapacity(Runs.Length, required)
+    let expanded = [next]VulkanTextSegmentRun
+    Array.Copy(Runs, expanded, RunCount)
+    Runs = expanded
+  }
+}
+
+internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
+  internal var Id uint64
+  internal var Version uint64
   internal var Shape ShapedText?
   internal var FontSize float32
   internal var LineX float32
@@ -55,75 +101,23 @@ internal sealed class VulkanRetainedTextSegment {
   internal var RendererValidationCacheEligible bool
 
   internal init(capacity int32) {
-    var resolvedCapacity = capacity
-    if resolvedCapacity <= 0 { resolvedCapacity = 1 }
-    Records = [resolvedCapacity]HbGpuTextInstanceRecord
-    Runs = [resolvedCapacity]VulkanTextSegmentRun
-    GlyphResources = [resolvedCapacity]ResourceId
-    GlyphAtlasTexelOffsets = [resolvedCapacity]uint32
-    GlyphAtlasTexelCounts = [resolvedCapacity]uint32
-    GlyphEffectAtlasTexelOffsets = [resolvedCapacity]uint32
-    GlyphEffectAtlasTexelCounts = [resolvedCapacity]uint32
+    Initialize(capacity)
   }
 
-  internal func EnsureRecordCapacity(required int32) {
-    if required <= Records.Length { return }
-    let next = VulkanTextSegmentGrowthCapacity(Records.Length, required)
-    let expandedRecords = [next]HbGpuTextInstanceRecord
-    let expandedResources = [next]ResourceId
-    let expandedOffsets = [next]uint32
-    let expandedCounts = [next]uint32
-    let expandedEffectOffsets = [next]uint32
-    let expandedEffectCounts = [next]uint32
-    Array.Copy(Records, expandedRecords, RecordCount)
-    Array.Copy(GlyphResources, expandedResources, GlyphResourceCount)
-    Array.Copy(GlyphAtlasTexelOffsets, expandedOffsets, GlyphResourceCount)
-    Array.Copy(GlyphAtlasTexelCounts, expandedCounts, GlyphResourceCount)
-    Array.Copy(GlyphEffectAtlasTexelOffsets, expandedEffectOffsets, GlyphResourceCount)
-    Array.Copy(GlyphEffectAtlasTexelCounts, expandedEffectCounts, GlyphResourceCount)
-    Records = expandedRecords
-    GlyphResources = expandedResources
-    GlyphAtlasTexelOffsets = expandedOffsets
-    GlyphAtlasTexelCounts = expandedCounts
-    GlyphEffectAtlasTexelOffsets = expandedEffectOffsets
-    GlyphEffectAtlasTexelCounts = expandedEffectCounts
+  internal func CreateReference() CachedTextSegmentRefRecord -> CachedTextSegmentRefRecord {
+    Bounds: Bounds,
+    SegmentId: Id,
+    SegmentVersion: Version,
+    GlyphCount: GlyphCount,
+    ClipChainId: ClipChainId,
+    Segment: this,
+    FirstInstance: -1,
   }
-
-  internal func EnsureRunCapacity(required int32) {
-    if required <= Runs.Length { return }
-    let next = VulkanTextSegmentGrowthCapacity(Runs.Length, required)
-    let expanded = [next]VulkanTextSegmentRun
-    Array.Copy(Runs, expanded, RunCount)
-    Runs = expanded
-  }
-
 }
-internal sealed class VulkanTextSegmentBuildWorkspace {
-  internal var Records []HbGpuTextInstanceRecord
-  internal var RecordCount int32
-  internal var Runs []VulkanTextSegmentRun
-  internal var RunCount int32
-  internal var GlyphResources []ResourceId
-  internal var GlyphResourceCount int32
-  internal var GlyphAtlasTexelOffsets []uint32
-  internal var GlyphAtlasTexelCounts []uint32
-  internal var GlyphEffectAtlasTexelOffsets []uint32
-  internal var GlyphEffectAtlasTexelCounts []uint32
-  internal var Bounds ConservativeBounds
-  internal var GlyphCount int32
-  internal var ClipChainId int32
-  internal var AtlasGeneration uint64
 
+internal sealed class VulkanTextSegmentBuildWorkspace : VulkanTextSegmentStorage {
   internal init(capacity int32) {
-    var resolvedCapacity = capacity
-    if resolvedCapacity <= 0 { resolvedCapacity = 1 }
-    Records = [resolvedCapacity]HbGpuTextInstanceRecord
-    Runs = [resolvedCapacity]VulkanTextSegmentRun
-    GlyphResources = [resolvedCapacity]ResourceId
-    GlyphAtlasTexelOffsets = [resolvedCapacity]uint32
-    GlyphAtlasTexelCounts = [resolvedCapacity]uint32
-    GlyphEffectAtlasTexelOffsets = [resolvedCapacity]uint32
-    GlyphEffectAtlasTexelCounts = [resolvedCapacity]uint32
+    Initialize(capacity)
   }
 
   internal func BeginBuild(atlasGeneration uint64, clipChainId int32) {
@@ -135,38 +129,6 @@ internal sealed class VulkanTextSegmentBuildWorkspace {
     GlyphResourceCount = 0
     AtlasGeneration = atlasGeneration
   }
-
-  internal func EnsureRecordCapacity(required int32) {
-    if required <= Records.Length { return }
-    let next = VulkanTextSegmentGrowthCapacity(Records.Length, required)
-    let expandedRecords = [next]HbGpuTextInstanceRecord
-    let expandedResources = [next]ResourceId
-    let expandedOffsets = [next]uint32
-    let expandedCounts = [next]uint32
-    let expandedEffectOffsets = [next]uint32
-    let expandedEffectCounts = [next]uint32
-    Array.Copy(Records, expandedRecords, RecordCount)
-    Array.Copy(GlyphResources, expandedResources, GlyphResourceCount)
-    Array.Copy(GlyphAtlasTexelOffsets, expandedOffsets, GlyphResourceCount)
-    Array.Copy(GlyphAtlasTexelCounts, expandedCounts, GlyphResourceCount)
-    Array.Copy(GlyphEffectAtlasTexelOffsets, expandedEffectOffsets, GlyphResourceCount)
-    Array.Copy(GlyphEffectAtlasTexelCounts, expandedEffectCounts, GlyphResourceCount)
-    Records = expandedRecords
-    GlyphResources = expandedResources
-    GlyphAtlasTexelOffsets = expandedOffsets
-    GlyphAtlasTexelCounts = expandedCounts
-    GlyphEffectAtlasTexelOffsets = expandedEffectOffsets
-    GlyphEffectAtlasTexelCounts = expandedEffectCounts
-  }
-
-  internal func EnsureRunCapacity(required int32) {
-    if required <= Runs.Length { return }
-    let next = VulkanTextSegmentGrowthCapacity(Runs.Length, required)
-    let expanded = [next]VulkanTextSegmentRun
-    Array.Copy(Runs, expanded, RunCount)
-    Runs = expanded
-  }
-
 }
 
 internal enum SceneResourceKind {

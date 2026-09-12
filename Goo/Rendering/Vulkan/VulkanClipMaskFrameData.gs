@@ -35,32 +35,24 @@ internal data struct VulkanClipMaskFrameTotals {
 }
 
 internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
-  internal let Device VkDevice
-  internal let Dispatch VkDeviceDispatch
-  internal let Allocator VulkanMemoryAllocator
-  internal let ObjectAccounting VulkanObjectAccounting?
-  internal var Buffer VkBuffer = 0uL
-  internal var Allocation VulkanMemoryAllocation? = nil
-  internal var Capacity VkDeviceSize
-  internal var BufferGeneration uint64
-  internal var LastUseSerial uint64
-  internal var Prepared bool
+  internal var Buffers VulkanFrameBuffers
+  internal var Lifecycle VulkanFrameSlotLifecycle
   internal var RetentionValid bool
   internal var RetainedDrawCount int32
   internal var RetainedByteCount VkDeviceSize
   internal var RetainedCapacity VkDeviceSize
   internal var RetainedBufferGeneration uint64
-  internal var ObjectAccounted bool
   internal var disposed bool
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     nativeAllocator VulkanMemoryAllocator, nativeObjectAccounting VulkanObjectAccounting?) {
-      Device = nativeDevice
-      Dispatch = nativeDispatch
-      Allocator = nativeAllocator
-      ObjectAccounting = nativeObjectAccounting
-      Capacity = 0uL
-      BufferGeneration = 0uL
+      Buffers = VulkanFrameBuffers{
+        Device: nativeDevice,
+        Dispatch: nativeDispatch,
+        Allocator: nativeAllocator,
+        ObjectAccounting: nativeObjectAccounting,
+      }
+      Lifecycle = VulkanFrameSlotLifecycle{}
       RetentionValid = false
     }
 
@@ -68,75 +60,33 @@ internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
     if required == 0uL {
       throw ArgumentOutOfRangeException("required")
     }
-    if required <= Capacity && Buffer != 0uL && Allocation != nil {
-      return
-    }
-    if BufferGeneration == uint64.MaxValue {
-      throw OverflowException("Vulkan clip frame buffer generation overflow")
-    }
-    var next = if Capacity == 0uL { 4096uL } else { Capacity }
-    while next < required {
-      if next > uint64.MaxValue / 2uL {
-        next = required
-        break
+    if Buffers.EnsureMappedCapacity(required, 4096uL,
+      uint32(VkConstants.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) {
+        InvalidateRetention()
       }
-      next = next * 2uL
-    }
-    DestroyBuffer()
-    let created = VulkanBufferFactory.CreateMapped(
-      Device,
-      Dispatch,
-      Allocator,
-      ObjectAccounting,
-      next,
-      uint32(VkConstants.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-      VulkanMemoryPolicy.HostVisibleCoherentCached)
-
-    Buffer = created.Buffer
-    Allocation = created.Allocation
-    ObjectAccounted = ObjectAccounting != nil
-
-    Capacity = next
-    BufferGeneration = BufferGeneration + 1uL
-    InvalidateRetention()
-  }
-
-  internal prop Mapped * void{
-    get {
-      guard let allocation = Allocation else {
-        throw InvalidOperationException("Vulkan clip frame data is not allocated")
-      }
-      if allocation.mapped == nil {
-        throw InvalidOperationException("Vulkan clip frame data is not mapped")
-      }
-      return allocation.mapped
-    }
   }
 
   internal func Flush(byteCount VkDeviceSize) {
-    guard let allocation = Allocation else {
-      throw InvalidOperationException("Vulkan clip frame data is not allocated")
-    }
-    let result = Allocator.FlushBeforeSubmit(allocation, 0uL, byteCount)
+    let result = Buffers.Flush(0uL, byteCount)
     if result != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("vkFlushMappedMemoryRanges failed for Vulkan clip frame data")
     }
   }
 
   internal func CanReuse(drawCount int32, byteCount VkDeviceSize) bool -> RetentionValid
-    && Buffer != 0uL
-    && Allocation != nil
+    && Buffers.Buffer != 0uL
+    && Buffers.Allocation != nil
     && RetainedDrawCount == drawCount
     && RetainedByteCount == byteCount
-    && RetainedCapacity == Capacity
-    && RetainedBufferGeneration == BufferGeneration
+    && RetainedCapacity == Buffers.Capacity
+    && RetainedBufferGeneration == Buffers.Generation
 
   internal func RememberRetention(drawCount int32, byteCount VkDeviceSize) {
     RetentionValid = true
     RetainedDrawCount = drawCount
     RetainedByteCount = byteCount
-    RetainedCapacity = Capacity
-    RetainedBufferGeneration = BufferGeneration
+    RetainedCapacity = Buffers.Capacity
+    RetainedBufferGeneration = Buffers.Generation
   }
 
   internal func InvalidateRetention() {
@@ -148,23 +98,7 @@ internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
   }
 
   internal func DestroyBuffer() {
-    if Buffer != 0uL {
-      let staleBuffer = Buffer
-      Buffer = 0uL
-      let destroyBuffer = Dispatch.vkDestroyBuffer
-      try { destroyBuffer(Device, staleBuffer, nil) } catch (cleanup Exception) { }
-      if ObjectAccounted {
-        if let accounting = ObjectAccounting {
-          try { accounting.Release() } catch (cleanup Exception) { }
-        }
-        ObjectAccounted = false
-      }
-    }
-    if let allocation = Allocation {
-      Allocation = nil
-      try { Allocator.Release(allocation) } catch (cleanup Exception) { }
-    }
-    Capacity = 0uL
+    Buffers.Destroy()
     InvalidateRetention()
   }
 
@@ -172,7 +106,7 @@ internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
     if disposed {
       return
     }
-    if Prepared {
+    if Lifecycle.Prepared {
       throw InvalidOperationException("Vulkan clip frame data has prepared work")
     }
     disposed = true
@@ -195,10 +129,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
   private let descriptorSetLayout VkDescriptorSetLayout
   private let maxStorageBufferRange VkDeviceSize
   private let slots []VulkanClipMaskFrameSlot
-  private let descriptorSets []VkDescriptorSet
-  private var descriptorPool VkDescriptorPool = 0uL
-  private var descriptorPoolAccounted bool
-  private var descriptorSetsAccounted int32
+  private var descriptors VulkanFrameDescriptorOwner
   private var preparedSlot int32 = -1
   private var preparedBytes VkDeviceSize
   private var preparedRegions([]VulkanClipMaskRegion)? = nil
@@ -227,12 +158,10 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
   }
   internal prop LiveObjectCount uint64{
     get {
-      var count uint64 = 0uL
-      if descriptorPool != 0uL { count++ }
-      count = count + uint64(descriptorSetsAccounted)
+      var count = descriptors.LiveObjectCount
       var index int32 = 0
       while index < slots.Length {
-        if slots[index].Buffer != 0uL { count++ }
+        count += slots[index].Buffers.LiveObjectCount
         index++
       }
       return count
@@ -267,12 +196,16 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       maxStorageBufferRange = nativeMaxStorageBufferRange
       objectAccounting = nativeObjectAccounting
       slots = [SlotCount]VulkanClipMaskFrameSlot
-      descriptorSets = [SlotCount]VkDescriptorSet
+      descriptors = VulkanFrameDescriptorOwner{
+        Device: device,
+        Dispatch: dispatch,
+        ObjectAccounting: objectAccounting,
+        Sets: [SlotCount]VkDescriptorSet,
+      }
       atlasGenerations = [SlotCount]uint64
       var index int32 = 0
       while index < SlotCount {
         slots[index] = VulkanClipMaskFrameSlot(device, dispatch, allocator, objectAccounting)
-        descriptorSets[index] = 0uL
         index++
       }
       try {
@@ -301,10 +234,10 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       }
       Collect(completedSubmissionSerial)
       let slot = slots[slotIndex]
-      if slot.Prepared {
+      if slot.Lifecycle.Prepared {
         throw InvalidOperationException("Vulkan clip frame slot already has prepared work")
       }
-      if slot.LastUseSerial > completedSubmissionSerial {
+      if slot.Lifecycle.LastUseSerial > completedSubmissionSerial {
         throw InvalidOperationException("Vulkan clip frame slot is still in flight")
       }
       if frame.DrawRefCount < 0 || frame.ClipMaskCount < 0
@@ -363,7 +296,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       let retained = retentionEligible && slot.CanReuse(frame.DrawRefCount, byteCount)
       if !retained {
         slot.InvalidateRetention()
-        let words = *uint32(nint(slot.Mapped))
+        let words = *uint32(nint(slot.Buffers.Mapped))
         WriteWords(words, frame, regions, regionCount,
           textChainTable, tableBaseWord)
         slot.Flush(byteCount)
@@ -374,7 +307,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       } else {
         slot.InvalidateRetention()
       }
-      slot.Prepared = true
+      slot.Lifecycle.Begin()
       preparedSlot = slotIndex
       preparedBytes = byteCount
       preparedRegions = regions
@@ -404,9 +337,9 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         RetentionEligible: retentionEligible,
         Retained: retained,
         RetentionValid: slot.RetentionValid,
-        Capacity: slot.Capacity,
-        BufferGeneration: slot.BufferGeneration,
-        LastUseSerial: slot.LastUseSerial,
+        Capacity: slot.Buffers.Capacity,
+        BufferGeneration: slot.Buffers.Generation,
+        LastUseSerial: slot.Lifecycle.LastUseSerial,
       }
       totalWrittenBytes = SaturatingAdd(totalWrittenBytes, stats.WrittenBytes)
       totalSkippedBytes = SaturatingAdd(totalSkippedBytes, stats.SkippedBytes)
@@ -434,10 +367,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
         UpdateAtlasDescriptor(preparedSlot)
         atlasGenerations[preparedSlot] = atlas.Generation
       }
-      var descriptorSet = descriptorSets[preparedSlot]
-      let bindDescriptorSets = dispatch.vkCmdBindDescriptorSets
-      bindDescriptorSets(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout, setIndex, 1u, &descriptorSet, 0u, nil)
+      descriptors.Bind(preparedSlot, commandBuffer, pipelineLayout, setIndex)
     }
 
   internal func MarkSubmitted(slotIndex int32, submissionSerial uint64) {
@@ -448,8 +378,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       atlas.MarkUsed(submissionSerial)
     }
     let slot = slots[slotIndex]
-    slot.Prepared = false
-    slot.LastUseSerial = submissionSerial
+    slot.Lifecycle.AcceptSubmission(submissionSerial)
     if lastStats.SlotIndex == slotIndex {
       lastStats.LastUseSerial = submissionSerial
     }
@@ -465,14 +394,13 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       throw ArgumentOutOfRangeException("submissionSerial")
     }
     let slot = slots[slotIndex]
-    if preparedSlot == slotIndex && slot.Prepared {
+    if preparedSlot == slotIndex && slot.Lifecycle.Prepared {
       if let regions = preparedRegions {
         atlas.MarkUsed(regions, preparedRegionCount, submissionSerial)
       } else {
         atlas.MarkUsed(submissionSerial)
       }
-      slot.Prepared = false
-      slot.LastUseSerial = submissionSerial
+      slot.Lifecycle.AcceptSubmission(submissionSerial)
       if lastStats.SlotIndex == slotIndex {
         lastStats.LastUseSerial = submissionSerial
       }
@@ -480,7 +408,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       preparedBytes = 0uL
     } else if preparedSlot >= 0 {
       throw InvalidOperationException("Vulkan clip frame data belongs to another prepared slot")
-    } else if slot.LastUseSerial != submissionSerial {
+    } else if slot.Lifecycle.LastUseSerial != submissionSerial {
       throw InvalidOperationException("Vulkan clip frame submission state is not recoverable")
     } else if let regions = preparedRegions {
       atlas.MarkUsed(regions, preparedRegionCount, submissionSerial)
@@ -495,7 +423,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       throw ArgumentOutOfRangeException("submissionSerial")
     }
     let slot = slots[slotIndex]
-    if preparedSlot != slotIndex || !slot.Prepared {
+    if preparedSlot != slotIndex || !slot.Lifecycle.Prepared {
       throw InvalidOperationException("Vulkan clip frame slot has no prepared work")
     }
   }
@@ -504,13 +432,11 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     EnsureOpen()
     var index int32 = 0
     while index < slots.Length {
-      if slots[index].LastUseSerial != 0uL
-        && slots[index].LastUseSerial <= completedSubmissionSerial{
-          slots[index].LastUseSerial = 0uL
-          if lastStats.SlotIndex == index {
-            lastStats.LastUseSerial = 0uL
-          }
+      if slots[index].Lifecycle.Collect(completedSubmissionSerial) {
+        if lastStats.SlotIndex == index {
+          lastStats.LastUseSerial = 0uL
         }
+      }
       index++
     }
   }
@@ -523,7 +449,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     if preparedSlot != slotIndex {
       return
     }
-    slots[slotIndex].Prepared = false
+    slots[slotIndex].Lifecycle.Abort()
     slots[slotIndex].InvalidateRetention()
     if lastStats.SlotIndex == slotIndex {
       lastStats.RetentionValid = false
@@ -557,8 +483,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     preparedRegionCount = 0
     var index int32 = 0
     while index < slots.Length {
-      slots[index].Prepared = false
-      slots[index].LastUseSerial = 0uL
+      slots[index].Lifecycle.Reset()
       slots[index].DestroyBuffer()
       index++
     }
@@ -579,7 +504,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     }
     var index int32 = 0
     while index < slots.Length {
-      if slots[index].LastUseSerial != 0uL {
+      if slots[index].Lifecycle.LastUseSerial != 0uL {
         throw InvalidOperationException("Vulkan clip frame data is still in flight")
       }
       index++
@@ -794,12 +719,8 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       2u,
       layouts,
       uint32(SlotCount),
-      &descriptorSets[0])
-    descriptorPool = creation.Pool
-    if objectAccounting != nil {
-      descriptorPoolAccounted = true
-      descriptorSetsAccounted = int32(creation.SetCount)
-    }
+      &descriptors.Sets[0])
+    descriptors.Adopt(creation)
     index = 0
     while index < SlotCount {
       UpdateAtlasDescriptor(index)
@@ -812,9 +733,9 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     VulkanDescriptorFactory.WriteStorageBuffer(
       device,
       dispatch,
-      descriptorSets[slotIndex],
+      descriptors.Sets[slotIndex],
       1u,
-      slots[slotIndex].Buffer,
+      slots[slotIndex].Buffers.Buffer,
       0uL,
       byteCount)
     if atlas.Generation != atlasGenerations[slotIndex] {
@@ -827,7 +748,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
     VulkanDescriptorFactory.WriteCombinedImageSampler(
       device,
       dispatch,
-      descriptorSets[slotIndex],
+      descriptors.Sets[slotIndex],
       0u,
       atlas.Sampler,
       atlas.ImageView,
@@ -843,29 +764,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
   }
 
   private func DestroyDescriptorResources() {
-    if descriptorPool != 0uL {
-      let stalePool = descriptorPool
-      descriptorPool = 0uL
-      let destroyPool = dispatch.vkDestroyDescriptorPool
-      try { destroyPool(device, stalePool, nil) } catch (cleanup Exception) { }
-      if let accounting = objectAccounting {
-        var index int32 = 0
-        while index < descriptorSetsAccounted {
-          try { accounting.Release() } catch (cleanup Exception) { }
-          index++
-        }
-        descriptorSetsAccounted = 0
-        if descriptorPoolAccounted {
-          try { accounting.Release() } catch (cleanup Exception) { }
-          descriptorPoolAccounted = false
-        }
-      }
-    }
-    var index int32 = 0
-    while index < descriptorSets.Length {
-      descriptorSets[index] = 0uL
-      index++
-    }
+    descriptors.Destroy()
   }
 
   private func EnsureOpen() {

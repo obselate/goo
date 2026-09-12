@@ -438,30 +438,17 @@ internal partial class SceneFrame {
     guard let segment = value.Segment else {
       throw ArgumentNullException("segment")
     }
-    if value.SegmentId == 0uL || value.SegmentId != segment.Id
-      || value.SegmentVersion == 0uL || value.SegmentVersion != segment.Version
-      || value.GlyphCount <= 0 || value.GlyphCount != segment.GlyphCount
+    if !VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
       || value.ClipChainId < 0 || value.ClipChainId != segment.ClipChainId
       || value.FirstInstance != -1
-      || segment.AtlasGeneration == 0uL
-      || segment.RecordCount != segment.GlyphCount
-      || segment.RecordCount <= 0 || segment.RecordCount > segment.Records.Length
-      || segment.GlyphResourceCount != segment.GlyphCount
-      || segment.GlyphResourceCount > segment.GlyphResources.Length
-      || segment.GlyphAtlasTexelOffsets.Length < segment.GlyphCount
-      || segment.GlyphAtlasTexelCounts.Length < segment.GlyphCount
-      || segment.GlyphEffectAtlasTexelOffsets.Length < segment.GlyphCount
-      || segment.GlyphEffectAtlasTexelCounts.Length < segment.GlyphCount
-      || segment.RunCount <= 0 || segment.RunCount > segment.Runs.Length{
+      || segment.AtlasGeneration == 0uL {
         throw ArgumentException("cached text segment is invalid")
       }
     ValidateTextBounds(value.Bounds)
     ValidateTextBounds(segment.Bounds)
-    if value.Bounds.X != segment.Bounds.X || value.Bounds.Y != segment.Bounds.Y
-      || value.Bounds.Width != segment.Bounds.Width
-      || value.Bounds.Height != segment.Bounds.Height{
-        throw ArgumentException("cached text segment bounds do not match")
-      }
+    if !VulkanRetainedTextValidation.SameBounds(value.Bounds, segment.Bounds) {
+      throw ArgumentException("cached text segment bounds do not match")
+    }
     var glyphIndex int32 = 0
     while glyphIndex < segment.GlyphCount {
       let glyphResource = segment.GlyphResources[glyphIndex]

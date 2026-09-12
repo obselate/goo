@@ -839,30 +839,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       guard let segment = value.Segment else {
         throw ArgumentNullException("segment")
       }
-      if segment.Id == 0uL || segment.Version == 0uL
-        || segment.Id != value.SegmentId
-        || segment.Version != value.SegmentVersion
-        || segment.GlyphCount != value.GlyphCount
+      if !VulkanRetainedTextValidation.ValidReferenceStorage(value, segment)
         || segment.ClipChainId != value.ClipChainId
-        || segment.AtlasGeneration != resourceGeneration
-        || segment.RecordCount != segment.GlyphCount
-        || segment.RecordCount <= 0
-        || segment.RecordCount > segment.Records.Length
-        || segment.GlyphResourceCount != segment.GlyphCount
-        || segment.GlyphResourceCount > segment.GlyphResources.Length
-        || segment.GlyphAtlasTexelOffsets.Length < segment.GlyphCount
-        || segment.GlyphAtlasTexelCounts.Length < segment.GlyphCount
-        || segment.GlyphEffectAtlasTexelOffsets.Length < segment.GlyphCount
-        || segment.GlyphEffectAtlasTexelCounts.Length < segment.GlyphCount
-        || segment.RunCount <= 0 || segment.RunCount > segment.Runs.Length{
+        || segment.AtlasGeneration != resourceGeneration{
           throw ArgumentException("cached text segment is invalid")
         }
       ValidateBounds(segment.Bounds)
-      if value.Bounds.X != segment.Bounds.X || value.Bounds.Y != segment.Bounds.Y
-        || value.Bounds.Width != segment.Bounds.Width
-        || value.Bounds.Height != segment.Bounds.Height{
-          throw ArgumentException("cached text segment bounds do not match")
-        }
+      if !VulkanRetainedTextValidation.SameBounds(value.Bounds, segment.Bounds) {
+        throw ArgumentException("cached text segment bounds do not match")
+      }
       if uint64(value.FirstInstance) + uint64(segment.RecordCount)
       > uint64(uint32.MaxValue) + 1uL {
         throw ArgumentOutOfRangeException("cached text global instance range")

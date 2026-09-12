@@ -60,21 +60,14 @@ internal partial class VulkanSceneCompiler {
   }
 
   private func RetainedLeafContextDefault(
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    activeClipBounds ConservativeBounds) bool -> parentTransformIndex == -1
-    && parentClipIndex == -1
-    && parentOpacity == 1.0F
-    && parentAxisAligned
-    && parentClipDepth == 0
-    && parentPathClipChainId == 0
-    && !parentIsolated
-    && ExactBounds(activeClipBounds, ConservativeBounds{
+    context VulkanSceneTraversalContext) bool -> context.ParentTransformIndex == -1
+    && context.ParentRectClipIndex == -1
+    && context.ParentOpacity == 1.0F
+    && context.ParentAxisAligned
+    && context.ParentRectClipDepth == 0
+    && context.ParentPathClipChainId == 0
+    && !context.ParentIsolation
+    && ExactBounds(context.ActiveClipBounds, ConservativeBounds{
       X: 0.0F,
       Y: 0.0F,
       Width: clipViewportWidth,
@@ -85,14 +78,7 @@ internal partial class VulkanSceneCompiler {
     node Node,
     bounds ConservativeBounds,
     opacity float32,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    activeClipBounds ConservativeBounds,
+    context VulkanSceneTraversalContext,
     requireNoChildren bool) bool{
       if (node.Kind != NodeKind.Container && node.Kind != NodeKind.Button)
         || (requireNoChildren && node.Children.Count != 0)
@@ -122,11 +108,9 @@ internal partial class VulkanSceneCompiler {
         || node.Hovered || node.Pressed || node.KeyboardPressed
         || node.Focused || node.Disabled
         || node.PointerPressCount != 0
-        || !RetainedLeafContextDefault(parentTransformIndex, parentClipIndex,
-          parentOpacity, parentAxisAligned, parentClipDepth,
-          parentPathClipChainId, parentIsolated, activeClipBounds) {
-            return false
-          }
+        || !RetainedLeafContextDefault(context) {
+          return false
+        }
       return true
     }
 
@@ -134,18 +118,9 @@ internal partial class VulkanSceneCompiler {
     node Node,
     bounds ConservativeBounds,
     opacity float32,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    activeClipBounds ConservativeBounds,
+    context VulkanSceneTraversalContext,
     requireNoChildren bool) bool{
-      if !RetainedCommonEligible(node, bounds, opacity, parentTransformIndex,
-        parentClipIndex, parentOpacity, parentAxisAligned, parentClipDepth,
-        parentPathClipChainId, parentIsolated, activeClipBounds, requireNoChildren)
+      if !RetainedCommonEligible(node, bounds, opacity, context, requireNoChildren)
         || node.BackgroundColor.A <= 0.0F {
           return false
         }
@@ -198,19 +173,10 @@ internal partial class VulkanSceneCompiler {
     node Node,
     bounds ConservativeBounds,
     opacity float32,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    activeClipBounds ConservativeBounds,
+    context VulkanSceneTraversalContext,
     out record PerEdgeBorderRecord) bool{
       record = PerEdgeBorderRecord{}
-      if !RetainedCommonEligible(node, bounds, opacity, parentTransformIndex,
-        parentClipIndex, parentOpacity, parentAxisAligned, parentClipDepth,
-        parentPathClipChainId, parentIsolated, activeClipBounds, true)
+      if !RetainedCommonEligible(node, bounds, opacity, context, true)
         || node.Opacity != 1.0
         || node.BackgroundColor.A > 0.0F
         || node.BorderStyle != BorderStyle.Solid
@@ -226,32 +192,15 @@ internal partial class VulkanSceneCompiler {
     node Node,
     bounds ConservativeBounds,
     opacity float32,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    activeClipBounds ConservativeBounds) bool -> RetainedBoxEligible(node, bounds, opacity, parentTransformIndex,
-      parentClipIndex, parentOpacity, parentAxisAligned, parentClipDepth,
-      parentPathClipChainId, parentIsolated, activeClipBounds, true)
+    context VulkanSceneTraversalContext) bool -> RetainedBoxEligible(
+      node, bounds, opacity, context, true)
 
   private func RetainedParentBoxEligible(
     node Node,
     bounds ConservativeBounds,
     opacity float32,
-    parentTransformIndex int32,
-    parentClipIndex int32,
-    parentOpacity float32,
-    parentAxisAligned bool,
-    parentClipDepth int32,
-    parentPathClipChainId int32,
-    parentIsolated bool,
-    activeClipBounds ConservativeBounds) bool -> ExactFloat(opacity, 1.0F)
-    && RetainedBoxEligible(node, bounds, opacity, parentTransformIndex,
-      parentClipIndex, parentOpacity, parentAxisAligned, parentClipDepth,
-      parentPathClipChainId, parentIsolated, activeClipBounds, false)
+    context VulkanSceneTraversalContext) bool -> ExactFloat(opacity, 1.0F)
+    && RetainedBoxEligible(node, bounds, opacity, context, false)
 
   private func ExactFloat(left float32, right float32) bool -> BitConverter.SingleToInt32Bits(left) == BitConverter.SingleToInt32Bits(right)
 

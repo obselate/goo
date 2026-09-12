@@ -29,6 +29,31 @@ Shader and text proof build:
 dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
 ```
 
+## Native presentation qualification
+
+The default proof uses the production window, queue worker, timeline, and retirement
+owners. It checks five accepted presentations, both frame slots, live prior-image
+retirement, capabilities, timestamps, and teardown. Run these maintenance-specific
+routes on a desktop where pending presentation retirement can be observed:
+
+```sh
+export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_READBACK=1 dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_REQUIRE_EXT_MAINTENANCE=1 dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_LIFECYCLE=1 GOO_VK_SKIP_DPI=1 GOO_VK_SKIP_MINIMIZE=1 \
+  dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_LIFECYCLE=1 GOO_VK_SKIP_DPI=1 GOO_VK_LIFECYCLE_X11=1 \
+  dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+```
+
+Readback retains fixed clear and quad pixels in a direct UNORM target. Lifecycle
+checks real resize, retirement collection, close, and reopen under a held runtime
+lease. The X11 flag selects a test-only native host for minimize/restore. Omit it
+to qualify Wayland. Omit the skip flags to require actual display-scale movement
+and minimize/restore. Skipped probes are reported as deferred. Software CI keeps
+the separate production text, image, timeline, queue, and recovery routes.
+
 ## Native queue wake regression
 
 The native queue wake regression check runs the normal window scheduler while

@@ -1019,15 +1019,7 @@ internal unsafe sealed class VulkanTextScene {
           fontSize, lineX, baseline, color, effectMode, effectRadiusPixels,
           effectOffsetX, effectOffsetY, parentTransform)
         && ProtectSegmentAtlases(segment) {
-          frame.AddCachedTextSegment(CachedTextSegmentRefRecord{
-            Bounds: segment.Bounds,
-            SegmentId: segment.Id,
-            SegmentVersion: segment.Version,
-            GlyphCount: segment.GlyphCount,
-            ClipChainId: segment.ClipChainId,
-            Segment: segment,
-            FirstInstance: -1,
-          })
+          frame.AddCachedTextSegment(segment.CreateReference())
           return true
         }
       buildWorkspace.BeginBuild(ResourceGeneration, frame.ActiveClipChainId)
@@ -1242,15 +1234,7 @@ internal unsafe sealed class VulkanTextScene {
         segment.EffectOffsetX = effectOffsetX
         segment.EffectOffsetY = effectOffsetY
         segment.ParentTransform = parentTransform
-        frame.AddCachedTextSegment(CachedTextSegmentRefRecord{
-          Bounds: segment.Bounds,
-          SegmentId: segment.Id,
-          SegmentVersion: segment.Version,
-          GlyphCount: segment.GlyphCount,
-          ClipChainId: segment.ClipChainId,
-          Segment: segment,
-          FirstInstance: -1,
-        })
+        frame.AddCachedTextSegment(segment.CreateReference())
       }
       return result
     }
