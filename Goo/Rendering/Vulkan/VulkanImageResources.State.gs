@@ -39,26 +39,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
               entry.UploadedVersion = entry.Id.Version
             }
             entry.UploadCompletedRows = completedRows
-            entry.UploadRowOffset = 0u
-            entry.UploadRowCount = 0u
-            entry.Upload = VulkanUploadReservation{}
-            entry.UploadRecorded = false
-            entry.UploadSubmitted = false
-            entry.UploadCommandBuffer = 0uL
-            entry.UploadFence = 0uL
+            ResetUploadAttempt(ref entry)
             entry.PendingRetire = false
             entry.State = VulkanImageResourceState.Retiring
             entry.LastTouch = TouchValue()
             entries[index] = entry
           } else if !finalChunk {
             entry.UploadCompletedRows = completedRows
-            entry.UploadRowOffset = 0u
-            entry.UploadRowCount = 0u
-            entry.Upload = VulkanUploadReservation{}
-            entry.UploadRecorded = false
-            entry.UploadSubmitted = false
-            entry.UploadCommandBuffer = 0uL
-            entry.UploadFence = 0uL
+            ResetUploadAttempt(ref entry)
             entry.State = VulkanImageResourceState.Resident
             entry.LastTouch = TouchValue()
             entries[index] = entry
@@ -85,13 +73,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
               entry.UploadedVersion = entry.Id.Version
             }
             entry.UploadCompletedRows = completedRows
-            entry.UploadRowOffset = 0u
-            entry.UploadRowCount = 0u
-            entry.Upload = VulkanUploadReservation{}
-            entry.UploadRecorded = false
-            entry.UploadSubmitted = false
-            entry.UploadCommandBuffer = 0uL
-            entry.UploadFence = 0uL
+            ResetUploadAttempt(ref entry)
             entry.LastTouch = TouchValue()
             if pendingRetire {
               entry.PendingRetire = false

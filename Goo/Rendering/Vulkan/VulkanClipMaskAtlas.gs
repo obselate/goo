@@ -1028,18 +1028,10 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       var layer uint32 = 0u
       while layer < activeLayerCount {
         var cursor = layerCursors[int32(layer)]
-        if cursor.NextX > width || cursor.NextY > height {
-          layer++
-          continue
-        }
-        if paddedWidth <= width - cursor.NextX && paddedHeight <= height - cursor.NextY {
-          let x = cursor.NextX
-          let y = cursor.NextY
-          cursor.NextX = x + paddedWidth
-          if paddedHeight > cursor.RowHeight {
-            cursor.RowHeight = paddedHeight
-          }
+        if TryPlaceOnShelf(ref cursor, width, height, paddedWidth, paddedHeight) {
           layerCursors[int32(layer)] = cursor
+          let x = cursor.NextX - paddedWidth
+          let y = cursor.NextY
           placement = VulkanClipMaskRegionPlacement{
             Layer: layer,
             X: x,
@@ -1053,33 +1045,35 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
           }
           return true
         }
-        if cursor.NextY > uint32.MaxValue - cursor.RowHeight {
-          layer++
-          continue
-        }
-        let nextY = cursor.NextY + cursor.RowHeight
-        if nextY > height || paddedHeight > height - nextY {
-          layer++
-          continue
-        }
-        cursor.NextX = paddedWidth
-        cursor.NextY = nextY
-        cursor.RowHeight = paddedHeight
-        layerCursors[int32(layer)] = cursor
-        placement = VulkanClipMaskRegionPlacement{
-          Layer: layer,
-          X: 0u,
-          Y: nextY,
-          Width: paddedWidth,
-          Height: paddedHeight,
-          ContentX: padding,
-          ContentY: nextY + padding,
-          ContentWidth: regionWidth,
-          ContentHeight: regionHeight,
-        }
-        return true
+        layer++
       }
       return false
+    }
+
+  private func TryPlaceOnShelf(ref cursor VulkanClipMaskLayerCursor,
+    targetWidth uint32, targetHeight uint32,
+    paddedWidth uint32, paddedHeight uint32) bool{
+      if cursor.NextX <= targetWidth && cursor.NextY <= targetHeight
+        && paddedWidth <= targetWidth - cursor.NextX
+        && paddedHeight <= targetHeight - cursor.NextY{
+          cursor.NextX = cursor.NextX + paddedWidth
+          if paddedHeight > cursor.RowHeight {
+            cursor.RowHeight = paddedHeight
+          }
+          return true
+        }
+      if cursor.RowHeight == 0u || cursor.NextY > targetHeight
+        || cursor.RowHeight > targetHeight - cursor.NextY{
+          return false
+        }
+      let nextY = cursor.NextY + cursor.RowHeight
+      if paddedWidth > targetWidth || paddedHeight > targetHeight - nextY {
+        return false
+      }
+      cursor.NextX = paddedWidth
+      cursor.NextY = nextY
+      cursor.RowHeight = paddedHeight
+      return true
     }
 
   private func TakeFreePlacement(paddedWidth uint32, paddedHeight uint32,
@@ -1313,28 +1307,11 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         var layer uint32 = 0u
         while layer < required {
           var cursor = cursors[int32(layer)]
-          if cursor.NextX <= targetWidth && cursor.NextY <= targetHeight
-            && paddedWidth <= targetWidth - cursor.NextX
-            && paddedHeight <= targetHeight - cursor.NextY{
-              cursor.NextX = cursor.NextX + paddedWidth
-              if paddedHeight > cursor.RowHeight {
-                cursor.RowHeight = paddedHeight
-              }
+          if TryPlaceOnShelf(ref cursor, targetWidth, targetHeight,
+            paddedWidth, paddedHeight) {
               cursors[int32(layer)] = cursor
               placed = true
               break
-            }
-          if cursor.RowHeight != 0u
-            && cursor.NextY <= targetHeight - cursor.RowHeight{
-              let nextY = cursor.NextY + cursor.RowHeight
-              if paddedWidth <= targetWidth && paddedHeight <= targetHeight - nextY {
-                cursor.NextX = paddedWidth
-                cursor.NextY = nextY
-                cursor.RowHeight = paddedHeight
-                cursors[int32(layer)] = cursor
-                placed = true
-                break
-              }
             }
           layer++
         }

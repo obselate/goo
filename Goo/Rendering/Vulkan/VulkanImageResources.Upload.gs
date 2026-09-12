@@ -227,13 +227,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
                 throw InvalidOperationException("Vulkan image upload reservation rollback failed")
               }
               entry.State = VulkanImageResourceState.Resident
-              entry.Upload = VulkanUploadReservation{}
-              entry.UploadRowOffset = 0u
-              entry.UploadRowCount = 0u
-              entry.UploadRecorded = false
-              entry.UploadSubmitted = false
-              entry.UploadCommandBuffer = 0uL
-              entry.UploadFence = 0uL
+              ResetUploadAttempt(ref entry)
               entry.PendingRetire = false
               entries[index] = entry
               uploadRing.Collect(highestCompletedFence)
@@ -309,25 +303,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if entry.State == VulkanImageResourceState.UploadPending
         && entry.Upload.Succeeded && !entry.UploadSubmitted
         && entry.UploadCommandBuffer == commandBuffer{
-          if !uploadRing.Cancel(entry.Upload) {
-            throw InvalidOperationException("Vulkan image upload reservation is stale")
-          }
-          entry.State = VulkanImageResourceState.Resident
-          entry.Upload = VulkanUploadReservation{}
-          entry.UploadRowOffset = 0u
-          entry.UploadRowCount = 0u
-          entry.UploadRecorded = false
-          entry.UploadSubmitted = false
-          entry.UploadCommandBuffer = 0uL
-          entry.UploadFence = 0uL
-          entry.PendingRetire = false
-          let dropLogicalOnRetire = entry.DropLogicalOnRetire
-          entries[index] = entry
-          if dropLogicalOnRetire {
-            if !Retire(entry.Id, generation, highestCompletedFence) {
-              throw InvalidOperationException("Vulkan image retirement failed")
-            }
-          }
+          AbortUpload(index, ref entry)
           aborted++
         }
       index++
@@ -361,25 +337,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if entry.State == VulkanImageResourceState.UploadPending
         && entry.Upload.Succeeded && !entry.UploadSubmitted
         && !entry.UploadRecorded && entry.UploadCommandBuffer == 0uL {
-          if !uploadRing.Cancel(entry.Upload) {
-            throw InvalidOperationException("Vulkan image upload reservation is stale")
-          }
-          entry.State = VulkanImageResourceState.Resident
-          entry.Upload = VulkanUploadReservation{}
-          entry.UploadRowOffset = 0u
-          entry.UploadRowCount = 0u
-          entry.UploadRecorded = false
-          entry.UploadSubmitted = false
-          entry.UploadCommandBuffer = 0uL
-          entry.UploadFence = 0uL
-          entry.PendingRetire = false
-          let dropLogicalOnRetire = entry.DropLogicalOnRetire
-          entries[index] = entry
-          if dropLogicalOnRetire {
-            if !Retire(entry.Id, generation, highestCompletedFence) {
-              throw InvalidOperationException("Vulkan image retirement failed")
-            }
-          }
+          AbortUpload(index, ref entry)
           aborted++
         }
       index++
@@ -387,6 +345,32 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     uploadRing.Collect(highestCompletedFence)
     flushPrepared = false
     return aborted
+  }
+
+  private func AbortUpload(index int32, ref entry VulkanImageResourceEntry) {
+    if !uploadRing.Cancel(entry.Upload) {
+      throw InvalidOperationException("Vulkan image upload reservation is stale")
+    }
+    entry.State = VulkanImageResourceState.Resident
+    ResetUploadAttempt(ref entry)
+    entry.PendingRetire = false
+    let dropLogicalOnRetire = entry.DropLogicalOnRetire
+    entries[index] = entry
+    if dropLogicalOnRetire {
+      if !Retire(entry.Id, generation, highestCompletedFence) {
+        throw InvalidOperationException("Vulkan image retirement failed")
+      }
+    }
+  }
+
+  private func ResetUploadAttempt(ref entry VulkanImageResourceEntry) {
+    entry.Upload = VulkanUploadReservation{}
+    entry.UploadRowOffset = 0u
+    entry.UploadRowCount = 0u
+    entry.UploadRecorded = false
+    entry.UploadSubmitted = false
+    entry.UploadCommandBuffer = 0uL
+    entry.UploadFence = 0uL
   }
 
   internal func ValidateUploadSubmission(
@@ -668,13 +652,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         if !uploadRing.Cancel(entry.Upload) {
           throw InvalidOperationException("Vulkan image upload reservation is stale")
         }
-        entry.Upload = VulkanUploadReservation{}
-        entry.UploadRowOffset = 0u
-        entry.UploadRowCount = 0u
-        entry.UploadRecorded = false
-        entry.UploadSubmitted = false
-        entry.UploadCommandBuffer = 0uL
-        entry.UploadFence = 0uL
+        ResetUploadAttempt(ref entry)
       }
       entry.RetireFence = safeFence
       entry.State = VulkanImageResourceState.Retiring
@@ -699,13 +677,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
     entry = retiredEntry
     if cancelUpload {
-      entry.Upload = VulkanUploadReservation{}
-      entry.UploadRowOffset = 0u
-      entry.UploadRowCount = 0u
-      entry.UploadRecorded = false
-      entry.UploadSubmitted = false
-      entry.UploadCommandBuffer = 0uL
-      entry.UploadFence = 0uL
+      ResetUploadAttempt(ref entry)
     }
     entry.RetireFence = safeFence
     entry.State = VulkanImageResourceState.Retiring
