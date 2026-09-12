@@ -888,34 +888,24 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   internal func RecordLayerPass(value0 uint64, value1 uint64) {
     if let current = diagnostics {
       current.AddLayerPoolPass(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerPass,
-          VulkanDiagnosticCategories.FramePlan, 0uL, 0, value0, value1)
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPass,
+        VulkanDiagnosticCategories.FramePlan, value0, value1)
     }
   }
 
   internal func RecordLayerComposite(value0 uint64, value1 uint64) {
     if let current = diagnostics {
       current.AddLayerPoolComposite(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerComposite,
-          VulkanDiagnosticCategories.FramePlan, 0uL, 0, value0, value1)
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerComposite,
+        VulkanDiagnosticCategories.FramePlan, value0, value1)
     }
   }
 
   private func RecordCreate(target VulkanOffscreenLayerTarget) {
     if let current = diagnostics {
       current.AddLayerPoolCreate(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerCreate,
-          VulkanDiagnosticCategories.Resource, 0uL, 0,
-          uint64(target.Extent.width), uint64(target.Extent.height))
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerCreate,
+        VulkanDiagnosticCategories.Resource, uint64(target.Extent.width), uint64(target.Extent.height))
     }
   }
 
@@ -927,47 +917,33 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       } else {
         VulkanDiagnosticEventIds.LayerReuse
       }
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          eventId,
-          VulkanDiagnosticCategories.Resource, 0uL, 0,
-          uint64(target.Extent.width), uint64(target.Extent.height))
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, eventId, VulkanDiagnosticCategories.Resource,
+        uint64(target.Extent.width), uint64(target.Extent.height))
     }
   }
 
   private func RecordPressure(required VkDeviceSize, completedSerial uint64) {
     if let current = diagnostics {
       current.AddLayerPoolPressure(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, completedSerial, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerPressure,
-          VulkanDiagnosticCategories.Resource, 0uL, 0,
-          uint64(required), uint64(residentBytes))
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPressure,
+        VulkanDiagnosticCategories.Resource, uint64(required), uint64(residentBytes),
+        completionSerial: completedSerial)
     }
   }
 
   private func RecordPressureFailure(required VkDeviceSize, available VkDeviceSize) {
     if let current = diagnostics {
       current.AddLayerPoolPressureFailure(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerPressure,
-          VulkanDiagnosticCategories.Resource, 1uL, 0,
-          uint64(required), uint64(available))
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerPressure,
+        VulkanDiagnosticCategories.Resource, uint64(required), uint64(available), severity: 1uL)
     }
   }
 
   private func RecordFailure(value0 uint64, value1 uint64) {
     if let current = diagnostics {
       current.AddLayerPoolFailure(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerFailure,
-          VulkanDiagnosticCategories.Resource, 1uL, 0, value0, value1)
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerFailure,
+        VulkanDiagnosticCategories.Resource, value0, value1, severity: 1uL)
     }
   }
 
@@ -983,14 +959,18 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     inFrame[index] = false
     if let current = diagnostics {
       current.AddLayerPoolEviction(1uL)
-      try {
-        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
-          VulkanDiagnosticEventIds.LayerEvict,
-          VulkanDiagnosticCategories.Resource, 0uL, 0,
-          uint64(index), uint64(target.Bytes))
-      } catch (cleanup Exception) { }
+      RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerEvict,
+        VulkanDiagnosticCategories.Resource, uint64(index), uint64(target.Bytes))
     }
   }
+
+  private func RecordLayerEvent(current VulkanDiagnostics, eventId uint64, category uint64,
+    value0 uint64, value1 uint64, severity uint64 = 0uL, completionSerial uint64 = 0uL) {
+      try {
+        current.Record(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, completionSerial, 0uL, 0uL,
+          eventId, category, severity, 0, value0, value1)
+      } catch (cleanup Exception) { }
+    }
 
   private func PublishStats() {
     if let current = diagnostics {

@@ -1,5 +1,6 @@
 package Goo
 
+import System
 import System.Runtime.InteropServices
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
@@ -22,11 +23,27 @@ internal unsafe class VulkanDiagnosticsValidation {
     }
   }
 
-  internal prop Callback VulkanDiagnosticsValidationCallback{ get -> callback }
-
   private init(diagnostics VulkanDiagnostics) {
     this.diagnostics = diagnostics
     callback = (severity, types, callbackData, userData) -> OnValidation(severity, types, callbackData, userData)
+  }
+
+  internal func CreateInfo() VkDebugUtilsMessengerCreateInfoEXT {
+    let callbackAddress = Marshal.GetFunctionPointerForDelegate(callback)
+    let nativeCallback = callbackAddress as (unmanaged[Cdecl](VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, nint, nint) -> VkBool32)?
+    if nativeCallback == nil {
+      throw InvalidOperationException("Vulkan validation callback address is unavailable")
+    }
+    var createInfo = VkDebugUtilsMessengerCreateInfoEXT{}
+    createInfo.sType = VkConstants.VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT
+    createInfo.messageSeverity = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    createInfo.messageType = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+    | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+    | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+    createInfo.pfnUserCallback = nativeCallback
+    createInfo.pUserData = nil
+    return createInfo
   }
 
   private func OnValidation(

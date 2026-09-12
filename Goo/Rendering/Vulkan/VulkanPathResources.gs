@@ -565,15 +565,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     if disposed {
       return
     }
-    ReleaseAllRecords()
-    retiredRecords.Clear()
-    sceneActivePathIds.Clear()
-    activePathOwners.Clear()
-    activePathRevisionOwners.Clear()
-    sceneRevisionSetPool.Clear()
-    revisionOwnerMapPool.Clear()
-    activeReferenceCount = 0
-    disposed = true
+    PrepareDisposal()
     atlas.Dispose()
     for retired in retiredAtlases {
       retired.Atlas.Dispose()
@@ -585,6 +577,15 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     if disposed {
       return
     }
+    PrepareDisposal()
+    atlas.DisposeAfterDeviceLoss()
+    for retired in retiredAtlases {
+      retired.Atlas.DisposeAfterDeviceLoss()
+    }
+    retiredAtlases.Clear()
+  }
+
+  private func PrepareDisposal() {
     ReleaseAllRecords()
     retiredRecords.Clear()
     sceneActivePathIds.Clear()
@@ -594,11 +595,6 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     revisionOwnerMapPool.Clear()
     activeReferenceCount = 0
     disposed = true
-    atlas.DisposeAfterDeviceLoss()
-    for retired in retiredAtlases {
-      retired.Atlas.DisposeAfterDeviceLoss()
-    }
-    retiredAtlases.Clear()
   }
 
   private func CollectRetiredAtlases(completedFence uint64) bool {

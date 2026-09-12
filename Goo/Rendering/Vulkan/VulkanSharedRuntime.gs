@@ -813,38 +813,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       logicalPathIdentityRegistry = nil
     }
     try { memoryAllocator.Dispose() } catch (cleanup Exception) { }
-    if graphicsTimeline != 0uL {
-      let destroySemaphore = dispatch.vkDestroySemaphore
-      try { destroySemaphore(device, graphicsTimeline, nil) } catch (cleanup Exception) { }
-      if let accounting = sharedObjectAccounting {
-        try { accounting.Release() } catch (cleanup Exception) { }
-      }
-    }
-    if device != nint(0) && deviceDestroyAvailable {
-      let destroyDevice = dispatch.vkDestroyDevice
-      destroyDevice(device, nil)
-      if let accounting = sharedObjectAccounting {
-        accounting.Release()
-      }
-    }
-    if validationMessengerCreated && instance != nint(0)
-      && instanceDispatch.vkDestroyDebugUtilsMessengerEXT != nil {
-        let destroyMessenger = instanceDispatch.vkDestroyDebugUtilsMessengerEXT
-        destroyMessenger(instance, validationMessenger, nil)
-        if let accounting = sharedObjectAccounting {
-          accounting.Release()
-        }
-      }
-    if instance != nint(0) && instanceDestroyAvailable {
-      let destroyInstance = instanceDispatch.vkDestroyInstance
-      destroyInstance(instance, nil)
-      if let accounting = sharedObjectAccounting {
-        accounting.Release()
-      }
-    }
-    if let currentValidation = validation {
-      currentValidation.KeepAlive()
-    }
+    DestroyNativeResources()
   }
 
   internal func DisposeAfterDeviceLoss() {
@@ -862,6 +831,10 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     try { pipelineCache.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
     try { imageResources.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
     try { memoryAllocator.Dispose() } catch (cleanup Exception) { }
+    DestroyNativeResources()
+  }
+
+  private func DestroyNativeResources() {
     if graphicsTimeline != 0uL {
       let destroySemaphore = dispatch.vkDestroySemaphore
       try { destroySemaphore(device, graphicsTimeline, nil) } catch (cleanup Exception) { }

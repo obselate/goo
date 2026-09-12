@@ -153,7 +153,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       timestampValidBits = validBits
       timestampPeriod = period
       timestampComputeAndGraphics = computeAndGraphics != VkConstants.VK_FALSE
-      timestampMask = BuildTimestampMask(validBits)
+      timestampMask = VulkanTimestamp.BuildMask(validBits)
       timestampSupported = nativeDevice != nint(0) && validBits != 0u && validBits <= 64u
         && period > 0.0F
       timestampLastResult = VkConstants.VK_SUCCESS
@@ -602,10 +602,10 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
             var scopeState = timestampRanges[rangeIndex]
             scopeState.beginTicks = values[scopeIndex * TimestampQueriesPerScope]
             scopeState.endTicks = values[scopeIndex * TimestampQueriesPerScope + 1]
-            scopeState.elapsedTicks = ElapsedTimestampTicks(
-              scopeState.beginTicks, scopeState.endTicks)
-            scopeState.elapsedNanoseconds = ElapsedTimestampNanoseconds(
-              scopeState.elapsedTicks)
+            scopeState.elapsedTicks = VulkanTimestamp.ElapsedTicks(
+              scopeState.beginTicks, scopeState.endTicks, timestampMask)
+            scopeState.elapsedNanoseconds = VulkanTimestamp.Nanoseconds(
+              scopeState.elapsedTicks, timestampPeriod)
             scopeState.resolved = true
             scopeState.result = result
             timestampRanges[rangeIndex] = scopeState
@@ -701,32 +701,6 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       return VulkanDiagnosticTimestampStage.Effects
     }
     return VulkanDiagnosticTimestampStage.Offscreen
-  }
-
-  private func BuildTimestampMask(validBits uint32) uint64 {
-    if validBits >= 64u {
-      return uint64.MaxValue
-    }
-    if validBits == 0u {
-      return 0uL
-    }
-    return (1uL << int32(validBits)) - 1uL
-  }
-
-  private func ElapsedTimestampTicks(begin uint64, end uint64) uint64 {
-    let maskedBegin = begin & timestampMask
-    let maskedEnd = end & timestampMask
-    if maskedEnd >= maskedBegin {
-      return maskedEnd - maskedBegin
-    }
-    return (timestampMask - maskedBegin + 1uL) + maskedEnd
-  }
-
-  private func ElapsedTimestampNanoseconds(ticks uint64) uint64 {
-    if timestampPeriod <= 0.0F {
-      return 0uL
-    }
-    return uint64(float64(ticks) * float64(timestampPeriod))
   }
 
   private func SaturatingAddTimestamp(left uint64, right uint64) uint64 {
@@ -918,4 +892,34 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         }
       }
     }
+}
+
+internal class VulkanTimestamp {
+  shared {
+    func BuildMask(validBits uint32) uint64 {
+      if validBits >= 64u {
+        return uint64.MaxValue
+      }
+      if validBits == 0u {
+        return 0uL
+      }
+      return (1uL << int32(validBits)) - 1uL
+    }
+
+    func ElapsedTicks(begin uint64, end uint64, timestampMask uint64) uint64 {
+      let maskedBegin = begin & timestampMask
+      let maskedEnd = end & timestampMask
+      if maskedEnd >= maskedBegin {
+        return maskedEnd - maskedBegin
+      }
+      return (timestampMask - maskedBegin + 1uL) + maskedEnd
+    }
+
+    func Nanoseconds(ticks uint64, timestampPeriod float32) uint64 {
+      if timestampPeriod <= 0.0F {
+        return 0uL
+      }
+      return uint64(float64(ticks) * float64(timestampPeriod))
+    }
+  }
 }

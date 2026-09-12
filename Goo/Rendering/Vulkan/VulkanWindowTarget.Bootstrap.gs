@@ -247,19 +247,7 @@ internal unsafe partial class VulkanWindowTarget {
       createInfo.ppEnabledExtensionNames = &extensionPointers[0].Value
       var debugMessengerCreateInfo = VkDebugUtilsMessengerCreateInfoEXT{}
       if let currentValidation = validation {
-        let callbackAddress = Marshal.GetFunctionPointerForDelegate(currentValidation.Callback)
-        let callback = callbackAddress as (unmanaged[Cdecl](VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, nint, nint) -> VkBool32)?
-        if callback == nil {
-          throw InvalidOperationException("Vulkan validation callback address is unavailable")
-        }
-        debugMessengerCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT
-        debugMessengerCreateInfo.messageSeverity = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-        | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-        debugMessengerCreateInfo.messageType = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-        | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-        | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-        debugMessengerCreateInfo.pfnUserCallback = callback
-        debugMessengerCreateInfo.pUserData = nil
+        debugMessengerCreateInfo = currentValidation.CreateInfo()
         createInfo.pNext = *void(&debugMessengerCreateInfo)
       }
       if let currentDiagnostics = diagnostics {
@@ -461,20 +449,7 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     let currentValidation = validation!!
-    let callbackAddress = Marshal.GetFunctionPointerForDelegate(currentValidation.Callback)
-    let callback = callbackAddress as (unmanaged[Cdecl](VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, nint, nint) -> VkBool32)?
-    if callback == nil {
-      throw InvalidOperationException("Vulkan validation callback address is unavailable")
-    }
-    var createInfo = VkDebugUtilsMessengerCreateInfoEXT{}
-    createInfo.sType = VkConstants.VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT
-    createInfo.messageSeverity = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-    | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-    createInfo.messageType = uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-    | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-    | uint32(VkConstants.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-    createInfo.pfnUserCallback = callback
-    createInfo.pUserData = nil
+    var createInfo = currentValidation.CreateInfo()
     let createMessenger = instanceDispatch.vkCreateDebugUtilsMessengerEXT
     let result = createMessenger(instance, &createInfo, nil, &validationMessenger)
     RecordDiagnosticResult(VulkanDiagnosticEventIds.ValidationMessage, result)

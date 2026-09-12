@@ -272,7 +272,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
           && nativeDispatch.vkCmdWriteTimestamp2 != nil {
             selectedTimestampEnabled = true
             selectedTimestampValidBits = currentTimestampState.TimestampValidBits
-            selectedTimestampMask = BuildTimestampMask(selectedTimestampValidBits)
+            selectedTimestampMask = VulkanTimestamp.BuildMask(selectedTimestampValidBits)
             selectedTimestampPeriod = currentTimestampState.TimestampPeriod
           }
       }
@@ -1102,37 +1102,11 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if result != VkConstants.VK_SUCCESS {
       return
     }
-    gpuSceneReplayNanoseconds = ElapsedTimestampNanoseconds(
-      ElapsedTimestampTicks(values[0], values[1]))
-    gpuCopyNanoseconds = ElapsedTimestampNanoseconds(
-      ElapsedTimestampTicks(values[2], values[3]))
+    gpuSceneReplayNanoseconds = VulkanTimestamp.Nanoseconds(
+      VulkanTimestamp.ElapsedTicks(values[0], values[1], timestampMask), timestampPeriod)
+    gpuCopyNanoseconds = VulkanTimestamp.Nanoseconds(
+      VulkanTimestamp.ElapsedTicks(values[2], values[3], timestampMask), timestampPeriod)
     gpuTimingAvailable = true
-  }
-
-  private func ElapsedTimestampTicks(begin uint64, end uint64) uint64 {
-    let maskedBegin = begin & timestampMask
-    let maskedEnd = end & timestampMask
-    if maskedEnd >= maskedBegin {
-      return maskedEnd - maskedBegin
-    }
-    return (timestampMask - maskedBegin + 1uL) + maskedEnd
-  }
-
-  private func ElapsedTimestampNanoseconds(ticks uint64) uint64 {
-    if timestampPeriod <= 0.0F {
-      return 0uL
-    }
-    return uint64(float64(ticks) * float64(timestampPeriod))
-  }
-
-  private func BuildTimestampMask(validBits uint32) uint64 {
-    if validBits >= 64u {
-      return uint64.MaxValue
-    }
-    if validBits == 0u {
-      return 0uL
-    }
-    return (1uL << int32(validBits)) - 1uL
   }
 
   private func DestroyTimestampQueryPool() {
