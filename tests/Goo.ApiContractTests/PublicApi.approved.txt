@@ -111,6 +111,7 @@ enum-underlying|Goo.TextTrimming|System.Int32
 enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
+enum-underlying|Goo.WindowActivationResult|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
 enum|Goo.AccessibilityAction|Activate|1
 enum|Goo.AccessibilityAction|Collapse|9
@@ -526,6 +527,10 @@ enum|Goo.TransitionProperty|Transform|51
 enum|Goo.TransitionProperty|Width|1
 enum|Goo.Visibility|Hidden|1
 enum|Goo.Visibility|Visible|0
+enum|Goo.WindowActivationResult|Accepted|0
+enum|Goo.WindowActivationResult|Closed|1
+enum|Goo.WindowActivationResult|Failed|3
+enum|Goo.WindowActivationResult|Unsupported|2
 enum|Goo.WindowState|Fullscreen|3
 enum|Goo.WindowState|Maximized|2
 enum|Goo.WindowState|Minimized|1
@@ -889,6 +894,7 @@ method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Void
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
+method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowActivationResult
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
@@ -1573,6 +1579,7 @@ type|Goo.VectorPath|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.VectorStroke|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.WindowActivationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Window|sealed-class|public|base:System.Object|interfaces:|generic:

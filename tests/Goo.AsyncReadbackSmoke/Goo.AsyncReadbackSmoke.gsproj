@@ -17,6 +17,7 @@
     <Compile Remove="WindowReadbackFixture.gs" />
     <Compile Remove="DiagnosticCaptureSmoke.gs" />
     <Compile Remove="EmbeddedHostSmoke.gs" />
+    <Compile Remove="WindowActivationSmoke.gs" />
     <Compile Include="../Shared/PrimitiveScene.gs" Link="PrimitiveScene.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
     <Compile Include="../Shared/EffectsScene.gs" Link="EffectsScene.gs" />

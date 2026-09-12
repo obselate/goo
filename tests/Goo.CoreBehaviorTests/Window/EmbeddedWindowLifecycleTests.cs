@@ -36,6 +36,37 @@ public sealed class EmbeddedWindowLifecycleTests
     }
 
     [Fact]
+    public void ActivationRequiresOwnerThreadAndDoesNotInventEmbeddedFocus()
+    {
+        var window = new Window { Root = new Root() };
+        Assert.Equal(WindowActivationResult.Closed, window.RequestActivation());
+        using var host = new Host();
+        window.Attach(host);
+        host.RenderFrame(0);
+        var notifications = 0;
+        window.FocusChanged += _ => notifications++;
+        Assert.Equal(WindowActivationResult.Unsupported, window.RequestActivation());
+        Assert.False(window.IsFocused);
+        Assert.Equal(0, notifications);
+        host.SetFocused(true);
+        Assert.Equal(WindowActivationResult.Unsupported, window.RequestActivation());
+        Assert.True(window.IsFocused);
+        Assert.Equal(1, notifications);
+
+        Exception? failure = null;
+        var worker = new Thread(() =>
+        {
+            try { window.RequestActivation(); }
+            catch (Exception error) { failure = error; }
+        });
+        worker.Start();
+        worker.Join();
+        Assert.IsType<InvalidOperationException>(failure);
+        host.Dispose();
+        Assert.Equal(WindowActivationResult.Closed, window.RequestActivation());
+    }
+
+    [Fact]
     public void HostLifecyclePreservesMountedStateAndDispatchUntilFinalClose()
     {
         using var host = new Host();
