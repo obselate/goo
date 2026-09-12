@@ -34,7 +34,6 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
   private var native SdlHost?
   internal var Creates int32
   internal var Destroys int32
-  internal var Wakes int32
   private var serviceableSubmissionWakes int32
 
   internal prop ServiceableSubmissionWakes int32{
@@ -55,7 +54,6 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
     if Window?.CaptureTargetForTest()?.EmbeddedSubmitCompletionServiceReadyForTest == true {
       Interlocked.Increment(ref serviceableSubmissionWakes)
     }
-    Interlocked.Increment(ref Wakes)
   }
   protected override func LoadVulkanLibrary() bool -> native!!.LoadVulkanLibrary()
   protected override func GetVulkanGetInstanceProcAddr() nint -> native!!.GetVulkanGetInstanceProcAddr()
