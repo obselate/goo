@@ -23,6 +23,13 @@ internal sealed class FileSystemFontResolver {
           || stem.Contains("liberationsans") || stem.StartsWith("segoeui")
           || stem.StartsWith("sfpro") || stem.StartsWith("sfns")
           || stem.StartsWith("arial") { familyScore = 50 }
+        if OperatingSystem.IsAndroid() {
+          if stem == "roboto" || stem == "robotoregular" || stem == "robotobold"
+            || stem == "robotoitalic" || stem == "robotobolditalic"
+            || stem.StartsWith("roboto[") { familyScore = 80 }
+          if stem == "notosans" || stem == "notosansregular" || stem == "notosansbold"
+            || stem == "notosansitalic" || stem == "notosansbolditalic" { familyScore = 60 }
+        }
       } else if stem.Contains(requested) {
         familyScore = 100
       }

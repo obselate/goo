@@ -18,6 +18,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   private var stopping bool
   private var faulted int32
   private var running int32
+  private var notifying int32
   private var nextGraphicsSubmissionSerial uint64 = 1uL
   private var disposed bool
 
@@ -213,8 +214,8 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
         if mailbox == nil {
           break
         }
+        let current = mailbox
         try {
-          let current = mailbox
           let phase = current.Phase
           if phase == VulkanQueueMailboxPhase.SubmitQueued {
             if Interlocked.CompareExchange(ref faulted, 0, 0) != 0 {
@@ -254,7 +255,15 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
             }
           }
         } finally {
+          Interlocked.Increment(ref notifying)
           Interlocked.Decrement(ref running)
+          try {
+            current.NotifyCompletion()
+          } catch (error Exception) {
+            Interlocked.Exchange(ref faulted, 1)
+          } finally {
+            Interlocked.Decrement(ref notifying)
+          }
         }
       }
       lock gate {
@@ -278,7 +287,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
     signal.Set()
     while true {
       lock gate {
-        if count == 0 && running == 0 {
+        if count == 0 && running == 0 && notifying == 0 {
           return
         }
       }

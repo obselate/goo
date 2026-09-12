@@ -39,6 +39,18 @@
         "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
         "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++"
+      },
+      "android-arm64": {
+        "SOURCE_DATE_EPOCH": "0",
+        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384"
+      },
+      "android-x64": {
+        "SOURCE_DATE_EPOCH": "0",
+        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384"
       }
     },
     "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs, macOS keeps private @rpath install names, and Windows uses unversioned DLL names.",
@@ -173,7 +185,38 @@
       "-Dbenchmark=disabled",
       "-Dgpu_demo=disabled",
       "-Dwith_libstdcxx=false"
-    ]
+    ],
+    "android": {
+      "ndkVersion": "27.2.12479018",
+      "minimumApi": 33,
+      "minimumVulkan": "1.3",
+      "minimumPageAlignment": 16384,
+      "requiredFormat": {
+        "android-arm64": "ELF 64-bit LSB shared object, ARM aarch64",
+        "android-x64": "ELF 64-bit LSB shared object, x86-64"
+      },
+      "requiredNeeded": {
+        "harfbuzz": [
+          "libc.so",
+          "libm.so"
+        ],
+        "gpu": [
+          "libc.so",
+          "libgoo-harfbuzz.so",
+          "libm.so"
+        ]
+      },
+      "requiredRpath": {
+        "harfbuzz": [],
+        "gpu": []
+      },
+      "requiredRunpath": {
+        "harfbuzz": [],
+        "gpu": [
+          "$ORIGIN/"
+        ]
+      }
+    }
   },
   "outputs": {
     "linux-x64": {
@@ -187,6 +230,14 @@
     "win-x64": {
       "harfbuzz": "goo-harfbuzz.dll",
       "gpu": "goo-harfbuzz-gpu.dll"
+    },
+    "android-arm64": {
+      "harfbuzz": "libgoo-harfbuzz.so",
+      "gpu": "libgoo-harfbuzz-gpu.so"
+    },
+    "android-x64": {
+      "harfbuzz": "libgoo-harfbuzz.so",
+      "gpu": "libgoo-harfbuzz-gpu.so"
     }
   },
   "requiredExports": {

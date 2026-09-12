@@ -62,6 +62,12 @@ PACKAGE_FILES = {
     "runtimes/linux-x64/native/libgoo-harfbuzz-gpu.so",
     "runtimes/linux-x64/native/libgoo-harfbuzz.so",
     "runtimes/linux-x64/native/text-native-build.json",
+    "runtimes/android-arm64/native/libgoo-harfbuzz.so",
+    "runtimes/android-arm64/native/libgoo-harfbuzz-gpu.so",
+    "runtimes/android-arm64/native/text-native-build.json",
+    "runtimes/android-x64/native/libgoo-harfbuzz.so",
+    "runtimes/android-x64/native/libgoo-harfbuzz-gpu.so",
+    "runtimes/android-x64/native/text-native-build.json",
     "runtimes/osx-arm64/native/libMoltenVK.dylib",
     "runtimes/osx-arm64/native/libSDL3.dylib",
     "runtimes/osx-arm64/native/libgoo-harfbuzz-gpu.dylib",
@@ -76,41 +82,7 @@ PACKAGE_FILES = {
     "tools/net10.0/any/Goo.ShaderEffectTool.runtimeconfig.json",
     "[Content_Types].xml",
 }
-BUNDLE_FILES = {
-    "Goo.PackageSmoke.deps.json",
-    "Goo.PackageSmoke.dll",
-    "Goo.PackageSmoke.runtimeconfig.json",
-    "Goo.dll",
-    "Gsharp.Extensions.dll",
-    "Hexa.NET.SDL3.dll",
-    "HexaGen.Runtime.dll",
-    "Unicode.Bidi.dll",
-    "Yoga.Net.dll",
-    "libSDL3.so",
-    "libgoo-harfbuzz-gpu.so",
-    "libgoo-harfbuzz.so",
-    "text-native-build.json",
-    "Vulkan/Runtime/HarfBuzz-COPYING.txt",
-    "Vulkan/Shaders/analytic.vert.spv",
-    "Vulkan/Shaders/analytic_blend.frag.spv",
-    "Vulkan/Shaders/analytic_shadow.frag.spv",
-    "Vulkan/Shaders/analytic_border.frag.spv",
-    "Vulkan/Shaders/analytic_linear4.frag.spv",
-    "Vulkan/Shaders/analytic_radial4.frag.spv",
-    "Vulkan/Shaders/analytic_sampled_image.frag.spv",
-    "Vulkan/Shaders/analytic_solid.frag.spv",
-    "Vulkan/Shaders/clip_mask.frag.spv",
-    "Vulkan/Shaders/clip_mask.vert.spv",
-    "Vulkan/Shaders/hb_gpu.vert.spv",
-    "Vulkan/Shaders/hb_gpu_draw.frag.spv",
-    "Vulkan/Shaders/hb_gpu_paint.frag.spv",
-    "Vulkan/Shaders/lava.frag.spv",
-    "Vulkan/Shaders/harfbuzz-14.3.1.provenance.json",
-    "Vulkan/Shaders/path_band.frag.spv",
-    "Vulkan/Shaders/path_band.vert.spv",
-    "Vulkan/Shaders/shader-manifest.json",
-    "Vulkan/Shaders/solid_quad.frag.spv",
-    "Vulkan/Shaders/solid_quad.vert.spv",
+BUNDLE_FILES = set((ROOT / ".github/scripts/linux-bundle-files.txt").read_text().splitlines()) | {
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
@@ -270,9 +242,19 @@ def validate_macos_payloads(payloads: dict[str, bytes]) -> None:
 
     recorded = json.loads(payloads["text-native-build.json"])
     manifest = json.loads((ROOT / "tools/Goo.TextNative/manifest.json").read_text())
-    for field in ("schema", "name", "source", "build", "requiredExports", "outputs"):
+    for field in ("schema", "name", "source", "requiredExports"):
         if recorded.get(field) != manifest.get(field):
             raise SystemExit(f"packaged macOS text-native provenance is stale: {field}")
+    if recorded.get("outputs", {}).get("osx-arm64") != manifest["outputs"]["osx-arm64"]:
+        raise SystemExit("packaged macOS text-native output names are stale")
+    recorded_build = recorded.get("build", {})
+    for field, expected in manifest["build"].items():
+        if field in ("linux", "windows", "android", "environments"):
+            continue
+        if recorded_build.get(field) != expected:
+            raise SystemExit(f"packaged macOS text-native provenance is stale: build.{field}")
+    if recorded_build.get("environments", {}).get("osx-arm64") != manifest["build"]["environments"]["osx-arm64"]:
+        raise SystemExit("packaged macOS text-native provenance environment is stale")
     evidence = recorded.get("buildEvidence", {})
     if evidence.get("target") != "osx-arm64" or evidence.get("sourceDirectory") != "temporary":
         raise SystemExit("packaged macOS text-native build evidence is invalid")
@@ -281,7 +263,7 @@ def validate_macos_payloads(payloads: dict[str, bytes]) -> None:
     if evidence.get("deploymentTarget") != "14.0":
         raise SystemExit("packaged macOS text-native deployment target is stale")
     for field, expected in manifest["build"].items():
-        if field != "environments" and evidence.get(field) != expected:
+        if field not in ("environments", "linux", "windows", "android") and evidence.get(field, recorded_build.get(field)) != expected:
             raise SystemExit(f"packaged macOS text-native build policy is stale: {field}")
     artifacts = recorded.get("artifacts", {})
     for role, name in manifest["outputs"]["osx-arm64"].items():
@@ -478,6 +460,14 @@ def validate_package(path: Path) -> str:
             macos_payloads["text-native-build.json"] = archive.read(
                 "runtimes/osx-arm64/native/text-native-build.json")
             validate_macos_payloads(macos_payloads)
+            for rid in ("android-arm64", "android-x64"):
+                provenance = json.loads(archive.read(f"runtimes/{rid}/native/text-native-build.json"))
+                if provenance["buildEvidence"]["target"] != rid:
+                    raise SystemExit(f"Android provenance target mismatch: {rid}")
+                for artifact in provenance["artifacts"].values():
+                    data = archive.read(f"runtimes/{rid}/native/{artifact['file']}")
+                    if hashlib.sha256(data).hexdigest() != artifact["sha256"]:
+                        raise SystemExit(f"Android payload hash mismatch: {rid}/{artifact['file']}")
     print(f"Package OK: {path.stat().st_size} bytes")
     return sdl_digest
 

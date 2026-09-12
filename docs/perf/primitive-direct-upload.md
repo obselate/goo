@@ -49,8 +49,8 @@ pre-experiment hashes and the newly added direct smoke was absent. This preserve
 earlier pipeline-identity, shared-timeline, queue-wake, and primitive-metrics work.
 
 See the [final pre-push report](pre-push-2026-09-05.md), the
-[paired confirmation analysis](evidence/pre-push-2026-09-05/results/direct-confirmation/analysis.md),
-and the [machine-readable rollback proof](evidence/pre-push-2026-09-05/rollback-proof.json).
+[paired confirmation analysis](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pre-push-2026-09-05/results/direct-confirmation/analysis.md),
+and the [machine-readable rollback proof](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pre-push-2026-09-05/rollback-proof.json).
 
 ## Historical design
 
@@ -135,24 +135,24 @@ validation passed, and runtime logs contained no Vulkan validation errors.
 Those results establish that the experiment was functionally correct before removal.
 They do not offset the later performance rejection. The historical candidate, logs, and
 exact patch remain archived under
-[`evidence/primitive-direct-upload-2026-09-05`](evidence/primitive-direct-upload-2026-09-05/).
+[`evidence/primitive-direct-upload-2026-09-05`](https://github.com/obselate/goo/tree/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05).
 
 ## Historical evidence
 
-- [Verification manifest](evidence/primitive-direct-upload-2026-09-05/verification.json),
-  [source hashes](evidence/primitive-direct-upload-2026-09-05/source-hashes.json),
-  [binary hashes](evidence/primitive-direct-upload-2026-09-05/binary-hashes.json), and
-  [task patch](evidence/primitive-direct-upload-2026-09-05/task.patch).
-- [Native direct gate](evidence/primitive-direct-upload-2026-09-05/direct-gate-final.log),
-  [lavapipe gate](evidence/primitive-direct-upload-2026-09-05/direct-ci-final.log),
-  [native lane results](evidence/primitive-direct-upload-2026-09-05/native-results.json),
-  and [direct readback](evidence/primitive-direct-upload-2026-09-05/direct-readback.log).
-- [Forced staged recovery](evidence/primitive-direct-upload-2026-09-05/recovery-staged-final.log),
-  [forced direct recovery](evidence/primitive-direct-upload-2026-09-05/recovery-direct-final.log),
-  [maintenance-disabled direct recovery](evidence/primitive-direct-upload-2026-09-05/recovery-direct-compat.log),
-  [API checks](evidence/primitive-direct-upload-2026-09-05/api-build.log),
-  [final candidate build](evidence/primitive-direct-upload-2026-09-05/async-build-final.log),
-  and [skill verification](evidence/primitive-direct-upload-2026-09-05/skill-verify.log).
+- [Verification manifest](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/verification.json),
+  [source hashes](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/source-hashes.json),
+  [binary hashes](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/binary-hashes.json), and
+  [task patch](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/task.patch).
+- [Native direct gate](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/direct-gate-final.log),
+  [lavapipe gate](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/direct-ci-final.log),
+  [native lane results](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/native-results.json),
+  and [direct readback](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/direct-readback.log).
+- [Forced staged recovery](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/recovery-staged-final.log),
+  [forced direct recovery](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/recovery-direct-final.log),
+  [maintenance-disabled direct recovery](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/recovery-direct-compat.log),
+  [API checks](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/api-build.log),
+  [final candidate build](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/async-build-final.log),
+  and [skill verification](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/primitive-direct-upload-2026-09-05/skill-verify.log).
 
 ## Vulkan references
 

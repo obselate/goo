@@ -708,7 +708,11 @@ internal partial class VulkanWindowTarget {
 
   internal func AbandonAcquiredFrameForTest() VkResult {
     if !frameBegun || activeFrameSlot == nil {
-      return VkConstants.VK_ERROR_INITIALIZATION_FAILED
+      return if frameFailureRetryable {
+        VkConstants.VK_NOT_READY
+      } else {
+        VkConstants.VK_ERROR_INITIALIZATION_FAILED
+      }
     }
     let result = TryAbandonRecordedFrameForRetry()
     RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
@@ -853,7 +857,6 @@ public partial class Window {
   internal func PollQueueCompletionForTest() bool {
     let completed = VulkanTargetForTest()?.PollQueueCompletion() == true
     if completed {
-      markFrameRendered()
       SdlHostForTest()?.FramePacing.MarkFrame(float64(Stopwatch.GetTimestamp()))
     }
     return completed

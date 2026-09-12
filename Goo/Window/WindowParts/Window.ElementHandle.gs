@@ -45,6 +45,7 @@ public partial class Window {
     let result = input.FocusElement(resolver, n)
     if result {
       markDirtyAndRender()
+      RefreshPlatformInput()
     }
     return result
   }
@@ -54,6 +55,7 @@ public partial class Window {
     let result = input.BlurElement(resolver, n)
     if result {
       markDirtyAndRender()
+      RefreshPlatformInput()
     }
     return result
   }

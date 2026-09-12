@@ -1,5 +1,6 @@
 package Goo
 
+import System
 import System.Threading
 
 /// Hosts a Goo tree in a native window.
@@ -27,7 +28,7 @@ public partial class Window {
       pendingRetainedEffects = combineEffects(pendingRetainedEffects, e)
       wake = Interlocked.Exchange(&pendingRetainedInvalidation, 1) == 0
     }
-    if wake && !SdlRuntime.IsCurrentMainThread() {
+    if wake && (embeddedHost != nil || Environment.CurrentManagedThreadId != ownerThreadId) {
       host?.Wake()
     }
   }

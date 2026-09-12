@@ -51,8 +51,8 @@ internal class VulkanRetiredSwapchainSet {
   }
 
   internal func TryWaitAndDisposeNext(retirement VulkanPresentationRetirement,
-    out result VkResult?) bool{
-      result = nil
+    out result VkResult) bool{
+      result = VkConstants.VK_SUCCESS
       if count == 0 {
         return false
       }

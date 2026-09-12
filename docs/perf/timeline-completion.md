@@ -121,33 +121,33 @@ remains retained after the direct-upload experiment was rejected and removed.
 
 ## Evidence
 
-- [ABI parity](evidence/timeline-completion-2026-09-04/logs/abi-parity.log),
-  [generator drift check](evidence/timeline-completion-2026-09-04/logs/generator-check.log), and
-  [generated proof parity](evidence/timeline-completion-2026-09-04/generated-proof-parity.json).
-- [Mechanical ABI mirror](evidence/timeline-completion-2026-09-04/scripts/mirror_timeline_abi.py)
-  and [parity validator](evidence/timeline-completion-2026-09-04/scripts/validate_timeline_abi.py).
-- [Verification manifest](evidence/timeline-completion-2026-09-04/verification.json),
-  [final native results](evidence/timeline-completion-2026-09-04/logs/final-native-results.json),
-  [final root-observed results](evidence/timeline-completion-2026-09-04/logs/root-final-results.json),
-  and [final LRU results](evidence/timeline-completion-2026-09-04/logs/timestamp-lru-results.json).
-- [Candidate offscreen-failure log](evidence/timeline-completion-2026-09-04/logs/offscreen-failure.log.gz)
-  and [pre-timeline baseline reproduction](evidence/timeline-completion-2026-09-04/logs/offscreen-failure-baseline.log.gz).
-- [Candidate timestamp contention](evidence/timeline-completion-2026-09-04/logs/timestamp-contention-1-candidate.log.gz),
-  [simultaneous pre-timeline baseline](evidence/timeline-completion-2026-09-04/logs/timestamp-contention-1-baseline.log.gz),
-  and [bounded layer LRU patch](evidence/timeline-completion-2026-09-04/scripts/layer-lru.patch).
-- [Native timeline](evidence/timeline-completion-2026-09-04/logs/timeline-lru-final.log),
-  [full readback](evidence/timeline-completion-2026-09-04/logs/readback-lru-final.log),
-  [pipeline identity](evidence/timeline-completion-2026-09-04/logs/pipeline-identity-lru-final.log),
-  [primitive metrics](evidence/timeline-completion-2026-09-04/logs/metrics-lru-final.log.gz), and
-  [retention](evidence/timeline-completion-2026-09-04/logs/retention-lru-final.log).
-- [Live pacing](evidence/timeline-completion-2026-09-04/logs/live-pacing-lru-final.log.gz),
-  [queue isolation](evidence/timeline-completion-2026-09-04/logs/queue-isolation-lru-final.log),
-  [software queue wake](evidence/timeline-completion-2026-09-04/logs/queue-wake-lru-final.log), and
-  [local CI-wrapper timeline](evidence/timeline-completion-2026-09-04/logs/ci-lru-final.log).
-- [Normal recovery](evidence/timeline-completion-2026-09-04/logs/recovery-lru-final.log),
-  [maintenance-disabled recovery](evidence/timeline-completion-2026-09-04/logs/recovery-compat-lru-final.log),
-  [Async build](evidence/timeline-completion-2026-09-04/logs/async-lru-final-build.log), and
-  [recovery build](evidence/timeline-completion-2026-09-04/logs/recovery-lru-build.log).
-- [API checks](evidence/timeline-completion-2026-09-04/logs/api-lru-final.log),
-  [ABI smoke](evidence/timeline-completion-2026-09-04/logs/abi-smoke.log), and
-  [strict lint](evidence/timeline-completion-2026-09-04/logs/lint-lru-final.log).
+- [ABI parity](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/abi-parity.log),
+  [generator drift check](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/generator-check.log), and
+  [generated proof parity](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/generated-proof-parity.json).
+- [Mechanical ABI mirror](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/scripts/mirror_timeline_abi.py)
+  and [parity validator](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/scripts/validate_timeline_abi.py).
+- [Verification manifest](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/verification.json),
+  [final native results](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/final-native-results.json),
+  [final root-observed results](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/root-final-results.json),
+  and [final LRU results](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/timestamp-lru-results.json).
+- [Candidate offscreen-failure log](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/offscreen-failure.log.gz)
+  and [pre-timeline baseline reproduction](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/offscreen-failure-baseline.log.gz).
+- [Candidate timestamp contention](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/timestamp-contention-1-candidate.log.gz),
+  [simultaneous pre-timeline baseline](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/timestamp-contention-1-baseline.log.gz),
+  and [bounded layer LRU patch](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/scripts/layer-lru.patch).
+- [Native timeline](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/timeline-lru-final.log),
+  [full readback](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/readback-lru-final.log),
+  [pipeline identity](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/pipeline-identity-lru-final.log),
+  [primitive metrics](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/metrics-lru-final.log.gz), and
+  [retention](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/retention-lru-final.log).
+- [Live pacing](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/live-pacing-lru-final.log.gz),
+  [queue isolation](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/queue-isolation-lru-final.log),
+  [software queue wake](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/queue-wake-lru-final.log), and
+  [local CI-wrapper timeline](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/ci-lru-final.log).
+- [Normal recovery](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/recovery-lru-final.log),
+  [maintenance-disabled recovery](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/recovery-compat-lru-final.log),
+  [Async build](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/async-lru-final-build.log), and
+  [recovery build](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/recovery-lru-build.log).
+- [API checks](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/api-lru-final.log),
+  [ABI smoke](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/abi-smoke.log), and
+  [strict lint](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/timeline-completion-2026-09-04/logs/lint-lru-final.log).

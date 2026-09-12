@@ -56,7 +56,11 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_FLAGS_RELEASE=-Os \
   -DCMAKE_INSTALL_PREFIX="$work/install" \
-  -DSDL_AUDIO=OFF \
+  -DSDL_AUDIO=ON \
+  -DSDL_ALSA=ON \
+  -DSDL_ALSA_SHARED=ON \
+  -DSDL_PULSEAUDIO=ON \
+  -DSDL_PULSEAUDIO_SHARED=ON \
   -DSDL_CAMERA=OFF \
   -DSDL_DIALOG=OFF \
   -DSDL_GPU=OFF \

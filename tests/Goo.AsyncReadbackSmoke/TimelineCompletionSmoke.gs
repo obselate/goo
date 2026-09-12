@@ -174,7 +174,14 @@ func RunTimelineCompletionSmoke() {
 
     let drainBefore = WindowReadbackTestFixture.GraphicsTimeline(openedFirst)
     let localBeforeDrain = WindowReadbackTestFixture.FrameSubmissions(openedFirst)
-    let drainResult = WindowReadbackTestFixture.RuntimeAcquireAndAbandonFrame(openedFirst)
+    var drainResult = WindowReadbackTestFixture.RuntimeAcquireAndAbandonFrame(openedFirst)
+    let drainDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
+    while drainResult == VkConstants.VK_NOT_READY
+      && Stopwatch.GetTimestamp() < drainDeadline{
+        WindowReadbackTestFixture.PumpNativeEvents()
+        Thread.Yield()
+        drainResult = WindowReadbackTestFixture.RuntimeAcquireAndAbandonFrame(openedFirst)
+      }
     let drainAfter = WindowReadbackTestFixture.GraphicsTimeline(openedFirst)
     let localAfterDrain = WindowReadbackTestFixture.FrameSubmissions(openedFirst)
     TimelineCompletionRequire(drainResult == VkConstants.VK_SUCCESS
@@ -182,7 +189,12 @@ func RunTimelineCompletionSmoke() {
         && drainAfter.CompletedResult == VkConstants.VK_SUCCESS
         && drainAfter.CompletedSerial >= drainAfter.LastEnqueuedSerial
         && drainAfter.PendingWindowSerial == 0uL,
-      "Timeline acquire drain did not complete one wait-only FIFO submission")
+      "Timeline acquire drain did not complete one wait-only FIFO submission: result="
+      +drainResult.ToString() + " before=" + drainBefore.LastEnqueuedSerial.ToString()
+      +" after=" + drainAfter.LastEnqueuedSerial.ToString()
+      +" completed_result=" + drainAfter.CompletedResult.ToString()
+      +" completed=" + drainAfter.CompletedSerial.ToString()
+      +" pending=" + drainAfter.PendingWindowSerial.ToString())
     TimelineCompletionRequire(
       TimelineCompletionSerialCount(localAfterDrain)
       == TimelineCompletionSerialCount(localBeforeDrain),

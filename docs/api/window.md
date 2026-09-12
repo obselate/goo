@@ -38,16 +38,19 @@ Sources:
 
 - [`Window.gs`](../../Goo/Window/Window.gs)
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
+- [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
 - [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
+- [`Window.Embedded.gs`](../../Goo/Window/WindowParts/Window.Embedded.gs)
 - [`Window.Frame.gs`](../../Goo/Window/WindowParts/Window.Frame.gs)
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
+- [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 
-Hosts a Goo tree on one process-wide UI thread. After Open, only Post and RequestClose are safe from another thread.
+Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
 ### `FocusChanged`
 
@@ -68,6 +71,10 @@ Occurs after the native window reports a new window state.
 ### `new`
 
 Creates a window with default configuration.
+
+### `Attach(EmbeddedWindowHost)`
+
+Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
 
 ### `ConfigureApplication(string,string,string)`
 
@@ -115,6 +122,10 @@ Queues an action for the UI thread.
 Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
+
+### `RequestActivation`
+
+Requests restoration of a minimized window, raising, and keyboard activation. Call on the owning UI thread in response to a user action. Desktop policy controls the outcome; observe IsFocused and FocusChanged for actual focus. Maximized/fullscreen state and the focused Goo element are preserved. Returns Closed before Open or after close, Unsupported for embedded hosts, or Failed if the native request reports an immediate error. Asynchronous policy denials are not reported by the desktop backend. Wayland requests use SDL's xdg-activation token and recent input serial.
 
 ### `RequestClose`
 
@@ -172,6 +183,10 @@ Gets the most recent adapter exception. Failed delivery retries on the next UI-t
 
 Gets or sets the close-request handler. Return false to veto closure. Accepted requests do not invoke the handler again while teardown finishes.
 
+### `PlatformInput`
+
+Gets the owner-thread platform input and focused-editor contract.
+
 ### `Resizable`
 
 Gets or sets whether the user can resize the window.
@@ -211,6 +226,21 @@ Gets or sets the requested horizontal position.
 ### `Y`
 
 Gets or sets the requested vertical position.
+
+## `WindowActivationResult`
+
+Source:
+
+- [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
+
+Reports whether a native window activation request could be submitted. Accepted does not confirm focus; desktop policy may deny or ignore the request.
+
+### Values
+
+- `Accepted`
+- `Closed`
+- `Unsupported`
+- `Failed`
 
 ## `WindowMetrics`
 

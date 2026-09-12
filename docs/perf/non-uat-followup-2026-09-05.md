@@ -8,7 +8,7 @@ Implemented sampled-image premultiplication, liquid-glass dispersed coverage, a 
 - Liquid glass combines the alpha coverage of its red, green, and blue refraction taps. The old bundle fails the new boundary assertion. The fixed bundle passes it. All 32 opaque control pixels and all 21 transparent control pixels are unchanged. A separate opaque 640x480 capture matches byte for byte.
 - Both production and generated SPIR-V mirrors are updated through the canonical generator. All 18 shader checks pass.
 
-See [shader evidence](evidence/non-uat-2026-09-05/shader-fixes/report.md).
+See [shader evidence](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/non-uat-2026-09-05/shader-fixes/report.md).
 
 ## Dense paths and glass GPU cost
 
@@ -36,7 +36,7 @@ The one-contour case costs 2.048 us more. The 31-contour pooled P50 is unchanged
 | terminal | 1120x760 | 0.089 | 0.052/0.053/0.054 |
 | terminal | 1920x1080 | 0.201 | 0.120/0.123/0.123 |
 
-Main includes Effects, so those durations must not be added. These measurements cover one material panel with a 24-pixel inset over a deterministic opaque background. They do not justify reducing either material's sampling quality on this GPU. See the [authoritative GPU report](evidence/non-uat-2026-09-05/gpu-layers-off/report.md) for individual runs, P95/P99, provenance, and limits.
+Main includes Effects, so those durations must not be added. These measurements cover one material panel with a 24-pixel inset over a deterministic opaque background. They do not justify reducing either material's sampling quality on this GPU. See the [authoritative GPU report](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/non-uat-2026-09-05/gpu-layers-off/report.md) for individual runs, P95/P99, provenance, and limits.
 
 ## In-app drag/drop
 
@@ -46,7 +46,7 @@ Cancellation covers Escape, focus loss, window close, removal, disable, and call
 
 Metadata stays sparse. Blob and Node retained allocation is unchanged. Each Window adds 48 bytes. The target hit path is lazy, and a warmed idle coordinator allocates zero bytes across 1,000 drains.
 
-See the [current input API](../api/input.md), [architecture record](../architecture/drag-drop-proposal-2026-09-05.md), and [drag/drop verification](evidence/non-uat-2026-09-05/drag-drop/report.md). Native platform drag/drop, drag ghosts, autoscroll, and generic keyboard target traversal remain outside this implementation.
+See the [current input API](../api/input.md), [architecture record](../architecture/drag-drop-proposal-2026-09-05.md), and [drag/drop verification](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/non-uat-2026-09-05/drag-drop/report.md). Native platform drag/drop, drag ghosts, autoscroll, and generic keyboard target traversal remain outside this implementation.
 
 ## Integrated verification
 
@@ -60,7 +60,7 @@ Subjective glass appearance, corner AA, and CRT design choices remain UAT work. 
 
 ## Evidence provenance
 
-The [evidence index](evidence/non-uat-2026-09-05/README.md) links the final verification logs, raw benchmark archives, environment, source/artifact hashes, and checksum manifest.
+The [evidence index](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/non-uat-2026-09-05/README.md) links the final verification logs, raw benchmark archives, environment, source/artifact hashes, and checksum manifest.
 
 The test host is Linux on a Ryzen 7 3700X and RTX 3080 with NVIDIA 610.57.04. Native runs use an isolated KWin virtual display at 3840x2160, scale 1. Source baseline is `80b72f8fcba26b91a3d3d4e1d0a173833751fc60` plus the preserved prior uncommitted work and this implementation.
 

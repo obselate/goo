@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.IO
 
 internal sealed class DecodedImage {
   shared {
@@ -91,41 +90,5 @@ internal sealed class DecodedImage {
 
   internal func Pixels()([]uint8)? {
     lock gate { return pixels }
-  }
-}
-
-internal sealed class ImageRequest {
-  internal init(path string) {
-    Path = path
-  }
-
-  internal prop Path string{ get; private set; }
-  internal prop Result DecodedImage{ get -> DecodedImage.Failed }
-}
-
-internal class ImageDecoding {
-  shared {
-
-    internal func Request(path string) ImageRequest {
-      let canonical = Canonicalize(path)
-      return ImageRequest(canonical)
-    }
-
-    internal func MatchesPath(request ImageRequest?, path string) bool {
-      if request == nil { return path.Length == 0 }
-      return StringComparerForPlatform().Equals(request?.Path, Canonicalize(path))
-    }
-
-    private func Canonicalize(path string) string {
-      if String.IsNullOrWhiteSpace(path) { return "<empty>" }
-      try {
-        return Path.GetFullPath(path)
-      } catch (error Exception) {
-        return "<invalid>" + path
-      }
-    }
-
-    private func StringComparerForPlatform() StringComparer -> OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal
-
   }
 }

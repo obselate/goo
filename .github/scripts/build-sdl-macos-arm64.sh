@@ -23,7 +23,7 @@ cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_INSTALL_PREFIX="$work/install" \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$deployment_target" \
-  -DSDL_AUDIO=OFF \
+  -DSDL_AUDIO=ON \
   -DSDL_CAMERA=OFF \
   -DSDL_DIALOG=OFF \
   -DSDL_GPU=OFF \

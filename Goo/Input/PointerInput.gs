@@ -566,6 +566,12 @@ internal partial class PointerInput {
         current.DragEditorStarted = false
       }
     }
+    if let pan = current.TouchPan {
+      if !nodeVisibleInTree(tree, pan.Target, false) || !canReceiveInput(pan.Target) {
+        cancelInteraction(root, resolver, text)
+        return true
+      }
+    }
     if let state = scrollDragState() {
       if let target = state.Target {
         if !nodeVisibleInTree(tree, target, false) || !scrollThumbAvailable(target) {
@@ -617,6 +623,7 @@ internal partial class PointerInput {
       }
       let delta = nextDelta(x, y)
       current.LastModifiers = modifiers
+      if touchPanActive() { return updateTouchPan(root, resolver, x, y, false) }
       if hasScrollDrag() {
         clearDragCandidate()
         return updateScrollDrag(root, x, y)
@@ -652,6 +659,7 @@ internal partial class PointerInput {
           return true
         }
       }
+      if updateTouchPan(root, resolver, x, y, prevented) { return true }
       return handleMove(root, resolver, x, y, current.Device == PointerDevice.Mouse && !prevented,
         isSemanticPrimary() && !prevented)
     }
@@ -858,7 +866,10 @@ internal partial class PointerInput {
         return false
       }
       let handled = HandlePress(root, resolver, text, timeS, x, y, modifiers, semantic)
-      if semantic { rememberDragCandidate() }
+      if semantic {
+        rememberDragCandidate()
+        beginTouchPan(x, y)
+      }
       return handled
     }
 
@@ -910,6 +921,9 @@ internal partial class PointerInput {
       updatePressure(eventPressure, hasPressure)
       let semantic = isSemanticPrimary()
       try {
+        if button == PointerButton.Primary && touchPanActive() {
+          return updateTouchPan(root, resolver, x, y, false)
+        }
         if button == PointerButton.Primary && hasScrollDrag() {
           updateScrollDrag(root, x, y)
           return true
@@ -945,6 +959,7 @@ internal partial class PointerInput {
           current.DragEditor = nil
           current.DragEditorStarted = false
           clearScrollDrag()
+          clearTouchPan()
           current.ClickTarget = nil
           if dragCandidate != nil && dragPointerMatches() { clearDragCandidate() }
           current.FocusTarget = nil
@@ -1098,6 +1113,7 @@ internal class PointerContact {
   internal var LastModifiers KeyModifiers
   internal var Pressure float32
   internal var FocusTarget Node?
+  internal var TouchPan PointerTouchPanState?
 
   internal init(id int64, device PointerDevice) {
     Id = id

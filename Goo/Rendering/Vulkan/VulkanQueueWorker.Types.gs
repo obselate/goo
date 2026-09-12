@@ -48,6 +48,8 @@ internal unsafe sealed class VulkanQueueMailbox {
   internal prop SyntheticDrainPerformed bool{ get -> syntheticDrainPerformed }
   internal prop SyntheticDrainResult VkResult{ get -> syntheticDrainResult }
 
+  internal func NotifyCompletion() { host?.Wake() }
+
   internal func PrepareSubmit(commandBuffer VkCommandBuffer, waitSemaphore VkSemaphore,
     signalSemaphore VkSemaphore) {
       SubmitCommandBuffer = commandBuffer
@@ -133,7 +135,6 @@ internal unsafe sealed class VulkanQueueMailbox {
         syntheticDrainResult
       }
       Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete)
-      host?.Wake()
       return
     }
     var waitInfo = VkSemaphoreSubmitInfo{}
@@ -167,7 +168,6 @@ internal unsafe sealed class VulkanQueueMailbox {
     let queueSubmit = dispatch.vkQueueSubmit2
     submitResult = queueSubmit(queue, 1u, &submitInfo, 0uL)
     Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete)
-    host?.Wake()
   }
 
   internal func RunPresent(dispatch VkDeviceDispatch, queue VkQueue) {
@@ -195,18 +195,15 @@ internal unsafe sealed class VulkanQueueMailbox {
     let queuePresent = dispatch.vkQueuePresentKHR
     presentResult = queuePresent(queue, &presentInfo)
     Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.PresentComplete)
-    host?.Wake()
   }
 
   internal func FailSubmit(result VkResult) {
     submitResult = result
     Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete)
-    host?.Wake()
   }
 
   internal func FailPresent(result VkResult) {
     presentResult = result
     Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.PresentComplete)
-    host?.Wake()
   }
 }

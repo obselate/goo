@@ -80,7 +80,8 @@ internal unsafe partial class VulkanWindowTarget {
       oldSwapchain,
       generationId,
       swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-      windowObjectAccounting)
+      windowObjectAccounting,
+      host.PreferRequestedFramebufferExtent)
     generation = next
     if let previous = old {
       InvalidateLastPresentedImageState()
@@ -221,13 +222,11 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DisposeRetiredSwapchains() {
-    var presentCompletionResult VkResult? = nil
+    var presentCompletionResult VkResult = VkConstants.VK_SUCCESS
     while retiredSwapchains.TryWaitAndDisposeNext(
       presentationRetirement, out presentCompletionResult) {
-        if let result = presentCompletionResult {
-          if result != VkConstants.VK_SUCCESS {
-            RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, result)
-          }
+        if presentCompletionResult != VkConstants.VK_SUCCESS {
+          RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, presentCompletionResult)
         }
       }
   }
@@ -404,11 +403,12 @@ internal unsafe partial class VulkanWindowTarget {
       }
     let compositeAlpha = SelectCompositeAlpha(
       capabilities.supportedCompositeAlpha,
-      host.Transparent)
+      host.Transparent,
+      host.AllowInheritedCompositeAlpha)
     if compositeAlpha == VkCompositeAlphaFlagBitsKHR(0) {
       if host.Transparent {
         throw InvalidOperationException(
-          "Vulkan surface has no premultiplied composite alpha mode for a transparent window")
+          "Vulkan surface has no supported composite alpha mode for the configured transparent window")
       }
       throw InvalidOperationException("Vulkan surface has no supported composite alpha mode")
     }
@@ -475,10 +475,14 @@ internal unsafe partial class VulkanWindowTarget {
   shared {
     internal func SelectCompositeAlpha(
       supported VkCompositeAlphaFlagsKHR,
-      transparent bool) VkCompositeAlphaFlagBitsKHR{
+      transparent bool,
+      allowInherited bool = false) VkCompositeAlphaFlagBitsKHR{
         if transparent {
           if (supported & uint32(VkConstants.VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)) != 0u {
             return VkConstants.VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR
+          }
+          if allowInherited && (supported & uint32(VkConstants.VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)) != 0u {
+            return VkConstants.VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
           }
           return VkCompositeAlphaFlagBitsKHR(0)
         }

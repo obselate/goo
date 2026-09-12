@@ -4,10 +4,11 @@ import System
 import System.Collections.Generic
 import System.Text
 
-internal class TextInput {
+internal partial class TextInput {
   private var focused Node?
   private var host WindowHost?
   private var nativeTextInputActive bool
+  private var nativeFocusAllowed bool
   private var clipFallback string
   private var focusControl InputDispatchControl
   private var focusDispatchGeneration int64
@@ -16,6 +17,7 @@ internal class TextInput {
   internal init() {
     clipFallback = ""
     focusControl = InputDispatchControl()
+    nativeFocusAllowed = true
   }
 
   internal func Attach(host WindowHost) {
@@ -25,6 +27,7 @@ internal class TextInput {
 
   internal func Dispose() {
     if let current = focused {
+      cancelEntryComposition(current)
       blurEditor(current)
       current.Focused = false
     }
@@ -44,7 +47,7 @@ internal class TextInput {
         SetFocus(resolver, nil)
       }
     }
-    if focused == nil {
+    if focused == nil && nativeFocusAllowed {
       if let target = findAutoFocus(tree, false, false) {
         SetFocus(resolver, target)
       }
@@ -85,18 +88,12 @@ internal class TextInput {
     return before != after
   }
 
-  // Seconds until the caret's next visibility flip, or 1.0 (deliberately
-  // larger than Window's 250ms idle-wait ceiling, so it never binds) when
-  // nothing is focused/blinking. A focused entry must wake the window again
-  // to blink, but as a bounded deadline, not a permanent "demand" latch --
-  // treating it as demand would revert Pump to an unpaced poll spin with
-  // nothing forcing a render most iterations (see Window.Host.gs).
   internal func BlinkDeadlineSeconds() float64 {
     guard let f = focused else {
-      return 1.0
+      return Double.PositiveInfinity
     }
     if (f.Kind != NodeKind.Entry && f.Kind != NodeKind.Editor) || !canReceiveInput(f) {
-      return 1.0
+      return Double.PositiveInfinity
     }
     let phase = f.BlinkT - Math.Floor(f.BlinkT)
     return phase < 0.5 ? 0.5 - phase : 1.0 - phase
@@ -104,6 +101,11 @@ internal class TextInput {
 
   internal func SetClipboardFallback(value string) {
     clipFallback = value
+  }
+
+  internal func SetNativeFocus(value bool) {
+    nativeFocusAllowed = value
+    syncNativeTextInput()
   }
 
   internal func AccessibilitySetValue(root Node?, target Node, value string) bool {
@@ -172,7 +174,9 @@ internal class TextInput {
     focusChangeGeneration++
     let changeGeneration = focusChangeGeneration
     focused = nextTarget
+    if nextTarget != nil { nativeFocusAllowed = true }
     if let old = previous {
+      cancelEntryComposition(old)
       blurEditor(old)
       old.Focused = false
       resolver.Invalidate(old, false)
@@ -235,6 +239,10 @@ internal class TextInput {
   }
 
   internal func HandleKey(root Node?, resolver Resolver, key Key, modifiers KeyModifiers) bool {
+    if entryComposition != nil {
+      if key == Key.Escape { return HandleCompositionCancel(root) }
+      FinishComposition(root)
+    }
     let shift = modifiers.Shift
     guard let n = focused else {
       if key == Key.Tab {
@@ -339,6 +347,13 @@ internal class TextInput {
     }
     if n.Kind == NodeKind.Entry && canReceiveInput(n) {
       let clean = sanitize(value)
+      if let current = entryComposition {
+        let before = entryCompositionBefore
+        cancelEntryComposition(n)
+        commitEdit(root, n, before, replaceEntryComposition(before, current, clean))
+        dispatchTextInput(n, value)
+        return true
+      }
       if clean.Length != 0 {
         let s = editState(n)
         commitEdit(root, n, s, Edit().Insert(s, clean))
@@ -365,6 +380,8 @@ internal class TextInput {
             updateTextInputArea(n)
           }
         }
+      } else if n.Kind == NodeKind.Entry {
+        updated = updateEntryComposition(n, composition)
       }
       dispatchTextComposition(n, composition)
       return updated
@@ -396,6 +413,8 @@ internal class TextInput {
         canceled = controller.Execute(TextCommand{ Kind: TextCommandKind.CancelComposition })
         if canceled { updateTextInputArea(n) }
       }
+    } else if n.Kind == NodeKind.Entry {
+      canceled = cancelEntryComposition(n)
     }
     dispatchTextCompositionCancel(n)
     return canceled
@@ -460,7 +479,7 @@ internal class TextInput {
 
   private func syncNativeTextInput() {
     let desired = if let current = focused {
-      canReceiveInput(current) && (current.Kind == NodeKind.Entry || current.Kind == NodeKind.Editor
+      nativeFocusAllowed && canReceiveInput(current) && (current.Kind == NodeKind.Entry || current.Kind == NodeKind.Editor
           || TextInputCallbacks.HasNodeCallbacks(current))
     } else { false }
     if desired == nativeTextInputActive {

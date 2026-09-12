@@ -31,7 +31,7 @@ hidden slot records a revision without rebuilding its hidden subtree, then
 applies the latest revision when shown. Reset updates shared state and
 invalidates all four slots so hidden regions are current when revealed.
 
-![Category CPU time and allocation](evidence/category-frame-times-2026-09-08/category-frame-times.png)
+![Category CPU time and allocation](https://raw.githubusercontent.com/obselate/goo/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/category-frame-times.png)
 
 ## Matched frame measurements
 
@@ -123,17 +123,17 @@ of keeping three hidden card subtrees mounted.
 
 ## Evidence
 
-[Reproduction instructions and raw-log inventory](evidence/category-frame-times-2026-09-08/README.md)
+[Reproduction instructions and raw-log inventory](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/README.md)
 
-- [Frame analysis](evidence/category-frame-times-2026-09-08/category-results.json)
-- [Frame measurement table](evidence/category-frame-times-2026-09-08/benchmark-numbers.csv)
-- [Scheduler analysis](evidence/category-frame-times-2026-09-08/scheduler-results.json)
-- [Scheduler measurement table](evidence/category-frame-times-2026-09-08/scheduler-numbers.csv)
-- [Frame-time plot](evidence/category-frame-times-2026-09-08/category-frame-times.svg)
-- [Visual comparison](evidence/category-frame-times-2026-09-08/visual-comparison.json)
-- [Build verification](evidence/category-frame-times-2026-09-08/validation/verify.log.gz)
-- [Category gate log](evidence/category-frame-times-2026-09-08/validation/category-gate-candidate.log.gz)
-- [Gallery smoke log](evidence/category-frame-times-2026-09-08/validation/gallery-smoke.log.gz)
+- [Frame analysis](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/category-results.json)
+- [Frame measurement table](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/benchmark-numbers.csv)
+- [Scheduler analysis](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/scheduler-results.json)
+- [Scheduler measurement table](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/scheduler-numbers.csv)
+- [Frame-time plot](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/category-frame-times.svg)
+- [Visual comparison](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/visual-comparison.json)
+- [Build verification](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/validation/verify.log.gz)
+- [Category gate log](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/validation/category-gate-candidate.log.gz)
+- [Gallery smoke log](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/category-frame-times-2026-09-08/validation/gallery-smoke.log.gz)
 
 ## Limits
 

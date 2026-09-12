@@ -116,19 +116,14 @@ internal partial class VulkanSceneCompiler {
     switch node.Kind {
       case NodeKind.Image {
         let source = node.ImageSource
-        if node.ImagePath != "" && source == nil {
-          RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.ImagePath,
-            VulkanSceneUnsupportedPrimitive.Image)
-        } else if source != nil && imageScene == nil {
+        if source != nil && imageScene == nil {
           RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.ImageSource,
             VulkanSceneUnsupportedPrimitive.Image)
-        }
-        if ((node.ImagePath != "" && source == nil)
-            || (source != nil && imageScene == nil))
-          && node.ImageFit != ImageFit.Contain{
+          if node.ImageFit != ImageFit.Contain {
             RecordUnsupportedDetail(node, VulkanSceneUnsupportedField.ImageFit,
               VulkanSceneUnsupportedPrimitive.Image)
           }
+        }
       }
       case NodeKind.Shape {
       }

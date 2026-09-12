@@ -3,6 +3,14 @@
 Goo depends on the third-party software identified below. License links are
 pinned to the source revision or release used by Goo.
 
+## StbImageSharp PNG decoder
+
+Goo depends on the managed `StbImageSharp` 2.30.16 package. No additional native
+image-decoder library is required. The package declares `Unlicense OR MIT`.
+
+- Package repository commit: `125af70cb557033f2c46aec8e82eaaf72ac49817`.
+- [StbImageSharp source and license](https://github.com/StbSharp/StbImageSharp/blob/125af70cb557033f2c46aec8e82eaaf72ac49817/README.md)
+
 ## G# runtime support
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from
@@ -25,9 +33,9 @@ endings to LF. Copyright (C) GSharp Authors. All rights reserved.
 
 ## HarfBuzz and hb-gpu text runtime
 
-Goo ships private Linux, Windows, and macOS native payloads built from the
+Goo ships private Linux, Windows, macOS, and Android native payloads built from the
 pinned HarfBuzz 14.3.1 upstream archive with `hb-gpu` enabled:
-`libgoo-harfbuzz.so` and `libgoo-harfbuzz-gpu.so` on Linux, with
+`libgoo-harfbuzz.so` and `libgoo-harfbuzz-gpu.so` on Linux and Android, with
 `goo-harfbuzz.dll` and `goo-harfbuzz-gpu.dll` on Windows, and
 `libgoo-harfbuzz.dylib` and `libgoo-harfbuzz-gpu.dylib` on macOS. They are
 private Goo artifacts, not system-library replacements or a runtime fallback.

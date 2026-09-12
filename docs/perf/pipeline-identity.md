@@ -77,17 +77,17 @@ same-program lookup cost and does not change the capacity-based acceptance decis
 
 ## Evidence
 
-- [Verification and fingerprints](evidence/pipeline-identity-2026-09-04/verification.json),
-  [paired results](evidence/pipeline-identity-2026-09-04/results.json),
-  [probe](evidence/pipeline-identity-2026-09-04/Pipeline.cs), and
-  [paired runner](evidence/pipeline-identity-2026-09-04/run-pairs.py).
-- [Baseline 64-program capacity](evidence/pipeline-identity-2026-09-04/baseline-duplicate64.log.gz)
-  and the final [candidate native gate and 64-program proof](evidence/pipeline-identity-2026-09-04/native.log).
-- [API checks](evidence/pipeline-identity-2026-09-04/api.log),
-  [recovery](evidence/pipeline-identity-2026-09-04/recovery.log.gz),
-  [primitive metrics](evidence/pipeline-identity-2026-09-04/metrics.log.gz), and
-  [retention](evidence/pipeline-identity-2026-09-04/retention.log).
-- [Queue wake](evidence/pipeline-identity-2026-09-04/queue-wake.log),
-  [queue isolation](evidence/pipeline-identity-2026-09-04/queue-isolation.log),
-  [strict lint](evidence/pipeline-identity-2026-09-04/lint.log), and
-  [local CI-wrapper gate](evidence/pipeline-identity-2026-09-04/ci.log).
+- [Verification and fingerprints](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/verification.json),
+  [paired results](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/results.json),
+  [probe](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/Pipeline.cs), and
+  [paired runner](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/run-pairs.py).
+- [Baseline 64-program capacity](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/baseline-duplicate64.log.gz)
+  and the final [candidate native gate and 64-program proof](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/native.log).
+- [API checks](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/api.log),
+  [recovery](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/recovery.log.gz),
+  [primitive metrics](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/metrics.log.gz), and
+  [retention](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/retention.log).
+- [Queue wake](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/queue-wake.log),
+  [queue isolation](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/queue-isolation.log),
+  [strict lint](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/lint.log), and
+  [local CI-wrapper gate](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/pipeline-identity-2026-09-04/ci.log).

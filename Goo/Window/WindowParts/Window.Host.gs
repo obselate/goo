@@ -96,7 +96,7 @@ internal class WindowScheduler {
         var currentIndex int32
         while currentIndex < currentCount {
           let window = snapshot[currentIndex]
-          if !window.IsOpen {
+          if !window.IsOpen || window.ExternallyDriven {
             currentIndex = currentIndex + 1
             continue
           }
@@ -119,7 +119,7 @@ internal class WindowScheduler {
         var afterEventsIndex int32
         while afterEventsIndex < afterEventsCount {
           let window = snapshot[afterEventsIndex]
-          if window.IsOpen {
+          if window.IsOpen && !window.ExternallyDriven {
             window.RefreshSchedulerMetrics()
           }
           afterEventsIndex = afterEventsIndex + 1
@@ -133,7 +133,7 @@ internal class WindowScheduler {
         var offset int32
         while offset < count {
           let window = snapshot[(start + offset) % count]
-          if window.IsOpen {
+          if window.IsOpen && !window.ExternallyDriven {
             let service = window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork()
             let timed = window.SchedulerTimedServiceDue()
             let frameDue = window.SchedulerFrameDue(afterEventsNow)
@@ -204,8 +204,8 @@ public partial class Window {
   }
 
   private func requireUiThread(operation string) {
-    if uiThreadBound {
-      requireOpenThread(operation)
+    if uiThreadBound && Environment.CurrentManagedThreadId != ownerThreadId {
+      throw InvalidOperationException(operation + " must run on the window owner thread")
     }
   }
 
@@ -228,14 +228,17 @@ public partial class Window {
   /// Creates the native window and returns this window.
   /// @returns this window after native initialization
   public func Open() Window {
-    requireOpenThread("Window.Open")
+    requireUiThread("Window.Open")
     if IsOpen {
       WindowDiagnostics.AttachIfEnabled(this)
       return this
     }
-    prepare()
-
+    requireOpenThread("Window.Open")
+    ownerThreadId = WindowOwnerThread.Acquire()
+    ownerThreadRegistered = true
+    uiThreadBound = true
     try {
+      prepare()
       let native = SdlHost(
         Title,
         Width,
@@ -252,7 +255,6 @@ public partial class Window {
       host = native
       let target = VulkanWindowTarget(native)
       windowTarget = target
-      uiThreadBound = true
       configureHost(native)
       profiler.Sink = target.ProfileSink
       if !applyNativeResize(
@@ -304,15 +306,16 @@ public partial class Window {
   }
 
   internal func handleFocusChanged(hasFocus bool) {
-    if IsFocused == hasFocus {
-      return
-    }
+    let changed = IsFocused != hasFocus
     IsFocused = hasFocus
-    if !hasFocus {
+    if hasFocus {
+      input.FocusGained()
+    } else {
       input.FocusLost(node, resolver)
       markDirtyAndRender()
     }
-    notifications.RaiseFocusChanged(hasFocus)
+    RefreshPlatformInput()
+    if changed { notifications.RaiseFocusChanged(hasFocus) }
   }
 
   /// Queues an idempotent close request. This is safe from any thread.
@@ -344,6 +347,10 @@ public partial class Window {
   public func Pump(dt float64) {
     requireUiThread("Window.Pump")
     schedulerSimulationBank = 0.0
+    if let externalHost = embeddedHost {
+      PumpEmbedded(dt, externalHost.IsSuspended)
+      return
+    }
     pumpCore(dt, true, true, dt)
     schedulerLastTicks = float64(Stopwatch.GetTimestamp())
   }
@@ -471,6 +478,7 @@ public partial class Window {
       let stepDt = frameAllowed ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
       let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       UpdateTree(dt, stepDt)
+      RefreshPlatformInput()
       if profiling {
         profiler.Record(FrameProfileStage.Tree, treeProfile)
       }
@@ -478,12 +486,11 @@ public partial class Window {
       let queueCompleted = queueCompletedAtEntry || windowTarget?.PollQueueCompletion() == true
       var rendered = false
       if queueCompleted {
-        markFrameRendered()
         rendered = true
         native.MarkFrame(float64(Stopwatch.GetTimestamp()))
       }
       let frameNeeded = needsRenderFrame(resolver.VisualDirty)
-      if frameAllowed && frameNeeded && windowTarget?.QueueWorkPending != true {
+      if frameAllowed && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
         let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         let currentProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         windowTarget?.BeginFrame()
@@ -498,8 +505,10 @@ public partial class Window {
           profiler.Record(FrameProfileStage.Render, renderProfile)
         }
         let submitted = windowTarget?.LastFrameSubmitted == true
-        if submitted {
+        if submitted || windowTarget?.QueueWorkPending == true {
           markFrameRendered()
+        }
+        if submitted {
           rendered = true
           native.MarkFrame(float64(Stopwatch.GetTimestamp()))
         } else {
@@ -606,6 +615,7 @@ public partial class Window {
 
   /// Opens the window and processes frames until all open Goo windows close.
   public func Run() {
+    if embeddedHost != nil { throw InvalidOperationException("Embedded windows use the host frame loop") }
     requireOpenThread("Window.Run")
     Open()
     try {
@@ -637,12 +647,14 @@ public partial class Window {
     firstError = captureCleanupError(firstError, () -> stopPosts())
     firstError = captureCleanupError(firstError, () -> input.Reset(node, resolver))
     firstError = captureCleanupError(firstError, () -> input.Dispose())
+    firstError = captureCleanupError(firstError, () -> RefreshPlatformInput())
 
     let target = windowTarget
     let native = host
     profiler.Sink = nil
     windowTarget = nil
     host = nil
+    embeddedHost = nil
     schedulerLastTicks = 0.0
     schedulerSimulationBank = 0.0
     framebufferWidth = 0
@@ -709,6 +721,10 @@ public partial class Window {
     resolver.ShaderEffectInvalidated = nil
     cellHook = nil
     hookInstalled = false
+    if ownerThreadRegistered {
+      WindowOwnerThread.Release()
+      ownerThreadRegistered = false
+    }
     if let error = firstError {
       throw error
     }
@@ -742,10 +758,9 @@ public partial class Window {
     newFramebufferWidth int32, newFramebufferHeight int32) bool{
       let framebufferValid = newFramebufferWidth > 0 && newFramebufferHeight > 0
       HandleResize(logicalWidth, logicalHeight, framebufferValid)
-      guard let target = windowTarget else {
-        return false
-      }
-      if !target.Resize(newFramebufferWidth, newFramebufferHeight) {
+      if let target = windowTarget {
+        if !target.Resize(newFramebufferWidth, newFramebufferHeight) { return false }
+      } else if embeddedHost == nil {
         return false
       }
       framebufferWidth = newFramebufferWidth

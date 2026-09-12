@@ -19,6 +19,6 @@ Known core failures requiring review:
 4. `PointerRoutingTests.ZIndexOrdersHitsWithinBounds`
 5. `PointerRoutingTests.TransformsMapPointerInput`
 
-The accessibility failure is a behavioral assertion before its allocation-budget assertion, so it is not evidence of an allocation regression. See [checkpoint test logs](evidence/checkpoint-2026-09-05/).
+The accessibility failure is a behavioral assertion before its allocation-budget assertion, so it is not evidence of an allocation regression. See [checkpoint test logs](https://github.com/obselate/goo/tree/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/checkpoint-2026-09-05).
 
 API review policy: Goo is pre-1.0. Breaking changes are allowed when they improve the library. External consumers inform impact assessment but do not constrain Goo's design. Avoid unnecessary breaks.

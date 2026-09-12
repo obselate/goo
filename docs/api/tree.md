@@ -402,7 +402,7 @@ Gets the image fit mode.
 
 ### `Path`
 
-Gets the local image path.
+Legacy path metadata. A nonempty path without Source throws when mounted. Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
 
 ### `Source`
 
@@ -495,6 +495,30 @@ Gets whether this source has released its owner reference.
 ### `Width`
 
 Gets this immutable source's pixel width.
+
+## `ImageSourceCache`
+
+Source:
+
+- [`ImageSourceCache.gs`](../../Goo/Tree/ImageSourceCache.gs)
+
+Loads local PNG assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Paths are snapshots; create a new cache to reload.
+
+### `new(int32,int32)`
+
+Creates a cache bounded by decoded RGBA bytes and unique paths. Limits must be positive; the default budget is 64 MiB and 128 paths.
+
+### `Dispose`
+
+Cancels queued/in-flight loads and releases cached owners. Existing returned sources and mounted leases remain valid. Repeated disposal is harmless.
+
+### `LoadAsync(string)`
+
+Loads a local PNG and returns an owned source for Image.Source. File, decoding, unsupported-format, and capacity errors fault the task.
+
+### `LoadAsync(string,System.Threading.CancellationToken)`
+
+Loads a local PNG with cancellation before reading, during validation, and before publication. Cancellation affects only this caller. Concurrent loads serialize decoding and reuse completed paths; failed loads can be retried.
 
 ## `ImageSourceLease`
 

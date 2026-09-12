@@ -37,7 +37,7 @@ CI now pins LunarG's Ubuntu validation-layer package at API version 1.4.313, ver
 
 The new fragment gate passes on NVIDIA and headless lavapipe, with zero validation errors and complete resource cleanup. Restoring the old Lava shader fails the clip-destination assertion. Restoring the old CRT bundle fails the sampled-alpha assertion.
 
-The [verification summary](evidence/final-release-2026-09-05/verification.json), [file hashes](evidence/final-release-2026-09-05/files.json), and [raw archive](evidence/final-release-2026-09-05/verification.tar.gz) retain the checks and four native glass captures. Expected negative controls and intermediate failed build/lint attempts are distinct from final passing results.
+The [verification summary](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/final-release-2026-09-05/verification.json), [file hashes](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/final-release-2026-09-05/files.json), and [raw archive](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/final-release-2026-09-05/verification.tar.gz) retain the checks and four native glass captures. Expected negative controls and intermediate failed build/lint attempts are distinct from final passing results.
 
 ## Follow-up boundary
 

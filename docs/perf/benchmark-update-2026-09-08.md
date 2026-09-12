@@ -2,9 +2,9 @@
 
 > Historical measurements: the lazy Gallery asset change included here was subsequently reverted at the user’s request. The six retained changes and current validation are listed in [optimization status](optimization-status-2026-09-08.md). These aggregate measurements do not describe the post-rollback tree.
 
-![Updated frame costs and memory](evidence/benchmark-update-2026-09-08/full-cost-breakdown-updated.png)
+![Updated frame costs and memory](https://raw.githubusercontent.com/obselate/goo/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/benchmark-update-2026-09-08/full-cost-breakdown-updated.png)
 
-The original four-panel format is retained. The upper panels show the completed changes. The lower panels compare fresh measurements before and after all seven changes. The [original chart](evidence/benchmark-update-2026-09-08/original-chart.png) is preserved separately.
+The original four-panel format is retained. The upper panels show the completed changes. The lower panels compare fresh measurements before and after all seven changes. The [original chart](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/benchmark-update-2026-09-08/original-chart.png) is preserved separately.
 
 | Active workload | Before host median / p95, ms | After host median / p95, ms | Before UI median / p95, KiB | After UI median / p95, KiB |
 |---|---:|---:|---:|---:|
@@ -27,4 +27,4 @@ The supplemental shader runs show Dither allocating zero UI bytes in all 1,000 u
 - No builds or profilers overlap timing runs. The host timer excludes the 16 ms pacing delay. It ends at submission/presentation handoff and does not measure scanout or input latency. GPU Main includes nested effects.
 - A separate updated visible-image run passes Khronos validation at the correct extent. The initial baseline preflight was height-clamped and is retained as rejected extent evidence, outside the timing matrix.
 
-[CSV numbers](evidence/benchmark-update-2026-09-08/benchmark-numbers.csv), [full results and run variation](evidence/benchmark-update-2026-09-08/chart-results.json), [SVG chart](evidence/benchmark-update-2026-09-08/full-cost-breakdown-updated.svg), and [reproduction instructions](evidence/benchmark-update-2026-09-08/README.md).
+[CSV numbers](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/benchmark-update-2026-09-08/benchmark-numbers.csv), [full results and run variation](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/benchmark-update-2026-09-08/chart-results.json), [SVG chart](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/benchmark-update-2026-09-08/full-cost-breakdown-updated.svg), and [reproduction instructions](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/benchmark-update-2026-09-08/README.md).

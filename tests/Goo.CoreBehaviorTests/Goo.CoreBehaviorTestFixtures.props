@@ -17,5 +17,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Rendering/ShapeGeometryFixtures.gs" Link="ShapeGeometryFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Diagnostics/DiagnosticsFixtures.gs" Link="DiagnosticsFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Rendering/GradientFixtures.gs" Link="GradientFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Rendering/VulkanQueueWorkerFixtures.gs" Link="VulkanQueueWorkerFixtures.gs" />
   </ItemGroup>
 </Project>

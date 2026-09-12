@@ -63,6 +63,11 @@ jobs:
           dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Run local PNG decoder and cache tests
+        run: |
+          dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj \
+            -c Release -p:TreatWarningsAsErrors=true
+
       - name: Run focused runtime SVG tests
         run: |
           dotnet test tests/Goo.Svg.Tests/Goo.Svg.Tests.csproj \
@@ -105,6 +110,14 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             -o artifacts/publish-macos-smoke
 
+      - name: Verify NativeAOT local PNG loading on macOS
+        run: |
+          dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/image-nativeaot
+          artifacts/image-nativeaot/Goo.ImageLoadingSmoke
+
       - name: Stage, sign, and run macOS smoke bundle
         run: |
           .github/scripts/stage-macos-arm64.sh \
@@ -115,6 +128,16 @@ jobs:
             tests/Goo.PackageSmoke/Info.plist
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+
+      - name: Verify NativeAOT UI audio on macOS
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/audio-nativeaot
+          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Fetch pinned Slang compiler
         run: |
@@ -270,6 +293,7 @@ jobs:
               apt-get update
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                 binutils ca-certificates curl file g++-8 gcc-8 libdbus-1-dev \
+                libasound2-dev libpulse-dev \
                 libegl1-mesa-dev libexpat1-dev libffi-dev libfontconfig1-dev \
                 libibus-1.0-dev libwayland-dev libxkbcommon-dev libxml2-dev \
                 ninja-build patch pkg-config python3 python3-pip tar \
@@ -283,8 +307,9 @@ jobs:
                 /src/Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
               cmp /out/text/libgoo-harfbuzz-gpu.so \
                 /src/Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz-gpu.so
-              cmp /out/text/text-native-build.json \
-                /src/Goo/Runtime/Vulkan/linux-x64/text-native-build.json
+              python3 /src/.github/scripts/validate-text-native-rebuild.py \
+                /src/Goo/Runtime/Vulkan/linux-x64/text-native-build.json \
+                /out/text/text-native-build.json
             '
 
       - name: Verify Vulkan software driver and validation layer
@@ -318,6 +343,32 @@ jobs:
           dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
             -c Release -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+
+      - name: Verify NativeAOT local PNG loading
+        run: |
+          dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/image-nativeaot
+          artifacts/image-nativeaot/Goo.ImageLoadingSmoke
+
+      - name: Verify local PNG pixels in Vulkan
+        run: |
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+      - name: Verify shared UI audio without a hardware device
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/audio-nativeaot
+          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Build Goo DevTools app
         run: |
@@ -359,6 +410,21 @@ jobs:
 
           .github/scripts/with-headless-wayland.sh env \
             GOO_QUEUE_WAKE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_EMBEDDED_HOST_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_WINDOW_ACTIVATION_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
@@ -603,7 +669,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: linux-x64
+    needs: [linux-x64, android]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -638,6 +704,12 @@ jobs:
           name: release-candidates
           path: artifacts
 
+      - name: Download Android adapter package
+        uses: actions/download-artifact@v8
+        with:
+          name: android-package
+          path: artifacts/packages
+
       - name: Require NuGet trusted-publishing identity
         env:
           NUGET_USER: ${{ vars.NUGET_USER }}
@@ -652,6 +724,10 @@ jobs:
       - name: Publish Goo developer packages to NuGet.org
         run: |
           dotnet nuget push "artifacts/packages/Goo.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
@@ -691,6 +767,7 @@ jobs:
           assets=(
             "artifacts/packages/Goo.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
+            "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Svg.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.SvgCompiler.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
@@ -711,3 +788,78 @@ jobs:
               --title "Goo $GOO_VERSION" \
               --notes-file CHANGELOG.md
           fi
+
+  android:
+    needs: linux-x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android and native toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
+          dotnet workload install android
+      - name: Download main package for Android consumer validation
+        uses: actions/download-artifact@v8
+        with:
+          name: release-candidates
+          path: artifacts/main-release
+      - name: Rebuild and verify Android native payloads
+        run: |
+          for rid in android-arm64 android-x64; do
+            bash .github/scripts/build-text-native-android.sh "$rid" "Goo/Runtime/Vulkan/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
+            bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
+            diff -qr "Goo/Runtime/Vulkan/$rid" "artifacts/android-rebuild/$rid"
+          done
+      - name: Build shared desktop scene and Android adapter
+        run: |
+          dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+      - name: Pack Android adapter
+        run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-package
+          path: artifacts/android-packages/*.nupkg
+      - name: Verify Release APK and AAB payloads
+        run: |
+          python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+          python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - name: Build clean Android package consumer
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
+        run: |
+          cp artifacts/main-release/packages/Goo.*.nupkg artifacts/android-packages/
+          python3 - <<'PYCONFIG'
+          import shutil
+          from pathlib import Path
+          source = Path('artifacts/android-packages').resolve()
+          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
+          consumer = Path('artifacts/android-consumer')
+          for name in ['Goo.AndroidSmoke', 'Goo.AndroidSmoke.Shared']:
+              shutil.copytree(Path('tests') / name, consumer / name, ignore=shutil.ignore_patterns('bin', 'obj'))
+          font = Path('Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf')
+          (consumer / font).parent.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(Path('tests') / font, consumer / font)
+          PYCONFIG
+          dotnet build artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+          python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-smoke
+          path: |
+            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
+            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
+            Goo/Runtime/Vulkan/android-*/text-native-build.json

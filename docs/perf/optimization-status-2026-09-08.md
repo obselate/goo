@@ -23,7 +23,7 @@ The three affected files exactly match their versions at `2cc6358`. No core rend
 - All three restored source files match `2cc6358` byte for byte. The six approved changes remain intact.
 - Strict lint passes for the changed files. The SDK Release build passes with zero warnings and errors. Whole-Gallery strict lint reports existing documentation warnings in other files.
 - Gallery smoke passes nine showcases, two sizes, four routes, input, paging, 180 shader frames and two window closes with Khronos validation enabled. Vulkan error counters and final live object count are zero.
-- No new benchmark claim is made. [Verification and logs](evidence/gallery-rollback-2026-09-08/verification.json).
+- No new benchmark claim is made. [Verification and logs](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/gallery-rollback-2026-09-08/verification.json).
 
 ## Known baseline limitation
 

@@ -3252,6 +3252,18 @@ func RunProtectedTextSmoke() {
 
 let managedEntryTimestamp = Stopwatch.GetTimestamp()
 Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
+if Environment.GetEnvironmentVariable("GOO_WINDOW_ACTIVATION_SMOKE") == "1" {
+  WindowActivationSmoke.Run()
+  return
+}
+if Environment.GetEnvironmentVariable("GOO_EMBEDDED_HOST_SMOKE") == "1" {
+  EmbeddedHostSmoke.Run()
+  return
+}
+if Environment.GetEnvironmentVariable("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE") == "1" {
+  DiagnosticCaptureFixture.Run()
+  return
+}
 if Environment.GetEnvironmentVariable("GOO_ALL_BLOB_BENCHMARK") == "1" {
   RunAllBlobBenchmark()
   return
@@ -3379,6 +3391,10 @@ if Environment.GetEnvironmentVariable("GOO_TEXT_TRANSPORT_SMOKE") == "1" {
 }
 if Environment.GetEnvironmentVariable("GOO_RETENTION_SMOKE") == "1" {
   RunRetentionSmoke()
+  return
+}
+if Environment.GetEnvironmentVariable("GOO_IMAGE_FILE_SMOKE") == "1" {
+  RunImageFileSmoke()
   return
 }
 if Environment.GetEnvironmentVariable("GOO_IMAGE_STAGING_SMOKE") == "1" {

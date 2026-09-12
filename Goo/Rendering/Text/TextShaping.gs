@@ -684,6 +684,25 @@ internal class TextShaping {
             }
             i++
           }
+          if OperatingSystem.IsAndroid() && result.Count < PrimaryFaceCacheCapacity {
+            let name = "Noto Color Emoji"
+            var seenFamily = false
+            for previous in familiesSeen {
+              if normalizeFamily(previous) == normalizeFamily(name) {
+                seenFamily = true
+                break
+              }
+            }
+            if !seenFamily {
+              let candidate = ResolveCachedPrimary(name, 400, false)
+              if candidate.IsRegistered || normalizeFamily(candidate.Family) == normalizeFamily(name) {
+                result.Add(candidate)
+                familiesSeen.Add(name)
+              } else {
+                candidate.Dispose()
+              }
+            }
+          }
           return result
         } catch (error Exception) {
           for lease in result { lease.Dispose() }

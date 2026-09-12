@@ -85,6 +85,15 @@ public sealed class PublicDocumentationTests
         "M:Goo.DragData.#ctor(System.Object,Goo.DragEffect)",
         "M:Goo.DragSource.#ctor(System.Func{Goo.DragStartEvent,Goo.DragData},System.Action{Goo.DragEndEvent})",
         "M:Goo.DropTarget.#ctor(System.Func{Goo.DragEvent,Goo.DragEffect},System.Action{Goo.DragEvent})",
+        "M:Goo.EmbeddedWindowHost.AttachPresentation",
+        "M:Goo.EmbeddedWindowHost.DetachPresentation",
+        "M:Goo.EmbeddedWindowHost.Dispose",
+        "M:Goo.EmbeddedWindowHost.RenderFrame(System.Double)",
+        "M:Goo.EmbeddedWindowHost.Resize(System.Int32,System.Int32,System.Int32,System.Int32)",
+        "M:Goo.EmbeddedWindowHost.Resume",
+        "M:Goo.EmbeddedWindowHost.ServicePendingSubmission",
+        "M:Goo.EmbeddedWindowHost.SetFocused(System.Boolean)",
+        "M:Goo.EmbeddedWindowHost.Suspend",
         "M:Goo.ElementHandle.#ctor",
         "M:Goo.ElementHandle.Blur",
         "M:Goo.ElementHandle.Focus",
@@ -101,6 +110,10 @@ public sealed class PublicDocumentationTests
         "M:Goo.FontSource.Register",
         "M:Goo.FontVariation.#ctor(System.String,System.Single)",
         "M:Goo.Image.#ctor",
+        "M:Goo.ImageSourceCache.#ctor(System.Int32,System.Int32)",
+        "M:Goo.ImageSourceCache.LoadAsync(System.String)",
+        "M:Goo.ImageSourceCache.LoadAsync(System.String,System.Threading.CancellationToken)",
+        "M:Goo.ImageSourceCache.Dispose",
         "M:Goo.ImageSource.#ctor(System.Int32,System.Int32,System.Byte[])",
         "M:Goo.ImageSource.Acquire",
         "M:Goo.ImageSourceProvider.Acquire",
@@ -126,6 +139,24 @@ public sealed class PublicDocumentationTests
         "M:Goo.PathBuilder.MoveTo(System.Double,System.Double)",
         "M:Goo.PathBuilder.Polyline(Goo.Point[],System.Boolean)",
         "M:Goo.PathBuilder.QuadraticTo(System.Double,System.Double,System.Double,System.Double)",
+        "M:Goo.PlatformInput.CancelComposition",
+        "M:Goo.PlatformInput.ClearFocus",
+        "M:Goo.PlatformInput.CommitText(System.String)",
+        "M:Goo.PlatformInput.DeleteSurroundingText(System.Int32,System.Int32)",
+        "M:Goo.PlatformInput.Execute(Goo.TextCommand)",
+        "M:Goo.PlatformInput.FinishComposition",
+        "M:Goo.PlatformInput.FocusLost",
+        "M:Goo.PlatformInput.KeyPress(Goo.Key,Goo.KeyModifiers)",
+        "M:Goo.PlatformInput.KeyRelease(Goo.Key)",
+        "M:Goo.PlatformInput.MoveFocus(System.Boolean)",
+        "M:Goo.PlatformInput.PointerCancel(System.Int64,Goo.PointerDevice)",
+        "M:Goo.PlatformInput.PointerMove(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.KeyModifiers,System.Single)",
+        "M:Goo.PlatformInput.PointerPress(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
+        "M:Goo.PlatformInput.PointerRelease(System.Int64,Goo.PointerDevice,System.Single,System.Single,Goo.PointerButton,Goo.KeyModifiers,System.Single)",
+        "M:Goo.PlatformInput.PointerWheel(System.Single,System.Single,System.Single,System.Single,Goo.KeyModifiers)",
+        "M:Goo.PlatformInput.SetComposition(System.String,System.Int32,System.Int32)",
+        "M:Goo.PlatformInput.SetCompositionRange(System.Int32,System.Int32)",
+        "M:Goo.PlatformInput.SetSelection(System.Int32,System.Int32)",
         "M:Goo.PointerEvent.Capture",
         "M:Goo.PointerEvent.PreventDefault",
         "M:Goo.PointerEvent.ReleaseCapture",
@@ -156,6 +187,15 @@ public sealed class PublicDocumentationTests
         "M:Goo.MotionVelocity.Add(Goo.MotionVelocity)",
         "M:Goo.MotionVelocity.Components(System.Double[])",
         "M:Goo.MotionVelocity.Uniform(System.Double)",
+        "M:Goo.SoundPlayback.Dispose",
+        "M:Goo.SoundPlayback.Stop",
+        "M:Goo.SoundPlayer.Dispose",
+        "M:Goo.SoundPlayer.TryPlay(Goo.SoundSource,System.Single)",
+        "M:Goo.SoundPlayer.StopAll",
+        "M:Goo.SoundPlayer.TryOpen",
+        "M:Goo.SoundSource.#ctor(System.Int32,System.Int32,System.Single[])",
+        "M:Goo.SoundSource.FromWav(System.Byte[])",
+        "M:Goo.SoundSource.LoadWav(System.IO.Stream)",
         "M:Goo.Style.#ctor",
         "M:Goo.Text.#ctor",
         "M:Goo.Text.#ctor(System.String)",
@@ -208,6 +248,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.Tokens.Get``1",
         "M:Goo.Tokens.Scope``2(``0,System.Func{``1})",
         "M:Goo.Window.#ctor",
+        "M:Goo.Window.Attach(Goo.EmbeddedWindowHost)",
         "M:Goo.Window.ConfigureApplication(System.String,System.String,System.String)",
         "M:Goo.Window.DragRegion(Goo.Container)",
         "M:Goo.Window.GetClipboardText",
@@ -215,10 +256,31 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.Post(System.Action)",
         "M:Goo.Window.Open",
         "M:Goo.Window.Pump(System.Double)",
+        "M:Goo.Window.RequestActivation",
         "M:Goo.Window.RequestClose",
         "M:Goo.Window.Run",
         "M:Goo.Window.SetClipboardText(System.String)",
         "M:Goo.Window.TryPost(System.Action)",
+    };
+
+    private static readonly string[] ExpectedProtectedMethodIds =
+    {
+        "M:Goo.EmbeddedWindowHost.AllowInheritedCompositeAlpha",
+        "M:Goo.EmbeddedWindowHost.CreateVulkanSurface(System.IntPtr,System.UInt64@)",
+        "M:Goo.EmbeddedWindowHost.DestroyVulkanSurface(System.IntPtr,System.UInt64)",
+        "M:Goo.EmbeddedWindowHost.GetClipboardText",
+        "M:Goo.EmbeddedWindowHost.GetNativeHandle",
+        "M:Goo.EmbeddedWindowHost.GetVulkanGetInstanceProcAddr",
+        "M:Goo.EmbeddedWindowHost.GetVulkanInstanceExtensions",
+        "M:Goo.EmbeddedWindowHost.LoadVulkanLibrary",
+        "M:Goo.EmbeddedWindowHost.PreferRequestedFramebufferExtent",
+        "M:Goo.EmbeddedWindowHost.RequestFrame",
+        "M:Goo.EmbeddedWindowHost.SetClipboardText(System.String)",
+        "M:Goo.EmbeddedWindowHost.SetCursor(Goo.Cursor)",
+        "M:Goo.EmbeddedWindowHost.SetImeArea(System.Int32,System.Int32,System.Int32,System.Int32,System.Int32)",
+        "M:Goo.EmbeddedWindowHost.StartTextInput",
+        "M:Goo.EmbeddedWindowHost.StopTextInput",
+        "M:Goo.EmbeddedWindowHost.UnloadVulkanLibrary",
     };
 
     private static readonly string[] ExpectedEqualityDocumentationIds =
@@ -245,6 +307,7 @@ public sealed class PublicDocumentationTests
 
     private static readonly HashSet<Type> SynthesizedPrimaryDataTypes =
     [
+        typeof(FocusedEditorSnapshot),
         typeof(TextChange),
         typeof(LayoutTransition),
         typeof(AccessibilityId),
@@ -581,7 +644,7 @@ public sealed class PublicDocumentationTests
                 .Select(property => $"P:{type.FullName}.{property.Name}"));
         var eventIds = types.SelectMany(type => type.GetEvents(PublicDeclared)
             .Select(@event => $"E:{type.FullName}.{@event.Name}"));
-        return ExpectedMethodIds.Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Concat(eventIds)
+        return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Concat(eventIds)
             .Append("P:Goo.Cell`1.Input");
     }
 

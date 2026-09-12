@@ -23,7 +23,7 @@ The correctness phase passed all 309 core tests and all 12 API contract tests. T
 | Failed idle | Failure recovery and cleanup with swapchain maintenance |
 | Failed idle, maintenance disabled | Recovery and cleanup without swapchain maintenance |
 
-[Commands, build/test logs, and runtime hashes](evidence/post-checkpoint-2026-09-05/) preserve the evidence. These runs do not qualify physical Mac hardware.
+[Commands, build/test logs, and runtime hashes](https://github.com/obselate/goo/tree/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/post-checkpoint-2026-09-05) preserve the evidence. These runs do not qualify physical Mac hardware.
 
 ## Small performance candidates
 
@@ -55,7 +55,7 @@ Five fresh-process pairs ran the existing 1,000-Container full-mutation workload
 
 Host-frame P50 and P95 improved in all five pairs. P99 improved in four of five pairs. All 20,000 measured frames had accepted Main GPU samples with zero drops. Every run passed build/mutation counts, frame-slot use, close, and resource-cleanup checks. GPU timestamps are preserved as observations, but this CPU change does not alter GPU work and supports no causal GPU speed claim. This is a Container/full result, not a new all-blob or sparse-update baseline.
 
-[Method, candidate patches, raw results, and final retention decision](evidence/post-checkpoint-2026-09-05/reconcile-benchmark/) preserve the measurement. Final native figures use `native-results/final-current-verified`, built from the current test source. An earlier private-compositor comparison used an archived executable with equivalent Container/full operations but stale shader-smoke tests. Its raw evidence is retained as superseded. The current shader smoke was rebuilt and passed separately. Desktop-compositor calibration and the parser preflight are excluded.
+[Method, candidate patches, raw results, and final retention decision](https://github.com/obselate/goo/tree/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/evidence/post-checkpoint-2026-09-05/reconcile-benchmark) preserve the measurement. Final native figures use `native-results/final-current-verified`, built from the current test source. An earlier private-compositor comparison used an archived executable with equivalent Container/full operations but stale shader-smoke tests. Its raw evidence is retained as superseded. The current shader smoke was rebuilt and passed separately. Desktop-compositor calibration and the parser preflight are excluded.
 
 ## Drag/drop research
 
