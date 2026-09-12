@@ -129,46 +129,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     && left.LogicalId == right.LogicalId
     && left.Version == right.Version
 
-  private func SameLogical(left ResourceId, right ResourceId) bool -> left.Kind == right.Kind && left.LogicalId == right.LogicalId
-
-  private func SameSource(entry VulkanImageResourceEntry, source VulkanResourceSource) bool {
-    let registered = registry.Lookup(entry.Id, generation)
-    if registered.Found {
-      return registered.Source.ProviderId == source.ProviderId
-        && registered.Source.SourceId == source.SourceId
-        && registered.Source.Version == source.Version
-        && registered.Source.Bytes == source.Bytes
-    }
-    let count = CopyLogicalResources()
-    var index int32 = 0
-    while index < count {
-      let logical = logicalRecords[index]
-      if SameSource(logical.Id, entry.Id) {
-        return logical.Source.ProviderId == source.ProviderId
-          && logical.Source.SourceId == source.SourceId
-          && logical.Source.Version == source.Version
-          && logical.Source.Bytes == source.Bytes
-      }
-      index++
-    }
-    return false
-  }
-
-  private func CopyLogicalResources() int32 {
-    let required = registry.Stats.LogicalCount
-    if logicalRecords.Length < required {
-      var capacity = logicalRecords.Length
-      while capacity < required {
-        if capacity > Int32.MaxValue / 2 {
-          capacity = required
-        } else {
-          capacity = capacity * 2
-        }
-      }
-      logicalRecords = [capacity]VulkanLogicalResource
-    }
-    return registry.CopyLogicalResources(logicalRecords)
-  }
+  private func SameSource(entry VulkanImageResourceEntry, source VulkanResourceSource) bool -> entry.ProviderId == source.ProviderId
+    && entry.SourceId == source.SourceId
+    && entry.Id.Version == source.Version
+    && entry.Bytes == source.Bytes
 
   private func RetireFence(entry VulkanImageResourceEntry, fence uint64) uint64 {
     var safeFence = fence

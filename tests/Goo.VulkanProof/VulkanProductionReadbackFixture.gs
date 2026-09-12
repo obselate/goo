@@ -190,6 +190,48 @@ internal partial class VulkanWindowTarget {
   }
 }
 
+internal unsafe partial class VulkanImageResources {
+  internal prop LogicalCapacityForProof int32{ get -> logicalRecords.Length }
+
+  internal func CreateTinyForProof() VulkanImageResources ->
+  VulkanImageResources(device, dispatch, allocator, 1, 1, 96uL, 96uL,
+    16uL, 16uL, 1, nil, generation, objectAccounting)
+
+  internal func CollectAfterDescriptorRetryForProof(
+    id ResourceId,
+    completedFence uint64) int32{
+      let index = FindExactIndex(id)
+      if index < 0 {
+        throw InvalidOperationException("Vulkan image proof resource is unavailable")
+      }
+      let slot = DescriptorSlot(index, VulkanImageSamplerMode.Linear)
+      let descriptor = descriptorSets[slot]
+      if descriptor == 0uL {
+        throw InvalidOperationException("Vulkan image proof descriptor is unavailable")
+      }
+      let before = Stats
+      var rejected bool
+      descriptorSets[slot] = 0uL
+      try {
+        Collect(completedFence)
+      } catch (error InvalidOperationException) {
+        if error.Message != "Vulkan image descriptor capacity reached" {
+          throw error
+        }
+        rejected = true
+      } finally {
+        descriptorSets[slot] = descriptor
+      }
+      let after = Stats
+      var expected = before
+      expected.HighestCompletedFence = after.HighestCompletedFence
+      if !rejected || !expected.Equals(after) {
+        throw InvalidOperationException("Vulkan production descriptor failure changed image state")
+      }
+      return Collect(completedFence)
+    }
+}
+
 internal class VulkanProductionReadbackFixture {
   shared {
     internal func Open(window Window, width uint32, height uint32)

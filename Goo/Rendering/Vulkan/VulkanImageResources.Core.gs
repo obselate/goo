@@ -29,12 +29,12 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let allocator VulkanMemoryAllocator
-  private let registry VulkanResourceRegistry
   private var capacity int32
   private var descriptorCapacity int32
   private let residentByteBudget VkDeviceSize
+  private var logicalStats VulkanResourceRegistryStats
   private var entries []VulkanImageResourceEntry
-  private var logicalRecords []VulkanLogicalResource
+  private var logicalRecords []VulkanImageLogicalRecord
   private var descriptorSets []VkDescriptorSet
   private let poolSizes []VkDescriptorPoolSize
   private var currentReferenceCounts []int32
@@ -77,7 +77,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         RetiringDescriptorCount: CurrentRetiringDescriptorCount(),
         HighestCompletedFence: highestCompletedFence,
         Upload: uploadRing.Stats,
-        Registry: registry.Stats,
+        Registry: logicalStats,
       }
     }
   }
@@ -136,11 +136,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       objectAccounting = nativeObjectAccounting
       capacity = imageCapacity
       residentByteBudget = maximumResidentBytes
+      logicalStats = VulkanResourceRegistryStats{
+        LogicalSourceBudget: maximumLogicalSourceBytes,
+      }
       stagingByteCapacity = stagingInitialBytes
       stagingMaximumByteCapacity = maximumStagingBytes
       stagingGate = Object()
       entries = [imageCapacity]VulkanImageResourceEntry
-      logicalRecords = [logicalResourceCapacity]VulkanLogicalResource
+      logicalRecords = [logicalResourceCapacity]VulkanImageLogicalRecord
       descriptorCapacity = imageCapacity + imageCapacity
       descriptorSets = [descriptorCapacity]VkDescriptorSet
       poolSizes = [1]VkDescriptorPoolSize
@@ -150,10 +153,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       highestCompletedFence = 0uL
       generationLastUseFence = 0uL
       nextTouch = 1uL
-      registry = VulkanResourceRegistry(logicalResourceCapacity, maximumResidentBytes,
-        maximumLogicalSourceBytes)
       uploadRing = VulkanUploadRing(stagingInitialBytes, uploadRangeCapacity, initialGeneration)
-      registry.SetGpuGeneration(initialGeneration)
       flushPrepared = false
       try {
         CreateGeneration()
@@ -161,7 +161,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         DestroyGeneration()
         DestroyStagingBuffer()
         uploadRing.Dispose()
-        registry.Dispose()
         throw error
       }
     }
@@ -192,9 +191,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       throw InvalidOperationException("Vulkan image uploads are still in flight")
     }
     try {
+      ValidateLogicalAttachments()
       DestroyGpuResources()
+      DetachLogicalResources()
       ClearCurrentReferences()
-      registry.SetGpuGeneration(nextGeneration)
       uploadRing.SetGeneration(nextGeneration)
       generation = nextGeneration
       generationLastUseFence = 0uL
@@ -206,7 +206,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       DestroyGeneration()
       DestroyStagingBuffer()
       uploadRing.Dispose()
-      registry.Dispose()
+      ClearLogicalResources()
       disposed = true
       throw error
     }

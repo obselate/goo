@@ -131,7 +131,8 @@ private unsafe func VulkanProductionImageQueueUpload(
 private func VulkanProductionImageCompleteUpload(
   window Window,
   resources VulkanImageResources,
-  generation uint64) {
+  generation uint64,
+  descriptorRetry bool = false) {
     let acceptedBefore = VulkanProductionReadbackFixture.AcceptedSubmissionSerial(window)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.DrainWindowQueue(window, 2000)
@@ -140,7 +141,15 @@ private func VulkanProductionImageCompleteUpload(
       throw InvalidOperationException("Vulkan production image upload submission serial did not advance")
     }
     let completed = AwaitVulkanProductionSubmission(window, accepted)
-    if completed == 0uL || resources.Collect(completed) <= 0 {
+    if completed == 0uL {
+      throw InvalidOperationException("Vulkan production image upload did not complete")
+    }
+    let collected = if descriptorRetry {
+      resources.CollectAfterDescriptorRetryForProof(VulkanImageResourceId(), completed)
+    } else {
+      resources.Collect(completed)
+    }
+    if collected <= 0 {
       throw InvalidOperationException("Vulkan production image upload did not complete")
     }
     let lookup = resources.Lookup(VulkanImageResourceId(), generation)
@@ -244,6 +253,88 @@ private func VulkanProductionImageRegister(
     }
   }
 
+private func VulkanProductionTinyLogical(
+  logicalId uint64,
+  cacheable bool) VulkanLogicalResource{
+    let id = ResourceId{
+      Kind: SceneResourceKind.Image,
+      LogicalId: logicalId,
+      Version: 1uL,
+    }
+    return VulkanLogicalResource{
+      Id: id,
+      Source: VulkanResourceSource{
+        ProviderId: 9921uL,
+        SourceId: logicalId,
+        Version: 1uL,
+        Bytes: 16uL,
+      },
+      Bytes: 16uL,
+      Cacheable: cacheable,
+    }
+  }
+
+private func VulkanProductionImageGrowthAndFailure(
+  resources VulkanImageResources,
+  allocator VulkanMemoryAllocator) {
+    let allocatorBefore = allocator.Counters
+    let tiny = resources.CreateTinyForProof()
+    try {
+      let initialStats = tiny.Stats
+      let initialAllocator = allocator.Counters
+      let invalid = VulkanProductionTinyLogical(9920uL, false)
+      var invalidRejected bool
+      try {
+        var source = invalid.Source
+        source.ProviderId = 0uL
+        tiny.RegisterImage(invalid.Id, 2u, 2u, source, false,
+          VulkanImageSamplerId(), VulkanImageSamplerMode.Nearest)
+      } catch (error ArgumentException) {
+        invalidRejected = true
+      }
+      if !invalidRejected || !initialStats.Equals(tiny.Stats)
+        || !initialAllocator.Equals(allocator.Counters) {
+          throw InvalidOperationException("Vulkan production invalid image registration changed state")
+        }
+
+      let first = VulkanProductionTinyLogical(9922uL, false)
+      let second = VulkanProductionTinyLogical(9923uL, true)
+      let replacement = VulkanProductionTinyLogical(9924uL, true)
+      VulkanProductionImageRegister(tiny, first, VulkanImageSamplerMode.Nearest)
+      VulkanProductionImageRegister(tiny, second, VulkanImageSamplerMode.Nearest)
+      if tiny.Stats.Capacity != 2 || tiny.LogicalCapacityForProof != 2 {
+        throw InvalidOperationException("Vulkan production image capacity did not grow")
+      }
+      if !tiny.Retire(first.Id, tiny.Generation, 0uL) || tiny.Collect(0uL) <= 0 {
+        throw InvalidOperationException("Vulkan production image hole did not retire")
+      }
+      VulkanProductionImageRegister(tiny, replacement, VulkanImageSamplerMode.Nearest)
+      let stats = tiny.Stats
+      let logical = [2]VulkanLogicalResource
+      if tiny.CopyLogicalResources(logical) != 2
+        || stats.Capacity != 2 || tiny.LogicalCapacityForProof != 2
+        || logical[0].Id.LogicalId != replacement.Id.LogicalId
+        || logical[1].Id.LogicalId != second.Id.LogicalId
+        || stats.LiveCount != 2 || stats.ResidentBytes != 32uL
+        || stats.Registry.EntryCount != 2 || stats.Registry.LogicalCount != 2
+        || stats.Registry.ResidentCount != 0 || stats.Registry.RetiringCount != 0
+        || stats.Registry.LogicalBytes != 32uL
+        || stats.Registry.LogicalSourceBytes != 32uL {
+          throw InvalidOperationException("Vulkan production image holes were not reused")
+        }
+    } finally {
+      tiny.Dispose()
+    }
+    let allocatorAfter = allocator.Counters
+    if tiny.Stats.LiveObjectCount != 0uL
+      || allocatorAfter.liveAllocations != allocatorBefore.liveAllocations
+      || allocatorAfter.liveBytes != allocatorBefore.liveBytes
+      || allocatorAfter.retiredAllocations != allocatorBefore.retiredAllocations
+      || allocatorAfter.retiredBytes != allocatorBefore.retiredBytes{
+        throw InvalidOperationException("Vulkan production image growth leaked memory")
+      }
+  }
+
 private unsafe func VulkanProductionImageFirstPass(
   pixels []uint8) VulkanProductionImageProofResult{
     let window = OpenVulkanProductionProofWindow()
@@ -257,6 +348,7 @@ private unsafe func VulkanProductionImageFirstPass(
       if generation == 0uL {
         throw InvalidOperationException("Vulkan production image generation is unavailable")
       }
+      VulkanProductionImageGrowthAndFailure(resources, allocator)
       let logical = VulkanLogicalResource{
         Id: VulkanImageResourceId(),
         Source: VulkanProductionImageSource(),
@@ -299,7 +391,7 @@ private unsafe func VulkanProductionImageFirstPass(
 
       VulkanProductionImageRegister(resources, logical, VulkanImageSamplerMode.Nearest)
       VulkanProductionImageQueueUpload(resources, logical.Id, pixels, generation)
-      VulkanProductionImageCompleteUpload(window, resources, generation)
+      VulkanProductionImageCompleteUpload(window, resources, generation, true)
       capture = VulkanProductionReadbackFixture.Open(window,
         VulkanImageE2EContract.Width, VulkanImageE2EContract.Height)
       let frame = SceneFrame(4)
@@ -511,7 +603,7 @@ internal func RunProductionImageReadback() {
     }
     let proof = VulkanProductionImageFirstPass(retainedPixels)
     VulkanProductionImageRehydrate(proof, retainedPixels)
-    Console.WriteLine("Image E2E: nearestDigest=${proof.NearestDigest} linearDigest=${proof.LinearDigest} plateau=true handles=${proof.PlateauHandles} residentAllocations=${proof.PlateauResidentAllocations} residentBytes=${proof.PlateauResidentBytes} retirement=true handles=${proof.RetainedHandles}->${proof.ReleasedHandles} liveAllocations=${proof.RetainedLiveAllocations}->${proof.ReleasedLiveAllocations} preflight=true handles=${proof.PreflightHandles}->${proof.PreflightReleasedHandles} liveAllocations=${proof.PreflightLiveAllocations}->${proof.PreflightReleasedLiveAllocations} liveBytes=${proof.PreflightLiveBytes}->${proof.PreflightReleasedLiveBytes} rehydration=true allocated=0")
+    Console.WriteLine("Image E2E: nearestDigest=${proof.NearestDigest} linearDigest=${proof.LinearDigest} plateau=true handles=${proof.PlateauHandles} residentAllocations=${proof.PlateauResidentAllocations} residentBytes=${proof.PlateauResidentBytes} retirement=true handles=${proof.RetainedHandles}->${proof.ReleasedHandles} liveAllocations=${proof.RetainedLiveAllocations}->${proof.ReleasedLiveAllocations} preflight=true handles=${proof.PreflightHandles}->${proof.PreflightReleasedHandles} liveAllocations=${proof.PreflightLiveAllocations}->${proof.PreflightReleasedLiveAllocations} liveBytes=${proof.PreflightLiveBytes}->${proof.PreflightReleasedLiveBytes} rehydration=true logicalGrowth=true holeReuse=true registrationFailure=true descriptorRetry=true allocated=0")
   } finally {
     stale?.Dispose()
     replacement?.Dispose()

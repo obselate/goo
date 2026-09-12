@@ -35,7 +35,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             }
             if existing.Id.Version == id.Version {
               EnsureExactMetadata(existing, id, width, height, source, cacheable, samplerId, samplerMode)
-              registry.Register(id, bytes, source, cacheable)
               existing.SamplerMode = samplerMode
               existing.LastTouch = TouchValue()
               entries[existingIndex] = existing
@@ -46,11 +45,10 @@ internal unsafe partial class VulkanImageResources : IDisposable {
           throw InvalidOperationException("Vulkan image version is retiring")
         }
       }
-      let registryStats = registry.Stats
-      if source.Bytes > registry.LogicalSourceBudget {
+      if source.Bytes > logicalStats.LogicalSourceBudget {
         throw InvalidOperationException("Vulkan image logical source hard limit exceeded")
       }
-      if registryStats.LogicalSourceBytes > registry.LogicalSourceBudget - source.Bytes {
+      if logicalStats.LogicalSourceBytes > logicalStats.LogicalSourceBudget - source.Bytes {
         return VulkanImageResourceLookup{ Found: false }
       }
       if bytes > residentByteBudget {
@@ -60,8 +58,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         return VulkanImageResourceLookup{ Found: false }
       }
       let index = if existingIndex >= 0 { existingIndex } else { FindEmptyIndex() }
-      let priorLogical = if existingIndex < 0 { CaptureLogical(id) } else { nil }
-      CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode, priorLogical)
+      CreateImage(index, id, width, height, bytes, source, cacheable, samplerId, samplerMode)
       return Lookup(index, samplerId, samplerMode)
     }
 
@@ -555,7 +552,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       || !entries[index].GpuPublished{
         throw InvalidOperationException("Vulkan image upload is not complete")
       }
-    registry.MarkUsed(id, expectedGeneration, fence)
     var entry = entries[index]
     if fence > entry.LastUseFence {
       entry.LastUseFence = fence
@@ -629,9 +625,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if safeFence > entry.RetireFence {
         if entry.GpuPublished {
           let retiredEntry = RetireDescriptors(entry, safeFence)
-          if !registry.Retire(id, safeFence) {
-            throw InvalidOperationException("Vulkan image registry entry is not resident")
-          }
           entry = retiredEntry
         }
         entry.RetireFence = safeFence
@@ -662,18 +655,12 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       return true
     }
-    let registryLookup = registry.Lookup(id, generation)
-    if !registryLookup.Found {
-      throw InvalidOperationException("Vulkan image registry entry is stale")
-    }
+    let logicalIndex = LogicalIndexForPhysical(index, entry)
     let retiredEntry = RetireDescriptors(entry, safeFence)
     if cancelUpload {
       if !uploadRing.Cancel(entry.Upload) {
         throw InvalidOperationException("Vulkan image upload reservation is stale")
       }
-    }
-    if !registry.Retire(id, safeFence) {
-      throw InvalidOperationException("Vulkan image registry entry is not resident")
     }
     entry = retiredEntry
     if cancelUpload {
@@ -682,6 +669,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     entry.RetireFence = safeFence
     entry.State = VulkanImageResourceState.Retiring
     entries[index] = entry
+    RetireLogical(logicalIndex)
     if entry.RetireFence > generationLastUseFence {
       generationLastUseFence = entry.RetireFence
     }

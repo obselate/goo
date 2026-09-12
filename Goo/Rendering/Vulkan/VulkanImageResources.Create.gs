@@ -168,9 +168,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     source VulkanResourceSource,
     cacheable bool,
     samplerId ResourceId,
-    samplerMode VulkanImageSamplerMode,
-    priorLogical VulkanLogicalResource?) {
+    samplerMode VulkanImageSamplerMode) {
       EnsureDescriptorSlots(index)
+      let logicalIndex = PrepareLogicalRegistration(id, source)
       let creation = VulkanImageFactory.Create2D(
         device,
         dispatch,
@@ -182,69 +182,27 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         | uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
         uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
         VulkanMemoryPolicy.DeviceLocalRequired)
-      let image = creation.Image
-      let view = creation.ImageView
-      let allocation = creation.Allocation
-      var registration VulkanResourceRegistration{}
-      try {
-        EnsureRegistryPublication(bytes)
-        registration = registry.Register(id, bytes, source, cacheable)
-        entries[index] = VulkanImageResourceEntry{
-          Id: id,
-          ProviderId: source.ProviderId,
-          SourceId: source.SourceId,
-          Width: width,
-          Height: height,
-          Bytes: bytes,
-          SamplerId: samplerId,
-          SamplerMode: samplerMode,
-          Cacheable: cacheable,
-          State: VulkanImageResourceState.Resident,
-          GpuPublished: false,
-          Image: image,
-          ImageView: view,
-          Allocation: allocation,
-          NearestDescriptor: VulkanImageDescriptorBinding{},
-          LinearDescriptor: VulkanImageDescriptorBinding{},
-          ImageLayout: VkConstants.VK_IMAGE_LAYOUT_UNDEFINED,
-          UploadedVersion: 0uL,
-          Upload: VulkanUploadReservation{},
-          UploadRecorded: false,
-          UploadSubmitted: false,
-          UploadCommandBuffer: 0uL,
-          UploadFence: 0uL,
-          PendingRetire: false,
-          DropLogicalOnRetire: false,
-          RecordingUseCount: 0,
-          LastUseFence: 0uL,
-          RetireFence: 0uL,
-          LastTouch: TouchValue(),
-        }
-        liveCount++
-        residentBytes += bytes
-      } catch (error Exception) {
-        var rollbackSucceeded = true
-        if registration.Accepted {
-          rollbackSucceeded = RollbackRegistration(id, registration, priorLogical)
-        }
-        if view != 0uL {
-          let destroyView = dispatch.vkDestroyImageView
-          destroyView(device, view, nil)
-          if let accounting = objectAccounting {
-            accounting.Release()
-          }
-        }
-        let destroyImage = dispatch.vkDestroyImage
-        destroyImage(device, image, nil)
-        if let accounting = objectAccounting {
-          accounting.Release()
-        }
-        allocator.Release(allocation)
-        if !rollbackSucceeded {
-          throw InvalidOperationException("Vulkan image registry rollback failed")
-        }
-        throw error
+      let entry = VulkanImageResourceEntry{
+        Id: id,
+        ProviderId: source.ProviderId,
+        SourceId: source.SourceId,
+        Width: width,
+        Height: height,
+        Bytes: bytes,
+        SamplerId: samplerId,
+        SamplerMode: samplerMode,
+        Cacheable: cacheable,
+        State: VulkanImageResourceState.Resident,
+        Image: creation.Image,
+        ImageView: creation.ImageView,
+        Allocation: creation.Allocation,
+        ImageLayout: VkConstants.VK_IMAGE_LAYOUT_UNDEFINED,
+        LastTouch: TouchValue(),
       }
+      CommitLogicalRegistration(logicalIndex, index, id, bytes, source, cacheable)
+      entries[index] = entry
+      liveCount++
+      residentBytes += bytes
     }
 
   private func BindDescriptorSet(

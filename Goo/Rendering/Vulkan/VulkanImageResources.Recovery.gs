@@ -9,7 +9,7 @@ internal unsafe partial class VulkanImageResources {
     try { DestroyGpuResources() } catch (cleanup Exception) { }
     try { DestroyStagingBuffer() } catch (cleanup Exception) { }
     try { uploadRing.Dispose() } catch (cleanup Exception) { }
-    try { registry.Dispose() } catch (cleanup Exception) { }
+    ClearLogicalResources()
     ClearCurrentReferences()
     var index int32 = 0
     while index < entries.Length {

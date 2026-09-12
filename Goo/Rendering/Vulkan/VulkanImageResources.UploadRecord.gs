@@ -285,49 +285,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
   }
 
-  private func EnsureRegistryPublication(bytes VkDeviceSize) {
-    if registry.GpuGeneration != generation {
-      throw InvalidOperationException("Vulkan image registry generation is stale")
-    }
-    if bytes > registry.ByteBudget {
-      throw InvalidOperationException("Vulkan image registry byte budget exceeded")
-    }
-    let registryStats = registry.Stats
-    if registryStats.ResidentBytes > registry.ByteBudget - bytes {
+  private func EnsureLogicalPublication(bytes VkDeviceSize) {
+    if bytes > residentByteBudget || logicalStats.ResidentBytes > residentByteBudget - bytes {
       throw InvalidOperationException("Vulkan image registry byte budget exceeded")
     }
   }
-
-  private func CaptureLogical(id ResourceId) VulkanLogicalResource? {
-    let count = CopyLogicalResources()
-    var index int32 = 0
-    while index < count {
-      let logical = logicalRecords[index]
-      if SameLogical(logical.Id, id) {
-        return logical
-      }
-      index++
-    }
-    return nil
-  }
-
-  private func RollbackRegistration(
-    id ResourceId,
-    registration VulkanResourceRegistration,
-    priorLogical VulkanLogicalResource?) bool{
-      if !registration.Existing {
-        return registry.DropLogical(id)
-      }
-      if priorLogical == nil {
-        return false
-      }
-      if !registry.DropLogical(id) {
-        return false
-      }
-      let prior = priorLogical
-      let restored = registry.Register(prior.Id, prior.Bytes, prior.Source, prior.Cacheable)
-      return restored.Accepted && !restored.Existing
-    }
 
   private func EnsureExactMetadata(
     entry VulkanImageResourceEntry,

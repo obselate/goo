@@ -10,9 +10,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
     let effectiveCompletedFence = highestCompletedFence
     let uploadStats = uploadRing.Stats
-    let registryStats = registry.Stats
-    if uploadStats.ActiveRanges == 0 && registryStats.RetiringCount == 0
-      && liveCount == registryStats.ResidentCount{
+    if uploadStats.ActiveRanges == 0 && logicalStats.RetiringCount == 0
+      && liveCount == logicalStats.ResidentCount{
         return 0
       }
     var completedUploads int32 = 0
@@ -52,24 +51,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             entries[index] = entry
           } else {
             if pendingRetire {
+              let logicalIndex = LogicalIndexForPhysical(index, entry)
               let retiredEntry = RetireDescriptors(entry, entry.RetireFence)
-              let registryLookup = registry.Lookup(entry.Id, generation)
-              if !registryLookup.Found {
-                throw InvalidOperationException("Vulkan image registry entry is stale")
-              }
-              registry.MarkUploaded(entry.Id, generation)
-              if !registry.Retire(entry.Id, entry.RetireFence) {
-                throw InvalidOperationException("Vulkan image registry entry is not resident")
-              }
+              RetireLogical(logicalIndex)
               entry = retiredEntry
             } else if !entry.GpuPublished {
               entry = PublishCompletedImage(index, entry)
             } else {
-              let registryLookup = registry.Lookup(entry.Id, generation)
-              if !registryLookup.Found {
-                throw InvalidOperationException("Vulkan image registry entry is stale")
-              }
-              registry.MarkUploaded(entry.Id, generation)
+              LogicalIndexForPhysical(index, entry)
               entry.UploadedVersion = entry.Id.Version
             }
             entry.UploadCompletedRows = completedRows
@@ -88,18 +77,14 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       index++
     }
     uploadRing.Collect(effectiveCompletedFence)
-    registry.Collect(effectiveCompletedFence)
     var retired int32 = 0
     index = 0
     while index < entries.Length {
       let entry = entries[index]
       if entry.State == VulkanImageResourceState.Retiring && entry.RetireFence <= effectiveCompletedFence {
-        if entry.DropLogicalOnRetire || (!entry.GpuPublished && !entry.Cacheable) {
-          if !registry.DropLogical(entry.Id) {
-            throw InvalidOperationException("Vulkan image logical registry rollback failed")
-          }
-        }
+        let logicalIndex = LogicalIndexForPhysical(index, entry)
         DestroyImage(index, entry)
+        CompleteLogicalRetirement(logicalIndex, entry)
         if let currentDiagnostics = diagnostics {
           currentDiagnostics.AddImageRetirement(1uL)
         }
@@ -117,13 +102,13 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private func PublishCompletedImage(
     index int32,
     entry VulkanImageResourceEntry) VulkanImageResourceEntry{
-      EnsureRegistryPublication(entry.Bytes)
+      let logicalIndex = LogicalIndexForPhysical(index, entry)
+      EnsureLogicalPublication(entry.Bytes)
       let nearestDescriptor = BindDescriptorSet(index, entry.Id, entry.SamplerId,
         entry.ImageView, VulkanImageSamplerMode.Nearest)
       let linearDescriptor = BindDescriptorSet(index, entry.Id, entry.SamplerId,
         entry.ImageView, VulkanImageSamplerMode.Linear)
-      registry.PublishGpu(entry.Id, generation, entry.Image, nearestDescriptor.Slot)
-      registry.MarkUploaded(entry.Id, generation)
+      PublishLogical(logicalIndex)
       var updated = entry
       updated.NearestDescriptor = nearestDescriptor
       updated.LinearDescriptor = linearDescriptor
@@ -135,7 +120,29 @@ internal unsafe partial class VulkanImageResources : IDisposable {
 
   internal func CopyLogicalResources(destination []VulkanLogicalResource) int32 {
     EnsureOpen()
-    return registry.CopyLogicalResources(destination)
+    if destination.Length < logicalStats.LogicalCount {
+      throw ArgumentException("Logical resource destination is too small", "destination")
+    }
+    var output int32 = 0
+    for index in 0 ... logicalRecords.Length {
+      let logical = logicalRecords[index]
+      if logical.Id.IsValid
+        && (logical.PhysicalSlot < 0 || !entries[logical.PhysicalSlot].GpuPublished) {
+          destination[output] = VulkanLogicalResource{
+            Id: logical.Id,
+            Source: VulkanResourceSource{
+              ProviderId: logical.ProviderId,
+              SourceId: logical.SourceId,
+              Version: logical.Id.Version,
+              Bytes: logical.Bytes,
+            },
+            Bytes: logical.Bytes,
+            Cacheable: logical.Cacheable,
+          }
+          output++
+        }
+    }
+    return output
   }
 
   internal func EvictLeastRecentlyUsed() bool {
@@ -333,7 +340,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     DestroyGpuResources()
     DestroyStagingBuffer()
     uploadRing.Dispose()
-    registry.Dispose()
+    ClearLogicalResources()
     ClearCurrentReferences()
     index = 0
     while index < entries.Length {
