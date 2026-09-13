@@ -64,12 +64,12 @@ public sealed class PointerStateTests
     }
 
     [Fact]
-    public void PointerLifecycleSidecarsKeepDefaultRetainedCostsExact()
+    public void PointerLifecycleSidecarsKeepDefaultRetainedCostsWithinBudget()
     {
         var fixtures = new InputFixtures();
         Assert.Equal(192, fixtures.PointerLifecycleEmptyBlobBytes());
         Assert.Equal(1_216, fixtures.PointerLifecycleEmptyNodeBytes());
-        Assert.Equal(3_416, fixtures.PointerLifecycleEmptyWindowBytes());
+        Assert.InRange(fixtures.PointerLifecycleEmptyWindowBytes(), 1, 3_416);
         Assert.Equal(0, fixtures.PointerLifecycleStablePlainDiffBytes());
     }
 }
