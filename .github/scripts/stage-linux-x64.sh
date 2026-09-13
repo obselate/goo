@@ -9,6 +9,7 @@ mapfile -t runtime_files <"$(dirname "${BASH_SOURCE[0]}")/linux-bundle-files.txt
 publish_extras=(
   Goo.PackageSmoke.pdb
   Gsharp.Extensions.pdb
+  Gsharp.Runtime.Channels.pdb
   Gsharp.Extensions.xml
   Vulkan/Runtime/MoltenVK-LICENSE.txt
   VendSans-VariableFont_wght.ttf

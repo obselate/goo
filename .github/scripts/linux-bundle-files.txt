@@ -3,6 +3,7 @@ Goo.PackageSmoke.dll
 Goo.PackageSmoke.runtimeconfig.json
 Goo.dll
 Gsharp.Extensions.dll
+Gsharp.Runtime.Channels.dll
 Hexa.NET.SDL3.dll
 HexaGen.Runtime.dll
 StbImageSharp.dll
