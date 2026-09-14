@@ -1,20 +1,12 @@
 --- a/src/atspi/bus.rs
 +++ b/src/atspi/bus.rs
-@@ -435,7 +435,7 @@
-         let Ok(item) = cache_item_for_node(self.unique_name().inner(), &node) else {
-             return Ok(());
+@@ -437,3 +437,3 @@
          };
 -        self.emit_cache_signal("AddAccessible", &item).await
 +        self.emit_cache_signal("AddAccessible", &(item,)).await
      }
- 
-     pub(crate) async fn emit_cache_remove(
-@@ -450,7 +450,7 @@
-                 node: node_id,
-             },
+@@ -452,3 +452,3 @@
          );
 -        self.emit_cache_signal("RemoveAccessible", &reference).await
 +        self.emit_cache_signal("RemoveAccessible", &(reference,)).await
      }
- 
-     async fn emit_cache_signal<B>(&self, signal_name: &str, body: &B) -> Result<()>
