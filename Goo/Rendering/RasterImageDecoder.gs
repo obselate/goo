@@ -156,6 +156,6 @@ internal partial class RasterImageDecoder {
     }
 
     internal func CrcUpdate(crc uint32, value uint8) uint32 ->
-      (crc >> 8) ^ crcTable[int32((crc ^ uint32(value)) & 255u)]
+    (crc >> 8) ^ crcTable[int32((crc ^ uint32(value)) & 255u)]
   }
 }
