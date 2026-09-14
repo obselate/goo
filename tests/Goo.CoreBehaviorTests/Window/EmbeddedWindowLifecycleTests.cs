@@ -36,6 +36,28 @@ public sealed class EmbeddedWindowLifecycleTests
     }
 
     [Fact]
+    public async System.Threading.Tasks.Task EmbeddedFileDialogsReportUnsupportedAndKeepInputAvailable()
+    {
+        using var host = new Host();
+        var window = new Window();
+        window.Attach(host);
+        var task = window.ShowFileDialogAsync(FileDialogKind.Folder);
+        Assert.True(task.IsCompletedSuccessfully);
+        Assert.Equal(FileDialogStatus.Unsupported, (await task).Status);
+        Assert.False(window.IsInputBlocked);
+        Assert.False(window.CancelFileDialog());
+        Exception? failure = null;
+        var worker = new Thread(() =>
+        {
+            try { window.ShowFileDialogAsync(FileDialogKind.OpenFile); }
+            catch (Exception error) { failure = error; }
+        });
+        worker.Start();
+        worker.Join();
+        Assert.IsType<InvalidOperationException>(failure);
+    }
+
+    [Fact]
     public void EmbeddedClipboardReadsReportUnsupportedAndEnforceThreadAndClose()
     {
         using var host = new Host();

@@ -12,6 +12,7 @@ internal class WindowFamily {
   internal var Registered bool
   internal var Closing bool
   internal var CloseError Exception?
+  internal var Dialog NativeFileDialog?
 }
 
 /// Configures native ownership and modality for secondary desktop windows.
@@ -49,8 +50,8 @@ public partial class Window {
     }
   }
 
-  /// Gets whether an open modal child currently blocks this window's native, platform, focus, and accessibility input.
-  public prop IsInputBlocked bool{ get -> family?.BlockingChild?.IsOpen == true }
+  /// Gets whether a modal child or native chooser blocks this window's native, platform, focus, and accessibility input.
+  public prop IsInputBlocked bool{ get -> family?.BlockingChild?.IsOpen == true || family?.Dialog != nil }
 
   private func validateOwnership() {
     if Modal && Owner == nil { throw InvalidOperationException("A modal window requires an Owner") }

@@ -691,6 +691,7 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    if !closeFileDialog() { return }
     if !closeOwnedWindows() { return }
     if windowTarget?.PrepareClose() == false {
       host?.Wake()

@@ -25,7 +25,7 @@ cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$deployment_target" \
   -DSDL_AUDIO=ON \
   -DSDL_CAMERA=OFF \
-  -DSDL_DIALOG=OFF \
+  -DSDL_DIALOG=ON \
   -DSDL_GPU=OFF \
   -DSDL_HAPTIC=OFF \
   -DSDL_HIDAPI=OFF \

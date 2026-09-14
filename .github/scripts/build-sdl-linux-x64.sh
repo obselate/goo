@@ -47,6 +47,8 @@ tar -xzf "$work/SDL3.tar.gz" -C "$work/src" --strip-components=1
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-window-interactions.patch"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/portal-dialog-lifetime.patch"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
 find "$work/src/wayland-protocols" -type f -name '*.xml' \
@@ -62,7 +64,7 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
   -DSDL_PULSEAUDIO=ON \
   -DSDL_PULSEAUDIO_SHARED=ON \
   -DSDL_CAMERA=OFF \
-  -DSDL_DIALOG=OFF \
+  -DSDL_DIALOG=ON \
   -DSDL_GPU=OFF \
   -DSDL_HAPTIC=OFF \
   -DSDL_HIDAPI=OFF \
@@ -84,6 +86,12 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
 "$cmake" --install "$work/build" --strip
 
 install -D -m 0644 "$(readlink -f "$work/install/lib/libSDL3.so")" "$output"
+for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog; do
+  if ! readelf --dyn-syms --wide "$output" | grep " $symbol@@" >/dev/null; then
+    printf 'libSDL3.so is missing the chooser bridge export: %s\n' "$symbol" >&2
+    exit 1
+  fi
+done
 max_glibc="$(readelf --version-info "$output" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1 | cut -d_ -f2)"
 if [[ "$(printf '%s\n' 2.27 "$max_glibc" | sort -V | tail -1)" != "2.27" ]]; then
   printf 'libSDL3.so requires glibc %s; maximum allowed is 2.27\n' "$max_glibc" >&2

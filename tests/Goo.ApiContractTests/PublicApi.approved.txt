@@ -14,6 +14,8 @@ ctor|Goo.DragSource|public|(create:System.Func`2<Goo.DragStartEvent,Goo.DragData
 ctor|Goo.DropTarget|public|(query:System.Func`2<Goo.DragEvent,Goo.DragEffect>,changed:System.Action`1<Goo.DragEvent>=null)
 ctor|Goo.ElementHandle|public|()
 ctor|Goo.EmbeddedWindowHost|public|()
+ctor|Goo.FileDialogFilter|public|(name:System.String,pattern:System.String)
+ctor|Goo.FileDialogOptions|public|()
 ctor|Goo.FocusedEditorSnapshot|public|(arg0:System.Int64,arg1:System.String,arg2:System.Int32,arg3:System.Int32,arg4:System.Int32,arg5:System.Int32,arg6:System.Boolean,arg7:System.Boolean,arg8:System.Boolean,arg9:Goo.ElementRect)
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[])
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[],faceIndex:System.UInt32,variations:Goo.FontVariation[])
@@ -87,6 +89,8 @@ enum-underlying|Goo.DragEffect|System.Int32
 enum-underlying|Goo.DragEndKind|System.Int32
 enum-underlying|Goo.DragEventKind|System.Int32
 enum-underlying|Goo.Easing|System.Int32
+enum-underlying|Goo.FileDialogKind|System.Int32
+enum-underlying|Goo.FileDialogStatus|System.Int32
 enum-underlying|Goo.FillRule|System.Int32
 enum-underlying|Goo.FlexDirection|System.Int32
 enum-underlying|Goo.FlexWrap|System.Int32
@@ -252,6 +256,14 @@ enum|Goo.Easing|EaseInOut|3
 enum|Goo.Easing|EaseIn|1
 enum|Goo.Easing|EaseOut|2
 enum|Goo.Easing|Linear|0
+enum|Goo.FileDialogKind|Folder|2
+enum|Goo.FileDialogKind|OpenFile|0
+enum|Goo.FileDialogKind|SaveFile|1
+enum|Goo.FileDialogStatus|Cancelled|1
+enum|Goo.FileDialogStatus|Failed|4
+enum|Goo.FileDialogStatus|Success|0
+enum|Goo.FileDialogStatus|TooLarge|3
+enum|Goo.FileDialogStatus|Unsupported|2
 enum|Goo.FillRule|EvenOdd|1
 enum|Goo.FillRule|NonZero|0
 enum|Goo.FlexDirection|ColumnReverse|1
@@ -898,6 +910,7 @@ method|Goo.WindowMetrics|ToString|instance|public|generic:|()->System.String
 method|Goo.WindowMetrics|op_Equality|static|public|generic:|(arg0:Goo.WindowMetrics,arg1:Goo.WindowMetrics)->System.Boolean
 method|Goo.WindowMetrics|op_Inequality|static|public|generic:|(arg0:Goo.WindowMetrics,arg1:Goo.WindowMetrics)->System.Boolean
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
+method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|GetClipboardFormats|instance|public|generic:|()->Goo.ClipboardFormats
@@ -912,6 +925,7 @@ method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowActiv
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
+method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
@@ -1126,6 +1140,16 @@ property|Goo.EmbeddedWindowHost|IsPresentationAttached|System.Boolean|instance|g
 property|Goo.EmbeddedWindowHost|IsSuspended|System.Boolean|instance|get:public|index:()
 property|Goo.EmbeddedWindowHost|NextFrameDelaySeconds|System.Double|instance|get:public|index:()
 property|Goo.EmbeddedWindowHost|Window|Goo.Window|instance|get:public|index:()
+property|Goo.FileDialogFilter|Name|System.String|instance|get:public|index:()
+property|Goo.FileDialogFilter|Pattern|System.String|instance|get:public|index:()
+property|Goo.FileDialogOptions|Filters|System.Collections.Generic.IReadOnlyList`1<Goo.FileDialogFilter>|instance|get:public,init:public|index:()
+property|Goo.FileDialogOptions|InitialPath|System.String|instance|get:public,init:public|index:()
+property|Goo.FileDialogOptions|Multiple|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.FileDialogOptions|Title|System.String|instance|get:public,init:public|index:()
+property|Goo.FileDialogResult|Error|System.String|instance|get:public|index:()
+property|Goo.FileDialogResult|FilterIndex|System.Int32|instance|get:public|index:()
+property|Goo.FileDialogResult|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
+property|Goo.FileDialogResult|Status|Goo.FileDialogStatus|instance|get:public|index:()
 property|Goo.FocusedEditorSnapshot|CaretArea|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|CompositionEnd|System.Int32|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|CompositionStart|System.Int32|instance|get:public,init:public|index:()
@@ -1531,6 +1555,11 @@ type|Goo.ElementHandle|sealed-class|public|base:System.Object|interfaces:|generi
 type|Goo.ElementMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.ElementRect|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.EmbeddedWindowHost|abstract-class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.FileDialogFilter|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.FileDialogKind|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.FileDialogOptions|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.FileDialogResult|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.FileDialogStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FillRule|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FlexDirection|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FlexWrap|enum|public|base:System.Enum|interfaces:|generic:

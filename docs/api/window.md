@@ -357,3 +357,41 @@ File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_H
 Image reads prefer PNG, JPEG, GIF, BMP, then macOS TIFF. PNG/JPEG/GIF bytes keep their declared MIME type; a successful transfer does not validate their encoding. Windows DIB/BMP and macOS TIFF are converted to PNG. Every encoded result is limited to 64 MiB. Native bitmap conversion checks dimensions before raster decode, allowing at most 8192 pixels per dimension and 64 MiB of RGBA pixels. These are payload and raster limits, not peak temporary-memory limits. Encoded bytes can be saved directly or passed to an application image-loading workflow.
 
 Linux relies on the active SDL clipboard backend. Windows uses native file-list and DIB access; macOS uses pasteboard items and ImageIO for TIFF conversion. Backend failures are reported explicitly; native Windows/macOS execution requires validation on those systems.
+
+## Native file dialogs
+
+`window.ShowFileDialogAsync(FileDialogKind.OpenFile, options)` opens an owner-modal
+native chooser and returns `Task[FileDialogResult]`. `SaveFile` suggests a filename
+when `InitialPath` includes one; `Folder` selects directories. `FileDialogOptions`
+also accepts a `Title`, `Multiple` for open/folder selection, and `Filters` such as
+`FileDialogFilter("Images", "png;jpg")` or `FileDialogFilter("All files", "*")`.
+Filters contain extensions, without `*.`. Options are copied at launch. The selected
+filter index is `-1` when the backend does not report it.
+
+Call the service on the open owner's UI thread and continue pumping its windows.
+The chooser blocks only its owner's Goo input and accessibility actions; independent
+windows continue rendering and accepting input. Completion releases modal ownership
+and restores the owner's previous focus on the UI thread. Task continuations follow
+normal .NET synchronization-context rules. A second chooser or an already-modal
+owner is rejected. An accepted owner close cancels the task, requests native dismissal,
+and retains the native owner until its callback finishes. `CancelFileDialog()` does
+the same cancellation without closing the owner. No selected file is opened or
+written by Goo; applications perform their own import/export after success.
+
+`FileDialogResult.Status` distinguishes `Success`, `Cancelled`, `Unsupported`,
+`TooLarge`, and `Failed`. Successful paths are immutable, fully qualified owned
+strings that remain valid after owner close. Requests allow at most 64 filters, a
+256-character title/filter label, a 1,024-character filter pattern, and a
+32,768-character initial path. Results allow at most 4,096 paths, 32,768 UTF-16 code
+units per path, and 1 MiB of total path code units. Invalid options throw before any
+native work; native and result-limit errors return an explicit outcome.
+
+Windows uses the SDL native chooser; macOS uses its native panel. Linux uses the
+XDG desktop FileChooser portal through Goo's bundled SDL bridge, preserving the exact
+Wayland/X11 owner and supporting `Request.Close` cancellation. A missing portal or
+an SDL payload without that bridge reports `Unsupported`. Embedded hosts report
+`Unsupported`. Normal native waiting creates no polling timer in Goo; the regular SDL event
+pump delivers completion. Windows cancellation briefly retries dismissal until SDL
+creates and closes its worker-owned chooser. Windows and macOS require runtime verification on their
+respective platforms; the Linux transport has a repeatable two-window fixture in
+`tests/Goo.AsyncReadbackSmoke/verify-file-dialogs.py`.

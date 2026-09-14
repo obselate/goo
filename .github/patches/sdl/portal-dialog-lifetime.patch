@@ -1,0 +1,373 @@
+--- a/src/dialog/unix/SDL_portaldialog.c
++++ b/src/dialog/unix/SDL_portaldialog.c
+@@ -39,7 +39,7 @@
+ #define SIGNAL_SENDER "org.freedesktop.portal.Desktop"
+ #define SIGNAL_INTERFACE "org.freedesktop.portal.Request"
+ #define SIGNAL_NAME "Response"
+-#define SIGNAL_FILTER "type='signal', sender='"SIGNAL_SENDER"', interface='"SIGNAL_INTERFACE"', member='"SIGNAL_NAME"', path='"
++#define SIGNAL_FILTER "type='signal', sender='"SIGNAL_SENDER"', interface='"SIGNAL_INTERFACE"', member='"SIGNAL_NAME"'"
+ 
+ #define HANDLE_LEN 10
+ 
+@@ -50,7 +50,11 @@
+     SDL_DialogFileCallback callback;
+     void *userdata;
+     const char *path;
++    char *match;
++    SDL_Window *owner;
+ } SignalCallback;
++
++#define GOO_DIALOG_PROPERTY "Goo.filedialog.portal"
+ 
+ static void DBus_AppendStringOption(SDL_DBusContext *dbus, DBusMessageIter *options, const char *key, const char *value)
+ {
+@@ -164,34 +168,40 @@
+         dbus->message_has_path(msg, signal_data->path)) {
+         DBusMessageIter signal_iter, result_array, array_entry, value_entry, uri_entry;
+         uint32_t result;
+-        size_t length = 2, current = 0;
++        size_t length = 2, current = 0, total_bytes = 0;
+         const char **path = NULL;
+ 
+         dbus->message_iter_init(msg, &signal_iter);
+         // Check if the parameters are what we expect
+         if (dbus->message_iter_get_arg_type(&signal_iter) != DBUS_TYPE_UINT32) {
+-            goto not_our_signal;
++            SDL_SetError("Malformed portal file chooser response");
++            signal_data->callback(signal_data->userdata, NULL, -1);
++            goto done;
+         }
+         dbus->message_iter_get_basic(&signal_iter, &result);
+ 
+-        if (result == 1 || result == 2) {
++        if (result == 1) {
+             // cancelled
+             const char *result_data[] = { NULL };
+             signal_data->callback(signal_data->userdata, result_data, -1); // TODO: Set this to the last selected filter
+             goto done;
+ 
+         } else if (result) {
+-            // some error occurred
++            SDL_SetError("Portal file chooser failed (response %u)", result);
+             signal_data->callback(signal_data->userdata, NULL, -1);
+             goto done;
+         }
+ 
+         if (!dbus->message_iter_next(&signal_iter)) {
+-            goto not_our_signal;
++            SDL_SetError("Malformed portal file chooser response");
++            signal_data->callback(signal_data->userdata, NULL, -1);
++            goto done;
+         }
+ 
+         if (dbus->message_iter_get_arg_type(&signal_iter) != DBUS_TYPE_ARRAY) {
+-            goto not_our_signal;
++            SDL_SetError("Malformed portal file chooser response");
++            signal_data->callback(signal_data->userdata, NULL, -1);
++            goto done;
+         }
+ 
+         dbus->message_iter_recurse(&signal_iter, &result_array);
+@@ -201,7 +211,9 @@
+ 
+             dbus->message_iter_recurse(&result_array, &array_entry);
+             if (dbus->message_iter_get_arg_type(&array_entry) != DBUS_TYPE_STRING) {
+-                goto not_our_signal;
++                SDL_SetError("Malformed portal file chooser response");
++                signal_data->callback(signal_data->userdata, NULL, -1);
++                goto done;
+             }
+ 
+             dbus->message_iter_get_basic(&array_entry, &method);
+@@ -211,21 +223,30 @@
+             }
+ 
+             if (!dbus->message_iter_next(&result_array)) {
+-                goto not_our_signal;
+-            }
+-        }
+-
+-        if (!dbus->message_iter_next(&array_entry)) {
+-            goto not_our_signal;
++                SDL_SetError("Malformed portal file chooser response");
++                signal_data->callback(signal_data->userdata, NULL, -1);
++                goto done;
++            }
++        }
++
++        if (dbus->message_iter_get_arg_type(&result_array) != DBUS_TYPE_DICT_ENTRY ||
++            !dbus->message_iter_next(&array_entry)) {
++            SDL_SetError("Malformed portal file chooser response");
++            signal_data->callback(signal_data->userdata, NULL, -1);
++            goto done;
+         }
+ 
+         if (dbus->message_iter_get_arg_type(&array_entry) != DBUS_TYPE_VARIANT) {
+-            goto not_our_signal;
++            SDL_SetError("Malformed portal file chooser response");
++            signal_data->callback(signal_data->userdata, NULL, -1);
++            goto done;
+         }
+         dbus->message_iter_recurse(&array_entry, &value_entry);
+ 
+         if (dbus->message_iter_get_arg_type(&value_entry) != DBUS_TYPE_ARRAY) {
+-            goto not_our_signal;
++            SDL_SetError("Malformed portal file chooser response");
++            signal_data->callback(signal_data->userdata, NULL, -1);
++            goto done;
+         }
+         dbus->message_iter_recurse(&value_entry, &uri_entry);
+ 
+@@ -238,6 +259,11 @@
+         while (dbus->message_iter_get_arg_type(&uri_entry) == DBUS_TYPE_STRING) {
+             const char *uri = NULL;
+ 
++            if (current >= 4096) {
++                SDL_SetError("Portal file chooser exceeds 4096 paths");
++                signal_data->callback(signal_data->userdata, NULL, -1);
++                goto done;
++            }
+             if (current >= length - 1) {
+                 ++length;
+                 const char **newpath = SDL_realloc(path, length * sizeof(const char *));
+@@ -252,8 +278,19 @@
+ 
+             // https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html
+             // Returned paths will always start with 'file://'; SDL_URIToLocal() truncates it.
++            total_bytes += SDL_strlen(uri);
++            if (SDL_strlen(uri) > 131072 || total_bytes > 4194304) {
++                SDL_SetError("Portal file chooser exceeds its path text budget");
++                signal_data->callback(signal_data->userdata, NULL, -1);
++                goto done;
++            }
++            if (SDL_strncmp(uri, "file:///", 8) != 0) {
++                SDL_SetError("Portal file chooser returned a nonlocal URI");
++                signal_data->callback(signal_data->userdata, NULL, -1);
++                goto done;
++            }
+             char *decoded_uri = SDL_malloc(SDL_strlen(uri) + 1);
+-            if (SDL_URIToLocal(uri, decoded_uri)) {
++            if (decoded_uri && SDL_URIToLocal(uri, decoded_uri)) {
+                 path[current] = decoded_uri;
+             } else {
+                 SDL_free(decoded_uri);
+@@ -268,6 +305,11 @@
+         path[current] = NULL;
+         signal_data->callback(signal_data->userdata, path, -1); // TODO: Fetch the index of the filter that was used
+ done:
++        if (signal_data->owner) {
++            SDL_ClearProperty(SDL_GetWindowProperties(signal_data->owner), GOO_DIALOG_PROPERTY);
++        }
++        dbus->bus_remove_match(conn, signal_data->match, NULL);
++        SDL_free(signal_data->match);
+         dbus->connection_remove_filter(conn, &DBus_MessageFilter, signal_data);
+ 
+         if (path) {
+@@ -281,12 +323,15 @@
+         return DBUS_HANDLER_RESULT_HANDLED;
+     }
+ 
+-not_our_signal:
+     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+ }
+ 
+ void SDL_Portal_ShowFileDialogWithProperties(SDL_FileDialogType type, SDL_DialogFileCallback callback, void *userdata, SDL_PropertiesID props)
+ {
++    SDL_DBusContext *dbus = SDL_DBus_GetContext();
++    DBusMessage *msg = NULL, *reply = NULL;
++    char *filter = NULL;
++    bool subscribed = false;
+     const char *method;
+     const char *method_title;
+ 
+@@ -349,21 +394,16 @@
+         goto cleanup;
+     }
+ 
+-    SDL_DBusContext *dbus = SDL_DBus_GetContext();
+     DBusError error;
+-    DBusMessage *msg;
+     DBusMessageIter params, options;
+     const char *signal_id = NULL;
+-    char *handle_str, *filter;
+-    int filter_len;
++    char *handle_str;
+     static uint32_t handle_id = 0;
+     static char *default_parent_window = "";
+     SDL_PropertiesID window_props = SDL_GetWindowProperties(window);
+ 
+     const char *err_msg = validate_filters(filters, nfilters);
+ 
+-    dbus->error_init(&error);
+-
+     if (err_msg) {
+         SDL_SetError("%s", err_msg);
+         callback(userdata, NULL, -1);
+@@ -376,6 +416,7 @@
+         goto cleanup;
+     }
+ 
++    dbus->error_init(&error);
+     msg = dbus->message_new_method_call(PORTAL_DESTINATION, PORTAL_PATH, PORTAL_INTERFACE, method);
+     if (msg == NULL) {
+         SDL_SetError("Failed to send message to portal");
+@@ -462,7 +503,25 @@
+     }
+     dbus->message_iter_close_container(&params, &options);
+ 
+-    DBusMessage *reply = dbus->connection_send_with_reply_and_block(dbus->session_conn, msg, DBUS_TIMEOUT_INFINITE, &error);
++    /* Subscribe before opening: a portal may emit Response before its method reply.
++       libdbus queues unrelated messages while waiting for the reply. */
++    filter = SDL_strdup(SIGNAL_FILTER);
++    if (!filter) {
++        callback(userdata, NULL, -1);
++        goto cleanup;
++    }
++    dbus->bus_add_match(dbus->session_conn, filter, &error);
++    if (dbus->error_is_set(&error)) {
++        SDL_SetError("Failed to subscribe to portal chooser: %s", error.message);
++        dbus->error_free(&error);
++        callback(userdata, NULL, -1);
++        goto cleanup;
++    }
++    subscribed = true;
++
++    reply = dbus->connection_send_with_reply_and_block(dbus->session_conn, msg, DBUS_TIMEOUT_INFINITE, &error);
++    dbus->message_unref(msg);
++    msg = NULL;
+     if (dbus->error_is_set(&error)) {
+         SDL_SetError("Failed to open dialog via DBus, %s: %s", error.name, error.message);
+         dbus->error_free(&error);
+@@ -485,31 +544,13 @@
+         goto incorrect_type;
+     }
+ 
+-    dbus->message_unref(msg);
+-
+-    filter_len = SDL_strlen(SIGNAL_FILTER) + SDL_strlen(signal_id) + 2;
+-    filter = SDL_malloc(sizeof(char) * filter_len);
+-    if (!filter) {
+-        callback(userdata, NULL, -1);
+-        goto incorrect_type;
+-    }
+-
+-    SDL_snprintf(filter, filter_len, SIGNAL_FILTER"%s'", signal_id);
+-    dbus->bus_add_match(dbus->session_conn, filter, &error);
+-    SDL_free(filter);
+-
+-    if (dbus->error_is_set(&error)) {
+-        SDL_SetError("Failed to set up DBus listener for dialog, %s: %s", error.name, error.message);
+-        dbus->error_free(&error);
+-        callback(userdata, NULL, -1);
+-        goto cleanup;
+-    }
+-
+     SignalCallback *data = SDL_malloc(sizeof(SignalCallback));
+     if (!data) {
+         callback(userdata, NULL, -1);
+         goto incorrect_type;
+     }
++    data->owner = window;
++    data->match = filter;
+     data->callback = callback;
+     data->userdata = userdata;
+     data->path = SDL_strdup(signal_id);
+@@ -519,17 +560,25 @@
+         goto incorrect_type;
+     }
+ 
+-    /* TODO: This should be registered before opening the portal, or the filter will not catch
+-             the message if it is sent before we register the filter.
+-    */
+-    dbus->connection_add_filter(dbus->session_conn,
+-                                &DBus_MessageFilter, data, NULL);
++    if ((window_props && !SDL_SetPointerProperty(window_props, GOO_DIALOG_PROPERTY, data)) ||
++        !dbus->connection_add_filter(dbus->session_conn, &DBus_MessageFilter, data, NULL)) {
++        SDL_ClearProperty(window_props, GOO_DIALOG_PROPERTY);
++        SDL_free((void *)data->path);
++        SDL_free(data);
++        SDL_SetError("Failed to retain portal file chooser request");
++        callback(userdata, NULL, -1);
++        goto incorrect_type;
++    }
++    filter = NULL; /* The signal callback now owns the subscription. */
++    subscribed = false;
+     dbus->connection_flush(dbus->session_conn);
+ 
+ incorrect_type:
+-    dbus->message_unref(reply);
+-
+ cleanup:
++    if (subscribed) { dbus->bus_remove_match(dbus->session_conn, filter, NULL); }
++    SDL_free(filter);
++    if (msg) { dbus->message_unref(msg); }
++    if (reply) { dbus->message_unref(reply); }
+     SDL_free(location_name);
+     SDL_free(location_folder);
+ }
+@@ -590,6 +639,32 @@
+     return (portal_present > 0);
+ }
+ 
++/* Goo extension: only call on the SDL event thread with a live owner. */
++__attribute__((visibility("default"))) void SDLCALL Goo_CancelFileDialog(SDL_Window *window)
++{
++    SDL_DBusContext *dbus = SDL_DBus_GetContext();
++    SDL_PropertiesID props = SDL_GetWindowProperties(window);
++    SignalCallback *data = SDL_GetPointerProperty(props, GOO_DIALOG_PROPERTY, NULL);
++    if (!data || !dbus) {
++        return;
++    }
++    SDL_ClearProperty(props, GOO_DIALOG_PROPERTY);
++    dbus->connection_remove_filter(dbus->session_conn, &DBus_MessageFilter, data);
++    dbus->bus_remove_match(dbus->session_conn, data->match, NULL);
++    DBusMessage *message = dbus->message_new_method_call(PORTAL_DESTINATION, data->path,
++                                                       SIGNAL_INTERFACE, "Close");
++    if (message) {
++        dbus->connection_send(dbus->session_conn, message, NULL);
++        dbus->message_unref(message);
++        dbus->connection_flush(dbus->session_conn);
++    }
++    const char *empty[] = { NULL };
++    data->callback(data->userdata, empty, -1);
++    SDL_free(data->match);
++    SDL_free((void *)data->path);
++    SDL_free(data);
++}
++
+ #else
+ 
+ // Dummy implementation to avoid compilation problems
+@@ -605,4 +680,21 @@
+     return false;
+ }
+ 
++__attribute__((visibility("default"))) void SDLCALL Goo_CancelFileDialog(SDL_Window *window)
++{
++    (void)window;
++}
++
+ #endif // SDL_USE_LIBDBUS
++
++/* Goo always uses an owner-aware, cancellable portal on Linux. */
++__attribute__((visibility("default"))) void SDLCALL Goo_ShowPortalFileDialog(SDL_FileDialogType type,
++    SDL_DialogFileCallback callback, void *userdata, SDL_PropertiesID props)
++{
++    if (!SDL_Portal_detect()) {
++        SDL_Unsupported();
++        callback(userdata, NULL, -1);
++        return;
++    }
++    SDL_Portal_ShowFileDialogWithProperties(type, callback, userdata, props);
++}
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1271,6 +1271,8 @@
+     SDL_LoadSurface_IO;
+     SDL_LoadSurface;
+     SDL_SetWindowFillDocument;
++    Goo_ShowPortalFileDialog;
++    Goo_CancelFileDialog;
+     # extra symbols go here (don't modify this line)
+   local: *;
+ };
