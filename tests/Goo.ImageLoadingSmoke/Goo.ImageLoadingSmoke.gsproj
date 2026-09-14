@@ -8,5 +8,7 @@
     <ProjectReference Include="../../Goo/Goo.gsproj" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="Assets/local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="Assets/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

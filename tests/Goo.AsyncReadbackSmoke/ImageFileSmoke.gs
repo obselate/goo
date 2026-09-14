@@ -5,13 +5,23 @@ import System.IO
 import Goo
 
 class ImageFileCell : Cell {
-  private let source ImageSource
+  private var source ImageSource
+  private var visible bool = true
 
   init(image ImageSource) { source = image }
 
-  override func Build() Blob -> Container {
-    Width: 96, Height: 96, BackgroundColor: Color.Rgb(0, 0, 0),
-    Children: { Image{ Source: source, Width: 96, Height: 96, Fit: ImageFit.Fill } },
+  func Hide() { visible = false
+    Rebuild() }
+  func Remount(image ImageSource) { source = image
+    visible = true
+    Rebuild() }
+
+  override func Build() Blob {
+    var child Blob = Container{}
+    if visible { child = Image{ Source: source, Width: 96, Height: 96, Fit: ImageFit.Fill } }
+    return Container{
+      Width: 96, Height: 96, BackgroundColor: Color.Rgb(0, 0, 0), Children: {child},
+    }
   }
 }
 
@@ -56,4 +66,61 @@ func RunImageFileSmoke() {
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Console.WriteLine("image-file-smoke: png_pixels=4 alpha=verified cache_disposed=1 source_disposed=1 close=1")
+  for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg", "local-transparent.gif", "local-animated.gif"} {
+    RunOtherImageFile(name)
+  }
+}
+
+func RunOtherImageFile(name string) {
+  using let cache = ImageSourceCache()
+  let path = Path.Combine(AppContext.BaseDirectory, name)
+  using let first = cache.LoadAsync(path).GetAwaiter().GetResult()
+  using let second = cache.LoadAsync(path).GetAwaiter().GetResult()
+  let root = ImageFileCell(first)
+  let window = Window{Title: "Goo " + name, Width: 96, Height: 96, VSync: false, Root: root}
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  try {
+    Console.SetError(capturedError)
+    window.Open()
+    ImageStagingSettle(window)
+    first.Dispose()
+    cache.Dispose()
+    ImageStagingSettle(window)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    let mounted = PrimitiveReadback(window, metrics)
+    RequireOtherImagePixels(mounted, metrics, name)
+    root.Hide()
+    ImageStagingSettle(window)
+    root.Remount(second)
+    ImageStagingSettle(window)
+    second.Dispose()
+    let remounted = PrimitiveReadback(window, metrics)
+    RequireOtherImagePixels(remounted, metrics, name)
+    if let capturePath = Environment.GetEnvironmentVariable("GOO_IMAGE_FILE_CAPTURE") {
+      if capturePath.Length > 0 { VectorQualityWriteImage(remounted, capturePath + "-" + name + ".png") }
+    }
+    window.RequestClose()
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    Require(!window.IsOpen && WindowReadbackTestFixture.ResidentResourceBytes(window) == 0uL,
+      "Image resources remained after close: " + name)
+  } finally {
+    Console.SetError(originalError)
+    if window.IsOpen { window.RequestClose()
+      WindowReadbackTestFixture.ForceRender(window, 0.0) }
+  }
+  ReadbackValidateCommonDiagnostics(capturedError.ToString())
+  Console.WriteLine("image-file-smoke: " + name + " pixels=verified disposed_mount=verified remount=verified close=verified")
+}
+
+func RequireOtherImagePixels(frame VulkanReadbackResult, metrics WindowMetrics, name string) {
+  if name.EndsWith(".gif") {
+    PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 48.0, 72.0,
+      uint8(30), uint8(190), uint8(90), 3, name + "_first_frame")
+    PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 8.0, 8.0,
+      uint8(0), uint8(0), uint8(0), 3, name + "_transparency")
+  } else {
+    PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 48.0, 48.0,
+      uint8(220), uint8(60), uint8(30), 6, name + "_rgb")
+  }
 }

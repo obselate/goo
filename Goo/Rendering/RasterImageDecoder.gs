@@ -6,7 +6,7 @@ import System.IO.Compression
 import System.Threading
 import StbImageSharp
 
-internal class PngImageDecoder {
+internal partial class RasterImageDecoder {
   shared {
     private const MaxEncodedBytes int32 = 16777216
     private const MaxDecodedBytes int32 = 67108864
@@ -26,13 +26,15 @@ internal class PngImageDecoder {
         encoded.Write(buffer, 0, count)
       }
       let bytes = encoded.ToArray()
-      Validate(bytes, token)
+      ValidateFormat(bytes, token)
       token.ThrowIfCancellationRequested()
       guard let image = StbImageSharp.ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha) else {
-        throw InvalidDataException("PNG decoder returned no image")
+        throw InvalidDataException("Image decoder returned no image")
       }
       token.ThrowIfCancellationRequested()
-      guard let pixels = image.Data else { throw InvalidDataException("PNG decoder returned no pixels") }
+      guard let pixels = image.Data else { throw InvalidDataException("Image decoder returned no pixels") }
+      ValidateDimensions(image.Width, image.Height)
+      if pixels.Length != image.Width * image.Height * 4 { throw InvalidDataException("Image decoder returned an invalid raster") }
       var offset = 0
       while offset < pixels.Length {
         let alpha = int32(pixels[offset + 3])
@@ -46,7 +48,7 @@ internal class PngImageDecoder {
 
     // Preflight the complete bounded zlib stream before stb can expand it. Header
     // dimensions alone do not bound a decoder's intermediate decompression buffer.
-    private func Validate(bytes []uint8, token CancellationToken) {
+    private func ValidatePng(bytes []uint8, token CancellationToken) {
       if bytes.Length < 8 { throw InvalidDataException("Truncated image header") }
       for i in 0 ... 8 {
         if bytes[i] != signature[i] { throw NotSupportedException("Only PNG images are supported; use ImageSource for other formats") }

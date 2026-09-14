@@ -14,6 +14,79 @@ public sealed class ImageSourceCacheTests : IDisposable
     public ImageSourceCacheTests() => Directory.CreateDirectory(directory);
     public void Dispose() => Directory.Delete(directory, true);
 
+    [Theory]
+    [InlineData("local-rgb.jpg")]
+    [InlineData("local-progressive.jpg")]
+    [InlineData("local-cmyk.jpg")]
+    [InlineData("local-transparent.gif")]
+    [InlineData("local-animated.gif")]
+    public async Task JpegAndFirstGifFrameHaveOwnedBoundedPixels(string name)
+    {
+        using var cache = new ImageSourceCache();
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", name);
+        using var source = await cache.LoadAsync(path);
+        using var second = await cache.LoadAsync(path);
+        Assert.Equal(3, source.Width);
+        Assert.Equal(2, source.Height);
+        using var lease = second.Acquire();
+        var decoded = lease.Result()!;
+        source.Dispose();
+        cache.Dispose();
+        Assert.True(decoded.IsValid);
+        var pixels = Assert.IsType<byte[]>(decoded.Pixels());
+        Assert.Equal(24, pixels.Length);
+        if (name.EndsWith(".gif", StringComparison.Ordinal))
+        {
+            Assert.Equal(new byte[] { 0, 0, 0, 0 }, pixels.Take(4));
+            Assert.Equal(new byte[] { 30, 190, 90, 255 }, pixels.Skip(4).Take(4));
+        }
+        else
+        {
+            Assert.InRange(pixels[0], 215, 225);
+            Assert.InRange(pixels[1], 55, 65);
+            Assert.InRange(pixels[2], 25, 35);
+            Assert.Equal(255, pixels[3]);
+        }
+        second.Dispose();
+        Assert.True(decoded.IsValid);
+        lease.Dispose();
+        Assert.False(decoded.IsValid);
+    }
+
+    [Theory]
+    [InlineData("local-rgb.jpg")]
+    [InlineData("local-transparent.gif")]
+    public async Task JpegAndGifRejectTruncationAndOversizedHeadersBeforeDecoding(string name)
+    {
+        var bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", name));
+        using var cache = new ImageSourceCache();
+        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("truncated-" + name, bytes[..^2])));
+        if (name.EndsWith(".gif", StringComparison.Ordinal))
+        {
+            bytes[6] = 0xff;
+            bytes[7] = 0x7f;
+        }
+        else
+        {
+            var frame = Enumerable.Range(0, bytes.Length - 1).First(i => bytes[i] == 0xff && bytes[i + 1] == 0xc0);
+            bytes[frame + 7] = 0x7f;
+            bytes[frame + 8] = 0xff;
+        }
+        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("oversized-" + name, bytes)));
+    }
+
+    [Fact]
+    public async Task GifRejectsRasterExpansionBeyondTheFrame()
+    {
+        var bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-transparent.gif"));
+        var image = Array.IndexOf(bytes, (byte)0x2c, 13);
+        Assert.True(image > 0);
+        bytes[image + 5] = 1;
+        bytes[image + 7] = 1;
+        using var cache = new ImageSourceCache();
+        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("overflow.gif", bytes)));
+    }
+
     [Fact]
     public async Task ConcurrentLoadsSharePixelsWithIndependentOwnersAndLeases()
     {

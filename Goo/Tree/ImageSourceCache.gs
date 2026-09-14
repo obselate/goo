@@ -6,7 +6,7 @@ import System.IO
 import System.Threading
 import System.Threading.Tasks
 
-/// Loads local PNG assets outside painting and shares immutable decoded pixels.
+/// Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels.
 /// Each result is an independently disposable owner. Mounted leases survive both
 /// result and cache disposal. Paths are snapshots; create a new cache to reload.
 public class ImageSourceCache : IDisposable {
@@ -32,11 +32,11 @@ public class ImageSourceCache : IDisposable {
       ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
   }
 
-  /// Loads a local PNG and returns an owned source for Image.Source.
+  /// Loads a local PNG, JPEG, or static GIF and returns an owned source for Image.Source.
   /// File, decoding, unsupported-format, and capacity errors fault the task.
   public func LoadAsync(path string) Task[ImageSource] -> LoadAsync(path, CancellationToken.None)
 
-  /// Loads a local PNG with cancellation before reading, during validation, and
+  /// Loads a local PNG, JPEG, or static GIF with cancellation before reading, during validation, and
   /// before publication. Cancellation affects only this caller. Concurrent loads
   /// serialize decoding and reuse completed paths; failed loads can be retried.
   public async func LoadAsync(path string, cancellationToken CancellationToken) ImageSource {
@@ -56,7 +56,7 @@ public class ImageSourceCache : IDisposable {
       if sources.TryGetValue(path, out var existing) { return existing.RetainSource() }
       if sources.Count >= maxEntries { throw InvalidOperationException("Image cache path budget is full") }
     }
-    let decoded = PngImageDecoder.Load(path, token)
+    let decoded = RasterImageDecoder.Load(path, token)
     var accepted = false
     try {
       token.ThrowIfCancellationRequested()

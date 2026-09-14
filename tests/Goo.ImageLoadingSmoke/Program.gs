@@ -22,3 +22,15 @@ cache.Dispose()
 using let retained = second.Acquire()
 if retained.IsFailed { throw InvalidOperationException("Cache disposal invalidated an owned source") }
 Console.WriteLine("image-loading: packaged_png=2x2 cancellation=verified owners=verified leases=verified")
+
+for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg", "local-transparent.gif", "local-animated.gif"} {
+  using let formats = ImageSourceCache()
+  using let image = formats.LoadAsync(Path.Combine(AppContext.BaseDirectory, "Assets", name)).GetAwaiter().GetResult()
+  using let owner = formats.LoadAsync(Path.Combine(AppContext.BaseDirectory, "Assets", name)).GetAwaiter().GetResult()
+  if image.Width != 3 || image.Height != 2 { throw InvalidOperationException("Packaged image dimensions are wrong: " + name) }
+  image.Dispose()
+  formats.Dispose()
+  using let lease = owner.Acquire()
+  if lease.IsFailed { throw InvalidOperationException("Image ownership failed: " + name) }
+}
+Console.WriteLine("image-loading: jpeg_baseline/progressive/cmyk=3x2 gif_transparent/first_frame=3x2 owners=verified")
