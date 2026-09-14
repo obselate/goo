@@ -85,6 +85,8 @@ internal data struct VirtualExtent {
 }
 
 internal open class VirtualStorage {
+  internal open func NeedsContinuation(n Node) bool -> false
+  internal open func OffsetForKey(n Node, key string) Point ? -> nil
   internal open func NeedsRefresh(n Node) bool;
   internal open func PrepareRefresh(n Node) IList[Blob];
   internal open func Extent() VirtualExtent?;
@@ -134,6 +136,17 @@ internal sealed class VirtualStorage[T] : VirtualStorage {
     guard let items = source else { return false }
     let target = window(n, items.Count, itemW, itemH)
     return !hasCurrentWindow || !sameVirtualWindow(currentWindow, target)
+  }
+
+  internal override func OffsetForKey(n Node, key string) Point? {
+    guard let items = source, let selectKey = keySelector else { return nil }
+    for i in 0 ... items.Count {
+      if selectKey(items[i]) == key {
+        let placement = virtualPlacement(window(n, items.Count, itemW, itemH), i)
+        return Point{X: float64(Math.Max(0.0F, placement.X)), Y: float64(Math.Max(0.0F, placement.Y))}
+      }
+    }
+    return nil
   }
 
   internal override func PrepareRefresh(n Node) IList[Blob] {
@@ -319,6 +332,22 @@ internal sealed class VirtualStorage[T] : VirtualStorage {
 internal sealed class VirtualNodeState {
   private var current VirtualStorage?
   private var pending VirtualStorage?
+
+  internal func PrepareRows[T](n Node, items IReadOnlyList[T], estimate float32,
+    itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob]{
+      let storage = (current as VirtualRowsStorage[T]) ?? VirtualRowsStorage[T]()
+      try {
+        let result = storage.Prepare(n, items, estimate, itemKey, itemBuilder)
+        pending = storage
+        return result
+      } catch (error Exception) {
+        storage.Cancel()
+        pending = nil
+        throw error
+      }
+    }
+  internal func NeedsContinuation(n Node) bool -> current?.NeedsContinuation(n) ?? false
+  internal func OffsetForKey(n Node, key string) Point ? -> current?.OffsetForKey(n, key)
 
   internal func Prepare[T](n Node, items IReadOnlyList[T], itemWidth float32,
     itemHeight float32, itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob]{

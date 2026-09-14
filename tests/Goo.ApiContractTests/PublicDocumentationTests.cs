@@ -108,6 +108,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.ElementHandle.Focus",
         "M:Goo.ElementHandle.JumpTo(System.Double,System.Double)",
         "M:Goo.ElementHandle.ScrollIntoView",
+        "M:Goo.ElementHandle.ScrollToItem(System.String)",
         "M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)",
         "M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)",
         "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
@@ -382,6 +383,8 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ElementHandle.Focus"] = new([], [], true),
             ["M:Goo.ElementHandle.JumpTo(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.ElementHandle.ScrollIntoView"] = new([], [], true),
+            ["M:Goo.ElementHandle.ScrollToItem(System.String)"] = new(["key"], [], true),
+            ["M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] = new(["items", "estimatedItemHeight", "itemKey", "itemBuilder"], ["T"], true),
             ["M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)"] = new([], [], true),
             ["M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)"] = new(["required"], [], true),
@@ -669,7 +672,8 @@ public sealed class PublicDocumentationTests
         var eventIds = types.SelectMany(type => type.GetEvents(PublicDeclared)
             .Select(@event => $"E:{type.FullName}.{@event.Name}"));
         return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Concat(eventIds)
-            .Append("P:Goo.Cell`1.Input");
+            .Append("P:Goo.Cell`1.Input")
+            .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})");
     }
 
     private static IEnumerable<Type> ApiTypes()

@@ -564,6 +564,7 @@ event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:publi
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
+function|Goo|VirtualRows|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,estimatedItemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 function|Goo|Virtual|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemWidth:System.Double,itemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32)->Goo.AccessibilityActionRequest
@@ -633,6 +634,7 @@ method|Goo.ElementHandle|Blur|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|Focus|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
 method|Goo.ElementHandle|ScrollIntoView|instance|public|generic:|()->System.Boolean
+method|Goo.ElementHandle|ScrollToItem|instance|public|generic:|(key:System.String)->System.Boolean
 method|Goo.ElementHandle|ScrollTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
 method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.ElementRect)->System.Boolean
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean

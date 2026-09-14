@@ -328,6 +328,14 @@ public partial class Window {
       if profiling {
         profiler.Record(FrameProfileStage.InputTree, inputTreeProfile)
       }
+      let continuationNodes = layout.ScrollNodes(n)
+      for i in 0 ... continuationNodes.Count {
+        let candidate = continuationNodes[i]
+        if Virtualization.State(candidate)?.NeedsContinuation(candidate) == true {
+          enqueueRetainedInvalidation(ReconcileEffects.Layout)
+          break
+        }
+      }
       if ShaderEffectStyles.TreeHasPlaying(n) {
         changed = true
       }

@@ -113,8 +113,11 @@ public class PublicApiTests
         var packageMethods = typeof(Window).Assembly.GetTypes()
             .Where(IsPackageContainer)
             .SelectMany(type => type.GetMethods(PublicDeclared));
-        var virtualMethod = Assert.Single(packageMethods, method => method.Name == "Virtual");
-        records.Add($"function|Goo|Virtual|{Visibility(virtualMethod)}|generic:{DescribeGenericParameters(virtualMethod.GetGenericArguments())}|({DescribeParameters(virtualMethod.GetParameters())})->{TypeIdentity(virtualMethod.ReturnType)}");
+        foreach (var name in new[] { "Virtual", "VirtualRows" })
+        {
+            var method = Assert.Single(packageMethods, method => method.Name == name);
+            records.Add($"function|Goo|{name}|{Visibility(method)}|generic:{DescribeGenericParameters(method.GetGenericArguments())}|({DescribeParameters(method.GetParameters())})->{TypeIdentity(method.ReturnType)}");
+        }
 
         var duplicates = records
             .GroupBy(record => record, StringComparer.Ordinal)

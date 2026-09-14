@@ -95,6 +95,15 @@ public class ElementHandle {
     return owner.JumpElementTo(n, x, y)
   }
 
+  /// Immediately scrolls a virtual collection to a stable item key, using estimates for unmeasured rows.
+  /// @param key The nonempty stable key returned by the virtual collection's itemKey callback.
+  /// @returns False for an unmounted handle, a nonvirtual element, or an unknown key.
+  public func ScrollToItem(key string) bool {
+    if String.IsNullOrEmpty(key) { throw ArgumentException("Virtual item keys must be nonempty", "key") }
+    guard let n = mountedNode(), let owner = window, let state = Virtualization.State(n), let offset = state.OffsetForKey(n, key) else { return false }
+    return owner.JumpElementTo(n, offset.X, offset.Y)
+  }
+
   /// Scrolls each scrollable ancestor enough to reveal this element.
   /// @returns False when the handle is unmounted.
   public func ScrollIntoView() bool {
