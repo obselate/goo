@@ -125,16 +125,17 @@ internal partial class TextInput {
     return false
   }
 
-  internal func AccessibilitySetSelection(target Node, start int32, length int32) bool {
+  internal func AccessibilitySetSelection(target Node, start int32, length int32, caret int32) bool {
     if !canReceiveInput(target) || start < 0 || length < 0 { return false }
     let end = start + length
-    if end < start { return false }
+    if end < start || (caret != start && caret != end) { return false }
+    let anchor = caret == start ? end : start
     if target.Kind == NodeKind.Entry {
       let semanticLength = target.Password
       ? UnicodeGraphemes.Starts(target.Buffer).Length : target.Buffer.Length
       if end > semanticLength { return false }
-      target.Anchor = target.Password ? protectedTextSourceOffset(target.Buffer, start) : start
-      target.Caret = target.Password ? protectedTextSourceOffset(target.Buffer, end) : end
+      target.Anchor = target.Password ? protectedTextSourceOffset(target.Buffer, anchor) : anchor
+      target.Caret = target.Password ? protectedTextSourceOffset(target.Buffer, caret) : caret
       target.AnchorAffinity = TextAffinity.Upstream
       target.CaretAffinity = TextAffinity.Downstream
       target.BlinkT = 0.0
@@ -144,8 +145,8 @@ internal partial class TextInput {
       guard let controller = target.EditorController else { return false }
       if end > controller.Document.Length { return false }
       controller.Selection = TextSelection{
-        Anchor: TextPosition{ Offset: start, Affinity: TextAffinity.Upstream },
-        Active: TextPosition{ Offset: end, Affinity: TextAffinity.Downstream },
+        Anchor: TextPosition{ Offset: anchor, Affinity: TextAffinity.Upstream },
+        Active: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
       }
       return true
     }

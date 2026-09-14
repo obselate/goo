@@ -17,6 +17,10 @@
 !/.github/patches/
 !/.github/patches/**
 /.github/scripts/*
+!/.github/patches/accesskit/
+!/.github/patches/accesskit/**
+!/.github/scripts/build-accesskit-linux-x64.sh
+!/.github/scripts/validate-accessibility-package.py
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/build-text-native-linux-x64.sh
@@ -38,6 +42,8 @@
 
 !/Goo/
 !/Goo/**
+!/Goo.Accessibility/
+!/Goo.Accessibility/**
 !/Goo.Svg/
 !/Goo.Svg/**
 !/Goo.Android/

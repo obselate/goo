@@ -11,6 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Goo.Accessibility\Goo.Accessibility.csproj" />
     <ProjectReference Include="..\..\vendor\Yoga.Net\src\Yoga.Net\Yoga.Net.csproj"
                       AdditionalProperties="Configuration=CoreTestRelease" />
     <ProjectReference Include="..\..\Goo\Goo.gsproj"

@@ -103,6 +103,7 @@ public partial class Window {
       if let native = host {
         native.SetTitle(v)
       }
+      if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { RequestNativeAccessibilityDelivery(adapter) }
     }
   }
 

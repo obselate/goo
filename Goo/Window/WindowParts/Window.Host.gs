@@ -275,6 +275,7 @@ public partial class Window {
       input.Attach(native)
       IsOpen = true
       family?.NativeDrop?.Bind(native)
+      if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.Bind(native) }
       registerOwnership()
       native.Show()
       schedulerLastTicks = float64(Stopwatch.GetTimestamp())
@@ -323,7 +324,10 @@ public partial class Window {
       markDirtyAndRender()
     }
     RefreshPlatformInput()
-    if changed { notifications.RaiseFocusChanged(hasFocus) }
+    if changed {
+      if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.FocusChanged(hasFocus) }
+      notifications.RaiseFocusChanged(hasFocus)
+    }
   }
 
   /// Queues an idempotent close request. This is safe from any thread.
@@ -655,6 +659,7 @@ public partial class Window {
     requireUiThread("Window teardown")
     var firstError Exception?
     firstError = captureCleanupError(firstError, () -> stopPosts())
+    if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { firstError = captureCleanupError(firstError, () -> adapter.Unbind()) }
     if let drop = family?.NativeDrop { firstError = captureCleanupError(firstError, () -> drop.Unbind()) }
     firstError = captureCleanupError(firstError, () -> input.Reset(node, resolver))
     firstError = captureCleanupError(firstError, () -> input.Dispose())

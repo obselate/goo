@@ -272,8 +272,8 @@ internal class InputCoordinator {
   }
 
   internal func AccessibilitySetSelection(resolver Resolver, target Node, start int32,
-    length int32) bool{
-      let result = text.AccessibilitySetSelection(target, start, length)
+    length int32, caret int32) bool{
+      let result = text.AccessibilitySetSelection(target, start, length, caret)
       if result { resolver.Invalidate(target, false) }
       return result
     }

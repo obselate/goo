@@ -3,6 +3,25 @@
 Goo depends on the third-party software identified below. License links are
 pinned to the source revision or release used by Goo.
 
+## Optional AccessKit accessibility runtime
+
+`Goo.Accessibility` redistributes AccessKit C 0.23.0 under MIT OR Apache-2.0.
+The companion includes both license texts and `native-build.json` with source,
+release archive, and per-platform payload checksums. Linux is rebuilt from the
+locked upstream source against Goo's glibc baseline; Windows and macOS use the
+upstream release binaries.
+
+- Copyright 2023 The AccessKit Authors. All rights reserved.
+- [AccessKit C release](https://github.com/AccessKit/accesskit-c/releases/tag/0.23.0)
+- [MIT license](https://github.com/AccessKit/accesskit-c/blob/0.23.0/LICENSE-MIT)
+- [Apache-2.0 license](https://github.com/AccessKit/accesskit-c/blob/0.23.0/LICENSE-APACHE)
+
+
+The Linux payload applies `atspi-cache-signal-arguments.patch`: AT-SPI cache
+notifications carry one struct argument instead of flattening it into separate
+D-Bus arguments. This keeps native client caches consistent on node insertion
+and removal. The native inspector test validates both wire signatures.
+
 ## StbImageSharp PNG decoder
 
 Goo depends on the managed `StbImageSharp` 2.30.16 package. No additional native

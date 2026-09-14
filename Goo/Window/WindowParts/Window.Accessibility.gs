@@ -12,6 +12,13 @@ public partial class Window {
     }
     set(v) {
       requireUiThread("Window.AccessibilityAdapter")
+      if accessibility?.Adapter == v { return }
+      if let next = v as NativeAccessibilityAdapter? {
+        if IsOpen { throw InvalidOperationException("Assign native accessibility before Window.Open") }
+        next.CheckOwner(this)
+      }
+      if let previous = accessibility?.Adapter as NativeAccessibilityAdapter? { previous.Detach() }
+      if let next = v as NativeAccessibilityAdapter? { next.SetOwner(this) }
       if accessibility == nil { accessibility = AccessibilityManager(this) }
       accessibility!!.SetAdapter(v)
       requestRender()
@@ -46,7 +53,7 @@ public partial class Window {
         case AccessibilityAction.Activate: hitActivate(node, target)
         case AccessibilityAction.SetValue: input.AccessibilitySetValue(node, resolver, target, request.Value)
         case AccessibilityAction.SetSelection: input.AccessibilitySetSelection(resolver, target,
-          request.SelectionStart, request.SelectionLength)
+          request.SelectionStart, request.SelectionLength, request.SelectionCaret)
         case AccessibilityAction.Scroll: ScrollElementTo(target, request.ScrollX, request.ScrollY)
         case AccessibilityAction.Increment: false
         case AccessibilityAction.Decrement: false

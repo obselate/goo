@@ -26,7 +26,7 @@ static int dispatch(struct ei *context) {
 }
 int main(int argc, char **argv) {
     const char *socket = getenv("WAYLAND_DISPLAY");
-    if (argc != 2 || !socket || strcmp(socket, "goo-native-drop")) return 2;
+    if (argc != 2 || !socket || (strcmp(socket, "goo-native-drop") && strcmp(socket, "goo-native-accessibility"))) return 2;
     struct ei *context = ei_new_sender(NULL);
     ei_configure_name(context, "Goo isolated native drop test");
     if (ei_setup_backend_fd(context, atoi(argv[1]))) return 3;

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageId>Goo.Accessibility</PackageId>
+    <Version>$(GooReleaseVersion)</Version>
+    <Description>Optional AccessKit native runtimes for Goo.NativeAccessibilityAdapter.</Description>
+    <Authors>Xaz</Authors>
+    <PackageLicenseExpression>MIT OR Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <GooAccessibilityRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</GooAccessibilityRid>
+    <GooAccessibilityRid Condition="'$(GooAccessibilityRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</GooAccessibilityRid>
+  </PropertyGroup>
+  <ItemGroup>
+    <AccessibilityPayload Include="Runtime/linux-x64/libgoo-accesskit-0.23.so" RuntimeIdentifier="linux-x64" />
+    <AccessibilityPayload Include="Runtime/win-x64/goo-accesskit-0.23.dll" RuntimeIdentifier="win-x64" />
+    <AccessibilityPayload Include="Runtime/win-arm64/goo-accesskit-0.23.dll" RuntimeIdentifier="win-arm64" />
+    <AccessibilityPayload Include="Runtime/osx-x64/libgoo-accesskit-0.23.dylib" RuntimeIdentifier="osx-x64" />
+    <AccessibilityPayload Include="Runtime/osx-arm64/libgoo-accesskit-0.23.dylib" RuntimeIdentifier="osx-arm64" />
+    <None Remove="@(AccessibilityPayload)" />
+    <None Include="@(AccessibilityPayload)" Pack="true" PackagePath="runtimes/%(RuntimeIdentifier)/native/%(Filename)%(Extension)">
+      <Link Condition="'%(RuntimeIdentifier)' == '$(GooAccessibilityRid)'">%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory Condition="'%(RuntimeIdentifier)' == '$(GooAccessibilityRid)'">PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory Condition="'%(RuntimeIdentifier)' == '$(GooAccessibilityRid)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <None Update="README.md;LICENSE-MIT;LICENSE-APACHE;native-build.json" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

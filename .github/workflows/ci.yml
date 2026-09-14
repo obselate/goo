@@ -504,6 +504,12 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Pack and validate native accessibility runtimes
+        run: |
+          dotnet pack Goo.Accessibility/Goo.Accessibility.csproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
+
       - name: Pack Goo DevTools and template
         run: |
           dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
@@ -634,6 +640,7 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SvgCompiler.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
@@ -656,6 +663,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
+            artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SvgCompiler.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
@@ -739,6 +747,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Svg.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -768,6 +780,7 @@ jobs:
             "artifacts/packages/Goo.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Svg.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.SvgCompiler.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"

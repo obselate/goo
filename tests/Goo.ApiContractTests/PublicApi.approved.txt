@@ -29,6 +29,7 @@ ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
 ctor|Goo.LinearGradient|public|(angle:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.LinearGradient|public|(params colors:Goo.Color[])
 ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<!0,System.Double[]>,write:System.Func`2<System.Double[],!0>)
+ctor|Goo.NativeAccessibilityAdapter|public|()
 ctor|Goo.PathBuilder|public|()
 ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double)
 ctor|Goo.RadialGradient|public|(centerX:System.Double,centerY:System.Double,radius:System.Double,stops:Goo.GradientStop[])
@@ -574,6 +575,7 @@ function|Goo|VirtualRows|public|generic:T[attrs:0,constraints:]|(items:System.Co
 function|Goo|Virtual|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemWidth:System.Double,itemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32)->Goo.AccessibilityActionRequest
+method|Goo.AccessibilityActionRequest|SetSelection|static|public|generic:|(start:System.Int32,length:System.Int32,caret:System.Int32)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityActionRequest|SetValue|static|public|generic:|(value:System.String)->Goo.AccessibilityActionRequest
 method|Goo.AccessibilityAdapter|Update|abstract|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
 method|Goo.AccessibilityId|Deconstruct|instance|public|generic:|(out Value:System.Int64&)->System.Void
@@ -737,6 +739,8 @@ method|Goo.MotionVelocity|Add|instance|public|generic:|(other:Goo.MotionVelocity
 method|Goo.MotionVelocity|Components|static|public|generic:|(params values:System.Double[])->Goo.MotionVelocity
 method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->Goo.MotionVelocity
 method|Goo.Motion|Tween|static|public|generic:|(duration:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
+method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
+method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
 method|Goo.PanelTransform|Equals|instance|public|generic:|(other:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Equality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Inequality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
@@ -949,6 +953,7 @@ method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->Syste
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollY|System.Double|instance|get:public|index:()
+property|Goo.AccessibilityActionRequest|SelectionCaret|System.Int32|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|SelectionLength|System.Int32|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|SelectionStart|System.Int32|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|Value|System.String|instance|get:public|index:()
@@ -1223,6 +1228,7 @@ property|Goo.LinearGradient|Angle|System.Double|instance|get:public|index:()
 property|Goo.LinearGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|instance|get:public|index:()
 property|Goo.Motion|Default|System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>|static|get:public,set:public|index:()
 property|Goo.Motion|TimeScale|System.Double|static|get:public,set:public|index:()
+property|Goo.NativeAccessibilityAdapter|IsAvailable|System.Boolean|static|get:public|index:()
 property|Goo.NativeFileDrop|IsPreview|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.NativeFileDrop|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
 property|Goo.PanelTransform|Rotate|System.Double|instance|get:public,init:public|index:()
@@ -1617,6 +1623,7 @@ type|Goo.LinearGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gr
 type|Goo.MotionConverter`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.MotionVelocity|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Motion|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.NativeAccessibilityAdapter|class|public|base:System.Object|interfaces:Goo.AccessibilityAdapter,System.IDisposable|generic:
 type|Goo.NativeFileDrop|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Overflow|enum|public|base:System.Enum|interfaces:|generic:

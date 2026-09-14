@@ -34,6 +34,7 @@
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Goo.Accessibility/Goo.Accessibility.csproj" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
                       AdditionalProperties="Configuration=AsyncReadbackTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.AsyncReadbackFixtures.props" />
     <ProjectReference Include="../../Goo.Svg/Goo.Svg.csproj"

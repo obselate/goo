@@ -1,0 +1,23 @@
+{
+  "accesskit_c": "0.23.0",
+  "source_url": "https://github.com/AccessKit/accesskit-c/archive/refs/tags/0.23.0.tar.gz",
+  "source_sha256": "ee989c2b98bdd201ce026237214c98c39b2f6e40182b6df311a193780e63d075",
+  "release_url": "https://github.com/AccessKit/accesskit-c/releases/tag/0.23.0",
+  "release_zip_sha256": "dd2f84f51bea0bcf01270a7505b2b85a7945d40d703b6f479d64963accb4b95d",
+  "linux_build": {
+    "distribution": "Ubuntu 18.04",
+    "rust": "1.98.0",
+    "cargo": "--release --locked",
+    "maximum_glibc": "2.25",
+    "patches": [
+      ".github/patches/accesskit/atspi-cache-signal-arguments.patch"
+    ]
+  },
+  "sha256": {
+    "Runtime/linux-x64/libgoo-accesskit-0.23.so": "5f8e3d4c9be52e98aa3d704ab031cc098986c7b9b5ed8e0307f091ded159c6e4",
+    "Runtime/win-x64/goo-accesskit-0.23.dll": "18f787364b5f27b893461c9a782b28fa85d4e325950435e84d9c9a2fffac9451",
+    "Runtime/win-arm64/goo-accesskit-0.23.dll": "349eede3df4343ab28de36179f6f3868045cbd56f0022470f07ec0656a0b97e2",
+    "Runtime/osx-x64/libgoo-accesskit-0.23.dylib": "e08f334287dfdf4bfcfe7f8c335e256af8c39e50023168f6e613dca062de57ef",
+    "Runtime/osx-arm64/libgoo-accesskit-0.23.dylib": "bc42d8fb87dc369b44e4cecf3c4ebc5e52b831b393bb59277bc959f1f245013a"
+  }
+}

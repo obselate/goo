@@ -240,6 +240,7 @@ public class AccessibilityActionRequest {
   private var value string
   private var selectionStart int32
   private var selectionLength int32
+  private var selectionCaret int32
   private var scrollX float64
   private var scrollY float64
 
@@ -255,6 +256,8 @@ public class AccessibilityActionRequest {
   public prop SelectionLength int32{
     get -> selectionLength
   }
+  /// Gets the active UTF-16 endpoint supplied for SetSelection.
+  public prop SelectionCaret int32{ get -> selectionCaret }
   /// Gets the horizontal logical target supplied for Scroll.
   public prop ScrollX float64{ get -> scrollX }
   /// Gets the vertical logical target supplied for Scroll.
@@ -288,6 +291,18 @@ public class AccessibilityActionRequest {
       request.action = AccessibilityAction.SetSelection
       request.selectionStart = start
       request.selectionLength = length
+      request.selectionCaret = start + length
+      return request
+    }
+
+    /// Creates a selection-change request with an explicit active endpoint.
+    /// @param start The nonnegative UTF-16 start in the exposed semantic value.
+    /// @param length The nonnegative UTF-16 length in the exposed semantic value.
+    /// @param caret The active endpoint, equal to start or start plus length.
+    public func SetSelection(start int32, length int32, caret int32) AccessibilityActionRequest {
+      let request = SetSelection(start, length)
+      if caret != start && caret != start + length { throw ArgumentOutOfRangeException("caret") }
+      request.selectionCaret = caret
       return request
     }
 
@@ -469,6 +484,7 @@ public interface AccessibilityNode {
 }
 
 internal class RetainedAccessibilityNode : AccessibilityNode {
+  internal var Revision int64
   private var id AccessibilityId
   private var role AccessibilityRole
   private var customRole string
@@ -577,6 +593,7 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
         || this.hasPopup != hasPopup || this.live != live || this.atomic != atomic
         || this.focused != focused || !sameAccessibilityRect(this.bounds, bounds) || !sameActionMask(actionMask)
       if !changed { return false }
+      Revision++
       this.role = role
       this.customRole = customRole
       this.name = name
@@ -629,6 +646,7 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
 
   internal func SetChildren(values List[AccessibilityNode]) bool {
     if sameAccessibilityNodes(children, values) { return false }
+    Revision++
     if values.Count == 0 {
       children = nil
       return true
@@ -646,11 +664,14 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
         && flowTo.Length == 0 && errorMessage.Length == 0 && activeDescendant == nil {
           if relationships == nil { return false }
           relationships = nil
+          Revision++
           return true
         }
       if relationships == nil { relationships = RetainedAccessibilityRelationshipIds() }
-      return relationships!!.Apply(labelledBy, describedBy, controls, owns, flowTo, errorMessage,
+      let changed = relationships!!.Apply(labelledBy, describedBy, controls, owns, flowTo, errorMessage,
         activeDescendant)
+      if changed { Revision++ }
+      return changed
     }
 
   internal func RelationshipsMatch(manager AccessibilityManager,

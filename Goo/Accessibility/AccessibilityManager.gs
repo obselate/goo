@@ -53,9 +53,14 @@ internal class AccessibilityManager {
     }
   }
 
+  internal func RequestDelivery() { deliveryPending = adapter != nil
+    retryUsed = false }
+  internal func ReportError(error Exception) { LastError = error }
+
   internal func MarkDirty() {
     if adapter != nil {
       semanticDirty = true
+      if adapter is NativeAccessibilityAdapter { deliveryPending = true }
       retryUsed = false
     }
   }

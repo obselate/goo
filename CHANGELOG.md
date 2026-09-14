@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added the optional Goo.Accessibility native runtime package and NativeAccessibilityAdapter for desktop screen readers, with retained native identities, UI-thread action routing, and reversible selection endpoints.
+
 - Added a Cell factory overload for constructor dependencies and F# object expressions, with stable mounted identity and Goo-owned disposal.
 
 ### Fixed
