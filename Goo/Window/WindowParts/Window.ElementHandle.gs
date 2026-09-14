@@ -42,6 +42,7 @@ public partial class Window {
 
   internal func FocusElement(n Node) bool {
     requireUiThread("ElementHandle.Focus")
+    if IsInputBlocked { return false }
     let result = input.FocusElement(resolver, n)
     if result {
       markDirtyAndRender()

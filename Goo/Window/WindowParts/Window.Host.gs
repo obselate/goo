@@ -235,6 +235,7 @@ public partial class Window {
       return this
     }
     requireOpenThread("Window.Open")
+    validateOwnership()
     ownerThreadId = WindowOwnerThread.Acquire()
     ownerThreadRegistered = true
     uiThreadBound = true
@@ -255,6 +256,7 @@ public partial class Window {
         VSync,
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
       host = native
+      configureOwnership(native)
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(minWidth, minHeight) }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }
       let target = VulkanWindowTarget(native)
@@ -271,8 +273,9 @@ public partial class Window {
       x = native.X
       y = native.Y
       input.Attach(native)
-      native.Show()
       IsOpen = true
+      registerOwnership()
+      native.Show()
       schedulerLastTicks = float64(Stopwatch.GetTimestamp())
       schedulerSimulationBank = 0.0
       Window.RegisterLiveWindow(this)
@@ -455,8 +458,10 @@ public partial class Window {
 
       // Drain returns true only for visually relevant input; bare moves stay quiet.
       let inputProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-      let inputChanged = input.Drain(node, resolver, timeS,
-        notifications.KeyPressedCallbacks, repeatStartTicks)
+      var inputChanged = false
+      if IsInputBlocked { input.Reset(node, resolver) }
+      else { inputChanged = input.Drain(node, resolver, timeS,
+        notifications.KeyPressedCallbacks, repeatStartTicks) }
       if profiling {
         profiler.Record(FrameProfileStage.Input, inputProfile)
       }
@@ -686,12 +691,14 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    if !closeOwnedWindows() { return }
     if windowTarget?.PrepareClose() == false {
       host?.Wake()
       return
     }
     Window.UnregisterLiveWindow(this)
-    var firstError Exception?
+    var firstError = family?.CloseError
+    if let state = family { state.CloseError = nil }
     firstError = captureCleanupError(firstError, () -> stopPosts())
     firstError = captureCleanupError(firstError, () -> stopImageCompletions())
     firstError = captureCleanupError(firstError, () -> stopRetainedInvalidations())
@@ -699,6 +706,7 @@ public partial class Window {
       firstError = captureCleanupError(firstError, () -> session.WindowClosed())
     }
     firstError = captureCleanupError(firstError, () -> teardownNative())
+    firstError = captureCleanupError(firstError, () -> unregisterOwnership())
 
     let tree = node
     node = nil

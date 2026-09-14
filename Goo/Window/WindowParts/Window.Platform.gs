@@ -19,7 +19,7 @@ public partial class Window {
   // Custom chrome hit routing: only undecorated windows own their edges and
   // drag regions; the system chrome handles both otherwise.
   internal func hitTest(x int32, y int32) WindowHitResult {
-    if decorated {
+    if decorated || IsInputBlocked {
       return WindowHitResult.Normal
     }
 

@@ -48,7 +48,7 @@ public class PlatformInput {
   /// Moves a platform pointer in window logical coordinates.
   public func PointerMove(pointerId int64, device PointerDevice, x float32, y float32,
     modifiers KeyModifiers, pressure float32) {
-      requireThread()
+      requireInput()
       input.QueuePointerMove(pointerId, device, x, y, modifiers, pressure)
       drain()
     }
@@ -56,7 +56,7 @@ public class PlatformInput {
   /// Presses a platform pointer in window logical coordinates.
   public func PointerPress(pointerId int64, device PointerDevice, x float32, y float32,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
-      requireThread()
+      requireInput()
       input.QueuePointerPress(pointerId, device, x, y, button, modifiers, pressure)
       drain()
     }
@@ -64,7 +64,7 @@ public class PlatformInput {
   /// Releases a platform pointer in window logical coordinates.
   public func PointerRelease(pointerId int64, device PointerDevice, x float32, y float32,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
-      requireThread()
+      requireInput()
       input.QueuePointerRelease(pointerId, device, x, y, button, modifiers, pressure)
       drain()
     }
@@ -79,14 +79,14 @@ public class PlatformInput {
   /// Dispatches wheel deltas at a window logical position.
   public func PointerWheel(x float32, y float32, deltaX float32, deltaY float32,
     modifiers KeyModifiers) {
-      requireThread()
+      requireInput()
       input.QueuePointerWheel(x, y, deltaX, deltaY, modifiers)
       drain()
     }
 
   /// Dispatches a physical key press through the existing keyboard routing.
   public func KeyPress(key Key, modifiers KeyModifiers) {
-    requireThread()
+    requireInput()
     input.QueueKeyPress(key, modifiers)
     drain()
   }
@@ -114,7 +114,7 @@ public class PlatformInput {
 
   /// Moves focus in the retained focus order, independent of editor indentation.
   public func MoveFocus(forward bool) bool {
-    requireThread()
+    requireInput()
     let result = input.MoveEditorFocus(owner.Tree, resolver, forward)
     finish()
     return result
@@ -122,7 +122,7 @@ public class PlatformInput {
 
   /// Replaces the current selection or preedit with committed text.
   public func CommitText(value string) bool {
-    requireThread()
+    requireInput()
     if value == nil { throw ArgumentNullException("value") }
     let result = input.CommitEditorText(owner.Tree, value)
     finish()
@@ -131,7 +131,7 @@ public class PlatformInput {
 
   /// Updates preedit and its selected UTF-16 segment without committing the value.
   public func SetComposition(value string, selectionStart int32, selectionLength int32) bool {
-    requireThread()
+    requireInput()
     if value == nil { throw ArgumentNullException("value") }
     let result = input.SetEditorComposition(owner.Tree, value, selectionStart, selectionLength)
     finish()
@@ -140,7 +140,7 @@ public class PlatformInput {
 
   /// Marks an existing effective UTF-16 range as composing text.
   public func SetCompositionRange(start int32, end int32) bool {
-    requireThread()
+    requireInput()
     let result = input.SetEditorCompositionRange(owner.Tree, start, end)
     finish()
     return result
@@ -148,7 +148,7 @@ public class PlatformInput {
 
   /// Commits the existing preedit without changing its text.
   public func FinishComposition() bool {
-    requireThread()
+    requireInput()
     let result = input.FinishEditorComposition(owner.Tree)
     finish()
     return result
@@ -165,7 +165,7 @@ public class PlatformInput {
   /// Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters.
   /// Selection direction and composing ranges remain independent.
   public func SetSelection(start int32, end int32) bool {
-    requireThread()
+    requireInput()
     let result = input.SetEditorSelection(owner.Tree, start, end)
     finish()
     return result
@@ -174,7 +174,7 @@ public class PlatformInput {
   /// Deletes UTF-16 lengths outside the union of selection and composition, retaining both.
   /// Deletion expands to whole grapheme clusters without committing preedit.
   public func DeleteSurroundingText(beforeLength int32, afterLength int32) bool {
-    requireThread()
+    requireInput()
     let result = input.DeleteEditorSurroundingText(owner.Tree, beforeLength, afterLength)
     finish()
     return result
@@ -182,7 +182,7 @@ public class PlatformInput {
 
   /// Executes shared semantic navigation, editing, clipboard, or submit behavior.
   public func Execute(command TextCommand) bool {
-    requireThread()
+    requireInput()
     let result = input.ExecuteEditorCommand(owner.Tree, resolver, command)
     finish()
     return result
@@ -199,6 +199,11 @@ public class PlatformInput {
   }
 
   private func requireThread() -> owner.RequireElementHandleThread("Window.PlatformInput")
+
+  private func requireInput() {
+    requireThread()
+    if owner.IsInputBlocked { throw InvalidOperationException("Window input is blocked by its modal child") }
+  }
 
   private func drain() {
     input.Drain(owner.Tree, resolver, float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency),

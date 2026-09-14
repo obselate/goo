@@ -36,6 +36,21 @@ public sealed class EmbeddedWindowLifecycleTests
     }
 
     [Fact]
+    public void EmbeddedViewportsRejectNativeOwnershipAndCannotOwnNativeChildren()
+    {
+        using var host = new Host();
+        var window = new Window { Owner = new Window() };
+        Assert.Throws<NotSupportedException>(() => window.Attach(host));
+        Assert.False(window.IsOpen);
+        window.Owner = null;
+        window.Attach(host);
+        var child = new Window { Owner = window };
+        Assert.Throws<NotSupportedException>(() => child.Open());
+        Assert.False(child.IsOpen);
+        Assert.Throws<InvalidOperationException>(() => window.Modal = true);
+    }
+
+    [Fact]
     public void EmbeddedHostsRejectDesktopSizeConstraintsWithoutChangingState()
     {
         using var host = new Host();

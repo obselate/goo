@@ -33,6 +33,7 @@ public partial class Window {
   public func PerformAccessibilityAction(id AccessibilityId, request AccessibilityActionRequest) bool {
     requireUiThread("Window.PerformAccessibilityAction")
     if request == nil { throw ArgumentNullException("request") }
+    if IsInputBlocked { return false }
     guard let manager = accessibility else { return false }
     if !manager.Supports(id, request.Action) { return false }
     guard let target = manager.NodeFor(id) else { return false }

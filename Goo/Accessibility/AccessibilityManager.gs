@@ -122,7 +122,7 @@ internal class AccessibilityManager {
     semanticNodes.Clear()
     let top = rentChildren()
     try {
-      if let treeRoot = root { appendNode(treeRoot, top, false, false, false) }
+      if let treeRoot = root { appendNode(treeRoot, top, false, owner.IsInputBlocked, false) }
       var rootChanged = false
       if top.Count == 0 {
         if syntheticRoot.SetChildren(noChildren) { rebuildingChanged = true }
@@ -132,7 +132,7 @@ internal class AccessibilityManager {
         rootChanged = tree.SetRoot(top[0])
       } else {
         if syntheticRoot.Apply(AccessibilityRole.Generic, "", "", "", "", "", nil,
-          nil, nil, nil, nil, nil, nil, AccessibilityChecked.Unspecified, nil, nil, false,
+          nil, nil, nil, nil, nil, nil, AccessibilityChecked.Unspecified, nil, nil, owner.IsInputBlocked,
           nil, nil, nil, nil, nil, AccessibilityOrientation.Unspecified, nil, nil, nil,
           nil, AccessibilityLive.Off, nil, false, ElementRect{}, 0) {
             rebuildingChanged = true

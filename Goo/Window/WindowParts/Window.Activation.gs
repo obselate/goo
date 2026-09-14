@@ -17,6 +17,7 @@ public partial class Window {
   public func RequestActivation() WindowActivationResult {
     requireUiThread("Window.RequestActivation")
     if !IsOpen { return WindowActivationResult.Closed }
+    if let child = family?.BlockingChild { return child.RequestActivation() }
     guard let native = host else { return WindowActivationResult.Closed }
     if native.IsClosing { return WindowActivationResult.Closed }
     return native.RequestActivation()

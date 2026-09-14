@@ -1,5 +1,43 @@
 # Window API
 
+## Native owned and modal windows
+
+Set `Owner` and optional `Modal: true` before `Open`. The owner must already be
+open on the same UI thread. Both windows must use desktop hosts; embedded
+viewports explicitly reject these relationships. Self-ownership and cycles are
+rejected before native creation. Existing independent windows remain the default.
+
+```gsharp
+let owner = Window{Title: "Main", Width: 800, Height: 600, Root: MainCell{}}.Open()
+let dialog = Window{Title: "Settings", Width: 420, Height: 280,
+  Owner: owner, Modal: true, Root: SettingsCell{}}.Open()
+owner.Run()
+```
+
+`Owner` and `Modal` cannot change while open. One direct modal child may be open
+per owner; use that modal window as the owner of another nested dialog. A modeless
+child does not block its owner. `IsInputBlocked` reports the direct modal block:
+queued native input is discarded, `ElementHandle.Focus` and accessibility actions
+return false, and modifying `PlatformInput` operations throw while blocked.
+Cancellation, key release, and focus clearing remain available for cleanup.
+Activation requests for a blocked owner are forwarded to its active modal child.
+
+SDL establishes the native parent and modal relationship before showing the
+child. The desktop controls stacking, taskbar grouping, minimizing/hiding and
+activation policy; child `State` is not a copy of owner `State`. Closing a modal
+restores the previous owner element's focus when it remains mounted and requests
+native owner activation. A compositor may deny focus or raising requests.
+
+Once the owner's `OnClosing` accepts closure, Goo tears down every owned
+descendant before destroying the owner's native window, waiting for GPU work
+without blocking the shared frame loop. Descendant `OnClosing` callbacks do not
+veto this forced teardown; put application-wide save/close policy on the owner.
+A child's normal `RequestClose` still invokes its own policy. Owned window trees
+cannot gain new children after teardown begins. Native failures establishing
+ownership/modality throw `NotSupportedException` with the SDL error and clean up
+the partially created child. Windows and macOS use the same SDL contract; native
+verification must be performed on the target desktop.
+
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
 Source: [`Goo/Window`](../../Goo/Window)
