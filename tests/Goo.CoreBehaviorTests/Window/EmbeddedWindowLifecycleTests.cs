@@ -36,6 +36,32 @@ public sealed class EmbeddedWindowLifecycleTests
     }
 
     [Fact]
+    public void EmbeddedHostsRejectDesktopSizeConstraintsWithoutChangingState()
+    {
+        using var host = new Host();
+        var window = new Window { MinWidth = 100 };
+        Assert.Throws<NotSupportedException>(() => window.Attach(host));
+        Assert.False(window.IsOpen);
+        window.MinWidth = 0;
+        window.Attach(host);
+        Assert.Throws<NotSupportedException>(() => window.MinWidth = 100);
+        Assert.Throws<NotSupportedException>(() => window.MinHeight = 100);
+        Assert.Throws<NotSupportedException>(() => window.MaxWidth = 100);
+        Assert.Throws<NotSupportedException>(() => window.MaxHeight = 100);
+        Assert.Equal(0, window.MinWidth);
+        Assert.Equal(0, window.MaxHeight);
+        Exception? failure = null;
+        var worker = new Thread(() =>
+        {
+            try { window.MinWidth = 100; }
+            catch (Exception error) { failure = error; }
+        });
+        worker.Start();
+        worker.Join();
+        Assert.IsType<InvalidOperationException>(failure);
+    }
+
+    [Fact]
     public void ActivationRequiresOwnerThreadAndDoesNotInventEmbeddedFocus()
     {
         var window = new Window { Root = new Root() };

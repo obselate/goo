@@ -4,6 +4,25 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Window`](../../Goo/Window)
 
+## Native size constraints
+
+`Window.MinWidth`, `MinHeight`, `MaxWidth`, and `MaxHeight` constrain the native
+client area in logical window pixels, independently of layout-node constraints.
+Zero removes a limit. Values must be nonnegative, and a nonzero maximum must be
+at least its corresponding minimum. An invalid assignment leaves the old value.
+Set these properties before `Open` or on the window's owner UI thread afterward.
+When moving a bounded interval, widen or clear the old bound before crossing it.
+
+`Open` clamps the requested initial size. Later `Width`/`Height` requests are also
+clamped. Changing native limits asks SDL to resize an out-of-range client area;
+`Width`, `Height`, and `MetricsChanged` reflect the compositor's resulting size
+when its queued metrics settle. Limits constrain normal resizing; fullscreen and
+window-manager-controlled states remain subject to platform policy. Native
+failures throw and leave the corresponding configured limit unchanged.
+
+Embedded hosts own viewport geometry: `Attach` rejects preconfigured limits and
+changing a limit on an attached window throws `NotSupportedException`.
+
 ## Observe window metrics
 
 Subscribe to `Window.MetricsChanged` on the UI thread. Goo delivers an immutable snapshot after queued native metrics and tree layout settle. A callback can queue UI work, but it must not expect recursive layout.

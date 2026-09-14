@@ -64,6 +64,12 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func Wake() { host.Wake() }
   public func SetTitle(value string) { }
   public func SetSize(width int32, height int32) { }
+  public func SetMinimumSize(width int32, height int32) {
+    throw NotSupportedException("Embedded hosts own their viewport size constraints")
+  }
+  public func SetMaximumSize(width int32, height int32) {
+    throw NotSupportedException("Embedded hosts own their viewport size constraints")
+  }
   public func SetPosition(x int32, y int32) { }
   public func SetState(value WindowState) { }
   public func RequestActivation() WindowActivationResult -> WindowActivationResult.Unsupported

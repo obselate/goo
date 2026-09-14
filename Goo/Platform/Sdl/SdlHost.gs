@@ -244,6 +244,16 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
   }
 
+  public func SetMinimumSize(width int32, height int32) {
+    ThrowIfDisposed()
+    Require(SDL.SetWindowMinimumSize(window, width, height), "SDL_SetWindowMinimumSize")
+  }
+
+  public func SetMaximumSize(width int32, height int32) {
+    ThrowIfDisposed()
+    Require(SDL.SetWindowMaximumSize(window, width, height), "SDL_SetWindowMaximumSize")
+  }
+
   public func SetPosition(x int32, y int32) {
     ThrowIfDisposed()
     if CanMove {

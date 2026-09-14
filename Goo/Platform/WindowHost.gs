@@ -63,6 +63,8 @@ internal interface WindowHost {
   func Wake();
   func SetTitle(value string);
   func SetSize(width int32, height int32);
+  func SetMinimumSize(width int32, height int32);
+  func SetMaximumSize(width int32, height int32);
   func SetPosition(x int32, y int32);
   func SetState(value WindowState);
   func RequestActivation() WindowActivationResult;

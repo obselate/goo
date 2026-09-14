@@ -44,6 +44,9 @@ public partial class Window {
     if externalHost == nil { throw ArgumentNullException("externalHost") }
     requireUiThread("Window.Attach")
     if IsOpen { throw InvalidOperationException("Window is already open") }
+    if minWidth != 0 || minHeight != 0 || maxWidth != 0 || maxHeight != 0 {
+      throw NotSupportedException("Embedded hosts own their viewport size constraints")
+    }
     ownerThreadId = WindowOwnerThread.Acquire()
     ownerThreadRegistered = true
     uiThreadBound = true
