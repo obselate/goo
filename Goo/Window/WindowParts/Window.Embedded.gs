@@ -45,6 +45,7 @@ public partial class Window {
     requireUiThread("Window.Attach")
     if IsOpen { throw InvalidOperationException("Window is already open") }
     if Owner != nil || Modal { throw NotSupportedException("Embedded hosts own their native window relationships") }
+    if NativeFileDropEnabled { throw NotSupportedException("Embedded hosts own their native file-drop ingress") }
     if minWidth != 0 || minHeight != 0 || maxWidth != 0 || maxHeight != 0 {
       throw NotSupportedException("Embedded hosts own their viewport size constraints")
     }

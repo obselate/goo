@@ -274,6 +274,7 @@ public partial class Window {
       y = native.Y
       input.Attach(native)
       IsOpen = true
+      family?.NativeDrop?.Bind(native)
       registerOwnership()
       native.Show()
       schedulerLastTicks = float64(Stopwatch.GetTimestamp())
@@ -654,6 +655,7 @@ public partial class Window {
     requireUiThread("Window teardown")
     var firstError Exception?
     firstError = captureCleanupError(firstError, () -> stopPosts())
+    if let drop = family?.NativeDrop { firstError = captureCleanupError(firstError, () -> drop.Unbind()) }
     firstError = captureCleanupError(firstError, () -> input.Reset(node, resolver))
     firstError = captureCleanupError(firstError, () -> input.Dispose())
     firstError = captureCleanupError(firstError, () -> RefreshPlatformInput())

@@ -141,6 +141,7 @@ public partial class Window {
       dirty = true
     }
     guard let cell = Root else {
+      family?.NativeDrop?.Validate()
       stopImageCompletions()
       if let semantics = accessibility {
         if semantics.Publish(nil) { requestRender() }
@@ -329,6 +330,7 @@ public partial class Window {
         profiler.Record(FrameProfileStage.InputTree, inputTreeProfile)
       }
       let continuationNodes = layout.ScrollNodes(n)
+      family?.NativeDrop?.Validate()
       for i in 0 ... continuationNodes.Count {
         let candidate = continuationNodes[i]
         if Virtualization.State(candidate)?.NeedsContinuation(candidate) == true {

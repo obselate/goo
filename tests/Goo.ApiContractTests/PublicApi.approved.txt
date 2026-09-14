@@ -98,6 +98,7 @@ enum-underlying|Goo.FontStyle|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
+enum-underlying|Goo.NativeTransferCapabilities|System.Int32
 enum-underlying|Goo.Overflow|System.Int32
 enum-underlying|Goo.PointerButtons|System.Int32
 enum-underlying|Goo.PointerButton|System.Int32
@@ -407,6 +408,11 @@ enum|Goo.Key|W|41
 enum|Goo.Key|X|42
 enum|Goo.Key|Y|43
 enum|Goo.Key|Z|44
+enum|Goo.NativeTransferCapabilities|DropPreview|2
+enum|Goo.NativeTransferCapabilities|EffectNegotiation|8
+enum|Goo.NativeTransferCapabilities|FileDrop|1
+enum|Goo.NativeTransferCapabilities|None|0
+enum|Goo.NativeTransferCapabilities|OutboundData|4
 enum|Goo.Overflow|Hidden|1
 enum|Goo.Overflow|Scroll|2
 enum|Goo.Overflow|Visible|0
@@ -1217,6 +1223,8 @@ property|Goo.LinearGradient|Angle|System.Double|instance|get:public|index:()
 property|Goo.LinearGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|instance|get:public|index:()
 property|Goo.Motion|Default|System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>|static|get:public,set:public|index:()
 property|Goo.Motion|TimeScale|System.Double|static|get:public,set:public|index:()
+property|Goo.NativeFileDrop|IsPreview|System.Boolean|instance|get:public,set:private|index:()
+property|Goo.NativeFileDrop|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
 property|Goo.PanelTransform|Rotate|System.Double|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|ScaleX|System.Double|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|ScaleY|System.Double|instance|get:public,init:public|index:()
@@ -1503,11 +1511,14 @@ property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|ind
 property|Goo.Window|IsInputBlocked|System.Boolean|instance|get:public|index:()
 property|Goo.Window|IsOpen|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.Window|LastAccessibilityError|System.Exception|instance|get:public|index:()
+property|Goo.Window|LastNativeFileDropError|System.String|instance|get:public|index:()
 property|Goo.Window|MaxHeight|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|MaxWidth|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|MinHeight|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|MinWidth|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|Modal|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|NativeFileDropEnabled|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|NativeTransferCapabilities|Goo.NativeTransferCapabilities|instance|get:public|index:()
 property|Goo.Window|OnClosing|System.Func`1<System.Boolean>|instance|get:public,set:public|index:()
 property|Goo.Window|Owner|Goo.Window|instance|get:public,set:public|index:()
 property|Goo.Window|PlatformInput|Goo.PlatformInput|instance|get:public|index:()
@@ -1606,6 +1617,8 @@ type|Goo.LinearGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gr
 type|Goo.MotionConverter`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.MotionVelocity|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Motion|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.NativeFileDrop|class|public|base:System.Object|interfaces:|generic:
+type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Overflow|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PanelTransform|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.PanelTransform>|generic:
 type|Goo.PathBuilder|sealed-class|public|base:System.Object|interfaces:|generic:

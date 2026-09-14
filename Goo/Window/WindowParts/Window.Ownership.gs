@@ -13,6 +13,7 @@ internal class WindowFamily {
   internal var Closing bool
   internal var CloseError Exception?
   internal var Dialog NativeFileDialog?
+  internal var NativeDrop NativeDropState?
 }
 
 /// Configures native ownership and modality for secondary desktop windows.

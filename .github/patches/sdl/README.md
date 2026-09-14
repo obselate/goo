@@ -32,3 +32,11 @@ suitable for local testing only. An arbitrary system SDL does not include Goo's
 titlebar patch. Existing published applications need a rebuilt native payload;
 no application-level click handlers or continuously running render loop are
 required. Windows and macOS payloads are unchanged.
+
+`wayland-drop-mime-priority.patch` keeps file URIs (or a document-portal file
+transfer) ahead of text fallbacks during drag negotiation. SDL 3.4.0 otherwise
+accepts Nemo's plain-text names and tries to decode those names as file URIs,
+producing an empty drop. The build runs `test_sdl_drop.py` against the actual C
+handler; the unpatched handler fails the mixed URI/text case. The real transfer
+is exercised by `tests/Goo.AsyncReadbackSmoke/verify-native-file-drop.py` in an
+isolated KWin session with Nemo and compositor input supplied by libei.

@@ -25,6 +25,14 @@ internal unsafe partial class SdlHost {
       return
     }
 
+    if eventType >= SDLEventType.DropFile && eventType <= SDLEventType.DropPosition {
+      if nativeEvent.Drop.WindowID == windowId && !IsClosing {
+        var data nint
+        if let pointer = nativeEvent.Drop.Data { data = nint(pointer) }
+        NativeDropState.Dispatch(this, eventType, data, nativeEvent.Drop.X, nativeEvent.Drop.Y, MapModifiers(SDL.GetModState()))
+      }
+      return
+    }
     if eventType == SDLEventType.MouseMotion {
       if nativeEvent.Motion.WindowID == windowId && !IsSyntheticMouse(nativeEvent.Motion.Which) {
         pointerButtons = MapPointerButtons(nativeEvent.Motion.State)

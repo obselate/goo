@@ -331,6 +331,8 @@ internal partial class SdlRuntime {
         windowId = nativeEvent.Edit.WindowID
       } else if eventType == SDLEventType.TextEditingCandidates {
         windowId = nativeEvent.EditCandidates.WindowID
+      } else if eventType >= SDLEventType.DropFile && eventType <= SDLEventType.DropPosition {
+        windowId = nativeEvent.Drop.WindowID
       } else {
         windowId = 0u
       }

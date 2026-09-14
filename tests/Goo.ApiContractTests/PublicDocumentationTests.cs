@@ -316,6 +316,11 @@ public sealed class PublicDocumentationTests
         "F:Goo.ImageFit.Cover",
         "F:Goo.ImageFit.Fill",
         "F:Goo.ImageFit.None",
+        "F:Goo.NativeTransferCapabilities.None",
+        "F:Goo.NativeTransferCapabilities.FileDrop",
+        "F:Goo.NativeTransferCapabilities.DropPreview",
+        "F:Goo.NativeTransferCapabilities.OutboundData",
+        "F:Goo.NativeTransferCapabilities.EffectNegotiation",
     };
 
     private static readonly HashSet<Type> SynthesizedPrimaryDataTypes =

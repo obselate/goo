@@ -46,7 +46,10 @@ mkdir "$work/src"
 tar -xzf "$work/SDL3.tar.gz" -C "$work/src" --strip-components=1
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-window-interactions.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-drop-mime-priority.patch"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
+python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_drop.py" "$work/src"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/portal-dialog-lifetime.patch"
 
