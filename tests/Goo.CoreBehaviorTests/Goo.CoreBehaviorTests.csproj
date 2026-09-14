@@ -11,6 +11,8 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\vendor\Yoga.Net\src\Yoga.Net\Yoga.Net.csproj"
+                      AdditionalProperties="Configuration=CoreTestRelease" />
     <ProjectReference Include="..\..\Goo\Goo.gsproj"
                       AdditionalProperties="Configuration=CoreTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.CoreBehaviorTestFixtures.props" />
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"

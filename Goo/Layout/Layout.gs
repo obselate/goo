@@ -34,6 +34,7 @@ internal class Layout {
   // Walk only when structure changed; targeted style pushes keep Yoga current,
   // and Yoga's setters propagate dirt to the root for the clean early-out.
   internal func Calculate(root Node, width float32, height float32) {
+    if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback cannot reenter window layout") }
     if structureDirty || root != lastRoot || root.Yoga == nil {
       syncNode(root, true)
       structureDirty = false
@@ -134,6 +135,14 @@ internal class Layout {
     if n.Kind == NodeKind.Image {
       ImageLayouts.Refresh(n)
     }
+    if let custom = CustomLayouts.State(n) {
+      if YGNodeAPI.YGNodeGetChildCount(yg) != nuint(0) { YGNodeAPI.YGNodeSetChildrenRetaining(yg, []Facebook.Yoga.Node{}) }
+      YGNodeAPI.YGNodeSetContext(yg, n)
+      YGNodeAPI.YGNodeSetMeasureFunc(yg, CustomLayouts.Measure)
+      for child in n.Children { syncNode(child, true) }
+      custom.SyncChildren()
+      return
+    }
     // Measured editors cannot own Yoga children; slot roots are calculated in readRect.
     if n.Kind == NodeKind.Editor {
       for i in 0 ... n.Children.Count {
@@ -173,46 +182,57 @@ internal class Layout {
 
   // Yoga positions are parent-relative; accumulate origin so Rect is absolute.
   // Scroll containers clamp their offsets and shift their children's origin.
-  internal func readRect(n Node, originX float32, originY float32) {
-    guard let yg = n.Yoga else {
-      return
+  internal func readRect(n Node, originX float32, originY float32,
+    placementX float32 = 0.0F, placementY float32 = 0.0F) {
+      guard let yg = n.Yoga else {
+        return
+      }
+      let localX = YGNodeLayoutAPI.YGNodeLayoutGetLeft(yg) + placementX
+      let localY = YGNodeLayoutAPI.YGNodeLayoutGetTop(yg) + placementY
+      let absX = originX + localX
+      let absY = originY + localY
+      let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY)
+      n.Rect = Rect{
+        X: visual.X,
+        Y: visual.Y,
+        W: YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
+        H: YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
+      }
+      let editor = n.Kind == NodeKind.Editor
+      let custom = CustomLayouts.State(n)
+      custom?.Arrange()
+      if n.OverflowX != Overflow.Scroll && !editor {
+        n.ScrollX = 0.0F
+        n.ScrollTargetX = 0.0F
+      }
+      if n.OverflowY != Overflow.Scroll && !editor {
+        n.ScrollY = 0.0F
+        n.ScrollTargetY = 0.0F
+        n.UserScrolled = false
+      }
+      if editor {
+        TextEditorLayouts.SyncScroll(n)
+      } else if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
+        clampScroll(n)
+      } else {
+        n.ScrollBarAlpha = 0.0F
+      }
+      if editor {
+        readEditorSlotRects(n)
+        return
+      }
+      if let state = custom {
+        let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left) - n.ScrollX
+        let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top) - n.ScrollY
+        for child in state.Children {
+          readRect(child.Node, x, y, float32(child.Bounds.X), float32(child.Bounds.Y))
+        }
+        return
+      }
+      for i in 0 ... n.Children.Count {
+        readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY)
+      }
     }
-    let localX = YGNodeLayoutAPI.YGNodeLayoutGetLeft(yg)
-    let localY = YGNodeLayoutAPI.YGNodeLayoutGetTop(yg)
-    let absX = originX + localX
-    let absY = originY + localY
-    let visual = LayoutTransitions.Resolve(n, absX, absY, localX, localY)
-    n.Rect = Rect{
-      X: visual.X,
-      Y: visual.Y,
-      W: YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
-      H: YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
-    }
-    let editor = n.Kind == NodeKind.Editor
-    if n.OverflowX != Overflow.Scroll && !editor {
-      n.ScrollX = 0.0F
-      n.ScrollTargetX = 0.0F
-    }
-    if n.OverflowY != Overflow.Scroll && !editor {
-      n.ScrollY = 0.0F
-      n.ScrollTargetY = 0.0F
-      n.UserScrolled = false
-    }
-    if editor {
-      TextEditorLayouts.SyncScroll(n)
-    } else if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
-      clampScroll(n)
-    } else {
-      n.ScrollBarAlpha = 0.0F
-    }
-    if editor {
-      readEditorSlotRects(n)
-      return
-    }
-    for i in 0 ... n.Children.Count {
-      readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY)
-    }
-  }
 
   private func readEditorSlotRects(n Node) {
     let contentWidth = TextLayouts.ContentWidth(n)
@@ -236,7 +256,10 @@ internal class Layout {
   internal func clampScroll(n Node) {
     var cw = 0.0F
     var ch = 0.0F
-    if let extent = Virtualization.ContentExtent(n) {
+    if let custom = CustomLayouts.State(n) {
+      cw = custom.ContentWidth
+      ch = custom.ContentHeight
+    } else if let extent = Virtualization.ContentExtent(n) {
       cw = extent.Width
       ch = extent.Height
     } else {

@@ -704,6 +704,17 @@ method|Goo.KeyModifiers|GetHashCode|instance|public|generic:|()->System.Int32
 method|Goo.KeyModifiers|ToString|instance|public|generic:|()->System.String
 method|Goo.KeyModifiers|op_Equality|static|public|generic:|(arg0:Goo.KeyModifiers,arg1:Goo.KeyModifiers)->System.Boolean
 method|Goo.KeyModifiers|op_Inequality|static|public|generic:|(arg0:Goo.KeyModifiers,arg1:Goo.KeyModifiers)->System.Boolean
+method|Goo.LayoutAlgorithm|Arrange|abstract|public|generic:|(context:Goo.LayoutContext,finalSize:Goo.LayoutSize)->System.Void
+method|Goo.LayoutAlgorithm|Measure|abstract|public|generic:|(context:Goo.LayoutContext,available:Goo.LayoutSize)->Goo.LayoutSize
+method|Goo.LayoutContext|ArrangeChild|instance|public|generic:|(index:System.Int32,bounds:Goo.ElementRect)->System.Void
+method|Goo.LayoutContext|MeasureChild|instance|public|generic:|(index:System.Int32,available:Goo.LayoutSize)->Goo.LayoutSize
+method|Goo.LayoutSize|Deconstruct|instance|public|generic:|(out width:System.Double&,out height:System.Double&)->System.Void
+method|Goo.LayoutSize|Equals|instance|public|generic:|(arg0:Goo.LayoutSize)->System.Boolean
+method|Goo.LayoutSize|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.LayoutSize|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.LayoutSize|ToString|instance|public|generic:|()->System.String
+method|Goo.LayoutSize|op_Equality|static|public|generic:|(arg0:Goo.LayoutSize,arg1:Goo.LayoutSize)->System.Boolean
+method|Goo.LayoutSize|op_Inequality|static|public|generic:|(arg0:Goo.LayoutSize,arg1:Goo.LayoutSize)->System.Boolean
 method|Goo.LayoutTransition|Deconstruct|instance|public|generic:|(out DurationMs:System.Double&,out Easing:Goo.Easing&)->System.Void
 method|Goo.LayoutTransition|Equals|instance|public|generic:|(arg0:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
@@ -1097,6 +1108,7 @@ property|Goo.CompiledVectorAsset|ViewBoxX|System.Single|instance|get:public|inde
 property|Goo.CompiledVectorAsset|ViewBoxY|System.Single|instance|get:public|index:()
 property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Container|Layout|Goo.LayoutAlgorithm|instance|get:public,init:public|index:()
 property|Goo.Container|PinToBottom|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.DashPattern|Intervals|System.Collections.Generic.IReadOnlyList`1<System.Double>|instance|get:public|index:()
 property|Goo.DashPattern|Offset|System.Double|instance|get:public|index:()
@@ -1190,6 +1202,9 @@ property|Goo.KeyModifiers|Alt|System.Boolean|instance|get:public,init:public|ind
 property|Goo.KeyModifiers|Ctrl|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyModifiers|Shift|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyModifiers|Super|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.LayoutContext|ChildCount|System.Int32|instance|get:public|index:()
+property|Goo.LayoutSize|Height|System.Double|instance|get:public,init:public|index:()
+property|Goo.LayoutSize|Width|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutTransition|DurationMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutTransition|Easing|Goo.Easing|instance|get:public,init:public|index:()
 property|Goo.Length|Auto|Goo.Length|static|get:public|index:()
@@ -1580,6 +1595,9 @@ type|Goo.JustifyContent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyModifiers|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Key|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:
+type|Goo.LayoutContext|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.LayoutTransition|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Length|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.LinearGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:

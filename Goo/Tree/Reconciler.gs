@@ -347,6 +347,7 @@ internal class Reconciler {
   }
 
   internal func applyContainer(n Node, c Container, initial bool) {
+    if CustomLayouts.Configure(n, c.Layout) { MarkEffects(ReconcileEffects.Layout) }
     applyStyle(n, c, c.Focusable, initial)
     if !Transforming.SameVectorViewport(Transforming.GetVectorViewport(n), c.VectorViewport) {
       Transforming.SetVectorViewport(n, c.VectorViewport)

@@ -15,6 +15,11 @@ public class Container : Blob {
   /// Gets the mutable child list.
   /// Give all siblings stable keys, or give no sibling a key.
   public prop Children IList[Blob]{ get; init; }
+  /// Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
+  public prop Layout LayoutAlgorithm? {
+    get -> CustomLayouts.BlobValue(this)
+    init -> CustomLayouts.SetBlobValue(this, value)
+  }
   internal prop VectorViewport VectorViewport? {
     get -> ContainerVectorViewports.Get(this)
     init -> ContainerVectorViewports.Set(this, value)

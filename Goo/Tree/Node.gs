@@ -32,6 +32,10 @@ internal class Node {
   }
 
   internal prop Kind NodeKind{ get; set; }
+  internal prop HasCustomLayout bool{
+    get -> (nodeState & (int32(1) << 12)) != 0
+    set -> nodeState = value ? nodeState | (int32(1) << 12) : nodeState & ^(int32(1) << 12)
+  }
   internal prop Key string? { get; set; }
   internal prop Parent Node? { get; set; }
   internal prop Children IList[Node]{ get; init; }
