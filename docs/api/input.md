@@ -4,6 +4,27 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Input`](../../Goo/Input)
 
+## Pointer click sequences
+
+`PointerEvent.ClickCount` is 1, 2, or 3 on a press and its matching button release;
+movement and cancellation report zero. It counts consecutive presses, saturating
+at three, using the same policy as built-in text selection. A sequence requires
+the same deepest interactive target and button, less than 400 ms between presses,
+and less than four logical window pixels of movement on each axis. Decorative
+children inside one control do not split its sequence. This is Goo normalization,
+independent of OS double-click preferences or native event counts.
+
+Leaving the movement tolerance, releasing outside the target, explicit capture
+release, capture transfer to a different target, cancellation, and focus/input
+reset break continuity. PreventDefault does not hide the count. A captured up
+still reports its original press count; capture does not turn a drag into a click.
+Mouse and pen sequences belong to their pointer contact. Touch contacts end on up,
+so separate taps report one; pen proximity cancellation resets its sequence.
+
+Single-line text entry selects a word for counts two and three. TextEditor uses
+one for the caret, two for a word, and three for a line. Applications keep control
+over what generic double/triple presses do.
+
 ## Route keyboard and focus callbacks
 
 `OnKeyDown` and `OnKeyUp` start at the currently focused element and bubble through its parents, so an ancestor can own shortcuts for a subtree. `KeyEvent.StopPropagation()` ends that route before the next ancestor without canceling Goo's default action. `KeyEvent.PreventDefault()` cancels the default action without stopping the remaining callbacks. Both controls are active only during that route; retaining the event value cannot affect a later dispatch.

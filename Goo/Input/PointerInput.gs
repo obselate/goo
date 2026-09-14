@@ -426,9 +426,7 @@ internal partial class PointerInput {
     current.CanceledButtons = PointerButtons.None
     current.LastEventValid = false
     current.LastModifiers = KeyModifiers{}
-    current.LastPressT = -10.0
-    current.LastPressNode = nil
-    current.LastPressCount = 0
+    resetClickSequence()
     if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
@@ -742,14 +740,10 @@ internal partial class PointerInput {
   internal func HandlePress(root Node?, resolver Resolver, text TextInput, timeS float64, x float32, y float32) bool -> HandlePress(root, resolver, text, timeS, x, y, KeyModifiers {}, true)
 
   private func HandlePress(root Node?, resolver Resolver, text TextInput, timeS float64, x float32,
-    y float32, modifiers KeyModifiers, semantic bool) bool{
+    y float32, modifiers KeyModifiers, semantic bool, normalized bool = false) bool{
       guard let tree = root else {
         return false
       }
-      let dbl = timeS - current.LastPressT < 0.4 && MathF.Abs(x - current.LastPressX) < 4.0F && MathF.Abs(y - current.LastPressY) < 4.0F
-      current.LastPressT = timeS
-      current.LastPressX = x
-      current.LastPressY = y
       clearPressChain(resolver)
       current.ClickTarget = nil
       current.DragEntry = nil
@@ -761,6 +755,7 @@ internal partial class PointerInput {
         current.ClickTarget = nil
         return false
       }
+      if !normalized { beginClickSequence(current.PressChain, timeS, x, y, PointerButton.Primary) }
       for i in 0 ... current.PressChain.Count {
         let pressed = current.PressChain[i]
         pressed.PointerPressCount++
@@ -771,8 +766,6 @@ internal partial class PointerInput {
       }
 
       if !semantic {
-        current.LastPressNode = nil
-        current.LastPressCount = 0
         current.ClickTarget = nil
         return current.PressChain.Count > 0
       }
@@ -799,7 +792,7 @@ internal partial class PointerInput {
           let local = point.X - TextLayouts.ContentLeft(entry)
           let hit = TextMetrics().HitAt(entry, local)
           let index = hit.Index
-          if dbl && entry == current.LastPressNode {
+          if current.LastPressCount >= 2 {
             let selection = Edit().SelectWordAt(EditState{ Text: entry.Buffer, Caret: entry.Caret, Anchor: entry.Anchor }, index)
             entry.Caret = selection.Caret
             entry.Anchor = selection.Anchor
@@ -815,26 +808,16 @@ internal partial class PointerInput {
           FollowCaret(entry)
           text.RefreshInputArea(entry)
           current.DragEntry = entry
-          current.LastPressCount = 0
         } else if entry.Kind == NodeKind.Editor {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
-          let repeated = dbl && entry == current.LastPressNode
-          var count = repeated ? current.LastPressCount + 1 : 1
-          if count > 3 { count = 3 }
-          current.LastPressCount = count
           if TextEditorInputAdapter.SelectAt(entry, point.X - entry.Rect.X, point.Y - entry.Rect.Y,
-            modifiers.Shift, count) {
+            modifiers.Shift, current.LastPressCount) {
               text.RefreshInputArea(entry)
               current.DragEditor = entry
             }
-        } else {
-          current.LastPressCount = 0
         }
-      } else {
-        current.LastPressCount = 0
       }
-      current.LastPressNode = target
       current.ClickTarget = deepestClickable(current.PressChain)
       return current.PressChain.Count > 0
     }
@@ -858,14 +841,15 @@ internal partial class PointerInput {
       let semantic = acquireSemanticPrimary(button)
       if button == PointerButton.Primary && semantic {
         if let tree = root {
-          if tryBeginScrollDrag(tree, resolver, x, y) { return true }
+          if tryBeginScrollDrag(tree, resolver, x, y) { resetClickSequence()
+            return true }
         }
       }
-      let prevented = dispatchPointer(root, PointerEventKind.Press, x, y, 0.0F, 0.0F, button, modifiers)
+      let prevented = dispatchPointer(root, PointerEventKind.Press, x, y, 0.0F, 0.0F, button, modifiers, timeS)
       if button != PointerButton.Primary || prevented {
         return false
       }
-      let handled = HandlePress(root, resolver, text, timeS, x, y, modifiers, semantic)
+      let handled = HandlePress(root, resolver, text, timeS, x, y, modifiers, semantic, true)
       if semantic {
         rememberDragCandidate()
         beginTouchPan(x, y)
@@ -1106,6 +1090,7 @@ internal class PointerContact {
   internal var LastPressX float32
   internal var LastPressY float32
   internal var LastPressNode Node?
+  internal var LastPressButton PointerButton
   internal var LastPressCount int32
   internal var LastEventX float32
   internal var LastEventY float32

@@ -55,10 +55,12 @@ internal partial class PointerInput {
   private func applyCaptureRequests(button PointerButton, route List[Node]) {
     if let requested = control.ReleaseTarget {
       if let owner = current.CaptureTarget {
-        if owner == requested { clearCapture() }
+        if owner == requested { clearCapture()
+          current.LastPressNode = nil }
       }
     }
     if let requested = control.CaptureTarget {
+      if requested != current.LastPressNode { current.LastPressNode = nil }
       current.CapturePath.Clear()
       current.CaptureTarget = requested
       current.CaptureButton = button
@@ -175,11 +177,12 @@ internal partial class PointerInput {
     }
 
   private func dispatchPointer(root Node?, kind PointerEventKind, x float32, y float32,
-    dx float64, dy float64, button PointerButton, modifiers KeyModifiers) bool{
+    dx float64, dy float64, button PointerButton, modifiers KeyModifiers, timeS float64 = 0.0) bool{
       guard let tree = root else { return false }
       var captured = false
       if (kind == PointerEventKind.Move || kind == PointerEventKind.Release) && current.CaptureTarget != nil {
         if !rebuildCapturePath(tree) {
+          resetClickSequence()
           clearCapture()
           return false
         }
@@ -188,13 +191,27 @@ internal partial class PointerInput {
         scratchChain.Clear()
         hitChainInto(tree, x, y, scratchChain)
         if chainDisabled(scratchChain) {
+          if kind == PointerEventKind.Press { resetClickSequence() }
           scratchChain.Clear()
           return false
         }
       }
       let route = captured ? current.CapturePath : scratchChain
       if kind == PointerEventKind.Press {
+        beginClickSequence(route, timeS, x, y, button)
         rememberActiveRoute(route)
+      } else {
+        invalidateMovedClickSequence(x, y)
+        if kind == PointerEventKind.Release && button == current.LastPressButton {
+          if captured {
+            scratchChain.Clear()
+            hitChainInto(tree, x, y, scratchChain)
+          }
+          if chainDisabled(scratchChain) || clickSequenceTarget(scratchChain) != current.LastPressNode {
+            current.LastPressNode = nil
+          }
+          if captured { scratchChain.Clear() }
+        }
       }
       let transformed = routeHasTransform(route)
       if transformed {
@@ -219,6 +236,7 @@ internal partial class PointerInput {
             WindowPosition: Point{ X: float64(x), Y: float64(y) },
             Delta: transformed ? routeDeltas[i - 1] : Point{ X: dx, Y: dy },
             Button: button,
+            ClickCount: kind != PointerEventKind.Move && button == current.LastPressButton ? current.LastPressCount : 0,
             Buttons: current.HeldButtons,
             Modifiers: modifiers,
             Control: control,
@@ -259,7 +277,8 @@ internal partial class PointerInput {
       || current.DragEntry != nil || current.DragEditor != nil || hasScrollDrag()
       || current.ClickTarget != nil || current.CaptureTarget != nil || current.ActiveTarget != nil
       || currentOwnsDragState()
-    if !hadInteraction { return false }
+    if !hadInteraction { resetClickSequence()
+      return false }
     let canceled = current.HeldButtons
     var failure Exception?
     try {
@@ -291,9 +310,7 @@ internal partial class PointerInput {
       clearCapture()
       clearActiveRoute()
       current.HeldButtons = PointerButtons.None
-      current.LastPressT = -10.0
-      current.LastPressNode = nil
-      current.LastPressCount = 0
+      resetClickSequence()
       if current.Device == PointerDevice.Touch && primaryTouch == current {
         primaryTouch = nil
       } else if current.Device == PointerDevice.Pen && primaryPen == current {
