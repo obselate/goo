@@ -11,6 +11,44 @@ namespace Goo.DevTools.Cli.Tests;
 
 public sealed class DevToolsCliEndToEndTests
 {
+    [Theory]
+    [InlineData(true, true, 0)]
+    [InlineData(true, false, 1)]
+    [InlineData(false, false, 2)]
+    public async Task InputRequiresCapabilityPreservesPayloadAndWaitsForAcknowledgement(bool enabled, bool accepted, int exitCode)
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-input-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var cliTask = RunCliAsync(directory.Path, "input", "pointer.down", "--latest", "--node", "42", "--offset-x", "3.5", "--button", "Secondary", "--ctrl", "--json", "--wait", "5");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "hello", protocol = "goo.devtools/1", capabilities = enabled ? new[] { "input" } : [] }));
+        if (enabled)
+        {
+            using var request = JsonDocument.Parse(await ReadLineAsync(reader));
+            Assert.Equal("input", request.RootElement.GetProperty("command").GetString());
+            var payload = request.RootElement.GetProperty("payload");
+            Assert.Equal("pointer.down", payload.GetProperty("event").GetString());
+            Assert.Equal(42, payload.GetProperty("nodeId").GetInt64());
+            Assert.Equal(3.5, payload.GetProperty("offsetX").GetDouble());
+            Assert.Equal("Secondary", payload.GetProperty("button").GetString());
+            Assert.True(payload.GetProperty("modifiers").GetProperty("ctrl").GetBoolean());
+            Assert.False(cliTask.IsCompleted);
+            await writer.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                type = "response", id = request.RootElement.GetProperty("id").GetString(), ok = accepted,
+                payload = new { applied = accepted, sequence = 12 }, error = new { code = "stale-target", message = "Target removed" }
+            }));
+        }
+        var result = await cliTask;
+        Assert.Equal(exitCode, result.ExitCode);
+        Assert.Contains(enabled ? "\"sequence\":12" : "does not permit input", enabled ? result.StandardOutput : result.StandardError, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task RuntimeDescriptorShapeIsAcceptedOnlyForProtocolOne()
     {

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -50,6 +51,7 @@ internal static class CliApplication
                 "attach" => await RunAttachAsync(commandLine),
                 "doctor" => await RunDoctorAsync(commandLine),
                 "capture" => await RunCaptureAsync(commandLine),
+                "input" => await RunInputAsync(commandLine),
                 _ => Fail($"Unknown command '{commandLine.Command}'. Run `goo help` for usage.")
             };
         }
@@ -167,6 +169,57 @@ internal static class CliApplication
 
         await RunInteractiveAsync(connection, commandLine.Has("json"), cancellation.Token);
         return 0;
+    }
+
+    private static async Task<int> RunInputAsync(CommandLine commandLine)
+    {
+        if (commandLine.Positionals.Count != 1)
+            throw new CliException("Usage: goo input <click|pointer.move|pointer.down|pointer.up|pointer.cancel|wheel|key.down|key.up|text|reset> [options]");
+        var project = ResolveProject(commandLine.Get("project"));
+        var projectDirectory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var processId = ParseOptionalInt(commandLine.Get("pid"), "pid");
+        var descriptor = Discovery.Select(Discovery.Scan(projectDirectory), processId,
+            commandLine.Get("pipe"), commandLine.Get("app"), commandLine.Get("window"), commandLine.Has("latest"))
+            ?? await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")));
+        var payload = new JsonObject { ["event"] = commandLine.Positionals[0] };
+        foreach (var name in new[] { "key", "text", "button" })
+            if (commandLine.Has(name))
+                payload[name] = commandLine.Get(name) ?? throw new CliException($"--{name} needs a value.");
+        if (commandLine.Has("node"))
+        {
+            if (!long.TryParse(commandLine.Get("node"), NumberStyles.None, CultureInfo.InvariantCulture, out var node) || node <= 0)
+                throw new CliException("--node needs a positive node ID from the selected window snapshot.");
+            payload["nodeId"] = node;
+        }
+        foreach (var (option, property) in new[] { ("x", "x"), ("y", "y"), ("offset-x", "offsetX"), ("offset-y", "offsetY"), ("delta-x", "deltaX"), ("delta-y", "deltaY") })
+        {
+            if (!commandLine.Has(option)) continue;
+            if (!double.TryParse(commandLine.Get(option), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || !double.IsFinite(value))
+                throw new CliException($"--{option} needs a finite number.");
+            payload[property] = value;
+        }
+        payload["modifiers"] = new JsonObject
+        {
+            ["alt"] = commandLine.Has("alt"), ["ctrl"] = commandLine.Has("ctrl"),
+            ["shift"] = commandLine.Has("shift"), ["super"] = commandLine.Has("super")
+        };
+        if (payload.ToJsonString().Length > 65536)
+            throw new CliException("Input request exceeds the endpoint request limit.");
+        using var timeout = new CancellationTokenSource(ParseWait(commandLine.Get("wait")));
+        await using var connection = await ConnectAsync(descriptor, timeout.Token);
+        var handshake = await connection.HandshakeAsync(timeout.Token);
+        ValidateHandshake(handshake, descriptor);
+        using (var hello = JsonDocument.Parse(handshake!))
+        {
+            if (!hello.RootElement.TryGetProperty("capabilities", out var capabilities)
+                || capabilities.ValueKind != JsonValueKind.Array
+                || !capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input"))
+                throw new CliException("This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.");
+        }
+        var response = await connection.RequestAsync("input", payload, timeout.Token);
+        if (response is null) throw new CliException("The window closed before acknowledging input.");
+        WriteProtocolLine(response.ToJsonString(), commandLine.Has("json"));
+        return response["ok"]?.GetValue<bool>() == true ? 0 : 1;
     }
 
     private static async Task<int> RunCaptureAsync(CommandLine commandLine)
@@ -781,12 +834,14 @@ internal static class CliApplication
         Console.WriteLine("  goo attach [options]");
         Console.WriteLine("  goo doctor [--json]");
         Console.WriteLine("  goo capture [options]");
+        Console.WriteLine("  goo input <event> [--pid PID --window NAME] [--node ID | --x X --y Y] [options]");
         Console.WriteLine();
         Console.WriteLine("Commands:");
         Console.WriteLine("  dev       Start a Goo project with diagnostics enabled and dotnet watch by default.");
         Console.WriteLine("  attach    Attach to a live Goo endpoint and stream protocol events.");
         Console.WriteLine("  doctor    Check the SDK, project, endpoint directory, and inspector installation.");
         Console.WriteLine("  capture   Request a screenshot from an attached endpoint.");
+        Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.");
         Console.WriteLine();
         Console.WriteLine("Common options:");
         Console.WriteLine("  --project PATH       Project file or directory.");
@@ -803,6 +858,7 @@ internal static class CliApplication
         Console.WriteLine("Environment:");
         Console.WriteLine("  GOO_DEVTOOLS_DIR         Runtime descriptor directory override.");
         Console.WriteLine("  GOO_DEVTOOLS_INSPECTOR   Standalone inspector executable or DLL.");
+        Console.WriteLine("  GOO_DEVTOOLS_INPUT=1     Permit application input when GOO_DEVTOOLS=1 enables diagnostics.");
         return 0;
     }
 

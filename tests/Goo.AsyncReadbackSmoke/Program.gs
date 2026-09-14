@@ -3252,6 +3252,21 @@ func RunProtectedTextSmoke() {
 
 let managedEntryTimestamp = Stopwatch.GetTimestamp()
 Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
+if Environment.GetEnvironmentVariable("GOO_DEVTOOLS_INPUT_SMOKE") == "1" {
+  let window = Window{Title: "Goo DevTools input", Width: 560, Height: 520, Root: DevToolsInputSmokeCell{}}.Open()
+  let deadline = Environment.TickCount64 + 120000
+  let done = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_INPUT_DONE") ?? ""
+  try {
+    while window.IsOpen && Environment.TickCount64 < deadline && !File.Exists(done) {
+      window.Pump(0.016)
+      Thread.Sleep(8)
+    }
+  } finally {
+    window.RequestClose()
+    window.Pump(0.016)
+  }
+  return
+}
 if Environment.GetEnvironmentVariable("GOO_WINDOW_SIZE_CONSTRAINTS_SMOKE") == "1" {
   WindowSizeConstraintsSmoke.Run()
   return

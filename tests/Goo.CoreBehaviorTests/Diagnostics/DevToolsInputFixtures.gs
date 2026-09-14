@@ -1,0 +1,111 @@
+package Goo
+
+import System
+import System.Collections.Generic
+import System.Text.Json
+
+internal class DevToolsInputCell : Cell {
+  internal var Clicks int32
+  internal var Value string = ""
+  internal var Show bool = true
+  internal var Moves int32
+  internal var Cancels int32
+
+  public override func Build() Blob -> Container {Width: 320, Height: 220, Children: {
+    if Show { Button{Key: "action", Width: 100, Height: 40, OnClick: () -> { Clicks++ },
+      Children: {Text{Content: "Count " + Clicks.ToString()}}} } else { Container{Key: "placeholder"} },
+    TextEntry{Key: "entry", Width: 200, Height: 40, Value: Value, OnChange: (value string) -> { Value = value }},
+    Container{Key: "drag", Width: 100, Height: 40,
+      OnPointerDown: (event PointerEvent) -> { event.Capture() },
+      OnPointerMove: (event PointerEvent) -> { if event.Buttons != PointerButtons.None { Moves++ } },
+      OnPointerCancel: (event PointerEvent) -> { Cancels++ }},
+  }}
+}
+
+internal class DevToolsInputFixtures {
+  private func send(session DevToolsSession, json string) string {
+    using let document = JsonDocument.Parse(json)
+    return session.InputPayload(document.RootElement)
+  }
+
+  private func find(session DevToolsSession, key string) int64 {
+    let snapshot = session.CaptureSnapshot()
+    for node in snapshot.Added { if node.Key == key { return node.Id } }
+    for node in snapshot.Updated { if node.Key == key { return node.Id } }
+    return 0
+  }
+
+  func OptInRoutingSettlementAndStaleTargets() bool {
+    let root = DevToolsInputCell{}
+    let window = Window{Root: root, Width: 320, Height: 220}
+    window.Open()
+    let session = window.AttachDiagnostics()
+    try {
+      window.UpdateTree()
+      var disabled = false
+      try { send(session, "{\"event\":\"click\",\"x\":10,\"y\":10}") }
+      catch (_ UnauthorizedAccessException) { disabled = true }
+      if !disabled || root.Clicks != 0 || session.AllowsInput { return false }
+      window.AttachDiagnostics(true)
+      let action = find(session, "action")
+      let entry = find(session, "entry")
+      if action == 0 || entry == 0 { return false }
+      send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}")
+      if root.Clicks != 1 { return false }
+      guard let tree = window.Tree else { return false }
+      if tree.Children[0].Children[0].Content != "Count 1" { return false }
+      send(session, "{\"event\":\"click\",\"nodeId\":" + entry.ToString() + "}")
+      send(session, "{\"event\":\"text\",\"text\":\"hello\"}")
+      if root.Value != "hello" { return false }
+      send(session, "{\"event\":\"key.down\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.up\",\"key\":\"Backspace\"}")
+      if root.Value != "hell" { return false }
+      root.Show = false
+      root.Rebuild()
+      var stale = false
+      try { send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}") }
+      catch (_ KeyNotFoundException) { stale = true }
+      return stale && root.Clicks == 1
+    } finally { session.Dispose()
+      window.Close() }
+  }
+
+  func CaptureCancelAndValidation() bool {
+    let root = DevToolsInputCell{}
+    let window = Window{Root: root, Width: 320, Height: 220}
+    window.Open()
+    let session = window.AttachDiagnostics(true)
+    try {
+      window.UpdateTree()
+      let drag = find(session, "drag")
+      send(session, "{\"event\":\"pointer.down\",\"nodeId\":" + drag.ToString() + "}")
+      send(session, "{\"event\":\"pointer.move\",\"x\":300,\"y\":200}")
+      if root.Moves != 1 { return false }
+      send(session, "{\"event\":\"pointer.cancel\"}")
+      if root.Cancels != 1 || root.Clicks != 0 { return false }
+      var rejected int32
+      for json in []string {"{\"event\":\"click\",\"x\":1}", "{\"event\":\"key.down\",\"key\":\"999\"}",
+        "{\"event\":\"wheel\",\"x\":1,\"y\":1,\"deltaY\":1e100}"} {
+          try { send(session, json) } catch (_ ArgumentException) { rejected++ }
+        }
+      return rejected == 3
+    } finally { session.Dispose()
+      window.Close() }
+  }
+
+  func QueuedTimeoutCannotExecuteLater() bool {
+    let cancelled = DiagnosticPipeCompletion()
+    cancelled.CancelQueued()
+    let rejected = !cancelled.Begin()
+    cancelled.Release()
+    cancelled.Release()
+    let started = DiagnosticPipeCompletion()
+    let accepted = started.Begin()
+    started.CancelQueued()
+    started.Done.Set()
+    let retained = started.Done.Wait(0)
+    started.Release()
+    started.Release()
+    return rejected && accepted && retained
+  }
+}

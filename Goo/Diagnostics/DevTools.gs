@@ -18,6 +18,16 @@ public class DevTools {
       return window.AttachDiagnostics()
     }
 
+    /// Attaches local diagnostics and optionally permits input commands through normal UI routing.
+    /// Input remains disabled unless explicitly allowed here or by GOO_DEVTOOLS_INPUT=1 at automatic attachment.
+    /// @param window The window to expose through Goo DevTools.
+    /// @param allowInput Whether to permit local application input commands for this session.
+    /// @returns An object that removes the diagnostics attachment when disposed.
+    public func Attach(window Window, allowInput bool) IDisposable {
+      if window == nil { throw ArgumentNullException("window") }
+      return window.AttachDiagnostics(allowInput)
+    }
+
     internal func Register(session DevToolsSession) {
       lock gate {
         if !sessions.Contains(session) { sessions.Add(session) }
@@ -65,7 +75,7 @@ internal class DiagnosticCaptureTracker {
   }
 }
 
-internal class DevToolsSession : IDisposable {
+internal partial class DevToolsSession : IDisposable {
   private let owner Window
   private let identity DiagnosticTreeState
   private let endpoint DiagnosticEndpoint
@@ -117,7 +127,7 @@ internal class DevToolsSession : IDisposable {
     remove{ snapshotChanged.Remove(value) }
   }
 
-  internal init(window Window) {
+  internal init(window Window, allowInput bool = false) {
     owner = window
     identity = DiagnosticTreeState()
     endpoint = DiagnosticEndpointDiscovery.Create(window)
@@ -129,6 +139,7 @@ internal class DevToolsSession : IDisposable {
     selectionBeforeInspect = nil
     captureTracker = DiagnosticCaptureTracker()
     pending = true
+    inputAllowed = allowInput
     pipe = DiagnosticPipeHost(this, endpoint)
   }
 
@@ -193,9 +204,11 @@ internal class DevToolsSession : IDisposable {
     return true
   }
 
-  internal func CaptureSnapshot() DiagnosticSnapshot {
+  internal func CaptureSnapshot(full bool = false) DiagnosticSnapshot {
     owner.RequireElementHandleThread("DevToolsSession.CaptureSnapshot")
     if disposed { throw ObjectDisposedException("DevToolsSession") }
+    if full { identity.Invalidate()
+      pending = true }
     guard let current = captureIfNeeded() else {
       throw InvalidOperationException("The diagnostics snapshot is unavailable.")
     }
@@ -306,12 +319,12 @@ internal class DevToolsSession : IDisposable {
         }
       captureTracker.Observe(status)
       if captureTracker.NeedsRequest {
-        owner.RequestDiagnosticsFrame()
+        // RequestReadback already drives its prerequisite frame. An extra redraw
+        // can invalidate that frame forever for scenes requiring a full compile.
         return "{\"command\":\"capture\",\"pending\":true}"
       }
     }
     guard let result = owner.PollDiagnosticsCapture() else {
-      owner.RequestDiagnosticsFrame()
       return "{\"command\":\"capture\",\"pending\":true}"
     }
     captureTracker.Complete()
@@ -378,6 +391,7 @@ internal class DevToolsSession : IDisposable {
 
   internal func WindowClosed() {
     if disposed { return }
+    resetInjectedInput()
     clearOverrides()
     owner.ClearDiagnostics(this)
     pipe?.Dispose()
@@ -394,6 +408,7 @@ internal class DevToolsSession : IDisposable {
   public func Dispose() {
     if disposed { return }
     owner.RequireElementHandleThread("DevToolsSession.Dispose")
+    resetInjectedInput()
     clearOverrides()
     owner.RequestDiagnosticsRebuild()
     owner.ClearDiagnostics(this)

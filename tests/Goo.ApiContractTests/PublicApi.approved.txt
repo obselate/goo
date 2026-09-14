@@ -610,6 +610,7 @@ method|Goo.CompiledVectorAsset|Render|instance|public|generic:|()->Goo.Blob
 method|Goo.CompiledVectorAsset|Render|instance|public|generic:|(key:System.String)->Goo.Blob
 method|Goo.CompiledVectorAsset|TryLoad|static|public|generic:|(bytes:System.Byte[])->Goo.CompiledVectorAsset
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window)->System.IDisposable
+method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window,allowInput:System.Boolean)->System.IDisposable
 method|Goo.ElementHandle|Blur|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|Focus|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean

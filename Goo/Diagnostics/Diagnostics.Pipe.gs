@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 import System.Globalization
 import System.IO
 import System.IO.Pipes
@@ -12,12 +13,19 @@ internal class DiagnosticPipeCompletion {
   internal let Done ManualResetEventSlim
   internal var Result string
   internal var Error string?
+  internal var ErrorCode string = "command"
+  private var state int32
+  private var references int32 = 2
 
   internal init() {
     Done = ManualResetEventSlim(false)
     Result = "{}"
     Error = nil
   }
+
+  internal func Begin() bool -> Interlocked.CompareExchange(&state, 1, 0) == 0
+  internal func CancelQueued() { Interlocked.CompareExchange(&state, 3, 0) }
+  internal func Release() { if Interlocked.Decrement(&references) == 0 { Done.Dispose() } }
 }
 
 internal class DiagnosticPipeHost : IDisposable {
@@ -28,6 +36,7 @@ internal class DiagnosticPipeHost : IDisposable {
   private var active NamedPipeServerStream?
   private var worker Thread?
   private var disposed bool
+  private var queuedRequests int32
 
   internal init(owner DevToolsSession, value DiagnosticEndpoint) {
     session = owner
@@ -98,11 +107,22 @@ internal class DiagnosticPipeHost : IDisposable {
     writer.NewLine = "\n"
     writer.WriteLine(hello())
     while !stopped.IsSet {
-      guard let line = reader.ReadLine() else { return }
+      guard let line = readRequest(reader) else { return }
       let result = dispatch(line)
       if result != "" {
         writer.WriteLine(result)
       }
+    }
+  }
+
+  private func readRequest(reader StreamReader) string? {
+    let result = StringBuilder()
+    while true {
+      let next = reader.Read()
+      if next < 0 { return if result.Length == 0 { nil } else { result.ToString() } }
+      if next == 10 { return result.ToString() }
+      if result.Length >= 65536 { throw InvalidDataException("DevTools requests are limited to 65536 characters.") }
+      result.Append(char(next))
     }
   }
 
@@ -136,36 +156,59 @@ internal class DiagnosticPipeHost : IDisposable {
   }
 
   private func dispatchOnUi(id string, command string, payload JsonElement) string {
+    if Interlocked.Increment(&queuedRequests) > 32 {
+      Interlocked.Decrement(&queuedRequests)
+      return errorResponse(id, "busy", "The Goo UI request queue is full.")
+    }
     let completion = DiagnosticPipeCompletion()
+    // Own the JSON beyond a timeout; the request document belongs to dispatch().
+    let ownedPayload = payload.Clone()
     try {
       session.Post(() -> {
         try {
-          completion.Result = execute(command, payload)
-        } catch (error Exception) {
-          completion.Error = error.Message
+          if !completion.Begin() { return }
+          try {
+            completion.Result = execute(command, ownedPayload)
+          } catch (error Exception) {
+            completion.Error = error.Message
+            completion.ErrorCode = if error is UnauthorizedAccessException { "input-disabled" }
+            else if error is KeyNotFoundException { "stale-target" }
+            else if error is ObjectDisposedException { "closed" }
+            else if error is ArgumentException { "invalid-input" } else { "command" }
+          }
+          completion.Done.Set()
+        } finally {
+          Interlocked.Decrement(&queuedRequests)
+          completion.Release()
         }
-        completion.Done.Set()
       })
     } catch (error Exception) {
-      completion.Done.Dispose()
+      Interlocked.Decrement(&queuedRequests)
+      completion.Release()
+      completion.Release()
       return errorResponse(id, "closed", error.Message)
     }
-    if !completion.Done.Wait(5000) {
-      completion.Done.Dispose()
-      return errorResponse(id, "timeout", "The Goo UI thread did not process the request.")
+    try {
+      let deadline = Environment.TickCount64 + 5000
+      while !completion.Done.Wait(50) {
+        if stopped.IsSet || Environment.TickCount64 >= deadline {
+          completion.CancelQueued()
+          return errorResponse(id, if stopped.IsSet { "closed" } else { "timeout" },
+            "The request did not complete. Queued work was cancelled; an already running handler may have applied input.")
+        }
+      }
+      if let error = completion.Error { return errorResponse(id, completion.ErrorCode, error) }
+      return response(id, completion.Result)
+    } finally {
+      completion.Release()
     }
-    if let error = completion.Error {
-      completion.Done.Dispose()
-      return errorResponse(id, "command", error)
-    }
-    let result = completion.Result
-    completion.Done.Dispose()
-    return response(id, result)
   }
 
   private func execute(command string, payload JsonElement) string {
+    if command == "input" { return session.InputPayload(payload) }
     if command == "snapshot" || command == "tree.snapshot" {
-      return snapshotPayload(session.CaptureSnapshot())
+      let full = payload.TryGetProperty("full", out var fullValue) && fullValue.ValueKind == JsonValueKind.True
+      return snapshotPayload(session.CaptureSnapshot(full))
     }
     if command == "capture" {
       return session.CapturePayload()
@@ -202,7 +245,9 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func hello() string {
     let builder = StringBuilder()
-    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"capabilities\":[\"tree.snapshot\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\"]}")
+    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"capabilities\":[\"tree.snapshot\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\"")
+    if session.AllowsInput { builder.Append(",\"input\"") }
+    builder.Append("]}")
     return builder.ToString()
   }
 
@@ -310,6 +355,6 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func quote(value string) string {
     if value == nil { return "null" }
-    return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t") + "\""
+    return "\"" + JsonEncodedText.Encode(value).ToString() + "\""
   }
 }

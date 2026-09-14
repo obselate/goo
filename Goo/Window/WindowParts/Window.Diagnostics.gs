@@ -6,7 +6,7 @@ internal class WindowDiagnostics {
   shared {
     internal func AttachIfEnabled(window Window) {
       if Environment.GetEnvironmentVariable("GOO_DEVTOOLS") == "1" {
-        window.AttachDiagnostics()
+        window.AttachDiagnostics(Environment.GetEnvironmentVariable("GOO_DEVTOOLS_INPUT") == "1")
       }
     }
   }

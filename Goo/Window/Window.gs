@@ -435,12 +435,13 @@ public partial class Window {
     dpi = Vector2(1.0F, 1.0F)
   }
 
-  internal func AttachDiagnostics() DevToolsSession {
+  internal func AttachDiagnostics(allowInput bool = false) DevToolsSession {
     requireUiThread("Window.AttachDiagnostics")
     if let current = DiagnosticsSession {
+      if allowInput { current.EnableInput() }
       return current
     }
-    let session = DevToolsSession(this)
+    let session = DevToolsSession(this, allowInput)
     diagnosticsSession = session
     resolver.DebugOverrides = session.OverrideStore
     input.SetDiagnostics(
