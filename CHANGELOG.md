@@ -1,10 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Added custom layout algorithms, measured virtual rows and stable-key scrolling.
+- Added native accessibility adapters, native file-drop ingress, file/image clipboard reads, and asynchronous native file dialogs.
+- Added native window size constraints, window ownership/modal lifecycle, pointer click counts, and composite-widget Tab stops.
+- Added bounded JPEG/static GIF decoding and opted-in DevTools input dispatch and inspection improvements.
+
 ## 0.5.3 - 2026-09-09
 
 ### Added
-
-- Added the optional Goo.Accessibility native runtime package and NativeAccessibilityAdapter for desktop screen readers, with retained native identities, UI-thread action routing, and reversible selection endpoints.
 
 - Added a Cell factory overload for constructor dependencies and F# object expressions, with stable mounted identity and Goo-owned disposal.
 
