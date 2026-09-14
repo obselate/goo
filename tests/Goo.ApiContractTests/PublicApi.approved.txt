@@ -1072,6 +1072,7 @@ property|Goo.Blob|OnTextComposition|System.Action`1<Goo.TextCompositionEvent>|in
 property|Goo.Blob|OnTextInput|System.Action`1<System.String>|instance|get:public,init:public|index:()
 property|Goo.Blob|OnWheel|System.Action`1<Goo.WheelEvent>|instance|get:public,init:public|index:()
 property|Goo.Blob|ScrollbarVisibility|Goo.ScrollbarVisibility|instance|get:public,init:public|index:()
+property|Goo.Blob|TabStop|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionDelayMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionEasing|Goo.Easing|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionMs|System.Double|instance|get:public,init:public|index:()

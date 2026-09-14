@@ -315,6 +315,10 @@ internal class Reconciler {
     }
 
     var inputChanged = disabledChanged || scrollbarVisibilityChanged
+    if n.TabStop != b.TabStop {
+      n.TabStop = b.TabStop
+      inputChanged = true
+    }
     if n.Focusable != nextFocusable {
       n.Focusable = nextFocusable
       inputChanged = true

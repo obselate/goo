@@ -722,3 +722,8 @@ Gets the wheel position in the current handler coordinates.
 ### `WindowPosition`
 
 Gets the wheel position in logical window coordinates.
+
+`Blob.TabStop` defaults to `true`. Set it to `false` on focusable children of a
+composite widget to exclude them from sequential Tab navigation while preserving
+pointer, `ElementHandle.Focus()`, and accessibility focus. Keep one enabled child
+as the tab stop and move focus explicitly for arrow-key navigation.

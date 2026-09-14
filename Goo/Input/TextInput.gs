@@ -593,7 +593,7 @@ internal partial class TextInput {
   private func collectFocusables(n Node, sink List[Node], hidden bool, disabled bool) {
     let nowHidden = hidden || n.PaintInputHidden
     let nowDisabled = disabled || n.Disabled
-    if !nowHidden && !nowDisabled && n.Focusable {
+    if !nowHidden && !nowDisabled && n.Focusable && n.TabStop {
       sink.Add(n)
     }
     for i in 0 ... n.Children.Count {

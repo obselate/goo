@@ -231,6 +231,12 @@ public open class Blob : Style {
       blobState = value ? blobState | int32(4) : blobState & ^int32(4)
     }
   }
+  /// Controls whether a focusable element participates in sequential Tab navigation. Defaults to true.
+  /// False preserves pointer, programmatic, and accessibility focus for composite widgets.
+  public prop TabStop bool{
+    get -> (blobState & int32(512)) == 0
+    init -> blobState = value ? blobState & ^int32(512) : blobState | int32(512)
+  }
   /// Reports whether this element and its descendants reject input.
   public prop Disabled bool{
     get -> (blobState & int32(8)) != 0

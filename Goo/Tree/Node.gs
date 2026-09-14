@@ -19,7 +19,7 @@ internal class Node {
   private var transitionDelayMs float32
   private var transitionSelection StyleMask
   private var nodeState int32
-  private var lifecycleState uint8
+  private var lifecycleState uint16
   private var scenePaintVersion uint64
 
   internal prop ScenePaintVersion uint64{ get -> scenePaintVersion }
@@ -227,10 +227,14 @@ internal class Node {
     }
   }
   internal prop AutoFocus bool{
-    get -> (lifecycleState & uint8(2)) != uint8(0)
+    get -> (lifecycleState & uint16(2)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(2) : lifecycleState & ^uint8(2)
+      lifecycleState = value ? lifecycleState | uint16(2) : lifecycleState & ^uint16(2)
     }
+  }
+  internal prop TabStop bool{
+    get -> (lifecycleState & uint16(256)) == uint16(0)
+    set -> lifecycleState = value ? lifecycleState & ^uint16(256) : lifecycleState | uint16(256)
   }
   internal prop Disabled bool{
     get -> (nodeState & (int32(1) << 15)) != 0
@@ -324,45 +328,45 @@ internal class Node {
   internal prop StylePendingInitial bool{ get; set; }
   internal prop StylePendingInheritedMask StyleMask{ get; set; }
   internal prop Retired bool{
-    get -> (lifecycleState & uint8(4)) != uint8(0)
+    get -> (lifecycleState & uint16(4)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(4) : lifecycleState & ^uint8(4)
+      lifecycleState = value ? lifecycleState | uint16(4) : lifecycleState & ^uint16(4)
     }
   }
   internal prop HasElementHandle bool{
-    get -> (lifecycleState & uint8(8)) != uint8(0)
+    get -> (lifecycleState & uint16(8)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(8) : lifecycleState & ^uint8(8)
+      lifecycleState = value ? lifecycleState | uint16(8) : lifecycleState & ^uint16(8)
     }
   }
   internal prop HasAccessibilityDeclaration bool{
-    get -> (lifecycleState & uint8(16)) != uint8(0)
+    get -> (lifecycleState & uint16(16)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(16) : lifecycleState & ^uint8(16)
+      lifecycleState = value ? lifecycleState | uint16(16) : lifecycleState & ^uint16(16)
     }
   }
   internal prop HasAccessibilityNodeState bool{
-    get -> (lifecycleState & uint8(32)) != uint8(0)
+    get -> (lifecycleState & uint16(32)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(32) : lifecycleState & ^uint8(32)
+      lifecycleState = value ? lifecycleState | uint16(32) : lifecycleState & ^uint16(32)
     }
   }
   internal prop HasSparseInputState bool{
-    get -> (lifecycleState & uint8(1)) != uint8(0)
+    get -> (lifecycleState & uint16(1)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(1) : lifecycleState & ^uint8(1)
+      lifecycleState = value ? lifecycleState | uint16(1) : lifecycleState & ^uint16(1)
     }
   }
   internal prop HasDirectImageSourceState bool{
-    get -> (lifecycleState & uint8(64)) != uint8(0)
+    get -> (lifecycleState & uint16(64)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(64) : lifecycleState & ^uint8(64)
+      lifecycleState = value ? lifecycleState | uint16(64) : lifecycleState & ^uint16(64)
     }
   }
   internal prop Password bool{
-    get -> (lifecycleState & uint8(128)) != uint8(0)
+    get -> (lifecycleState & uint16(128)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint8(128) : lifecycleState & ^uint8(128)
+      lifecycleState = value ? lifecycleState | uint16(128) : lifecycleState & ^uint16(128)
     }
   }
 
