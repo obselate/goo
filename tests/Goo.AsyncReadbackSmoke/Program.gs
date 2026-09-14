@@ -3252,6 +3252,10 @@ func RunProtectedTextSmoke() {
 
 let managedEntryTimestamp = Stopwatch.GetTimestamp()
 Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
+if !String.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOO_CLIPBOARD_SMOKE")) {
+  RunClipboardSmoke()
+  return
+}
 if Environment.GetEnvironmentVariable("GOO_WINDOW_OWNERSHIP_SMOKE") == "1" {
   RunWindowOwnershipSmoke()
   return

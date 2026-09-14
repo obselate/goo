@@ -154,5 +154,8 @@ internal partial class RasterImageDecoder {
       for i in offset ... offset + count { crc = (crc >> 8) ^ crcTable[int32((crc ^ bytes[i]) & 255u)] }
       return crc ^ 0xFFFFFFFFu
     }
+
+    internal func CrcUpdate(crc uint32, value uint8) uint32 ->
+      (crc >> 8) ^ crcTable[int32((crc ^ uint32(value)) & 255u)]
   }
 }

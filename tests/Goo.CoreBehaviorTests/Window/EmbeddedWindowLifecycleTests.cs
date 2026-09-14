@@ -36,6 +36,30 @@ public sealed class EmbeddedWindowLifecycleTests
     }
 
     [Fact]
+    public void EmbeddedClipboardReadsReportUnsupportedAndEnforceThreadAndClose()
+    {
+        using var host = new Host();
+        var window = new Window();
+        window.Attach(host);
+        Assert.Equal(ClipboardReadStatus.Unsupported, window.GetClipboardFormats().Status);
+        Assert.Equal(ClipboardReadStatus.Unsupported, window.ReadClipboardFiles().Status);
+        Assert.Equal(ClipboardReadStatus.Unsupported, window.ReadClipboardImage().Status);
+        Exception? failure = null;
+        var worker = new Thread(() =>
+        {
+            try { window.ReadClipboardImage(); }
+            catch (Exception error) { failure = error; }
+        });
+        worker.Start();
+        worker.Join();
+        Assert.IsType<InvalidOperationException>(failure);
+        host.Dispose();
+        Assert.Throws<InvalidOperationException>(() => window.GetClipboardFormats());
+        Assert.Throws<InvalidOperationException>(() => window.ReadClipboardFiles());
+        Assert.Throws<InvalidOperationException>(() => window.ReadClipboardImage());
+    }
+
+    [Fact]
     public void EmbeddedViewportsRejectNativeOwnershipAndCannotOwnNativeChildren()
     {
         using var host = new Host();
