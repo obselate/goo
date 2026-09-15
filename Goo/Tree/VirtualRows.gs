@@ -195,12 +195,11 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         if String.IsNullOrEmpty(id) || !indices.TryAdd(id, i) { throw InvalidOperationException("VirtualRows keys must be nonempty and unique across the collection") }
         var row = VirtualRow[T]{Item: item, Key: id, Height: estimate}
         if let previous = old {
-          if sameBuilder && previous.Width == width && previous.Indices.TryGetValue(id, out var index) {
+          if previous.Width == width && previous.Indices.TryGetValue(id, out var index) {
             let retained = previous.Rows[index]
-            if retained.Measured && equality.Equals(retained.Item, item) {
-              row.Height = retained.Height
-              row.Measured = true
-            }
+            // Keep the last height as an estimate while changed content is remeasured.
+            row.Height = retained.Height
+            row.Measured = retained.Measured && sameBuilder && equality.Equals(retained.Item, item)
           }
         }
         rows[i] = row

@@ -90,6 +90,28 @@ public sealed class VirtualRowsTests
     }
 
     [Fact]
+    public void RebuildingNearTheBottomKeepsMeasuredHeightsUntilReplacementRowsAreMeasured()
+    {
+        var cell = new Rows(8) { Gap = 0, Estimate = 36 };
+        for (var i = 0; i < cell.Items.Count; i++) cell.Items[i] = cell.Items[i] with { Height = i == 0 ? 91.2 : 36 };
+        var window = new Window { Root = cell, Width = 700, Height = 259 };
+        try
+        {
+            Settle(window);
+            cell.Handle.JumpTo(0, 48);
+            Settle(window);
+            var scroll = cell.Handle.ScrollOffset.Y;
+            var rowY = cell.Handles[6].BorderBox.Y;
+            for (var i = 0; i < cell.Items.Count; i++) cell.Items[i] = cell.Items[i] with { Text = "Selected" };
+            cell.Rebuild();
+            Settle(window);
+            Assert.Equal(scroll, cell.Handle.ScrollOffset.Y, 2);
+            Assert.Equal(rowY, cell.Handles[6].BorderBox.Y, 2);
+        }
+        finally { window.Close(); }
+    }
+
+    [Fact]
     public void WrappedContentRemeasuresOnWidthAndContentChanges()
     {
         var cell = new Rows(100) { Wrapped = true };
