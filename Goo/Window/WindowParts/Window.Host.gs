@@ -256,6 +256,7 @@ public partial class Window {
         VSync,
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
       host = native
+      SyncTitlebarHook()
       configureOwnership(native)
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(minWidth, minHeight) }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 typedef uint64_t Uint64;
 typedef uint32_t Uint32;
 typedef struct { int x, y; } SDL_Point;
@@ -42,6 +43,15 @@ enum { SDL_WINDOW_RESIZABLE = 1, SDL_WINDOW_MAXIMIZED = 2, SDL_WINDOW_FULLSCREEN
 #define SDL_abs abs
 static SDL_Mouse mouse = { 500, 8 };
 static int moves, resizes, maximizes, restores, exposes, geometries, acks;
+static bool callback_handles;
+static int callback_count, callback_x, callback_y;
+static bool (*titlebar_callback)(int, int);
+static bool titlebar(int x, int y) { ++callback_count; callback_x = x; callback_y = y; return callback_handles; }
+static unsigned SDL_GetWindowProperties(SDL_Window *window) { return window->id; }
+static void *SDL_GetPointerProperty(unsigned properties, const char *name, void *fallback) {
+    assert(properties != 0 && strcmp(name, "Goo.Window.TitlebarDoubleClick.1") == 0);
+    return titlebar_callback ? (void *)titlebar_callback : fallback;
+}
 static SDL_Mouse *SDL_GetMouse(void) { return &mouse; }
 static void SDL_MaximizeWindow(SDL_Window *w) { ++maximizes; w->flags |= SDL_WINDOW_MAXIMIZED; }
 static void SDL_RestoreWindow(SDL_Window *w) { ++restores; w->flags &= ~SDL_WINDOW_MAXIMIZED; }
@@ -91,6 +101,22 @@ int main(void)
     Wayland_ProcessHitTest(&seat, 13, SDL_MS_TO_NS(3000), true);
     Wayland_ProcessHitTest(&seat, 14, SDL_MS_TO_NS(3100), true);
     assert(maximizes == 1 && restores == 1);
+    titlebar_callback = titlebar;
+    callback_handles = true;
+    window.flags = SDL_WINDOW_RESIZABLE;
+    Wayland_ProcessHitTest(&seat, 15, SDL_MS_TO_NS(4000), true);
+    Wayland_ProcessHitTest(&seat, 16, SDL_MS_TO_NS(4100), true);
+    assert(callback_count == 1 && callback_x == 120 && callback_y == 20);
+    assert(maximizes == 1 && restores == 1); /* handled callback replaces native action */
+    callback_handles = false;
+    Wayland_ProcessHitTest(&seat, 17, SDL_MS_TO_NS(5000), true);
+    Wayland_ProcessHitTest(&seat, 18, SDL_MS_TO_NS(5100), true);
+    assert(callback_count == 2 && maximizes == 2); /* unhandled keeps native default */
+    window.flags = 0;
+    callback_handles = true;
+    Wayland_ProcessHitTest(&seat, 19, SDL_MS_TO_NS(6000), true);
+    Wayland_ProcessHitTest(&seat, 20, SDL_MS_TO_NS(6100), true);
+    assert(callback_count == 3 && maximizes == 2); /* host callback can act on fixed-size windows */
     for (int edge = SDL_HITTEST_RESIZE_TOPLEFT; edge <= SDL_HITTEST_RESIZE_LEFT; ++edge) {
         data.hit_test_result = edge;
         Wayland_ProcessHitTest(&seat, 15, SDL_MS_TO_NS(3200), true);

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Container and Button copy read-only child lists so factory output retains the documented mutable child collection.
+- Added native titlebar double-click interception for custom chrome, with platform defaults preserved unless handled.
+- Fixed inline slot positions after styled text changes its measured advance.
 - Added custom layout algorithms, measured virtual rows and stable-key scrolling.
 - Added native accessibility adapters, native file-drop ingress, file/image clipboard reads, and asynchronous native file dialogs.
 - Added native window size constraints, window ownership/modal lifecycle, pointer click counts, and composite-widget Tab stops.

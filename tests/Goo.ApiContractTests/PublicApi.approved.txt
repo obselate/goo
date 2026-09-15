@@ -572,6 +572,7 @@ event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:publi
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
+event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
 function|Goo|VirtualRows|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,estimatedItemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 function|Goo|Virtual|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemWidth:System.Double,itemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
@@ -1518,6 +1519,8 @@ property|Goo.WindowMetrics|FramebufferHeight|System.Int32|instance|get:public,in
 property|Goo.WindowMetrics|FramebufferWidth|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalWidth|System.Int32|instance|get:public,init:public|index:()
+property|Goo.WindowTitlebarEvent|Handled|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.WindowTitlebarEvent|Position|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.Window|AccessibilityAdapter|Goo.AccessibilityAdapter|instance|get:public,set:public|index:()
 property|Goo.Window|Background|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|CanMove|System.Boolean|instance|get:public|index:()
@@ -1702,4 +1705,5 @@ type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowActivationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowTitlebarEvent|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Window|sealed-class|public|base:System.Object|interfaces:|generic:

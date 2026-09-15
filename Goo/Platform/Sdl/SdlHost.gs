@@ -369,6 +369,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     SdlRuntime.RequireMainThread("SdlHost.Dispose")
     disposed = true
+    SdlTitlebarHooks.Unbind(this)
     if windowId != 0u {
       SdlRuntime.Unregister(windowId)
       windowId = 0u

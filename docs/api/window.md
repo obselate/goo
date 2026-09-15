@@ -149,6 +149,27 @@ Marks a container subtree as a native drag region for undecorated windows. Click
 
 Returns: the same container
 
+### `TitlebarDoubleClicked`
+
+An optional event raised before the platform handles a double-click on blank space
+inside an undecorated `DragRegion`. `WindowTitlebarEvent.Position` is in logical
+client coordinates. Set `Handled = true` after replacing the command; otherwise
+the native default continues. Clickable/focusable descendants and resize edges
+are excluded. Subscribe and handle on the window UI thread.
+
+```gsharp
+window.TitlebarDoubleClicked += (event WindowTitlebarEvent) -> {
+  event.Handled = true
+  window.State = window.State == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized
+}
+```
+
+Wayland uses the bundled SDL patch and its configured double-click policy.
+Windows uses a per-window subclass; macOS uses an app-local event monitor and
+`NSEvent.clickCount`. The event does not synthesize ordinary pointer down/up
+callbacks. Subscriptions allocate native hook state only for the affected windows,
+and closing a window removes those hooks. Embedded hosts do not emit this event.
+
 ### `GetClipboardText`
 
 Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard or native copy failure.
