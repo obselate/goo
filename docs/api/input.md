@@ -27,6 +27,11 @@ Single-line text entry selects a word for counts two and three. TextEditor uses
 one for the caret, two for a word, and three for a line. Applications keep control
 over what generic double/triple presses do.
 
+`PointerEvent.IsFromInteractiveChild` identifies a clickable or focusable descendant
+below the current handler on a routed down, move, up, or cancel path. A parent can
+use it to handle decorative title content while leaving embedded controls alone.
+It excludes the current handler itself; unrouted hover notifications report false.
+
 ## Route keyboard and focus callbacks
 
 `OnKeyDown` and `OnKeyUp` start at the currently focused element and bubble through its parents, so an ancestor can own shortcuts for a subtree. `KeyEvent.StopPropagation()` ends that route before the next ancestor without canceling Goo's default action. `KeyEvent.PreventDefault()` cancels the default action without stopping the remaining callbacks. Both controls are active only during that route; retaining the event value cannot affect a later dispatch.
@@ -684,6 +689,11 @@ Gets the pointer device type that produced this event.
 ### `IsPrimary`
 
 Reports whether this contact is primary for its active device-type sequence.
+
+### `IsFromInteractiveChild`
+
+True when a clickable or focusable descendant is below this handler on the routed
+down, move, up, or cancel path. Hover notifications are not routed and report false.
 
 ### `Modifiers`
 

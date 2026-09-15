@@ -223,6 +223,7 @@ internal partial class PointerInput {
       let generation = dispatchGeneration
       control.Begin(generation, current.CaptureTarget)
       var prevented = false
+      var interactiveChild = false
       try {
         for var i = route.Count; i > 0; i-- {
           let n = route[i - 1]
@@ -236,6 +237,7 @@ internal partial class PointerInput {
             WindowPosition: Point{ X: float64(x), Y: float64(y) },
             Delta: transformed ? routeDeltas[i - 1] : Point{ X: dx, Y: dy },
             Button: button,
+            IsFromInteractiveChild: interactiveChild,
             ClickCount: kind != PointerEventKind.Move && button == current.LastPressButton ? current.LastPressCount : 0,
             Buttons: current.HeldButtons,
             Modifiers: modifiers,
@@ -262,6 +264,7 @@ internal partial class PointerInput {
             control.ClearCurrentTarget(generation)
           }
           if control.PropagationStopped || n.FocusScopeBoundary { break }
+          interactiveChild = interactiveChild || isInteractiveContent(n)
         }
         applyCaptureRequests(button, route)
         prevented = control.DefaultPrevented
@@ -331,6 +334,7 @@ internal partial class PointerInput {
     dispatchGeneration++
     let generation = dispatchGeneration
     control.Begin(generation, nil)
+    var interactiveChild = false
     try {
       for var i = route.Count; i > 0; i-- {
         let n = route[i - 1]
@@ -342,6 +346,7 @@ internal partial class PointerInput {
           WindowPosition: Point{ X: float64(current.LastEventX), Y: float64(current.LastEventY) },
           Delta: Point{},
           Button: PointerButton.None,
+          IsFromInteractiveChild: interactiveChild,
           Buttons: PointerButtons.None,
           Modifiers: current.LastModifiers,
           Control: control,
@@ -357,6 +362,7 @@ internal partial class PointerInput {
           control.ClearCurrentTarget(generation)
         }
         if control.PropagationStopped { break }
+        interactiveChild = interactiveChild || isInteractiveContent(n)
       }
     } finally {
       control.Finish(generation)

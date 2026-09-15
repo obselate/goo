@@ -966,7 +966,7 @@ internal partial class PointerInput {
     }
     for i in 0 ... hitChain.Count {
       let child = hitChain[i]
-      if child.OnClick != nil || child.Focusable {
+      if isInteractiveContent(child) {
         info.HasContent = true
       }
       if child.DragsWindow {

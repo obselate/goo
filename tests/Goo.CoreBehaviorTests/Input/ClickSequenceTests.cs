@@ -4,6 +4,10 @@ using Xunit;
 public sealed class ClickSequenceTests
 {
     [Fact]
+    public void ParentGesturesDistinguishTitleContentFromEmbeddedControls() =>
+        Assert.True(new ClickSequenceFixtures().RoutedInteractiveChildIsRelativeToEachHandler());
+
+    [Fact]
     public void GenericCountsRespectSequenceBoundaries() =>
         Assert.True(new ClickSequenceFixtures().GenericCountsRespectBoundariesTargetsButtonsAndCancellation());
 

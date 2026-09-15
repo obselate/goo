@@ -1255,6 +1255,7 @@ property|Goo.PointerEvent|Button|Goo.PointerButton|instance|get:public,init:publ
 property|Goo.PointerEvent|ClickCount|System.Int32|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|Delta|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|Device|Goo.PointerDevice|instance|get:public|index:()
+property|Goo.PointerEvent|IsFromInteractiveChild|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|IsPrimary|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|PointerId|System.Int64|instance|get:public|index:()

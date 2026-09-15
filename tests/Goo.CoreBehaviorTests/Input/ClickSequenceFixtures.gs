@@ -4,6 +4,36 @@ import System
 import System.Collections.Generic
 
 internal class ClickSequenceFixtures {
+  func RoutedInteractiveChildIsRelativeToEachHandler() bool {
+    let parent = List[bool]()
+    let child = List[bool]()
+    let resolver = Resolver{}
+    let input = PointerInput()
+    let text = TextInput()
+    let root = Reconciler{Res: resolver}.Mount(Container{
+      Width: 300, Height: 60, FlexDirection: FlexDirection.Row,
+      OnPointerDown: (e PointerEvent) -> { parent.Add(e.IsFromInteractiveChild) },
+      Children: {
+        Container{Width: 100, Height: 60, Children: {Text{Content: "Title"}}},
+        Button{Width: 100, Height: 60, OnClick: () -> {},
+          OnPointerDown: (e PointerEvent) -> { child.Add(e.IsFromInteractiveChild) },
+          Children: {Text{Content: "Control"}}},
+        Container{Width: 100, Height: 60, Focusable: true,
+          OnPointerDown: (e PointerEvent) -> { child.Add(e.IsFromInteractiveChild) }},
+      },
+    })
+    Layout().Calculate(root, 300.0F, 60.0F)
+    for i in 0 ... 3 {
+      let x = 10.0F + float32(i) * 100.0F
+      input.QueuePress(x, 10.0F)
+      input.QueueRelease(x, 10.0F)
+      input.Drain(root, resolver, float64(i), text)
+      if input.HitInfo(root, x, 10.0F).HasContent != (i > 0) { return false }
+    }
+    return parent.Count == 3 && !parent[0] && parent[1] && parent[2]
+      && child.Count == 2 && !child[0] && !child[1]
+  }
+
   func GenericCountsRespectBoundariesTargetsButtonsAndCancellation() bool {
     let downs = List[int32]()
     let ups = List[int32]()
