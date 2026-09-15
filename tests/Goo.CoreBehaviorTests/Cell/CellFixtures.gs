@@ -305,28 +305,20 @@ internal class CellFixtures {
     WindowDisposableCell.Disposals = 0
 
     let rec = Reconciler{ Res: Resolver{} }
-    var keyed = rec.Mount(Container{
-      Children: {
+    var keyed = rec.Mount(Container() {
         Cell.Mount[KeyedDisposableCell]("removed"),
         Text{ Key: "kept", Content: "kept" },
-      },
-    })
-    keyed = rec.Diff(keyed, Container{
-      Children: {
+      })
+    keyed = rec.Diff(keyed, Container() {
         Text{ Key: "kept", Content: "kept" },
-      },
-    })
+      })
 
-    var positional = rec.Mount(Container{
-      Children: {
+    var positional = rec.Mount(Container() {
         Text{ Content: "kept" },
         Cell.Mount[PositionalDisposableCell](nil),
-      },
-    })
-    positional = rec.Diff(positional, Container{
-      Children: {
-        Text{ Content: "kept" },
-      },
+      })
+    positional = rec.Diff(positional, Container() {
+        Text{ Content: "kept"},
     })
 
     var replacement = rec.Mount(Cell.Mount[ReplacementDisposableCell]("same"))
@@ -347,16 +339,15 @@ internal class CellFixtures {
   func KeyedRetirementContinuesAfterDisposeFailures() bool {
     RetirementDisposableCell.Reset()
     let rec = Reconciler{ Res: Resolver{} }
-    let root = rec.Mount(Container{ Children: {
+    let root = rec.Mount(Container() {
       Cell.Mount[string, RetirementDisposableCell]("first", "first"),
       Cell.Mount[string, RetirementDisposableCell]("later", "later"),
       Text{ Key: "kept", Content: "kept" },
-    } })
+    })
     var message = ""
     try {
-      rec.Diff(root, Container{ Children: {
-        Text{ Key: "kept", Content: "kept" },
-      } })
+      rec.Diff(root, Container() {
+        Text{ Key: "kept", Content: "kept" },})
     } catch (error Exception) {
       message = error.Message
     }
@@ -370,16 +361,15 @@ internal class CellFixtures {
   func PositionalRetirementContinuesAfterDisposeFailures() bool {
     RetirementDisposableCell.Reset()
     let rec = Reconciler{ Res: Resolver{} }
-    let root = rec.Mount(Container{ Children: {
+    let root = rec.Mount(Container() {
       Text{ Content: "kept" },
       Cell.Mount[string, RetirementDisposableCell](nil, "first"),
       Cell.Mount[string, RetirementDisposableCell](nil, "later"),
-    } })
+    })
     var message = ""
     try {
-      rec.Diff(root, Container{ Children: {
-        Text{ Content: "kept" },
-      } })
+      rec.Diff(root, Container() {
+        Text{ Content: "kept" },})
     } catch (error Exception) {
       message = error.Message
     }
@@ -434,7 +424,7 @@ internal class CellFixtures {
     let first = FactorySubtypeCell("first")
     let second = FactorySubtypeCell("second")
     let rec = Reconciler{ Res: Resolver{} }
-    var root = rec.Mount(Container{ Children: {
+    var root = rec.Mount(Container() {
       Cell.Mount[FactoryBaseCell](() -> {
         FactorySubtypeCell.InitialFactoryCalls++
         return first
@@ -443,8 +433,8 @@ internal class CellFixtures {
         FactorySubtypeCell.InitialFactoryCalls++
         return second
       }, "second"),
-    } })
-    root = rec.Diff(root, Container{ Children: {
+    })
+    root = rec.Diff(root, Container() {
       Cell.Mount[FactoryBaseCell](() -> {
         FactorySubtypeCell.ReplacementFactoryCalls++
         return FactorySubtypeCell("unused")
@@ -453,7 +443,7 @@ internal class CellFixtures {
         FactorySubtypeCell.ReplacementFactoryCalls++
         return FactorySubtypeCell("unused")
       }, "first"),
-    } })
+      })
     if FactorySubtypeCell.InitialFactoryCalls != 2
       || FactorySubtypeCell.ReplacementFactoryCalls != 0
       || root.Children[0].Fiber != second
@@ -694,10 +684,10 @@ internal open class CellThrowingInputFixtureCell : Cell[CellThrowingInputFixture
 }
 
 internal class CellSchedulingSiblingsParent : Cell {
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Cell.Mount[CellSchedulingLeft]("left", nil),
     Cell.Mount[CellSchedulingRight]("right", nil),
-  } }
+  }
 }
 
 internal class CellSchedulingLeft : Cell {
@@ -762,10 +752,10 @@ internal class CellSchedulingDirectChild : Cell {
 }
 
 internal class CellSchedulingRecoveryParent : Cell {
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Cell.Mount[CellSchedulingRecoveryFirst]("first", nil),
     Cell.Mount[CellSchedulingRecoverySecond]("second", nil),
-  } }
+  }
 }
 
 internal class CellSchedulingRecoveryFirst : Cell {
@@ -810,11 +800,11 @@ internal class CellSchedulingOrderParent : Cell {
   override func Build() Blob {
     Builds = Builds + 1
     Trace = Trace + "P"
-    return Container{ Children: {
+    return Container() {
       Cell.Mount[CellSchedulingOrderInput, CellSchedulingOrderChild](
         nil,
         CellSchedulingOrderInput{ Label: label }),
-    } }
+    }
   }
 }
 
@@ -846,11 +836,10 @@ internal class CellSchedulingRemovalParent : Cell {
 
   override func Build() Blob {
     if showChild {
-      return Container{ Children: {
+      return Container() {
         Cell.Mount[CellSchedulingRemovalChild](nil, nil),
       } }
-    }
-    return Container{ Children: { Text{ Content: "removed" } } }
+    return Container() { Text{ Content: "removed" },}
   }
 }
 
@@ -873,10 +862,10 @@ internal class CellSchedulingRemovalChild : Cell, IDisposable {
 }
 
 internal class CellSchedulingDeferredParent : Cell {
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Cell.Mount[CellSchedulingDeferredFirst]("first", nil),
     Cell.Mount[CellSchedulingDeferredSecond]("second", nil),
-  } }
+  }
 }
 
 internal class CellSchedulingDeferredFirst : Cell {
@@ -986,8 +975,7 @@ internal class RetirementDisposableCell : Cell[string], IDisposable {
 }
 
 internal class WindowCleanupParent : Cell {
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Cell.Mount[string, RetirementDisposableCell]("first", "first"),
     Cell.Mount[string, RetirementDisposableCell]("later", "later"),
   } }
-}

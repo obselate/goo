@@ -1,11 +1,11 @@
 package GooAsyncReadbackSmoke
 
+import Goo
+import Hexa.NET.SDL3
 import System
 import System.IO
 import System.Threading
 import System.Threading.Tasks
-import Goo
-import Hexa.NET.SDL3
 
 unsafe func RunFileDialogSmoke() {
   let mode = Environment.GetEnvironmentVariable("GOO_FILE_DIALOG_SMOKE") ?? ""

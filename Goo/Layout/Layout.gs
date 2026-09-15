@@ -1,14 +1,30 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Collections.Generic
-import Facebook.Yoga
+import System.Runtime.CompilerServices
 
-// Bumped on any real overflow change so every window's cached scroll list
-// refreshes; per-window flags would go stale across windows.
+internal class ScrollTopologyValue {
+  internal var Version int64
+}
+
 internal class ScrollTopology {
   shared {
-    internal var Version int64
+    private let versions ConditionalWeakTable[Node, ScrollTopologyValue] =
+    ConditionalWeakTable[Node, ScrollTopologyValue]()
+
+    internal func Version(root Node) int64 -> versions.TryGetValue(root, out var value)
+    ? value.Version : 0L
+
+    internal func Invalidate(node Node) {
+      var root = node
+      while let parent = root.Parent {
+        root = parent
+      }
+      let value = versions.GetOrCreateValue(root)
+      value.Version++
+    }
   }
 }
 
@@ -22,6 +38,7 @@ internal class Layout {
   internal var scrollNodes List[Node]
   internal var scrollListDirty bool
   internal var scrollSeen int64
+  private var scrollRoot Node?
 
   // No web defaults: native Yoga's Column direction matches Goo's default.
   internal init() {
@@ -67,11 +84,13 @@ internal class Layout {
   // Cached flat list of scrolling nodes so per-pump scroll work is
   // O(scrollers), not O(tree). Rebuilt on structure or Overflow changes.
   internal func ScrollNodes(root Node) List[Node] {
-    if scrollListDirty || scrollSeen != ScrollTopology.Version {
+    let version = ScrollTopology.Version(root)
+    if scrollListDirty || scrollRoot != root || scrollSeen != version {
       scrollNodes.Clear()
       collectScroll(root)
       scrollListDirty = false
-      scrollSeen = ScrollTopology.Version
+      scrollRoot = root
+      scrollSeen = version
     }
     return scrollNodes
   }
@@ -146,7 +165,15 @@ internal class Layout {
     // Measured editors cannot own Yoga children; slot roots are calculated in readRect.
     if n.Kind == NodeKind.Editor {
       for i in 0 ... n.Children.Count {
-        syncNode(n.Children[i], true)
+        let child = n.Children[i]
+        syncNode(child, true)
+        if let childYoga = child.Yoga {
+          YGNodeAPI.YGNodeSetContext(childYoga, child)
+          YGNodeAPI.YGNodeSetDirtiedFunc(childYoga, TextEditorLayouts.SlotChildDirty)
+          if YGNodeAPI.YGNodeIsDirty(childYoga) {
+            TextEditorLayouts.SlotChildDirty(childYoga)
+          }
+        }
       }
       return
     }
@@ -201,21 +228,11 @@ internal class Layout {
       let editor = n.Kind == NodeKind.Editor
       let custom = CustomLayouts.State(n)
       custom?.Arrange()
-      if n.OverflowX != Overflow.Scroll && !editor {
-        n.ScrollX = 0.0F
-        n.ScrollTargetX = 0.0F
-      }
-      if n.OverflowY != Overflow.Scroll && !editor {
-        n.ScrollY = 0.0F
-        n.ScrollTargetY = 0.0F
-        n.UserScrolled = false
-      }
+      ScrollState.RefreshAxes(n)
       if editor {
-        TextEditorLayouts.SyncScroll(n)
+        ScrollState.SyncEditor(n)
       } else if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
-        clampScroll(n)
-      } else {
-        n.ScrollBarAlpha = 0.0F
+        measureScrollExtent(n)
       }
       if editor {
         readEditorSlotRects(n)
@@ -235,7 +252,7 @@ internal class Layout {
     }
 
   private func readEditorSlotRects(n Node) {
-    let contentWidth = TextLayouts.ContentWidth(n)
+    let contentWidth = BoxGeometry.ContentWidth(n)
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       guard let yoga = child.Yoga else { continue }
@@ -253,7 +270,7 @@ internal class Layout {
 
   // Content extent from Yoga's relative child geometry; every pass re-clamps
   // so content shrink can never leave an out-of-range offset behind.
-  internal func clampScroll(n Node) {
+  private func measureScrollExtent(n Node) {
     var cw = 0.0F
     var ch = 0.0F
     if let custom = CustomLayouts.State(n) {
@@ -273,19 +290,7 @@ internal class Layout {
         if bottom > ch { ch = bottom }
       }
     }
-    let grewY = ch > n.ContentH
-    n.ContentW = cw
-    n.ContentH = ch
-    if n.OverflowY == Overflow.Scroll && n.PinToBottom && !n.UserScrolled {
-      n.ScrollTargetY = maxScrollY(n)
-      if grewY {
-        n.ScrollY = maxScrollY(n)
-      }
-    }
-    n.ScrollTargetX = clampOffset(n.ScrollTargetX, maxScrollX(n))
-    n.ScrollTargetY = clampOffset(n.ScrollTargetY, maxScrollY(n))
-    n.ScrollX = clampOffset(n.ScrollX, maxScrollX(n))
-    n.ScrollY = clampOffset(n.ScrollY, maxScrollY(n))
+    ScrollState.SetExtent(n, cw, ch)
   }
 }
 

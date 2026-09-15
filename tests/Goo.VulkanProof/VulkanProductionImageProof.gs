@@ -1,8 +1,8 @@
 package Goo.VulkanProof
 
+import Goo
 import System
 import System.Threading
-import Goo
 
 internal class VulkanProductionImageProvider : ImageSourceProvider, IDisposable {
   private var version uint64 = 1uL

@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.Globalization
-import Goo
 
 data struct VirtualTableItem {
   internal var Symbol string
@@ -403,13 +403,8 @@ class VirtualTableRootCell : Cell {
         logical = logical + 1
       }
     }
-    return Container{
-      Width: viewportWidth,
-      Height: viewportHeight,
-      Position: PositionType.Relative,
-      OverflowX: Overflow.Hidden,
-      OverflowY: Overflow.Hidden,
-      Children: { canvas },
+    return Container() {.Width: viewportWidth,.Height: viewportHeight,.Position: PositionType.Relative,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,
+      canvas,
     }
   }
 

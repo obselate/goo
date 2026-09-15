@@ -1,11 +1,11 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Collections.Generic
 import System.Globalization
 import System.Runtime.CompilerServices
 import System.Text
-import Facebook.Yoga
 
 internal class DiagnosticNodeIdentityValue {
   internal let Id int64
@@ -196,10 +196,10 @@ internal class DiagnosticTreeState {
       X: float64(padding.X), Y: float64(padding.Y),
       Width: float64(padding.W), Height: float64(padding.H),
     }
-    let contentLeft = TextLayouts.ContentLeft(n)
-    let contentTop = TextLayouts.ContentTop(n)
-    let contentWidth = TextLayouts.ContentWidth(n)
-    let contentHeight = TextLayouts.ContentHeight(n)
+    let contentLeft = BoxGeometry.ContentLeft(n)
+    let contentTop = BoxGeometry.ContentTop(n)
+    let contentWidth = BoxGeometry.ContentWidth(n)
+    let contentHeight = BoxGeometry.ContentHeight(n)
     let content = TransformGeometry.BoundsToWindow(n, contentLeft, contentTop,
       contentWidth, contentHeight)
     result.ContentBox = DiagnosticRect{

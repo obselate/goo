@@ -1,11 +1,11 @@
 package GooAsyncReadbackSmoke
 
+import Goo
+import GooReadbackFixture
 import System
 import System.Diagnostics
 import System.IO
 import System.Threading
-import Goo
-import GooReadbackFixture
 
 class PendingPathReadinessCell : Cell {
   private let clip VectorPath
@@ -29,19 +29,11 @@ class PendingPathReadinessCell : Cell {
 }
 
 class RoundedResizeFirstFrameCell : Cell {
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    BorderRadius: 24,
-    OverflowX: Overflow.Hidden,
-    OverflowY: Overflow.Hidden,
-    BackgroundColor: Color.Rgb(220, 48, 64),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.BorderRadius: 24,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,.BackgroundColor: Color.Rgb(220, 48, 64),
+    Container{
         Width: Length.Percent(100),
         Height: Length.Percent(100),
         BackgroundColor: Color.Rgb(48, 208, 112),
-      },
     },
   }
 }

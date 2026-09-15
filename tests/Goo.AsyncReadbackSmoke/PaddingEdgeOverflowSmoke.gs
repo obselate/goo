@@ -1,11 +1,11 @@
 package GooAsyncReadbackSmoke
 
+import Goo
+import GooReadbackFixture
 import System
 import System.Diagnostics
 import System.IO
 import System.Threading
-import Goo
-import GooReadbackFixture
 
 class PaddingEdgeOverflowCell : Cell {
   shared {
@@ -17,14 +17,8 @@ class PaddingEdgeOverflowCell : Cell {
     let MixedYOverflowBox ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Handle: PaddingEdgeOverflowCell.Root,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: PaddingEdgeOverflowCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
         Position: PositionType.Absolute,
         Left: 8,
         Top: 8,
@@ -36,27 +30,14 @@ class PaddingEdgeOverflowCell : Cell {
         BorderRadius: 12,
         BackgroundColor: Color.Rgb(220, 40, 48),
       },
+      Container() {.Position: PositionType.Absolute,.Left: 72,.Top: 8,.Width: 48,.Height: 48,.Handle: PaddingEdgeOverflowCell.OverflowBox,.BorderWidth: 1,.BorderColor: Color.White,.BorderRadius: 12,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(220, 40, 48),
       Container{
-        Position: PositionType.Absolute,
-        Left: 72,
-        Top: 8,
-        Width: 48,
-        Height: 48,
-        Handle: PaddingEdgeOverflowCell.OverflowBox,
-        BorderWidth: 1,
-        BorderColor: Color.White,
-        BorderRadius: 12,
-        Overflow: Overflow.Hidden,
-        BackgroundColor: Color.Rgb(220, 40, 48),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 0,
             Top: 0,
             Width: Length.Percent(100),
             Height: Length.Percent(100),
             BackgroundColor: Color.Rgb(220, 40, 48),
-          },
         },
       },
       Container{
@@ -69,26 +50,14 @@ class PaddingEdgeOverflowCell : Cell {
         BorderColor: Color.White,
         BackgroundColor: Color.Rgb(220, 40, 48),
       },
+      Container() {.Position: PositionType.Absolute,.Left: 200,.Top: 8,.Width: 48,.Height: 48,.Handle: PaddingEdgeOverflowCell.RectOverflowBox,.BorderWidth: 1,.BorderColor: Color.White,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(220, 40, 48),
       Container{
-        Position: PositionType.Absolute,
-        Left: 200,
-        Top: 8,
-        Width: 48,
-        Height: 48,
-        Handle: PaddingEdgeOverflowCell.RectOverflowBox,
-        BorderWidth: 1,
-        BorderColor: Color.White,
-        Overflow: Overflow.Hidden,
-        BackgroundColor: Color.Rgb(220, 40, 48),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: -1,
             Top: -1,
             Width: 48,
             Height: 48,
             BackgroundColor: Color.Rgb(220, 40, 48),
-          },
         },
       },
       Container{
@@ -101,27 +70,14 @@ class PaddingEdgeOverflowCell : Cell {
         BorderColor: Color.White,
         BackgroundColor: Color.Rgb(220, 40, 48),
       },
+      Container() {.Position: PositionType.Absolute,.Left: 72,.Top: 72,.Width: 48,.Height: 48,.Handle: PaddingEdgeOverflowCell.MixedXOverflowBox,.BorderWidth: 1,.BorderColor: Color.White,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Visible,.BackgroundColor: Color.Rgb(220, 40, 48),
       Container{
-        Position: PositionType.Absolute,
-        Left: 72,
-        Top: 72,
-        Width: 48,
-        Height: 48,
-        Handle: PaddingEdgeOverflowCell.MixedXOverflowBox,
-        BorderWidth: 1,
-        BorderColor: Color.White,
-        OverflowX: Overflow.Hidden,
-        OverflowY: Overflow.Visible,
-        BackgroundColor: Color.Rgb(220, 40, 48),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: -1,
             Top: -1,
             Width: 48,
             Height: 48,
             BackgroundColor: Color.Rgb(220, 40, 48),
-          },
         },
       },
       Container{
@@ -134,28 +90,14 @@ class PaddingEdgeOverflowCell : Cell {
         BorderColor: Color.White,
         BackgroundColor: Color.Rgb(220, 40, 48),
       },
+      Container() {.Position: PositionType.Absolute,.Left: 200,.Top: 72,.Width: 48,.Height: 48,.Handle: PaddingEdgeOverflowCell.MixedYOverflowBox,.BorderWidth: 1,.BorderColor: Color.White,.OverflowX: Overflow.Visible,.OverflowY: Overflow.Hidden,.BackgroundColor: Color.Rgb(220, 40, 48),
       Container{
-        Position: PositionType.Absolute,
-        Left: 200,
-        Top: 72,
-        Width: 48,
-        Height: 48,
-        Handle: PaddingEdgeOverflowCell.MixedYOverflowBox,
-        BorderWidth: 1,
-        BorderColor: Color.White,
-        OverflowX: Overflow.Visible,
-        OverflowY: Overflow.Hidden,
-        BackgroundColor: Color.Rgb(220, 40, 48),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: -1,
             Top: -1,
             Width: 48,
             Height: 48,
             BackgroundColor: Color.Rgb(220, 40, 48),
-          },
-        },
       },
     },
   }

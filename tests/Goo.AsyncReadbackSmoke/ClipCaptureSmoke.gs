@@ -1,11 +1,11 @@
 package GooAsyncReadbackSmoke
 
+import Goo
+import GooReadbackFixture
 import System
 import System.Diagnostics
 import System.IO
 import System.Threading
-import Goo
-import GooReadbackFixture
 
 func ClipCaptureReadback(window Window, metrics WindowMetrics)
 VulkanReadbackResult{

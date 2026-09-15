@@ -1012,9 +1012,9 @@ internal static class Program
             new AssemblyPart { Path = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl", Sha256 = "892f76421162819caae0db0d0a29aa6b50e3fbdacfa82926b79d423cb27e0274" },
             new AssemblyPart { Path = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_paint.frag.wrapper.glsl", Sha256 = "7d492c19e2872bbac1a120ba17e6f2324ae3f02f02ff35dfd3cabe795c19bdd7" }
         });
-        if (manifest.Shaders.Count != 18)
+        if (manifest.Shaders.Count != 17)
         {
-            throw new InvalidOperationException("shaders must contain exactly eighteen entries");
+            throw new InvalidOperationException("shaders must contain exactly seventeen entries");
         }
         RequireShader(manifest.Shaders[0], "solid_quad_vertex", "vertex", "solid_quad.vert.slang", "solid_quad.vert.spv");
         RequireShader(manifest.Shaders[1], "solid_quad_fragment", "fragment", "solid_quad.frag.slang", "solid_quad.frag.spv");
@@ -1033,7 +1033,6 @@ internal static class Program
         RequireShader(manifest.Shaders[14], "hb_gpu_paint_fragment", "fragment", "hb_gpu_paint.frag.wrapper.glsl", "hb_gpu_paint.frag.spv", "hb_gpu_paint_fragment");
         RequireShader(manifest.Shaders[15], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv");
         RequireShader(manifest.Shaders[16], "clip_mask_fragment", "fragment", "clip_mask.frag.slang", "clip_mask.frag.spv");
-        RequireShader(manifest.Shaders[17], "lava_fragment", "fragment", "lava.frag.slang", "lava.frag.spv");
         foreach (Shader shader in manifest.Shaders)
         {
             if (shader.SourceSha256 is not null || shader.OutputSha256 is not null || shader.OutputBytes is not null)
@@ -1041,9 +1040,9 @@ internal static class Program
                 throw new InvalidOperationException($"Source manifest contains generated hashes: {shader.Id}");
             }
         }
-        if (manifest.Pipelines.Count != 13)
+        if (manifest.Pipelines.Count != 12)
         {
-            throw new InvalidOperationException("pipelines must contain exactly thirteen entries");
+            throw new InvalidOperationException("pipelines must contain exactly twelve entries");
         }
         RequirePipeline(manifest.Pipelines[0], "solid_quad", "SolidQuadPushConstants.Generated.gs", "SolidQuadPushConstants", 32, new[]
         {
@@ -1168,17 +1167,7 @@ internal static class Program
         {
             new Descriptor { Set = 0, Binding = 0, Type = "storage-buffer", Count = 1, Stages = new List<string> { "vertex", "fragment" } }
         }, false, "r8-unorm");
-        RequirePipeline(manifest.Pipelines[12], "lava", "LavaPrimitiveRecord.Generated.gs", "LavaPrimitiveRecord", 0, new[]
-        {
-            new PushConstantMember { Name = "rect", Offset = 0, Type = "vec4" },
-            new PushConstantMember { Name = "transform0", Offset = 16, Type = "vec4" },
-            new PushConstantMember { Name = "transform1", Offset = 32, Type = "vec4" },
-            new PushConstantMember { Name = "radii", Offset = 48, Type = "vec4" },
-            new PushConstantMember { Name = "params", Offset = 64, Type = "vec4" },
-            new PushConstantMember { Name = "stopPositions", Offset = 80, Type = "vec4" },
-            new PushConstantMember { Name = "packedColors", Offset = 96, Type = "uvec4" },
-            new PushConstantMember { Name = "packedColorsExtra", Offset = 112, Type = "uvec4" }
-        }, Array.Empty<string>(), "disabled", "premultiplied-linear-opaque", "analytic_vertex", "lava_fragment", "vec2", "uv", AnalyticDescriptors());
+
     }
 
     private static void RequireAssembly(ShaderAssembly assembly, string id, IReadOnlyList<AssemblyPart> parts)

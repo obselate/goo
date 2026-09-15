@@ -423,9 +423,9 @@ internal unsafe sealed class VulkanTextScene {
           return true
         }
       bounds = ConservativeBounds{}
-      let contentX = TextLayouts.ContentLeft(node)
-      let contentY = TextLayouts.ContentTop(node)
-      let contentWidth = TextLayouts.ContentWidth(node)
+      let contentX = BoxGeometry.ContentLeft(node)
+      let contentY = BoxGeometry.ContentTop(node)
+      let contentWidth = BoxGeometry.ContentWidth(node)
       let lineHeight = TextLayouts.resolvedLineHeight(node)
       let layout = RequestTextLayout(node, contentWidth)
       if layout.Rich != nil { return false }
@@ -541,11 +541,11 @@ internal unsafe sealed class VulkanTextScene {
     parentTransformIndex int32,
     ref complete bool) bool{
       if opacity <= 0.0F { return true }
-      let layout = RequestTextLayout(node, TextLayouts.ContentWidth(node))
+      let layout = RequestTextLayout(node, BoxGeometry.ContentWidth(node))
 
-      let contentX = TextLayouts.ContentLeft(node)
-      let contentY = TextLayouts.ContentTop(node)
-      let contentWidth = TextLayouts.ContentWidth(node)
+      let contentX = BoxGeometry.ContentLeft(node)
+      let contentY = BoxGeometry.ContentTop(node)
+      let contentWidth = BoxGeometry.ContentWidth(node)
       if let rich = layout.Rich {
         var result = true
         var lineY = contentY
@@ -739,9 +739,9 @@ internal unsafe sealed class VulkanTextScene {
       } else {
         bufferShape
       }
-      let contentX = TextLayouts.ContentLeft(node)
-      let contentY = TextLayouts.ContentTop(node)
-      let contentHeight = TextLayouts.ContentHeight(node)
+      let contentX = BoxGeometry.ContentLeft(node)
+      let contentY = BoxGeometry.ContentTop(node)
+      let contentHeight = BoxGeometry.ContentHeight(node)
       let paintShape = shape ?? bufferShape
       let lineHeight = bufferShape.Descent - bufferShape.Ascent
       let lineTop = contentY + (contentHeight - lineHeight) * 0.5F
@@ -789,12 +789,12 @@ internal unsafe sealed class VulkanTextScene {
     transformIndex int32) bool{
       guard let state = node.EditorState else { return false }
       if opacity <= 0.0F { return true }
-      let width = TextLayouts.ContentWidth(node)
-      let height = TextLayouts.ContentHeight(node)
+      let width = BoxGeometry.ContentWidth(node)
+      let height = BoxGeometry.ContentHeight(node)
       let layout = TextEditorLayouts.For(node, width, height)
       let controller = state.Controller.State()
-      let contentX = TextLayouts.ContentLeft(node)
-      let contentY = TextLayouts.ContentTop(node)
+      let contentX = BoxGeometry.ContentLeft(node)
+      let contentY = BoxGeometry.ContentTop(node)
       let scrollX = float32(controller.ScrollTargetX)
       let scrollY = float32(controller.ScrollTargetY)
       let activeLine = TextEditorLayouts.LineForPosition(layout, controller.Selection.Active)
@@ -1653,10 +1653,10 @@ internal unsafe sealed class VulkanTextScene {
   }
 
   private func ContentBounds(node Node) ConservativeBounds -> ConservativeBounds {
-    X: TextLayouts.ContentLeft(node),
-    Y: TextLayouts.ContentTop(node),
-    Width: TextLayouts.ContentWidth(node),
-    Height: TextLayouts.ContentHeight(node),
+    X: BoxGeometry.ContentLeft(node),
+    Y: BoxGeometry.ContentTop(node),
+    Width: BoxGeometry.ContentWidth(node),
+    Height: BoxGeometry.ContentHeight(node),
   }
 
   private func AddSelectionBoxes(

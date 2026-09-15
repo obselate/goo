@@ -1,11 +1,11 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.IO
 import System.Numerics
 import System.Text
-import Goo
 
 class PipelineIdentityCell : Cell {
   private let first ShaderEffect
@@ -21,13 +21,8 @@ class PipelineIdentityCell : Cell {
     second = secondEffect
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
         Handle: PipelineIdentityCell.First,
         Position: PositionType.Absolute,
         Left: 16,
@@ -46,7 +41,6 @@ class PipelineIdentityCell : Cell {
         Height: 72,
         BackgroundColor: Color.White,
         ShaderEffect: second,
-      },
     },
   }
 }

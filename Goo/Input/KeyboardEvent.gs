@@ -3,38 +3,6 @@ package Goo
 import System
 import System.Runtime.CompilerServices
 
-internal class InputDispatchControl {
-  internal var Active bool
-  internal var Generation int64
-  internal var PropagationStopped bool
-  internal var DefaultPrevented bool
-
-  internal func Begin(generation int64) {
-    Generation = generation
-    PropagationStopped = false
-    DefaultPrevented = false
-    Active = true
-  }
-
-  internal func Finish(generation int64) {
-    if Active && Generation == generation {
-      Active = false
-    }
-  }
-
-  internal func Stop(generation int64) {
-    if Active && Generation == generation {
-      PropagationStopped = true
-    }
-  }
-
-  internal func Prevent(generation int64) {
-    if Active && Generation == generation {
-      DefaultPrevented = true
-    }
-  }
-}
-
 /// Describes a keyboard callback.
 public struct KeyEvent {
   /// Gets the physical key.
@@ -155,9 +123,6 @@ internal class InputCallbacks {
       let destinationPresence = presence(destination)
       if source == nil {
         nodeValues.Remove(node)
-        node.HasSparseInputState = node.HasElementHandle
-          || TextInputCallbacks.HasNodeCallbacks(node)
-          || DragDropMetadata.HasNodeBindings(node)
         return sourcePresence != destinationPresence
       }
       if destination == nil {
@@ -170,7 +135,6 @@ internal class InputCallbacks {
       destination.OnBlur = source.OnBlur
       destination.OnPointerEnter = source.OnPointerEnter
       destination.OnPointerLeave = source.OnPointerLeave
-      node.HasSparseInputState = true
       return sourcePresence != destinationPresence
     }
 

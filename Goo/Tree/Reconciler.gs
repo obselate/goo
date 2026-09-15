@@ -4,6 +4,10 @@ import System
 import System.Collections.Generic
 
 internal class Reconciler {
+  internal prop Owner Window? {
+    get;
+    init;
+  }
   internal prop CellInvalidated Action[Cell]? { get; init; }
   internal prop ImageCompleted((Node, object) -> void)? { get; init; }
   internal prop RetainedInvalidated Action[ReconcileEffects]? { get; init; }
@@ -106,7 +110,6 @@ internal class Reconciler {
     let result = switch b {
       case v is VirtualBlobBase: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
-      case lava is LavaSurface: mountLava(lava)
       case bt is Button: mountButton(bt)
       case c is Container: mountContainer(c)
       case t is Text: mountText(t)
@@ -122,7 +125,7 @@ internal class Reconciler {
         reconcileSparseState(result, b)
       }
     } catch (error Exception) {
-      TextLayouts.DisposeTree(result)
+      NodeLifecycle.DisposeTree(result)
       throw error
     }
     markMounted()
@@ -172,7 +175,7 @@ internal class Reconciler {
   }
 
   internal func diffVirtual(n Node, b VirtualBlobBase) Node {
-    if n.Kind != NodeKind.Container || n.Key != b.Key || Virtualization.State(n) == nil {
+    if !canReuseNode(n, b) {
       return replace(n, b)
     }
     let state = applyVirtual(n, b, false)
@@ -185,45 +188,6 @@ internal class Reconciler {
       state.Cancel()
       throw error
     }
-  }
-
-  internal func mountLava(l LavaSurface) Node {
-    let n = Node{ Kind: NodeKind.Lava, Key: l.Key }
-    applyLava(n, l, true)
-    return n
-  }
-
-  internal func applyLava(n Node, l LavaSurface, initial bool) {
-    applyStyle(n, l, l.Focusable, initial)
-    let changed = initial
-      || n.LavaFlow != l.Flow
-      || n.LavaForm != l.Form
-      || n.LavaBlend != l.Blend
-      || n.LavaLight != l.Light
-      || n.LavaHue != l.Hue
-      || n.LavaRainbow != l.Rainbow
-      || n.LavaRotation.X != l.Rotation.X
-      || n.LavaRotation.Y != l.Rotation.Y
-      || n.LavaSeed != l.Seed
-    n.LavaFlow = l.Flow
-    n.LavaForm = l.Form
-    n.LavaBlend = l.Blend
-    n.LavaLight = l.Light
-    n.LavaHue = l.Hue
-    n.LavaRainbow = l.Rainbow
-    n.LavaRotation = l.Rotation
-    n.LavaSeed = l.Seed
-    if changed {
-      MarkEffects(ReconcileEffects.Paint)
-    }
-  }
-
-  internal func diffLava(n Node, l LavaSurface) Node {
-    if n.Kind != NodeKind.Lava || n.Key != l.Key {
-      return replace(n, l)
-    }
-    applyLava(n, l, false)
-    return n
   }
 
   internal func mountButton(b Button) Node {
@@ -244,7 +208,7 @@ internal class Reconciler {
         n.Children.Add(mounted)
       }
     } catch (error Exception) {
-      TextLayouts.DisposeTree(n)
+      NodeLifecycle.DisposeTree(n)
       throw error
     } finally {
       scratch.Return(scratchScope)
@@ -309,8 +273,7 @@ internal class Reconciler {
     let scrollbarVisibilityChanged = n.ScrollbarVisibility != b.ScrollbarVisibility
     if scrollbarVisibilityChanged {
       n.ScrollbarVisibility = b.ScrollbarVisibility
-      n.ScrollBarAlpha = 0.0F
-      n.ScrollIdle = 0.0F
+      ScrollState.ResetActivity(n)
       MarkEffects(ReconcileEffects.Paint)
     }
 
@@ -388,7 +351,7 @@ internal class Reconciler {
       }
       entries = changed
     }
-    applyStyleEntries(n, b, entries, true, initial)
+    applyStyleEntries(n, b, entries, b.Focusable, initial)
   }
 
   internal func applyText(n Node, t Text, initial bool) {
@@ -418,7 +381,7 @@ internal class Reconciler {
   }
 
   internal func diffEntry(n Node, t TextEntry) Node {
-    if n.Kind != NodeKind.Entry || n.Key != t.Key {
+    if !canReuseNode(n, t) {
       return replace(n, t)
     }
     applyEntry(n, t, false)
@@ -435,7 +398,7 @@ internal class Reconciler {
   }
 
   internal func diffEditor(n Node, t TextEditor) Node {
-    if n.Kind != NodeKind.Editor || n.Key != t.Key || n.EditorController != t.Controller {
+    if !canReuseNode(n, t) {
       return replace(n, t)
     }
     let layers = t.LayerValues
@@ -447,15 +410,13 @@ internal class Reconciler {
 
   internal func applyEditor(n Node, t TextEditor, layers []TextPresentationLayer,
     initial bool) {
-      applyStyle(n, t, true, initial)
+      applyStyle(n, t, t.Focusable, initial)
       var contentChanged = false
       var paintChanged = false
       var inputChanged = false
       if n.EditorState == nil {
         validateEditorLayerOverlaps(layers)
-        t.Controller.Attach(n)
-        n.EditorController = t.Controller
-        n.EditorState = TextEditorRenderState(n, t.Controller.Document, t.Controller, layers, t.ReadOnly,
+      n.EditorBinding = TextEditorBinding(n, t.Controller, layers, t.ReadOnly,
           RetainedInvalidated)
         contentChanged = true
         paintChanged = true
@@ -511,10 +472,7 @@ internal class Reconciler {
             continue
           }
         guard let content = projection.Content else { continue }
-        result.Add(Container{
-          Key: textEditorSlotKey(layer, projection),
-          Position: PositionType.Absolute,
-          Children: { content },
+        result.Add(Container() {.Key: textEditorSlotKey(layer, projection),.Position: PositionType.Absolute, content,
         })
       }
     }
@@ -541,9 +499,9 @@ internal class Reconciler {
     }
   }
 
-  // Focus-wins: while focused the node buffer is authoritative and Value is ignored.
+  // The default remains focus-wins; controlled entries explicitly accept host replacements.
   internal func applyEntry(n Node, t TextEntry, initial bool) {
-    applyStyle(n, t, true, initial)
+    applyStyle(n, t, t.Focusable, initial)
     var paintChanged = false
     if n.Password != t.Password {
       n.Password = t.Password
@@ -560,7 +518,17 @@ internal class Reconciler {
     }
     n.OnChange = t.OnChange
     n.OnSubmit = t.OnSubmit
-    if !n.Focused {
+    if t.Controlled && n.Focused {
+      let changed = if let owner = Owner {
+        owner.SyncControlledEntry(n, t.Value)
+      } else {
+        TextInput.ReplaceEntryValue(n, t.Value)
+      }
+      if changed {
+        MarkEffects(ReconcileEffects.Content)
+        paintChanged = true
+      }
+    } else if !n.Focused {
       if n.Buffer != t.Value {
         n.Buffer = t.Value
         if n.Caret > n.Buffer.Length { n.Caret = n.Buffer.Length }
@@ -628,13 +596,12 @@ internal class Reconciler {
     }
     if n.Fiber != nil && !(b is CellElement) {
       let replacement = replace(n, b)
-      TextLayouts.DisposeTree(n)
+      NodeLifecycle.DisposeTree(n)
       markStructure()
       return replacement
     }
     let result = switch b {
       case v is VirtualBlobBase: diffVirtual(n, v)
-      case lava is LavaSurface: diffLava(n, lava)
       case bt is Button: diffButton(n, bt)
       case c is Container: diffContainer(n, c)
       case t is Text: diffText(n, t)
@@ -650,7 +617,7 @@ internal class Reconciler {
     }
     if result != n {
       if deferredRetirement != n {
-        TextLayouts.DisposeTree(n)
+        NodeLifecycle.DisposeTree(n)
       }
       markStructure()
     }
@@ -659,16 +626,7 @@ internal class Reconciler {
 
   private func reconcileSparseState(n Node, b Blob) {
     if b.HasSparseInputState || n.HasSparseInputState {
-      if b.HasElementHandle {
-        ElementHandles.Bind(n, b.Handle)
-      } else if n.HasElementHandle {
-        ElementHandles.Bind(n, nil)
-      }
-      let keyboardChanged = InputCallbacks.Sync(n, b)
-      let textChanged = TextInputCallbacks.Sync(n, b)
-      let dragDropChanged = DragDropMetadata.Sync(n, b)
-      n.HasSparseInputState = b.HasSparseInputState || n.HasElementHandle
-      if keyboardChanged || textChanged || dragDropChanged {
+      if InputMetadata.Sync(n, b, Owner) {
         MarkEffects(ReconcileEffects.Input)
       }
     }
@@ -685,7 +643,7 @@ internal class Reconciler {
       return Mount(b)
     } catch (error Exception) {
       if let handle = previous {
-        ElementHandles.Bind(n, handle)
+        ElementHandles.Bind(n, handle, Owner)
       }
       throw error
     }
@@ -927,7 +885,7 @@ internal class Reconciler {
   }
 
   internal func diffShape(n Node, s Shape) Node {
-    if n.Kind != NodeKind.Shape || n.Key != s.Key {
+    if !canReuseNode(n, s) {
       return replace(n, s)
     }
     applyShape(n, s, false)
@@ -950,7 +908,7 @@ internal class Reconciler {
     let fitChanged = n.ImageFit != i.Fit
     if sourceChanged {
       if let source = i.Source {
-        ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted)
+        ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner)
       } else {
         ImageLayouts.ApplyPath(n, i.Path, i.Fit)
       }
@@ -968,7 +926,7 @@ internal class Reconciler {
   }
 
   internal func diffImage(n Node, i Image) Node {
-    if n.Kind != NodeKind.Image || n.Key != i.Key {
+    if !canReuseNode(n, i) {
       return replace(n, i)
     }
     applyImage(n, i, false)
@@ -976,7 +934,7 @@ internal class Reconciler {
   }
 
   internal func diffContainer(n Node, c Container) Node {
-    if n.Kind != NodeKind.Container || n.Key != c.Key || Virtualization.State(n) != nil {
+    if !canReuseNode(n, c) {
       return replace(n, c)
     }
     applyContainer(n, c, false)
@@ -985,7 +943,7 @@ internal class Reconciler {
   }
 
   internal func diffButton(n Node, b Button) Node {
-    if n.Kind != NodeKind.Button || n.Key != b.Key {
+    if !canReuseNode(n, b) {
       return replace(n, b)
     }
     applyButton(n, b, false)
@@ -994,7 +952,7 @@ internal class Reconciler {
   }
 
   internal func diffText(n Node, t Text) Node {
-    if n.Kind != NodeKind.Text || n.Key != t.Key {
+    if !canReuseNode(n, t) {
       return replace(n, t)
     }
     applyText(n, t, false)
@@ -1063,7 +1021,7 @@ internal class Reconciler {
     }
   }
 
-  private func keyedHitCompatible(n Node, b Blob) bool {
+  private func canReuseNode(n Node, b Blob) bool {
     switch b {
       case retained is VirtualRetainedBlob {
         return !n.Retired && n.Key == b.Key
@@ -1077,9 +1035,6 @@ internal class Reconciler {
           return mountType(cell) == e.CellType && cell.mountKey == e.Key && !cell.disposed
         }
         return false
-      }
-      case lava is LavaSurface {
-        return n.Fiber == nil && n.Kind == NodeKind.Lava && n.Key == b.Key
       }
       case button is Button {
         return n.Fiber == nil && n.Kind == NodeKind.Button && n.Key == b.Key
@@ -1096,6 +1051,7 @@ internal class Reconciler {
       }
       case editor is TextEditor {
         return n.Fiber == nil && n.Kind == NodeKind.Editor && n.Key == b.Key
+          && n.EditorController == editor.Controller
       }
       case shape is Shape {
         return n.Fiber == nil && n.Kind == NodeKind.Shape && n.Key == b.Key
@@ -1137,7 +1093,7 @@ internal class Reconciler {
       while i < blobs.Count {
         let blob = blobs[i]
         if let hit = takeMatch(scratchScope, blob) {
-          if keyedHitCompatible(hit, blob) {
+          if canReuseNode(hit, blob) {
             var child Node
             if let cell = hit.Fiber {
               let oldKey = hit.Key
@@ -1242,7 +1198,7 @@ internal class Reconciler {
     var i int32
     while i < nodes.Count {
       try {
-        TextLayouts.DisposeTree(nodes[i])
+        NodeLifecycle.DisposeTree(nodes[i])
       } catch (error Exception) {
         if firstError == nil {
           firstError = error
@@ -1275,9 +1231,9 @@ internal class Reconciler {
         child = descendant.directChild
       }
       replacement.Cell.RestoreDirtyAndSubmit()
-      TextLayouts.DisposeTree(replacement.Replacement)
+      NodeLifecycle.DisposeTree(replacement.Replacement)
       if let handle = replacement.OldHandle {
-        ElementHandles.Bind(replacement.Old, handle)
+        ElementHandles.Bind(replacement.Old, handle, Owner)
       }
       i++
     }
@@ -1286,7 +1242,7 @@ internal class Reconciler {
   private func disposeProvisional(scratchScope ChildDiffScratchScope) {
     var i int32
     while i < scratchScope.Provisional.Count {
-      TextLayouts.DisposeTree(scratchScope.Provisional[i])
+      NodeLifecycle.DisposeTree(scratchScope.Provisional[i])
       i++
     }
   }
@@ -1300,7 +1256,7 @@ internal class Reconciler {
           ElementHandles.Detach(current)
         }
       }
-      ElementHandles.Bind(replacement.Old, replacement.OldHandle)
+      ElementHandles.Bind(replacement.Old, replacement.OldHandle, Owner)
       i++
     }
   }

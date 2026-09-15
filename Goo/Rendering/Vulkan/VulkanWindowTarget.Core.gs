@@ -143,8 +143,8 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       }
       return textRedrawPending || imageRedrawPending || pathRedrawPending
         || clipMaskRedrawPending
-        || sceneCompiler.Frame.LavaCount > 0
         || forceFullRedraw
+        || sceneCompiler.Frame.ShaderPlaybackActive
         || (recreatePending && framebufferWidth > 0 && framebufferHeight > 0)
     }
   }
@@ -562,8 +562,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
         out damageRegion,
         out fullRedraw)
       if forceFullRedraw || textRedrawPending || imageRedrawPending
-        || pathRedrawPending || clipMaskRedrawPending
-        || sceneCompiler.Frame.LavaCount > 0 {
+        || pathRedrawPending || clipMaskRedrawPending{
           fullRedraw = true
           hasDamage = true
           damageRegion = VulkanDamageRegion{

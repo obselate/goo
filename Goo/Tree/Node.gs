@@ -3,7 +3,8 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image; Lava }
+internal enum NodeKind { Container; Button; Text; Entry; Editor; Shape; Image;
+}
 
 internal data struct Rect {
   internal var X float32
@@ -181,8 +182,12 @@ internal class Node {
   internal prop TextLayout TextLayout? { get; set; }
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
   internal prop EntryShape EntryShapeState? { get; set; }
-  internal prop EditorController TextEditorController? { get; set; }
-  internal prop EditorState TextEditorRenderState? { get; set; }
+  internal prop EditorBinding TextEditorBinding? { get; set; }
+  internal prop EditorController TextEditorController? {
+    get -> EditorBinding?.Controller
+  }
+  internal prop EditorState TextEditorRenderState? { get -> EditorBinding?.RenderState
+  }
   internal prop EditorReadOnly bool{ get; set; }
   internal prop EditorCaretColor Color{ get; set; }
   internal prop EditorCurrentLineColor Color{ get; set; }
@@ -231,6 +236,14 @@ internal class Node {
     set {
       lifecycleState = value ? lifecycleState | uint16(2) : lifecycleState & ^uint16(2)
     }
+  }
+  internal prop HasFocusScopes bool{
+    get -> (lifecycleState & uint16(512)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(512) : lifecycleState & ^uint16(512)
+  }
+  internal prop FocusScopeBoundary bool{
+    get -> (lifecycleState & uint16(1024)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(1024) : lifecycleState & ^uint16(1024)
   }
   internal prop TabStop bool{
     get -> (lifecycleState & uint16(256)) == uint16(0)
@@ -411,14 +424,6 @@ internal class Node {
   internal prop DecodedImage DecodedImage? { get; set; }
   internal prop ImageIntrinsicWidth float32{ get; set; }
   internal prop ImageIntrinsicHeight float32{ get; set; }
-  internal prop LavaFlow float64{ get; set; }
-  internal prop LavaForm float64{ get; set; }
-  internal prop LavaBlend float64{ get; set; }
-  internal prop LavaLight float64{ get; set; }
-  internal prop LavaHue float64{ get; set; }
-  internal prop LavaRainbow bool{ get; set; }
-  internal prop LavaRotation Point{ get; set; }
-  internal prop LavaSeed uint32{ get; set; }
   internal prop Buffer string{ get; set; }
   internal prop Caret int32{ get; set; }
   internal prop Anchor int32{ get; set; }
@@ -467,11 +472,15 @@ internal class Node {
 }
 
 internal func canReceiveInput(n Node) bool {
-  if n.PaintInputHidden || n.Disabled {
+  var current = n
+  while true {
+    if current.PaintInputHidden || current.Disabled {
     return false
   }
-  if let parent = n.Parent {
-    return canReceiveInput(parent)
+  if let parent = current.Parent {
+      current = parent
+    } else {
+      return !current.HasFocusScopes || FocusScopes.Allows(current, n)
   }
-  return true
+  }
 }

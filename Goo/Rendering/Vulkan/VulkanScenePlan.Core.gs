@@ -43,8 +43,6 @@ internal partial class SceneFrame {
   private var shadowCount int32
   private var underlines []UnderlineRecord
   private var underlineCount int32
-  private var lavas []LavaRecord
-  private var lavaCount int32
   private var layers []LayerRecord
   private var layerCount int32
   private var shaderEffects []ShaderEffectRecord
@@ -87,7 +85,6 @@ internal partial class SceneFrame {
     clipChains = [capacity]ClipChainRecord
     shadows = [capacity]ShadowRecord
     underlines = [capacity]UnderlineRecord
-    lavas = [capacity]LavaRecord
     layers = [capacity]LayerRecord
     shaderEffects = [capacity]ShaderEffectRecord
     InitializeShaderEffectData()
@@ -131,12 +128,21 @@ internal partial class SceneFrame {
   internal prop ShadowCount int32{ get -> shadowCount }
   internal prop Underlines []UnderlineRecord{ get -> underlines }
   internal prop UnderlineCount int32{ get -> underlineCount }
-  internal prop Lavas []LavaRecord{ get -> lavas }
-  internal prop LavaCount int32{ get -> lavaCount }
   internal prop Layers []LayerRecord{ get -> layers }
   internal prop LayerCount int32{ get -> layerCount }
   internal prop ShaderEffects []ShaderEffectRecord{ get -> shaderEffects }
-  internal prop ShaderEffectCount int32{ get -> shaderEffectCount }
+  internal prop ShaderEffectCount int32{ get -> shaderEffectCount
+  }
+  internal prop ShaderPlaybackActive bool{
+    get {
+      for index in 0 ... shaderEffectCount {
+        if shaderEffects[index].Program?.PlaybackActive == true {
+          return true
+        }
+      }
+      return false
+    }
+  }
   internal prop ActiveChunk int32{ get -> activeChunk }
   internal prop ActiveClipChainId int32{ get -> activeClipChainId }
   internal prop GrowthOperations uint64{ get -> growthOperations }
@@ -190,7 +196,6 @@ internal partial class SceneFrame {
     }
     shadowCount = 0
     underlineCount = 0
-    lavaCount = 0
     layerCount = 0
     shaderEffectCount = 0
     activeChunk = -1
@@ -559,15 +564,6 @@ internal partial class SceneFrame {
     ValidateTransformIndex(value.TransformIndex)
     let index = AppendRecord(&underlines, &underlineCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Underline, Index: index, Flags: 0u, ClipChainId: 0 })
-    return index
-  }
-
-  internal func AddLava(value LavaRecord) int32 {
-    RequireOpenChunk()
-    ValidateTransformIndex(value.TransformIndex)
-    let index = AppendRecord(&lavas, &lavaCount, value)
-    AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Lava, Index: index, Flags: 0u,
-      ClipChainId: 0 })
     return index
   }
 

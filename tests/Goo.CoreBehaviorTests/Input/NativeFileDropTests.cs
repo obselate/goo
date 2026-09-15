@@ -132,7 +132,7 @@ public sealed class NativeFileDropTests
             router.Move(10, 10, default);
             Assert.Equal(2, outer.Count);
         }
-        finally { router.Cancel(); TextLayouts.DisposeTree(root); }
+        finally { router.Cancel(); NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class NativeFileDropTests
         scene.Available = true;
         scene.Events.Clear();
         scene.Start();
-        TextLayouts.DisposeTree(scene.Root);
+        NodeLifecycle.DisposeTree(scene.Root);
         scene.State.Validate();
         scene.File("/tmp/removed.txt");
         scene.Send(SDLEventType.DropComplete);
@@ -187,7 +187,7 @@ public sealed class NativeFileDropTests
         router = new NativeDropRouter(() => root, () => true, () => { });
         var data = new DragData(new NativeFileDrop(Array.Empty<string>(), true), DragEffect.Copy);
         try { router.Begin(data, 20, 20, default); router.Complete(data, 20, 20, default); Assert.Empty(events); }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -237,6 +237,6 @@ public sealed class NativeFileDropTests
             try { Send(SDLEventType.DropFile, path); }
             finally { Marshal.FreeCoTaskMem(path); }
         }
-        public void Dispose() { State.Unbind(); if (!Root.Retired) TextLayouts.DisposeTree(Root); }
+        public void Dispose() { State.Unbind(); if (!Root.Retired) NodeLifecycle.DisposeTree(Root); }
     }
 }

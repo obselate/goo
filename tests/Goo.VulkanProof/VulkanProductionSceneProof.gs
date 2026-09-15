@@ -1,8 +1,8 @@
 package Goo.VulkanProof
 
+import Goo
 import System
 import System.Threading
-import Goo
 
 internal class VulkanProductionProofCell : Cell {
   override func Build() Blob -> Container {

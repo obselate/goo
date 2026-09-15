@@ -59,23 +59,17 @@ internal partial class PointerInput {
       state.LastY = y
       var target Node? = state.Target
       while let n = target {
-        var moved bool
-        if n.OverflowX == Overflow.Scroll && remainingX != 0.0F {
-          let previous = n.ScrollTargetX
-          let next = clampOffset(previous + remainingX, maxScrollX(n))
-          n.ScrollTargetX = next
-          remainingX = remainingX - (next - previous)
-          moved = next != previous
+      let dx = n.OverflowX == Overflow.Scroll ? remainingX : 0.0F
+      let dy = n.OverflowY == Overflow.Scroll ? remainingY : 0.0F
+      if dx != 0.0F || dy != 0.0F {
+          let moved = ScrollState.By(n, dx, dy)
+        if dx != 0.0F {
+          remainingX = remainingX - float32(moved.X)
         }
-        if n.OverflowY == Overflow.Scroll && remainingY != 0.0F {
-          let previous = n.ScrollTargetY
-          let next = clampOffset(previous + remainingY, maxScrollY(n))
-          n.ScrollTargetY = next
-          remainingY = remainingY - (next - previous)
-          moved = moved || next != previous
-          if n.PinToBottom { n.UserScrolled = next < maxScrollY(n) - 0.5F }
+        if dy != 0.0F {
+          remainingY = remainingY - float32(moved.Y)
         }
-        if moved { markScrolled(n) }
+      }
         target = n.Parent
       }
       return true

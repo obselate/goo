@@ -257,6 +257,7 @@ internal partial class SdlRuntime {
               SDL.DestroyCursor(cursor)
             }
           }
+          Array.Clear(cursors)
           currentCursor = Cursor.Default
           SDL.QuitSubSystem(requiredSubsystems)
         }

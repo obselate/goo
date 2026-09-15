@@ -424,7 +424,7 @@ public partial class Window {
     retainedInvalidationHook = nil
     childDiffScratch = ChildDiffScratch()
     layout = Layout()
-    resolver = Resolver{}
+    resolver = Resolver{Owner: this}
     profiler = FrameProfiler()
     motionPump = MotionPump()
     motionPump.Wake = requestReconcile

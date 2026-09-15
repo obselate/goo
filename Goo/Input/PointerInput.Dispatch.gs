@@ -223,6 +223,7 @@ internal partial class PointerInput {
       let generation = dispatchGeneration
       control.Begin(generation, current.CaptureTarget)
       var prevented = false
+      var interactiveChild = false
       try {
         for var i = route.Count; i > 0; i-- {
           let n = route[i - 1]
@@ -236,6 +237,7 @@ internal partial class PointerInput {
             WindowPosition: Point{ X: float64(x), Y: float64(y) },
             Delta: transformed ? routeDeltas[i - 1] : Point{ X: dx, Y: dy },
             Button: button,
+            IsFromInteractiveChild: interactiveChild,
             ClickCount: kind != PointerEventKind.Move && button == current.LastPressButton ? current.LastPressCount : 0,
             Buttons: current.HeldButtons,
             Modifiers: modifiers,
@@ -247,21 +249,22 @@ internal partial class PointerInput {
             if kind == PointerEventKind.Press {
               if let callback = n.OnPointerDown {
                 callback(event)
-                rebuildOwner(route, i - 1)
+                CellOwnership.InRoute(route, i - 1)?.Rebuild()
               }
             } else if kind == PointerEventKind.Move {
               if let callback = n.OnPointerMove {
                 callback(event)
-                rebuildOwner(route, i - 1)
+                CellOwnership.InRoute(route, i - 1)?.Rebuild()
               }
             } else if let callback = n.OnPointerUp {
               callback(event)
-              rebuildOwner(route, i - 1)
+              CellOwnership.InRoute(route, i - 1)?.Rebuild()
             }
           } finally {
             control.ClearCurrentTarget(generation)
           }
-          if control.PropagationStopped { break }
+          if control.PropagationStopped || n.FocusScopeBoundary { break }
+          interactiveChild = interactiveChild || isInteractiveContent(n)
         }
         applyCaptureRequests(button, route)
         prevented = control.DefaultPrevented
@@ -272,7 +275,7 @@ internal partial class PointerInput {
       return prevented
     }
 
-  private func cancelInteraction(root Node?, resolver Resolver, text TextInput) bool {
+  private func cancelInteraction(root Node?, resolver Resolver) bool {
     let hadInteraction = current.HeldButtons != PointerButtons.None || current.PressChain.Count > 0
       || current.DragEntry != nil || current.DragEditor != nil || hasScrollDrag()
       || current.ClickTarget != nil || current.CaptureTarget != nil || current.ActiveTarget != nil
@@ -303,7 +306,8 @@ internal partial class PointerInput {
       current.ClickTarget = nil
       if isSemanticPrimary() {
         if let focusTarget = current.FocusTarget {
-          if text.FocusedNode() == focusTarget { text.SetFocus(resolver, nil) }
+          if focus.FocusedNode() == focusTarget {
+            focus.SetFocus(resolver, nil) }
         }
       }
       current.FocusTarget = nil
@@ -331,6 +335,7 @@ internal partial class PointerInput {
     dispatchGeneration++
     let generation = dispatchGeneration
     control.Begin(generation, nil)
+    var interactiveChild = false
     try {
       for var i = route.Count; i > 0; i-- {
         let n = route[i - 1]
@@ -342,6 +347,7 @@ internal partial class PointerInput {
           WindowPosition: Point{ X: float64(current.LastEventX), Y: float64(current.LastEventY) },
           Delta: Point{},
           Button: PointerButton.None,
+          IsFromInteractiveChild: interactiveChild,
           Buttons: PointerButtons.None,
           Modifiers: current.LastModifiers,
           Control: control,
@@ -351,24 +357,16 @@ internal partial class PointerInput {
         try {
           if let callback = n.OnPointerCancel {
             callback(event)
-            rebuildOwner(route, i - 1)
+            CellOwnership.InRoute(route, i - 1)?.Rebuild()
           }
         } finally {
           control.ClearCurrentTarget(generation)
         }
         if control.PropagationStopped { break }
+        interactiveChild = interactiveChild || isInteractiveContent(n)
       }
     } finally {
-      control.Finish(generation)
-    }
-  }
-
-  private func rebuildOwner(route List[Node], index int32) {
-    var owner Cell? = nil
-    for i in 0 ... index + 1 {
-      if let current = route[i].Fiber { owner = current }
-    }
-    if let cell = owner { cell.Rebuild() }
+      control.Finish(generation) }
   }
 }
 

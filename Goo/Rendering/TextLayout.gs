@@ -1,8 +1,8 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Collections.Generic
-import Facebook.Yoga
 
 internal class TextLine {
   internal prop Content string{ get; init; }
@@ -102,7 +102,7 @@ internal class TextLayouts {
     }
 
     internal func CurrentForGeometry(n Node) TextLayout? {
-      let width = ContentWidth(n)
+      let width = BoxGeometry.ContentWidth(n)
       if let layout = n.TextLayout {
         if matches(layout, n, width) { return layout }
       }
@@ -145,27 +145,7 @@ internal class TextLayouts {
       }
     }
 
-    internal func DisposeTree(n Node) {
-      let firstError = disposeTree(n)
-      if let error = firstError {
-        throw error
-      }
-    }
-
-    private func disposeTree(n Node) Exception? {
-      n.Retired = true
-      ElementHandles.Detach(n)
-      if n.HasAccessibilityDeclaration { AccessibilityMetadata.Remove(n) }
-      if n.HasAccessibilityNodeState { AccessibilityNodeStates.Remove(n) }
-      var firstError Exception?
-      if let cell = n.Fiber {
-        n.Fiber = nil
-        try {
-          cell.DisposeMounted()
-        } catch (error Exception) {
-          firstError = error
-        }
-      }
+    internal func Dispose(n Node) {
       disposeCached(n)
       TextAnalyses.Remove(n)
       PassiveTextPresentations.Remove(n)
@@ -174,24 +154,6 @@ internal class TextLayouts {
         entryShape.PlaceholderShape?.Dispose()
         n.EntryShape = nil
       }
-      if n.Kind == NodeKind.Editor {
-        TextEditorLayouts.Dispose(n)
-      }
-      if n.Kind == NodeKind.Image {
-        ImageLayouts.Dispose(n)
-      }
-      BackgroundImageLayouts.Dispose(n)
-      ShaderEffectStyles.Dispose(n)
-      LayoutTransitions.Dispose(n)
-      Virtualization.Dispose(n)
-      for i in 0 ... n.Children.Count {
-        if let error = disposeTree(n.Children[i]) {
-          if firstError == nil {
-            firstError = error
-          }
-        }
-      }
-      return firstError
     }
 
     internal func disposeCached(n Node) {
@@ -275,22 +237,6 @@ internal class TextLayouts {
           case TextAlign.End: rtl ? 0.0F : free
           default: 0.0F
         }
-      }
-
-    internal func ContentLeft(n Node) float32 -> n.Rect.X + borderPx(n, YGEdge.Left) + padding(n, YGEdge.Left)
-
-    internal func ContentTop(n Node) float32 -> n.Rect.Y + borderPx(n, YGEdge.Top) + padding(n, YGEdge.Top)
-
-    internal func ContentWidth(n Node) float32 {
-      let width = n.Rect.W - borderPx(n, YGEdge.Left) - borderPx(n, YGEdge.Right)
-      -padding(n, YGEdge.Left) - padding(n, YGEdge.Right)
-      return width > 0.0F ? width : 0.0F
-    }
-
-    internal func ContentHeight(n Node) float32 {
-      let height = n.Rect.H - borderPx(n, YGEdge.Top) - borderPx(n, YGEdge.Bottom)
-      -padding(n, YGEdge.Top) - padding(n, YGEdge.Bottom)
-      return height > 0.0F ? height : 0.0F
     }
 
     internal func build(n Node, maxWidth float32) TextLayout {
@@ -681,19 +627,6 @@ internal class TextLayouts {
     internal func letterSpacing(n Node) float32 -> n.LetterSpacing.Px
 
     internal func resolvedLineHeight(n Node) float32 -> fontSize(n) * float32(n.LineHeight)
-
-    internal func padding(n Node, edge YGEdge) float32 -> resolveEdgePadding(n, edge, 0.0F)
-
-    internal func borderPx(n Node, edge YGEdge) float32 {
-      let width = switch edge {
-        case YGEdge.Left: n.BorderLeftWidth
-        case YGEdge.Top: n.BorderTopWidth
-        case YGEdge.Right: n.BorderRightWidth
-        case YGEdge.Bottom: n.BorderBottomWidth
-        default: Length {}
-      }
-      return width.Px
-    }
 
     internal func breakAfter(text string, index int32) bool {
       if index <= 0 || index >= text.Length {

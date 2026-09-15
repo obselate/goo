@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
 import System.IO
 import System.Threading
-import Goo
 
 class QueueIsolationCell : Cell {
   internal let Root ElementHandle = ElementHandle{}
@@ -25,14 +25,8 @@ class QueueIsolationCell : Cell {
 
   override func Build() Blob {
     BuildCount = BuildCount + 1
-    return Container{
-      Width: Length.Percent(100),
-      Height: Length.Percent(100),
-      Handle: Root,
-      Position: PositionType.Relative,
-      BackgroundColor: Color.Rgb(12, 20, 32),
-      Children: {
-        Container{
+    return Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+      Container{
           Position: PositionType.Absolute,
           Left: 8,
           Top: 8,
@@ -46,7 +40,6 @@ class QueueIsolationCell : Cell {
           Top: 48,
           Content: service.ToString(),
           Color: Color.Rgb(240, 244, 248),
-        },
       },
     }
   }

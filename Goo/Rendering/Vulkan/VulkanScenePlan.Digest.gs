@@ -153,10 +153,6 @@ internal partial class SceneFrame {
     for index in 0 ... underlineCount {
       hash = HashUnderline(hash, underlines[index])
     }
-    hash = Mix(hash, uint64(lavaCount))
-    for index in 0 ... lavaCount {
-      hash = HashLava(hash, lavas[index])
-    }
     hash = Mix(hash, uint64(layerCount))
     for index in 0 ... layerCount {
       let value = layers[index]
@@ -329,9 +325,6 @@ internal partial class SceneFrame {
       case SceneDrawKind.Underline {
         return HashUnderline(result, underlines[reference.Index])
       }
-      case SceneDrawKind.Lava {
-        return HashLava(result, lavas[reference.Index])
-      }
       case SceneDrawKind.LayerBegin {
         return HashLayerContent(result, reference.Index)
       }
@@ -439,20 +432,6 @@ internal partial class SceneFrame {
     result = HashFloat(result, value.Thickness)
     result = Mix(result, uint64(value.Color))
     result = Mix(result, uint64(value.Mode))
-    return HashTransformIndex(result, value.TransformIndex)
-  }
-
-  private func HashLava(hash uint64, value LavaRecord) uint64 {
-    var result = HashBounds(hash, value.Bounds)
-    result = HashFloat(result, value.Flow)
-    result = HashFloat(result, value.Form)
-    result = HashFloat(result, value.Blend)
-    result = HashFloat(result, value.Light)
-    result = HashFloat(result, value.Hue)
-    result = Mix(result, uint64(value.Rainbow))
-    result = HashFloat(result, float32(value.Rotation.X))
-    result = HashFloat(result, float32(value.Rotation.Y))
-    result = Mix(result, uint64(value.Seed))
     return HashTransformIndex(result, value.TransformIndex)
   }
 

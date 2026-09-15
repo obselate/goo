@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Threading
-import Goo
 
 func RunQueueWakeSmoke() {
   for phase in 0 ... 2 {

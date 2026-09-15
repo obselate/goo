@@ -9,11 +9,12 @@
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Gsharp.NET.Sdk" Version="0.4.591" GeneratePathProperty="true" PrivateAssets="all" ExcludeAssets="all" />
-  </ItemGroup>
-  <ItemGroup>
     <Reference Include="GSharp.Core">
-      <HintPath>$(PkgGsharp_NET_Sdk)/tools/compiler/GSharp.Core.dll</HintPath>
+      <HintPath>../../artifacts/gsharp/compiler/GSharp.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="GSharp.Formatting">
+      <HintPath>../../artifacts/gsharp/formatter/GSharp.Formatting.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>

@@ -126,7 +126,7 @@ public class TextPresentationLayer : IDisposable {
     projectionRangeIndex = List[TextPresentationProjection]()
     styleRangeIndex = List[TextStyleRangeEntry]()
     stylePrefixMaxEnd = []int32{}
-    document.Changed += onDocumentChanged
+    document.Committed += onDocumentChanged
   }
 
   /// Gets the document whose source ranges this layer references.
@@ -271,7 +271,7 @@ public class TextPresentationLayer : IDisposable {
   public func Dispose() {
     if !disposed {
       disposed = true
-      document.Changed -= onDocumentChanged
+      document.Committed -= onDocumentChanged
       projectionHistory.Clear()
       styleHistory.Clear()
       projectionHistoryTransactions.Clear()

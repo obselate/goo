@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
+import Goo
+import Hexa.NET.SDL3
 import System
 import System.IO
 import System.Runtime.InteropServices
-import Goo
-import Hexa.NET.SDL3
 
 // SDK 0.4.591 nullable-wraps imported pointer fields. Use the native address
 // directly for this SDL event; RunNativeInputSmoke checks its ABI layout.
@@ -59,13 +59,8 @@ class NativeInputAcceptanceCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container {
-    Width: 320,
-    Height: 160,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Button{
+  override func Build() Blob -> Container() {.Width: 320,.Height: 160,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Button{
         Key: "retained-sdl-target",
         Handle: Target,
         Position: PositionType.Absolute,
@@ -96,7 +91,7 @@ class NativeInputAcceptanceCell : Cell {
         SelectionColor: Color.Rgba(48, 96, 160, 180),
         OnKeyDown: func(value KeyEvent) { RecordKeyDown() },
         OnKeyUp: func(value KeyEvent) { RecordKeyUp() },
-        OnTextInput: func(value string) { RecordText(value) },
+        OnTextInput: func(value string) { RecordText(value)
       },
     },
   }

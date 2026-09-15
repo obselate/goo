@@ -40,15 +40,17 @@ Gsharp.NET.Sdk 0.4.591.
 - Release commit: `d670ac98c03e0b0f7c9ac965f5fa3914712f09de`.
 - [G# license](https://github.com/DavidObando/gsharp/blob/d670ac98c03e0b0f7c9ac965f5fa3914712f09de/LICENSE)
 
-## G# formatting engine
+## G# authoring tools
 
-`tools/Goo.Gslint/FormattingEngine.cs` is derived from G#'s MIT-licensed
-formatting engine at commit `41d5ccbafcc40b8babdbdc0ab9add728a4b1eb02`.
-Goo changes the namespace, removes source comments, and fixes canonical line
-endings to LF. Copyright (C) GSharp Authors. All rights reserved.
+The compiler and canonical formatter are built without source changes from
+[DavidObando/gsharp commit 947be9cb](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
+`.github/scripts/bootstrap-gsharp.py` builds `src/Compiler/Compiler.csproj` and
+`src/Formatting/GSharp.Formatting/GSharp.Formatting.csproj` into ignored
+`artifacts/gsharp/` output. `Goo.Gslint` uses the upstream parser and ADR-0179
+formatter assemblies. The previous copied formatting engine has been removed.
+Copyright (C) GSharp Authors. All rights reserved.
 
-- [G# formatting engine source](https://github.com/DavidObando/gsharp/blob/41d5ccbafcc40b8babdbdc0ab9add728a4b1eb02/src/LanguageServer/FormattingEngine.cs)
-- [G# license](https://github.com/DavidObando/gsharp/blob/41d5ccbafcc40b8babdbdc0ab9add728a4b1eb02/LICENSE)
+- [G# license](https://github.com/DavidObando/gsharp/blob/947be9cb5f4467947ecb95dba06b461f9984d659/LICENSE)
 
 ## HarfBuzz and hb-gpu text runtime
 

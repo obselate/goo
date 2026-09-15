@@ -1,9 +1,9 @@
 package GooPackageSmoke
 
+import Goo
 import System
 import System.Diagnostics
 import System.Globalization
-import Goo
 
 func WindowsQualificationNanoseconds(ticks int64) int64 ->
 int64(float64(ticks) * 1000000000.0 / float64(Stopwatch.Frequency))

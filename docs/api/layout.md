@@ -4,69 +4,70 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Layout`](../../Goo/Layout)
 
-The custom layout surface consists of `LayoutAlgorithm`, `LayoutContext`, and `LayoutSize`.
+## `LayoutAlgorithm`
 
-## Retained custom layout
+Source:
 
-Set `Container.Layout` to an immutable `LayoutAlgorithm` to replace the container's
-flex algorithm while keeping its mounted children, styles, input, accessibility,
-and rendering. A policy implements `Measure(context, available)` and
-`Arrange(context, finalSize)`. Both sizes describe the container's **content** area;
-Goo handles its padding and border. Positive infinity is allowed only in available
-constraints. Desired sizes and arranged rectangles must be finite, nonnegative in
-size, and representable by the renderer's 32-bit logical coordinates.
+- [`CustomLayout.gs`](../../Goo/Layout/CustomLayout.gs)
 
-`context.MeasureChild(index, available)` asks the existing child subtree for its
-desired margin-box size. It handles wrapping text, images, nested flex layouts, and
-nested custom panels. It does not reconcile or remount children. During `Arrange`,
-call `context.ArrangeChild(index, bounds)` exactly once for every direct child,
-including hidden children. Bounds are margin boxes relative to the content origin;
-Goo subtracts child margins before arranging the child's border box. The algorithm
-controls final width/height even when the child has an authored size or size limit;
-those declarations participate in measurement. Normal relative child offsets still
-apply. Custom layout owns track/gap and out-of-flow policy; all direct children
-participate. Scroll extents and layout transitions include custom placements.
+Measures and arranges the existing children of a Container. Implementations must be immutable and must not mutate UI state during layout.
 
-A context is valid only on the UI thread inside its current callback. Out-of-phase use, duplicate or
-missing arrangements, invalid sizes, reentrant window layout, and more than 64
-nested custom measurement callbacks throw. Do not mutate the UI or an algorithm's configuration
-inside its callbacks. Replace a policy object when its configuration changes.
-Content, font, image, child-list, and child-style changes invalidate affected
-measurements automatically; changing available width uses a new constraint key.
+### `Arrange(LayoutContext,LayoutSize)`
 
-Each measured child keeps at most four cached sizes, invalidated with its custom
-parent when a retained child layout becomes dirty. Each callback permits at most
-`min(65536, max(32, childCount * 16))` calls to `MeasureChild`. Structural updates
-perform an O(n) child-index rebuild while retaining matching child state. Unchanged
-geometry and scroll-only updates reuse the completed arrangement. Ordinary flex
-containers allocate no custom-layout state.
+Places every child in the final content area; child indices and mounted identity match Container.Children.
 
-```gsharp
-class VerticalLayout : LayoutAlgorithm {
-  public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
-    var width = 0.0
-    var height = 0.0
-    for i in 0 ... context.ChildCount {
-      let child = context.MeasureChild(i, LayoutSize{
-        Width: available.Width, Height: System.Double.PositiveInfinity,
-      })
-      width = System.Math.Max(width, child.Width)
-      height += child.Height
-    }
-    return LayoutSize{Width: width, Height: height}
-  }
+- `context`: The retained children available only during this callback.
+- `finalSize`: The finite content size after the surrounding layout resolves the container.
 
-  public func Arrange(context LayoutContext, finalSize LayoutSize) {
-    var y = 0.0
-    for i in 0 ... context.ChildCount {
-      let child = context.MeasureChild(i, LayoutSize{
-        Width: finalSize.Width, Height: System.Double.PositiveInfinity,
-      })
-      context.ArrangeChild(i, ElementRect{
-        Y: y, Width: finalSize.Width, Height: child.Height,
-      })
-      y += child.Height
-    }
-  }
-}
-```
+### `Measure(LayoutContext,LayoutSize)`
+
+Returns the desired content size under the available constraints, excluding the container's padding and border.
+
+- `context`: The retained children available only during this callback.
+- `available`: The maximum content size, with positive infinity on an unbounded axis.
+
+Returns: A finite, nonnegative desired content size, clamped by the parent constraints.
+
+## `LayoutContext`
+
+Source:
+
+- [`CustomLayout.gs`](../../Goo/Layout/CustomLayout.gs)
+
+Provides bounded access to retained children during custom measure and arrange callbacks.
+
+### `ArrangeChild(int32,ElementRect)`
+
+Places a child margin box relative to the container's content origin. Every child must be placed exactly once per arrange callback.
+
+- `index`: The zero-based child index.
+- `bounds`: A finite, nonnegative-size margin box; offsets may be negative.
+
+### `MeasureChild(int32,LayoutSize)`
+
+Measures a retained child subtree without rebuilding it. Root margins are included in the returned size.
+
+- `index`: The zero-based child index.
+- `available`: Maximum width and height; positive infinity means unconstrained.
+
+Returns: The child's desired margin-box size under these constraints.
+
+### `ChildCount`
+
+Gets the number of retained direct children. Access outside a layout callback throws.
+
+## `LayoutSize`
+
+Source:
+
+- [`CustomLayout.gs`](../../Goo/Layout/CustomLayout.gs)
+
+Describes a logical size, or available constraints with positive infinity on unbounded axes.
+
+### `Height`
+
+Gets the logical height.
+
+### `Width`
+
+Gets the logical width.

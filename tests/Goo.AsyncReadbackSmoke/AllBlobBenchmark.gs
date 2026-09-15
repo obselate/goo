@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.IO
-import Goo
 
 class AllBlobKind {
   shared {

@@ -136,20 +136,16 @@ internal class DiagnosticsFixtures {
 }
 
 internal class DiagnosticsInteractionCell : Cell {
-  override func Build() Blob -> Container { Width: 200.0, Height: 100.0, Children: {
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
     Container{
       Key: "target", Width: 100.0, Height: 100.0,
       BackgroundColor: Color.Rgb(51, 102, 204), HitTestSelf: true,
-    },
-  } }
+    }
+  }
 }
 
 internal class DiagnosticsOverrideCell : Cell {
-  override func Build() Blob -> Container {
-    Width: 200.0,
-    Height: 100.0,
-    Color: Color.Rgb(210, 48, 42),
-    FontSize: 14.0,
-    Children: { Text{ Content: "inherited" } },
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,.Color: Color.Rgb(210, 48, 42),.FontSize: 14.0,
+    Text{ Content: "inherited" },
   }
 }

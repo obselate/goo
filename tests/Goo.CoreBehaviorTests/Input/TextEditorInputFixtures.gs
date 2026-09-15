@@ -229,20 +229,15 @@ internal class TextEditorInputReadOnlyCell : Cell {
     Controller = controller
   }
 
-  override func Build() Blob -> Container {
-    Width: 320.0,
-    Height: 120.0,
-    FlexDirection: FlexDirection.Row,
-    Children: {
-      TextEditor(Controller) {
+  override func Build() Blob -> Container() {.Width: 320.0,.Height: 120.0,.FlexDirection: FlexDirection.Row,
+    TextEditor(Controller) {
         Key = "editor",
         Width = 250.0,
         Height = 100.0,
         ReadOnly = true,
       },
       Container{ Key: "after", Width: 40.0, Height: 40.0, Focusable: true },
-    },
-  }
+    }
 }
 
 internal data struct TextEditorInputPoint {

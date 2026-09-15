@@ -1,3 +1,4 @@
+using GSharp.Core.CodeAnalysis.Syntax;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -19,7 +20,8 @@ var sourceDirectories = Directory.EnumerateDirectories(sourceRoot)
 var types = sourceDirectories
     .SelectMany(path => ReadTypes(path, sourceRoot))
     .GroupBy(type => type.XmlName, StringComparer.Ordinal)
-    .Select(group => group.First() with
+    .Select(group => group.OrderByDescending(type => type.Sources.Any(source =>
+        source.FileName == type.DisplayName.Split('<')[0] + ".gs")).First() with
     {
         Sources = group.SelectMany(type => type.Sources)
             .OrderBy(source => source.RelativeFile, StringComparer.Ordinal)
@@ -143,7 +145,7 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
         text.AppendLine(type.Sources.Count == 1 ? "Source:" : "Sources:");
         text.AppendLine();
         foreach (var source in type.Sources)
-            text.AppendLine($"- [`{source.FileName}`](../../Goo/{type.Directory}/{source.RelativeFile})");
+            text.AppendLine($"- [`{source.FileName}`](../../Goo/{source.RelativeFile})");
 
         var typeId = "T:" + type.XmlName;
         var typeMember = members.SingleOrDefault(member => member.Id == typeId);
@@ -167,11 +169,11 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
         }
 
         if (type.XmlName == "Goo.ImageSourceProvider"
-            && !members.Any(member => BelongsTo(member.Id, type.XmlName)))
+            && !members.Any(member => BelongsTo(member.Id, type.XmlName, type.IsFunction)))
             AppendImageSourceProviderMembers(text);
 
         foreach (var member in members
-            .Where(member => BelongsTo(member.Id, type.XmlName))
+            .Where(member => BelongsTo(member.Id, type.XmlName, type.IsFunction))
             .OrderBy(member => member.Id, StringComparer.Ordinal))
         {
             matched.Add(member.Id);
@@ -546,7 +548,7 @@ static string BuildIndex(string[] sourceDirectories)
 static IEnumerable<ApiType> ReadTypes(string directoryPath, string sourceRoot)
 {
     var typePattern = new Regex(
-        @"(?m)^public\s+(?:(?:partial|sealed|open|data)\s+)*(?<kind>class|struct|enum|interface)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)(?<generic>\[[^\]\r\n]+\])?",
+        @"(?m)^public\s+(?:(?:partial|sealed|open|data)\s+)*(?<kind>class|struct|enum|interface|func)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)(?<generic>\[[^\]\r\n]+\])?",
         RegexOptions.CultureInvariant);
     foreach (var file in Directory.EnumerateFiles(directoryPath, "*.gs", SearchOption.AllDirectories)
         .Order(StringComparer.Ordinal))
@@ -555,9 +557,12 @@ static IEnumerable<ApiType> ReadTypes(string directoryPath, string sourceRoot)
         foreach (Match match in typePattern.Matches(source))
         {
             var name = match.Groups["name"].Value;
+            var isFunction = match.Groups["kind"].Value == "func";
+            if (isFunction && name == "operator")
+                continue;
             var generic = match.Groups["generic"].Value;
             var arity = generic.Length == 0 ? 0 : generic.Count(character => character == ',') + 1;
-            var xmlName = "Goo." + name + (arity == 0 ? "" : "`" + arity);
+            var xmlName = "Goo." + name + (arity == 0 ? "" : (isFunction ? "``" : "`") + arity);
             var values = match.Groups["kind"].Value == "enum"
                 ? ReadEnumValues(source, match.Index + match.Length)
                 : [];
@@ -568,39 +573,16 @@ static IEnumerable<ApiType> ReadTypes(string directoryPath, string sourceRoot)
                 ReadSourceSummary(source, match.Index),
                 values,
                 [new ApiSource(
-                    Path.GetRelativePath(directoryPath, file).Replace(Path.DirectorySeparatorChar, '/'),
-                    Path.GetFileName(file))]);
+                    Path.GetRelativePath(sourceRoot, file).Replace(Path.DirectorySeparatorChar, '/'),
+                    Path.GetFileName(file))], isFunction);
         }
     }
 }
 
-static IReadOnlyList<string> ReadEnumValues(string source, int start)
-{
-    var open = source.IndexOf('{', start);
-    if (open < 0)
-        return [];
-    var depth = 0;
-    var close = -1;
-    for (var index = open; index < source.Length; index++)
-    {
-        if (source[index] == '{')
-            depth++;
-        else if (source[index] == '}' && --depth == 0)
-        {
-            close = index;
-            break;
-        }
-    }
-    if (close < 0)
-        return [];
-
-    var body = Regex.Replace(source[(open + 1)..close], @"(?m)^\s*///.*$", "");
-    return body.Split(';', StringSplitOptions.RemoveEmptyEntries)
-        .Select(part => Regex.Match(part, @"^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)"))
-        .Where(match => match.Success)
-        .Select(match => match.Groups["name"].Value)
-        .ToArray();
-}
+static IReadOnlyList<string> ReadEnumValues(string source, int start) =>
+    SyntaxTree.Parse(source).Root.Members.OfType<EnumDeclarationSyntax>()
+        .Single(declaration => declaration.Span.Start < start && declaration.Span.End > start)
+        .Members.Select(member => member.Identifier.Text).ToArray();
 
 static string ReadSourceSummary(string source, int declarationStart)
 {
@@ -617,7 +599,8 @@ static string ReadSourceSummary(string source, int declarationStart)
     return Normalize(string.Join(' ', summary));
 }
 
-static bool BelongsTo(string id, string xmlTypeName) =>
+static bool BelongsTo(string id, string xmlTypeName, bool isFunction = false) =>
+    isFunction ? id.StartsWith("M:" + xmlTypeName + "(", StringComparison.Ordinal) :
     id.StartsWith("M:" + xmlTypeName + ".", StringComparison.Ordinal) ||
     id.StartsWith("P:" + xmlTypeName + ".", StringComparison.Ordinal) ||
     id.StartsWith("F:" + xmlTypeName + ".", StringComparison.Ordinal) ||
@@ -625,7 +608,9 @@ static bool BelongsTo(string id, string xmlTypeName) =>
 
 static string DisplayMember(ApiMember member, ApiType type)
 {
-    var value = member.Id[(type.XmlName.Length + 3)..];
+    var value = type.IsFunction
+        ? type.DisplayName + member.Id[(type.XmlName.Length + 2)..]
+        : member.Id[(type.XmlName.Length + 3)..];
     var methodParameters = member.Element.Elements("typeparam")
         .Select(element => element.Attribute("name")?.Value ?? "T")
         .ToArray();
@@ -671,6 +656,9 @@ static void WriteIfChanged(string path, string content)
     if (File.Exists(path) && File.ReadAllText(path) == content)
         return;
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    content = System.Text.RegularExpressions.Regex.Replace(content, @"(```gsharp\n)(.*?)(```)",
+        match => match.Groups[1].Value + Goo.Tools.SourceFormatting.Format(match.Groups[2].Value) + match.Groups[3].Value,
+        System.Text.RegularExpressions.RegexOptions.Singleline);
     File.WriteAllText(path, content, new UTF8Encoding(false));
 }
 
@@ -705,7 +693,8 @@ sealed record ApiType(
     string XmlName,
     string Summary,
     IReadOnlyList<string> EnumValues,
-    IReadOnlyList<ApiSource> Sources);
+    IReadOnlyList<ApiSource> Sources,
+    bool IsFunction = false);
 
 sealed record ApiSource(string RelativeFile, string FileName);
 

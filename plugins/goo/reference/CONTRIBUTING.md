@@ -32,6 +32,22 @@ For NativeAOT, install the target platform's [.NET NativeAOT
 prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
 NativeAOT publishing must run on the target operating system.
 
+## G# authoring tools
+
+The current source uses upstream G# ADR-0180 mixed initializers and the ADR-0179
+formatter. Build the pinned compiler and formatter before building this checkout:
+
+```sh
+python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+```
+
+The pin is upstream `947be9cb5f4467947ecb95dba06b461f9984d659`. The published
+G# SDK 0.4.591 supplies the MSBuild tasks and runtime libraries. The source-built
+compiler supplies the newer language support through `GsharpCompilerFullPath`.
+App samples and code examples use the official four-space formatter with a
+120-column layout budget. Core source retains its existing formatting.
+See [native authoring](docs/native-authoring.md) for construction and spread rules.
+
 ## Verification
 
 Run the focused managed checks for ordinary API or behavior changes:
@@ -39,13 +55,15 @@ Run the focused managed checks for ordinary API or behavior changes:
 ```sh
 dotnet build tools/Goo.Gslint/Goo.Gslint.csproj -c Release
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
-  --strict --severity GL0005=none --severity GL0006=none .
+  --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo tests
+dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
+  --strict --severity GL0005=none --severity GL0006=none apps templates plugins/goo/reference/templates
 dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
 dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release
 ```
 
-Run the linter with `--fix` to apply canonical formatting and other safe
-mechanical rewrites. GL0005 remains a manual review advisory because syntax
+Limit formatting fixes to app samples and examples; do not run a bulk formatter
+over core source. Use `--fix` only on the intended files. GL0005 remains a manual review advisory because syntax
 cannot distinguish intentional fail-fast assertions. Public API documentation
 is enforced by `Goo.ApiContractTests`, which covers supplemented documentation
 and avoids treating public test fixtures as product API.

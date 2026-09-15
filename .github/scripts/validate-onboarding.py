@@ -11,6 +11,7 @@ from release_version import read_release_version
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_PACKAGE_IDS = {
     "Goo",
+    "Goo.Accessibility",
     "Goo.Android",
     "Goo.DevTools",
     "Goo.DevTools.App",
@@ -31,7 +32,7 @@ def tracked_files() -> list[str]:
         check=True,
         stdout=subprocess.PIPE,
     )
-    return [item.decode() for item in result.stdout.split(b"\0") if item]
+    return [item.decode() for item in result.stdout.split(b"\0") if item and (ROOT / item.decode()).is_file()]
 
 
 def markdown_prose(text: str) -> str:

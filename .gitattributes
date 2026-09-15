@@ -2,4 +2,3 @@
 *.glsl text eol=lf
 *.spv binary
 docs/perf/evidence/** -text -whitespace
-apps/Goo.Workbench/Assets/OFL*.txt -text -whitespace

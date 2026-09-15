@@ -105,7 +105,7 @@ public class TextEditorController : IDisposable {
       Anchor: TextPosition{ Offset: 0, Affinity: TextAffinity.Upstream },
       Active: TextPosition{ Offset: 0, Affinity: TextAffinity.Upstream },
     }
-    document.Changed += onDocumentChanged
+    document.Committed += onDocumentChanged
   }
 
   /// Gets the document edited by this controller.
@@ -287,7 +287,7 @@ public class TextEditorController : IDisposable {
     if !disposed {
       disposed = true
       undoGroup = nil
-      document.Changed -= onDocumentChanged
+      document.Committed -= onDocumentChanged
       mountedEditor = nil
     }
   }
@@ -442,7 +442,7 @@ public class TextEditorController : IDisposable {
 
   private func moveVertical(lines int32, extend bool) bool {
     if let mounted = mountedEditor as Node? {
-      let contentLeft = TextLayouts.ContentLeft(mounted) - mounted.Rect.X
+      let contentLeft = BoxGeometry.ContentLeft(mounted) - mounted.Rect.X
       if !hasDesiredHorizontalPosition {
         let rect = TextEditorLayouts.CaretRect(mounted, selection.Active)
         desiredHorizontalPosition = float64(rect.X - contentLeft + float32(scrollTargetX))

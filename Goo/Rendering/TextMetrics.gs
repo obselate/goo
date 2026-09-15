@@ -145,7 +145,7 @@ internal class TextMetrics {
   }
 
   internal func EntryOffset(n Node, shaped ShapedText) float32 {
-    let free = TextLayouts.ContentWidth(n) - shaped.Width
+    let free = BoxGeometry.ContentWidth(n) - shaped.Width
     if free <= 0.0F { return 0.0F }
     return switch n.TextAlign {
       case TextAlign.Center: free * 0.5F
@@ -156,7 +156,7 @@ internal class TextMetrics {
     }
   }
 
-  internal func EntryOriginX(n Node, shaped ShapedText) float32 -> TextLayouts.ContentLeft(n) + EntryOffset(n, shaped) - n.EditScrollX
+  internal func EntryOriginX(n Node, shaped ShapedText) float32 -> BoxGeometry.ContentLeft(n) + EntryOffset(n, shaped) - n.EditScrollX
 
   internal func CaretX(n Node, index int32) float32 {
     let shaped = BufferShape(n)
@@ -204,7 +204,7 @@ internal class TextMetrics {
 // Keeps the caret inside the padded view with a 2px margin.
 internal func FollowCaret(n Node) {
   let m = TextMetrics()
-  let viewW = TextLayouts.ContentWidth(n)
+  let viewW = BoxGeometry.ContentWidth(n)
   if viewW <= 0.0F {
     return
   }

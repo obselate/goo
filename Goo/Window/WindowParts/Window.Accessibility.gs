@@ -44,6 +44,9 @@ public partial class Window {
     guard let manager = accessibility else { return false }
     if !manager.Supports(id, request.Action) { return false }
     guard let target = manager.NodeFor(id) else { return false }
+    if !canReceiveInput(target) {
+      return false
+    }
     var result bool
     if let handled = manager.InvokeDeclared(target, request) {
       result = handled

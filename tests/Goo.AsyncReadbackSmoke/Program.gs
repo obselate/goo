@@ -1,35 +1,22 @@
 package GooAsyncReadbackSmoke
 
-import System
-import System.Diagnostics
-import System.IO
-import System.Collections.Generic
-import System.Threading
 import Goo
 import GooPrimitiveFixture
 import GooReadbackFixture
+import System
+import System.Collections.Generic
+import System.Diagnostics
+import System.IO
+import System.Threading
 
 class ReadbackSmokeCell : Cell {
   shared {
     let Root ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Handle: ReadbackSmokeCell.Root,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: ReadbackSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 48,.Height: 40,.Opacity: 0.5,
       Container{
-        Position: PositionType.Absolute,
-        Left: 8,
-        Top: 8,
-        Width: 48,
-        Height: 40,
-        Opacity: 0.5,
-        Children: {
-          Container{
             Width: Length.Percent(100),
             Height: Length.Percent(100),
             BackgroundColor: Color.Rgb(220, 40, 64),
@@ -38,8 +25,6 @@ class ReadbackSmokeCell : Cell {
             Width: Length.Percent(100),
             Height: Length.Percent(100),
             BackgroundColor: Color.Rgb(40, 80, 220),
-          },
-        },
       },
     },
   }
@@ -245,13 +230,8 @@ class ProtectedTextCell : Cell {
     CompositionText = ""
   }
 
-  override func Build() Blob -> Container {
-    Width: 320,
-    Height: 96,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      TextEntry{
+  override func Build() Blob -> Container() {.Width: 320,.Height: 96,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    TextEntry{
         Handle: ProtectedTextCell.Entry,
         Position: PositionType.Absolute,
         Left: 0,
@@ -285,8 +265,7 @@ class ProtectedTextCell : Cell {
         Value: "•••",
         Accessibility: Accessibility{ Hidden: true },
       },
-    },
-  }
+    }
 }
 
 class InputAccessibilityCell : Cell {
@@ -328,13 +307,8 @@ class InputAccessibilityCell : Cell {
 
   internal prop MotionRunning bool{ get -> motion.Running }
 
-  override func Build() Blob -> Container {
-    Width: 320,
-    Height: 176,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Button{
+  override func Build() Blob -> Container() {.Width: 320,.Height: 176,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Button{
         Handle: InputAccessibilityCell.Target,
         Position: PositionType.Absolute,
         Left: 8,
@@ -379,23 +353,13 @@ class InputAccessibilityCell : Cell {
         Height: 32,
         BackgroundColor: Color.Rgb(72, 144, 232),
       },
+      Container() {.Handle: InputAccessibilityCell.ScrollViewport,.Position: PositionType.Absolute,.Left: 8,.Top: 88,.Width: 120,.Height: 72,.OverflowY: Overflow.Scroll,.BackgroundColor: Color.Rgb(24, 32, 48),
       Container{
-        Handle: InputAccessibilityCell.ScrollViewport,
-        Position: PositionType.Absolute,
-        Left: 8,
-        Top: 88,
-        Width: 120,
-        Height: 72,
-        OverflowY: Overflow.Scroll,
-        BackgroundColor: Color.Rgb(24, 32, 48),
-        Children: {
-          Container{
             Handle: InputAccessibilityCell.ScrollLeaf,
             Width: 120,
             Height: 176,
             BackgroundColor: Color.Rgb(96, 176, 216),
-            OnWheel: func(value WheelEvent) { ScrollWheelCount++ },
-          },
+            OnWheel: func(value WheelEvent) { ScrollWheelCount++
         },
       },
     },

@@ -1,8 +1,8 @@
 package Goo.VulkanProof
 
+import Goo
 import System
 import System.Threading
-import Goo
 
 internal unsafe sealed class VulkanSolidQuadReadbackTarget : IDisposable {
   private const ByteSize VkDeviceSize = 64uL * 64uL * 4uL

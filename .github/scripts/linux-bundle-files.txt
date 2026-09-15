@@ -27,7 +27,6 @@ Vulkan/Shaders/clip_mask.vert.spv
 Vulkan/Shaders/hb_gpu.vert.spv
 Vulkan/Shaders/hb_gpu_draw.frag.spv
 Vulkan/Shaders/hb_gpu_paint.frag.spv
-Vulkan/Shaders/lava.frag.spv
 Vulkan/Shaders/path_band.frag.spv
 Vulkan/Shaders/path_band.vert.spv
 Vulkan/Shaders/shader-manifest.json

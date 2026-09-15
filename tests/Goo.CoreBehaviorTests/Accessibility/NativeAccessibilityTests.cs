@@ -218,7 +218,7 @@ public sealed class NativeAccessibilityTests
         public void Dispose() {
             var tree = typeof(Window).GetField("node", Hidden)!.GetValue(Window) as Node;
             Adapter.Dispose();
-            if (tree is not null) TextLayouts.DisposeTree(tree);
+            if (tree is not null) NodeLifecycle.DisposeTree(tree);
             Root.Controller.Dispose();
         }
         private static AccessibilityNode Find(AccessibilityNode node, AccessibilityRole role)

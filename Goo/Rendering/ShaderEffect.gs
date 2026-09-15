@@ -1,9 +1,9 @@
 package Goo
 
 import System
+import System.Diagnostics
 import System.Numerics
 import System.Runtime.CompilerServices
-import System.Diagnostics
 
 public sealed class ShaderEffect {
   private const MaximumBackdropOutset float32 = 256.0F
@@ -272,18 +272,6 @@ internal class ShaderEffectStyles {
       guard let value = state(n) else { return }
       values?.Remove(n)
       value.Dispose()
-    }
-
-    internal func TreeHasPlaying(n Node) bool {
-      if let value = state(n) {
-        if value.Effect.PlaybackActive { return true }
-      }
-      var index int32
-      while index < n.Children.Count {
-        if TreeHasPlaying(n.Children[index]) { return true }
-        index++
-      }
-      return false
     }
 
     private func state(n Node) ShaderEffectBinding? {

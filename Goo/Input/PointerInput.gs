@@ -6,6 +6,7 @@ import System.Numerics
 import System.Runtime.ExceptionServices
 
 internal partial class PointerInput {
+  private let focus FocusManager
   private let mouse PointerContact
   private var contacts List[PointerContact]?
   private var current PointerContact
@@ -34,7 +35,8 @@ internal partial class PointerInput {
   private var dragHitPath List[Node]?
   private var dragGeneration int64
 
-  internal init() {
+  internal init(focus FocusManager) {
+    this.focus = focus
     queue = List[QueuedPointerEvent]()
     queueHead = 0
     mouse = PointerContact(0, PointerDevice.Mouse)
@@ -209,7 +211,7 @@ internal partial class PointerInput {
             if let hook = diagnosticsHook {
               diagnosticsConsumed = hook(root, PointerEventKind.Cancel, e.X, e.Y, e.Button)
             }
-            let canceled = cancelInteraction(root, resolver, text)
+            let canceled = cancelInteraction(root, resolver)
             if diagnosticsConsumed || canceled {
               changed = true
             }
@@ -380,7 +382,7 @@ internal partial class PointerInput {
     }
   }
 
-  internal func Reset(root Node?, resolver Resolver, text TextInput) {
+  internal func Reset(root Node?, resolver Resolver) {
     var failure Exception?
     try {
       cancelDrag(root)
@@ -389,7 +391,7 @@ internal partial class PointerInput {
     }
     current = mouse
     try {
-      cancelInteraction(root, resolver, text)
+      cancelInteraction(root, resolver)
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
@@ -397,7 +399,7 @@ internal partial class PointerInput {
       for i in 0 ... values.Count {
         current = values[i]
         try {
-          cancelInteraction(root, resolver, text)
+          cancelInteraction(root, resolver)
         } catch (error Exception) {
           if failure == nil { failure = error }
         }
@@ -482,7 +484,7 @@ internal partial class PointerInput {
       let n = route[i - 1]
       if let callback = InputCallbacks.PointerLeave(n) {
         callback(hoverEvent(n, x, y))
-        rebuildOwner(route, i - 1)
+        CellOwnership.InRoute(route, i - 1)?.Rebuild()
       }
     }
   }
@@ -492,7 +494,7 @@ internal partial class PointerInput {
       let n = route[i]
       if let callback = InputCallbacks.PointerEnter(n) {
         callback(hoverEvent(n, x, y))
-        rebuildOwner(route, i)
+        CellOwnership.InRoute(route, i)?.Rebuild()
       }
     }
   }
@@ -516,14 +518,14 @@ internal partial class PointerInput {
 
   private func maskCanceledButtons(buttons PointerButtons) PointerButtons -> PointerButtons(int32(buttons) & (int32(-1) ^ int32(current.CanceledButtons)))
 
-  internal func AfterTreeUpdated(root Node?, resolver Resolver, text TextInput) {
+  internal func AfterTreeUpdated(root Node?, resolver Resolver) {
     current = mouse
-    afterTreeUpdatedCurrent(root, resolver, text)
+    afterTreeUpdatedCurrent(root, resolver)
     if let values = contacts {
       for var i = 0; i < values.Count; {
         let contact = values[i]
         current = contact
-        let canceled = afterTreeUpdatedCurrent(root, resolver, text)
+        let canceled = afterTreeUpdatedCurrent(root, resolver)
         if canceled {
           removeCurrentContact()
         } else {
@@ -534,9 +536,9 @@ internal partial class PointerInput {
     current = mouse
   }
 
-  private func afterTreeUpdatedCurrent(root Node?, resolver Resolver, text TextInput) bool {
+  private func afterTreeUpdatedCurrent(root Node?, resolver Resolver) bool {
     guard let tree = root else {
-      let canceled = cancelInteraction(root, resolver, text)
+      let canceled = cancelInteraction(root, resolver)
       if current.Device == PointerDevice.Mouse {
         clearHover(resolver)
         cursorValid = false
@@ -550,7 +552,7 @@ internal partial class PointerInput {
       routeUnavailable = !rebuildActivePath(tree)
     }
     if routeUnavailable {
-      cancelInteraction(root, resolver, text)
+      cancelInteraction(root, resolver)
       return true
     }
     if let d = current.DragEntry {
@@ -566,7 +568,7 @@ internal partial class PointerInput {
     }
     if let pan = current.TouchPan {
       if !nodeVisibleInTree(tree, pan.Target, false) || !canReceiveInput(pan.Target) {
-        cancelInteraction(root, resolver, text)
+        cancelInteraction(root, resolver)
         return true
       }
     }
@@ -701,7 +703,7 @@ internal partial class PointerInput {
             current.DragEntry = nil
             return changed
           }
-          let local = point.X - TextLayouts.ContentLeft(d)
+          let local = point.X - BoxGeometry.ContentLeft(d)
           let hit = TextMetrics().HitAt(d, local)
           d.Caret = hit.Index
           d.CaretAffinity = TextAffinity(hit.Affinity)
@@ -777,10 +779,10 @@ internal partial class PointerInput {
           break
         }
       }
-      let focusedBefore = text.FocusedNode()
-      text.SetFocus(resolver, target)
-      if text.FocusedNode() != focusedBefore {
-        current.FocusTarget = text.FocusedNode()
+      let focusedBefore = focus.FocusedNode()
+      focus.SetFocus(resolver, target)
+      if focus.FocusedNode() != focusedBefore {
+        current.FocusTarget = focus.FocusedNode()
       } else {
         current.FocusTarget = nil
       }
@@ -789,7 +791,7 @@ internal partial class PointerInput {
         if entry.Kind == NodeKind.Entry {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
-          let local = point.X - TextLayouts.ContentLeft(entry)
+          let local = point.X - BoxGeometry.ContentLeft(entry)
           let hit = TextMetrics().HitAt(entry, local)
           let index = hit.Index
           if current.LastPressCount >= 2 {
@@ -966,7 +968,7 @@ internal partial class PointerInput {
     }
     for i in 0 ... hitChain.Count {
       let child = hitChain[i]
-      if child.OnClick != nil || child.Focusable {
+      if isInteractiveContent(child) {
         info.HasContent = true
       }
       if child.DragsWindow {
@@ -982,11 +984,18 @@ internal partial class PointerInput {
       if chain[i - 1].OnClick != nil {
         return chain[i - 1]
       }
+      if chain[i - 1].FocusScopeBoundary {
+        break
+      }
     }
     return nil
   }
 
   private func chainDisabled(chain List[Node]) bool {
+    if chain.Count > 0 && chain[0].HasFocusScopes
+      && !FocusScopes.Allows(chain[0], chain[chain.Count - 1]) {
+        return true
+      }
     for i in 0 ... chain.Count {
       if chain[i].Disabled {
         return true

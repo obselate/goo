@@ -281,6 +281,75 @@ public sealed class TextEditorRetainedTests
     }
 
     [Fact]
+    public void TallInlineSlotsContributeToLineAndIntrinsicHeight()
+    {
+        var document = new TextDocument("before X after\ntail");
+        using var controller = new TextEditorController(document);
+        using var layer = new TextPresentationLayer(document);
+        layer.SetInlineSlot("inline", new TextRange(7, 1), new Container { Width = 120.0, Height = 80.0 });
+        var node = Mount(new TextEditor(controller, new[] { layer }) { Width = 200.0, Height = 200.0 });
+        new Layout().Calculate(node, 200, 200);
+
+        var layout = TextEditorLayouts.For(node, 200, -1);
+        var line = Assert.Single(layout.Lines, value => value.Slots.Count != 0);
+        Assert.True(line.Height >= 80, "An inline child must fit within its visual line.");
+        var following = layout.Lines.First(value => value.Top > line.Top);
+        Assert.True(following.Top >= line.Top + 80, "Following text must not overlap the inline child.");
+        Assert.True(layout.Height >= following.Top + following.Height);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WrappedInlineSlotsRefreshTheirMeasuredHeight(bool updateAfterMount)
+    {
+        var document = new TextDocument("before X after text that must wrap below the inline link");
+        using var controller = new TextEditorController(document);
+        using var layer = new TextPresentationLayer(document);
+        Blob Content(double maxWidth) => new Button
+        {
+            Padding = 0.0, MinWidth = 0.0, MaxWidth = maxWidth,
+            Children = { new Text { Content = "complete release guide with all of the details needed to review this deployment and its follow-up changes", FontSize = 18.0, TextWrap = TextWrap.Wrap, MinWidth = 0.0 } }
+        };
+        layer.SetInlineSlot("link", new TextRange(7, 1), Content(updateAfterMount ? 1000 : 414));
+        var reconciler = new Reconciler { Res = new Resolver() };
+        TextEditor Editor() => new(controller, new[] { layer }) { Width = 414.0, Height = 300.0, FontSize = 18.0 };
+        var node = reconciler.Mount(Editor());
+        new Layout().Calculate(node, 414, 300);
+        if (updateAfterMount)
+        {
+            layer.Clear();
+            layer.SetInlineSlot("link", new TextRange(7, 1), Content(414));
+            _ = TextEditorLayouts.For(node, 414, -1);
+            node = reconciler.Diff(node, Editor());
+            new Layout().Calculate(node, 414, 300);
+        }
+        var layout = TextEditorLayouts.For(node, 414, -1);
+        var line = Assert.Single(layout.Lines, value => value.Slots.Count != 0);
+        var child = Assert.Single(node.Children);
+        Assert.True(child.Rect.H > 40, $"Actual slot must wrap: {child.Rect.H}");
+        Assert.True(line.Height >= child.Rect.H, $"Line {line.Height} must contain actual slot {child.Rect.H}");
+        var following = layout.Lines.First(value => value.Top > line.Top);
+        Assert.True(following.Top >= line.Top + child.Rect.H);
+    }
+
+    [Fact]
+    public void InlineSlotFollowsTheActualStyledPrefixAdvance()
+    {
+        var document = new TextDocument("bold X after");
+        using var controller = new TextEditorController(document);
+        using var layer = new TextPresentationLayer(document);
+        layer.SetStyle("bold", new TextRange(0, 5), new Style { FontSize = 28.0, FontWeight = 700.0 });
+        layer.SetInlineSlot("inline", new TextRange(5, 1), new Container { Width = 60.0, Height = 20.0 });
+        var node = Mount(new TextEditor(controller, new[] { layer }) { Width = 400.0, Height = 100.0, FontSize = 14.0 });
+        new Layout().Calculate(node, 400, 100);
+        var line = Assert.Single(TextEditorLayouts.For(node, 400, 100).Lines);
+        var slot = Assert.Single(line.Slots);
+        var prefix = line.Runs.First(run => run.DisplayStart == 0);
+        Assert.InRange(Math.Abs(slot.X - (prefix.X + prefix.Shape!.Width)), 0, 0.01);
+    }
+
+    [Fact]
     public void PrefixCacheFindsTheViewportParagraph()
     {
         var document = new TextDocument("X\nsecond\nthird");

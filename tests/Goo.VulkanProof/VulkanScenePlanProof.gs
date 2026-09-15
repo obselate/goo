@@ -1,7 +1,7 @@
 package Goo.VulkanProof
 
-import System
 import Goo
+import System
 
 internal func RequireScenePlanProof(value bool, message string) {
   if !value {

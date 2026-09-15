@@ -7,7 +7,7 @@ loader reads and decodes on a worker, then returns an immutable `ImageSource`:
 using let images = ImageSourceCache()
 using let logo = await images.LoadAsync(Path.Combine(AppContext.BaseDirectory, "Assets/logo.png"))
 // Store logo in application state and use it from Cell.Build:
-Image{ Source: logo, Width: 64, Height: 64, Fit: ImageFit.Contain }
+Image{Source: logo, Width: 64, Height: 64, Fit: ImageFit.Contain}
 ```
 
 Copy packaged image assets to the output/publish directory using the application's

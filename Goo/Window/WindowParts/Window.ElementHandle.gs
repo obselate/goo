@@ -4,6 +4,8 @@ import System
 
 /// Hosts supported element-handle operations on the UI thread.
 public partial class Window {
+  internal func SyncControlledEntry(n Node, value string) bool -> input.SyncControlledEntry(n, value)
+
   internal func RequireElementHandleThread(operation string) {
     requireUiThread(operation)
   }
@@ -51,6 +53,21 @@ public partial class Window {
     return result
   }
 
+  internal func BeginFocusScope(n Node, options FocusScopeOptions) FocusScope {
+    requireUiThread("ElementHandle.BeginFocusScope")
+    guard let tree = node else {
+      throw InvalidOperationException("The window has no mounted tree")
+    }
+    return input.BeginFocusScope(this, tree, n, options)
+  }
+
+  internal func FocusScopeChanged() {
+    pendingReconcileEffects = combineEffects(
+      pendingReconcileEffects,
+      ReconcileEffects.Input | ReconcileEffects.Accessibility)
+    markDirtyAndRender()
+  }
+
   internal func BlurElement(n Node) bool {
     requireUiThread("ElementHandle.Blur")
     let result = input.BlurElement(resolver, n)
@@ -84,14 +101,7 @@ public partial class Window {
     let scrollable = n.Kind == NodeKind.Editor
       || n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll
     if !scrollable { return false }
-    if n.Kind == NodeKind.Editor {
-      TextEditorLayouts.SyncScroll(n)
-    }
-    let targetX = n.OverflowX == Overflow.Scroll || n.Kind == NodeKind.Editor
-    ? clampOffset(float32(x), maxScrollX(n)) : 0.0F
-    let targetY = n.OverflowY == Overflow.Scroll || n.Kind == NodeKind.Editor
-    ? clampOffset(float32(y), maxScrollY(n)) : 0.0F
-    setElementScrollTarget(n, targetX, targetY)
+    setElementScrollTarget(n, float32(x), float32(y))
     accessibility?.MarkDirty()
     return true
   }
@@ -101,7 +111,7 @@ public partial class Window {
     let scrollable = n.Kind == NodeKind.Editor
       || n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll
     if !scrollable { return false }
-    setImmediateScroll(n, float32(x), float32(y))
+    ScrollState.To(n, float32(x), float32(y), true)
     pendingReconcileEffects = combineEffects(pendingReconcileEffects,
       ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect
       | ReconcileEffects.Accessibility)
@@ -130,12 +140,12 @@ public partial class Window {
 
   private func scrollSubjectIntoAncestor(subject Node, ancestor Node) {
     if ancestor.Kind == NodeKind.Editor {
-      TextEditorLayouts.SyncScroll(ancestor)
+      ScrollState.SyncEditor(ancestor)
     }
-    let left = TextLayouts.ContentLeft(ancestor)
-    let top = TextLayouts.ContentTop(ancestor)
-    let right = left + TextLayouts.ContentWidth(ancestor)
-    let bottom = top + TextLayouts.ContentHeight(ancestor)
+    let left = BoxGeometry.ContentLeft(ancestor)
+    let top = BoxGeometry.ContentTop(ancestor)
+    let right = left + BoxGeometry.ContentWidth(ancestor)
+    let bottom = top + BoxGeometry.ContentHeight(ancestor)
     var targetX = ancestor.ScrollX
     var targetY = ancestor.ScrollY
     if ancestor.OverflowX == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {
@@ -143,37 +153,20 @@ public partial class Window {
       else if subject.Rect.X + subject.Rect.W > right {
         targetX = targetX + subject.Rect.X + subject.Rect.W - right
       }
-      targetX = clampOffset(targetX, maxScrollX(ancestor))
     }
     if ancestor.OverflowY == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {
       if subject.Rect.Y < top { targetY = targetY + subject.Rect.Y - top }
       else if subject.Rect.Y + subject.Rect.H > bottom {
         targetY = targetY + subject.Rect.Y + subject.Rect.H - bottom
       }
-      targetY = clampOffset(targetY, maxScrollY(ancestor))
     }
     setElementScrollTarget(ancestor, targetX, targetY)
   }
 
   private func setElementScrollTarget(n Node, x float32, y float32) {
-    if n.Kind == NodeKind.Editor {
-      if let state = n.EditorState {
-        state.Controller.ScrollTo(float64(x), float64(y))
-      }
-      n.ScrollX = x
-      n.ScrollY = y
+    if ScrollState.To(n, x, y) {
+      markDirtyAndRender()
     }
-    if n.ScrollTargetX == x && n.ScrollTargetY == y {
-      return
-    }
-    n.ScrollTargetX = x
-    n.ScrollTargetY = y
-    n.ScrollIdle = 0.0F
-    n.ScrollBarAlpha = 1.0F
-    if n.PinToBottom {
-      n.UserScrolled = y < maxScrollY(n) - 0.5F
-    }
-    markDirtyAndRender()
   }
 
   private func markDirtyAndRender() {

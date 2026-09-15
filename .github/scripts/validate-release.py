@@ -50,7 +50,6 @@ PACKAGE_FILES = {
     "contentFiles/any/any/Vulkan/Shaders/hb_gpu.vert.spv",
     "contentFiles/any/any/Vulkan/Shaders/hb_gpu_draw.frag.spv",
     "contentFiles/any/any/Vulkan/Shaders/hb_gpu_paint.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/lava.frag.spv",
     "contentFiles/any/any/Vulkan/Shaders/harfbuzz-14.3.1.provenance.json",
     "contentFiles/any/any/Vulkan/Runtime/MoltenVK-LICENSE.txt",
     "contentFiles/any/any/Vulkan/Shaders/path_band.frag.spv",

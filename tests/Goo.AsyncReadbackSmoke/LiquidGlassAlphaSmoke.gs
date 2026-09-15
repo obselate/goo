@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
 import System.Numerics
-import Goo
 
 class LiquidGlassAlphaCell : Cell {
   private let effect ShaderEffect
@@ -12,13 +12,8 @@ class LiquidGlassAlphaCell : Cell {
     effect = value
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Transparent,
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
+    Container{
         Position: PositionType.Absolute,
         Left: 0,
         Top: 0,
@@ -42,7 +37,6 @@ class LiquidGlassAlphaCell : Cell {
         Height: 96,
         BackgroundColor: Color.Transparent,
         ShaderEffect: effect,
-      },
     },
   }
 }

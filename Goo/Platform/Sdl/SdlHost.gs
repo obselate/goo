@@ -1,10 +1,10 @@
 package Goo
 
+import Hexa.NET.SDL3
 import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.Runtime.InteropServices
-import Hexa.NET.SDL3
 
 internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost {
   private const MousePointerId int64 = 0L
@@ -369,6 +369,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     SdlRuntime.RequireMainThread("SdlHost.Dispose")
     disposed = true
+    SdlTitlebarHooks.Unbind(this)
     if windowId != 0u {
       SdlRuntime.Unregister(windowId)
       windowId = 0u

@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
 import System.Threading
-import Goo
 
 class NativeAccessibilitySmokeCell : Cell {
   internal let EditorHandle ElementHandle = ElementHandle()
@@ -22,33 +22,28 @@ class NativeAccessibilitySmokeCell : Cell {
       Padding = 12, BackgroundColor = Color.Rgb(31, 43, 60), BorderRadius = 8,
       Accessibility = Accessibility{Relationships: AccessibilityRelationships{LabelledBy: []ElementHandle{LabelHandle}}},
     }
-    return Container{Padding: 24, Gap: 14, BackgroundColor: Color.Rgb(16, 23, 33), Color: Color.Rgb(230, 236, 244), Children: {
+    return Container() {.Padding: 24,.Gap: 14,.BackgroundColor: Color.Rgb(16, 23, 33),.Color: Color.Rgb(230, 236, 244),
       Text{Content: "Native accessibility", FontSize: 27},
       Text{Content: "AT-SPI · retained nodes · native actions", FontSize: 14, Color: Color.Rgb(145, 171, 194)},
-      Container{Disabled: Modal, Opacity: if Modal {0.25} else {1.0}, Accessibility: Accessibility{Hidden: Modal}, Gap: 12, Children: {
+      Container() {.Disabled: Modal,.Opacity: if Modal {0.25} else {1.0},.Accessibility: Accessibility{Hidden: Modal},.Gap: 12,
         Text{Handle: LabelHandle, Content: "Message", FontSize: 16},
         editor,
-        Button{Children: {Text("Save message")}, OnClick: () -> Clicks++, Height: 40,
-          BackgroundColor: Color.Rgb(34, 99, 143), BorderRadius: 7},
+        Button() {Text("Save message"),.OnClick: () -> Clicks++,.Height: 40,.BackgroundColor: Color.Rgb(34, 99, 143),.BorderRadius: 7},
         Text{Content: "Saved " + Clicks.ToString() + " times", FontSize: 15, Accessibility: Accessibility{Role: AccessibilityRole.Status, Live: AccessibilityLive.Polite}},
-        Container{Accessibility: Accessibility{Role: AccessibilityRole.List, Name: "Conversations"}, Children: {
-          Button{Children: {Text("Selected conversation")}, Display: if Removed { Display.None } else { Display.Flex }, Height: 38,
-            BackgroundColor: Color.Rgb(36, 67, 82), Accessibility: Accessibility{
+        Container() {.Accessibility: Accessibility{Role: AccessibilityRole.List, Name: "Conversations"},
+          Button() {Text("Selected conversation"),.Display: if Removed { Display.None } else { Display.Flex },.Height: 38,.BackgroundColor: Color.Rgb(36, 67, 82),.Accessibility: Accessibility{
               Role: AccessibilityRole.ListItem, Name: "Selected conversation", Selected: Selected, Actions: []AccessibilityAction{AccessibilityAction.Select, AccessibilityAction.Deselect},
               OnAction: (request AccessibilityActionRequest) -> {Selected = request.Action == AccessibilityAction.Select
                 return true},
-            }},
-        }},
-        Button{Children: {Text("Open dialog")}, OnClick: () -> Modal = true, Height: 38},
-      }},
-      Container{Display: if Modal { Display.Flex } else { Display.None }, Position: PositionType.Absolute, Left: 24, Top: 180, Width: 512, Height: 210, Padding: 22, Gap: 16,
-        BackgroundColor: Color.Rgb(43, 53, 78), BorderRadius: 10,
-        Accessibility: Accessibility{Role: AccessibilityRole.Dialog, Name: "Review message", Modal: true}, Children: {
-          Text("Review message") {FontSize = 23},
+            }}
+        },
+        Button() {Text("Open dialog"),.OnClick: () -> Modal = true,.Height: 38}
+      },
+      Container() {.Display: if Modal { Display.Flex } else { Display.None },.Position: PositionType.Absolute,.Left: 24,.Top: 180,.Width: 512,.Height: 210,.Padding: 22,.Gap: 16,.BackgroundColor: Color.Rgb(43, 53, 78),.BorderRadius: 10,.Accessibility: Accessibility{Role: AccessibilityRole.Dialog, Name: "Review message", Modal: true},
+        Text("Review message") {FontSize = 23},
           Text("This dialog is exposed as a native modal scope."),
-          Button{Handle: DialogHandle, Children: {Text("Close dialog")}, OnClick: () -> Modal = false, Height: 38},
-        }},
-    }}
+          Button() {.Handle: DialogHandle, Text("Close dialog"),.OnClick: () -> Modal = false,.Height: 38}
+      }}
   }
 }
 

@@ -20,14 +20,8 @@ class EffectsCell : Cell {
     let DiamondPath VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 0.5).LineTo(0.5, 1.0).LineTo(0.0, 0.5).Close().Build()
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Handle: EffectsCell.Root,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: EffectsCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
         Position: PositionType.Absolute,
         Left: 14,
         Top: 14,
@@ -70,15 +64,7 @@ class EffectsCell : Cell {
         },
         BackgroundColor: Color.Rgb(44, 92, 132),
       },
-      Button{
-        Position: PositionType.Absolute,
-        Left: 144,
-        Top: 14,
-        Width: 112,
-        Height: 88,
-        Handle: EffectsCell.ShadowButton,
-        BorderRadius: 16,
-        BoxShadows: []BoxShadow{
+      Button() {.Position: PositionType.Absolute,.Left: 144,.Top: 14,.Width: 112,.Height: 88,.Handle: EffectsCell.ShadowButton,.BorderRadius: 16,.BoxShadows: []BoxShadow{
           BoxShadow{
             OffsetX: 2,
             OffsetY: 3,
@@ -94,10 +80,8 @@ class EffectsCell : Cell {
             Color: Color.Rgba(72, 224, 128, 160),
             Inset: true,
           },
-        },
-        BackgroundColor: Color.Rgb(36, 116, 84),
-        Children: {
-          Text{
+        },.BackgroundColor: Color.Rgb(36, 116, 84),
+      Text{
             Position: PositionType.Absolute,
             Left: 14,
             Top: 28,
@@ -105,7 +89,6 @@ class EffectsCell : Cell {
             FontFamily: "ReadbackGateFont",
             FontSize: 22,
             Color: Color.White,
-          },
         },
       },
       Shape{
@@ -139,22 +122,9 @@ class EffectsCell : Cell {
         },
         BackgroundColor: Color.Rgb(72, 128, 224),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 272,
-        Top: 14,
-        Width: 154,
-        Height: 88,
-        Handle: EffectsCell.GroupOuter,
-        Opacity: 0.65,
-        Children: {
-          Container{
-            Width: Length.Percent(100),
-            Height: Length.Percent(100),
-            Handle: EffectsCell.GroupInner,
-            Opacity: 0.75,
-            Children: {
-              Container{
+      Container() {.Position: PositionType.Absolute,.Left: 272,.Top: 14,.Width: 154,.Height: 88,.Handle: EffectsCell.GroupOuter,.Opacity: 0.65,
+      Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: EffectsCell.GroupInner,.Opacity: 0.75,
+        Container{
                 Position: PositionType.Absolute,
                 Left: 10,
                 Top: 12,
@@ -172,22 +142,8 @@ class EffectsCell : Cell {
               },
             },
           },
-        },
-      },
+    Container() {.Position: PositionType.Absolute,.Left: 14,.Top: 132,.Width: 132,.Height: 112,.Handle: EffectsCell.ClipViewport,.BorderRadius: 24,.Overflow: Overflow.Hidden,.ClipPath: EffectsCell.DiamondPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(32, 84, 132),
       Container{
-        Position: PositionType.Absolute,
-        Left: 14,
-        Top: 132,
-        Width: 132,
-        Height: 112,
-        Handle: EffectsCell.ClipViewport,
-        BorderRadius: 24,
-        Overflow: Overflow.Hidden,
-        ClipPath: EffectsCell.DiamondPath,
-        ClipPathFit: ShapeFit.Fill,
-        BackgroundColor: Color.Rgb(32, 84, 132),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 22,
             Top: 26,
@@ -196,7 +152,6 @@ class EffectsCell : Cell {
             Handle: EffectsCell.ClipLeaf,
             Transform: PanelTransform{ Rotate: 18, ScaleX: 0.9, ScaleY: 1.1 },
             BackgroundColor: Color.Rgb(232, 196, 72),
-          },
         },
       },
       Text{
@@ -253,18 +208,7 @@ class EffectsCell : Cell {
           Color: Color.Rgba(72, 224, 196, 180),
         },
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 292,
-        Top: 142,
-        Width: 132,
-        Height: 92,
-        BorderRadius: 14,
-        OutlineWidth: 2,
-        OutlineOffset: -3,
-        OutlineColor: Color.Rgb(108, 224, 196),
-        BackgroundColor: Color.Rgb(24, 48, 72),
-        BoxShadows: []BoxShadow{
+      Container() {.Position: PositionType.Absolute,.Left: 292,.Top: 142,.Width: 132,.Height: 92,.BorderRadius: 14,.OutlineWidth: 2,.OutlineOffset: -3,.OutlineColor: Color.Rgb(108, 224, 196),.BackgroundColor: Color.Rgb(24, 48, 72),.BoxShadows: []BoxShadow{
           BoxShadow{
             OffsetX: 0,
             OffsetY: 0,
@@ -274,8 +218,7 @@ class EffectsCell : Cell {
             Inset: true,
           },
         },
-        Children: {
-          Text{
+      Text{
             Position: PositionType.Absolute,
             Left: 12,
             Top: 30,
@@ -285,16 +228,8 @@ class EffectsCell : Cell {
             Color: Color.Rgb(224, 232, 244),
           },
         },
-      },
+    Container() {.Position: PositionType.Absolute,.Left: 14,.Top: 246,.Width: 96,.Height: 18,.BackgroundColor: Color.Rgb(224, 64, 72),
       Container{
-        Position: PositionType.Absolute,
-        Left: 14,
-        Top: 246,
-        Width: 96,
-        Height: 18,
-        BackgroundColor: Color.Rgb(224, 64, 72),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 24,
             Top: 3,
@@ -305,16 +240,8 @@ class EffectsCell : Cell {
             BackgroundColor: Color.Rgb(72, 128, 224),
           },
         },
-      },
+    Container() {.Position: PositionType.Absolute,.Left: 120,.Top: 246,.Width: 96,.Height: 18,.BackgroundColor: Color.Rgb(224, 64, 72),
       Container{
-        Position: PositionType.Absolute,
-        Left: 120,
-        Top: 246,
-        Width: 96,
-        Height: 18,
-        BackgroundColor: Color.Rgb(224, 64, 72),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 24,
             Top: 3,
@@ -325,16 +252,8 @@ class EffectsCell : Cell {
             BackgroundColor: Color.Rgb(72, 128, 224),
           },
         },
-      },
+    Container() {.Position: PositionType.Absolute,.Left: 226,.Top: 246,.Width: 96,.Height: 18,.BackgroundColor: Color.Rgb(224, 64, 72),
       Container{
-        Position: PositionType.Absolute,
-        Left: 226,
-        Top: 246,
-        Width: 96,
-        Height: 18,
-        BackgroundColor: Color.Rgb(224, 64, 72),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 24,
             Top: 3,
@@ -345,16 +264,8 @@ class EffectsCell : Cell {
             BackgroundColor: Color.Rgb(72, 128, 224),
           },
         },
-      },
+    Container() {.Position: PositionType.Absolute,.Left: 332,.Top: 246,.Width: 96,.Height: 18,.BackgroundColor: Color.Rgb(224, 64, 72),
       Container{
-        Position: PositionType.Absolute,
-        Left: 332,
-        Top: 246,
-        Width: 96,
-        Height: 18,
-        BackgroundColor: Color.Rgb(224, 64, 72),
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 24,
             Top: 3,
@@ -365,7 +276,5 @@ class EffectsCell : Cell {
             BackgroundColor: Color.Rgb(72, 128, 224),
           },
         },
-      },
-    },
-  }
+      }
 }

@@ -186,6 +186,14 @@ Creates a selection-change request.
 - `start`: The nonnegative UTF-16 start in the exposed semantic value.
 - `length`: The nonnegative UTF-16 length in the exposed semantic value.
 
+### `SetSelection(int32,int32,int32)`
+
+Creates a selection-change request with an explicit active endpoint.
+
+- `start`: The nonnegative UTF-16 start in the exposed semantic value.
+- `length`: The nonnegative UTF-16 length in the exposed semantic value.
+- `caret`: The active endpoint, equal to start or start plus length.
+
 ### `SetValue(string)`
 
 Creates a value-change request.
@@ -203,6 +211,10 @@ Gets the horizontal logical target supplied for Scroll.
 ### `ScrollY`
 
 Gets the vertical logical target supplied for Scroll.
+
+### `SelectionCaret`
+
+Gets the active UTF-16 endpoint supplied for SetSelection.
 
 ### `SelectionLength`
 
@@ -596,3 +608,32 @@ Gets the current numeric value, when one exists.
 ### `Text`
 
 Gets the localized value text, when one exists.
+
+## `NativeAccessibilityAdapter`
+
+Sources:
+
+- [`NativeAccessibilityActions.gs`](../../Goo/Accessibility/Native/NativeAccessibilityActions.gs)
+- [`NativeAccessibilityAdapter.gs`](../../Goo/Accessibility/Native/NativeAccessibilityAdapter.gs)
+- [`NativeAccessibilityText.gs`](../../Goo/Accessibility/Native/NativeAccessibilityText.gs)
+- [`NativeAccessibilityTree.gs`](../../Goo/Accessibility/Native/NativeAccessibilityTree.gs)
+
+Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit. Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.
+
+### `new`
+
+Creates an unattached adapter. Assign it to exactly one Window.AccessibilityAdapter.
+
+### `Dispose`
+
+Detaches from its window and releases native objects on the owning UI thread. Idempotent.
+
+### `Update(AccessibilityTree)`
+
+Receives a retained tree on the owning window's UI thread.
+
+- `tree`: The current retained semantic tree.
+
+### `IsAvailable`
+
+Reports whether the versioned native runtime can load on this 64-bit desktop platform.

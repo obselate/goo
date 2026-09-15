@@ -1,8 +1,8 @@
 package GooAndroidSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 /// Creates the same application Window for desktop and Android smoke entry points.
 public class SmokeApplication {
@@ -38,21 +38,11 @@ class SmokeCell : Cell, IDisposable {
     font.Register()
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Overflow: Overflow.Scroll,
-    Padding: 20,
-    Gap: 14,
-    Children: {
-      Text{ Content: "Goo Vulkan", FontFamily: "Smoke Vend Sans", FontSize: 30, Color: Color.White },
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Overflow: Overflow.Scroll,.Padding: 20,.Gap: 14,
+    Text{ Content: "Goo Vulkan", FontFamily: "Smoke Vend Sans", FontSize: 30, Color: Color.White },
       Text{ Content: "System fallback: Hello, Android!", FontFamily: "sans-serif", FontSize: 16, Color: Color.White },
-      Button{
-        Height: 48,
-        BackgroundColor: Color.Rgb(37, 99, 235),
-        BorderRadius: 10,
-        OnClick: () -> { count++ },
-        Children: { Text{ Content: "Retained count: " + count.ToString(), Color: Color.White } },
+      Button() {.Height: 48,.BackgroundColor: Color.Rgb(37, 99, 235),.BorderRadius: 10,.OnClick: () -> { count++ },
+      Text{ Content: "Retained count: " + count.ToString(), Color: Color.White},
       },
       Image{ Source: picture, Width: 64, Height: 64 },
       TextEntry{
@@ -81,15 +71,11 @@ class SmokeCell : Cell, IDisposable {
         Color = Color.White,
         BackgroundColor = Color.Rgb(31, 41, 55),
       },
-      Container{
-        Height: 240,
-        BackgroundGradient: LinearGradient(90.0, []GradientStop{
+      Container() {.Height: 240,.BackgroundGradient: LinearGradient(90.0, []GradientStop{
           GradientStop{ Offset: 0.0, Color: Color.Rgb(37, 99, 235) },
           GradientStop{ Offset: 1.0, Color: Color.Rgb(139, 92, 246) },
-        }),
-        BorderRadius: 16,
-        Children: { Text{ Content: "Scroll to this shared Cell", Padding: 20, Color: Color.White } },
-      },
+        }),.BorderRadius: 16,
+      Text{ Content: "Scroll to this shared Cell", Padding: 20, Color: Color.White},
     },
   }
 

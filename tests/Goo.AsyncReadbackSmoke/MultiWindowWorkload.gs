@@ -1,7 +1,7 @@
 package GooAsyncReadbackSmoke
 
-import System
 import Goo
+import System
 
 class PerformanceThreeWindowRoot : Cell {
   shared {
@@ -169,15 +169,8 @@ class PerformanceThreeWindowRoot : Cell {
       && textState
   }
 
-  override func Build() Blob -> Container {
-    Width: width,
-    Height: height,
-    Position: PositionType.Relative,
-    OverflowX: Overflow.Hidden,
-    OverflowY: Overflow.Hidden,
-    BackgroundColor: Color.Rgb(8, 13, 22),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: width,.Height: height,.Position: PositionType.Relative,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,.BackgroundColor: Color.Rgb(8, 13, 22),
+    Container{
         Key: leafKey,
         Handle: Leaf,
         Position: PositionType.Absolute,
@@ -225,6 +218,5 @@ class PerformanceThreeWindowRoot : Cell {
         OnKeyDown: func(value KeyEvent) { RecordKey() },
         OnTextInput: func(value string) { RecordText() },
       },
-    },
-  }
+    }
 }

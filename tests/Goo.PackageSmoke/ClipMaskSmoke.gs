@@ -1,10 +1,10 @@
 package GooPackageSmoke
 
-import System
-import System.IO
-import System.Collections.Generic
-import System.Threading
 import Goo
+import System
+import System.Collections.Generic
+import System.IO
+import System.Threading
 
 class ClipMaskPressureCell : Cell {
   private var Phase int32
@@ -45,25 +45,15 @@ class ClipMaskPressureCell : Cell {
       } else {
         "clip-" + phase.ToString() + "-" + index.ToString()
       }
-      children.Add(Container{
-        Key: key,
-        Position: PositionType.Absolute,
-        Left: left,
-        Top: top,
-        Width: width,
-        Height: height,
-        ClipPath: if growing {
+      children.Add(Container() {.Key: key,.Position: PositionType.Absolute,.Left: left,.Top: top,.Width: width,.Height: height,.ClipPath: if growing {
           ClipMaskPressureCell.GrowingPath
         } else {
           ClipMaskPressureCell.MaskPath(index, phase)
-        },
-        ClipPathFit: ShapeFit.Fill,
-        Children: {
+        },.ClipPathFit: ShapeFit.Fill,
           Container{
             Width: Length.Percent(100),
             Height: Length.Percent(100),
             BackgroundColor: Color.Rgb(uint8(28 + (index * 11) % 180), 96, 196),
-          },
         },
       })
       index = index + 1

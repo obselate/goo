@@ -104,9 +104,6 @@ internal partial class VulkanWindowTarget {
       frame.Underlines[index].Bounds = ScaleBounds(frame.Underlines[index].Bounds, scaleX, scaleY)
       frame.Underlines[index].Thickness = ScaleRadius(frame.Underlines[index].Thickness, scaleX, scaleY)
     }
-    for index in 0 ... frame.LavaCount {
-      frame.Lavas[index].Bounds = ScaleBounds(frame.Lavas[index].Bounds, scaleX, scaleY)
-    }
     let layers = frame.Layers
     for index in 0 ... frame.LayerCount {
       layers[index].Bounds = ScaleBounds(layers[index].Bounds, scaleX, scaleY)

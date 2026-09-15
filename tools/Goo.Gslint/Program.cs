@@ -1,6 +1,7 @@
 using GSharp.Core.CodeAnalysis;
 using GSharp.Core.CodeAnalysis.Syntax;
 using GSharp.Core.CodeAnalysis.Text;
+using GSharp.Formatting;
 
 namespace Goo.Gslint;
 
@@ -194,7 +195,7 @@ public static class Program
             rewritten = rewritten.Remove(edit.Start, edit.Length).Insert(edit.Start, edit.Text);
         }
 
-        return FormattingEngine.Format(rewritten);
+        return GSharpFormatter.Format(SourceText.From(rewritten)).Text?.ToString() ?? source;
     }
 
     private static void CollectFixEdits(SyntaxNode node, string source, List<SourceEdit> edits)
@@ -251,7 +252,8 @@ public static class Program
                 && openParenthesis > start
                 && openParenthesis < source.Length
                 && source.AsSpan(start, openParenthesis - start).StartsWith("operator ", StringComparison.Ordinal)
-                && !char.IsWhiteSpace(source[openParenthesis - 1]))
+                && !char.IsWhiteSpace(source[openParenthesis - 1])
+                && !char.IsLetter(source[openParenthesis - 1]))
             {
                 edits.Add(new SourceEdit(openParenthesis, 0, " "));
             }
@@ -266,7 +268,13 @@ public static class Program
     private static IReadOnlyList<Finding> Analyze(SyntaxTree tree, string source, bool strict)
     {
         var findings = new List<Finding>();
-        var formatted = FormattingEngine.Format(source);
+        var result = GSharpFormatter.Format(tree.Text);
+        var formatted = result.Text?.ToString() ?? source;
+        if (result.Text is null)
+        {
+            findings.Add(new Finding(FormatRule, "warning", tree.Root.Location,
+                "canonical formatter rejected this source: " + string.Join(" ", result.Diagnostics)));
+        }
         if (source != formatted)
         {
             var position = FirstDifference(source, formatted);
@@ -274,7 +282,7 @@ public static class Program
                 FormatRule,
                 "warning",
                 new TextLocation(tree.Text, new TextSpan(position, 0)),
-                "file is not canonically formatted (2-space indent, K&R braces); first difference here"));
+                "file is not canonically formatted (upstream ADR-0179); first difference here"));
         }
 
         var tokens = SyntaxTree.ParseTokens(source);
@@ -780,7 +788,8 @@ public static class Program
             || openParenthesis <= start
             || openParenthesis >= source.Length
             || !source.AsSpan(start, openParenthesis - start).StartsWith("operator ", StringComparison.Ordinal)
-            || char.IsWhiteSpace(source[openParenthesis - 1]))
+            || char.IsWhiteSpace(source[openParenthesis - 1])
+            || char.IsLetter(source[openParenthesis - 1]))
         {
             return;
         }

@@ -7,8 +7,71 @@ internal partial class TextInput {
   private var entryComposition TextComposition?
   private var entryCompositionBefore EditState
 
+  internal func SyncControlledEntry(n Node, value string) bool {
+    var canceled = false
+    if focus.FocusedNode() == n && entryComposition != nil {
+      if value == entryCompositionBefore.Text {
+        return false
+      }
+      entryComposition = nil
+      canceled = true
+      if nativeTextInputActive {
+        host?.StopTextInput()
+        nativeTextInputActive = false
+        syncNativeTextInput()
+      }
+    }
+    let changed = ReplaceEntryValue(n, value)
+    if changed && focus.FocusedNode() == n {
+      FollowCaret(n)
+    }
+    return changed || canceled
+  }
+
+  shared {
+    internal func ReplaceEntryValue(n Node, value string) bool {
+      if n.Buffer == value {
+        return false
+      }
+      let caret = Math.Min(n.Caret, value.Length)
+      let anchor = Math.Min(n.Anchor, value.Length)
+      var low = Math.Min(caret, anchor)
+      var high = Math.Max(caret, anchor)
+      if low > 0 && low < value.Length || high > 0 && high < value.Length {
+        let starts = UnicodeGraphemes.Starts(value)
+        if low > 0 && low < value.Length {
+          var start = 0
+          for boundary in starts {
+            if boundary > low {
+              break
+            }
+            start = boundary
+          }
+          low = start
+        }
+        if caret == anchor {
+          high = low
+        } else if high > 0 && high < value.Length {
+          var end = value.Length
+          for boundary in starts {
+            if boundary >= high {
+              end = boundary
+              break
+            }
+          }
+          high = end
+        }
+      }
+      n.Buffer = value
+      n.Anchor = anchor <= caret ? low : high
+      n.Caret = anchor <= caret ? high : low
+      n.BlinkT = 0.0
+      return true
+    }
+  }
+
   internal func EditorSnapshot() FocusedEditorSnapshot? {
-    guard let n = focused else { return nil }
+    guard let n = focus.FocusedNode() else { return nil }
     if !canReceiveInput(n) { return nil }
     var value = n.Buffer
     var anchor = n.Anchor
@@ -36,7 +99,7 @@ internal partial class TextInput {
     let compositionStart = if let current = composing { current.Range.Start } else { -1 }
     let compositionEnd = if let current = composing { compositionStart + current.Text.Length } else { -1 }
     return FocusedEditorSnapshot{
-      FocusId: focusChangeGeneration,
+      FocusId: focus.Generation,
       Text: value,
       SelectionStart: anchor,
       SelectionEnd: active,
@@ -49,19 +112,9 @@ internal partial class TextInput {
     }
   }
 
-  internal func ClearEditorFocus(resolver Resolver) {
-    SetFocus(resolver, nil)
-  }
-
-  internal func MoveEditorFocus(root Node?, resolver Resolver, forward bool) bool {
-    let before = focusChangeGeneration
-    focusStep(root, resolver, forward ? 1 : -1)
-    return focusChangeGeneration != before
-  }
-
   internal func CommitPlatformText(root Node?, value string) bool {
     if value != "" { return HandleChar(root, value) }
-    guard let n = focused else { return false }
+    guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
     if n.Kind == NodeKind.Editor && !n.EditorReadOnly {
       guard let controller = n.EditorController else { return false }
@@ -77,7 +130,7 @@ internal partial class TextInput {
   }
 
   internal func SetEditorSelection(root Node?, start int32, end int32) bool {
-    guard let snapshot = EditorSnapshot(), let n = focused else { return false }
+    guard let snapshot = EditorSnapshot(), let n = focus.FocusedNode() else { return false }
     if start < 0 || end < 0 || start > snapshot.Text.Length || end > snapshot.Text.Length {
       return false
     }
@@ -112,7 +165,7 @@ internal partial class TextInput {
     if start == end { return true }
     let low = textBoundary(snapshot.Text, start, false)
     let high = textBoundary(snapshot.Text, end, true)
-    guard let n = focused else { return false }
+    guard let n = focus.FocusedNode() else { return false }
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       let result = controller.SetPlatformCompositionRange(TextRange{ Start: low, Length: high - low })
@@ -130,7 +183,7 @@ internal partial class TextInput {
   }
 
   internal func FinishComposition(root Node?) bool {
-    guard let n = focused else { return false }
+    guard let n = focus.FocusedNode() else { return false }
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       if controller.Composition == nil { return true }
@@ -152,7 +205,7 @@ internal partial class TextInput {
   }
 
   internal func DeleteSurroundingText(root Node?, beforeLength int32, afterLength int32) bool {
-    guard let current = EditorSnapshot(), let n = focused else { return false }
+    guard let current = EditorSnapshot(), let n = focus.FocusedNode() else { return false }
     if current.IsReadOnly || beforeLength < 0 || afterLength < 0 { return false }
     let selectionLow = Math.Min(current.SelectionStart, current.SelectionEnd)
     let selectionHigh = Math.Max(current.SelectionStart, current.SelectionEnd)
@@ -238,7 +291,7 @@ internal partial class TextInput {
         FollowCaret(n)
         if before.Text != committed {
           n.OnChange?.Invoke(committed)
-          invalidateOwner(root, n)
+          CellOwnership.Within(root, n)?.Rebuild()
         }
       }
       updateTextInputArea(n)
@@ -246,7 +299,7 @@ internal partial class TextInput {
     }
 
   internal func ExecuteEditorCommand(root Node?, resolver Resolver, command TextCommand) bool {
-    guard let n = focused else { return false }
+    guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
     if command.Kind == TextCommandKind.CancelComposition { return HandleCompositionCancel(root) }
     if command.Kind == TextCommandKind.CommitComposition { return FinishComposition(root) }
@@ -308,7 +361,7 @@ internal partial class TextInput {
       }
       case TextCommandKind.Submit {
         n.OnSubmit?.Invoke(n.Buffer)
-        invalidateOwner(root, n)
+        CellOwnership.Within(root, n)?.Rebuild()
         return true
       }
       case _ { return false }
@@ -398,8 +451,8 @@ internal partial class TextInput {
     } else {
       let metrics = TextMetrics()
       left = metrics.EntryOriginX(n, metrics.BufferShape(n)) + metrics.CaretX(n, n.Caret)
-      top = TextLayouts.ContentTop(n)
-      height = TextLayouts.ContentHeight(n)
+      top = BoxGeometry.ContentTop(n)
+      height = BoxGeometry.ContentHeight(n)
     }
     let p0 = TransformGeometry.NodeToWindow(n, left, top)
     let p1 = TransformGeometry.NodeToWindow(n, left + width, top)

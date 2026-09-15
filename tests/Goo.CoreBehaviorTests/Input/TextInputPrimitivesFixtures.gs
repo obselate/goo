@@ -5,6 +5,7 @@ import System.Collections.Generic
 
 internal class TextInputPrimitivesFixtures {
   func GenericCallbacksReceiveNormalizedUtf16Payloads() bool {
+    let textFocus = FocusManager()
     var committed = ""
     var compositionText = ""
     var selectionStart = -1
@@ -29,14 +30,13 @@ internal class TextInputPrimitivesFixtures {
       OnTextCompositionCancel: () -> { cancellations++ },
     })
     let resolver = Resolver{}
-    let text = TextInput()
-    let keyboard = KeyboardInput()
-    text.SetFocus(resolver, root)
-    keyboard.QueueText("😀", text.FocusGeneration())
-    keyboard.QueueComposition("a😀b", 2, 0, text.FocusGeneration())
-    keyboard.QueueCompositionCandidates([]string{ "first", "second" }, 7, true,
-      text.FocusGeneration())
-    keyboard.QueueCompositionCancel(text.FocusGeneration())
+    let text = TextInput(textFocus)
+    let keyboard = KeyboardInput(textFocus)
+    textFocus.SetFocus(resolver, root)
+    keyboard.QueueText("😀", textFocus.Generation)
+    keyboard.QueueComposition("a😀b", 2, 0, textFocus.Generation)
+    keyboard.QueueCompositionCandidates([]string{ "first", "second" }, 7, true, textFocus.Generation)
+    keyboard.QueueCompositionCancel(textFocus.Generation)
     let changed = keyboard.Drain(root, resolver, text, nil)
     return !changed && committed == "😀" && compositionText == "a😀b"
       && selectionStart == 0 && selectionLength == 0 && candidate == "first"
@@ -44,9 +44,9 @@ internal class TextInputPrimitivesFixtures {
   }
 
   func StaleTextEventsDropAcrossTransfersAndFocusCycles() bool {
+    let textFocus = FocusManager()
     let events = List[string]()
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Children: {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {
         Container{
           Key: "first", Width: 100, Height: 30, Focusable: true,
           OnTextInput: (value string) -> { events.Add("first:text:" + value) },
@@ -69,19 +69,18 @@ internal class TextInputPrimitivesFixtures {
           },
           OnTextCompositionCancel: () -> { events.Add("second:cancel") },
         },
-      },
-    })
+      })
     let resolver = Resolver{}
-    let text = TextInput()
-    let keyboard = KeyboardInput()
+    let text = TextInput(textFocus)
+    let keyboard = KeyboardInput(textFocus)
     let first = root.Children[0]
     let second = root.Children[1]
-    text.SetFocus(resolver, first)
-    queueAll(keyboard, text, "stale-first")
-    text.SetFocus(resolver, second)
-    queueAll(keyboard, text, "stale-second")
-    text.SetFocus(resolver, first)
-    queueAll(keyboard, text, "final")
+    textFocus.SetFocus(resolver, first)
+    queueAll(keyboard, textFocus, "stale-first")
+    textFocus.SetFocus(resolver, second)
+    queueAll(keyboard, textFocus, "stale-second")
+    textFocus.SetFocus(resolver, first)
+    queueAll(keyboard, textFocus, "final")
     if keyboard.Drain(root, resolver, text, nil) { return false }
     let expected = []string{
       "first:text:final",
@@ -97,6 +96,7 @@ internal class TextInputPrimitivesFixtures {
   }
 
   func BuiltInDefaultsPrecedeThrowingObserversAndRetainQueuedSuffix() bool {
+    let textFocus = FocusManager()
     var observerCalls int32
     var throwFirst = true
     let root = Reconciler{ Res: Resolver{} }.Mount(TextEntry{
@@ -110,11 +110,11 @@ internal class TextInputPrimitivesFixtures {
       },
     })
     let resolver = Resolver{}
-    let text = TextInput()
-    let keyboard = KeyboardInput()
-    text.SetFocus(resolver, root)
-    keyboard.QueueText("a", text.FocusGeneration())
-    keyboard.QueueText("b", text.FocusGeneration())
+    let text = TextInput(textFocus)
+    let keyboard = KeyboardInput(textFocus)
+    textFocus.SetFocus(resolver, root)
+    keyboard.QueueText("a", textFocus.Generation)
+    keyboard.QueueText("b", textFocus.Generation)
     var threw = false
     try {
       keyboard.Drain(root, resolver, text, nil)
@@ -181,6 +181,7 @@ internal class TextInputPrimitivesFixtures {
   }
 
   func SameDiffKeyboardAndTextCallbacksStaySynchronized() bool {
+    let inputFocus = FocusManager()
     var keyCalls int32
     var text = ""
     let resolver = Resolver{}
@@ -191,9 +192,9 @@ internal class TextInputPrimitivesFixtures {
       OnKeyDown: (value KeyEvent) -> { keyCalls = keyCalls + 1 },
       OnTextInput: (value string) -> { text = "first:" + value },
     })
-    let input = TextInput()
-    let keyboard = KeyboardInput()
-    input.SetFocus(resolver, root)
+    let input = TextInput(inputFocus)
+    let keyboard = KeyboardInput(inputFocus)
+    inputFocus.SetFocus(resolver, root)
     keyboard.HandleKey(root, resolver, input, Key.A, KeyModifiers{})
     input.HandleChar(root, "a")
     if keyCalls != 1 || text != "first:a" { return false }
@@ -205,7 +206,7 @@ internal class TextInputPrimitivesFixtures {
     })
     keyboard.HandleKey(root, resolver, input, Key.B, KeyModifiers{})
     input.HandleChar(root, "b")
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return keyCalls == 11 && text == "newest:b"
   }
 
@@ -221,15 +222,13 @@ internal class TextInputPrimitivesFixtures {
 
   func TextCallbackOptOutStableDiffBytes() int64 {
     let rec = Reconciler{ Res: Resolver{} }
-    let blob = Container{ Width: 100, Height: 30, Children: {
-      Text{ Content: "plain" },
-    } }
+    let blob = Container() {.Width: 100,.Height: 30, Text{ Content: "plain"} }
     let root = rec.Mount(blob)
     rec.Diff(root, blob)
     let before = GC.GetAllocatedBytesForCurrentThread()
     rec.Diff(root, blob)
     let bytes = GC.GetAllocatedBytesForCurrentThread() - before
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return bytes
   }
 
@@ -333,8 +332,8 @@ internal class TextInputPrimitivesFixtures {
     }
   }
 
-  private func queueAll(keyboard KeyboardInput, text TextInput, value string) {
-    let generation = text.FocusGeneration()
+  private func queueAll(keyboard KeyboardInput, focus FocusManager, value string) {
+    let generation = focus.Generation
     keyboard.QueueText(value, generation)
     keyboard.QueueComposition(value, 0, value.Length, generation)
     keyboard.QueueCompositionCandidates([]string{ value }, 0, false, generation)
@@ -394,7 +393,7 @@ internal class MountedTextClientCell : Cell {
   }
 
   override func Build() Blob {
-    let root = Container{ Width: 160, Height: 90, Children: {} }
+    let root = Container() {.Width: 160,.Height: 90,}
     if FirstAttached {
       root.Children.Add(Container{
         Key: "custom-first", Handle: First, Width: 70, Height: 30, Focusable: true,
@@ -447,7 +446,7 @@ internal class NativeTextInputLifecycleCell : Cell {
   }
 
   override func Build() Blob {
-    let root = Container{ Width: 180, Height: 120, Children: {} }
+    let root = Container() {.Width: 180,.Height: 120,}
     if FirstAttached {
       let callback Action[string]? = FirstTextEnabled ? func(value string) {} : nil
       root.Children.Add(Container{

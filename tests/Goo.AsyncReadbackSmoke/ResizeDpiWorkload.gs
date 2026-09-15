@@ -1,7 +1,7 @@
 package GooAsyncReadbackSmoke
 
-import System
 import Goo
+import System
 
 class PerformanceResizeDpiRoot : Cell {
   shared {
@@ -231,16 +231,8 @@ class PerformanceResizeDpiRoot : Cell {
     let imageHeight = float64(logicalHeight) * 0.34
     let transformWidth = float64(logicalWidth) * 0.16
     let transformHeight = float64(logicalHeight) * 0.16
-    let canvas = Container{
-      Key: "perf-resize-dpi-canvas",
-      Position: PositionType.Absolute,
-      Left: 0.0,
-      Top: 0.0,
-      Width: logicalWidth,
-      Height: logicalHeight,
-      BackgroundColor: Color.Rgb(8, 13, 22),
-      Children: {
-        Container{
+    let canvas = Container() {.Key: "perf-resize-dpi-canvas",.Position: PositionType.Absolute,.Left: 0.0,.Top: 0.0,.Width: logicalWidth,.Height: logicalHeight,.BackgroundColor: Color.Rgb(8, 13, 22),
+      Container{
           Key: "perf-resize-dpi-box",
           Position: PositionType.Absolute,
           Left: float64(logicalWidth) * 0.08,
@@ -291,16 +283,9 @@ class PerformanceResizeDpiRoot : Cell {
           BorderRadius: 12.0,
           BackgroundColor: Color.Rgb(88, 172, 224),
         },
-      },
-    }
-    return Container{
-      Key: "perf-resize-dpi-root",
-      Width: logicalWidth,
-      Height: logicalHeight,
-      Position: PositionType.Relative,
-      OverflowX: Overflow.Hidden,
-      OverflowY: Overflow.Hidden,
-      Children: { canvas },
+      }
+    return Container() {.Key: "perf-resize-dpi-root",.Width: logicalWidth,.Height: logicalHeight,.Position: PositionType.Relative,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,
+      canvas,
     }
   }
 }

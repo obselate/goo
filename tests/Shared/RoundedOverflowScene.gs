@@ -30,32 +30,10 @@ class RoundedOverflowCell : Cell {
     let InnerClipPath VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 1.0).LineTo(0.0, 1.0).Close().Build()
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Handle: RoundedOverflowCell.Root,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
-        Position: PositionType.Absolute,
-        Left: 8,
-        Top: 8,
-        Width: 120,
-        Height: 48,
-        OverflowX: Overflow.Scroll,
-        OverflowY: Overflow.Visible,
-        Handle: RoundedOverflowCell.HorizontalViewport,
-        BackgroundColor: Color.Rgb(18, 32, 52),
-        Children: {
-          Container{
-            Position: PositionType.Absolute,
-            Width: 240,
-            Height: 72,
-            Handle: RoundedOverflowCell.HorizontalContent,
-            BackgroundColor: Color.Rgb(52, 196, 112),
-            Children: {
-              Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: RoundedOverflowCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 120,.Height: 48,.OverflowX: Overflow.Scroll,.OverflowY: Overflow.Visible,.Handle: RoundedOverflowCell.HorizontalViewport,.BackgroundColor: Color.Rgb(18, 32, 52),
+      Container() {.Position: PositionType.Absolute,.Width: 240,.Height: 72,.Handle: RoundedOverflowCell.HorizontalContent,.BackgroundColor: Color.Rgb(52, 196, 112),
+        Container{
                 Position: PositionType.Absolute,
                 Left: 128,
                 Width: 112,
@@ -65,27 +43,9 @@ class RoundedOverflowCell : Cell {
               },
             },
           },
-        },
-      },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 144,
-        Top: 8,
-        Width: 120,
-        Height: 48,
-        OverflowX: Overflow.Visible,
-        OverflowY: Overflow.Scroll,
-        Handle: RoundedOverflowCell.VerticalViewport,
-        BackgroundColor: Color.Rgb(36, 52, 76),
-        Children: {
-          Container{
-            Position: PositionType.Absolute,
-            Width: 160,
-            Height: 144,
-            Handle: RoundedOverflowCell.VerticalContent,
-            BackgroundColor: Color.Rgb(228, 160, 64),
-            Children: {
-              Container{
+    Container() {.Position: PositionType.Absolute,.Left: 144,.Top: 8,.Width: 120,.Height: 48,.OverflowX: Overflow.Visible,.OverflowY: Overflow.Scroll,.Handle: RoundedOverflowCell.VerticalViewport,.BackgroundColor: Color.Rgb(36, 52, 76),
+      Container() {.Position: PositionType.Absolute,.Width: 160,.Height: 144,.Handle: RoundedOverflowCell.VerticalContent,.BackgroundColor: Color.Rgb(228, 160, 64),
+        Container{
                 Position: PositionType.Absolute,
                 Top: 80,
                 Width: 120,
@@ -95,17 +55,8 @@ class RoundedOverflowCell : Cell {
               },
             },
           },
-        },
-      },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 280,
-        Top: 8,
-        Width: 112,
-        Height: 48,
-        BackgroundColor: Color.Rgb(26, 50, 76),
-        Children: {
-          Text{
+    Container() {.Position: PositionType.Absolute,.Left: 280,.Top: 8,.Width: 112,.Height: 48,.BackgroundColor: Color.Rgb(26, 50, 76),
+      Text{
             Position: PositionType.Absolute,
             Left: 6,
             Top: 10,
@@ -115,19 +66,8 @@ class RoundedOverflowCell : Cell {
             Color: Color.White,
           },
         },
-      },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 8,
-        Top: 84,
-        Width: 124,
-        Height: 96,
-        BorderRadius: 20,
-        Overflow: Overflow.Hidden,
-        Handle: RoundedOverflowCell.RoundedHidden,
-        BackgroundColor: Color.Rgb(228, 64, 72),
-        Children: {
-          Text{
+    Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 84,.Width: 124,.Height: 96,.BorderRadius: 20,.Overflow: Overflow.Hidden,.Handle: RoundedOverflowCell.RoundedHidden,.BackgroundColor: Color.Rgb(228, 64, 72),
+      Text{
             Position: PositionType.Absolute,
             Left: 16,
             Top: 14,
@@ -158,26 +98,9 @@ class RoundedOverflowCell : Cell {
             BackgroundColor: Color.Rgb(72, 224, 128),
           },
         },
-      },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 148,
-        Top: 84,
-        Width: 124,
-        Height: 96,
-        BorderRadius: 20,
-        Overflow: Overflow.Scroll,
-        Handle: RoundedOverflowCell.RoundedScroll,
-        BackgroundColor: Color.Rgb(24, 48, 72),
-        Children: {
-          Container{
-            Position: PositionType.Absolute,
-            Width: 248,
-            Height: 96,
-            Handle: RoundedOverflowCell.RoundedScrollContent,
-            BackgroundColor: Color.Rgb(52, 196, 112),
-            Children: {
-              Container{
+    Container() {.Position: PositionType.Absolute,.Left: 148,.Top: 84,.Width: 124,.Height: 96,.BorderRadius: 20,.Overflow: Overflow.Scroll,.Handle: RoundedOverflowCell.RoundedScroll,.BackgroundColor: Color.Rgb(24, 48, 72),
+      Container() {.Position: PositionType.Absolute,.Width: 248,.Height: 96,.Handle: RoundedOverflowCell.RoundedScrollContent,.BackgroundColor: Color.Rgb(52, 196, 112),
+        Container{
                 Position: PositionType.Absolute,
                 Left: 138,
                 Width: 110,
@@ -187,31 +110,9 @@ class RoundedOverflowCell : Cell {
               },
             },
           },
-        },
-      },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 288,
-        Top: 84,
-        Width: 104,
-        Height: 96,
-        Handle: RoundedOverflowCell.ClipOuter,
-        ClipPath: RoundedOverflowCell.OuterClipPath,
-        ClipPathFit: ShapeFit.Fill,
-        BackgroundColor: Color.Rgb(32, 96, 144),
-        Children: {
-          Container{
-            Position: PositionType.Absolute,
-            Left: 8,
-            Top: 8,
-            Width: 88,
-            Height: 80,
-            Handle: RoundedOverflowCell.ClipInner,
-            ClipPath: RoundedOverflowCell.InnerClipPath,
-            ClipPathFit: ShapeFit.Fill,
-            BackgroundColor: Color.Rgb(160, 64, 192),
-            Children: {
-              Container{
+    Container() {.Position: PositionType.Absolute,.Left: 288,.Top: 84,.Width: 104,.Height: 96,.Handle: RoundedOverflowCell.ClipOuter,.ClipPath: RoundedOverflowCell.OuterClipPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 88,.Height: 80,.Handle: RoundedOverflowCell.ClipInner,.ClipPath: RoundedOverflowCell.InnerClipPath,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(160, 64, 192),
+        Container{
                 Position: PositionType.Absolute,
                 Left: 20,
                 Top: 18,
@@ -223,8 +124,5 @@ class RoundedOverflowCell : Cell {
               },
             },
           },
-        },
-      },
-    },
-  }
+        }
 }

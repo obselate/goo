@@ -1,10 +1,10 @@
 package GooAudioSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.Threading
-import Goo
 
 func Require(value bool, message string) {
   if !value { throw InvalidOperationException(message) }

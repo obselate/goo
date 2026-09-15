@@ -1,12 +1,12 @@
 package GooAsyncReadbackSmoke
 
-import System
-import System.IO
-import System.Collections.Generic
-import System.Runtime.InteropServices
-import System.Threading
 import Goo
 import Hexa.NET.SDL3
+import System
+import System.Collections.Generic
+import System.IO
+import System.Runtime.InteropServices
+import System.Threading
 
 @StructLayout(LayoutKind.Sequential, Size: 128)
 struct NativeDropSmokeEvent {
@@ -51,14 +51,14 @@ class NativeFileDropSmokeCell : Cell {
     content.Add(Text{Content: if Hover { "Release to copy files" } else if Files.Count > 0 { "Files received" } else { "Drop files here" }, FontSize: 23})
     content.Add(Text{Content: "Owned paths · no file contents loaded", FontSize: 14, Color: Color.Rgb(152, 176, 199)})
     for i in 0 ... Math.Min(Files.Count, 8) { content.Add(Text{Content: Path.GetFileName(Files[i]), FontFamily: "Noto Sans CJK", FontSize: 17}) }
-    return Container{Padding: 24, Gap: 16, BackgroundColor: Color.Rgb(18, 24, 34), Color: Color.Rgb(224, 233, 243), Children: {
+    return Container() {.Padding: 24,.Gap: 16,.BackgroundColor: Color.Rgb(18, 24, 34),.Color: Color.Rgb(224, 233, 243),
       Text{Content: "Native file drop", FontSize: 28},
       Text{Content: "External file manager → retained DropTarget", FontSize: 14, Color: Color.Rgb(144, 167, 190)},
       Container{Handle: Target, DropTarget: target, FlexGrow: 1, Padding: 24, Gap: 14,
         BackgroundColor: if Hover { Color.Rgb(29, 69, 100) } else { Color.Rgb(28, 39, 53) },
         BorderWidth: 2, BorderColor: if Hover { Color.Rgb(106, 194, 237) } else { Color.Rgb(60, 87, 111) },
-        BorderRadius: 10, Children: content},
-    }}
+        BorderRadius: 10, Children: content
+      }}
   }
 }
 

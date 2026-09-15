@@ -88,7 +88,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private let linearModule VkShaderModule
   private let radialModule VkShaderModule
   private let sampledModule VkShaderModule
-  private let lavaModule VkShaderModule
   private let blendModule VkShaderModule
   private let pathVertexModule VkShaderModule
   private let pathFragmentModule VkShaderModule
@@ -103,7 +102,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private var linearPipeline VkPipeline
   private var radialPipeline VkPipeline
   private var sampledPipeline VkPipeline
-  private var lavaPipeline VkPipeline
   private var blendPipeline VkPipeline
   private var pathPipeline VkPipeline
   private var textPipeline VkPipeline
@@ -139,10 +137,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     get -> ResolvePipeline(ref sampledPipeline, analyticVertexModule, sampledModule,
       pipelineLayout, true, true)
   }
-  internal prop LavaPipeline VkPipeline{
-    get -> ResolvePipeline(ref lavaPipeline, analyticVertexModule, lavaModule,
-      pipelineLayout, true, true)
-  }
   internal prop BlendPipeline VkPipeline{
     get -> ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
       blendPipelineLayout, true, true)
@@ -168,7 +162,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       if linearPipeline != 0uL { count++ }
       if radialPipeline != 0uL { count++ }
       if sampledPipeline != 0uL { count++ }
-      if lavaPipeline != 0uL { count++ }
       if blendPipeline != 0uL { count++ }
       if pathPipeline != 0uL { count++ }
       if textPipeline != 0uL { count++ }
@@ -194,7 +187,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     linearModule VkShaderModule,
     radialModule VkShaderModule,
     sampledModule VkShaderModule,
-    lavaModule VkShaderModule,
     blendModule VkShaderModule,
     pathVertexModule VkShaderModule,
     pathFragmentModule VkShaderModule,
@@ -226,7 +218,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       }
       if vertexModule == 0uL || solidModule == 0uL || borderModule == 0uL
         || shadowModule == 0uL || linearModule == 0uL || radialModule == 0uL
-        || sampledModule == 0uL || lavaModule == 0uL || blendModule == 0uL {
+        || sampledModule == 0uL || blendModule == 0uL {
           throw ArgumentException("Vulkan primitive shader module is null")
         }
       if pathVertexModule == 0uL || pathFragmentModule == 0uL {
@@ -252,7 +244,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       this.linearModule = linearModule
       this.radialModule = radialModule
       this.sampledModule = sampledModule
-      this.lavaModule = lavaModule
       this.blendModule = blendModule
       this.pathVertexModule = pathVertexModule
       this.pathFragmentModule = pathFragmentModule
@@ -276,8 +267,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     ResolvePipeline(ref radialPipeline, analyticVertexModule, radialModule,
       pipelineLayout, true, true)
     ResolvePipeline(ref sampledPipeline, analyticVertexModule, sampledModule,
-      pipelineLayout, true, true)
-    ResolvePipeline(ref lavaPipeline, analyticVertexModule, lavaModule,
       pipelineLayout, true, true)
     ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
       blendPipelineLayout, true, true)
@@ -423,8 +412,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref sampledPipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(
-      device, dispatch.vkDestroyPipeline, objectAccounting, ref lavaPipeline)
-    VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref blendPipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref pathPipeline)
@@ -463,7 +450,6 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
   private var linearModule VkShaderModule
   private var radialModule VkShaderModule
   private var sampledModule VkShaderModule
-  private var lavaModule VkShaderModule
   private var blendModule VkShaderModule
   private var pathVertexModule VkShaderModule
   private var pathFragmentModule VkShaderModule
@@ -515,7 +501,6 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       if linearModule != 0uL { count++ }
       if radialModule != 0uL { count++ }
       if sampledModule != 0uL { count++ }
-      if lavaModule != 0uL { count++ }
       if blendModule != 0uL { count++ }
       if pathVertexModule != 0uL { count++ }
       if pathFragmentModule != 0uL { count++ }
@@ -583,7 +568,6 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       let linearCode = LoadShaderCode("analytic_linear4.frag.spv")
       let radialCode = LoadShaderCode("analytic_radial4.frag.spv")
       let sampledCode = LoadShaderCode("analytic_sampled_image.frag.spv")
-      let lavaCode = LoadShaderCode("lava.frag.spv")
       let blendCode = LoadShaderCode("analytic_blend.frag.spv")
       let pathVertexCode = LoadShaderCode("path_band.vert.spv")
       let pathFragmentCode = LoadShaderCode("path_band.frag.spv")
@@ -600,7 +584,6 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
         linearModule = CreateShaderModule(linearCode, "analytic_linear4.frag.spv")
         radialModule = CreateShaderModule(radialCode, "analytic_radial4.frag.spv")
         sampledModule = CreateShaderModule(sampledCode, "analytic_sampled_image.frag.spv")
-        lavaModule = CreateShaderModule(lavaCode, "lava.frag.spv")
         blendModule = CreateShaderModule(blendCode, "analytic_blend.frag.spv")
         pathVertexModule = CreateShaderModule(pathVertexCode, "path_band.vert.spv")
         pathFragmentModule = CreateShaderModule(pathFragmentCode, "path_band.frag.spv")
@@ -658,7 +641,6 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       linearModule,
       radialModule,
       sampledModule,
-      lavaModule,
       blendModule,
       pathVertexModule,
       pathFragmentModule,
@@ -945,8 +927,6 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       device, dispatch.vkDestroyShaderModule, objectAccounting, ref textVertexModule)
     VulkanNativeHandleDestroyer.DestroyShaderModule(
       device, dispatch.vkDestroyShaderModule, objectAccounting, ref sampledModule)
-    VulkanNativeHandleDestroyer.DestroyShaderModule(
-      device, dispatch.vkDestroyShaderModule, objectAccounting, ref lavaModule)
     VulkanNativeHandleDestroyer.DestroyShaderModule(
       device, dispatch.vkDestroyShaderModule, objectAccounting, ref blendModule)
     VulkanNativeHandleDestroyer.DestroyShaderModule(

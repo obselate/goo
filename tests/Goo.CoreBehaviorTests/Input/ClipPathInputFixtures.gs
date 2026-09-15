@@ -89,52 +89,26 @@ internal class ClipPathInputFixtures {
 internal class ClipPathHitCell : Cell {
   internal prop Events List[string]{ get; init; }
 
-  override func Build() Blob -> Container {
-    Width: 200.0,
-    Height: 100.0,
-    Children: {
-      clipPathFallback(Events),
-      Container{
-        Key: "clip",
-        Position: PositionType.Absolute,
-        Width: 100.0,
-        Height: 50.0,
-        ClipPath: leftHalf(),
-        Children: { clipPathTarget(Events, 50.0) },
-      },
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
+    clipPathFallback(Events),
+      Container() {.Key: "clip",.Position: PositionType.Absolute,.Width: 100.0,.Height: 50.0,.ClipPath: leftHalf(),
+      clipPathTarget(Events, 50.0),
     },
   }
 }
 
 internal class ClipPathNestedCell : Cell {
-  override func Build() Blob -> Container {
-    Width: 200.0,
-    Height: 100.0,
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
+    Container{
         Key: "fallback",
         Position: PositionType.Absolute,
         Width: 200.0,
         Height: 100.0,
         HitTestSelf: true,
       },
-      Container{
-        Key: "outer",
-        Position: PositionType.Absolute,
-        Width: 100.0,
-        Height: 100.0,
-        ClipPath: leftThreeQuarters(),
-        HitTestSelf: false,
-        Children: {
-          Container{
-            Key: "inner",
-            Position: PositionType.Absolute,
-            Width: 100.0,
-            Height: 100.0,
-            ClipPath: leftHalf(),
-            HitTestSelf: false,
-            Children: {
-              Container{
+      Container() {.Key: "outer",.Position: PositionType.Absolute,.Width: 100.0,.Height: 100.0,.ClipPath: leftThreeQuarters(),.HitTestSelf: false,
+      Container() {.Key: "inner",.Position: PositionType.Absolute,.Width: 100.0,.Height: 100.0,.ClipPath: leftHalf(),.HitTestSelf: false,
+        Container{
                 Key: "clipped",
                 Position: PositionType.Absolute,
                 Width: 100.0,
@@ -143,43 +117,25 @@ internal class ClipPathNestedCell : Cell {
               },
             },
           },
-        },
-      },
-    },
-  }
+        }
 }
 
 internal class ClipPathTransformCell : Cell {
-  override func Build() Blob -> Container {
-    Width: 200.0,
-    Height: 100.0,
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
+    Container{
         Key: "fallback",
         Position: PositionType.Absolute,
         Width: 200.0,
         Height: 100.0,
         HitTestSelf: true,
       },
+      Container() {.Key: "clip",.Position: PositionType.Absolute,.Width: 100.0,.Height: 100.0,.Transform: PanelTransform{ TranslateX: 100 },.TransformOriginX: Length.Percent(0),.TransformOriginY: Length.Percent(0),.ClipPath: leftHalf(),.HitTestSelf: false,
       Container{
-        Key: "clip",
-        Position: PositionType.Absolute,
-        Width: 100.0,
-        Height: 100.0,
-        Transform: PanelTransform{ TranslateX: 100 },
-        TransformOriginX: Length.Percent(0),
-        TransformOriginY: Length.Percent(0),
-        ClipPath: leftHalf(),
-        HitTestSelf: false,
-        Children: {
-          Container{
             Key: "clipped",
             Position: PositionType.Absolute,
             Width: 100.0,
             Height: 100.0,
             HitTestSelf: true,
-          },
-        },
       },
     },
   }
@@ -188,20 +144,10 @@ internal class ClipPathTransformCell : Cell {
 internal class ClipPathCaptureCell : Cell {
   internal prop Events List[string]{ get; init; }
 
-  override func Build() Blob -> Container {
-    Width: 200.0,
-    Height: 100.0,
-    Children: {
-      clipPathFallback(Events),
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
+    clipPathFallback(Events),
+      Container() {.Key: "clip",.Position: PositionType.Absolute,.Width: 100.0,.Height: 100.0,.ClipPath: leftHalf(),.HitTestSelf: false,
       Container{
-        Key: "clip",
-        Position: PositionType.Absolute,
-        Width: 100.0,
-        Height: 100.0,
-        ClipPath: leftHalf(),
-        HitTestSelf: false,
-        Children: {
-          Container{
             Key: "clipped",
             Position: PositionType.Absolute,
             Width: 100.0,
@@ -211,8 +157,7 @@ internal class ClipPathCaptureCell : Cell {
               e.Capture()
             },
             OnPointerMove: (e PointerEvent) -> { Events.Add("move:clipped") },
-            OnPointerUp: (e PointerEvent) -> { Events.Add("up:clipped") },
-          },
+            OnPointerUp: (e PointerEvent) -> { Events.Add("up:clipped")
         },
       },
     },

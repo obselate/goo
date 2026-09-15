@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
 import System.Threading
-import Goo
 
 func RunVSyncSmoke() {
   let root = ReadbackSmokeCell{}

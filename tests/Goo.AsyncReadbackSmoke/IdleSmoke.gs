@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
 import System.Threading
-import Goo
 
 func IdleDelta(after uint64, before uint64) uint64 -> after >= before ? after - before : uint64.MaxValue
 

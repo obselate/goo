@@ -82,8 +82,6 @@ internal class TextInputCallbacks {
       let destinationPresence = presence(destination)
       if source == nil {
         nodeValues?.Remove(node)
-        node.HasSparseInputState = node.HasElementHandle || InputCallbacks.HasNodeCallbacks(node)
-          || DragDropMetadata.HasNodeBindings(node)
         return sourcePresence != destinationPresence
       }
       if destination == nil {
@@ -97,7 +95,6 @@ internal class TextInputCallbacks {
       destination.OnTextComposition = source.OnTextComposition
       destination.OnTextCompositionCancel = source.OnTextCompositionCancel
       destination.OnTextCandidates = source.OnTextCandidates
-      node.HasSparseInputState = true
       return sourcePresence != destinationPresence
     }
 

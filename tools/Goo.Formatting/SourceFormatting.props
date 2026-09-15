@@ -1,0 +1,13 @@
+<Project>
+  <ItemGroup>
+    <Reference Include="GSharp.Core">
+      <HintPath>$(MSBuildThisFileDirectory)../../artifacts/gsharp/compiler/GSharp.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="GSharp.Formatting">
+      <HintPath>$(MSBuildThisFileDirectory)../../artifacts/gsharp/formatter/GSharp.Formatting.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Compile Include="$(MSBuildThisFileDirectory)SourceFormatting.cs" Link="SourceFormatting.cs" />
+  </ItemGroup>
+</Project>

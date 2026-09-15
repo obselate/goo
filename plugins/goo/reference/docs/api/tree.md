@@ -178,6 +178,10 @@ Gets the callback that receives pointer wheel movement.
 
 Controls whether Goo auto-hides, always shows, or suppresses built-in scrollbars.
 
+### `TabStop`
+
+Controls whether a focusable element participates in sequential Tab navigation. Defaults to true. False preserves pointer, programmatic, and accessibility focus for composite widgets.
+
 ### `TransitionDelayMs`
 
 Gets the delay before a transition starts, in milliseconds.
@@ -206,9 +210,15 @@ Defines a semantic button container with pointer and keyboard activation.
 
 Initializes an empty button.
 
+### `Add(Blob)`
+
+Adds a child to the end of the ordered child collection.
+
+- `child`: The child to add.
+
 ### `Children`
 
-Gets the mutable child list. Give all siblings stable keys, or give no sibling a key.
+Gets the mutable child list. Read-only lists supplied during initialization are copied. Give all siblings stable keys, or give no sibling a key.
 
 ## `Container`
 
@@ -222,13 +232,23 @@ Defines an element that contains child blobs.
 
 Initializes an empty child collection.
 
+### `Add(Blob)`
+
+Adds a child to the end of the ordered child collection.
+
+- `child`: The child to add.
+
 ### `Children`
 
-Gets the mutable child list. Give all siblings stable keys, or give no sibling a key.
+Gets the mutable child list. Read-only lists supplied during initialization are copied. Give all siblings stable keys, or give no sibling a key.
 
 ### `HitTestSelf`
 
 Overrides whether this container participates in pointer hit testing. When omitted, Goo derives the value from authored interaction behavior.
+
+### `Layout`
+
+Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
 
 ### `PinToBottom`
 
@@ -249,6 +269,14 @@ Occurs after this mounted element reaches a new stable geometry or scroll state.
 ### `new`
 
 Initializes an unmounted element handle.
+
+### `BeginFocusScope(FocusScopeOptions)`
+
+Begins a nested focus scope on this mounted, visible, enabled, focusable element.
+
+- `options`: Modal blocking, initial focus, and restoration policy.
+
+Returns: A scope to dispose when the overlay closes; removal also closes it automatically.
 
 ### `Blur`
 
@@ -285,6 +313,14 @@ Sets this element's logical scroll target.
 - `y`: The non-negative vertical target.
 
 Returns: False when the handle is unmounted or the element is not scrollable.
+
+### `ScrollToItem(string)`
+
+Immediately scrolls a virtual collection to a stable item key, using estimates for unmeasured rows.
+
+- `key`: The nonempty stable key returned by the virtual collection's itemKey callback.
+
+Returns: False for an unmounted handle, a nonvirtual element, or an unknown key.
 
 ### `SetTextInputArea(ElementRect)`
 
@@ -402,7 +438,7 @@ Gets the image fit mode.
 
 ### `Path`
 
-Gets the local image path.
+Legacy path metadata. A nonempty path without Source throws when mounted. Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
 
 ### `Source`
 
@@ -495,6 +531,30 @@ Gets whether this source has released its owner reference.
 ### `Width`
 
 Gets this immutable source's pixel width.
+
+## `ImageSourceCache`
+
+Source:
+
+- [`ImageSourceCache.gs`](../../Goo/Tree/ImageSourceCache.gs)
+
+Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Paths are snapshots; create a new cache to reload.
+
+### `new(int32,int32)`
+
+Creates a cache bounded by decoded RGBA bytes and unique paths. Limits must be positive; the default budget is 64 MiB and 128 paths.
+
+### `Dispose`
+
+Cancels queued/in-flight loads and releases cached owners. Existing returned sources and mounted leases remain valid. Repeated disposal is harmless.
+
+### `LoadAsync(string)`
+
+Loads a local PNG, JPEG, or static GIF and returns an owned source for Image.Source. File, decoding, unsupported-format, and capacity errors fault the task.
+
+### `LoadAsync(string,System.Threading.CancellationToken)`
+
+Loads a local PNG, JPEG, or static GIF with cancellation before reading, during validation, and before publication. Cancellation affects only this caller. Concurrent loads serialize decoding and reuse completed paths; failed loads can be retried.
 
 ## `ImageSourceLease`
 
@@ -689,6 +749,10 @@ Defines an editable single-line text element.
 
 Initializes an empty text entry with the default selection highlight.
 
+### `Controlled`
+
+Applies Value while focused without reporting an edit. Defaults to false. Preserves an IME composition when Value matches its committed text; a replacement cancels it.
+
 ### `OnChange`
 
 Gets the action that receives each edited value.
@@ -711,4 +775,30 @@ Gets the selection highlight color.
 
 ### `Value`
 
-Gets the value used while the entry is not focused.
+Gets the value used while unfocused, or also while focused when Controlled is true.
+
+## `Virtual<T>`
+
+Source:
+
+- [`Virtualization.gs`](../../Goo/Tree/Virtualization.gs)
+
+## `VirtualRows<T>`
+
+Source:
+
+- [`VirtualRows.gs`](../../Goo/Tree/VirtualRows.gs)
+
+Creates a vertically scrolling virtual list whose retained rows are measured at the available content width. @param items Immutable row values; replace changed values and rebuild the owning Cell after collection changes. @param estimatedItemHeight A finite positive estimate used until a row is measured. @param itemKey Stable, nonempty keys, unique across the whole collection. @param itemBuilder Builds one row; all render dependencies should participate in item equality or builder identity. @typeparam T The immutable row value type. @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
+
+### `VirtualRows<T>(System.Collections.Generic.IReadOnlyList{T},float64,System.Func{T,string},System.Func{T,Blob})`
+
+Creates a vertically scrolling virtual list whose retained rows are measured at the available content width.
+
+- `T`: The immutable row value type.
+- `items`: Immutable row values; replace changed values and rebuild the owning Cell after collection changes.
+- `estimatedItemHeight`: A finite positive estimate used until a row is measured.
+- `itemKey`: Stable, nonempty keys, unique across the whole collection.
+- `itemBuilder`: Builds one row; all render dependencies should participate in item equality or builder identity.
+
+Returns: A vertical virtual collection with two overscan rows on either side and bounded measurement work.

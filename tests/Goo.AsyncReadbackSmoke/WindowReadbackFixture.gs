@@ -1,10 +1,10 @@
 package Goo
 
+import Hexa.NET.SDL3
 import System
 import System.Diagnostics
 import System.Threading
 
-import Hexa.NET.SDL3
 internal data struct VulkanPresentationLatencyTestSample {
   internal var Token uint64
   internal var Kind int32
@@ -1300,22 +1300,6 @@ internal partial class SdlHost {
 
 internal class WindowReadbackTestFixture {
   shared {
-    internal func CreateClippedLavaFixture() Blob -> Container {
-      Position: PositionType.Absolute,
-      Left: 16,
-      Top: 16,
-      Width: 96,
-      Height: 96,
-      BorderRadius: 30,
-      Overflow: Overflow.Hidden,
-      Children: {
-        LavaSurface{
-          Width: Length.Percent(100),
-          Height: Length.Percent(100),
-        },
-      },
-    }
-
     internal func AbortPrimitiveMetrics(window Window, finish bool) VulkanPrimitiveFrameStats ->
     window.AbortPrimitiveMetricsForTest(finish)
 

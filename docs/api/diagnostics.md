@@ -20,6 +20,11 @@ Attaches Goo DevTools diagnostics to the window.
 
 Returns: An object that removes the diagnostics attachment when disposed.
 
-### `Attach(Window, Boolean)`
+### `Attach(Window,bool)`
 
-Attaches local diagnostics and optionally permits application input through normal routing. `allowInput: true` enables the `input` protocol capability until the session is disposed; attaching again with `false` does not revoke an existing grant. The owning UI thread and normal window lifetime requirements apply. See the [input protocol](../devtools/protocol.md#application-input).
+Attaches local diagnostics and optionally permits input commands through normal UI routing. Input remains disabled unless explicitly allowed here or by GOO_DEVTOOLS_INPUT=1 at automatic attachment.
+
+- `window`: The window to expose through Goo DevTools.
+- `allowInput`: Whether to permit local application input commands for this session.
+
+Returns: An object that removes the diagnostics attachment when disposed.

@@ -20,7 +20,6 @@ LITERAL_VERSION_FILES = (
     "apps/Goo.DevTools/Program.gs",
     "apps/Goo.DevTools/README.md",
     "apps/Goo.Gallery/Program.gs",
-    "apps/Goo.WindowsDemo/Program.gs",
     "docs/devtools/README.md",
     "docs/devtools/protocol.md",
     "integrations/rider/README.md",

@@ -75,7 +75,7 @@ internal partial class PointerInput {
             Y: float64(mapped.Y - source.Rect.Y) },
           WindowPosition: Point{ X: float64(x), Y: float64(y) },
         })
-        rebuildDragOwner(tree, source)
+      CellOwnership.Within(tree, source)?.Rebuild()
       } catch (error Exception) {
         current.ClickTarget = nil
         ExceptionDispatchInfo.Capture(error).Throw()
@@ -169,7 +169,7 @@ internal partial class PointerInput {
           if let event = dragEvent(session, target, DragEventKind.Move, x, y,
             modifiers, DragEffect.None) {
               let queried = descriptor.Query(event)
-              rebuildDragOwner(root, target)
+            CellOwnership.Within(root, target)?.Rebuild()
               if !ensureDragSession(root, session) {
                 path.Clear()
                 return nil
@@ -208,7 +208,7 @@ internal partial class PointerInput {
       guard let descriptor = DragDropMetadata.Target(target) else { return false }
       guard let event = dragEvent(session, target, kind, x, y, modifiers, effect) else { return false }
       descriptor.Changed?.Invoke(event)
-      rebuildDragOwner(root, target)
+      CellOwnership.Within(root, target)?.Rebuild()
       if terminalLeave {
         return dragSession == session && dragTargetAvailable(root, target)
       }
@@ -292,7 +292,7 @@ internal partial class PointerInput {
         modifiers, effect) else { return false }
       if let callback = descriptor.Changed {
         callback(event)
-        rebuildDragOwner(root, target)
+        CellOwnership.Within(root, target)?.Rebuild()
       }
       return true
     }
@@ -330,7 +330,7 @@ internal partial class PointerInput {
                 if let callback = source.End {
                   try {
                     callback(DragEndEvent{ Kind: kind, Effect: effect })
-                    rebuildDragOwner(tree, session.Source)
+                  CellOwnership.Within(tree, session.Source)?.Rebuild()
                   } catch (error Exception) {
                     if failure == nil { failure = error }
                   }
@@ -431,9 +431,5 @@ internal partial class PointerInput {
     } catch (error Exception) {
       terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, error)
     }
-  }
-
-  private func rebuildDragOwner(root Node, target Node) {
-    if let owner = findOwner(root, target, nil) { owner.Rebuild() }
   }
 }

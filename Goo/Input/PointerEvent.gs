@@ -93,6 +93,12 @@ public struct PointerEvent {
   /// Gets the normalized press count (1 to 3) on down and matching up; zero on other events.
   /// Counts use the same target, button, 400 ms, and 4 logical pixel policy as text selection.
   public prop ClickCount int32{ get; init; }
+  /// True when a clickable or focusable descendant is below this handler on the routed path.
+  /// Applies to down, move, up, and cancel; hover notifications are not routed.
+  public prop IsFromInteractiveChild bool{
+    get;
+    init;
+  }
   /// Gets the pointer buttons held after the event transition.
   public prop Buttons PointerButtons{ get; init; }
   /// Gets the modifier keys held for the event.

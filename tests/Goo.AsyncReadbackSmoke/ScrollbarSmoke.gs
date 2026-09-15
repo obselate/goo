@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 class ScrollbarCell : Cell {
   shared {
@@ -20,30 +20,13 @@ class ScrollbarCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(8, 14, 24),
-    Children: {
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(8, 14, 24),
+    Container() {.Handle: ScrollbarCell.Viewport,.Position: PositionType.Absolute,.Left: 20.0,.Top: 20.0,.Width: 100.0,.Height: 100.0,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Scroll,.ScrollbarVisibility: visibility,
       Container{
-        Handle: ScrollbarCell.Viewport,
-        Position: PositionType.Absolute,
-        Left: 20.0,
-        Top: 20.0,
-        Width: 100.0,
-        Height: 100.0,
-        OverflowX: Overflow.Hidden,
-        OverflowY: Overflow.Scroll,
-        ScrollbarVisibility: visibility,
-        Children: {
-          Container{
             Width: 100.0,
             Height: 300.0,
             FlexShrink: 0.0,
             BackgroundColor: Color.Rgb(24, 80, 160),
-          },
-        },
       },
     },
   }

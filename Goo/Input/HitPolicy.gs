@@ -1,5 +1,7 @@
 package Goo
 
+internal func isInteractiveContent(node Node) bool -> node.OnClick != nil || node.Focusable
+
 internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
   hover StyleEntries?, active StyleEntries?) bool{
     switch b {

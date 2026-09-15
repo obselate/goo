@@ -1,7 +1,7 @@
 package GooAsyncReadbackSmoke
 
-import System
 import Goo
+import System
 
 func RunFramePacingChecks() {
   Console.WriteLine(WindowReadbackTestFixture.RunFramePacingChecks())

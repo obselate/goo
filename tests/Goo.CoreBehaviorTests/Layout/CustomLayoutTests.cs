@@ -37,7 +37,7 @@ public sealed class CustomLayoutTests
                 Assert.Same(yoga[i], panel.Children[i].Yoga);
             }
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class CustomLayoutTests
             layout.Calculate(root, 200, 800);
             Assert.True(panel.Rect.H > first);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class CustomLayoutTests
             Assert.Equal(20, first.Rect.H);
             Assert.Equal(20, root.Children[1].Rect.Y);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class CustomLayoutTests
             Assert.Equal(5, root.Children[2].Rect.Y);
             Assert.Equal(calls, policy.Arranges);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class CustomLayoutTests
             Assert.Throws<InvalidOperationException>(() => policy.Context!.MeasureChild(0, Size(100, 100)));
             Assert.Throws<InvalidOperationException>(() => { _ = policy.Context!.ChildCount; });
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
         AssertPolicyFails<InvalidOperationException>(new Faulty((context, size) =>
         {
             for (var i = 0; i < 33; i++) context.MeasureChild(0, Size(100, 100));
@@ -151,7 +151,7 @@ public sealed class CustomLayoutTests
         var policy = new Faulty((context, size) => new Layout().Calculate(root!, 100, 100));
         root = new Reconciler { Res = new Resolver() }.Mount(new Container { Width = 100, Height = 100, Layout = policy, Children = { new Container() } });
         try { Assert.Throws<InvalidOperationException>(() => new Layout().Calculate(root, 100, 100)); }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
         Assert.Equal(0, CustomLayouts.Depth);
     }
 
@@ -184,7 +184,7 @@ public sealed class CustomLayoutTests
             Assert.Same(child, root.Children[0].Children[1]);
             Assert.Equal(132, child.Rect.W);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class CustomLayoutTests
             layout.RefreshRects(root);
             Assert.Equal(100, second.Rect.Y);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public sealed class CustomLayoutTests
             Assert.True(root.Children[0].Rect.H > height);
             Assert.Equal(300, policy.IntrinsicImage.Height);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     [Fact]
@@ -263,14 +263,14 @@ public sealed class CustomLayoutTests
             new Layout().Calculate(root, 100, 100);
             Assert.IsType<InvalidOperationException>(error);
         }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
     }
 
     private static void AssertPolicyFails<T>(LayoutAlgorithm policy) where T : Exception
     {
         var root = new Reconciler { Res = new Resolver() }.Mount(new Container { Width = 100, Height = 100, Layout = policy, Children = { new Container() } });
         try { Assert.Throws<T>(() => new Layout().Calculate(root, 100, 100)); }
-        finally { TextLayouts.DisposeTree(root); }
+        finally { NodeLifecycle.DisposeTree(root); }
         Assert.Equal(0, CustomLayouts.Depth);
     }
 

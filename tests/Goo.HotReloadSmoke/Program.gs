@@ -1,12 +1,12 @@
 package HotReloadSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.IO
 import System.Reflection
 import System.Runtime.CompilerServices
 import System.Threading
-import Goo
 
 data struct LeafInput(Label string) {}
 
@@ -35,14 +35,10 @@ open class Leaf : Cell[LeafInput] {
   protected override func Build(input LeafInput) Blob {
     Builds++
     LastLabel = "Before " + input.Label
-    return Container{
-      Padding: 20, Gap: 12, Width: Length.Percent(100), Height: Length.Percent(100),
-      BackgroundColor: Color.Rgb(20, 27, 39),
-      Children: {
-        Text{ Content: LastLabel + ": " + Counter.ToString(), FontSize: 24, Color: Color.White },
+    return Container() {.Padding: 20,.Gap: 12,.Width: Length.Percent(100),.Height: Length.Percent(100),.BackgroundColor: Color.Rgb(20, 27, 39),
+      Text{ Content: LastLabel + ": " + Counter.ToString(), FontSize: 24, Color: Color.White },
         TextEditor(Editor) { Height = 80, Width = Length.Percent(100), FontSize = 18, Color = Color.White },
-      },
-    }
+      }
   }
 }
 
@@ -51,9 +47,8 @@ open class DirectWrapper : Cell[LeafInput] {
 }
 
 class Shell : Cell {
-  override func Build() Blob -> Container { Children: {
-    Cell.Mount[LeafInput, DirectWrapper]("wrapper", LeafInput("stable")),
-  } }
+  override func Build() Blob -> Container() {
+    Cell.Mount[LeafInput, DirectWrapper]("wrapper", LeafInput("stable")),}
 }
 
 func NativeHandle(window Window) string {

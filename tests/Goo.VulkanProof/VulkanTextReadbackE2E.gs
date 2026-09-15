@@ -1,8 +1,8 @@
 package Goo.VulkanProof
 
+import Goo
 import System
 import System.IO
-import Goo
 
 internal class VulkanTextReadbackContract {
   const Width uint32 = 64u

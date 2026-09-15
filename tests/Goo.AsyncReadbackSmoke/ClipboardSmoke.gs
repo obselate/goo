@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
 import System.Threading
-import Goo
 
 class ClipboardSmokeCell : Cell {
   public override func Build() Blob -> Container {}

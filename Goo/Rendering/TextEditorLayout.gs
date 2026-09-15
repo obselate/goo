@@ -1,8 +1,8 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Collections.Generic
-import Facebook.Yoga
 
 internal class TextEditorResolvedSegment {
   internal prop Source TextRange{ get; init; }
@@ -218,7 +218,6 @@ internal sealed class TextEditorRenderState : IDisposable {
   private let node Node
   private let document TextDocument
   private let controller TextEditorController
-  private let retainedInvalidated Action[ReconcileEffects]?
   private var layers []TextPresentationLayer
   private let paragraphs List[TextEditorParagraphLayout]
   private let analyses List[TextEditorAnalysisCacheEntry]
@@ -234,9 +233,6 @@ internal sealed class TextEditorRenderState : IDisposable {
   private var placeholderFingerprint int32
   private var baseStyle TextResolvedStyle?
   private var baseStyleFingerprint int32
-  private var composition TextComposition?
-  private var scrollTargetX float64
-  private var scrollTargetY float64
   private var disposed bool
 
   internal prop ReadOnly bool{ get; set; }
@@ -245,11 +241,10 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal prop PlaceholderShape ShapedText? { get; set; }
 
   internal init(node Node, document TextDocument, controller TextEditorController,
-    layers []TextPresentationLayer, readOnly bool, retainedInvalidated Action[ReconcileEffects]?) {
+    layers []TextPresentationLayer, readOnly bool) {
       this.node = node
       this.document = document
       this.controller = controller
-      this.retainedInvalidated = retainedInvalidated
       this.layers = copyEditorLayers(layers)
       paragraphs = List[TextEditorParagraphLayout]()
       analyses = List[TextEditorAnalysisCacheEntry]()
@@ -262,15 +257,8 @@ internal sealed class TextEditorRenderState : IDisposable {
       usedParagraphScratch = List[TextEditorParagraphLayout]()
       usedParagraphSet = HashSet[TextEditorParagraphLayout]()
       placeholderText = ""
-      composition = controller.Composition
-      scrollTargetX = controller.ScrollTargetX
-      scrollTargetY = controller.ScrollTargetY
       ReadOnly = readOnly
       Dirty = true
-      document.Changed += onDocumentChanged
-      controller.Changed = onControllerChanged
-      controller.Submitted = onSubmitted
-      TextEditorLayerBindings.Register(this)
     }
 
   internal prop Document TextDocument{ get -> document }
@@ -445,11 +433,9 @@ internal sealed class TextEditorRenderState : IDisposable {
 
   internal func Apply(nextLayers []TextPresentationLayer, readOnly bool) {
     if !sameArray(layers, nextLayers) {
-      TextEditorLayerBindings.Unregister(this)
       layers = copyEditorLayers(nextLayers)
-      TextEditorLayerBindings.Register(this)
       ClearParagraphs()
-      invalidate(true)
+      Invalidate(true)
     }
     ReadOnly = readOnly
   }
@@ -459,23 +445,17 @@ internal sealed class TextEditorRenderState : IDisposable {
       return
     }
     disposed = true
-    document.Changed -= onDocumentChanged
-    controller.Changed = nil
-    controller.Submitted = nil
-    TextEditorLayerBindings.Unregister(this)
     ClearParagraphs()
     analyses.Clear()
     PlaceholderShape?.Dispose()
     PlaceholderShape = nil
     Layout = nil
-    controller.Detach(node)
   }
 
-  private func onDocumentChanged(change TextDocumentChange) {
-    node.EditorOnChange?.Invoke(change)
+  internal func DocumentChanged(change TextDocumentChange) {
     RebaseParagraphs(change)
-    if !retainLayoutAfter(change) { invalidate(true) }
-    requestIntrinsicInvalidation()
+    if !retainLayoutAfter(change) {
+      Invalidate(true) }
   }
 
   private func retainLayoutAfter(change TextDocumentChange) bool {
@@ -496,99 +476,11 @@ internal sealed class TextEditorRenderState : IDisposable {
     return true
   }
 
-  internal func LayerChanged(change TextPresentationLayerChange) {
-    if change.All { ClearParagraphs() }
-    else { InvalidateParagraphs(change.Range) }
-    refreshSlotMetadata()
-    invalidate(true)
-    if change.SlotChildrenChanged { requestRebuild() }
-    requestIntrinsicInvalidation()
-  }
-
-  private func refreshSlotMetadata() {
-    for child in node.Children {
-      if child.EditorSlotKey == "" { continue }
-      if !refreshSlotMetadata(child) { child.Visibility = Visibility.Hidden }
-    }
-  }
-
-  private func refreshSlotMetadata(child Node) bool {
-    for layerIndex in 0 ... layers.Length {
-      let layer = layers[layerIndex]
-      for projection in layer.ReadProjections() {
-        if projection.Kind != TextProjectionKind.InlineSlot
-          && projection.Kind != TextProjectionKind.BlockSlot{ continue }
-        if child.EditorSlotKey != textEditorSlotKey(layer, projection) { continue }
-        child.EditorSlotRange = projection.Range
-        child.EditorSlotBlock = projection.Kind == TextProjectionKind.BlockSlot
-        return true
-      }
-    }
-    return false
-  }
-
-  private func onControllerChanged() {
-    let current = controller.Composition
-    let intrinsic = !sameEditorComposition(composition, current)
-    let scrollChanged = scrollTargetX != controller.ScrollTargetX
-      || scrollTargetY != controller.ScrollTargetY
-    if intrinsic {
-      if let previous = composition { InvalidateParagraphs(previous.Range) }
-      if let next = current { InvalidateParagraphs(next.Range) }
-    }
-    composition = current
-    scrollTargetX = controller.ScrollTargetX
-    scrollTargetY = controller.ScrollTargetY
-    node.BlinkT = 0.0
-    if intrinsic {
-      invalidate(true)
-      requestIntrinsicInvalidation()
-    } else if scrollChanged {
-      invalidate(false)
-      requestInvalidation(ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect)
-    } else {
-      requestInvalidation(ReconcileEffects.Paint | ReconcileEffects.Input)
-    }
-  }
-
-  private func onSubmitted() {
-    node.EditorOnSubmit?.Invoke()
-  }
-
-  private func invalidate(intrinsic bool) {
+  internal func Invalidate(intrinsic bool) {
     Dirty = true
     Layout = nil
     if intrinsic && !(node.Width.HasMagnitude && node.Height.HasMagnitude) {
       if let yoga = node.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
-    }
-  }
-
-  private func requestIntrinsicInvalidation() {
-    var effects = ReconcileEffects.Content | ReconcileEffects.Paint
-    | ReconcileEffects.Input | ReconcileEffects.Rect
-    if !(node.Width.HasMagnitude && node.Height.HasMagnitude) {
-      effects = ReconcileEffects(int32(effects) | int32(ReconcileEffects.Layout))
-    }
-    requestInvalidation(effects)
-  }
-
-  private func requestInvalidation(e ReconcileEffects) {
-    if let callback = retainedInvalidated {
-      callback(e)
-      return
-    }
-    requestRebuild()
-  }
-
-  private func requestRebuild() {
-    var current Node? = node
-    while current != nil {
-      let value = current
-      if let cell = value.Fiber {
-        cell.Rebuild()
-        return
-      }
-      current = value.Parent
     }
   }
 }
@@ -676,6 +568,18 @@ internal class TextEditorLayouts {
       }
     }
 
+    // Slot roots are detached from the editor's measured Yoga node. Propagate
+    // intrinsic changes explicitly, including a child Cell's own rebuild.
+    internal func SlotChildDirty(yoga Facebook.Yoga.Node) {
+      guard let child = YGNodeAPI.YGNodeGetContext(yoga) as Node,
+      let parent = child.Parent,
+      let state = parent.EditorState else {
+        return
+      }
+      state.ClearParagraphs()
+      Invalidate(parent)
+    }
+
     internal func Invalidate(n Node) {
       if let state = n.EditorState {
         state.Dirty = true
@@ -684,14 +588,6 @@ internal class TextEditorLayouts {
       if !(n.Width.Unit == LengthUnit.Px && n.Height.Unit == LengthUnit.Px) {
         if let yoga = n.Yoga { YGNodeAPI.YGNodeMarkDirty(yoga) }
       }
-    }
-
-    internal func Dispose(n Node) {
-      if let state = n.EditorState {
-        n.EditorState = nil
-        state.Dispose()
-      }
-      n.EditorController = nil
     }
 
     internal func disposeParagraph(value TextEditorParagraphLayout) {
@@ -715,8 +611,8 @@ internal class TextEditorLayouts {
       }
 
     internal func CaretRect(n Node, position TextPosition) Rect {
-      let width = TextLayouts.ContentWidth(n)
-      let height = TextLayouts.ContentHeight(n)
+      let width = BoxGeometry.ContentWidth(n)
+      let height = BoxGeometry.ContentHeight(n)
       let layout = For(n, width, height)
       return CaretRect(n, layout, position)
     }
@@ -736,9 +632,9 @@ internal class TextEditorLayouts {
 
     private func CaretRect(n Node, layout TextEditorVisualLayout,
       position TextPosition) Rect{
-        let width = TextLayouts.ContentWidth(n)
-        let contentLeft = TextLayouts.ContentLeft(n) - n.Rect.X
-        let contentTop = TextLayouts.ContentTop(n) - n.Rect.Y
+        let width = BoxGeometry.ContentWidth(n)
+        let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
+        let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
         let scroll = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
         let line = LineForPosition(layout, position)
         guard let visual = line else {
@@ -762,11 +658,11 @@ internal class TextEditorLayouts {
           return CaretRect(n, TextPosition{ Offset: source, Affinity: selected.Active.Affinity })
         }
       }
-      let width = TextLayouts.ContentWidth(n)
-      let height = TextLayouts.ContentHeight(n)
+      let width = BoxGeometry.ContentWidth(n)
+      let height = BoxGeometry.ContentHeight(n)
       let layout = For(n, width, height)
-      let contentLeft = TextLayouts.ContentLeft(n) - n.Rect.X
-      let contentTop = TextLayouts.ContentTop(n) - n.Rect.Y
+      let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
+      let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
       let scrollY = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
       let scrollX = if let state = n.EditorState { float32(state.Controller.ScrollTargetX) } else { 0.0F }
       var lineIndex int32 = 0
@@ -837,45 +733,18 @@ internal class TextEditorLayouts {
         return false
       }
 
-    internal func SyncScroll(n Node) {
-      if let state = n.EditorState {
-        let layout = For(n, TextLayouts.ContentWidth(n), TextLayouts.ContentHeight(n))
-        n.ContentW = layout.ContentWidth > n.Rect.W ? layout.ContentWidth : n.Rect.W
-        n.ContentH = layout.ContentHeight > n.Rect.H ? layout.ContentHeight : n.Rect.H
-        let current = state.Controller.State()
-        let maxX = n.ContentW - n.Rect.W
-        let maxY = n.ContentH - n.Rect.H
-        let x = clampOffset(float32(current.ScrollTargetX), maxX)
-        let y = clampOffset(float32(current.ScrollTargetY), maxY)
-        n.ScrollTargetX = x
-        n.ScrollTargetY = y
-        n.ScrollX = x
-        n.ScrollY = y
-        if x != float32(current.ScrollTargetX) || y != float32(current.ScrollTargetY) {
-          state.Controller.ScrollTo(float64(x), float64(y))
+    internal func ScrollExtent(n Node) Point {
+        let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
+      return Point{
+        X: float64(layout.ContentWidth > n.Rect.W ? layout.ContentWidth : n.Rect.W),
+        Y: float64(layout.ContentHeight > n.Rect.H ? layout.ContentHeight : n.Rect.H)
         }
-      }
-    }
-
-    internal func ScrollBy(n Node, dx float32, dy float32) bool {
-      guard let state = n.EditorState else { return false }
-      SyncScroll(n)
-      let current = state.Controller.State()
-      let x = clampOffset(float32(current.ScrollTargetX) + dx, maxScrollX(n))
-      let y = clampOffset(float32(current.ScrollTargetY) + dy, maxScrollY(n))
-      if x == float32(current.ScrollTargetX) && y == float32(current.ScrollTargetY) { return false }
-      state.Controller.ScrollTo(float64(x), float64(y))
-      n.ScrollTargetX = x
-      n.ScrollTargetY = y
-      n.ScrollX = x
-      n.ScrollY = y
-      return true
     }
 
     internal func FollowCaret(n Node, position TextPosition) {
       if let state = n.EditorState {
         var current = state.Controller.State()
-        let initial = For(n, TextLayouts.ContentWidth(n), TextLayouts.ContentHeight(n))
+        let initial = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
         var visible = false
         for line in initial.Lines {
           if position.Offset >= line.SourceStart && position.Offset <= line.SourceEnd {
@@ -888,14 +757,14 @@ internal class TextEditorLayouts {
           let line = snapshot.GetLineIndex(position.Offset)
           let y = verticalOffsetForLine(state, snapshot, line, initial.ConstraintWidth,
             initial.FontFingerprint, initial.LineHeight, initial.Ascent, initial.Descent)
-          state.Controller.ScrollTo(current.ScrollTargetX, float64(y))
+          ScrollState.To(n, float32(current.ScrollTargetX), y, true, false)
           current = state.Controller.State()
         }
         let rect = CaretRect(n, position)
-        let left = TextLayouts.ContentLeft(n) - n.Rect.X
-        let top = TextLayouts.ContentTop(n) - n.Rect.Y
-        let right = left + TextLayouts.ContentWidth(n)
-        let bottom = top + TextLayouts.ContentHeight(n)
+        let left = BoxGeometry.ContentLeft(n) - n.Rect.X
+        let top = BoxGeometry.ContentTop(n) - n.Rect.Y
+        let right = left + BoxGeometry.ContentWidth(n)
+        let bottom = top + BoxGeometry.ContentHeight(n)
         let logicalLeft = rect.X + float32(current.ScrollTargetX)
         let logicalTop = rect.Y + float32(current.ScrollTargetY)
         var x = float32(current.ScrollTargetX)
@@ -904,20 +773,15 @@ internal class TextEditorLayouts {
         else if logicalLeft + rect.W > x + right { x = logicalLeft + rect.W - right }
         if logicalTop < y + top { y = logicalTop - top }
         else if logicalTop + rect.H > y + bottom { y = logicalTop + rect.H - bottom }
-        SyncScroll(n)
-        x = clampOffset(x, maxScrollX(n))
-        y = clampOffset(y, maxScrollY(n))
-        if x != float32(current.ScrollTargetX) || y != float32(current.ScrollTargetY) {
-          state.Controller.ScrollTo(float64(x), float64(y))
-        }
+        ScrollState.To(n, x, y, true, false)
       }
     }
 
     internal func SlotOrigin(n Node, key string) Rect? {
-      let width = TextLayouts.ContentWidth(n)
-      let layout = For(n, width, TextLayouts.ContentHeight(n))
-      let left = TextLayouts.ContentLeft(n) - n.Rect.X
-      let top = TextLayouts.ContentTop(n) - n.Rect.Y
+      let width = BoxGeometry.ContentWidth(n)
+      let layout = For(n, width, BoxGeometry.ContentHeight(n))
+      let left = BoxGeometry.ContentLeft(n) - n.Rect.X
+      let top = BoxGeometry.ContentTop(n) - n.Rect.Y
       let scrollX = if let state = n.EditorState { float32(state.Controller.ScrollTargetX) } else { 0.0F }
       let scrollY = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
       for line in layout.Lines {
@@ -925,7 +789,7 @@ internal class TextEditorLayouts {
           if slot.Key != key { continue }
           let x = slot.Block ? left : left + editorLineOffset(n, line, width) + slot.X - scrollX
           let y = top + line.Top - scrollY
-          let contentHeight = TextLayouts.ContentHeight(n)
+          let contentHeight = BoxGeometry.ContentHeight(n)
           if x + slot.Width <= left || x >= left + width
             || y + slot.Height <= top || y >= top + contentHeight{ return nil }
           return Rect{ X: x, Y: y, W: slot.Width, H: slot.Height }
@@ -935,8 +799,8 @@ internal class TextEditorLayouts {
     }
 
     internal func HitTest(n Node, localX float32, localY float32) TextPosition {
-      let width = TextLayouts.ContentWidth(n)
-      let height = TextLayouts.ContentHeight(n)
+      let width = BoxGeometry.ContentWidth(n)
+      let height = BoxGeometry.ContentHeight(n)
       let layout = For(n, width, height)
       return HitTest(n, layout, localX, localY)
     }
@@ -952,8 +816,8 @@ internal class TextEditorLayouts {
     internal func CurrentForGeometry(n Node) TextEditorVisualLayout? {
       guard let state = n.EditorState, let layout = state.Layout else { return nil }
       if state.Dirty || layout.Version != state.Document.Version
-        || layout.ConstraintWidth != TextLayouts.ContentWidth(n)
-        || layout.HeightConstraint != TextLayouts.ContentHeight(n) {
+        || layout.ConstraintWidth != BoxGeometry.ContentWidth(n)
+        || layout.HeightConstraint != BoxGeometry.ContentHeight(n) {
           return nil
         }
       return layout
@@ -969,9 +833,9 @@ internal class TextEditorLayouts {
 
     private func HitTest(n Node, layout TextEditorVisualLayout, localX float32,
       localY float32) TextPosition{
-        let width = TextLayouts.ContentWidth(n)
-        let contentLeft = TextLayouts.ContentLeft(n) - n.Rect.X
-        let contentTop = TextLayouts.ContentTop(n) - n.Rect.Y
+        let width = BoxGeometry.ContentWidth(n)
+        let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
+        let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
         let state = n.EditorState!!
         let x = localX - contentLeft + float32(state.Controller.ScrollTargetX)
         let y = localY - contentTop + float32(state.Controller.ScrollTargetY)
@@ -998,7 +862,7 @@ internal class TextEditorLayouts {
 
     internal func MoveVertical(n Node, position TextPosition, desiredX float32,
       delta int32) TextPosition? {
-        let layout = For(n, TextLayouts.ContentWidth(n), TextLayouts.ContentHeight(n))
+        let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
         let current = lineIndexForPosition(layout, position)
         if current < 0 || layout.Lines.Count == 0 { return nil }
         var target = current + delta
@@ -1012,7 +876,7 @@ internal class TextEditorLayouts {
       }
 
     internal func MoveHorizontal(n Node, position TextPosition, direction int32) TextPosition? {
-      let layout = For(n, TextLayouts.ContentWidth(n), TextLayouts.ContentHeight(n))
+      let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
       if layout.Lines.Count == 0 || direction == 0 { return nil }
       let lineIndex = lineIndexForPosition(layout, position)
       if lineIndex < 0 { return nil }
@@ -1290,7 +1154,7 @@ internal class TextEditorLayouts {
           if metrics.Descent > visualDescent { visualDescent = metrics.Descent }
           let styledHeight = (metrics.Descent - metrics.Ascent) * segment.Style.LineHeight
           if styledHeight > visualHeight { visualHeight = styledHeight }
-          if segment.Slot && segment.BlockSlot && segment.SlotHeight > visualHeight {
+          if segment.Slot && segment.SlotHeight > visualHeight {
             visualHeight = segment.SlotHeight
           }
         }
@@ -1400,8 +1264,9 @@ internal class TextEditorLayouts {
       paragraph TextEditorResolvedParagraph, start int32, end int32, displayStart int32,
       shape ShapedText, correction float32, style TextResolvedStyle) float32{
         let run = shapeEditorLine(n, paragraph, start, end, style)
-        var natural = shape.CaretX(end - displayStart, int32(TextAffinity.Downstream))
-        -shape.CaretX(start - displayStart, int32(TextAffinity.Downstream))
+        let naturalStart = shape.CaretX(start - displayStart, int32(TextAffinity.Downstream))
+        let naturalEnd = shape.CaretX(end - displayStart, int32(TextAffinity.Downstream))
+        var natural = naturalEnd - naturalStart
         if natural < 0.0F { natural = -natural }
         let retained = TextPaintRun{ Shape: run,
           X: shape.CaretX(start - displayStart, int32(TextAffinity.Downstream)) + correction,
@@ -1413,7 +1278,19 @@ internal class TextEditorLayouts {
           if segments.Length > 0 { retained.DecorationSegments = segments }
         }
         line.Runs.Add(retained)
-        return run.Width - natural
+        let adjustment = run.Width - natural
+        if adjustment != 0.0F {
+          let right = naturalStart > naturalEnd ? naturalStart : naturalEnd
+          for slot in line.Slots {
+            if slot.NaturalLeft < right {
+              continue
+            }
+            slot.X = slot.X + adjustment
+            slot.LogicalStart = slot.LogicalStart + adjustment
+            slot.LogicalEnd = slot.LogicalEnd + adjustment
+          }
+        }
+        return adjustment
       }
 
     private func resolveParagraph(snapshot TextSnapshot, line int32,
@@ -2065,66 +1942,4 @@ internal func paragraphChanged(paragraph TextRange, changes IReadOnlyList[TextCh
     if rangesEditorTouch(paragraph, change.Range) { return true }
   }
   return false
-}
-
-internal func sameEditorComposition(left TextComposition?, right TextComposition?) bool {
-  guard let leftValue = left, let rightValue = right else { return left == nil && right == nil }
-  return leftValue.Range == rightValue.Range && leftValue.Text == rightValue.Text
-    && leftValue.SelectionStart == rightValue.SelectionStart
-    && leftValue.SelectionLength == rightValue.SelectionLength
-}
-
-internal class TextEditorLayerBindings {
-  shared {
-    private let states List[TextEditorRenderState] = List[TextEditorRenderState]()
-
-    internal func Register(state TextEditorRenderState) {
-      if !states.Contains(state) { states.Add(state) }
-    }
-
-    internal func Unregister(state TextEditorRenderState) {
-      states.Remove(state)
-    }
-
-    internal func Changed(layer TextPresentationLayer, change TextPresentationLayerChange) {
-      for state in states {
-        for index in 0 ... state.LayerCount {
-          if state.Layer(index) == layer {
-            state.LayerChanged(change)
-            break
-          }
-        }
-      }
-    }
-
-    private func hasLayerOverlap(layer TextPresentationLayer, textRange TextRange) bool {
-      for state in states {
-        var contains = false
-        for layerIndex in 0 ... state.LayerCount {
-          if state.Layer(layerIndex) == layer {
-            contains = true
-            break
-          }
-        }
-        if !contains { continue }
-        for layerIndex in 0 ... state.LayerCount {
-          let candidate = state.Layer(layerIndex)
-          if candidate == layer { continue }
-          for projection in candidate.ReadProjections() {
-            if rangesEditorOverlap(textRange, projection.Range) { return true }
-          }
-        }
-      }
-      return false
-    }
-
-    internal func EnsureNonOverlapping(layer TextPresentationLayer, textRange TextRange) {
-      if hasLayerOverlap(layer, textRange) {
-        throw ArgumentException("Layout-affecting projections cannot overlap", "range")
-      }
-    }
-
-    internal func CanRestoreNonOverlapping(layer TextPresentationLayer,
-      textRange TextRange) bool -> !hasLayerOverlap(layer, textRange)
-  }
 }

@@ -143,19 +143,11 @@ internal class ScrollbarFixtures {
 
   private func mountScrollViewport(horizontal bool, visibility ScrollbarVisibility,
     onPointerDown Action?) Node{
-      let viewport = Container{
-        Width: 100.0,
-        Height: 100.0,
-        OverflowX: horizontal ? Overflow.Scroll : Overflow.Hidden,
-        OverflowY: horizontal ? Overflow.Hidden : Overflow.Scroll,
-        ScrollbarVisibility: visibility,
-        OnPointerDown: func(event PointerEvent) { onPointerDown?.Invoke() },
-        Children: {
-          Container{
+      let viewport = Container() {.Width: 100.0,.Height: 100.0,.OverflowX: horizontal ? Overflow.Scroll : Overflow.Hidden,.OverflowY: horizontal ? Overflow.Hidden : Overflow.Scroll,.ScrollbarVisibility: visibility,.OnPointerDown: func(event PointerEvent) { onPointerDown?.Invoke() },
+      Container{
             Width: horizontal ? 300.0 : 100.0,
             Height: horizontal ? 100.0 : 300.0,
             FlexShrink: 0.0,
-          },
         },
       }
       let root = Reconciler{ Res: Resolver{} }.Mount(viewport)
@@ -165,14 +157,7 @@ internal class ScrollbarFixtures {
 }
 
 internal class ScrollbarPublicCell(handle ElementHandle) : Cell {
-  override func Build() Blob -> Container {
-    Handle: handle,
-    Width: 100.0,
-    Height: 100.0,
-    OverflowY: Overflow.Scroll,
-    ScrollbarVisibility: ScrollbarVisibility.Always,
-    Children: {
-      Container{ Width: 100.0, Height: 300.0, FlexShrink: 0.0 },
-    },
-  }
+  override func Build() Blob -> Container() {.Handle: handle,.Width: 100.0,.Height: 100.0,.OverflowY: Overflow.Scroll,.ScrollbarVisibility: ScrollbarVisibility.Always,
+    Container{ Width: 100.0, Height: 300.0, FlexShrink: 0.0 },
+    }
 }

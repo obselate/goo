@@ -1,7 +1,7 @@
 package Goo.VulkanProof
 
-import System
 import Goo
+import System
 
 internal class VulkanImageE2EContract {
   const Width uint32 = 64u

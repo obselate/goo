@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Collections.Generic
-import Goo
 
 data struct PerformanceSmallAnimationStaticCardInput {
   internal var Index int32

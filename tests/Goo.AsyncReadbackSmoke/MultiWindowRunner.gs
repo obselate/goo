@@ -1,8 +1,22 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
-import Goo
+import System.Threading
+
+func PerformanceCloseWindow(window Window) {
+  window.RequestClose()
+  let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
+  while window.IsOpen {
+    WindowReadbackTestFixture.PollQueueCompletion(window)
+    window.Pump(0.0)
+    Require(
+      Stopwatch.GetTimestamp() < deadline || !window.IsOpen,
+      "Retained performance window close did not settle")
+    Thread.Yield()
+  }
+}
 
 func PerformanceThreeWindowSelectRoot(index int32,
   first PerformanceThreeWindowRoot,
@@ -769,8 +783,7 @@ func RunPerformanceThreeWindowBenchmark() {
     resourceCurrent = WindowReadbackTestFixture.TargetResidentResourceBytes(firstTarget)
     +WindowReadbackTestFixture.TargetResidentResourceBytes(secondTarget)
     +WindowReadbackTestFixture.TargetResidentResourceBytes(thirdTarget)
-    openedFirst.RequestClose()
-    WindowReadbackTestFixture.ForceRender(openedFirst, 0.0)
+    PerformanceCloseWindow(openedFirst)
     window0CloseVerified = !openedFirst.IsOpen
     Require(window0CloseVerified && openedSecond.IsOpen && openedThird.IsOpen,
       "Retained performance three-window first close was not independent")
@@ -807,15 +820,13 @@ func RunPerformanceThreeWindowBenchmark() {
       "Retained performance three-window remaining windows are not live")
     remainingLivenessVerified = window1LivenessVerified
       && window2LivenessVerified
-    openedSecond.RequestClose()
-    WindowReadbackTestFixture.ForceRender(openedSecond, 0.0)
+    PerformanceCloseWindow(openedSecond)
     window1CloseVerified = !openedSecond.IsOpen
     Require(window1CloseVerified
         && WindowReadbackTestFixture.TargetResidentResourceBytes(secondTarget)
       == 0uL,
       "Retained performance three-window second target did not close cleanly")
-    openedThird.RequestClose()
-    WindowReadbackTestFixture.ForceRender(openedThird, 0.0)
+    PerformanceCloseWindow(openedThird)
     window2CloseVerified = !openedThird.IsOpen
     Require(window2CloseVerified
         && WindowReadbackTestFixture.TargetResidentResourceBytes(thirdTarget)
@@ -842,20 +853,17 @@ func RunPerformanceThreeWindowBenchmark() {
     collectGpu = false
     if let active = first {
       if active.IsOpen {
-        active.RequestClose()
-        WindowReadbackTestFixture.ForceRender(active, 0.0)
+        PerformanceCloseWindow(active)
       }
     }
     if let active = second {
       if active.IsOpen {
-        active.RequestClose()
-        WindowReadbackTestFixture.ForceRender(active, 0.0)
+        PerformanceCloseWindow(active)
       }
     }
     if let active = third {
       if active.IsOpen {
-        active.RequestClose()
-        WindowReadbackTestFixture.ForceRender(active, 0.0)
+        PerformanceCloseWindow(active)
       }
     }
   }

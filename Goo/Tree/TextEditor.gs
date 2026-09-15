@@ -64,6 +64,7 @@ public class TextEditor : Blob {
     CaretColor = Color.White
     CurrentLineColor = Color.Transparent
     overscanLines = 3
+    Focusable = true
   }
 }
 

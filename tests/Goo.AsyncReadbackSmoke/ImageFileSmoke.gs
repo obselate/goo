@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 class ImageFileCell : Cell {
   private var source ImageSource
@@ -19,8 +19,7 @@ class ImageFileCell : Cell {
   override func Build() Blob {
     var child Blob = Container{}
     if visible { child = Image{ Source: source, Width: 96, Height: 96, Fit: ImageFit.Fill } }
-    return Container{
-      Width: 96, Height: 96, BackgroundColor: Color.Rgb(0, 0, 0), Children: {child},
+    return Container() {.Width: 96,.Height: 96,.BackgroundColor: Color.Rgb(0, 0, 0), child,
     }
   }
 }

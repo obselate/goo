@@ -47,9 +47,9 @@ internal partial class PointerInput {
           }
           if let callback = n.OnWheel {
             callback(event)
-            rebuildOwner(route, i - 1)
+            CellOwnership.InRoute(route, i - 1)?.Rebuild()
           }
-          if wheelControl.PropagationStopped { break }
+          if wheelControl.PropagationStopped || n.FocusScopeBoundary { break }
         }
         return wheelControl.DefaultPrevented
       } finally {
@@ -60,72 +60,28 @@ internal partial class PointerInput {
   private func applyWheelScroll(chain List[Node], dx float32, dy float32) bool {
     var consumed = false
     if dy != 0.0F {
-      if let editor = deepestEditorY(chain) {
-        consumed = TextEditorLayouts.ScrollBy(editor, 0.0F, -dy * InputPolicy.WheelUnit())
-        if consumed { markScrolled(editor) }
-      } else if let target = deepestArmedY(chain) {
-        let next = clampOffset(target.ScrollTargetY - dy * InputPolicy.WheelUnit(), maxScrollY(target))
-        if next != target.ScrollTargetY {
-          target.ScrollTargetY = next
-          markScrolled(target)
-          if target.PinToBottom {
-            target.UserScrolled = target.ScrollTargetY < maxScrollY(target) - 0.5F
-          }
-          consumed = true
-        }
+      if let target = deepestScrollable(chain, true) {
+        let moved = ScrollState.By(target, 0.0F, -dy * InputPolicy.WheelUnit())
+        consumed = moved.Y != 0.0
       }
     }
     if dx != 0.0F {
-      if let editor = deepestEditorX(chain) {
-        let moved = TextEditorLayouts.ScrollBy(editor, -dx * InputPolicy.WheelUnit(), 0.0F)
-        if moved { markScrolled(editor) }
-        consumed = consumed || moved
-      } else if let target = deepestArmedX(chain) {
-        let next = clampOffset(target.ScrollTargetX - dx * InputPolicy.WheelUnit(), maxScrollX(target))
-        if next != target.ScrollTargetX {
-          target.ScrollTargetX = next
-          markScrolled(target)
-          consumed = true
-        }
+      if let target = deepestScrollable(chain, false) {
+        let moved = ScrollState.By(target, -dx * InputPolicy.WheelUnit(), 0.0F)
+        consumed = consumed || moved.X != 0.0
       }
     }
     return consumed
   }
 
-  private func deepestEditorY(chain List[Node]) Node? {
+  private func deepestScrollable(chain List[Node], vertical bool) Node? {
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
-      if n.Kind == NodeKind.Editor && maxScrollY(n) > 0.0F { return n }
+      if (vertical ? maxScrollY(n) : maxScrollX(n)) > 0.0F { return n }
+      if n.FocusScopeBoundary {
+        break
+      }
     }
     return nil
-  }
-
-  private func deepestEditorX(chain List[Node]) Node? {
-    for var i = chain.Count; i > 0; i-- {
-      let n = chain[i - 1]
-      if n.Kind == NodeKind.Editor && maxScrollX(n) > 0.0F { return n }
-    }
-    return nil
-  }
-
-  private func deepestArmedY(chain List[Node]) Node? {
-    for var i = chain.Count; i > 0; i-- {
-      let n = chain[i - 1]
-      if n.OverflowY == Overflow.Scroll && maxScrollY(n) > 0.0F { return n }
-    }
-    return nil
-  }
-
-  private func deepestArmedX(chain List[Node]) Node? {
-    for var i = chain.Count; i > 0; i-- {
-      let n = chain[i - 1]
-      if n.OverflowX == Overflow.Scroll && maxScrollX(n) > 0.0F { return n }
-    }
-    return nil
-  }
-
-  private func markScrolled(n Node) {
-    n.ScrollIdle = 0.0F
-    n.ScrollBarAlpha = 1.0F
   }
 }

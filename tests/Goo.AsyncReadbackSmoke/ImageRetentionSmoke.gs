@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 class ImageRetentionCell : Cell {
   private let source ImageSource
@@ -23,13 +23,8 @@ class ImageRetentionCell : Cell {
     source.Dispose()
   }
 
-  override func Build() Blob -> Container {
-    Width: 160,
-    Height: 64,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Image{
+  override func Build() Blob -> Container() {.Width: 160,.Height: 64,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Image{
         Position: PositionType.Absolute,
         Left: 8,
         Top: 8,
@@ -52,7 +47,6 @@ class ImageRetentionCell : Cell {
         Source: source,
         Fit: ImageFit.Fill,
         BackgroundColor: Color.Rgb(168, 96, 40),
-      },
     },
   }
 }

@@ -24,14 +24,8 @@ class PrimitiveSmokeCell : Cell {
     let FrontStack ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Handle: PrimitiveSmokeCell.Root,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: PrimitiveSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
         Position: PositionType.Absolute,
         Left: 10,
         Top: 10,
@@ -127,64 +121,23 @@ class PrimitiveSmokeCell : Cell {
           GradientStop{ Offset: 1.0, Color: Color.Rgb(128, 54, 92) },
         }),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 270,
-        Top: 60,
-        Width: 80,
-        Height: 60,
-        Handle: PrimitiveSmokeCell.TransformOuter,
-        Transform: PanelTransform{ TranslateX: 4, TranslateY: 2 },
-        BackgroundColor: Color.Rgb(24, 42, 72),
-        Children: {
-          Container{
-            Width: 52,
-            Height: 36,
-            Handle: PrimitiveSmokeCell.TransformInner,
-            Transform: PanelTransform{ TranslateX: 6, TranslateY: 5 },
-            BackgroundColor: Color.Rgb(52, 116, 188),
-            Children: {
-              Container{
+      Container() {.Position: PositionType.Absolute,.Left: 270,.Top: 60,.Width: 80,.Height: 60,.Handle: PrimitiveSmokeCell.TransformOuter,.Transform: PanelTransform{ TranslateX: 4, TranslateY: 2 },.BackgroundColor: Color.Rgb(24, 42, 72),
+      Container() {.Width: 52,.Height: 36,.Handle: PrimitiveSmokeCell.TransformInner,.Transform: PanelTransform{ TranslateX: 6, TranslateY: 5 },.BackgroundColor: Color.Rgb(52, 116, 188),
+        Container{
                 Width: 24,
                 Height: 20,
                 BackgroundColor: Color.Rgb(196, 224, 88),
               },
             },
           },
-        },
-      },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 10,
-        Top: 136,
-        Width: 92,
-        Height: 54,
-        Handle: PrimitiveSmokeCell.ScrollViewport,
-        Overflow: Overflow.Scroll,
-        BackgroundColor: Color.Rgb(18, 32, 52),
-        Children: {
+    Container() {.Position: PositionType.Absolute,.Left: 10,.Top: 136,.Width: 92,.Height: 54,.Handle: PrimitiveSmokeCell.ScrollViewport,.Overflow: Overflow.Scroll,.BackgroundColor: Color.Rgb(18, 32, 52),
+      Container() {.Width: 180,.Height: 46,.Handle: PrimitiveSmokeCell.ClipOuter,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(24, 48, 72),
+        Container() {.Width: 164,.Height: 38,.Handle: PrimitiveSmokeCell.ClipInner,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(32, 64, 88),
           Container{
-            Width: 180,
-            Height: 46,
-            Handle: PrimitiveSmokeCell.ClipOuter,
-            Overflow: Overflow.Hidden,
-            BackgroundColor: Color.Rgb(24, 48, 72),
-            Children: {
-              Container{
-                Width: 164,
-                Height: 38,
-                Handle: PrimitiveSmokeCell.ClipInner,
-                Overflow: Overflow.Hidden,
-                BackgroundColor: Color.Rgb(32, 64, 88),
-                Children: {
-                  Container{
                     Width: 28,
                     Height: 24,
                     Handle: PrimitiveSmokeCell.ScrollLeaf,
                     BackgroundColor: Color.Rgb(52, 196, 112),
-                  },
-                },
-              },
             },
           },
         },
@@ -229,6 +182,5 @@ class PrimitiveSmokeCell : Cell {
         ZIndex: 1,
         BackgroundColor: Color.Rgb(220, 48, 48),
       },
-    },
-  }
+    }
 }

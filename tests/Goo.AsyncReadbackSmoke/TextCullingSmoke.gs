@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 data struct TextCullingCase {
   internal var Name string
@@ -101,48 +101,16 @@ class TextCullingCullCell : Cell {
     if effected {
       sceneEffect = effect
     }
-    return Container{
-      Width: Length.Percent(100),
-      Height: Length.Percent(100),
-      Position: PositionType.Relative,
-      BackgroundColor: Color.Rgb(10, 12, 20),
-      Children: {
-        Container{
-          Position: PositionType.Absolute,
-          Left: 8,
-          Top: 8,
-          Width: nested ? 88 : 80,
-          Height: nested ? 48 : 40,
-          OverflowX: Overflow.Hidden,
-          OverflowY: mixedAxis ? Overflow.Visible : Overflow.Hidden,
-          BorderRadius: rounded ? 8 : 0,
-          Transform: transformed
-          ? PanelTransform{ Rotate: 18, ScaleX: 0.9, ScaleY: 1.1 } : PanelTransform{},
-          ClipPath: if pathClipped {
+    return Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(10, 12, 20),
+      Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: nested ? 88 : 80,.Height: nested ? 48 : 40,.OverflowX: Overflow.Hidden,.OverflowY: mixedAxis ? Overflow.Visible : Overflow.Hidden,.BorderRadius: rounded ? 8 : 0,.Transform: transformed
+          ? PanelTransform{ Rotate: 18, ScaleX: 0.9, ScaleY: 1.1 } : PanelTransform{},.ClipPath: if pathClipped {
             TextCullingCullCell.ClipPath
           } else {
             VectorPath{}
-          },
-          ClipPathFit: ShapeFit.Fill,
-          ShaderEffect: sceneEffect,
-          BackgroundColor: Color.Rgb(18, 24, 38),
-          Children: {
-            Container{
-              Position: PositionType.Absolute,
-              Left: nested ? 8 : 0,
-              Top: nested ? 4 : 0,
-              Width: nested ? 72 : 80,
-              Height: nested ? 36 : 40,
-              OverflowX: scrolling ? Overflow.Scroll : Overflow.Hidden,
-              OverflowY: scrolling ? Overflow.Scroll : Overflow.Hidden,
-              Handle: TextCullingCullCell.ScrollViewport,
-              Children: {
-                Container{
-                  Position: PositionType.Absolute,
-                  Width: scrolling ? 160 : (nested ? 72 : 80),
-                  Height: scrolling ? 80 : (nested ? 36 : 40),
-                  Children: {
-                    Text{
+          },.ClipPathFit: ShapeFit.Fill,.ShaderEffect: sceneEffect,.BackgroundColor: Color.Rgb(18, 24, 38),
+        Container() {.Position: PositionType.Absolute,.Left: nested ? 8 : 0,.Top: nested ? 4 : 0,.Width: nested ? 72 : 80,.Height: nested ? 36 : 40,.OverflowX: scrolling ? Overflow.Scroll : Overflow.Hidden,.OverflowY: scrolling ? Overflow.Scroll : Overflow.Hidden,.Handle: TextCullingCullCell.ScrollViewport,
+          Container() {.Position: PositionType.Absolute,.Width: scrolling ? 160 : (nested ? 72 : 80),.Height: scrolling ? 80 : (nested ? 36 : 40),
+            Text{
                       Content: content,
                       Position: PositionType.Absolute,
                       Left: textLeft,
@@ -156,10 +124,6 @@ class TextCullingCullCell : Cell {
                       TextWrap: TextWrap.NoWrap,
                       TextTrimming: TextTrimming.Ellipsis,
                       Color: textColor,
-                    },
-                  },
-                },
-              },
             },
           },
         },

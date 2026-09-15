@@ -2,45 +2,81 @@ package Goo
 
 import Facebook.Yoga
 
+internal data struct ResolvedShapeGeometry {
+  internal let Content Rect
+  internal let Mapping PathMapping
+  internal let Path VectorPath
+  internal let StrokeWidth float32
+  internal let StrokeExtent float32
+  internal let StrokeVisible bool
+}
+
 internal class ShapeGeometry {
   shared {
-    internal func HitTest(n Node, x float32, y float32) bool {
+    internal func Resolve(n Node, bounds Rect) ResolvedShapeGeometry {
       let strokeWidth = n.BorderLeftWidth.Px
       let strokeInset = if n.ShapeStrokeInset { strokeWidth } else { 0.0F }
       let halfStroke = strokeInset * 0.5F
-      let strokeExtent = resolveShapeStrokeExtent(strokeWidth, n.ShapeStrokeJoin,
-        float32(n.MiterLimit))
-      let paddingLeft = resolveEdgePadding(n, YGEdge.Left, n.Rect.W)
-      let paddingTop = resolveEdgePadding(n, YGEdge.Top, n.Rect.W)
-      let paddingRight = resolveEdgePadding(n, YGEdge.Right, n.Rect.W)
-      let paddingBottom = resolveEdgePadding(n, YGEdge.Bottom, n.Rect.W)
-      let left = n.Rect.X + paddingLeft + halfStroke
-      let top = n.Rect.Y + paddingTop + halfStroke
-      let width = n.Rect.W - paddingLeft - paddingRight - strokeInset
-      let height = n.Rect.H - paddingTop - paddingBottom - strokeInset
-      if width <= 0.0F || height <= 0.0F
-        || x < left - strokeExtent || y < top - strokeExtent
-        || x >= left + width + strokeExtent || y >= top + height + strokeExtent{
-          return !PathGeometry.For(n.ShapePath).HasFillContour && strokeWidth <= 0.0F
-        }
-      let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, left, top, width, height)
-      if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        return !PathGeometry.For(n.ShapePath).HasFillContour && strokeWidth <= 0.0F
+      let left = resolveEdgePadding(n, YGEdge.Left, bounds.W)
+      let top = resolveEdgePadding(n, YGEdge.Top, bounds.W)
+      let right = resolveEdgePadding(n, YGEdge.Right, bounds.W)
+      let bottom = resolveEdgePadding(n, YGEdge.Bottom, bounds.W)
+      let content = Rect{
+        X: bounds.X + left + halfStroke,
+        Y: bounds.Y + top + halfStroke,
+        W: bounds.W - left - right - strokeInset,
+        H: bounds.H - top - bottom - strokeInset,
       }
-      let strokeVisible = strokeWidth > 0.0F && n.BorderLeftColor.A > 0.0F
-      let shapePath = PathRoundedCache.Shared.Resolve(n.ShapePath, mapping,
-        n.ShapeCornerRadius)
-      if shapePath.CommandCount == 0 {
-        return !PathGeometry.For(n.ShapePath).HasFillContour && !strokeVisible
+      let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, content.X, content.Y, content.W, content.H)
+      let path = mapping.Valid
+      ? PathRoundedCache.Shared.Resolve(n.ShapePath, mapping, n.ShapeCornerRadius) : VectorPath.Empty
+      return ResolvedShapeGeometry{
+        Content: content,
+        Mapping: mapping,
+        Path: path,
+        StrokeWidth: strokeWidth,
+        StrokeExtent: resolveShapeStrokeExtent(strokeWidth, n.ShapeStrokeJoin, float32(n.MiterLimit)),
+        StrokeVisible: strokeWidth > 0.0F && n.BorderLeftColor.A > 0.0F,
+      }
+    }
+
+    internal func Stroke(n Node, geometry ResolvedShapeGeometry) VectorPath {
+      if !geometry.StrokeVisible || geometry.Path.CommandCount == 0 {
+        return VectorPath.Empty
+      }
+      return PathStrokeCache.Shared.Resolve(
+        geometry.Path,
+        geometry.Mapping,
+        geometry.StrokeWidth,
+        n.ShapeStrokeCap,
+        n.ShapeStrokeJoin,
+        float32(n.MiterLimit),
+        n.Dashes)
+    }
+
+    internal func HitTest(n Node, x float32, y float32) bool {
+      let geometry = Resolve(n, n.Rect)
+      let content = geometry.Content
+      let extent = geometry.StrokeExtent
+      if content.W <= 0.0F || content.H <= 0.0F
+        || x < content.X - extent || y < content.Y - extent
+        || x >= content.X + content.W + extent || y >= content.Y + content.H + extent{
+          return !PathGeometry.For(n.ShapePath).HasFillContour && geometry.StrokeWidth <= 0.0F
+        }
+      let mapping = geometry.Mapping
+      if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
+        return !PathGeometry.For(n.ShapePath).HasFillContour && geometry.StrokeWidth <= 0.0F
+      }
+      if geometry.Path.CommandCount == 0 {
+        return !PathGeometry.For(n.ShapePath).HasFillContour && !geometry.StrokeVisible
       }
       let localX = (x - mapping.TranslateX) / mapping.ScaleX
       let localY = (y - mapping.TranslateY) / mapping.ScaleY
-      let fillHit = PathGeometry.For(shapePath).Contains(localX, localY, n.ShapeFillRule)
-      if !strokeVisible {
+      let fillHit = PathGeometry.For(geometry.Path).Contains(localX, localY, n.ShapeFillRule)
+      if !geometry.StrokeVisible {
         return fillHit
       }
-      let outline = PathStrokeCache.Shared.Resolve(shapePath, mapping, strokeWidth,
-        n.ShapeStrokeCap, n.ShapeStrokeJoin, float32(n.MiterLimit), n.Dashes)
+      let outline = Stroke(n, geometry)
       let strokeHit = outline.CommandCount != 0
         && PathGeometry.For(outline).Contains(localX, localY, FillRule.NonZero)
       return fillHit || strokeHit

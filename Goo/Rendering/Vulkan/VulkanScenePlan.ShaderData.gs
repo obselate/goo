@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 internal data struct ShaderEffectDataPack {
   internal var WordOffset uint32
@@ -12,6 +13,19 @@ internal data struct ShaderEffectDataSignature {
   internal var Version uint64
   internal var ByteLength int32
   internal var ByteOffset int32
+}
+
+internal data struct ShaderEffectDataKey {
+  internal var Identity uint64
+  internal var Version uint64
+  internal var ByteLength int32
+}
+
+internal data struct ShaderEffectDataPackKey {
+  internal var Data0 ShaderEffectDataKey
+  internal var Data1 ShaderEffectDataKey
+  internal var Data2 ShaderEffectDataKey
+  internal var Data3 ShaderEffectDataKey
 }
 
 internal partial class SceneFrame {
@@ -26,6 +40,8 @@ internal partial class SceneFrame {
   private var shaderEffectDataVersion uint64
   private var shaderEffectDataChanged bool
   private var shaderEffectDataVersionFinalized bool
+  private let shaderEffectDataPacks Dictionary[ShaderEffectDataPackKey, ShaderEffectDataPack] =
+  Dictionary[ShaderEffectDataPackKey, ShaderEffectDataPack]()
 
   internal prop ShaderEffectDataBytes []uint8{ get -> shaderEffectData }
   internal prop ShaderEffectDataByteCount int32{ get -> shaderEffectDataCount }
@@ -48,6 +64,7 @@ internal partial class SceneFrame {
     previousShaderEffectDataByteCount = shaderEffectDataCount
     shaderEffectDataSignatureCount = 0
     shaderEffectDataCount = 0
+    shaderEffectDataPacks.Clear()
     shaderEffectDataChanged = false
     shaderEffectDataVersionFinalized = false
   }
@@ -61,6 +78,15 @@ internal partial class SceneFrame {
 
   private func PackShaderEffectData(value ShaderEffectSnapshot) ShaderEffectDataPack {
     try {
+      let key = ShaderEffectDataPackKey{
+        Data0: ShaderDataKey(value.Data0),
+        Data1: ShaderDataKey(value.Data1),
+        Data2: ShaderDataKey(value.Data2),
+        Data3: ShaderDataKey(value.Data3),
+      }
+      if shaderEffectDataPacks.TryGetValue(key, out var existing) {
+        return existing
+      }
       let required = ShaderEffectDataHeaderBytes
       +AlignedBytes(value.Data0.ByteLength)
       +AlignedBytes(value.Data1.ByteLength)
@@ -78,17 +104,19 @@ internal partial class SceneFrame {
       cursor = WriteShaderEffectDataCapture(value.Data2, 2, segmentOffset, cursor)
       cursor = WriteShaderEffectDataCapture(value.Data3, 3, segmentOffset, cursor)
       shaderEffectDataCount = cursor
-      return ShaderEffectDataPack{
+      let packed = ShaderEffectDataPack{
         WordOffset: uint32(segmentOffset / 4),
         ByteCount: cursor - segmentOffset,
       }
+      shaderEffectDataPacks.Add(key, packed)
+      return packed
     } finally {
-      value.Data0.Release()
-      value.Data1.Release()
-      value.Data2.Release()
-      value.Data3.Release()
+      ReleaseShaderEffectDataCaptures(value)
     }
   }
+
+  private func ShaderDataKey(value ShaderEffectDataCapture) ShaderEffectDataKey ->
+  ShaderEffectDataKey{Identity: value.Identity, Version: value.Version, ByteLength: value.ByteLength}
 
   private func WriteShaderEffectDataCapture(value ShaderEffectDataCapture, slot int32,
     segmentOffset int32, cursor int32) int32{

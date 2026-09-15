@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
-import System
-import System.Threading
 import Goo
 import Hexa.NET.SDL3
+import System
+import System.Threading
 
 class OwnershipAccessibility : AccessibilityAdapter {
   internal var Root AccessibilityNode?

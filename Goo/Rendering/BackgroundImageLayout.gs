@@ -42,7 +42,7 @@ internal class BackgroundImageLayouts {
       return false
     }
 
-    internal func SetSource(n Node, source ImageSourceProvider?, invalidated Action?) bool {
+    internal func SetSource(n Node, source ImageSourceProvider?, invalidated Action?, owner Window?) bool {
       if source == nil {
         guard let current = state(n) else { return false }
         current.Invalidated = invalidated
@@ -66,7 +66,8 @@ internal class BackgroundImageLayouts {
       current.SetSourceChanged(() -> {
         BackgroundImageLayouts.refreshSource(n, current)
       })
-      current.RebindSource(source)
+      current.ReleaseSource()
+      current.BindSource(source, owner)
       if Refresh(n) { return true }
       current.WatchSource((token ImageSourceBindingToken) -> {
         BackgroundImageLayouts.invalidateSource(n, current, token)

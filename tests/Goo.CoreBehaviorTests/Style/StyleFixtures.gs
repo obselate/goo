@@ -34,12 +34,8 @@ internal class StyleFixtures {
       Foreground: Color.Rgb(240, 244, 248),
       Padding: 12,
     }
-    let declaration = Tokens.Scope[CompositionTokens, Blob](theme, () -> Container{
-      Gap: 6,
-      Children: {
-        tokenCard("synchronous"),
+    let declaration = Tokens.Scope[CompositionTokens, Blob](theme, () -> Container() {.Gap: 6, tokenCard("synchronous"),
         tokenCell("retained"),
-      },
     })
 
     var scopeEnded = false
@@ -163,11 +159,9 @@ internal class StyleFixtures {
       }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      Direction: Direction.LeftToRight,
-      TextAlign: TextAlign.End,
-      Children: { Container{ MarginStart: 4, PaddingStart: 5, Start: 6,
-        BorderStartWidth: 7, BorderStartColor: red } },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Direction: Direction.LeftToRight,.TextAlign: TextAlign.End,
+        Container{ MarginStart: 4, PaddingStart: 5, Start: 6,
+        BorderStartWidth: 7, BorderStartColor: red},
     })
     let inherited = root.Children[0]
     if inherited.Direction != Direction.LeftToRight || inherited.TextAlign != TextAlign.End
@@ -593,20 +587,13 @@ internal class StyleFixtures {
       }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      TextShadows: []TextShadow{
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextShadows: []TextShadow{
         TextShadow{ OffsetX: 2, Color: red },
         TextShadow{ OffsetY: 3, Blur: 4, Color: blue },
-      },
-      TransitionMs: 100.0,
-      Hover: Style{ TextShadow: TextShadow{ OffsetX: 8, Color: blue } },
-      Children: {
+      },.TransitionMs: 100.0,.Hover: Style{ TextShadow: TextShadow{ OffsetX: 8, Color: blue } },
         Text{ Content: "inherited" },
         TextEntry{ Value: "entry" },
-        Container{
-          TextShadows: []TextShadow{},
-          Children: { Text{ Content: "cleared" } },
-        },
+        Container() {.TextShadows: []TextShadow{}, Text{ Content: "cleared"},
       },
     })
     let inherited = root.Children[0]
@@ -670,19 +657,11 @@ internal class StyleFixtures {
     if zero.HasTextStrokeState || TextStroking.Visible(zero) != nil { return false }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      TextStrokeWidth: 2,
-      TextStrokeColor: red,
-      TransitionMs: 100.0,
-      Hover: Style{ TextStrokeWidth: 4, TextStrokeColor: blue },
-      Children: {
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextStrokeWidth: 2,.TextStrokeColor: red,.TransitionMs: 100.0,.Hover: Style{ TextStrokeWidth: 4, TextStrokeColor: blue },
         Text{ Content: "inherited" },
         TextEntry{ Value: "entry" },
         Text{ Content: "width-clear", TextStrokeWidth: 0 },
-        Container{
-          TextStrokeColor: Color.Transparent,
-          Children: { Text{ Content: "color-clear" } },
-        },
+        Container() {.TextStrokeColor: Color.Transparent, Text{ Content: "color-clear"},
       },
     })
     resolver.FlushEffects()
@@ -950,15 +929,11 @@ internal class StyleFixtures {
 
   func TypographyInheritanceContract() bool {
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      Color: Color.Rgb(255, 0, 0), FontFamily: "base", TextAlign: TextAlign.Right,
-      Hover: Style{
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Color: Color.Rgb(255, 0, 0),.FontFamily: "base",.TextAlign: TextAlign.Right,.Hover: Style{
         Color: Color.Rgb(0, 255, 0), FontFamily: "hover", TextAlign: TextAlign.Center,
       },
-      Children: {
         Text{ Content: "inherited" },
-        Text{ Content: "local", Color: Color.Rgb(0, 0, 255) },
-      },
+        Text{ Content: "local", Color: Color.Rgb(0, 0, 255)},
     })
     let inherited = root.Children[0]
     let local = root.Children[1]
@@ -980,15 +955,10 @@ internal class StyleFixtures {
     if defaults.TextTransform != TextTransform.None { return false }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      TextTransform: TextTransform.Uppercase,
-      TransitionMs: 100.0,
-      Hover: Style{ TextTransform: TextTransform.Lowercase },
-      Children: {
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextTransform: TextTransform.Uppercase,.TransitionMs: 100.0,.Hover: Style{ TextTransform: TextTransform.Lowercase },
         Text{ Content: "i I" },
         Text{ Content: "local", TextTransform: TextTransform.None },
-        TextEntry{ Value: "entry" },
-      },
+        TextEntry{ Value: "entry"},
     })
     let inherited = root.Children[0]
     let local = root.Children[1]
@@ -1028,15 +998,9 @@ internal class StyleFixtures {
     }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      TextWrap: TextWrap.NoWrap,
-      TextTrimming: TextTrimming.Ellipsis,
-      TransitionMs: 100.0,
-      Hover: Style{ TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.None },
-      Children: {
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextWrap: TextWrap.NoWrap,.TextTrimming: TextTrimming.Ellipsis,.TransitionMs: 100.0,.Hover: Style{ TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.None },
         Text{ Content: "inherited" },
-        Text{ Content: "local", TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.Ellipsis },
-      },
+        Text{ Content: "local", TextWrap: TextWrap.Wrap, TextTrimming: TextTrimming.Ellipsis},
     })
     let inherited = root.Children[0]
     let local = root.Children[1]
@@ -1077,9 +1041,7 @@ internal class StyleFixtures {
     let defaults = Node{ Kind: NodeKind.Text }
     if defaults.TextMaxLines != 0 { return false }
 
-    let parent = Reconciler{ Res: Resolver{} }.Mount(Container{
-      TextMaxLines: 1,
-      Children: { Text{ Content: "one\ntwo" } },
+    let parent = Reconciler{ Res: Resolver{} }.Mount(Container() {.TextMaxLines: 1, Text{ Content: "one\ntwo"},
     })
     if parent.TextMaxLines != 1 || parent.Children[0].TextMaxLines != 0 {
       return false
@@ -1125,17 +1087,12 @@ internal class StyleFixtures {
       }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      OutlineWidth: 2,
-      OutlineColor: Color.Rgb(255, 0, 0),
-      OutlineOffset: 1,
-      TransitionMs: 100.0,
-      Focus: Style{
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.OutlineWidth: 2,.OutlineColor: Color.Rgb(255, 0, 0),.OutlineOffset: 1,.TransitionMs: 100.0,.Focus: Style{
         OutlineWidth: 4,
         OutlineColor: Color.Rgb(0, 0, 255),
         OutlineOffset: -2,
       },
-      Children: { Container{} },
+        Container{},
     })
     let child = root.Children[0]
     if !root.HasOutlineState || root.OutlineWidth.Value != 2.0F
@@ -1189,11 +1146,8 @@ internal class StyleFixtures {
     if combined.PaintInputHidden { return false }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      Visibility: Visibility.Visible,
-      TransitionMs: 100.0,
-      Hover: Style{ Visibility: Visibility.Hidden },
-      Children: { Container{} },
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Visibility: Visibility.Visible,.TransitionMs: 100.0,.Hover: Style{ Visibility: Visibility.Hidden },
+        Container{},
     })
     let child = root.Children[0]
     if root.Visibility != Visibility.Visible || child.Visibility != Visibility.Visible {
@@ -1226,15 +1180,10 @@ internal class StyleFixtures {
     }
 
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      TextDecoration: TextDecoration.Underline,
-      TransitionMs: 100.0,
-      Hover: Style{ TextDecoration: TextDecoration.LineThrough },
-      Children: {
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.TextDecoration: TextDecoration.Underline,.TransitionMs: 100.0,.Hover: Style{ TextDecoration: TextDecoration.LineThrough },
         Text{ Content: "inherited" },
         TextEntry{ Value: "entry" },
-        Text{ Content: "clear", TextDecoration: TextDecoration.None },
-      },
+        Text{ Content: "clear", TextDecoration: TextDecoration.None},
     })
     let inherited = root.Children[0]
     let entry = root.Children[1]
@@ -1272,14 +1221,9 @@ internal class StyleFixtures {
 
   func CursorInheritanceAndResetContract() bool {
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      Cursor: Cursor.Move,
-      TransitionMs: 100.0,
-      Hover: Style{ Cursor: Cursor.Crosshair },
-      Children: {
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.Cursor: Cursor.Move,.TransitionMs: 100.0,.Hover: Style{ Cursor: Cursor.Crosshair },
         Text{ Content: "inherited" },
-        Container{ Cursor: Cursor.Pointer },
-      },
+        Container{ Cursor: Cursor.Pointer},
     })
     let inherited = root.Children[0]
     let local = root.Children[1]
@@ -1312,12 +1256,9 @@ internal class StyleFixtures {
 
   func ZIndexRangeStateAndResetContract() bool {
     let resolver = Resolver{}
-    let root = Reconciler{ Res: resolver }.Mount(Container{
-      ZIndex: 20,
-      Children: {
+    let root = Reconciler{ Res: resolver }.Mount(Container() {.ZIndex: 20,
         Container{ ZIndex: Int32.MinValue, Hover: Style{ ZIndex: Int32.MaxValue } },
         Container{},
-      },
     })
     let child = root.Children[0]
     if root.ZIndex != 20 || child.ZIndex != Int32.MinValue || root.Children[1].ZIndex != 0 {
@@ -1836,13 +1777,9 @@ internal class StyleFixtures {
     rec.Diff(mounted, Container{})
     if mounted.HasTransformState || mounted.HasVisualTransform { return false }
 
-    let plain = rec.Mount(Container{ Width: 40, Height: 30, Children: {
-      Container{ Width: 12, Height: 8 },
-    } })
-    let transformed = rec.Mount(Container{
-      Width: 40, Height: 30,
-      Transform: PanelTransform{ TranslateX: Length.Percent(50), Rotate: 25, Scale: 1.5 },
-      Children: { Container{ Width: 12, Height: 8 } },
+    let plain = rec.Mount(Container() {.Width: 40,.Height: 30, Container{ Width: 12, Height: 8} })
+    let transformed = rec.Mount(Container() {.Width: 40,.Height: 30,.Transform: PanelTransform{ TranslateX: Length.Percent(50), Rotate: 25, Scale: 1.5 },
+        Container{ Width: 12, Height: 8},
     })
     let layout = Layout()
     layout.Calculate(plain, 100.0F, 100.0F)
@@ -2231,10 +2168,8 @@ internal func tokenCell(label string) Blob {
     CompositionCellInput{ Theme: theme, Label: label })
 }
 
-internal func compositionCard(theme CompositionTokens, label string) Container -> Container {
-  Padding: theme.Padding,
-  BackgroundColor: theme.Surface,
-  Children: { Text{ Content: label, Color: theme.Foreground } },
+internal func compositionCard(theme CompositionTokens, label string) Container -> Container() {.Padding: theme.Padding,.BackgroundColor: theme.Surface,
+  Text{ Content: label, Color: theme.Foreground},
 }
 
 internal class CompositionCell : Cell[CompositionCellInput] {

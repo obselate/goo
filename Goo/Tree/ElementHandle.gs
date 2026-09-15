@@ -67,6 +67,16 @@ public class ElementHandle {
     return owner.FocusElement(n)
   }
 
+  /// Begins a nested focus scope on this mounted, visible, enabled, focusable element.
+  /// @param options Modal blocking, initial focus, and restoration policy.
+  /// @returns A scope to dispose when the overlay closes; removal also closes it automatically.
+  public func BeginFocusScope(options FocusScopeOptions? = nil) FocusScope {
+    guard let n = mountedNode(), let owner = window else {
+      throw InvalidOperationException("A focus scope requires a mounted element")
+    }
+    return owner.BeginFocusScope(n, options ?? FocusScopeOptions())
+  }
+
   /// Removes keyboard focus when this element owns it.
   /// @returns False when the handle is unmounted or does not own focus.
   public func Blur() bool {
@@ -274,20 +284,6 @@ internal class ElementHandles {
     ConditionalWeakTable[Blob, ElementHandle]()
     private let values ConditionalWeakTable[Node, ElementHandle] =
     ConditionalWeakTable[Node, ElementHandle]()
-    @ThreadStatic
-    private var owners Stack[Window]?
-
-    internal func PushOwner(owner Window) {
-      if owners == nil {
-        owners = Stack[Window]()
-      }
-      owners!!.Push(owner)
-    }
-
-    internal func PopOwner() {
-      owners!!.Pop()
-    }
-
     internal func BlobHandle(b Blob) ElementHandle? {
       if blobValues.TryGetValue(b, out var value) {
         return value
@@ -302,7 +298,7 @@ internal class ElementHandles {
       }
     }
 
-    internal func Bind(n Node, handle ElementHandle?) {
+    internal func Bind(n Node, handle ElementHandle?, owner Window?) {
       if handle == nil && !n.HasElementHandle {
         return
       }
@@ -315,7 +311,6 @@ internal class ElementHandles {
           TextLayouts.RemoveGeometry(n)
         }
         if let same = handle {
-          let owner = currentOwner()
           let unchanged = same.AttachedNode() == n && same.AttachedWindow() == owner
           same.Attach(n, owner)
           if !unchanged {
@@ -325,7 +320,6 @@ internal class ElementHandles {
         return
       }
       TextLayouts.RemoveGeometry(n)
-      let owner = currentOwner()
       if let next = handle {
         next.Attach(n, owner)
         MetricSubscriptions.AttachElement(next, owner)
@@ -335,13 +329,12 @@ internal class ElementHandles {
         values.Remove(n)
         prior.Detach(n)
         n.HasElementHandle = false
-        n.HasSparseInputState = InputCallbacks.HasNodeCallbacks(n)
-          || TextInputCallbacks.HasNodeCallbacks(n) || DragDropMetadata.HasNodeBindings(n)
+        InputMetadata.Refresh(n)
       }
       if let next = handle {
         values.Add(n, next)
         n.HasElementHandle = true
-        n.HasSparseInputState = true
+        InputMetadata.Refresh(n)
         if n.Kind == NodeKind.Text {
           TextLayouts.Invalidate(n)
         }
@@ -355,17 +348,15 @@ internal class ElementHandles {
       }
       TextLayouts.RemoveGeometry(n)
       if values.TryGetValue(n, out var value) {
-        MetricSubscriptions.DetachElement(value, currentOwner() ?? value.AttachedWindow())
+        MetricSubscriptions.DetachElement(value, value.AttachedWindow())
         values.Remove(n)
         value.Detach(n)
         n.HasElementHandle = false
-        n.HasSparseInputState = InputCallbacks.HasNodeCallbacks(n)
-          || TextInputCallbacks.HasNodeCallbacks(n) || DragDropMetadata.HasNodeBindings(n)
+        InputMetadata.Refresh(n)
         return value
       }
       n.HasElementHandle = false
-      n.HasSparseInputState = InputCallbacks.HasNodeCallbacks(n)
-        || TextInputCallbacks.HasNodeCallbacks(n) || DragDropMetadata.HasNodeBindings(n)
+      InputMetadata.Refresh(n)
       return nil
     }
 
@@ -389,15 +380,6 @@ internal class ElementHandles {
       return nil
     }
 
-    private func currentOwner() Window? {
-      if owners == nil || owners!!.Count == 0 {
-        return nil
-      }
-      return owners!!.Peek()
-    }
-
-    internal func CurrentOwner() Window ? -> currentOwner()
-
     internal func BorderBox(n Node) ElementRect {
       let bounds = TransformGeometry.BoundsToWindow(n)
       return ElementRect{ X: float64(bounds.X), Y: float64(bounds.Y),
@@ -405,10 +387,10 @@ internal class ElementHandles {
     }
 
     internal func ContentBox(n Node) ElementRect {
-      let left = TextLayouts.ContentLeft(n)
-      let top = TextLayouts.ContentTop(n)
-      let right = left + TextLayouts.ContentWidth(n)
-      let bottom = top + TextLayouts.ContentHeight(n)
+      let left = BoxGeometry.ContentLeft(n)
+      let top = BoxGeometry.ContentTop(n)
+      let right = left + BoxGeometry.ContentWidth(n)
+      let bottom = top + BoxGeometry.ContentHeight(n)
       let p0 = TransformGeometry.NodeToWindow(n, left, top)
       let p1 = TransformGeometry.NodeToWindow(n, right, top)
       let p2 = TransformGeometry.NodeToWindow(n, left, bottom)
@@ -893,8 +875,8 @@ internal class TextGeometryQueries {
       guard let layout = TextLayouts.CurrentForGeometry(n) else { return false }
       guard let geometry = layout.Geometry else { return false }
       if layout.Lines.Count == 0 || geometry.Lines.Count != layout.Lines.Count { return false }
-      let contentX = TextLayouts.ContentLeft(n) - n.Rect.X
-      let contentY = TextLayouts.ContentTop(n) - n.Rect.Y
+      let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
+      let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
       let lineHeight = TextLayouts.resolvedLineHeight(n)
       if lineHeight <= 0.0F { return false }
       var index = int32((float32(local.Y) - contentY) / lineHeight)
@@ -903,7 +885,7 @@ internal class TextGeometryQueries {
       let line = layout.Lines[index]
       let geometryLine = geometry.Lines[index]
       guard let shape = line.Shape else { return false }
-      let x = float32(local.X) - contentX - TextLayouts.lineOffset(n, line, TextLayouts.ContentWidth(n))
+      let x = float32(local.X) - contentX - TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n))
       let hit = shape.HitTest(x)
       let display = geometryLine.DisplayStart + hit.Index
       if geometryLine.VisibleEnd < geometryLine.DisplayEnd
@@ -919,7 +901,7 @@ internal class TextGeometryQueries {
     private func entryPositionAt(n Node, local Point, out position TextPosition) bool {
       position = TextPosition{}
       guard let shape = cachedEntryShape(n) else { return false }
-      let contentX = TextLayouts.ContentLeft(n) - n.Rect.X
+      let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
       let hit = shape.HitTest(float32(local.X) - contentX - entryOffset(n, shape) + n.EditScrollX)
       position = TextPosition{ Offset: entrySourceOffset(n.EntryShape!!, hit.Index),
         Affinity: TextAffinity(hit.Affinity) }
@@ -948,10 +930,10 @@ internal class TextGeometryQueries {
       guard let shape = line.Shape else { return false }
       let localIndex = display - geometryLine.DisplayStart
       if localIndex < 0 || localIndex > line.Content.Length { return false }
-      let contentX = TextLayouts.ContentLeft(n) - n.Rect.X
-      let contentY = TextLayouts.ContentTop(n) - n.Rect.Y
+      let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
+      let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
       let height = TextLayouts.resolvedLineHeight(n)
-      rect = Rect{ X: contentX + TextLayouts.lineOffset(n, line, TextLayouts.ContentWidth(n))
+      rect = Rect{ X: contentX + TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n))
         +shape.CaretX(localIndex, int32(position.Affinity)),
         Y: contentY + float32(lineIndex) * height, W: 1.5F, H: height }
       return true
@@ -961,10 +943,10 @@ internal class TextGeometryQueries {
       rect = Rect{}
       if position.Offset < 0 || position.Offset > n.Buffer.Length { return false }
       guard let shape = cachedEntryShape(n) else { return false }
-      let contentHeight = TextLayouts.ContentHeight(n)
+      let contentHeight = BoxGeometry.ContentHeight(n)
       let height = shape.Descent - shape.Ascent
-      let top = TextLayouts.ContentTop(n) - n.Rect.Y + (contentHeight - height) * 0.5F
-      rect = Rect{ X: TextLayouts.ContentLeft(n) - n.Rect.X + entryOffset(n, shape) - n.EditScrollX
+      let top = BoxGeometry.ContentTop(n) - n.Rect.Y + (contentHeight - height) * 0.5F
+      rect = Rect{ X: BoxGeometry.ContentLeft(n) - n.Rect.X + entryOffset(n, shape) - n.EditScrollX
         +shape.CaretX(entryDisplayOffset(n.EntryShape!!, position.Offset, position.Affinity),
           int32(position.Affinity)), Y: top, W: 1.5F, H: height }
       return true
@@ -980,8 +962,8 @@ internal class TextGeometryQueries {
         let start = textRange.Start
         let end = textRange.Start + textRange.Length
         if end < start { return false }
-        let contentX = TextLayouts.ContentLeft(n) - n.Rect.X
-        let contentY = TextLayouts.ContentTop(n) - n.Rect.Y
+        let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
+        let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
         let height = TextLayouts.resolvedLineHeight(n)
         let values = stackalloc[64]float32
         for i in 0 ... layout.Lines.Count {
@@ -1003,7 +985,7 @@ internal class TextGeometryQueries {
             let copied = shape.CopySelectionRects(lineStart - geometryLine.DisplayStart,
               lineEnd - geometryLine.DisplayStart, rectOffset, values)
             let appended = appendSelectionRects(n, values, copied,
-              contentX + TextLayouts.lineOffset(n, line, TextLayouts.ContentWidth(n)),
+              contentX + TextLayouts.lineOffset(n, line, BoxGeometry.ContentWidth(n)),
               contentY + float32(i) * height, height, space, destination, required)
             if appended < 0 {
               required = 0
@@ -1022,10 +1004,10 @@ internal class TextGeometryQueries {
         required = 0
         if !validRange(textRange, n.Buffer.Length) { return false }
         guard let shape = cachedEntryShape(n) else { return false }
-        let contentHeight = TextLayouts.ContentHeight(n)
+        let contentHeight = BoxGeometry.ContentHeight(n)
         let height = shape.Descent - shape.Ascent
-        let top = TextLayouts.ContentTop(n) - n.Rect.Y + (contentHeight - height) * 0.5F
-        let x = TextLayouts.ContentLeft(n) - n.Rect.X + entryOffset(n, shape) - n.EditScrollX
+        let top = BoxGeometry.ContentTop(n) - n.Rect.Y + (contentHeight - height) * 0.5F
+        let x = BoxGeometry.ContentLeft(n) - n.Rect.X + entryOffset(n, shape) - n.EditScrollX
         let start = entryDisplayOffset(n.EntryShape!!, textRange.Start, TextAffinity.Downstream)
         let end = entryDisplayOffset(n.EntryShape!!, textRange.Start + textRange.Length,
           TextAffinity.Upstream)
@@ -1055,8 +1037,8 @@ internal class TextGeometryQueries {
         guard let layout = TextEditorLayouts.CurrentForGeometry(n) else { return false }
         let start = textRange.Start
         let end = textRange.Start + textRange.Length
-        let contentX = TextLayouts.ContentLeft(n) - n.Rect.X
-        let contentY = TextLayouts.ContentTop(n) - n.Rect.Y
+        let contentX = BoxGeometry.ContentLeft(n) - n.Rect.X
+        let contentY = BoxGeometry.ContentTop(n) - n.Rect.Y
         let scrollX = float32(state.Controller.ScrollTargetX)
         let scrollY = float32(state.Controller.ScrollTargetY)
         let values = stackalloc[64]float32
@@ -1071,7 +1053,7 @@ internal class TextGeometryQueries {
             TextAffinity.Downstream) - line.DisplayStart
           let displayEnd = TextEditorLayouts.DisplayOffsetForSource(line.Paragraph, lineEnd,
             TextAffinity.Upstream) - line.DisplayStart
-          let x = contentX + TextEditorLayouts.editorLineOffset(n, line, TextLayouts.ContentWidth(n)) - scrollX
+          let x = contentX + TextEditorLayouts.editorLineOffset(n, line, BoxGeometry.ContentWidth(n)) - scrollX
           var rectOffset int32 = 0
           var rectCount int32 = 0
           while rectOffset < rectCount || rectOffset == 0 {
@@ -1097,8 +1079,8 @@ internal class TextGeometryQueries {
         return point
       }
       if space == TextCoordinateSpace.Content {
-        return Point{ X: point.X + float64(TextLayouts.ContentLeft(n) - n.Rect.X - textScrollX(n)),
-          Y: point.Y + float64(TextLayouts.ContentTop(n) - n.Rect.Y - textScrollY(n)) }
+        return Point{ X: point.X + float64(BoxGeometry.ContentLeft(n) - n.Rect.X - textScrollX(n)),
+          Y: point.Y + float64(BoxGeometry.ContentTop(n) - n.Rect.Y - textScrollY(n)) }
       }
       let mapped = TransformGeometry.WindowToNode(n, float32(point.X), float32(point.Y))
       if !mapped.Valid { return nil }
@@ -1114,9 +1096,9 @@ internal class TextGeometryQueries {
           return true
         }
         if space == TextCoordinateSpace.Content {
-          rect = ElementRect{ X: float64(raw.X - (TextLayouts.ContentLeft(n) - n.Rect.X)
+          rect = ElementRect{ X: float64(raw.X - (BoxGeometry.ContentLeft(n) - n.Rect.X)
             +textScrollX(n)),
-            Y: float64(raw.Y - (TextLayouts.ContentTop(n) - n.Rect.Y) + textScrollY(n)),
+            Y: float64(raw.Y - (BoxGeometry.ContentTop(n) - n.Rect.Y) + textScrollY(n)),
             Width: float64(raw.W), Height: float64(raw.H) }
           return true
         }
@@ -1184,7 +1166,7 @@ internal class TextGeometryQueries {
     }
 
     private func entryOffset(n Node, shape ShapedText) float32 {
-      let free = TextLayouts.ContentWidth(n) - shape.Width
+      let free = BoxGeometry.ContentWidth(n) - shape.Width
       if free <= 0.0F { return 0.0F }
       return switch n.TextAlign {
         case TextAlign.Center: free * 0.5F

@@ -1,7 +1,7 @@
 package GooAsyncReadbackSmoke
 
-import System
 import Goo
+import System
 
 func CheckPrimitiveMetrics(stats VulkanPrimitiveFrameRetentionTestSnapshot,
   changed int32, full bool, label string) {

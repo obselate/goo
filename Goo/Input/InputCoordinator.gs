@@ -5,16 +5,19 @@ import System.Collections.Generic
 import System.Runtime.ExceptionServices
 
 internal class InputCoordinator {
+  private let focus FocusManager
   private var keyboard KeyboardInput
   private var pointer PointerInput
   private var text TextInput
   private var attachedHost WindowHost?
+  private var scopes FocusScopeStack?
   private var disposed bool
 
   internal init() {
-    keyboard = KeyboardInput()
-    pointer = PointerInput()
-    text = TextInput()
+    focus = FocusManager()
+    keyboard = KeyboardInput(focus)
+    pointer = PointerInput(focus)
+    text = TextInput(focus)
   }
 
   internal func SetDiagnostics(
@@ -23,6 +26,8 @@ internal class InputCoordinator {
       pointer.SetDiagnosticsHook(pointerHook)
       keyboard.SetDiagnosticsHook(keyboardHook)
     }
+
+  internal func SyncControlledEntry(n Node, value string) bool -> text.SyncControlledEntry(n, value)
 
   internal func Attach(host WindowHost) {
     if disposed { throw ObjectDisposedException("InputCoordinator") }
@@ -57,24 +62,22 @@ internal class InputCoordinator {
 
   internal func Drain(root Node?, resolver Resolver, timeS float64,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64) bool{
+      refreshScopes(root, resolver)
       let pointerChanged = pointer.Drain(root, resolver, timeS, text)
       return keyboard.Drain(root, resolver, text, onKeyPress, repeatStartTicks, pointer)
         || pointerChanged
     }
 
   internal func AfterTreeUpdated(root Node?, resolver Resolver, rebuilt bool) {
+    refreshScopes(root, resolver)
     if !rebuilt {
       return
     }
     try {
-      if let tree = root {
-        if hasUnavailableFocus(tree, false, false) {
-          text.SetFocus(resolver, nil)
-        }
-      }
-      text.AfterTreeUpdated(root, resolver)
-      keyboard.AfterTreeUpdated(resolver, text)
-      pointer.AfterTreeUpdated(root, resolver, text)
+      focus.AfterTreeUpdated(root, resolver)
+      text.RefreshFocus()
+      keyboard.AfterTreeUpdated(resolver)
+      pointer.AfterTreeUpdated(root, resolver)
     } finally {
       resolver.Flush()
     }
@@ -115,16 +118,16 @@ internal class InputCoordinator {
 
   internal func FocusLost(root Node?, resolver Resolver) {
     try {
-      text.SetNativeFocus(false)
+      focus.SetNativeFocus(false)
       keyboard.Reset(resolver)
-      text.SetFocus(resolver, nil)
+      focus.SetFocus(resolver, nil)
       if root != nil {
-        pointer.Reset(root, resolver, text)
+        pointer.Reset(root, resolver)
       } else {
         pointer.FocusLost(root, resolver)
       }
     } finally {
-      text.SetNativeFocus(false)
+      focus.SetNativeFocus(false)
       resolver.Flush()
     }
   }
@@ -133,26 +136,44 @@ internal class InputCoordinator {
     FocusLost(nil, resolver)
   }
 
-  internal func FocusGained() -> text.SetNativeFocus(true)
+  internal func FocusGained() -> focus.SetNativeFocus(true)
 
   internal func FocusElement(resolver Resolver, target Node) bool {
-    if target.Retired || !target.Focusable || !canReceiveInput(target) {
+    if !focus.CanFocus(target) {
       return false
     }
-    text.SetFocus(resolver, target)
-    return text.FocusedNode() == target
+    focus.SetFocus(resolver, target)
+    return focus.FocusedNode() == target
   }
 
-  internal func FocusedNode() Node ? -> text.FocusedNode()
+  internal func BeginFocusScope(owner Window, root Node, scopeRoot Node, options FocusScopeOptions) FocusScope {
+    if disposed {
+      throw ObjectDisposedException("InputCoordinator")
+    }
+    let current = scopes ?? FocusScopeStack(owner)
+    scopes = current
+    return current.Add(root, scopeRoot, focus.FocusedNode(), options)
+  }
+
+  private func refreshScopes(root Node?, resolver Resolver) {
+    if let current = scopes {
+      current.Refresh(root, resolver, focus)
+      if current.IsEmpty {
+        scopes = nil
+      }
+    }
+  }
+
+  internal func FocusedNode() Node ? -> focus.FocusedNode()
 
   internal func EditorSnapshot() FocusedEditorSnapshot ? -> text.EditorSnapshot()
 
   internal func CommitEditorText(root Node?, value string) bool -> text.CommitPlatformText(root, value)
 
-  internal func ClearEditorFocus(resolver Resolver) -> text.ClearEditorFocus(resolver)
+  internal func ClearEditorFocus(resolver Resolver) -> focus.SetFocus(resolver, nil)
 
   internal func MoveEditorFocus(root Node?, resolver Resolver, forward bool) bool ->
-  text.MoveEditorFocus(root, resolver, forward)
+  focus.MoveFocus(root, resolver, forward)
 
   internal func SetEditorSelection(root Node?, start int32, end int32) bool ->
   text.SetEditorSelection(root, start, end)
@@ -174,10 +195,10 @@ internal class InputCoordinator {
   text.ExecuteEditorCommand(root, resolver, command)
 
   internal func BlurElement(resolver Resolver, target Node) bool {
-    if target.Retired || text.FocusedNode() != target {
+    if target.Retired || focus.FocusedNode() != target {
       return false
     }
-    text.SetFocus(resolver, nil)
+    focus.SetFocus(resolver, nil)
     return true
   }
 
@@ -189,12 +210,12 @@ internal class InputCoordinator {
       failure = error
     }
     try {
-      pointer.Reset(root, resolver, text)
+      pointer.Reset(root, resolver)
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
     try {
-      text.SetFocus(resolver, nil)
+      focus.SetFocus(resolver, nil)
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
@@ -211,6 +232,9 @@ internal class InputCoordinator {
       return
     }
     disposed = true
+    scopes?.Dispose()
+    scopes = nil
+    focus.Dispose()
     text.Dispose()
   }
 
@@ -287,20 +311,20 @@ internal class InputCoordinator {
   }
 
   internal func QueueText(value string) {
-    keyboard.QueueText(value, text.FocusGeneration())
+    keyboard.QueueText(value, focus.Generation)
   }
 
   internal func QueueComposition(value string, selectionStart int32, selectionLength int32) {
-    keyboard.QueueComposition(value, selectionStart, selectionLength, text.FocusGeneration())
+    keyboard.QueueComposition(value, selectionStart, selectionLength, focus.Generation)
   }
 
   internal func QueueCompositionCandidates(candidates IReadOnlyList[string], selected int32,
     horizontal bool) {
-      keyboard.QueueCompositionCandidates(candidates, selected, horizontal, text.FocusGeneration())
+      keyboard.QueueCompositionCandidates(candidates, selected, horizontal, focus.Generation)
     }
 
   internal func QueueCompositionCancel() {
-    keyboard.QueueCompositionCancel(text.FocusGeneration())
+    keyboard.QueueCompositionCancel(focus.Generation)
   }
 
   internal func QueuePointerMove(x float32, y float32) {
@@ -376,18 +400,4 @@ internal class InputCoordinator {
 
   internal func HitInfo(root Node?, x float32, y float32) InputHitInfo ->
   pointer.HitInfo(root, x, y)
-
-  private func hasUnavailableFocus(n Node, hidden bool, disabled bool) bool {
-    let nowHidden = hidden || n.PaintInputHidden
-    let nowDisabled = disabled || n.Disabled
-    if (nowHidden || nowDisabled) && n.Focused {
-      return true
-    }
-    for index in 0 ... n.Children.Count {
-      if hasUnavailableFocus(n.Children[index], nowHidden, nowDisabled) {
-        return true
-      }
-    }
-    return false
-  }
 }

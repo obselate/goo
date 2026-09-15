@@ -1,7 +1,7 @@
 package Goo
 
-import System
 import Facebook.Yoga
+import System
 
 internal partial class VulkanSceneCompiler {
   private func ValidateViewport(width float32, height float32) {
@@ -139,7 +139,7 @@ internal partial class VulkanSceneCompiler {
   }
 
   private func RecordUnsupportedRichTextFields(node Node) {
-    let layout = TextLayouts.For(node, TextLayouts.ContentWidth(node))
+    let layout = TextLayouts.For(node, BoxGeometry.ContentWidth(node))
     guard let rich = layout.Rich else { return }
     var stroke = node.TextStrokeWidth.Px > VulkanTextScene.MaximumStrokeWidth
       && !transparent(node.TextStrokeColor)
@@ -157,8 +157,7 @@ internal partial class VulkanSceneCompiler {
   }
 
   private func RecordUnsupportedEditorTextFields(node Node) {
-    let layout = TextEditorLayouts.For(node, TextLayouts.ContentWidth(node),
-      TextLayouts.ContentHeight(node))
+    let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
     var stroke = node.TextStrokeWidth.Px > VulkanTextScene.MaximumStrokeWidth
       && !transparent(node.TextStrokeColor)
     for lineIndex in 0 ... layout.Lines.Count {
@@ -204,7 +203,7 @@ internal partial class VulkanSceneCompiler {
         stroke = true
       }
     if node.Kind == NodeKind.Text {
-      let layout = TextLayouts.For(node, TextLayouts.ContentWidth(node))
+      let layout = TextLayouts.For(node, BoxGeometry.ContentWidth(node))
       if let rich = layout.Rich {
         for line in rich.Lines {
           for run in line.Runs {
@@ -223,8 +222,7 @@ internal partial class VulkanSceneCompiler {
         }
       }
     } else if node.Kind == NodeKind.Editor {
-      let layout = TextEditorLayouts.For(node, TextLayouts.ContentWidth(node),
-        TextLayouts.ContentHeight(node))
+      let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
       for lineIndex in 0 ... layout.Lines.Count {
         let line = layout.Lines[lineIndex]
         for runIndex in 0 ... line.Runs.Count {
@@ -289,13 +287,17 @@ internal partial class VulkanSceneCompiler {
     shapePaintClip bool,
     shapePaintParentChainId int32,
     contentPathClipChainId int32,
+    shapeGeometry ResolvedShapeGeometry,
     out textComplete bool) {
       textComplete = node.Kind != NodeKind.Text
       if node.Kind == NodeKind.Shape {
-        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, false)
-        PaintShape(node, bounds, opacity, transformIndex, shapePaintClip,
+        let outline = ShapeGeometry.Stroke(node, shapeGeometry)
+        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, shapeGeometry, outline, false)
+        PaintShape(node, bounds, opacity, transformIndex,
+          shapeGeometry,
+          outline, shapePaintClip,
           shapePaintParentChainId)
-        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, true)
+        PaintShapeBoxShadows(node, bounds, opacity, transformIndex, shapeGeometry, outline, true)
         return
       }
       if node.Kind == NodeKind.Image {
@@ -382,6 +384,8 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     opacity float32,
     transformIndex int32,
+    geometry ResolvedShapeGeometry,
+    outline VectorPath,
     shapePaintClip bool,
     shapePaintParentChainId int32) {
       let hasBackgroundImage = node.HasBackgroundImageState
@@ -390,34 +394,15 @@ internal partial class VulkanSceneCompiler {
       let fillVisible = node.BackgroundColor.A > 0.0F
         || node.BackgroundGradient != nil
         || hasBackgroundImage
-      let strokeWidth = node.BorderLeftWidth.Px
-      let strokeVisible = strokeWidth > 0.0F && node.BorderLeftColor.A > 0.0F
+      let strokeVisible = geometry.StrokeVisible
       if bounds.IsEmpty || opacity <= 0.0F || (!fillVisible && !strokeVisible)
         || node.ShapePath.CommandCount == 0 {
           return
         }
       guard let renderer = pathScene else { return }
-      let strokeInset = if node.ShapeStrokeInset { strokeWidth } else { 0.0F }
-      let halfStroke = strokeInset * 0.5F
-      let paddingLeft = resolveEdgePadding(node, YGEdge.Left, bounds.Width)
-      let paddingTop = resolveEdgePadding(node, YGEdge.Top, bounds.Width)
-      let paddingRight = resolveEdgePadding(node, YGEdge.Right, bounds.Width)
-      let paddingBottom = resolveEdgePadding(node, YGEdge.Bottom, bounds.Width)
-      let contentLeft = bounds.X + paddingLeft + halfStroke
-      let contentTop = bounds.Y + paddingTop + halfStroke
-      let contentWidth = bounds.Width - paddingLeft - paddingRight - strokeInset
-      let contentHeight = bounds.Height - paddingTop - paddingBottom - strokeInset
-      if contentWidth <= 0.0F || contentHeight <= 0.0F {
-        return
-      }
-      let mapping = PathGeometry.Map(node.ShapePath, node.ShapeFit,
-        contentLeft, contentTop, contentWidth, contentHeight)
-      if !mapping.Valid {
-        return
-      }
-      let shapePath = PathRoundedCache.Shared.Resolve(node.ShapePath, mapping,
-        node.ShapeCornerRadius)
-      if shapePath.CommandCount == 0 {
+      let mapping = geometry.Mapping
+      let shapePath = geometry.Path
+      if !mapping.Valid || shapePath.CommandCount == 0 {
         return
       }
       if shapePaintClip {
@@ -457,14 +442,11 @@ internal partial class VulkanSceneCompiler {
         }
       }
       if strokeVisible {
-        let outline = strokeCache.Resolve(shapePath, mapping, strokeWidth,
-          node.ShapeStrokeCap, node.ShapeStrokeJoin, float32(node.MiterLimit), node.Dashes)
         if outline.CommandCount != 0 {
           let path = renderer.Emit(outline, FillRule.NonZero)
           if path.Renderable {
             frame.AddAnalyticPathBand(AnalyticPathBandRecord{
-              Bounds: bounds.Inflate(resolveShapeStrokeExtent(strokeWidth, node.ShapeStrokeJoin,
-                float32(node.MiterLimit))),
+              Bounds: bounds.Inflate(geometry.StrokeExtent),
               PathId: path.PathId,
               AtlasId: path.AtlasId,
               AtlasWordOffset: path.BaseWord,
@@ -579,57 +561,46 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     opacity float32,
     transformIndex int32,
+    geometry ResolvedShapeGeometry,
+    outline VectorPath,
     insetOnly bool) {
       let count = boxShadowCount(node.BoxShadows)
       if count == 0 || bounds.IsEmpty || opacity <= 0.0F
         || node.ShapePath.CommandCount == 0 {
           return
         }
+      var first = count - 1
+      while first >= 0 && boxShadowAt(node.BoxShadows, first).Inset != insetOnly {
+        first--
+      }
+      if first < 0 {
+        return
+      }
       guard let renderer = pathScene else {
         return
       }
-      let strokeWidth = node.BorderLeftWidth.Px
-      let strokeInset = if node.ShapeStrokeInset { strokeWidth } else { 0.0F }
-      let halfStroke = strokeInset * 0.5F
-      let paddingLeft = resolveEdgePadding(node, YGEdge.Left, bounds.Width)
-      let paddingTop = resolveEdgePadding(node, YGEdge.Top, bounds.Width)
-      let paddingRight = resolveEdgePadding(node, YGEdge.Right, bounds.Width)
-      let paddingBottom = resolveEdgePadding(node, YGEdge.Bottom, bounds.Width)
-      let contentLeft = bounds.X + paddingLeft + halfStroke
-      let contentTop = bounds.Y + paddingTop + halfStroke
-      let contentWidth = bounds.Width - paddingLeft - paddingRight - strokeInset
-      let contentHeight = bounds.Height - paddingTop - paddingBottom - strokeInset
-      if contentWidth <= 0.0F || contentHeight <= 0.0F {
-        return
-      }
-      let mapping = PathGeometry.Map(node.ShapePath, node.ShapeFit,
-        contentLeft, contentTop, contentWidth, contentHeight)
-      if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
-        return
-      }
-      let shapePath = PathRoundedCache.Shared.Resolve(node.ShapePath, mapping,
-        node.ShapeCornerRadius)
-      if shapePath.CommandCount == 0 {
+      let mapping = geometry.Mapping
+      let shapePath = geometry.Path
+      if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F
+        || shapePath.CommandCount == 0 {
         return
       }
       let fillVisible = (node.BackgroundColor.A > 0.0F
           || node.BackgroundGradient != nil
           || node.HasBackgroundImageState)
         && PathGeometry.For(shapePath).HasFillContour
-      let strokeVisible = strokeWidth > 0.0F && node.BorderLeftColor.A > 0.0F
+      let strokeVisible = geometry.StrokeVisible
       var fillPath VulkanPathRenderable{}
       if fillVisible {
         fillPath = renderer.Emit(shapePath, node.ShapeFillRule)
       }
       var strokePath VulkanPathRenderable{}
       if strokeVisible {
-        let outline = strokeCache.Resolve(shapePath, mapping, strokeWidth,
-          node.ShapeStrokeCap, node.ShapeStrokeJoin, float32(node.MiterLimit), node.Dashes)
         if outline.CommandCount != 0 {
           strokePath = renderer.Emit(outline, FillRule.NonZero)
         }
       }
-      var index = count - 1
+      var index = first
       while index >= 0 {
         let shadow = boxShadowAt(node.BoxShadows, index)
         if shadow.Inset != insetOnly {
@@ -942,8 +913,7 @@ internal partial class VulkanSceneCompiler {
       return result
     }
     if node.Kind == NodeKind.Editor {
-      let layout = TextEditorLayouts.For(node, TextLayouts.ContentWidth(node),
-        TextLayouts.ContentHeight(node))
+      let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
       for lineIndex in 0 ... layout.Lines.Count {
         let line = layout.Lines[lineIndex]
         if let baseStyle = line.Paragraph.BaseStyle {
@@ -958,7 +928,7 @@ internal partial class VulkanSceneCompiler {
       }
       return result
     }
-    let layout = TextLayouts.For(node, TextLayouts.ContentWidth(node))
+    let layout = TextLayouts.For(node, BoxGeometry.ContentWidth(node))
     if let rich = layout.Rich {
       for line in rich.Lines {
         if line.PaintPad > result { result = line.PaintPad }

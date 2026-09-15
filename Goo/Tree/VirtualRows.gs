@@ -1,8 +1,8 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Collections.Generic
-import Facebook.Yoga
 
 /// Creates a vertically scrolling virtual list whose retained rows are measured at the available content width.
 /// @param items Immutable row values; replace changed values and rebuild the owning Cell after collection changes.
@@ -69,7 +69,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
 
   internal override func NeedsRefresh(n Node) bool {
     guard let data = metadata else { return false }
-    if data.Width != TextLayouts.ContentWidth(n) || data.Gap != Gap(n) { return true }
+    if data.Width != BoxGeometry.ContentWidth(n) || data.Gap != Gap(n) { return true }
     let target = Window(n, data, float64(n.ScrollY), false)
     if !sameVirtualWindow(window, target) { return true }
     let focused = FocusedIndex(n, data)
@@ -97,7 +97,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         throw InvalidOperationException("VirtualRows supports only Column direction without wrapping")
       }
       if items.Count > 1000000 { throw ArgumentOutOfRangeException("items", "VirtualRows supports at most one million metadata entries") }
-      let width = TextLayouts.ContentWidth(n)
+      let width = BoxGeometry.ContentWidth(n)
       let gap = Gap(n)
       let sameBuilder = Object.Equals(builder, build)
       let old = metadata
@@ -120,7 +120,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
           let anchor = previous.Rows[oldIndex].Key
           let nextIndex = if data.Indices.TryGetValue(anchor, out var found) { found } else { Math.Min(oldIndex, data.Rows.Length - 1) }
           let before = float64(window.OriginY) + previous.Index.Prefix(oldIndex)
-          let after = float64(TextLayouts.ContentTop(n) - n.Rect.Y) + Prefix(data, nextIndex, true)
+          let after = float64(BoxGeometry.ContentTop(n) - n.Rect.Y) + Prefix(data, nextIndex, true)
           scroll = Math.Max(0.0, scroll + after - before)
         }
       }
@@ -169,10 +169,8 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       if unchanged && samePlacement { output.Add(marker) }
       else {
         let child = if unchanged { marker } else { virtualItem(build(row.Item), row.Key) }
-        output.Add(Container{
-          Key: row.Key, Position: PositionType.Absolute,
-          Left: float64(placement.X), Top: float64(placement.Y), Width: float64(placement.W),
-          FlexShrink: 0.0, Children: {child},
+        output.Add(Container() {.Key: row.Key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: float64(placement.W),.FlexShrink: 0.0,
+            child,
         })
       }
     }
@@ -247,9 +245,9 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
   }
 
   private func Window(n Node, data VirtualRowMetadata[T], scroll float64, pending bool) VirtualWindow {
-    let height = TextLayouts.ContentHeight(n)
-    let x = TextLayouts.ContentLeft(n) - n.Rect.X
-    let y = TextLayouts.ContentTop(n) - n.Rect.Y
+    let height = BoxGeometry.ContentHeight(n)
+    let x = BoxGeometry.ContentLeft(n) - n.Rect.X
+    let y = BoxGeometry.ContentTop(n) - n.Rect.Y
     let count = data.Rows.Length
     let start = if count == 0 { 0 } else { Math.Max(0, Find(data, Math.Max(0.0, scroll - float64(y)), pending) - 2) }
     let end = if count == 0 { 0 } else { Math.Min(count, Find(data, Math.Max(0.0, scroll + float64(height) - float64(y)), pending) + 3) }
@@ -261,7 +259,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       ItemH: height, RowGap: data.Gap, Direction: FlexDirection.Column, Wrap: FlexWrap.NoWrap}
   }
 
-  private func Gap(n Node) float32 -> Math.Max(0.0F, virtualGap(n.RowGap, n.Gap, TextLayouts.ContentWidth(n)))
+  private func Gap(n Node) float32 -> Math.Max(0.0F, virtualGap(n.RowGap, n.Gap, BoxGeometry.ContentWidth(n)))
 
   private func NeedsMeasurement(child Node, data VirtualRowMetadata[T], out index int32, out height float32) bool {
     index = -1

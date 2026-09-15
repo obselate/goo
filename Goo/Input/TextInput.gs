@@ -5,19 +5,17 @@ import System.Collections.Generic
 import System.Text
 
 internal partial class TextInput {
-  private var focused Node?
+  private let focus FocusManager
   private var host WindowHost?
   private var nativeTextInputActive bool
-  private var nativeFocusAllowed bool
   private var clipFallback string
-  private var focusControl InputDispatchControl
-  private var focusDispatchGeneration int64
-  private var focusChangeGeneration int64
 
-  internal init() {
+  internal init(focus FocusManager) {
+    this.focus = focus
     clipFallback = ""
-    focusControl = InputDispatchControl()
-    nativeFocusAllowed = true
+    focus.BeforeBlur = beforeBlur
+    focus.AfterFocus = afterFocus
+    focus.Changed = RefreshFocus
   }
 
   internal func Attach(host WindowHost) {
@@ -26,57 +24,46 @@ internal partial class TextInput {
   }
 
   internal func Dispose() {
-    if let current = focused {
-      cancelEntryComposition(current)
-      blurEditor(current)
-      current.Focused = false
-    }
-    focused = nil
     syncNativeTextInput()
     host = nil
     nativeTextInputActive = false
   }
 
-  internal func AfterTreeUpdated(root Node?, resolver Resolver) {
-    guard let tree = root else {
-      SetFocus(resolver, nil)
-      return
-    }
-    if let f = focused {
-      if !containsPath(tree, f) {
-        SetFocus(resolver, nil)
-      }
-    }
-    if focused == nil && nativeFocusAllowed {
-      if let target = findAutoFocus(tree, false, false) {
-        SetFocus(resolver, target)
-      }
-    }
+  internal func RefreshFocus() {
     syncNativeTextInput()
-    if let f = focused {
-      if f.Kind == NodeKind.Entry || f.Kind == NodeKind.Editor {
-        updateTextInputArea(f)
+    if let current = focus.FocusedNode() {
+      if current.Kind == NodeKind.Entry || current.Kind == NodeKind.Editor {
+        updateTextInputArea(current)
       }
     }
   }
 
-  private func findAutoFocus(n Node, hidden bool, disabled bool) Node? {
-    let nowHidden = hidden || n.PaintInputHidden
-    let nowDisabled = disabled || n.Disabled
-    if !nowHidden && !nowDisabled && n.AutoFocus && n.Focusable {
-      return n
-    }
-    for i in 0 ... n.Children.Count {
-      if let found = findAutoFocus(n.Children[i], nowHidden, nowDisabled) {
-        return found
+  private func beforeBlur(n Node) {
+    cancelEntryComposition(n)
+    blurEditor(n)
+  }
+
+  private func afterFocus(n Node) {
+    if n.Kind == NodeKind.Entry {
+      n.PreFocus = n.Buffer
+      n.Caret = n.Buffer.Length
+      n.Anchor = n.Caret
+      n.CaretAffinity = TextAffinity.Upstream
+      n.AnchorAffinity = TextAffinity.Upstream
+      n.BlinkT = 0.0
+      FollowCaret(n)
+    } else if n.Kind == NodeKind.Editor {
+      if let controller = n.EditorController {
+        n.BlinkT = 0.0
+        controller.Focus()
+        TextEditorLayouts.FollowCaret(n, controller.Selection.Active)
       }
     }
-    return nil
   }
 
   // Reports caret visibility flips so the render gate repaints on blink edges.
   internal func Step(dt float64) bool {
-    guard let f = focused else {
+    guard let f = focus.FocusedNode() else {
       return false
     }
     if (f.Kind != NodeKind.Entry && f.Kind != NodeKind.Editor) || !canReceiveInput(f) {
@@ -89,7 +76,7 @@ internal partial class TextInput {
   }
 
   internal func BlinkDeadlineSeconds() float64 {
-    guard let f = focused else {
+    guard let f = focus.FocusedNode() else {
       return Double.PositiveInfinity
     }
     if (f.Kind != NodeKind.Entry && f.Kind != NodeKind.Editor) || !canReceiveInput(f) {
@@ -101,11 +88,6 @@ internal partial class TextInput {
 
   internal func SetClipboardFallback(value string) {
     clipFallback = value
-  }
-
-  internal func SetNativeFocus(value bool) {
-    nativeFocusAllowed = value
-    syncNativeTextInput()
   }
 
   internal func AccessibilitySetValue(root Node?, target Node, value string) bool {
@@ -153,89 +135,8 @@ internal partial class TextInput {
     return false
   }
 
-  internal func FocusedNode() Node ? -> focused
-
-  internal func FocusGeneration() int64 -> focusChangeGeneration
-
   internal func RefreshInputArea(n Node) {
-    if focused == n { updateTextInputArea(n) }
-  }
-
-  internal func SetFocus(resolver Resolver, target Node?) {
-    var nextTarget = target
-    if let requested = nextTarget {
-      if !canReceiveInput(requested) {
-        nextTarget = nil
-      }
-    }
-    let previous = focused
-    if nextTarget == previous {
-      return
-    }
-    focusChangeGeneration++
-    let changeGeneration = focusChangeGeneration
-    focused = nextTarget
-    if nextTarget != nil { nativeFocusAllowed = true }
-    if let old = previous {
-      cancelEntryComposition(old)
-      blurEditor(old)
-      old.Focused = false
-      resolver.Invalidate(old, false)
-    }
-    if let next = nextTarget {
-      next.Focused = true
-      resolver.Invalidate(next, false)
-      if next.Kind == NodeKind.Entry {
-        next.PreFocus = next.Buffer
-        next.Caret = next.Buffer.Length
-        next.Anchor = next.Caret
-        next.CaretAffinity = TextAffinity.Upstream
-        next.AnchorAffinity = TextAffinity.Upstream
-        next.BlinkT = 0.0
-        FollowCaret(next)
-      } else if next.Kind == NodeKind.Editor {
-        if let controller = next.EditorController {
-          next.BlinkT = 0.0
-          controller.Focus()
-          TextEditorLayouts.FollowCaret(next, controller.Selection.Active)
-        }
-      }
-    }
-    syncNativeTextInput()
-    if let next = nextTarget {
-      if next.Kind == NodeKind.Entry || next.Kind == NodeKind.Editor {
-        updateTextInputArea(next)
-      }
-    }
-    if let old = previous {
-      dispatchFocus(old, false)
-      if focusChangeGeneration != changeGeneration {
-        return
-      }
-    }
-    if let next = nextTarget {
-      dispatchFocus(next, true)
-    }
-  }
-
-  private func dispatchFocus(target Node, received bool) {
-    focusDispatchGeneration++
-    let generation = focusDispatchGeneration
-    focusControl.Begin(generation)
-    try {
-      var current Node? = target
-      while current != nil {
-        let node = current
-        let callback = received ? InputCallbacks.Focus(node) : InputCallbacks.Blur(node)
-        if let handler = callback {
-          handler(FocusEvent{ Control: focusControl, Generation: generation })
-          rebuildFiberOwner(node)
-        }
-        if focusControl.PropagationStopped { break }
-        current = node.Parent
-      }
-    } finally {
-      focusControl.Finish(generation)
+    if focus.FocusedNode() == n { updateTextInputArea(n)
     }
   }
 
@@ -245,23 +146,17 @@ internal partial class TextInput {
       FinishComposition(root)
     }
     let shift = modifiers.Shift
-    guard let n = focused else {
-      if key == Key.Tab {
-        focusStep(root, resolver, shift ? -1 : 1)
-        return true
-      }
+    guard let n = focus.FocusedNode() else {
       return false
     }
     if n.Kind == NodeKind.Editor && canReceiveInput(n) {
       if key == Key.Tab && n.EditorReadOnly {
-        focusStep(root, resolver, shift ? -1 : 1)
-        return true
+        return false
       }
       return handleEditorKey(n, key, modifiers)
     }
     if key == Key.Tab {
-      focusStep(root, resolver, shift ? -1 : 1)
-      return true
+      return false
     }
     if n.Kind != NodeKind.Entry || !canReceiveInput(n) {
       return false
@@ -293,7 +188,7 @@ internal partial class TextInput {
     } else if key == Key.Enter || key == Key.KeypadEnter {
       if let h = n.OnSubmit {
         h(n.Buffer)
-        invalidateOwner(root, n)
+        CellOwnership.Within(root, n)?.Rebuild()
       }
     } else if key == Key.Escape {
       if n.Buffer != n.PreFocus {
@@ -304,10 +199,10 @@ internal partial class TextInput {
         n.AnchorAffinity = TextAffinity.Upstream
         if let h = n.OnChange {
           h(n.Buffer)
-          invalidateOwner(root, n)
+          CellOwnership.Within(root, n)?.Rebuild()
         }
       }
-      SetFocus(resolver, nil)
+      focus.SetFocus(resolver, nil)
     } else if primary && key == Key.A {
       commitEdit(root, n, s, e.SelectAll(s))
     } else if primary && key == Key.C {
@@ -328,7 +223,7 @@ internal partial class TextInput {
   }
 
   internal func HandleChar(root Node?, value string) bool {
-    guard let n = focused else {
+    guard let n = focus.FocusedNode() else {
       return false
     }
     if n.Kind == NodeKind.Editor && canReceiveInput(n) {
@@ -368,7 +263,7 @@ internal partial class TextInput {
 
   internal func HandleComposition(root Node?, value string, selectionStart int32,
     selectionLength int32) bool{
-      guard let n = focused else { return false }
+      guard let n = focus.FocusedNode() else { return false }
       if !canReceiveInput(n) { return false }
       let composition = normalizeComposition(value, selectionStart, selectionLength)
       var updated = false
@@ -390,7 +285,7 @@ internal partial class TextInput {
 
   internal func HandleCompositionCandidates(candidates IReadOnlyList[string]?, selected int32,
     horizontal bool) {
-      guard let n = focused else {
+      guard let n = focus.FocusedNode() else {
         return
       }
       if !canReceiveInput(n) {
@@ -401,12 +296,12 @@ internal partial class TextInput {
       if let callback = TextInputCallbacks.TextCandidates(n) {
         callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
           Horizontal: horizontal })
-        rebuildFiberOwner(n)
+      CellOwnership.Nearest(n)?.Rebuild()
       }
     }
 
   internal func HandleCompositionCancel(root Node?) bool {
-    guard let n = focused else { return false }
+    guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
     var canceled = false
     if n.Kind == NodeKind.Editor {
@@ -424,21 +319,21 @@ internal partial class TextInput {
   private func dispatchTextInput(n Node, value string) {
     if let callback = TextInputCallbacks.TextInput(n) {
       callback(value)
-      rebuildFiberOwner(n)
+      CellOwnership.Nearest(n)?.Rebuild()
     }
   }
 
   private func dispatchTextComposition(n Node, value TextCompositionEvent) {
     if let callback = TextInputCallbacks.TextComposition(n) {
       callback(value)
-      rebuildFiberOwner(n)
+      CellOwnership.Nearest(n)?.Rebuild()
     }
   }
 
   private func dispatchTextCompositionCancel(n Node) {
     if let callback = TextInputCallbacks.TextCompositionCancel(n) {
       callback()
-      rebuildFiberOwner(n)
+      CellOwnership.Nearest(n)?.Rebuild()
     }
   }
 
@@ -479,8 +374,8 @@ internal partial class TextInput {
     && Char.IsHighSurrogate(value[offset - 1]) && Char.IsLowSurrogate(value[offset])
 
   private func syncNativeTextInput() {
-    let desired = if let current = focused {
-      nativeFocusAllowed && canReceiveInput(current) && (current.Kind == NodeKind.Entry || current.Kind == NodeKind.Editor
+    let desired = if let current = focus.FocusedNode() {
+      focus.NativeFocusAllowed && canReceiveInput(current) && (current.Kind == NodeKind.Entry || current.Kind == NodeKind.Editor
           || TextInputCallbacks.HasNodeCallbacks(current))
     } else { false }
     if desired == nativeTextInputActive {
@@ -495,31 +390,6 @@ internal partial class TextInput {
       native.StopTextInput()
       nativeTextInputActive = false
     }
-  }
-
-  private func focusStep(root Node?, resolver Resolver, dir int32) {
-    guard let tree = root else {
-      return
-    }
-    let order = List[Node]()
-    collectFocusables(tree, order, false, false)
-    if order.Count == 0 {
-      return
-    }
-    var idx = -1
-    for i in 0 ... order.Count {
-      if let f = focused {
-        if order[i] == f {
-          idx = i
-          break
-        }
-      }
-    }
-    var next = dir > 0 ? 0 : order.Count - 1
-    if idx != -1 {
-      next = ((idx + dir) % order.Count + order.Count) % order.Count
-    }
-    SetFocus(resolver, order[next])
   }
 
   private func commitEdit(root Node?, n Node, before EditState, after EditState) {
@@ -546,7 +416,7 @@ internal partial class TextInput {
     if after.Text != before.Text {
       if let h = n.OnChange {
         h(after.Text)
-        invalidateOwner(root, n)
+        CellOwnership.Within(root, n)?.Rebuild()
       }
     }
     FollowCaret(n)
@@ -581,26 +451,6 @@ internal partial class TextInput {
     updateTextInputArea(n)
   }
 
-  private func invalidateOwner(root Node?, target Node) {
-    guard let tree = root else {
-      return
-    }
-    if let c = findOwner(tree, target, nil) {
-      c.Rebuild()
-    }
-  }
-
-  private func collectFocusables(n Node, sink List[Node], hidden bool, disabled bool) {
-    let nowHidden = hidden || n.PaintInputHidden
-    let nowDisabled = disabled || n.Disabled
-    if !nowHidden && !nowDisabled && n.Focusable && n.TabStop {
-      sink.Add(n)
-    }
-    for i in 0 ... n.Children.Count {
-      collectFocusables(n.Children[i], sink, nowHidden, nowDisabled)
-    }
-  }
-
   private func editState(n Node) EditState -> EditState { Text: n.Buffer, Caret: n.Caret, Anchor: n.Anchor }
 
   private func clipboardGet() string -> if let native = host { native.GetClipboardText() } else { clipFallback }
@@ -626,8 +476,8 @@ internal partial class TextInput {
       let shaped = metrics.BufferShape(n)
       let caretX = metrics.EntryOriginX(n, shaped)
       +metrics.CaretX(n, n.Caret)
-      let topY = TextLayouts.ContentTop(n)
-      let bottomY = topY + TextLayouts.ContentHeight(n)
+      let topY = BoxGeometry.ContentTop(n)
+      let bottomY = topY + BoxGeometry.ContentHeight(n)
       let p0 = TransformGeometry.NodeToWindow(n, caretX, topY)
       let p1 = TransformGeometry.NodeToWindow(n, caretX + 1.5F, topY)
       let p2 = TransformGeometry.NodeToWindow(n, caretX, bottomY)
@@ -746,16 +596,5 @@ internal partial class TextInput {
       updateTextInputArea(n)
     }
     return handled
-  }
-}
-
-internal func rebuildFiberOwner(node Node) {
-  var current Node? = node
-  while current != nil {
-    if let owner = current.Fiber {
-      owner.Rebuild()
-      return
-    }
-    current = current.Parent
   }
 }

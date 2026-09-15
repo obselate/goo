@@ -21,6 +21,7 @@
 !/.github/patches/accesskit/**
 !/.github/scripts/build-accesskit-linux-x64.sh
 !/.github/scripts/validate-accessibility-package.py
+!/.github/scripts/bootstrap-gsharp.py
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/build-text-native-linux-x64.sh
@@ -58,11 +59,10 @@
 !/apps/Goo.Gallery/**
 !/apps/Goo.DevTools/
 !/apps/Goo.DevTools/**
-!/apps/Goo.Workbench/
-!/apps/Goo.Workbench/**
 
 !/docs/
 /docs/*
+!/docs/native-authoring.md
 !/docs/nuget-readme.md
 !/docs/android.md
 !/docs/images.md
@@ -98,6 +98,8 @@
 !/tools/Goo.SvgCompiler/**
 !/tools/Goo.DevTools.Cli/
 !/tools/Goo.DevTools.Cli/**
+!/tools/Goo.Formatting/
+!/tools/Goo.Formatting/**
 !/tools/Goo.Gslint/
 !/tools/Goo.Gslint/**
 

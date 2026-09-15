@@ -1,7 +1,7 @@
 package GooAsyncReadbackSmoke
 
-import System
 import Goo
+import System
 
 data struct PerformanceImageEffectsCardInput {
   internal var Seed uint64
@@ -158,35 +158,19 @@ open class PerformanceImageEffectsCard : Cell[PerformanceImageEffectsCardInput] 
         input.Seed, input.Index, input.Revision),
       BlendMode: input.Blend,
     }
-    return Container{
-      Position: PositionType.Absolute,
-      Left: float64(input.Column) * 120.0,
-      Top: float64(input.Row) * 67.5,
-      Width: 120.0,
-      Height: 67.5,
-      BorderRadius: input.Radius,
-      Overflow: if PerformanceImageEffectsRoundedClip(input.Seed, input.Index) {
+    return Container() {.Position: PositionType.Absolute,.Left: float64(input.Column) * 120.0,.Top: float64(input.Row) * 67.5,.Width: 120.0,.Height: 67.5,.BorderRadius: input.Radius,.Overflow: if PerformanceImageEffectsRoundedClip(input.Seed, input.Index) {
         Overflow.Hidden
       } else {
         Overflow.Visible
-      },
-
-      BorderStyle: BorderStyle.Solid,
-      BorderWidth: input.BorderWidth,
-      BorderColor: borderColor,
-      BoxShadow: BoxShadow{
+      },.BorderStyle: BorderStyle.Solid,.BorderWidth: input.BorderWidth,.BorderColor: borderColor,.BoxShadow: BoxShadow{
         OffsetX: 2.0,
         OffsetY: 3.0,
         Blur: input.ShadowBlur,
         Spread: input.ShadowSpread,
         Color: shadowColor,
-      },
-      Opacity: 1.0,
-      BlendMode: BlendMode.Normal,
-      BackgroundGradient: PerformanceImageEffectsGradient(
+      },.Opacity: 1.0,.BlendMode: BlendMode.Normal,.BackgroundGradient: PerformanceImageEffectsGradient(
         input.Seed, input.Index, input.Revision),
-      Children: {
-        Image{
+      Image{
           Width: Length.Percent(100),
           Height: Length.Percent(100),
           Source: input.Provider,
@@ -194,7 +178,6 @@ open class PerformanceImageEffectsCard : Cell[PerformanceImageEffectsCardInput] 
           Opacity: input.Opacity,
         },
         overlay,
-      },
     }
   }
 }
@@ -395,14 +378,7 @@ class PerformanceImageEffectsRoot : Cell {
   }
 
   override func Build() Blob {
-    let canvas = Container{
-      Key: "perf-image-effects-canvas",
-      Position: PositionType.Absolute,
-      Left: 0.0,
-      Top: 0.0,
-      Width: PerformanceImageEffectsWidth,
-      Height: PerformanceImageEffectsHeight,
-      Children: {},
+    let canvas = Container() {.Key: "perf-image-effects-canvas",.Position: PositionType.Absolute,.Left: 0.0,.Top: 0.0,.Width: PerformanceImageEffectsWidth,.Height: PerformanceImageEffectsHeight,
     }
     var index int32 = 0
     while index < PerformanceImageEffectsCards {
@@ -429,13 +405,8 @@ class PerformanceImageEffectsRoot : Cell {
         }))
       index = index + 1
     }
-    return Container{
-      Width: PerformanceImageEffectsWidth,
-      Height: PerformanceImageEffectsHeight,
-      Position: PositionType.Relative,
-      Overflow: Overflow.Hidden,
-      BackgroundColor: Color.Rgb(8, 13, 22),
-      Children: { canvas },
+    return Container() {.Width: PerformanceImageEffectsWidth,.Height: PerformanceImageEffectsHeight,.Position: PositionType.Relative,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(8, 13, 22),
+      canvas,
     }
   }
 }

@@ -222,10 +222,10 @@ internal sealed class VirtualStorage[T] : VirtualStorage {
       return VirtualWindow{ Direction: n.FlexDirection, Wrap: n.FlexWrap }
     }
 
-    let viewportW = TextLayouts.ContentWidth(n)
-    let viewportH = TextLayouts.ContentHeight(n)
-    let originX = TextLayouts.ContentLeft(n) - n.Rect.X
-    let originY = TextLayouts.ContentTop(n) - n.Rect.Y
+    let viewportW = BoxGeometry.ContentWidth(n)
+    let viewportH = BoxGeometry.ContentHeight(n)
+    let originX = BoxGeometry.ContentLeft(n) - n.Rect.X
+    let originY = BoxGeometry.ContentTop(n) - n.Rect.Y
     let rowGap = virtualGap(n.RowGap, n.Gap, viewportW)
     let columnGap = virtualGap(n.ColumnGap, n.Gap, viewportW)
     let rowFlow = n.FlexDirection == FlexDirection.Row
@@ -412,15 +412,8 @@ internal sealed class VirtualNodeState {
   }
 }
 
-internal func virtualWrapper(key string, child Blob, placement VirtualPlacement) Blob -> Container {
-  Key: key,
-  Position: PositionType.Absolute,
-  Left: float64(placement.X),
-  Top: float64(placement.Y),
-  Width: float64(placement.W),
-  Height: float64(placement.H),
-  FlexShrink: 0.0,
-  Children: { child },
+internal func virtualWrapper(key string, child Blob, placement VirtualPlacement) Blob -> Container() {.Key: key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: float64(placement.W),.Height: float64(placement.H),.FlexShrink: 0.0,
+  child,
 }
 
 internal func virtualPlacement(window VirtualWindow, index int32) VirtualPlacement {

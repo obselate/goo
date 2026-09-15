@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 class TextTransportCell : Cell {
   shared {
@@ -20,11 +20,8 @@ class TextTransportCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container {
-    Width: 96,
-    Height: 64,
-    Children: {
-      Text{
+  override func Build() Blob -> Container() {.Width: 96,.Height: 64,
+    Text{
         Content: Mutated ? "BCDA" : "ABCD",
         Position: PositionType.Absolute,
         Left: 8,
@@ -58,7 +55,6 @@ class TextTransportCell : Cell {
         Height: 20,
         FontSize: 16,
         Color: Color.Rgb(220, 220, 220),
-      },
     },
   }
 }

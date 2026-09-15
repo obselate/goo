@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 class ImageStagingProvider : ImageSourceProvider {
   private var source ImageSource
@@ -55,17 +55,12 @@ class ImageStagingCell : Cell {
     provider = sourceProvider
   }
 
-  override func Build() Blob -> Container {
-    Width: 96,
-    Height: 96,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Image{
+  override func Build() Blob -> Container() {.Width: 96,.Height: 96,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Image{
         Width: 96,
         Height: 96,
         Source: provider,
         Fit: ImageFit.Fill,
-      },
     },
   }
 }

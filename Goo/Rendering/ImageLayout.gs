@@ -1,8 +1,8 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Runtime.CompilerServices
-import Facebook.Yoga
 
 internal open class ImageSourceBinding {
   internal var Source ImageSourceProvider?
@@ -19,12 +19,18 @@ internal open class ImageSourceBinding {
     sourceChangedHandler = callback
   }
 
-  internal func BindSource(source ImageSourceProvider) {
+  internal func BindSource(source ImageSourceProvider, owner Window?) {
+    ownerThreadId = Environment.CurrentManagedThreadId
+    ownerPost = nil
+    if let window = owner {
+      ownerPost = (action Action) -> {
+        window.Post(action)
+      }
+    }
     BindSource(source, 0uL)
   }
 
   private func BindSource(source ImageSourceProvider, minimumVersion uint64) {
-    captureOwner()
     var lease ImageSourceLease?
     var acceptedVersion uint64
     var observedVersion uint64
@@ -99,16 +105,7 @@ internal open class ImageSourceBinding {
     sourceChangedRegistration = registration
     try {
       source.ContentChanged += registration
-    } catch (error Exception) {
-    }
-  }
-
-  private func captureOwner() {
-    if ownerThreadId != 0 { return }
-    ownerThreadId = Environment.CurrentManagedThreadId
-    if let owner = ElementHandles.CurrentOwner() {
-      ownerPost = (action Action) -> { owner.Post(action) }
-    }
+    } catch (error Exception) { }
   }
 
   private func dispatchToOwner(action Action) {
@@ -207,7 +204,8 @@ internal class ImageLayouts {
     }
 
     internal func ApplySource(n Node, source ImageSourceProvider, fit ImageFit,
-      completed((Node, object) -> void)?) {
+      completed((Node, object) -> void)?,
+      owner Window?) {
         n.ImageFit = fit
         let prior = sourceState(n)
         if prior?.Source == source {
@@ -224,7 +222,7 @@ internal class ImageLayouts {
         value.SetSourceChanged(() -> {
           ImageLayouts.refreshSource(n, value, completed)
         })
-        value.BindSource(source)
+        value.BindSource(source, owner)
         if sourceValues == nil { sourceValues = ConditionalWeakTable[Node, ImageSourceBinding]() }
         sourceValues?.Add(n, value)
         n.HasDirectImageSourceState = true

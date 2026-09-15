@@ -54,7 +54,8 @@ internal partial class PointerInput {
 
   private func scrollThumbAvailable(n Node) bool {
     if n.ScrollbarVisibility == ScrollbarVisibility.Hidden { return false }
-    if n.Kind == NodeKind.Editor { TextEditorLayouts.SyncScroll(n) }
+    if n.Kind == NodeKind.Editor {
+      ScrollState.SyncEditor(n) }
     var geometry ScrollThumbGeometry
     return verticalScrollThumb(n, out geometry)
       || horizontalScrollThumb(n, out geometry)
@@ -68,7 +69,8 @@ internal partial class PointerInput {
       for var i = scratchChain.Count; i > 0; i-- {
         let n = scratchChain[i - 1]
         if scrollbarAlpha(n) <= 0.0F { continue }
-        if n.Kind == NodeKind.Editor { TextEditorLayouts.SyncScroll(n) }
+        if n.Kind == NodeKind.Editor {
+          ScrollState.SyncEditor(n) }
         let point = TransformGeometry.WindowToNode(n, x, y)
         if !point.Valid { continue }
         var geometry ScrollThumbGeometry
@@ -97,9 +99,8 @@ internal partial class PointerInput {
       current.DragEditor = nil
       current.DragEditorStarted = false
       PointerScrollStates.Begin(current, n, vertical, grabOffset)
-      n.ScrollIdle = 0.0F
-      n.ScrollBarAlpha = 1.0F
-    }
+    ScrollState.Touch(n)
+  }
 
   private func updateScrollDrag(root Node?, x float32, y float32) bool {
     guard let tree = root else {
@@ -137,7 +138,7 @@ internal partial class PointerInput {
     let offset = scrollOffsetFromThumb(geometry, pointer, state.GrabOffset)
     let nextX = state.Vertical ? n.ScrollX : offset
     let nextY = state.Vertical ? offset : n.ScrollY
-    let changed = setImmediateScroll(n, nextX, nextY)
+    let changed = ScrollState.To(n, nextX, nextY, true)
     if changed { PointerScrollStates.MarkDirty(this) }
     return true
   }

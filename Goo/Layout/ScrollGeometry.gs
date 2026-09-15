@@ -117,29 +117,6 @@ internal func scrollThumbContains(n Node, geometry ScrollThumbGeometry,
     return x >= bounds.X && x < bounds.X + bounds.W && y >= top && y < bottom
   }
 
-internal func setImmediateScroll(n Node, x float32, y float32) bool {
-  if n.Kind == NodeKind.Editor { TextEditorLayouts.SyncScroll(n) }
-  let nextX = clampOffset(x, maxScrollX(n))
-  let nextY = clampOffset(y, maxScrollY(n))
-  let changed = n.ScrollX != nextX || n.ScrollY != nextY
-    || n.ScrollTargetX != nextX || n.ScrollTargetY != nextY
-  if n.Kind == NodeKind.Editor {
-    if let state = n.EditorState {
-      state.Controller.ScrollTo(float64(nextX), float64(nextY))
-    }
-  }
-  n.ScrollTargetX = nextX
-  n.ScrollTargetY = nextY
-  n.ScrollX = nextX
-  n.ScrollY = nextY
-  n.ScrollIdle = 0.0F
-  n.ScrollBarAlpha = 1.0F
-  if n.PinToBottom {
-    n.UserScrolled = nextY < maxScrollY(n) - 0.5F
-  }
-  return changed
-}
-
 internal func scrollOffsetFromThumb(geometry ScrollThumbGeometry, pointer float32,
   grabOffset float32) float32{
     let travel = geometry.TrackLength - geometry.ThumbLength

@@ -5,4 +5,5 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <Import Project="../Goo.Formatting/SourceFormatting.props" />
 </Project>

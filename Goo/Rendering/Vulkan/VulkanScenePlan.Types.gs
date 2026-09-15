@@ -194,7 +194,6 @@ internal enum SceneDrawKind {
   RectClipEnd;
   Shadow;
   Underline;
-  Lava;
   LayerBegin = 15;
   LayerEnd;
 }
@@ -460,19 +459,6 @@ internal struct UnderlineRecord {
   internal var Thickness float32
   internal var Color uint32
   internal var Mode uint32
-  internal var TransformIndex int32
-}
-
-internal struct LavaRecord {
-  internal var Bounds ConservativeBounds
-  internal var Flow float32
-  internal var Form float32
-  internal var Blend float32
-  internal var Light float32
-  internal var Hue float32
-  internal var Rainbow uint32
-  internal var Rotation Point
-  internal var Seed uint32
   internal var TransformIndex int32
 }
 

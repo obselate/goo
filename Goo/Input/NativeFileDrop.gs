@@ -175,7 +175,7 @@ internal class NativeDropRouter {
     Rebuild(root, target)
   }
   private func Rebuild(root Node, target Node) {
-    if let owner = findOwner(root, target, nil) { owner.Rebuild() }
+    CellOwnership.Within(root, target)?.Rebuild()
     invalidate()
   }
 }

@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
-import Goo
 
 func PerformanceLatencyWriteStats(prefix string, values []int64, count int32) {
   Console.WriteLine(prefix + ":"

@@ -29,6 +29,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Build pinned upstream G# authoring tools
+        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+
       - name: Validate onboarding and release metadata
         run: .github/scripts/validate-onboarding.py
 
@@ -45,7 +48,10 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            Goo apps templates tests plugins/goo/reference/templates
+            --severity GL0001=none Goo tests
+          dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
+            --strict --severity GL0005=none --severity GL0006=none \
+            apps templates plugins/goo/reference/templates
 
       - name: Build Goo with warnings as errors
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
@@ -87,6 +93,9 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Build pinned upstream G# authoring tools
+        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
 
       - name: Install native build tools
         run: brew install cmake meson ninja
@@ -238,6 +247,9 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Build pinned upstream G# authoring tools
+        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
 
       - name: Install Linux build and Wayland dependencies
         run: |
@@ -697,6 +709,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Build pinned upstream G# authoring tools
+        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+
       - name: Validate release tag
         shell: bash
         run: |
@@ -811,6 +826,9 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Build pinned upstream G# authoring tools
+        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

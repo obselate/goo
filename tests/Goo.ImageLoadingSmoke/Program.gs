@@ -1,9 +1,9 @@
 package GooImageLoadingSmoke
 
+import Goo
 import System
 import System.IO
 import System.Threading
-import Goo
 
 let path = Path.Combine(AppContext.BaseDirectory, "Assets", "local-rgba.png")
 using let cache = ImageSourceCache()

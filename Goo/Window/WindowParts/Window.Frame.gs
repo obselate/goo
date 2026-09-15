@@ -141,6 +141,7 @@ public partial class Window {
       dirty = true
     }
     guard let cell = Root else {
+      input.AfterTreeUpdated(nil, resolver, true)
       family?.NativeDrop?.Validate()
       stopImageCompletions()
       if let semantics = accessibility {
@@ -156,9 +157,9 @@ public partial class Window {
       dirty = false
       let reconcileProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       beginCellTransaction()
-      ElementHandles.PushOwner(this)
       let paintResourceInvalidated = Interlocked.Exchange(&pendingPaintResourceInvalidation, 0) != 0
       let rec = Reconciler{
+        Owner: this,
         CellInvalidated: cellHook,
         ImageCompleted: imageCompletionHook,
         RetainedInvalidated: retainedInvalidationHook,
@@ -187,7 +188,6 @@ public partial class Window {
             rec.DiscardStyles()
           }
         } finally {
-          ElementHandles.PopOwner()
           endCellTransaction()
         }
       }
@@ -337,9 +337,6 @@ public partial class Window {
           enqueueRetainedInvalidation(ReconcileEffects.Layout)
           break
         }
-      }
-      if ShaderEffectStyles.TreeHasPlaying(n) {
-        changed = true
       }
     }
     if hasEffect(effects, ReconcileEffects.Paint) {
@@ -503,15 +500,7 @@ public partial class Window {
   private func stepScroll(scrollers List[Node], k float32) bool {
     var moved = false
     for i in 0 ... scrollers.Count {
-      let n = scrollers[i]
-      let nx = approach(n.ScrollX, n.ScrollTargetX, k)
-      let ny = approach(n.ScrollY, n.ScrollTargetY, k)
-      if nx != n.ScrollX {
-        n.ScrollX = nx
-        moved = true
-      }
-      if ny != n.ScrollY {
-        n.ScrollY = ny
+      if ScrollState.Step(scrollers[i], k) {
         moved = true
       }
     }
@@ -531,8 +520,8 @@ public partial class Window {
     }
     if !needed { return ReconcileEffects.None }
 
-    ElementHandles.PushOwner(this)
     let rec = Reconciler{
+      Owner: this,
       CellInvalidated: cellHook,
       ImageCompleted: imageCompletionHook,
       RetainedInvalidated: retainedInvalidationHook,
@@ -550,40 +539,18 @@ public partial class Window {
       stylesFlushed = true
       return rec.Effects
     } finally {
-      try {
-        if !stylesFlushed {
+      if !stylesFlushed {
           pendingReconcileEffects = combineEffects(pendingReconcileEffects, rec.Effects)
           rec.DiscardStyles()
         }
-      } finally {
-        ElementHandles.PopOwner()
       }
-    }
-  }
-
-  private func approach(v float32, target float32, k float32) float32 {
-    if v == target {
-      return v
-    }
-    let next = v + (target - v) * k
-    return MathF.Abs(target - next) < 0.5F ? target : next
   }
 
   private func fadeScrollBars(scrollers List[Node], dt float32) bool {
     var changed = false
     for i in 0 ... scrollers.Count {
-      let n = scrollers[i]
-      if n.ScrollbarVisibility != ScrollbarVisibility.Auto { continue }
-      if n.ScrollBarAlpha > 0.0F {
-        n.ScrollIdle = n.ScrollIdle + dt
-      }
-      if n.ScrollIdle > 1.0F && n.ScrollBarAlpha > 0.0F {
-        let a = n.ScrollBarAlpha - dt * 4.0F
-        let next = a < 0.0F ? 0.0F : a
-        if next != n.ScrollBarAlpha {
-          n.ScrollBarAlpha = next
-          changed = true
-        }
+      if ScrollState.Fade(scrollers[i], dt) {
+        changed = true
       }
     }
     return changed

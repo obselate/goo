@@ -1,8 +1,8 @@
 package Goo
 
+import Hexa.NET.SDL3
 import System
 import System.Threading
-import Hexa.NET.SDL3
 
 internal unsafe class WindowSizeConstraintsSmoke {
   shared {

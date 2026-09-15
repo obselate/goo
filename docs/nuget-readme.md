@@ -39,37 +39,33 @@ package CounterApp
 import Goo
 
 class Counter : Cell {
-  private var count int32
+    private var count int32
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Padding: 24,
-    Gap: 12,
-    BorderRadius: 16,
-    BackgroundColor: Color.Rgb(24, 31, 43),
-    Children: {
-      Text{
-        Content: "Count: " + count.ToString(),
-        FontSize: 24,
-        Color: Color.Rgb(244, 247, 255),
-      },
-      Button{
-        Padding: 10,
-        BorderRadius: 10,
-        BackgroundColor: Color.Rgb(74, 125, 255),
-        OnClick: () -> { count++ },
+    override func Build() Blob -> Container{
+        Width: Length.Percent(100),
+        Height: Length.Percent(100),
+        Padding: 24,
+        Gap: 12,
+        BorderRadius: 16,
+        BackgroundColor: Color.Rgb(24, 31, 43),
         Children: {
-          Text{ Content: "Add one", Color: Color.White },
+            Text{Content: "Count: " + count.ToString(), FontSize: 24, Color: Color.Rgb(244, 247, 255),},
+            Button{
+                Padding: 10,
+                BorderRadius: 10,
+                BackgroundColor: Color.Rgb(74, 125, 255),
+                OnClick: () -> {
+                    count++
+                },
+                Children: {Text{Content: "Add one", Color: Color.White},},
+            },
         },
-      },
-    },
-  }
+    }
 }
 
 func Main() {
-  Window.ConfigureApplication("Counter", "1.0.0", "com.example.counter")
-  Window{ Title: "Counter", Width: 320, Height: 180, Root: Counter{} }.Run()
+    Window.ConfigureApplication("Counter", "1.0.0", "com.example.counter")
+    Window{Title: "Counter", Width: 320, Height: 180, Root: Counter{}}.Run()
 }
 ```
 

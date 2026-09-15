@@ -450,18 +450,14 @@ public partial class Window {
 internal class AccessibilityFixtureCell : Cell {
   internal var Actions int32
 
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Text{ Content: "plain" },
-    Button{ Children: { Text{ Content: "Save" } } },
+    Button() { Text{ Content: "Save"} },
     TextEntry{ Value: "edit" },
     Image{},
     Image{ Accessibility: Accessibility{ Role: AccessibilityRole.None } },
-    Container{ Accessibility: Accessibility{ Role: AccessibilityRole.None }, Children: {
-      Text{ Content: "kept" },
-    } },
-    Container{ Accessibility: Accessibility{ Hidden: true }, Children: {
-      Text{ Content: "hidden" },
-    } },
+    Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.None }, Text{ Content: "kept" }},
+    Container() {.Accessibility: Accessibility{ Hidden: true }, Text{ Content: "hidden"} },
     Container{ Accessibility: Accessibility{
       Role: AccessibilityRole.Generic,
       Actions: []AccessibilityAction{ AccessibilityAction.Increment, AccessibilityAction.Scroll },
@@ -469,8 +465,8 @@ internal class AccessibilityFixtureCell : Cell {
         Actions++
         return request.Action == AccessibilityAction.Increment || request.Action == AccessibilityAction.Scroll
       },
-    } },
-  } }
+    }
+    } }
 }
 
 internal class AccessibilityEditorCell(document TextDocument, controller TextEditorController) : Cell {
@@ -496,13 +492,13 @@ internal class AccessibilityEquivalentCell : Cell {
 }
 
 internal class AccessibilityRelationshipCell(label ElementHandle) : Cell {
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Text{ Handle: label, Content: "label" },
     Container{ Accessibility: Accessibility{
       Role: AccessibilityRole.Generic,
       Relationships: AccessibilityRelationships{ LabelledBy: []ElementHandle{ label } },
-    } },
-  } }
+    }
+    } }
 }
 
 internal class AccessibilityTargetCell(label ElementHandle) : Cell {
@@ -536,20 +532,18 @@ internal class AccessibilityActionCell : Cell {
 
   init() { HideAction = false }
 
-  override func Build() Blob -> Container { Children: {
-    Container{ Disabled: true, Accessibility: Accessibility{ Role: AccessibilityRole.None }, Children: {
+  override func Build() Blob -> Container() {
+    Container() {.Disabled: true,.Accessibility: Accessibility{ Role: AccessibilityRole.None },
       Container{ Accessibility: Accessibility{ Role: AccessibilityRole.Generic,
         Hidden: HideAction,
         Actions: []AccessibilityAction{ AccessibilityAction.Increment },
         OnAction: func(request AccessibilityActionRequest) bool { return true },
-      } },
-    } },
+      } }
+    },
     TextEntry{ Value: "start" },
-    Container{ Accessibility: Accessibility{ Role: AccessibilityRole.Generic }, Height: 8,
-      OverflowY: Overflow.Scroll, Children: {
-        Text{ Content: "scroll content" },
-      } },
-  } }
+    Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.Generic },.Height: 8,.OverflowY: Overflow.Scroll,
+      Text{ Content: "scroll content" }
+    } }
 }
 
 internal class AccessibilityExclusionCell : Cell {
@@ -562,11 +556,11 @@ internal class AccessibilityExclusionCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container { Accessibility: Accessibility{ Role: AccessibilityRole.Generic }, Children: {
+  override func Build() Blob -> Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.Generic },
     Text{ Content: "display", Display: visible ? Display.Flex : Display.None },
     Text{ Content: "visibility", Visibility: visible ? Visibility.Visible : Visibility.Hidden },
-    Text{ Content: "visible" },
-  } }
+    Text{ Content: "visible" }
+  }
 }
 
 internal class AccessibilityGeometryCell : Cell {
@@ -579,16 +573,15 @@ internal class AccessibilityGeometryCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container { Width: wide ? 160.0 : 80.0, Accessibility: Accessibility{
+  override func Build() Blob -> Container() {.Width: wide ? 160.0 : 80.0,.Accessibility: Accessibility{
     Role: AccessibilityRole.Generic,
-  }, Children: {
+  },
     TextEntry{ Value: "entry" },
-    Container{ Height: 12.0, OverflowY: Overflow.Scroll, Accessibility: Accessibility{
+    Container() {.Height: 12.0,.OverflowY: Overflow.Scroll,.Accessibility: Accessibility{
       Role: AccessibilityRole.Generic,
-    }, Children: {
-      Container{ Height: 100.0, Accessibility: Accessibility{ Role: AccessibilityRole.Generic } },
-    } },
-  } }
+    },
+      Container{ Height: 100.0, Accessibility: Accessibility{ Role: AccessibilityRole.Generic } }
+    } }
 }
 
 internal class AccessibilityRelationshipTargetsCell : Cell {
@@ -655,14 +648,13 @@ internal class AccessibilitySyntheticRootCell : Cell {
 internal class AccessibilityPrimitiveActionCell : Cell, IDisposable {
   private let image ImageSource = ImageSource(1, 1, [4]uint8)
   public func Dispose() { image.Dispose() }
-  override func Build() Blob -> Container { Accessibility: Accessibility{ Role: AccessibilityRole.None }, Children: {
-    Button{ Children: { Text{ Content: "Run" } } },
-    Image{ Path: "images/nonempty-name-must-not-leak.png", Source: image },
-  } }
+  override func Build() Blob -> Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.None },
+    Button() { Text{ Content: "Run"} },
+    Image{ Path: "images/nonempty-name-must-not-leak.png", Source: image} }
 }
 
 internal class AccessibilityActionFailureCell : Cell {
-  override func Build() Blob -> Container { Accessibility: Accessibility{ Role: AccessibilityRole.None }, Children: {
+  override func Build() Blob -> Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.None },
     Container{ Accessibility: Accessibility{
       Role: AccessibilityRole.Generic,
       Actions: []AccessibilityAction{ AccessibilityAction.Select },
@@ -674,8 +666,8 @@ internal class AccessibilityActionFailureCell : Cell {
       OnAction: func(request AccessibilityActionRequest) bool {
         throw InvalidOperationException("Synthetic declared accessibility action failure")
       },
-    } },
-  } }
+    }
+    } }
 }
 
 internal class AccessibilityPerformanceFixtures {
@@ -707,7 +699,7 @@ internal class AccessibilityPerformanceFixtures {
     window.UpdateTree()
     guard let root = window.Tree else { return -1 }
     let count = root.Children.Count
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return count
   }
 
@@ -958,17 +950,10 @@ internal class AccessibilityScaleEntryCell : Cell {
 internal class AccessibilityScaleScrollCell : Cell {
   internal var Handle ElementHandle?
 
-  override func Build() Blob -> Container {
-    Width: 96.0,
-    Height: 32.0,
-    OverflowY: Overflow.Scroll,
-    Handle: Handle,
-    Accessibility: Accessibility{ Role: AccessibilityRole.Generic, Name: "scroll target" },
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: 96.0,.Height: 32.0,.OverflowY: Overflow.Scroll,.Handle: Handle,.Accessibility: Accessibility{ Role: AccessibilityRole.Generic, Name: "scroll target" },
+    Container{
         Height: 96.0,
-        Accessibility: Accessibility{ Role: AccessibilityRole.Generic, Name: "scroll content" },
-      },
+        Accessibility: Accessibility{ Role: AccessibilityRole.Generic, Name: "scroll content"},
     },
   }
 }
@@ -992,10 +977,9 @@ internal class AccessibilityScaleStaticCell : Cell {
 }
 
 internal class AccessibilityOptOutCell : Cell {
-  override func Build() Blob -> Container { Children: {
-    Button{ Children: { Text{ Content: "static" } } },
-    Text{ Content: "content" },
-  } }
+  override func Build() Blob -> Container() {
+    Button() { Text{ Content: "static" } },
+    Text{ Content: "content"} }
 }
 
 internal class AccessibilityOptInCell : Cell {
@@ -1003,14 +987,14 @@ internal class AccessibilityOptInCell : Cell {
 
   init() { label = ElementHandle{} }
 
-  override func Build() Blob -> Container { Accessibility: Accessibility{ Role: AccessibilityRole.Generic }, Children: {
-    Button{ Children: { Text{ Content: "static button name" } } },
+  override func Build() Blob -> Container() {.Accessibility: Accessibility{ Role: AccessibilityRole.Generic },
+    Button() { Text{ Content: "static button name"} },
     Text{ Handle: label, Content: "label" },
     Container{ Accessibility: Accessibility{
       Role: AccessibilityRole.Generic,
       Relationships: AccessibilityRelationships{ LabelledBy: []ElementHandle{ label } },
-    } },
-  } }
+    } }
+  }
 }
 
 private func hasAction(node AccessibilityNode, action AccessibilityAction) bool {

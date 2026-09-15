@@ -6,7 +6,10 @@ and runs `tests/NativeWindow/test_sdl_wayland.py` against the patched handlers.
 
 - SDL consumes custom hit-test titlebar clicks before its normal mouse click
   tracker. Track primary presses per seat/window with SDL's configured
-  double-click time and radius, then maximize/restore resizable windows.
+  double-click time and radius, then maximize/restore resizable windows. Before
+  the default action, the optional `Goo.Window.TitlebarDoubleClick.1` window
+  pointer property is called as `bool callback(int x, int y)`; true consumes the
+  command. Goo installs it only while `Window.TitlebarDoubleClicked` has subscribers.
   Releases must not start additional compositor moves or resizes.
 - Backport the exposure wakeups from upstream SDL's Wayland configure handlers.
   An idle render-on-demand client otherwise waits for a size event while SDL

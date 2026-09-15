@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
 import System.Threading
-import Goo
 
 class CustomLayoutSmokePolicy : LayoutAlgorithm {
   public func Measure(context LayoutContext, available LayoutSize) LayoutSize {
@@ -33,9 +33,8 @@ class CustomLayoutSmokePolicy : LayoutAlgorithm {
 class CustomLayoutCounter : Cell {
   internal let Handle ElementHandle = ElementHandle()
   internal var Count int32
-  public override func Build() Blob -> Button {
-    Handle: Handle, Height: 44, BackgroundColor: Color.Rgb(35, 91, 148), BorderRadius: 6,
-    OnClick: () -> { Count++ }, Children: {Text("Retained count: " + Count.ToString())},
+  public override func Build() Blob -> Button() {.Handle: Handle,.Height: 44,.BackgroundColor: Color.Rgb(35, 91, 148),.BorderRadius: 6,.OnClick: () -> { Count++ },
+    Text("Retained count: " + Count.ToString()),
   }
 }
 
@@ -44,20 +43,18 @@ class CustomLayoutSmokeCell : Cell {
   internal var Counter CustomLayoutCounter?
   internal let Palette ImageSource = CustomPalette()
   private let policy LayoutAlgorithm = CustomLayoutSmokePolicy()
-  public override func Build() Blob -> Container {
-    BackgroundColor: Color.Rgb(18, 24, 34), Color: Color.Rgb(224, 233, 243), Padding: 24, Gap: 20,
-    Children: {
-      Text{Content: "Retained custom layout", FontSize: 25},
+  public override func Build() Blob -> Container() {.BackgroundColor: Color.Rgb(18, 24, 34),.Color: Color.Rgb(224, 233, 243),.Padding: 24,.Gap: 20,
+    Text{Content: "Retained custom layout", FontSize: 25},
       Text{Content: "Retained children · real text measurement", Color: Color.Rgb(145, 166, 188), FontSize: 14},
-      Container{Layout: policy, Padding: 16, BorderWidth: 1, BorderColor: Color.Rgb(51, 67, 84), BorderRadius: 8,
-        Children: {
-          Text{Key: "label-description", Content: "Description", FontSize: 14, Color: Color.Rgb(145, 166, 188)},
-          Container{Key: "details", Handle: Details, Children: {Text{Content: "This paragraph wraps to the available track width. Resizing preserves the same mounted controls and their state, while the rows below move to fit the measured text.", FontSize: 17}}},
+      Container() {.Layout: policy,.Padding: 16,.BorderWidth: 1,.BorderColor: Color.Rgb(51, 67, 84),.BorderRadius: 8,
+      Text{Key: "label-description", Content: "Description", FontSize: 14, Color: Color.Rgb(145, 166, 188)},
+          Container() {.Key: "details",.Handle: Details,
+        Text{Content: "This paragraph wraps to the available track width. Resizing preserves the same mounted controls and their state, while the rows below move to fit the measured text.", FontSize: 17
+        }},
           Text{Key: "label-image", Content: "Image", FontSize: 14, Color: Color.Rgb(145, 166, 188)},
           Image{Key: "image", Source: Palette, Height: 40},
           Text{Key: "label-state", Content: "Local state", FontSize: 14, Color: Color.Rgb(145, 166, 188)},
-          Cell.Mount[CustomLayoutCounter]("counter", (counter CustomLayoutCounter) -> { Counter = counter }),
-        }},
+          Cell.Mount[CustomLayoutCounter]("counter", (counter CustomLayoutCounter) -> { Counter = counter })
     },
   }
 }

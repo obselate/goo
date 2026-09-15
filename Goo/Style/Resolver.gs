@@ -59,6 +59,11 @@ internal class Resolver {
       StyleField.PaddingLeft, StyleField.PaddingTop, StyleField.PaddingRight, StyleField.PaddingBottom }
   }
 
+  internal prop Owner Window? {
+    get;
+    init;
+  }
+
   internal prop Animating List[Node]{ get; init; }
   internal prop DebugOverrides DiagnosticOverrideStore? {
     get -> ResolverDiagnostics.Get(this)
@@ -391,7 +396,7 @@ internal class Resolver {
       || !transitionSelected(n.TransitionSelection, e.Field)
       || (fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B) {
         finishTransition(n, e.Field)
-        if writeDirectWithInvalidation(n, e, invalidationFor(e.Field)) {
+        if writeDirectWithInvalidation(n, e, invalidationFor(e.Field), Owner) {
           recordResolvedChange(e.Field)
         }
         return
@@ -409,7 +414,7 @@ internal class Resolver {
       || !transitionSelected(n.TransitionSelection, StyleField.BoxShadows)
       || !boxShadowListsCompatible(entryShadows(cur), entryShadows(e)) {
         finishTransition(n, StyleField.BoxShadows)
-        if writeDirectWithInvalidation(n, e, PaintResourceInvalidated) {
+        if writeDirectWithInvalidation(n, e, PaintResourceInvalidated, Owner) {
           recordResolvedChange(StyleField.BoxShadows)
         }
         return
@@ -519,7 +524,8 @@ internal class Resolver {
           n.BoxShadows = t >= 1.0 ? tr.TargetShadows : work
           recordResolvedChange(StyleField.BoxShadows)
         } else {
-          if writeDirectWithInvalidation(n, interpolatedTransitionEntry(tr, ft), PaintResourceInvalidated) {
+          if writeDirectWithInvalidation(n, interpolatedTransitionEntry(tr, ft), PaintResourceInvalidated,
+            Owner) {
             recordResolvedChange(tr.Field)
           }
         }
@@ -573,7 +579,7 @@ internal class Resolver {
         }
       }
       finishTransition(child, f)
-      if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated) {
+      if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated, Owner) {
         recordResolvedChange(f)
       }
       propagateInherited(child, f)
@@ -638,7 +644,7 @@ internal func inheritable(f StyleField) bool -> StyleFields.Has(f, StyleFieldFla
 
 internal func writeDirect(n Node, e StyleEntry) bool -> writeDirectWithInvalidation(n, e, nil)
 
-internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Action?) bool {
+internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Action?, owner Window? = nil) bool {
   if !styleFieldApplies(n, e.Field) {
     return false
   }
@@ -691,20 +697,20 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
       let next = Overflow(int32(e.A))
       if next != n.OverflowX {
         n.OverflowX = next
-        ScrollTopology.Version = ScrollTopology.Version + 1
+        ScrollTopology.Invalidate(n)
       }
     }
     case StyleField.OverflowY {
       let next = Overflow(int32(e.A))
       if next != n.OverflowY {
         n.OverflowY = next
-        ScrollTopology.Version = ScrollTopology.Version + 1
+        ScrollTopology.Invalidate(n)
       }
     }
     case StyleField.BackgroundColor { n.BackgroundColor = Color.FromNormalized(e.A, e.B, e.C, e.D) }
     case StyleField.BackgroundGradient { n.BackgroundGradient = entryGradient(e) }
     case StyleField.BackgroundImage { BackgroundImageLayouts.SetPath(n, entryText(e) ?? "", invalidated) }
-    case StyleField.BackgroundImageSource { BackgroundImageLayouts.SetSource(n, entryImageSource(e), invalidated) }
+    case StyleField.BackgroundImageSource { BackgroundImageLayouts.SetSource(n, entryImageSource(e), invalidated, owner) }
     case StyleField.ShaderEffect { ShaderEffectStyles.Set(n, entryShaderEffect(e), invalidated) }
     case StyleField.BackgroundImageFit { n.BackgroundImageFit = ImageFit(int32(e.A)) }
     case StyleField.ClipPath { ClipPaths.SetPath(n, entryPath(e)) }

@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
 import System.Numerics
-import Goo
 
 class FragmentCorrectnessCell : Cell {
   private let crtEffect ShaderEffect
@@ -12,39 +12,15 @@ class FragmentCorrectnessCell : Cell {
     crtEffect = effect
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Transparent,
-    Children: {
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
+    Container() {.Position: PositionType.Absolute,.Left: 160,.Top: 16,.Width: 640,.Height: 96,.BackgroundColor: Color.Transparent,.ShaderEffect: crtEffect,
       Container{
-        Position: PositionType.Absolute,
-        Left: 0,
-        Top: 0,
-        Width: 128,
-        Height: 128,
-        BackgroundColor: Color.Rgb(236, 52, 28),
-      },
-      WindowReadbackTestFixture.CreateClippedLavaFixture(),
-      Container{
-        Position: PositionType.Absolute,
-        Left: 160,
-        Top: 16,
-        Width: 640,
-        Height: 96,
-        BackgroundColor: Color.Transparent,
-        ShaderEffect: crtEffect,
-        Children: {
-          Container{
             Position: PositionType.Absolute,
             Left: 0,
             Top: 0,
             Width: 320,
             Height: 96,
             BackgroundColor: Color.Rgb(8, 32, 248),
-          },
-        },
       },
     },
   }
@@ -87,16 +63,6 @@ func RunFragmentCorrectnessSmoke() {
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(frame, metrics)
-    let lavaOutside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 4.0, 64.0)
-    let lavaCorner = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 17.0, 17.0)
-    let lavaCenter = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 64.0, 64.0)
-    Require(PrimitiveNear(lavaOutside, 236, 52, 28, 4),
-      "Lava backdrop control is invalid: " + PrimitivePixelText(lavaOutside))
-    Require(PrimitiveNear(lavaCorner, 236, 52, 28, 4),
-      "Clipped Lava did not preserve its destination: " + PrimitivePixelText(lavaCorner))
-    Require(lavaCenter[3] == uint8(255)
-        && !PrimitiveNear(lavaCenter, 236, 52, 28, 12),
-      "Lava opaque interior is invalid: " + PrimitivePixelText(lavaCenter))
     let crtOpaque = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 476.0, 64.0)
     Require(crtOpaque[2] >= uint8(240) && crtOpaque[3] == uint8(255),
       "CRT opaque source output is invalid: " + PrimitivePixelText(crtOpaque))
@@ -116,9 +82,7 @@ func RunFragmentCorrectnessSmoke() {
       if crtSamples.Length > 0 { crtSamples += "," }
       crtSamples += x.ToString() + "=" + PrimitivePixelText(sample)
     }
-    Console.WriteLine("fragment-correctness-smoke: lava_outside="
-      +PrimitivePixelText(lavaOutside) + " lava_corner=" + PrimitivePixelText(lavaCorner)
-      +" lava_center=" + PrimitivePixelText(lavaCenter) + " crt=" + crtSamples)
+    Console.WriteLine("fragment-correctness-smoke: crt=" + crtSamples)
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(!opened.IsOpen, "Fragment correctness gate window did not close")
@@ -126,9 +90,8 @@ func RunFragmentCorrectnessSmoke() {
       "Fragment correctness gate resources remain resident after close")
     Console.SetError(originalError)
     ReadbackValidateCommonDiagnostics(capturedError.ToString())
-    Console.WriteLine("fragment-correctness-cleanup: lava_corner="
-      +PrimitivePixelText(lavaCorner) + " lava_center=" + PrimitivePixelText(lavaCenter)
-      +" crt=" + crtSamples + " validation=0 cleanup=1")
+    Console.WriteLine(
+      "fragment-correctness-cleanup: crt=" + crtSamples + " validation=0 cleanup=1")
   } finally {
     Console.SetError(originalError)
     if let active = window {

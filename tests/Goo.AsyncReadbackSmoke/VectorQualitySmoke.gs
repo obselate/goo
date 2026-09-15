@@ -1,11 +1,11 @@
 package GooAsyncReadbackSmoke
 
-import System
-import System.IO
-import System.Text
 import Goo
 import Goo.Svg
 import GooReadbackFixture
+import System
+import System.IO
+import System.Text
 
 class VectorQualityCell : Cell {
   let Asset VectorAsset
@@ -23,59 +23,23 @@ class VectorQualityCell : Cell {
     CompositionAsset = Svg.Parse("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"10 20 100 100\"><g transform=\"translate(10 20) scale(.5)\"><path d=\"M20 30 H60 V50 H20 Z\" fill=\"#f1c36d\" stroke=\"#70d9cf\" stroke-width=\"4\"/><g transform=\"translate(60 100)\"><path d=\"M0 0 H20 L0 20\" fill=\"#70d9cf\"/></g></g><path d=\"M65 65 H75 V75 H65 Z\" fill=\"#af82e1\"/></svg>")
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
-        Position: PositionType.Absolute,
-        Left: 20,
-        Top: 20,
-        Width: 160,
-        Height: 120,
-        Children: { RuntimeAsset.Render() },
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container() {.Position: PositionType.Absolute,.Left: 20,.Top: 20,.Width: 160,.Height: 120,
+      RuntimeAsset.Render(),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 220,
-        Top: 20,
-        Width: 160,
-        Height: 120,
-        Children: { Asset.Render() },
+      Container() {.Position: PositionType.Absolute,.Left: 220,.Top: 20,.Width: 160,.Height: 120, Asset.Render(),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 20,
-        Top: 180,
-        Width: 160.0 * Scale,
-        Height: 120.0 * Scale,
-        Children: { RuntimeAsset.Render() },
+      Container() {.Position: PositionType.Absolute,.Left: 20,.Top: 180,.Width: 160.0 * Scale,.Height: 120.0 * Scale,
+      RuntimeAsset.Render(),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 20,
-        Top: 450,
-        Width: 160,
-        Height: 160,
-        Children: { AuthoredAsset.Render() },
+      Container() {.Position: PositionType.Absolute,.Left: 20,.Top: 450,.Width: 160,.Height: 160,
+      AuthoredAsset.Render(),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 380,
-        Top: 220,
-        Width: 100,
-        Height: 100,
-        Children: { AnimatedAsset.Render() },
+      Container() {.Position: PositionType.Absolute,.Left: 380,.Top: 220,.Width: 100,.Height: 100,
+      AnimatedAsset.Render(),
       },
-      Container{
-        Position: PositionType.Absolute,
-        Left: 220,
-        Top: 450,
-        Width: 160,
-        Height: 160,
-        Children: { CompositionAsset.Render() },
-      },
+      Container() {.Position: PositionType.Absolute,.Left: 220,.Top: 450,.Width: 160,.Height: 160,
+      CompositionAsset.Render(),
     },
   }
 }

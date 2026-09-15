@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <GsharpCompilerFullPath Condition="'$(GsharpCompilerFullPath)' == ''">$(MSBuildThisFileDirectory)artifacts/gsharp/compiler/gsc.dll</GsharpCompilerFullPath>
     <GooReleaseVersion>0.5.3</GooReleaseVersion>
   </PropertyGroup>
   <!-- Custom Release configurations still require optimized G# output. -->

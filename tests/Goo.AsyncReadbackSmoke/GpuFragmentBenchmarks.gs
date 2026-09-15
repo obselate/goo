@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
 import System.Numerics
-import Goo
 
 class GpuPathBenchmarkRoot : Cell {
   private let path VectorPath
@@ -25,13 +25,8 @@ class GpuPathBenchmarkRoot : Cell {
     path = builder.Build()
   }
 
-  override func Build() Blob -> Container {
-    Width: width,
-    Height: height,
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(8, 14, 24),
-    Children: {
-      Shape{
+  override func Build() Blob -> Container() {.Width: width,.Height: height,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(8, 14, 24),
+    Shape{
         Position: PositionType.Absolute,
         Left: 0,
         Top: 0,
@@ -42,8 +37,7 @@ class GpuPathBenchmarkRoot : Cell {
         FillRule: FillRule.EvenOdd,
         BackgroundColor: Color.Rgb(52, 214, 168),
       },
-    },
-  }
+    }
 }
 
 class GpuGlassBenchmarkRoot : Cell {
@@ -58,14 +52,7 @@ class GpuGlassBenchmarkRoot : Cell {
   }
 
   override func Build() Blob {
-    let background = Container{
-      Position: PositionType.Absolute,
-      Left: 0,
-      Top: 0,
-      Width: width,
-      Height: height,
-      BackgroundColor: Color.Rgb(226, 239, 235),
-      Children: {},
+    let background = Container() {.Position: PositionType.Absolute,.Left: 0,.Top: 0,.Width: width,.Height: height,.BackgroundColor: Color.Rgb(226, 239, 235),
     }
     let stripeWidth = float64(width) / 8.0
     var stripe int32 = 0
@@ -84,13 +71,8 @@ class GpuGlassBenchmarkRoot : Cell {
       })
       stripe++
     }
-    return Container{
-      Width: width,
-      Height: height,
-      Position: PositionType.Relative,
-      BackgroundColor: Color.Rgb(226, 239, 235),
-      Children: {
-        background,
+    return Container() {.Width: width,.Height: height,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(226, 239, 235),
+      background,
         Container{
           Position: PositionType.Absolute,
           Left: 24,
@@ -100,7 +82,6 @@ class GpuGlassBenchmarkRoot : Cell {
           BorderRadius: 24,
           BackgroundColor: Color.Rgba(248, 252, 250, 48),
           ShaderEffect: effect,
-        },
       },
     }
   }

@@ -8,10 +8,7 @@ internal class DragDropFixtures {
     let events = List[string]()
     var clicks int32
     let reconciler = Reconciler{ Res: Resolver{} }
-    let root = reconciler.Mount(Container{
-      Width: 240,
-      Height: 80,
-      Children: {
+    let root = reconciler.Mount(Container() {.Width: 240,.Height: 80,
         Container{
           Key: "source",
           Position: PositionType.Absolute,
@@ -26,26 +23,16 @@ internal class DragDropFixtures {
             (e DragEndEvent) -> events.Add("end:" + e.Kind.ToString()
               +":" + e.Effect.ToString())),
         },
-        Container{
-          Key: "target",
-          Position: PositionType.Absolute,
-          Width: 40,
-          Height: 40,
-          OverflowX: Overflow.Hidden,
-          Transform: PanelTransform{ TranslateX: 100, Scale: 2 },
-          TransformOriginX: Length.Percent(0),
-          TransformOriginY: Length.Percent(0),
-          DropTarget: DropTarget(
+        Container() {.Key: "target",.Position: PositionType.Absolute,.Width: 40,.Height: 40,.OverflowX: Overflow.Hidden,.Transform: PanelTransform{ TranslateX: 100, Scale: 2 },.TransformOriginX: Length.Percent(0),.TransformOriginY: Length.Percent(0),.DropTarget: DropTarget(
             (e DragEvent) -> {
               events.Add("query:" + int32(e.Position.X).ToString())
               return e.Modifiers.Ctrl ? DragEffect.Copy : DragEffect.Move
             },
             (e DragEvent) -> events.Add(e.Kind.ToString() + ":" + e.Effect.ToString())),
-          Children: { Container{
+          Container{
             Width: 40,
             Height: 40,
             DropTarget: DropTarget((e DragEvent) -> DragEffect.None),
-          } },
         },
       },
     })
@@ -87,12 +74,9 @@ internal class DragDropFixtures {
   func CancellationContactAndCleanupContract() bool {
     let events = List[string]()
     let reconciler = Reconciler{ Res: Resolver{} }
-    let root = reconciler.Mount(Container{
-      Width: 200,
-      Height: 60,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
+    let root = reconciler.Mount(Container() {.Width: 200,.Height: 60,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
         (e DragEvent) -> events.Add(e.Kind.ToString())),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
@@ -101,7 +85,7 @@ internal class DragDropFixtures {
             return DragData(events, DragEffect.Move)
           },
           (e DragEndEvent) -> events.Add("end:" + e.Kind.ToString())),
-      } },
+        },
     })
     Layout().Calculate(root, 200.0F, 60.0F)
     let input = InputCoordinator()
@@ -150,10 +134,7 @@ internal class DragDropFixtures {
       DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
         (e DragEvent) -> { if e.Kind == DragEventKind.Leave { leaveCount++ } }),
     }
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      Children: { source, target },
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50, source, target,
     })
     Layout().Calculate(root, 160.0F, 50.0F)
     let input = InputCoordinator()
@@ -167,18 +148,15 @@ internal class DragDropFixtures {
     input.Drain(root, resolver, 1.0, nil)
     if endCount != 1 || leaveCount != 0 { return false }
 
-    let disableRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
+    let disableRoot = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
         (e DragEvent) -> { if e.Kind == DragEventKind.Leave { leaveCount++ } }),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("payload", DragEffect.Move),
           (e DragEndEvent) -> endCount++),
-      } },
+        },
     })
     Layout().Calculate(disableRoot, 160.0F, 50.0F)
     let disableInput = InputCoordinator()
@@ -188,18 +166,15 @@ internal class DragDropFixtures {
     disableInput.AfterTreeUpdated(disableRoot, resolver, true)
     if endCount != 2 || leaveCount != 1 { return false }
 
-    let resetRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
+    let resetRoot = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move,
         (e DragEvent) -> { if e.Kind == DragEventKind.Leave { leaveCount++ } }),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("payload", DragEffect.Move),
           (e DragEndEvent) -> endCount++),
-      } },
+        },
     })
     Layout().Calculate(resetRoot, 160.0F, 50.0F)
     let resetInput = InputCoordinator()
@@ -209,17 +184,14 @@ internal class DragDropFixtures {
     if endCount != 3 || leaveCount != 2 { return false }
 
     var detachedEndCount int32
-    let detachedRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),
-      Children: { Container{
+    let detachedRoot = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("payload", DragEffect.Move),
           (e DragEndEvent) -> detachedEndCount++),
-      } },
+        },
     })
     Layout().Calculate(detachedRoot, 160.0F, 50.0F)
     let detachedInput = InputCoordinator()
@@ -236,15 +208,12 @@ internal class DragDropFixtures {
     var queryCount int32
     var endCount int32
     var throwQuery bool
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> {
         queryCount++
         if throwQuery { throw InvalidOperationException("drag query") }
         return DragEffect.Move
       }),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
@@ -253,7 +222,7 @@ internal class DragDropFixtures {
             endCount++
             throw InvalidOperationException("drag end")
           }),
-      } },
+        },
     })
     Layout().Calculate(root, 160.0F, 50.0F)
     let input = InputCoordinator()
@@ -278,11 +247,7 @@ internal class DragDropFixtures {
     var callbackInput InputCoordinator?
     var callbackRoot Node?
     let callbackResolver = Resolver{}
-    let mountedCallbackRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),
-      OnPointerMove: (e PointerEvent) -> {
+    let mountedCallbackRoot = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),.OnPointerMove: (e PointerEvent) -> {
         if throwMove {
           if let coordinator = callbackInput {
             if let tree = callbackRoot { coordinator.Reset(tree, callbackResolver) }
@@ -290,13 +255,13 @@ internal class DragDropFixtures {
           throwAfterDragReset()
         }
       },
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("payload", DragEffect.Move),
           (e DragEndEvent) -> moveEndCount++),
-      } },
+        },
     })
     callbackRoot = mountedCallbackRoot
     Layout().Calculate(mountedCallbackRoot, 160.0F, 50.0F)
@@ -324,10 +289,7 @@ internal class DragDropFixtures {
     var dropCount int32
     var droppedEndCount int32
     var rootValue Node?
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      Children: {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,
         Container{
           Width: 40,
           Height: 40,
@@ -349,7 +311,6 @@ internal class DragDropFixtures {
                 if let value = rootValue { value.Children.RemoveAt(1) }
               }
             }),
-        },
       },
     })
     rootValue = root
@@ -410,17 +371,12 @@ internal class DragDropFixtures {
     var capturedMoves int32
     var normalMoves int32
     var captureEnds int32
-    let cleanupRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 200,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),
-      OnPointerMove: (e PointerEvent) -> {
+    let cleanupRoot = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 200,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),.OnPointerMove: (e PointerEvent) -> {
         if captureAfterStart {
           capturedMoves++
           e.Capture()
         }
       },
-      Children: {
         Container{
           Width: 40,
           Height: 40,
@@ -437,7 +393,6 @@ internal class DragDropFixtures {
           Width: 40,
           Height: 40,
           OnPointerMove: (e PointerEvent) -> normalMoves++,
-        },
       },
     })
     Layout().Calculate(cleanupRoot, 200.0F, 50.0F)
@@ -458,21 +413,18 @@ internal class DragDropFixtures {
     var resetEnds int32
     var reentrantRoot Node?
     var reentrantInput InputCoordinator?
-    let mountedReentrant = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> {
+    let mountedReentrant = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> {
         queryCount++
         if let coordinator = reentrantInput { coordinator.Reset(reentrantRoot, resolver) }
         return DragEffect.Move
       }),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("reset", DragEffect.Move),
           (e DragEndEvent) -> resetEnds++),
-      } },
+        },
     })
     reentrantRoot = mountedReentrant
     reentrantInput = InputCoordinator()
@@ -492,20 +444,17 @@ internal class DragDropFixtures {
     var secondEnds int32
     let resolver = Resolver{}
     let reconciler = Reconciler{ Res: resolver }
-    var root = reconciler.Mount(Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> {
+    var root = reconciler.Mount(Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> {
         firstQueries++
         return DragEffect.Move
       }),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("payload", DragEffect.Move),
           (e DragEndEvent) -> firstEnds++),
-      } },
+        },
     })
     Layout().Calculate(root, 160.0F, 50.0F)
     let input = InputCoordinator()
@@ -514,20 +463,17 @@ internal class DragDropFixtures {
     let firstBeforeDiff = firstQueries
 
     let diff = Reconciler{ Res: resolver }
-    root = diff.Diff(root, Container{
-      Width: 160,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> {
+    root = diff.Diff(root, Container() {.Width: 160,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> {
         secondQueries++
         return DragEffect.Move
       }),
-      Children: { Container{
+        Container{
         Width: 40,
         Height: 40,
         DragSource: DragSource(
           (e DragStartEvent) -> DragData("replacement", DragEffect.Move),
           (e DragEndEvent) -> secondEnds++),
-      } },
+        },
     })
     if (int32(diff.Effects) & int32(ReconcileEffects.Input)) == 0 { return false }
     input.AfterTreeUpdated(root, resolver, true)
@@ -566,15 +512,11 @@ internal class DragDropFixtures {
     let payload = DragDropDisposable()
     let factory = DragDropPayloadFactory{ Value: payload }
     let weak = WeakReference(payload)
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
-      Width: 120,
-      Height: 50,
-      DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),
-      Children: { Container{
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 120,.Height: 50,.DropTarget: DropTarget((e DragEvent) -> DragEffect.Move),
+        Container{
         Width: 40,
         Height: 40,
-        DragSource: DragSource((e DragStartEvent) -> factory.Create()),
-      } },
+        DragSource: DragSource((e DragStartEvent) -> factory.Create()),},
     })
     Layout().Calculate(root, 120.0F, 50.0F)
     let input = InputCoordinator()

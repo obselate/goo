@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/obselate/goo/main/docs/assets/goo-readme-banner.gif" alt="Goo" width="1200">
 </p>
 
-<p align="center">A retained desktop UI framework for G#, rendered directly with Vulkan.</p>
+<p align="center">A retained UI framework for G#, rendered directly with Vulkan.</p>
 
 <p align="center">
   <a href="https://github.com/obselate/goo/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/obselate/goo/ci.yml?branch=main&amp;style=flat-square&amp;label=ci" alt="CI status"></a>
@@ -101,70 +101,60 @@ Precompiled SVG assets can be loaded by core `Goo` without `Goo.Svg`.
 
 ## Example
 
+This example uses the current checkout's mixed initializers. Follow the
+[native authoring setup](docs/native-authoring.md) to build it.
+
 ```gsharp
 package CounterApp
 
 import Goo
 
 data struct CounterInput {
-  var Title string
-  var Accent Color
+    var Title string
+    var Accent Color
 }
 
 open class Counter : Cell[CounterInput] {
-  shared {
-    let Card Style = Style{
-      Padding: 24,
-      Gap: 12,
-      BorderRadius: 16,
-      BackgroundColor: Color.Rgb(24, 31, 43),
+    shared {
+        let Card Style = Style{Padding: 24, Gap: 12, BorderRadius: 16, BackgroundColor: Color.Rgb(24, 31, 43),}
+        let Action Style = Style{Padding: 10, BorderRadius: 10,}
     }
-    let Action Style = Style{
-      Padding: 10,
-      BorderRadius: 10,
-    }
-  }
 
-  private var count int32
+    private var count int32
 
-  protected override func Build(input CounterInput) Blob -> Container {
-    BasedOn: Card,
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Children: {
-      Text{
-        Content: input.Title + ": " + count.ToString(),
-        FontSize: 24,
-        Color: Color.Rgb(244, 247, 255),
-      },
-      Button{
-        BasedOn: Action,
-        BackgroundColor: input.Accent,
-        OnClick: () -> { count++ },
-        Children: {
-          Text{ Content: "Add one", Color: Color.White },
+    protected override func Build(input CounterInput) Blob -> Container(){
+        .BasedOn: Card,
+        .Width: Length.Percent(100),
+        .Height: Length.Percent(100),
+        Text{Content: input.Title + ": " + count.ToString(), FontSize: 24, Color: Color.Rgb(244, 247, 255),},
+        Button(){
+            .BasedOn: Action,
+            .BackgroundColor: input.Accent,
+            .OnClick: () -> {
+                count++
+            },
+            Text{Content: "Add one", Color: Color.White},
         },
-      },
-    },
-  }
+    }
 }
 
 class App : Cell {
-  override func Build() Blob -> Container { Children: {
-    Cell.Mount[CounterInput, Counter]("counter", CounterInput{
-      Title: "Count",
-      Accent: Color.Rgb(74, 125, 255),
-    }),
-  } }
+    override func Build() Blob -> Container(){Cell.Mount[CounterInput, Counter](
+            "counter",
+            CounterInput{Title: "Count", Accent: Color.Rgb(74, 125, 255),}
+        ),
+    }
 }
 
 func Main() {
-  Window.ConfigureApplication("Counter", "1.0.0", "com.example.counter")
-  let window = Window{ Title: "Counter", Width: 320, Height: 180, Root: App{} }
-  window.StateChanged += (state) -> {
-    if state == WindowState.Maximized { window.Title = "Counter - maximized" }
-  }
-  window.Run()
+    Window.ConfigureApplication("Counter", "1.0.0", "com.example.counter")
+    let window = Window{Title: "Counter", Width: 320, Height: 180, Root: App{}}
+    window.StateChanged += (state) -> {
+        if state == WindowState.Maximized {
+            window.Title = "Counter - maximized"
+        }
+    }
+    window.Run()
 }
 ```
 
@@ -174,7 +164,8 @@ func Main() {
 
 ## Platforms
 
-Goo ships runtime assets for Windows x64, Linux x64, and macOS arm64. The
+Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
+and Android x64. The
 renderer requires the Vulkan 1.3 feature set used by Goo.
 
 - Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The
@@ -185,6 +176,11 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
 - macOS arm64 requires macOS 14 or newer on Apple silicon. Goo bundles
   MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
   Vulkan SDK.
+
+- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device. The
+  `Goo.Android` adapter hosts the same Window, Cell, and Blob application in an
+  Android activity or native view. See [Android integration](docs/android.md)
+  for the shared smoke app, NDK builds, packaging, and lifecycle checks.
 
 ## Further reading
 

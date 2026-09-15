@@ -251,6 +251,58 @@ Describes a non-cancelable focus lifecycle callback.
 
 Stops this lifecycle event before the next ancestor callback. Focus has already changed.
 
+## `FocusScope`
+
+Source:
+
+- [`FocusScope.gs`](../../Goo/Input/FocusScope.gs)
+
+Contains sequential keyboard focus until disposed or its root becomes unavailable. Nested scopes activate in opening order; dispose on the owning window's UI thread.
+
+### `Dispose`
+
+Closes this scope. Focus restoration occurs at the next stable input/tree update.
+
+### `IsActive`
+
+Reports whether the scope remains registered, including an inactive underlying layer.
+
+### `Order`
+
+Gets this scope's opening order among overlapping scopes in this window.
+
+## `FocusScopeOptions`
+
+Source:
+
+- [`FocusScope.gs`](../../Goo/Input/FocusScope.gs)
+
+Configures one mounted focus scope. The root must be focusable for empty-scope fallback.
+
+### `new`
+
+Initializes a nonmodal scope that restores focus on close.
+
+### `InitialFocus`
+
+Requests initial focus within the scope. Otherwise AutoFocus, the first tab stop, or the root is used.
+
+### `Modal`
+
+Blocks input and accessibility outside the top scope while any modal registration is active.
+
+### `RestoreFocus`
+
+Restores prior eligible focus on close unless focus has explicitly moved outside. Defaults to true.
+
+## `FocusedEditorSnapshot`
+
+Source:
+
+- [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
+
+Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, and logical CaretArea for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
+
 ## `Key`
 
 Source:
@@ -436,6 +488,146 @@ Reports whether Shift is pressed.
 
 Reports whether Super is pressed.
 
+## `NativeFileDrop`
+
+Source:
+
+- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
+
+Contains an owned external file list, or an empty preview before the host delivers paths.
+
+### `IsPreview`
+
+Gets whether paths are still unavailable; preview acceptance must not depend on individual files.
+
+### `Paths`
+
+Gets absolute file paths without reading file contents; the list survives the drag and window lifetime.
+
+## `NativeTransferCapabilities`
+
+Source:
+
+- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
+
+Reports the native transfer operations supported by an open desktop window.
+
+### Values
+
+- `None`
+- `FileDrop`
+- `DropPreview`
+- `OutboundData`
+- `EffectNegotiation`
+
+### `DropPreview`
+
+The host reports drag positions before the final file list is available.
+
+### `EffectNegotiation`
+
+The host can report a target's negotiated effect back to the source application.
+
+### `FileDrop`
+
+The host can deliver owned external file lists to DropTarget.
+
+### `None`
+
+No native transfer operation is available.
+
+### `OutboundData`
+
+The host can offer application data to other applications.
+
+## `PlatformInput`
+
+Source:
+
+- [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
+
+Routes platform events and semantic editing through the window's existing input system. Call on the window owner thread. Use Window.Post to dispatch from another thread.
+
+### `EditorChanged`
+
+Reports settled focus, text, selection, composition, and caret-area changes.
+
+### `CancelComposition`
+
+Discards preedit and restores the committed value and selection.
+
+### `ClearFocus`
+
+Removes editor focus and cancels transient composition.
+
+### `CommitText(string)`
+
+Replaces the current selection or preedit with committed text.
+
+### `DeleteSurroundingText(int32,int32)`
+
+Deletes UTF-16 lengths outside the union of selection and composition, retaining both. Deletion expands to whole grapheme clusters without committing preedit.
+
+### `Execute(TextCommand)`
+
+Executes shared semantic navigation, editing, clipboard, or submit behavior.
+
+### `FinishComposition`
+
+Commits the existing preedit without changing its text.
+
+### `FocusLost`
+
+Clears editor focus, composition, pressed keys, and pointer capture.
+
+### `KeyPress(Key,KeyModifiers)`
+
+Dispatches a physical key press through the existing keyboard routing.
+
+### `KeyRelease(Key)`
+
+Releases a physical key and stops its repeat state.
+
+### `MoveFocus(bool)`
+
+Moves focus in the retained focus order, independent of editor indentation.
+
+### `PointerCancel(System.Int64,PointerDevice)`
+
+Cancels one pointer, releasing capture without generating a click.
+
+### `PointerMove(System.Int64,PointerDevice,float32,float32,KeyModifiers,float32)`
+
+Moves a platform pointer in window logical coordinates.
+
+### `PointerPress(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+
+Presses a platform pointer in window logical coordinates.
+
+### `PointerRelease(System.Int64,PointerDevice,float32,float32,PointerButton,KeyModifiers,float32)`
+
+Releases a platform pointer in window logical coordinates.
+
+### `PointerWheel(float32,float32,float32,float32,KeyModifiers)`
+
+Dispatches wheel deltas at a window logical position.
+
+### `SetComposition(string,int32,int32)`
+
+Updates preedit and its selected UTF-16 segment without committing the value.
+
+### `SetCompositionRange(int32,int32)`
+
+Marks an existing effective UTF-16 range as composing text.
+
+### `SetSelection(int32,int32)`
+
+Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters. Selection direction and composing ranges remain independent.
+
+### `Editor`
+
+Gets a current immutable snapshot, or nil when no text editor has focus.
+
 ## `PointerButton`
 
 Source:
@@ -516,6 +708,10 @@ Gets the pointer button that changed, or None for movement.
 
 Gets the pointer buttons held after the event transition.
 
+### `ClickCount`
+
+Gets the normalized press count (1 to 3) on down and matching up; zero on other events. Counts use the same target, button, 400 ms, and 4 logical pixel policy as text selection.
+
 ### `Delta`
 
 Gets movement since the preceding pointer position in the current handler coordinates.
@@ -523,6 +719,10 @@ Gets movement since the preceding pointer position in the current handler coordi
 ### `Device`
 
 Gets the pointer device type that produced this event.
+
+### `IsFromInteractiveChild`
+
+True when a clickable or focusable descendant is below this handler on the routed path. Applies to down, move, up, and cancel; hover notifications are not routed.
 
 ### `IsPrimary`
 

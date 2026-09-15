@@ -18,14 +18,14 @@ internal class ElementHandleFixtures {
     if handle.IsMounted { return false }
     node = diff(rec, owner, node, Text{ Handle: handle, Key: "item", Content: "reattached" })
     if !handle.IsMounted { return false }
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     if handle.IsMounted || handle.Focus() || handle.Blur() || handle.ScrollTo(0.0, 0.0)
       || handle.ScrollIntoView() {
         return false
       }
     node = mount(rec, owner, Text{ Handle: handle, Key: "item", Content: "remounted" })
     let remounted = handle.IsMounted
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     return remounted && !handle.IsMounted
   }
 
@@ -38,7 +38,7 @@ internal class ElementHandleFixtures {
     Layout().Calculate(root, 100.0F, 80.0F)
     let border = handle.BorderBox
     let content = handle.ContentBox
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return border.X == 0.0 && border.Y == 0.0 && border.Width == 100.0 && border.Height == 80.0
       && content.X == 12.0 && content.Y == 12.0 && content.Width == 76.0 && content.Height == 56.0
       && handle.BorderBox.Width == 0.0 && handle.ContentBox.Height == 0.0
@@ -48,14 +48,12 @@ internal class ElementHandleFixtures {
     let owner = Window{}
     let first = ElementHandle{}
     let second = ElementHandle{}
-    let root = mount(Reconciler{ Res: Resolver{} }, owner, Container{
-      Children: {
+    let root = mount(Reconciler{ Res: Resolver{} }, owner, Container() {
         Container{ Handle: first, Focusable: true },
-        Container{ Handle: second, Focusable: true },
-      },
+        Container{ Handle: second, Focusable: true},
     })
     let focused = first.Focus() && first.Blur() && second.Focus() && !first.Blur()
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return focused && !second.IsMounted
   }
 
@@ -64,13 +62,10 @@ internal class ElementHandleFixtures {
     let innerHandle = ElementHandle{}
     let childHandle = ElementHandle{}
     let owner = Window{}
-    let root = mount(Reconciler{ Res: Resolver{} }, owner, Container{
-      Handle: rootHandle, Width: 100, Height: 100, OverflowY: Overflow.Scroll,
-      Children: {
+    let root = mount(Reconciler{ Res: Resolver{} }, owner, Container() {.Handle: rootHandle,.Width: 100,.Height: 100,.OverflowY: Overflow.Scroll,
         Container{ Height: 120 },
-        Container{ Handle: innerHandle, Height: 80, OverflowY: Overflow.Scroll, Children: {
-          Container{ Handle: childHandle, Height: 130 },
-        } },
+        Container() {.Handle: innerHandle,.Height: 80,.OverflowY: Overflow.Scroll,
+          Container{ Handle: childHandle, Height: 130},
       },
     })
     Layout().Calculate(root, 100.0F, 100.0F)
@@ -87,7 +82,7 @@ internal class ElementHandleFixtures {
       || root.ScrollTargetY != 100.0F {
         return false
       }
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return !rootHandle.ScrollTo(0.0, 0.0)
   }
 
@@ -97,10 +92,9 @@ internal class ElementHandleFixtures {
     let rec = Reconciler{ Res: Resolver{} }
     var rejected = false
     try {
-      mount(rec, owner, Container{ Children: {
+      mount(rec, owner, Container() {
         Text{ Handle: duplicate, Content: "first" },
-        Text{ Handle: duplicate, Content: "second" },
-      } })
+        Text{ Handle: duplicate, Content: "second" },})
     } catch (error InvalidOperationException) {
       rejected = true
     }
@@ -111,25 +105,23 @@ internal class ElementHandleFixtures {
     let existing = mount(rec, owner, Text{ Handle: rootHandle, Content: "existing" })
     rejected = false
     try {
-      mount(rec, owner, Container{ Handle: rootHandle, Children: {
-        Text{ Handle: child, Content: "provisional" },
-      } })
+      mount(rec, owner, Container() {.Handle: rootHandle, Text{ Handle: child, Content: "provisional" },})
     } catch (error InvalidOperationException) {
       rejected = true
     }
     if !rejected || !rootHandle.IsMounted || child.IsMounted {
       return false
     }
-    TextLayouts.DisposeTree(existing)
+    NodeLifecycle.DisposeTree(existing)
     if rootHandle.IsMounted { return false }
 
     let nested = ElementHandle{}
     ElementHandleNestedCell.Target = nested
-    let root = mount(rec, owner, Container{ Children: {
+    let root = mount(rec, owner, Container() {
       Cell.Mount[ElementHandleNestedCell]("nested", nil),
-    } })
+    })
     let retained = nested.IsMounted
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     ElementHandleNestedCell.Target = nil
     return retained && !nested.IsMounted
   }
@@ -144,22 +136,22 @@ internal class ElementHandleFixtures {
     let image = ElementHandle{}
     var node = mount(rec, owner, Button{ Handle: button })
     if !button.IsMounted { return false }
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     node = mount(rec, owner, TextEntry{ Handle: entry })
     if !entry.IsMounted { return false }
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     let document = TextDocument{}
     node = mount(rec, owner, TextEditor(TextEditorController(document)) {
       Handle = editor,
     })
     if !editor.IsMounted { return false }
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     node = mount(rec, owner, Shape{ Handle: shape })
     if !shape.IsMounted { return false }
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     node = mount(rec, owner, Image{ Handle: image })
     if !image.IsMounted { return false }
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     return !button.IsMounted && !entry.IsMounted && !editor.IsMounted
       && !shape.IsMounted && !image.IsMounted
   }
@@ -178,15 +170,13 @@ internal class ElementHandleFixtures {
 
   func NoHandleDiffBytes() int64 {
     let rec = Reconciler{ Res: Resolver{} }
-    let blob = Container{ Width: 100, Height: 40, Children: {
-      Text{ Content: "stable" },
-    } }
+    let blob = Container() {.Width: 100,.Height: 40, Text{ Content: "stable" },}
     let root = rec.Mount(blob)
     rec.Diff(root, blob)
     let before = GC.GetAllocatedBytesForCurrentThread()
     rec.Diff(root, blob)
     let bytes = GC.GetAllocatedBytesForCurrentThread() - before
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return bytes
   }
 
@@ -353,7 +343,7 @@ internal class ElementHandleFixtures {
     let before = GC.GetAllocatedBytesForCurrentThread()
     rec.Diff(root, blob)
     let bytes = GC.GetAllocatedBytesForCurrentThread() - before
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return bytes
   }
 
@@ -389,22 +379,21 @@ internal class ElementHandleFixtures {
     ElementHandleRollbackCell.Target = handle
     let owner = Window{}
     let rec = Reconciler{ Res: Resolver{} }
-    let root = mount(rec, owner, Container{ Children: {
+    let root = mount(rec, owner, Container() {
       Cell.Mount[ElementHandleRollbackCell]("a", nil),
-      Text{ Key: "b", Content: "stable" },
-    } })
+      Text{ Key: "b", Content: "stable" },})
     if !handle.IsMounted { return false }
     var rejected = false
     try {
-      diff(rec, owner, root, Container{ Children: {
+      diff(rec, owner, root, Container() {
         Text{ Key: "a", Handle: handle, Content: "replacement" },
         Text{ Key: "b", Handle: handle, Content: "duplicate" },
-      } })
+      })
     } catch (error InvalidOperationException) {
       rejected = true
     }
     let restored = rejected && handle.IsMounted
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     ElementHandleRollbackCell.Target = nil
     return restored && !handle.IsMounted
   }
@@ -413,17 +402,17 @@ internal class ElementHandleFixtures {
     let owner = Window{}
     let handle = ElementHandle{}
     let rec = Reconciler{ Res: Resolver{} }
-    var root = mount(rec, owner, Container{ Children: {
+    var root = mount(rec, owner, Container() {
       Text{ Key: "owner", Handle: handle, Content: "owner" },
       Text{ Key: "receiver", Content: "receiver" },
-    } })
-    root = diff(rec, owner, root, Container{ Children: {
+    })
+    root = diff(rec, owner, root, Container() {
       Text{ Key: "receiver", Handle: handle, Content: "receiver" },
       Text{ Key: "owner", Content: "owner" },
-    } })
+      })
     let moved = handle.IsMounted && ElementHandles.Owns(root.Children[0], handle)
       && !ElementHandles.Owns(root.Children[1], handle)
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return moved && !handle.IsMounted
   }
 
@@ -441,36 +430,22 @@ internal class ElementHandleFixtures {
     let probe = ElementHandle{}
     let node = Reconciler{ Res: Resolver{} }.Mount(Container{ Handle: probe, Focusable: true })
     let leaked = probe.Focus()
-    TextLayouts.DisposeTree(node)
+    NodeLifecycle.DisposeTree(node)
     return rejected && !leaked
   }
 
-  private func mount(rec Reconciler, owner Window, b Blob) Node {
-    ElementHandles.PushOwner(owner)
-    try {
-      return rec.Mount(b)
-    } finally {
-      ElementHandles.PopOwner()
-    }
-  }
+  private func mount(rec Reconciler, owner Window, b Blob) Node ->
+  Reconciler{Res: rec.Res, Owner: owner}.Mount(b)
 
-  private func diff(rec Reconciler, owner Window, n Node, b Blob) Node {
-    ElementHandles.PushOwner(owner)
-    try {
-      return rec.Diff(n, b)
-    } finally {
-      ElementHandles.PopOwner()
-    }
-  }
+  private func diff(rec Reconciler, owner Window, n Node, b Blob) Node ->
+  Reconciler{Res: rec.Res, Owner: owner}.Diff(n, b)
 
   private func makeRetiredTree(handle ElementHandle) WeakReference {
     let owner = Window{}
-    let root = mount(Reconciler{ Res: Resolver{} }, owner, Container{
-      Handle: handle,
-      Children: { Text{ Content: "retired" } },
+    let root = mount(Reconciler{ Res: Resolver{} }, owner, Container() {.Handle: handle, Text{ Content: "retired"},
     })
     let weak = WeakReference(root)
-    TextLayouts.DisposeTree(root)
+    NodeLifecycle.DisposeTree(root)
     return weak
   }
 }
@@ -490,10 +465,10 @@ internal class ElementHandleRollbackCell : Cell {
 internal class ElementHandleFailureCell : Cell {
   shared { var Target ElementHandle? }
 
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Text{ Handle: Target, Content: "first" },
     Text{ Handle: Target, Content: "second" },
-  } }
+  }
 }
 
 internal class ElementMetricsFixtureCell : Cell {
@@ -511,8 +486,9 @@ internal class ElementMetricsFixtureCell : Cell {
     if !Attached {
       return Container{ Width: Width, Height: 60 }
     }
-    return Container{ Handle: Handle, Width: Width, Height: 60, OverflowY: Overflow.Scroll,
-      Children: { Container{ Height: 200 } } }
+    return Container() {.Handle: Handle,.Width: Width,.Height: 60,.OverflowY: Overflow.Scroll,
+      Container{ Height: 200 },
+    }
   }
 }
 
@@ -527,10 +503,10 @@ internal class ElementMetricsPairCell : Cell {
     Width = 100
   }
 
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Container{ Handle: First, Width: Width, Height: 30 },
     Container{ Handle: Second, Width: 100, Height: 30 },
-  } }
+  }
 }
 
 internal class VirtualFixtureCell : Cell {
@@ -581,11 +557,8 @@ internal class VirtualFixtureCell : Cell {
 
   private func buildItem(item VirtualFixtureItem) Blob {
     Builds.Add(item.Id)
-    return Container{
-      Handle: Handles[item.Id],
-      Width: grid ? 17 : 75,
-      Height: 13,
-      Children: { Text{ Content: "row ${item.Id}:${item.Revision}" } },
+    return Container() {.Handle: Handles[item.Id],.Width: grid ? 17 : 75,.Height: 13,
+      Text{ Content: "row ${item.Id}:${item.Revision}"},
     }
   }
 }

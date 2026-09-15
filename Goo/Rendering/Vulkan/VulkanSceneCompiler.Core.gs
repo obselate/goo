@@ -1,7 +1,7 @@
 package Goo
 
-import System
 import Facebook.Yoga
+import System
 import System.Runtime.CompilerServices
 
 private sealed class VulkanRoundedOverflowPathCacheEntry {
@@ -159,7 +159,6 @@ internal partial class VulkanSceneCompiler {
   private let roundedOverflowPaths ConditionalWeakTable[Node,
     VulkanRoundedOverflowPathCacheEntry]
   private let unsupportedDetails []VulkanSceneUnsupportedDetail
-  private let strokeCache PathStrokeCache
   private var textScene VulkanTextScene?
   private var imageScene VulkanImageScene?
   private var pathScene VulkanPathScene?
@@ -203,7 +202,6 @@ internal partial class VulkanSceneCompiler {
     ownerToken = Object()
     roundedOverflowPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
     unsupportedDetails = [capacity]VulkanSceneUnsupportedDetail
-    strokeCache = PathStrokeCache.Shared
     nextOwnerId = FirstNodeOwnerId
     blendModeSupported = true
     exactTextClipCullEnabled = true
@@ -462,7 +460,7 @@ internal partial class VulkanSceneCompiler {
         }
       let fontSize = TextLayouts.fontSize(node)
       let lineHeight = TextLayouts.resolvedLineHeight(node)
-      let contentHeight = TextLayouts.ContentHeight(node)
+      let contentHeight = BoxGeometry.ContentHeight(node)
       let eligible = node.TextWrap == TextWrap.NoWrap
         && node.TextTrimming == TextTrimming.Ellipsis
         && node.Width.Unit == LengthUnit.Px
@@ -522,10 +520,10 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func TextEditorContentBounds(node Node) ConservativeBounds -> ConservativeBounds {
-    X: TextLayouts.ContentLeft(node),
-    Y: TextLayouts.ContentTop(node),
-    Width: TextLayouts.ContentWidth(node),
-    Height: TextLayouts.ContentHeight(node),
+    X: BoxGeometry.ContentLeft(node),
+    Y: BoxGeometry.ContentTop(node),
+    Width: BoxGeometry.ContentWidth(node),
+    Height: BoxGeometry.ContentHeight(node),
   }
 
   private func ExactTextClipCullEligible(
@@ -797,29 +795,7 @@ internal partial class VulkanSceneCompiler {
         skippedNodeCount = skippedNodeCount + 1
         return
       }
-      if node.Kind == NodeKind.Lava {
-        InvalidateRetainedBox(owner)
-        InvalidateRetainedText(owner)
-        frame.BeginChunk(ownerId, frameVersion, bounds, true)
-        let transform = AddNodeTransform(node, context.ParentTransformIndex)
-        transformCount = frame.TransformCount
-        frame.AddLava(LavaRecord{
-          Bounds: bounds,
-          Flow: float32(node.LavaFlow),
-          Form: float32(node.LavaForm),
-          Blend: float32(node.LavaBlend),
-          Light: float32(node.LavaLight),
-          Hue: float32(node.LavaHue),
-          Rainbow: node.LavaRainbow ? 1u : 0u,
-          Rotation: node.LavaRotation,
-          Seed: node.LavaSeed,
-          TransformIndex: transform.Index,
-        })
-        frame.EndChunk()
-        emittedNodeCount = emittedNodeCount + 1
-        return
-      }
-      var retainedLeafEligible = false
+    var retainedLeafEligible = false
       var retainedTextEligible = false
       if node.Kind == NodeKind.Text || node.Kind == NodeKind.Entry {
         InvalidateRetainedBox(owner)
@@ -974,12 +950,16 @@ internal partial class VulkanSceneCompiler {
           mixedOverflowClip = true
         }
       }
-      var shapePaintClip = false
+    let shapeGeometry = node.Kind == NodeKind.Shape
+    ? ShapeGeometry.Resolve(
+      node,
+      Rect{X: bounds.X, Y: bounds.Y, W: bounds.Width, H: bounds.Height}) : ResolvedShapeGeometry{}
+    var shapePaintClip = false
       let nodeContentClipChainId = node.Kind == NodeKind.Shape
       ? overflowPathClipChainId : activePathClipChainId
       var paintPathClipChainId = nodeContentClipChainId
       if ShapePaintNeedsMask(node) {
-        let shapeClip = ResolveShapePaintClip(node, bounds, transform.Index,
+        let shapeClip = ResolveShapePaintClip(node, bounds, shapeGeometry, transform.Index,
           nodeContentClipChainId)
         if shapeClip.Emitted {
           paintPathClipChainId = shapeClip.ChainIndex
@@ -1057,7 +1037,8 @@ internal partial class VulkanSceneCompiler {
       }
       var textComplete bool
       PaintNode(node, bounds, contentOpacity, transform.Index, axisAligned, childClipDepth,
-        shapePaintClip, nodeContentClipChainId, overflowPathClipChainId, out textComplete)
+        shapePaintClip, nodeContentClipChainId, overflowPathClipChainId,
+      shapeGeometry, out textComplete)
       let inheritedChildClipIndex = clipIndex >= 0 ? clipIndex : context.ParentRectClipIndex
       var editorContentClipIndex int32 = -1
       var editorContentBounds ConservativeBounds
@@ -1279,29 +1260,14 @@ internal partial class VulkanSceneCompiler {
   private func ResolveShapePaintClip(
     node Node,
     bounds ConservativeBounds,
+    shape ResolvedShapeGeometry,
     transformIndex int32,
     parentChainId int32) VulkanScenePathClipResult{
       if !TryResolvePathClipParentDepth(parentChainId, out var parentDepth) {
         return VulkanScenePathClipResult{}
       }
-      let strokeWidth = node.BorderLeftWidth.Px
-      let strokeInset = if node.ShapeStrokeInset { strokeWidth } else { 0.0F }
-      let halfStroke = strokeInset * 0.5F
-      let paddingLeft = resolveEdgePadding(node, YGEdge.Left, bounds.Width)
-      let paddingTop = resolveEdgePadding(node, YGEdge.Top, bounds.Width)
-      let paddingRight = resolveEdgePadding(node, YGEdge.Right, bounds.Width)
-      let paddingBottom = resolveEdgePadding(node, YGEdge.Bottom, bounds.Width)
-      let contentLeft = bounds.X + paddingLeft + halfStroke
-      let contentTop = bounds.Y + paddingTop + halfStroke
-      let contentWidth = bounds.Width - paddingLeft - paddingRight - strokeInset
-      let contentHeight = bounds.Height - paddingTop - paddingBottom - strokeInset
-      let mapping = PathGeometry.Map(node.ShapePath, node.ShapeFit,
-        contentLeft, contentTop, contentWidth, contentHeight)
-      let shapePath = if mapping.Valid {
-        PathRoundedCache.Shared.Resolve(node.ShapePath, mapping, node.ShapeCornerRadius)
-      } else {
-        VectorPath.Empty
-      }
+      let mapping = shape.Mapping
+      let shapePath = shape.Path
       let stableId = ShapePaintMaskId(node)
       let contentKey = ClipContentKey(node, shapePath, ShapeFit.Fill,
         uint32(node.ShapeFillRule), bounds, transformIndex)

@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
 import System.IO
 import System.Numerics
-import Goo
 
 class ShaderEffectCell : Cell {
   private var effect ShaderEffect
@@ -24,13 +24,8 @@ class ShaderEffectCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
         Position: PositionType.Absolute,
         Left: 16,
         Top: 24,
@@ -84,7 +79,6 @@ class ShaderEffectCell : Cell {
         FontFamily: "monospace",
         FontSize: 16,
         Color: Color.Rgb(4, 252, 4),
-      },
     },
   }
 }

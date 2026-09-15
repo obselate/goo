@@ -11,15 +11,15 @@ internal class DevToolsInputCell : Cell {
   internal var Moves int32
   internal var Cancels int32
 
-  public override func Build() Blob -> Container {Width: 320, Height: 220, Children: {
-    if Show { Button{Key: "action", Width: 100, Height: 40, OnClick: () -> { Clicks++ },
-      Children: {Text{Content: "Count " + Clicks.ToString()}}} } else { Container{Key: "placeholder"} },
+  public override func Build() Blob -> Container() {.Width: 320,.Height: 220,
+    if Show { Button() {.Key: "action",.Width: 100,.Height: 40,.OnClick: () -> { Clicks++ },
+        Text{Content: "Count " + Clicks.ToString()}} } else { Container{Key: "placeholder"} },
     TextEntry{Key: "entry", Width: 200, Height: 40, Value: Value, OnChange: (value string) -> { Value = value }},
     Container{Key: "drag", Width: 100, Height: 40,
       OnPointerDown: (event PointerEvent) -> { event.Capture() },
       OnPointerMove: (event PointerEvent) -> { if event.Buttons != PointerButtons.None { Moves++ } },
-      OnPointerCancel: (event PointerEvent) -> { Cancels++ }},
-  }}
+      OnPointerCancel: (event PointerEvent) -> { Cancels++ }
+    }}
 }
 
 internal class DevToolsInputFixtures {

@@ -170,50 +170,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       BindAndDraw(commandBuffer, primitivePipelines.SolidPipeline, *void(&push))
     }
 
-  private func EmitLava(
-    commandBuffer VkCommandBuffer,
-    extent VkExtent2D,
-    value LavaRecord,
-    frame SceneFrame) {
-      ValidateBounds(value.Bounds)
-      ValidateFinite(value.Flow, "lava flow")
-      ValidateFinite(value.Form, "lava form")
-      ValidateFinite(value.Blend, "lava blend")
-      ValidateFinite(value.Light, "lava light")
-      ValidateFinite(value.Hue, "lava hue")
-      if value.Flow < 0.0F || value.Flow > 1.0F
-        || value.Form < 0.0F || value.Form > 1.0F
-        || value.Blend < 0.0F || value.Blend > 1.0F
-        || value.Light < 0.0F || value.Light > 1.0F
-        || value.Hue < 0.0F || value.Hue > 1.0F
-        || value.Rainbow > 1u
-        || Double.IsNaN(value.Rotation.X) || Double.IsInfinity(value.Rotation.X)
-        || Double.IsNaN(value.Rotation.Y) || Double.IsInfinity(value.Rotation.Y) {
-          throw ArgumentOutOfRangeException("lava state")
-        }
-      ValidateTransformIndex(frame, value.TransformIndex)
-      if value.Bounds.IsEmpty {
-        return
-      }
-      let transform = ResolveTransform(frame, value.TransformIndex)
-      var push = VulkanPrimitiveGpuRecord{}
-      FillTransform(&push.Geometry, value.Bounds, transform, extent)
-      push.radii_x = value.Flow
-      push.radii_y = value.Form
-      push.radii_z = value.Blend
-      push.radii_w = value.Bounds.Width / value.Bounds.Height
-      let phase = lavaFrameSeconds - Math.Floor(lavaFrameSeconds / 4096.0) * 4096.0
-      push.params_x = float32(phase)
-      push.params_y = value.Light
-      push.params_z = value.Hue
-      push.params_w = value.Rainbow == 1u ? 1.0F : 0.0F
-      push.stopPositions_x = float32(value.Rotation.X)
-      push.stopPositions_y = float32(value.Rotation.Y)
-      push.stopPositions_z = 0.0F
-      push.packedColorsExtra_x = value.Seed
-      BindAndDraw(commandBuffer, primitivePipelines.LavaPipeline, *void(&push))
-    }
-
   private func EmitShadow(
     commandBuffer VkCommandBuffer,
     extent VkExtent2D,

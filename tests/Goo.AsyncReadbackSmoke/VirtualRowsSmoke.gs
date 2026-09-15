@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
-import System
-import System.IO
-import System.Collections.Generic
-import System.Threading
 import Goo
+import System
+import System.Collections.Generic
+import System.IO
+import System.Threading
 
 data struct MeasuredSmokeRow {
   internal var Id int32
@@ -25,27 +25,20 @@ class VirtualRowsSmokeCell : Cell {
       } else { "A short update with a smaller measured height." }})
     }
   }
-  public override func Build() Blob -> Container {
-    Padding: 24, Gap: 14, BackgroundColor: Color.Rgb(16, 23, 33), Color: Color.Rgb(225, 235, 246),
-    Children: {
-      Text{Content: "Measured virtual rows", FontSize: 26},
+  public override func Build() Blob -> Container() {.Padding: 24,.Gap: 14,.BackgroundColor: Color.Rgb(16, 23, 33),.Color: Color.Rgb(225, 235, 246),
+    Text{Content: "Measured virtual rows", FontSize: 26},
       Text{Content: "1,000 messages · stable keys · actual text heights", FontSize: 13, Color: Color.Rgb(148, 173, 198)},
       VirtualRows(Items, 100.0, (row MeasuredSmokeRow) -> row.Id.ToString(), builder) {
         Handle = ListHandle, FlexGrow = 1, MinHeight = 0, RowGap = 10,
         ScrollbarVisibility = ScrollbarVisibility.Always,
       },
-    },
-  }
+    }
+
   private func BuildRow(row MeasuredSmokeRow) Blob {
     Builds++
-    return Container{
-      Handle: if row.Id == 400 { Anchor } else { nil }, Padding: 16, Gap: 8,
-      BackgroundColor: if row.Id == 400 { Color.Rgb(27, 65, 95) } else { Color.Rgb(29, 39, 53) },
-      BorderRadius: 8, BorderWidth: 1, BorderColor: Color.Rgb(48, 68, 89),
-      Children: {
-        Text{Content: "MESSAGE " + row.Id.ToString(), FontSize: 11, Color: Color.Rgb(134, 190, 224)},
+    return Container() {.Handle: if row.Id == 400 { Anchor } else { nil },.Padding: 16,.Gap: 8,.BackgroundColor: if row.Id == 400 { Color.Rgb(27, 65, 95) } else { Color.Rgb(29, 39, 53) },.BorderRadius: 8,.BorderWidth: 1,.BorderColor: Color.Rgb(48, 68, 89),
+      Text{Content: "MESSAGE " + row.Id.ToString(), FontSize: 11, Color: Color.Rgb(134, 190, 224)},
         Text{Content: row.Content, FontSize: 17},
-      },
     }
   }
 }

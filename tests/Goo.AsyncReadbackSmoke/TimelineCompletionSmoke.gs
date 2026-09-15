@@ -1,25 +1,20 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Diagnostics
 import System.IO
 import System.Threading
-import Goo
 
 class TimelineCompletionCell : Cell {
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    BackgroundColor: Color.Rgb(18, 30, 46),
-    Children: {
-      Container{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.BackgroundColor: Color.Rgb(18, 30, 46),
+    Container{
         Position: PositionType.Absolute,
         Left: 12,
         Top: 12,
         Width: 36,
         Height: 28,
         BackgroundColor: Color.Rgb(62, 134, 210),
-      },
     },
   }
 }

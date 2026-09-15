@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Text
-import Goo
 
 class PerformanceTextEditingRoot : Cell {
   shared {

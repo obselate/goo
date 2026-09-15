@@ -66,6 +66,9 @@ public class TextDocument {
   /// Occurs after one document transaction commits.
   public event Changed Action[TextDocumentChange]
 
+  // Core observers maintain controller, layer, and view state before application callbacks.
+  internal var Committed Action[TextDocumentChange]?
+
   /// Creates an empty document.
   public init() {
     undoHistory = List[TextHistoryEntry]()
@@ -239,6 +242,7 @@ public class TextDocument {
       currentMutation = TextDocumentMutation{ Kind: mutationKind,
         Transaction: committedTransaction, DiscardedTransactions: discarded }
       try {
+        Committed?(committed)
         if Changed != nil {
           Changed(committed)
         }

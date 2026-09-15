@@ -9,26 +9,19 @@ Source: [`Goo/Rendering`](../../Goo/Rendering)
 Load one backend-neutral `ShaderEffectProgram`, create retained `ShaderEffect` state from it, and assign the effect through the ordinary `Style.ShaderEffect` property on a `Container`, `Button`, `Text`, `Image`, `Shape`, or another Blob. Goo renders that element and its subtree into a bounded offscreen layer, runs the selected backend artifact, then composites the result without changing layout, hit testing, accessibility, transforms, or clipping.
 
 ```gsharp
+import Goo
 import System
 import System.IO
 import System.Numerics
-import Goo
 
 let path = Path.Combine(AppContext.BaseDirectory, "Shaders", "glass.goo-effect")
 let program = ShaderEffectProgram.Load(path)
-let effect = ShaderEffect(program,
-  samplesBackdrop: true,
-  backdropOutset: 24.0F)
+let effect = ShaderEffect(program, samplesBackdrop: true, backdropOutset: 24.0F)
 effect.SetParameter(0, Vector4(0.18F, 0.65F, 0.9F, 1.0F))
 let data = ShaderEffectData(BitConverter.GetBytes(1.0F))
 effect.SetData(0, data)
 
-let control = Button{
-  Width: 180,
-  Height: 52,
-  BorderRadius: 18,
-  ShaderEffect: effect,
-}
+let control = Button{Width: 180, Height: 52, BorderRadius: 18, ShaderEffect: effect,}
 ```
 
 Reuse the same effect instance for controls that share program and parameters. Create separate effect instances from the same program when controls need independent parameter state. Program sharing also shares the backend pipeline identity. `SetParameter` accepts slots 0 through 7, marks mounted users paint-dirty only when a value changes, and stays allocation-free after construction.

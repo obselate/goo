@@ -4,27 +4,6 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Input`](../../Goo/Input)
 
-## Pointer click sequences
-
-`PointerEvent.ClickCount` is 1, 2, or 3 on a press and its matching button release;
-movement and cancellation report zero. It counts consecutive presses, saturating
-at three, using the same policy as built-in text selection. A sequence requires
-the same deepest interactive target and button, less than 400 ms between presses,
-and less than four logical window pixels of movement on each axis. Decorative
-children inside one control do not split its sequence. This is Goo normalization,
-independent of OS double-click preferences or native event counts.
-
-Leaving the movement tolerance, releasing outside the target, explicit capture
-release, capture transfer to a different target, cancellation, and focus/input
-reset break continuity. PreventDefault does not hide the count. A captured up
-still reports its original press count; capture does not turn a drag into a click.
-Mouse and pen sequences belong to their pointer contact. Touch contacts end on up,
-so separate taps report one; pen proximity cancellation resets its sequence.
-
-Single-line text entry selects a word for counts two and three. TextEditor uses
-one for the caret, two for a word, and three for a line. Applications keep control
-over what generic double/triple presses do.
-
 ## Route keyboard and focus callbacks
 
 `OnKeyDown` and `OnKeyUp` start at the currently focused element and bubble through its parents, so an ancestor can own shortcuts for a subtree. `KeyEvent.StopPropagation()` ends that route before the next ancestor without canceling Goo's default action. `KeyEvent.PreventDefault()` cancels the default action without stopping the remaining callbacks. Both controls are active only during that route; retaining the event value cannot affect a later dispatch.
@@ -59,17 +38,7 @@ The selected target receives `Enter`, `Move`, `Leave`, and `Drop` snapshots thro
 
 Escape, pointer cancellation, focus loss, window close, source removal or disablement, and callback failure cancel the session. Internal termination and capture cleanup run once. `DragSource.End` runs at most once only while its source remains mounted. Goo strongly retains the payload through an eligible `End`, then releases it. Goo never calls `Dispose` on consumer payloads. Callback cleanup preserves the original exception.
 
-One in-app pointer drag can be active per window. Goo provides no visual drag preview, automatic scrolling, or generic keyboard target navigation. Applications must expose an equivalent keyboard and accessibility action when drag movement affects application state.
-
-### Native file drops
-
-Set `Window.NativeFileDropEnabled = true` before `Open` or on its owning UI thread to receive external file lists through `DropTarget`. `Window.NativeTransferCapabilities` reports support for `FileDrop`, `DropPreview`, `OutboundData`, and `EffectNegotiation`. The supported Windows, Cocoa, and native Wayland hosts support the first two; outbound offers and native effect feedback are unsupported. Closed/embedded windows report `None`; enabling on an unsupported host throws. Native file ingress is off by default. Linux requires Goo's patched SDL payload to preserve file-URI priority when a file manager also offers plain text.
-
-Accept `DragData.Value is NativeFileDrop` with `DragEffect.Copy`. Preview callbacks carry `IsPreview = true` and an empty `Paths` list because SDL does not expose file names until drop. A preview may ultimately be a text offer or an empty/cancelled offer, so it never promises deliverable files. The final query and `Drop` use an immutable owned `Paths` list with `IsPreview = false`. Paths follow the same absolute-path validation and order as clipboard file lists (`text/uri-list` on Linux); Goo does not open or read them. Retaining the payload after drop or window close is safe.
-
-The deepest eligible target accepting Copy receives Enter, Move, and either Drop or Leave. Coordinates are logical window/target coordinates, `PointerId` is -1, and native ingress does not capture a Goo pointer. Leaving, cancellation, disabling ingress, blocking the owner with a modal window, and owner close cancel the preview. Retired or disabled targets receive no stale callbacks. Missing-position, text-only, and malformed offers do not produce a Drop. Native callbacks run on the window UI thread and rebuild their owning Cell through the usual input invalidation path.
-
-The bridge accepts at most 4,096 paths, 32,768 UTF-16 units per path, 1,048,576 total path units, and 131,072 UTF-8 bytes per incoming path. An invalid or oversized path rejects the whole offer and records `Window.LastNativeFileDropError`, cleared by the next offer. No partial list is delivered. SDL's source cursor/effect remains Copy independently of Goo target acceptance; `EffectNegotiation` is absent to expose that backend limit. These rules do not add work to frame painting; disabled windows allocate no transfer state.
+One pointer drag can be active per window. Goo provides no drag preview, automatic scrolling, native transfer, or generic keyboard target navigation. Applications must expose an equivalent keyboard and accessibility action when drag movement affects application state.
 
 ## `DragData`
 
@@ -282,6 +251,50 @@ Describes a non-cancelable focus lifecycle callback.
 
 Stops this lifecycle event before the next ancestor callback. Focus has already changed.
 
+## `FocusScope`
+
+Source:
+
+- [`FocusScope.gs`](../../Goo/Input/FocusScope.gs)
+
+Contains sequential keyboard focus until disposed or its root becomes unavailable. Nested scopes activate in opening order; dispose on the owning window's UI thread.
+
+### `Dispose`
+
+Closes this scope. Focus restoration occurs at the next stable input/tree update.
+
+### `IsActive`
+
+Reports whether the scope remains registered, including an inactive underlying layer.
+
+### `Order`
+
+Gets this scope's opening order among overlapping scopes in this window.
+
+## `FocusScopeOptions`
+
+Source:
+
+- [`FocusScope.gs`](../../Goo/Input/FocusScope.gs)
+
+Configures one mounted focus scope. The root must be focusable for empty-scope fallback.
+
+### `new`
+
+Initializes a nonmodal scope that restores focus on close.
+
+### `InitialFocus`
+
+Requests initial focus within the scope. Otherwise AutoFocus, the first tab stop, or the root is used.
+
+### `Modal`
+
+Blocks input and accessibility outside the top scope while any modal registration is active.
+
+### `RestoreFocus`
+
+Restores prior eligible focus on close unless focus has explicitly moved outside. Defaults to true.
+
 ## `FocusedEditorSnapshot`
 
 Source:
@@ -475,6 +488,58 @@ Reports whether Shift is pressed.
 
 Reports whether Super is pressed.
 
+## `NativeFileDrop`
+
+Source:
+
+- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
+
+Contains an owned external file list, or an empty preview before the host delivers paths.
+
+### `IsPreview`
+
+Gets whether paths are still unavailable; preview acceptance must not depend on individual files.
+
+### `Paths`
+
+Gets absolute file paths without reading file contents; the list survives the drag and window lifetime.
+
+## `NativeTransferCapabilities`
+
+Source:
+
+- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
+
+Reports the native transfer operations supported by an open desktop window.
+
+### Values
+
+- `None`
+- `FileDrop`
+- `DropPreview`
+- `OutboundData`
+- `EffectNegotiation`
+
+### `DropPreview`
+
+The host reports drag positions before the final file list is available.
+
+### `EffectNegotiation`
+
+The host can report a target's negotiated effect back to the source application.
+
+### `FileDrop`
+
+The host can deliver owned external file lists to DropTarget.
+
+### `None`
+
+No native transfer operation is available.
+
+### `OutboundData`
+
+The host can offer application data to other applications.
+
 ## `PlatformInput`
 
 Source:
@@ -643,6 +708,10 @@ Gets the pointer button that changed, or None for movement.
 
 Gets the pointer buttons held after the event transition.
 
+### `ClickCount`
+
+Gets the normalized press count (1 to 3) on down and matching up; zero on other events. Counts use the same target, button, 400 ms, and 4 logical pixel policy as text selection.
+
 ### `Delta`
 
 Gets movement since the preceding pointer position in the current handler coordinates.
@@ -650,6 +719,10 @@ Gets movement since the preceding pointer position in the current handler coordi
 ### `Device`
 
 Gets the pointer device type that produced this event.
+
+### `IsFromInteractiveChild`
+
+True when a clickable or focusable descendant is below this handler on the routed path. Applies to down, move, up, and cancel; hover notifications are not routed.
 
 ### `IsPrimary`
 
@@ -722,8 +795,3 @@ Gets the wheel position in the current handler coordinates.
 ### `WindowPosition`
 
 Gets the wheel position in logical window coordinates.
-
-`Blob.TabStop` defaults to `true`. Set it to `false` on focusable children of a
-composite widget to exclude them from sequential Tab navigation while preserving
-pointer, `ElementHandle.Focus()`, and accessibility focus. Keep one enabled child
-as the tab stop and move focus explicitly for arrow-key navigation.

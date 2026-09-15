@@ -321,10 +321,10 @@ internal partial class VulkanSceneCompiler {
         && node.OverflowY == Overflow.Hidden
       let rectClip = RectClipRecord{
         Bounds: entry ? ConservativeBounds{
-          X: TextLayouts.ContentLeft(node),
-          Y: TextLayouts.ContentTop(node),
-          Width: TextLayouts.ContentWidth(node),
-          Height: TextLayouts.ContentHeight(node),
+          X: BoxGeometry.ContentLeft(node),
+          Y: BoxGeometry.ContentTop(node),
+          Width: BoxGeometry.ContentWidth(node),
+          Height: BoxGeometry.ContentHeight(node),
         } : bounds,
         TransformIndex: parentTransformIndex,
         ParentIndex: entry ? -1 : parentClipIndex,

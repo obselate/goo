@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.Collections.Generic
-import System.Diagnostics
 import System.IO
 import System.Runtime.InteropServices
 
@@ -85,8 +84,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var primitiveRecordPlan []uint32
   private var primitivePrepass bool
   private var primitivePrepared bool
-  private let lavaStartSeconds float64
-  private var lavaFrameSeconds float64
   private var primitiveDescriptorBound bool
   private var primitiveDescriptorLayout VkPipelineLayout
   private var primitiveDescriptorSlot int32 = -1
@@ -235,8 +232,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       this.primitiveRecordPlan = [1]uint32
       this.clipRegions = [64]VulkanClipMaskRegion
       this.clipContentKeys = Dictionary[uint64, uint64]()
-      lavaStartSeconds = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
-      lavaFrameSeconds = 0.0
       BuildLinearChannelTable()
     }
 
@@ -383,8 +378,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       EnsurePrimitivePlanCapacity(frame.DrawRefCount)
       let maximumRecordCount = ComputeMaximumAnalyticRecordCount(frame)
-      lavaFrameSeconds = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
-      -lavaStartSeconds
       primitivePrepass = true
       primitivePrepared = false
       primitiveRecordCount = 0
@@ -722,10 +715,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         RequireRecordIndex(reference.Index, frame.ShadowCount, "shadow index")
         EmitShadow(commandBuffer, activeExtent, frame.Shadows[reference.Index], frame)
       }
-      case SceneDrawKind.Lava {
-        RequireRecordIndex(reference.Index, frame.LavaCount, "lava index")
-        EmitLava(commandBuffer, activeExtent, frame.Lavas[reference.Index], frame)
-      }
       default {
         throw NotSupportedException("Vulkan primitive renderer received an unknown draw kind")
       }
@@ -795,7 +784,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         case SceneDrawKind.LayerEnd { count = 1uL }
         case SceneDrawKind.CachedImage { count = 1uL }
         case SceneDrawKind.Shadow { count = 1uL }
-        case SceneDrawKind.Lava { count = 1uL }
         default { count = 0uL }
       }
       if count > 0uL {

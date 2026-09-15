@@ -1,9 +1,9 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.Diagnostics
-import Goo
 
 data struct PrimitiveUploadBox {
   internal var Left float64

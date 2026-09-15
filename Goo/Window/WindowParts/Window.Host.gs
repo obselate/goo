@@ -256,6 +256,7 @@ public partial class Window {
         VSync,
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
       host = native
+      SyncTitlebarHook()
       configureOwnership(native)
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(minWidth, minHeight) }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }
@@ -544,7 +545,7 @@ public partial class Window {
   // latch Pump into an unpaced, unrendered poll spin instead of a bounded
   // sleep. idleWaitMs() below is where their timing actually gets honored.
   private func hasDemand() bool -> motionPump.Active || resolver.Animating.Count > 0
-    || shaderPlaybackDemand() || renderDirty || pendingRebuild != 0
+    || renderDirty || pendingRebuild != 0
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
     || windowTarget?.NeedsRender == true || windowTarget?.QueueWorkPending == true
@@ -620,11 +621,6 @@ public partial class Window {
         }
     }
     return false
-  }
-
-  private func shaderPlaybackDemand() bool {
-    guard let root = node else { return false }
-    return ShaderEffectStyles.TreeHasPlaying(root)
   }
 
   /// Opens the window and processes frames until all open Goo windows close.
@@ -719,7 +715,7 @@ public partial class Window {
     let tree = node
     node = nil
     if let current = tree {
-      firstError = captureCleanupError(firstError, () -> TextLayouts.DisposeTree(current))
+      firstError = captureCleanupError(firstError, () -> NodeLifecycle.DisposeTree(current))
     }
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.ClearWindow(this))

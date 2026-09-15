@@ -1,9 +1,9 @@
 package Goo
 
-import System
-import System.Threading
 import Goo.VulkanProof
 import Hexa.NET.SDL3
+import System
+import System.Threading
 
 internal partial class SdlRuntime {
   shared {

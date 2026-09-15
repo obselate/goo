@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.IO
-import Goo
 
 class TextEditorSmokeCell : Cell {
   shared {
@@ -34,13 +34,8 @@ class TextEditorSmokeCell : Cell {
   }
 
   override func Build() Blob ->
-  Container{
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Position: PositionType.Relative,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      TextEditor(Controller, []TextPresentationLayer{ presentation }) {
+  Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    TextEditor(Controller, []TextPresentationLayer{ presentation }) {
         Handle = TextEditorSmokeCell.Editor,
         Position = PositionType.Absolute,
         Left = 24,
@@ -54,7 +49,6 @@ class TextEditorSmokeCell : Cell {
         OverscanLines = 0,
         BackgroundColor = Color.Rgb(24, 40, 64),
         Color = Color.Rgb(232, 238, 248),
-      },
     },
   }
 

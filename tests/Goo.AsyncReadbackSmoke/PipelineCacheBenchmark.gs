@@ -1,8 +1,8 @@
 package GooAsyncReadbackSmoke
 
-import System
 import Goo
 import GooReadbackFixture
+import System
 
 func RunPipelineCacheBenchmark() {
   let root = ReadbackSmokeCell{}

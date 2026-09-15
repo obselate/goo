@@ -64,17 +64,14 @@ internal class TreeFixtures {
 
   internal func freshSubtreeOnCellReplacement() bool {
     let rec = Reconciler{ Res: Resolver{} }
-    let root = rec.Mount(Container{ Children: {
-      Cell.Mount[TreeContainerCell]("slot", nil),
-    } })
+    let root = rec.Mount(Container() {
+      Cell.Mount[TreeContainerCell]("slot", nil),})
     let entry = root.Children[0].Children[0]
     entry.Focused = true
     entry.Buffer = "typed"
-    rec.Diff(root, Container{ Children: {
-      Container{ Key: "slot", Children: {
-        TextEntry{ Key: "entry", Value: "new" },
-      } },
-    } })
+    rec.Diff(root, Container() {
+      Container() {.Key: "slot", TextEntry{ Key: "entry", Value: "new" },
+      },})
     let replacement = root.Children[0].Children[0]
     return !replacement.Focused && replacement.Buffer == "new"
   }
@@ -99,15 +96,15 @@ internal class TreeFixtures {
 
   func OutputAndKindReplacementContract() bool {
     let rec = Reconciler{ Res: Resolver{} }
-    let node = rec.Mount(Container{ Children: { Text("original") } })
-    rec.Diff(node, Container{ Children: { Text("changed") } })
+    let node = rec.Mount(Container() { Text("original"),})
+    rec.Diff(node, Container() { Text("changed"),})
     if node.Children[0].Content != "changed" { return false }
-    rec.Diff(node, Container{ Children: { Container{ Children: { Text("nested") } } } })
+    rec.Diff(node, Container() { Container() { Text("nested"),},})
     let container = node.Children[0]
     if container.Children.Count != 1 || container.Children[0].Content != "nested" {
       return false
     }
-    rec.Diff(node, Container{ Children: { Text("replaced") } })
+    rec.Diff(node, Container() { Text("replaced"),})
     let replacement = node.Children[0]
     return replacement.Content == "replaced" && replacement.Children.Count == 0
   }
@@ -117,18 +114,18 @@ internal class TreeFixtures {
       let rec = Reconciler{ Res: Resolver{} }
       switch scenario {
         case "mount-mixed" {
-          rec.Mount(Container{ Children: { Text{ Key: "keyed", Content: "x" }, Text{ Content: "plain" } } })
+          rec.Mount(Container() { Text{ Key: "keyed", Content: "x" }, Text{ Content: "plain" },})
         }
         case "diff-mixed" {
-          let node = rec.Mount(Container{ Children: { Text{ Key: "keyed", Content: "x" } } })
-          rec.Diff(node, Container{ Children: { Text{ Key: "keyed", Content: "x" }, Text{ Content: "plain" } } })
+          let node = rec.Mount(Container() { Text{ Key: "keyed", Content: "x" },})
+          rec.Diff(node, Container() { Text{ Key: "keyed", Content: "x" }, Text{ Content: "plain" },})
         }
         case "mount-duplicate" {
-          rec.Mount(Container{ Children: { Text{ Key: "same", Content: "a" }, Text{ Key: "same", Content: "b" } } })
+          rec.Mount(Container() { Text{ Key: "same", Content: "a" }, Text{ Key: "same", Content: "b" },})
         }
         case "diff-duplicate" {
-          let node = rec.Mount(Container{ Children: { Text{ Key: "a", Content: "a" } } })
-          rec.Diff(node, Container{ Children: { Text{ Key: "same", Content: "a" }, Text{ Key: "same", Content: "b" } } })
+          let node = rec.Mount(Container() { Text{ Key: "a", Content: "a" },})
+          rec.Diff(node, Container() { Text{ Key: "same", Content: "a" }, Text{ Key: "same", Content: "b" },})
         }
         case _ {
           return false
@@ -310,14 +307,9 @@ internal class TreeFixtures {
   func ButtonSemanticPrimitiveContract() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{ Res: resolver }
-    let node = reconciler.Mount(Button{
-      BackgroundColor: Color.Rgb(100, 100, 100),
-      Color: Color.Rgb(200, 20, 10),
-      Hover: Style{ BackgroundColor: Color.White },
-      Children: {
+    let node = reconciler.Mount(Button() {.BackgroundColor: Color.Rgb(100, 100, 100),.Color: Color.Rgb(200, 20, 10),.Hover: Style{ BackgroundColor: Color.White },
         Shape{ Key: "icon", Path: PathBuilder().MoveTo(0.0, 0.0).LineTo(1.0, 1.0).Build() },
-        Text{ Key: "label", Content: "Hi" },
-      },
+        Text{ Key: "label", Content: "Hi"},
     })
     if node.Kind != NodeKind.Button || !node.Focusable || node.TransitionMs != 0.0
       || node.JustifyContent != JustifyContent.Center || node.AlignItems != AlignItems.Center
@@ -333,12 +325,9 @@ internal class TreeFixtures {
     if node.BackgroundColor != Color.White {
       return false
     }
-    reconciler.Diff(node, Button{
-      Color: Color.Rgb(10, 20, 200),
-      Children: {
+    reconciler.Diff(node, Button() {.Color: Color.Rgb(10, 20, 200),
         Shape{ Key: "icon", Path: PathBuilder().MoveTo(0.0, 0.0).LineTo(1.0, 0.0).Build() },
-        Text{ Key: "label", Content: "Updated" },
-      },
+        Text{ Key: "label", Content: "Updated"},
     })
     return node.Kind == NodeKind.Button && node.Children.Count == 2
       && node.Children[1].Content == "Updated" && node.Children[1].Color == Color.Rgb(10, 20, 200)
@@ -433,6 +422,85 @@ internal class TreeFixtures {
       && node.Placeholder == "updated" && node.Color.B == 1.0F && calls == 1
   }
 
+  func ExplicitControlledEntryValue() bool {
+    let resolver = Resolver{}
+    let rec = Reconciler{Res: resolver}
+    let focus = FocusManager()
+    let input = TextInput(focus)
+    var calls = 0
+    let node = rec.Mount(TextEntry{Value: "original"})
+    focus.SetFocus(resolver, node)
+    node.Anchor = 5
+    node.Caret = 2
+    rec.Diff(
+      node,
+      TextEntry{
+        Value: "a😀b",
+        Controlled: true,
+        OnChange: (value string) -> {
+          calls++
+        }
+      })
+    if node.Buffer != "a😀b" || node.Anchor != 4 || node.Caret != 1 || !node.Focused || calls != 0 {
+      return false
+    }
+    node.Anchor = 2
+    node.Caret = 2
+    rec.Diff(node, TextEntry{Value: "xa\u0301z", Controlled: true})
+    if node.Caret != 1 || node.Anchor != 1 {
+      return false
+    }
+    rec.Diff(node, TextEntry{Value: "", Controlled: true})
+    if node.Caret != 0 || node.Anchor != 0 || node.Buffer != "" || !node.Focused {
+      return false
+    }
+    node.Buffer = "local"
+    rec.Diff(node, TextEntry{Value: "external"})
+    return node.Buffer == "local" && !TextEntry{}.Controlled
+  }
+
+  func ControlledEntryComposition() bool {
+    let resolver = Resolver{}
+    let rec = Reconciler{Res: resolver}
+    let focus = FocusManager()
+    let input = TextInput(focus)
+    var calls = 0
+    let node = rec.Mount(
+      TextEntry{
+        Value: "hello",
+        OnChange: (value string) -> {
+          calls++
+        }
+      })
+    focus.SetFocus(resolver, node)
+    input.HandleComposition(node, "😀", 0, 2)
+    if node.Buffer != "hello😀" || input.SyncControlledEntry(node, "hello") {
+      return false
+    }
+    if input.EditorSnapshot()!!.CompositionStart != 5 {
+      return false
+    }
+    if !input.SyncControlledEntry(node, "external") || node.Buffer != "external"
+      || input.EditorSnapshot()!!.CompositionStart != -1 || !node.Focused || calls != 0 {
+        return false
+      }
+    input.HandleCompositionCancel(node)
+    if node.Buffer != "external" {
+      return false
+    }
+    input.HandleChar(node, "!")
+    if calls != 1 {
+      return false
+    }
+    input.HandleComposition(node, "x", 0, 1)
+    let effective = node.Buffer
+    if !input.SyncControlledEntry(node, effective) {
+      return false
+    }
+    input.HandleCompositionCancel(node)
+    return node.Buffer == effective && input.EditorSnapshot()!!.CompositionStart == -1 && calls == 1
+  }
+
   internal func markBackgroundApplied(node Node) {
     node.AppliedMask = styleMaskWith(node.AppliedMask, StyleField.BackgroundColor)
   }
@@ -444,11 +512,11 @@ internal class TreeKeyedParent : Cell {
   init() { Mode = 0 }
 
   override func Build() Blob -> switch Mode {
-    case 0: Container { Children: { keyedCell("a"), keyedCell("b") } }
-    case 1: Container { Children: { keyedCell("b"), keyedCell("a") } }
-    case 2: Container { Children: { keyedCell("b"), keyedCell("c"), keyedCell("a") } }
-    case 3: Container { Children: { keyedCell("b"), keyedCell("a") } }
-    case _: Container { Children: { keyedCell("b"), Text{ Key: "a", Content: "replacement" } } }
+    case 0: Container() { keyedCell("a"), keyedCell("b"),}
+    case 1: Container() { keyedCell("b"), keyedCell("a"),}
+    case 2: Container() { keyedCell("b"), keyedCell("c"), keyedCell("a"),}
+    case 3: Container() { keyedCell("b"), keyedCell("a"),}
+    case _: Container() { keyedCell("b"), Text{ Key: "a", Content: "replacement" },}
   }
 
   internal func keyedCell(label string) Blob -> Cell.Mount[string, TreeKeyedCell](label, label)
@@ -470,9 +538,8 @@ internal class TreeKeyedCell : Cell[string], IDisposable {
 }
 
 internal class TreeContainerCell : Cell {
-  override func Build() Blob -> Container { Children: {
-    TextEntry{ Key: "entry", Value: "old" },
-  } }
+  override func Build() Blob -> Container() {
+    TextEntry{ Key: "entry", Value: "old" },}
 }
 
 internal class TreePositionalParent : Cell {
@@ -480,11 +547,11 @@ internal class TreePositionalParent : Cell {
 
   init() { Label = "before" }
 
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Text{ Content: Label },
     Cell.Mount[TreePositionalCell](nil),
     Text{ Content: "tail" },
-  } }
+  }
 }
 
 internal class TreePositionalCell : Cell {
@@ -500,21 +567,20 @@ internal class TreeIncrementalParent : Cell {
 
   init() { Title = "old" }
 
-  override func Build() Blob -> Container { Children: {
+  override func Build() Blob -> Container() {
     Text{ Key: "title", Content: Title },
     Cell.Mount[string, TreeIncrementalChild]("child", Title),
   } }
-}
 
 internal class TreeBuildCountingParent : Cell {
   internal var Builds int32
 
   override func Build() Blob {
     Builds = Builds + 1
-    return Container{ Children: {
+    return Container() {
       Text{ Key: "stable", Content: "stable" },
       Cell.Mount[string, TreeIncrementalChild]("child", ""),
-    } }
+    }
   }
 }
 
@@ -525,9 +591,9 @@ internal class TreeRemovedChildParent : Cell {
 
   override func Build() Blob {
     if ShowChild {
-      return Container{ Children: { Cell.Mount[string, TreeIncrementalChild]("child", "") } }
+      return Container() { Cell.Mount[string, TreeIncrementalChild]("child", ""),}
     }
-    return Container{ Children: { Text{ Content: "empty" } } }
+    return Container() { Text{ Content: "empty" },}
   }
 }
 
@@ -541,10 +607,9 @@ internal class TreeIncrementalChild : Cell[string] {
 
   override func Build() Blob {
     Builds = Builds + 1
-    return Container{ Children: {
+    return Container() {
       Text{ Content: Input },
-      Text{ Content: "${Count}" },
-    } }
+      Text{ Content: "${Count}" },}
   }
 }
 
@@ -558,13 +623,13 @@ internal class TreeDisplayFocusCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container { Width: 300.0, Height: 100.0, Children: {
+  override func Build() Blob -> Container() {.Width: 300.0,.Height: 100.0,
     TextEntry{ Key: "a", Width: 100.0, Height: 30.0 },
-    Container{ Key: "hidden", Display: Hidden ? Display.None : Display.Flex, Children: {
+    Container() {.Key: "hidden",.Display: Hidden ? Display.None : Display.Flex,
       TextEntry{ Key: "hidden-entry", Width: 100.0, Height: 30.0 },
-    } },
+    },
     TextEntry{ Key: "c", Width: 100.0, Height: 30.0 },
-  } }
+  }
 }
 
 internal class TreeDisplayRetainedParent : Cell {
@@ -581,11 +646,11 @@ internal class TreeDisplayRetainedParent : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container { Width: 200.0, Height: 100.0, Children: {
-    Container{ Key: "wrapper", Display: Hidden ? Display.None : Display.Flex, Children: {
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
+    Container() {.Key: "wrapper",.Display: Hidden ? Display.None : Display.Flex,
       Cell.Mount[TreeDisplayRetainedCell]("retained", nil),
-    } },
-  } }
+    },
+  }
 }
 
 internal class TreeVisibilityFocusCell : Cell {
@@ -598,19 +663,16 @@ internal class TreeVisibilityFocusCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container { Width: 300.0, Height: 100.0, Children: {
+  override func Build() Blob -> Container() {.Width: 300.0,.Height: 100.0,
     TextEntry{ Key: "a", Width: 100.0, Height: 30.0 },
-    Container{
-      Key: "hidden", Visibility: Hidden ? Visibility.Hidden : Visibility.Visible,
-      Children: {
-        TextEntry{
+    Container() {.Key: "hidden",.Visibility: Hidden ? Visibility.Hidden : Visibility.Visible,
+      TextEntry{
           Key: "hidden-entry", Width: 100.0, Height: 30.0,
           Visibility: Visibility.Visible,
         },
       },
-    },
     TextEntry{ Key: "c", Width: 100.0, Height: 30.0 },
-  } }
+  }
 }
 
 internal class TreeVisibilityRetainedParent : Cell {
@@ -627,12 +689,11 @@ internal class TreeVisibilityRetainedParent : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container { Width: 200.0, Height: 100.0, Children: {
-    Container{
-      Key: "wrapper", Visibility: Hidden ? Visibility.Hidden : Visibility.Visible,
-      Children: { Cell.Mount[TreeDisplayRetainedCell]("retained", nil) },
+  override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,
+    Container() {.Key: "wrapper",.Visibility: Hidden ? Visibility.Hidden : Visibility.Visible,
+      Cell.Mount[TreeDisplayRetainedCell]("retained", nil),
     },
-  } }
+  }
 }
 
 internal class TreeDisplayRetainedCell : Cell, IDisposable {
@@ -648,5 +709,4 @@ internal class TreeDisplayRetainedCell : Cell, IDisposable {
 
   func Dispose() { Disposed = true }
 
-  override func Build() Blob -> Container { Children: { Text{ Content: "${Count}" } } }
-}
+  override func Build() Blob -> Container() { Text{ Content: "${Count}" },} }

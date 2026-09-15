@@ -316,7 +316,7 @@ public sealed class AccessibilityAllocationTests
         public void Dispose()
         {
             if (window.Tree is not null)
-                TextLayouts.DisposeTree(window.Tree);
+                NodeLifecycle.DisposeTree(window.Tree);
             controller.Dispose();
         }
 

@@ -1,9 +1,9 @@
 package GooFailedIdleSmoke
 
+import Goo
 import System
 import System.IO
 import System.Threading
-import Goo
 
 func Require(condition bool, message string) {
   if !condition {
@@ -187,14 +187,8 @@ class RecoveryCell : Cell {
     }
   }
 
-  override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
-    Padding: 12,
-    Gap: 8,
-    BackgroundColor: Color.Rgb(12, 20, 32),
-    Children: {
-      Text{
+  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Padding: 12,.Gap: 8,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Text{
         Content: CurrentText,
         Handle: TextHandle,
         FontSize: 24,
@@ -206,21 +200,12 @@ class RecoveryCell : Cell {
         Source: RecoveryCell.Source,
         Fit: ImageFit.Contain,
       },
+      Container() {.Position: PositionType.Absolute,.Left: 176,.Top: 12,.Width: 112,.Height: 64,.Opacity: 0.86,
       Container{
-        Position: PositionType.Absolute,
-        Left: 176,
-        Top: 12,
-        Width: 112,
-        Height: 64,
-        Opacity: 0.86,
-        Children: {
-          Container{
             Width: Length.Percent(100),
             Height: Length.Percent(100),
             Opacity: 0.84,
             BackgroundColor: Color.Rgb(36, 116, 84),
-          },
-        },
       },
     },
   }

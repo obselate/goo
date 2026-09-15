@@ -1,7 +1,7 @@
 package Goo.VulkanProof
 
-import System
 import Goo
+import System
 
 // Read real production pixels for long gradients, including partial final stop groups.
 internal unsafe func VerifyLongGradientReadbacks(capture VulkanProductionReadbackCapture) {

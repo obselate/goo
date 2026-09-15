@@ -1,10 +1,10 @@
 package GooAsyncReadbackSmoke
 
+import Goo
 import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.IO
-import Goo
 
 func PerformanceTableText(row int32, column int32, mutated bool) string {
   if mutated {
@@ -114,14 +114,7 @@ class PerformanceTableRoot : Cell {
     if firstRow > lastStart {
       firstRow = lastStart
     }
-    let canvas = Container{
-      Key: "perf-table-canvas",
-      Position: PositionType.Absolute,
-      Left: 0.0,
-      Top: -float64(scrollRow) * PerformanceTableRowHeight,
-      Width: PerformanceTableWidth,
-      Height: float64(PerformanceTableRows) * PerformanceTableRowHeight,
-      Children: {},
+    let canvas = Container() {.Key: "perf-table-canvas",.Position: PositionType.Absolute,.Left: 0.0,.Top: -float64(scrollRow) * PerformanceTableRowHeight,.Width: PerformanceTableWidth,.Height: float64(PerformanceTableRows) * PerformanceTableRowHeight,
     }
     var offset int32 = 0
     while offset < poolRows {
@@ -135,14 +128,8 @@ class PerformanceTableRoot : Cell {
         }))
       offset = offset + 1
     }
-    return Container{
-      Width: PerformanceTableWidth,
-      Height: PerformanceTableHeight,
-      Position: PositionType.Relative,
-      OverflowX: Overflow.Hidden,
-      OverflowY: Overflow.Hidden,
-      BackgroundColor: Color.Rgb(10, 15, 24),
-      Children: { canvas },
+    return Container() {.Width: PerformanceTableWidth,.Height: PerformanceTableHeight,.Position: PositionType.Relative,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,.BackgroundColor: Color.Rgb(10, 15, 24),
+      canvas,
     }
   }
 }
@@ -336,18 +323,7 @@ class PerformanceTopologyRoot : Cell {
   }
 
   override func Build() Blob {
-    let canvas = Container{
-      Key: "perf-topology-canvas",
-      Position: PositionType.Absolute,
-      Left: -panX,
-      Top: -panY,
-      Width: 5760,
-      Height: 3240,
-      Transform: PanelTransform{ Scale: zoom },
-      TransformOriginX: Length.Percent(0),
-      TransformOriginY: Length.Percent(0),
-      BackgroundColor: Color.Rgb(8, 13, 22),
-      Children: {},
+    let canvas = Container() {.Key: "perf-topology-canvas",.Position: PositionType.Absolute,.Left: -panX,.Top: -panY,.Width: 5760,.Height: 3240,.Transform: PanelTransform{ Scale: zoom },.TransformOriginX: Length.Percent(0),.TransformOriginY: Length.Percent(0),.BackgroundColor: Color.Rgb(8, 13, 22),
     }
     visibleEdgeCount = 0
     var visibleSlot int32 = 0
@@ -398,13 +374,8 @@ class PerformanceTopologyRoot : Cell {
         }))
       slot = slot + 1
     }
-    return Container{
-      Width: PerformanceTopologyWidth,
-      Height: PerformanceTopologyHeight,
-      Position: PositionType.Relative,
-      OverflowX: Overflow.Hidden,
-      OverflowY: Overflow.Hidden,
-      Children: { canvas },
+    return Container() {.Width: PerformanceTopologyWidth,.Height: PerformanceTopologyHeight,.Position: PositionType.Relative,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,
+      canvas,
     }
   }
 }

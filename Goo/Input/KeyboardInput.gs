@@ -5,6 +5,7 @@ import System.Collections.Generic
 import System.Diagnostics
 
 internal class KeyboardInput {
+  private let focus FocusManager
   private var queue List[KeyboardEvent]
   private var queueHead int32
   private var heldKey Key
@@ -18,7 +19,8 @@ internal class KeyboardInput {
   private var diagnosticsHook((Key, KeyModifiers) -> bool)?
   private var dispatchGeneration int64
 
-  internal init() {
+  internal init(focus FocusManager) {
+    this.focus = focus
     queue = List[KeyboardEvent]()
     queueHead = 0
     heldKey = Key.Unknown
@@ -94,7 +96,7 @@ internal class KeyboardInput {
   internal func Drain(root Node?, resolver Resolver, text TextInput,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64,
     pointer PointerInput?) bool{
-      var changed = clearButtonPressAfterFocusMove(resolver, text)
+      var changed = clearButtonPressAfterFocusMove(resolver)
       queueHead = 0
       try {
         resolver.Flush()
@@ -109,15 +111,17 @@ internal class KeyboardInput {
                   continue
                 }
               }
-              if let callback = onKeyPress {
+              if root == nil || FocusScopes.ModalRoot(root) == nil {
+                if let callback = onKeyPress {
                 callback(e.Key, e.Modifiers)
+                }
               }
               if pointer?.HandleDragKey(root, e.Key, e.Modifiers) == true {
                 changed = true
                 StopKeyRepeat(e.Key)
                 continue
               }
-              let dispatch = DispatchKeyDown(text.FocusedNode(), e.Key, e.Modifiers, false)
+              let dispatch = DispatchKeyDown(focus.FocusedNode(), e.Key, e.Modifiers, false)
               let handled = !dispatch.DefaultPrevented
                 && HandleKeyDefault(root, resolver, text, e.Key, e.Modifiers)
               if dispatch.Routed || handled {
@@ -130,17 +134,17 @@ internal class KeyboardInput {
                   changed = true
                   continue
                 }
-                let dispatch = DispatchKeyUp(text.FocusedNode(), e.Key, e.Modifiers)
-                if HandleButtonRelease(root, resolver, text, e.Key, !dispatch.DefaultPrevented) {
+                let dispatch = DispatchKeyUp(focus.FocusedNode(), e.Key, e.Modifiers)
+                if HandleButtonRelease(root, resolver, e.Key, !dispatch.DefaultPrevented) {
                   changed = true
                 }
               } finally {
                 // Never leave key release state armed when a public callback throws.
-                HandleButtonRelease(root, resolver, text, e.Key, false)
+                HandleButtonRelease(root, resolver, e.Key, false)
                 StopKeyRepeat(e.Key)
               }
             } else if let value = e.Text {
-              if e.TextFocusGeneration != text.FocusGeneration() {
+              if e.TextFocusGeneration != focus.Generation {
                 continue
               }
               if e.Kind == KeyboardEventKind.Text && text.HandleChar(root, value) {
@@ -151,11 +155,11 @@ internal class KeyboardInput {
                   changed = true
                 }
             } else if e.Kind == KeyboardEventKind.CompositionCandidates {
-              if e.TextFocusGeneration == text.FocusGeneration() {
+              if e.TextFocusGeneration == focus.Generation {
                 text.HandleCompositionCandidates(e.Candidates, e.SelectedCandidate, e.CandidatesHorizontal)
               }
             } else if e.Kind == KeyboardEventKind.CompositionCancel {
-              if e.TextFocusGeneration == text.FocusGeneration() && text.HandleCompositionCancel(root) {
+              if e.TextFocusGeneration == focus.Generation && text.HandleCompositionCancel(root) {
                 changed = true
               }
             }
@@ -232,9 +236,9 @@ internal class KeyboardInput {
     clearButtonPress(resolver)
   }
 
-  internal func AfterTreeUpdated(resolver Resolver, text TextInput) {
-    clearButtonPressAfterFocusMove(resolver, text)
-    guard let focused = text.FocusedNode() else {
+  internal func AfterTreeUpdated(resolver Resolver) {
+    clearButtonPressAfterFocusMove(resolver)
+    guard let focused = focus.FocusedNode() else {
       resetRepeat()
       return
     }
@@ -269,16 +273,16 @@ internal class KeyboardInput {
     if let hook = diagnosticsHook {
       if hook(key, modifiers) { return true }
     }
-    let dispatch = DispatchKeyDown(text.FocusedNode(), key, modifiers, false)
+    let dispatch = DispatchKeyDown(focus.FocusedNode(), key, modifiers, false)
     if dispatch.DefaultPrevented { return false }
     return HandleKeyDefault(root, resolver, text, key, modifiers)
   }
 
-  internal func HandleButtonPress(root Node?, resolver Resolver, text TextInput, key Key) bool {
+  internal func HandleButtonPress(root Node?, resolver Resolver, key Key) bool {
     if key != Key.Enter && key != Key.Space {
       return false
     }
-    guard let n = text.FocusedNode() else { return false }
+    guard let n = focus.FocusedNode() else { return false }
     if n.Kind != NodeKind.Button || !canReceiveInput(n) {
       return false
     }
@@ -294,7 +298,7 @@ internal class KeyboardInput {
     return true
   }
 
-  internal func HandleButtonRelease(root Node?, resolver Resolver, text TextInput, key Key,
+  internal func HandleButtonRelease(root Node?, resolver Resolver, key Key,
     activate bool) bool{
       if key != pressedKey {
         return false
@@ -303,7 +307,7 @@ internal class KeyboardInput {
         pressedKey = Key.Unknown
         return false
       }
-      let shouldActivate = activate && key == Key.Space && text.FocusedNode() == n
+      let shouldActivate = activate && key == Key.Space && focus.FocusedNode() == n
       clearButtonPress(resolver)
       if shouldActivate {
         hitActivate(root, n)
@@ -324,7 +328,7 @@ internal class KeyboardInput {
   }
 
   private func HandleRepeatedKey(root Node?, resolver Resolver, text TextInput) bool {
-    let dispatch = DispatchKeyDown(text.FocusedNode(), heldKey, heldModifiers, true)
+    let dispatch = DispatchKeyDown(focus.FocusedNode(), heldKey, heldModifiers, true)
     if dispatch.DefaultPrevented { return false }
     let handled = HandleKeyDefault(root, resolver, text, heldKey, heldModifiers)
     return handled
@@ -333,11 +337,15 @@ internal class KeyboardInput {
   private func HandleKeyDefault(root Node?, resolver Resolver, text TextInput, key Key,
     modifiers KeyModifiers) bool{
       var handled = text.HandleKey(root, resolver, key, modifiers)
-      if handled {
-        clearButtonPressAfterFocusMove(resolver, text)
+      if !handled && key == Key.Tab {
+      focus.MoveFocus(root, resolver, !modifiers.Shift)
+      handled = true
+    }
+    if handled {
+        clearButtonPressAfterFocusMove(resolver)
       }
       if !handled {
-        handled = HandleButtonPress(root, resolver, text, key)
+        handled = HandleButtonPress(root, resolver, key)
       }
       return handled
     }
@@ -351,6 +359,9 @@ internal class KeyboardInput {
     down bool) KeyboardDispatchResult{
       var result KeyboardDispatchResult
       guard let start = target else { return result }
+      if !canReceiveInput(start) {
+        return result
+      }
       dispatchGeneration++
       let generation = dispatchGeneration
       control.Begin(generation)
@@ -363,9 +374,9 @@ internal class KeyboardInput {
             result.Routed = true
             handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
               Control: control, Generation: generation })
-            rebuildFiberOwner(node)
+            CellOwnership.Nearest(node)?.Rebuild()
           }
-          if control.PropagationStopped { break }
+          if control.PropagationStopped || node.FocusScopeBoundary { break }
           current = node.Parent
         }
         result.DefaultPrevented = control.DefaultPrevented
@@ -379,9 +390,9 @@ internal class KeyboardInput {
 
   private func repeatIntervalTicks() int64 -> int64(Math.Ceiling(float64(Stopwatch.Frequency) / 30.0))
 
-  private func clearButtonPressAfterFocusMove(resolver Resolver, text TextInput) bool {
+  private func clearButtonPressAfterFocusMove(resolver Resolver) bool {
     if let n = pressedButton {
-      if text.FocusedNode() != n || !canReceiveInput(n) {
+      if focus.FocusedNode() != n || !canReceiveInput(n) {
         clearButtonPress(resolver)
         return true
       }
