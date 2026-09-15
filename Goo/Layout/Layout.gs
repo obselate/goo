@@ -146,7 +146,13 @@ internal class Layout {
     // Measured editors cannot own Yoga children; slot roots are calculated in readRect.
     if n.Kind == NodeKind.Editor {
       for i in 0 ... n.Children.Count {
-        syncNode(n.Children[i], true)
+        let child = n.Children[i]
+        syncNode(child, true)
+        if let childYoga = child.Yoga {
+          YGNodeAPI.YGNodeSetContext(childYoga, child)
+          YGNodeAPI.YGNodeSetDirtiedFunc(childYoga, TextEditorLayouts.SlotChildDirty)
+          if YGNodeAPI.YGNodeIsDirty(childYoga) { TextEditorLayouts.SlotChildDirty(childYoga) }
+        }
       }
       return
     }

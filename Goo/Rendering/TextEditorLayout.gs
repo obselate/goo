@@ -676,6 +676,15 @@ internal class TextEditorLayouts {
       }
     }
 
+    // Slot roots are detached from the editor's measured Yoga node. Propagate
+    // intrinsic changes explicitly, including a child Cell's own rebuild.
+    internal func SlotChildDirty(yoga Facebook.Yoga.Node) {
+      guard let child = YGNodeAPI.YGNodeGetContext(yoga) as Node,
+      let parent = child.Parent, let state = parent.EditorState else { return }
+      state.ClearParagraphs()
+      Invalidate(parent)
+    }
+
     internal func Invalidate(n Node) {
       if let state = n.EditorState {
         state.Dirty = true

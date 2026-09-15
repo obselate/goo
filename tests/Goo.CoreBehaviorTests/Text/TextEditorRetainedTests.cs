@@ -298,6 +298,41 @@ public sealed class TextEditorRetainedTests
         Assert.True(layout.Height >= following.Top + following.Height);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WrappedInlineSlotsRefreshTheirMeasuredHeight(bool updateAfterMount)
+    {
+        var document = new TextDocument("before X after text that must wrap below the inline link");
+        using var controller = new TextEditorController(document);
+        using var layer = new TextPresentationLayer(document);
+        Blob Content(double maxWidth) => new Button
+        {
+            Padding = 0.0, MinWidth = 0.0, MaxWidth = maxWidth,
+            Children = { new Text { Content = "complete release guide with all of the details needed to review this deployment and its follow-up changes", FontSize = 18.0, TextWrap = TextWrap.Wrap, MinWidth = 0.0 } }
+        };
+        layer.SetInlineSlot("link", new TextRange(7, 1), Content(updateAfterMount ? 1000 : 414));
+        var reconciler = new Reconciler { Res = new Resolver() };
+        TextEditor Editor() => new(controller, new[] { layer }) { Width = 414.0, Height = 300.0, FontSize = 18.0 };
+        var node = reconciler.Mount(Editor());
+        new Layout().Calculate(node, 414, 300);
+        if (updateAfterMount)
+        {
+            layer.Clear();
+            layer.SetInlineSlot("link", new TextRange(7, 1), Content(414));
+            _ = TextEditorLayouts.For(node, 414, -1);
+            node = reconciler.Diff(node, Editor());
+            new Layout().Calculate(node, 414, 300);
+        }
+        var layout = TextEditorLayouts.For(node, 414, -1);
+        var line = Assert.Single(layout.Lines, value => value.Slots.Count != 0);
+        var child = Assert.Single(node.Children);
+        Assert.True(child.Rect.H > 40, $"Actual slot must wrap: {child.Rect.H}");
+        Assert.True(line.Height >= child.Rect.H, $"Line {line.Height} must contain actual slot {child.Rect.H}");
+        var following = layout.Lines.First(value => value.Top > line.Top);
+        Assert.True(following.Top >= line.Top + child.Rect.H);
+    }
+
     [Fact]
     public void PrefixCacheFindsTheViewportParagraph()
     {
