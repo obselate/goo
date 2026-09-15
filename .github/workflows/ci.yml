@@ -699,7 +699,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: release-candidates
-          path: artifacts/release
+          path: artifacts
       - name: Install software Vulkan for native Windows checks
         uses: jakoch/install-vulkan-sdk-action@ae57d335f36a1cd380da18748c28ea65feea4a17
         with:
@@ -711,14 +711,12 @@ jobs:
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
-          dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --source "$PWD/artifacts/release/packages" --source https://api.nuget.org/v3/index.json
+          dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
         shell: pwsh
-        env:
-          VK_DRIVER_FILES: C:\Lavapipe\share\vulkan\icd.d\lvp_icd.x86_64.json
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
