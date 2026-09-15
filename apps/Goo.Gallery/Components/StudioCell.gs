@@ -446,19 +446,19 @@ class StudioCell : Cell {
         } else {
             GalleryTheme.Ink
         }
-        return Button(){
-            .Key: "program-" + index.ToString(),
-            .Padding: 9,
-            .BackgroundColor: background,
-            .BorderWidth: 1,
-            .BorderColor: GalleryTheme.Border,
-            .BorderRadius: 8,
-            .Focusable: true,
-            .TransitionMs: 100.0,
-            .Hover: Style{BackgroundColor: GalleryTheme.Border},
-            .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
-            .Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label, Selected: selectedStyle,},
-            .OnClick: func () {
+        return Button{
+            Key: "program-" + index.ToString(),
+            Padding: 9,
+            BackgroundColor: background,
+            BorderWidth: 1,
+            BorderColor: GalleryTheme.Border,
+            BorderRadius: 8,
+            Focusable: true,
+            TransitionMs: 100.0,
+            Hover: Style{BackgroundColor: GalleryTheme.Border},
+            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+            Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label, Selected: selectedStyle,},
+            OnClick: func () {
                 SelectProgram(index)
             },
             Text{Content: label, FontSize: 12, FontWeight: 600, Color: foreground,},
@@ -505,19 +505,19 @@ class StudioCell : Cell {
         } else {
             GalleryTheme.Ink
         }
-        return Button(){
-            .Key: "palette-" + index.ToString(),
-            .Padding: 8,
-            .BackgroundColor: background,
-            .BorderWidth: 1,
-            .BorderColor: GalleryTheme.Border,
-            .BorderRadius: 8,
-            .Focusable: true,
-            .TransitionMs: 100.0,
-            .Hover: Style{BackgroundColor: GalleryTheme.Border},
-            .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
-            .Accessibility: Accessibility{Role: AccessibilityRole.Radio, Name: label, Selected: selectedStyle,},
-            .OnClick: func () {
+        return Button{
+            Key: "palette-" + index.ToString(),
+            Padding: 8,
+            BackgroundColor: background,
+            BorderWidth: 1,
+            BorderColor: GalleryTheme.Border,
+            BorderRadius: 8,
+            Focusable: true,
+            TransitionMs: 100.0,
+            Hover: Style{BackgroundColor: GalleryTheme.Border},
+            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+            Accessibility: Accessibility{Role: AccessibilityRole.Radio, Name: label, Selected: selectedStyle,},
+            OnClick: func () {
                 palette = index
                 Rebuild()
             },
@@ -778,15 +778,15 @@ class StudioCell : Cell {
 
         let controls = List[Blob]()
         controls.Add(
-            Container(){
-                .Key: "studio-c0",
-                .Width: if Compact {
+            Container{
+                Key: "studio-c0",
+                Width: if Compact {
                     Length.Percent(100)
                 } else {
                     Length.Percent(48)
                 },
-                .FlexGrow: 0.0,
-                .FlexShrink: 1.0,
+                FlexGrow: 0.0,
+                FlexShrink: 1.0,
                 Cell.Mount[GalleryRange](
                     "studio-c0",
                     func (slider GalleryRange) {
@@ -804,15 +804,15 @@ class StudioCell : Cell {
             }
         )
         controls.Add(
-            Container(){
-                .Key: "studio-c1",
-                .Width: if Compact {
+            Container{
+                Key: "studio-c1",
+                Width: if Compact {
                     Length.Percent(100)
                 } else {
                     Length.Percent(48)
                 },
-                .FlexGrow: 0.0,
-                .FlexShrink: 1.0,
+                FlexGrow: 0.0,
+                FlexShrink: 1.0,
                 Cell.Mount[GalleryRange](
                     "studio-c1",
                     func (slider GalleryRange) {
@@ -830,15 +830,15 @@ class StudioCell : Cell {
             }
         )
         controls.Add(
-            Container(){
-                .Key: "studio-c2",
-                .Width: if Compact {
+            Container{
+                Key: "studio-c2",
+                Width: if Compact {
                     Length.Percent(100)
                 } else {
                     Length.Percent(48)
                 },
-                .FlexGrow: 0.0,
-                .FlexShrink: 1.0,
+                FlexGrow: 0.0,
+                FlexShrink: 1.0,
                 Cell.Mount[GalleryRange](
                     "studio-c2",
                     func (slider GalleryRange) {
@@ -863,33 +863,33 @@ class StudioCell : Cell {
         }
         let panelWidth Length = 380
         let panelMinWidth Length = 0
-        let body = Container(){
-            .Width: Length.Percent(100),
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinHeight: 0,
-            .FlexDirection: if Compact {
+        let body = Container{
+            Width: Length.Percent(100),
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinHeight: 0,
+            FlexDirection: if Compact {
                 FlexDirection.Column
             } else {
                 FlexDirection.Row
             },
-            .Gap: 18,
-            .AlignItems: AlignItems.Center,
-            Container(){
-                .Key: "studio-panel",
-                .Width: if Compact {
+            Gap: 18,
+            AlignItems: AlignItems.Center,
+            Container{
+                Key: "studio-panel",
+                Width: if Compact {
                     Length.Percent(100)
                 } else {
                     panelWidth
                 },
-                .MinWidth: if Compact {
+                MinWidth: if Compact {
                     panelMinWidth
                 } else {
                     panelWidth
                 },
-                .FlexShrink: 0.0,
-                .FlexDirection: FlexDirection.Column,
-                .Gap: 14,
+                FlexShrink: 0.0,
+                FlexDirection: FlexDirection.Column,
+                Gap: 14,
                 Container{
                     Key: "studio-selectors",
                     FlexDirection: FlexDirection.Row,
@@ -897,10 +897,10 @@ class StudioCell : Cell {
                     Gap: 8,
                     Children: selectors,
                 },
-                Container(){
-                    .Key: "studio-editor",
-                    .FlexDirection: FlexDirection.Column,
-                    .Gap: 10,
+                Container{
+                    Key: "studio-editor",
+                    FlexDirection: FlexDirection.Column,
+                    Gap: 10,
                     TextEntry{
                         Key: "title",
                         Value: title,
@@ -922,8 +922,8 @@ class StudioCell : Cell {
                             Rebuild()
                         },
                     },
-                    Container(){
-                        .Key: "studio-play",
+                    Container{
+                        Key: "studio-play",
                         GalleryTheme.GhostButton(
                             if playing {
                                 "Pause"
@@ -945,14 +945,14 @@ class StudioCell : Cell {
                     Children: controls,
                 },
             },
-            Container(){
-                .Key: "studio-composition",
-                .MinWidth: 0,
-                .MinHeight: 0,
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
+            Container{
+                Key: "studio-composition",
+                MinWidth: 0,
+                MinHeight: 0,
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
                 compositionCanvas(programs, time),
             },
         }

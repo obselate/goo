@@ -615,16 +615,16 @@ class StateSurfacesChapter : Cell {
         return Color.Rgb(151, 91, 190)
     }
 
-    private func magnetFace(letter GallerySurfaceLetter, size float64) Blob -> Container(){
-        .Width: size,
-        .Height: size,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .BackgroundColor: magnetColor(letter.Id),
-        .BorderRadius: size * 0.28,
-        .BorderWidth: 1,
-        .BorderColor: Color.Rgba(255, 255, 255, 100),
-        .BoxShadows: MagnetShadows,
+    private func magnetFace(letter GallerySurfaceLetter, size float64) Blob -> Container{
+        Width: size,
+        Height: size,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        BackgroundColor: magnetColor(letter.Id),
+        BorderRadius: size * 0.28,
+        BorderWidth: 1,
+        BorderColor: Color.Rgba(255, 255, 255, 100),
+        BoxShadows: MagnetShadows,
         Text{
             Content: letter.Character.ToString(),
             FontSize: size * 0.60,
@@ -645,15 +645,15 @@ class StateSurfacesChapter : Cell {
         left float64,
         top float64,
         opacity float64
-    ) Blob -> Container(){
-        .Position: PositionType.Absolute,
-        .Left: left,
-        .Top: top,
-        .Width: size,
-        .Height: size * 1.35,
-        .Opacity: opacity,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
+    ) Blob -> Container{
+        Position: PositionType.Absolute,
+        Left: left,
+        Top: top,
+        Width: size,
+        Height: size * 1.35,
+        Opacity: opacity,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
         Text{
             Content: letter.Character.ToString(),
             FontSize: size * 1.02,
@@ -680,15 +680,15 @@ class StateSurfacesChapter : Cell {
                     let sample = Math.Min(float64(sampleIndex) / 10.0, progress)
                     let track = glyph.Pen(sample)
                     children.Add(
-                        Container(){
-                            .Position: PositionType.Absolute,
-                            .Left: Length.Percent(track.X),
-                            .Top: Length.Percent(track.Y),
-                            .Width: patchWidth,
-                            .Height: patchHeight,
-                            .OverflowX: Overflow.Hidden,
-                            .OverflowY: Overflow.Hidden,
-                            .Transform: PanelTransform{TranslateX: -patchWidth * 0.5, TranslateY: -patchHeight * 0.5,},
+                        Container{
+                            Position: PositionType.Absolute,
+                            Left: Length.Percent(track.X),
+                            Top: Length.Percent(track.Y),
+                            Width: patchWidth,
+                            Height: patchHeight,
+                            OverflowX: Overflow.Hidden,
+                            OverflowY: Overflow.Hidden,
+                            Transform: PanelTransform{TranslateX: -patchWidth * 0.5, TranslateY: -patchHeight * 0.5,},
                             inkCharacter(
                                 letter,
                                 size,
@@ -719,14 +719,14 @@ class StateSurfacesChapter : Cell {
         return Container{Width: size, Height: size * 1.35, Position: PositionType.Relative, Children: children,}
     }
 
-    private func cipherFace(letter GallerySurfaceLetter, size float64) Blob -> Container(){
-        .Width: size,
-        .Height: size,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .BackgroundColor: Color.Rgba(21, 36, 34, 215),
-        .BorderWidth: 1,
-        .BorderColor: Color.Rgba(112, 230, 174, 100),
+    private func cipherFace(letter GallerySurfaceLetter, size float64) Blob -> Container{
+        Width: size,
+        Height: size,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        BackgroundColor: Color.Rgba(21, 36, 34, 215),
+        BorderWidth: 1,
+        BorderColor: Color.Rgba(112, 230, 174, 100),
         Text{
             Content: letter.Character.ToString(),
             FontSize: size * 0.70,
@@ -751,24 +751,24 @@ class StateSurfacesChapter : Cell {
                 cipherFace(letter, size * 0.82)
             }
         }
-        return Container(){
-            .Key: "surface-letter-" + letter.Id.ToString(),
-            .Position: PositionType.Absolute,
-            .Left: Length.Percent(position.X * 100.0),
-            .Top: Length.Percent(position.Y * 100.0),
-            .Width: size,
-            .Height: if activeAct == 1 {
+        return Container{
+            Key: "surface-letter-" + letter.Id.ToString(),
+            Position: PositionType.Absolute,
+            Left: Length.Percent(position.X * 100.0),
+            Top: Length.Percent(position.Y * 100.0),
+            Width: size,
+            Height: if activeAct == 1 {
                 size * 1.35
             } else {
                 size
             },
-            .Focusable: activeAct == 0,
-            .Cursor: if activeAct == 0 {
+            Focusable: activeAct == 0,
+            Cursor: if activeAct == 0 {
                 Cursor.Move
             } else {
                 Cursor.Default
             },
-            .Accessibility: Accessibility{
+            Accessibility: Accessibility{
                 Role: AccessibilityRole.Button,
                 Name: "Letter " + letter.Character.ToString(),
                 Actions: []AccessibilityAction{
@@ -779,34 +779,34 @@ class StateSurfacesChapter : Cell {
                 OnAction: (request AccessibilityActionRequest) ->
                 moveMagnetAccessible(letter, request),
             },
-            .Transform: PanelTransform{
+            Transform: PanelTransform{
                 TranslateX: -size * 0.5,
                 TranslateY: -size * 0.5,
                 Rotate: displayRotation(letter),
                 Scale: displayScale(letter),
             },
-            .DragSource: DragSource(
+            DragSource: DragSource(
                 (event DragStartEvent) -> beginMagnetDrag(letter, event),
                 (event DragEndEvent) -> endMagnetDrag(letter, event)
             ),
-            .OnKeyDown: (event KeyEvent) -> nudgeMagnet(letter, event),
+            OnKeyDown: (event KeyEvent) -> nudgeMagnet(letter, event),
             content,
         }
     }
 
-    private func fridgeSurface() Blob -> Container(){
-        .Key: "act-surface",
-        .Position: PositionType.Absolute,
-        .Left: 0,
-        .Top: 0,
-        .Right: 0,
-        .Bottom: 0,
-        .DropTarget: DropTarget(
+    private func fridgeSurface() Blob -> Container{
+        Key: "act-surface",
+        Position: PositionType.Absolute,
+        Left: 0,
+        Top: 0,
+        Right: 0,
+        Bottom: 0,
+        DropTarget: DropTarget(
             (event DragEvent) -> queryMagnetDrop(event),
             (event DragEvent) -> changeMagnetDrop(event)
         ),
-        .TransitionMs: 250.0,
-        .BackgroundColor: Color.Rgb(91, 70, 54),
+        TransitionMs: 250.0,
+        BackgroundColor: Color.Rgb(91, 70, 54),
         Container{
             Position: PositionType.Absolute,
             Left: Length.Percent(3),
@@ -838,16 +838,16 @@ class StateSurfacesChapter : Cell {
             BorderTopWidth: 2,
             BorderColor: Color.Rgba(35, 25, 20, 120),
         },
-        Container(){
-            .Position: PositionType.Absolute,
-            .Left: Length.Percent(5),
-            .Right: Length.Percent(5),
-            .Bottom: Length.Percent(4),
-            .Height: Length.Percent(27),
-            .BackgroundGradient: LinearGradient(90.0, Color.Rgb(77, 55, 43), Color.Rgb(42, 31, 27)),
-            .BorderWidth: 2,
-            .BorderColor: Color.Rgba(31, 22, 19, 180),
-            .BoxShadows: []BoxShadow{
+        Container{
+            Position: PositionType.Absolute,
+            Left: Length.Percent(5),
+            Right: Length.Percent(5),
+            Bottom: Length.Percent(4),
+            Height: Length.Percent(27),
+            BackgroundGradient: LinearGradient(90.0, Color.Rgb(77, 55, 43), Color.Rgb(42, 31, 27)),
+            BorderWidth: 2,
+            BorderColor: Color.Rgba(31, 22, 19, 180),
+            BoxShadows: []BoxShadow{
                 BoxShadow{
                     OffsetX: 0.0,
                     OffsetY: 7.0,
@@ -868,25 +868,25 @@ class StateSurfacesChapter : Cell {
         },
     }
 
-    private func inkSurface() Blob -> Container(){
-        .Key: "act-surface",
-        .Position: PositionType.Absolute,
-        .Left: 0,
-        .Top: 0,
-        .Right: 0,
-        .Bottom: 0,
-        .TransitionMs: 250.0,
-        .BackgroundColor: Color.Rgb(224, 217, 198),
-        Container(){
-            .Position: PositionType.Absolute,
-            .Left: Length.Percent(6),
-            .Top: Length.Percent(7),
-            .Width: Length.Percent(88),
-            .Height: Length.Percent(86),
-            .BackgroundColor: Color.Rgb(244, 239, 221),
-            .BorderWidth: 1,
-            .BorderColor: Color.Rgb(197, 188, 165),
-            .BoxShadows: []BoxShadow{
+    private func inkSurface() Blob -> Container{
+        Key: "act-surface",
+        Position: PositionType.Absolute,
+        Left: 0,
+        Top: 0,
+        Right: 0,
+        Bottom: 0,
+        TransitionMs: 250.0,
+        BackgroundColor: Color.Rgb(224, 217, 198),
+        Container{
+            Position: PositionType.Absolute,
+            Left: Length.Percent(6),
+            Top: Length.Percent(7),
+            Width: Length.Percent(88),
+            Height: Length.Percent(86),
+            BackgroundColor: Color.Rgb(244, 239, 221),
+            BorderWidth: 1,
+            BorderColor: Color.Rgb(197, 188, 165),
+            BoxShadows: []BoxShadow{
                 BoxShadow{
                     OffsetX: 0.0,
                     OffsetY: 8.0,
@@ -951,17 +951,17 @@ class StateSurfacesChapter : Cell {
         }
     }
 
-    private func cipherSurface() Blob -> Container(){
-        .Key: "act-surface",
-        .Position: PositionType.Absolute,
-        .Left: 0,
-        .Top: 0,
-        .Right: 0,
-        .Bottom: 0,
-        .TransitionMs: 250.0,
-        .BackgroundColor: Color.Rgb(9, 18, 18),
-        .BorderWidth: 1,
-        .BorderColor: Color.Rgb(39, 73, 64),
+    private func cipherSurface() Blob -> Container{
+        Key: "act-surface",
+        Position: PositionType.Absolute,
+        Left: 0,
+        Top: 0,
+        Right: 0,
+        Bottom: 0,
+        TransitionMs: 250.0,
+        BackgroundColor: Color.Rgb(9, 18, 18),
+        BorderWidth: 1,
+        BorderColor: Color.Rgb(39, 73, 64),
         Container{
             Position: PositionType.Absolute,
             Left: Length.Percent(7),
@@ -991,31 +991,31 @@ class StateSurfacesChapter : Cell {
         return cipherSurface()
     }
 
-    private func actButton(label string, act int32) Blob -> Button(){
-        .Padding: 10,
-        .BackgroundColor: if activeAct == act {
+    private func actButton(label string, act int32) Blob -> Button{
+        Padding: 10,
+        BackgroundColor: if activeAct == act {
             GalleryTheme.Ink
         } else {
             GalleryTheme.SurfaceRaised
         },
-        .BorderWidth: 1,
-        .BorderColor: if activeAct == act {
+        BorderWidth: 1,
+        BorderColor: if activeAct == act {
             GalleryTheme.Ink
         } else {
             GalleryTheme.Border
         },
-        .BorderRadius: 8,
-        .TransitionMs: 100.0,
-        .Hover: Style{
+        BorderRadius: 8,
+        TransitionMs: 100.0,
+        Hover: Style{
             BackgroundColor: if activeAct == act {
                 GalleryTheme.Ink
             } else {
                 GalleryTheme.Border
             }
         },
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
-        .Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label,},
-        .OnClick: () -> switchAct(act),
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong},
+        Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label,},
+        OnClick: () -> switchAct(act),
         Text{
             Content: label,
             FontSize: 13,
@@ -1073,14 +1073,14 @@ class StateSurfacesChapter : Cell {
         }
     }
 
-    private func content() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .FlexGrow: 1.0,
-        .FlexShrink: 1.0,
-        .MinWidth: 0,
-        .MinHeight: 0,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 10,
+    private func content() Blob -> Container{
+        Width: Length.Percent(100),
+        FlexGrow: 1.0,
+        FlexShrink: 1.0,
+        MinWidth: 0,
+        MinHeight: 0,
+        FlexDirection: FlexDirection.Column,
+        Gap: 10,
         controls(),
         stage(),
     }

@@ -1,10 +1,10 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "6c3342df6696acf44f94245e1811ba61ea7842a9",
+  "commit": "6282dd12d76190aca1cca9efa95754beb0212f7c",
   "files": {
-    "README.md": "993e8ea34447cec452e53240c1780a8fdcb96a196997dba9876a8e0d4fb304ef",
+    "README.md": "d66d1fd07d8ca151e570740798b33993d60d34aa8e5ffa7dd53088ad7e1dd686",
     "CONTRIBUTING.md": "66c3fd4d44b299709569670077546c21ab811da22c3744e77c28b48a1c6feacb",
-    "docs/native-authoring.md": "6a132fb398687dc2ce4c4486013cb1a331e03565c8b0009ec5f964f292df31f7",
+    "docs/native-authoring.md": "6768a4ea5bbd5fac320541be751a1008131cbdbd76b54ff3ef84b29e4dcc3d65",
     "docs/api/README.md": "8ae1406a1c6e033b9b4e495fb19c849e936e400c1c7aade28c8cb2ea02f7a58a",
     "docs/api/accessibility.md": "e67c6117764001a949ca20f6e80cff6f16f295eac8a2f735eae83298c0d43966",
     "docs/api/audio.md": "c561073504c539572e2774b85e27f06c4112ace9f7a60b5412ac6a5045964d71",
@@ -23,7 +23,7 @@
     "docs/devtools/README.md": "66a41ed4e585758ab44ce6138fc1bcaf65056af0383401d4fec43257e7dfbfaa",
     "docs/devtools/development.md": "bc90a98cd92b93a6cc45a4cb15f5ef058b02ca59d54857174fe0b19bcdb83ea1",
     "docs/devtools/protocol.md": "26ee4f19af3faa4b1f2fef658c973b68e4498e7fa1c8f17af9063a69c7902b3b",
-    "templates/Goo.Templates/content/Program.gs": "a4ec8f8d89f9f52a554cb406f6edce6cc89c581c80021eca718d77946f98053b",
+    "templates/Goo.Templates/content/Program.gs": "93a6a005631ee61def5af29c150982a6ed4bf51503db10b75bd6e3e81b8dcb79",
     "templates/Goo.Templates/content/GooStarter.gsproj": "77c4323793343bb176d02f280cfa0bde8a5a9e69414fea234f23d6119e5f1bb9"
   }
 }

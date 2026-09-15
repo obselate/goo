@@ -63,13 +63,13 @@ class SmokeCell : Cell {
     } else {
       SmokeCell.SharedImageSource
     }
-    return Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: SmokeCell.Root,.Padding: 12,.Gap: 8,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    return Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: SmokeCell.Root,Padding: 12,Gap: 8,Position: PositionType.Relative,BackgroundColor: Color.Rgb(12, 20, 32),
       Text{
           Content: TextValue,
           FontSize: 24,
           Color: Color.White,
         },
-        Container() {.Width: 224,.Height: 48,.BackgroundImageSource: backgroundSource,.BackgroundImageFit: ImageFit.Cover,.BorderStyle: BorderStyle.Solid,.BorderTopWidth: 2,.BorderRightWidth: 2,.BorderBottomWidth: 2,.BorderLeftWidth: 2,.BorderTopColor: Color.Rgb(236, 128, 64),.BorderRightColor: Color.Rgb(128, 236, 96),.BorderBottomColor: Color.Rgb(64, 160, 236),.BorderLeftColor: Color.Rgb(212, 96, 212),
+        Container {Width: 224,Height: 48,BackgroundImageSource: backgroundSource,BackgroundImageFit: ImageFit.Cover,BorderStyle: BorderStyle.Solid,BorderTopWidth: 2,BorderRightWidth: 2,BorderBottomWidth: 2,BorderLeftWidth: 2,BorderTopColor: Color.Rgb(236, 128, 64),BorderRightColor: Color.Rgb(128, 236, 96),BorderBottomColor: Color.Rgb(64, 160, 236),BorderLeftColor: Color.Rgb(212, 96, 212),
         Image{
               Width: 96,
               Height: 48,
@@ -130,8 +130,8 @@ class SmokeCell : Cell {
           BorderBottomColor: Color.Rgb(64, 160, 236),
           BorderLeftColor: Color.Rgb(212, 96, 212),
         },
-        Container() {.Position: PositionType.Absolute,.Left: 236,.Top: 8,.Width: 72,.Height: 156,
-        Container() {.Position: PositionType.Absolute,.Width: 28,.Height: 28,.Transform: PanelTransform{ TranslateX: 2, TranslateY: 2 },
+        Container {Position: PositionType.Absolute,Left: 236,Top: 8,Width: 72,Height: 156,
+        Container {Position: PositionType.Absolute,Width: 28,Height: 28,Transform: PanelTransform{ TranslateX: 2, TranslateY: 2 },
           Container{
                   Width: 12,
                   Height: 12,
@@ -139,8 +139,8 @@ class SmokeCell : Cell {
                   BackgroundColor: Color.Rgb(46, 126, 196),
                 },
               },
-        Container() {.Position: PositionType.Absolute,.Top: 36,.Width: 64,.Height: 48,.Overflow: Overflow.Scroll,.Handle: SmokeCell.Viewport,
-          Container() {.Width: 120,.Height: 40,.Overflow: Overflow.Hidden,
+        Container {Position: PositionType.Absolute,Top: 36,Width: 64,Height: 48,Overflow: Overflow.Scroll,Handle: SmokeCell.Viewport,
+          Container {Width: 120,Height: 40,Overflow: Overflow.Hidden,
             Container{
                       Width: 20,
                       Height: 20,
@@ -204,7 +204,7 @@ func BuildLayerTree(depth int32) Blob {
       BackgroundColor: Color.Rgb(72, 160, 236),
     }
   }
-  return Container() {.Width: 64,.Height: 64,.Opacity: 0.98, BuildLayerTree(depth - 1),
+  return Container {Width: 64,Height: 64,Opacity: 0.98, BuildLayerTree(depth - 1),
   }
 }
 
@@ -226,14 +226,14 @@ class CompiledVectorSmokeCell : Cell {
     morphAsset = morphValue
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: CompiledVectorSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
-    Container() {.Key: "static-host",.Position: PositionType.Absolute,.Left: 12,.Top: 12,.Width: 280,.Height: 220,.Handle: CompiledVectorSmokeCell.StaticHost,.BackgroundColor: Color.Rgb(24, 48, 76),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: CompiledVectorSmokeCell.Root,Position: PositionType.Relative,BackgroundColor: Color.Rgb(12, 20, 32),
+    Container {Key: "static-host",Position: PositionType.Absolute,Left: 12,Top: 12,Width: 280,Height: 220,Handle: CompiledVectorSmokeCell.StaticHost,BackgroundColor: Color.Rgb(24, 48, 76),
       staticAsset.Render("static"),
       },
-      Container() {.Key: "animated-host",.Position: PositionType.Absolute,.Left: 308,.Top: 12,.Width: 280,.Height: 220,.Handle: CompiledVectorSmokeCell.AnimatedHost,.BackgroundColor: Color.Rgb(38, 48, 76),
+      Container {Key: "animated-host",Position: PositionType.Absolute,Left: 308,Top: 12,Width: 280,Height: 220,Handle: CompiledVectorSmokeCell.AnimatedHost,BackgroundColor: Color.Rgb(38, 48, 76),
       animatedAsset.Render("animated"),
       },
-      Container() {.Key: "morph-host",.Position: PositionType.Absolute,.Left: 604,.Top: 12,.Width: 280,.Height: 220,.Handle: CompiledVectorSmokeCell.MorphHost,.BackgroundColor: Color.Rgb(48, 38, 76),
+      Container {Key: "morph-host",Position: PositionType.Absolute,Left: 604,Top: 12,Width: 280,Height: 220,Handle: CompiledVectorSmokeCell.MorphHost,BackgroundColor: Color.Rgb(48, 38, 76),
       morphAsset.Render("morph"),
     },
   }
@@ -283,7 +283,7 @@ class PathSmokeCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: PathSmokeCell.Root,.Padding: 12,.Gap: 12,.FlexDirection: FlexDirection.Row,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: PathSmokeCell.Root,Padding: 12,Gap: 12,FlexDirection: FlexDirection.Row,BackgroundColor: Color.Rgb(12, 20, 32),
     Shape{
         Width: 220,
         Height: 170,
@@ -345,7 +345,7 @@ class StaticPathSmokeCell : Cell {
     let Path VectorPath = PathBuilder(0.0, 0.0, 100.0, 100.0).MoveTo(10.0, 12.0).LineTo(90.0, 12.0).QuadraticTo(96.0, 48.0, 82.0, 86.0).CubicTo(64.0, 72.0, 36.0, 72.0, 18.0, 86.0).ArcTo(40.0, 40.0, 0.0, false, true, 10.0, 12.0).Close().Build()
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: StaticPathSmokeCell.Root,.ClipPath: StaticPathSmokeCell.Path,.ClipPathFit: ShapeFit.Fill,.Padding: 12,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: StaticPathSmokeCell.Root,ClipPath: StaticPathSmokeCell.Path,ClipPathFit: ShapeFit.Fill,Padding: 12,BackgroundColor: Color.Rgb(12, 20, 32),
     Shape{
         Width: 260,
         Height: 190,
@@ -371,7 +371,7 @@ class RegisteredFontCorpusSmokeCell : Cell {
     let Fallback ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Padding: 8,.Gap: 3,.AlignItems: AlignItems.FlexStart,.Handle: RegisteredFontCorpusSmokeCell.Root,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Padding: 8,Gap: 3,AlignItems: AlignItems.FlexStart,Handle: RegisteredFontCorpusSmokeCell.Root,BackgroundColor: Color.Rgb(12, 20, 32),
     Text{
         Content: "A a registered fallback",
         FontFamily: "GooSmokePrimary,GooSmokeFallback",
@@ -530,7 +530,7 @@ class TextControlsSmokeCell : Cell {
     presentation.Dispose()
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: TextControlsSmokeCell.Root,.Padding: 12,.Gap: 10,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: TextControlsSmokeCell.Root,Padding: 12,Gap: 10,BackgroundColor: Color.Rgb(12, 20, 32),
     TextEntry{
         Width: 296,
         Height: 32,
@@ -595,7 +595,7 @@ class TextReopenSmokeCell : Cell {
     let Root ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Padding: 12,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Padding: 12,BackgroundColor: Color.Rgb(12, 20, 32),
     Text{
         Content: "Goo reopened text",
         Handle: TextReopenSmokeCell.Root,
@@ -623,7 +623,7 @@ class TextAtlasSmokeCell : Cell {
     Rebuild()
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: TextAtlasSmokeCell.Root,.Padding: 8,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: TextAtlasSmokeCell.Root,Padding: 8,BackgroundColor: Color.Rgb(12, 20, 32),
     Text{
         Content: content,
         FontSize: 18,

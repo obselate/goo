@@ -212,16 +212,16 @@ class World3DCell : Cell {
         let overlayChildren = List[Blob]()
         if state.Dead {
             overlayChildren.Add(
-                Container(){
-                    .Position: PositionType.Absolute,
-                    .Left: Length.Percent(0),
-                    .Top: Length.Percent(0),
-                    .Width: Length.Percent(100),
-                    .Height: Length.Percent(100),
-                    .BackgroundColor: Color.Rgba(36, 0, 0, 180),
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
-                    .FlexDirection: FlexDirection.Column,
+                Container{
+                    Position: PositionType.Absolute,
+                    Left: Length.Percent(0),
+                    Top: Length.Percent(0),
+                    Width: Length.Percent(100),
+                    Height: Length.Percent(100),
+                    BackgroundColor: Color.Rgba(36, 0, 0, 180),
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    FlexDirection: FlexDirection.Column,
                     Text{
                         Content: "YOU DIED",
                         FontSize: 56,
@@ -241,16 +241,16 @@ class World3DCell : Cell {
             )
         } else if state.Won {
             overlayChildren.Add(
-                Container(){
-                    .Position: PositionType.Absolute,
-                    .Left: Length.Percent(0),
-                    .Top: Length.Percent(0),
-                    .Width: Length.Percent(100),
-                    .Height: Length.Percent(100),
-                    .BackgroundColor: Color.Rgba(0, 36, 12, 180),
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
-                    .FlexDirection: FlexDirection.Column,
+                Container{
+                    Position: PositionType.Absolute,
+                    Left: Length.Percent(0),
+                    Top: Length.Percent(0),
+                    Width: Length.Percent(100),
+                    Height: Length.Percent(100),
+                    BackgroundColor: Color.Rgba(0, 36, 12, 180),
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    FlexDirection: FlexDirection.Column,
                     Text{
                         Content: "SECTOR CLEARED",
                         FontSize: 56,

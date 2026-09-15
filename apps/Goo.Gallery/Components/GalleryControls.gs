@@ -146,13 +146,13 @@ class GalleryRange : Cell {
 
     override func Build() Blob {
         let percent = fraction() * 100.0
-        return Container(){
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 8,
-            Container(){
-                .Key: "head",
-                .FlexDirection: FlexDirection.Row,
-                .JustifyContent: JustifyContent.SpaceBetween,
+        return Container{
+            FlexDirection: FlexDirection.Column,
+            Gap: 8,
+            Container{
+                Key: "head",
+                FlexDirection: FlexDirection.Row,
+                JustifyContent: JustifyContent.SpaceBetween,
                 Text{
                     Key: "label",
                     Content: Label,
@@ -164,19 +164,19 @@ class GalleryRange : Cell {
                 },
                 Text{Key: "value", Content: valueText(), FontSize: 12, Color: GalleryTheme.InkMuted,},
             },
-            Container(){
-                .Key: "track",
-                .Handle: Track,
-                .Focusable: true,
-                .Cursor: Cursor.Pointer,
-                .Height: 24,
-                .MinWidth: 120,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .TransitionMs: 100.0,
-                .Hover: Style{Opacity: 0.9},
-                .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong, OutlineOffset: 2,},
-                .Accessibility: Accessibility{
+            Container{
+                Key: "track",
+                Handle: Track,
+                Focusable: true,
+                Cursor: Cursor.Pointer,
+                Height: 24,
+                MinWidth: 120,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                TransitionMs: 100.0,
+                Hover: Style{Opacity: 0.9},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.BorderStrong, OutlineOffset: 2,},
+                Accessibility: Accessibility{
                     Role: AccessibilityRole.Slider,
                     Name: Label,
                     Orientation: AccessibilityOrientation.Horizontal,
@@ -188,41 +188,41 @@ class GalleryRange : Cell {
                     },
                     OnAction: (request AccessibilityActionRequest) -> handleAction(request),
                 },
-                .OnKeyDown: func (e KeyEvent) {
+                OnKeyDown: func (e KeyEvent) {
                     applyKeys(e)
                 },
-                .OnPointerDown: func (e PointerEvent) {
+                OnPointerDown: func (e PointerEvent) {
                     e.Capture()
                     e.PreventDefault()
                     dragging = true
                     SetValue(valueFromPointer(e))
                 },
-                .OnPointerMove: func (e PointerEvent) {
+                OnPointerMove: func (e PointerEvent) {
                     if dragging {
                         SetValue(valueFromPointer(e))
                     }
                 },
-                .OnPointerUp: func (e PointerEvent) {
+                OnPointerUp: func (e PointerEvent) {
                     e.ReleaseCapture()
                     dragging = false
                 },
-                .OnPointerCancel: func (e PointerEvent) {
+                OnPointerCancel: func (e PointerEvent) {
                     e.ReleaseCapture()
                     dragging = false
                 },
-                .OnWheel: func (e WheelEvent) {
+                OnWheel: func (e WheelEvent) {
                     e.PreventDefault()
                     SetValue(Value - stride() * float64(Math.Sign(e.Delta.Y)))
                 },
-                Container(){
-                    .Key: "bar",
-                    .FlexGrow: 1.0,
-                    .FlexShrink: 1.0,
-                    .MinWidth: 0,
-                    .Height: 4,
-                    .BorderRadius: 2,
-                    .BackgroundColor: GalleryTheme.Border,
-                    .Position: PositionType.Relative,
+                Container{
+                    Key: "bar",
+                    FlexGrow: 1.0,
+                    FlexShrink: 1.0,
+                    MinWidth: 0,
+                    Height: 4,
+                    BorderRadius: 2,
+                    BackgroundColor: GalleryTheme.Border,
+                    Position: PositionType.Relative,
                     Container{
                         Key: "fill",
                         Position: PositionType.Absolute,

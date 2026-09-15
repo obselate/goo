@@ -62,27 +62,27 @@ internal class GalleryStageView {
             let showcase = catalog.Showcases[currentShowcase]
             let surfacesActive = showcase.Chapter == 1
             let transient = Transient(catalog, currentShowcase, compact, assets, programs)
-            return Container(){
-                .Key: "gallery-stage",
-                .Width: Length.Percent(100),
-                .Height: Length.Percent(100),
-                .MinWidth: 0,
-                .MinHeight: 0,
-                .Position: PositionType.Relative,
-                Container(){
-                    .Key: "persistent-surfaces-host",
-                    .Display: if surfacesActive {
+            return Container{
+                Key: "gallery-stage",
+                Width: Length.Percent(100),
+                Height: Length.Percent(100),
+                MinWidth: 0,
+                MinHeight: 0,
+                Position: PositionType.Relative,
+                Container{
+                    Key: "persistent-surfaces-host",
+                    Display: if surfacesActive {
                         Display.Flex
                     } else {
                         Display.None
                     },
-                    .Position: PositionType.Absolute,
-                    .Left: 0,
-                    .Top: 0,
-                    .Right: 0,
-                    .Bottom: 0,
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
+                    Position: PositionType.Absolute,
+                    Left: 0,
+                    Top: 0,
+                    Right: 0,
+                    Bottom: 0,
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
                     Cell.Mount[StateSurfacesChapter](
                         "showcase-surfaces",
                         (c StateSurfacesChapter) -> {
@@ -91,20 +91,20 @@ internal class GalleryStageView {
                         }
                     ),
                 },
-                Container(){
-                    .Key: "transient-showcase-host",
-                    .Display: if surfacesActive {
+                Container{
+                    Key: "transient-showcase-host",
+                    Display: if surfacesActive {
                         Display.None
                     } else {
                         Display.Flex
                     },
-                    .Position: PositionType.Absolute,
-                    .Left: 0,
-                    .Top: 0,
-                    .Right: 0,
-                    .Bottom: 0,
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
+                    Position: PositionType.Absolute,
+                    Left: 0,
+                    Top: 0,
+                    Right: 0,
+                    Bottom: 0,
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
                     transient,
                 },
             }

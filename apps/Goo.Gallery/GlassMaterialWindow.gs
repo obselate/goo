@@ -25,16 +25,16 @@ internal class GlassMaterialBackdropCell : Cell {
         return Container{Position: PositionType.Absolute, Left: 0, Top: 0, Right: 0, Bottom: 0, Children: lines,}
     }
 
-    public override func Build() Blob -> Container(){
-        .Key: "glass-lab-backdrop",
-        .Position: PositionType.Absolute,
-        .Left: 0,
-        .Top: 0,
-        .Right: 0,
-        .Bottom: 0,
-        .OverflowX: Overflow.Hidden,
-        .OverflowY: Overflow.Hidden,
-        .BackgroundColor: Color.Rgb(226, 239, 235),
+    public override func Build() Blob -> Container{
+        Key: "glass-lab-backdrop",
+        Position: PositionType.Absolute,
+        Left: 0,
+        Top: 0,
+        Right: 0,
+        Bottom: 0,
+        OverflowX: Overflow.Hidden,
+        OverflowY: Overflow.Hidden,
+        BackgroundColor: Color.Rgb(226, 239, 235),
         Container{
             Position: PositionType.Absolute,
             Left: -90,
@@ -171,17 +171,17 @@ internal class GlassMaterialPanelCell : Cell {
 
     private func modeButton(label string, terminal bool) Button {
         let active = terminalMode == terminal
-        return Button(){
-            .Key: terminal ? "terminal-glass": "liquid-glass",
-            .Height: 36,
-            .PaddingLeft: 16,
-            .PaddingRight: 16,
-            .BorderRadius: 18,
-            .BorderWidth: 1,
-            .BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
-            .BackgroundColor: active ? Color.Rgba(249, 253, 252, 218): Color.Rgba(249, 253, 252, 160),
-            .Hover: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
-            .OnClick: () -> {
+        return Button{
+            Key: terminal ? "terminal-glass": "liquid-glass",
+            Height: 36,
+            PaddingLeft: 16,
+            PaddingRight: 16,
+            BorderRadius: 18,
+            BorderWidth: 1,
+            BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
+            BackgroundColor: active ? Color.Rgba(249, 253, 252, 218): Color.Rgba(249, 253, 252, 160),
+            Hover: Style{BackgroundColor: Color.Rgba(249, 253, 252, 236)},
+            OnClick: () -> {
                 selectMode(terminal)
             },
             Text{
@@ -202,14 +202,14 @@ internal class GlassMaterialPanelCell : Cell {
         Color: color,
     }
 
-    private func buildProjectRail() Container -> Container(){
-        .Width: 176,
-        .PaddingLeft: 18,
-        .PaddingTop: 18,
-        .PaddingRight: 14,
-        .Gap: 12,
-        .BorderRightWidth: 1,
-        .BorderRightColor: terminalMode ? Color.Rgba(226, 238, 242, 24): Color.Rgba(31, 70, 80, 32),
+    private func buildProjectRail() Container -> Container{
+        Width: 176,
+        PaddingLeft: 18,
+        PaddingTop: 18,
+        PaddingRight: 14,
+        Gap: 12,
+        BorderRightWidth: 1,
+        BorderRightColor: terminalMode ? Color.Rgba(226, 238, 242, 24): Color.Rgba(31, 70, 80, 32),
         Text{
             Content: "Workspace",
             FontFamily: "monospace",
@@ -227,31 +227,31 @@ internal class GlassMaterialPanelCell : Cell {
         },
         terminalLine("  Goo", secondaryInk()),
         terminalLine("  Rendering", secondaryInk()),
-        Container(){
-            .PaddingLeft: 8,
-            .PaddingTop: 7,
-            .PaddingBottom: 7,
-            .BorderRadius: 7,
-            .BackgroundColor: terminalMode ? Color.Rgba(116, 196, 176, 24): Color.Rgba(25, 113, 91, 20),
+        Container{
+            PaddingLeft: 8,
+            PaddingTop: 7,
+            PaddingBottom: 7,
+            BorderRadius: 7,
+            BackgroundColor: terminalMode ? Color.Rgba(116, 196, 176, 24): Color.Rgba(25, 113, 91, 20),
             terminalLine("  Vulkan", accentInk(), true),
         },
         terminalLine("  Shaders", secondaryInk()),
         terminalLine("  tests", secondaryInk()),
     }
 
-    private func buildTerminal() Container -> Container(){
-        .FlexGrow: 1,
-        .MinWidth: 0,
-        .PaddingLeft: 22,
-        .PaddingTop: 20,
-        .PaddingRight: 22,
-        .Gap: 10,
+    private func buildTerminal() Container -> Container{
+        FlexGrow: 1,
+        MinWidth: 0,
+        PaddingLeft: 22,
+        PaddingTop: 20,
+        PaddingRight: 22,
+        Gap: 10,
         terminalLine("~/Projects/goo-gsharp", secondaryInk()),
         terminalLine("$ goo verify --target gallery", primaryInk(), true),
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 9,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 9,
             Container{Width: 7, Height: 7, BorderRadius: 4, BackgroundColor: Color.Rgb(109, 222, 166)},
             terminalLine("checks passed", accentInk(), true),
             terminalLine("  0 warnings  ·  0 errors", secondaryInk()),
@@ -262,14 +262,14 @@ internal class GlassMaterialPanelCell : Cell {
         terminalLine("$ _", primaryInk(), true),
     }
 
-    private func buildSurface() Container -> Container(){
-        .Width: Length.Percent(100),
-        .MaxWidth: 700,
-        .Height: 420,
-        .Position: PositionType.Relative,
-        .Handle: surfaceHandle,
-        .BorderRadius: terminalMode ? 18: 30,
-        .BoxShadows: []BoxShadow{
+    private func buildSurface() Container -> Container{
+        Width: Length.Percent(100),
+        MaxWidth: 700,
+        Height: 420,
+        Position: PositionType.Relative,
+        Handle: surfaceHandle,
+        BorderRadius: terminalMode ? 18: 30,
+        BoxShadows: []BoxShadow{
             BoxShadow{
                 OffsetX: 0.0,
                 OffsetY: 30.0,
@@ -287,8 +287,8 @@ internal class GlassMaterialPanelCell : Cell {
                 Inset: true
             },
         },
-        .BackgroundColor: Color.Transparent,
-        .OnPointerMove: (event PointerEvent) -> {
+        BackgroundColor: Color.Transparent,
+        OnPointerMove: (event PointerEvent) -> {
             trackPointer(event)
         },
         Container{
@@ -301,27 +301,27 @@ internal class GlassMaterialPanelCell : Cell {
             BackgroundColor: Color.Transparent,
             ShaderEffect: selectedEffect(),
         },
-        Container(){
-            .Position: PositionType.Absolute,
-            .Left: 0,
-            .Top: 0,
-            .Right: 0,
-            .Bottom: 0,
-            .BorderRadius: terminalMode ? 18: 30,
-            .OverflowX: Overflow.Hidden,
-            .OverflowY: Overflow.Hidden,
-            .BorderWidth: 1,
-            .BorderColor: terminalMode ? Color.Transparent: Color.Rgba(255, 255, 255, 40),
-            .BackgroundColor: Color.Transparent,
-            Container(){
-                .Height: 54,
-                .PaddingLeft: 20,
-                .PaddingRight: 20,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 10,
-                .BorderBottomWidth: 1,
-                .BorderBottomColor: terminalMode ? Color.Rgba(226, 238, 242, 28): Color.Rgba(31, 70, 80, 34),
+        Container{
+            Position: PositionType.Absolute,
+            Left: 0,
+            Top: 0,
+            Right: 0,
+            Bottom: 0,
+            BorderRadius: terminalMode ? 18: 30,
+            OverflowX: Overflow.Hidden,
+            OverflowY: Overflow.Hidden,
+            BorderWidth: 1,
+            BorderColor: terminalMode ? Color.Transparent: Color.Rgba(255, 255, 255, 40),
+            BackgroundColor: Color.Transparent,
+            Container{
+                Height: 54,
+                PaddingLeft: 20,
+                PaddingRight: 20,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 10,
+                BorderBottomWidth: 1,
+                BorderBottomColor: terminalMode ? Color.Rgba(226, 238, 242, 28): Color.Rgba(31, 70, 80, 34),
                 Container{Width: 9, Height: 9, BorderRadius: 5, BackgroundColor: Color.Rgb(112, 213, 174)},
                 Text{
                     Content: "Goo",
@@ -337,32 +337,32 @@ internal class GlassMaterialPanelCell : Cell {
                     Color: secondaryInk(),
                 },
                 Container{FlexGrow: 1.0},
-                Container(){
-                    .PaddingLeft: 10,
-                    .PaddingRight: 10,
-                    .PaddingTop: 5,
-                    .PaddingBottom: 5,
-                    .BorderRadius: 12,
-                    .BackgroundColor: Color.Rgba(109, 222, 166, 22),
+                Container{
+                    PaddingLeft: 10,
+                    PaddingRight: 10,
+                    PaddingTop: 5,
+                    PaddingBottom: 5,
+                    BorderRadius: 12,
+                    BackgroundColor: Color.Rgba(109, 222, 166, 22),
                     terminalLine("ready", accentInk(), true),
                 },
             },
-            Container(){
-                .FlexGrow: 1.0,
-                .MinHeight: 0,
-                .FlexDirection: FlexDirection.Row,
+            Container{
+                FlexGrow: 1.0,
+                MinHeight: 0,
+                FlexDirection: FlexDirection.Row,
                 buildProjectRail(),
                 buildTerminal(),
             },
-            Container(){
-                .Height: 34,
-                .PaddingLeft: 18,
-                .PaddingRight: 18,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 14,
-                .BorderTopWidth: 1,
-                .BorderTopColor: terminalMode ? Color.Rgba(226, 238, 242, 22): Color.Rgba(31, 70, 80, 28),
+            Container{
+                Height: 34,
+                PaddingLeft: 18,
+                PaddingRight: 18,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 14,
+                BorderTopWidth: 1,
+                BorderTopColor: terminalMode ? Color.Rgba(226, 238, 242, 22): Color.Rgba(31, 70, 80, 28),
                 terminalLine("main", terminalMode ? Color.Rgba(157, 196, 233, 178): Color.Rgb(47, 96, 150)),
                 terminalLine("Vulkan", secondaryInk()),
                 Container{FlexGrow: 1.0},
@@ -371,19 +371,19 @@ internal class GlassMaterialPanelCell : Cell {
         },
     }
 
-    public override func Build() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .MaxWidth: 760,
-        .Gap: 18,
-        .AlignItems: AlignItems.Center,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
-            .Padding: 4,
-            .BorderRadius: 23,
-            .BackgroundColor: Color.Rgba(240, 249, 247, 122),
-            .BoxShadows: []BoxShadow{
+    public override func Build() Blob -> Container{
+        Width: Length.Percent(100),
+        MaxWidth: 760,
+        Gap: 18,
+        AlignItems: AlignItems.Center,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
+            Padding: 4,
+            BorderRadius: 23,
+            BackgroundColor: Color.Rgba(240, 249, 247, 122),
+            BoxShadows: []BoxShadow{
                 BoxShadow{
                     OffsetX: 0.0,
                     OffsetY: 10.0,
@@ -418,15 +418,15 @@ internal class GlassMaterialRootCell : Cell {
         this.initialTerminal = initialTerminal
     }
 
-    public override func Build() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .Height: Length.Percent(100),
-        .Position: PositionType.Relative,
-        .PaddingLeft: 28,
-        .PaddingRight: 28,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .BackgroundColor: Color.Rgb(226, 239, 235),
+    public override func Build() Blob -> Container{
+        Width: Length.Percent(100),
+        Height: Length.Percent(100),
+        Position: PositionType.Relative,
+        PaddingLeft: 28,
+        PaddingRight: 28,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        BackgroundColor: Color.Rgb(226, 239, 235),
         Cell.Mount[GlassMaterialBackdropCell]("glass-material-backdrop"),
         Cell.Mount[GlassMaterialPanelCell](
             "glass-material-panel",

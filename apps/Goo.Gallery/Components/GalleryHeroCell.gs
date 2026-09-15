@@ -262,16 +262,16 @@ class HeroCell : Cell {
 
     private func letter(key string, content string, index int32, size float64) Blob {
         let point = currentPosition(index)
-        return Container(){
-            .Key: key,
-            .Position: PositionType.Absolute,
-            .Left: Length.Percent(point.X * 100.0),
-            .Top: Length.Percent(point.Y * 100.0),
-            .Width: size,
-            .Height: size,
-            .Transform: PanelTransform{TranslateX: -size * 0.5, TranslateY: -size * 0.5,},
-            .JustifyContent: JustifyContent.Center,
-            .AlignItems: AlignItems.Center,
+        return Container{
+            Key: key,
+            Position: PositionType.Absolute,
+            Left: Length.Percent(point.X * 100.0),
+            Top: Length.Percent(point.Y * 100.0),
+            Width: size,
+            Height: size,
+            Transform: PanelTransform{TranslateX: -size * 0.5, TranslateY: -size * 0.5,},
+            JustifyContent: JustifyContent.Center,
+            AlignItems: AlignItems.Center,
             Text{
                 Content: content,
                 FontSize: if index == 0 {
@@ -339,40 +339,40 @@ class HeroCell : Cell {
             )
             effect.SetParameter(7, Vector4(float32(secondOVelocity.X), float32(secondOVelocity.Y), 0.0F, 0.0F))
         }
-        let content = Container(){
-            .Width: Length.Percent(100),
-            .Height: Length.Percent(100),
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinHeight: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 10,
-            Container(){
-                .Key: "goo-memory-surface",
-                .Handle: hostHandle,
-                .Width: Length.Percent(100),
-                .MinHeight: 0,
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .Position: PositionType.Relative,
-                .BackgroundColor: Color.Rgb(9, 11, 16),
-                .BorderRadius: 8,
-                .BorderWidth: 1,
-                .BorderColor: GalleryTheme.BorderStrong,
-                .ShaderEffect: liveEffect,
-                .Cursor: if pointerDown {
+        let content = Container{
+            Width: Length.Percent(100),
+            Height: Length.Percent(100),
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 10,
+            Container{
+                Key: "goo-memory-surface",
+                Handle: hostHandle,
+                Width: Length.Percent(100),
+                MinHeight: 0,
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                Position: PositionType.Relative,
+                BackgroundColor: Color.Rgb(9, 11, 16),
+                BorderRadius: 8,
+                BorderWidth: 1,
+                BorderColor: GalleryTheme.BorderStrong,
+                ShaderEffect: liveEffect,
+                Cursor: if pointerDown {
                     Cursor.Move
                 } else if anchorAtPointer() >= 0 {
                     Cursor.Pointer
                 } else {
                     Cursor.Default
                 },
-                .Focusable: true,
-                .Accessibility: Accessibility{
+                Focusable: true,
+                Accessibility: Accessibility{
                     Role: AccessibilityRole.Generic,
                     Name: "Goo has shape memory. Grab a letter and release to reform.",
                 },
-                .OnPointerDown: (e PointerEvent) -> {
+                OnPointerDown: (e PointerEvent) -> {
                     updatePointer(e)
                     let hit = anchorAtPointer()
                     if hit >= 0 {
@@ -384,14 +384,14 @@ class HeroCell : Cell {
                         Rebuild()
                     }
                 },
-                .OnPointerMove: (e PointerEvent) -> {
+                OnPointerMove: (e PointerEvent) -> {
                     updatePointer(e)
                     if pointerDown {
                         pullMaterial()
                     }
                     Rebuild()
                 },
-                .OnPointerUp: (e PointerEvent) -> {
+                OnPointerUp: (e PointerEvent) -> {
                     if pointerDown {
                         e.ReleaseCapture()
                         updatePointer(e)
@@ -402,7 +402,7 @@ class HeroCell : Cell {
                         Rebuild()
                     }
                 },
-                .OnPointerCancel: (e PointerEvent) -> {
+                OnPointerCancel: (e PointerEvent) -> {
                     if pointerDown {
                         e.ReleaseCapture()
                         pointerDown = false
@@ -427,12 +427,12 @@ class HeroCell : Cell {
                 letter("goo-letter-o1", "o", 1, letterSize),
                 letter("goo-letter-o2", "o", 2, letterSize),
             },
-            Container(){
-                .Key: "goo-memory-controls",
-                .Width: Length.Percent(100),
-                .FlexDirection: FlexDirection.Row,
-                .FlexWrap: FlexWrap.Wrap,
-                .Gap: 8,
+            Container{
+                Key: "goo-memory-controls",
+                Width: Length.Percent(100),
+                FlexDirection: FlexDirection.Row,
+                FlexWrap: FlexWrap.Wrap,
+                Gap: 8,
                 GalleryTheme.GhostButton(layoutButtonLabel(0, "Wordmark"), () -> setLayout(0)),
                 GalleryTheme.GhostButton(layoutButtonLabel(1, "Stack"), () -> setLayout(1)),
                 GalleryTheme.GhostButton(layoutButtonLabel(2, "Orbit"), () -> setLayout(2)),

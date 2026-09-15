@@ -75,22 +75,22 @@ class DevToolsCell : Cell {
         return BuildRoot()
     }
 
-    private func BuildRoot() Container -> Container(){
-        .Key: "devtools-root",
-        .Width: Length.Percent(100),
-        .Height: Length.Percent(100),
-        .FlexDirection: FlexDirection.Column,
-        .BorderRadius: 8,
-        .Overflow: Overflow.Hidden,
-        .BorderTopWidth: 1,
-        .BorderRightWidth: 1,
-        .BorderBottomWidth: 1,
-        .BorderLeftWidth: 1,
-        .BorderTopColor: DevToolsTheme.Border,
-        .BorderRightColor: DevToolsTheme.Border,
-        .BorderBottomColor: DevToolsTheme.Border,
-        .BorderLeftColor: DevToolsTheme.Border,
-        .BackgroundColor: DevToolsTheme.Background,
+    private func BuildRoot() Container -> Container{
+        Key: "devtools-root",
+        Width: Length.Percent(100),
+        Height: Length.Percent(100),
+        FlexDirection: FlexDirection.Column,
+        BorderRadius: 8,
+        Overflow: Overflow.Hidden,
+        BorderTopWidth: 1,
+        BorderRightWidth: 1,
+        BorderBottomWidth: 1,
+        BorderLeftWidth: 1,
+        BorderTopColor: DevToolsTheme.Border,
+        BorderRightColor: DevToolsTheme.Border,
+        BorderBottomColor: DevToolsTheme.Border,
+        BorderLeftColor: DevToolsTheme.Border,
+        BackgroundColor: DevToolsTheme.Background,
         BuildTopbar(),
         BuildBody(),
     }
@@ -110,10 +110,10 @@ class DevToolsCell : Cell {
         )
         children.Add(Container{Key: "title-spacer", FlexGrow: 1.0})
         children.Add(
-            Container(){
-                .Key: "window-controls",
-                .FlexDirection: FlexDirection.Row,
-                .Gap: 2,
+            Container{
+                Key: "window-controls",
+                FlexDirection: FlexDirection.Row,
+                Gap: 2,
                 WindowControl(
                     "minimize",
                     DevToolsIcons.Minimize,
@@ -164,25 +164,25 @@ class DevToolsCell : Cell {
         )
     }
 
-    private func WindowControl(key string, icon VectorAsset, action Action) Button -> Button(){
-        .Key: "window-" + key,
-        .Width: 28,
-        .Height: 28,
-        .Padding: 0,
-        .Margin: 0,
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .BorderRadius: 4,
-        .Cursor: Cursor.Pointer,
-        .Hover: Style{
+    private func WindowControl(key string, icon VectorAsset, action Action) Button -> Button{
+        Key: "window-" + key,
+        Width: 28,
+        Height: 28,
+        Padding: 0,
+        Margin: 0,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        BorderRadius: 4,
+        Cursor: Cursor.Pointer,
+        Hover: Style{
             BackgroundColor: if key == "close" {
                 DevToolsTheme.CloseHover
             } else {
                 DevToolsTheme.SurfaceRaised
             }
         },
-        .OnClick: action,
+        OnClick: action,
         DevToolsIcons.View("window-icon", icon),
     }
 
@@ -304,22 +304,22 @@ class DevToolsCell : Cell {
     private func BuildActions() Container {
         let children = List[Blob]()
         children.Add(
-            Button(){
-                .Key: "window-picker-toggle",
-                .Width: 0,
-                .FlexGrow: 1.0,
-                .MinWidth: 180,
-                .MaxWidth: 340,
-                .Height: 28,
-                .PaddingLeft: 8,
-                .PaddingRight: 8,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 8,
-                .BackgroundColor: DevToolsTheme.Surface,
-                .Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
-                .Cursor: Cursor.Pointer,
-                .OnClick: () -> {
+            Button{
+                Key: "window-picker-toggle",
+                Width: 0,
+                FlexGrow: 1.0,
+                MinWidth: 180,
+                MaxWidth: 340,
+                Height: 28,
+                PaddingLeft: 8,
+                PaddingRight: 8,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 8,
+                BackgroundColor: DevToolsTheme.Surface,
+                Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
+                Cursor: Cursor.Pointer,
+                OnClick: () -> {
                     windowPickerOpen = !windowPickerOpen
                     Rebuild()
                 },
@@ -436,23 +436,23 @@ class DevToolsCell : Cell {
         for target in session.Windows {
             let selected = target.Id == session.SelectedWindowId
             buttons.Add(
-                Button(){
-                    .Key: "window-" + ordinal.ToString() + "-" + target.Id,
-                    .Width: Length.Percent(100),
-                    .Height: 30,
-                    .PaddingLeft: 8,
-                    .PaddingRight: 8,
-                    .FlexDirection: FlexDirection.Row,
-                    .AlignItems: AlignItems.Center,
-                    .Gap: 12,
-                    .BackgroundColor: if selected {
+                Button{
+                    Key: "window-" + ordinal.ToString() + "-" + target.Id,
+                    Width: Length.Percent(100),
+                    Height: 30,
+                    PaddingLeft: 8,
+                    PaddingRight: 8,
+                    FlexDirection: FlexDirection.Row,
+                    AlignItems: AlignItems.Center,
+                    Gap: 12,
+                    BackgroundColor: if selected {
                         DevToolsTheme.Selection
                     } else {
                         DevToolsTheme.Surface
                     },
-                    .Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
-                    .Cursor: Cursor.Pointer,
-                    .OnClick: () -> {
+                    Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
+                    Cursor: Cursor.Pointer,
+                    OnClick: () -> {
                         session.SelectWindow(target.Id)
                         windowPickerOpen = false
                         Rebuild()
@@ -526,11 +526,11 @@ class DevToolsCell : Cell {
         }
     }
 
-    private func BuildInspectBanner() Container -> Container(){
-        .Key: "inspect-banner",
-        .Width: Length.Percent(100),
-        .Padding: 10,
-        .BackgroundColor: DevToolsTheme.Selection,
+    private func BuildInspectBanner() Container -> Container{
+        Key: "inspect-banner",
+        Width: Length.Percent(100),
+        Padding: 10,
+        BackgroundColor: DevToolsTheme.Selection,
         Text{
             Key: "inspect-help",
             FontSize: 12,
@@ -583,11 +583,11 @@ class DevToolsCell : Cell {
         }
         if rows.Count == 0 {
             rows.Add(
-                Container(){
-                    .Key: "tree-empty",
-                    .Width: Length.Percent(100),
-                    .Height: 56,
-                    .Padding: 14,
+                Container{
+                    Key: "tree-empty",
+                    Width: Length.Percent(100),
+                    Height: 56,
+                    Padding: 14,
                     Text{
                         Key: "tree-empty-text",
                         Content: if session.State != DiagnosticConnectionState.Connected {
@@ -614,23 +614,23 @@ class DevToolsCell : Cell {
             FlexDirection: FlexDirection.Column,
             Children: rows,
         }
-        return Container(){
-            .Key: "tree-section",
-            .Width: Length.Percent(100),
-            .Height: 0,
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinHeight: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 8,
-            Container(){
-                .Key: "tree-toolbar",
-                .Width: Length.Percent(100),
-                .Height: 54,
-                .MinHeight: 54,
-                .FlexDirection: FlexDirection.Column,
-                .AlignItems: AlignItems.Center,
-                .Gap: 10,
+        return Container{
+            Key: "tree-section",
+            Width: Length.Percent(100),
+            Height: 0,
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 8,
+            Container{
+                Key: "tree-toolbar",
+                Width: Length.Percent(100),
+                Height: 54,
+                MinHeight: 54,
+                FlexDirection: FlexDirection.Column,
+                AlignItems: AlignItems.Center,
+                Gap: 10,
                 Container{
                     Key: "tree-heading",
                     Width: Length.Percent(100),
@@ -669,15 +669,15 @@ class DevToolsCell : Cell {
         let children = List[Blob]()
         if node.Children.Count > 0 {
             children.Add(
-                Button(){
-                    .Key: "expand-" + node.Id,
-                    .Width: 26,
-                    .Height: 32,
-                    .FlexDirection: FlexDirection.Row,
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
-                    .Cursor: Cursor.Pointer,
-                    .OnClick: () -> {
+                Button{
+                    Key: "expand-" + node.Id,
+                    Width: 26,
+                    Height: 32,
+                    FlexDirection: FlexDirection.Row,
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    Cursor: Cursor.Pointer,
+                    OnClick: () -> {
                         if !collapsed.Remove(node.Id) {
                             collapsed.Add(node.Id)
                         }
@@ -697,17 +697,17 @@ class DevToolsCell : Cell {
             children.Add(Container{Key: "leaf-space", Width: 26})
         }
         children.Add(
-            Button(){
-                .Key: "select-" + node.Id,
-                .Width: 0,
-                .FlexGrow: 1.0,
-                .MinWidth: 0,
-                .Height: 32,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 8,
-                .Cursor: Cursor.Pointer,
-                .OnClick: () -> {
+            Button{
+                Key: "select-" + node.Id,
+                Width: 0,
+                FlexGrow: 1.0,
+                MinWidth: 0,
+                Height: 32,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 8,
+                Cursor: Cursor.Pointer,
+                OnClick: () -> {
                     session.SelectNode(node.Id)
                     if compact {
                         showProperties = true
@@ -787,11 +787,11 @@ class DevToolsCell : Cell {
         }
         if captureCards.Count == 0 {
             captureCards.Add(
-                Container(){
-                    .Key: "captures-empty",
-                    .Width: Length.Percent(100),
-                    .Height: 44,
-                    .Padding: 10,
+                Container{
+                    Key: "captures-empty",
+                    Width: Length.Percent(100),
+                    Height: 44,
+                    Padding: 10,
                     Text{
                         Key: "captures-empty-label",
                         Content: "No captured frames",
@@ -806,27 +806,27 @@ class DevToolsCell : Cell {
         } else {
             logRows
         }
-        return Container(){
-            .Key: "bottom-panel",
-            .Width: Length.Percent(100),
-            .Height: 148,
-            .MinHeight: 148,
-            .FlexDirection: FlexDirection.Column,
-            .BackgroundColor: DevToolsTheme.Surface,
-            .BorderWidth: 1,
-            .BorderColor: DevToolsTheme.Border,
-            Container(){
-                .Key: "bottom-header",
-                .Width: Length.Percent(100),
-                .Height: 38,
-                .MinHeight: 38,
-                .PaddingLeft: 6,
-                .PaddingRight: 8,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 5,
-                .BorderBottomWidth: 1,
-                .BorderBottomColor: DevToolsTheme.Border,
+        return Container{
+            Key: "bottom-panel",
+            Width: Length.Percent(100),
+            Height: 148,
+            MinHeight: 148,
+            FlexDirection: FlexDirection.Column,
+            BackgroundColor: DevToolsTheme.Surface,
+            BorderWidth: 1,
+            BorderColor: DevToolsTheme.Border,
+            Container{
+                Key: "bottom-header",
+                Width: Length.Percent(100),
+                Height: 38,
+                MinHeight: 38,
+                PaddingLeft: 6,
+                PaddingRight: 8,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 5,
+                BorderBottomWidth: 1,
+                BorderBottomColor: DevToolsTheme.Border,
                 ActionButton(
                     "drawer-console",
                     "Console " + session.Logs.Count.ToString(),
@@ -909,17 +909,17 @@ class DevToolsCell : Cell {
         } else {
             DevToolsTheme.InkSubtle
         }
-        return Container(){
-            .Key: "log-" + ordinal.ToString() + "-" + entry.Timestamp + "-" + entry.Source + "-" + entry.Message,
-            .Width: Length.Percent(100),
-            .Height: 23,
-            .MinHeight: 23,
-            .PaddingLeft: 6,
-            .PaddingRight: 6,
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
-            .BackgroundColor: DevToolsTheme.Surface,
+        return Container{
+            Key: "log-" + ordinal.ToString() + "-" + entry.Timestamp + "-" + entry.Source + "-" + entry.Message,
+            Width: Length.Percent(100),
+            Height: 23,
+            MinHeight: 23,
+            PaddingLeft: 6,
+            PaddingRight: 6,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
+            BackgroundColor: DevToolsTheme.Surface,
             Text{Key: "log-time", Content: entry.Timestamp, Width: 68, FontSize: 12, Color: DevToolsTheme.InkSubtle,},
             Text{
                 Key: "log-level",
@@ -951,21 +951,21 @@ class DevToolsCell : Cell {
         }
     }
 
-    private func BuildCaptureCard(screenshot DiagnosticScreenshot, ordinal int32) Container -> Container(){
-        .Key: "capture-" + ordinal.ToString() + "-" + screenshot.Id,
-        .Width: Length.Percent(100),
-        .MinHeight: 62,
-        .Padding: 8,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 3,
-        .BackgroundColor: DevToolsTheme.SurfaceRaised,
-        .BorderRadius: 4,
-        .BorderWidth: 1,
-        .BorderColor: DevToolsTheme.Border,
-        Container(){
-            .Key: "capture-title-row",
-            .Width: Length.Percent(100),
-            .FlexDirection: FlexDirection.Row,
+    private func BuildCaptureCard(screenshot DiagnosticScreenshot, ordinal int32) Container -> Container{
+        Key: "capture-" + ordinal.ToString() + "-" + screenshot.Id,
+        Width: Length.Percent(100),
+        MinHeight: 62,
+        Padding: 8,
+        FlexDirection: FlexDirection.Column,
+        Gap: 3,
+        BackgroundColor: DevToolsTheme.SurfaceRaised,
+        BorderRadius: 4,
+        BorderWidth: 1,
+        BorderColor: DevToolsTheme.Border,
+        Container{
+            Key: "capture-title-row",
+            Width: Length.Percent(100),
+            FlexDirection: FlexDirection.Row,
             Text{
                 Key: "capture-window",
                 Content: screenshot.WindowName,
@@ -994,10 +994,10 @@ class DevToolsCell : Cell {
         details.Add(BuildDetails(node))
         if session.ActiveTab == DiagnosticDetailsTab.Configuration {
             details.Add(
-                Container(){
-                    .Key: "style-editor-toggle",
-                    .FlexDirection: FlexDirection.Row,
-                    .PaddingTop: 6,
+                Container{
+                    Key: "style-editor-toggle",
+                    FlexDirection: FlexDirection.Row,
+                    PaddingTop: 6,
                     ActionButton(
                         "overrides-toggle",
                         if showOverrides {
@@ -1019,15 +1019,15 @@ class DevToolsCell : Cell {
             }
         }
         details.Add(
-            Container(){
-                .Key: "advanced-section",
-                .Width: Length.Percent(100),
-                .MarginTop: 16,
-                .Gap: 8,
-                .BorderTopWidth: 1,
-                .BorderTopColor: DevToolsTheme.Border,
-                .PaddingTop: 8,
-                .FlexDirection: FlexDirection.Column,
+            Container{
+                Key: "advanced-section",
+                Width: Length.Percent(100),
+                MarginTop: 16,
+                Gap: 8,
+                BorderTopWidth: 1,
+                BorderTopColor: DevToolsTheme.Border,
+                PaddingTop: 8,
+                FlexDirection: FlexDirection.Column,
                 ActionButton(
                     "advanced-toggle",
                     if showAdvanced {
@@ -1051,33 +1051,33 @@ class DevToolsCell : Cell {
             details.Add(DetailRow("accessibility", "Accessibility", Reported(node.Accessibility)))
             details.Add(DetailRow("changes", "Changes", Reported(node.Changes)))
         }
-        return Container(){
-            .Key: "inspector",
-            .Width: if compact {
+        return Container{
+            Key: "inspector",
+            Width: if compact {
                 Length.Percent(100)
             } else {
                 Length(InspectorWidth())
             },
-            .MinWidth: 0,
-            .MinHeight: 0,
-            .Height: Length.Percent(100),
-            .FlexShrink: 0.0,
-            .FlexDirection: FlexDirection.Column,
-            .BackgroundColor: DevToolsTheme.Surface,
-            .BorderLeftWidth: 1,
-            .BorderLeftColor: DevToolsTheme.Border,
-            Container(){
-                .Key: "inspector-header",
-                .Width: Length.Percent(100),
-                .Height: 40,
-                .MinHeight: 40,
-                .PaddingLeft: 12,
-                .PaddingRight: 6,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 8,
-                .BorderBottomWidth: 1,
-                .BorderBottomColor: DevToolsTheme.Border,
+            MinWidth: 0,
+            MinHeight: 0,
+            Height: Length.Percent(100),
+            FlexShrink: 0.0,
+            FlexDirection: FlexDirection.Column,
+            BackgroundColor: DevToolsTheme.Surface,
+            BorderLeftWidth: 1,
+            BorderLeftColor: DevToolsTheme.Border,
+            Container{
+                Key: "inspector-header",
+                Width: Length.Percent(100),
+                Height: 40,
+                MinHeight: 40,
+                PaddingLeft: 12,
+                PaddingRight: 6,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 8,
+                BorderBottomWidth: 1,
+                BorderBottomColor: DevToolsTheme.Border,
                 Text{
                     Key: "inspector-node-name",
                     Content: node.DisplayName,
@@ -1131,23 +1131,23 @@ class DevToolsCell : Cell {
 
     private func BuildTabButton(tab DiagnosticDetailsTab, label string) Button {
         let selected = session.ActiveTab == tab
-        return Button(){
-            .Key: "tab-" + label,
-            .Height: 30,
-            .PaddingLeft: 10,
-            .PaddingRight: 10,
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .BackgroundColor: DevToolsTheme.Surface,
-            .BorderBottomWidth: if selected {
+        return Button{
+            Key: "tab-" + label,
+            Height: 30,
+            PaddingLeft: 10,
+            PaddingRight: 10,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            BackgroundColor: DevToolsTheme.Surface,
+            BorderBottomWidth: if selected {
                 2
             } else {
                 0
             },
-            .BorderBottomColor: DevToolsTheme.Accent,
-            .Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
-            .Cursor: Cursor.Pointer,
-            .OnClick: () -> {
+            BorderBottomColor: DevToolsTheme.Accent,
+            Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
+            Cursor: Cursor.Pointer,
+            OnClick: () -> {
                 session.SetTab(tab)
                 Rebuild()
             },
@@ -1209,20 +1209,20 @@ class DevToolsCell : Cell {
         Reported(value)
     }
 
-    private func DetailRow(key string, label string, value string) Container -> Container(){
-        .Key: "detail-row-" + key,
-        .Width: Length.Percent(100),
-        .MinHeight: 42,
-        .PaddingLeft: 8,
-        .PaddingRight: 8,
-        .PaddingTop: 6,
-        .PaddingBottom: 6,
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.FlexStart,
-        .Gap: 10,
-        .BackgroundColor: DevToolsTheme.Surface,
-        .BorderBottomWidth: 1,
-        .BorderBottomColor: DevToolsTheme.Border,
+    private func DetailRow(key string, label string, value string) Container -> Container{
+        Key: "detail-row-" + key,
+        Width: Length.Percent(100),
+        MinHeight: 42,
+        PaddingLeft: 8,
+        PaddingRight: 8,
+        PaddingTop: 6,
+        PaddingBottom: 6,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.FlexStart,
+        Gap: 10,
+        BackgroundColor: DevToolsTheme.Surface,
+        BorderBottomWidth: 1,
+        BorderBottomColor: DevToolsTheme.Border,
         Text{
             Key: "detail-label",
             Content: label,
@@ -1245,27 +1245,27 @@ class DevToolsCell : Cell {
         },
     }
 
-    private func BuildOverridePanel() Container -> Container(){
-        .Key: "override-panel",
-        .Width: Length.Percent(100),
-        .Padding: 10,
-        .MarginTop: 4,
-        .MarginBottom: 12,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 7,
-        .BackgroundColor: DevToolsTheme.SurfaceRaised,
-        .BorderRadius: 5,
-        .BorderWidth: 1,
-        .BorderColor: if session.OverrideActive {
+    private func BuildOverridePanel() Container -> Container{
+        Key: "override-panel",
+        Width: Length.Percent(100),
+        Padding: 10,
+        MarginTop: 4,
+        MarginBottom: 12,
+        FlexDirection: FlexDirection.Column,
+        Gap: 7,
+        BackgroundColor: DevToolsTheme.SurfaceRaised,
+        BorderRadius: 5,
+        BorderWidth: 1,
+        BorderColor: if session.OverrideActive {
             DevToolsTheme.Accent
         } else {
             DevToolsTheme.Border
         },
-        Container(){
-            .Key: "override-heading",
-            .Width: Length.Percent(100),
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
+        Container{
+            Key: "override-heading",
+            Width: Length.Percent(100),
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
             Text{
                 Key: "override-title",
                 Content: "Temporary style",
@@ -1326,11 +1326,11 @@ class DevToolsCell : Cell {
                 Rebuild()
             },
         },
-        Container(){
-            .Key: "override-actions",
-            .Width: Length.Percent(100),
-            .FlexDirection: FlexDirection.Row,
-            .Gap: 6,
+        Container{
+            Key: "override-actions",
+            Width: Length.Percent(100),
+            FlexDirection: FlexDirection.Row,
+            Gap: 6,
             ActionButton(
                 "override-apply",
                 "Apply",
@@ -1360,20 +1360,20 @@ class DevToolsCell : Cell {
         background Color,
         foreground Color,
         onClick Action
-    ) Button -> Button(){
-        .Key: key,
-        .Height: 26,
-        .PaddingLeft: 10,
-        .PaddingRight: 10,
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .BackgroundColor: background,
-        .BorderRadius: 3,
-        .Hover: Style{BackgroundColor: DevToolsTheme.SurfaceStrong},
-        .Active: Style{BackgroundColor: DevToolsTheme.BorderStrong},
-        .Cursor: Cursor.Pointer,
-        .OnClick: onClick,
+    ) Button -> Button{
+        Key: key,
+        Height: 26,
+        PaddingLeft: 10,
+        PaddingRight: 10,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        BackgroundColor: background,
+        BorderRadius: 3,
+        Hover: Style{BackgroundColor: DevToolsTheme.SurfaceStrong},
+        Active: Style{BackgroundColor: DevToolsTheme.BorderStrong},
+        Cursor: Cursor.Pointer,
+        OnClick: onClick,
         Text{Key: "button-label", Content: label, FontSize: 12, FontWeight: 600, Color: foreground,},
     }
 

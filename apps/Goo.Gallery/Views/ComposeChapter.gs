@@ -156,10 +156,10 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
 
     private func tileContent() Blob {
         let shownRotation = int32(rotation) % 360
-        let controls = Container(){
-            .FlexDirection: FlexDirection.Row,
-            .FlexWrap: FlexWrap.Wrap,
-            .Gap: 8,
+        let controls = Container{
+            FlexDirection: FlexDirection.Row,
+            FlexWrap: FlexWrap.Wrap,
+            Gap: 8,
             GalleryTheme.GhostButton("Orientation: " + orientationName(), () -> cycleOrientation()),
             GalleryTheme.GhostButton("Rotate 90° · " + shownRotation.ToString() + "°", () -> rotateTiles()),
             GalleryTheme.GhostButton("Swap ends", () -> swapEnds()),
@@ -185,23 +185,23 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             BorderRadius: 8,
             Children: buildTiles(),
         }
-        let grid = Container(){
-            .Width: Length.Percent(100),
-            .MinWidth: 0,
-            .MinHeight: 0,
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
+        let grid = Container{
+            Width: Length.Percent(100),
+            MinWidth: 0,
+            MinHeight: 0,
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
             spiral,
         }
-        return Container(){
-            .Width: Length.Percent(100),
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinHeight: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 14,
+        return Container{
+            Width: Length.Percent(100),
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 14,
             controls,
             grid,
         }
@@ -232,25 +232,25 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                 }
             }
             children.Add(
-                Container(){
-                    .Key: "tile-" + tile.Index.ToString(),
-                    .Position: PositionType.Absolute,
-                    .Left: Length.Percent(placement.Left / layoutWidth * 100.0),
-                    .Top: Length.Percent(placement.Top / layoutHeight * 100.0),
-                    .Width: Length.Percent(placement.Size / layoutWidth * 100.0),
-                    .Height: Length.Percent(placement.Size / layoutHeight * 100.0),
-                    .MinWidth: 0,
-                    .MinHeight: 0,
-                    .BorderWidth: 1,
-                    .BorderColor: Color.Rgba(8, 8, 10, 180),
-                    .BackgroundColor: fill,
-                    .Transform: PanelTransform{Rotate: rotation},
-                    .TransitionMs: 350.0,
-                    .TransitionEasing: Easing.EaseInOut,
-                    .JustifyContent: JustifyContent.Center,
-                    .AlignItems: AlignItems.Center,
-                    .OverflowX: Overflow.Hidden,
-                    .OverflowY: Overflow.Hidden,
+                Container{
+                    Key: "tile-" + tile.Index.ToString(),
+                    Position: PositionType.Absolute,
+                    Left: Length.Percent(placement.Left / layoutWidth * 100.0),
+                    Top: Length.Percent(placement.Top / layoutHeight * 100.0),
+                    Width: Length.Percent(placement.Size / layoutWidth * 100.0),
+                    Height: Length.Percent(placement.Size / layoutHeight * 100.0),
+                    MinWidth: 0,
+                    MinHeight: 0,
+                    BorderWidth: 1,
+                    BorderColor: Color.Rgba(8, 8, 10, 180),
+                    BackgroundColor: fill,
+                    Transform: PanelTransform{Rotate: rotation},
+                    TransitionMs: 350.0,
+                    TransitionEasing: Easing.EaseInOut,
+                    JustifyContent: JustifyContent.Center,
+                    AlignItems: AlignItems.Center,
+                    OverflowX: Overflow.Hidden,
+                    OverflowY: Overflow.Hidden,
                     Text{
                         Content: tile.Value.ToString(),
                         FontSize: if slot < 2 {
@@ -284,13 +284,13 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         let flowOffset = posterFlowReflow.Offset
         let gapOffset = posterGapReflow.Offset
         let wrapOffset = posterWrapReflow.Offset
-        return Container(){
-            .Width: Length.Percent(100),
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinHeight: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 14,
+        return Container{
+            Width: Length.Percent(100),
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 14,
             Cell.Mount[GalleryRange](
                 "poster-width",
                 func (slider GalleryRange) {
@@ -305,48 +305,48 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                     }
                 }
             ),
-            Container(){
-                .Key: "poster-stage",
-                .Width: Length.Percent(100),
-                .MinWidth: 0,
-                .MinHeight: 0,
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
-                Container(){
-                    .Key: "poster",
-                    .Width: posterWidth,
-                    .MaxWidth: Length.Percent(100),
-                    .MinWidth: 0,
-                    .Height: if narrowPoster {
+            Container{
+                Key: "poster-stage",
+                Width: Length.Percent(100),
+                MinWidth: 0,
+                MinHeight: 0,
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                Container{
+                    Key: "poster",
+                    Width: posterWidth,
+                    MaxWidth: Length.Percent(100),
+                    MinWidth: 0,
+                    Height: if narrowPoster {
                         600
                     } else {
                         540
                     },
-                    .TransitionMs: 180.0,
-                    .TransitionEasing: Easing.EaseInOut,
-                    .TransitionProperties: GalleryPosterTransitions.Frame,
-                    .Position: PositionType.Relative,
-                    .FlexDirection: FlexDirection.Column,
-                    .BackgroundColor: ink,
-                    .BorderWidth: 1,
-                    .BorderColor: Color.Rgb(88, 88, 94),
-                    .OverflowX: Overflow.Hidden,
-                    .OverflowY: Overflow.Hidden,
-                    Container(){
-                        .Key: "poster-head",
-                        .Width: Length.Percent(100),
-                        .Height: 52,
-                        .MinHeight: 52,
-                        .PaddingLeft: 18,
-                        .PaddingRight: 18,
-                        .FlexDirection: FlexDirection.Row,
-                        .AlignItems: AlignItems.Center,
-                        .JustifyContent: JustifyContent.SpaceBetween,
-                        .BackgroundColor: paper,
-                        .BorderBottomWidth: 2,
-                        .BorderColor: ink,
+                    TransitionMs: 180.0,
+                    TransitionEasing: Easing.EaseInOut,
+                    TransitionProperties: GalleryPosterTransitions.Frame,
+                    Position: PositionType.Relative,
+                    FlexDirection: FlexDirection.Column,
+                    BackgroundColor: ink,
+                    BorderWidth: 1,
+                    BorderColor: Color.Rgb(88, 88, 94),
+                    OverflowX: Overflow.Hidden,
+                    OverflowY: Overflow.Hidden,
+                    Container{
+                        Key: "poster-head",
+                        Width: Length.Percent(100),
+                        Height: 52,
+                        MinHeight: 52,
+                        PaddingLeft: 18,
+                        PaddingRight: 18,
+                        FlexDirection: FlexDirection.Row,
+                        AlignItems: AlignItems.Center,
+                        JustifyContent: JustifyContent.SpaceBetween,
+                        BackgroundColor: paper,
+                        BorderBottomWidth: 2,
+                        BorderColor: ink,
                         Text{
                             Content: "MODULAR / SYSTEM 03",
                             FontSize: 11,
@@ -362,46 +362,46 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                             Color: ink,
                         },
                     },
-                    Container(){
-                        .Key: "poster-grid",
-                        .Width: Length.Percent(100),
-                        .MinWidth: 0,
-                        .MinHeight: 0,
-                        .FlexGrow: 1.0,
-                        .FlexShrink: 1.0,
-                        .Padding: 10,
-                        .FlexDirection: FlexDirection.Row,
-                        .FlexWrap: FlexWrap.Wrap,
-                        .Gap: 10,
-                        .RowGap: 10,
-                        .ColumnGap: 10,
-                        .AlignItems: AlignItems.Stretch,
-                        .AlignContent: AlignContent.SpaceBetween,
-                        .BackgroundColor: ink,
-                        Container(){
-                            .Key: "poster-form",
-                            .Handle: posterFormReflow.Handle,
-                            .Transform: PanelTransform{TranslateX: formOffset.X, TranslateY: formOffset.Y,},
-                            .Height: if narrowPoster {
+                    Container{
+                        Key: "poster-grid",
+                        Width: Length.Percent(100),
+                        MinWidth: 0,
+                        MinHeight: 0,
+                        FlexGrow: 1.0,
+                        FlexShrink: 1.0,
+                        Padding: 10,
+                        FlexDirection: FlexDirection.Row,
+                        FlexWrap: FlexWrap.Wrap,
+                        Gap: 10,
+                        RowGap: 10,
+                        ColumnGap: 10,
+                        AlignItems: AlignItems.Stretch,
+                        AlignContent: AlignContent.SpaceBetween,
+                        BackgroundColor: ink,
+                        Container{
+                            Key: "poster-form",
+                            Handle: posterFormReflow.Handle,
+                            Transform: PanelTransform{TranslateX: formOffset.X, TranslateY: formOffset.Y,},
+                            Height: if narrowPoster {
                                 220
                             } else {
                                 268
                             },
-                            .FlexGrow: 3.0,
-                            .FlexShrink: 1.0,
-                            .FlexBasis: if narrowPoster {
+                            FlexGrow: 3.0,
+                            FlexShrink: 1.0,
+                            FlexBasis: if narrowPoster {
                                 320
                             } else {
                                 500
                             },
-                            .TransitionMs: 180.0,
-                            .TransitionEasing: Easing.EaseInOut,
-                            .TransitionProperties: GalleryPosterTransitions.Module,
-                            .MinWidth: 180,
-                            .Padding: 18,
-                            .FlexDirection: FlexDirection.Column,
-                            .JustifyContent: JustifyContent.SpaceBetween,
-                            .BackgroundColor: blue,
+                            TransitionMs: 180.0,
+                            TransitionEasing: Easing.EaseInOut,
+                            TransitionProperties: GalleryPosterTransitions.Module,
+                            MinWidth: 180,
+                            Padding: 18,
+                            FlexDirection: FlexDirection.Column,
+                            JustifyContent: JustifyContent.SpaceBetween,
+                            BackgroundColor: blue,
                             Text{
                                 Content: "FLEX-GROW 3 / BASIS 500",
                                 FontSize: 10,
@@ -425,31 +425,31 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                                 Color: paper,
                             },
                         },
-                        Container(){
-                            .Key: "poster-align",
-                            .Handle: posterAlignReflow.Handle,
-                            .Transform: PanelTransform{TranslateX: alignOffset.X, TranslateY: alignOffset.Y,},
-                            .Height: if narrowPoster {
+                        Container{
+                            Key: "poster-align",
+                            Handle: posterAlignReflow.Handle,
+                            Transform: PanelTransform{TranslateX: alignOffset.X, TranslateY: alignOffset.Y,},
+                            Height: if narrowPoster {
                                 150
                             } else {
                                 268
                             },
-                            .FlexGrow: 1.0,
-                            .FlexShrink: 1.0,
-                            .FlexBasis: if narrowPoster {
+                            FlexGrow: 1.0,
+                            FlexShrink: 1.0,
+                            FlexBasis: if narrowPoster {
                                 140
                             } else {
                                 220
                             },
-                            .TransitionMs: 180.0,
-                            .TransitionEasing: Easing.EaseInOut,
-                            .TransitionProperties: GalleryPosterTransitions.Module,
-                            .MinWidth: 84,
-                            .Padding: 16,
-                            .FlexDirection: FlexDirection.Column,
-                            .AlignItems: AlignItems.FlexEnd,
-                            .JustifyContent: JustifyContent.SpaceBetween,
-                            .BackgroundColor: acid,
+                            TransitionMs: 180.0,
+                            TransitionEasing: Easing.EaseInOut,
+                            TransitionProperties: GalleryPosterTransitions.Module,
+                            MinWidth: 84,
+                            Padding: 16,
+                            FlexDirection: FlexDirection.Column,
+                            AlignItems: AlignItems.FlexEnd,
+                            JustifyContent: JustifyContent.SpaceBetween,
+                            BackgroundColor: acid,
                             Text{
                                 Content: "ALIGN / END",
                                 FontSize: 10,
@@ -457,28 +457,28 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                                 LetterSpacing: 0.8,
                                 Color: ink,
                             },
-                            Container(){
-                                .Width: if narrowPoster {
+                            Container{
+                                Width: if narrowPoster {
                                     50
                                 } else {
                                     72
                                 },
-                                .Height: if narrowPoster {
+                                Height: if narrowPoster {
                                     50
                                 } else {
                                     72
                                 },
-                                .BorderRadius: if narrowPoster {
+                                BorderRadius: if narrowPoster {
                                     25
                                 } else {
                                     36
                                 },
-                                .TransitionMs: 180.0,
-                                .TransitionEasing: Easing.EaseInOut,
-                                .TransitionProperties: GalleryPosterTransitions.Marker,
-                                .BackgroundColor: ink,
-                                .AlignItems: AlignItems.Center,
-                                .JustifyContent: JustifyContent.Center,
+                                TransitionMs: 180.0,
+                                TransitionEasing: Easing.EaseInOut,
+                                TransitionProperties: GalleryPosterTransitions.Marker,
+                                BackgroundColor: ink,
+                                AlignItems: AlignItems.Center,
+                                JustifyContent: JustifyContent.Center,
                                 Text{
                                     Content: "03",
                                     FontSize: if narrowPoster {
@@ -494,32 +494,32 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                                 },
                             },
                         },
-                        Container(){
-                            .Key: "poster-flow",
-                            .Handle: posterFlowReflow.Handle,
-                            .Transform: PanelTransform{TranslateX: flowOffset.X, TranslateY: flowOffset.Y,},
-                            .Height: if narrowPoster {
+                        Container{
+                            Key: "poster-flow",
+                            Handle: posterFlowReflow.Handle,
+                            Transform: PanelTransform{TranslateX: flowOffset.X, TranslateY: flowOffset.Y,},
+                            Height: if narrowPoster {
                                 130
                             } else {
                                 180
                             },
-                            .FlexGrow: 2.0,
-                            .FlexShrink: 1.0,
-                            .FlexBasis: if narrowPoster {
+                            FlexGrow: 2.0,
+                            FlexShrink: 1.0,
+                            FlexBasis: if narrowPoster {
                                 220
                             } else {
                                 360
                             },
-                            .TransitionMs: 180.0,
-                            .TransitionEasing: Easing.EaseInOut,
-                            .TransitionProperties: GalleryPosterTransitions.Module,
-                            .MinWidth: 150,
-                            .PaddingLeft: 18,
-                            .PaddingRight: 18,
-                            .FlexDirection: FlexDirection.Row,
-                            .AlignItems: AlignItems.Center,
-                            .JustifyContent: JustifyContent.SpaceBetween,
-                            .BackgroundColor: coral,
+                            TransitionMs: 180.0,
+                            TransitionEasing: Easing.EaseInOut,
+                            TransitionProperties: GalleryPosterTransitions.Module,
+                            MinWidth: 150,
+                            PaddingLeft: 18,
+                            PaddingRight: 18,
+                            FlexDirection: FlexDirection.Row,
+                            AlignItems: AlignItems.Center,
+                            JustifyContent: JustifyContent.SpaceBetween,
+                            BackgroundColor: coral,
                             Text{
                                 Content: "FLOW",
                                 FontSize: if narrowPoster {
@@ -534,10 +534,10 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                                 LetterSpacing: -2.4,
                                 Color: ink,
                             },
-                            Container(){
-                                .FlexDirection: FlexDirection.Column,
-                                .AlignItems: AlignItems.FlexEnd,
-                                .Gap: 2,
+                            Container{
+                                FlexDirection: FlexDirection.Column,
+                                AlignItems: AlignItems.FlexEnd,
+                                Gap: 2,
                                 Text{Content: "WRAP", FontSize: 10, FontWeight: 800, LetterSpacing: 0.8, Color: ink,},
                                 Text{
                                     Content: "SHRINK 1",
@@ -548,30 +548,30 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                                 },
                             },
                         },
-                        Container(){
-                            .Key: "poster-gap",
-                            .Handle: posterGapReflow.Handle,
-                            .Transform: PanelTransform{TranslateX: gapOffset.X, TranslateY: gapOffset.Y,},
-                            .Height: if narrowPoster {
+                        Container{
+                            Key: "poster-gap",
+                            Handle: posterGapReflow.Handle,
+                            Transform: PanelTransform{TranslateX: gapOffset.X, TranslateY: gapOffset.Y,},
+                            Height: if narrowPoster {
                                 120
                             } else {
                                 180
                             },
-                            .FlexGrow: 1.0,
-                            .FlexShrink: 1.0,
-                            .FlexBasis: if narrowPoster {
+                            FlexGrow: 1.0,
+                            FlexShrink: 1.0,
+                            FlexBasis: if narrowPoster {
                                 100
                             } else {
                                 160
                             },
-                            .TransitionMs: 180.0,
-                            .TransitionEasing: Easing.EaseInOut,
-                            .TransitionProperties: GalleryPosterTransitions.Module,
-                            .MinWidth: 76,
-                            .Padding: 16,
-                            .FlexDirection: FlexDirection.Column,
-                            .JustifyContent: JustifyContent.SpaceBetween,
-                            .BackgroundColor: paper,
+                            TransitionMs: 180.0,
+                            TransitionEasing: Easing.EaseInOut,
+                            TransitionProperties: GalleryPosterTransitions.Module,
+                            MinWidth: 76,
+                            Padding: 16,
+                            FlexDirection: FlexDirection.Column,
+                            JustifyContent: JustifyContent.SpaceBetween,
+                            BackgroundColor: paper,
                             Text{Content: "GAP", FontSize: 10, FontWeight: 800, LetterSpacing: 0.9, Color: ink,},
                             Text{
                                 Content: "08",
@@ -588,30 +588,30 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                                 Color: ink,
                             },
                         },
-                        Container(){
-                            .Key: "poster-wrap",
-                            .Handle: posterWrapReflow.Handle,
-                            .Transform: PanelTransform{TranslateX: wrapOffset.X, TranslateY: wrapOffset.Y,},
-                            .Height: if narrowPoster {
+                        Container{
+                            Key: "poster-wrap",
+                            Handle: posterWrapReflow.Handle,
+                            Transform: PanelTransform{TranslateX: wrapOffset.X, TranslateY: wrapOffset.Y,},
+                            Height: if narrowPoster {
                                 120
                             } else {
                                 180
                             },
-                            .FlexGrow: 1.0,
-                            .FlexShrink: 2.0,
-                            .FlexBasis: if narrowPoster {
+                            FlexGrow: 1.0,
+                            FlexShrink: 2.0,
+                            FlexBasis: if narrowPoster {
                                 100
                             } else {
                                 150
                             },
-                            .TransitionMs: 180.0,
-                            .TransitionEasing: Easing.EaseInOut,
-                            .TransitionProperties: GalleryPosterTransitions.Module,
-                            .MinWidth: 72,
-                            .Padding: 16,
-                            .FlexDirection: FlexDirection.Column,
-                            .JustifyContent: JustifyContent.SpaceBetween,
-                            .BackgroundColor: Color.Rgb(31, 32, 37),
+                            TransitionMs: 180.0,
+                            TransitionEasing: Easing.EaseInOut,
+                            TransitionProperties: GalleryPosterTransitions.Module,
+                            MinWidth: 72,
+                            Padding: 16,
+                            FlexDirection: FlexDirection.Column,
+                            JustifyContent: JustifyContent.SpaceBetween,
+                            BackgroundColor: Color.Rgb(31, 32, 37),
                             Text{
                                 Content: "COL",
                                 FontSize: 10,
@@ -635,19 +635,19 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                             },
                         },
                     },
-                    Container(){
-                        .Key: "poster-badge",
-                        .Position: PositionType.Absolute,
-                        .Right: 16,
-                        .Bottom: 16,
-                        .ZIndex: 3,
-                        .PaddingLeft: 10,
-                        .PaddingRight: 10,
-                        .PaddingTop: 6,
-                        .PaddingBottom: 6,
-                        .BackgroundColor: acid,
-                        .BorderWidth: 1,
-                        .BorderColor: ink,
+                    Container{
+                        Key: "poster-badge",
+                        Position: PositionType.Absolute,
+                        Right: 16,
+                        Bottom: 16,
+                        ZIndex: 3,
+                        PaddingLeft: 10,
+                        PaddingRight: 10,
+                        PaddingTop: 6,
+                        PaddingBottom: 6,
+                        BackgroundColor: acid,
+                        BorderWidth: 1,
+                        BorderColor: ink,
                         Text{Content: "ABS / PINNED", FontSize: 9, FontWeight: 850, LetterSpacing: 0.9, Color: ink,},
                     },
                 },

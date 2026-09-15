@@ -15,11 +15,7 @@ Render the same reusable asset at the size of its parent:
 
 ```gsharp
 let icon = Svg.Load("icon.svg")
-Container(){
-    .Width: 32,
-    .Height: 32,
-    icon.Render(),
-}
+Container{Width: 32, Height: 32, icon.Render(),}
 ```
 
 The core `Goo` package also supports `VectorAsset.Load(bytes)` for compiled GCV1

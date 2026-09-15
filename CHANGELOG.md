@@ -2,7 +2,7 @@
 
 ## 0.5.4 - 2026-09-15
 
-- Added native G# mixed initializers: `Container` and `Button` accept direct children and ordered spreads through `Add`. The package automatically supplies the upstream compiler/formatter containing G# #3785 while the tagged SDK catches up.
+- Added native G# mixed initializers: `Container` and `Button` accept direct children and ordered spreads through `Add`. Examples use dot-free, member-first syntax. The package automatically supplies the upstream compiler/formatter containing G# #3785 while the tagged SDK catches up.
 - Preserved measured virtual-row heights while replacement content is remeasured, fixing scroll jumps when DataGrid selection rebuilds rows near the bottom.
 - Added `EmbeddedWindowHost`, host-owned `PlatformInput`, and the `Goo.Android` adapter for shared retained applications.
 - Added bounded local PNG loading and `ImageSourceCache`, plus shared desktop UI audio through `SoundSource` and `SoundPlayer`.

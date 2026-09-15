@@ -17,12 +17,12 @@ class DevToolsIcons {
             Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", name + ".svg")
         )
 
-        func View(key string, asset VectorAsset) Container -> Container(){
-            .Key: key,
-            .Width: 18,
-            .Height: 18,
-            .Padding: 0,
-            .Margin: 0,
+        func View(key string, asset VectorAsset) Container -> Container{
+            Key: key,
+            Width: 18,
+            Height: 18,
+            Padding: 0,
+            Margin: 0,
             asset.Render(),
         }
     }

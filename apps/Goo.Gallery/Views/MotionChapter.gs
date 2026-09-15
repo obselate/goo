@@ -542,26 +542,26 @@ class MotionChapter : Cell {
         lastTrackedTick = now
     }
 
-    private func actionBtn(label string, isAct bool, onClick Action) Button -> Button(){
-        .PaddingLeft: 8,
-        .PaddingRight: 8,
-        .Height: 24,
-        .BackgroundColor: if isAct {
+    private func actionBtn(label string, isAct bool, onClick Action) Button -> Button{
+        PaddingLeft: 8,
+        PaddingRight: 8,
+        Height: 24,
+        BackgroundColor: if isAct {
             GalleryTheme.Accent
         } else {
             GalleryTheme.SurfaceRaised
         },
-        .BorderWidth: 1,
-        .BorderColor: if isAct {
+        BorderWidth: 1,
+        BorderColor: if isAct {
             GalleryTheme.AccentStrong
         } else {
             GalleryTheme.Border
         },
-        .BorderRadius: 4,
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .TransitionMs: 100.0,
-        .Hover: Style{
+        BorderRadius: 4,
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        TransitionMs: 100.0,
+        Hover: Style{
             BackgroundColor: if isAct {
                 GalleryTheme.Accent
             } else {
@@ -573,8 +573,8 @@ class MotionChapter : Cell {
                 GalleryTheme.BorderStrong
             },
         },
-        .Active: Style{Transform: PanelTransform{Scale: 0.96},},
-        .OnClick: onClick,
+        Active: Style{Transform: PanelTransform{Scale: 0.96},},
+        OnClick: onClick,
         Text{
             Content: label,
             FontSize: 11,
@@ -595,26 +595,26 @@ class MotionChapter : Cell {
         let p = physicsPuckPos.Value
         let scale = physicsPuckScale.Value
         let color = physicsPuckColor.Value
-        return Container(){
-            .Key: "physics-puck",
-            .Position: PositionType.Absolute,
-            .Left: p.X,
-            .Top: p.Y,
-            .Width: 48,
-            .Height: 48,
-            .BorderRadius: 24,
-            .BorderWidth: 2,
-            .BorderColor: color,
-            .BackgroundColor: Color.FromNormalized(
+        return Container{
+            Key: "physics-puck",
+            Position: PositionType.Absolute,
+            Left: p.X,
+            Top: p.Y,
+            Width: 48,
+            Height: 48,
+            BorderRadius: 24,
+            BorderWidth: 2,
+            BorderColor: color,
+            BackgroundColor: Color.FromNormalized(
                 float32(color.R) / 255.0F,
                 float32(color.G) / 255.0F,
                 float32(color.B) / 255.0F,
                 0.28F
             ),
-            .Transform: PanelTransform{TranslateX: -24.0, TranslateY: -24.0, Scale: scale},
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
-            .Cursor: Cursor.Move,
+            Transform: PanelTransform{TranslateX: -24.0, TranslateY: -24.0, Scale: scale},
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            Cursor: Cursor.Move,
             Container{Width: 16, Height: 16, BorderRadius: 8, BackgroundColor: color,},
         }
     }
@@ -635,46 +635,46 @@ class MotionChapter : Cell {
             case 3: 78.0
             default: 78.0
         }
-        return Container(){
-            .Key: "anchor-" + index.ToString(),
-            .Position: PositionType.Absolute,
-            .Left: Length.Percent(leftPct),
-            .Top: Length.Percent(topPct),
-            .Width: 32,
-            .Height: 32,
-            .BorderRadius: 16,
-            .BorderWidth: 1,
-            .BorderColor: if isTarget {
+        return Container{
+            Key: "anchor-" + index.ToString(),
+            Position: PositionType.Absolute,
+            Left: Length.Percent(leftPct),
+            Top: Length.Percent(topPct),
+            Width: 32,
+            Height: 32,
+            BorderRadius: 16,
+            BorderWidth: 1,
+            BorderColor: if isTarget {
                 GalleryTheme.Accent
             } else {
                 Color.Rgb(50, 50, 56)
             },
-            .BackgroundColor: if isTarget {
+            BackgroundColor: if isTarget {
                 Color.FromNormalized(0.39F, 0.40F, 0.95F, 0.22F)
             } else {
                 Color.FromNormalized(0.12F, 0.12F, 0.15F, 0.60F)
             },
-            .Transform: PanelTransform{TranslateX: -16.0, TranslateY: -16.0},
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .TransitionMs: 120.0,
-            .TransitionProperties: []TransitionProperty{
+            Transform: PanelTransform{TranslateX: -16.0, TranslateY: -16.0},
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            TransitionMs: 120.0,
+            TransitionProperties: []TransitionProperty{
                 TransitionProperty.Transform,
                 TransitionProperty.BorderColor,
                 TransitionProperty.BackgroundColor,
             },
-            .Hover: Style{
+            Hover: Style{
                 BorderColor: GalleryTheme.AccentStrong,
                 Transform: PanelTransform{TranslateX: -16.0, TranslateY: -16.0, Scale: 1.12},
             },
-            .OnPointerDown: func (e PointerEvent) {
+            OnPointerDown: func (e PointerEvent) {
                 e.StopPropagation()
                 e.PreventDefault()
                 movePuckToAnchor(index)
             },
-            .OnClick: () -> movePuckToAnchor(index),
+            OnClick: () -> movePuckToAnchor(index),
             Text{
                 Content: label,
                 FontSize: 9,
@@ -691,25 +691,25 @@ class MotionChapter : Cell {
     private func telemetryBar() Container {
         let p = physicsPuckPos.Value
         let isRunning = physicsPuckPos.Running || puckDragging
-        return Container(){
-            .Width: Length.Percent(100),
-            .Height: 30,
-            .PaddingLeft: 12,
-            .PaddingRight: 12,
-            .BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
-            .BorderTopWidth: 1,
-            .BorderColor: GalleryTheme.Border,
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.SpaceBetween,
-            .Cursor: Cursor.Default,
-            .OnPointerDown: func (e PointerEvent) {
+        return Container{
+            Width: Length.Percent(100),
+            Height: 30,
+            PaddingLeft: 12,
+            PaddingRight: 12,
+            BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
+            BorderTopWidth: 1,
+            BorderColor: GalleryTheme.Border,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.SpaceBetween,
+            Cursor: Cursor.Default,
+            OnPointerDown: func (e PointerEvent) {
                 e.StopPropagation()
                 e.PreventDefault()
             },
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .Gap: 14,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                Gap: 14,
                 Text{
                     Content: "POS: " + p.X.ToString("F0") + ", " + p.Y.ToString("F0"),
                     FontSize: 10,
@@ -733,24 +733,24 @@ class MotionChapter : Cell {
                     },
                 },
             },
-            Container(){
-                .PaddingLeft: 6,
-                .PaddingRight: 6,
-                .Height: 18,
-                .BorderRadius: 4,
-                .BackgroundColor: if isRunning {
+            Container{
+                PaddingLeft: 6,
+                PaddingRight: 6,
+                Height: 18,
+                BorderRadius: 4,
+                BackgroundColor: if isRunning {
                     Color.FromNormalized(0.18F, 0.45F, 0.25F, 0.35F)
                 } else {
                     Color.FromNormalized(0.2F, 0.2F, 0.25F, 0.35F)
                 },
-                .BorderWidth: 1,
-                .BorderColor: if isRunning {
+                BorderWidth: 1,
+                BorderColor: if isRunning {
                     Color.Rgb(87, 188, 120)
                 } else {
                     GalleryTheme.Border
                 },
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
                 Text{
                     Content: if isRunning {
                         "● ACTIVE SIM"
@@ -778,32 +778,32 @@ class MotionChapter : Cell {
         arenaChildren.Add(anchorBlob(4, "SE"))
         arenaChildren.Add(puckBlob())
 
-        return Container(){
-            .Height: Length.Percent(100),
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinWidth: 0,
-            .MinHeight: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 8,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
-                Container(){
-                    .FlexDirection: FlexDirection.Row,
-                    .Gap: 6,
-                    .AlignItems: AlignItems.Center,
+        return Container{
+            Height: Length.Percent(100),
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinWidth: 0,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 8,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
+                Container{
+                    FlexDirection: FlexDirection.Row,
+                    Gap: 6,
+                    AlignItems: AlignItems.Center,
                     Text{Content: "PRESET:", FontSize: 10, FontWeight: 700, Color: GalleryTheme.InkSubtle},
                     actionBtn("Bouncy", activeProfile == 0, () -> setProfile(0)),
                     actionBtn("Snappy", activeProfile == 1, () -> setProfile(1)),
                     actionBtn("Viscous", activeProfile == 2, () -> setProfile(2)),
                     actionBtn("Stiff", activeProfile == 3, () -> setProfile(3)),
                 },
-                Container(){
-                    .FlexDirection: FlexDirection.Row,
-                    .Gap: 6,
-                    .AlignItems: AlignItems.Center,
+                Container{
+                    FlexDirection: FlexDirection.Row,
+                    Gap: 6,
+                    AlignItems: AlignItems.Center,
                     Text{Content: "SPEED:", FontSize: 10, FontWeight: 700, Color: GalleryTheme.InkSubtle},
                     actionBtn("0.25x", activeSpeed == 0, () -> applySpeed(0)),
                     actionBtn("0.5x", activeSpeed == 1, () -> applySpeed(1)),
@@ -811,29 +811,29 @@ class MotionChapter : Cell {
                     actionBtn("1.5x", activeSpeed == 3, () -> applySpeed(3)),
                 },
             },
-            Container(){
-                .Handle: arenaHandle,
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .MinWidth: 0,
-                .MinHeight: 0,
-                .Position: PositionType.Relative,
-                .BackgroundColor: Color.Rgb(15, 17, 21),
-                .BorderRadius: 8,
-                .OverflowX: Overflow.Hidden,
-                .OverflowY: Overflow.Hidden,
-                .Cursor: Cursor.Crosshair,
-                .OnPointerDown: (e PointerEvent) -> handleArenaPointerDown(e),
-                .OnPointerMove: (e PointerEvent) -> handleArenaPointerMove(e),
-                .OnPointerUp: (e PointerEvent) -> handleArenaPointerUp(e),
-                .OnPointerCancel: (e PointerEvent) -> handleArenaPointerUp(e),
+            Container{
+                Handle: arenaHandle,
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                MinWidth: 0,
+                MinHeight: 0,
+                Position: PositionType.Relative,
+                BackgroundColor: Color.Rgb(15, 17, 21),
+                BorderRadius: 8,
+                OverflowX: Overflow.Hidden,
+                OverflowY: Overflow.Hidden,
+                Cursor: Cursor.Crosshair,
+                OnPointerDown: (e PointerEvent) -> handleArenaPointerDown(e),
+                OnPointerMove: (e PointerEvent) -> handleArenaPointerMove(e),
+                OnPointerUp: (e PointerEvent) -> handleArenaPointerUp(e),
+                OnPointerCancel: (e PointerEvent) -> handleArenaPointerUp(e),
                 Container{
                     Width: Length.Percent(100),
                     Height: Length.Percent(100),
                     Position: PositionType.Relative,
                     Children: arenaChildren,
                 },
-                Container(){.Position: PositionType.Absolute, .Left: 0, .Right: 0, .Bottom: 0, telemetryBar(),},
+                Container{Position: PositionType.Absolute, Left: 0, Right: 0, Bottom: 0, telemetryBar(),},
                 Container{
                     Position: PositionType.Absolute,
                     Left: 1,
@@ -849,31 +849,31 @@ class MotionChapter : Cell {
         }
     }
 
-    private func switchBlob() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .Padding: 10,
-        .BackgroundColor: GalleryTheme.SurfaceRaised,
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Border,
-        .BorderRadius: 8,
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.SpaceBetween,
-        Container(){
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 2,
+    private func switchBlob() Blob -> Container{
+        Width: Length.Percent(100),
+        Padding: 10,
+        BackgroundColor: GalleryTheme.SurfaceRaised,
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Border,
+        BorderRadius: 8,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.SpaceBetween,
+        Container{
+            FlexDirection: FlexDirection.Column,
+            Gap: 2,
             Text{Content: "Spring Toggle", FontSize: 12, FontWeight: 600, Color: GalleryTheme.Ink},
             Text{Content: "Elastic overshoot & chromatic track", FontSize: 10, Color: GalleryTheme.InkMuted},
         },
-        Container(){
-            .Width: 52,
-            .Height: 28,
-            .BorderRadius: 14,
-            .BackgroundColor: switchTrackColor.Value,
-            .Position: PositionType.Relative,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .OnClick: () -> toggleSwitch(),
+        Container{
+            Width: 52,
+            Height: 28,
+            BorderRadius: 14,
+            BackgroundColor: switchTrackColor.Value,
+            Position: PositionType.Relative,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            OnClick: () -> toggleSwitch(),
             Container{
                 Position: PositionType.Absolute,
                 Left: switchThumbX.Value,
@@ -895,16 +895,16 @@ class MotionChapter : Cell {
             let idx = i
             let isSel = selectedSegment == idx
             tabButtons.Add(
-                Button(){
-                    .Width: 72,
-                    .Height: 26,
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
-                    .BackgroundColor: Color.Transparent,
-                    .BorderWidth: 0,
-                    .Cursor: Cursor.Pointer,
-                    .Focusable: true,
-                    .OnClick: () -> selectSegment(idx),
+                Button{
+                    Width: 72,
+                    Height: 26,
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    BackgroundColor: Color.Transparent,
+                    BorderWidth: 0,
+                    Cursor: Cursor.Pointer,
+                    Focusable: true,
+                    OnClick: () -> selectSegment(idx),
                     Text{
                         Content: tabs[idx],
                         FontSize: 11,
@@ -928,30 +928,30 @@ class MotionChapter : Cell {
             case 1: "Real-time coordinate, velocity vector, and settling state telemetry."
             default: "Click or toss mid-flight: instantaneous momentum is seamlessly carried over."
         }
-        return Container(){
-            .Width: Length.Percent(100),
-            .Padding: 10,
-            .BackgroundColor: GalleryTheme.SurfaceRaised,
-            .BorderWidth: 1,
-            .BorderColor: GalleryTheme.Border,
-            .BorderRadius: 8,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 8,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
+        return Container{
+            Width: Length.Percent(100),
+            Padding: 10,
+            BackgroundColor: GalleryTheme.SurfaceRaised,
+            BorderWidth: 1,
+            BorderColor: GalleryTheme.Border,
+            BorderRadius: 8,
+            FlexDirection: FlexDirection.Column,
+            Gap: 8,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
                 Text{Content: "Segmented Indicator", FontSize: 12, FontWeight: 600, Color: GalleryTheme.Ink},
                 Text{Content: "Gliding pill", FontSize: 10, Color: GalleryTheme.InkMuted},
             },
-            Container(){
-                .Position: PositionType.Relative,
-                .Height: 28,
-                .BackgroundColor: Color.Rgb(15, 15, 17),
-                .BorderRadius: 6,
-                .BorderWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                .FlexDirection: FlexDirection.Row,
+            Container{
+                Position: PositionType.Relative,
+                Height: 28,
+                BackgroundColor: Color.Rgb(15, 15, 17),
+                BorderRadius: 6,
+                BorderWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                FlexDirection: FlexDirection.Row,
                 Container{
                     Position: PositionType.Absolute,
                     Left: segmentPillX.Value,
@@ -976,19 +976,19 @@ class MotionChapter : Cell {
             case 2: ("γ = 15.0 /s", "ω = 9.0 rad/s", "Overdamped (Viscous)")
             default: ("γ = 18.0 /s", "ω = 32.0 rad/s", "High Frequency (Stiff)")
         }
-        return Container(){
-            .Width: Length.Percent(100),
-            .Padding: 10,
-            .BackgroundColor: GalleryTheme.SurfaceRaised,
-            .BorderWidth: 1,
-            .BorderColor: GalleryTheme.Border,
-            .BorderRadius: 8,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 6,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
+        return Container{
+            Width: Length.Percent(100),
+            Padding: 10,
+            BackgroundColor: GalleryTheme.SurfaceRaised,
+            BorderWidth: 1,
+            BorderColor: GalleryTheme.Border,
+            BorderRadius: 8,
+            FlexDirection: FlexDirection.Column,
+            Gap: 6,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
                 Text{Content: "Harmonic Dynamics", FontSize: 12, FontWeight: 600, Color: GalleryTheme.Ink},
                 actionBtn("↺ Step", false, () -> testOscillation()),
             },
@@ -1007,44 +1007,44 @@ class MotionChapter : Cell {
         }
     }
 
-    private func impulseBlob() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .Padding: 8,
-        .BackgroundColor: GalleryTheme.SurfaceRaised,
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Border,
-        .BorderRadius: 8,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 6,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.SpaceBetween,
+    private func impulseBlob() Blob -> Container{
+        Width: Length.Percent(100),
+        Padding: 8,
+        BackgroundColor: GalleryTheme.SurfaceRaised,
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Border,
+        BorderRadius: 8,
+        FlexDirection: FlexDirection.Column,
+        Gap: 6,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.SpaceBetween,
             Text{Content: "Elastic Momentum", FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
-            Container(){
-                .FontFamily: GalleryTheme.GalleryFontFamily,
-                .FlexDirection: FlexDirection.Row,
-                .Gap: 4,
+            Container{
+                FontFamily: GalleryTheme.GalleryFontFamily,
+                FlexDirection: FlexDirection.Row,
+                Gap: 4,
                 actionBtn("↖", false, () -> fireImpulseDirection(-1.0, -1.0)),
                 actionBtn("↗", false, () -> fireImpulseDirection(1.0, -1.0)),
                 actionBtn("↙", false, () -> fireImpulseDirection(-1.0, 1.0)),
                 actionBtn("↘", false, () -> fireImpulseDirection(1.0, 1.0)),
             },
         },
-        Button(){
-            .Width: Length.Percent(100),
-            .Height: 28,
-            .BackgroundColor: GalleryTheme.Accent,
-            .BorderWidth: 1,
-            .BorderColor: GalleryTheme.AccentStrong,
-            .BorderRadius: 6,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .TransitionMs: 80.0,
-            .Hover: Style{BackgroundColor: GalleryTheme.AccentStrong},
-            .OnClick: () -> triggerImpulse(),
+        Button{
+            Width: Length.Percent(100),
+            Height: 28,
+            BackgroundColor: GalleryTheme.Accent,
+            BorderWidth: 1,
+            BorderColor: GalleryTheme.AccentStrong,
+            BorderRadius: 6,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            TransitionMs: 80.0,
+            Hover: Style{BackgroundColor: GalleryTheme.AccentStrong},
+            OnClick: () -> triggerImpulse(),
             Text{
                 Content: "⚡ FIRE 2D IMPULSE",
                 FontSize: 11,
@@ -1068,14 +1068,14 @@ class MotionChapter : Cell {
         } else {
             panelWidth
         }
-        return Container(){
-            .Width: width,
-            .MinWidth: minWidth,
-            .FlexShrink: 0.0,
-            .FlexGrow: 1.0,
-            .MinHeight: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 8,
+        return Container{
+            Width: width,
+            MinWidth: minWidth,
+            FlexShrink: 0.0,
+            FlexGrow: 1.0,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 8,
             switchBlob(),
             segmentedTabsBlob(),
             harmonicProfileBlob(),
@@ -1083,19 +1083,19 @@ class MotionChapter : Cell {
         }
     }
 
-    private func buildPhysicsLabContent() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .Height: Length.Percent(100),
-        .FlexGrow: 1.0,
-        .FlexShrink: 1.0,
-        .MinHeight: 0,
-        .MinWidth: 0,
-        .FlexDirection: if Compact {
+    private func buildPhysicsLabContent() Blob -> Container{
+        Width: Length.Percent(100),
+        Height: Length.Percent(100),
+        FlexGrow: 1.0,
+        FlexShrink: 1.0,
+        MinHeight: 0,
+        MinWidth: 0,
+        FlexDirection: if Compact {
             FlexDirection.Column
         } else {
             FlexDirection.Row
         },
-        .Gap: 14,
+        Gap: 14,
         buildArenaSection(),
         buildCompanionControlsSection(),
     }
@@ -1361,26 +1361,26 @@ class MotionChapter : Cell {
 
     private func compCategoryBtn(label string, cat int32) Button {
         let isSel = compCategory == cat
-        return Button(){
-            .PaddingLeft: 10,
-            .PaddingRight: 10,
-            .Height: 26,
-            .BorderRadius: 2,
-            .BackgroundColor: if isSel {
+        return Button{
+            PaddingLeft: 10,
+            PaddingRight: 10,
+            Height: 26,
+            BorderRadius: 2,
+            BackgroundColor: if isSel {
                 GalleryTheme.Accent
             } else {
                 GalleryTheme.SurfaceRaised
             },
-            .BorderWidth: 1,
-            .BorderColor: if isSel {
+            BorderWidth: 1,
+            BorderColor: if isSel {
                 GalleryTheme.AccentStrong
             } else {
                 GalleryTheme.Border
             },
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .TransitionMs: 120.0,
-            .Hover: Style{
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            TransitionMs: 120.0,
+            Hover: Style{
                 BackgroundColor: if isSel {
                     GalleryTheme.Accent
                 } else {
@@ -1392,8 +1392,8 @@ class MotionChapter : Cell {
                     GalleryTheme.BorderStrong
                 },
             },
-            .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-            .OnClick: () -> {
+            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+            OnClick: () -> {
                 compCategory = cat
                 Rebuild()
             },
@@ -1414,21 +1414,21 @@ class MotionChapter : Cell {
         }
     }
 
-    private func compCard(title string, children List[Blob]) Container -> Container(){
-        .FlexGrow: 1.0,
-        .FlexShrink: 0.0,
-        .FlexBasis: Length.Percent(48),
-        .MinWidth: 340,
-        .Padding: 16,
-        .BorderRadius: 6,
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Border,
-        .BackgroundColor: GalleryTheme.SurfaceRaised,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 12,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
+    private func compCard(title string, children List[Blob]) Container -> Container{
+        FlexGrow: 1.0,
+        FlexShrink: 0.0,
+        FlexBasis: Length.Percent(48),
+        MinWidth: 340,
+        Padding: 16,
+        BorderRadius: 6,
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Border,
+        BackgroundColor: GalleryTheme.SurfaceRaised,
+        FlexDirection: FlexDirection.Column,
+        Gap: 12,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
             Text{Content: title, FontSize: 12, FontWeight: 700, Color: GalleryTheme.Ink,},
         },
         Container{FlexDirection: FlexDirection.Column, Gap: 10, Children: children,},
@@ -1440,27 +1440,27 @@ class MotionChapter : Cell {
         thumbX float64,
         trackColor Color,
         onToggle Action
-    ) Container -> Container(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.SpaceBetween,
-        Container(){
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 2,
+    ) Container -> Container{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.SpaceBetween,
+        Container{
+            FlexDirection: FlexDirection.Column,
+            Gap: 2,
             Text{Content: label, FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
             Text{Content: subtitle, FontSize: 9, Color: GalleryTheme.InkSubtle},
         },
-        Container(){
-            .Width: 44,
-            .Height: 24,
-            .BorderRadius: 4,
-            .BackgroundColor: trackColor,
-            .BorderWidth: 1,
-            .BorderColor: trackColor,
-            .Position: PositionType.Relative,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .OnClick: onToggle,
+        Container{
+            Width: 44,
+            Height: 24,
+            BorderRadius: 4,
+            BackgroundColor: trackColor,
+            BorderWidth: 1,
+            BorderColor: trackColor,
+            Position: PositionType.Relative,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            OnClick: onToggle,
             Container{
                 Position: PositionType.Absolute,
                 Left: thumbX,
@@ -1473,36 +1473,36 @@ class MotionChapter : Cell {
         },
     }
 
-    private func compCheckbox(label string, isChecked bool, onToggle Action) Button -> Button(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .Gap: 8,
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .BackgroundColor: Color.Transparent,
-        .BorderRadius: 3,
-        .Padding: 4,
-        .TransitionMs: 100.0,
-        .Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-        .OnClick: onToggle,
-        Container(){
-            .Width: 18,
-            .Height: 18,
-            .BorderRadius: 4,
-            .BorderWidth: 1,
-            .BorderColor: if isChecked {
+    private func compCheckbox(label string, isChecked bool, onToggle Action) Button -> Button{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 8,
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        BackgroundColor: Color.Transparent,
+        BorderRadius: 3,
+        Padding: 4,
+        TransitionMs: 100.0,
+        Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        OnClick: onToggle,
+        Container{
+            Width: 18,
+            Height: 18,
+            BorderRadius: 4,
+            BorderWidth: 1,
+            BorderColor: if isChecked {
                 GalleryTheme.Accent
             } else {
                 GalleryTheme.BorderStrong
             },
-            .BackgroundColor: if isChecked {
+            BackgroundColor: if isChecked {
                 GalleryTheme.Accent
             } else {
                 Color.FromNormalized(0.12F, 0.12F, 0.15F, 0.8F)
             },
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
             if isChecked {
                 Container(){GalleryTheme.Icon(GalleryTheme.IconCheck, 13, Color.Rgb(255, 255, 255)),}
             } else {
@@ -1525,27 +1525,27 @@ class MotionChapter : Cell {
         },
     }
 
-    private func compRadio(label string, desc string, isSelected bool, onSelect Action) Button -> Button(){
-        .Width: Length.Percent(100),
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .Padding: 8,
-        .BorderRadius: 3,
-        .BorderWidth: 1,
-        .BorderColor: if isSelected {
+    private func compRadio(label string, desc string, isSelected bool, onSelect Action) Button -> Button{
+        Width: Length.Percent(100),
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Padding: 8,
+        BorderRadius: 3,
+        BorderWidth: 1,
+        BorderColor: if isSelected {
             GalleryTheme.AccentStrong
         } else {
             GalleryTheme.Border
         },
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .BackgroundColor: if isSelected {
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        BackgroundColor: if isSelected {
             GalleryTheme.AccentMuted
         } else {
             Color.Transparent
         },
-        .TransitionMs: 100.0,
-        .Hover: Style{
+        TransitionMs: 100.0,
+        Hover: Style{
             BackgroundColor: if isSelected {
                 GalleryTheme.AccentMuted
             } else {
@@ -1557,11 +1557,11 @@ class MotionChapter : Cell {
                 GalleryTheme.BorderStrong
             },
         },
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-        .OnClick: onSelect,
-        Container(){
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 1,
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        OnClick: onSelect,
+        Container{
+            FlexDirection: FlexDirection.Column,
+            Gap: 1,
             Text{
                 Content: label,
                 FontSize: 11,
@@ -1580,22 +1580,22 @@ class MotionChapter : Cell {
         },
     }
 
-    private func compSmallPresetBtn(label string, onClick Action) Button -> Button(){
-        .PaddingLeft: 6,
-        .PaddingRight: 6,
-        .Height: 18,
-        .BorderRadius: 2,
-        .BackgroundColor: Color.FromNormalized(0.16F, 0.16F, 0.20F, 0.8F),
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Border,
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .TransitionMs: 100.0,
-        .Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42), BorderColor: GalleryTheme.BorderStrong},
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-        .OnClick: onClick,
+    private func compSmallPresetBtn(label string, onClick Action) Button -> Button{
+        PaddingLeft: 6,
+        PaddingRight: 6,
+        Height: 18,
+        BorderRadius: 2,
+        BackgroundColor: Color.FromNormalized(0.16F, 0.16F, 0.20F, 0.8F),
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Border,
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        TransitionMs: 100.0,
+        Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42), BorderColor: GalleryTheme.BorderStrong},
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        OnClick: onClick,
         Text{Content: label, FontSize: 9, FontWeight: 600, Color: GalleryTheme.InkMuted},
     }
 
@@ -1609,19 +1609,19 @@ class MotionChapter : Cell {
         onPreset0 Action,
         onPreset1 Action,
         onPreset2 Action
-    ) Container -> Container(){
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 4,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .JustifyContent: JustifyContent.SpaceBetween,
+    ) Container -> Container{
+        FlexDirection: FlexDirection.Column,
+        Gap: 4,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            JustifyContent: JustifyContent.SpaceBetween,
             Text{Content: label, FontSize: 10, FontWeight: 600, Color: GalleryTheme.InkSubtle},
             Text{Content: value.Length.ToString() + " chars", FontSize: 9, Color: GalleryTheme.InkSubtle},
         },
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 6,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 6,
             TextEntry{
                 Key: key,
                 Value: value,
@@ -1644,23 +1644,23 @@ class MotionChapter : Cell {
                 OnChange: onType,
             },
             if value.Length > 0 {
-                Container(){
-                    .Key: key + "-clear-slot",
-                    Button(){
-                        .Width: 28,
-                        .Height: 32,
-                        .BorderRadius: 4,
-                        .BackgroundColor: Color.FromNormalized(0.14F, 0.14F, 0.18F, 0.8F),
-                        .BorderWidth: 1,
-                        .BorderColor: GalleryTheme.BorderStrong,
-                        .Cursor: Cursor.Pointer,
-                        .Focusable: true,
-                        .AlignItems: AlignItems.Center,
-                        .JustifyContent: JustifyContent.Center,
-                        .TransitionMs: 100.0,
-                        .Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-                        .OnClick: onClear,
+                Container{
+                    Key: key + "-clear-slot",
+                    Button{
+                        Width: 28,
+                        Height: 32,
+                        BorderRadius: 4,
+                        BackgroundColor: Color.FromNormalized(0.14F, 0.14F, 0.18F, 0.8F),
+                        BorderWidth: 1,
+                        BorderColor: GalleryTheme.BorderStrong,
+                        Cursor: Cursor.Pointer,
+                        Focusable: true,
+                        AlignItems: AlignItems.Center,
+                        JustifyContent: JustifyContent.Center,
+                        TransitionMs: 100.0,
+                        Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                        OnClick: onClear,
                         GalleryTheme.Icon(GalleryTheme.IconClose, 15, GalleryTheme.InkSubtle),
                     },
                 }
@@ -1668,10 +1668,10 @@ class MotionChapter : Cell {
                 Container{Key: key + "-clear-slot",}
             },
         },
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .Gap: 4,
-            .AlignItems: AlignItems.Center,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            Gap: 4,
+            AlignItems: AlignItems.Center,
             Text{Content: "Presets:", FontSize: 9, Color: GalleryTheme.InkSubtle},
             compSmallPresetBtn("@dev", onPreset0),
             compSmallPresetBtn("@wayland", onPreset1),
@@ -1679,54 +1679,54 @@ class MotionChapter : Cell {
         },
     }
 
-    private func compStepper(label string, count int32, onDec Action, onInc Action) Container -> Container(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.SpaceBetween,
+    private func compStepper(label string, count int32, onDec Action, onInc Action) Container -> Container{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.SpaceBetween,
         Text{Content: label, FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .BorderRadius: 4,
-            .BorderWidth: 1,
-            .BorderColor: GalleryTheme.BorderStrong,
-            .BackgroundColor: Color.FromNormalized(0.08F, 0.08F, 0.10F, 0.9F),
-            Button(){
-                .Width: 28,
-                .Height: 26,
-                .BackgroundColor: Color.Transparent,
-                .Cursor: Cursor.Pointer,
-                .Focusable: true,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
-                .TransitionMs: 100.0,
-                .Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-                .OnClick: onDec,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            BorderRadius: 4,
+            BorderWidth: 1,
+            BorderColor: GalleryTheme.BorderStrong,
+            BackgroundColor: Color.FromNormalized(0.08F, 0.08F, 0.10F, 0.9F),
+            Button{
+                Width: 28,
+                Height: 26,
+                BackgroundColor: Color.Transparent,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                TransitionMs: 100.0,
+                Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                OnClick: onDec,
                 Text{Content: "-", FontSize: 14, FontWeight: 700, Color: GalleryTheme.Ink},
             },
-            Container(){
-                .Width: 32,
-                .Height: 26,
-                .BorderLeftWidth: 1,
-                .BorderRightWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
+            Container{
+                Width: 32,
+                Height: 26,
+                BorderLeftWidth: 1,
+                BorderRightWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
                 Text{Content: count.ToString(), FontSize: 11, FontWeight: 700, Color: GalleryTheme.AccentStrong},
             },
-            Button(){
-                .Width: 28,
-                .Height: 26,
-                .BackgroundColor: Color.Transparent,
-                .Cursor: Cursor.Pointer,
-                .Focusable: true,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
-                .TransitionMs: 100.0,
-                .Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-                .OnClick: onInc,
+            Button{
+                Width: 28,
+                Height: 26,
+                BackgroundColor: Color.Transparent,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                TransitionMs: 100.0,
+                Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                OnClick: onInc,
                 Text{Content: "+", FontSize: 14, FontWeight: 700, Color: GalleryTheme.Ink},
             },
         },
@@ -1734,12 +1734,12 @@ class MotionChapter : Cell {
 
     private func compSlider(label string, value float64) Container {
         let pct = Math.Clamp(value, 0.0, 100.0)
-        return Container(){
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 6,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .JustifyContent: JustifyContent.SpaceBetween,
+        return Container{
+            FlexDirection: FlexDirection.Column,
+            Gap: 6,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                JustifyContent: JustifyContent.SpaceBetween,
                 Text{Content: label, FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
                 Text{
                     Content: pct.ToString("F0") + "%",
@@ -1748,38 +1748,38 @@ class MotionChapter : Cell {
                     Color: GalleryTheme.AccentStrong
                 },
             },
-            Container(){
-                .Handle: compSliderTrackHandle,
-                .Focusable: true,
-                .Cursor: Cursor.Pointer,
-                .Height: 28,
-                .Position: PositionType.Relative,
-                .JustifyContent: JustifyContent.Center,
-                .OnPointerDown: func (e PointerEvent) {
+            Container{
+                Handle: compSliderTrackHandle,
+                Focusable: true,
+                Cursor: Cursor.Pointer,
+                Height: 28,
+                Position: PositionType.Relative,
+                JustifyContent: JustifyContent.Center,
+                OnPointerDown: func (e PointerEvent) {
                     e.Capture()
                     e.PreventDefault()
                     sliderDragging = true
                     updateCompSliderFromPointer(e)
                 },
-                .OnPointerMove: func (e PointerEvent) {
+                OnPointerMove: func (e PointerEvent) {
                     if sliderDragging {
                         updateCompSliderFromPointer(e)
                     }
                 },
-                .OnPointerUp: func (e PointerEvent) {
+                OnPointerUp: func (e PointerEvent) {
                     e.ReleaseCapture()
                     sliderDragging = false
                 },
-                .OnPointerCancel: func (e PointerEvent) {
+                OnPointerCancel: func (e PointerEvent) {
                     e.ReleaseCapture()
                     sliderDragging = false
                 },
-                Container(){
-                    .Width: Length.Percent(100),
-                    .Height: 6,
-                    .BorderRadius: 2,
-                    .BackgroundColor: Color.FromNormalized(0.18F, 0.18F, 0.22F, 0.9F),
-                    .Position: PositionType.Relative,
+                Container{
+                    Width: Length.Percent(100),
+                    Height: 6,
+                    BorderRadius: 2,
+                    BackgroundColor: Color.FromNormalized(0.18F, 0.18F, 0.22F, 0.9F),
+                    Position: PositionType.Relative,
                     Container{
                         Width: Length.Percent(pct),
                         Height: 6,
@@ -1787,30 +1787,30 @@ class MotionChapter : Cell {
                         BackgroundColor: GalleryTheme.Accent,
                     },
                 },
-                Container(){
-                    .Position: PositionType.Absolute,
-                    .Left: Length.Percent(pct),
-                    .Top: 0.0,
-                    .Width: 28,
-                    .Height: 28,
-                    .BackgroundColor: Color.Transparent,
-                    .Transform: PanelTransform{TranslateX: -14.0},
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
-                    Container(){
-                        .Width: 16,
-                        .Height: 16,
-                        .BorderRadius: 4,
-                        .BackgroundColor: GalleryTheme.Accent,
-                        .AlignItems: AlignItems.Center,
-                        .JustifyContent: JustifyContent.Center,
+                Container{
+                    Position: PositionType.Absolute,
+                    Left: Length.Percent(pct),
+                    Top: 0.0,
+                    Width: 28,
+                    Height: 28,
+                    BackgroundColor: Color.Transparent,
+                    Transform: PanelTransform{TranslateX: -14.0},
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    Container{
+                        Width: 16,
+                        Height: 16,
+                        BorderRadius: 4,
+                        BackgroundColor: GalleryTheme.Accent,
+                        AlignItems: AlignItems.Center,
+                        JustifyContent: JustifyContent.Center,
                         Container{Width: 14, Height: 14, BorderRadius: 3, BackgroundColor: Color.Rgb(255, 255, 255),},
                     },
                 },
             },
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .JustifyContent: JustifyContent.SpaceBetween,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                JustifyContent: JustifyContent.SpaceBetween,
                 compSmallPresetBtn("25%", () -> setSliderScale(25.0)),
                 compSmallPresetBtn("50%", () -> setSliderScale(50.0)),
                 compSmallPresetBtn("75%", () -> setSliderScale(75.0)),
@@ -1821,13 +1821,13 @@ class MotionChapter : Cell {
 
     private func compProgressBar(label string, progress float64, onStep Action) Container {
         let pct = Math.Clamp(progress, 0.0, 100.0)
-        return Container(){
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 6,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .JustifyContent: JustifyContent.SpaceBetween,
-                .AlignItems: AlignItems.Center,
+        return Container{
+            FlexDirection: FlexDirection.Column,
+            Gap: 6,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                JustifyContent: JustifyContent.SpaceBetween,
+                AlignItems: AlignItems.Center,
                 Text{Content: label, FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
                 Text{
                     Content: pct.ToString("F0") + "% Complete",
@@ -1836,11 +1836,11 @@ class MotionChapter : Cell {
                     Color: Color.Rgb(140, 210, 240)
                 },
             },
-            Container(){
-                .Width: Length.Percent(100),
-                .Height: 8,
-                .BorderRadius: 2,
-                .BackgroundColor: Color.FromNormalized(0.15F, 0.15F, 0.18F, 0.9F),
+            Container{
+                Width: Length.Percent(100),
+                Height: 8,
+                BorderRadius: 2,
+                BackgroundColor: Color.FromNormalized(0.15F, 0.15F, 0.18F, 0.9F),
                 Container{
                     Width: Length.Percent(pct),
                     Height: 8,
@@ -1848,24 +1848,24 @@ class MotionChapter : Cell {
                     BackgroundColor: Color.Rgb(56, 189, 248),
                 },
             },
-            Button(){
-                .Height: 24,
-                .BorderRadius: 4,
-                .BackgroundColor: Color.FromNormalized(0.18F, 0.20F, 0.28F, 0.8F),
-                .BorderWidth: 1,
-                .BorderColor: GalleryTheme.BorderStrong,
-                .Cursor: Cursor.Pointer,
-                .Focusable: true,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
-                .TransitionMs: 100.0,
-                .Hover: Style{BackgroundColor: Color.Rgb(40, 42, 54), BorderColor: GalleryTheme.AccentStrong},
-                .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-                .OnClick: onStep,
-                Container(){
-                    .FlexDirection: FlexDirection.Row,
-                    .Gap: 5,
-                    .AlignItems: AlignItems.Center,
+            Button{
+                Height: 24,
+                BorderRadius: 4,
+                BackgroundColor: Color.FromNormalized(0.18F, 0.20F, 0.28F, 0.8F),
+                BorderWidth: 1,
+                BorderColor: GalleryTheme.BorderStrong,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                TransitionMs: 100.0,
+                Hover: Style{BackgroundColor: Color.Rgb(40, 42, 54), BorderColor: GalleryTheme.AccentStrong},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                OnClick: onStep,
+                Container{
+                    FlexDirection: FlexDirection.Row,
+                    Gap: 5,
+                    AlignItems: AlignItems.Center,
                     GalleryTheme.Icon(GalleryTheme.IconBolt, 14, GalleryTheme.Ink),
                     Text{Content: "Advance progress (+15%)", FontSize: 10, FontWeight: 600, Color: GalleryTheme.Ink},
                 },
@@ -1873,69 +1873,69 @@ class MotionChapter : Cell {
         }
     }
 
-    private func compAvatarCard(name string, handle string, isFollowing bool, onToggle Action) Container -> Container(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.SpaceBetween,
-        .Padding: 10,
-        .BorderRadius: 6,
-        .BackgroundColor: Color.FromNormalized(0.10F, 0.10F, 0.13F, 0.8F),
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Border,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 10,
-            Container(){
-                .Width: 36,
-                .Height: 36,
-                .BorderRadius: 18,
-                .BackgroundColor: GalleryTheme.Accent,
-                .Position: PositionType.Relative,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
+    private func compAvatarCard(name string, handle string, isFollowing bool, onToggle Action) Container -> Container{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.SpaceBetween,
+        Padding: 10,
+        BorderRadius: 6,
+        BackgroundColor: Color.FromNormalized(0.10F, 0.10F, 0.13F, 0.8F),
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Border,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 10,
+            Container{
+                Width: 36,
+                Height: 36,
+                BorderRadius: 18,
+                BackgroundColor: GalleryTheme.Accent,
+                Position: PositionType.Relative,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
                 Text{Content: "AV", FontSize: 12, FontWeight: 700, Color: Color.Rgb(255, 255, 255)},
             },
-            Container(){
-                .FlexDirection: FlexDirection.Column,
+            Container{
+                FlexDirection: FlexDirection.Column,
                 Text{Content: name, FontSize: 11, FontWeight: 700, Color: GalleryTheme.Ink},
                 Text{Content: handle, FontSize: 9, Color: GalleryTheme.InkSubtle},
             },
         },
-        Button(){
-            .PaddingLeft: 10,
-            .PaddingRight: 10,
-            .Height: 24,
-            .BorderRadius: 4,
-            .BackgroundColor: if isFollowing {
+        Button{
+            PaddingLeft: 10,
+            PaddingRight: 10,
+            Height: 24,
+            BorderRadius: 4,
+            BackgroundColor: if isFollowing {
                 GalleryTheme.SurfaceRaised
             } else {
                 GalleryTheme.Accent
             },
-            .BorderWidth: 1,
-            .BorderColor: if isFollowing {
+            BorderWidth: 1,
+            BorderColor: if isFollowing {
                 GalleryTheme.BorderStrong
             } else {
                 GalleryTheme.AccentStrong
             },
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
-            .TransitionMs: 100.0,
-            .Hover: Style{
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            TransitionMs: 100.0,
+            Hover: Style{
                 BackgroundColor: if isFollowing {
                     Color.Rgb(36, 36, 42)
                 } else {
                     GalleryTheme.AccentStrong
                 }
             },
-            .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-            .OnClick: onToggle,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .Gap: 4,
-                .AlignItems: AlignItems.Center,
+            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+            OnClick: onToggle,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                Gap: 4,
+                AlignItems: AlignItems.Center,
                 Text{
                     Content: if isFollowing {
                         "Following"
@@ -1950,8 +1950,8 @@ class MotionChapter : Cell {
                         Color.Rgb(255, 255, 255)
                     },
                 },
-                Container(){
-                    .Display: if isFollowing {
+                Container{
+                    Display: if isFollowing {
                         Display.Flex
                     } else {
                         Display.None
@@ -1964,85 +1964,85 @@ class MotionChapter : Cell {
 
     private func compAlertBanner(message string, isVisible bool, onDismiss Action) Blob {
         if !isVisible {
-            return Container(){
-                .Padding: 8,
-                .BorderRadius: 6,
-                .BorderWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                .BackgroundColor: Color.FromNormalized(0.10F, 0.10F, 0.13F, 0.5F),
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
+            return Container{
+                Padding: 8,
+                BorderRadius: 6,
+                BorderWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                BackgroundColor: Color.FromNormalized(0.10F, 0.10F, 0.13F, 0.5F),
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
                 Text{Content: "Alert dismissed.", FontSize: 10, Color: GalleryTheme.InkSubtle},
-                Button(){
-                    .BackgroundColor: Color.Transparent,
-                    .Cursor: Cursor.Pointer,
-                    .Focusable: true,
-                    .TransitionMs: 100.0,
-                    .Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
-                    .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-                    .OnClick: onDismiss,
+                Button{
+                    BackgroundColor: Color.Transparent,
+                    Cursor: Cursor.Pointer,
+                    Focusable: true,
+                    TransitionMs: 100.0,
+                    Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
+                    Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                    OnClick: onDismiss,
                     Text{Content: "Undo / Restore", FontSize: 10, FontWeight: 600, Color: GalleryTheme.AccentStrong},
                 },
             }
         }
-        return Container(){
-            .Padding: 10,
-            .BorderRadius: 6,
-            .BorderWidth: 1,
-            .BorderColor: Color.FromNormalized(0.25F, 0.40F, 0.85F, 0.6F),
-            .BackgroundColor: Color.FromNormalized(0.12F, 0.18F, 0.35F, 0.45F),
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.SpaceBetween,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 8,
+        return Container{
+            Padding: 10,
+            BorderRadius: 6,
+            BorderWidth: 1,
+            BorderColor: Color.FromNormalized(0.25F, 0.40F, 0.85F, 0.6F),
+            BackgroundColor: Color.FromNormalized(0.12F, 0.18F, 0.35F, 0.45F),
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.SpaceBetween,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 8,
                 GalleryTheme.Icon(GalleryTheme.IconInfo, 16, Color.Rgb(140, 210, 255)),
                 Text{Content: message, FontSize: 10, FontWeight: 500, Color: GalleryTheme.Ink},
             },
-            Button(){
-                .Width: 20,
-                .Height: 20,
-                .BorderRadius: 2,
-                .BackgroundColor: Color.Transparent,
-                .Cursor: Cursor.Pointer,
-                .Focusable: true,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
-                .TransitionMs: 100.0,
-                .Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
-                .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-                .OnClick: onDismiss,
+            Button{
+                Width: 20,
+                Height: 20,
+                BorderRadius: 2,
+                BackgroundColor: Color.Transparent,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                TransitionMs: 100.0,
+                Hover: Style{BackgroundColor: Color.Rgb(36, 36, 42)},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+                OnClick: onDismiss,
                 GalleryTheme.Icon(GalleryTheme.IconClose, 15, GalleryTheme.InkMuted),
             },
         }
     }
 
-    private func compAccordion(title string, isOpen bool, onToggle Action) Container -> Container(){
-        .BorderRadius: 6,
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Border,
-        .BackgroundColor: Color.FromNormalized(0.10F, 0.10F, 0.13F, 0.8F),
-        .FlexDirection: FlexDirection.Column,
-        Button(){
-            .Padding: 10,
-            .BackgroundColor: Color.Transparent,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.SpaceBetween,
-            .TransitionMs: 100.0,
-            .Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
-            .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-            .OnClick: onToggle,
+    private func compAccordion(title string, isOpen bool, onToggle Action) Container -> Container{
+        BorderRadius: 6,
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Border,
+        BackgroundColor: Color.FromNormalized(0.10F, 0.10F, 0.13F, 0.8F),
+        FlexDirection: FlexDirection.Column,
+        Button{
+            Padding: 10,
+            BackgroundColor: Color.Transparent,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.SpaceBetween,
+            TransitionMs: 100.0,
+            Hover: Style{BackgroundColor: Color.Rgb(31, 31, 35)},
+            Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+            OnClick: onToggle,
             Text{Content: title, FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink},
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .Gap: 4,
-                .AlignItems: AlignItems.Center,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                Gap: 4,
+                AlignItems: AlignItems.Center,
                 GalleryTheme.Icon(
                     if isOpen {
                         GalleryTheme.IconExpandLess
@@ -2065,13 +2065,13 @@ class MotionChapter : Cell {
             },
         },
         if isOpen {
-            Container(){
-                .Padding: 10,
-                .BorderTopWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                .BackgroundColor: Color.FromNormalized(0.07F, 0.07F, 0.09F, 0.9F),
-                .FlexDirection: FlexDirection.Column,
-                .Gap: 4,
+            Container{
+                Padding: 10,
+                BorderTopWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                BackgroundColor: Color.FromNormalized(0.07F, 0.07F, 0.09F, 0.9F),
+                FlexDirection: FlexDirection.Column,
+                Gap: 4,
                 Text{
                     Content: "Architecture: Goo Declarative Retained Layout System",
                     FontSize: 10,
@@ -2094,34 +2094,34 @@ class MotionChapter : Cell {
         },
     }
 
-    private func compSegmentBtn(icon string, label string, isSel bool, onClick Action) Button -> Button(){
-        .PaddingLeft: 10,
-        .PaddingRight: 10,
-        .Height: 24,
-        .BorderRadius: 2,
-        .BackgroundColor: if isSel {
+    private func compSegmentBtn(icon string, label string, isSel bool, onClick Action) Button -> Button{
+        PaddingLeft: 10,
+        PaddingRight: 10,
+        Height: 24,
+        BorderRadius: 2,
+        BackgroundColor: if isSel {
             GalleryTheme.Accent
         } else {
             Color.Transparent
         },
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .TransitionMs: 100.0,
-        .Hover: Style{
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        TransitionMs: 100.0,
+        Hover: Style{
             BackgroundColor: if isSel {
                 GalleryTheme.Accent
             } else {
                 Color.Rgb(36, 36, 42)
             }
         },
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-        .OnClick: onClick,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .Gap: 4,
-            .AlignItems: AlignItems.Center,
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        OnClick: onClick,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            Gap: 4,
+            AlignItems: AlignItems.Center,
             GalleryTheme.Icon(
                 icon,
                 14,
@@ -2148,41 +2148,41 @@ class MotionChapter : Cell {
         },
     }
 
-    private func compOutlineBtn(label string, onClick Action) Button -> Button(){
-        .PaddingLeft: 8,
-        .PaddingRight: 8,
-        .Height: 24,
-        .BorderRadius: 4,
-        .BackgroundColor: Color.Transparent,
-        .BorderWidth: 1,
-        .BorderColor: GalleryTheme.Accent,
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .TransitionMs: 100.0,
-        .Hover: Style{BackgroundColor: GalleryTheme.AccentMuted, BorderColor: GalleryTheme.AccentStrong},
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-        .OnClick: onClick,
+    private func compOutlineBtn(label string, onClick Action) Button -> Button{
+        PaddingLeft: 8,
+        PaddingRight: 8,
+        Height: 24,
+        BorderRadius: 4,
+        BackgroundColor: Color.Transparent,
+        BorderWidth: 1,
+        BorderColor: GalleryTheme.Accent,
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        TransitionMs: 100.0,
+        Hover: Style{BackgroundColor: GalleryTheme.AccentMuted, BorderColor: GalleryTheme.AccentStrong},
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        OnClick: onClick,
         Text{Content: label, FontSize: 10, FontWeight: 600, Color: GalleryTheme.AccentStrong},
     }
 
-    private func compDangerBtn(label string, onClick Action) Button -> Button(){
-        .PaddingLeft: 8,
-        .PaddingRight: 8,
-        .Height: 24,
-        .BorderRadius: 4,
-        .BackgroundColor: Color.FromNormalized(0.25F, 0.08F, 0.08F, 0.5F),
-        .BorderWidth: 1,
-        .BorderColor: Color.Rgb(239, 68, 68),
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .TransitionMs: 100.0,
-        .Hover: Style{BackgroundColor: Color.FromNormalized(0.38F, 0.10F, 0.10F, 0.65F)},
-        .Focus: Style{OutlineWidth: 1, OutlineColor: Color.Rgb(248, 113, 113)},
-        .OnClick: onClick,
+    private func compDangerBtn(label string, onClick Action) Button -> Button{
+        PaddingLeft: 8,
+        PaddingRight: 8,
+        Height: 24,
+        BorderRadius: 4,
+        BackgroundColor: Color.FromNormalized(0.25F, 0.08F, 0.08F, 0.5F),
+        BorderWidth: 1,
+        BorderColor: Color.Rgb(239, 68, 68),
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        TransitionMs: 100.0,
+        Hover: Style{BackgroundColor: Color.FromNormalized(0.38F, 0.10F, 0.10F, 0.65F)},
+        Focus: Style{OutlineWidth: 1, OutlineColor: Color.Rgb(248, 113, 113)},
+        OnClick: onClick,
         Text{Content: label, FontSize: 10, FontWeight: 600, Color: Color.Rgb(248, 113, 113)},
     }
 
@@ -2287,13 +2287,13 @@ class MotionChapter : Cell {
         if compCategory == 0 || compCategory == 3 {
             let btnChildren = List[Blob]()
             btnChildren.Add(
-                Container(){
-                    .FlexDirection: FlexDirection.Row,
-                    .BorderRadius: 6,
-                    .Padding: 3,
-                    .BackgroundColor: Color.FromNormalized(0.08F, 0.08F, 0.10F, 0.9F),
-                    .BorderWidth: 1,
-                    .BorderColor: GalleryTheme.BorderStrong,
+                Container{
+                    FlexDirection: FlexDirection.Row,
+                    BorderRadius: 6,
+                    Padding: 3,
+                    BackgroundColor: Color.FromNormalized(0.08F, 0.08F, 0.10F, 0.9F),
+                    BorderWidth: 1,
+                    BorderColor: GalleryTheme.BorderStrong,
                     compSegmentBtn(GalleryTheme.IconGridView, "Grid", selectedViewMode == 0, () -> selectViewMode(0)),
                     compSegmentBtn(GalleryTheme.IconViewList, "List", selectedViewMode == 1, () -> selectViewMode(1)),
                     compSegmentBtn(
@@ -2305,10 +2305,10 @@ class MotionChapter : Cell {
                 }
             )
             btnChildren.Add(
-                Container(){
-                    .FlexDirection: FlexDirection.Row,
-                    .Gap: 6,
-                    .FlexWrap: FlexWrap.Wrap,
+                Container{
+                    FlexDirection: FlexDirection.Row,
+                    Gap: 6,
+                    FlexWrap: FlexWrap.Wrap,
                     actionBtn("Primary Action", true, () -> clickPrimaryAction()),
                     actionBtn("Secondary", false, () -> clickSecondaryAction()),
                     compOutlineBtn("Outline", () -> clickOutlineAction()),
@@ -2337,22 +2337,22 @@ class MotionChapter : Cell {
             cards.Add(compCard("Range, progress & feedback", displayChildren))
         }
 
-        return Container(){
-            .Width: Length.Percent(100),
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .MinHeight: 0,
-            .MinWidth: 0,
-            .FlexDirection: FlexDirection.Column,
-            .Gap: 10,
-            Container(){
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
-                Container(){
-                    .FlexDirection: FlexDirection.Row,
-                    .Gap: 6,
-                    .AlignItems: AlignItems.Center,
+        return Container{
+            Width: Length.Percent(100),
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            MinHeight: 0,
+            MinWidth: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 10,
+            Container{
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
+                Container{
+                    FlexDirection: FlexDirection.Row,
+                    Gap: 6,
+                    AlignItems: AlignItems.Center,
                     Text{Content: "Filter", FontSize: 10, FontWeight: 600, Color: GalleryTheme.InkSubtle},
                     compCategoryBtn("All Categories", 0),
                     compCategoryBtn("Forms & Inputs", 1),
@@ -2360,35 +2360,35 @@ class MotionChapter : Cell {
                     compCategoryBtn("Buttons", 3),
                     compCategoryBtn("Display & Feedback", 4),
                 },
-                Button(){
-                    .PaddingLeft: 8,
-                    .PaddingRight: 8,
-                    .Height: 24,
-                    .BorderRadius: 4,
-                    .BackgroundColor: GalleryTheme.SurfaceRaised,
-                    .BorderWidth: 1,
-                    .BorderColor: GalleryTheme.Border,
-                    .Cursor: Cursor.Pointer,
-                    .FlexDirection: FlexDirection.Row,
-                    .Gap: 5,
-                    .AlignItems: AlignItems.Center,
-                    .JustifyContent: JustifyContent.Center,
-                    .Accessibility: Accessibility{Name: "Reset defaults"},
-                    .OnClick: () -> resetComponentGalleryDefaults(),
+                Button{
+                    PaddingLeft: 8,
+                    PaddingRight: 8,
+                    Height: 24,
+                    BorderRadius: 4,
+                    BackgroundColor: GalleryTheme.SurfaceRaised,
+                    BorderWidth: 1,
+                    BorderColor: GalleryTheme.Border,
+                    Cursor: Cursor.Pointer,
+                    FlexDirection: FlexDirection.Row,
+                    Gap: 5,
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    Accessibility: Accessibility{Name: "Reset defaults"},
+                    OnClick: () -> resetComponentGalleryDefaults(),
                     GalleryTheme.Icon(GalleryTheme.IconRestart, 15, GalleryTheme.InkMuted),
                     Text{Content: "Reset defaults", FontSize: 10, FontWeight: 600, Color: GalleryTheme.InkMuted},
                 },
             },
-            Container(){
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .MinHeight: 0,
-                .BorderWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                .BorderRadius: 8,
-                .BackgroundColor: Color.Rgb(12, 14, 18),
-                .Padding: 14,
-                .OverflowY: Overflow.Scroll,
+            Container{
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                MinHeight: 0,
+                BorderWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                BorderRadius: 8,
+                BackgroundColor: Color.Rgb(12, 14, 18),
+                Padding: 14,
+                OverflowY: Overflow.Scroll,
                 Container{
                     Width: Length.Percent(100),
                     FlexDirection: FlexDirection.Row,
@@ -2398,18 +2398,18 @@ class MotionChapter : Cell {
                     Children: cards,
                 },
             },
-            Container(){
-                .Width: Length.Percent(100),
-                .Height: 26,
-                .PaddingLeft: 12,
-                .PaddingRight: 12,
-                .BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
-                .BorderRadius: 4,
-                .BorderWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
+            Container{
+                Width: Length.Percent(100),
+                Height: 26,
+                PaddingLeft: 12,
+                PaddingRight: 12,
+                BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
+                BorderRadius: 4,
+                BorderWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
                 Text{
                     Content: "Text input · switches · selection · stepper · range · progress · disclosure",
                     FontSize: 10,

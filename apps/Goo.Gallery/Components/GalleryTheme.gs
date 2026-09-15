@@ -104,16 +104,16 @@ class GalleryTheme {
             Children: children,
         }
 
-        func GhostButton(content string, onClick Action) Button -> Button(){
-            .Padding: 10,
-            .BackgroundColor: SurfaceRaised,
-            .BorderWidth: 1,
-            .BorderColor: Border,
-            .BorderRadius: 8,
-            .TransitionMs: 100.0,
-            .Hover: Style{BackgroundColor: Border, BorderColor: BorderStrong},
-            .Focus: Style{OutlineWidth: 1, OutlineColor: BorderStrong},
-            .OnClick: onClick,
+        func GhostButton(content string, onClick Action) Button -> Button{
+            Padding: 10,
+            BackgroundColor: SurfaceRaised,
+            BorderWidth: 1,
+            BorderColor: Border,
+            BorderRadius: 8,
+            TransitionMs: 100.0,
+            Hover: Style{BackgroundColor: Border, BorderColor: BorderStrong},
+            Focus: Style{OutlineWidth: 1, OutlineColor: BorderStrong},
+            OnClick: onClick,
             Text{Content: content, FontSize: 13, FontWeight: 600, Color: Ink,},
         }
     }

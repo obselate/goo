@@ -45,11 +45,11 @@ class ClipMaskPressureCell : Cell {
       } else {
         "clip-" + phase.ToString() + "-" + index.ToString()
       }
-      children.Add(Container() {.Key: key,.Position: PositionType.Absolute,.Left: left,.Top: top,.Width: width,.Height: height,.ClipPath: if growing {
+      children.Add(Container {Key: key,Position: PositionType.Absolute,Left: left,Top: top,Width: width,Height: height,ClipPath: if growing {
           ClipMaskPressureCell.GrowingPath
         } else {
           ClipMaskPressureCell.MaskPath(index, phase)
-        },.ClipPathFit: ShapeFit.Fill,
+        },ClipPathFit: ShapeFit.Fill,
           Container{
             Width: Length.Percent(100),
             Height: Length.Percent(100),

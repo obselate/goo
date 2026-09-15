@@ -11,21 +11,23 @@ The temporary package bridge respects explicit compiler paths; set
 ## Direct children
 
 The current Goo API exposes `Container.Add(Blob)` and `Button.Add(Blob)`.
-Use the call-headed form with explicit member designators:
+Prefer dot-free, member-first initializers:
 
 ```gsharp
 let rows = []Blob{Text("Second")}
-let content = Container(){.Gap: 12.0, Text("First"), ...rows, Button(){.OnClick: () -> Save(), Text("Save"),},}
+let content = Container{Gap: 12.0, Text("First"), ...rows, Button{OnClick: () -> Save(), Text("Save"),},}
 ```
 
-`.Member: value` sets a receiver member. Bare values call `Add`, and `...rows`
+`Member: value` sets a receiver member. Bare values call `Add`, and `...rows`
 evaluates and enumerates the source once. Keep trailing commas in multiline
 initializers. All member values, children, and spreads execute in source order.
 `BasedOn` must precede its overrides. Siblings must be all keyed or all unkeyed.
 
-The member-first form `Container{Gap: 12.0, Text("First"), ...rows}` is also valid.
-A leading spread in `Container{...source}` is structural projection.
-`Container(){...rows,}` is content enumeration. In a call-headed initializer,
+Start with a member when combining properties and children. For styled text,
+use `Text{Content: "Hello", FontSize: 24}`; plain text can use `Text("Hello")`.
+A leading spread in `Container{...source}` is structural projection, while
+`Container(){...rows,}` enumerates children. Keep the parentheses for that
+content-only form. In an initializer after a constructor or factory call,
 unmarked `key: value` calls `Add(key, value)` and never sets a member.
 
 `Children: { ... }` remains valid for collection members and older Goo packages.

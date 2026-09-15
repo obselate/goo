@@ -10,32 +10,32 @@ internal class GalleryNavigationView {
             targetIndex int32,
             isActive bool,
             onSelect Action[int32]
-        ) Button -> Button(){
-            .Key: "chapter-tab-" + targetIndex.ToString(),
-            .Height: 28,
-            .PaddingLeft: 10,
-            .PaddingRight: 10,
-            .BackgroundColor: if isActive {
+        ) Button -> Button{
+            Key: "chapter-tab-" + targetIndex.ToString(),
+            Height: 28,
+            PaddingLeft: 10,
+            PaddingRight: 10,
+            BackgroundColor: if isActive {
                 GalleryTheme.SurfaceRaised
             } else {
                 Color.Transparent
             },
-            .BorderWidth: 1,
-            .BorderColor: if isActive {
+            BorderWidth: 1,
+            BorderColor: if isActive {
                 GalleryTheme.BorderStrong
             } else {
                 Color.Transparent
             },
-            .BorderRadius: 6,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .TransitionMs: 100.0,
-            .Hover: Style{BackgroundColor: GalleryTheme.SurfaceRaised, BorderColor: GalleryTheme.Border,},
-            .OnClick: func () {
+            BorderRadius: 6,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            TransitionMs: 100.0,
+            Hover: Style{BackgroundColor: GalleryTheme.SurfaceRaised, BorderColor: GalleryTheme.Border,},
+            OnClick: func () {
                 onSelect(targetIndex)
             },
-            .JustifyContent: JustifyContent.Center,
-            .AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            AlignItems: AlignItems.Center,
             Text{
                 Content: label,
                 FontSize: 11,
@@ -59,20 +59,20 @@ internal class GalleryNavigationView {
             danger bool,
             window Window?,
             onClick Action
-        ) Button -> Button(){
-            .Key: "window-control-" + label,
-            .Width: 30,
-            .Height: 30,
-            .BackgroundColor: Color.Transparent,
-            .BorderWidth: 1,
-            .BorderColor: Color.Transparent,
-            .BorderRadius: 4,
-            .Cursor: Cursor.Pointer,
-            .Focusable: true,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
-            .TransitionMs: 80.0,
-            .Hover: Style{
+        ) Button -> Button{
+            Key: "window-control-" + label,
+            Width: 30,
+            Height: 30,
+            BackgroundColor: Color.Transparent,
+            BorderWidth: 1,
+            BorderColor: Color.Transparent,
+            BorderRadius: 4,
+            Cursor: Cursor.Pointer,
+            Focusable: true,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            TransitionMs: 80.0,
+            Hover: Style{
                 BackgroundColor: if danger {
                     Color.Rgb(127, 29, 29)
                 } else {
@@ -84,8 +84,8 @@ internal class GalleryNavigationView {
                     GalleryTheme.Border
                 },
             },
-            .Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label,},
-            .OnClick: onClick,
+            Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: label,},
+            OnClick: onClick,
             GalleryTheme.Icon(
                 icon,
                 17,
@@ -97,12 +97,12 @@ internal class GalleryNavigationView {
             ),
         }
 
-        private func RailSectionHeader(title string, itemKey string) Container -> Container(){
-            .Key: itemKey,
-            .Width: Length.Percent(100),
-            .PaddingTop: 10,
-            .PaddingBottom: 4,
-            .PaddingLeft: 8,
+        private func RailSectionHeader(title string, itemKey string) Container -> Container{
+            Key: itemKey,
+            Width: Length.Percent(100),
+            PaddingTop: 10,
+            PaddingBottom: 4,
+            PaddingLeft: 8,
             Text{Content: title, FontSize: 9, FontWeight: 800, LetterSpacing: 1.2, Color: GalleryTheme.InkSubtle,},
         }
 
@@ -114,27 +114,27 @@ internal class GalleryNavigationView {
         ) Button {
             let showcase = catalog.Showcases[index]
             let isActive = currentShowcase == index
-            return Button(){
-                .Key: "rail-item-" + index.ToString(),
-                .Width: Length.Percent(100),
-                .Height: 30,
-                .PaddingLeft: 8,
-                .PaddingRight: 8,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.FlexStart,
-                .Position: PositionType.Relative,
-                .BackgroundColor: if isActive {
+            return Button{
+                Key: "rail-item-" + index.ToString(),
+                Width: Length.Percent(100),
+                Height: 30,
+                PaddingLeft: 8,
+                PaddingRight: 8,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.FlexStart,
+                Position: PositionType.Relative,
+                BackgroundColor: if isActive {
                     GalleryTheme.SurfaceRaised
                 } else {
                     Color.Transparent
                 },
-                .BorderRadius: 4,
-                .Cursor: Cursor.Pointer,
-                .Focusable: true,
-                .TransitionMs: 100.0,
-                .Hover: Style{BackgroundColor: GalleryTheme.SurfaceRaised,},
-                .OnClick: func () {
+                BorderRadius: 4,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                TransitionMs: 100.0,
+                Hover: Style{BackgroundColor: GalleryTheme.SurfaceRaised,},
+                OnClick: func () {
                     onSelect(index)
                 },
                 Container{
@@ -207,27 +207,27 @@ internal class GalleryNavigationView {
                 tabs.Add(ChapterTab(chapter.TabLabel, target, currentChapter == chapterIndex, onSelect))
                 chapterIndex = chapterIndex + 1
             }
-            let bar = Container(){
-                .Key: "gallery-top-bar",
-                .Width: Length.Percent(100),
-                .Height: 48,
-                .MinHeight: 48,
-                .PaddingLeft: if compact {
+            let bar = Container{
+                Key: "gallery-top-bar",
+                Width: Length.Percent(100),
+                Height: 48,
+                MinHeight: 48,
+                PaddingLeft: if compact {
                     16
                 } else {
                     20
                 },
-                .PaddingRight: 6,
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.SpaceBetween,
-                .BackgroundColor: GalleryTheme.Surface,
-                .BorderBottomWidth: 1,
-                .BorderColor: GalleryTheme.Border,
-                Container(){
-                    .Key: "gallery-brand",
-                    .FlexDirection: FlexDirection.Row,
-                    .AlignItems: AlignItems.Center,
+                PaddingRight: 6,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.SpaceBetween,
+                BackgroundColor: GalleryTheme.Surface,
+                BorderBottomWidth: 1,
+                BorderColor: GalleryTheme.Border,
+                Container{
+                    Key: "gallery-brand",
+                    FlexDirection: FlexDirection.Row,
+                    AlignItems: AlignItems.Center,
                     Text{Content: "Goo UI gallery", FontSize: 13, FontWeight: 700, Color: GalleryTheme.Ink,},
                 },
                 Container{
@@ -237,11 +237,11 @@ internal class GalleryNavigationView {
                     Gap: 4,
                     Children: tabs,
                 },
-                Container(){
-                    .Key: "gallery-window-controls",
-                    .FlexDirection: FlexDirection.Row,
-                    .AlignItems: AlignItems.Center,
-                    .Gap: 2,
+                Container{
+                    Key: "gallery-window-controls",
+                    FlexDirection: FlexDirection.Row,
+                    AlignItems: AlignItems.Center,
+                    Gap: 2,
                     WindowControl(
                         GalleryTheme.IconMinimize,
                         "Minimize",
@@ -334,27 +334,27 @@ internal class GalleryNavigationView {
             if showcase.Chapter >= 0 {
                 sentence = catalog.Chapters[showcase.Chapter].Sentence
             }
-            return Container(){
-                .Key: "gallery-status-bar",
-                .Width: Length.Percent(100),
-                .Height: 26,
-                .MinHeight: 26,
-                .PaddingLeft: if compact {
+            return Container{
+                Key: "gallery-status-bar",
+                Width: Length.Percent(100),
+                Height: 26,
+                MinHeight: 26,
+                PaddingLeft: if compact {
                     20
                 } else {
                     28
                 },
-                .PaddingRight: if compact {
+                PaddingRight: if compact {
                     16
                 } else {
                     20
                 },
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.FlexStart,
-                .BackgroundColor: GalleryTheme.Surface,
-                .BorderTopWidth: 1,
-                .BorderColor: GalleryTheme.Border,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.FlexStart,
+                BackgroundColor: GalleryTheme.Surface,
+                BorderTopWidth: 1,
+                BorderColor: GalleryTheme.Border,
                 Text{
                     Content: sentence,
                     FontSize: 11,

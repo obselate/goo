@@ -126,16 +126,16 @@ public class GlassTerminalCell : Cell {
         syncShader()
         let cornerInt = int32(Math.Max(cornerRadius, 0.0F))
 
-        return Container(){
-            .Key: "glass-terminal-root",
-            .Width: Length.Percent(100),
-            .Height: Length.Percent(100),
-            .BorderRadius: cornerInt,
-            .OverflowX: Overflow.Hidden,
-            .OverflowY: Overflow.Hidden,
-            .Position: PositionType.Relative,
-            .BackgroundColor: Color.Transparent,
-            .ShaderEffect: effect,
+        return Container{
+            Key: "glass-terminal-root",
+            Width: Length.Percent(100),
+            Height: Length.Percent(100),
+            BorderRadius: cornerInt,
+            OverflowX: Overflow.Hidden,
+            OverflowY: Overflow.Hidden,
+            Position: PositionType.Relative,
+            BackgroundColor: Color.Transparent,
+            ShaderEffect: effect,
             buildWindowChrome(),
             buildTerminalCanvas(),
             buildFloatingControlDock(),
@@ -143,17 +143,17 @@ public class GlassTerminalCell : Cell {
     }
 
     private func buildWindowChrome() Container {
-        let titleBar = Container(){
-            .Key: "custom-titlebar",
-            .Width: Length.Percent(100),
-            .Height: 36,
-            .Position: PositionType.Relative,
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.SpaceBetween,
-            .PaddingLeft: 16,
-            .PaddingRight: 16,
-            .BackgroundColor: Color.Transparent,
+        let titleBar = Container{
+            Key: "custom-titlebar",
+            Width: Length.Percent(100),
+            Height: 36,
+            Position: PositionType.Relative,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.SpaceBetween,
+            PaddingLeft: 16,
+            PaddingRight: 16,
+            BackgroundColor: Color.Transparent,
             buildTrafficLights(),
             buildTitleInfo(),
             buildQuickCornerToggle(),
@@ -161,10 +161,10 @@ public class GlassTerminalCell : Cell {
         return Window.DragRegion(titleBar)
     }
 
-    private func buildTrafficLights() Container -> Container(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .Gap: 8,
+    private func buildTrafficLights() Container -> Container{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 8,
         buildStoplight(
             "btn-close",
             Color.Rgb(255, 95, 86),
@@ -214,10 +214,10 @@ public class GlassTerminalCell : Cell {
         OnClick: action,
     }
 
-    private func buildTitleInfo() Container -> Container(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .Gap: 8,
+    private func buildTitleInfo() Container -> Container{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 8,
         Text{
             Content: "xaz@archlinux: ~/Projects/goo-gsharp (fish)",
             FontFamily: "monospace",
@@ -240,20 +240,20 @@ public class GlassTerminalCell : Cell {
             6
         }
 
-        return Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
-            Button(){
-                .Key: "quick-corner-toggle",
-                .PaddingLeft: 9,
-                .PaddingRight: 9,
-                .PaddingTop: 4,
-                .PaddingBottom: 4,
-                .BorderRadius: btnRadius,
-                .BackgroundColor: Color.Rgba(255, 255, 255, 14),
-                .Hover: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
-                .OnClick: func () {
+        return Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
+            Button{
+                Key: "quick-corner-toggle",
+                PaddingLeft: 9,
+                PaddingRight: 9,
+                PaddingTop: 4,
+                PaddingBottom: 4,
+                BorderRadius: btnRadius,
+                BackgroundColor: Color.Rgba(255, 255, 255, 14),
+                Hover: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
+                OnClick: func () {
                     if cornerRadius <= 0.001F {
                         setCornerRadius(12.0F, "12px (Native)")
                     } else {
@@ -271,17 +271,17 @@ public class GlassTerminalCell : Cell {
         }
     }
 
-    private func buildTerminalCanvas() Container -> Container(){
-        .Key: "terminal-canvas",
-        .FlexGrow: 1,
-        .PaddingLeft: 22,
-        .PaddingRight: 22,
-        .PaddingTop: 18,
-        .PaddingBottom: 72,
+    private func buildTerminalCanvas() Container -> Container{
+        Key: "terminal-canvas",
+        FlexGrow: 1,
+        PaddingLeft: 22,
+        PaddingRight: 22,
+        PaddingTop: 18,
+        PaddingBottom: 72,
         // Leave room for floating glass control dock
-        .Gap: 6,
-        .OverflowY: Overflow.Scroll,
-        .BackgroundColor: Color.Transparent,
+        Gap: 6,
+        OverflowY: Overflow.Scroll,
+        BackgroundColor: Color.Transparent,
         // Fish welcome banner
         terminalLine("Welcome to fish, the friendly interactive shell", Color.Rgb(148, 163, 184)),
         terminalLine("Type help for instructions on how to use fish", Color.Rgba(148, 163, 184, 180)),
@@ -307,13 +307,13 @@ public class GlassTerminalCell : Cell {
         activeFishPrompt("~/Projects/goo-gsharp", "main"),
     }
 
-    private func fishPrompt(path string, branch string, command string) Container -> Container(){
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 3,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
+    private func fishPrompt(path string, branch string, command string) Container -> Container{
+        FlexDirection: FlexDirection.Column,
+        Gap: 3,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
             Text{
                 Content: "xaz@archlinux",
                 FontFamily: "monospace",
@@ -336,10 +336,10 @@ public class GlassTerminalCell : Cell {
                 Color: Color.Rgb(192, 132, 252),
             },
         },
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
             Text{Content: "❯", FontFamily: "monospace", FontSize: 13, FontWeight: 700, Color: Color.Rgb(74, 222, 128),},
             Text{
                 Content: command,
@@ -351,13 +351,13 @@ public class GlassTerminalCell : Cell {
         },
     }
 
-    private func activeFishPrompt(path string, branch string) Container -> Container(){
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 3,
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
+    private func activeFishPrompt(path string, branch string) Container -> Container{
+        FlexDirection: FlexDirection.Column,
+        Gap: 3,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
             Text{
                 Content: "xaz@archlinux",
                 FontFamily: "monospace",
@@ -380,10 +380,10 @@ public class GlassTerminalCell : Cell {
                 Color: Color.Rgb(192, 132, 252),
             },
         },
-        Container(){
-            .FlexDirection: FlexDirection.Row,
-            .AlignItems: AlignItems.Center,
-            .Gap: 8,
+        Container{
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 8,
             Text{Content: "❯", FontFamily: "monospace", FontSize: 13, FontWeight: 700, Color: Color.Rgb(74, 222, 128),},
             Container{Width: 8, Height: 16, BackgroundColor: Color.Rgb(248, 250, 252),},
             Text{
@@ -396,10 +396,10 @@ public class GlassTerminalCell : Cell {
         },
     }
 
-    private func gitStatusLine(status string, file string, statusColor Color) Container -> Container(){
-        .FlexDirection: FlexDirection.Row,
-        .AlignItems: AlignItems.Center,
-        .Gap: 10,
+    private func gitStatusLine(status string, file string, statusColor Color) Container -> Container{
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 10,
         Text{Content: " " + status, FontFamily: "monospace", FontSize: 12, FontWeight: 700, Color: statusColor,},
         Text{Content: file, FontFamily: "monospace", FontSize: 12, FontWeight: 500, Color: Color.Rgb(226, 232, 240),},
     }
@@ -438,27 +438,27 @@ public class GlassTerminalCell : Cell {
             12
         }
 
-        return Container(){
-            .Key: "floating-dock-wrapper",
-            .Position: PositionType.Absolute,
-            .Left: 0,
-            .Right: 0,
-            .Bottom: 14,
-            .AlignItems: AlignItems.Center,
-            .JustifyContent: JustifyContent.Center,
-            Container(){
-                .Key: "floating-control-dock",
-                .PaddingLeft: 14,
-                .PaddingRight: 14,
-                .PaddingTop: 8,
-                .PaddingBottom: 8,
-                .BorderRadius: dockRadius,
-                .BackgroundColor: Color.Rgba(10, 15, 26, 210),
-                .BorderWidth: 1,
-                .BorderColor: Color.Rgba(255, 255, 255, 14),
-                .FlexDirection: FlexDirection.Row,
-                .AlignItems: AlignItems.Center,
-                .Gap: 12,
+        return Container{
+            Key: "floating-dock-wrapper",
+            Position: PositionType.Absolute,
+            Left: 0,
+            Right: 0,
+            Bottom: 14,
+            AlignItems: AlignItems.Center,
+            JustifyContent: JustifyContent.Center,
+            Container{
+                Key: "floating-control-dock",
+                PaddingLeft: 14,
+                PaddingRight: 14,
+                PaddingTop: 8,
+                PaddingBottom: 8,
+                BorderRadius: dockRadius,
+                BackgroundColor: Color.Rgba(10, 15, 26, 210),
+                BorderWidth: 1,
+                BorderColor: Color.Rgba(255, 255, 255, 14),
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                Gap: 12,
                 // Borders section
                 dockSectionLabel("BORDER:"),
                 dockButton(
@@ -617,21 +617,21 @@ public class GlassTerminalCell : Cell {
             Color.Rgb(226, 232, 240)
         }
 
-        return Button(){
-            .PaddingLeft: 8,
-            .PaddingRight: 8,
-            .PaddingTop: 4,
-            .PaddingBottom: 4,
-            .BorderRadius: radius,
-            .BackgroundColor: bg,
-            .Hover: Style{
+        return Button{
+            PaddingLeft: 8,
+            PaddingRight: 8,
+            PaddingTop: 4,
+            PaddingBottom: 4,
+            BorderRadius: radius,
+            BackgroundColor: bg,
+            Hover: Style{
                 BackgroundColor: if active {
                     bg
                 } else {
                     Color.Rgba(255, 255, 255, 25)
                 }
             },
-            .OnClick: action,
+            OnClick: action,
             Text{
                 Content: label,
                 FontFamily: "monospace",

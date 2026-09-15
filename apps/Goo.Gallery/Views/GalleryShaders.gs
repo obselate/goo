@@ -220,11 +220,11 @@ class ShaderLabCell : Cell {
 
     private func frameChildren(name string, hint string, content Blob) Container {
         let children = List[Blob]()
-        children.Add(Container(){.Key: "spec-name", GalleryTheme.SpecimenName(name),})
-        children.Add(Container(){.Key: "spec-content", .FontFamily: GalleryTheme.ElementFontFamily, content,})
+        children.Add(Container{Key: "spec-name", GalleryTheme.SpecimenName(name),})
+        children.Add(Container{Key: "spec-content", FontFamily: GalleryTheme.ElementFontFamily, content,})
         children.Add(GalleryTheme.Hint(hint))
         let frame = GalleryTheme.Frame(children)
-        return Container(){.Key: "spec-" + name, .Width: Length.Percent(100), frame,}
+        return Container{Key: "spec-" + name, Width: Length.Percent(100), frame,}
     }
 
     private func effectsReady() bool -> Active
@@ -475,19 +475,19 @@ class ShaderLabCell : Cell {
         let effect = programs.Lab(5)
         writeFrame(effect, GlassCanvas, time, glassPointerX, glassPointerY, glassPointerPressure, glassPointerDown)
         effect.SetParameter(2, Vector4(0.72F, 0.62F, 0.32F, 14.0F))
-        return Container(){
-            .Key: if effectsReady() {
+        return Container{
+            Key: if effectsReady() {
                 "terminal-glass-live"
             } else {
                 "terminal-glass-idle"
             },
-            .Width: Length.Percent(100),
-            .AspectRatio: 16.0 / 9.0,
-            .Position: PositionType.Relative,
-            .BackgroundColor: Color.Rgb(12, 19, 28),
-            .BorderRadius: 10,
-            .OverflowX: Overflow.Hidden,
-            .OverflowY: Overflow.Hidden,
+            Width: Length.Percent(100),
+            AspectRatio: 16.0 / 9.0,
+            Position: PositionType.Relative,
+            BackgroundColor: Color.Rgb(12, 19, 28),
+            BorderRadius: 10,
+            OverflowX: Overflow.Hidden,
+            OverflowY: Overflow.Hidden,
             Container{
                 Position: PositionType.Absolute,
                 Right: 18,
@@ -528,19 +528,19 @@ class ShaderLabCell : Cell {
                 LetterSpacing: -2,
                 Color: Color.Rgba(235, 241, 245, 72),
             },
-            Container(){
-                .Position: PositionType.Absolute,
-                .Left: Length.Percent(7),
-                .Top: Length.Percent(10),
-                .Right: Length.Percent(7),
-                .Bottom: Length.Percent(10),
-                .Handle: GlassCanvas,
-                .BackgroundColor: Color.Transparent,
-                .BorderRadius: 14,
-                .OverflowX: Overflow.Hidden,
-                .OverflowY: Overflow.Hidden,
-                .Focusable: true,
-                .OnPointerDown: func (e PointerEvent) {
+            Container{
+                Position: PositionType.Absolute,
+                Left: Length.Percent(7),
+                Top: Length.Percent(10),
+                Right: Length.Percent(7),
+                Bottom: Length.Percent(10),
+                Handle: GlassCanvas,
+                BackgroundColor: Color.Transparent,
+                BorderRadius: 14,
+                OverflowX: Overflow.Hidden,
+                OverflowY: Overflow.Hidden,
+                Focusable: true,
+                OnPointerDown: func (e PointerEvent) {
                     e.Capture()
                     e.PreventDefault()
                     glassPointerDown = true
@@ -550,20 +550,20 @@ class ShaderLabCell : Cell {
                     glassPointerPressure = e.Pressure
                     Rebuild()
                 },
-                .OnPointerMove: func (e PointerEvent) {
+                OnPointerMove: func (e PointerEvent) {
                     let bounds = GlassCanvas.BorderBox
                     glassPointerX = Math.Clamp(e.Position.X / Math.Max(bounds.Width, 1.0), 0.0, 1.0)
                     glassPointerY = Math.Clamp(e.Position.Y / Math.Max(bounds.Height, 1.0), 0.0, 1.0)
                     glassPointerPressure = e.Pressure
                     Rebuild()
                 },
-                .OnPointerUp: func (e PointerEvent) {
+                OnPointerUp: func (e PointerEvent) {
                     glassPointerDown = false
                     glassPointerPressure = 0.0
                     e.ReleaseCapture()
                     Rebuild()
                 },
-                .OnPointerCancel: func (e PointerEvent) {
+                OnPointerCancel: func (e PointerEvent) {
                     glassPointerDown = false
                     glassPointerPressure = 0.0
                     e.ReleaseCapture()
@@ -580,26 +580,26 @@ class ShaderLabCell : Cell {
                     OverflowY: Overflow.Hidden,
                     ShaderEffect: activeEffect(effect),
                 },
-                Container(){
-                    .Position: PositionType.Absolute,
-                    .Left: 0,
-                    .Top: 0,
-                    .Right: 0,
-                    .Bottom: 0,
-                    .BorderWidth: 1,
-                    .BorderColor: Color.Rgba(226, 238, 247, 62),
-                    .BorderRadius: 14,
-                    .OverflowX: Overflow.Hidden,
-                    .OverflowY: Overflow.Hidden,
-                    Container(){
-                        .Height: 42,
-                        .PaddingLeft: 16,
-                        .PaddingRight: 16,
-                        .FlexDirection: FlexDirection.Row,
-                        .AlignItems: AlignItems.Center,
-                        .Gap: 8,
-                        .BorderBottomWidth: 1,
-                        .BorderBottomColor: Color.Rgba(226, 238, 247, 34),
+                Container{
+                    Position: PositionType.Absolute,
+                    Left: 0,
+                    Top: 0,
+                    Right: 0,
+                    Bottom: 0,
+                    BorderWidth: 1,
+                    BorderColor: Color.Rgba(226, 238, 247, 62),
+                    BorderRadius: 14,
+                    OverflowX: Overflow.Hidden,
+                    OverflowY: Overflow.Hidden,
+                    Container{
+                        Height: 42,
+                        PaddingLeft: 16,
+                        PaddingRight: 16,
+                        FlexDirection: FlexDirection.Row,
+                        AlignItems: AlignItems.Center,
+                        Gap: 8,
+                        BorderBottomWidth: 1,
+                        BorderBottomColor: Color.Rgba(226, 238, 247, 34),
                         Container{Width: 8, Height: 8, BorderRadius: 4, BackgroundColor: Color.Rgb(237, 111, 91)},
                         Container{Width: 8, Height: 8, BorderRadius: 4, BackgroundColor: Color.Rgb(226, 179, 78)},
                         Container{Width: 8, Height: 8, BorderRadius: 4, BackgroundColor: Color.Rgb(83, 190, 126)},
@@ -612,15 +612,15 @@ class ShaderLabCell : Cell {
                             Color: Color.Rgba(221, 231, 238, 150),
                         },
                         Container{FlexGrow: 1.0},
-                        Button(){
-                            .PaddingLeft: 8,
-                            .PaddingRight: 8,
-                            .PaddingTop: 3,
-                            .PaddingBottom: 3,
-                            .BorderRadius: 4,
-                            .BackgroundColor: Color.Rgba(56, 189, 248, 38),
-                            .Hover: Style{BackgroundColor: Color.Rgba(56, 189, 248, 80)},
-                            .OnClick: func () {
+                        Button{
+                            PaddingLeft: 8,
+                            PaddingRight: 8,
+                            PaddingTop: 3,
+                            PaddingBottom: 3,
+                            BorderRadius: 4,
+                            BackgroundColor: Color.Rgba(56, 189, 248, 38),
+                            Hover: Style{BackgroundColor: Color.Rgba(56, 189, 248, 80)},
+                            OnClick: func () {
                                 let glassWin = GlassTerminalWindow.CreateWindow()
                                 glassWin.Open()
                             },
@@ -640,12 +640,12 @@ class ShaderLabCell : Cell {
                             Color: Color.Rgba(107, 207, 184, 176),
                         },
                     },
-                    Container(){
-                        .PaddingLeft: 20,
-                        .PaddingTop: 18,
-                        .PaddingRight: 20,
-                        .FlexDirection: FlexDirection.Column,
-                        .Gap: 9,
+                    Container{
+                        PaddingLeft: 20,
+                        PaddingTop: 18,
+                        PaddingRight: 20,
+                        FlexDirection: FlexDirection.Column,
+                        Gap: 9,
                         Text{
                             Content: "xaz@goo  ~/Projects/goo-gsharp",
                             FontFamily: "monospace",
@@ -751,28 +751,28 @@ class ShaderLabCell : Cell {
         }
     }
 
-    private func ditherChoice(label string, selected bool, onClick Action) Button -> Button(){
-        .Height: 34,
-        .MinWidth: 72,
-        .FlexGrow: 1.0,
-        .BackgroundColor: if selected {
+    private func ditherChoice(label string, selected bool, onClick Action) Button -> Button{
+        Height: 34,
+        MinWidth: 72,
+        FlexGrow: 1.0,
+        BackgroundColor: if selected {
             GalleryTheme.Accent
         } else {
             GalleryTheme.SurfaceRaised
         },
-        .BorderWidth: 1,
-        .BorderColor: if selected {
+        BorderWidth: 1,
+        BorderColor: if selected {
             GalleryTheme.AccentStrong
         } else {
             GalleryTheme.Border
         },
-        .BorderRadius: 6,
-        .Cursor: Cursor.Pointer,
-        .Focusable: true,
-        .AlignItems: AlignItems.Center,
-        .JustifyContent: JustifyContent.Center,
-        .TransitionMs: 100.0,
-        .Hover: Style{
+        BorderRadius: 6,
+        Cursor: Cursor.Pointer,
+        Focusable: true,
+        AlignItems: AlignItems.Center,
+        JustifyContent: JustifyContent.Center,
+        TransitionMs: 100.0,
+        Hover: Style{
             BackgroundColor: if selected {
                 GalleryTheme.Accent
             } else {
@@ -784,8 +784,8 @@ class ShaderLabCell : Cell {
                 GalleryTheme.BorderStrong
             },
         },
-        .Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
-        .OnClick: onClick,
+        Focus: Style{OutlineWidth: 1, OutlineColor: GalleryTheme.AccentStrong},
+        OnClick: onClick,
         Text{
             Content: label,
             FontSize: 12,
@@ -802,17 +802,17 @@ class ShaderLabCell : Cell {
         },
     }
 
-    private func ditherShapeControls() Container -> Container(){
-        .Key: "dither-shape-controls",
-        .MinWidth: 0,
-        .FlexGrow: 1.0,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 7,
+    private func ditherShapeControls() Container -> Container{
+        Key: "dither-shape-controls",
+        MinWidth: 0,
+        FlexGrow: 1.0,
+        FlexDirection: FlexDirection.Column,
+        Gap: 7,
         Text{Content: "SHAPE", FontSize: 10, FontWeight: 700, LetterSpacing: 0.8, Color: GalleryTheme.InkMuted,},
-        Container(){
-            .Width: Length.Percent(100),
-            .FlexDirection: FlexDirection.Row,
-            .Gap: 6,
+        Container{
+            Width: Length.Percent(100),
+            FlexDirection: FlexDirection.Row,
+            Gap: 6,
             ditherChoice(
                 "Sphere",
                 ditherShape == 0,
@@ -840,17 +840,17 @@ class ShaderLabCell : Cell {
         },
     }
 
-    private func ditherLevelControls() Container -> Container(){
-        .Key: "dither-level-controls",
-        .MinWidth: 0,
-        .FlexGrow: 1.0,
-        .FlexDirection: FlexDirection.Column,
-        .Gap: 7,
+    private func ditherLevelControls() Container -> Container{
+        Key: "dither-level-controls",
+        MinWidth: 0,
+        FlexGrow: 1.0,
+        FlexDirection: FlexDirection.Column,
+        Gap: 7,
         Text{Content: "DITHER LEVEL", FontSize: 10, FontWeight: 700, LetterSpacing: 0.8, Color: GalleryTheme.InkMuted,},
-        Container(){
-            .Width: Length.Percent(100),
-            .FlexDirection: FlexDirection.Row,
-            .Gap: 6,
+        Container{
+            Width: Length.Percent(100),
+            FlexDirection: FlexDirection.Row,
+            Gap: 6,
             ditherChoice(
                 "2",
                 ditherLevels == 2,
@@ -882,18 +882,18 @@ class ShaderLabCell : Cell {
         let effect = programs.Lab(8)
         writeFrame(effect, AuroraCanvas, time, 0.5, 0.5, 0.0, false)
         effect.SetParameter(2, Vector4(0.56F, 0.60F, 0.58F, 0.0F))
-        return Container(){
-            .Key: if effectsReady() {
+        return Container{
+            Key: if effectsReady() {
                 "aurora-live"
             } else {
                 "aurora-idle"
             },
-            .Width: Length.Percent(100),
-            .AspectRatio: 16.0 / 9.0,
-            .Handle: AuroraCanvas,
-            .Position: PositionType.Relative,
-            .BackgroundColor: Color.Rgb(3, 7, 18),
-            .ShaderEffect: activeEffect(effect),
+            Width: Length.Percent(100),
+            AspectRatio: 16.0 / 9.0,
+            Handle: AuroraCanvas,
+            Position: PositionType.Relative,
+            BackgroundColor: Color.Rgb(3, 7, 18),
+            ShaderEffect: activeEffect(effect),
             Text{
                 Content: "NORTH / 67.8",
                 Position: PositionType.Absolute,
@@ -912,18 +912,18 @@ class ShaderLabCell : Cell {
         let effect = programs.Lab(9)
         writeFrame(effect, SilkCanvas, time, 0.5, 0.5, 0.0, false)
         effect.SetParameter(2, Vector4(0.58F, 0.78F, 0.46F, 0.0F))
-        return Container(){
-            .Key: if effectsReady() {
+        return Container{
+            Key: if effectsReady() {
                 "silk-live"
             } else {
                 "silk-idle"
             },
-            .Width: Length.Percent(100),
-            .AspectRatio: 16.0 / 9.0,
-            .Handle: SilkCanvas,
-            .Position: PositionType.Relative,
-            .BackgroundColor: Color.Rgb(11, 15, 27),
-            .ShaderEffect: activeEffect(effect),
+            Width: Length.Percent(100),
+            AspectRatio: 16.0 / 9.0,
+            Handle: SilkCanvas,
+            Position: PositionType.Relative,
+            BackgroundColor: Color.Rgb(11, 15, 27),
+            ShaderEffect: activeEffect(effect),
             Text{
                 Content: "MESH / 09",
                 Position: PositionType.Absolute,
@@ -942,31 +942,31 @@ class ShaderLabCell : Cell {
         let effect = programs.Lab(10)
         writeFrame(effect, CrtCanvas, time, 0.5, 0.5, 0.0, false)
         effect.SetParameter(2, Vector4(0.32F, 0.52F, 0.28F, 0.0F))
-        return Container(){
-            .Key: if effectsReady() {
+        return Container{
+            Key: if effectsReady() {
                 "crt-live"
             } else {
                 "crt-idle"
             },
-            .Width: Length.Percent(100),
-            .AspectRatio: 16.0 / 9.0,
-            .Handle: CrtCanvas,
-            .Position: PositionType.Relative,
-            .BackgroundColor: Color.Rgb(5, 13, 10),
-            .ShaderEffect: activeEffect(effect),
-            .OverflowX: Overflow.Hidden,
-            .OverflowY: Overflow.Hidden,
-            Container(){
-                .Position: PositionType.Absolute,
-                .Left: 26,
-                .Top: 24,
-                .Right: 26,
-                .Bottom: 24,
-                .Padding: 20,
-                .FlexDirection: FlexDirection.Column,
-                .Gap: 10,
-                .BorderWidth: 1,
-                .BorderColor: Color.Rgba(89, 222, 142, 86),
+            Width: Length.Percent(100),
+            AspectRatio: 16.0 / 9.0,
+            Handle: CrtCanvas,
+            Position: PositionType.Relative,
+            BackgroundColor: Color.Rgb(5, 13, 10),
+            ShaderEffect: activeEffect(effect),
+            OverflowX: Overflow.Hidden,
+            OverflowY: Overflow.Hidden,
+            Container{
+                Position: PositionType.Absolute,
+                Left: 26,
+                Top: 24,
+                Right: 26,
+                Bottom: 24,
+                Padding: 20,
+                FlexDirection: FlexDirection.Column,
+                Gap: 10,
+                BorderWidth: 1,
+                BorderColor: Color.Rgba(89, 222, 142, 86),
                 Text{
                     Content: "GOO SIGNAL MONITOR",
                     FontFamily: "monospace",
@@ -1005,9 +1005,9 @@ class ShaderLabCell : Cell {
         max float64,
         value float64,
         change Action[float64]
-    ) Container -> Container(){
-        .Key: "control-" + key,
-        .Width: Length.Percent(100),
+    ) Container -> Container{
+        Key: "control-" + key,
+        Width: Length.Percent(100),
         Cell.Mount[GalleryRange](
             key,
             func (slider GalleryRange) {
@@ -1103,9 +1103,9 @@ class ShaderLabCell : Cell {
         let controls = List[Blob]()
         if Showcase != 0 && Showcase != 7 {
             controls.Add(
-                Container(){
-                    .Key: "lab-play",
-                    .Width: Length.Percent(100),
+                Container{
+                    Key: "lab-play",
+                    Width: Length.Percent(100),
                     GalleryTheme.GhostButton(
                         if Playing {
                             "Pause ambient motion"
@@ -1158,14 +1158,14 @@ class ShaderLabCell : Cell {
         let controlsMinWidth Length = 0
         let bodyChildren = List[Blob]()
         bodyChildren.Add(
-            Container(){
-                .Key: "lab-specimen",
-                .MinWidth: 0,
-                .MinHeight: 0,
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
+            Container{
+                Key: "lab-specimen",
+                MinWidth: 0,
+                MinHeight: 0,
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
                 specimenCanvas,
             }
         )

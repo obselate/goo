@@ -99,19 +99,19 @@ class GalleryCell : Cell, IDisposable {
         Rebuild()
     }
 
-    override func Build() Blob -> Container(){
-        .Key: "root",
-        .Width: Length.Percent(100),
-        .Height: Length.Percent(100),
-        .Handle: rootHandle,
-        .BackgroundColor: GalleryTheme.Background,
-        .FontFamily: GalleryTheme.GalleryFontFamily,
-        .BorderRadius: 8,
-        .OverflowX: Overflow.Hidden,
-        .OverflowY: Overflow.Hidden,
-        .Position: PositionType.Relative,
-        .FlexDirection: FlexDirection.Column,
-        .OnKeyDown: func (e KeyEvent) {
+    override func Build() Blob -> Container{
+        Key: "root",
+        Width: Length.Percent(100),
+        Height: Length.Percent(100),
+        Handle: rootHandle,
+        BackgroundColor: GalleryTheme.Background,
+        FontFamily: GalleryTheme.GalleryFontFamily,
+        BorderRadius: 8,
+        OverflowX: Overflow.Hidden,
+        OverflowY: Overflow.Hidden,
+        Position: PositionType.Relative,
+        FlexDirection: FlexDirection.Column,
+        OnKeyDown: func (e KeyEvent) {
             if e.Key == Key.PageUp || e.Key == Key.Left {
                 e.PreventDefault()
                 PreviousShowcase()
@@ -129,15 +129,15 @@ class GalleryCell : Cell, IDisposable {
                 OpenShowcase(index)
             }
         ),
-        Container(){
-            .Key: "gallery-showcase-region",
-            .Handle: showcaseHandle,
-            .Width: Length.Percent(100),
-            .MinHeight: 0,
-            .FlexGrow: 1.0,
-            .FlexShrink: 1.0,
-            .FlexDirection: FlexDirection.Row,
-            .BackgroundColor: GalleryTheme.Background,
+        Container{
+            Key: "gallery-showcase-region",
+            Handle: showcaseHandle,
+            Width: Length.Percent(100),
+            MinHeight: 0,
+            FlexGrow: 1.0,
+            FlexShrink: 1.0,
+            FlexDirection: FlexDirection.Row,
+            BackgroundColor: GalleryTheme.Background,
             GalleryNavigationView.Rail(
                 catalog,
                 currentShowcase,
@@ -146,28 +146,28 @@ class GalleryCell : Cell, IDisposable {
                     OpenShowcase(index)
                 }
             ),
-            Container(){
-                .Key: "gallery-content",
-                .FlexGrow: 1.0,
-                .FlexShrink: 1.0,
-                .Height: Length.Percent(100),
-                .Position: PositionType.Relative,
-                .OverflowX: Overflow.Hidden,
-                .OverflowY: Overflow.Hidden,
-                .PaddingLeft: if Compact {
+            Container{
+                Key: "gallery-content",
+                FlexGrow: 1.0,
+                FlexShrink: 1.0,
+                Height: Length.Percent(100),
+                Position: PositionType.Relative,
+                OverflowX: Overflow.Hidden,
+                OverflowY: Overflow.Hidden,
+                PaddingLeft: if Compact {
                     20
                 } else {
                     36
                 },
-                .PaddingRight: if Compact {
+                PaddingRight: if Compact {
                     20
                 } else {
                     36
                 },
-                .PaddingTop: 18,
-                .PaddingBottom: 18,
-                .AlignItems: AlignItems.Center,
-                .JustifyContent: JustifyContent.Center,
+                PaddingTop: 18,
+                PaddingBottom: 18,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
                 GalleryStageView.Build(catalog, currentShowcase, Compact, Assets, Programs),
             },
         },
