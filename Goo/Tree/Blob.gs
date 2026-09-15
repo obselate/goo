@@ -228,9 +228,12 @@ public open class Blob : Style {
   public prop Focusable bool{
     get -> (blobState & int32(4)) != 0
     init{
-      blobState = value ? blobState | int32(4) : blobState & ^int32(4)
+      blobState = (value ? blobState | int32(4) : blobState & ^int32(4)) | int32(1024)
     }
   }
+  internal func ResolveFocusable(defaultValue bool) bool ->
+  (blobState & int32(1024)) != 0 ? Focusable : defaultValue
+
   /// Controls whether a focusable element participates in sequential Tab navigation. Defaults to true.
   /// False preserves pointer, programmatic, and accessibility focus for composite widgets.
   public prop TabStop bool{

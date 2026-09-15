@@ -261,7 +261,7 @@ internal partial class PointerInput {
           } finally {
             control.ClearCurrentTarget(generation)
           }
-          if control.PropagationStopped { break }
+          if control.PropagationStopped || n.FocusScopeBoundary { break }
         }
         applyCaptureRequests(button, route)
         prevented = control.DefaultPrevented

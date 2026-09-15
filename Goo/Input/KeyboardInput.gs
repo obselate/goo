@@ -109,8 +109,8 @@ internal class KeyboardInput {
                   continue
                 }
               }
-              if let callback = onKeyPress {
-                callback(e.Key, e.Modifiers)
+              if root == nil || FocusScopes.ModalRoot(root) == nil {
+                if let callback = onKeyPress { callback(e.Key, e.Modifiers) }
               }
               if pointer?.HandleDragKey(root, e.Key, e.Modifiers) == true {
                 changed = true
@@ -351,6 +351,7 @@ internal class KeyboardInput {
     down bool) KeyboardDispatchResult{
       var result KeyboardDispatchResult
       guard let start = target else { return result }
+      if !canReceiveInput(start) { return result }
       dispatchGeneration++
       let generation = dispatchGeneration
       control.Begin(generation)
@@ -365,7 +366,7 @@ internal class KeyboardInput {
               Control: control, Generation: generation })
             rebuildFiberOwner(node)
           }
-          if control.PropagationStopped { break }
+          if control.PropagationStopped || node.FocusScopeBoundary { break }
           current = node.Parent
         }
         result.DefaultPrevented = control.DefaultPrevented

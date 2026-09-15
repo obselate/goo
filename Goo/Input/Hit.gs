@@ -55,7 +55,14 @@ internal func hitTopmost(root Node, x float32, y float32) Node? {
   return hitsMapped(root, point.X, point.Y) ? root : nil
 }
 
-internal func hitDispatchClick(root Node, x float32, y float32) bool -> hitDispatch(root, x, y, nil) == HitResult.Handled
+internal func hitDispatchClick(root Node, x float32, y float32) bool {
+  if root.HasFocusScopes {
+    if let target = hitTopmost(root, x, y) {
+      if !FocusScopes.Allows(root, target) { return false }
+    }
+  }
+  return hitDispatch(root, x, y, nil) == HitResult.Handled
+}
 
 internal func hitActivate(root Node?, target Node) bool {
   guard let tree = root else { return false }
@@ -103,12 +110,12 @@ private func hitDispatch(n Node, x float32, y float32, inherited Cell?) HitResul
         return result
       }
       if result == HitResult.Unhandled {
-        return hitFire(n, owner) ? HitResult.Handled : HitResult.Unhandled
+        return hitFire(n, owner) ? HitResult.Handled : (n.FocusScopeBoundary ? HitResult.Blocked : HitResult.Unhandled)
       }
     }
   }
   if !hitsMapped(n, point.X, point.Y) { return HitResult.Miss }
-  return hitFire(n, owner) ? HitResult.Handled : HitResult.Unhandled
+  return hitFire(n, owner) ? HitResult.Handled : (n.FocusScopeBoundary ? HitResult.Blocked : HitResult.Unhandled)
 }
 
 // A handler presumably mutated its own cell's state; mark it dirty so

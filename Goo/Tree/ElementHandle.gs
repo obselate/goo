@@ -67,6 +67,16 @@ public class ElementHandle {
     return owner.FocusElement(n)
   }
 
+  /// Begins a nested focus scope on this mounted, visible, enabled, focusable element.
+  /// @param options Modal blocking, initial focus, and restoration policy.
+  /// @returns A scope to dispose when the overlay closes; removal also closes it automatically.
+  public func BeginFocusScope(options FocusScopeOptions? = nil) FocusScope {
+    guard let n = mountedNode(), let owner = window else {
+      throw InvalidOperationException("A focus scope requires a mounted element")
+    }
+    return owner.BeginFocusScope(n, options ?? FocusScopeOptions())
+  }
+
   /// Removes keyboard focus when this element owns it.
   /// @returns False when the handle is unmounted or does not own focus.
   public func Blur() bool {

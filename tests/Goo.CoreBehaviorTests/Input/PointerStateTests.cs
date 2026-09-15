@@ -69,8 +69,8 @@ public sealed class PointerStateTests
         var fixtures = new InputFixtures();
         Assert.Equal(192, fixtures.PointerLifecycleEmptyBlobBytes());
         Assert.Equal(1_216, fixtures.PointerLifecycleEmptyNodeBytes());
-        // Size limits add 16 bytes, click tracking 8, and the lazy native-family slot 8.
-        Assert.InRange(fixtures.PointerLifecycleEmptyWindowBytes(), 1, 3_448);
+        // Size limits add 16 bytes; click tracking, native family, and focus scopes add 8 each.
+        Assert.InRange(fixtures.PointerLifecycleEmptyWindowBytes(), 1, 3_456);
         Assert.Equal(0, fixtures.PointerLifecycleStablePlainDiffBytes());
     }
 }

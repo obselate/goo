@@ -388,7 +388,7 @@ internal class Reconciler {
       }
       entries = changed
     }
-    applyStyleEntries(n, b, entries, true, initial)
+    applyStyleEntries(n, b, entries, b.ResolveFocusable(true), initial)
   }
 
   internal func applyText(n Node, t Text, initial bool) {
@@ -447,7 +447,7 @@ internal class Reconciler {
 
   internal func applyEditor(n Node, t TextEditor, layers []TextPresentationLayer,
     initial bool) {
-      applyStyle(n, t, true, initial)
+      applyStyle(n, t, t.ResolveFocusable(true), initial)
       var contentChanged = false
       var paintChanged = false
       var inputChanged = false
@@ -543,7 +543,7 @@ internal class Reconciler {
 
   // Focus-wins: while focused the node buffer is authoritative and Value is ignored.
   internal func applyEntry(n Node, t TextEntry, initial bool) {
-    applyStyle(n, t, true, initial)
+    applyStyle(n, t, t.ResolveFocusable(true), initial)
     var paintChanged = false
     if n.Password != t.Password {
       n.Password = t.Password

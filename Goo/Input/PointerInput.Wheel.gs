@@ -49,7 +49,7 @@ internal partial class PointerInput {
             callback(event)
             rebuildOwner(route, i - 1)
           }
-          if wheelControl.PropagationStopped { break }
+          if wheelControl.PropagationStopped || n.FocusScopeBoundary { break }
         }
         return wheelControl.DefaultPrevented
       } finally {
@@ -96,6 +96,7 @@ internal partial class PointerInput {
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
       if n.Kind == NodeKind.Editor && maxScrollY(n) > 0.0F { return n }
+      if n.FocusScopeBoundary { break }
     }
     return nil
   }
@@ -104,6 +105,7 @@ internal partial class PointerInput {
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
       if n.Kind == NodeKind.Editor && maxScrollX(n) > 0.0F { return n }
+      if n.FocusScopeBoundary { break }
     }
     return nil
   }
@@ -112,6 +114,7 @@ internal partial class PointerInput {
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
       if n.OverflowY == Overflow.Scroll && maxScrollY(n) > 0.0F { return n }
+      if n.FocusScopeBoundary { break }
     }
     return nil
   }
@@ -120,6 +123,7 @@ internal partial class PointerInput {
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
       if n.OverflowX == Overflow.Scroll && maxScrollX(n) > 0.0F { return n }
+      if n.FocusScopeBoundary { break }
     }
     return nil
   }

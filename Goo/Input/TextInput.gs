@@ -48,7 +48,7 @@ internal partial class TextInput {
       }
     }
     if focused == nil && nativeFocusAllowed {
-      if let target = findAutoFocus(tree, false, false) {
+      if let target = findAutoFocus(FocusScopes.TraversalRoot(tree), false, false) {
         SetFocus(resolver, target)
       }
     }
@@ -102,6 +102,8 @@ internal partial class TextInput {
   internal func SetClipboardFallback(value string) {
     clipFallback = value
   }
+
+  internal prop NativeFocusAllowed bool{ get -> nativeFocusAllowed }
 
   internal func SetNativeFocus(value bool) {
     nativeFocusAllowed = value
@@ -231,7 +233,7 @@ internal partial class TextInput {
           handler(FocusEvent{ Control: focusControl, Generation: generation })
           rebuildFiberOwner(node)
         }
-        if focusControl.PropagationStopped { break }
+        if focusControl.PropagationStopped || node.FocusScopeBoundary { break }
         current = node.Parent
       }
     } finally {
@@ -502,7 +504,12 @@ internal partial class TextInput {
       return
     }
     let order = List[Node]()
-    collectFocusables(tree, order, false, false)
+    let scopeRoot = FocusScopes.TraversalRoot(tree)
+    collectFocusables(scopeRoot, order, false, false)
+    if order.Count == 0 && scopeRoot.FocusScopeBoundary && canReceiveInput(scopeRoot) {
+      SetFocus(resolver, scopeRoot)
+      return
+    }
     if order.Count == 0 {
       return
     }
@@ -590,10 +597,17 @@ internal partial class TextInput {
     }
   }
 
+  internal func FirstScopeFocus(root Node) Node {
+    if let automatic = findAutoFocus(root, false, false) { return automatic }
+    let order = List[Node]()
+    collectFocusables(root, order, false, false)
+    return order.Count == 0 ? root : order[0]
+  }
+
   private func collectFocusables(n Node, sink List[Node], hidden bool, disabled bool) {
     let nowHidden = hidden || n.PaintInputHidden
     let nowDisabled = disabled || n.Disabled
-    if !nowHidden && !nowDisabled && n.Focusable && n.TabStop {
+    if !nowHidden && !nowDisabled && n.Focusable && n.TabStop && !n.FocusScopeBoundary {
       sink.Add(n)
     }
     for i in 0 ... n.Children.Count {

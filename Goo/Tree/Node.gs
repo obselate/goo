@@ -232,6 +232,15 @@ internal class Node {
       lifecycleState = value ? lifecycleState | uint16(2) : lifecycleState & ^uint16(2)
     }
   }
+  internal prop HasFocusScopes bool{
+    get -> (lifecycleState & uint16(512)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(512) : lifecycleState & ^uint16(512)
+  }
+  internal prop FocusScopeBoundary bool{
+    get -> (lifecycleState & uint16(1024)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(1024) : lifecycleState & ^uint16(1024)
+  }
+
   internal prop TabStop bool{
     get -> (lifecycleState & uint16(256)) == uint16(0)
     set -> lifecycleState = value ? lifecycleState & ^uint16(256) : lifecycleState | uint16(256)
@@ -467,11 +476,10 @@ internal class Node {
 }
 
 internal func canReceiveInput(n Node) bool {
-  if n.PaintInputHidden || n.Disabled {
-    return false
+  var current = n
+  while true {
+    if current.PaintInputHidden || current.Disabled { return false }
+    if let parent = current.Parent { current = parent }
+    else { return !current.HasFocusScopes || FocusScopes.Allows(current, n) }
   }
-  if let parent = n.Parent {
-    return canReceiveInput(parent)
-  }
-  return true
 }

@@ -33,7 +33,35 @@ Key-down defaults run after the route and include text editing, `Tab` or `Shift+
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
-Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. `Tab` and `Shift+Tab` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
+Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. `Tab` and `Shift+Tab` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
+
+## Mounted focus scopes
+
+Call `ElementHandle.BeginFocusScope(FocusScopeOptions)` after the element mounts,
+for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
+overlay closes. The visible, enabled root must be focusable. On the next stable
+input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
+descendant, the first descendant tab stop, or the root when no child accepts
+focus. Tab and Shift+Tab wrap within the top scope and skip the scope root unless
+it is the fallback. Editors retain their normal Tab indentation behavior.
+
+`Modal: true` blocks input and accessibility outside the latest modal scope and
+any nonmodal scopes opened after it. This lets menus and submenus remain usable
+inside a dialog. The accessibility tree omits other background subtrees. Global
+`Window.KeyPressed` callbacks are suspended while a modal scope exists. Routed
+keyboard, pointer, wheel, and focus callbacks stop at scope boundaries.
+Nonmodal scopes contain sequential focus and permit outside input; their widget
+supplies outside-click dismissal.
+
+Opening order chooses the active scope. `FocusScope.Order` can order sibling
+overlays under the same parent; it does not move elements between parents or
+change clipping. Disposal, removal, hiding, or disabling a scope root closes its
+registration. Closing an underlying scope preserves the top scope and repairs its
+restoration target. `RestoreFocus` defaults to true and restores the prior target
+only if it remains eligible in the same window and focus has not explicitly moved
+to another eligible target outside the closing scope. Restoration runs after the tree
+is stable and waits while native focus is absent or an owned native modal blocks
+the window. Disposing the window closes all scopes without restoring focus.
 
 ## Receive generic text and IME input
 

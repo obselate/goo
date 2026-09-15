@@ -51,6 +51,18 @@ public partial class Window {
     return result
   }
 
+  internal func BeginFocusScope(n Node, options FocusScopeOptions) FocusScope {
+    requireUiThread("ElementHandle.BeginFocusScope")
+    guard let tree = node else { throw InvalidOperationException("The window has no mounted tree") }
+    return input.BeginFocusScope(this, tree, n, options)
+  }
+
+  internal func FocusScopeChanged() {
+    pendingReconcileEffects = combineEffects(pendingReconcileEffects,
+      ReconcileEffects.Input | ReconcileEffects.Accessibility)
+    markDirtyAndRender()
+  }
+
   internal func BlurElement(n Node) bool {
     requireUiThread("ElementHandle.Blur")
     let result = input.BlurElement(resolver, n)

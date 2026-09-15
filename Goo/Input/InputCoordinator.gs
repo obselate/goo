@@ -9,6 +9,7 @@ internal class InputCoordinator {
   private var pointer PointerInput
   private var text TextInput
   private var attachedHost WindowHost?
+  private var scopes FocusScopeStack?
   private var disposed bool
 
   internal init() {
@@ -57,12 +58,14 @@ internal class InputCoordinator {
 
   internal func Drain(root Node?, resolver Resolver, timeS float64,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64) bool{
+      refreshScopes(root, resolver)
       let pointerChanged = pointer.Drain(root, resolver, timeS, text)
       return keyboard.Drain(root, resolver, text, onKeyPress, repeatStartTicks, pointer)
         || pointerChanged
     }
 
   internal func AfterTreeUpdated(root Node?, resolver Resolver, rebuilt bool) {
+    refreshScopes(root, resolver)
     if !rebuilt {
       return
     }
@@ -143,6 +146,19 @@ internal class InputCoordinator {
     return text.FocusedNode() == target
   }
 
+  internal func BeginFocusScope(owner Window, root Node, scopeRoot Node, options FocusScopeOptions) FocusScope {
+    if disposed { throw ObjectDisposedException("InputCoordinator") }
+    scopes ??= FocusScopeStack(owner)
+    return scopes!!.Add(root, scopeRoot, text.FocusedNode(), options)
+  }
+
+  private func refreshScopes(root Node?, resolver Resolver) {
+    if let current = scopes {
+      current.Refresh(root, resolver, text)
+      if current.IsEmpty { scopes = nil }
+    }
+  }
+
   internal func FocusedNode() Node ? -> text.FocusedNode()
 
   internal func EditorSnapshot() FocusedEditorSnapshot ? -> text.EditorSnapshot()
@@ -211,6 +227,8 @@ internal class InputCoordinator {
       return
     }
     disposed = true
+    scopes?.Dispose()
+    scopes = nil
     text.Dispose()
   }
 
@@ -380,7 +398,7 @@ internal class InputCoordinator {
   private func hasUnavailableFocus(n Node, hidden bool, disabled bool) bool {
     let nowHidden = hidden || n.PaintInputHidden
     let nowDisabled = disabled || n.Disabled
-    if (nowHidden || nowDisabled) && n.Focused {
+    if (nowHidden || nowDisabled || !n.Focusable) && n.Focused {
       return true
     }
     for index in 0 ... n.Children.Count {

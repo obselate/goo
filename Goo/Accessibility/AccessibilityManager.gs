@@ -20,6 +20,7 @@ internal class AccessibilityManager {
   private var deliveryPending bool
   private var retryUsed bool
   private var rebuildingChanged bool
+  private var visibleScopes FocusScopeStack?
 
   internal init(owner Window) {
     this.owner = owner
@@ -121,6 +122,7 @@ internal class AccessibilityManager {
 
   private func rebuild(root Node?) bool {
     rebuildingChanged = false
+    visibleScopes = root == nil ? nil : FocusScopes.ModalStack(root!!)
     forced.Clear()
     if let treeRoot = root { collectForced(treeRoot, false) }
     nodes.Clear()
@@ -272,6 +274,7 @@ internal class AccessibilityManager {
   }
 
   private func computeHidden(n Node, declaration Accessibility?, inherited bool) bool -> inherited || n.PaintInputHidden || declaration?.Hidden == true
+    || (visibleScopes != nil && !visibleScopes!!.Visible(n))
 
   private func declaredRoleIsNone(declaration Accessibility?) bool {
     if let metadata = declaration { return metadata.Role == AccessibilityRole.None }

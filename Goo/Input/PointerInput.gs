@@ -979,14 +979,15 @@ internal partial class PointerInput {
 
   private func deepestClickable(chain List[Node]) Node? {
     for var i = chain.Count; i > 0; i-- {
-      if chain[i - 1].OnClick != nil {
-        return chain[i - 1]
-      }
+      if chain[i - 1].OnClick != nil { return chain[i - 1] }
+      if chain[i - 1].FocusScopeBoundary { break }
     }
     return nil
   }
 
   private func chainDisabled(chain List[Node]) bool {
+    if chain.Count > 0 && chain[0].HasFocusScopes
+      && !FocusScopes.Allows(chain[0], chain[chain.Count - 1]) { return true }
     for i in 0 ... chain.Count {
       if chain[i].Disabled {
         return true

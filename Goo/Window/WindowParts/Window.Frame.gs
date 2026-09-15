@@ -141,6 +141,7 @@ public partial class Window {
       dirty = true
     }
     guard let cell = Root else {
+      input.AfterTreeUpdated(nil, resolver, true)
       family?.NativeDrop?.Validate()
       stopImageCompletions()
       if let semantics = accessibility {
