@@ -719,6 +719,10 @@ Source:
 
 Defines an editable single-line text element.
 
+### `Controlled`
+
+Applies `Value` while focused without reporting an edit. Defaults to false. An unchanged committed value preserves active IME composition; a host replacement cancels it. Selection endpoints remain on valid grapheme boundaries.
+
 ### `new`
 
 Initializes an empty text entry with the default selection highlight.
@@ -745,4 +749,4 @@ Gets the selection highlight color.
 
 ### `Value`
 
-Gets the value used while the entry is not focused.
+Gets the value used while unfocused, or also while focused when `Controlled` is true.

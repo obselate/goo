@@ -7,6 +7,58 @@ internal partial class TextInput {
   private var entryComposition TextComposition?
   private var entryCompositionBefore EditState
 
+  internal func SyncControlledEntry(n Node, value string) bool {
+    var canceled = false
+    if focused == n && entryComposition != nil {
+      if value == entryCompositionBefore.Text { return false }
+      entryComposition = nil
+      canceled = true
+      if nativeTextInputActive {
+        host?.StopTextInput()
+        nativeTextInputActive = false
+        syncNativeTextInput()
+      }
+    }
+    let changed = ReplaceEntryValue(n, value)
+    if changed && focused == n { FollowCaret(n) }
+    return changed || canceled
+  }
+
+  shared {
+    internal func ReplaceEntryValue(n Node, value string) bool {
+      if n.Buffer == value { return false }
+      let caret = Math.Min(n.Caret, value.Length)
+      let anchor = Math.Min(n.Anchor, value.Length)
+      var low = Math.Min(caret, anchor)
+      var high = Math.Max(caret, anchor)
+      if low > 0 && low < value.Length || high > 0 && high < value.Length {
+        let starts = UnicodeGraphemes.Starts(value)
+        if low > 0 && low < value.Length {
+          var start = 0
+          for boundary in starts {
+            if boundary > low { break }
+            start = boundary
+          }
+          low = start
+        }
+        if caret == anchor { high = low }
+        else if high > 0 && high < value.Length {
+          var end = value.Length
+          for boundary in starts {
+            if boundary >= high { end = boundary
+              break }
+          }
+          high = end
+        }
+      }
+      n.Buffer = value
+      n.Anchor = anchor <= caret ? low : high
+      n.Caret = anchor <= caret ? high : low
+      n.BlinkT = 0.0
+      return true
+    }
+  }
+
   internal func EditorSnapshot() FocusedEditorSnapshot? {
     guard let n = focused else { return nil }
     if !canReceiveInput(n) { return nil }

@@ -433,6 +433,51 @@ internal class TreeFixtures {
       && node.Placeholder == "updated" && node.Color.B == 1.0F && calls == 1
   }
 
+  func ExplicitControlledEntryValue() bool {
+    let resolver = Resolver{}
+    let rec = Reconciler{ Res: resolver }
+    let input = TextInput()
+    var calls = 0
+    let node = rec.Mount(TextEntry{ Value: "original" })
+    input.SetFocus(resolver, node)
+    node.Anchor = 5
+    node.Caret = 2
+    rec.Diff(node, TextEntry{ Value: "a😀b", Controlled: true, OnChange: (value string) -> { calls++ } })
+    if node.Buffer != "a😀b" || node.Anchor != 4 || node.Caret != 1 || !node.Focused || calls != 0 { return false }
+    node.Anchor = 2
+    node.Caret = 2
+    rec.Diff(node, TextEntry{ Value: "xa\u0301z", Controlled: true })
+    if node.Caret != 1 || node.Anchor != 1 { return false }
+    rec.Diff(node, TextEntry{ Value: "", Controlled: true })
+    if node.Caret != 0 || node.Anchor != 0 || node.Buffer != "" || !node.Focused { return false }
+    node.Buffer = "local"
+    rec.Diff(node, TextEntry{ Value: "external" })
+    return node.Buffer == "local" && !TextEntry{}.Controlled
+  }
+
+  func ControlledEntryComposition() bool {
+    let resolver = Resolver{}
+    let rec = Reconciler{ Res: resolver }
+    let input = TextInput()
+    var calls = 0
+    let node = rec.Mount(TextEntry{ Value: "hello", OnChange: (value string) -> { calls++ } })
+    input.SetFocus(resolver, node)
+    input.HandleComposition(node, "😀", 0, 2)
+    if node.Buffer != "hello😀" || input.SyncControlledEntry(node, "hello") { return false }
+    if input.EditorSnapshot()!!.CompositionStart != 5 { return false }
+    if !input.SyncControlledEntry(node, "external") || node.Buffer != "external"
+      || input.EditorSnapshot()!!.CompositionStart != -1 || !node.Focused || calls != 0 { return false }
+    input.HandleCompositionCancel(node)
+    if node.Buffer != "external" { return false }
+    input.HandleChar(node, "!")
+    if calls != 1 { return false }
+    input.HandleComposition(node, "x", 0, 1)
+    let effective = node.Buffer
+    if !input.SyncControlledEntry(node, effective) { return false }
+    input.HandleCompositionCancel(node)
+    return node.Buffer == effective && input.EditorSnapshot()!!.CompositionStart == -1 && calls == 1
+  }
+
   internal func markBackgroundApplied(node Node) {
     node.AppliedMask = styleMaskWith(node.AppliedMask, StyleField.BackgroundColor)
   }

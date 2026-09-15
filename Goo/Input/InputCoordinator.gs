@@ -25,6 +25,8 @@ internal class InputCoordinator {
       keyboard.SetDiagnosticsHook(keyboardHook)
     }
 
+  internal func SyncControlledEntry(n Node, value string) bool -> text.SyncControlledEntry(n, value)
+
   internal func Attach(host WindowHost) {
     if disposed { throw ObjectDisposedException("InputCoordinator") }
     if attachedHost == host {

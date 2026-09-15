@@ -55,6 +55,10 @@ public open class Blob : Style {
     get -> (blobState & int32(256)) != 0
     set -> blobState = value ? blobState | int32(256) : blobState & ^int32(256)
   }
+  internal prop ControlledEntryValue bool{
+    get -> (blobState & int32(2048)) != 0
+    set -> blobState = value ? blobState | int32(2048) : blobState & ^int32(2048)
+  }
   /// Gets the action that runs when the element is clicked.
   public prop OnClick Action? { get; init; }
   /// Gets the callback that receives each pointer button press.

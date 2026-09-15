@@ -541,7 +541,7 @@ internal class Reconciler {
     }
   }
 
-  // Focus-wins: while focused the node buffer is authoritative and Value is ignored.
+  // The default remains focus-wins; controlled entries explicitly accept host replacements.
   internal func applyEntry(n Node, t TextEntry, initial bool) {
     applyStyle(n, t, t.ResolveFocusable(true), initial)
     var paintChanged = false
@@ -560,7 +560,15 @@ internal class Reconciler {
     }
     n.OnChange = t.OnChange
     n.OnSubmit = t.OnSubmit
-    if !n.Focused {
+    if t.Controlled && n.Focused {
+      let changed = if let owner = ElementHandles.CurrentOwner() {
+        owner.SyncControlledEntry(n, t.Value)
+      } else { TextInput.ReplaceEntryValue(n, t.Value) }
+      if changed {
+        MarkEffects(ReconcileEffects.Content)
+        paintChanged = true
+      }
+    } else if !n.Focused {
       if n.Buffer != t.Value {
         n.Buffer = t.Value
         if n.Caret > n.Buffer.Length { n.Caret = n.Buffer.Length }

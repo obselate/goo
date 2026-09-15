@@ -1,5 +1,7 @@
 # Input API
 
+`TextEntry.Value` normally applies only while unfocused. Set `Controlled: true` to accept host value replacements while focused, for example when canceling a draft or changing a formatter. Keep `Value` current in `OnChange`. Replacements retain focus, clamp selections to grapheme boundaries, and do not invoke `OnChange` or `OnSubmit`. An unchanged committed value preserves active IME composition; replacing it cancels that composition without committing its draft.
+
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
 Source: [`Goo/Input`](../../Goo/Input)

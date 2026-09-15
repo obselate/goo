@@ -1433,6 +1433,7 @@ property|Goo.TextEditor|OverscanLines|System.Int32|instance|get:public,init:publ
 property|Goo.TextEditor|Placeholder|System.String|instance|get:public,init:public|index:()
 property|Goo.TextEditor|ReadOnly|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.TextEditor|SelectionColor|Goo.Color|instance|get:public,init:public|index:()
+property|Goo.TextEntry|Controlled|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.TextEntry|OnChange|System.Action`1<System.String>|instance|get:public,init:public|index:()
 property|Goo.TextEntry|OnSubmit|System.Action`1<System.String>|instance|get:public,init:public|index:()
 property|Goo.TextEntry|Password|System.Boolean|instance|get:public,init:public|index:()

@@ -4,6 +4,8 @@ import System
 
 /// Hosts supported element-handle operations on the UI thread.
 public partial class Window {
+  internal func SyncControlledEntry(n Node, value string) bool -> input.SyncControlledEntry(n, value)
+
   internal func RequireElementHandleThread(operation string) {
     requireUiThread(operation)
   }
