@@ -334,6 +334,22 @@ public sealed class TextEditorRetainedTests
     }
 
     [Fact]
+    public void InlineSlotFollowsTheActualStyledPrefixAdvance()
+    {
+        var document = new TextDocument("bold X after");
+        using var controller = new TextEditorController(document);
+        using var layer = new TextPresentationLayer(document);
+        layer.SetStyle("bold", new TextRange(0, 5), new Style { FontSize = 28.0, FontWeight = 700.0 });
+        layer.SetInlineSlot("inline", new TextRange(5, 1), new Container { Width = 60.0, Height = 20.0 });
+        var node = Mount(new TextEditor(controller, new[] { layer }) { Width = 400.0, Height = 100.0, FontSize = 14.0 });
+        new Layout().Calculate(node, 400, 100);
+        var line = Assert.Single(TextEditorLayouts.For(node, 400, 100).Lines);
+        var slot = Assert.Single(line.Slots);
+        var prefix = line.Runs.First(run => run.DisplayStart == 0);
+        Assert.InRange(Math.Abs(slot.X - (prefix.X + prefix.Shape!.Width)), 0, 0.01);
+    }
+
+    [Fact]
     public void PrefixCacheFindsTheViewportParagraph()
     {
         var document = new TextDocument("X\nsecond\nthird");

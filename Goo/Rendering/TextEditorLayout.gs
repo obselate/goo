@@ -1409,8 +1409,9 @@ internal class TextEditorLayouts {
       paragraph TextEditorResolvedParagraph, start int32, end int32, displayStart int32,
       shape ShapedText, correction float32, style TextResolvedStyle) float32{
         let run = shapeEditorLine(n, paragraph, start, end, style)
-        var natural = shape.CaretX(end - displayStart, int32(TextAffinity.Downstream))
-        -shape.CaretX(start - displayStart, int32(TextAffinity.Downstream))
+        let naturalStart = shape.CaretX(start - displayStart, int32(TextAffinity.Downstream))
+        let naturalEnd = shape.CaretX(end - displayStart, int32(TextAffinity.Downstream))
+        var natural = naturalEnd - naturalStart
         if natural < 0.0F { natural = -natural }
         let retained = TextPaintRun{ Shape: run,
           X: shape.CaretX(start - displayStart, int32(TextAffinity.Downstream)) + correction,
@@ -1422,7 +1423,17 @@ internal class TextEditorLayouts {
           if segments.Length > 0 { retained.DecorationSegments = segments }
         }
         line.Runs.Add(retained)
-        return run.Width - natural
+        let adjustment = run.Width - natural
+        if adjustment != 0.0F {
+          let right = naturalStart > naturalEnd ? naturalStart : naturalEnd
+          for slot in line.Slots {
+            if slot.NaturalLeft < right { continue }
+            slot.X = slot.X + adjustment
+            slot.LogicalStart = slot.LogicalStart + adjustment
+            slot.LogicalEnd = slot.LogicalEnd + adjustment
+          }
+        }
+        return adjustment
       }
 
     private func resolveParagraph(snapshot TextSnapshot, line int32,
