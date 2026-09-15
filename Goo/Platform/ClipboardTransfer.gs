@@ -11,8 +11,6 @@ internal unsafe partial class ClipboardTransfer {
   shared {
     internal const MaxImageBytes int32 = 67108864
     internal const MaxFileListBytes int32 = 1048576
-    internal const MaxPaths int32 = 4096
-    internal const MaxPathUnits int32 = 1048576
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
     private let imageTypes []string = []string{"image/png", "image/jpeg", "image/gif", "image/bmp", "image/tiff"}
 
@@ -62,7 +60,8 @@ internal unsafe partial class ClipboardTransfer {
         if formatType == "" { return ClipboardFiles(ClipboardReadStatus.Empty, []string{}) }
         let data = ReadData(formatType, MaxFileListBytes)
         return ParseFiles(utf8.GetString(data), formatType == "x-special/gnome-copied-files")
-      } catch (error ClipboardLimitException) { return ClipboardFiles(ClipboardReadStatus.TooLarge, []string{}, error.Message) }
+      } catch (error NativePathLimitException) { return ClipboardFiles(ClipboardReadStatus.TooLarge, []string{}, "Clipboard: " + error.Message) }
+      catch (error ClipboardLimitException) { return ClipboardFiles(ClipboardReadStatus.TooLarge, []string{}, error.Message) }
       catch (error Exception) { return ClipboardFiles(ClipboardReadStatus.Failed, []string{}, error.Message) }
     }
 
@@ -82,18 +81,9 @@ internal unsafe partial class ClipboardTransfer {
             throw InvalidDataException("Clipboard file lists must contain local file URIs")
           }
         let local = if uri.Host == "" { uri } else { Uri("file://" + uri.AbsolutePath) }
-        AddPath(paths, local.LocalPath, ref units)
+        NativeFilePaths.Add(paths, local.LocalPath, ref units)
       }
       return ClipboardFiles(if paths.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, paths.ToArray())
-    }
-
-    internal func AddPath(paths List[string], path string, ref units int32) {
-      if path.IndexOf(char(0)) >= 0 || !Path.IsPathFullyQualified(path) { throw InvalidDataException("Clipboard paths must be absolute and contain no NUL") }
-      if paths.Count >= MaxPaths || path.Length > 32768 || path.Length > MaxPathUnits - units {
-        throw ClipboardLimitException("Clipboard file list exceeds its path-count or text budget")
-      }
-      units += path.Length
-      paths.Add(path)
     }
 
     internal func ReadImage() ClipboardImage {

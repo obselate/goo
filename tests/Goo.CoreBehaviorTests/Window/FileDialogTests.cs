@@ -62,7 +62,7 @@ public sealed class FileDialogTests
         using var relative = new NativePaths(["relative"]);
         Assert.Throws<InvalidDataException>(() => NativeFileDialog.ReadResult(relative.Pointer, -1, 0));
         using var excessive = new NativePaths(Enumerable.Repeat(Path.GetTempPath(), 4097).ToArray());
-        Assert.Throws<ClipboardLimitException>(() => NativeFileDialog.ReadResult(excessive.Pointer, -1, 0));
+        Assert.Throws<NativePathLimitException>(() => NativeFileDialog.ReadResult(excessive.Pointer, -1, 0));
     }
 
     [Fact]

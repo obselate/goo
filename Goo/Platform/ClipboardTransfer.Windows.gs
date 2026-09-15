@@ -34,17 +34,17 @@ internal unsafe partial class ClipboardTransfer {
         let drop = WinClipboardData(15u)
         if drop == nint(0) { throw IOException("CF_HDROP read failed: " + Marshal.GetLastWin32Error().ToString()) }
         let count = WinDropFile(drop, uint32.MaxValue, nint(0), 0u)
-        if count > uint32(MaxPaths) { throw ClipboardLimitException("Clipboard exceeds 4096 file paths") }
+        if count > uint32(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Clipboard exceeds 4096 file paths") }
         let paths = List[string](int32(count))
         var units = 0
         for i in 0 ... int32(count) {
           let length = WinDropFile(drop, uint32(i), nint(0), 0u)
-          if length > 32768u || length > uint32(MaxPathUnits - units) { throw ClipboardLimitException("Clipboard paths exceed the text budget") }
+          if length > uint32(NativeFilePaths.MaxPathUnits) || length > uint32(NativeFilePaths.MaxTotalUnits - units) { throw ClipboardLimitException("Clipboard paths exceed the text budget") }
           let buffer = Marshal.AllocHGlobal((int32(length) + 1) * 2)
           try {
             let written = WinDropFile(drop, uint32(i), buffer, length + 1u)
             if written != length { throw IOException("CF_HDROP path changed while reading") }
-            AddPath(paths, Marshal.PtrToStringUni(buffer, int32(length)), ref units)
+            NativeFilePaths.Add(paths, Marshal.PtrToStringUni(buffer, int32(length)), ref units)
           } finally { Marshal.FreeHGlobal(buffer) }
         }
         return ClipboardFiles(if paths.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, paths.ToArray())

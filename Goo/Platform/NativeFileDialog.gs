@@ -103,7 +103,7 @@ internal partial class NativeFileDialog {
 
   private func Receive(paths nint, filter int32) {
     try { result = ReadResult(paths, filter, filters.Length) }
-    catch (error ClipboardLimitException) { result = FileDialogResult(FileDialogStatus.TooLarge, []string{}, error: error.Message) }
+    catch (error NativePathLimitException) { result = FileDialogResult(FileDialogStatus.TooLarge, []string{}, error: error.Message) }
     catch (error Exception) { result = FileDialogResult(FileDialogStatus.Failed, []string{}, error: error.Message) }
     finally {
       ReleaseBuffers()
@@ -184,17 +184,17 @@ internal partial class NativeFileDialog {
       }
       let values = List[string]()
       var units = 0
-      for i in 0 ... 4097 {
+      for i in 0 ... (NativeFilePaths.MaxCount + 1) {
         let pointer = Marshal.ReadIntPtr(paths, i * nint.Size)
         if pointer == nint(0) {
           let selected = if filter >= 0 && filter < filterCount { filter } else { -1 }
           return FileDialogResult(if values.Count == 0 { FileDialogStatus.Cancelled } else { FileDialogStatus.Success }, values.ToArray(), selected)
         }
-        if i == 4096 { throw ClipboardLimitException("Native chooser exceeds 4096 paths") }
+        if i == NativeFilePaths.MaxCount { throw NativePathLimitException("Native chooser exceeds 4096 paths") }
         var length = 0
-        while length <= 131072 && Marshal.ReadByte(pointer, length) != 0 { length++ }
-        if length > 131072 { throw ClipboardLimitException("Native chooser path exceeds its text budget") }
-        ClipboardTransfer.AddPath(values, Marshal.PtrToStringUTF8(pointer, length), ref units)
+        while length <= NativeFilePaths.MaxUtf8Bytes && Marshal.ReadByte(pointer, length) != 0 { length++ }
+        if length > NativeFilePaths.MaxUtf8Bytes { throw NativePathLimitException("Native chooser path exceeds its text budget") }
+        NativeFilePaths.Add(values, Marshal.PtrToStringUTF8(pointer, length), ref units)
       }
       throw InvalidDataException("Native chooser file list is unterminated")
     }

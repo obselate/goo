@@ -10,6 +10,7 @@ SPIR-V and native HarfBuzz payloads:
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
+python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
 dotnet build Goo/Goo.gsproj -c Release
 ```
 
@@ -67,6 +68,13 @@ over core source. Use `--fix` only on the intended files. GL0005 remains a manua
 cannot distinguish intentional fail-fast assertions. Public API documentation
 is enforced by `Goo.ApiContractTests`, which covers supplemented documentation
 and avoids treating public test fixtures as product API.
+
+Edit the explanatory input, window, tree, layout, and accessibility guides in
+[`tools/Goo.ApiDocs/Guides`](tools/Goo.ApiDocs/Guides). Member descriptions belong
+in source XML comments. Regenerate `docs/api` with
+`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release`; do not edit
+generated pages directly. The generator validates all member mappings and code
+examples before replacing output pages.
 
 Vulkan, package, native payload, template, DevTools, and NativeAOT checks are
 environment-specific. The CI workflow provisions the pinned shader tools,

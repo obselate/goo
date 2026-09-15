@@ -35,10 +35,10 @@ public sealed class ClipboardTests
     public void FileListsEnforceCountAndPathBudgets()
     {
         Assert.Throws<InvalidDataException>(() => ClipboardTransfer.ParseFiles("move\nfile:///tmp/a", true));
-        Assert.Throws<ClipboardLimitException>(() => ClipboardTransfer.ParseFiles(string.Concat(Enumerable.Repeat(FirstUri + "\n", 4097)), false));
+        Assert.Throws<NativePathLimitException>(() => ClipboardTransfer.ParseFiles(string.Concat(Enumerable.Repeat(FirstUri + "\n", 4097)), false));
         var paths = new System.Collections.Generic.List<string>();
         var units = 0;
-        Assert.Throws<ClipboardLimitException>(() => ClipboardTransfer.AddPath(paths, FirstPath + new string('x', 32768), ref units));
+        Assert.Throws<NativePathLimitException>(() => NativeFilePaths.Add(paths, FirstPath + new string('x', 32768), ref units));
     }
 
     [Fact]

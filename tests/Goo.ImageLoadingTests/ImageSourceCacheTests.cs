@@ -228,18 +228,18 @@ public sealed class ImageSourceCacheTests : IDisposable
         using var source = new ImageSource(1, 1, new byte[] { 20, 40, 80, 255 });
         BackgroundImageLayouts.SetPath(node, "asset.png", null);
         Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node));
-        BackgroundImageLayouts.SetSource(node, source, null);
+        BackgroundImageLayouts.SetSource(node, source, null, null);
         var decoded = BackgroundImageLayouts.Image(node);
         Assert.True(decoded!.IsValid);
         BackgroundImageLayouts.SetPath(node, "changed.png", null);
         Assert.Same(decoded, BackgroundImageLayouts.Image(node));
-        BackgroundImageLayouts.SetSource(node, null, null);
+        BackgroundImageLayouts.SetSource(node, null, null, null);
         Assert.Same(DecodedImage.Failed, BackgroundImageLayouts.Image(node));
         Assert.True(decoded.IsValid);
-        BackgroundImageLayouts.SetSource(node, source, null);
+        BackgroundImageLayouts.SetSource(node, source, null, null);
         BackgroundImageLayouts.SetPath(node, "", null);
         Assert.Same(decoded, BackgroundImageLayouts.Image(node));
-        BackgroundImageLayouts.SetSource(node, null, null);
+        BackgroundImageLayouts.SetSource(node, null, null, null);
         Assert.Null(BackgroundImageLayouts.Image(node));
         Assert.False(node.HasBackgroundImageState);
     }

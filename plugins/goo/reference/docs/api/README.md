@@ -11,8 +11,6 @@ These pages are generated from the Release `Goo.xml` file.
 - [Motion](motion.md)
 - [Platform](platform.md)
 - [Rendering](rendering.md)
-- [Runtime](runtime.md)
-- [Shaders](shaders.md)
 - [Shapes](shapes.md)
 - [Style](style.md)
 - [Text](text.md)

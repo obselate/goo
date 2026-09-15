@@ -77,7 +77,7 @@ internal class NativeDropRouter {
       return }
     current = nil
     generation++
-    if canReceive() && Available(root, target) {
+    if canReceive() && DragTargetRouting.Available(root, target) {
       Notify(root, session, target, DragEventKind.Drop, DragEffect.Copy)
     }
   }
@@ -88,7 +88,7 @@ internal class NativeDropRouter {
     generation++
     if let session = previous {
       if let target = session.Target, let root = getRoot() {
-        if Available(root, target) { Notify(root, session, target, DragEventKind.Leave, DragEffect.None) }
+        if DragTargetRouting.Available(root, target) { Notify(root, session, target, DragEventKind.Leave, DragEffect.None) }
       }
     }
   }
@@ -100,12 +100,9 @@ internal class NativeDropRouter {
     if !canReceive() { Cancel()
       return }
     if let target = session.Target {
-      if !Available(root, target) { Cancel() }
+      if !DragTargetRouting.Available(root, target) { Cancel() }
     }
   }
-
-  private func Available(root Node, target Node) bool -> !target.Retired
-    && containsPath(root, target) && canReceiveInput(target) && DragDropMetadata.Target(target) != nil
 
   private func Update(session NativeDropSession, x float32, y float32,
     modifiers KeyModifiers, moved bool) {
@@ -120,18 +117,16 @@ internal class NativeDropRouter {
         path.Clear()
         hitChainInto(root, x, y, path)
         var selected Node?
-        var disabled = false
-        for i in 0 ... path.Count { if path[i].Disabled { disabled = true
-          break } }
-        if !disabled {
+        if DragTargetRouting.AllowsPath(path) {
           for var i = path.Count; i > 0; i-- {
             let target = path[i - 1]
+            if !DragTargetRouting.Available(root, target) { continue }
             if let descriptor = DragDropMetadata.Target(target) {
               if let event = Event(session, target, DragEventKind.Move, DragEffect.None) {
                 let accepted = acceptedDragEffect(descriptor.Query(event), DragEffect.Copy)
                 Rebuild(root, target)
                 if current != session || !canReceive() { return }
-                if accepted == DragEffect.Copy && Available(root, target) { selected = target
+                if accepted == DragEffect.Copy && DragTargetRouting.Available(root, target) { selected = target
                   break }
               }
             }
@@ -141,10 +136,10 @@ internal class NativeDropRouter {
         let previous = session.Target
         if previous != selected {
           session.Target = nil
-          if let old = previous { if Available(root, old) { Notify(root, session, old, DragEventKind.Leave, DragEffect.None) } }
+          if let old = previous { if DragTargetRouting.Available(root, old) { Notify(root, session, old, DragEventKind.Leave, DragEffect.None) } }
           if current != session || !canReceive() { return }
           if let target = selected {
-            if Available(root, target) {
+            if DragTargetRouting.Available(root, target) {
               session.Target = target
               Notify(root, session, target, DragEventKind.Enter, DragEffect.Copy)
             }
@@ -160,14 +155,9 @@ internal class NativeDropRouter {
       } finally { path.Clear() }
     }
 
-  private func Event(session NativeDropSession, target Node, kind DragEventKind, effect DragEffect) DragEvent? {
-    let mapped = TransformGeometry.WindowToNode(target, session.X, session.Y)
-    if !mapped.Valid { return nil }
-    return DragEvent{Kind: kind, Data: session.Data, PointerId: -1L, Device: PointerDevice.Mouse,
-      Position: Point{X: float64(mapped.X - target.Rect.X), Y: float64(mapped.Y - target.Rect.Y)},
-      WindowPosition: Point{X: float64(session.X), Y: float64(session.Y)}, Modifiers: session.Modifiers,
-      AllowedEffects: DragEffect.Copy, Effect: effect}
-  }
+  private func Event(session NativeDropSession, target Node, kind DragEventKind, effect DragEffect) DragEvent? ->
+    DragTargetRouting.CreateEvent(session.Data, target, kind, session.X, session.Y,
+      session.Modifiers, DragEffect.Copy, effect, -1L, PointerDevice.Mouse)
 
   private func Notify(root Node, session NativeDropSession, target Node, kind DragEventKind, effect DragEffect) {
     guard let descriptor = DragDropMetadata.Target(target), let event = Event(session, target, kind, effect) else { return }

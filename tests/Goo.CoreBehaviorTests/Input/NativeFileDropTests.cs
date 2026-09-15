@@ -8,6 +8,70 @@ using Xunit;
 
 public sealed class NativeFileDropTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ModalScopesRejectBackgroundAndAncestorQueriesBeforeCallbacks(bool native)
+    {
+        var content = new ModalDropContent();
+        var window = new Window { Root = content, Width = 300, Height = 100 };
+        window.UpdateTree();
+        var root = content.RootHandle.AttachedNode()!;
+        var input = new InputCoordinator();
+        var resolver = new Resolver();
+        var data = new DragData(new NativeFileDrop(Array.Empty<string>(), true), DragEffect.Copy);
+        var router = new NativeDropRouter(() => root, () => true, () => { });
+        try
+        {
+            using var scope = content.Scope.BeginFocusScope(new FocusScopeOptions { Modal = true });
+            window.UpdateTree();
+            if (native)
+            {
+                router.Begin(data, 10, 10, default);
+                router.Move(150, 10, default);
+                router.Complete(data, 150, 10, default);
+            }
+            else
+            {
+                input.QueuePointerPress(10, 10);
+                input.QueuePointerMove(20, 10);
+                input.QueuePointerMove(150, 10);
+                input.QueuePointerRelease(150, 10);
+                input.Drain(root, resolver, 0, null);
+            }
+            Assert.True(content.InsideQueries > 0);
+            Assert.Equal(0, content.OutsideQueries);
+            Assert.Equal(0, content.OutsideEvents);
+        }
+        finally { router.Cancel(); input.Dispose(); NodeLifecycle.DisposeTree(root); }
+    }
+
+    private sealed class ModalDropContent : Cell
+    {
+        internal readonly ElementHandle RootHandle = new();
+        internal readonly ElementHandle Scope = new();
+        internal int InsideQueries;
+        internal int OutsideQueries;
+        internal int OutsideEvents;
+        public override Blob Build() => new Container
+        {
+            Handle = RootHandle, Width = 300, Height = 100, FlexDirection = FlexDirection.Row,
+            DropTarget = OutsideTarget(),
+            Children =
+            {
+                new Container
+                {
+                    Handle = Scope, Width = 100, Height = 100, Focusable = true,
+                    DragSource = new DragSource(_ => new DragData("payload", DragEffect.Copy)),
+                    DropTarget = new DropTarget(_ => { InsideQueries++; return DragEffect.None; }),
+                },
+                new Container { Width = 100, Height = 100, DropTarget = OutsideTarget() },
+            },
+        };
+        private DropTarget OutsideTarget() => new(
+            _ => { OutsideQueries++; return DragEffect.Copy; }, _ => OutsideEvents++);
+    }
+
     [Fact]
     public void PreviewMoveAndCompleteDeliverOneOwnedFileListWithCopyOnly()
     {

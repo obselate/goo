@@ -53,7 +53,7 @@ internal unsafe partial class ClipboardTransfer {
       try {
         let items = MacSend(MacPasteboard(), sel_registerName("pasteboardItems"))
         let count = MacCount(items, sel_registerName("count"))
-        if count > nuint(MaxPaths) { throw ClipboardLimitException("Clipboard exceeds 4096 pasteboard items") }
+        if count > nuint(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Clipboard exceeds 4096 pasteboard items") }
         let paths = List[string](int32(count))
         let formatType = MacString("public.file-url")
         var units = 0
@@ -64,7 +64,7 @@ internal unsafe partial class ClipboardTransfer {
           if MacCount(value, sel_registerName("length")) > nuint(131072) { throw ClipboardLimitException("Clipboard file URL exceeds its text budget") }
           let uri = BoundedUtf8(MacSend(value, sel_registerName("UTF8String")), 524288)
           let parsed = ParseFiles(uri, false)
-          for path in parsed.Paths { AddPath(paths, path, ref units) }
+          for path in parsed.Paths { NativeFilePaths.Add(paths, path, ref units) }
         }
         return ClipboardFiles(if paths.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, paths.ToArray())
       } finally { objc_autoreleasePoolPop(pool) }

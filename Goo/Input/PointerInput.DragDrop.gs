@@ -129,34 +129,17 @@ internal partial class PointerInput {
     return false
   }
 
-  private func dragTargetAvailable(root Node, target Node) bool ->
-  containsPath(root, target) && canReceiveInput(target)
-    && DragDropMetadata.Target(target) != nil
-
   private func dragEvent(session PointerDragSession, target Node, kind DragEventKind,
-    x float32, y float32, modifiers KeyModifiers, effect DragEffect) DragEvent? {
-      let mapped = TransformGeometry.WindowToNode(target, x, y)
-      if !mapped.Valid { return nil }
-      return DragEvent{
-        Kind: kind,
-        Data: session.Data,
-        PointerId: session.PointerId,
-        Device: session.Device,
-        Modifiers: modifiers,
-        Position: Point{ X: float64(mapped.X - target.Rect.X),
-          Y: float64(mapped.Y - target.Rect.Y) },
-        WindowPosition: Point{ X: float64(x), Y: float64(y) },
-        AllowedEffects: session.Data.AllowedEffects,
-        Effect: effect,
-      }
-    }
+    x float32, y float32, modifiers KeyModifiers, effect DragEffect) DragEvent? ->
+    DragTargetRouting.CreateEvent(session.Data, target, kind, x, y, modifiers,
+      session.Data.AllowedEffects, effect, session.PointerId, session.Device)
 
   private func queryDragTarget(root Node, session PointerDragSession, x float32, y float32,
     modifiers KeyModifiers) Node? {
       let path = dragTargetPath()
       path.Clear()
       hitChainInto(root, x, y, path)
-      if chainDisabled(path) {
+      if !DragTargetRouting.AllowsPath(path) {
         path.Clear()
         session.Effect = DragEffect.None
         return nil
@@ -165,6 +148,7 @@ internal partial class PointerInput {
       var effect = DragEffect.None
       for var i = path.Count; i > 0; i-- {
         let target = path[i - 1]
+        if !DragTargetRouting.Available(root, target) { continue }
         if let descriptor = DragDropMetadata.Target(target) {
           if let event = dragEvent(session, target, DragEventKind.Move, x, y,
             modifiers, DragEffect.None) {
@@ -174,7 +158,7 @@ internal partial class PointerInput {
                 path.Clear()
                 return nil
               }
-              if dragTargetAvailable(root, target) {
+              if DragTargetRouting.Available(root, target) {
                 let accepted = acceptedDragEffect(queried, session.Data.AllowedEffects)
                 if accepted != DragEffect.None {
                   selected = target
@@ -202,7 +186,7 @@ internal partial class PointerInput {
     effect DragEffect) bool{
       let terminalLeave = kind == DragEventKind.Leave && session.Terminating
       if dragSession != session || (session.Terminating && !terminalLeave)
-        || !dragTargetAvailable(root, target) {
+        || !DragTargetRouting.Available(root, target) {
           return false
         }
       guard let descriptor = DragDropMetadata.Target(target) else { return false }
@@ -210,9 +194,9 @@ internal partial class PointerInput {
       descriptor.Changed?.Invoke(event)
       CellOwnership.Within(root, target)?.Rebuild()
       if terminalLeave {
-        return dragSession == session && dragTargetAvailable(root, target)
+        return dragSession == session && DragTargetRouting.Available(root, target)
       }
-      return ensureDragSession(root, session) && dragTargetAvailable(root, target)
+      return ensureDragSession(root, session) && DragTargetRouting.Available(root, target)
     }
 
   private func updateDragTarget(root Node, x float32, y float32, modifiers KeyModifiers,
@@ -232,7 +216,7 @@ internal partial class PointerInput {
           if !dragSessionCurrent(session) { return }
         }
         if let nextTarget = selected {
-          if dragTargetAvailable(root, nextTarget) {
+          if DragTargetRouting.Available(root, nextTarget) {
             session.Target = nextTarget
             let retained = notifyDragTarget(root, session, nextTarget, DragEventKind.Enter,
               x, y, modifiers, effect)
@@ -266,7 +250,7 @@ internal partial class PointerInput {
         return
       }
       let effect = session.Effect
-      if !dragTargetAvailable(root, target) {
+      if !DragTargetRouting.Available(root, target) {
         terminateDrag(root, DragEndKind.Canceled, DragEffect.None, false, nil)
         return
       }
@@ -286,7 +270,7 @@ internal partial class PointerInput {
 
   private func dispatchDrop(root Node, session PointerDragSession, target Node,
     x float32, y float32, modifiers KeyModifiers, effect DragEffect) bool{
-      if !dragSessionCurrent(session) || !dragTargetAvailable(root, target) { return false }
+      if !dragSessionCurrent(session) || !DragTargetRouting.Available(root, target) { return false }
       guard let descriptor = DragDropMetadata.Target(target) else { return false }
       guard let event = dragEvent(session, target, DragEventKind.Drop, x, y,
         modifiers, effect) else { return false }

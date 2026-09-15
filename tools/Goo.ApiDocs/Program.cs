@@ -37,25 +37,18 @@ var members = XDocument.Load(xmlPath)
         element))
     .ToArray();
 
+var guideRoot = Path.Combine(repositoryRoot, "tools", "Goo.ApiDocs", "Guides");
+var documentedDirectories = sourceDirectories
+    .Where(path => types.Any(type => type.Directory == Path.GetFileName(path)))
+    .ToArray();
 var matched = new HashSet<string>(StringComparer.Ordinal);
-Directory.CreateDirectory(outputRoot);
-var expectedPages = sourceDirectories
-    .Select(directory => Path.GetFileName(directory).ToLowerInvariant() + ".md")
-    .Append("README.md")
-    .ToHashSet(StringComparer.Ordinal);
-foreach (var stalePath in Directory.EnumerateFiles(outputRoot, "*.md"))
-{
-    if (expectedPages.Contains(Path.GetFileName(stalePath)))
-        continue;
-    File.Delete(stalePath);
-    Console.WriteLine($"Removed stale API page {stalePath}.");
-}
-foreach (var directoryPath in sourceDirectories)
+var pages = new Dictionary<string, string>(StringComparer.Ordinal);
+foreach (var directoryPath in documentedDirectories)
 {
     var directory = Path.GetFileName(directoryPath);
     var pageTypes = types.Where(type => type.Directory == directory).ToArray();
-    var markdown = BuildPage(directory, pageTypes, members, matched);
-    WriteIfChanged(Path.Combine(outputRoot, directory.ToLowerInvariant() + ".md"), markdown);
+    var markdown = BuildPage(directory, pageTypes, members, matched, guideRoot);
+    pages.Add(directory.ToLowerInvariant() + ".md", FormatPage(markdown));
 }
 
 var unmatched = members.Select(member => member.Id)
@@ -65,8 +58,16 @@ var unmatched = members.Select(member => member.Id)
 if (unmatched.Length != 0)
     throw new InvalidDataException("Unmapped Goo.xml members:" + Environment.NewLine + string.Join(Environment.NewLine, unmatched));
 
-WriteIfChanged(Path.Combine(outputRoot, "README.md"), BuildIndex(sourceDirectories));
-Console.WriteLine($"Generated {sourceDirectories.Length} API pages in {outputRoot}.");
+pages.Add("README.md", FormatPage(BuildIndex(documentedDirectories)));
+Directory.CreateDirectory(outputRoot);
+foreach (var stalePath in Directory.EnumerateFiles(outputRoot, "*.md"))
+{
+    if (!pages.ContainsKey(Path.GetFileName(stalePath)))
+        File.Delete(stalePath);
+}
+foreach (var (name, markdown) in pages)
+    WriteIfChanged(Path.Combine(outputRoot, name), markdown);
+Console.WriteLine($"Generated {documentedDirectories.Length} API pages in {outputRoot}.");
 
 static void AppendGradientStopsGuide(StringBuilder text)
 {
@@ -80,7 +81,7 @@ static void AppendGradientStopsGuide(StringBuilder text)
     text.AppendLine("per-stop alpha and element opacity.");
 }
 
-static string BuildPage(string directory, ApiType[] types, ApiMember[] members, HashSet<string> matched)
+static string BuildPage(string directory, ApiType[] types, ApiMember[] members, HashSet<string> matched, string guideRoot)
 {
     var text = new StringBuilder();
     text.AppendLine($"# {directory} API");
@@ -89,53 +90,22 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
     text.AppendLine();
     text.AppendLine($"Source: [`Goo/{directory}`](../../Goo/{directory})");
 
-    if (directory == "Accessibility")
-        AppendAccessibilityGuide(text);
-    if (directory == "Window")
-        AppendWindowMetricsGuide(text);
-    if (directory == "Window")
-        AppendWindowNotificationGuide(text);
-    if (directory == "Window")
-        AppendWindowDispatcherGuide(text);
-    if (directory == "Window")
-        AppendClipboardGuide(text);
-    if (directory == "Input")
-        AppendKeyboardFocusGuide(text);
-    if (directory == "Input")
-        AppendTextInputGuide(text);
-    if (directory == "Input")
-        AppendPointerLifecycleGuide(text);
-    if (directory == "Input")
-        AppendDragDropGuide(text);
+    if (directory is "Accessibility" or "Window" or "Input" or "Tree" or "Layout")
+    {
+        text.AppendLine();
+        text.Append(File.ReadAllText(Path.Combine(guideRoot, directory.ToLowerInvariant() + ".md")));
+    }
+
     if (directory == "Style")
         AppendStyleCompositionGuide(text);
     if (directory == "Cell")
         AppendCellInputGuide(text);
     if (directory == "Cell")
         AppendCellFactoryGuide(text);
-    if (directory == "Tree")
-        AppendVirtualizationGuide(text);
-    if (directory == "Tree")
-        AppendLayoutTransitionGuide(text);
-    if (directory == "Tree")
-        AppendOwnedImageSourceGuide(text);
-    if (directory == "Tree")
-        AppendElementMetricsGuide(text);
-    if (directory == "Tree")
-        AppendScrollGuide(text);
-    if (directory == "Tree")
-        AppendTextInputAreaGuide(text);
     if (directory == "Rendering")
         AppendShaderEffectGuide(text);
     if (directory == "Rendering")
         AppendGradientStopsGuide(text);
-
-    if (types.Length == 0)
-    {
-        text.AppendLine();
-        text.AppendLine("This source directory declares no public types.");
-        return text.ToString();
-    }
 
     foreach (var type in types)
     {
@@ -268,44 +238,6 @@ static void AppendStyleCompositionGuide(StringBuilder text)
     text.AppendLine("`BackgroundGradient: nil` is an explicit clear declaration. It removes an earlier composed or lower-state gradient while preserving `BackgroundColor`. Omitting `BackgroundGradient` leaves the earlier declaration in effect.");
 }
 
-static void AppendVirtualizationGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Virtualize complete data sources");
-    text.AppendLine();
-    text.AppendLine("`Virtual(items, itemWidth, itemHeight, itemKey, itemBuilder)` accepts the complete `IReadOnlyList<T>` source and one positive, finite logical width and height shared by every item. Goo derives list or wrapped-grid placement from `FlexDirection` and `FlexWrap`, then mounts only the viewport window plus one overscan line. The caller does not calculate a range, supply an item count, or choose a list or grid primitive.");
-    text.AppendLine();
-    text.AppendLine("The shared item extent is the sole source for placement and scroll range. Builder content is mounted inside that fixed extent and cannot resize the virtual layout. Variable-extent sources are unsupported.");
-    text.AppendLine();
-    text.AppendLine("Source order controls logical order, and `itemKey` supplies stable identity. Goo uses the item type's equality semantics to retain unchanged visible nodes without calling `itemBuilder`. Newly visible and changed items invoke the builder. Items leaving the viewport unmount through the ordinary Goo lifecycle, including focus, pointer capture, handles, and accessibility state. Keys must be unique and non-empty. Rebuild the owning Cell after same-count content changes. A live source count change is detected directly.");
-}
-
-static void AppendOwnedImageSourceGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Owned image sources");
-    text.AppendLine();
-    text.AppendLine("`Image.Source` and `Style.BackgroundImageSource` accept an `ImageSourceProvider`. A source wins over its local image path. Goo preserves the path for a later source removal, but never falls back to it after source failure.");
-    text.AppendLine();
-    text.AppendLine("`ImageSource(width, height, pixels)` copies one exact row-major premultiplied-RGBA buffer (`width * height * 4` bytes) into Goo-owned storage. Width and height must be positive. The buffer must be non-null and exactly that length. Disposing the source releases its owner reference while already-mounted leases remain usable until their elements unmount or replace the source.");
-    text.AppendLine();
-    text.AppendLine("`ImageSource.Transfer(width, height, pixels, released)` adopts the same validated buffer without copying. A successful call transfers ownership to Goo: the caller must not read, write, or reuse the array until `released` runs. Goo invokes that callback exactly once after it can no longer read the array. The callback may run synchronously during disposal, and its exceptions do not interrupt cleanup. Rejected arguments leave ownership with the caller and do not invoke the callback.");
-    text.AppendLine();
-    text.AppendLine("For streaming content, retain one provider identity and publish each frame as a new immutable source with a monotonically increasing `ContentVersion`. Superseded generations may remain alive until their callbacks return their buffers to a bounded producer pool; never mutate an in-flight generation.");
-    text.AppendLine();
-    text.AppendLine("Custom providers create one `ImageSourceLease` per mounted binding. Each lease completes once through `Complete(source)` or `Fail()`. Goo releases a replaced or unmounted lease synchronously and raises `Released` exactly once, so providers should cancel outstanding work from that event. Late completion returns `false`; callback exceptions cannot interrupt Goo cleanup. Stable source identity keeps its existing lease, so warm paints do not reacquire or lock provider state.");
-    text.AppendLine();
-    text.AppendLine("When one provider source advances versions, Vulkan keeps the last published version renderable until the replacement upload completes, then moves current references and fence-retires the old version. Stale older versions cannot supersede a newer registration. If the configured resident or logical-source budget cannot hold both versions, Goo keeps the last-good version rather than presenting an empty handoff.");
-}
-
-static void AppendLayoutTransitionGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Animate computed position changes");
-    text.AppendLine();
-    text.AppendLine("Set `Blob.LayoutTransition` to a `LayoutTransition(durationMs, easing)` value to glide a mounted element when its own computed layout slot changes. It is separate from style `TransitionProperties`. The visual rectangle used by painting, hit testing, metrics, descendants, and accessibility moves together. Ordinary scrolling and ancestor-only movement do not start another glide.");
-}
-
 static void AppendImageSourceProviderMembers(StringBuilder text)
 {
     text.AppendLine();
@@ -376,158 +308,6 @@ static void AppendShaderEffectGuide(StringBuilder text)
     text.AppendLine("Each `ShaderEffectData` publication is a complete replacement. The constructor and `Publish` copy bytes. `Transfer` and `PublishTransferred` take array ownership and invoke the supplied callback after Goo no longer reads that publication. Each source is limited to 16 MiB, each compiled scene frame is limited to 64 MiB of effect data, and unchanged retained versions reuse the existing upload. Goo recreates device-local data from the retained publication after device recovery.");
     text.AppendLine();
     text.AppendLine("The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot currently share the same element with `ShaderEffect`.");
-}
-
-static void AppendAccessibilityGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Use accessibility semantics");
-    text.AppendLine();
-    text.AppendLine("Set `Blob.Accessibility` to declare role, name, description, value, state, relationships, and composed-control actions. The model is backend-neutral. An `AccessibilityAdapter` maps the retained tree to a platform API.");
-    text.AppendLine();
-    text.AppendLine("Native primitives publish defaults: text, button, text entry, editor, and image. `Role.None` removes only its own node and keeps semantic descendants. `Hidden` removes the complete subtree. Display and visibility exclusion also remove a subtree.");
-    text.AppendLine();
-    text.AppendLine("Semantic IDs are stable for the mounted window lifetime. Adapters receive mutable retained node and tree views. Read each view again after an update. Call the adapter and route actions only on Goo's UI thread.");
-    text.AppendLine();
-    text.AppendLine("`AccessibilityTree` exposes `Root` and monotonic `Version`. Each `AccessibilityNode` exposes ID, role, name, value, state, bounds, actions, children, relationships, and editor `TextSnapshot`, selection, and caret. `AccessibilityRelationshipIds` exposes ordered ID lists plus an active descendant.");
-    text.AppendLine();
-    text.AppendLine("Replacing an adapter delivers the current retained tree to the replacement. A failed delivery retries once on a later UI update and exposes `Window.LastAccessibilityError`.");
-    text.AppendLine();
-    text.AppendLine("Use `ElementHandle` relationships only for mounted nodes in the same window. Hidden, flattened, detached, and foreign targets are omitted.");
-    text.AppendLine();
-    text.AppendLine("Route neutral actions with `new AccessibilityActionRequest(action)`. Use `SetValue`, `SetSelection`, and `Scroll` factories for payload actions. `Window.PerformAccessibilityAction` checks the advertised capability before routing built-in or declared actions.");
-    text.AppendLine();
-    text.AppendLine("Protected `TextEntry` nodes expose one bullet per extended grapheme cluster. Their value, selection, and caret use this masked semantic coordinate space. Copy and cut do not expose or remove protected text, while paste and `SetValue` remain available.");
-    text.AppendLine();
-    text.AppendLine("Text editors expose `TextSnapshot`, selection, and caret metadata. The snapshot is versioned and avoids a full document copy.");
-}
-
-static void AppendWindowDispatcherGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Post UI work");
-    text.AppendLine();
-    text.AppendLine("Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.");
-    text.AppendLine();
-    text.AppendLine("Use `TryPost` when teardown can race the producer. It returns `false` after posting closes instead of throwing. `true` means the action was atomically accepted into the queue, not that it is guaranteed to execute, because later teardown may still discard queued work.");
-    text.AppendLine();
-    text.AppendLine("Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.");
-    text.AppendLine();
-    text.AppendLine("Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.");
-}
-
-static void AppendWindowMetricsGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Observe window metrics");
-    text.AppendLine();
-    text.AppendLine("Subscribe to `Window.MetricsChanged` on the UI thread. Goo delivers an immutable snapshot after queued native metrics and tree layout settle. A callback can queue UI work, but it must not expect recursive layout.");
-    text.AppendLine();
-    text.AppendLine("The snapshot reports the dimensions from the latest native metrics event. A zero framebuffer dimension is reported as zero and its corresponding display scale is zero. Goo keeps the prior render target while minimized or otherwise zero-sized.");
-    text.AppendLine();
-    text.AppendLine("Equal snapshots do not notify. A listener added after another listener has already received the current snapshot waits for a real change. Removing the final listener resets that listener stream, so a later first listener receives a new initial snapshot.");
-}
-
-static void AppendWindowNotificationGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Observe window notifications");
-    text.AppendLine();
-    text.AppendLine("Subscribe to `StateChanged`, `FocusChanged`, and `KeyPressed` with `+=` on the window UI thread. Each event supports independent listeners. Remove listeners with `-=` when their ownership ends.");
-    text.AppendLine();
-    text.AppendLine("`OnClosing` is different: it is the single close-policy callback, and returning `false` vetoes the pending close request.");
-}
-
-static void AppendClipboardGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Use the native clipboard");
-    text.AppendLine();
-    text.AppendLine("Call `Window.GetClipboardText` and `Window.SetClipboardText` only on the open window's UI thread. Both fail deterministically after close. An empty getter result can mean either an empty clipboard or a native copy failure; setter failures propagate. Built-in text entry and editor shortcuts use the same native clipboard path.");
-}
-
-static void AppendTextInputGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Receive generic text and IME input");
-    text.AppendLine();
-    text.AppendLine("A focusable `Blob` can opt into `OnTextInput`, `OnTextComposition`, `OnTextCompositionCancel`, and `OnTextCandidates`. Committed text and composition offsets use UTF-16. Invalid or surrogate-splitting composition selections are delivered as the empty range. Candidate snapshots are read-only and use `SelectedCandidate = -1` when native selection is invalid.");
-    text.AppendLine();
-    text.AppendLine("Callbacks run only for the currently focused, enabled, visible client. Queued text is bound to the focus generation that received it, so it is discarded after a focus transfer, including a transfer back to the original element. `TextEntry` and `TextEditor` retain their existing default behavior before these observers run. Goo provides no candidate UI; applications own candidate presentation.");
-}
-
-static void AppendKeyboardFocusGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Route keyboard and focus callbacks");
-    text.AppendLine();
-    text.AppendLine("`OnKeyDown` and `OnKeyUp` start at the currently focused element and bubble through its parents, so an ancestor can own shortcuts for a subtree. `KeyEvent.StopPropagation()` ends that route before the next ancestor without canceling Goo's default action. `KeyEvent.PreventDefault()` cancels the default action without stopping the remaining callbacks. Both controls are active only during that route; retaining the event value cannot affect a later dispatch.");
-    text.AppendLine();
-    text.AppendLine("Key-down defaults run after the route and include text editing, `Tab` or `Shift+Tab` traversal, and `Button` Enter or Space press behavior. Preventing the matching Space key-up cancels release activation. Repeated key downs use the same route with `Repeat: true` and resolve the current focus target again for each repeat.");
-    text.AppendLine();
-    text.AppendLine("A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.");
-    text.AppendLine();
-    text.AppendLine("Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. `Tab` and `Shift+Tab` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.");
-}
-
-static void AppendPointerLifecycleGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Receive pointer lifecycle and pressure input");
-    text.AppendLine();
-    text.AppendLine("`OnPointerEnter` and `OnPointerLeave` are sparse, non-bubbling lifecycle callbacks. They run only for mouse hover-route changes. Goo sends leaves from the old route leaf to root, then enters from the new route root to leaf. Shared route ancestors receive neither callback. Removal, disable, hidden state, focus loss, and transformed hit routes use the same order.");
-    text.AppendLine();
-    text.AppendLine("`PointerEvent.IsPrimary` is true for the mouse and the first active touch or pen contact in a device-type sequence. The primary contact stays primary through its up callback. Goo does not promote another held contact during that sequence.");
-    text.AppendLine();
-    text.AppendLine("`PointerEvent.Pressure` is normalized to the inclusive range from 0 to 1. Mouse pressure is 1 only while the primary button is held and 0 otherwise. Touch samples every SDL down, move, and up event. Pen samples its latest pressure-axis value on the next down, move, up, or pen-button event. A pressure-axis event alone emits no `PointerMove`. A pen proximity-out clears that pen's sampled pressure. Goo does not coalesce movement or expose tilt, twist, contact geometry, raw history, or gesture recognition.");
-}
-
-static void AppendDragDropGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Transfer data within a Goo window");
-    text.AppendLine();
-    text.AppendLine("Attach an optional `DragSource` or `DropTarget` descriptor to a `Blob`. Goo records a source candidate after an unclaimed primary press. It calls `DragSource.Create` once when movement reaches four logical pixels. Returning null rejects the drag and preserves normal click behavior. Returning `DragData` captures the initiating pointer and suppresses its click.");
-    text.AppendLine();
-    text.AppendLine("`DragData.AllowedEffects` must contain `Copy`, `Move`, or both. A target query accepts by returning exactly one allowed effect. Any other value is treated as `None`. Goo hit-tests independently of source capture, honors clipping and transforms, and walks from the deepest target to its ancestors. It queries again when pointer modifiers change, after input-affecting tree updates, and immediately before release. A target with no `Changed` callback can accept a no-op drop through `Query`.");
-    text.AppendLine();
-    text.AppendLine("The selected target receives `Enter`, `Move`, `Leave`, and `Drop` snapshots through `Changed`. Positions are current target-local and logical-window coordinates. A successful `Drop` remains successful when its callback removes or reparents the target or source. Goo makes no further callback to a detached owner.");
-    text.AppendLine();
-    text.AppendLine("Escape, pointer cancellation, focus loss, window close, source removal or disablement, and callback failure cancel the session. Internal termination and capture cleanup run once. `DragSource.End` runs at most once only while its source remains mounted. Goo strongly retains the payload through an eligible `End`, then releases it. Goo never calls `Dispose` on consumer payloads. Callback cleanup preserves the original exception.");
-    text.AppendLine();
-    text.AppendLine("One pointer drag can be active per window. Goo provides no drag preview, automatic scrolling, native transfer, or generic keyboard target navigation. Applications must expose an equivalent keyboard and accessibility action when drag movement affects application state.");
-}
-
-static void AppendTextInputAreaGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Position a custom IME");
-    text.AppendLine();
-    text.AppendLine("A focused generic text client can call `ElementHandle.SetTextInputArea` with a finite, non-negative logical-window rectangle. Goo floors the origin, ceils the far edge, and passes cursor offset zero to the native IME. The call returns false for unmounted, unfocused, built-in, closed-window, nonparticipating, or native-IME-unavailable elements. Invalid and out-of-range rectangles throw.");
-}
-
-static void AppendElementMetricsGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Observe mounted element metrics");
-    text.AppendLine();
-    text.AppendLine("Subscribe to `ElementHandle.MetricsChanged` on the UI thread. The immutable snapshot contains mounted state, transformed border and content boxes in window logical coordinates, the actual scroll offset, and the maximum legal scroll range.");
-    text.AppendLine();
-    text.AppendLine("Goo calls listeners after reconciliation, layout, rect refresh, and scroll stepping settle. Detach produces one final `IsMounted = false` snapshot after tree disposal. A detach followed by reattach in the same update reports only the final mounted state.");
-    text.AppendLine();
-    text.AppendLine("Subscription state is sparse. Handles without a listener and ordinary blobs and nodes do not retain metrics state. New handle subscriptions made during metric delivery wait for the next update. Listener changes on an already accepted handle follow ordinary live event behavior.");
-}
-
-static void AppendScrollGuide(StringBuilder text)
-{
-    text.AppendLine();
-    text.AppendLine("## Control scrolling");
-    text.AppendLine();
-    text.AppendLine("Set `OverflowX` or `OverflowY` to `Scroll` and attach an `ElementHandle`. `ScrollTo` updates the smoothed target, `JumpTo` applies an immediate clamped offset, and `ScrollIntoView` adjusts every scrollable ancestor. `ScrollOffset` is the displayed position and `ScrollRange` is the maximum legal X/Y offset.");
-    text.AppendLine();
-    text.AppendLine("`ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic, or drag interaction and then fades it. `Always` keeps the thumb rendered and draggable without creating idle frame demand. `Hidden` suppresses only the built-in thumb; scrolling and custom scrollbar composition continue working.");
-    text.AppendLine();
-    text.AppendLine("A custom thumb can derive content size as viewport size plus scroll range. Its length is `track * viewport / content`, and its position is `(track - thumb) * offset / range`. Use `JumpTo` while dragging so content stays under the pointer.");
 }
 
 static string BuildIndex(string[] sourceDirectories)
@@ -650,15 +430,16 @@ static void AppendText(StringBuilder text, string value)
     text.AppendLine(value);
 }
 
+static string FormatPage(string content) => Regex.Replace(content.Replace("\r\n", "\n"),
+    @"(```gsharp\n)(.*?)(```)",
+    match => match.Groups[1].Value + Goo.Tools.SourceFormatting.Format(match.Groups[2].Value) + match.Groups[3].Value,
+    RegexOptions.Singleline);
+
 static void WriteIfChanged(string path, string content)
 {
-    content = content.Replace("\r\n", "\n");
     if (File.Exists(path) && File.ReadAllText(path) == content)
         return;
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-    content = System.Text.RegularExpressions.Regex.Replace(content, @"(```gsharp\n)(.*?)(```)",
-        match => match.Groups[1].Value + Goo.Tools.SourceFormatting.Format(match.Groups[2].Value) + match.Groups[3].Value,
-        System.Text.RegularExpressions.RegexOptions.Singleline);
     File.WriteAllText(path, content, new UTF8Encoding(false));
 }
 

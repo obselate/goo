@@ -136,7 +136,26 @@ Linux native CI runs it through the headless Wayland wrapper.
 includes frame P50/P95/P99/max, allocation measurements, and measured-interval
 cumulative CPU-written, CPU-compared, CPU-write-operation, and submitted-transfer
 counters.
-See [counter definitions and commands](../docs/perf/primitive-upload-metrics.md).
+
+Primitive frame counters separate CPU staging work, transfer preparation, native command recording, and accepted submissions. They count logical operations and byte lengths, not physical memory-bus traffic or GPU execution time. `SubmittedTransferBytes` means submission succeeded and its completion was reconciled on the host. It does not mean GPU execution or presentation has completed.
+
+| Field | Meaning and accounting point |
+| --- | --- |
+| `CpuWrittenBytes` | Bytes written into mapped staging by record writes, effect-data copies, and the empty-frame sentinel. Counted when written, including work later aborted. |
+| `CpuWriteOperations` | One per 128-byte record write, effect-data copy, or sentinel write. Not individual word stores or map calls. |
+| `CpuComparedBytes` | Bytes examined per operand when comparing staging records with CPU history. Counts the differing word and stops at the first difference. An unchanged 128-byte record compares 128 bytes from each operand. Full preparation skips comparison. |
+| `HistoryCopiedBytes` | Bytes copied from staging into CPU history after successful submission. This is separate from staging writes and comparison reads. |
+| `PlannedTransferBytes` | Sum of dirty primitive and effect-data ranges from a completed preparation. Includes plans subsequently aborted. |
+| `SkippedTransferBytes` | Prepared payload bytes omitted from that transfer plan. These bytes may still have been written and compared by the CPU. |
+| `UploadRangeCount` | Number of planned `VkBufferCopy` regions. Multiple regions can use one native copy command. |
+| `FlushRequests` | Nonempty transfer ranges passed to the allocator's flush helper. Coherent-memory no-ops still count as requests. |
+| `NativeFlushCalls` | Actual calls to `vkFlushMappedMemoryRanges`, including calls that return an error. Coherent-memory early returns count zero. |
+| `RecordedCopyCommands` | Actual `vkCmdCopyBuffer` calls made while recording. Aborting a recorded frame does not erase this CPU work. |
+| `RecordedBarriers` | Transfer-to-shader buffer barrier commands recorded for the primitive payload. |
+| `SubmittedTransferBytes` | Planned bytes accepted at the existing successful-submission/history-publication boundary. Abort adds zero. Repeated reconciliation of the same submission adds zero. |
+| `DirtyRecordCount`, `FullUpload`, `RetainedReuse` | Properties of the completed transfer plan. `FullUpload` describes a full plan, not proof of submission. |
+
+`Total*` fields accumulate the same events over the frame-data owner's lifetime and saturate at `uint64.MaxValue`. Each successful `BeginPrepare` resets the per-preparation snapshot. Abort retains the snapshot and incurred totals. Total full uploads count completed full preparations. Allocation, descriptor updates, scene compilation, text/clip uploads, and driver-internal work are outside these primitive counters.
 
 ## All Blob benchmark
 

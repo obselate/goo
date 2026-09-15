@@ -87,8 +87,8 @@ internal class NativeDropState {
     if kind != SDLEventType.DropFile { return }
     try {
       let path = ReadPath(data)
-      ClipboardTransfer.AddPath(active.Paths, path, ref active.Units)
-    } catch (error ClipboardLimitException) {
+      NativeFilePaths.Add(active.Paths, path, ref active.Units)
+    } catch (error NativePathLimitException) {
       Reject(active, "Native file list exceeds the path-count or text budget")
     } catch (error System.IO.InvalidDataException) {
       Reject(active, "Native file paths must be absolute and contain no NUL")
@@ -107,8 +107,8 @@ internal class NativeDropState {
   private func ReadPath(data nint) string {
     if data == nint(0) { throw System.IO.InvalidDataException("Missing native path") }
     var length = 0
-    while length <= 131072 && Marshal.ReadByte(data, length) != 0 { length++ }
-    if length > 131072 { throw ClipboardLimitException("Native path exceeds its UTF-8 limit") }
+    while length <= NativeFilePaths.MaxUtf8Bytes && Marshal.ReadByte(data, length) != 0 { length++ }
+    if length > NativeFilePaths.MaxUtf8Bytes { throw NativePathLimitException("Native path exceeds its UTF-8 limit") }
     let bytes = [length]uint8
     Marshal.Copy(data, bytes, 0, length)
     return utf8.GetString(bytes)

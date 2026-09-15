@@ -8,9 +8,19 @@ Source: [`Goo/Tree`](../../Goo/Tree)
 
 `Virtual(items, itemWidth, itemHeight, itemKey, itemBuilder)` accepts the complete `IReadOnlyList<T>` source and one positive, finite logical width and height shared by every item. Goo derives list or wrapped-grid placement from `FlexDirection` and `FlexWrap`, then mounts only the viewport window plus one overscan line. The caller does not calculate a range, supply an item count, or choose a list or grid primitive.
 
-The shared item extent is the sole source for placement and scroll range. Builder content is mounted inside that fixed extent and cannot resize the virtual layout. Variable-extent sources are unsupported.
+The shared item extent is the sole source for placement and scroll range. Builder content is mounted inside that fixed extent and cannot resize the virtual layout.
 
 Source order controls logical order, and `itemKey` supplies stable identity. Goo uses the item type's equality semantics to retain unchanged visible nodes without calling `itemBuilder`. Newly visible and changed items invoke the builder. Items leaving the viewport unmount through the ordinary Goo lifecycle, including focus, pointer capture, handles, and accessibility state. Keys must be unique and non-empty. Rebuild the owning Cell after same-count content changes. A live source count change is detected directly.
+
+`VirtualRows(items, estimatedItemHeight, itemKey, itemBuilder)` opts into measured heights for a vertical list. Rows occupy the available content width and derive their height from actual child layout. It supports `Column` without wrapping; use `RowGap` or `Gap` for spacing. The finite positive estimate supplies the extent of rows that have not been measured. The default overflows are horizontal `Hidden` and vertical `Scroll`; give the list a bounded viewport height.
+
+Keep item values immutable and include all render dependencies in item equality, or change builder identity when external render inputs change. Rebuild the owning Cell after source edits. Goo retains measured heights by key when the item, builder, and available width are unchanged. A width change resets measurements to the estimate and remeasures realized content. Changes within a retained child also update its measured height.
+
+The first visible key and its pixel offset anchor scrolling when measurements change, rows are inserted, or the width changes. If that key disappears, the closest surviving source index is used. `ElementHandle.ScrollToItem(key)` immediately jumps either virtual mode to a stable key, returns false when the key is absent, and uses estimates for unmeasured rows. Subsequent measurement preserves that key's position, subject to the scroll range at the collection ends.
+
+Measured lists retain two overscan rows on each side, plus the row containing keyboard focus even when it leaves the viewport. Blur releases an offscreen row through the normal lifecycle. Each refresh measures at most 128 rows; the normal frame processes at most three refresh passes and schedules further frames until measurements settle. Realization is limited to 4,096 viewport/overscan rows plus one focused row, and metadata to one million items; exceeding either limit throws explicitly. Zero measured heights are allowed. Fixed-extent virtualization keeps its existing behavior.
+
+Metadata uses a prefix-sum tree: committed offset lookup, index lookup, and one measured-height update take O(log n). Explicit source reconciliation validates all keys and values in O(n); changed snapshots and width invalidation use O(n) metadata memory. Refresh work is bounded by realized rows and the 128 staged measurements. Stable metadata and row descriptions are reused between refreshes; no metadata is allocated for ordinary elements or fixed-extent lists.
 
 ## Animate computed position changes
 

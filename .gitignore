@@ -77,7 +77,6 @@
 !/docs/perf/
 /docs/perf/*
 !/docs/perf/performance-workloads.json
-!/docs/perf/linux-release-qualification.md
 
 !/tools/
 /tools/*

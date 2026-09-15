@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed native and in-window drag queries reaching targets outside modal focus scopes.
+- Restored reproducible API guides and centralized native file-path validation across clipboard, choosers, and drops.
 - Container and Button copy read-only child lists so factory output retains the documented mutable child collection.
 - Added native titlebar double-click interception for custom chrome, with platform defaults preserved unless handled.
 - Fixed inline slot positions after styled text changes its measured advance.
@@ -87,7 +89,7 @@
 ### Verification
 
 - Passed 317 core behavior tests, 12 public API and documentation tests, strict repository lint, generated shader consistency, Release builds, and focused native Vulkan lifecycle, input, image, vector, clip, effect, queue, and readback gates.
-- Current evidence and hardware limits are recorded in [`docs/perf/linux-release-qualification.md`](docs/perf/linux-release-qualification.md).
+- Current evidence and hardware limits are recorded in [historical Linux qualification](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/linux-release-qualification.md).
 
 ## 0.4.2 - 2026-09-02
 
@@ -177,7 +179,7 @@ to glibc 2.27, and qualifies Linux 6.6 or newer.
 ### Verification
 
 - Linux x64 passes public API, framework behavior, package, Vulkan validation, lifecycle, and performance checks.
-- Accepted Linux evidence is summarized in [`docs/perf/linux-release-qualification.md`](docs/perf/linux-release-qualification.md).
+- Accepted Linux evidence is summarized in [historical Linux qualification](https://github.com/obselate/goo/blob/1003f46a94a9087b289326c52c7a6ee600766b7a/docs/perf/linux-release-qualification.md).
 
 ### Pending
 
