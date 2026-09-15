@@ -6,15 +6,19 @@ import System.Runtime.CompilerServices
 
 /// Defines an element that contains child blobs.
 public class Container : Blob {
+  private var children IList[Blob] = List[Blob]()
   private var hitTestSelf bool
   private var hasAuthoredHitTestSelf bool
 
   internal override func coreBlob() {
   }
 
-  /// Gets the mutable child list.
+  /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
   /// Give all siblings stable keys, or give no sibling a key.
-  public prop Children IList[Blob]{ get; init; }
+  public prop Children IList[Blob]{
+    get -> children
+    init -> children = value.IsReadOnly ? List[Blob](value) : value
+  }
   /// Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
   public prop Layout LayoutAlgorithm? {
     get -> CustomLayouts.BlobValue(this)
@@ -40,9 +44,7 @@ public class Container : Blob {
   internal prop HasAuthoredHitTestSelf bool{ get -> hasAuthoredHitTestSelf }
 
   /// Initializes an empty child collection.
-  public init() {
-    Children = List[Blob]()
-  }
+  public init() { }
 }
 
 internal class ContainerVectorViewports {
