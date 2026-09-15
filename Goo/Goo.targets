@@ -1,4 +1,11 @@
 <Project>
+  <!-- SDK 0.4.591 predates ADR-0180. Remove this bridge after adopting a newer SDK release. -->
+  <PropertyGroup Condition="'$(Language)' == 'Gsharp' and '$(GooUseBundledGsharp)' != 'false'">
+    <GsharpCompilerFullPath
+        Condition="$([System.String]::Copy('$(GsharpCompilerFullPath)').Replace('\', '/').Contains('/gsharp.net.sdk/0.4.591/'))">$(MSBuildThisFileDirectory)../tools/gsharp/compiler/gsc.dll</GsharpCompilerFullPath>
+    <GsharpFormatterFullPath
+        Condition="$([System.String]::Copy('$(GsharpFormatterFullPath)').Replace('\', '/').Contains('/gsharp.net.sdk/0.4.591/'))">$(MSBuildThisFileDirectory)../tools/gsharp/formatter/gsfmt.dll</GsharpFormatterFullPath>
+  </PropertyGroup>
   <PropertyGroup>
     <GooShaderEffectToolPath
         Condition="'$(GooShaderEffectToolPath)' == '' and Exists('$(MSBuildThisFileDirectory)..\tools\net10.0\any\Goo.ShaderEffectTool.dll')">$(MSBuildThisFileDirectory)..\tools\net10.0\any\Goo.ShaderEffectTool.dll</GooShaderEffectToolPath>

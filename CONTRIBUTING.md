@@ -73,8 +73,9 @@ Edit the explanatory input, window, tree, layout, and accessibility guides in
 [`tools/Goo.ApiDocs/Guides`](tools/Goo.ApiDocs/Guides). Member descriptions belong
 in source XML comments. Regenerate `docs/api` with
 `dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release`; do not edit
-generated pages directly. The generator validates all member mappings and code
-examples before replacing output pages.
+generated pages directly. The generator validates all member mappings and parses/formats code
+examples before replacing output pages. Compile runnable examples against the
+current package to verify their types and behavior.
 
 Vulkan, package, native payload, template, DevTools, and NativeAOT checks are
 environment-specific. The CI workflow provisions the pinned shader tools,

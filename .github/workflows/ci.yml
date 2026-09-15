@@ -687,9 +687,50 @@ jobs:
             artifacts/macos-candidate/Goo.Gallery-macos-arm64.tar.gz.sha256
             artifacts/macos-candidate/install-goo-gallery-macos.sh
 
+  windows-x64:
+    needs: linux-x64
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-candidates
+          path: artifacts/release
+      - name: Install software Vulkan for native Windows checks
+        uses: jakoch/install-vulkan-sdk-action@ae57d335f36a1cd380da18748c28ea65feea4a17
+        with:
+          vulkan_version: 1.4.357.0
+          install_runtime: true
+          install_lavapipe: true
+          cache: true
+      - name: Build NativeAOT consumer using the packaged G# compiler
+        shell: pwsh
+        run: |
+          $version = python .github/scripts/release_version.py --print
+          dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --source "$PWD/artifacts/release/packages" --source https://api.nuget.org/v3/index.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
+        shell: pwsh
+        env:
+          VK_DRIVER_FILES: C:\Lavapipe\share\vulkan\icd.d\lvp_icd.x86_64.json
+        run: |
+          & artifacts/windows-smoke/run-windows-qualification.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: goo-windows-qualification
+          path: artifacts/windows-smoke/results-*/
+
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [linux-x64, android]
+    needs: [linux-x64, android, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -708,9 +749,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
-      - name: Build pinned upstream G# authoring tools
-        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
 
       - name: Validate release tag
         shell: bash

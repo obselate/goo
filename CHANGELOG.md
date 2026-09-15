@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.5.4 - 2026-09-15
 
+- Added native G# mixed initializers: `Container` and `Button` accept direct children and ordered spreads through `Add`. The package automatically supplies the upstream compiler/formatter containing G# #3785 while the tagged SDK catches up.
+- Preserved measured virtual-row heights while replacement content is remeasured, fixing scroll jumps when DataGrid selection rebuilds rows near the bottom.
+- Added `EmbeddedWindowHost`, host-owned `PlatformInput`, and the `Goo.Android` adapter for shared retained applications.
+- Added bounded local PNG loading and `ImageSourceCache`, plus shared desktop UI audio through `SoundSource` and `SoundPlayer`.
+- Added `Window.RequestActivation` with platform-managed foreground activation.
+- Consolidated focus, scroll, input metadata, text-editor binding, and Cell ownership under explicit core boundaries.
+- Removed the internal Lava surface/shader and obsolete Workbench and WindowsDemo applications. Custom shader effects remain supported.
 - Fixed native and in-window drag queries reaching targets outside modal focus scopes.
 - Restored reproducible API guides and centralized native file-path validation across clipboard, choosers, and drops.
 - Container and Button copy read-only child lists so factory output retains the documented mutable child collection.

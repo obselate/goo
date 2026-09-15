@@ -35,8 +35,6 @@ code to avoid NuGet cache reuse.
 The generated consumer uses SDK 0.4.591 with
 `GsharpHotReloadRuntimeAssemblyFullPath` pointing at the rebuilt runtime. This
 overrides the runtime payload only, keeping compiler and MSBuild inputs stable.
-The released SDK 0.4.1 does not contain the new callback dispatch, and the
-released Goo 0.5.0 does not contain the new all-window rebuild path.
 
 Verified on Linux x64, .NET SDK 10.0.302: two edits in each mode preserved both
 native windows and all asserted state. This does not qualify structural edits,

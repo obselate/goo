@@ -20,7 +20,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.5.3
+dotnet new install Goo.Templates@0.5.4
 
 mkdir hello-goo
 cd hello-goo
@@ -48,9 +48,10 @@ to their SDK roots. The Gallery compiles its own shaders during the build.
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
+python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
 ```
 
-Download [Goo.0.5.3.nupkg](https://github.com/obselate/goo/releases/download/v0.5.3/Goo.0.5.3.nupkg)
+Download [Goo.0.5.4.nupkg](https://github.com/obselate/goo/releases/download/v0.5.4/Goo.0.5.4.nupkg)
 and extract it as a ZIP archive into `artifacts/gallery-native` inside the
 checkout. This supplies the released native libraries without compiling them
 yourself. Keep the archive's directory structure intact.
@@ -109,58 +110,43 @@ package CounterApp
 
 import Goo
 
-data struct CounterInput {
-    var Title string
-    var Accent Color
-}
-
-open class Counter : Cell[CounterInput] {
-    shared {
-        let Card Style = Style{Padding: 24, Gap: 12, BorderRadius: 16, BackgroundColor: Color.Rgb(24, 31, 43),}
-        let Action Style = Style{Padding: 10, BorderRadius: 10,}
-    }
-
+class Counter : Cell {
     private var count int32
 
-    protected override func Build(input CounterInput) Blob -> Container(){
-        .BasedOn: Card,
+    override func Build() Blob -> Container(){
         .Width: Length.Percent(100),
         .Height: Length.Percent(100),
-        Text{Content: input.Title + ": " + count.ToString(), FontSize: 24, Color: Color.Rgb(244, 247, 255),},
+        .Padding: 24,
+        .Gap: 12,
+        .BackgroundColor: Color.Rgb(24, 31, 43),
+        Text("Count: $count"){.FontSize: 24, .Color: Color.White},
         Button(){
-            .BasedOn: Action,
-            .BackgroundColor: input.Accent,
+            .Padding: 10,
+            .BorderRadius: 10,
+            .BackgroundColor: Color.Rgb(74, 125, 255),
             .OnClick: () -> {
                 count++
             },
-            Text{Content: "Add one", Color: Color.White},
+            Text("Add one"){.Color: Color.White},
         },
     }
 }
 
-class App : Cell {
-    override func Build() Blob -> Container(){Cell.Mount[CounterInput, Counter](
-            "counter",
-            CounterInput{Title: "Count", Accent: Color.Rgb(74, 125, 255),}
-        ),
-    }
-}
-
 func Main() {
-    Window.ConfigureApplication("Counter", "1.0.0", "com.example.counter")
-    let window = Window{Title: "Counter", Width: 320, Height: 180, Root: App{}}
-    window.StateChanged += (state) -> {
-        if state == WindowState.Maximized {
-            window.Title = "Counter - maximized"
-        }
-    }
-    window.Run()
+    Window.ConfigureApplication("Goo starter", "1.0.0", "com.example.goostarter")
+    Window{Title: "Goo starter", Width: 360, Height: 220, Root: Counter{}}.Run()
 }
 ```
 
-`Cell[TInput].Build(input)` receives the current immutable input snapshot directly. Packaged typed Cells are `open class` declarations because G# requires that for protected overrides. The protected `Input` property exposes the same snapshot to callbacks and `ShouldRebuild`. Event handlers invalidate their owning Cell automatically, so changing `count` rebuilds only this component.
+`Cell` owns local state. Input callbacks automatically rebuild their owning Cell,
+so the button only changes `count`. Ordinary G# interpolation formats the label.
+Direct children and spreads use `Add` in source order; no child-list wrapper or
+builder API is needed. See the [native authoring guide](docs/native-authoring.md)
+for composition, typed Cell inputs, and current language conventions.
 
-`Style.BasedOn` copies ordered declarations at its exact position. Later declarations such as the button's `BackgroundColor` win. Window notifications use native G# event authoring with `+=` and `-=`. Virtual collections now take explicit fixed item width and height so placement and scroll range do not depend on realized child measurement.
+`Style.BasedOn` applies declarations at its exact position; later overrides win.
+`Virtual` uses fixed item extents. `VirtualRows` measures varying row heights and
+preserves stable-key scroll positions as content changes.
 
 ## Platforms
 

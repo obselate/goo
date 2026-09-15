@@ -15,10 +15,10 @@ Render the same reusable asset at the size of its parent:
 
 ```gsharp
 let icon = Svg.Load("icon.svg")
-Container{
-  Width: 32,
-  Height: 32,
-  Children: { icon.Render() },
+Container(){
+    .Width: 32,
+    .Height: 32,
+    icon.Render(),
 }
 ```
 

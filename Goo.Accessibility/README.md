@@ -5,9 +5,9 @@ Add this package alongside Goo, then assign the adapter before opening a window:
 
 ```gsharp
 let window = Window{
-  Title: "My app",
-  AccessibilityAdapter: NativeAccessibilityAdapter(),
-  Root: MyApp{},
+    Title: "My app",
+    AccessibilityAdapter: NativeAccessibilityAdapter(),
+    Root: MyApp{},
 }.Open()
 ```
 

@@ -1,9 +1,12 @@
 # Native G# authoring
 
-Current-source builds use the upstream compiler and formatter at
+Goo includes the upstream compiler and formatter at
 [`947be9cb`](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
-Run the [authoring setup](../CONTRIBUTING.md#g-authoring-tools) first.
-The published SDK 0.4.591 predates mixed initializers.
+The package automatically selects these build tools for SDK 0.4.591, which
+predates mixed initializers. No separate installation is needed for apps.
+Source contributors run the [authoring setup](../CONTRIBUTING.md#g-authoring-tools).
+The temporary package bridge respects explicit compiler paths; set
+`GooUseBundledGsharp=false` when testing another SDK compiler.
 
 ## Direct children
 
@@ -27,8 +30,7 @@ unmarked `key: value` calls `Add(key, value)` and never sets a member.
 
 `Children: { ... }` remains valid for collection members and older Goo packages.
 `Children: existingList` assigns that list and is not interchangeable with a
-spread that copies its contents. The published starter keeps the collection-member
-form because Goo 0.5.3 does not expose `Container.Add` or `Button.Add`.
+spread that copies its contents.
 
 ## Other authoring rules
 

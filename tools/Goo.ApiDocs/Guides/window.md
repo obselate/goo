@@ -38,7 +38,7 @@ verification must be performed on the target desktop.
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Window`](../../Goo/Window)
+Source: [`Goo/Window`](https://github.com/obselate/goo/tree/main/Goo/Window)
 
 ## Native size constraints
 

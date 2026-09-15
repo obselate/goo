@@ -45,9 +45,11 @@ Gsharp.NET.Sdk 0.4.591.
 The compiler and canonical formatter are built without source changes from
 [DavidObando/gsharp commit 947be9cb](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
 `.github/scripts/bootstrap-gsharp.py` builds `src/Compiler/Compiler.csproj` and
-`src/Formatting/GSharp.Formatting/GSharp.Formatting.csproj` into ignored
+`src/Formatting/Gsfmt.Cli/Gsfmt.Cli.csproj` into ignored
 `artifacts/gsharp/` output. `Goo.Gslint` uses the upstream parser and ADR-0179
-formatter assemblies. The previous copied formatting engine has been removed.
+formatter assemblies. Goo redistributes the compiler and formatter under
+`tools/gsharp/`, with the upstream license and commit ID, as a temporary build-only
+bridge for SDK 0.4.591. These tools are not copied into application runtime output.
 Copyright (C) GSharp Authors. All rights reserved.
 
 - [G# license](https://github.com/DavidObando/gsharp/blob/947be9cb5f4467947ecb95dba06b461f9984d659/LICENSE)

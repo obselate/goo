@@ -28,7 +28,7 @@ Goo uses Semantic Versioning.
    and refresh the plugin reference with `python3 plugins/goo/scripts/sync_docs.py "$PWD"`.
    Run `.github/scripts/validate-onboarding.py`.
 4. Push the release commit to `main` and require a green CI run.
-5. Confirm that the release-candidates and android-package artifacts contain all seven packages,
+5. Confirm that the release-candidates and android-package artifacts contain all eight packages,
    the Linux and macOS arm64 bundles, and that the clean template and DevTools
    installation steps passed. Confirm that Android native reproducibility and
    Release APK/AAB payload checks passed.
