@@ -1290,7 +1290,7 @@ internal class TextEditorLayouts {
           if metrics.Descent > visualDescent { visualDescent = metrics.Descent }
           let styledHeight = (metrics.Descent - metrics.Ascent) * segment.Style.LineHeight
           if styledHeight > visualHeight { visualHeight = styledHeight }
-          if segment.Slot && segment.BlockSlot && segment.SlotHeight > visualHeight {
+          if segment.Slot && segment.SlotHeight > visualHeight {
             visualHeight = segment.SlotHeight
           }
         }

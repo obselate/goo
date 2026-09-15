@@ -281,6 +281,24 @@ public sealed class TextEditorRetainedTests
     }
 
     [Fact]
+    public void TallInlineSlotsContributeToLineAndIntrinsicHeight()
+    {
+        var document = new TextDocument("before X after\ntail");
+        using var controller = new TextEditorController(document);
+        using var layer = new TextPresentationLayer(document);
+        layer.SetInlineSlot("inline", new TextRange(7, 1), new Container { Width = 120.0, Height = 80.0 });
+        var node = Mount(new TextEditor(controller, new[] { layer }) { Width = 200.0, Height = 200.0 });
+        new Layout().Calculate(node, 200, 200);
+
+        var layout = TextEditorLayouts.For(node, 200, -1);
+        var line = Assert.Single(layout.Lines, value => value.Slots.Count != 0);
+        Assert.True(line.Height >= 80, "An inline child must fit within its visual line.");
+        var following = layout.Lines.First(value => value.Top > line.Top);
+        Assert.True(following.Top >= line.Top + 80, "Following text must not overlap the inline child.");
+        Assert.True(layout.Height >= following.Top + following.Height);
+    }
+
+    [Fact]
     public void PrefixCacheFindsTheViewportParagraph()
     {
         var document = new TextDocument("X\nsecond\nthird");
