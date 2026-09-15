@@ -53,7 +53,7 @@ func RunClipCaptureSmoke() {
     window = opened
     Console.SetError(capturedError)
     opened.Open()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    WindowReadbackTestFixture.Pump(opened, 0.0)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     Require(RoundedOverflowCell.ClipOuter.IsMounted
         && RoundedOverflowCell.ClipInner.IsMounted,
@@ -106,20 +106,21 @@ func RunClipCaptureSmoke() {
     PrimitiveRequirePixelNear(second.Pixels, second.Width, metrics,
       340.0, 130.0, uint8(236), uint8(196), uint8(72), 24,
       "transformed_leaf")
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
     Require(WindowReadbackTestFixture.RequestCount(opened) == 2uL
         && WindowReadbackTestFixture.CompletionCount(opened) == 2uL,
       "Clip capture readback lifecycle counts are incorrect")
 
     opened.RequestClose()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    WindowReadbackTestFixture.Pump(opened, 0.0)
     Require(!opened.IsOpen, "Clip capture window did not close")
   } finally {
     Console.SetError(originalError)
     if let active = window {
       if active.IsOpen {
         active.RequestClose()
-        WindowReadbackTestFixture.ForceRender(active, 0.0)
+        WindowReadbackTestFixture.DrainWindowQueue(active, 10000)
+        WindowReadbackTestFixture.Pump(active, 0.0)
       }
     }
     font.Dispose()

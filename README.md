@@ -102,8 +102,8 @@ Precompiled SVG assets can be loaded by core `Goo` without `Goo.Svg`.
 
 ## Example
 
-This example uses the current checkout's mixed initializers. Follow the
-[native authoring setup](docs/native-authoring.md) to build it.
+This example runs with the starter above. Goo supplies the upstream G# compiler
+needed for direct child composition automatically.
 
 ```gsharp
 package CounterApp
