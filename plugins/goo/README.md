@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-Standalone G# Goo authoring guidance and eight stdio MCP tools. Requires Python 3.11+, uv, and .NET 10 for applications. The server uses the official MCP Python SDK.
+Standalone G# Goo authoring guidance and twelve stdio MCP tools. Requires Python 3.11+, uv, and .NET 10 for applications. The server uses the official MCP Python SDK.
 
 | Tool | Purpose |
 | --- | --- |
@@ -9,9 +9,13 @@ Standalone G# Goo authoring guidance and eight stdio MCP tools. Requires Python 
 | `goo_read` | Read bounded document ranges with content hashes |
 | `goo_starter` | Return the official counter project and source |
 | `goo_targets` | Discover live processes and stable window IDs |
+| `goo_capabilities` | Read runtime capabilities and supported temporary style properties |
 | `goo_snapshot` | Read a complete tree or bounded semantic query with session-scoped target handles |
 | `goo_capture` | Return a real Vulkan screenshot as MCP image content |
 | `goo_input` | Send opt-in pointer, wheel, keyboard, text, and reset events |
+| `goo_inspect` | Enter, select, clear, or exit diagnostics inspection |
+| `goo_style_override` | Apply one temporary runtime style override |
+| `goo_style_reset` | Reset one property or all temporary overrides on one node |
 
 ## Runtime setup
 
@@ -22,7 +26,7 @@ dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release
 export GOO_CLI=/absolute/path/to/goo/tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll
 ```
 
-Published Goo 0.5.4 provides the full snapshot and input runtime used by the integration check. `GOO_CLI` can select an executable or a built CLI DLL. Set `GOO_DEVTOOLS_DIR` in both the app and server environments for a custom descriptor directory. For project-local discovery, pass the app project file or directory as `project` to all runtime tools.
+Published Goo 0.5.4 provides the earlier snapshot, input, and advertised inspection commands but does not advertise style-property discovery. Typed inspection works for capabilities that the selected runtime advertises. Style tools require a runtime from this checkout, and opaque targets require `target.handles`. `GOO_CLI` can select an executable or a built CLI DLL. Set `GOO_DEVTOOLS_DIR` in both the app and server environments for a custom descriptor directory. For project-local discovery, pass the app project file or directory as `project` to all runtime tools.
 
 Run any MCP client against:
 
@@ -44,9 +48,11 @@ Call `goo_targets` and select the intended PID and stable window ID. Runtime too
 
 `wait="exists"` or `wait="missing"` requires a 1-10,000 ms timeout. `after_sequence` requires a wait and is only an observation gate, not proof that application state changed. Compact results contain `targetIdentity`, `sequence`, `outcome`, the normalized `predicate`, `matchedCount`, paging metadata, and `nodes`. `outcome` is `matched`, `not-matched`, or `timeout`. Truncated editor text cannot prove exact equality or absence in its uncaptured suffix. Older runtimes without resolved-semantic and target-handle capabilities reject compact queries explicitly.
 
-For automation, launch with `goo dev --input --no-watch --project App.gsproj`. This enables diagnostics and input without setting environment variables yourself. When launching outside the CLI, set both `GOO_DEVTOOLS=1` and `GOO_DEVTOOLS_INPUT=1`. `goo_input` uses normal hit testing, focus, event routing, and Cell updates. Calls for the same explicit target are serialized. On runtimes that advertise gesture leases, the plugin retains the token across pointer and key holds for 30 seconds and always uses it for cleanup. Prefer the opaque `target` from the selected window snapshot for pointer and wheel events. It is scoped to that diagnostic session and window, while legacy `node_id` is only window-local. Targeted input rejects stale, clipped, disabled, blocked, or unverified nodes. Logical `x`/`y` remains lower-level normal routing. Text and keys go to focus and reject targeting fields. Await each event, finish gestures, and inspect the resulting snapshot and image. A timed-out action may have applied and must not be retried automatically. Input is marked as state-changing and can trigger application behavior. Inspection tools remain read-only.
+Use `goo_capabilities` before temporary style work. Its property list comes from the selected runtime, not the plugin. `goo_inspect` accepts `enter`, `select`, `clear`, and `exit`; select requires exactly one opaque target, positive node ID, or complete finite x/y pair. Entering inspection diverts pointer routing until exit. `goo_style_override` changes one advertised property on one node. `goo_style_reset` restores one property or, when property is omitted, all temporary overrides on that node only. These tools are state-changing diagnostics operations, need no input permission, and reject dispatch while a retained input gesture is active. They do not edit source. Missing acknowledgements may follow an applied mutation, so never retry automatically.
 
-JSON CLI runtime and setup failures propagated by MCP include a stable code, phase, `mayHaveApplied`, CLI version, and runtime status. Tool argument and document-query validation remains normal MCP validation. A missing acknowledgement for a state-changing request is treated as possibly applied. A confirmed pre-dispatch rejection such as `stale-target` is not. Never retry input automatically when `mayHaveApplied` is true.
+For automation, launch with `goo dev --input --no-watch --project App.gsproj`. This enables diagnostics and input without setting environment variables yourself. When launching outside the CLI, set both `GOO_DEVTOOLS=1` and `GOO_DEVTOOLS_INPUT=1`. `goo_input` uses normal hit testing, focus, event routing, and Cell updates. Calls for the same explicit target are serialized. On runtimes that advertise gesture leases, the plugin retains the token across pointer and key holds for 30 seconds and always uses it for cleanup. Prefer the opaque `target` from the selected window snapshot for pointer and wheel events. It is scoped to that diagnostic session and window, while legacy `node_id` is only window-local. Targeted input rejects stale, clipped, disabled, blocked, or unverified nodes. Logical `x`/`y` remains lower-level normal routing. Text and keys go to focus and reject targeting fields. Await each event, finish gestures, and inspect the resulting snapshot and image. A timed-out action may have applied and must not be retried automatically. Input is marked as state-changing and can trigger application behavior.
+
+JSON CLI runtime and setup failures propagated by MCP include a stable code, phase, `mayHaveApplied`, CLI version, and runtime status. Tool argument and document-query validation remains normal MCP validation. Typed mutations require their advertised capabilities, opaque handles require `target.handles`, and style properties require runtime discovery on the same connection before dispatch. A missing acknowledgement for a state-changing request is treated as possibly applied. A confirmed pre-dispatch rejection such as `stale-target` is not. Never retry a mutation automatically when `mayHaveApplied` is true.
 
 Application processes remain under the caller's control. The plugin does not launch apps, enable input in running apps, or pick the latest unrelated process.
 

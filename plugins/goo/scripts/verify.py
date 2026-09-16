@@ -29,10 +29,11 @@ async def main():
         async with ClientSession(*streams) as session:
             await session.initialize()
             tools = {tool.name: tool for tool in (await session.list_tools()).tools}
-            assert set(tools) == {"goo_context", "goo_search", "goo_read", "goo_starter", "goo_targets", "goo_snapshot", "goo_capture", "goo_input"}, tools
-            assert not tools["goo_input"].annotations.readOnlyHint
-            assert not tools["goo_input"].annotations.idempotentHint
-            assert all(tool.annotations.readOnlyHint for name, tool in tools.items() if name != "goo_input")
+            mutations = {"goo_input", "goo_inspect", "goo_style_override", "goo_style_reset"}
+            assert set(tools) == {"goo_context", "goo_search", "goo_read", "goo_starter", "goo_targets", "goo_capabilities",
+                                  "goo_snapshot", "goo_capture", *mutations}, tools
+            assert all(not tools[name].annotations.readOnlyHint and not tools[name].annotations.idempotentHint for name in mutations)
+            assert all(tool.annotations.readOnlyHint for name, tool in tools.items() if name not in mutations)
 
             async def call(tool_name, **args):
                 result = await session.call_tool(tool_name, args)

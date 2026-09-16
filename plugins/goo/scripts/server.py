@@ -1,5 +1,6 @@
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -20,6 +21,7 @@ MANIFEST = json.loads((BUNDLE / "manifest.json").read_text())
 PLUGIN_MANIFEST = json.loads((ROOT / ".codex-plugin/plugin.json").read_text())
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 INPUT = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
+MUTATION = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
 mcp = FastMCP("Goo", instructions="Author standalone G# Goo desktop apps. Use current checkout docs when available. Inspect running apps through Goo DevTools. This is not s&box Goo.")
 _gesture_gate = threading.Lock()
 _gestures: dict[tuple[int, str, str], str] = {}
@@ -167,7 +169,9 @@ def checked_cli(timeout: float = 5) -> list[str]:
 
 
 def runtime_status(hello: dict) -> dict:
-    capabilities = hello.get("capabilities", [])
+    raw_capabilities = hello.get("capabilities")
+    valid_capabilities = isinstance(raw_capabilities, list) and all(isinstance(item, str) for item in raw_capabilities)
+    capabilities = raw_capabilities if valid_capabilities else []
     identity = {name: hello.get(name) for name in ("pid", "windowId", "sessionId") if hello.get(name) is not None}
     return {
         "runtimeVersion": hello.get("runtimeVersion", "unavailable"),
@@ -175,7 +179,7 @@ def runtime_status(hello: dict) -> dict:
         "protocolVersion": hello.get("version", "unavailable"),
         "capabilities": capabilities,
         "identity": identity,
-        "inputPermission": "unavailable" if "capabilities" not in hello else "enabled" if "input" in capabilities else "disabled",
+        "inputPermission": "unavailable" if not valid_capabilities else "enabled" if "input" in capabilities else "disabled",
         "inspectMode": hello.get("inspectMode", "unavailable"),
     }
 
@@ -269,7 +273,7 @@ def run(arguments: list[str], timeout: float = 25, uncertain_input: bool = False
     except subprocess.TimeoutExpired as error:
         message = "Goo CLI timed out."
         if uncertain_input:
-            message += " Input may already have applied. Inspect state before another action and do not automatically retry input."
+            message += " The action may already have applied. Inspect state before another action and do not automatically retry it."
         raise GooTimeout("cli-timeout", message, phase, uncertain_input) from error
     if result.returncode:
         output = result.stderr + result.stdout
@@ -297,6 +301,24 @@ def goo_targets(pid: int = 0, project: str = "") -> dict:
     return json.loads(run(arguments, phase="discovery"))
 
 
+@mcp.tool(annotations=READ)
+def goo_capabilities(pid: int, window: str = "", project: str = "") -> dict:
+    """Read the selected runtime's actual capability list and supported temporary style override properties. Older runtimes report property discovery as unavailable."""
+    _, hello = snapshot_response(pid, window, project)
+    capabilities = hello.get("capabilities")
+    if not isinstance(capabilities, list) or not all(isinstance(item, str) for item in capabilities):
+        raise GooFailure("invalid-handshake", "The runtime returned an invalid capability list.", "handshake", context={"runtime": runtime_status(hello)})
+    discovery = "runtime-overrides" in capabilities and "runtime-overrides.describe" in capabilities
+    properties = hello.get("runtimeOverrideProperties")
+    if discovery and (not isinstance(properties, list) or not all(isinstance(item, str) and item for item in properties)):
+        raise GooFailure("invalid-handshake", "The runtime advertised override discovery without a valid property list.", "handshake", context={"runtime": runtime_status(hello)})
+    return {"runtime": runtime_status(hello), "runtimeOverrides": {
+        "available": discovery,
+        "properties": properties if discovery else [],
+        "reason": "" if discovery else "The runtime does not advertise runtime-overrides and runtime-overrides.describe.",
+    }}
+
+
 def response(output: str, phase: str) -> dict:
     messages = [json.loads(line) for line in output.splitlines() if line.strip()]
     hello = next((message for message in messages if message.get("type") == "hello"), {})
@@ -308,6 +330,88 @@ def response(output: str, phase: str) -> dict:
         raise GooFailure(str(detail.get("code") or "request-failed"), str(detail.get("message") or f"Goo request failed: {str(result)[:3000]}"), str(detail.get("phase") or phase), bool(detail.get("mayHaveApplied")))
     result.setdefault("runtime", runtime_status(hello))
     return result
+
+
+def mutation_response(pid: int, window: str, project: str, command: str, payload: dict,
+                      capabilities: list[str], override_property: str = "") -> dict:
+    selected_target = target_args(pid, window, project)
+    status = cli_preflight()
+    if not status.get("compatible"):
+        raise GooFailure("cli-incompatible", status["issues"][0], "preflight", action=status["actions"][0],
+                         context={"cliVersion": status.get("version", "unavailable")})
+    if "attach.require-capabilities" not in status.get("features", []):
+        raise GooFailure("cli-incompatible", "The configured Goo CLI cannot guard typed mutations before dispatch.", "preflight",
+                         action="Build the current tools/Goo.DevTools.Cli project and set GOO_CLI to its output DLL.",
+                         context={"cliVersion": status.get("version", "unavailable")})
+    body = json.dumps(payload, separators=(",", ":"))
+    if len(body) > 65536:
+        raise ValueError("Request exceeds the endpoint request limit")
+    arguments = ["attach", "--once", "--json", "--command", command, "--payload", body,
+                 "--require-capabilities", ",".join(capabilities), "--wait", "10"]
+    if override_property:
+        arguments += ["--require-override-property", override_property]
+    arguments += selected_target
+    return response(run(arguments, uncertain_input=True, phase=command), command)
+
+
+def mutation_target(target: str | None, node_id: int | None) -> tuple[dict, list[str]]:
+    if (target is None) == (node_id is None):
+        raise ValueError("Provide exactly one of target or node_id")
+    if target is not None:
+        if not target or len(target) > 128:
+            raise ValueError("target must contain 1-128 characters")
+        return {"target": target}, ["target.handles"]
+    if node_id is None or node_id <= 0:
+        raise ValueError("node_id must be positive")
+    return {"nodeId": node_id}, []
+
+
+@mcp.tool(annotations=MUTATION)
+def goo_inspect(pid: int, action: Literal["enter", "select", "clear", "exit"], window: str = "",
+                target: str | None = None, node_id: int | None = None, x: float | None = None,
+                y: float | None = None, project: str = "") -> dict:
+    """Change diagnostics inspection state. enter diverts pointer routing to inspection; exit restores normal routing. select requires exactly one selector: opaque target, positive node_id, or complete finite x/y. selected=false is valid when numeric or point selection finds no node. Never retry a timed-out mutation automatically."""
+    selectors = (target is not None, node_id is not None, x is not None, y is not None)
+    if action != "select":
+        if any(selectors):
+            raise ValueError("Inspection selectors apply only to select")
+        return mutation_response(pid, window, project, f"inspect.{action}", {}, [f"inspect.{action}"])
+    if target is not None or node_id is not None:
+        if x is not None or y is not None:
+            raise ValueError("Use target, node_id, or x/y, not a mixture")
+        payload, required = mutation_target(target, node_id)
+    else:
+        if x is None or y is None:
+            raise ValueError("select requires target, node_id, or both x and y")
+        if not math.isfinite(x) or not math.isfinite(y):
+            raise ValueError("x and y must be finite")
+        payload, required = {"x": x, "y": y}, []
+    return mutation_response(pid, window, project, "inspect.select", payload, ["inspect.select", *required])
+
+
+@mcp.tool(annotations=MUTATION)
+def goo_style_override(pid: int, property: str, value: str, window: str = "", target: str | None = None,
+                       node_id: int | None = None, project: str = "") -> dict:
+    """Apply one temporary diagnostics-only runtime style override to exactly one target or node; this does not edit source. Read goo_capabilities for runtime-owned property names. Examples: Width="100px", BackgroundColor="#ff0000", Opacity="0.5". Lengths accept px or %, with auto limited to width/height; opacity is 0-1. Never retry a timed-out mutation automatically."""
+    if not property.strip() or not value.strip():
+        raise ValueError("property and value must not be empty")
+    payload, required = mutation_target(target, node_id)
+    payload.update({"property": property, "value": value})
+    return mutation_response(pid, window, project, "property.override", payload,
+                             ["runtime-overrides", "runtime-overrides.describe", *required], property)
+
+
+@mcp.tool(annotations=MUTATION)
+def goo_style_reset(pid: int, window: str = "", target: str | None = None, node_id: int | None = None,
+                    property: str | None = None, project: str = "") -> dict:
+    """Reset one temporary diagnostics-only style property, or omit property to reset all temporary overrides on exactly one target or node. This does not edit source or reset input or other nodes. Never retry a timed-out mutation automatically."""
+    if property is not None and not property.strip():
+        raise ValueError("property must not be empty")
+    payload, required = mutation_target(target, node_id)
+    if property is not None:
+        payload["property"] = property
+    return mutation_response(pid, window, project, "property.reset", payload,
+                             ["runtime-overrides", "runtime-overrides.describe", *required], property or "")
 
 
 def snapshot_response(pid: int, window: str, project: str, timeout: float = 4) -> tuple[dict, dict]:
