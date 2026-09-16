@@ -56,6 +56,14 @@ Pass `--project` throughout when using project-local descriptors. `attach --once
 bounds its connection and request with `--wait` and exits unsuccessfully for a
 rejected response. Streaming attach remains open until disconnected.
 
+One window accepts up to eight simultaneous clients. Each request is serialized
+through the window UI queue. A client that sends no complete request or stops
+reading a response is disconnected after 30 seconds, so an inspector or broken
+client cannot block short-lived snapshot and capture clients. Interactive attach
+uses request envelopes for plain command lines. On stdin EOF it drains responses
+for sent request IDs up to `--wait`, then detaches. Use `--once` for one scripted
+request.
+
 Supported CLI requests are `snapshot`, `capture`, and the command supplied by `goo attach --command`. A capture response may first return `payload.pending: true`; repeat the `capture` request until it returns `pending: false` or the bounded CLI wait expires. The completed response uses `format: "rgba8-srgb-premultiplied"`, `width`, `height`, `stride`, and `rgbaBase64`. The CLI encodes this pixel payload as a real PNG. Legacy responses can contain `payload.contentBase64`, `payload.base64`, `payload.data`, or `payload.path`.
 
 Clients must inspect the handshake capabilities before enabling optional panels. An older runtime may omit capabilities or close the connection for an unsupported request. The CLI treats that as a connection failure and reports the endpoint and command.
@@ -64,26 +72,27 @@ Clients must inspect the handshake capabilities before enabling optional panels.
 
 Input is separately opt-in: launch with `goo dev --input --no-watch --project App.gsproj`, set both `GOO_DEVTOOLS=1` and `GOO_DEVTOOLS_INPUT=1`, or call `DevTools.Attach(window, true)` on the owning UI thread. The CLI flag sets the input environment variable for its child process. Attaching without permission keeps inspection available without adding the `input` capability. Permission lasts until that diagnostics session is disposed. This is a trusted local automation endpoint, not a remote control service.
 
-Send `command: "input"` with an object payload whose `event` is `pointer.move`, `pointer.down`, `pointer.up`, `pointer.cancel`, `wheel`, `key.down`, `key.up`, `text`, `click`, or `reset`. Commands run in arrival order through `PlatformInput` on the selected window's UI queue, including normal bubbling, focus, capture, default editing, and Cell invalidation. Use one client to order a multi-request gesture. Native user input can interleave; use a dedicated test window for deterministic automation.
+Send `command: "input"` with an object payload whose `event` is `pointer.move`, `pointer.down`, `pointer.up`, `pointer.cancel`, `wheel`, `key.down`, `key.up`, `text`, `click`, or `reset`. Commands run in arrival order through `PlatformInput` on the selected window's UI queue, including normal bubbling, focus, capture, default editing, and Cell invalidation. Native user input can interleave; use a dedicated test window for deterministic automation.
 
 - Pointer and wheel coordinates are logical window coordinates (`x`, `y`). Alternatively, supply a stable snapshot `nodeId` and optional `offsetX`/`offsetY` measured from its current window border-box origin. Omitted offsets use the border-box center. The node is resolved after pending tree updates. Hidden, removed, and wrong-window IDs are rejected. Coordinate targeting still obeys clipping, overlap and normal hit testing; it does not force activation of an obscured node.
 - `button` is a `PointerButton` name, defaulting to `Primary`; wheel uses logical `deltaX`/`deltaY`. Coordinates/deltas must be finite and within ±10,000,000. Node-relative offsets refer to the axis-aligned window bounds, including transforms.
 - Keys use the `Key` enum names in `key`. `text` contains committed UTF-16 text, at most 16,384 units, and requires a focused editable control. IME composition is not simulated. Optional `modifiers` contains boolean `alt`, `ctrl`, `shift`, and `super` fields on each event.
 - `click` sends a down/up pair. Pointer commands share one session-owned mouse contact, distinct from the native mouse. `pointer.cancel` needs no target and releases its capture. `reset` resets window input and focus. Session disposal or an exception after injection also resets input, preventing a retained drag or pressed key. Input commands are rejected while inspector selection mode is active.
+- A runtime that advertises `input.gesture-lease` owns held pointer buttons and keys with an opaque `gestureId`. `pointer.down` or `key.down` acquires the lease. Every later input request supplies the same ID until all matching releases complete. `pointer.cancel` clears pointer holds only. `reset` clears pointer and key holds. Successful owner input renews the 30-second lease. Observation does not renew it. Expiry resets injected input without replaying any action. Snapshots and captures remain available while inspect and style mutations return `gesture-owned`.
 
-A successful response has `ok: true` and `payload: {"command":"input","applied":true,"sequence":N}`. It acknowledges synchronous handlers and subsequent reconciliation/layout, not asynchronous application work or GPU presentation. Request a `snapshot` with `payload: {"full":true}` to obtain a complete settled tree, preserving node IDs, and use `capture` for a presented image.
+A successful response has `ok: true` and `payload: {"command":"input","applied":true,"sequence":N,"gestureId":"...","gestureActive":true,"leaseMs":30000}` while holds remain. `gestureId` is `null`, `gestureActive` is false and `leaseMs` is zero after release. It acknowledges synchronous handlers and subsequent reconciliation/layout, not asynchronous application work or GPU presentation. Every remote `snapshot` response is a complete settled tree with `full:true`, preserving node IDs. The `full` request field remains accepted for compatibility. Use `capture` for a presented image.
 
-Errors use `input-disabled`, `invalid-input`, `stale-target`, `closed`, `busy`, `timeout`, or `command`. Requests are limited to 65,536 characters and the UI queue to 32 pending requests. A five-second server timeout cancels work that has not begun. A handler already running may have applied input: **do not automatically retry timed-out actions**. Release/cancel a gesture explicitly when its result is uncertain. Oversized request lines close the connection. No input worker or frame work is created when diagnostics are disabled.
+Errors use `input-disabled`, `invalid-input`, `stale-target`, `gesture-owned`, `gesture-expired`, `closed`, `busy`, `timeout`, or `command`. Requests are limited to 65,536 characters and the UI queue to 32 pending requests. A five-second server timeout cancels work that has not begun. A handler already running may have applied input: **do not automatically retry timed-out actions**. The CLI prints the generated token before sending a hold, so use that token to release, cancel, or reset after an uncertain result. Oversized request lines close the connection. No input worker or frame work is created when diagnostics are disabled.
 
 ```sh
 goo dev --input --no-watch --project App.gsproj
 goo input click --pid 1234 --window "Main" --node 42
 goo input text --pid 1234 --window "Main" --text "hello"
 goo input key.down --pid 1234 --window "Main" --key Backspace
-goo input key.up --pid 1234 --window "Main" --key Backspace
+goo input key.up --pid 1234 --window "Main" --key Backspace --gesture TOKEN
 goo input pointer.down --pid 1234 --window "Main" --x 200 --y 60
-goo input pointer.move --pid 1234 --window "Main" --x 280 --y 60
-goo input pointer.cancel --pid 1234 --window "Main"
+goo input pointer.move --pid 1234 --window "Main" --x 280 --y 60 --gesture TOKEN
+goo input pointer.cancel --pid 1234 --window "Main" --gesture TOKEN
 goo attach --pid 1234 --window "Main" --once --json --payload '{"full":true}'
 ```
 
