@@ -166,4 +166,3 @@ internal sealed class VulkanTextNodeSegmentCache {
     Segments = GrowArray(Segments, Segments.Length, required, 1)
   }
 }
-

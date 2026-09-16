@@ -130,13 +130,6 @@ Linux native CI runs it through the headless Wayland wrapper.
 effect-tail, and flush-call accounting gate in `Goo.AsyncReadbackSmoke`.
 Linux native CI runs it through the headless Wayland wrapper.
 
-`GOO_PRIMITIVE_UPLOAD_BENCHMARK=1` runs the fixed 1,000-box benchmark. Select
-`GOO_PRIMITIVE_UPLOAD_WORKLOAD=unchanged|sparse|full` and configure the existing
-`GOO_PRIMITIVE_UPLOAD_WARMUP` and `GOO_PRIMITIVE_UPLOAD_SAMPLES` counts. Output
-includes frame P50/P95/P99/max, allocation measurements, and measured-interval
-cumulative CPU-written, CPU-compared, CPU-write-operation, and submitted-transfer
-counters.
-
 Primitive frame counters separate CPU staging work, transfer preparation, native command recording, and accepted submissions. They count logical operations and byte lengths, not physical memory-bus traffic or GPU execution time. `SubmittedTransferBytes` means submission succeeded and its completion was reconciled on the host. It does not mean GPU execution or presentation has completed.
 
 | Field | Meaning and accounting point |
@@ -156,27 +149,6 @@ Primitive frame counters separate CPU staging work, transfer preparation, native
 | `DirtyRecordCount`, `FullUpload`, `RetainedReuse` | Properties of the completed transfer plan. `FullUpload` describes a full plan, not proof of submission. |
 
 `Total*` fields accumulate the same events over the frame-data owner's lifetime and saturate at `uint64.MaxValue`. Each successful `BeginPrepare` resets the per-preparation snapshot. Abort retains the snapshot and incurred totals. Total full uploads count completed full preparations. Allocation, descriptor updates, scene compilation, text/clip uploads, and driver-internal work are outside these primitive counters.
-
-## All Blob benchmark
-
-`GOO_ALL_BLOB_BENCHMARK=1` runs an optional 1,000-cell retained benchmark for
-`container`, `text`, `image`, `shape`, `button`, `text-entry`, or `text-editor`.
-Select the kind with `GOO_ALL_BLOB_KIND` and select `unchanged`, `sparse`, or
-`full` with `GOO_ALL_BLOB_MODE`. Configure up to 300 warm frames with
-`GOO_ALL_BLOB_WARMUP` and up to 2,000 measured frames with
-`GOO_ALL_BLOB_SAMPLES`.
-
-The root builds once. Each measured update changes only leaf opacity between
-1.0 and 0.75: zero leaves for unchanged, one leaf for sparse, and all 1,000
-leaves for full. The output reports host frame wall time, managed allocation,
-process and managed-memory samples, Goo allocation counters, and Vulkan
-timestamp stages. Main is the outer render-pass scope and upload is separate.
-Effects and offscreen scopes can nest inside main, so stage times must not be
-summed. Two cold update frames are measured after the initial untimed render
-and before warmup. These are not application startup or first-paint times.
-Allocation output includes P50, P95, and P99. On Linux, a post-GC snapshot pairs
-managed retained bytes with RSS and PSS from one `/proc/self/smaps_rollup` read.
-This diagnostic benchmark is not run automatically by CI.
 
 ## Pipeline identity
 
@@ -200,7 +172,7 @@ Linux native CI runs it through the headless Wayland wrapper.
 | `Goo.ApiContractTests` | Approved public API and generated XML documentation |
 | `Goo.CoreBehaviorTests` | Cells, reconciliation, layout, style, motion, input, text, accessibility, and allocation behavior |
 | `Goo.VulkanAbiSmoke` | Vulkan bindings, text-provider ABI, retained path encoding, and upload contracts |
-| `Goo.AsyncReadbackSmoke` | Vulkan pixels, clipping, effects, input, pacing, windowing, and performance workloads |
+| `Goo.AsyncReadbackSmoke` | Vulkan pixels, clipping, effects, input, pacing, windowing, and metrics |
 | `Goo.PackageSmoke` | Clean NuGet consumer, packaged native assets, and public runtime behavior |
 | `Goo.VulkanProof` | Low-level shader, text, image, path, and readback proofs |
 

@@ -141,4 +141,3 @@ internal struct VulkanSceneTraversalContext {
   internal var ExactCullContextSafe bool
   internal var ActiveClipBounds ConservativeBounds
 }
-

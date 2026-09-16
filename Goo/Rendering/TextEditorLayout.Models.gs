@@ -147,7 +147,6 @@ internal class TextEditorParagraphLayout {
     Lines = List[TextEditorVisualLine]()
   }
 }
-
 internal class TextEditorAnalysisCacheEntry {
   internal prop Content string{ get; set; }
   internal prop Fingerprint int32{ get; set; }
@@ -213,4 +212,3 @@ internal class TextEditorVisualLayout {
     Lines = List[TextEditorVisualLine]()
   }
 }
-

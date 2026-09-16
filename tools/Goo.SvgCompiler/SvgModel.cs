@@ -255,4 +255,3 @@ internal sealed class SvgStyle
         };
     }
 }
-
