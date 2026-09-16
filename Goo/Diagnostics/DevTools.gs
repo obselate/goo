@@ -129,7 +129,7 @@ internal partial class DevToolsSession : IDisposable {
 
   internal init(window Window, allowInput bool = false) {
     owner = window
-    identity = DiagnosticTreeState()
+    identity = DiagnosticTreeState(window)
     endpoint = DiagnosticEndpointDiscovery.Create(window)
     windowId = endpoint.WindowId
     overrideStore = DiagnosticOverrideStore()
@@ -198,6 +198,20 @@ internal partial class DevToolsSession : IDisposable {
     captureIfNeeded()
     guard let target = identity.FindNode(id) else { return false }
     selected = target
+    clickLocked = true
+    pending = true
+    owner.RequestDiagnosticsFrame()
+    return true
+  }
+
+  internal func SelectTarget(target string) bool {
+    owner.RequireElementHandleThread("DevToolsSession.SelectTarget")
+    if disposed { throw ObjectDisposedException("DevToolsSession") }
+    CaptureSnapshot(true)
+    guard let node = identity.FindTarget(target) else {
+      throw KeyNotFoundException("The selection target no longer exists in this window.")
+    }
+    selected = node
     clickLocked = true
     pending = true
     owner.RequestDiagnosticsFrame()
@@ -330,54 +344,68 @@ internal partial class DevToolsSession : IDisposable {
   internal func OverridePayload(payload JsonElement) string {
     owner.RequireElementHandleThread("DevToolsSession.OverridePayload")
     if disposed { throw ObjectDisposedException("DevToolsSession") }
+    if payload.TryGetProperty("target", out var ignoredTarget)
+      && payload.TryGetProperty("nodeId", out var ignoredNode) {
+      throw ArgumentException("Use target or nodeId, not both.")
+    }
     let request = parseDiagnosticOverride(payload)
     let spec = diagnosticOverrideSpec(request.Property)
-    captureIfNeeded()
-    guard let target = identity.FindNode(request.NodeId) else {
-      throw KeyNotFoundException("Runtime override node was not found: " + request.NodeId.ToString())
+    CaptureSnapshot(true)
+    let targetHandle = diagnosticText(payload, "target")
+    let target = targetHandle != "" ? identity.FindTarget(targetHandle) : identity.FindNode(request.NodeId)
+    guard let node = target else {
+      throw KeyNotFoundException("Runtime override target was not found in this window.")
     }
     let entries = diagnosticOverrideEntries(spec, request.Value)
-    for entry in entries { overrideStore.Set(target, entry) }
-    debugNodes[request.NodeId] = target
-    owner.InvalidateDiagnosticsOverride(target)
+    let nodeId = targetHandle != "" ? identity.FindTargetSnapshot(targetHandle)?.Id ?? 0 : request.NodeId
+    for entry in entries { overrideStore.Set(node, entry) }
+    debugNodes[nodeId] = node
+    owner.InvalidateDiagnosticsOverride(node)
     pending = true
     owner.RequestDiagnosticsRebuild()
-    return overrideResponse(request.NodeId, spec.Name, request.Value)
+    return overrideResponse(nodeId, spec.Name, request.Value)
   }
 
   internal func ResetPayload(payload JsonElement) string {
     owner.RequireElementHandleThread("DevToolsSession.ResetPayload")
     if disposed { throw ObjectDisposedException("DevToolsSession") }
+    if payload.TryGetProperty("target", out var ignoredTarget)
+      && payload.TryGetProperty("nodeId", out var ignoredNode) {
+      throw ArgumentException("Use target or nodeId, not both.")
+    }
     let nodeId = diagnosticResetNodeId(payload)
-    captureIfNeeded()
-    guard let target = identity.FindNode(nodeId) else {
-      throw KeyNotFoundException("Runtime override node was not found: " + nodeId.ToString())
+    CaptureSnapshot(true)
+    let targetHandle = diagnosticText(payload, "target")
+    let resolvedId = targetHandle != "" ? identity.FindTargetSnapshot(targetHandle)?.Id ?? 0 : nodeId
+    let target = targetHandle != "" ? identity.FindTarget(targetHandle) : identity.FindNode(nodeId)
+    guard let node = target else {
+      throw KeyNotFoundException("Runtime override target was not found in this window.")
     }
     let property = diagnosticText(payload, "property").Trim()
     var resetProperty string?
     var restored bool
     if property == "" {
-      let fields = overrideFields(target)
-      restored = overrideStore.Clear(target)
+      let fields = overrideFields(node)
+      restored = overrideStore.Clear(node)
       resetProperty = nil
-      debugNodes.Remove(nodeId)
-      if restored { owner.CompleteDiagnosticsOverrideReset(target, fields) }
+      debugNodes.Remove(resolvedId)
+      if restored { owner.CompleteDiagnosticsOverrideReset(node, fields) }
     } else {
       let spec = diagnosticOverrideSpec(property)
-      restored = overrideStore.ClearFields(target, spec.Fields)
+      restored = overrideStore.ClearFields(node, spec.Fields)
       resetProperty = spec.Name
-      if let state = overrideStore.State(target) {
-        if state.Values.Count == 0 { debugNodes.Remove(nodeId) }
+      if let state = overrideStore.State(node) {
+        if state.Values.Count == 0 { debugNodes.Remove(resolvedId) }
       } else {
-        debugNodes.Remove(nodeId)
+        debugNodes.Remove(resolvedId)
       }
-      if restored { owner.CompleteDiagnosticsOverrideReset(target, spec.Fields) }
+      if restored { owner.CompleteDiagnosticsOverrideReset(node, spec.Fields) }
     }
     if restored {
       pending = true
       owner.RequestDiagnosticsRebuild()
     }
-    return resetResponse(nodeId, resetProperty, restored)
+    return resetResponse(resolvedId, resetProperty, restored)
   }
 
   internal func WindowClosed() {
@@ -424,7 +452,9 @@ internal partial class DevToolsSession : IDisposable {
 
   private func captureCurrent(notify bool) DiagnosticSnapshot? {
     if disposed { return nil }
-    let next = identity.Capture(owner.Tree, windowId, hovered, selected)
+    let root = owner.Tree
+    let semantics = owner.CaptureDiagnosticsAccessibility(root)
+    let next = identity.Capture(root, windowId, hovered, selected, semantics)
     snapshot = next
     pending = false
     clearRemovedOverrides(next.Removed)

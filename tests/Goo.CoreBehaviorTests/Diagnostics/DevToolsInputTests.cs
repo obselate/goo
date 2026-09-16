@@ -8,6 +8,10 @@ public sealed class DevToolsInputTests
         Assert.True(new DevToolsInputFixtures().OptInRoutingSettlementAndStaleTargets());
 
     [Fact]
+    public void OpaqueTargetsRejectOtherWindowsAndUnmountedNodes() =>
+        Assert.True(new DevToolsInputFixtures().OpaqueTargetsRejectOtherWindowsAndRemounts());
+
+    [Fact]
     public void CapturedDragRejectsForeignClientsThenCancelsAndInvalidInputIsRejected() =>
         Assert.True(new DevToolsInputFixtures().CaptureCancelAndValidation());
 

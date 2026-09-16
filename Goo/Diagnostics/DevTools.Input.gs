@@ -14,6 +14,14 @@ internal class DiagnosticGestureException : InvalidOperationException {
   }
 }
 
+internal class DiagnosticInputException : InvalidOperationException {
+  internal let Code string
+
+  internal init(code string, message string): base(message) {
+    Code = code
+  }
+}
+
 internal partial class DevToolsSession {
   private const InputPointerId int64 = -9223372036854775807L
   private const InputGestureLeaseMs int32 = 30000
@@ -37,6 +45,12 @@ internal partial class DevToolsSession {
     if inspecting { throw InvalidOperationException("Exit inspector selection mode before sending application input.") }
     if payload.ValueKind != JsonValueKind.Object { throw ArgumentException("Input payload must be an object.") }
     let eventName = inputText(payload, "event", true)
+    let positional = eventName == "pointer.move" || eventName == "pointer.down"
+      || eventName == "pointer.up" || eventName == "click" || eventName == "wheel"
+    if !positional && (payload.TryGetProperty("target", out var ignoredTarget)
+      || payload.TryGetProperty("nodeId", out var ignoredNode)) {
+      throw ArgumentException("target and nodeId apply only to pointer and wheel events.")
+    }
     let requestedGesture = inputText(payload, "gestureId", false)
     if requestedGesture.Length > 128 { throw ArgumentException("gestureId is limited to 128 characters.") }
     let gesture = authorizeInputGesture(eventName, requestedGesture)
@@ -187,26 +201,65 @@ internal partial class DevToolsSession {
   }
 
   private func inputPoint(payload JsonElement) Point {
-    if payload.TryGetProperty("nodeId", out var idValue) {
-      if !idValue.TryGetInt64(out var id) || id <= 0 { throw ArgumentException("nodeId must be a positive integer.") }
-      captureIfNeeded()
-      guard let node = identity.FindNode(id), let bounds = identity.Find(id) else {
+    let hasTarget = payload.TryGetProperty("target", out var targetValue)
+    let hasNodeId = payload.TryGetProperty("nodeId", out var idValue)
+    if hasTarget && hasNodeId { throw ArgumentException("Use target or nodeId, not both.") }
+    if hasTarget || hasNodeId {
+      CaptureSnapshot(true)
+      var node Node?
+      var bounds DiagnosticNodeSnapshot?
+      if hasTarget {
+        if targetValue.ValueKind != JsonValueKind.String { throw ArgumentException("target must be text.") }
+        let target = targetValue.GetString() ?? ""
+        if target.Length == 0 || target.Length > 128 { throw ArgumentException("target must contain 1-128 characters.") }
+        node = identity.FindTarget(target)
+        bounds = identity.FindTargetSnapshot(target)
+      } else {
+        if !idValue.TryGetInt64(out var id) || id <= 0 { throw ArgumentException("nodeId must be a positive integer.") }
+        node = identity.FindNode(id)
+        bounds = identity.Find(id)
+      }
+      guard let targetNode = node, let targetBounds = bounds else {
         throw KeyNotFoundException("The input target no longer exists in this window.")
       }
-      if node.Retired || bounds.BorderBox.Width <= 0 || bounds.BorderBox.Height <= 0 {
+      if targetNode.Retired || targetBounds.BorderBox.Width <= 0 || targetBounds.BorderBox.Height <= 0 {
         throw KeyNotFoundException("The input target is no longer mounted and visible.")
       }
-      var ancestor Node? = node
-      while let current = ancestor {
-        if current.Display == Display.None { throw KeyNotFoundException("The input target is hidden.") }
-        ancestor = current.Parent
-      }
       if payload.TryGetProperty("x", out var ignoredX) || payload.TryGetProperty("y", out var ignoredY) {
-        throw ArgumentException("Use nodeId with optional offsetX/offsetY, or x/y coordinates.")
+        throw ArgumentException("Use target or nodeId with optional offsetX/offsetY, or x/y coordinates.")
       }
-      let x = if payload.TryGetProperty("offsetX", out var offsetX) { inputNumber(payload, "offsetX", true) } else { bounds.BorderBox.Width / 2.0 }
-      let y = if payload.TryGetProperty("offsetY", out var offsetY) { inputNumber(payload, "offsetY", true) } else { bounds.BorderBox.Height / 2.0 }
-      return Point{X: bounds.BorderBox.X + x, Y: bounds.BorderBox.Y + y}
+      let hasOffsetX = payload.TryGetProperty("offsetX", out var offsetX)
+      let hasOffsetY = payload.TryGetProperty("offsetY", out var offsetY)
+      if !hasOffsetX && !hasOffsetY {
+        guard let point = targetBounds.ActionPoint else {
+          throw DiagnosticInputException("target-not-actionable",
+            "The input target has no verified actionable point: " + targetBounds.ActionStatus)
+        }
+        return Point{X: point.X, Y: point.Y}
+      }
+      if !targetBounds.Visible || targetBounds.ActionStatus == "disabled"
+        || targetBounds.ActionStatus == "hidden" || targetBounds.ActionStatus == "modal-blocked"
+        || targetBounds.ActionStatus == "window-blocked" {
+          throw DiagnosticInputException("target-not-actionable",
+            "The input target is not actionable: " + targetBounds.ActionStatus)
+        }
+      let point = DiagnosticPoint{
+        X: targetBounds.BorderBox.X + (hasOffsetX ? inputNumber(payload, "offsetX", true) : targetBounds.BorderBox.Width / 2.0),
+        Y: targetBounds.BorderBox.Y + (hasOffsetY ? inputNumber(payload, "offsetY", true) : targetBounds.BorderBox.Height / 2.0),
+      }
+      guard let root = owner.Tree else {
+        throw DiagnosticInputException("target-not-actionable", "The input target tree is unavailable.")
+      }
+      guard let hit = hitTopmost(root, float32(point.X), float32(point.Y)) else {
+        throw DiagnosticInputException("target-not-actionable",
+          "The requested target offset does not hit the target through normal routing.")
+      }
+      if !FocusScopes.Contains(targetNode, hit) || !canReceiveInput(hit)
+        || !FocusScopes.Allows(root, hit) {
+          throw DiagnosticInputException("target-not-actionable",
+            "The requested target offset does not hit the target through normal routing.")
+      }
+      return Point{X: point.X, Y: point.Y}
     }
     return Point{X: inputNumber(payload, "x", true), Y: inputNumber(payload, "y", true)}
   }

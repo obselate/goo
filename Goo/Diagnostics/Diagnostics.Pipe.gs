@@ -268,6 +268,7 @@ internal class DiagnosticPipeHost : IDisposable {
             completion.Error = error.Message
             completion.ErrorCode = if error is UnauthorizedAccessException { "input-disabled" }
             else if error is DiagnosticGestureException { error.Code }
+            else if error is DiagnosticInputException { error.Code }
             else if error is KeyNotFoundException { "stale-target" }
             else if error is ObjectDisposedException { "closed" }
             else if error is ArgumentException { "invalid-input" } else { "command" }
@@ -322,7 +323,21 @@ internal class DiagnosticPipeHost : IDisposable {
       return statePayload("inspect.clear", session.IsInspecting, session.SelectedNodeId)
     }
     if command == "inspect.select" || command == "select" {
-      if payload.TryGetProperty("nodeId", out var nodeIdValue) {
+      let hasTarget = payload.TryGetProperty("target", out var targetValue)
+      let hasNode = payload.TryGetProperty("nodeId", out var nodeIdValue)
+      if hasTarget && hasNode { throw ArgumentException("Use target or nodeId, not both.") }
+      if hasTarget {
+        if targetValue.ValueKind != JsonValueKind.String {
+          throw ArgumentException("target must be text.")
+        }
+        let target = targetValue.GetString() ?? ""
+        if target.Length == 0 || target.Length > 128 {
+          throw ArgumentException("target must contain 1-128 characters.")
+        }
+        let selected = session.SelectTarget(target)
+        return selectPayload(selected, session.SelectedNodeId)
+      }
+      if hasNode {
         let selected = session.SelectNode(integer(nodeIdValue, "nodeId"))
         return selectPayload(selected, session.SelectedNodeId)
       }
@@ -341,7 +356,7 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func hello() string {
     let builder = StringBuilder()
-    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"capabilities\":[\"tree.snapshot\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\"")
+    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append(",\"capabilities\":[\"tree.snapshot\",\"tree.resolved-semantics\",\"target.handles\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\"")
     if session.AllowsInput { builder.Append(",\"input\",\"input.gesture-lease\"") }
     builder.Append("]}")
     return builder.ToString()
@@ -362,7 +377,7 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func snapshotPayload(value DiagnosticSnapshot) string {
     let builder = StringBuilder()
-    builder.Append("{\"command\":\"snapshot\",\"sequence\":").Append(value.Sequence).Append(",\"full\":").Append(boolText(value.IsFull)).Append(",\"hasChanges\":").Append(boolText(value.HasChanges)).Append(",\"windowId\":").Append(quote(value.WindowId)).Append(",\"rootId\":").Append(optional(value.RootId)).Append(",\"hoveredId\":").Append(optional(value.HoveredId)).Append(",\"selectedId\":").Append(optional(value.SelectedId)).Append(",\"added\":[")
+    builder.Append("{\"command\":\"snapshot\",\"sequence\":").Append(value.Sequence).Append(",\"full\":").Append(boolText(value.IsFull)).Append(",\"hasChanges\":").Append(boolText(value.HasChanges)).Append(",\"windowId\":").Append(quote(value.WindowId)).Append(",\"targetIdentity\":{\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append("},\"rootId\":").Append(optional(value.RootId)).Append(",\"hoveredId\":").Append(optional(value.HoveredId)).Append(",\"selectedId\":").Append(optional(value.SelectedId)).Append(",\"added\":[")
     appendNodes(builder, value.Added)
     builder.Append("],\"updated\":[")
     appendNodes(builder, value.Updated)
@@ -388,7 +403,21 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func nodePayload(value DiagnosticNodeSnapshot) string {
     let builder = StringBuilder()
-    builder.Append("{\"id\":").Append(value.Id).Append(",\"parentId\":").Append(optional(value.ParentId)).Append(",\"childIndex\":").Append(value.ChildIndex).Append(",\"childIds\":[")
+    builder.Append("{\"id\":").Append(value.Id).Append(",\"target\":").Append(quote(value.Target))
+      .Append(",\"visible\":").Append(boolText(value.Visible))
+      .Append(",\"clipped\":").Append(boolText(value.Clipped))
+      .Append(",\"clipApproximate\":").Append(boolText(value.ClipApproximate))
+      .Append(",\"actionable\":").Append(boolText(value.Actionable))
+      .Append(",\"actionStatus\":").Append(quote(value.ActionStatus))
+      .Append(",\"actionPoint\":").Append(optionalPoint(value.ActionPoint))
+      .Append(",\"accessibilityId\":").Append(optional(value.AccessibilityId))
+      .Append(",\"text\":").Append(quote(value.Text))
+      .Append(",\"textLength\":").Append(value.TextLength)
+      .Append(",\"textTruncated\":").Append(boolText(value.TextTruncated))
+      .Append(",\"selectionStart\":").Append(optional(value.SelectionStart))
+      .Append(",\"selectionLength\":").Append(optional(value.SelectionLength))
+      .Append(",\"caret\":").Append(optional(value.Caret))
+      .Append(",\"parentId\":").Append(optional(value.ParentId)).Append(",\"childIndex\":").Append(value.ChildIndex).Append(",\"childIds\":[")
     var first = true
     for id in value.ChildIds {
       if !first { builder.Append(",") }
@@ -403,6 +432,16 @@ internal class DiagnosticPipeHost : IDisposable {
   +",\"width\":" + numberText(value.Width) + ",\"height\":" + numberText(value.Height) + "}"
 
   private func point(value DiagnosticPoint) string -> "{\"x\":" + numberText(value.X) + ",\"y\":" + numberText(value.Y) + "}"
+
+  private func optionalPoint(value DiagnosticPoint?) string {
+    guard let actual = value else { return "null" }
+    return point(actual)
+  }
+
+  private func optional(value int32?) string {
+    guard let actual = value else { return "null" }
+    return actual.ToString(CultureInfo.InvariantCulture)
+  }
 
   private func number(root JsonElement, name string) float64 {
     if !root.TryGetProperty(name, out var value) { return 0.0 }

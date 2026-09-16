@@ -275,6 +275,7 @@ private func diagnosticMarginField(field StyleField) bool -> field == StyleField
 
 private func diagnosticNodeId(root JsonElement) int64 {
   if !root.TryGetProperty("nodeId", out var value) {
+    if diagnosticText(root, "target") != "" { return 0 }
     throw FormatException("Override nodeId is required.")
   }
   if value.ValueKind == JsonValueKind.Number {

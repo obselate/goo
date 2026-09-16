@@ -10,6 +10,7 @@ internal class AccessibilityManager {
   private let tree RetainedAccessibilityTree
   private let nodes Dictionary[int64, Node]
   private let semanticNodes List[Node]
+  private let semanticSet HashSet[Node]
   private let forced HashSet[Node]
   private let childLists List[List[AccessibilityNode]]
   private let noChildren List[AccessibilityNode]
@@ -27,6 +28,7 @@ internal class AccessibilityManager {
     tree = RetainedAccessibilityTree()
     nodes = Dictionary[int64, Node]()
     semanticNodes = List[Node]()
+    semanticSet = HashSet[Node]()
     forced = HashSet[Node]()
     childLists = List[List[AccessibilityNode]]()
     noChildren = List[AccessibilityNode]()
@@ -50,6 +52,7 @@ internal class AccessibilityManager {
     if value == nil {
       nodes.Clear()
       semanticNodes.Clear()
+      semanticSet.Clear()
       forced.Clear()
     }
   }
@@ -64,6 +67,18 @@ internal class AccessibilityManager {
       if adapter is NativeAccessibilityAdapter { deliveryPending = true }
       retryUsed = false
     }
+  }
+
+  internal func CaptureForDiagnostics(root Node?) {
+    if rebuild(root) {
+      tree.MarkChanged()
+      if adapter != nil { deliveryPending = true }
+    }
+  }
+
+  internal func DiagnosticNodeFor(n Node) AccessibilityNode? {
+    if !semanticSet.Contains(n) { return nil }
+    return AccessibilityNodeStates.Get(n)
   }
 
   internal func NodeFor(id AccessibilityId) Node? {
@@ -128,6 +143,7 @@ internal class AccessibilityManager {
     if let treeRoot = root { collectForced(treeRoot, false) }
     nodes.Clear()
     semanticNodes.Clear()
+    semanticSet.Clear()
     let top = rentChildren()
     try {
       if let treeRoot = root { appendNode(treeRoot, top, false, owner.IsInputBlocked, false) }
@@ -245,6 +261,7 @@ internal class AccessibilityManager {
         if view.SetChildren(childValues) { rebuildingChanged = true }
         nodes[view.Id.Value] = n
         semanticNodes.Add(n)
+        semanticSet.Add(n)
         target.Add(view)
       } finally {
         returnChildren()

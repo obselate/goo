@@ -16,6 +16,12 @@ public sealed class DiagnosticsTests
     }
 
     [Fact]
+    public void SnapshotsUseResolvedSemanticsBoundEditorTextAndMaskPasswords()
+    {
+        Assert.True(new DiagnosticsFixtures().ResolvedSemanticsAndEditorPrivacyContract());
+    }
+
+    [Fact]
     public void InspectClickConsumesReleaseAndEscapeRestoresSelection()
     {
         Assert.True(new DiagnosticsFixtures().InspectClickAndEscapeContract());

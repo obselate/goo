@@ -57,12 +57,65 @@ internal class DiagnosticsFixtures {
     return tracker.NeedsRequest
   }
 
+  func ResolvedSemanticsAndEditorPrivacyContract() bool {
+    let secret = "synthetic-password-secret"
+    let document = TextDocument(String('x', 20012))
+    using let controller = TextEditorController(document)
+    controller.Selection = TextSelection{
+      Anchor: TextPosition{Offset: 3, Affinity: TextAffinity.Upstream},
+      Active: TextPosition{Offset: 9, Affinity: TextAffinity.Downstream},
+    }
+    let window = Window{Root: DiagnosticsSemanticsCell(secret, controller), Width: 420, Height: 260}
+    window.UpdateTree()
+    let session = window.AttachDiagnostics()
+    try {
+      let snapshot = session.CaptureSnapshot(true)
+      var entry DiagnosticNodeSnapshot?
+      var password DiagnosticNodeSnapshot?
+      var button DiagnosticNodeSnapshot?
+      var editor DiagnosticNodeSnapshot?
+      for node in snapshot.Added {
+        if node.Key == "entry" { entry = node }
+        if node.Key == "password" { password = node }
+        if node.Key == "button" { button = node }
+        if node.Key == "editor" { editor = node }
+      }
+      guard let normal = entry, let secureNode = password, let action = button,
+        let textEditor = editor else { return false }
+      return window.AccessibilityAdapter == nil
+        && normal.AccessibilityRole == "TextInput" && normal.Text == "agent value"
+        && normal.AccessibilityValue == "agent value" && normal.AccessibilityId != nil
+        && action.AccessibilityRole == "Button" && action.AccessibilityName == "Save"
+        && secureNode.AccessibilityValue != secret && secureNode.Text != secret
+        && secureNode.Content != secret && secureNode.AccessibilityName != secret
+        && secureNode.AccessibilityDescription != secret
+        && textEditor.AccessibilityRole == "TextEditor" && textEditor.Text.Length == 16384
+        && textEditor.TextLength == 20012 && textEditor.TextTruncated
+        && textEditor.SelectionStart == 3 && textEditor.SelectionLength == 6
+        && textEditor.Caret == 9
+    } finally {
+      session.Dispose()
+    }
+  }
+
   func InspectClickAndEscapeContract() bool {
     let window = Window{ Root: DiagnosticsInteractionCell{}, Width: 200, Height: 100 }
     window.UpdateTree()
     let session = window.AttachDiagnostics()
     try {
       guard let tree = window.Tree else { return false }
+      let snapshot = session.CaptureSnapshot(true)
+      var target = ""
+      var targetId int64 = 0
+      for node in snapshot.Added {
+        if node.Key == "target" {
+          target = node.Target
+          targetId = node.Id
+        }
+      }
+      if target == "" || !session.SelectTarget(target) || session.SelectedNodeId != targetId {
+        return false
+      }
       session.EnterInspectMode()
       if !session.PointerEvent(tree, PointerEventKind.Press, 20.0F, 20.0F,
         PointerButton.Primary) {
@@ -96,7 +149,18 @@ internal class DiagnosticsFixtures {
     try {
       let snapshot = session.CaptureSnapshot()
       guard let nodeId = snapshot.RootId else { return false }
-      using let colorDocument = JsonDocument.Parse("{\"nodeId\":" + nodeId.ToString()
+      var target = ""
+      for node in snapshot.Added {
+        if node.Id == nodeId { target = node.Target }
+      }
+      if target == "" { return false }
+      using let invalidDocument = JsonDocument.Parse("{\"target\":\"" + target
+        + "\",\"nodeId\":0,\"value\":\"Color = #19D278\"}")
+      var rejectedBoth bool = false
+      try { session.OverridePayload(invalidDocument.RootElement) }
+      catch (_ ArgumentException) { rejectedBoth = true }
+      if !rejectedBoth { return false }
+      using let colorDocument = JsonDocument.Parse("{\"target\":\"" + target + "\""
         +",\"value\":\"Color = #19D278\"}")
       session.OverridePayload(colorDocument.RootElement)
       using let sizeDocument = JsonDocument.Parse("{\"nodeId\":" + nodeId.ToString()
@@ -164,5 +228,15 @@ internal class DiagnosticsInteractionCell : Cell {
 internal class DiagnosticsOverrideCell : Cell {
   override func Build() Blob -> Container() {.Width: 200.0,.Height: 100.0,.Color: Color.Rgb(210, 48, 42),.FontSize: 14.0,
     Text{ Content: "inherited" },
+  }
+}
+
+internal class DiagnosticsSemanticsCell(secret string, controller TextEditorController) : Cell {
+  override func Build() Blob -> Container() {.Width: 420,.Height: 260,
+    TextEntry{Key: "entry", Width: 180, Height: 32, Value: "agent value"},
+    TextEntry{Key: "password", Width: 180, Height: 32, Value: secret, Password: true,
+      Accessibility: Accessibility{Value: secret, Name: "Password"}},
+    Button() {.Key: "button",.Width: 100,.Height: 32, Text{Content: "Save"}},
+    TextEditor(controller) {.Key: "editor",.Width: 300,.Height: 100},
   }
 }
