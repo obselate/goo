@@ -137,8 +137,7 @@ internal class ScrollbarFixtures {
     if handle.ScrollOffset.Y != 125.0 || latest.ScrollOffset.Y != 125.0 { return false }
     if handle.ScrollTo(0.0, 200.0) == false { return false }
     window.UpdateTree(1.0)
-    if handle.ScrollOffset.Y != 200.0 { return false }
-    return !window.UpdateTree(2.0)
+    return if handle.ScrollOffset.Y != 200.0 { false } else { !window.UpdateTree(2.0) }
   }
 
   private func mountScrollViewport(horizontal bool, visibility ScrollbarVisibility,

@@ -788,16 +788,9 @@ internal func childrenAlreadyMatch(yg Facebook.Yoga.Node, n Node) bool {
 
 internal func clampOffset(v float32, max float32) float32 {
   if v < 0.0F { return 0.0F }
-  if v > max { return max }
-  return v
+  return if v > max { max } else { v }
 }
 
-internal func maxScrollX(n Node) float32 {
-  if n.OverflowX != Overflow.Scroll && n.Kind != NodeKind.Editor { return 0.0F }
-  return n.ContentW > n.Rect.W ? n.ContentW - n.Rect.W : 0.0F
-}
+internal func maxScrollX(n Node) float32 -> if n.OverflowX != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F } else { n.ContentW > n.Rect.W ? n.ContentW - n.Rect.W : 0.0F }
 
-internal func maxScrollY(n Node) float32 {
-  if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { return 0.0F }
-  return n.ContentH > n.Rect.H ? n.ContentH - n.Rect.H : 0.0F
-}
+internal func maxScrollY(n Node) float32 -> if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F } else { n.ContentH > n.Rect.H ? n.ContentH - n.Rect.H : 0.0F }

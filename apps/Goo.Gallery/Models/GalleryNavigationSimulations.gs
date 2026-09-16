@@ -61,20 +61,10 @@ class GalleryGooFollowSimulation : Simulation {
     }
 
     /// Gets the damped pointer-follow coordinate.
-    public override func Position(elapsed float64) float64 {
-        if Done(elapsed) {
-            return target
-        }
-        return target + displacement * Math.Exp(-decay * elapsed)
-    }
+    public override func Position(elapsed float64) float64 -> if Done(elapsed) { target } else { target + displacement * Math.Exp(-decay * elapsed) }
 
     /// Gets the damped pointer-follow velocity.
-    public override func Velocity(elapsed float64) float64 {
-        if Done(elapsed) {
-            return 0.0
-        }
-        return -decay * displacement * Math.Exp(-decay * elapsed)
-    }
+    public override func Velocity(elapsed float64) float64 -> if Done(elapsed) { 0.0 } else { -decay * displacement * Math.Exp(-decay * elapsed) }
 
     /// Gets whether the pointer-follow motion has settled.
     public override func Done(elapsed float64) bool -> elapsed >= 0.32

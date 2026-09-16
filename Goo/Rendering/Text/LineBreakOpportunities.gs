@@ -259,8 +259,7 @@ internal class LineBreakOpportunities {
       if IsRegionalIndicatorPair(scalars, leftIndex, right) {
         return TextLineBreakAction.Prohibited
       }
-      if IsEmojiModifierSequence(left, right) { return TextLineBreakAction.Prohibited }
-      return TextLineBreakAction.Allowed
+      return if IsEmojiModifierSequence(left, right) { TextLineBreakAction.Prohibited } else { TextLineBreakAction.Allowed }
     }
 
     private func HasZeroWidthBefore(scalars List[TextLineBreakScalar], leftIndex int32) bool {

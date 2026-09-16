@@ -83,10 +83,7 @@ internal unsafe func VerifyShadowPixelSceneReadback(
     if !ShadowPixelSceneHalo(readback, width, 32, 44) {
       return false
     }
-    if !ShadowPixelSceneClear(readback, width, 17, 17) {
-      return false
-    }
-    return !(!ShadowPixelSceneClear(readback, width, 10, 10))
+    return if !ShadowPixelSceneClear(readback, width, 17, 17) { false } else { !(!ShadowPixelSceneClear(readback, width, 10, 10)) }
   }
 
 private unsafe func ShadowPixelSceneFill(

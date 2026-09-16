@@ -897,10 +897,5 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     }
   }
 
-  private func SaturatingAdd(current uint64, value uint64) uint64 {
-    if uint64.MaxValue - current < value {
-      return uint64.MaxValue
-    }
-    return current + value
-  }
+  private func SaturatingAdd(current uint64, value uint64) uint64 -> if uint64.MaxValue - current < value { uint64.MaxValue } else { current + value }
 }

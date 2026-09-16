@@ -15,10 +15,7 @@ internal class LayoutTransitionBlobs {
     private let values ConditionalWeakTable[Blob, LayoutTransitionBlobValue] =
     ConditionalWeakTable[Blob, LayoutTransitionBlobValue]()
 
-    internal func Get(blob Blob) LayoutTransition? {
-      if values.TryGetValue(blob, out var current) { return current.Value }
-      return nil
-    }
+    internal func Get(blob Blob) LayoutTransition? -> if values.TryGetValue(blob, out var current) { current.Value } else { nil }
 
     internal func Set(blob Blob, value LayoutTransition?) {
       values.Remove(blob)
@@ -145,10 +142,7 @@ internal class LayoutTransitions {
     private let values ConditionalWeakTable[Node, LayoutTransitionState] =
     ConditionalWeakTable[Node, LayoutTransitionState]()
 
-    internal func Value(n Node) LayoutTransition? {
-      if values.TryGetValue(n, out var state) { return state.Value }
-      return nil
-    }
+    internal func Value(n Node) LayoutTransition? -> if values.TryGetValue(n, out var state) { state.Value } else { nil }
 
     internal func Configure(n Node, value LayoutTransition?, pump MotionPump?,
       invalidated Action[ReconcileEffects]?) {

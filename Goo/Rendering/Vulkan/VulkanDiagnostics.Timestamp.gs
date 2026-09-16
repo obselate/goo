@@ -138,10 +138,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     validBits uint32, period float32, computeAndGraphics VkBool32,
     sharedLease VulkanSharedLease) VkResult{
       if timestampPoolCreated {
-        if nativeDevice == timestampDevice {
-          return VkConstants.VK_SUCCESS
-        }
-        return VkConstants.VK_ERROR_INITIALIZATION_FAILED
+        return if nativeDevice == timestampDevice { VkConstants.VK_SUCCESS } else { VkConstants.VK_ERROR_INITIALIZATION_FAILED }
       }
       if sharedLease == nil || sharedLease.Device != nativeDevice {
         return VkConstants.VK_ERROR_INITIALIZATION_FAILED
@@ -312,8 +309,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       }
       slot++
     }
-    if requiredCompletionSerial == 0uL { return true }
-    return lease.PollGraphicsSubmission(requiredCompletionSerial) == VkConstants.VK_SUCCESS
+    return if requiredCompletionSerial == 0uL { true } else { lease.PollGraphicsSubmission(requiredCompletionSerial) == VkConstants.VK_SUCCESS }
   }
 
   internal func ResetTimestampQueries(commandBuffer VkCommandBuffer, slot int32,
@@ -703,12 +699,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     return VulkanDiagnosticTimestampStage.Offscreen
   }
 
-  private func SaturatingAddTimestamp(left uint64, right uint64) uint64 {
-    if uint64.MaxValue - left < right {
-      return uint64.MaxValue
-    }
-    return left + right
-  }
+  private func SaturatingAddTimestamp(left uint64, right uint64) uint64 -> if uint64.MaxValue - left < right { uint64.MaxValue } else { left + right }
 
   private func ResetTimestampRangeState() {
     var slot int32 = 0
@@ -900,26 +891,15 @@ internal class VulkanTimestamp {
       if validBits >= 64u {
         return uint64.MaxValue
       }
-      if validBits == 0u {
-        return 0uL
-      }
-      return (1uL << int32(validBits)) - 1uL
+      return if validBits == 0u { 0uL } else { (1uL << int32(validBits)) - 1uL }
     }
 
     func ElapsedTicks(begin uint64, end uint64, timestampMask uint64) uint64 {
       let maskedBegin = begin & timestampMask
       let maskedEnd = end & timestampMask
-      if maskedEnd >= maskedBegin {
-        return maskedEnd - maskedBegin
-      }
-      return (timestampMask - maskedBegin + 1uL) + maskedEnd
+      return if maskedEnd >= maskedBegin { maskedEnd - maskedBegin } else { (timestampMask - maskedBegin + 1uL) + maskedEnd }
     }
 
-    func Nanoseconds(ticks uint64, timestampPeriod float32) uint64 {
-      if timestampPeriod <= 0.0F {
-        return 0uL
-      }
-      return uint64(float64(ticks) * float64(timestampPeriod))
-    }
+    func Nanoseconds(ticks uint64, timestampPeriod float32) uint64 -> if timestampPeriod <= 0.0F { 0uL } else { uint64(float64(ticks) * float64(timestampPeriod)) }
   }
 }

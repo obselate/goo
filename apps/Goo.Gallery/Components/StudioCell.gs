@@ -69,12 +69,7 @@ class StudioCell : Cell {
 
     private func effectsReady() bool -> Active
 
-    private func activeEffect(effect ShaderEffect) ShaderEffect? {
-        if effectsReady() {
-            return effect
-        }
-        return nil
-    }
+    private func activeEffect(effect ShaderEffect) ShaderEffect? -> if effectsReady() { effect } else { nil }
 
     private func firstLabel() string {
         if selected == 0 {
@@ -104,10 +99,7 @@ class StudioCell : Cell {
         if selected == 8 {
             return "Scale"
         }
-        if selected == 9 {
-            return "Folds"
-        }
-        return "Curvature"
+        return if selected == 9 { "Folds" } else { "Curvature" }
     }
 
     private func secondLabel() string {
@@ -138,10 +130,7 @@ class StudioCell : Cell {
         if selected == 8 {
             return "Intensity"
         }
-        if selected == 9 {
-            return "Chroma"
-        }
-        return "Scanlines"
+        return if selected == 9 { "Chroma" } else { "Scanlines" }
     }
 
     private func thirdLabel() string {
@@ -172,10 +161,7 @@ class StudioCell : Cell {
         if selected == 8 {
             return "Drift"
         }
-        if selected == 9 {
-            return "Motion"
-        }
-        return "Bloom"
+        return if selected == 9 { "Motion" } else { "Bloom" }
     }
 
     private func firstMin() float64 {
@@ -200,10 +186,7 @@ class StudioCell : Cell {
         if selected == 6 {
             return 0.0
         }
-        if selected == 7 {
-            return 0.0
-        }
-        return 0.0
+        return if selected == 7 { 0.0 } else { 0.0 }
     }
 
     private func firstMax() float64 {
@@ -228,18 +211,10 @@ class StudioCell : Cell {
         if selected == 6 {
             return 2.0
         }
-        if selected == 7 {
-            return 1.0
-        }
-        return 1.0
+        return if selected == 7 { 1.0 } else { 1.0 }
     }
 
-    private func firstStep() float64 {
-        if selected == 1 || selected == 7 {
-            return 1.0
-        }
-        return 0.01
-    }
+    private func firstStep() float64 -> if selected == 1 || selected == 7 { 1.0 } else { 0.01 }
 
     private func secondMin() float64 {
         if selected == 0 {
@@ -263,10 +238,7 @@ class StudioCell : Cell {
         if selected == 6 {
             return 0.0
         }
-        if selected == 7 {
-            return 0.0
-        }
-        return 0.0
+        return if selected == 7 { 0.0 } else { 0.0 }
     }
 
     private func secondMax() float64 {
@@ -291,18 +263,10 @@ class StudioCell : Cell {
         if selected == 6 {
             return 1.0
         }
-        if selected == 7 {
-            return 1.0
-        }
-        return 1.0
+        return if selected == 7 { 1.0 } else { 1.0 }
     }
 
-    private func secondStep() float64 {
-        if selected == 4 {
-            return 0.1
-        }
-        return 0.01
-    }
+    private func secondStep() float64 -> if selected == 4 { 0.1 } else { 0.01 }
 
     private func thirdMin() float64 {
         if selected == 0 {
@@ -326,10 +290,7 @@ class StudioCell : Cell {
         if selected == 6 {
             return 0.0
         }
-        if selected == 7 {
-            return 0.0
-        }
-        return 0.0
+        return if selected == 7 { 0.0 } else { 0.0 }
     }
 
     private func thirdMax() float64 {
@@ -354,18 +315,10 @@ class StudioCell : Cell {
         if selected == 6 {
             return 1.0
         }
-        if selected == 7 {
-            return 1.0
-        }
-        return 1.0
+        return if selected == 7 { 1.0 } else { 1.0 }
     }
 
-    private func thirdStep() float64 {
-        if selected == 7 {
-            return 1.0
-        }
-        return 0.01
-    }
+    private func thirdStep() float64 -> if selected == 7 { 1.0 } else { 0.01 }
 
     private func resetControls(index int32) {
         if index == 0 {
@@ -460,27 +413,18 @@ class StudioCell : Cell {
             if index == 0 {
                 return Color.Rgb(21, 31, 46)
             }
-            if index == 1 {
-                return Color.Rgb(86, 161, 188)
-            }
-            return Color.Rgb(170, 195, 208)
+            return if index == 1 { Color.Rgb(86, 161, 188) } else { Color.Rgb(170, 195, 208) }
         }
         if palette == 1 {
             if index == 0 {
                 return Color.Rgb(52, 27, 18)
             }
-            if index == 1 {
-                return Color.Rgb(213, 131, 56)
-            }
-            return Color.Rgb(245, 193, 111)
+            return if index == 1 { Color.Rgb(213, 131, 56) } else { Color.Rgb(245, 193, 111) }
         }
         if index == 0 {
             return Color.Rgb(42, 14, 24)
         }
-        if index == 1 {
-            return Color.Rgb(235, 47, 73)
-        }
-        return Color.Rgb(255, 177, 61)
+        return if index == 1 { Color.Rgb(235, 47, 73) } else { Color.Rgb(255, 177, 61) }
     }
 
     private func paletteButton(label string, index int32) Button {

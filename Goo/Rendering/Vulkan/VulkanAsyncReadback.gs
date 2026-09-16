@@ -41,10 +41,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
   internal prop GpuCopyNanoseconds uint64{ get -> target.GpuCopyNanoseconds }
   internal prop Result VulkanReadbackResult? {
     get {
-      if state != VulkanReadbackState.Complete {
-        return nil
-      }
-      return result
+      return if state != VulkanReadbackState.Complete { nil } else { result }
     }
   }
 
@@ -173,10 +170,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
         AbandonAfterDeviceLoss()
         return VkConstants.VK_ERROR_DEVICE_LOST
       }
-    if completion != VkConstants.VK_SUCCESS {
-      return completion
-    }
-    return VkConstants.VK_SUCCESS
+    return if completion != VkConstants.VK_SUCCESS { completion } else { VkConstants.VK_SUCCESS }
   }
 
   internal func Reset() {

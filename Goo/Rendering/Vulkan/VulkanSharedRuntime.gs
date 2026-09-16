@@ -962,10 +962,7 @@ internal unsafe sealed class VulkanSharedLease : IDisposable {
       return false
     }
     disposed = true
-    if alreadyIdle {
-      return owner.ReleaseLeaseAfterIdle()
-    }
-    return owner.ReleaseLease()
+    return if alreadyIdle { owner.ReleaseLeaseAfterIdle() } else { owner.ReleaseLease() }
   }
 
   internal func Release() bool -> ReleaseCore(false)

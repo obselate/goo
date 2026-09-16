@@ -209,12 +209,7 @@ class ShaderLabCell : Cell {
 
     private func effectsReady() bool -> Active
 
-    private func activeEffect(effect ShaderEffect) ShaderEffect? {
-        if effectsReady() {
-            return effect
-        }
-        return nil
-    }
+    private func activeEffect(effect ShaderEffect) ShaderEffect? -> if effectsReady() { effect } else { nil }
 
     private func addRipple(x float64, y float64) {
         var index int32 = 2

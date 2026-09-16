@@ -23,15 +23,13 @@ func PerformanceThreeWindowSelectRoot(index int32,
   second PerformanceThreeWindowRoot,
   third PerformanceThreeWindowRoot) PerformanceThreeWindowRoot{
     if index == 0 { return first }
-    if index == 1 { return second }
-    return third
+    return if index == 1 { second } else { third }
   }
 
 func PerformanceThreeWindowSelectWindow(index int32,
   first Window, second Window, third Window) Window{
     if index == 0 { return first }
-    if index == 1 { return second }
-    return third
+    return if index == 1 { second } else { third }
   }
 
 func RunPerformanceThreeWindowBenchmark() {

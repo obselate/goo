@@ -129,8 +129,7 @@ internal partial class PointerInput {
 
   private func normalizePressure(value float32) float32 {
     if Single.IsNaN(value) || value <= 0.0F { return 0.0F }
-    if value >= 1.0F { return 1.0F }
-    return value
+    return if value >= 1.0F { 1.0F } else { value }
   }
 
   private func acquireSemanticPrimary(button PointerButton) bool {
@@ -591,18 +590,12 @@ internal partial class PointerInput {
 
   internal func RefreshHover(root Node?, resolver Resolver) bool {
     current = mouse
-    if cursorValid {
-      return HandleMove(root, resolver, cursor.X, cursor.Y)
-    }
-    return false
+    return if cursorValid { HandleMove(root, resolver, cursor.X, cursor.Y) } else { false }
   }
 
   internal func CurrentCursor() Cursor {
     current = mouse
-    if hoverChain.Count == 0 {
-      return Cursor.Default
-    }
-    return hoverChain[hoverChain.Count - 1].Cursor
+    return if hoverChain.Count == 0 { Cursor.Default } else { hoverChain[hoverChain.Count - 1].Cursor }
   }
 
   internal func HandleClick(root Node?, x float32, y float32) bool {
@@ -932,10 +925,7 @@ internal partial class PointerInput {
         }
         let prevented = dispatchPointer(root, PointerEventKind.Release, x, y, 0.0F, 0.0F, button, modifiers)
         releaseCaptureAfterUp(button)
-        if button != PointerButton.Primary || !semantic {
-          return false
-        }
-        return HandleRelease(root, resolver, x, y, !prevented)
+        return if button != PointerButton.Primary || !semantic { false } else { HandleRelease(root, resolver, x, y, !prevented) }
       } finally {
         releaseCaptureAfterUp(button)
         if button == PointerButton.Primary {

@@ -456,10 +456,7 @@ internal class DiagnosticPipeHost : IDisposable {
           }
       }
     }
-    if root.TryGetProperty(name, out var value) {
-      return integer(value, "")
-    }
-    return 0
+    return if root.TryGetProperty(name, out var value) { integer(value, "") } else { 0 }
   }
 
   private func text(root JsonElement, name string) string {

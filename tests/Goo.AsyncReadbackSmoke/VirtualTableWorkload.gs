@@ -340,19 +340,9 @@ class VirtualTableRootCell : Cell {
       row = row + 1
     }
   }
-  func SlotForLogical(index int32) int32 {
-    if index < 0 || index >= logicalToSlot.Length {
-      return -1
-    }
-    return logicalToSlot[index]
-  }
+  func SlotForLogical(index int32) int32 -> if index < 0 || index >= logicalToSlot.Length { -1 } else { logicalToSlot[index] }
 
-  func LogicalForSlot(slot int32) int32 {
-    if slot < 0 || slot >= slotToLogical.Length {
-      return -1
-    }
-    return slotToLogical[slot]
-  }
+  func LogicalForSlot(slot int32) int32 -> if slot < 0 || slot >= slotToLogical.Length { -1 } else { slotToLogical[slot] }
 
   override func Build() Blob {
     let canvas = Container{
@@ -533,14 +523,12 @@ class VirtualTableRootCell : Cell {
 
   private func ClampIndex(value int32, limit int32) int32 {
     if value < 0 { return 0 }
-    if value >= limit { return limit - 1 }
-    return value
+    return if value >= limit { limit - 1 } else { value }
   }
 
   private func ClampExclusive(value int32, limit int32) int32 {
     if value < 1 { return 1 }
-    if value > limit { return limit }
-    return value
+    return if value > limit { limit } else { value }
   }
 }
 

@@ -160,10 +160,7 @@ public sealed partial class NativeAccessibilityAdapter : AccessibilityAdapter, I
       }
     }
 
-    private func Find(data nint) NativeAccessibilityAdapter? {
-      if bindings.TryGetValue(int64(data), out var weak) && weak.TryGetTarget(out var adapter) { return adapter }
-      return nil
-    }
+    private func Find(data nint) NativeAccessibilityAdapter? -> if bindings.TryGetValue(int64(data), out var weak) && weak.TryGetTarget(out var adapter) { adapter } else { nil }
 
     private func Activate(data nint) nint {
       guard let adapter = Find(data), let window = adapter.owner else { return nint(0) }

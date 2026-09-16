@@ -604,10 +604,7 @@ internal partial class VulkanSceneCompiler {
       var paintBounds ConservativeBounds
       let hasPaintBounds = scene.TryGetCachedTextPaintBounds(
         node, owner, bounds, out paintBounds)
-      if !hasPaintBounds {
-        return false
-      }
-      return IntersectBounds(paintBounds, activeClipBounds).IsEmpty
+      return if !hasPaintBounds { false } else { IntersectBounds(paintBounds, activeClipBounds).IsEmpty }
     }
 
   private func EmittedPathClipBounds(

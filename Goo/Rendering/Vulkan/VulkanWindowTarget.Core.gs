@@ -220,10 +220,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
         throw InvalidOperationException("Vulkan readback close poll failed: " + result.ToString())
       }
     }
-    if ready {
-      return true
-    }
-    return VulkanDeviceRecoveryCoordinator.Count <= 1
+    return if ready { true } else { VulkanDeviceRecoveryCoordinator.Count <= 1 }
   }
 
   internal func HoldNextQueueSubmitForTest() {
@@ -1652,10 +1649,5 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
     throw InvalidOperationException("Vulkan frame operation failed: " + result.ToString())
   }
 
-  private func ResolveScale(value float32) float32 {
-    if Single.IsNaN(value) || Single.IsInfinity(value) || value <= 0.0F {
-      return 1.0F
-    }
-    return value
-  }
+  private func ResolveScale(value float32) float32 -> if Single.IsNaN(value) || Single.IsInfinity(value) || value <= 0.0F { 1.0F } else { value }
 }

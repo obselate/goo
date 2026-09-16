@@ -1289,12 +1289,7 @@ internal partial class SdlHost {
       FramebufferHeight = framebufferHeight
     }
 
-  internal func WindowIdForTest() uint32 {
-    if window.IsNull {
-      return 0u
-    }
-    return SDL.GetWindowID(window)
-  }
+  internal func WindowIdForTest() uint32 -> if window.IsNull { 0u } else { SDL.GetWindowID(window) }
 
 }
 

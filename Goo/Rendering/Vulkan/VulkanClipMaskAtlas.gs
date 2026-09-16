@@ -1197,10 +1197,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     if record.LastUseSerial == 0uL {
       return true
     }
-    if completedSerial <= record.LastUseSerial {
-      return false
-    }
-    return completedSerial - record.LastUseSerial >= StaleSerialWindow
+    return if completedSerial <= record.LastUseSerial { false } else { completedSerial - record.LastUseSerial >= StaleSerialWindow }
   }
 
   private func IsProtected(record VulkanClipMaskRegionRecord) bool {

@@ -108,10 +108,7 @@ class PerformanceSmallAnimationRoot : Cell {
     let periodSeconds = float64(AnimationPeriodFrames) * FixedDeltaSeconds
     let halfPeriodSeconds = periodSeconds * 0.5
     let phaseSeconds = float64(phase) * FixedDeltaSeconds
-    if phaseSeconds <= halfPeriodSeconds {
-      return phaseSeconds / halfPeriodSeconds
-    }
-    return (periodSeconds - phaseSeconds) / halfPeriodSeconds
+    return if phaseSeconds <= halfPeriodSeconds { phaseSeconds / halfPeriodSeconds } else { (periodSeconds - phaseSeconds) / halfPeriodSeconds }
   }
 
   func Advance(frame int32) {

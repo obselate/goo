@@ -1193,14 +1193,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   private func Clamp01(value float32) float32 {
     if value <= 0.0F { return 0.0F }
-    if value >= 1.0F { return 1.0F }
-    return value
+    return if value >= 1.0F { 1.0F } else { value }
   }
 
   private func ClampLength(value float32, limit float32) float32 {
     if value <= 0.0F { return 0.0F }
-    if value >= limit { return limit }
-    return value
+    return if value >= limit { limit } else { value }
   }
 
 }

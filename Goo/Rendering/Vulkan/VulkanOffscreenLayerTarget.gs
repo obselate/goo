@@ -971,12 +971,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     }
   }
 
-  private func NeedsBudgetPressure(required VkDeviceSize) bool {
-    if residentBytes > byteBudget {
-      return true
-    }
-    return required > byteBudget - residentBytes
-  }
+  private func NeedsBudgetPressure(required VkDeviceSize) bool -> if residentBytes > byteBudget { true } else { required > byteBudget - residentBytes }
 
   private func EnsureOpen() {
     if disposed {

@@ -380,8 +380,7 @@ func AllBlobSampleMemory(process Process, window Window,
 
 func AllBlobMutationExpected(mode string, frames int32) int64 {
   if mode == AllBlobMode.Unchanged { return 0L }
-  if mode == AllBlobMode.Sparse { return int64(frames) }
-  return int64(frames) * int64(AllBlobRoot.Count)
+  return if mode == AllBlobMode.Sparse { int64(frames) } else { int64(frames) * int64(AllBlobRoot.Count) }
 }
 
 data struct AllBlobLinuxSmapsSnapshot {

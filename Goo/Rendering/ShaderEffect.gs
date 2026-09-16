@@ -211,10 +211,7 @@ public sealed class ShaderEffect {
     }
   }
 
-  private func elapsedAt(timestamp int64) float64 {
-    if !playing { return elapsedSeconds }
-    return elapsedSeconds + float64(timestamp - playbackTimestamp) / float64(Stopwatch.Frequency)
-  }
+  private func elapsedAt(timestamp int64) float64 -> if !playing { elapsedSeconds } else { elapsedSeconds + float64(timestamp - playbackTimestamp) / float64(Stopwatch.Frequency) }
 
   private func finite(value float32) bool -> !Single.IsNaN(value) && !Single.IsInfinity(value)
 

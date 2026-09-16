@@ -72,8 +72,7 @@ internal class ClipPaths {
 
     private func state(n Node) ClipPathValue? {
       guard let table = values else { return nil }
-      if table.TryGetValue(n, out var value) { return value }
-      return nil
+      return if table.TryGetValue(n, out var value) { value } else { nil }
     }
 
     private func add(n Node, value ClipPathValue) {

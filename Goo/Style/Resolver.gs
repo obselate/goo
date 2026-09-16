@@ -191,12 +191,7 @@ internal class Resolver {
     return changed
   }
 
-  private func changedField(mask StyleMask, before StyleEntry, n Node, field StyleField) StyleMask {
-    if sameStyleEntry(before, readField(n, field)) {
-      return mask
-    }
-    return styleMaskWith(mask, field)
-  }
+  private func changedField(mask StyleMask, before StyleEntry, n Node, field StyleField) StyleMask -> if sameStyleEntry(before, readField(n, field)) { mask } else { styleMaskWith(mask, field) }
 
   private func resolveNode(n Node, initial bool) {
     writeField(n, StyleEntry{ Field: StyleField.Direction,
@@ -631,10 +626,7 @@ internal func makeBoxShadowTransition(from BoxShadowStack?, target BoxShadowStac
 internal func ease(e Easing, t float64) float64 {
   if e == Easing.EaseIn { return t * t }
   if e == Easing.EaseOut { return 1.0 - (1.0 - t) * (1.0 - t) }
-  if e == Easing.EaseInOut {
-    return t < 0.5 ? 2.0 * t * t : 1.0 - (1.0 - t) * (1.0 - t) * 2.0
-  }
-  return t
+  return if e == Easing.EaseInOut { t < 0.5 ? 2.0 * t * t : 1.0 - (1.0 - t) * (1.0 - t) * 2.0 } else { t }
 }
 
 // Paint effects without public transition selectors stay discrete.

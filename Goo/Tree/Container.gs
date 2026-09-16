@@ -58,8 +58,7 @@ internal class ContainerVectorViewports {
 
     internal func Get(container Container) VectorViewport? {
       guard let table = values else { return nil }
-      if table.TryGetValue(container, out var value) { return value.Value }
-      return nil
+      return if table.TryGetValue(container, out var value) { value.Value } else { nil }
     }
 
     internal func Set(container Container, next VectorViewport?) {

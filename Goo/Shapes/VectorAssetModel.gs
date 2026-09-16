@@ -587,12 +587,7 @@ internal func compiledVectorClipPath(value CompiledVector,
   }
 
 internal func compiledVectorClipRule(value CompiledVector,
-  node CompiledVectorNodeView) FillRule{
-    if !node.HasClip {
-      return FillRule.NonZero
-    }
-    return FillRule(value.ClipAt(int32(node.ClipIndex)).FillRule)
-  }
+  node CompiledVectorNodeView) FillRule-> if !node.HasClip { FillRule.NonZero } else { FillRule(value.ClipAt(int32(node.ClipIndex)).FillRule) }
 
 internal func compiledVectorTransform(node CompiledVectorNodeView) PanelTransform {
   let a = node.M11

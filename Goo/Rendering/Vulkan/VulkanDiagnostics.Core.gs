@@ -81,12 +81,7 @@ internal unsafe partial class VulkanDiagnostics {
   private var activeWriters int32
 
   shared {
-    func Create(enabled bool) VulkanDiagnostics? {
-      if !enabled {
-        return nil
-      }
-      return VulkanDiagnostics()
-    }
+    func Create(enabled bool) VulkanDiagnostics? -> if !enabled { nil } else { VulkanDiagnostics() }
   }
 
   internal prop ValidationErrorCount int64{ get -> Interlocked.Read(ref validationErrors) }

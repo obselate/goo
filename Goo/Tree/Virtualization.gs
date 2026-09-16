@@ -458,8 +458,7 @@ internal func virtualPlacement(window VirtualWindow, index int32) VirtualPlaceme
 
 internal func virtualGap(specific Length, fallback Length, basis float32) float32 {
   if specific.HasMagnitude { return virtualLength(specific, basis) }
-  if fallback.HasMagnitude { return virtualLength(fallback, basis) }
-  return 0.0F
+  return if fallback.HasMagnitude { virtualLength(fallback, basis) } else { 0.0F }
 }
 
 internal func virtualLength(value Length, basis float32) float32 ->
@@ -474,10 +473,7 @@ internal func virtualLineCapacity(viewport float32, item float32, gap float32) i
 internal func virtualCeiling(value int32, divisor int32) int32 ->
 value / divisor + (value % divisor == 0 ? 0 : 1)
 
-internal func virtualSpan(count int32, item float32, gap float32) float32 {
-  if count <= 0 { return 0.0F }
-  return float32(count) * item + float32(count - 1) * gap
-}
+internal func virtualSpan(count int32, item float32, gap float32) float32 -> if count <= 0 { 0.0F } else { float32(count) * item + float32(count - 1) * gap }
 
 internal data struct VirtualLineWindow {
   internal var Start int32
@@ -543,10 +539,7 @@ internal class Virtualization {
     private let values ConditionalWeakTable[Node, VirtualNodeState] =
     ConditionalWeakTable[Node, VirtualNodeState]()
 
-    internal func State(n Node) VirtualNodeState? {
-      if values.TryGetValue(n, out var state) { return state }
-      return nil
-    }
+    internal func State(n Node) VirtualNodeState? -> if values.TryGetValue(n, out var state) { state } else { nil }
 
     internal func Configure(n Node) VirtualNodeState {
       if let state = State(n) { return state }

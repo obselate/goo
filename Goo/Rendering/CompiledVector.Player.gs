@@ -198,10 +198,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
       return -1
     }
     var parsed int32
-    if !Int32.TryParse(value.Substring(prefix.Length), out parsed) {
-      return -1
-    }
-    return parsed
+    return if !Int32.TryParse(value.Substring(prefix.Length), out parsed) { -1 } else { parsed }
   }
 
   private func prepareReverseTargets() {
@@ -810,14 +807,12 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
 
   private func clamp01(value float32) float32 {
     if value <= 0.0F { return 0.0F }
-    if value >= 1.0F { return 1.0F }
-    return value
+    return if value >= 1.0F { 1.0F } else { value }
   }
 
   private func clamp01f(value float32) float32 {
     if value <= 0.0F { return 0.0F }
-    if value >= 1.0F { return 1.0F }
-    return value
+    return if value >= 1.0F { 1.0F } else { value }
   }
 
   private func clampNonNegative(value float32) float32 -> value < 0.0F ? 0.0F : value
@@ -825,7 +820,6 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
   private func clampOrdinal(value float32, minimum int32, maximum int32) int32 {
     let rounded = int32(value + 0.5F)
     if rounded < minimum { return minimum }
-    if rounded > maximum { return maximum }
-    return rounded
+    return if rounded > maximum { maximum } else { rounded }
   }
 }

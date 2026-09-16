@@ -424,10 +424,7 @@ internal partial class VulkanWindowTarget {
 }
 
 internal partial class SdlHost {
-  internal func LegacyNativeMinimizedForProof() bool {
-    if window.IsNull { return false }
-    return (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Minimized)) != 0uL
-  }
+  internal func LegacyNativeMinimizedForProof() bool -> if window.IsNull { false } else { (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Minimized)) != 0uL }
 }
 
 public partial class Window {

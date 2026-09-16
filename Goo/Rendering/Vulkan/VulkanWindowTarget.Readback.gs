@@ -335,10 +335,7 @@ internal unsafe partial class VulkanWindowTarget {
     if result == VkConstants.VK_SUCCESS {
       return WindowReadbackPollStatus.Complete
     }
-    if result == VkConstants.VK_NOT_READY {
-      return WindowReadbackPollStatus.NotReady
-    }
-    return WindowReadbackPollStatus.Failed
+    return if result == VkConstants.VK_NOT_READY { WindowReadbackPollStatus.NotReady } else { WindowReadbackPollStatus.Failed }
   }
 
   public func TakeCaptureResult() WindowReadbackResult ? -> TakeReadbackResult()

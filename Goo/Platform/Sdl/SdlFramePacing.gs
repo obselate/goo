@@ -52,12 +52,7 @@ internal class SdlFramePacing {
     }
   }
 
-  internal func IsDue(nowTicks float64) bool {
-    if retryDeadlineTicks > nowTicks {
-      return false
-    }
-    return UncappedBenchmark || nextDeadlineTicks <= 0.0 || nextDeadlineTicks <= nowTicks
-  }
+  internal func IsDue(nowTicks float64) bool -> if retryDeadlineTicks > nowTicks { false } else { UncappedBenchmark || nextDeadlineTicks <= 0.0 || nextDeadlineTicks <= nowTicks }
 
   internal func WaitMilliseconds(nowTicks float64, fallbackMs int32) int32 {
     if retryDeadlineTicks > nowTicks {

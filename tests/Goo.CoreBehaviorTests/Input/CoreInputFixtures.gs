@@ -1025,10 +1025,7 @@ internal class InputFixtures {
     }
     driver.Press(150.0F, 150.0F)
     driver.Press(25.0F, 25.0F)
-    if !after.Children[0].Focused {
-      return false
-    }
-    return focusLossClearsInputState()
+    return if !after.Children[0].Focused { false } else { focusLossClearsInputState() }
   }
 
   func EditHandlesGraphemeClustersAndWordBoundaries() bool {
@@ -1428,10 +1425,7 @@ internal class InputFixtures {
     two.Press(10.0F, 31.5F)
     two.Release(10.0F, 31.5F)
     guard let twoTree = two.Window.Tree else { return false }
-    if twoTree.Children[1].Caret != twoTree.Children[1].Anchor {
-      return false
-    }
-    return queuedPointerSelectionKeepsSdl3Order()
+    return if twoTree.Children[1].Caret != twoTree.Children[1].Anchor { false } else { queuedPointerSelectionKeepsSdl3Order() }
   }
 
   func NestedWheelOwnershipAndBoundary() bool {

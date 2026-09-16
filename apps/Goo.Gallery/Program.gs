@@ -325,8 +325,5 @@ func MeasureRun(window Window, samples[]float64, spot string) int32 {
         "gallery-bench " + spot + ": median="
         + median.ToString("F2") + "ms p95=" + p95.ToString("F2") + "ms"
     )
-    if median > 17.5 || p95 > 20.0 {
-        return 1
-    }
-    return 0
+    return if median > 17.5 || p95 > 20.0 { 1 } else { 0 }
 }

@@ -284,12 +284,7 @@ internal class ElementHandles {
     ConditionalWeakTable[Blob, ElementHandle]()
     private let values ConditionalWeakTable[Node, ElementHandle] =
     ConditionalWeakTable[Node, ElementHandle]()
-    internal func BlobHandle(b Blob) ElementHandle? {
-      if blobValues.TryGetValue(b, out var value) {
-        return value
-      }
-      return nil
-    }
+    internal func BlobHandle(b Blob) ElementHandle? -> if blobValues.TryGetValue(b, out var value) { value } else { nil }
 
     internal func SetBlobHandle(b Blob, handle ElementHandle?) {
       blobValues.Remove(b)
@@ -364,20 +359,14 @@ internal class ElementHandles {
       if !n.HasElementHandle {
         return false
       }
-      if values.TryGetValue(n, out var value) {
-        return value == handle
-      }
-      return false
+      return if values.TryGetValue(n, out var value) { value == handle } else { false }
     }
 
     internal func Current(n Node) ElementHandle? {
       if !n.HasElementHandle {
         return nil
       }
-      if values.TryGetValue(n, out var value) {
-        return value
-      }
-      return nil
+      return if values.TryGetValue(n, out var value) { value } else { nil }
     }
 
     internal func BorderBox(n Node) ElementRect {
@@ -849,8 +838,7 @@ internal class TextGeometryQueries {
           case NodeKind.Editor: TextEditorLayouts.TryCaretRectForGeometry(n, position, out local)
           default: false
         }
-        if !found { return false }
-        return convertRect(n, local, space, out rect)
+        return if !found { false } else { convertRect(n, local, space, out rect) }
       }
 
     internal func CopyRangeRects(n Node, textRange TextRange, space TextCoordinateSpace,

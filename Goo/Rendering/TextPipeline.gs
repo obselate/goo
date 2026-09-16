@@ -28,10 +28,7 @@ internal class TextAnalysis {
     FontFamily = ""
   }
 
-  internal func Paragraph(index int32) TextParagraphAnalysis {
-    if index == 0 { return First }
-    return Additional!! [index - 1]
-  }
+  internal func Paragraph(index int32) TextParagraphAnalysis -> if index == 0 { First } else { Additional!! [index - 1] }
 
   internal func SetParagraph(index int32, value TextParagraphAnalysis) {
     if index == 0 {
@@ -93,8 +90,7 @@ internal class PassiveTextRangeBlobs {
 
     internal func Values(text Text) [] ? TextStyleRange {
       if !text.HasPassiveTextRanges { return nil }
-      if values.TryGetValue(text, out var value) { return value.Ranges }
-      return nil
+      return if values.TryGetValue(text, out var value) { value.Ranges } else { nil }
     }
 
     internal func Write(text Text, ranges [] ? TextStyleRange) {
@@ -138,10 +134,7 @@ internal class PassiveTextPresentations {
         return PassiveTextPresentationChange{ Changed: true, FlowChanged: flowChanged }
       }
 
-    internal func Read(n Node) [] ? TextStyleRange {
-      if values.TryGetValue(n, out var value) { return value.Plan.Ranges }
-      return nil
-    }
+    internal func Read(n Node) [] ? TextStyleRange -> if values.TryGetValue(n, out var value) { value.Plan.Ranges } else { nil }
 
     internal func Remove(n Node) {
       values.Remove(n)
@@ -433,10 +426,7 @@ internal class TextFlow {
           overflowed || exceeds, false)
       }
 
-    internal func Resolve(cursor int32, fit int32, preferred int32, overflowed bool) int32 {
-      if overflowed && preferred > cursor { return preferred }
-      return fit
-    }
+    internal func Resolve(cursor int32, fit int32, preferred int32, overflowed bool) int32 -> if overflowed && preferred > cursor { preferred } else { fit }
 
     internal func Measure(paragraph TextParagraphAnalysis, start int32, end int32,
       style TextResolvedStyle) float32{

@@ -77,10 +77,7 @@ internal func styleMaskWithout(mask StyleMask, field StyleField) StyleMask {
 
 internal func styleMaskHas(mask StyleMask, field StyleField) bool {
   let ordinal = styleMaskOrdinal(field)
-  if ordinal < 64 {
-    return (mask.Low & (uint64(1) << ordinal)) != uint64(0)
-  }
-  return (mask.High & (uint64(1) << (ordinal - 64))) != uint64(0)
+  return if ordinal < 64 { (mask.Low & (uint64(1) << ordinal)) != uint64(0) } else { (mask.High & (uint64(1) << (ordinal - 64))) != uint64(0) }
 }
 
 internal func styleMaskUnion(left StyleMask, right StyleMask) StyleMask -> StyleMask { Low: left.Low | right.Low, High: left.High | right.High }

@@ -57,15 +57,9 @@ internal func protectedTextDisplayOffset(value string, source int32,
 internal func protectedTextSourceOffset(value string, display int32) int32 -> mappedSourceOffset(value, UnicodeGraphemes.Starts(value), display)
 
 internal func entryDisplayOffset(state EntryShapeState, source int32,
-  affinity TextAffinity) int32{
-    if !state.Password { return source }
-    return mappedDisplayOffset(state.Content, state.SourceStarts, source, affinity)
-  }
+  affinity TextAffinity) int32-> if !state.Password { source } else { mappedDisplayOffset(state.Content, state.SourceStarts, source, affinity) }
 
-internal func entrySourceOffset(state EntryShapeState, display int32) int32 {
-  if !state.Password { return display }
-  return mappedSourceOffset(state.Content, state.SourceStarts, display)
-}
+internal func entrySourceOffset(state EntryShapeState, display int32) int32 -> if !state.Password { display } else { mappedSourceOffset(state.Content, state.SourceStarts, display) }
 
 private func mappedDisplayOffset(value string, starts []int32, source int32,
   affinity TextAffinity) int32{
@@ -82,8 +76,7 @@ private func mappedDisplayOffset(value string, starts []int32, source int32,
 
 private func mappedSourceOffset(value string, starts []int32, display int32) int32 {
   if display <= 0 { return 0 }
-  if display >= starts.Length { return value.Length }
-  return starts[display]
+  return if display >= starts.Length { value.Length } else { starts[display] }
 }
 
 internal class TextMetrics {

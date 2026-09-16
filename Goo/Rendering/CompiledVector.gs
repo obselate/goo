@@ -156,10 +156,7 @@ internal sealed class CompiledVector {
             return false
           }
         let expected = uint64(countWord) * uint64(stride)
-        if expected != uint64(lengthWord) || expected > uint64(Int32.MaxValue) {
-          return false
-        }
-        return uint64(offsetWord) + expected <= uint64(length)
+        return if expected != uint64(lengthWord) || expected > uint64(Int32.MaxValue) { false } else { uint64(offsetWord) + expected <= uint64(length) }
       }
 
     private func sectionsDoNotOverlap(sections []CompiledVectorSection) bool {

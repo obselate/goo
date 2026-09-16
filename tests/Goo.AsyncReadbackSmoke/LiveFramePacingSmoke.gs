@@ -20,18 +20,10 @@ class FramePacingSimulation : Simulation {
     if elapsed <= 0.0 {
       return from
     }
-    if elapsed >= duration {
-      return to
-    }
-    return from + (to - from) * (elapsed / duration)
+    return if elapsed >= duration { to } else { from + (to - from) * (elapsed / duration) }
   }
 
-  public override func Velocity(elapsed float64) float64 {
-    if elapsed < 0.0 || elapsed >= duration {
-      return 0.0
-    }
-    return (to - from) / duration
-  }
+  public override func Velocity(elapsed float64) float64 -> if elapsed < 0.0 || elapsed >= duration { 0.0 } else { (to - from) / duration }
 
   public override func Done(elapsed float64) bool -> elapsed >= duration
 }

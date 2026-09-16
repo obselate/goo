@@ -411,10 +411,7 @@ func DiagnosticExcerpt(diagnostics string, kind string) string {
   } else {
     diagnostics.Substring(start, lineEnd - start)
   }
-  if line.Length > 512 {
-    return line.Substring(0, 512)
-  }
-  return line
+  return if line.Length > 512 { line.Substring(0, 512) } else { line }
 }
 
 func EnvironmentCount(name string, fallback int32, maximum int32) int32 {

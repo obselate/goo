@@ -70,10 +70,7 @@ internal unsafe sealed class VulkanMemoryBudgetState {
     }
     let usage = heapUsages[int32(heapIndex)]
     let budget = heapBudgets[int32(heapIndex)]
-    if usage > budget {
-      return false
-    }
-    return blockSize <= budget - usage
+    return if usage > budget { false } else { blockSize <= budget - usage }
   }
 
   internal func TotalBudget() VkDeviceSize {

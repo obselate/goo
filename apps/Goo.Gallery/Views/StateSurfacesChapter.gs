@@ -253,30 +253,21 @@ class StateSurfacesChapter : Cell {
         if act == 0 {
             return fridgePosition(letter)
         }
-        if act == 1 {
-            return inkTarget(letter)
-        }
-        return cipherTarget(letter)
+        return if act == 1 { inkTarget(letter) } else { cipherTarget(letter) }
     }
 
     private func actRotation(letter GallerySurfaceLetter, act int32) float64 {
         if act == 0 {
             return fridgeRotation(letter)
         }
-        if act == 1 {
-            return -2.0 + float64(letter.Id % 5)
-        }
-        return 0.0
+        return if act == 1 { -2.0 + float64(letter.Id % 5) } else { 0.0 }
     }
 
     private func actScale(act int32) float64 {
         if act == 0 {
             return 1.0
         }
-        if act == 1 {
-            return 1.08
-        }
-        return 0.92
+        return if act == 1 { 1.08 } else { 0.92 }
     }
 
     private func transitionEase() float64 {
@@ -601,10 +592,7 @@ class StateSurfacesChapter : Cell {
         if palette == 3 {
             return Color.Rgb(69, 178, 112)
         }
-        if palette == 4 {
-            return Color.Rgb(237, 120, 48)
-        }
-        return Color.Rgb(151, 91, 190)
+        return if palette == 4 { Color.Rgb(237, 120, 48) } else { Color.Rgb(151, 91, 190) }
     }
 
     private func magnetFace(letter GallerySurfaceLetter, size float64) Blob -> Container{
@@ -977,10 +965,7 @@ class StateSurfacesChapter : Cell {
         if activeAct == 0 {
             return fridgeSurface()
         }
-        if activeAct == 1 {
-            return inkSurface()
-        }
-        return cipherSurface()
+        return if activeAct == 1 { inkSurface() } else { cipherSurface() }
     }
 
     private func actButton(label string, act int32) Blob -> Button{

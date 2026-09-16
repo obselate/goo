@@ -31,10 +31,7 @@ internal class DiagnosticOverrideStore {
     values = Dictionary[Node, DiagnosticOverrideNode]()
   }
 
-  internal func State(n Node) DiagnosticOverrideNode? {
-    if values.TryGetValue(n, out var state) { return state }
-    return nil
-  }
+  internal func State(n Node) DiagnosticOverrideNode? -> if values.TryGetValue(n, out var state) { state } else { nil }
 
   internal func Set(n Node, entry StyleEntry) {
     let state = if values.TryGetValue(n, out var existing) {
@@ -312,15 +309,9 @@ private func diagnosticNodeId(root JsonElement) int64 {
 
 internal func diagnosticResetNodeId(root JsonElement) int64 -> diagnosticNodeId(root)
 
-private func diagnosticText(root JsonElement, name string) string {
-  if !root.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String {
-    return ""
-  }
-  return value.GetString() ?? ""
-}
+private func diagnosticText(root JsonElement, name string) string -> if !root.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String { "" } else { value.GetString() ?? "" }
 
 private func diagnosticRawValue(value JsonElement) string {
   if value.ValueKind == JsonValueKind.String { return value.GetString() ?? "" }
-  if value.ValueKind == JsonValueKind.Number { return value.GetRawText() }
-  return ""
+  return if value.ValueKind == JsonValueKind.Number { value.GetRawText() } else { "" }
 }

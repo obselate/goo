@@ -67,20 +67,14 @@ public class GlassTerminalCell : Cell {
         if tintIndex == 4 {
             return "Emerald"
         }
-        if tintIndex == 5 {
-            return "Amethyst"
-        }
-        return "Smoke"
+        return if tintIndex == 5 { "Amethyst" } else { "Smoke" }
     }
 
     private func blurValue() float32 {
         if blurLevel == 0 {
             return 0.12F
         }
-        if blurLevel == 2 {
-            return 0.62F
-        }
-        return 0.24F
+        return if blurLevel == 2 { 0.62F } else { 0.24F }
     }
 
     private func syncShader() {

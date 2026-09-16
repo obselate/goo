@@ -723,10 +723,7 @@ internal func findLineIndex(root TextPieceNode?, offset int32) int32 {
 internal func lineStartAfter(root TextPieceNode?, breakIndex int32) int32 {
   let start = findTextLineBreakStart(root, breakIndex)
   let next = start + 1
-  if textCharAt(root, start) == '\r' && next < textLength(root) && textCharAt(root, next) == '\n' {
-    return next + 1
-  }
-  return next
+  return if textCharAt(root, start) == '\r' && next < textLength(root) && textCharAt(root, next) == '\n' { next + 1 } else { next }
 }
 
 internal func findTextLineBreakStart(root TextPieceNode?, breakIndex int32) int32 {

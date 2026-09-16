@@ -1380,9 +1380,6 @@ class DevToolsCell : Cell {
         if value == DiagnosticConnectionState.Faulted {
             return DevToolsTheme.Red
         }
-        if value == DiagnosticConnectionState.Connecting {
-            return DevToolsTheme.Amber
-        }
-        return DevToolsTheme.InkSubtle
+        return if value == DiagnosticConnectionState.Connecting { DevToolsTheme.Amber } else { DevToolsTheme.InkSubtle }
     }
 }

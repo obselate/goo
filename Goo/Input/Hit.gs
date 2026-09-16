@@ -27,10 +27,7 @@ private func hitsMapped(n Node, x float32, y float32) bool {
   if !hitWithinMapped(n, x, y) || !n.HitTestSelf {
     return false
   }
-  if n.Kind == NodeKind.Shape {
-    return ShapeGeometry.HitTest(n, x, y)
-  }
-  return true
+  return if n.Kind == NodeKind.Shape { ShapeGeometry.HitTest(n, x, y) } else { true }
 }
 
 // Reverse order agrees with Painter's paint order: later children win.
@@ -65,10 +62,7 @@ internal func hitDispatchClick(root Node, x float32, y float32) bool {
 
 internal func hitActivate(root Node?, target Node) bool {
   guard let tree = root else { return false }
-  if !canReceiveInput(target) {
-    return false
-  }
-  return hitFire(target, CellOwnership.Within(tree, target))
+  return if !canReceiveInput(target) { false } else { hitFire(target, CellOwnership.Within(tree, target)) }
 }
 
 // Append the committed path from the root to the topmost node.

@@ -276,8 +276,7 @@ internal class InputCoordinator {
 
   internal func HandleKey(root Node?, resolver Resolver, key Key, modifiers KeyModifiers) bool {
     try {
-      if pointer.HandleDragKey(root, key, modifiers) { return true }
-      return keyboard.HandleKey(root, resolver, text, key, modifiers)
+      return if pointer.HandleDragKey(root, key, modifiers) { true } else { keyboard.HandleKey(root, resolver, text, key, modifiers) }
     } finally {
       resolver.Flush()
     }

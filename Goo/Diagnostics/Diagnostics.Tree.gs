@@ -42,12 +42,7 @@ internal class DiagnosticNodeIdentity {
     throw InvalidOperationException("Diagnostic target identity is unavailable.")
   }
 
-  internal func TryGet(n Node) int64? {
-    if values.TryGetValue(n, out var value) {
-      return value.Id
-    }
-    return nil
-  }
+  internal func TryGet(n Node) int64? -> if values.TryGetValue(n, out var value) { value.Id } else { nil }
 
 }
 
@@ -136,12 +131,7 @@ internal class DiagnosticTreeState {
       current.SelectedId, added, List[DiagnosticNodeSnapshot](), List[int64](), false)
   }
 
-  internal func Find(id int64) DiagnosticNodeSnapshot? {
-    if previous.TryGetValue(id, out var node) {
-      return node
-    }
-    return nil
-  }
+  internal func Find(id int64) DiagnosticNodeSnapshot? -> if previous.TryGetValue(id, out var node) { node } else { nil }
 
   internal func FindNode(id int64) Node? {
     if !nodes.TryGetValue(id, out var reference) { return nil }
@@ -157,15 +147,9 @@ internal class DiagnosticTreeState {
     return node
   }
 
-  internal func FindTarget(target string) Node? {
-    if !targets.TryGetValue(target, out var id) { return nil }
-    return FindNode(id)
-  }
+  internal func FindTarget(target string) Node? -> if !targets.TryGetValue(target, out var id) { nil } else { FindNode(id) }
 
-  internal func FindTargetSnapshot(target string) DiagnosticNodeSnapshot? {
-    if !targets.TryGetValue(target, out var id) { return nil }
-    return Find(id)
-  }
+  internal func FindTargetSnapshot(target string) DiagnosticNodeSnapshot? -> if !targets.TryGetValue(target, out var id) { nil } else { Find(id) }
 
   private func nodeId(node Node?, values Dictionary[int64, DiagnosticNodeSnapshot]) int64 {
     guard let value = node else { return 0 }
@@ -506,8 +490,7 @@ internal class DiagnosticTreeState {
   private func lengthText(value Length) string {
     if value.Unit == LengthUnit.Auto { return "auto" }
     if value.Unit == LengthUnit.Percent { return value.Magnitude.ToString(CultureInfo.InvariantCulture) + "%" }
-    if value.Unit == LengthUnit.Px { return value.Magnitude.ToString(CultureInfo.InvariantCulture) + "px" }
-    return "unset"
+    return if value.Unit == LengthUnit.Px { value.Magnitude.ToString(CultureInfo.InvariantCulture) + "px" } else { "unset" }
   }
 
   private func colorText(value Color) string -> value.R.ToString(CultureInfo.InvariantCulture) + ","
@@ -525,10 +508,7 @@ internal class DiagnosticTreeState {
     return finiteEdge(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, edge))
   }
 
-  private func finiteEdge(value float32) float32 {
-    if Single.IsNaN(value) || Single.IsInfinity(value) { return 0.0F }
-    return value
-  }
+  private func finiteEdge(value float32) float32 -> if Single.IsNaN(value) || Single.IsInfinity(value) { 0.0F } else { value }
 
   private func configurationText(value DiagnosticNodeSnapshot) string {
     let builder = StringBuilder()

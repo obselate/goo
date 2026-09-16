@@ -344,10 +344,7 @@ internal unsafe partial class VulkanWindowTarget {
     if hasSurfaceKhr {
       return VulkanSwapchainMaintenanceVariant.Khr
     }
-    if hasSurfaceExt {
-      return VulkanSwapchainMaintenanceVariant.Ext
-    }
-    return VulkanSwapchainMaintenanceVariant.None
+    return if hasSurfaceExt { VulkanSwapchainMaintenanceVariant.Ext } else { VulkanSwapchainMaintenanceVariant.None }
   }
 
   private func HasInstanceExtensionName(expected string) bool {

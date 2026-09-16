@@ -926,10 +926,5 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     return MixTopology(result, value.Version)
   }
 
-  private func SaturatingAdd(current uint64, value uint64) uint64 {
-    if value > uint64.MaxValue - current {
-      return uint64.MaxValue
-    }
-    return current + value
-  }
+  private func SaturatingAdd(current uint64, value uint64) uint64 -> if value > uint64.MaxValue - current { uint64.MaxValue } else { current + value }
 }

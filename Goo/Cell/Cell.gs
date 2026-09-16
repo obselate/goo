@@ -125,10 +125,7 @@ public open class Cell {
 
   internal func MountedNodeFor(generation int64) Node? {
     lock rebuildGate {
-      if disposed || mountGeneration != generation {
-        return nil
-      }
-      return mountedNode
+      return if disposed || mountGeneration != generation { nil } else { mountedNode }
     }
   }
 

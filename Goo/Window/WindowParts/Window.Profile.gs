@@ -225,12 +225,7 @@ internal class FrameProfiler {
     return 0
   }
 
-  private func countPerFrame(value int64) string {
-    if frames == 0 {
-      return "0.00"
-    }
-    return (float64(value) / float64(frames)).ToString("F2")
-  }
+  private func countPerFrame(value int64) string -> if frames == 0 { "0.00" } else { (float64(value) / float64(frames)).ToString("F2") }
 
   private func Reset() {
     frames = 0

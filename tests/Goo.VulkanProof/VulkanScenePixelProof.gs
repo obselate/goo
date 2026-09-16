@@ -408,10 +408,7 @@ internal unsafe func VerifyPixelSceneReadbackWithClear(
     if !YellowCenter(readback, width, 36, 33) {
       return false
     }
-    if !Dominant(readback, width, 28, 33, 2, 0, 1, 24) {
-      return false
-    }
-    return !(!Dominant(readback, width, 43, 33, 2, 0, 1, 24))
+    return if !Dominant(readback, width, 28, 33, 2, 0, 1, 24) { false } else { !(!Dominant(readback, width, 43, 33, 2, 0, 1, 24)) }
   }
 
 private unsafe func ExactPixel(

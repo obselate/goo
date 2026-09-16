@@ -12,10 +12,7 @@ internal class VulkanDiagnosticResultClassifier {
       if result == VkConstants.VK_SUCCESS {
         return VulkanDiagnosticResultClass.Success
       }
-      if result == VkConstants.VK_SUBOPTIMAL_KHR {
-        return VulkanDiagnosticResultClass.RecoverableWsi
-      }
-      return VulkanDiagnosticResultClass.NonSuccess
+      return if result == VkConstants.VK_SUBOPTIMAL_KHR { VulkanDiagnosticResultClass.RecoverableWsi } else { VulkanDiagnosticResultClass.NonSuccess }
     }
   }
 }

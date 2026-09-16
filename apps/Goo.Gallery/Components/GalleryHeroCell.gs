@@ -142,10 +142,7 @@ class HeroCell : Cell {
         if index == 0 {
             return gPosition.Value
         }
-        if index == 1 {
-            return firstOPosition.Value
-        }
-        return secondOPosition.Value
+        return if index == 1 { firstOPosition.Value } else { secondOPosition.Value }
     }
 
     private func moveAnchor(index int32, target Point) {
@@ -182,12 +179,7 @@ class HeroCell : Cell {
         Rebuild()
     }
 
-    private func layoutButtonLabel(index int32, name string) string {
-        if layoutMode == index {
-            return "• " + name
-        }
-        return name
-    }
+    private func layoutButtonLabel(index int32, name string) string -> if layoutMode == index { "• " + name } else { name }
 
     private func updatePointer(e PointerEvent) {
         let bounds = hostHandle.BorderBox

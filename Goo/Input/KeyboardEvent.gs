@@ -174,10 +174,7 @@ internal class InputCallbacks {
 
     private func nodeCallbacks(node Node) InputCallbackSet? {
       if !node.HasSparseInputState { return nil }
-      if nodeValues.TryGetValue(node, out var value) {
-        return value
-      }
-      return nil
+      return if nodeValues.TryGetValue(node, out var value) { value } else { nil }
     }
 
     private func presence(value InputCallbackSet?) int32 {

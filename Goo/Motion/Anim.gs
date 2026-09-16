@@ -92,10 +92,7 @@ public class Anim[T] {
         return currentT
       }
       let now = pump.Now
-      if memoValid && memoTime == now && memoScale == Motion.TimeScale {
-        return memoValue
-      }
-      return memoize(now)
+      return if memoValid && memoTime == now && memoScale == Motion.TimeScale { memoValue } else { memoize(now) }
     }
   }
 
@@ -116,10 +113,7 @@ public class Anim[T] {
       for var i = 0; i < sims.Length; i++ {
         velRead[i] = simAt(i).Velocity(elapsed)
       }
-      if velRead.Length == 1 {
-        return MotionVelocity.Uniform(velRead[0])
-      }
-      return MotionVelocity.Components(velRead)
+      return if velRead.Length == 1 { MotionVelocity.Uniform(velRead[0]) } else { MotionVelocity.Components(velRead) }
     }
   }
 

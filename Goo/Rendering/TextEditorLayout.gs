@@ -1032,8 +1032,7 @@ internal class TextEditorLayouts {
             return line
           }
         }
-        if low >= snapshot.LineCount { return snapshot.LineCount - 1 }
-        return low < 0 ? 0 : low
+        return if low >= snapshot.LineCount { snapshot.LineCount - 1 } else { low < 0 ? 0 : low }
       }
 
     private func verticalOffsetForLine(state TextEditorRenderState, snapshot TextSnapshot,
@@ -1354,10 +1353,7 @@ internal class TextEditorLayouts {
     }
 
     private func transformedCompositionOffset(text string, offset int32,
-      transform TextTransform) int32{
-        if transform == TextTransform.None { return offset }
-        return TextLayouts.transformText(text.Substring(0, offset), transform).Length
-      }
+      transform TextTransform) int32-> if transform == TextTransform.None { offset } else { TextLayouts.transformText(text.Substring(0, offset), transform).Length }
 
     private func appendSourceSegment(result TextEditorResolvedParagraph, ref display string,
       text string, start int32, styles List[TextEditorPresentationStyle], baseStyle TextResolvedStyle) {
@@ -1603,8 +1599,7 @@ internal class TextEditorLayouts {
             return i
           }
         }
-        if fallback >= 0 { return fallback }
-        return layout.Lines.Count == 0 ? -1 : layout.Lines.Count - 1
+        return if fallback >= 0 { fallback } else { layout.Lines.Count == 0 ? -1 : layout.Lines.Count - 1 }
       }
 
     private func editorLayerRevision(state TextEditorRenderState) int64 {

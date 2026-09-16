@@ -164,8 +164,5 @@ internal partial class SceneFrame {
     return DebugEdge(YGNodeLayoutAPI.YGNodeLayoutGetMargin(yoga, edge))
   }
 
-  private func DebugEdge(value float32) float32 {
-    if !finiteVulkanSceneValue(value) { return 0.0F }
-    return value
-  }
+  private func DebugEdge(value float32) float32 -> if !finiteVulkanSceneValue(value) { 0.0F } else { value }
 }

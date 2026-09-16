@@ -91,7 +91,7 @@ public static class Program
             }
             else if (arg == "--version")
             {
-                Console.WriteLine("Goo.Gslint 1.1.0");
+                Console.WriteLine("Goo.Gslint 1.2.0");
                 return 0;
             }
             else if (arg.StartsWith("--", StringComparison.Ordinal))
@@ -203,7 +203,7 @@ public static class Program
     {
         var edits = new List<SourceEdit>();
         CollectFixEdits(tree.Root, source, edits);
-        CollectBooleanReturnEdits(tree.Root, source, edits);
+        CollectConditionalReturnEdits(tree.Root, source, edits);
         CollectDefaultAssignmentEdits(tree.Root, source, edits);
 
         var varFindings = new List<Finding>();
@@ -233,32 +233,33 @@ public static class Program
         return rewritten;
     }
 
-    private static void CollectBooleanReturnEdits(SyntaxNode node, string source, List<SourceEdit> edits)
+    private static void CollectConditionalReturnEdits(SyntaxNode node, string source, List<SourceEdit> edits)
     {
         if (node is BlockStatementSyntax block)
         {
             for (var index = 0; index < block.Statements.Length; index++)
             {
                 if (block.Statements[index] is not IfStatementSyntax { Initializer: null } conditional
-                    || !TrySingleBooleanReturn(conditional.ThenStatement, out var whenTrue))
+                    || !TrySingleReturn(conditional.ThenStatement, out var whenTrue))
                 {
                     continue;
                 }
 
                 if (conditional.ElseClause is { } clause
-                    && TrySingleBooleanReturn(clause.ElseStatement, out var whenFalse)
-                    && whenTrue != whenFalse)
+                    && TrySingleReturn(clause.ElseStatement, out var whenFalse))
                 {
-                    AddBooleanReturnEdit(conditional.Span, conditional.Condition, whenTrue, source, edits);
+                    AddConditionalReturnEdit(
+                        conditional.Span, conditional.Condition, whenTrue, whenFalse, source, edits);
                 }
                 else if (conditional.ElseClause is null
                     && index + 1 < block.Statements.Length
                     && block.Statements[index + 1] is ReturnStatementSyntax trailing
-                    && TryBoolean(trailing, out whenFalse)
-                    && whenTrue != whenFalse)
+                    && trailing.Expression is { } trailingExpression
+                    && !trailing.IsRefReturn)
                 {
                     var span = TextSpan.FromBounds(conditional.Span.Start, trailing.Span.End);
-                    AddBooleanReturnEdit(span, conditional.Condition, whenTrue, source, edits);
+                    AddConditionalReturnEdit(
+                        span, conditional.Condition, whenTrue, trailingExpression, source, edits);
                     index++;
                 }
             }
@@ -266,30 +267,92 @@ public static class Program
 
         foreach (var child in node.GetChildren())
         {
-            CollectBooleanReturnEdits(child, source, edits);
+            CollectConditionalReturnEdits(child, source, edits);
         }
     }
 
-    private static bool TrySingleBooleanReturn(StatementSyntax statement, out bool value)
+    private static bool TrySingleReturn(StatementSyntax statement, out ExpressionSyntax expression)
     {
         if (statement is BlockStatementSyntax { Statements.Length: 1 } block
-            && block.Statements[0] is ReturnStatementSyntax result)
+            && block.Statements[0] is ReturnStatementSyntax { Expression: { } value, IsRefReturn: false })
         {
-            return TryBoolean(result, out value);
+            expression = value;
+            return true;
         }
 
-        if (statement is ReturnStatementSyntax direct)
+        if (statement is ReturnStatementSyntax { Expression: { } direct, IsRefReturn: false })
         {
-            return TryBoolean(direct, out value);
+            expression = direct;
+            return true;
         }
 
-        value = false;
+        expression = null!;
         return false;
     }
 
-    private static bool TryBoolean(ReturnStatementSyntax statement, out bool value)
+    private static void AddConditionalReturnEdit(
+        TextSpan span,
+        ExpressionSyntax condition,
+        ExpressionSyntax whenTrue,
+        ExpressionSyntax whenFalse,
+        string source,
+        List<SourceEdit> edits)
     {
-        if (statement.Expression is LiteralExpressionSyntax { Value: bool literal })
+        var original = source.Substring(span.Start, span.Length);
+        if (original.Contains("//", StringComparison.Ordinal)
+            || original.Contains("/*", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var test = Source(condition);
+        var success = Source(whenTrue);
+        var failure = Source(whenFalse);
+        if (TryBoolean(whenTrue, out var trueValue)
+            && TryBoolean(whenFalse, out var falseValue)
+            && trueValue != falseValue)
+        {
+            edits.Add(new SourceEdit(span.Start, span.Length,
+                trueValue ? $"return {test}" : $"return !({test})"));
+            return;
+        }
+
+        if (!IsSimpleConditional(test, success, failure))
+        {
+            return;
+        }
+
+        edits.Add(new SourceEdit(span.Start, span.Length,
+            $"return if {test} {{ {success} }} else {{ {failure} }}"));
+
+        string Source(SyntaxNode value) => source.Substring(value.Span.Start, value.Span.Length);
+    }
+
+    private static bool IsSimpleConditional(string condition, string whenTrue, string whenFalse)
+    {
+        var combinedLength = condition.Length + whenTrue.Length + whenFalse.Length;
+        return combinedLength <= 120
+            && !ContainsLineBreak(condition)
+            && !ContainsLineBreak(whenTrue)
+            && !ContainsLineBreak(whenFalse)
+            && !condition.Contains("nil", StringComparison.Ordinal)
+            && !condition.Contains(" is ", StringComparison.Ordinal)
+            && !condition.Contains("let ", StringComparison.Ordinal)
+            && IsSimpleValue(whenTrue)
+            && IsSimpleValue(whenFalse);
+    }
+
+    private static bool IsSimpleValue(string value) =>
+        !value.Contains('{')
+        && !value.Contains('}')
+        && !value.StartsWith("if ", StringComparison.Ordinal)
+        && !value.StartsWith("switch ", StringComparison.Ordinal);
+
+    private static bool ContainsLineBreak(string value) => value.Contains('\r') || value.Contains('\n');
+
+    private static bool TryBoolean(ExpressionSyntax expression, out bool value)
+    {
+        if (expression is LiteralExpressionSyntax { Value: bool literal })
         {
             value = literal;
             return true;
@@ -297,18 +360,6 @@ public static class Program
 
         value = false;
         return false;
-    }
-
-    private static void AddBooleanReturnEdit(
-        TextSpan span,
-        ExpressionSyntax condition,
-        bool returnWhenTrue,
-        string source,
-        List<SourceEdit> edits)
-    {
-        var expression = source.Substring(condition.Span.Start, condition.Span.Length);
-        edits.Add(new SourceEdit(span.Start, span.Length,
-            returnWhenTrue ? $"return {expression}" : $"return !({expression})"));
     }
 
     private static void CollectDefaultAssignmentEdits(SyntaxNode node, string source, List<SourceEdit> edits)
