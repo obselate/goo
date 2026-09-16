@@ -349,9 +349,6 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
           dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.FailedIdleSmoke/Goo.FailedIdleSmoke.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
           dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
             -c Release -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"

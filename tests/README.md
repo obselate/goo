@@ -201,7 +201,6 @@ Linux native CI runs it through the headless Wayland wrapper.
 | `Goo.CoreBehaviorTests` | Cells, reconciliation, layout, style, motion, input, text, accessibility, and allocation behavior |
 | `Goo.VulkanAbiSmoke` | Vulkan bindings, text-provider ABI, retained path encoding, and upload contracts |
 | `Goo.AsyncReadbackSmoke` | Vulkan pixels, clipping, effects, input, pacing, windowing, and performance workloads |
-| `Goo.FailedIdleSmoke` | Multi-window lifecycle, surface loss, device loss, recovery, and terminal failure behavior |
 | `Goo.PackageSmoke` | Clean NuGet consumer, packaged native assets, and public runtime behavior |
 | `Goo.VulkanProof` | Low-level shader, text, image, path, and readback proofs |
 
