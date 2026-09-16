@@ -11,35 +11,32 @@ and meet Goo's [platform requirements](../../README.md#platforms), then install:
 
 ```sh
 dotnet tool install --global Goo.DevTools --version 0.5.4
-dotnet tool install --global Goo.DevTools.App --version 0.5.4
 ```
 
-`Goo.DevTools` provides the `goo` CLI. `Goo.DevTools.App` provides the
-`goo-devtools` graphical inspector. The CLI also works on its own for launching
-apps, streaming diagnostic events, and capturing screenshots.
+`Goo.DevTools` provides the `goo` CLI for launching apps, streaming diagnostic
+events, sending input, and capturing screenshots.
 
 ## Run and inspect your app
 
 From your application directory:
 
 ```sh
-goo dev --inspector
+goo dev
 ```
 
-This starts the app with diagnostics enabled, watches for code changes, and opens
-the inspector when the app is ready. No application code changes are needed.
-Use the inspector to browse the UI tree and examine the selected element.
+This starts the app with diagnostics enabled and watches for code changes. No
+application code changes are needed. Use `goo attach` to stream its UI state.
 
 To select a project explicitly:
 
 ```sh
-goo dev --inspector --project HelloGoo/HelloGoo.gsproj
+goo dev --project HelloGoo/HelloGoo.gsproj
 ```
 
 You can also supply a launch command:
 
 ```sh
-goo dev --inspector -- dotnet run --project HelloGoo/HelloGoo.gsproj
+goo dev -- dotnet run --project HelloGoo/HelloGoo.gsproj
 ```
 
 Add `--no-watch` to run without watching for changes. Some edits require a process
@@ -73,20 +70,7 @@ an unambiguous title substring. Use the same `--project` on subsequent commands
 when the descriptors are stored in the application's `.goo/devtools` directory.
 The `list` command requires a CLI build from this checkout until its next release.
 
-If the app was launched with diagnostics enabled, open the inspector separately:
-
-```sh
-goo-devtools
-```
-
-It connects to the newest live target. To select a process explicitly:
-
-```sh
-goo attach --pid 12345 --inspector
-```
-
-If that process has several windows, add `--latest` to select its newest window.
-For terminal output or scripts, use:
+Attach to the newest live target or select a process explicitly:
 
 ```sh
 goo attach --latest
@@ -107,13 +91,10 @@ several windows.
 
 ## Troubleshooting
 
-Run `goo doctor` to check the SDK, project, and inspector installation.
+Run `goo doctor` to check the SDK, project, and endpoint discovery.
 
 - **No target appears:** start the app with `goo dev`, or set `GOO_DEVTOOLS=1`
   before launching it. Keep the app running while you inspect or capture it.
-- **Inspector not found:** install `Goo.DevTools.App` and ensure `goo-devtools`
-  is on `PATH`. For a custom installation, set `GOO_DEVTOOLS_INSPECTOR` to its
-  executable or DLL.
 - **Several windows match:** select one with `--window` or use `--latest`.
 - **Tools cannot find an app launched elsewhere:** set `GOO_DEVTOOLS_DIR` to the
   same directory in both the app and tool launch environments.

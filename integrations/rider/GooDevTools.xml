@@ -20,16 +20,6 @@
         <option name="Execute" enabled="true" />
       </method>
     </tool>
-    <tool name="Open Goo Inspector" description="Launch the standalone Goo inspector for the newest live Goo endpoint." showInMainMenu="true" showInEditor="false" showInProjectViews="true" disabled="false">
-      <option name="arguments" value="attach --latest --inspector --once" />
-      <option name="passParentEnvs" value="true" />
-      <option name="program" value="goo" />
-      <option name="workingDirectory" value="$ProjectFileDir$" />
-      <envs />
-      <method v="2">
-        <option name="Execute" enabled="true" />
-      </method>
-    </tool>
     <tool name="Capture Goo Frame" description="Capture a PNG from the newest live Goo window endpoint." showInMainMenu="true" showInEditor="false" showInProjectViews="true" disabled="false">
       <option name="arguments" value="capture --latest --output $ProjectFileDir$/goo-frame.png" />
       <option name="passParentEnvs" value="true" />

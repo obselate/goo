@@ -78,11 +78,7 @@ function parseJson(line) {
 
 function runCli(args, onLine) {
   return new Promise((resolve, reject) => {
-    const configuredInspector = configuration().get('inspectorPath', '');
     const environment = { ...process.env };
-    if (configuredInspector) {
-      environment.GOO_DEVTOOLS_INSPECTOR = configuredInspector;
-    }
     const processHandle = childProcess.spawn(cliPath(), args, {
       cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd(),
       env: environment,
@@ -101,9 +97,6 @@ async function start() {
   try {
     const project = await projectPath();
     const args = ['dev', '--watch', '--project', project];
-    if (configuration().get('launchInspector', true)) {
-      args.push('--inspector');
-    }
     const command = [shellQuote(cliPath()), ...args.map(shellQuote)].join(' ');
     if (!devTerminal) {
       devTerminal = vscode.window.createTerminal({ name: 'Goo DevTools' });
@@ -146,18 +139,6 @@ function detach() {
   }
   if (status) {
     status.text = '$(circle-slash) Goo detached';
-  }
-}
-
-async function openInspector() {
-  try {
-    output.show(true);
-    const code = await runCli(['attach', '--latest', '--inspector', '--once', '--json'], writeLine);
-    if (code !== 0) {
-      vscode.window.showErrorMessage('Goo DevTools could not launch the inspector. Run Goo: Doctor for details.');
-    }
-  } catch (error) {
-    showError(error);
   }
 }
 
@@ -257,7 +238,6 @@ function activate(context) {
   context.subscriptions.push(vscode.commands.registerCommand('goo.start', start));
   context.subscriptions.push(vscode.commands.registerCommand('goo.attach', attach));
   context.subscriptions.push(vscode.commands.registerCommand('goo.detach', detach));
-  context.subscriptions.push(vscode.commands.registerCommand('goo.openInspector', openInspector));
   context.subscriptions.push(vscode.commands.registerCommand('goo.capture', capture));
   context.subscriptions.push(vscode.commands.registerCommand('goo.openSource', openSource));
   context.subscriptions.push(vscode.commands.registerCommand('goo.restartHotReload', restartHotReload));

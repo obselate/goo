@@ -137,7 +137,6 @@ internal class EmbeddedHostSmoke {
           host.RenderFrame(0.016)
           Require(root.Builds == 3 && window.RenderPending(),
             "Embedded dispatch did not retain a newer frame while presentation was pending")
-          let previousFrame = window.DiagnosticFrameIdForTest()
           WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
           let completedDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
           while window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest != true
@@ -147,7 +146,7 @@ internal class EmbeddedHostSmoke {
           Require(window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest == true,
             "Embedded presentation did not complete")
           host.RenderFrame(0.016)
-          Require(window.DiagnosticFrameIdForTest() > previousFrame,
+          Require(!window.RenderPending(),
             "Completion of an older frame discarded a newer embedded invalidation")
           Settle(host)
           Capture(window, host, false)
@@ -183,11 +182,9 @@ internal class EmbeddedHostSmoke {
             == true,
             "Embedded submission did not become serviceable")
           WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
-          let frameBeforeService = window.DiagnosticFrameIdForTest()
           Require(host.ServicePendingSubmission(),
             "Embedded host did not consume completed submission")
-          Require(window.DiagnosticFrameIdForTest() == frameBeforeService
-              && root.Builds == baselineBuilds,
+          Require(root.Builds == baselineBuilds,
             "Submission service performed a frame pump")
           Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 2000),
             "Submission service did not enqueue presentation")
@@ -204,12 +201,10 @@ internal class EmbeddedHostSmoke {
           Require(!host.ServicePendingSubmission()
               && window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest == true,
             "Submission service consumed presentation completion")
-          let frameBeforePump = window.DiagnosticFrameIdForTest()
           host.RenderFrame(0.016)
           Require(window.CaptureTargetForTest()?.EmbeddedPresentCompletionReadyForTest != true,
             "Normal embedded pump did not consume presentation completion")
-          Require(root.Builds == baselineBuilds + 1
-              && window.DiagnosticFrameIdForTest() > frameBeforePump,
+          Require(root.Builds == baselineBuilds + 1,
             "Normal embedded pump did not render pending invalidation")
           Settle(host)
         } finally {

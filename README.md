@@ -93,11 +93,10 @@ are optional and installed separately. The starter template already references
 | [Goo.Svg](https://www.nuget.org/packages/Goo.Svg/) | [Load SVG files at runtime](Goo.Svg/README.md) | `dotnet add package Goo.Svg` |
 | [Goo.SvgCompiler](https://www.nuget.org/packages/Goo.SvgCompiler/) | [Compile SVG assets](tools/Goo.SvgCompiler/README.md) with `goo-svgc` | `dotnet tool install --global Goo.SvgCompiler` |
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
-| [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
 | [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
-Add library packages from your application directory. Install both DevTools
-packages to launch the graphical inspector with `goo dev --inspector`.
+Add library packages from your application directory. Use the DevTools CLI to
+launch, discover, inspect, and capture applications.
 Precompiled SVG assets can be loaded by core `Goo` without `Goo.Svg`.
 
 ## Example

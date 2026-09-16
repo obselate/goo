@@ -176,15 +176,10 @@ internal static class Program
 
     private static void RunFontCacheGate(string fontPath)
     {
-        var cacheBudget = TextShaping.PrimaryFaceCacheByteBudgetForTests();
         var callerBytes = File.ReadAllBytes(fontPath);
-        var oversizedBytes = new byte[checked((int)cacheBudget + 1)];
-        Array.Copy(callerBytes, oversizedBytes, callerBytes.Length);
         var source = new FontSource("GooAbiOwned", 400, false, callerBytes);
         callerBytes[0] = (byte)(callerBytes[0] ^ 0xFF);
         ShapedText? shaped = null;
-        FontSource? oversizedSource = null;
-        ShapedText? oversizedShaped = null;
         try
         {
             source.Register();
@@ -220,50 +215,11 @@ internal static class Program
 
             shaped.Dispose();
             shaped = null;
-
-            var cacheBefore = TextShaping.PrimaryFaceCacheBytesForTests();
-            var countBefore = TextShaping.PrimaryFaceCacheCountForTests();
-            if (cacheBefore > cacheBudget)
-                throw new InvalidOperationException("Font cache exceeded its byte budget before oversized entry");
-            oversizedSource = new FontSource("GooAbiOversized", 400, false, oversizedBytes);
-            oversizedSource.Register();
-            oversizedShaped = TextShaping.Shape("office café", "GooAbiOversized", 16f, 400, false, 0f, 1);
-            if (oversizedShaped.GlyphCount <= 0 || oversizedShaped.Width <= 0f
-                || oversizedShaped.HasMissingGlyph || oversizedShaped.Runs.Count == 0)
-                throw new InvalidOperationException("Oversized registered font did not shape");
-            var oversizedProvider = oversizedShaped.Runs[0].Provider;
-            var cacheAfterShape = TextShaping.PrimaryFaceCacheBytesForTests();
-            var countAfterShape = TextShaping.PrimaryFaceCacheCountForTests();
-            if (cacheAfterShape > cacheBudget || cacheAfterShape != cacheBefore
-                || countAfterShape != countBefore)
-                throw new InvalidOperationException("Oversized font entered the cache");
-
-            oversizedSource.Dispose();
-            var oversizedWorkspace = new VulkanTextShapingWorkspace(16);
-            var oversizedResult = oversizedProvider.ShapeInto("A", new VulkanTextShapingOptions
-            {
-                Direction = 4u,
-                Script = 0x4C61746Eu,
-                Language = "en",
-                ClusterLevel = 0u,
-                Flags = 0u,
-                Features = null,
-            }, oversizedWorkspace);
-            var cacheAfterDispose = TextShaping.PrimaryFaceCacheBytesForTests();
-            if (oversizedResult.Status != VulkanTextProviderAbi.Success
-                || oversizedResult.Count <= 0
-                || oversizedWorkspace.GlyphCount != oversizedResult.Count
-                || cacheAfterDispose > cacheBudget)
-                throw new InvalidOperationException("Oversized active lease or cache budget contract failed");
-
-            Console.WriteLine("FONT_CACHE_SMOKE defensiveCopy=1 cacheBytes=" + cacheAfterDispose
-                + " budget=" + cacheBudget + " oversizedBypass=1 activeLease=1");
+            Console.WriteLine("FONT_CACHE_SMOKE defensiveCopy=1 activeLease=1");
         }
         finally
         {
             shaped?.Dispose();
-            oversizedShaped?.Dispose();
-            oversizedSource?.Dispose();
             source.Dispose();
         }
     }

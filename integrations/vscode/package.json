@@ -35,10 +35,6 @@
         "title": "Goo: Detach"
       },
       {
-        "command": "goo.openInspector",
-        "title": "Goo: Open Inspector"
-      },
-      {
         "command": "goo.capture",
         "title": "Goo: Capture Screenshot"
       },
@@ -67,16 +63,6 @@
           "type": "string",
           "default": "",
           "description": "Project file used by Goo DevTools commands. Empty uses the first project in the workspace."
-        },
-        "goo.inspectorPath": {
-          "type": "string",
-          "default": "",
-          "description": "Standalone Goo DevTools executable or DLL. Empty lets the CLI discover it."
-        },
-        "goo.launchInspector": {
-          "type": "boolean",
-          "default": true,
-          "description": "Ask goo dev to launch the standalone inspector when a window publishes its endpoint descriptor."
         },
         "goo.statusPollSeconds": {
           "type": "number",

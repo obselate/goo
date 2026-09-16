@@ -57,8 +57,6 @@
 /apps/*
 !/apps/Goo.Gallery/
 !/apps/Goo.Gallery/**
-!/apps/Goo.DevTools/
-!/apps/Goo.DevTools/**
 
 !/docs/
 /docs/*

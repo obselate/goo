@@ -11,15 +11,13 @@ dotnet tool install --global Goo.DevTools
 ## Use
 
 ```sh
-goo dev --inspector --watch -- dotnet run --project App.gsproj
+goo dev --watch -- dotnet run --project App.gsproj
 goo dev --input --no-watch --project App.gsproj
 goo attach --latest
 goo list --json
 goo capture --latest --output frame.png
 goo doctor
 ```
-
-The graphical inspector is a separate tool. Install `Goo.DevTools.App` to get `goo-devtools` and use `goo dev --inspector`.
 
 See the [Goo DevTools guide](../../docs/devtools/README.md) and [development guide](../../docs/devtools/development.md).
 
