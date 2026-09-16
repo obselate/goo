@@ -26,17 +26,17 @@ var options = ParseArguments(args);
 var repositoryRoot = FindRepositoryRoot();
 var lineBreakOutputPath = options.TryGetValue("output", out var requestedOutput)
     ? Path.GetFullPath(requestedOutput)
-    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "UnicodeLineBreakData.generated.gs");
+    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "Data", "UnicodeLineBreakData.bin");
 var contextOutputPath = options.TryGetValue("context-output", out var requestedContextOutput)
     ? Path.GetFullPath(requestedContextOutput)
-    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "UnicodeLineBreakContext.generated.gs");
+    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "Data", "UnicodeLineBreakContext.bin");
 var scriptsOutputPath = options.TryGetValue("scripts-output", out var requestedScriptsOutput)
     ? Path.GetFullPath(requestedScriptsOutput)
-    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "UnicodeScriptsData.generated.gs");
+    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "Data", "UnicodeScriptsData.bin");
 var scriptExtensionsOutputPath = options.TryGetValue("script-extensions-output",
     out var requestedScriptExtensionsOutput)
     ? Path.GetFullPath(requestedScriptExtensionsOutput)
-    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "UnicodeScriptExtensionsData.generated.gs");
+    : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "Data", "UnicodeScriptExtensionsData.bin");
 
 var scriptsOnly = options.ContainsKey("scripts-only");
 var emojiDataBytes = Array.Empty<byte>();
@@ -57,8 +57,8 @@ if (!scriptsOnly)
 
     Directory.CreateDirectory(Path.GetDirectoryName(lineBreakOutputPath)!);
     Directory.CreateDirectory(Path.GetDirectoryName(contextOutputPath)!);
-    File.WriteAllText(lineBreakOutputPath, RenderLineBreakData(lineBreakRanges), new UTF8Encoding(false));
-    File.WriteAllText(contextOutputPath, RenderContextData(contextRanges), new UTF8Encoding(false));
+    File.WriteAllBytes(lineBreakOutputPath, EncodeLineBreakData(lineBreakRanges));
+    File.WriteAllBytes(contextOutputPath, EncodeContextData(contextRanges));
     Console.WriteLine($"Generated {lineBreakRanges.Count} Unicode {version} line-break ranges into {lineBreakOutputPath}.");
     Console.WriteLine($"Generated {contextRanges.Count} Unicode {version} line-break context ranges into {contextOutputPath}.");
 }
@@ -71,19 +71,11 @@ var propertyValueAliasesBytes = ReadSource(options, "property-value-aliases-inpu
 var scriptData = ScriptGenerator.Generate(
     Encoding.UTF8.GetString(scriptsBytes),
     Encoding.UTF8.GetString(scriptExtensionsBytes),
-    Encoding.UTF8.GetString(propertyValueAliasesBytes),
-    version,
-    scriptsSourceUrl,
-    scriptsSourceSha256,
-    scriptExtensionsSourceUrl,
-    scriptExtensionsSourceSha256,
-    propertyValueAliasesSourceUrl,
-    propertyValueAliasesSourceSha256);
+    Encoding.UTF8.GetString(propertyValueAliasesBytes));
 Directory.CreateDirectory(Path.GetDirectoryName(scriptsOutputPath)!);
 Directory.CreateDirectory(Path.GetDirectoryName(scriptExtensionsOutputPath)!);
-File.WriteAllText(scriptsOutputPath, scriptData.ScriptsSource, new UTF8Encoding(false));
-File.WriteAllText(scriptExtensionsOutputPath, scriptData.ScriptExtensionsSource,
-    new UTF8Encoding(false));
+File.WriteAllBytes(scriptsOutputPath, scriptData.ScriptsData);
+File.WriteAllBytes(scriptExtensionsOutputPath, scriptData.ScriptExtensionsData);
 Console.WriteLine($"Generated {scriptData.ScriptRangeCount} Unicode {version} script ranges into {scriptsOutputPath}.");
 Console.WriteLine($"Generated {scriptData.ScriptExtensionRangeCount} Unicode {version} script-extension ranges into {scriptExtensionsOutputPath}.");
 
@@ -93,7 +85,7 @@ if (options.ContainsKey("grapheme-break-input") || options.ContainsKey("derived-
     if (scriptsOnly) throw new ArgumentException("--scripts-only cannot be combined with grapheme generation.");
     var graphemeOutputPath = options.TryGetValue("grapheme-output", out var requestedGraphemeOutput)
         ? Path.GetFullPath(requestedGraphemeOutput)
-        : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "UnicodeGraphemeData.generated.gs");
+        : Path.Combine(repositoryRoot, "Goo", "Rendering", "Text", "Data", "UnicodeGraphemeData.bin");
     var graphemeBreakBytes = ReadSource(options, "grapheme-break-input", graphemeBreakSourceUrl,
         graphemeBreakSourceSha256);
     var derivedCorePropertiesBytes = ReadSource(options, "derived-core-properties-input",
@@ -103,7 +95,7 @@ if (options.ContainsKey("grapheme-break-input") || options.ContainsKey("derived-
         ParseIndicConjunctBreakRanges(Encoding.UTF8.GetString(derivedCorePropertiesBytes)),
         ParsePropertyRanges(Encoding.UTF8.GetString(emojiDataBytes), "Extended_Pictographic"));
     Directory.CreateDirectory(Path.GetDirectoryName(graphemeOutputPath)!);
-    File.WriteAllText(graphemeOutputPath, RenderGraphemeData(graphemeRanges), new UTF8Encoding(false));
+    File.WriteAllBytes(graphemeOutputPath, EncodeGraphemeData(graphemeRanges));
     Console.WriteLine($"Generated {graphemeRanges.Count} Unicode {version} grapheme ranges into {graphemeOutputPath}.");
 }
 
@@ -548,172 +540,89 @@ static CodePointRange ParseRange(string value)
 static int ParseCodePoint(string value) =>
     int.Parse(value.Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 
-static string RenderLineBreakData(List<UnicodeRange> ranges)
+static byte[] EncodeLineBreakData(List<UnicodeRange> ranges)
 {
-    var builder = new StringBuilder();
-    AppendLine(builder, "package Goo");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal data struct UnicodeLineBreakRange(Start int32, End int32, Class TextLineBreakClass) { }");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal class UnicodeLineBreakData {");
-    AppendLine(builder, "  shared {");
-    AppendLine(builder, "    internal const SourceVersion string = \"16.0.0\"");
-    AppendLine(builder, "    internal const SourceUrl string = \"https://www.unicode.org/Public/16.0.0/ucd/LineBreak.txt\"");
-    AppendLine(builder, "    internal const SourceSha256 string = \"e97e4259d0d20fab150b9c7b4b28abfae5cd78ca97e7f4ac6ed20d685d5f4a7c\"");
-    AppendLine(builder, "    private let ranges []UnicodeLineBreakRange = []UnicodeLineBreakRange{");
-    foreach (var range in ranges)
-        AppendLine(builder, $"      UnicodeLineBreakRange(0x{range.Start:X}, 0x{range.End:X}, TextLineBreakClass.{range.Class}),");
-    AppendLine(builder, "    }");
-    AppendLine(builder, "");
-    AppendLine(builder, "    internal func Classify(value int32) TextLineBreakClass {");
-    AppendLine(builder, "      var low int32 = 0");
-    AppendLine(builder, "      var high = ranges.Length - 1");
-    AppendLine(builder, "      while low <= high {");
-    AppendLine(builder, "        let middle = low + (high - low) / 2");
-    AppendLine(builder, "        let current = ranges[middle]");
-    AppendLine(builder, "        if value < current.Start {");
-    AppendLine(builder, "          high = middle - 1");
-    AppendLine(builder, "        } else if value > current.End {");
-    AppendLine(builder, "          low = middle + 1");
-    AppendLine(builder, "        } else {");
-    AppendLine(builder, "          return current.Class");
-    AppendLine(builder, "        }");
-    AppendLine(builder, "      }");
-    AppendLine(builder, "      return TextLineBreakClass.XX");
-    AppendLine(builder, "    }");
-    AppendLine(builder, "  }");
-    AppendLine(builder, "}");
-    return builder.ToString();
+    var names = new[]
+    {
+        "AI", "AK", "AL", "AP", "AS", "B2", "BA", "BB", "BK", "CB", "CJ", "CL",
+        "CM", "CP", "CR", "EB", "EM", "EX", "GL", "H2", "H3", "HL", "HY", "ID",
+        "IN", "IS", "JL", "JT", "JV", "LF", "NL", "NS", "NU", "OP", "PO", "PR",
+        "QU", "RI", "SA", "SG", "SP", "SY", "VF", "VI", "WJ", "XX", "ZW", "ZWJ",
+    };
+    return Encode(writer =>
+    {
+        writer.Write(ranges.Count);
+        foreach (var range in ranges)
+        {
+            var value = Array.IndexOf(names, range.Class);
+            if (value < 0)
+                throw new InvalidDataException($"Unsupported Line_Break class: {range.Class}");
+            writer.Write(range.Start);
+            writer.Write(range.End);
+            writer.Write((byte)value);
+        }
+    });
 }
 
-static string RenderContextData(List<ContextRange> ranges)
+static byte[] EncodeContextData(List<ContextRange> ranges) => Encode(writer =>
 {
-    var builder = new StringBuilder();
-    AppendLine(builder, "package Goo");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal data struct UnicodeLineBreakContextRange(Start int32, End int32, Flags uint8) { }");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal class UnicodeLineBreakContext {");
-    AppendLine(builder, "  shared {");
-    AppendLine(builder, "    internal const EastAsian uint8 = 1u");
-    AppendLine(builder, "    internal const InitialQuote uint8 = 2u");
-    AppendLine(builder, "    internal const FinalQuote uint8 = 4u");
-    AppendLine(builder, "    internal const ExtendedPictographic uint8 = 8u");
-    AppendLine(builder, "    internal const ExtendedPictographicUnassigned uint8 = 16u");
-    AppendLine(builder, "    internal const CombiningMark uint8 = 32u");
-    AppendLine(builder, "    internal const EastAsianWidthSourceSha256 string = \"43adc76c0686a42cb370764eb8cfe2b2a45b10b855e5572a2db4a0eecce15d5b\"");
-    AppendLine(builder, "    internal const EmojiDataSourceSha256 string = \"f1365a5173eee18e1f98b240cdc492e84a25f1ce7e0c9d1094eb29c41a22696a\"");
-    AppendLine(builder, "    internal const UnicodeDataSourceSha256 string = \"ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f\"");
-    AppendLine(builder, "    private let ranges []UnicodeLineBreakContextRange = []UnicodeLineBreakContextRange{");
-    foreach (var range in ranges)
-        AppendLine(builder, $"      UnicodeLineBreakContextRange(0x{range.Start:X}, 0x{range.End:X}, uint8({range.Flags})),");
-    AppendLine(builder, "    }");
-    AppendLine(builder, "");
-    AppendLine(builder, "    internal func Classify(value int32) uint8 {");
-    AppendLine(builder, "      var low int32 = 0");
-    AppendLine(builder, "      var high = ranges.Length - 1");
-    AppendLine(builder, "      while low <= high {");
-    AppendLine(builder, "        let middle = low + (high - low) / 2");
-    AppendLine(builder, "        let current = ranges[middle]");
-    AppendLine(builder, "        if value < current.Start {");
-    AppendLine(builder, "          high = middle - 1");
-    AppendLine(builder, "        } else if value > current.End {");
-    AppendLine(builder, "          low = middle + 1");
-    AppendLine(builder, "        } else {");
-    AppendLine(builder, "          return current.Flags");
-    AppendLine(builder, "        }");
-    AppendLine(builder, "      }");
-    AppendLine(builder, "      return uint8(0)");
-    AppendLine(builder, "    }");
-    AppendLine(builder, "  }");
-    AppendLine(builder, "}");
-    return builder.ToString();
-}
-
-static string RenderGraphemeData(List<GraphemeRange> ranges)
-{
-    var builder = new StringBuilder();
-    AppendLine(builder, "package Goo");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal enum UnicodeGraphemeClass {");
-    AppendLine(builder, "  Other;");
-    AppendLine(builder, "  CR;");
-    AppendLine(builder, "  LF;");
-    AppendLine(builder, "  Control;");
-    AppendLine(builder, "  Extend;");
-    AppendLine(builder, "  ZWJ;");
-    AppendLine(builder, "  RegionalIndicator;");
-    AppendLine(builder, "  Prepend;");
-    AppendLine(builder, "  SpacingMark;");
-    AppendLine(builder, "  L;");
-    AppendLine(builder, "  V;");
-    AppendLine(builder, "  T;");
-    AppendLine(builder, "  LV;");
-    AppendLine(builder, "  LVT;");
-    AppendLine(builder, "}");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal enum UnicodeGraphemeInCB {");
-    AppendLine(builder, "  None;");
-    AppendLine(builder, "  Consonant;");
-    AppendLine(builder, "  Extend;");
-    AppendLine(builder, "  Linker;");
-    AppendLine(builder, "}");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal data struct UnicodeGraphemeInfo(Class UnicodeGraphemeClass,");
-    AppendLine(builder, "  InCB UnicodeGraphemeInCB, ExtendedPictographic bool) { }");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal data struct UnicodeGraphemeRange(Start int32, End int32,");
-    AppendLine(builder, "  Class UnicodeGraphemeClass, InCB UnicodeGraphemeInCB,");
-    AppendLine(builder, "  ExtendedPictographic bool) { }");
-    AppendLine(builder, "");
-    AppendLine(builder, "internal class UnicodeGraphemeData {");
-    AppendLine(builder, "  shared {");
-    AppendLine(builder, "    internal const SourceVersion string = \"16.0.0\"");
-    AppendLine(builder, "    internal const GraphemeBreakSourceUrl string = \"https://www.unicode.org/Public/16.0.0/ucd/auxiliary/GraphemeBreakProperty.txt\"");
-    AppendLine(builder, "    internal const GraphemeBreakSourceSha256 string = \"c29360bd6f7132811d701d29069541e827eb44bfc4c8fbde8c370d6982689dc1\"");
-    AppendLine(builder, "    internal const DerivedCorePropertiesSourceUrl string = \"https://www.unicode.org/Public/16.0.0/ucd/DerivedCoreProperties.txt\"");
-    AppendLine(builder, "    internal const DerivedCorePropertiesSourceSha256 string = \"39d35161f2954497f69e08bdb9e701493f476a3d30222de20028feda36c1dabd\"");
-    AppendLine(builder, "    internal const EmojiDataSourceSha256 string = \"f1365a5173eee18e1f98b240cdc492e84a25f1ce7e0c9d1094eb29c41a22696a\"");
-    AppendLine(builder, "    private let ranges []UnicodeGraphemeRange = []UnicodeGraphemeRange{");
+    writer.Write(ranges.Count);
     foreach (var range in ranges)
     {
-        var className = range.Class switch
-        {
-            "Regional_Indicator" => "RegionalIndicator",
-            _ => range.Class
-        };
-        var inCbName = range.InCB;
-        if (className is not ("Other" or "CR" or "LF" or "Control" or "Extend" or "ZWJ" or "RegionalIndicator"
-            or "Prepend" or "SpacingMark" or "L" or "V" or "T" or "LV" or "LVT"))
-            throw new InvalidDataException($"Unsupported Grapheme_Cluster_Break class: {range.Class}");
-        if (inCbName is not ("None" or "Consonant" or "Extend" or "Linker"))
-            throw new InvalidDataException($"Unsupported Indic_Conjunct_Break class: {range.InCB}");
-        AppendLine(builder, $"      UnicodeGraphemeRange(0x{range.Start:X}, 0x{range.End:X}, UnicodeGraphemeClass.{className}, UnicodeGraphemeInCB.{inCbName}, {range.ExtendedPictographic.ToString().ToLowerInvariant()}),");
+        writer.Write(range.Start);
+        writer.Write(range.End);
+        writer.Write((byte)range.Flags);
     }
-    AppendLine(builder, "    }");
-    AppendLine(builder, "");
-    AppendLine(builder, "    internal func Classify(value int32) UnicodeGraphemeInfo {");
-    AppendLine(builder, "      var low int32 = 0");
-    AppendLine(builder, "      var high = ranges.Length - 1");
-    AppendLine(builder, "      while low <= high {");
-    AppendLine(builder, "        let middle = low + (high - low) / 2");
-    AppendLine(builder, "        let current = ranges[middle]");
-    AppendLine(builder, "        if value < current.Start {");
-    AppendLine(builder, "          high = middle - 1");
-    AppendLine(builder, "        } else if value > current.End {");
-    AppendLine(builder, "          low = middle + 1");
-    AppendLine(builder, "        } else {");
-    AppendLine(builder, "          return UnicodeGraphemeInfo(current.Class, current.InCB, current.ExtendedPictographic)");
-    AppendLine(builder, "        }");
-    AppendLine(builder, "      }");
-    AppendLine(builder, "      return UnicodeGraphemeInfo(UnicodeGraphemeClass.Other, UnicodeGraphemeInCB.None, false)");
-    AppendLine(builder, "    }");
-    AppendLine(builder, "  }");
-    AppendLine(builder, "}");
-    return builder.ToString();
+});
+
+static byte[] EncodeGraphemeData(List<GraphemeRange> ranges) => Encode(writer =>
+{
+    writer.Write(ranges.Count);
+    foreach (var range in ranges)
+    {
+        writer.Write(range.Start);
+        writer.Write(range.End);
+        writer.Write(GraphemeClassValue(range.Class));
+        writer.Write(GraphemeInCbValue(range.InCB));
+        writer.Write(range.ExtendedPictographic);
+    }
+});
+
+static byte[] Encode(Action<BinaryWriter> write)
+{
+    using var stream = new MemoryStream();
+    using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
+        write(writer);
+    return stream.ToArray();
 }
 
-static void AppendLine(StringBuilder builder, string value) => builder.Append(value).Append('\n');
+static byte GraphemeClassValue(string value) => value switch
+{
+    "Other" => 0,
+    "CR" => 1,
+    "LF" => 2,
+    "Control" => 3,
+    "Extend" => 4,
+    "ZWJ" => 5,
+    "Regional_Indicator" => 6,
+    "Prepend" => 7,
+    "SpacingMark" => 8,
+    "L" => 9,
+    "V" => 10,
+    "T" => 11,
+    "LV" => 12,
+    "LVT" => 13,
+    _ => throw new InvalidDataException($"Unsupported Grapheme_Cluster_Break class: {value}"),
+};
+
+static byte GraphemeInCbValue(string value) => value switch
+{
+    "None" => 0,
+    "Consonant" => 1,
+    "Extend" => 2,
+    "Linker" => 3,
+    _ => throw new InvalidDataException($"Unsupported Indic_Conjunct_Break class: {value}"),
+};
 
 readonly record struct CodePointRange(int Start, int End);
 readonly record struct UnicodeRange(int Start, int End, string Class);
