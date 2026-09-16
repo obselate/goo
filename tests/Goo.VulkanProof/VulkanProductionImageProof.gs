@@ -222,7 +222,7 @@ private func VulkanProductionImageLogicalResource(
       throw InvalidOperationException("Vulkan production logical image source is unavailable")
     }
     let logical = [count]VulkanLogicalResource
-    let copied = resources.CopyLogicalResources(logical)
+    let copied = resources.CopyLogicalResourcesForProof(logical)
     var index int32 = 0
     while index < copied {
       let candidate = logical[index]
@@ -311,7 +311,7 @@ private func VulkanProductionImageGrowthAndFailure(
       VulkanProductionImageRegister(tiny, replacement, VulkanImageSamplerMode.Nearest)
       let stats = tiny.Stats
       let logical = [2]VulkanLogicalResource
-      if tiny.CopyLogicalResources(logical) != 2
+      if tiny.CopyLogicalResourcesForProof(logical) != 2
         || stats.Capacity != 2 || tiny.LogicalCapacityForProof != 2
         || logical[0].Id.LogicalId != replacement.Id.LogicalId
         || logical[1].Id.LogicalId != second.Id.LogicalId

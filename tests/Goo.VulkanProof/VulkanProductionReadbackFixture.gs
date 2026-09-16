@@ -197,6 +197,33 @@ internal unsafe partial class VulkanImageResources {
   VulkanImageResources(device, dispatch, allocator, 1, 1, 96uL, 96uL,
     16uL, 16uL, 1, nil, generation, objectAccounting)
 
+  internal func CopyLogicalResourcesForProof(destination []VulkanLogicalResource) int32 {
+    EnsureOpen()
+    if destination.Length < logicalStats.LogicalCount {
+      throw ArgumentException("Logical resource destination is too small", "destination")
+    }
+    var output int32 = 0
+    for index in 0 ... logicalRecords.Length {
+      let logical = logicalRecords[index]
+      if logical.Id.IsValid
+        && (logical.PhysicalSlot < 0 || !entries[logical.PhysicalSlot].GpuPublished) {
+          destination[output] = VulkanLogicalResource{
+            Id: logical.Id,
+            Source: VulkanResourceSource{
+              ProviderId: logical.ProviderId,
+              SourceId: logical.SourceId,
+              Version: logical.Id.Version,
+              Bytes: logical.Bytes,
+            },
+            Bytes: logical.Bytes,
+            Cacheable: logical.Cacheable,
+          }
+          output++
+        }
+    }
+    return output
+  }
+
   internal func CollectAfterDescriptorRetryForProof(
     id ResourceId,
     completedFence uint64) int32{
