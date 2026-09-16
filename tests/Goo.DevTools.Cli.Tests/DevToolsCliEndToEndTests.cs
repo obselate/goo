@@ -101,14 +101,16 @@ public sealed class DevToolsCliEndToEndTests
         Assert.Contains("Runtime window", result.StandardOutput, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task AttachUsesRuntimeNamedPipeAndPreservesJsonLines()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AttachUsesRuntimeNamedPipeAndReportsRequestStatus(bool accepted)
     {
         using var directory = TemporaryDirectory.Create();
         var pipeName = $"goo-test-{Guid.NewGuid():N}";
         await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
         using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        var cliTask = RunCliAsync(directory.Path, "attach", "--latest", "--once", "--json", "--wait", "5");
+        var cliTask = RunCliAsync(directory.Path, "attach", "--latest", "--once", "--json", "--payload", "{\"full\":true}", "--wait", "5");
         await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
@@ -120,15 +122,58 @@ public sealed class DevToolsCliEndToEndTests
         var request = await ReadLineAsync(reader);
         using var requestDocument = JsonDocument.Parse(request);
         var id = requestDocument.RootElement.GetProperty("id").GetString();
+        Assert.True(requestDocument.RootElement.GetProperty("payload").GetProperty("full").GetBoolean());
         await writer.WriteLineAsync(JsonSerializer.Serialize(new
         {
             type = "response",
             id,
+            ok = accepted,
             payload = new { command = "snapshot", ok = true }
         }));
         var result = await cliTask;
-        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(accepted ? 0 : 1, result.ExitCode);
         Assert.Contains("\"command\":\"snapshot\"", result.StandardOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ListedWindowIdsSelectSameTitleWindowsInOneProcess()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-list-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName + "-one", "goo.devtools/1", fileName: "one.json", windowId: "window-one");
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1", fileName: "two.json", windowId: "window-two");
+        await File.WriteAllTextAsync(Path.Combine(directory.Path, "malformed.json"), "{");
+        var listed = await RunCliAsync(directory.Path, "list", "--pid", Environment.ProcessId.ToString(), "--json");
+        Assert.Equal(0, listed.ExitCode);
+        using var listing = JsonDocument.Parse(listed.StandardOutput);
+        var targets = listing.RootElement.GetProperty("targets");
+        Assert.Equal(2, targets.GetArrayLength());
+        Assert.Contains(targets.EnumerateArray(), target => target.GetProperty("window").GetString() == "window-two");
+
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var attached = RunCliAsync(directory.Path, "attach", "--pid", Environment.ProcessId.ToString(), "--window", "window-two", "--once", "--json", "--wait", "5");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        using var request = JsonDocument.Parse(await ReadLineAsync(reader));
+        await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "response", id = request.RootElement.GetProperty("id").GetString(), ok = true }));
+        Assert.Equal(0, (await attached).ExitCode);
+    }
+
+    [Fact]
+    public async Task OneShotAttachTimesOutWhenEndpointDoesNotSendHello()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-timeout-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var attached = RunCliAsync(directory.Path, "attach", "--latest", "--once", "--wait", "1");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await attached.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("cancelled", result.StandardError);
     }
 
     [Fact]
@@ -399,7 +444,8 @@ public sealed class DevToolsCliEndToEndTests
         string protocol,
         string transport = "named-pipe",
         string? fileName = null,
-        int? processId = null)
+        int? processId = null,
+        string windowId = "window-1")
     {
         var descriptor = new
         {
@@ -410,7 +456,7 @@ public sealed class DevToolsCliEndToEndTests
             transport,
             pipe = pipeName,
             createdUtc = DateTimeOffset.UtcNow.ToString("O"),
-            windows = new[] { new { id = "window-1", title = "Runtime window" } }
+            windows = new[] { new { id = windowId, title = "Runtime window" } }
         };
         await File.WriteAllTextAsync(Path.Combine(directory, fileName ?? "goo-test.json"), JsonSerializer.Serialize(descriptor));
     }

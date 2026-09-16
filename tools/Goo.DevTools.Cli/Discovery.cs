@@ -15,6 +15,19 @@ internal sealed record DiscoveryDescriptor(
     DateTimeOffset? StartedAt,
     JsonElement Metadata)
 {
+    public string? WindowId
+    {
+        get
+        {
+            if (Metadata.TryGetProperty("windows", out var windows) && windows.ValueKind == JsonValueKind.Array)
+                foreach (var window in windows.EnumerateArray())
+                    if (window.ValueKind == JsonValueKind.Object
+                        && window.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String)
+                        return id.GetString();
+            return null;
+        }
+    }
+
     public bool IsProcessAlive
     {
         get
@@ -157,7 +170,8 @@ internal static class Discovery
         if (!string.IsNullOrWhiteSpace(application))
             filtered = filtered.Where(item => item.DisplayName.Contains(application, StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(window))
-            filtered = filtered.Where(item => (item.WindowTitle ?? string.Empty).Contains(window, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(item => string.Equals(item.WindowId, window, StringComparison.Ordinal)
+                || (item.WindowTitle ?? string.Empty).Contains(window, StringComparison.OrdinalIgnoreCase));
 
         var matches = filtered.ToArray();
         return matches;

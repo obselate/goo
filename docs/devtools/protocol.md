@@ -50,6 +50,12 @@ Requests use a unique `id` and a command-specific payload:
 
 The response keeps the same `id`. Unsolicited tree, event, log, and hot-reload updates are JSON objects without a matching request ID. `goo attach --json` preserves every line for IDE or script consumers.
 
+Use `goo list --json` for live process/window discovery. Its `window` IDs can be
+passed to `--window` on attach, capture and input, including when titles match.
+Pass `--project` throughout when using project-local descriptors. `attach --once`
+bounds its connection and request with `--wait` and exits unsuccessfully for a
+rejected response. Streaming attach remains open until disconnected.
+
 Supported CLI requests are `snapshot`, `capture`, and the command supplied by `goo attach --command`. A capture response may first return `payload.pending: true`; repeat the `capture` request until it returns `pending: false` or the bounded CLI wait expires. The completed response uses `format: "rgba8-srgb-premultiplied"`, `width`, `height`, `stride`, and `rgbaBase64`. The CLI encodes this pixel payload as a real PNG. Legacy responses can contain `payload.contentBase64`, `payload.base64`, `payload.data`, or `payload.path`.
 
 Clients must inspect the handshake capabilities before enabling optional panels. An older runtime may omit capabilities or close the connection for an unsupported request. The CLI treats that as a connection failure and reports the endpoint and command.

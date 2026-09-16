@@ -50,6 +50,7 @@ internal static class CliApplication
                 "dev" => await RunDevAsync(commandLine),
                 "attach" => await RunAttachAsync(commandLine),
                 "doctor" => await RunDoctorAsync(commandLine),
+                "list" => RunList(commandLine),
                 "capture" => await RunCaptureAsync(commandLine),
                 "input" => await RunInputAsync(commandLine),
                 _ => Fail($"Unknown command '{commandLine.Command}'. Run `goo help` for usage.")
@@ -70,6 +71,22 @@ internal static class CliApplication
             Console.Error.WriteLine($"goo: {exception.Message}");
             return 1;
         }
+    }
+
+    private static int RunList(CommandLine commandLine)
+    {
+        var project = ResolveProject(commandLine.Get("project"));
+        var directory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var targets = Discovery.Matching(Discovery.Scan(directory), ParseOptionalInt(commandLine.Get("pid"), "pid"),
+            commandLine.Get("pipe"), commandLine.Get("app"), commandLine.Get("window"))
+            .Select(item => new { pid = item.ProcessId, process = item.DisplayName, window = item.WindowId,
+                title = item.WindowTitle, protocol = item.Protocol, transport = item.Transport, pipe = item.Pipe }).ToArray();
+        if (commandLine.Has("json"))
+            Console.WriteLine(JsonSerializer.Serialize(new { targets }));
+        else
+            foreach (var target in targets)
+                Console.WriteLine($"{target.process} pid={target.pid} window={target.window} title={target.title}");
+        return 0;
     }
 
     private static async Task<int> RunDevAsync(CommandLine commandLine)
@@ -154,6 +171,8 @@ internal static class CliApplication
             LaunchInspector(descriptor, commandLine.Has("focus"), projectDirectory);
 
         using var cancellation = new CancellationTokenSource();
+        if (commandLine.Has("once"))
+            cancellation.CancelAfter(ParseWait(commandLine.Get("wait")));
         await using var connection = await ConnectAsync(descriptor, cancellation.Token);
         var handshake = await connection.HandshakeAsync(cancellation.Token);
         ValidateHandshake(handshake, descriptor);
@@ -164,7 +183,8 @@ internal static class CliApplication
             var request = await connection.RequestAsync(commandLine.Get("command") ?? "snapshot", ParsePayload(commandLine.Get("payload")), cancellation.Token);
             if (request is not null)
                 WriteProtocolLine(request.ToJsonString(), commandLine.Has("json"));
-            return request is null ? 1 : 0;
+            return request is null || BoolValue(request["ok"]) == false
+                || StringValue(request["type"]) == "error" || request["error"] is not null ? 1 : 0;
         }
 
         await RunInteractiveAsync(connection, commandLine.Has("json"), cancellation.Token);
@@ -833,6 +853,7 @@ internal static class CliApplication
         Console.WriteLine("  goo dev [options] -- <command> [args]");
         Console.WriteLine("  goo attach [options]");
         Console.WriteLine("  goo doctor [--json]");
+        Console.WriteLine("  goo list [--pid PID] [--project PATH] [--json]");
         Console.WriteLine("  goo capture [options]");
         Console.WriteLine("  goo input <event> [--pid PID --window NAME] [--node ID | --x X --y Y] [options]");
         Console.WriteLine();
@@ -840,6 +861,7 @@ internal static class CliApplication
         Console.WriteLine("  dev       Start a Goo project with diagnostics enabled and dotnet watch by default.");
         Console.WriteLine("  attach    Attach to a live Goo endpoint and stream protocol events.");
         Console.WriteLine("  doctor    Check the SDK, project, endpoint directory, and inspector installation.");
+        Console.WriteLine("  list      List live endpoints without connecting or selecting a window.");
         Console.WriteLine("  capture   Request a screenshot from an attached endpoint.");
         Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.");
         Console.WriteLine();
@@ -848,7 +870,7 @@ internal static class CliApplication
         Console.WriteLine("  --pid PID            Select one process ID.");
         Console.WriteLine("  --pipe NAME          Select one pipe or socket endpoint.");
         Console.WriteLine("  --app NAME           Select by application name.");
-        Console.WriteLine("  --window NAME        Select by window title.");
+        Console.WriteLine("  --window NAME        Select by stable window ID or window title.");
         Console.WriteLine("  --latest             Select the newest endpoint.");
         Console.WriteLine("  --wait SECONDS       Wait for a descriptor, up to 300 seconds.");
         Console.WriteLine("  --inspector          Launch the standalone inspector when ready.");
