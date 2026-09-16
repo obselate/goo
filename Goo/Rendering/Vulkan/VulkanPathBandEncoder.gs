@@ -338,5 +338,3 @@ internal data struct PathBandCandidate {
   internal var Near float32
   internal var Far float32
 }
-
-internal data struct PathBandBuildResult(Bands []PathAnalyticBand, Indices []uint32) { }

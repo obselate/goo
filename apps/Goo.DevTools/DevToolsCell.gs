@@ -1373,13 +1373,4 @@ class DevToolsCell : Cell {
         Text{Key: "button-label", Content: label, FontSize: 12, FontWeight: 600, Color: foreground,},
     }
 
-    private func ConnectionColor(value DiagnosticConnectionState) Color {
-        if value == DiagnosticConnectionState.Connected {
-            return DevToolsTheme.Green
-        }
-        if value == DiagnosticConnectionState.Faulted {
-            return DevToolsTheme.Red
-        }
-        return if value == DiagnosticConnectionState.Connecting { DevToolsTheme.Amber } else { DevToolsTheme.InkSubtle }
-    }
 }

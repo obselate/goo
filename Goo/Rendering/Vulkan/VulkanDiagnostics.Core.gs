@@ -308,17 +308,6 @@ internal unsafe partial class VulkanDiagnostics {
     }
   }
 
-  internal func CaptureDeviceExtensionCount(extensionCount uint32) {
-    if !EnterWriter() {
-      return
-    }
-    try {
-      fatalDeviceExtensionCount = extensionCount
-    } finally {
-      ExitWriter()
-    }
-  }
-
   internal func CaptureDeviceFacts(
     apiVersion uint32,
     driverVersion uint32,
@@ -356,47 +345,6 @@ internal unsafe partial class VulkanDiagnostics {
         ExitWriter()
       }
     }
-
-  internal func CaptureExtension(kind uint32, name * int8) {
-    if !EnterWriter() {
-      return
-    }
-    try {
-      if let records = fatalExtensions {
-        if let bytes = fatalExtensionText {
-          if fatalExtensionCount >= FatalExtensionCapacity {
-            fatalExtensionDropped++
-            return
-          }
-          let slot = fatalExtensionCount
-          fatalExtensionCount++
-          var length uint32 = 0u
-          var hash uint32 = 2166136261u
-          let offset = slot * FatalNameCapacity
-          while name != nil && length < uint32(FatalNameCapacity) {
-            let value = name[length]
-            if value == int8(0) {
-              break
-            }
-            let byte = uint8(value)
-            bytes[offset + int32(length)] = byte
-            hash = (hash ^ uint32(byte)) * 16777619u
-            length++
-          }
-          let truncated uint32 = if length == uint32(FatalNameCapacity) { 1u } else { 0u }
-          records[slot] = VulkanDiagnosticFatalExtensionRecord{
-            extensionKind: kind,
-            hash: hash,
-            length: length,
-            offset: uint32(offset),
-            truncated: truncated,
-          }
-        }
-      }
-    } finally {
-      ExitWriter()
-    }
-  }
 
   internal func CaptureWsiFacts(window uint64, surface uint64, swapchain uint64,
     frame uint64, generation uint64) {

@@ -3,13 +3,6 @@ package Goo
 import System.Runtime.InteropServices
 
 @StructLayout(LayoutKind.Sequential)
-internal unsafe struct VkGlobalDispatch {
-  var vkGetInstanceProcAddr unmanaged[Cdecl](VkInstance, *int8) -> unmanaged[Cdecl]() -> void
-  var vkEnumerateInstanceVersion unmanaged[Cdecl](*uint32) -> VkResult
-  var vkEnumerateInstanceExtensionProperties unmanaged[Cdecl](*int8, *uint32, *VkExtensionProperties) -> VkResult
-  var vkCreateInstance unmanaged[Cdecl](*VkInstanceCreateInfo, *VkAllocationCallbacks, *VkInstance) -> VkResult
-}
-@StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkInstanceDispatch {
   var vkDestroyInstance unmanaged[Cdecl](VkInstance, *VkAllocationCallbacks) -> void
   var vkEnumeratePhysicalDevices unmanaged[Cdecl](VkInstance, *uint32, *VkPhysicalDevice) -> VkResult

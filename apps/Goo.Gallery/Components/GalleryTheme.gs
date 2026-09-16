@@ -44,21 +44,6 @@ class GalleryTheme {
         let PadCompact float64 = 32.0
         let MaxContent float64 = 1120.0
 
-        func ChapterTitle(content string) Text -> Text{
-            Content: content,
-            FontSize: 30,
-            FontWeight: 700,
-            LetterSpacing: -0.6,
-            Color: Ink,
-        }
-
-        func ChapterSentence(content string) Text -> Text{
-            Content: content,
-            FontSize: 15,
-            LineHeight: 1.5,
-            Color: InkMuted,
-        }
-
         func SpecimenName(content string) Text -> Text{
             Content: content,
             FontSize: 13,

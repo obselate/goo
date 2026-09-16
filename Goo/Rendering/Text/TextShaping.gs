@@ -133,16 +133,6 @@ internal class TextShaping {
 
     internal func GlyphCount(shaped ShapedText) int32 -> shaped.GlyphCount
 
-    internal func PrimaryFaceCacheCountForTests() int32 {
-      lock (PrimaryFacesLock) { return PrimaryFaces.Count }
-    }
-
-    internal func PrimaryFaceCacheByteBudgetForTests() int64 -> PrimaryFaceCacheByteBudget
-
-    internal func PrimaryFaceCacheBytesForTests() int64 {
-      lock (PrimaryFacesLock) { return primaryFaceCacheBytes }
-    }
-
     private func MeasureUncached(text string, families string, size float32, weight int32,
       italic bool, letterSpacing float32, direction int32) float32 ->
     MeasureLineUncached(text, 0, text.Length, families, size, weight, italic,

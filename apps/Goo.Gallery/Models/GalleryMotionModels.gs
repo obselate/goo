@@ -20,8 +20,6 @@ class GalleryTypeClock : Simulation {
     public override func Done(elapsed float64) bool -> false
 }
 
-func GalleryTypeClockSpec(start float64, target float64, velocity float64) Simulation -> GalleryTypeClock(start)
-
 class GallerySpringSimulation : Simulation {
     private let target float64
     private let displacement float64
@@ -80,6 +78,3 @@ GallerySpringSimulation(start, target, velocity, 12.0, 4.0)
 
 func GalleryStiffSpringSpec(start float64, target float64, velocity float64) Simulation ->
 GallerySpringSimulation(start, target, velocity, 12.0, 28.0)
-
-func GalleryMotionSpec(start float64, target float64, velocity float64) Simulation ->
-GallerySnappySpringSpec(start, target, velocity)

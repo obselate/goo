@@ -108,14 +108,6 @@ public class GlassTerminalCell : Cell {
         Rebuild()
     }
 
-    private func setBlur(level int32, label string) {
-        blurLevel = level
-        lastAction = "Blur level set to " + label
-        testActionCount++
-        syncShader()
-        Rebuild()
-    }
-
     public override func Build() Blob {
         syncShader()
         let cornerInt = int32(Math.Max(cornerRadius, 0.0F))
