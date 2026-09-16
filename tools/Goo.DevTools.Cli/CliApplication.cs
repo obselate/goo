@@ -204,6 +204,9 @@ internal static class CliApplication
             commandLine.Get("pipe"), commandLine.Get("app"), commandLine.Get("window"), commandLine.Has("latest"))
             ?? await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")));
         var eventName = commandLine.Positionals[0];
+        if (eventName is not ("click" or "pointer.move" or "pointer.down" or "pointer.up" or "wheel")
+            && (commandLine.Has("target") || commandLine.Has("node")))
+            throw new CliException("--target and --node apply only to pointer and wheel events.");
         var gesture = commandLine.Get("gesture");
         if (commandLine.Has("gesture") && string.IsNullOrWhiteSpace(gesture))
             throw new CliException("--gesture needs the token returned by pointer.down or key.down.");
@@ -215,6 +218,15 @@ internal static class CliApplication
         foreach (var name in new[] { "key", "text", "button" })
             if (commandLine.Has(name))
                 payload[name] = commandLine.Get(name) ?? throw new CliException($"--{name} needs a value.");
+        if (commandLine.Has("node") && commandLine.Has("target"))
+            throw new CliException("Use --target or --node, not both.");
+        if (commandLine.Has("target"))
+        {
+            var targetHandle = commandLine.Get("target");
+            if (string.IsNullOrWhiteSpace(targetHandle) || targetHandle.Length > 128)
+                throw new CliException("--target needs an opaque target handle from the selected window snapshot.");
+            payload["target"] = targetHandle;
+        }
         if (commandLine.Has("node"))
         {
             if (!long.TryParse(commandLine.Get("node"), NumberStyles.None, CultureInfo.InvariantCulture, out var node) || node <= 0)
@@ -240,6 +252,7 @@ internal static class CliApplication
         var handshake = await connection.HandshakeAsync(timeout.Token);
         ValidateHandshake(handshake, descriptor);
         var gestureLease = false;
+        var targetHandles = false;
         using (var hello = JsonDocument.Parse(handshake!))
         {
             if (!hello.RootElement.TryGetProperty("capabilities", out var capabilities)
@@ -247,7 +260,10 @@ internal static class CliApplication
                 || !capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input"))
                 throw new CliException("This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.");
             gestureLease = capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input.gesture-lease");
+            targetHandles = capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "target.handles");
         }
+        if (commandLine.Has("target") && !targetHandles)
+            throw new CliException("This endpoint does not support opaque target handles. Update the target application's Goo runtime.");
         if (gestureLease && gesture is not null)
         {
             payload["gestureId"] = gesture;
@@ -549,6 +565,9 @@ internal static class CliApplication
         if (!ProtocolConnection.TryParse(handshake, out var message)
             || !string.Equals(StringValue(message["protocol"]), Discovery.Protocol, StringComparison.OrdinalIgnoreCase))
             throw new CliException($"The Goo endpoint at {descriptor.Pipe} did not confirm protocol {Discovery.Protocol}.");
+        if (IntegerValue(message["pid"]) != descriptor.ProcessId
+            || !string.Equals(StringValue(message["windowId"]), descriptor.WindowId, StringComparison.Ordinal))
+            throw new CliException($"The Goo endpoint at {descriptor.Pipe} did not confirm descriptor PID/window identity.");
     }
 
     private static async Task RunInteractiveAsync(ProtocolConnection connection, bool json, TimeSpan drainTimeout, CancellationToken cancellationToken)
@@ -932,7 +951,7 @@ internal static class CliApplication
         Console.WriteLine("  goo doctor [--json]");
         Console.WriteLine("  goo list [--pid PID] [--project PATH] [--json]");
         Console.WriteLine("  goo capture [options]");
-        Console.WriteLine("  goo input <event> [--pid PID --window NAME] [--node ID | --x X --y Y] [options]");
+        Console.WriteLine("  goo input <event> [--pid PID --window NAME] [--target HANDLE | --node ID | --x X --y Y] [options]");
         Console.WriteLine();
         Console.WriteLine("Commands:");
         Console.WriteLine("  dev       Start a Goo project with diagnostics enabled and dotnet watch by default.");

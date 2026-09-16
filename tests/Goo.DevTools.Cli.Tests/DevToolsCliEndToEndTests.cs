@@ -26,7 +26,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "hello", protocol = "goo.devtools/1", capabilities = enabled ? new[] { "input", "input.gesture-lease" } : [] }));
+        await writer.WriteLineAsync(ServerHello(enabled ? ["input", "input.gesture-lease"] : []));
         if (enabled)
         {
             using var request = JsonDocument.Parse(await ReadLineAsync(reader));
@@ -50,6 +50,49 @@ public sealed class DevToolsCliEndToEndTests
         Assert.Contains(enabled ? "\"sequence\":12" : "does not permit input", enabled ? result.StandardOutput : result.StandardError, StringComparison.Ordinal);
         if (enabled)
             Assert.Contains("[goo] gesture ", result.StandardError, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InputCarriesOpaqueTargetWhenRuntimeAdvertisesHandles()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-target-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var cliTask = RunCliAsync(directory.Path, "input", "click", "--latest", "--target", "opaque-target", "--json", "--wait", "5");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync(ServerHello(["input", "target.handles"]));
+        using var request = JsonDocument.Parse(await ReadLineAsync(reader));
+        Assert.Equal("opaque-target", request.RootElement.GetProperty("payload").GetProperty("target").GetString());
+        await writer.WriteLineAsync(JsonSerializer.Serialize(new
+        {
+            type = "response",
+            id = request.RootElement.GetProperty("id").GetString(),
+            ok = true,
+            payload = new { applied = true, sequence = 4 }
+        }));
+        Assert.Equal(0, (await cliTask).ExitCode);
+    }
+
+    [Fact]
+    public async Task AttachRejectsHandshakeForAnotherWindow()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-identity-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var cliTask = RunCliAsync(directory.Path, "attach", "--latest", "--once", "--json", "--wait", "5");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync(ServerHello(windowId: "window-other"));
+        var result = await cliTask;
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("descriptor PID/window identity", result.StandardError, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -80,7 +123,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        await writer.WriteLineAsync(ServerHello());
         await process.StandardInput.WriteLineAsync("snapshot");
         process.StandardInput.Close();
         using var request = JsonDocument.Parse(await ReadLineAsync(reader));
@@ -164,7 +207,7 @@ public sealed class DevToolsCliEndToEndTests
         using var helloDocument = JsonDocument.Parse(hello);
         Assert.Equal("hello", helloDocument.RootElement.GetProperty("type").GetString());
         Assert.Equal("goo.devtools/1", helloDocument.RootElement.GetProperty("protocol").GetString());
-        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\",\"capabilities\":[\"tree\"]}");
+        await writer.WriteLineAsync(ServerHello(["tree"]));
         var request = await ReadLineAsync(reader);
         using var requestDocument = JsonDocument.Parse(request);
         var id = requestDocument.RootElement.GetProperty("id").GetString();
@@ -202,7 +245,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        await writer.WriteLineAsync(ServerHello(windowId: "window-two"));
         using var request = JsonDocument.Parse(await ReadLineAsync(reader));
         await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "response", id = request.RootElement.GetProperty("id").GetString(), ok = true }));
         Assert.Equal(0, (await attached).ExitCode);
@@ -247,7 +290,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        await writer.WriteLineAsync(ServerHello());
         var request = await ReadLineAsync(reader);
         using var requestDocument = JsonDocument.Parse(request);
         var id = requestDocument.RootElement.GetProperty("id").GetString();
@@ -275,7 +318,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        await writer.WriteLineAsync(ServerHello());
 
         var firstRequest = await ReadLineAsync(reader);
         using var firstDocument = JsonDocument.Parse(firstRequest);
@@ -333,7 +376,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        await writer.WriteLineAsync(ServerHello());
         var requests = 0;
         while (await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) is { } request)
         {
@@ -506,6 +549,17 @@ public sealed class DevToolsCliEndToEndTests
         };
         await File.WriteAllTextAsync(Path.Combine(directory, fileName ?? "goo-test.json"), JsonSerializer.Serialize(descriptor));
     }
+
+    private static string ServerHello(string[]? capabilities = null, int? processId = null, string windowId = "window-1") =>
+        JsonSerializer.Serialize(new
+        {
+            type = "hello",
+            protocol = "goo.devtools/1",
+            pid = processId ?? Environment.ProcessId,
+            windowId,
+            sessionId = "test-session",
+            capabilities = capabilities ?? []
+        });
 
     private static bool EndpointCheck(string output)
     {
