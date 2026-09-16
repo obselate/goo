@@ -643,18 +643,6 @@ internal partial class SceneFrame {
     ValidateClipChainIndex(index)
   }
 
-  private func GrowthCapacity(current int32, required int32) int32 {
-    if required <= current { return current }
-    var next = current
-    while next < required {
-      if next > Int32.MaxValue / 2 {
-        next = required
-        break
-      }
-      next = next * 2
-    }
-    return next
-  }
 
   private func Mix(hash uint64, value uint64) uint64 -> (hash ^ value) * HashPrime
 

@@ -17,23 +17,13 @@ internal sealed class VulkanRetainedTextSnapshot {
 
   internal func EnsureCapacity(requiredSegments int32) {
     if requiredSegments > segments.Length {
-      let expanded = [GrowthCapacity(segments.Length,
-        requiredSegments)]CachedTextSegmentRefRecord
+      let expanded = [ArrayGrowthCapacity(segments.Length,
+        requiredSegments, 1)]CachedTextSegmentRefRecord
       Array.Copy(segments, expanded, SegmentCount)
       segments = expanded
     }
   }
 
-  private func GrowthCapacity(current int32, required int32) int32 {
-    var next = current
-    while next < required {
-      if next > Int32.MaxValue / 2 {
-        return required
-      }
-      next = next * 2
-    }
-    return next
-  }
 
 }
 

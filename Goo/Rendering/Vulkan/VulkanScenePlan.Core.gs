@@ -608,7 +608,7 @@ internal partial class SceneFrame {
 
   private func Grow[T any](ref values []T, count int32, required int32) {
     if required <= values.Length { return }
-    let expanded = [GrowthCapacity(values.Length, required)]T
+    let expanded = [ArrayGrowthCapacity(values.Length, required, 1)]T
     Array.Copy(values, expanded, count)
     values = expanded
     growthOperations = growthOperations + 1uL

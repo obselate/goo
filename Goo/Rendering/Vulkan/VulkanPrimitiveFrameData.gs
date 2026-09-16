@@ -94,47 +94,11 @@ internal unsafe sealed class VulkanPrimitiveFrameSlot : IDisposable {
   }
 
   internal func EnsureHistoryWordCapacity(requiredWords int32) {
-    if requiredWords < 0 {
-      throw ArgumentOutOfRangeException("requiredWords")
-    }
-    if requiredWords <= HistoryWords.Length {
-      return
-    }
-    var next = if HistoryWords.Length == 0 { 256 } else { HistoryWords.Length }
-    while next < requiredWords {
-      if next > Int32.MaxValue / 2 {
-        next = requiredWords
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]uint32
-    Array.Copy(HistoryWords, replacement, HistoryWords.Length)
-    HistoryWords = replacement
+    HistoryWords = GrowArray(HistoryWords, HistoryWords.Length, requiredWords, 256)
   }
 
   internal func EnsureRangeCapacity(recordCount int32) {
-    if recordCount < 0 {
-      throw ArgumentOutOfRangeException("recordCount")
-    }
-    if recordCount <= PreparedRanges.Length {
-      return
-    }
-    var next = if PreparedRanges.Length == 0 { 8 } else { PreparedRanges.Length }
-    while next < recordCount {
-      if next > Int32.MaxValue / 2 {
-        next = recordCount
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]VkBufferCopy
-    var index int32 = 0
-    while index < PreparedRanges.Length {
-      replacement[index] = PreparedRanges[index]
-      index++
-    }
-    PreparedRanges = replacement
+    PreparedRanges = GrowArray(PreparedRanges, PreparedRanges.Length, recordCount, 8)
   }
 
   internal func DestroyBuffers() {

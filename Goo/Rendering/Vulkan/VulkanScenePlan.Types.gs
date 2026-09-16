@@ -2,18 +2,6 @@ package Goo
 
 import System
 
-internal func VulkanTextSegmentGrowthCapacity(current int32, required int32) int32 {
-  var next = current
-  if next <= 0 { next = 1 }
-  while next < required {
-    if next > Int32.MaxValue / 2 {
-      return required
-    }
-    next = next * 2
-  }
-  return next
-}
-
 internal struct VulkanTextSegmentRun {
   internal var FirstInstance int32
   internal var InstanceCount int32
@@ -52,7 +40,7 @@ internal open class VulkanTextSegmentStorage {
 
   internal func EnsureRecordCapacity(required int32) {
     if required <= Records.Length { return }
-    let next = VulkanTextSegmentGrowthCapacity(Records.Length, required)
+    let next = ArrayGrowthCapacity(Records.Length, required, 1)
     let expandedRecords = [next]HbGpuTextInstanceRecord
     let expandedResources = [next]ResourceId
     let expandedOffsets = [next]uint32
@@ -75,7 +63,7 @@ internal open class VulkanTextSegmentStorage {
 
   internal func EnsureRunCapacity(required int32) {
     if required <= Runs.Length { return }
-    let next = VulkanTextSegmentGrowthCapacity(Runs.Length, required)
+    let next = ArrayGrowthCapacity(Runs.Length, required, 1)
     let expanded = [next]VulkanTextSegmentRun
     Array.Copy(Runs, expanded, RunCount)
     Runs = expanded

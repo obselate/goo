@@ -105,15 +105,8 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
     if segmentCount <= CandidateIds.Length && segmentCount <= HistoryIds.Length {
       return
     }
-    var next = if CandidateIds.Length == 0 { 8 } else { CandidateIds.Length }
-    if HistoryIds.Length > next { next = HistoryIds.Length }
-    while next < segmentCount {
-      if next > Int32.MaxValue / 2 {
-        next = segmentCount
-        break
-      }
-      next = next * 2
-    }
+    let next = ArrayGrowthCapacity(Math.Max(CandidateIds.Length, HistoryIds.Length),
+      segmentCount, 8)
     let candidateIds = [next]uint64
     let candidateVersions = [next]uint64
     let candidateFirstInstances = [next]int32
@@ -150,27 +143,7 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
   }
 
   internal func EnsureRangeCapacity(rangeCount int32) {
-    if rangeCount < 0 {
-      throw ArgumentOutOfRangeException("rangeCount")
-    }
-    if rangeCount <= PreparedRanges.Length {
-      return
-    }
-    var next = if PreparedRanges.Length == 0 { 8 } else { PreparedRanges.Length }
-    while next < rangeCount {
-      if next > Int32.MaxValue / 2 {
-        next = rangeCount
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]VkBufferCopy
-    var index int32 = 0
-    while index < PreparedRanges.Length {
-      replacement[index] = PreparedRanges[index]
-      index = index + 1
-    }
-    PreparedRanges = replacement
+    PreparedRanges = GrowArray(PreparedRanges, PreparedRanges.Length, rangeCount, 8)
   }
 
   internal func FlushRanges() uint64 {

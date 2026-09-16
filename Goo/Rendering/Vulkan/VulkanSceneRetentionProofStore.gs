@@ -293,8 +293,8 @@ internal class VulkanSceneRetentionProofStore {
   }
 
   private func EnsureChunkCapacity(required int32) {
-    let capacity = GrowthCapacity(Max(chunks.Length,
-      Max(textProofs.Length, nextTextProofs.Length)), required)
+    let capacity = ArrayGrowthCapacity(Max(chunks.Length,
+      Max(textProofs.Length, nextTextProofs.Length)), required, 1)
     if capacity > chunks.Length {
       let expanded = [capacity]VulkanSceneChunkIdentity
       Array.Copy(chunks, expanded, chunkCount)
@@ -319,7 +319,7 @@ internal class VulkanSceneRetentionProofStore {
   }
 
   private func EnsureDrawCapacity(required int32) {
-    let capacity = GrowthCapacity(Max(draws.Length, nextDraws.Length), required)
+    let capacity = ArrayGrowthCapacity(Max(draws.Length, nextDraws.Length), required, 1)
     if capacity > draws.Length {
       let expanded = [capacity]VulkanSceneDrawIdentity
       Array.Copy(draws, expanded, drawCount)
@@ -331,7 +331,7 @@ internal class VulkanSceneRetentionProofStore {
   }
 
   private func EnsureResourceCapacity(required int32) {
-    let capacity = GrowthCapacity(Max(resources.Length, nextResources.Length), required)
+    let capacity = ArrayGrowthCapacity(Max(resources.Length, nextResources.Length), required, 1)
     if capacity > resources.Length {
       let expanded = [capacity]ResourceId
       Array.Copy(resources, expanded, resourceCount)
@@ -343,8 +343,8 @@ internal class VulkanSceneRetentionProofStore {
   }
 
   private func EnsureSegmentCapacity(required int32) {
-    let capacity = GrowthCapacity(Max(cachedTextSegments.Length,
-      nextCachedTextSegments.Length), required)
+    let capacity = ArrayGrowthCapacity(Max(cachedTextSegments.Length,
+      nextCachedTextSegments.Length), required, 1)
     if capacity > cachedTextSegments.Length {
       let expanded = [capacity]CachedTextSegmentRefRecord
       Array.Copy(cachedTextSegments, expanded, cachedTextSegmentCount)
@@ -356,8 +356,8 @@ internal class VulkanSceneRetentionProofStore {
   }
 
   private func EnsureImageCapacity(required int32) {
-    let capacity = GrowthCapacity(Max(cachedImages.Length,
-      nextCachedImages.Length), required)
+    let capacity = ArrayGrowthCapacity(Max(cachedImages.Length,
+      nextCachedImages.Length), required, 1)
     if capacity > cachedImages.Length {
       let expanded = [capacity]VulkanSceneCachedImageProof
       Array.Copy(cachedImages, expanded, cachedImageCount)
@@ -366,20 +366,6 @@ internal class VulkanSceneRetentionProofStore {
     if capacity > nextCachedImages.Length {
       nextCachedImages = [capacity]VulkanSceneCachedImageProof
     }
-  }
-
-  private func GrowthCapacity(current int32, required int32) int32 {
-    if required < 0 {
-      throw ArgumentOutOfRangeException("required")
-    }
-    var capacity = current > 0 ? current : 1
-    while capacity < required {
-      if capacity > Int32.MaxValue / 2 {
-        return required
-      }
-      capacity = capacity * 2
-    }
-    return capacity
   }
 
   private func Max(left int32, right int32) int32

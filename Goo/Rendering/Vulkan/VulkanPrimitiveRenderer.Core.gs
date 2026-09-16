@@ -735,21 +735,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if needed <= primitiveRecordPlan.Length {
       return
     }
-    var next = if primitiveRecordPlan.Length == 0 { 8 } else { primitiveRecordPlan.Length }
-    while next < needed {
-      if next > Int32.MaxValue / 2 {
-        next = needed
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]uint32
-    var index int32 = 0
-    while index < primitiveRecordPlan.Length {
-      replacement[index] = primitiveRecordPlan[index]
-      index++
-    }
-    primitiveRecordPlan = replacement
+    primitiveRecordPlan = GrowArray(primitiveRecordPlan,
+      primitiveRecordPlan.Length, needed, 8)
   }
   private func ComputeMaximumAnalyticRecordCount(frame SceneFrame) uint64 {
     if frame.DrawRefCount < 0 || frame.DrawRefCount > Int32.MaxValue {

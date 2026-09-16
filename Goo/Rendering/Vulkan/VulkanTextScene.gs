@@ -163,18 +163,7 @@ internal sealed class VulkanTextNodeSegmentCache {
   }
 
   internal func EnsureCapacity(required int32) {
-    if required <= Segments.Length { return }
-    var next = Segments.Length
-    while next < required {
-      if next > Int32.MaxValue / 2 {
-        next = required
-        break
-      }
-      next = next * 2
-    }
-    let expanded = [next]VulkanRetainedTextSegment?
-    Array.Copy(Segments, expanded, Segments.Length)
-    Segments = expanded
+    Segments = GrowArray(Segments, Segments.Length, required, 1)
   }
 }
 

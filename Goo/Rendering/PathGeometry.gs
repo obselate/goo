@@ -423,19 +423,7 @@ internal class PathGeometry {
     }
 
   private func ensureEdgeCapacity(required int32) {
-    if required <= Edges.Length { return }
-    var capacity = Edges.Length
-    if capacity == 0 { capacity = 16 }
-    while capacity < required {
-      if capacity > Int32.MaxValue / 2 {
-        capacity = required
-      } else {
-        capacity = capacity * 2
-      }
-    }
-    let next = [capacity]PathEdge
-    if EdgeCount > 0 { Array.Copy(Edges, next, EdgeCount) }
-    Edges = next
+    Edges = GrowArray(Edges, EdgeCount, required, 16)
   }
 
   internal func Contains(x float32, y float32, rule FillRule) bool {
