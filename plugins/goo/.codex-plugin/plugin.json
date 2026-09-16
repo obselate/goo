@@ -1,6 +1,6 @@
 {
   "name": "goo",
-  "version": "0.1.0+codex.20260916061540",
+  "version": "0.1.0+codex.20260916064401",
   "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
   "author": {
     "name": "Xaz"
