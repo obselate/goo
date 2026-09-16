@@ -414,45 +414,7 @@ func DiagnosticExcerpt(diagnostics string, kind string) string {
   return if line.Length > 512 { line.Substring(0, 512) } else { line }
 }
 
-func EnvironmentCount(name string, fallback int32, maximum int32) int32 {
-  let text = Environment.GetEnvironmentVariable(name)
-  if text == nil || text == "" {
-    return fallback
-  }
-  var value int32
-  try {
-    value = int32(UInt64.Parse(text))
-  } catch (error Exception) {
-    throw InvalidOperationException(name + " must be an integer")
-  }
-  if value < 0 || value > maximum {
-    throw InvalidOperationException(name + " is outside the supported range")
-  }
-  return value
-}
-
 func TicksToNanoseconds(ticks int64) int64 -> int64(float64(ticks) * 1000000000.0 / float64(Stopwatch.Frequency))
-
-func Percentile(values []int64, percentile float64) int64 {
-  let sorted = [values.Length]int64
-  Array.Copy(values, sorted, values.Length)
-  Array.Sort(sorted)
-  let rawIndex = int32(Math.Ceiling(float64(sorted.Length) * percentile)) - 1
-  let index = if rawIndex < 0 { 0 } else if rawIndex >= sorted.Length { sorted.Length - 1 } else { rawIndex }
-  return sorted[index]
-}
-
-func Maximum(values []int64) int64 {
-  var maximum int64 = 0L
-  var index int32 = 0
-  while index < values.Length {
-    if values[index] > maximum {
-      maximum = values[index]
-    }
-    index = index + 1
-  }
-  return maximum
-}
 
 func ReadbackOpenCell(root ReadbackSmokeCell) Window {
   let opened = Window{
@@ -743,296 +705,6 @@ func ReadbackRunCalibration(values []int64) {
   if sink == 0L {
     throw InvalidOperationException("Readback timing calibration did not execute")
   }
-}
-
-func RunReadbackReadbackMeasure() {
-  Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
-    "GOO_VK_DIAGNOSTICS=1 is required")
-  let arm = ReadbackReadbackArm()
-  let warmup = EnvironmentCount("GOO_READBACK_WARMUP", 8, 64)
-  let samplesCount = EnvironmentCount("GOO_READBACK_SAMPLES", 64, 512)
-  Require(samplesCount > 0, "GOO_READBACK_SAMPLES must be positive")
-  let frameTicks = [samplesCount]int64
-  let frameAllocations = [samplesCount]int64
-  let timerOverhead = [samplesCount]int64
-  let requestReadyTicks = [samplesCount]int64
-  let requestCpuTicks = [samplesCount]int64
-  let normalRecordTicks = [samplesCount]int64
-  let completionObservedTicks = [samplesCount]int64
-  let cpuCopyTicks = [samplesCount]int64
-  let objectCreateDeltas = [samplesCount]uint64
-  let objectDestroyDeltas = [samplesCount]uint64
-  let requestAllocations = [samplesCount]int64
-  let completionAllocations = [samplesCount]int64
-  let totalAllocations = [samplesCount]int64
-  let gpuSceneReplayValues = [samplesCount]int64
-  let gpuCopyValues = [samplesCount]int64
-  let root = ReadbackSmokeCell{}
-  let capturedError = StringWriter()
-  let originalError = Console.Error
-  Console.SetError(capturedError)
-  var window Window? = nil
-  var warmAllocated int64 = 0L
-  var requestCountBeforeSamples uint64 = 0uL
-  var completionCountBeforeSamples uint64 = 0uL
-  var requestCountAfterSamples uint64 = 0uL
-  var completionCountAfterSamples uint64 = 0uL
-  var takeCountAfterSamples uint64 = 0uL
-  var residentPeak uint64 = 0uL
-  var residentBeforeClose uint64 = 0uL
-  var requestedBytes uint64 = 0uL
-  var warmupObjectCreateDelta uint64 = 0uL
-  var gpuTimingSampleCount int32 = 0
-  try {
-    let opened = ReadbackOpenCell(root)
-    window = opened
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
-    let warmStartBytes = GC.GetAllocatedBytesForCurrentThread()
-    var warmIndex int32 = 0
-    while warmIndex < warmup {
-      if arm == "active" {
-        let requestStart = ReadbackBeginReadback(opened)
-        ReadbackFinishReadback(opened, requestStart)
-        let timing = WindowReadbackTestFixture.Timing(opened)
-        warmupObjectCreateDelta = warmupObjectCreateDelta + timing.ObjectCreateDelta
-      } else {
-        WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
-      }
-      warmIndex = warmIndex + 1
-    }
-    warmAllocated = GC.GetAllocatedBytesForCurrentThread() - warmStartBytes
-    requestCountBeforeSamples = WindowReadbackTestFixture.RequestCount(opened)
-    completionCountBeforeSamples = WindowReadbackTestFixture.CompletionCount(opened)
-    residentPeak = WindowReadbackTestFixture.ResidentResourceBytes(opened)
-    var sampleIndex int32 = 0
-    while sampleIndex < samplesCount {
-      let beforeBytes = GC.GetAllocatedBytesForCurrentThread()
-      let start = Stopwatch.GetTimestamp()
-      var requestStart int64 = 0L
-      if arm == "active" {
-        requestStart = ReadbackBeginReadback(opened)
-      } else {
-        WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
-      }
-      let end = Stopwatch.GetTimestamp()
-      let afterRequestBytes = GC.GetAllocatedBytesForCurrentThread()
-      frameTicks[sampleIndex] = end - start
-      requestAllocations[sampleIndex] = afterRequestBytes - beforeBytes
-      frameAllocations[sampleIndex] = requestAllocations[sampleIndex]
-      if arm == "active" {
-        let beforeCompletionBytes = GC.GetAllocatedBytesForCurrentThread()
-        ReadbackAwaitReadbackReady(opened, 1000)
-        let readyTicks = Stopwatch.GetTimestamp()
-        ReadbackTakeReadback(opened)
-        let afterTakeBytes = GC.GetAllocatedBytesForCurrentThread()
-        completionAllocations[sampleIndex] = afterTakeBytes - beforeCompletionBytes
-        totalAllocations[sampleIndex] = afterTakeBytes - beforeBytes
-        takeCountAfterSamples = takeCountAfterSamples + 1uL
-        let timing = WindowReadbackTestFixture.Timing(opened)
-        Require(timing.ReadyTicks >= timing.RequestStartTicks
-            && timing.RecordTicks >= timing.RequestStartTicks
-            && timing.SubmitTicks >= timing.RecordTicks
-            && timing.CpuCopyStartTicks >= timing.SubmitTicks
-            && timing.CpuCopyEndTicks >= timing.CpuCopyStartTicks
-            && timing.ReadyTicks >= timing.CpuCopyEndTicks,
-          "Readback active measurement timing snapshot is invalid")
-        normalRecordTicks[sampleIndex] = timing.RecordTicks - timing.RequestStartTicks
-        requestCpuTicks[sampleIndex] = timing.SubmitTicks - timing.RequestStartTicks
-        completionObservedTicks[sampleIndex] = timing.CpuCopyStartTicks - timing.RequestStartTicks
-        requestReadyTicks[sampleIndex] = timing.ReadyTicks - timing.RequestStartTicks
-        Require(readyTicks >= timing.ReadyTicks,
-          "Readback active measurement ready timestamp is invalid")
-        cpuCopyTicks[sampleIndex] = timing.CpuCopyEndTicks - timing.CpuCopyStartTicks
-        objectCreateDeltas[sampleIndex] = timing.ObjectCreateDelta
-        objectDestroyDeltas[sampleIndex] = timing.ObjectDestroyDelta
-        requestedBytes = uint64(timing.RequestedByteSize)
-        if timing.GpuTimingAvailable {
-          gpuSceneReplayValues[gpuTimingSampleCount] =
-          int64(timing.GpuSceneReplayNanoseconds)
-          gpuCopyValues[gpuTimingSampleCount] = int64(timing.GpuCopyNanoseconds)
-          gpuTimingSampleCount = gpuTimingSampleCount + 1
-        }
-      }
-      let resident = WindowReadbackTestFixture.ResidentResourceBytes(opened)
-      if resident > residentPeak {
-        residentPeak = resident
-      }
-      sampleIndex = sampleIndex + 1
-    }
-    requestCountAfterSamples = WindowReadbackTestFixture.RequestCount(opened)
-    completionCountAfterSamples = WindowReadbackTestFixture.CompletionCount(opened)
-    residentBeforeClose = WindowReadbackTestFixture.ResidentResourceBytes(opened)
-    ReadbackRunCalibration(timerOverhead)
-    Require(ReadbackSmokeCell.Root.IsMounted,
-      "Readback measurement lost the root mount")
-    opened.RequestClose()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
-    Require(!opened.IsOpen, "Readback measurement window did not close")
-  } finally {
-    Console.SetError(originalError)
-    if let active = window {
-      if active.IsOpen {
-        active.RequestClose()
-        WindowReadbackTestFixture.ForceRender(active, 0.0)
-      }
-    }
-  }
-  let diagnostics = capturedError.ToString()
-  ReadbackValidateCommonDiagnostics(diagnostics)
-  let frameNs = [samplesCount]int64
-  let allocationValues = [samplesCount]int64
-  let requestAllocationValues = [samplesCount]int64
-  let completionAllocationValues = [samplesCount]int64
-  let totalAllocationValues = [samplesCount]int64
-  let overheadNs = [samplesCount]int64
-  let requestCpuNs = [samplesCount]int64
-  let normalRecordNs = [samplesCount]int64
-  let completionObservedNs = [samplesCount]int64
-  let requestReadyNs = [samplesCount]int64
-  let cpuCopyNs = [samplesCount]int64
-  var objectCreateDeltaTotal uint64 = warmupObjectCreateDelta
-  var objectDestroyDeltaTotal uint64 = 0uL
-  var index int32 = 0
-  while index < samplesCount {
-    frameNs[index] = TicksToNanoseconds(frameTicks[index])
-    allocationValues[index] = frameAllocations[index]
-    requestAllocationValues[index] = requestAllocations[index]
-    completionAllocationValues[index] = completionAllocations[index]
-    totalAllocationValues[index] = totalAllocations[index]
-    overheadNs[index] = TicksToNanoseconds(timerOverhead[index])
-    normalRecordNs[index] = TicksToNanoseconds(normalRecordTicks[index])
-    requestCpuNs[index] = TicksToNanoseconds(requestCpuTicks[index])
-    completionObservedNs[index] = TicksToNanoseconds(completionObservedTicks[index])
-    requestReadyNs[index] = TicksToNanoseconds(requestReadyTicks[index])
-    cpuCopyNs[index] = TicksToNanoseconds(cpuCopyTicks[index])
-    objectCreateDeltaTotal = objectCreateDeltaTotal + objectCreateDeltas[index]
-    objectDestroyDeltaTotal = objectDestroyDeltaTotal + objectDestroyDeltas[index]
-    index = index + 1
-  }
-  var gpuTimingAvailable bool = false
-  var gpuSceneReplayP95 int64 = 0L
-  var gpuSceneReplayMax int64 = 0L
-  var gpuCopyP95 int64 = 0L
-  var gpuCopyMax int64 = 0L
-  if gpuTimingSampleCount > 0 {
-    let gpuSceneTimingValues = [gpuTimingSampleCount]int64
-    let gpuCopyTimingValues = [gpuTimingSampleCount]int64
-    var gpuIndex int32 = 0
-    while gpuIndex < gpuTimingSampleCount {
-      gpuSceneTimingValues[gpuIndex] = gpuSceneReplayValues[gpuIndex]
-      gpuCopyTimingValues[gpuIndex] = gpuCopyValues[gpuIndex]
-      gpuIndex = gpuIndex + 1
-    }
-    gpuTimingAvailable = true
-    gpuSceneReplayP95 = Percentile(gpuSceneTimingValues, 0.95)
-    gpuSceneReplayMax = Maximum(gpuSceneTimingValues)
-    gpuCopyP95 = Percentile(gpuCopyTimingValues, 0.95)
-    gpuCopyMax = Maximum(gpuCopyTimingValues)
-  }
-  let frameP50 = Percentile(frameNs, 0.50)
-  let frameP95 = Percentile(frameNs, 0.95)
-  let frameP99 = Percentile(frameNs, 0.99)
-  let frameP999 = Percentile(frameNs, 0.999)
-  let overheadP95 = Percentile(overheadNs, 0.95)
-  let allocationP95 = Percentile(allocationValues, 0.95)
-  let allocationMax = Maximum(allocationValues)
-  var requestAllocationP95 int64 = 0L
-  var completionAllocationP95 int64 = 0L
-  var totalAllocationP95 int64 = 0L
-  if arm == "active" {
-    requestAllocationP95 = Percentile(requestAllocationValues, 0.95)
-    completionAllocationP95 = Percentile(completionAllocationValues, 0.95)
-    totalAllocationP95 = Percentile(totalAllocationValues, 0.95)
-  }
-  var requestReadyP95 int64 = 0L
-  var requestReadyMax int64 = 0L
-  var normalRecordP95 int64 = 0L
-  var normalRecordMax int64 = 0L
-  var requestCpuP95 int64 = 0L
-  var requestCpuMax int64 = 0L
-  var completionObservedP95 int64 = 0L
-  var completionObservedMax int64 = 0L
-  var cpuCopyP95 int64 = 0L
-  var cpuCopyMax int64 = 0L
-  if arm == "active" {
-    normalRecordP95 = Percentile(normalRecordNs, 0.95)
-    normalRecordMax = Maximum(normalRecordNs)
-    requestReadyP95 = Percentile(requestReadyNs, 0.95)
-    requestReadyMax = Maximum(requestReadyNs)
-    requestCpuP95 = Percentile(requestCpuNs, 0.95)
-    requestCpuMax = Maximum(requestCpuNs)
-    completionObservedP95 = Percentile(completionObservedNs, 0.95)
-    completionObservedMax = Maximum(completionObservedNs)
-    cpuCopyP95 = Percentile(cpuCopyNs, 0.95)
-    cpuCopyMax = Maximum(cpuCopyNs)
-  }
-  let requestDelta = requestCountAfterSamples - requestCountBeforeSamples
-  let completionDelta = completionCountAfterSamples - completionCountBeforeSamples
-  let takeDelta = takeCountAfterSamples
-  if arm == "active" {
-    Require(requestDelta == uint64(samplesCount),
-      "Readback active measurement request count is incomplete")
-    Require(completionDelta == uint64(samplesCount),
-      "Readback active measurement completion count is incomplete")
-    Require(takeDelta == uint64(samplesCount),
-      "Readback active measurement result take count is incomplete")
-    Require(requestedBytes == 16384uL,
-      "Readback active measurement requested region byte size is incorrect")
-    Require(residentBeforeClose > 0uL && residentPeak == residentBeforeClose,
-      "Readback active measurement readback residency did not reuse one pool slot")
-  } else {
-    Require(requestDelta == 0uL && completionDelta == 0uL && takeDelta == 0uL,
-      "Readback disabled measurement performed readback work")
-    Require(residentPeak == 0uL && residentBeforeClose == 0uL,
-      "Readback disabled measurement retained readback resources")
-  }
-  let requireZero = Environment.GetEnvironmentVariable("GOO_READBACK_REQUIRE_ZERO_ALLOC") == "1"
-  if requireZero && arm == "disabled" {
-    Require(allocationMax == 0L,
-      "Readback disabled warm frame allocated managed memory")
-  }
-  Console.WriteLine("readback-measure: arm=" + arm
-    +" warmup=" + warmup.ToString()
-    +" samples=" + samplesCount.ToString()
-    +" frame_p50_ns=" + frameP50.ToString()
-    +" frame_p95_ns=" + frameP95.ToString()
-    +" frame_p99_ns=" + frameP99.ToString()
-    +" frame_p999_ns=" + frameP999.ToString()
-    +" frame_max_ns=" + Maximum(frameNs).ToString()
-    +" harness_p95_ns=" + overheadP95.ToString()
-    +" alloc_p95_B=" + allocationP95.ToString()
-    +" alloc_max_B=" + allocationMax.ToString()
-    +" request_alloc_p95_B=" + requestAllocationP95.ToString()
-    +" completion_alloc_p95_B=" + completionAllocationP95.ToString()
-    +" total_request_alloc_p95_B=" + totalAllocationP95.ToString()
-    +" warm_alloc_B=" + warmAllocated.ToString()
-    +" readback_request_delta=" + requestDelta.ToString()
-    +" readback_completion_delta=" + completionDelta.ToString()
-    +" readback_take_delta=" + takeDelta.ToString()
-    +" normal_scene_record_cpu_p95_ns=" + normalRecordP95.ToString()
-    +" normal_scene_record_cpu_max_ns=" + normalRecordMax.ToString()
-    +" request_submit_cpu_p95_ns=" + requestCpuP95.ToString()
-    +" request_submit_cpu_max_ns=" + requestCpuMax.ToString()
-    +" completion_observed_before_copy_p95_ns=" + completionObservedP95.ToString()
-    +" completion_observed_before_copy_max_ns=" + completionObservedMax.ToString()
-    +" request_ready_after_copy_p95_ns=" + requestReadyP95.ToString()
-    +" request_ready_after_copy_max_ns=" + requestReadyMax.ToString()
-    +" cpu_copy_p95_ns=" + cpuCopyP95.ToString()
-    +" cpu_copy_max_ns=" + cpuCopyMax.ToString()
-    +" gpu_timing_available=" + (if gpuTimingAvailable { "1" } else { "0" })
-    +" gpu_timing_samples=" + gpuTimingSampleCount.ToString()
-    +" gpu_scene_replay_p95_ns=" + gpuSceneReplayP95.ToString()
-    +" gpu_scene_replay_max_ns=" + gpuSceneReplayMax.ToString()
-    +" gpu_copy_p95_ns=" + gpuCopyP95.ToString()
-    +" gpu_copy_max_ns=" + gpuCopyMax.ToString()
-    +" requested_bytes=" + (if arm == "active" { "16384" } else { "0" })
-    +" requested_bytes_snapshot=" + requestedBytes.ToString()
-    +" resource_create_delta=" + objectCreateDeltaTotal.ToString()
-    +" resource_destroy_delta=" + objectDestroyDeltaTotal.ToString()
-    +" resource_resident_peak_B=" + residentPeak.ToString()
-    +" resource_resident_before_close_B=" + residentBeforeClose.ToString()
-    +" resource_resident_after_close_B=0"
-    +" render_path=" + (if arm == "active" { "readback_request" } else { "forced" }))
 }
 
 func PrimitivePixelIndex(width uint32, x int32, y int32) int32 -> int32((uint64(y) * uint64(width) + uint64(x)) * 4uL)
@@ -3229,7 +2901,6 @@ func RunSelectedSmoke(modes []SmokeMode) bool {
   return false
 }
 
-let managedEntryTimestamp = Stopwatch.GetTimestamp()
 Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
 let modes = []SmokeMode{
   SmokeMode("GOO_NATIVE_ACCESSIBILITY_SMOKE", "1", () -> RunNativeAccessibilitySmoke()),
@@ -3244,21 +2915,13 @@ let modes = []SmokeMode{
   SmokeMode("GOO_WINDOW_ACTIVATION_SMOKE", "1", () -> WindowActivationSmoke.Run()),
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
-  SmokeMode("GOO_ALL_BLOB_BENCHMARK", "1", () -> RunAllBlobBenchmark()),
-  SmokeMode("GOO_PIPELINE_CACHE_BENCHMARK", "1", () -> RunPipelineCacheBenchmark()),
-  SmokeMode("GOO_INPUT_LATENCY_SMOKE", "1", () -> RunPerformanceLatencyBenchmark(managedEntryTimestamp)),
-  SmokeMode("GOO_GPU_TIMESTAMPS_SMOKE", "1", () -> RunGpuTimestampSmoke()),
-  SmokeMode("GOO_GPU_PATH_BENCHMARK", "1", () -> RunGpuPathBenchmark()),
-  SmokeMode("GOO_GPU_GLASS_BENCHMARK", "1", () -> RunGpuGlassBenchmark()),
   SmokeMode("GOO_NATIVE_INPUT_SMOKE", "1", () -> RunNativeInputSmoke()),
-  SmokeMode("GOO_PERFORMANCE_SMOKE", "1", () -> RunPerformanceBenchmark()),
   SmokeMode("GOO_IDLE_SMOKE", "1", () -> RunIdleSmoke()),
   SmokeMode("GOO_OFFSCREEN_FAILURE_SMOKE", "1", () -> RunOffscreenFailureSmoke()),
   SmokeMode("GOO_SCROLLBAR_SMOKE", "1", () -> RunScrollbarSmoke()),
   SmokeMode("GOO_SHADER_EFFECT_SMOKE", "1", () -> RunShaderEffectSmoke()),
   SmokeMode("GOO_LIQUID_GLASS_ALPHA_SMOKE", "1", () -> RunLiquidGlassAlphaSmoke()),
   SmokeMode("GOO_FRAGMENT_CORRECTNESS_SMOKE", "1", () -> RunFragmentCorrectnessSmoke()),
-  SmokeMode("GOO_SHADER_EFFECT_BENCHMARK", "1", () -> RunShaderEffectBenchmark()),
   SmokeMode("GOO_PIPELINE_IDENTITY_SMOKE", "1", () -> RunPipelineIdentitySmoke()),
   SmokeMode("GOO_INPUT_ACCESSIBILITY_SMOKE", "1", () -> RunInputAccessibilitySmoke()),
   SmokeMode("GOO_PROTECTED_TEXT_SMOKE", "1", () -> RunProtectedTextSmoke()),
@@ -3270,9 +2933,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_QUEUE_WAKE_SMOKE", "1", () -> RunQueueWakeSmoke()),
   SmokeMode("GOO_TIMELINE_COMPLETION_SMOKE", "1", () -> RunTimelineCompletionSmoke()),
   SmokeMode("GOO_VIRTUAL_TABLE_SMOKE", "1", () -> RunVirtualTableSmoke()),
-  SmokeMode("GOO_VIRTUAL_TABLE_BENCHMARK", "1", () -> RunVirtualTableBenchmark()),
   SmokeMode("GOO_PRIMITIVE_METRICS_SMOKE", "1", () -> RunPrimitiveUploadMetricsSmoke()),
-  SmokeMode("GOO_PRIMITIVE_UPLOAD_BENCHMARK", "1", () -> RunPrimitiveUploadBenchmark()),
   SmokeMode("GOO_TEXT_CULLING_SMOKE", "1", () -> RunTextCullingSmoke()),
   SmokeMode("GOO_TEXT_TRANSPORT_SMOKE", "1", () -> RunTextTransportSmoke()),
   SmokeMode("GOO_RETENTION_SMOKE", "1", () -> RunRetentionSmoke()),
@@ -3286,6 +2947,5 @@ let modes = []SmokeMode{
   SmokeMode("GOO_VECTOR_QUALITY_SMOKE", "1", () -> RunVectorQualitySmoke()),
   SmokeMode("GOO_CLIP_CAPTURE_SMOKE", "1", () -> RunClipCaptureSmoke()),
   SmokeMode("GOO_PRIMITIVE_PIXEL_SMOKE", "1", () -> RunPrimitivePixelSmoke()),
-  SmokeMode("GOO_READBACK_MODE", "measure", () -> RunReadbackReadbackMeasure()),
 }
 if !RunSelectedSmoke(modes) { RunReadbackSmoke() }
