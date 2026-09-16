@@ -17,15 +17,30 @@ from mcp.types import ToolAnnotations
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "reference"
 MANIFEST = json.loads((BUNDLE / "manifest.json").read_text())
+PLUGIN_MANIFEST = json.loads((ROOT / ".codex-plugin/plugin.json").read_text())
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 INPUT = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
 mcp = FastMCP("Goo", instructions="Author standalone G# Goo desktop apps. Use current checkout docs when available. Inspect running apps through Goo DevTools. This is not s&box Goo.")
 _gesture_gate = threading.Lock()
 _gestures: dict[tuple[int, str, str], str] = {}
 _input_locks: dict[tuple[int, str, str], threading.Lock] = {}
+_cli_preflight_cache: tuple[tuple, dict] | None = None
 
 
-class GooTimeout(ValueError):
+class GooFailure(ValueError):
+    def __init__(self, code: str, message: str, phase: str, may_have_applied: bool = False, action: str = "", context: dict | None = None):
+        self.detail = {"code": code, "message": message, "phase": phase, "mayHaveApplied": may_have_applied,
+                       "pluginVersion": PLUGIN_MANIFEST["version"], "cliVersion": "unavailable",
+                       "runtime": {"runtimeVersion": "unavailable", "protocol": "unavailable", "protocolVersion": "unavailable",
+                                   "capabilities": [], "identity": {}, "inputPermission": "unavailable", "inspectMode": "unavailable"}}
+        if action:
+            self.detail["action"] = action
+        if context:
+            self.detail.update(context)
+        super().__init__(json.dumps(self.detail, separators=(",", ":")))
+
+
+class GooTimeout(GooFailure):
     pass
 
 
@@ -61,11 +76,116 @@ def document(root: Path, path: str) -> Path:
     return target
 
 
+def disk_plugin_fingerprint() -> str:
+    digest = hashlib.sha256()
+    for path in (ROOT / ".codex-plugin/plugin.json", ROOT / "scripts/server.py", ROOT / "skills/goo-authoring/SKILL.md", ROOT / "reference/manifest.json"):
+        digest.update(path.relative_to(ROOT).as_posix().encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+LOADED_PLUGIN_VERSION = PLUGIN_MANIFEST["version"]
+LOADED_PLUGIN_FINGERPRINT = disk_plugin_fingerprint()
+
+
+def configuration_status() -> dict:
+    path = ROOT / ".mcp.json"
+    expected = ["run", "--project", str(ROOT), "--locked", "python", str(ROOT / "scripts/server.py")]
+    issues = []
+    try:
+        config = json.loads(path.read_text())
+        server = config.get("mcpServers", {}).get("goo", {})
+        configured = server.get("command") == "uv" and server.get("args") == expected
+        declared_environment = server.get("env", {})
+        if not isinstance(declared_environment, dict):
+            configured = False
+            issues.append("The Goo MCP server environment is not a JSON object.")
+        else:
+            for name in ("GOO_CLI", "GOO_SOURCE_ROOT", "GOO_DEVTOOLS_DIR"):
+                if name in declared_environment and str(declared_environment[name]) != os.environ.get(name):
+                    configured = False
+                    issues.append(f"{name} differs from the environment loaded by this server process.")
+    except (OSError, ValueError, AttributeError) as error:
+        configured = False
+        issues.append(f"The Goo MCP manifest is unreadable: {error}")
+    if not configured and not issues:
+        issues.append("The Goo MCP manifest is not configured for this loaded plugin source.")
+    return {
+        "configured": configured,
+        "manifest": str(path),
+        "issues": issues,
+        "actions": [] if configured else [f"Run `python3 {ROOT / 'scripts/configure.py'} --check`, reinstall Goo, and start a new thread."],
+    }
+
+
+def cli_preflight(timeout: float = 5) -> dict:
+    global _cli_preflight_cache
+    try:
+        command = cli()
+    except GooFailure as error:
+        return {"available": False, "version": "unavailable", "features": {}, "issues": [error.detail["message"]], "actions": [error.detail["action"]]}
+    executable = Path(command[-1])
+    try:
+        metadata = executable.stat()
+    except OSError as error:
+        return {"available": False, "version": "unavailable", "features": {}, "issues": [str(error)], "actions": ["Install Goo.DevTools or set GOO_CLI to a compatible executable or built CLI DLL."]}
+    cache_key = (tuple(command), metadata.st_mtime_ns, metadata.st_size)
+    if _cli_preflight_cache is not None and _cli_preflight_cache[0] == cache_key:
+        return _cli_preflight_cache[1]
+    try:
+        result = subprocess.run(command + ["--version", "--json"], capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return {"available": False, "version": "unavailable", "features": {}, "issues": [str(error)], "actions": ["Install Goo.DevTools or set GOO_CLI to a compatible executable or built CLI DLL."]}
+    try:
+        version_status = json.loads(result.stdout) if result.returncode == 0 else {}
+    except ValueError:
+        version_status = {}
+    raw_features = version_status.get("features", []) if isinstance(version_status, dict) else []
+    features = raw_features if isinstance(raw_features, list) and all(isinstance(item, str) for item in raw_features) else []
+    required = {"list", "input", "dev.input", "errors.structured", "process-tree-cleanup"}
+    available = result.returncode == 0 and isinstance(version_status, dict) and bool(version_status.get("version"))
+    compatible = available and required.issubset(features)
+    issues = [] if compatible else ["The configured Goo CLI is missing required agent features."]
+    status = {
+        "available": available,
+        "compatible": compatible,
+        "command": command[-1],
+        "version": version_status.get("version", "unavailable") if isinstance(version_status, dict) else "unavailable",
+        "features": sorted(features),
+        "issues": issues,
+        "actions": [] if compatible else ["Build the current tools/Goo.DevTools.Cli project and set GOO_CLI to its output DLL."],
+    }
+    _cli_preflight_cache = (cache_key, status)
+    return status
+
+
+def checked_cli(timeout: float = 5) -> list[str]:
+    status = cli_preflight(timeout)
+    if not status.get("compatible"):
+        raise GooFailure("cli-incompatible", status["issues"][0], "preflight", action=status["actions"][0])
+    return cli()
+
+
+def runtime_status(hello: dict) -> dict:
+    capabilities = hello.get("capabilities", [])
+    identity = {name: hello.get(name) for name in ("pid", "windowId", "sessionId") if hello.get(name) is not None}
+    return {
+        "runtimeVersion": hello.get("runtimeVersion", "unavailable"),
+        "protocol": hello.get("protocol", "unavailable"),
+        "protocolVersion": hello.get("version", "unavailable"),
+        "capabilities": capabilities,
+        "identity": identity,
+        "inputPermission": "unavailable" if "capabilities" not in hello else "enabled" if "input" in capabilities else "disabled",
+        "inspectMode": hello.get("inspectMode", "unavailable"),
+    }
+
+
 @mcp.tool(annotations=READ)
 def goo_context(repository: str = "") -> dict:
     """List available API guides, template files, source provenance and runtime tool setup. Pass a Goo checkout for current docs."""
     root = source(repository)
-    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": documents(root), "runtime": "Launch with goo dev --no-watch --project App.gsproj. Add --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option."}
+    current_fingerprint = disk_plugin_fingerprint()
+    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": documents(root), "runtime": "Launch with goo dev --no-watch --project App.gsproj. Add --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.", "preflight": {"plugin": {"version": LOADED_PLUGIN_VERSION, "loadedSource": str(ROOT), "loadedFingerprint": LOADED_PLUGIN_FINGERPRINT, "diskFingerprint": current_fingerprint, "restartRequired": current_fingerprint != LOADED_PLUGIN_FINGERPRINT}, "configuration": configuration_status(), "cli": cli_preflight(), "scope": "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."}}
 
 
 @mcp.tool(annotations=READ)
@@ -123,7 +243,7 @@ def goo_starter(name: str = "HelloGoo", repository: str = "") -> dict:
 def cli() -> list[str]:
     executable = os.environ.get("GOO_CLI") or shutil.which("goo") or str(Path.home() / ".dotnet/tools/goo")
     if not Path(executable).is_file():
-        raise ValueError("Install Goo.DevTools or set GOO_CLI to its executable or built CLI DLL")
+        raise GooFailure("cli-unavailable", "Goo.DevTools is not installed or GOO_CLI does not name a file.", "preflight", action="Install Goo.DevTools or set GOO_CLI to its executable or built CLI DLL.")
     return ["dotnet", executable] if executable.lower().endswith(".dll") else [executable]
 
 
@@ -138,16 +258,31 @@ def input_lock(key: tuple[int, str, str]) -> threading.Lock:
         return _input_locks.setdefault(key, threading.Lock())
 
 
-def run(arguments: list[str], timeout: float = 25, uncertain_input: bool = False) -> str:
+def run(arguments: list[str], timeout: float = 25, uncertain_input: bool = False, phase: str = "cli") -> str:
+    started = time.monotonic()
     try:
-        result = subprocess.run(cli() + arguments, capture_output=True, text=True, timeout=timeout)
+        command = checked_cli(timeout)
+        remaining = timeout - (time.monotonic() - started)
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(command, timeout)
+        result = subprocess.run(command + arguments, capture_output=True, text=True, timeout=remaining)
     except subprocess.TimeoutExpired as error:
         message = "Goo CLI timed out."
         if uncertain_input:
             message += " Input may already have applied. Inspect state before another action and do not automatically retry input."
-        raise GooTimeout(message) from error
+        raise GooTimeout("cli-timeout", message, phase, uncertain_input) from error
     if result.returncode:
-        raise ValueError((result.stderr + result.stdout)[-6000:])
+        output = result.stderr + result.stdout
+        for line in reversed(output.splitlines()):
+            try:
+                value = json.loads(line)
+            except ValueError:
+                continue
+            detail = value.get("error") if isinstance(value, dict) else None
+            if isinstance(detail, dict):
+                context = {name: detail[name] for name in ("cliVersion", "runtime") if name in detail}
+                raise GooFailure(str(detail.get("code") or "cli-failed"), str(detail.get("message") or "Goo CLI failed."), str(detail.get("phase") or phase), bool(detail.get("mayHaveApplied")), str(detail.get("action") or ""), context)
+        raise GooFailure("cli-failed", output[-6000:].strip() or "Goo CLI failed.", phase, uncertain_input)
     return result.stdout
 
 
@@ -159,26 +294,34 @@ def goo_targets(pid: int = 0, project: str = "") -> dict:
     arguments = ["list", "--json"] + (["--pid", str(pid)] if pid else [])
     if project:
         arguments.append(f"--project={project}")
-    return json.loads(run(arguments))
+    return json.loads(run(arguments, phase="discovery"))
 
 
-def response(output: str) -> dict:
+def response(output: str, phase: str) -> dict:
     messages = [json.loads(line) for line in output.splitlines() if line.strip()]
+    hello = next((message for message in messages if message.get("type") == "hello"), {})
     result = next((message for message in reversed(messages) if message.get("id")), None)
     if result is None or result.get("ok") is not True or result.get("error") or result.get("type") == "error":
-        raise ValueError(f"Goo request failed: {str(result)[:3000]}")
+        detail = result.get("error", {}) if isinstance(result, dict) else {}
+        if not isinstance(detail, dict):
+            detail = {}
+        raise GooFailure(str(detail.get("code") or "request-failed"), str(detail.get("message") or f"Goo request failed: {str(result)[:3000]}"), str(detail.get("phase") or phase), bool(detail.get("mayHaveApplied")))
+    result.setdefault("runtime", runtime_status(hello))
     return result
 
 
 def snapshot_response(pid: int, window: str, project: str, timeout: float = 4) -> tuple[dict, dict]:
     wait = max(0.1, timeout - 0.1)
     output = run(["attach", "--once", "--json", "--command", "snapshot", "--payload", '{"full":true}',
-                  "--wait", f"{wait:.3f}"] + target_args(pid, window, project), timeout=timeout)
+                  "--wait", f"{wait:.3f}"] + target_args(pid, window, project), timeout=timeout, phase="snapshot")
     messages = [json.loads(line) for line in output.splitlines() if line.strip()]
     hello = next((message for message in messages if message.get("type") == "hello"), {})
     result = next((message for message in reversed(messages) if message.get("id")), None)
     if result is None or result.get("ok") is not True or result.get("error") or result.get("type") == "error":
-        raise ValueError(f"Goo request failed: {str(result)[:3000]}")
+        detail = result.get("error", {}) if isinstance(result, dict) else {}
+        if not isinstance(detail, dict):
+            detail = {}
+        raise GooFailure(str(detail.get("code") or "snapshot-failed"), str(detail.get("message") or f"Goo request failed: {str(result)[:3000]}"), str(detail.get("phase") or "snapshot"), bool(detail.get("mayHaveApplied")))
     if result.get("payload", {}).get("full") is not True:
         raise ValueError("The runtime returned an incomplete tree. Update Goo to a version supporting full snapshot requests.")
     return result, hello
@@ -298,7 +441,9 @@ def goo_snapshot(pid: int, window: str = "", project: str = "", compact: bool = 
              or any((role, name, key, state, subtree, fields, offset, wait, after_sequence))
              or limit != 100 or match != "contains")
     if not query:
-        return snapshot_response(pid, window, project)[0]
+        result, hello = snapshot_response(pid, window, project)
+        result["runtime"] = runtime_status(hello)
+        return result
     selectors = {"role": role, "name": name, "key": key, "text": text, "value": value, "state": state}
     deadline = time.monotonic() + timeout_ms / 1000 if wait else None
     session = None
@@ -325,6 +470,7 @@ def goo_snapshot(pid: int, window: str = "", project: str = "", compact: bool = 
         elif current_session != session:
             raise ValueError("The selected Goo diagnostic session changed while waiting; reacquire targets.")
         projected = compact_snapshot(result, selectors, subtree, fields, offset, limit, match, wait, after_sequence, "not-matched")
+        projected["runtime"] = runtime_status(hello)
         gated = not after_sequence or projected["sequence"] > after_sequence
         satisfied = projected["matchedCount"] > 0 if wait != "missing" else projected["matchedCount"] == 0
         if not wait:
@@ -368,7 +514,7 @@ def goo_input(pid: int, event: Literal["click", "pointer.move", "pointer.down", 
             if value:
                 arguments.append(f"--{name}")
         try:
-            result = response(run(arguments, uncertain_input=True))
+            result = response(run(arguments, uncertain_input=True, phase="input"), "input")
         except ValueError as error:
             if "gesture-owned" in str(error) or "gesture-expired" in str(error):
                 _gestures.pop(target_key, None)
@@ -389,7 +535,7 @@ def goo_capture(pid: int, window: str = "", project: str = "") -> Image:
     """Return an actual PNG screenshot from a live Goo window as MCP image content. Requires diagnostics enabled."""
     with tempfile.TemporaryDirectory(prefix="goo-capture-") as directory:
         path = Path(directory) / "frame.png"
-        run(["capture", "--output", str(path), "--wait", "10"] + target_args(pid, window, project))
+        run(["capture", "--output", str(path), "--wait", "10"] + target_args(pid, window, project), phase="capture")
         data = path.read_bytes()
         if not data.startswith(b"\x89PNG\r\n\x1a\n"):
             raise ValueError("Goo CLI did not produce a PNG")
