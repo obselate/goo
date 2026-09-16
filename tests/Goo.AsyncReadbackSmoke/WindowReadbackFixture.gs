@@ -95,6 +95,8 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
 }
 
 internal partial class VulkanWindowTarget {
+  internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
+
   internal func DiagnosticCountersSnapshotForTest() VulkanDiagnosticCounterSnapshot {
     if let current = diagnostics {
       return current.Counters
@@ -402,6 +404,7 @@ public partial class Window {
     return target.DiagnosticCountersSnapshotForTest()
   }
   internal func CaptureTargetForTest() VulkanWindowTarget ? -> VulkanTargetForTest()
+  internal func DiagnosticFrameIdForTest() uint64 -> VulkanTargetForTest()?.DiagnosticFrameIdForTest() ?? 0uL
 
   internal func ForceRenderForTest(dt float64) {
     requestRender()

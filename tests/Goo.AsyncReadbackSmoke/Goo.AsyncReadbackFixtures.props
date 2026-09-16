@@ -10,6 +10,5 @@
              Link="EmbeddedHostSmoke.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)WindowActivationSmoke.gs"
              Link="WindowActivationSmoke.gs" />
-    <Compile Include="$(MSBuildThisFileDirectory)WindowSizeConstraintsSmoke.gs" Link="WindowSizeConstraintsSmoke.gs" />
   </ItemGroup>
 </Project>

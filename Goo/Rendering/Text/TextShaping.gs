@@ -42,7 +42,7 @@ private struct TextPrimaryFaceKey : IEquatable[TextPrimaryFaceKey] {
   }
 }
 
-internal class TextShaping {
+internal partial class TextShaping {
   shared {
     private let PrimaryFaces Dictionary[TextPrimaryFaceKey, TypefaceResource] =
     Dictionary[TextPrimaryFaceKey, TypefaceResource]()
