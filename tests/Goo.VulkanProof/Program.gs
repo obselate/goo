@@ -39,7 +39,6 @@ internal unsafe func RunVulkanProof() int32 {
     RunProductionTextPaintReadback()
     return 0
   }
-  return RunVulkanProductionLegacyProof(
-    Environment.GetEnvironmentVariable("GOO_VK_READBACK") == "1",
-    Environment.GetEnvironmentVariable("GOO_VK_LIFECYCLE") == "1")
+  RunProductionImageReadback()
+  return 0
 }
