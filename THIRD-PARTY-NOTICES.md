@@ -112,7 +112,7 @@ The hb-gpu GLSL inputs are the pinned HarfBuzz sources
 `src/hb-gpu-draw-fragment.glsl`, and `src/hb-gpu-paint-fragment.glsl`.
 Goo's Vulkan GLSL compatibility adapters under
 `tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/` and checked-in SPIR-V
-under `tests/Goo.VulkanProof/Generated/Shaders/` are derivative inclusions of
+under `Goo/Shaders/Vulkan/` are derivative inclusions of
 those sources and retain the same attribution and license terms.
 
 ## Yoga.Net 3.2.3, based on Meta Yoga v3.2.1

@@ -15,8 +15,8 @@
                       AdditionalProperties="Configuration=VulkanProofTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.VulkanProofFixtures.props" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Generated/Shaders/solid_quad.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/solid_quad.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Shaders/Vulkan/solid_quad.vert.spv" Link="solid_quad.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Shaders/Vulkan/solid_quad.frag.spv" Link="solid_quad.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans.provenance.json" Link="VendSans.provenance.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
