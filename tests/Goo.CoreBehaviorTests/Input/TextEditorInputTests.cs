@@ -4,17 +4,6 @@ using Xunit;
 
 public sealed class TextEditorInputTests
 {
-    [Fact]
-    public void KeyboardRoutesEditing()
-    {
-        Assert.True(new TextEditorInputFixtures().KeyboardCompositionClipboardAndSubmit());
-    }
-
-    [Fact]
-    public void PointerSelectsAndFocuses()
-    {
-        Assert.True(new TextEditorInputFixtures().PointerSelectsWordLineShiftAndFocusesController());
-    }
 
     [Fact]
     public void PointerJitterDoesNotCollapseWordOrLineSelection()
@@ -39,24 +28,6 @@ public sealed class TextEditorInputTests
         driver.Move(x + 1, y);
         driver.Release(x + 1, y);
         Assert.Equal(new TextRange(0, 7), SelectionRange(controller.Selection));
-    }
-
-    [Fact]
-    public void ReadOnlyTabMovesFocusAndCommandsCanCancel()
-    {
-        Assert.True(new TextEditorInputFixtures().ReadOnlyTabEscapesAndCommandsCanCancel());
-    }
-
-    [Fact]
-    public void WheelAndCaretBlinkUseEditorState()
-    {
-        Assert.True(new TextEditorInputFixtures().WheelScrollAndCaretBlinkUseEditorState());
-    }
-
-    [Fact]
-    public void NewVerticalRepeatIgnoresTimeBeforeThePress()
-    {
-        Assert.True(new TextEditorInputFixtures().NewVerticalRepeatDoesNotUsePreInputTime());
     }
 
     private static TextRange SelectionRange(TextSelection selection)

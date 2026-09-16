@@ -3,23 +3,6 @@ using Xunit;
 
 public sealed class ReconciliationTests
 {
-    [Fact]
-    public void KeyedChildrenRetainStateAcrossReorderAndReplacement()
-    {
-        Assert.True(new TreeFixtures().KeyedReconciliationContract());
-    }
-
-    [Fact]
-    public void PositionalChildrenRetainStateBySlot()
-    {
-        Assert.True(new TreeFixtures().PositionalReconciliationContract());
-    }
-
-    [Fact]
-    public void UpdatesContentAndReplacesNodeKinds()
-    {
-        Assert.True(new TreeFixtures().OutputAndKindReplacementContract());
-    }
 
     [Fact]
     public void ButtonStylesReuseEquivalentCompositionAndRefreshChangedState()

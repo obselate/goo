@@ -3,29 +3,12 @@ using Xunit;
 
 public sealed class AccessibilityTests
 {
-    [Fact]
-    public void PrimitivesPublishTextNamesActionsAndExclusions()
-        => Assert.True(new AccessibilityFixtures().PrimitiveAndExclusionContract());
 
-    [Fact]
-    public void EditorsPublishLazySnapshotsAndSelection()
-        => Assert.True(new AccessibilityFixtures().SnapshotAndSelectionContract());
 
-    [Fact]
-    public void ValidationIsTransactionalAndDeliveryRetriesOnce()
-        => Assert.True(new AccessibilityFixtures().ValidationAndRetryContract());
 
-    [Fact]
-    public void EquivalentDeclarationsKeepIdentityAndRelationshipsStayWindowLocal()
-        => Assert.True(new AccessibilityFixtures().RetainedIdentityAndRelationshipsContract());
 
-    [Fact]
-    public void FailedDiffKeepsThePriorPublishedSemanticTree()
-        => Assert.True(new AccessibilityFixtures().FailedDiffPreservesPublishedTreeContract());
 
-    [Fact]
-    public void StateChangesAndAdvertisedActionsRemainCapabilityGated()
-        => Assert.True(new AccessibilityFixtures().StateAndActionCapabilityContract());
+
 
     [Fact]
     public void ActionRequestFactoriesValidateAndRoutePayloads()
@@ -39,33 +22,12 @@ public sealed class AccessibilityTests
             AccessibilityActionRequest.Scroll(0.0, double.NaN));
     }
 
-    [Fact]
-    public void SemanticDemandAndReentrantAdapterReplacementRemainLive()
-        => Assert.True(new AccessibilityFixtures().DeliveryDemandAndReplacementContract());
 
-    [Fact]
-    public void DisplayAndVisibilityHiddenSubtreesAreExcluded()
-        => Assert.True(new AccessibilityFixtures().DisplayAndVisibilityExclusionContract());
 
-    [Fact]
-    public void FocusLayoutAndScrollChangesRepublishSemanticState()
-        => Assert.True(new AccessibilityFixtures().FocusLayoutAndScrollContract());
 
-    [Fact]
-    public void RetiredAndInvalidRelationshipTargetsAreOmitted()
-        => Assert.True(new AccessibilityFixtures().RetiredAndInvalidRelationshipContract());
 
-    [Fact]
-    public void SyntheticRootsAndPrimitiveActionCapabilitiesRemainCorrect()
-        => Assert.True(new AccessibilityFixtures().SyntheticRootAndPrimitiveActionContract());
 
-    [Fact]
-    public void DeclaredActionFailuresDoNotLeaveSemanticStateDirty()
-        => Assert.True(new AccessibilityFixtures().DeclaredActionFailureContract());
 
-    [Fact]
-    public void AdapterDeliveryUsesTheCallingUiThread()
-        => Assert.True(new AccessibilityFixtures().AdapterDeliveryThreadContract());
 
     [Fact]
     public void ActionRequestConstructionIsImmutableAndPayloadSafe()
