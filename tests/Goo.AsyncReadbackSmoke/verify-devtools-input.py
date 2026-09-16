@@ -38,9 +38,13 @@ with tempfile.TemporaryDirectory(prefix="goo-input-") as temporary:
                 return {node["key"]: node for node in payload["added"] if node["key"]}, payload
 
             def send(event, *arguments):
-                response = json.loads(run("input", event, *arguments, "--json").strip())
+                forwarded = (*arguments, *(["--gesture", gesture[0]] if gesture[0] else []))
+                response = json.loads(run("input", event, *forwarded, "--json").strip())
                 assert response["ok"] and response["payload"]["applied"], response
+                payload = response["payload"]
+                gesture[0] = payload.get("gestureId") if payload.get("gestureActive") else None
 
+            gesture = [None]
             nodes, initial = snapshot()
             (output / "before.json").write_text(json.dumps(initial, indent=2))
             run("capture", "--output", str(output / "before.png"))

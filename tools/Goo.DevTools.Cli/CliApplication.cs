@@ -189,7 +189,7 @@ internal static class CliApplication
                 || StringValue(request["type"]) == "error" || request["error"] is not null ? 1 : 0;
         }
 
-        await RunInteractiveAsync(connection, commandLine.Has("json"), cancellation.Token);
+        await RunInteractiveAsync(connection, commandLine.Has("json"), ParseWait(commandLine.Get("wait")), cancellation.Token);
         return 0;
     }
 
@@ -203,7 +203,15 @@ internal static class CliApplication
         var descriptor = Discovery.Select(Discovery.Scan(projectDirectory), processId,
             commandLine.Get("pipe"), commandLine.Get("app"), commandLine.Get("window"), commandLine.Has("latest"))
             ?? await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")));
-        var payload = new JsonObject { ["event"] = commandLine.Positionals[0] };
+        var eventName = commandLine.Positionals[0];
+        var gesture = commandLine.Get("gesture");
+        if (commandLine.Has("gesture") && string.IsNullOrWhiteSpace(gesture))
+            throw new CliException("--gesture needs the token returned by pointer.down or key.down.");
+        if (gesture is { Length: > 128 })
+            throw new CliException("--gesture is limited to 128 characters.");
+        if (gesture is null && eventName is "pointer.down" or "key.down")
+            gesture = Guid.NewGuid().ToString("N");
+        var payload = new JsonObject { ["event"] = eventName };
         foreach (var name in new[] { "key", "text", "button" })
             if (commandLine.Has(name))
                 payload[name] = commandLine.Get(name) ?? throw new CliException($"--{name} needs a value.");
@@ -231,13 +239,27 @@ internal static class CliApplication
         await using var connection = await ConnectAsync(descriptor, timeout.Token);
         var handshake = await connection.HandshakeAsync(timeout.Token);
         ValidateHandshake(handshake, descriptor);
+        var gestureLease = false;
         using (var hello = JsonDocument.Parse(handshake!))
         {
             if (!hello.RootElement.TryGetProperty("capabilities", out var capabilities)
                 || capabilities.ValueKind != JsonValueKind.Array
                 || !capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input"))
                 throw new CliException("This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.");
+            gestureLease = capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input.gesture-lease");
         }
+        if (gestureLease && gesture is not null)
+        {
+            payload["gestureId"] = gesture;
+            if (eventName is "pointer.down" or "key.down")
+                Console.Error.WriteLine($"[goo] gesture {gesture}");
+        }
+        else if (!gestureLease && gesture is not null)
+        {
+            Console.Error.WriteLine("[goo] endpoint does not advertise gesture leases; ownership and abandoned-input cleanup are unavailable.");
+        }
+        if (payload.ToJsonString().Length > 65536)
+            throw new CliException("Input request exceeds the endpoint request limit.");
         var response = await connection.RequestAsync("input", payload, timeout.Token);
         if (response is null) throw new CliException("The window closed before acknowledging input.");
         WriteProtocolLine(response.ToJsonString(), commandLine.Has("json"));
@@ -529,23 +551,29 @@ internal static class CliApplication
             throw new CliException($"The Goo endpoint at {descriptor.Pipe} did not confirm protocol {Discovery.Protocol}.");
     }
 
-    private static async Task RunInteractiveAsync(ProtocolConnection connection, bool json, CancellationToken cancellationToken)
+    private static async Task RunInteractiveAsync(ProtocolConnection connection, bool json, TimeSpan drainTimeout, CancellationToken cancellationToken)
     {
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var remote = ReadRemoteAsync(connection, json, stop.Token);
-        var local = WriteLocalAsync(connection, stop.Token);
-        await remote;
+        var requests = new InteractiveRequestTracker();
+        var remote = ReadRemoteAsync(connection, json, requests, stop.Token);
+        var local = WriteLocalAsync(connection, requests, stop.Token);
+        var completed = await Task.WhenAny(remote, local);
+        if (ReferenceEquals(completed, local))
+        {
+            await local;
+            await Task.WhenAny(requests.Drained, remote, Task.Delay(drainTimeout, cancellationToken));
+        }
         stop.Cancel();
         try
         {
-            await local;
+            await Task.WhenAll(remote, local);
         }
         catch (OperationCanceledException)
         {
         }
     }
 
-    private static async Task ReadRemoteAsync(ProtocolConnection connection, bool json, CancellationToken cancellationToken)
+    private static async Task ReadRemoteAsync(ProtocolConnection connection, bool json, InteractiveRequestTracker requests, CancellationToken cancellationToken)
     {
         try
         {
@@ -554,6 +582,9 @@ internal static class CliApplication
                 var line = await connection.ReadLineAsync(cancellationToken);
                 if (line is null)
                     return;
+                if (ProtocolConnection.TryParse(line, out var message)
+                    && StringValue(message["id"]) is { } id)
+                    requests.Complete(id);
                 WriteProtocolLine(line, json);
             }
         }
@@ -562,7 +593,7 @@ internal static class CliApplication
         }
     }
 
-    private static async Task WriteLocalAsync(ProtocolConnection connection, CancellationToken cancellationToken)
+    private static async Task WriteLocalAsync(ProtocolConnection connection, InteractiveRequestTracker requests, CancellationToken cancellationToken)
     {
         try
         {
@@ -570,23 +601,67 @@ internal static class CliApplication
             {
                 var line = await Console.In.ReadLineAsync(cancellationToken);
                 if (line is null)
+                {
+                    requests.Finish();
                     return;
+                }
                 if (line.TrimStart().StartsWith('{'))
                 {
+                    if (ProtocolConnection.TryParse(line, out var raw)
+                        && StringValue(raw["type"]) == "request"
+                        && StringValue(raw["id"]) is { } rawId)
+                        requests.Add(rawId);
                     await connection.SendRawAsync(line, cancellationToken);
                     continue;
                 }
 
-                var command = new JsonObject
-                {
-                    ["type"] = "command",
-                    ["command"] = line
-                };
-                await connection.SendAsync(command, cancellationToken);
+                var request = ProtocolConnection.CreateRequest(line);
+                requests.Add(request["id"]!.GetValue<string>());
+                await connection.SendAsync(request, cancellationToken);
             }
         }
         catch (OperationCanceledException)
         {
+        }
+    }
+
+    private sealed class InteractiveRequestTracker
+    {
+        private readonly object _gate = new();
+        private readonly HashSet<string> _pending = new(StringComparer.Ordinal);
+        private readonly TaskCompletionSource<bool> _drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private bool _finished;
+
+        public Task Drained => _drained.Task;
+
+        public void Add(string id)
+        {
+            lock (_gate)
+                _pending.Add(id);
+        }
+
+        public void Complete(string id)
+        {
+            lock (_gate)
+            {
+                _pending.Remove(id);
+                CompleteIfDrained();
+            }
+        }
+
+        public void Finish()
+        {
+            lock (_gate)
+            {
+                _finished = true;
+                CompleteIfDrained();
+            }
+        }
+
+        private void CompleteIfDrained()
+        {
+            if (_finished && _pending.Count == 0)
+                _drained.TrySetResult(true);
         }
     }
 
@@ -877,6 +952,7 @@ internal static class CliApplication
         Console.WriteLine("  --wait SECONDS       Wait for a descriptor, up to 300 seconds.");
         Console.WriteLine("  --inspector          Launch the standalone inspector when ready.");
         Console.WriteLine("  --input              Permit agent input in the app launched by dev.");
+        Console.WriteLine("  --gesture TOKEN      Continue or release a held pointer/key gesture.");
         Console.WriteLine("  --focus              Launch or focus the standalone inspector.");
         Console.WriteLine("  --json               Keep protocol output as JSON lines.");
         Console.WriteLine();

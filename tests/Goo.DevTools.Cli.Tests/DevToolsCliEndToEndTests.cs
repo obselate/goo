@@ -26,7 +26,7 @@ public sealed class DevToolsCliEndToEndTests
         using var reader = new StreamReader(server, leaveOpen: true);
         using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         await ReadLineAsync(reader);
-        await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "hello", protocol = "goo.devtools/1", capabilities = enabled ? new[] { "input" } : [] }));
+        await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "hello", protocol = "goo.devtools/1", capabilities = enabled ? new[] { "input", "input.gesture-lease" } : [] }));
         if (enabled)
         {
             using var request = JsonDocument.Parse(await ReadLineAsync(reader));
@@ -37,6 +37,7 @@ public sealed class DevToolsCliEndToEndTests
             Assert.Equal(3.5, payload.GetProperty("offsetX").GetDouble());
             Assert.Equal("Secondary", payload.GetProperty("button").GetString());
             Assert.True(payload.GetProperty("modifiers").GetProperty("ctrl").GetBoolean());
+            Assert.Equal(32, payload.GetProperty("gestureId").GetString()?.Length);
             Assert.False(cliTask.IsCompleted);
             await writer.WriteLineAsync(JsonSerializer.Serialize(new
             {
@@ -47,6 +48,51 @@ public sealed class DevToolsCliEndToEndTests
         var result = await cliTask;
         Assert.Equal(exitCode, result.ExitCode);
         Assert.Contains(enabled ? "\"sequence\":12" : "does not permit input", enabled ? result.StandardOutput : result.StandardError, StringComparison.Ordinal);
+        if (enabled)
+            Assert.Contains("[goo] gesture ", result.StandardError, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InteractiveAttachUsesRequestEnvelopeAndDrainsResponseAfterStdinEof()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-interactive-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            WorkingDirectory = RepositoryRoot,
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"));
+        foreach (var argument in new[] { "attach", "--latest", "--json" })
+            startInfo.ArgumentList.Add(argument);
+        startInfo.Environment["GOO_DEVTOOLS_DIR"] = directory.Path;
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start Goo CLI.");
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync("{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\"}");
+        await process.StandardInput.WriteLineAsync("snapshot");
+        process.StandardInput.Close();
+        using var request = JsonDocument.Parse(await ReadLineAsync(reader));
+        Assert.Equal("request", request.RootElement.GetProperty("type").GetString());
+        Assert.Equal("snapshot", request.RootElement.GetProperty("command").GetString());
+        Assert.Equal(JsonValueKind.Object, request.RootElement.GetProperty("payload").ValueKind);
+        var id = request.RootElement.GetProperty("id").GetString();
+        await writer.WriteLineAsync(JsonSerializer.Serialize(new { type = "response", id, ok = true, payload = new { command = "snapshot" } }));
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(0, process.ExitCode);
+        Assert.Contains($"\"id\":\"{id}\"", await output, StringComparison.Ordinal);
+        await error;
     }
 
     [Fact]

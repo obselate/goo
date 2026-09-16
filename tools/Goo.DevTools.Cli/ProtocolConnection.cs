@@ -118,14 +118,8 @@ internal sealed class ProtocolConnection : IAsyncDisposable
 
     public async Task<JsonObject?> RequestAsync(string command, JsonObject? payload, CancellationToken cancellationToken)
     {
-        var id = Guid.NewGuid().ToString("N");
-        var request = new JsonObject
-        {
-            ["type"] = "request",
-            ["id"] = id,
-            ["command"] = command,
-            ["payload"] = payload?.DeepClone() ?? new JsonObject()
-        };
+        var request = CreateRequest(command, payload);
+        var id = StringValue(request["id"]);
         await SendAsync(request, cancellationToken);
         while (true)
         {
@@ -139,6 +133,14 @@ internal sealed class ProtocolConnection : IAsyncDisposable
             return message;
         }
     }
+
+    public static JsonObject CreateRequest(string command, JsonObject? payload = null) => new()
+    {
+        ["type"] = "request",
+        ["id"] = Guid.NewGuid().ToString("N"),
+        ["command"] = command,
+        ["payload"] = payload?.DeepClone() ?? new JsonObject()
+    };
 
     public static bool TryParse(string line, out JsonObject message)
     {

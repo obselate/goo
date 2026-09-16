@@ -5,6 +5,8 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
+import uuid
 from pathlib import Path
 from typing import Literal
 
@@ -17,6 +19,9 @@ MANIFEST = json.loads((BUNDLE / "manifest.json").read_text())
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 INPUT = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
 mcp = FastMCP("Goo", instructions="Author standalone G# Goo desktop apps. Use current checkout docs when available. Inspect running apps through Goo DevTools. This is not s&box Goo.")
+_gesture_gate = threading.Lock()
+_gestures: dict[tuple[int, str, str], str] = {}
+_input_locks: dict[tuple[int, str, str], threading.Lock] = {}
 
 
 def source(repository: str) -> Path:
@@ -119,6 +124,11 @@ def target(pid: int, window: str, project: str) -> list[str]:
     return ["--pid", str(pid)] + ([f"--window={window}"] if window else []) + ([f"--project={project}"] if project else [])
 
 
+def input_lock(key: tuple[int, str, str]) -> threading.Lock:
+    with _gesture_gate:
+        return _input_locks.setdefault(key, threading.Lock())
+
+
 def run(arguments: list[str]) -> str:
     try:
         result = subprocess.run(cli() + arguments, capture_output=True, text=True, timeout=25)
@@ -164,19 +174,38 @@ def goo_input(pid: int, event: Literal["click", "pointer.move", "pointer.down", 
               delta_x: float | None = None, delta_y: float | None = None,
               button: str = "Primary", key: str | None = None, text: str | None = None,
               alt: bool = False, ctrl: bool = False, shift: bool = False, super: bool = False, project: str = "") -> dict:
-    """Send one input event through normal Goo UI routing. Requires GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the app. Target pointer/wheel events by snapshot node_id or logical window x/y. Offsets default to node center. Keys use Goo Key enum names. Text goes to the focused editor. Await each call to order gestures, finish with pointer.up or pointer.cancel, and use reset to clear input/focus. Acknowledges handlers and layout, not async app work or GPU presentation. Never automatically retry a timed-out action: it may have applied. Inspect with goo_snapshot/goo_capture afterward."""
-    arguments = ["input", event, "--json", "--wait", "10"] + target(pid, window, project)
-    for name, value in {"node": node_id, "x": x, "y": y, "offset-x": offset_x, "offset-y": offset_y,
-                        "delta-x": delta_x, "delta-y": delta_y, "button": button, "key": key, "text": text}.items():
-        if value is not None:
-            arguments.append(f"--{name}={value}")
-    for name, value in {"alt": alt, "ctrl": ctrl, "shift": shift, "super": super}.items():
-        if value:
-            arguments.append(f"--{name}")
-    result = response(run(arguments))
-    if result.get("payload", {}).get("applied") is not True:
-        raise ValueError("Input was not acknowledged as applied. Inspect state before another action.")
-    return result
+    """Send one input event through normal Goo UI routing. Requires GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the app. Target pointer/wheel events by snapshot node_id or logical window x/y. Offsets default to node center. Keys use Goo Key enum names. Text goes to the focused editor. Calls for one explicit target are serialized. When the runtime advertises support, pointer and key holds retain a 30-second gesture lease through matching releases, pointer.cancel, or reset. The acknowledgement covers synchronous handlers and layout, not async app work or GPU presentation. A timed-out action may have applied, so its token is retained for explicit cleanup and the action is never retried. Inspect with goo_snapshot/goo_capture afterward."""
+    target_key = (pid, window, project)
+    with input_lock(target_key):
+        gesture = _gestures.get(target_key)
+        if gesture is None and event in ("pointer.down", "key.down"):
+            gesture = uuid.uuid4().hex
+            _gestures[target_key] = gesture
+        arguments = ["input", event, "--json", "--wait", "10"] + target(pid, window, project)
+        if gesture is not None:
+            arguments.append(f"--gesture={gesture}")
+        for name, value in {"node": node_id, "x": x, "y": y, "offset-x": offset_x, "offset-y": offset_y,
+                            "delta-x": delta_x, "delta-y": delta_y, "button": button, "key": key, "text": text}.items():
+            if value is not None:
+                arguments.append(f"--{name}={value}")
+        for name, value in {"alt": alt, "ctrl": ctrl, "shift": shift, "super": super}.items():
+            if value:
+                arguments.append(f"--{name}")
+        try:
+            result = response(run(arguments))
+        except ValueError as error:
+            if "gesture-owned" in str(error) or "gesture-expired" in str(error):
+                _gestures.pop(target_key, None)
+            raise
+        payload = result.get("payload", {})
+        if payload.get("applied") is not True:
+            raise ValueError("Input was not acknowledged as applied. Inspect state before another action.")
+        if payload.get("gestureActive") is True and payload.get("gestureId"):
+            _gestures[target_key] = payload["gestureId"]
+        else:
+            _gestures.pop(target_key, None)
+        result["gestureLease"] = {"supported": "gestureActive" in payload, "leaseMs": payload.get("leaseMs", 0)}
+        return result
 
 
 @mcp.tool(annotations=READ)
