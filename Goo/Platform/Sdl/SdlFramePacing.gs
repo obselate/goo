@@ -4,16 +4,6 @@ import System
 import System.Diagnostics
 
 internal class SdlFramePacing {
-  shared {
-    private var uncappedBenchmark bool
-
-    internal func SetUncappedBenchmark(value bool) {
-      uncappedBenchmark = value
-    }
-
-    internal prop UncappedBenchmark bool{ get -> uncappedBenchmark }
-  }
-
   private var displayId uint32
   private var refreshRate float64
   private var intervalTicks float64
@@ -52,7 +42,7 @@ internal class SdlFramePacing {
     }
   }
 
-  internal func IsDue(nowTicks float64) bool -> if retryDeadlineTicks > nowTicks { false } else { UncappedBenchmark || nextDeadlineTicks <= 0.0 || nextDeadlineTicks <= nowTicks }
+  internal func IsDue(nowTicks float64) bool -> if retryDeadlineTicks > nowTicks { false } else { nextDeadlineTicks <= 0.0 || nextDeadlineTicks <= nowTicks }
 
   internal func WaitMilliseconds(nowTicks float64, fallbackMs int32) int32 {
     if retryDeadlineTicks > nowTicks {
@@ -86,10 +76,6 @@ internal class SdlFramePacing {
 
   internal func MarkFrame(nowTicks float64) {
     retryDeadlineTicks = 0.0
-    if UncappedBenchmark {
-      nextDeadlineTicks = nowTicks
-      return
-    }
     if intervalTicks <= 0.0 {
       nextDeadlineTicks = nowTicks
       return

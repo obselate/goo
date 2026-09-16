@@ -93,10 +93,6 @@ internal partial class VulkanSceneCompiler {
   internal func SetBlendModeSupport(value bool) {
     blendModeSupported = value
   }
-  internal func SetExactTextClipCullEnabled(value bool) {
-    exactTextClipCullEnabled = value
-  }
-
   internal func Compile(
     root Node?,
     background Color,

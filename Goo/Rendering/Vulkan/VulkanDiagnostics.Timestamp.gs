@@ -21,23 +21,6 @@ internal struct VulkanDiagnosticTimestampContext {
   var fence uint64
   var completionSerial uint64
 }
-internal data struct VulkanDiagnosticTimestampSnapshot {
-  var stage VulkanDiagnosticTimestampStage
-  var run uint64
-  var workload uint64
-  var process uint64
-  var window uint64
-  var frame uint64
-  var sample uint64
-  var queue uint64
-  var submission uint64
-  var fence uint64
-  var elapsedTicks uint64
-  var elapsedNanoseconds uint64
-  var scopeCount int32
-  var droppedScopeCount int32
-}
-
 internal struct VulkanDiagnosticTimestampRange {
   var firstQuery uint32
   var reset bool
@@ -111,23 +94,10 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
 
   private let diagnostics VulkanDiagnostics
   private let objectAccounting VulkanObjectAccounting?
-  private var mainPassTimestampSink Action[VulkanDiagnosticTimestampSnapshot]?
-  private var allTimestampSink Action[VulkanDiagnosticTimestampSnapshot]?
-
   internal init(nativeDiagnostics VulkanDiagnostics,
     nativeObjectAccounting VulkanObjectAccounting?) {
       diagnostics = nativeDiagnostics
       objectAccounting = nativeObjectAccounting
-    }
-
-  internal func SetMainPassTimestampSink(
-    sink Action[VulkanDiagnosticTimestampSnapshot]?) {
-      mainPassTimestampSink = sink
-    }
-
-  internal func SetAllTimestampSink(
-    sink Action[VulkanDiagnosticTimestampSnapshot]?) {
-      allTimestampSink = sink
     }
 
   internal prop TimestampQueriesSupported bool{ get -> timestampSupported }
@@ -617,7 +587,6 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
           timestampStages[stageRangeIndex] = stageState
           let stage = TimestampStageFromIndex(stageIndex)
           RecordTimestampStage(stageState, stage, slot)
-          PublishTimestamp(stageState, stage)
         }
       }
       stageIndex++
@@ -856,33 +825,6 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         state.elapsedTicks, state.elapsedNanoseconds)
     }
 
-  private func PublishTimestamp(state VulkanDiagnosticTimestampStageState,
-    stage VulkanDiagnosticTimestampStage) {
-      let snapshot = VulkanDiagnosticTimestampSnapshot{
-        stage: stage,
-        run: state.run,
-        workload: state.workload,
-        process: state.process,
-        window: state.window,
-        frame: state.frame,
-        sample: state.sample,
-        queue: state.queue,
-        submission: state.submission,
-        fence: state.fence,
-        elapsedTicks: state.elapsedTicks,
-        elapsedNanoseconds: state.elapsedNanoseconds,
-        scopeCount: state.scopeCount,
-        droppedScopeCount: state.droppedScopeCount,
-      }
-      if let sink = allTimestampSink {
-        sink.Invoke(snapshot)
-      }
-      if stage == VulkanDiagnosticTimestampStage.Main {
-        if let sink = mainPassTimestampSink {
-          sink.Invoke(snapshot)
-        }
-      }
-    }
 }
 
 internal class VulkanTimestamp {
