@@ -3,23 +3,6 @@ package GooGallery
 import Goo
 import System
 
-class GalleryTypeClock : Simulation {
-    private let offset float64
-
-    public init(offset float64) {
-        this.offset = offset
-    }
-
-    /// Gets the scalar coordinate at the specified elapsed time.
-    public override func Position(elapsed float64) float64 -> offset + elapsed
-
-    /// Gets the rate of change of progress at the specified elapsed time.
-    public override func Velocity(elapsed float64) float64 -> 1.0
-
-    /// Gets whether the simulation has settled at the specified elapsed time.
-    public override func Done(elapsed float64) bool -> false
-}
-
 class GallerySpringSimulation : Simulation {
     private let target float64
     private let displacement float64

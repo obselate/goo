@@ -9,8 +9,6 @@ import System.Threading
 
 class SmokeCell : Cell {
   internal var TextValue string
-  internal var PressureSource ImageSourceProvider
-  internal var PressureEnabled bool
   private var ImageProvider ImageSourceProvider?
   private var BackgroundProvider ImageSourceProvider?
 
@@ -28,33 +26,21 @@ class SmokeCell : Cell {
 
   init() {
     TextValue = "Goo Vulkan text"
-    PressureSource = SmokeCell.SharedImageSource
   }
 
   init(imageProvider ImageSourceProvider, backgroundProvider ImageSourceProvider) {
     TextValue = "Goo Vulkan text"
-    PressureSource = SmokeCell.SharedImageSource
     ImageProvider = imageProvider
     BackgroundProvider = backgroundProvider
   }
 
-  internal func SetPressureSource(source ImageSourceProvider) {
-    PressureSource = source
-    PressureEnabled = true
-    Rebuild()
-  }
-
   override func Build() Blob {
-    let imageSource ImageSourceProvider = if PressureEnabled {
-      PressureSource
-    } else if let source = ImageProvider {
+    let imageSource ImageSourceProvider = if let source = ImageProvider {
       source
     } else {
       SmokeCell.SharedImageSource
     }
-    let backgroundSource ImageSourceProvider = if PressureEnabled {
-      SmokeCell.SharedImageSource
-    } else if let source = BackgroundProvider {
+    let backgroundSource ImageSourceProvider = if let source = BackgroundProvider {
       source
     } else {
       SmokeCell.SharedImageSource
