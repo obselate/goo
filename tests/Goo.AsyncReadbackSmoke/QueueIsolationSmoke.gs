@@ -13,9 +13,7 @@ class QueueIsolationCell : Cell {
   internal var BuildCount int32
   internal var PostedCount int32
 
-  init() {
-    service = 0
-  }
+  init() { }
 
   internal func RecordService() {
     PostedCount = PostedCount + 1

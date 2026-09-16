@@ -89,7 +89,6 @@ internal partial class SceneFrame {
     shaderEffects = [capacity]ShaderEffectRecord
     InitializeShaderEffectData()
     activeChunk = -1
-    activeClipChainId = 0
   }
 
   internal prop Chunks []SceneChunk{ get -> chunks }

@@ -554,8 +554,6 @@ open class VirtualTableCell : Cell[VirtualTableCellInput] {
   init() {
     boundSlot = -1
     boundLogical = -1
-    boundActive = false
-    hasCurrent = false
   }
 
   func Apply(slot int32, index int32, item VirtualTableItem) bool {

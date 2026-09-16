@@ -100,12 +100,7 @@ class ShaderLabCell : Cell {
     private var fog float64
 
     public init() {
-        Assets = nil
-        Programs = nil
         Playing = true
-        showcase = 0
-        Compact = false
-        active = false
         clock = Animate(0.0, updateClock)
         ChromeCanvas = ElementHandle{}
         RadialCanvas = ElementHandle{}
@@ -117,35 +112,20 @@ class ShaderLabCell : Cell {
         AuroraCanvas = ElementHandle{}
         SilkCanvas = ElementHandle{}
         CrtCanvas = ElementHandle{}
-        baseTime = 0.0
         chromeYaw = 0.7
         chromePitch = 0.06
         chromePointerX = 0.5
         chromePointerY = 0.5
-        chromePointerPressure = 0.0
-        chromePointerDown = false
-        chromeDragging = false
         radialPointerX = 0.5
         radialPointerY = 0.5
-        radialPointerPressure = 0.0
-        radialPointerDown = false
         ripplePointerX = 0.5
         ripplePointerY = 0.5
-        ripplePointerPressure = 0.0
-        ripplePointerDown = false
         glassPointerX = 0.5
         glassPointerY = 0.5
-        glassPointerPressure = 0.0
-        glassPointerDown = false
         ditherPointerX = 0.5
         ditherPointerY = 0.5
-        ditherPointerDown = false
-        ditherDragging = false
         ditherYaw = 0.35
-        ditherPitch = 0.0
-        ditherShape = 0
         ditherLevels = 4
-        rippleCount = 0
         roughness = 0.25
         morph = 0.4
         fov = 1.0

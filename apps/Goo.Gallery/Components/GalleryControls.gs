@@ -21,12 +21,8 @@ class GalleryRange : Cell {
 
     public init() {
         Label = ""
-        MinValue = 0.0
         MaxValue = 1.0
         Value = 0.5
-        Step = 0.0
-        OnChange = nil
-        dragging = false
         Track = ElementHandle{}
     }
 

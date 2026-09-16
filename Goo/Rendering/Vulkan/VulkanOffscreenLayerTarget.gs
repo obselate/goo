@@ -64,10 +64,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
       sampler = nativeSampler
       imageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
       leaseInitialLayout = imageLayout
-      leaseActive = false
-      lastUseSerial = 0uL
       bytes = 0uL
-      disposed = false
       Create()
     }
 
@@ -429,8 +426,6 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       diagnostics = nativeDiagnostics
       byteBudget = maximumBytes
       residentBytes = 0uL
-      lastCollectedSerial = 0uL
-      disposed = false
       targets = [initialTargetCapacity]VulkanOffscreenLayerTarget?
       leased = [initialTargetCapacity]bool
       inFrame = [initialTargetCapacity]bool
@@ -441,9 +436,6 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
         descriptorSets[descriptorIndex] = 0uL
         descriptorIndex++
       }
-      descriptorPoolCount = 0
-      samplerAccounted = false
-      descriptorSetsAccounted = 0
       PublishStats()
       try {
         CreateDescriptorResources(initialTargetCapacity, 0)

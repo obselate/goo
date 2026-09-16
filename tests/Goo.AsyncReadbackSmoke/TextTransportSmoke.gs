@@ -11,9 +11,7 @@ class TextTransportCell : Cell {
 
   private var Mutated bool
 
-  init() {
-    Mutated = false
-  }
+  init() { }
 
   func Mutate() {
     Mutated = true

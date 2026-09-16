@@ -1026,7 +1026,6 @@ internal class WindowSiblingRetainedCell : Cell, IDisposable {
 
   init() {
     Animation = Animate(0.0)
-    Value = 0
   }
 
   func Dispose() {
@@ -1162,7 +1161,6 @@ internal class ThrowingDoneSimulation : Simulation {
 
   init() {
     Throw = true
-    Complete = false
   }
 
   public override func Position(elapsed float64) float64 -> elapsed

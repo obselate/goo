@@ -53,7 +53,6 @@ internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
         ObjectAccounting: nativeObjectAccounting,
       }
       Lifecycle = VulkanFrameSlotLifecycle{}
-      RetentionValid = false
     }
 
   internal func EnsureCapacity(required VkDeviceSize) {

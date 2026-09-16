@@ -135,8 +135,6 @@ internal partial class DevToolsSession : IDisposable {
     overrideStore = DiagnosticOverrideStore()
     debugNodes = Dictionary[int64, Node]()
     snapshotChanged = List[Action[DiagnosticSnapshot]]()
-    pipe = nil
-    selectionBeforeInspect = nil
     captureTracker = DiagnosticCaptureTracker()
     pending = true
     inputAllowed = allowInput

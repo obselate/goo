@@ -21,10 +21,6 @@ class GalleryCell : Cell, IDisposable {
         catalog = GalleryCatalog{}
         Assets = GalleryMathAssets{}
         Programs = GalleryShaderPrograms{}
-        attachedWindow = nil
-        Compact = false
-        currentShowcase = 0
-        disposed = false
         rootMetricsHandler = (metrics ElementMetrics) -> {
             if metrics.IsMounted && metrics.BorderBox.Width > 0.0 {
                 UpdateCompact(metrics.BorderBox.Width)

@@ -441,8 +441,6 @@ internal class NativeTextInputLifecycleCell : Cell {
     Controller = TextEditorController(Document)
     FirstAttached = true
     FirstTextEnabled = true
-    FirstHidden = false
-    FirstDisabled = false
   }
 
   override func Build() Blob {

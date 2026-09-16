@@ -37,9 +37,6 @@ class TextCullingCullCell : Cell {
   init(shader ShaderEffect) {
     Left = 8.0
     Top = 8.0
-    ContentMode = 0
-    SceneMode = 0
-    ColorMode = 0
     Revealed = true
     effect = shader
   }

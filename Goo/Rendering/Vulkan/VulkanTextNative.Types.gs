@@ -271,7 +271,6 @@ internal sealed class VulkanTextShapingWorkspace {
       throw ArgumentOutOfRangeException("capacity")
     }
     glyphBuffer = [capacity]VulkanTextGlyph
-    glyphCount = 0
   }
 
   internal func Reset() {

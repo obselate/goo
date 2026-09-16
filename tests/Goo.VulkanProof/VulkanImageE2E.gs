@@ -100,10 +100,7 @@ internal unsafe func VerifyVulkanImageReadback(readback * uint8, width uint32, h
     || !VulkanImageNearRegion(readback, width, 44, 16, 4, 15, 188, 92, 0, 128, 4) {
       return false
     }
-  if !VulkanImageNearRegion(readback, width, 40, 16, 4, 15, 189, 102, 92, 255, 4) {
-    return false
-  }
-  return true
+  return !(!VulkanImageNearRegion(readback, width, 40, 16, 4, 15, 189, 102, 92, 255, 4))
 }
 
 internal unsafe func VerifyVulkanImageLinearReadback(
@@ -125,11 +122,8 @@ internal unsafe func VerifyVulkanImageLinearReadback(
       || !VulkanImageNearRegion(readback, width, 40, 40, 8, 8, 0, 0, 0, 0, 0) {
         return false
       }
-    if !VulkanImageNearRegion(readback, width, 44, 16, 4, 8, 188, 92, 0, 128, 4)
-      || !VulkanImageNearRegion(readback, width, 40, 16, 4, 8, 189, 102, 92, 255, 4) {
-        return false
-      }
-    return true
+    return !(!VulkanImageNearRegion(readback, width, 44, 16, 4, 8, 188, 92, 0, 128, 4)
+      || !VulkanImageNearRegion(readback, width, 40, 16, 4, 8, 189, 102, 92, 255, 4))
   }
 
 private unsafe func VulkanImageNearPixel(

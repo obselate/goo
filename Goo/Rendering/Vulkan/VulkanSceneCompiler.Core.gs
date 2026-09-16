@@ -531,8 +531,7 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     exactCullContextSafe bool,
     parentAxisAligned bool,
-    preflight VulkanRectOverflowClipPreflight) bool{
-      if node.Kind != NodeKind.Text || node.Children.Count != 0
+    preflight VulkanRectOverflowClipPreflight) bool-> !(node.Kind != NodeKind.Text || node.Children.Count != 0
         || !exactCullContextSafe
         || !finiteVulkanSceneValue(bounds.X) || !finiteVulkanSceneValue(bounds.Y)
         || !finiteVulkanSceneValue(bounds.Width) || !finiteVulkanSceneValue(bounds.Height)
@@ -566,11 +565,7 @@ internal partial class VulkanSceneCompiler {
         || node.BorderTopColor.A > 0.0F
         || node.BorderRightColor.A > 0.0F
         || node.BorderBottomColor.A > 0.0F
-        || node.BorderLeftColor.A > 0.0F {
-          return false
-        }
-      return true
-    }
+        || node.BorderLeftColor.A > 0.0F)
 
   private func ExactCullContextForChildren(
     contextSafe bool,
@@ -586,11 +581,8 @@ internal partial class VulkanSceneCompiler {
       if preflight.ClipsX != preflight.ClipsY {
         return false
       }
-      if preflight.BothAxes
-        && (!preflight.RectangularEmittable || preflight.HasRadius) {
-          return false
-        }
-      return true
+      return !(preflight.BothAxes
+        && (!preflight.RectangularEmittable || preflight.HasRadius))
     }
 
   private func StrictTextViewportCulled(

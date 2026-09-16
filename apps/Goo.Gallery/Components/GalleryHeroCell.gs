@@ -39,9 +39,6 @@ class HeroCell : Cell {
     private var velocityTick int64
 
     public init() {
-        Programs = nil
-        Compact = false
-        active = false
         hostHandle = ElementHandle{}
         gPosition = Animate(Point{X: 0.35, Y: 0.5})
         firstOPosition = Animate(Point{X: 0.50, Y: 0.5})
@@ -53,11 +50,8 @@ class HeroCell : Cell {
         firstOVelocity = Point{X: 0.0, Y: 0.0}
         secondOVelocity = Point{X: 0.0, Y: 0.0}
         velocityTick = Environment.TickCount64
-        layoutMode = 0
         pointerX = 0.5
         pointerY = 0.5
-        pressure = 0.0
-        pointerDown = false
         draggingAnchor = -1
     }
 

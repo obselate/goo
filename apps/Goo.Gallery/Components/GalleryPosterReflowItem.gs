@@ -13,7 +13,6 @@ class GalleryPosterReflowItem {
         handle = ElementHandle{}
         offset = animatedOffset
         layout = Point{}
-        initialized = false
         handle.MetricsChanged += trackMetrics
     }
 

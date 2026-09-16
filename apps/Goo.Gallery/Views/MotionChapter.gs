@@ -99,54 +99,33 @@ class MotionChapter : Cell {
     private var feedbackToastText string
 
     public init() {
-        Compact = false
-        Assets = nil
-        Programs = nil
-        active = false
-        showcase = 0
 
         // Exhibit 0
         arenaHandle = ElementHandle{}
         physicsPuckPos = Animate(Point{X: 380.0, Y: 298.0})
         physicsPuckScale = Animate(1.0)
         physicsPuckColor = Animate(GalleryTheme.Accent)
-        activeProfile = 0
         activeSpeed = 2
-        isPointerDown = false
         pointerDownPos = Point{X: 380.0, Y: 298.0}
-        dragInitiated = false
-        puckDragging = false
         lastMovePoint = Point{X: 380.0, Y: 298.0}
-        lastMoveTick = 0
-        flingVx = 0.0
-        flingVy = 0.0
         targetAnchorIndex = 2
         lastTrackedPos = Point{X: 380.0, Y: 298.0}
         lastTrackedTick = Environment.TickCount64
-        currentVx = 0.0
-        currentVy = 0.0
-        currentSpeed = 0.0
 
-        switchOn = false
         switchThumbX = Animate(3.0)
         switchTrackColor = Animate(Color.Rgb(39, 39, 42))
         switchScale = Animate(1.0)
 
-        selectedSegment = 0
         segmentPillX = Animate(0.0)
 
-        impulseStep = 0
 
         // Exhibit 1: UI Component Gallery
         compSliderTrackHandle = ElementHandle{}
-        sliderDragging = false
-        compCategory = 0
         inputHandleText = "@goo_developer"
         searchFilterText = "Vulkan Pipeline"
         stepperCount = 4
         switchAutosave = true
         switchHardware = true
-        switchTelemetry = false
         switchAutosaveThumbX = Animate(23.0)
         switchAutosaveTrackColor = Animate(GalleryTheme.Accent)
         switchHardwareThumbX = Animate(23.0)
@@ -156,12 +135,9 @@ class MotionChapter : Cell {
         checkDigest = true
         check2Fa = true
         selectedRadioTier = 1
-        selectedViewMode = 0
         sliderValue = 75.0
         progressValue = 68.0
-        isFollowingUser = false
         showAlertBanner = true
-        isAccordionOpen = false
         feedbackToastText = "Ready"
     }
 

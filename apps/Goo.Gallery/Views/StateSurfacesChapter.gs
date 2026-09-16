@@ -67,14 +67,6 @@ class StateSurfacesChapter : Cell {
 
     public init() {
         phrase = "State across surface"
-        Compact = false
-        active = false
-        activeAct = 0
-        restoring = false
-        drawerDropping = false
-        drawerRound = 0
-        inkStarted = false
-        cipherStarted = false
         dragId = -1
         dragOffset = Point{}
         alphabet = GalleryHandAlphabet()

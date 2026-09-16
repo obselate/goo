@@ -91,11 +91,6 @@ class PerformanceSmallAnimationRoot : Cell {
       Opacity: MaximumOpacity,
       Root: this,
     }
-    staticMountedCount = 0
-    staticBuildCount = 0
-    animatedBuildCount = 0
-    animatedInitialBuildCount = 0
-    advanceCount = 0
   }
 
   private func StaticTint(index int32) Color {

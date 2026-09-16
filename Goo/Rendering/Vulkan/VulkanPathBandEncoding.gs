@@ -102,7 +102,6 @@ internal sealed class PathBandEncoding {
       this.verticalCurveIndices = ReadOnlyCollection[uint32](verticalIndexBuffer)
       this.curves = ReadOnlyCollection[PathAnalyticCurve](curveBuffer)
       words = []uint32{}
-      wordCount = 0
       Rebuild(minimumX, minimumY, maximumX, maximumY, horizontalBands,
         verticalBands, horizontalCurveIndices, verticalCurveIndices, curves,
         fillRuleMask, revision)

@@ -46,9 +46,6 @@ class PerformanceTextEditingRoot : Cell {
     sourceLength = document.Length
     sourceLineCount = document.LineCount
     controller = TextEditorController(document)
-    operationCount = 0
-    lastFrame = 0
-    hasAdvanced = false
     lastOperationAccepted = true
   }
 

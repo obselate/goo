@@ -31,7 +31,6 @@ private sealed class PathStrokePolyline {
 
   internal init() {
     Points = List[PathStrokePoint]()
-    Closed = false
   }
 
   internal func Set(points List[PathStrokePoint], closed bool) {
@@ -54,7 +53,6 @@ private sealed class PathStrokeSubpath {
 
   internal init() {
     Points = List[PathStrokePoint]()
-    Closed = false
   }
 
   internal func Set(points List[PathStrokePoint], closed bool) {

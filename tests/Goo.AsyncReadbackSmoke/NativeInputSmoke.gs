@@ -31,10 +31,6 @@ class NativeInputAcceptanceCell : Cell {
   internal var CommittedText string
 
   init() {
-    PointerCount = 0
-    KeyDownCount = 0
-    KeyUpCount = 0
-    TextCount = 0
     CommittedText = ""
   }
 

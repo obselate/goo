@@ -411,10 +411,7 @@ internal unsafe func VerifyPixelSceneReadbackWithClear(
     if !Dominant(readback, width, 28, 33, 2, 0, 1, 24) {
       return false
     }
-    if !Dominant(readback, width, 43, 33, 2, 0, 1, 24) {
-      return false
-    }
-    return true
+    return !(!Dominant(readback, width, 43, 33, 2, 0, 1, 24))
   }
 
 private unsafe func ExactPixel(

@@ -207,7 +207,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         sharedState.PrimitiveDescriptorSetLayout, nativeMaxStorageBufferRange,
         nativePrimitiveFrameSlotCount, nativeObjectAccounting)
       primitiveFrameSlotCount = nativePrimitiveFrameSlotCount
-      primitiveFrameSlot = 0
       textFrameScaleX = 1.0F
       textFrameScaleY = 1.0F
       this.resourceGeneration = expectedGeneration

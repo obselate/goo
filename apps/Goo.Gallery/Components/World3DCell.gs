@@ -39,18 +39,8 @@ class World3DCell : Cell {
                 return GalleryClockSimulation(0.0)
             }
         )
-        lastTime = 0.0
-        keyW = false
-        keyA = false
-        keyS = false
-        keyD = false
-        focused = false
-        dragging = false
         pointerX = 0.5
         pointerY = 0.5
-        pointerPressure = 0.0
-        pointerDown = false
-        Effect = nil
         Fov = 1.0
         Contrast = 1.0
         Fog = 0.35

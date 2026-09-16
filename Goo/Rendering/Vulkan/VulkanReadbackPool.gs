@@ -57,10 +57,7 @@ internal unsafe sealed class VulkanReadbackPool : IDisposable {
       factory = nativeFactory
       slots = [MaximumSlotCount]VulkanAsyncReadback?
       leased = [MaximumSlotCount]bool
-      slotCount = 0
-      leasedCount = 0
       residentBytes = 0uL
-      disposed = false
     }
 
   internal func Acquire() VulkanAsyncReadback? {

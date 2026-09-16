@@ -172,7 +172,6 @@ class RecoveryCell : Cell {
 
   init() {
     TextHandle = ElementHandle()
-    TextRevision = 0
   }
 
   internal func ShowPostRecoveryText() {

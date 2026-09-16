@@ -75,15 +75,6 @@ class PerformanceThreeWindowRoot : Cell {
     controlKey = "perf-three-window-" + initialWindowIndex.ToString() + "-control"
     entryKey = "perf-three-window-" + initialWindowIndex.ToString() + "-entry"
     entryValue = "window-" + initialWindowIndex.ToString()
-    generation = 0
-    callbackOrder = 0
-    pointerCount = 0
-    keyCount = 0
-    textCount = 0
-    pointerOrder = 0
-    keyOrder = 0
-    textOrder = 0
-    latencyMutations = false
   }
 
   private func LeafColor() Color {

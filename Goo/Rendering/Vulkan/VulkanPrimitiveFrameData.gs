@@ -73,11 +73,7 @@ internal unsafe sealed class VulkanPrimitiveFrameSlot : IDisposable {
       }
       Lifecycle = VulkanFrameSlotLifecycle{}
       HistoryWords = [0]uint32
-      HistoryRecordCount = 0
-      HistoryBufferGeneration = 0uL
-      HistoryValid = false
       PreparedRanges = [0]VkBufferCopy
-      PreparedRangeCount = 0
     }
 
   internal func EnsureCapacity(required VkDeviceSize, completedSubmissionSerial uint64) {

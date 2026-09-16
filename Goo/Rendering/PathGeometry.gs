@@ -77,14 +77,6 @@ internal class PathGeometry {
     Edges = [0]PathEdge
     QuadraticCount = owner.QuadraticCount
     ContourCount = owner.ContourCount
-    EdgeCount = 0
-    GeometryRevision = 0uL
-    HasClosedContour = false
-    HasFillContour = false
-    MinX = 0.0F
-    MinY = 0.0F
-    MaxX = 0.0F
-    MaxY = 0.0F
     Refresh(owner)
   }
 

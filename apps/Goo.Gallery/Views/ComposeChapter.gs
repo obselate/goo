@@ -34,11 +34,8 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         posterFlowReflow = GalleryPosterReflowItem(Animate(Point{}))
         posterGapReflow = GalleryPosterReflowItem(Animate(Point{}))
         posterWrapReflow = GalleryPosterReflowItem(Animate(Point{}))
-        rotation = 0.0
         posterWidth = 1040.0
-        orientation = 0
         shuffleState = 173
-        workerGeneration = 0
     }
 
     /// Releases poster geometry subscriptions.

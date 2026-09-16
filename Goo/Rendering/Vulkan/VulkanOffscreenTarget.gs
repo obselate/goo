@@ -281,28 +281,13 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       timestampPeriod = selectedTimestampPeriod
       imageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
       state = VulkanOffscreenState.Idle
-      imageReferencesReserved = false
       reservedImageIds = Array.Empty[ResourceId]()
       reservedTextAtlasIds = Array.Empty[ResourceId]()
       reservedPathIds = Array.Empty[ResourceId]()
-      reservedImageIdCount = 0
-      reservedTextAtlasIdCount = 0
-      reservedPathIdCount = 0
       commandPool = 0uL
-      commandPoolAccounted = false
       timestampQueryPool = 0uL
-      timestampQueryPoolAccounted = false
       readbackRegion = fullReadbackPlan.Region
       readbackByteSize = stagingByteSize
-      clipMaskSubmissionSerial = 0uL
-      clipFrameSubmissionReconcilePending = false
-      primitiveFrameSubmissionReconcilePending = false
-      layerSubmissionReconcilePending = false
-      gpuTimingAvailable = false
-      gpuSceneReplayNanoseconds = 0uL
-      gpuCopyNanoseconds = 0uL
-      unsafeTeardown = false
-      disposed = false
       Create()
     }
 

@@ -1029,12 +1029,9 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.TextWrap != TextWrap.Wrap || root.TextTrimming != TextTrimming.None
+    return !(root.TextWrap != TextWrap.Wrap || root.TextTrimming != TextTrimming.None
       || inherited.TextWrap != TextWrap.Wrap || inherited.TextTrimming != TextTrimming.None
-      || local.TextWrap != TextWrap.Wrap || local.TextTrimming != TextTrimming.Ellipsis{
-        return false
-      }
-    return true
+      || local.TextWrap != TextWrap.Wrap || local.TextTrimming != TextTrimming.Ellipsis)
   }
 
   func TextMaxLinesResolutionStateAndCacheContract() bool {
@@ -1122,12 +1119,9 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.HasOutlineState || root.OutlineWidth.Unit != LengthUnit.Unset
+    return !(root.HasOutlineState || root.OutlineWidth.Unit != LengthUnit.Unset
       || root.OutlineOffset.Unit != LengthUnit.Unset
-      || !sameColor(root.OutlineColor, Color.Transparent) {
-        return false
-      }
-    return true
+      || !sameColor(root.OutlineColor, Color.Transparent))
   }
 
   func VisibilityStateResetTransitionAndStorageContract() bool {
@@ -1210,13 +1204,10 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.TextDecoration != TextDecoration.None
+    return !(root.TextDecoration != TextDecoration.None
       || inherited.TextDecoration != TextDecoration.None
       || entry.TextDecoration != TextDecoration.None
-      || cleared.TextDecoration != TextDecoration.None{
-        return false
-      }
-    return true
+      || cleared.TextDecoration != TextDecoration.None)
   }
 
   func CursorInheritanceAndResetContract() bool {
@@ -1247,11 +1238,8 @@ internal class StyleFixtures {
     root.Hovered = false
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.Cursor != Cursor.Move || inherited.Cursor != Cursor.Move
-      || local.Cursor != Cursor.Move{
-        return false
-      }
-    return true
+    return !(root.Cursor != Cursor.Move || inherited.Cursor != Cursor.Move
+      || local.Cursor != Cursor.Move)
   }
 
   func ZIndexRangeStateAndResetContract() bool {
@@ -1896,12 +1884,9 @@ internal class StyleFixtures {
         Direction.RightToLeft) {
           return false
         }
-    if styleFieldUsesShapeStorage(field)
+    return !(styleFieldUsesShapeStorage(field)
       && !styleFieldResolutionContract(field, declaration, source, NodeKind.Container,
-        Direction.Auto) {
-          return false
-        }
-    return true
+        Direction.Auto))
   }
 
   private func styleFieldResolutionContract(field StyleField, declaration Style,

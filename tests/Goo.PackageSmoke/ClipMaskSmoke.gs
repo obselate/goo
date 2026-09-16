@@ -21,9 +21,7 @@ class ClipMaskPressureCell : Cell {
     }
   }
 
-  init() {
-    Phase = 0
-  }
+  init() { }
 
   func SetPhase(value int32) {
     Phase = value

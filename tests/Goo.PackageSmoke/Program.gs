@@ -29,15 +29,11 @@ class SmokeCell : Cell {
   init() {
     TextValue = "Goo Vulkan text"
     PressureSource = SmokeCell.SharedImageSource
-    PressureEnabled = false
-    ImageProvider = nil
-    BackgroundProvider = nil
   }
 
   init(imageProvider ImageSourceProvider, backgroundProvider ImageSourceProvider) {
     TextValue = "Goo Vulkan text"
     PressureSource = SmokeCell.SharedImageSource
-    PressureEnabled = false
     ImageProvider = imageProvider
     BackgroundProvider = backgroundProvider
   }
@@ -274,9 +270,7 @@ class PathSmokeCell : Cell {
     }
   }
 
-  init() {
-    Phase = 0
-  }
+  init() { }
 
   internal func SetPhase(value int32) {
     Phase = value
@@ -615,7 +609,6 @@ class TextAtlasSmokeCell : Cell {
 
   init(nativeContent string) {
     content = nativeContent
-    phase = 0
   }
 
   internal func SetPhase(value int32) {

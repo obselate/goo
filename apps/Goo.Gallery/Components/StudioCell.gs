@@ -56,25 +56,15 @@ class StudioCell : Cell {
     private var baseTime float64
 
     public init() {
-        Assets = nil
-        Programs = nil
-        Compact = false
-        active = false
         clock = Animate(0.0)
         Canvas = ElementHandle{}
-        selected = 0
         title = "FORM / FIELD"
         playing = true
         c0 = 72.0
         c1 = 1.0
         c2 = 0.35
-        palette = 0
         pointerX = 0.5
         pointerY = 0.5
-        pointerPressure = 0.0
-        pointerDown = false
-        ringCount = 0
-        baseTime = 0.0
     }
 
     private func effectsReady() bool -> Active

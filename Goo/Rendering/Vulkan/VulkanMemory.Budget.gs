@@ -26,7 +26,6 @@ internal unsafe sealed class VulkanMemoryBudgetState {
       extensionAvailable = nativeExtensionAvailable
       heapBudgets = [MaximumHeapCount]VkDeviceSize
       heapUsages = [MaximumHeapCount]VkDeviceSize
-      available = false
     }
 
   internal func Refresh() {

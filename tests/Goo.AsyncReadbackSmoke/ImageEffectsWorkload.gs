@@ -27,7 +27,6 @@ class PerformanceImageEffectsProvider : ImageSourceProvider {
   init(initial ImageSource) {
     source = initial
     version = 1uL
-    disposed = false
   }
 
   public prop ContentVersion uint64{ get -> version }
@@ -235,7 +234,6 @@ class PerformanceImageEffectsRoot : Cell {
       mutation = mutation + 1
     }
     replacementSlot = int32(seed % uint64(PerformanceImageEffectsProviders))
-    advanceOrdinal = 0
   }
   internal func DisposeSources() {
     var slot int32 = 0

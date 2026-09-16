@@ -22,7 +22,6 @@ internal class KeyboardInput {
   internal init(focus FocusManager) {
     this.focus = focus
     queue = List[KeyboardEvent]()
-    queueHead = 0
     heldKey = Key.Unknown
     pressedKey = Key.Unknown
     control = InputDispatchControl()

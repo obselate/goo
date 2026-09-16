@@ -38,7 +38,6 @@ internal partial class PointerInput {
   internal init(focus FocusManager) {
     this.focus = focus
     queue = List[QueuedPointerEvent]()
-    queueHead = 0
     mouse = PointerContact(0, PointerDevice.Mouse)
     current = mouse
     hoverChain = List[Node]()

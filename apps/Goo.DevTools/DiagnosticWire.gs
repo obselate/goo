@@ -916,7 +916,6 @@ class DiagnosticWireWindow {
         Title = title
         Dimensions = dimensions
         Scale = scale
-        Root = nil
         Nodes = List[DiagnosticWireNode]()
     }
 }
@@ -1002,13 +1001,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         pending = Queue[DiagnosticMessage]()
         state = DiagnosticConnectionState.Disconnected
         capabilities = DiagnosticCapabilities{}
-        wake = nil
-        worker = nil
-        stream = nil
-        reader = nil
-        writer = nil
-        stopRequested = false
-        requestSequence = 0
     }
 
     prop State DiagnosticConnectionState {
@@ -1305,7 +1297,6 @@ class DiagnosticDisconnectedTransport : DiagnosticTransport {
             WindowTitle: "",
             StartedAt: "",
         }
-        wake = nil
     }
 
     prop State DiagnosticConnectionState {

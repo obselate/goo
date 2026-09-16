@@ -509,7 +509,7 @@ internal class TreeFixtures {
 internal class TreeKeyedParent : Cell {
   internal var Mode int32
 
-  init() { Mode = 0 }
+  init() { }
 
   override func Build() Blob -> switch Mode {
     case 0: Container() { keyedCell("a"), keyedCell("b"),}
@@ -601,9 +601,7 @@ internal class TreeIncrementalChild : Cell[string] {
   internal var Count int32
   internal var Builds int32
 
-  init() {
-    Count = 0
-  }
+  init() { }
 
   override func Build() Blob {
     Builds = Builds + 1
@@ -616,7 +614,7 @@ internal class TreeIncrementalChild : Cell[string] {
 internal class TreeDisplayFocusCell : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -635,7 +633,7 @@ internal class TreeDisplayFocusCell : Cell {
 internal class TreeDisplayRetainedParent : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -656,7 +654,7 @@ internal class TreeDisplayRetainedParent : Cell {
 internal class TreeVisibilityFocusCell : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -678,7 +676,7 @@ internal class TreeVisibilityFocusCell : Cell {
 internal class TreeVisibilityRetainedParent : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -700,7 +698,7 @@ internal class TreeDisplayRetainedCell : Cell, IDisposable {
   shared { var Disposed bool }
   internal var Count int32
 
-  init() { Count = 0 }
+  init() { }
 
   func Increment() {
     Count = Count + 1

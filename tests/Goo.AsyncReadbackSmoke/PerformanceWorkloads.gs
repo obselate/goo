@@ -63,7 +63,6 @@ class PerformanceTableRoot : Cell {
       rowKeys[rowIndex] = "perf-table-row-" + rowIndex.ToString()
       rowIndex = rowIndex + 1
     }
-    scrollRow = 0
     scrollDirection = 1
     var mutationIndex int32 = 0
     while mutationIndex < 10 {
@@ -245,7 +244,6 @@ class PerformanceTopologyRoot : Cell {
       mutatedNodes[index] = -1
       index = index + 1
     }
-    visibleCount = 0
     panX = 1800.0
     panY = 990.0
     zoom = 1.0
@@ -485,7 +483,6 @@ class PerformanceBoxesRoot : Cell {
       keys[index] = "perf-box-" + index.ToString()
       index = index + 1
     }
-    generation = 0
     changedIndex = -1
   }
 
@@ -819,7 +816,6 @@ class PerformanceScenario : Cell {
   }
 
   init(selected string) {
-    revision = 0
     workload = selected
     seed = if selected == "table" {
       2654435761uL

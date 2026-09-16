@@ -27,14 +27,10 @@ class DevToolsCell : Cell {
 
     public init() {
         session = DiagnosticSession{}
-        wakePending = 0
-        showCaptures = false
     }
 
     public init(sessionValue DiagnosticSession) {
         session = sessionValue
-        wakePending = 0
-        showCaptures = false
     }
 
     internal func AttachWindow(window Window) {

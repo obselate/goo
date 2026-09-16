@@ -70,10 +70,6 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       generation = expectedGeneration
       state = VulkanReadbackState.Idle
       region = VulkanReadbackPlan.Full(target.Extent).Region
-      submissionSerial = 0uL
-      cpuCopyStartTicks = 0L
-      cpuCopyEndTicks = 0L
-      disposed = false
     }
 
   internal func Request(frame SceneFrame, clearColor VkClearColorValue,

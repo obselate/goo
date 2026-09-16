@@ -2252,9 +2252,7 @@ internal class ZIndexRuntimeRootCell : Cell {
 internal class ZIndexRuntimeChildCell : Cell {
   internal var Raised bool
 
-  init() {
-    Raised = false
-  }
+  init() { }
 
   override func Build() Blob {
     if Raised {
@@ -2507,7 +2505,7 @@ internal class InputButtonCell : Cell {
   internal var genericClicks int32
   internal var HideSpace bool
 
-  init() { HideSpace = false }
+  init() { }
 
   override func Build() Blob -> Container() {.Width: 300.0,.Height: 100.0,.FlexDirection: FlexDirection.Row,
     Button() {.Key: "enter",.Width: 100.0,.Height: 30.0,.Active: Style{ Opacity: 0.5 },.OnClick: func() { enterClicks++ },
@@ -2820,9 +2818,7 @@ internal class InputDisabledCell : Cell {
 internal class InputDisableFocusedEntryCell : Cell {
   internal var Off bool
 
-  init() {
-    Off = false
-  }
+  init() { }
 
   internal func Disable() {
     Off = true
@@ -3001,9 +2997,7 @@ internal class InputScrollStateCell : Cell {
 internal class InputAxisScrollCell : Cell {
   private var hiddenX bool
 
-  init() {
-    hiddenX = false
-  }
+  init() { }
 
   internal func HideX() {
     hiddenX = true

@@ -221,10 +221,7 @@ internal class VulkanSceneDamageJournal {
         return false
       }
       region = ToRegion(bounds, scaleX, scaleY, extentWidth, extentHeight)
-      if region.IsEmpty {
-        return false
-      }
-      return true
+      return !(region.IsEmpty)
     }
 
   private func FindEntry(version uint64) int32 {

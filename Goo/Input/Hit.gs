@@ -12,10 +12,7 @@ private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
   if n.OverflowX != Overflow.Visible && (x < n.Rect.X || x >= n.Rect.X + n.Rect.W) {
     return false
   }
-  if n.OverflowY != Overflow.Visible && (y < n.Rect.Y || y >= n.Rect.Y + n.Rect.H) {
-    return false
-  }
-  return true
+  return !(n.OverflowY != Overflow.Visible && (y < n.Rect.Y || y >= n.Rect.Y + n.Rect.H))
 }
 
 private func hitCanTraverseChildrenMapped(n Node, x float32, y float32) bool {

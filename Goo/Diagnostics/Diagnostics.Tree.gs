@@ -69,8 +69,6 @@ internal class DiagnosticTreeState {
     previous = Dictionary[int64, DiagnosticNodeSnapshot]()
     nodes = Dictionary[int64, WeakReference]()
     targets = Dictionary[string, int64](StringComparer.Ordinal)
-    previousRoot = nil
-    revisionNumber = 0
   }
 
   internal func Invalidate() {

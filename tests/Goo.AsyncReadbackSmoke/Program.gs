@@ -49,16 +49,7 @@ class RetentionCell : Cell {
     let BorderLeaf ElementHandle = ElementHandle{}
   }
 
-  init() {
-    ColorChanged = false
-    BoundsChanged = false
-    ExtraVisible = false
-    UnsupportedFeature = false
-    ParentColorChanged = false
-    ParentUnsupportedFeature = false
-    BorderColorChanged = false
-    BorderUnsupportedFeature = false
-  }
+  init() { }
 
   func MutateBox() {
     ColorChanged = true
@@ -292,7 +283,6 @@ class InputAccessibilityCell : Cell {
   internal var ScrollWheelCount int32
 
   init() {
-    disabled = false
     motion = Animate(0.0)
   }
 

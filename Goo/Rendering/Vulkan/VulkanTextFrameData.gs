@@ -74,18 +74,11 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
       CandidateVersions = [0]uint64
       CandidateFirstInstances = [0]int32
       CandidateRecordCounts = [0]int32
-      CandidateSegmentCount = 0
-      CandidateTopologyKey = 0uL
       HistoryIds = [0]uint64
       HistoryVersions = [0]uint64
       HistoryFirstInstances = [0]int32
       HistoryRecordCounts = [0]int32
-      HistorySegmentCount = 0
-      HistoryTopologyKey = 0uL
-      HistoryBufferGeneration = 0uL
-      HistoryValid = false
       PreparedRanges = [0]VkBufferCopy
-      PreparedRangeCount = 0
     }
 
   internal func EnsureCapacity(required VkDeviceSize, completedSubmissionSerial uint64) {

@@ -56,16 +56,13 @@ class PerformanceResizeDpiRoot : Cell {
 
   init(initialSeed uint64) {
     seed = initialSeed
-    stateIndex = 0
     logicalWidth = PerformanceResizeDpiState0Width
     logicalHeight = PerformanceResizeDpiState0Height
     scale = PerformanceResizeDpiState0Scale
     framebufferWidth = int32(float64(logicalWidth) * scale)
     framebufferHeight = int32(float64(logicalHeight) * scale)
     marker = MarkerFor(0, 0)
-    revision = 0
     imageSource = BuildImageSource()
-    imageSourceDisposed = false
   }
   func DisposeSource() {
     if imageSourceDisposed {
