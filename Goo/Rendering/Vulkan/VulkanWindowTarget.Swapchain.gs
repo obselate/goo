@@ -303,10 +303,6 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func TryQuerySelection(out selection VulkanWindowTargetSelection) bool {
     selection = VulkanWindowTargetSelection{}
-    if VulkanWindowTarget.TakeTestSurfaceLostForTest() {
-      surfaceLost = true
-      return false
-    }
     var capabilities = VkSurfaceCapabilitiesKHR{}
     let getSurfaceCapabilities = instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR
     let capabilitiesResult = getSurfaceCapabilities(

@@ -64,9 +64,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     private var logicalPathIdentityRegistry VulkanPathIdentityRegistry?
     private var terminalFailure bool
     private var terminalFailureResult VkResult = VkConstants.VK_SUCCESS
-    private var testFailNextDeviceIdle int32
     private var testFailNextGraphicsSubmission int32
-    private var testDeviceIdleCallCount int64
 
     private func CreateGraphicsQueueCore(device VkDevice, dispatch VkDeviceDispatch,
       queue VkQueue, accounting VulkanObjectAccounting?) VulkanGraphicsQueueCore{
@@ -110,19 +108,9 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
         }
       }
 
-    internal prop DeviceIdleCallCountForTest int64{
-      get -> Interlocked.Read(ref testDeviceIdleCallCount)
-    }
-
-    internal func FailNextDeviceIdleForTest() {
-      Interlocked.Exchange(ref testFailNextDeviceIdle, 1)
-    }
-
     internal func FailNextGraphicsSubmissionForTest() {
       Interlocked.Exchange(ref testFailNextGraphicsSubmission, 1)
     }
-
-    private func TakeTestDeviceIdleFailure() bool -> Interlocked.Exchange(ref testFailNextDeviceIdle, 0) != 0
 
     internal func TakeTestGraphicsSubmissionFailure() bool -> Interlocked.Exchange(ref testFailNextGraphicsSubmission, 0) != 0
 
@@ -753,15 +741,10 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   }
 
   internal func WaitDeviceIdleResult() VkResult {
-    Interlocked.Increment(ref testDeviceIdleCallCount)
     if terminal {
       return terminalIdleResult
     }
     if deviceLost {
-      return VkConstants.VK_ERROR_DEVICE_LOST
-    }
-    if VulkanSharedRuntime.TakeTestDeviceIdleFailure() {
-      MarkDeviceLost()
       return VkConstants.VK_ERROR_DEVICE_LOST
     }
     if disposed || device == nint(0) || deviceWaitIdleAddress == nint(0) {
