@@ -9,6 +9,5 @@
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../Goo.ShaderGen/SpirvReflection.cs" Link="SpirvReflection.cs" />
   </ItemGroup>
 </Project>
