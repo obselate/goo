@@ -3,6 +3,25 @@ package GooAsyncReadbackSmoke
 import Goo
 import System
 import System.IO
+import System.Text
+
+func WriteImage(result VulkanReadbackResult, path string) {
+  using let stream = File.Create(path)
+  let header = Encoding.ASCII.GetBytes("P6\n" + result.Width.ToString()
+    +" " + result.Height.ToString() + "\n255\n")
+  stream.Write(header, 0, header.Length)
+  let pixels = result.Pixels
+  let row = [int32(result.Width) * 3]uint8
+  for y in 0 ... int32(result.Height) {
+    for x in 0 ... int32(result.Width) {
+      let source = (y * int32(result.Width) + x) * 4
+      row[x * 3] = pixels[source]
+      row[x * 3 + 1] = pixels[source + 1]
+      row[x * 3 + 2] = pixels[source + 2]
+    }
+    stream.Write(row, 0, row.Length)
+  }
+}
 
 class ImageFileCell : Cell {
   private var source ImageSource
@@ -41,7 +60,7 @@ func RunImageFileSmoke() {
     let metrics = WindowReadbackTestFixture.Metrics(window)
     let frame = PrimitiveReadback(window, metrics)
     if let capturePath = Environment.GetEnvironmentVariable("GOO_IMAGE_FILE_CAPTURE") {
-      if capturePath.Length > 0 { VectorQualityWriteImage(frame, capturePath) }
+      if capturePath.Length > 0 { WriteImage(frame, capturePath) }
     }
     PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 12.0, 12.0,
       uint8(224), uint8(48), uint8(32), 3, "local_png_red")
@@ -97,7 +116,7 @@ func RunOtherImageFile(name string) {
     let remounted = PrimitiveReadback(window, metrics)
     RequireOtherImagePixels(remounted, metrics, name)
     if let capturePath = Environment.GetEnvironmentVariable("GOO_IMAGE_FILE_CAPTURE") {
-      if capturePath.Length > 0 { VectorQualityWriteImage(remounted, capturePath + "-" + name + ".png") }
+      if capturePath.Length > 0 { WriteImage(remounted, capturePath + "-" + name + ".png") }
     }
     window.RequestClose()
     WindowReadbackTestFixture.ForceRender(window, 0.0)
