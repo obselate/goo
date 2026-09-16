@@ -34,8 +34,11 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         posterFlowReflow = GalleryPosterReflowItem(Animate(Point{}))
         posterGapReflow = GalleryPosterReflowItem(Animate(Point{}))
         posterWrapReflow = GalleryPosterReflowItem(Animate(Point{}))
+        rotation = 0.0
         posterWidth = 1040.0
+        orientation = 0
         shuffleState = 173
+        workerGeneration = 0
     }
 
     /// Releases poster geometry subscriptions.
@@ -145,11 +148,10 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         if orientation == 1 {
             return "portrait"
         }
-        return if orientation == 2 {
-            "landscape flipped"
-        } else {
-            "portrait flipped"
+        if orientation == 2 {
+            return "landscape flipped"
         }
+        return "portrait flipped"
     }
 
     private func tileContent() Blob {

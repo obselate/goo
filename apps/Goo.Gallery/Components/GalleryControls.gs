@@ -21,8 +21,12 @@ class GalleryRange : Cell {
 
     public init() {
         Label = ""
+        MinValue = 0.0
         MaxValue = 1.0
         Value = 0.5
+        Step = 0.0
+        OnChange = nil
+        dragging = false
         Track = ElementHandle{}
     }
 
@@ -45,20 +49,22 @@ class GalleryRange : Cell {
         return MinValue + steps * Step
     }
 
-    private func fraction() float64 -> if MaxValue <= MinValue {
-        0.0
-    } else {
-        Math.Clamp((Value - MinValue) / (MaxValue - MinValue), 0.0, 1.0)
+    private func fraction() float64 {
+        if MaxValue <= MinValue {
+            return 0.0
+        }
+        return Math.Clamp((Value - MinValue) / (MaxValue - MinValue), 0.0, 1.0)
     }
 
     private func valueFromFraction(part float64) float64 -> MinValue + Math.Clamp(part, 0.0, 1.0) * (
         MaxValue - MinValue
     )
 
-    private func stride() float64 -> if Step > 0.0 {
-        Step
-    } else {
-        (MaxValue - MinValue) / 50.0
+    private func stride() float64 {
+        if Step > 0.0 {
+            return Step
+        }
+        return (MaxValue - MinValue) / 50.0
     }
 
     private func valueText() string {
@@ -88,11 +94,10 @@ class GalleryRange : Cell {
 
     private func valueFromPointer(e PointerEvent) float64 {
         let width = Track.BorderBox.Width
-        return if width <= 0.0 {
-            Value
-        } else {
-            valueFromFraction(e.Position.X / width)
+        if width <= 0.0 {
+            return Value
         }
+        return valueFromFraction(e.Position.X / width)
     }
 
     private func applyKeys(e KeyEvent) {

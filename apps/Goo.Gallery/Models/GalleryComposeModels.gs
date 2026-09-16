@@ -44,11 +44,10 @@ internal func galleryFibonacciBasePlacement(slot int32) GalleryFibonacciPlacemen
     if slot == 5 {
         return GalleryFibonacciPlacement(26.0, 0.0, 8.0)
     }
-    return if slot == 6 {
-        GalleryFibonacciPlacement(21.0, 8.0, 13.0)
-    } else {
-        GalleryFibonacciPlacement(0.0, 0.0, 21.0)
+    if slot == 6 {
+        return GalleryFibonacciPlacement(21.0, 8.0, 13.0)
     }
+    return GalleryFibonacciPlacement(0.0, 0.0, 21.0)
 }
 
 internal func galleryFibonacciPlacement(slot int32, orientation int32) GalleryFibonacciPlacement {

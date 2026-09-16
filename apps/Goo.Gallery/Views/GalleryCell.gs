@@ -8,6 +8,8 @@ class GalleryCell : Cell, IDisposable {
     private let showcaseHandle ElementHandle
     private let catalog GalleryCatalog
     private let rootMetricsHandler Action[ElementMetrics]
+    private let Assets GalleryMathAssets
+    private let Programs GalleryShaderPrograms
     private var attachedWindow Window?
     private var Compact bool
     private var currentShowcase int32
@@ -17,6 +19,12 @@ class GalleryCell : Cell, IDisposable {
         rootHandle = ElementHandle{}
         showcaseHandle = ElementHandle{}
         catalog = GalleryCatalog{}
+        Assets = GalleryMathAssets{}
+        Programs = GalleryShaderPrograms{}
+        attachedWindow = nil
+        Compact = false
+        currentShowcase = 0
+        disposed = false
         rootMetricsHandler = (metrics ElementMetrics) -> {
             if metrics.IsMounted && metrics.BorderBox.Width > 0.0 {
                 UpdateCompact(metrics.BorderBox.Width)
@@ -36,6 +44,7 @@ class GalleryCell : Cell, IDisposable {
         }
         disposed = true
         rootHandle.MetricsChanged -= rootMetricsHandler
+        Assets.Dispose()
     }
 
     /// Gets the element handle for the root layout container.
@@ -72,11 +81,10 @@ class GalleryCell : Cell, IDisposable {
     public func OpenSection(name string) bool {
         let chapter = catalog.ChapterIndex(name)
         let index = catalog.FirstShowcase(chapter)
-        return if index < 0 {
-            false
-        } else {
-            OpenShowcase(index)
+        if index < 0 {
+            return false
         }
+        return OpenShowcase(index)
     }
 
     /// Finds the chapter index by its route name.
@@ -160,7 +168,7 @@ class GalleryCell : Cell, IDisposable {
                 PaddingBottom: 18,
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
-                GalleryStageView.Build(catalog, currentShowcase, Compact),
+                GalleryStageView.Build(catalog, currentShowcase, Compact, Assets, Programs),
             },
         },
         GalleryNavigationView.StatusBar(catalog, currentShowcase, Compact),
