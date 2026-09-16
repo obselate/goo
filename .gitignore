@@ -83,8 +83,6 @@
 !/tools/merge_xml_docs.py
 !/tools/Goo.ApiDocs/
 !/tools/Goo.ApiDocs/**
-!/tools/Goo.VulkanGen/
-!/tools/Goo.VulkanGen/**
 !/tools/Goo.ShaderGen/
 !/tools/Goo.ShaderGen/**
 !/tools/Goo.ShaderEffectTool/
