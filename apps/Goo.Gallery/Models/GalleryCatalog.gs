@@ -39,7 +39,7 @@ internal class GalleryCatalog {
                 Name: "motion",
                 TabLabel: "Motion",
                 Title: "Motion & Dynamics",
-                Sentence: "Closed-form physical simulations, continuous velocity retargeting, and a comprehensive gallery of interactive UI controls.",
+                Sentence: "Closed-form physical simulations and continuous velocity retargeting.",
                 RailLabel: "MOTION & DYNAMICS",
             },
             GalleryChapter{
@@ -56,7 +56,6 @@ internal class GalleryCatalog {
             GalleryShowcase{Chapter: 0, Local: 1, Title: "Live modular poster"},
             GalleryShowcase{Chapter: 1, Local: 0, Title: "One State, Many Surfaces"},
             GalleryShowcase{Chapter: 2, Local: 0, Title: "Kinetic Physics & UI Dynamics"},
-            GalleryShowcase{Chapter: 2, Local: 1, Title: "UI Component Gallery"},
             GalleryShowcase{Chapter: 3, Local: 0, Title: "3D World"},
             GalleryShowcase{Chapter: 3, Local: 3, Title: "Radial Light"},
             GalleryShowcase{Chapter: 3, Local: 7, Title: "Dither"},

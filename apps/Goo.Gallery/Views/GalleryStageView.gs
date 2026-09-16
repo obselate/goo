@@ -31,10 +31,7 @@ internal class GalleryStageView {
                 case 2: Cell.Mount[MotionChapter](
                     "showcase-motion",
                     (c MotionChapter) -> {
-                        c.Assets = assets
-                        c.Programs = programs
                         c.Compact = compact
-                        c.Showcase = showcase.Local
                         c.Active = true
                     }
                 )
