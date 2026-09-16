@@ -1,19 +1,20 @@
 {
   "name": "goo",
-  "version": "0.1.0+codex.20260908042214",
-  "description": "G# Goo authoring, API lookup, live UI snapshots and screenshots.",
+  "version": "0.1.0+codex.20260916032858",
+  "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
   "author": {
     "name": "Xaz"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Goo",
-    "shortDescription": "Build and inspect G# Goo apps.",
-    "longDescription": "Authoring guidance and MCP tools for source-aware API search, starter projects, live retained UI snapshots, and Vulkan screenshots.",
+    "shortDescription": "Build, inspect and exercise G# Goo apps.",
+    "longDescription": "Authoring guidance and MCP tools for source-aware API search, starter projects, process and window discovery, complete UI snapshots, Vulkan screenshots and opt-in input automation.",
     "developerName": "Xaz",
     "category": "Developer Tools",
     "capabilities": [
-      "Read"
+      "Read",
+      "Write"
     ],
     "defaultPrompt": "Build a Goo desktop app and verify its live UI."
   },
