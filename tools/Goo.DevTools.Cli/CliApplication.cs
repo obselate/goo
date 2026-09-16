@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -38,9 +39,22 @@ internal static class CliApplication
         try
         {
             var commandLine = CommandLine.Parse(args);
+            if (commandLine.Has("help"))
+                return PrintHelp();
             if (commandLine.Has("version"))
             {
-                Console.WriteLine(Version);
+                if (commandLine.Has("json"))
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(new
+                    {
+                        version = Version,
+                        features = new[] { "list", "input", "dev.input", "errors.structured", "process-tree-cleanup" }
+                    }));
+                }
+                else
+                {
+                    Console.WriteLine(Version);
+                }
                 return 0;
             }
 
@@ -53,22 +67,22 @@ internal static class CliApplication
                 "list" => RunList(commandLine),
                 "capture" => await RunCaptureAsync(commandLine),
                 "input" => await RunInputAsync(commandLine),
-                _ => Fail($"Unknown command '{commandLine.Command}'. Run `goo help` for usage.")
+                _ => throw new CliException($"Unknown command '{commandLine.Command}'. Run `goo help` for usage.")
             };
         }
         catch (CliException exception)
         {
-            Console.Error.WriteLine($"goo: {exception.Message}");
+            WriteError(args, exception.Message, exception.Code, exception.Phase, exception.MayHaveApplied, exception.RuntimeHello);
             return 2;
         }
         catch (OperationCanceledException)
         {
-            Console.Error.WriteLine("goo: operation cancelled.");
+            WriteError(args, "Operation cancelled.", "cancelled", "operation", false);
             return 130;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SocketException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SocketException or Win32Exception)
         {
-            Console.Error.WriteLine($"goo: {exception.Message}");
+            WriteError(args, exception.Message, "io-error", "operation", false);
             return 1;
         }
     }
@@ -76,7 +90,7 @@ internal static class CliApplication
     private static int RunList(CommandLine commandLine)
     {
         var project = ResolveProject(commandLine.Get("project"));
-        var directory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var directory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var targets = Discovery.Matching(Discovery.Scan(directory), ParseOptionalInt(commandLine.Get("pid"), "pid"),
             commandLine.Get("pipe"), commandLine.Get("app"), commandLine.Get("window"))
             .Select(item => new { pid = item.ProcessId, process = item.DisplayName, window = item.WindowId,
@@ -91,8 +105,11 @@ internal static class CliApplication
 
     private static async Task<int> RunDevAsync(CommandLine commandLine)
     {
+        var inspectorWait = ParseWait(commandLine.Get("wait"));
+        if (commandLine.Has("watch") && commandLine.Has("no-watch"))
+            throw new CliException("Use --watch or --no-watch, not both.");
         var project = ResolveProject(commandLine.Get("project"));
-        var projectDirectory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var watch = !commandLine.Has("no-watch");
         if (commandLine.Has("watch"))
             watch = true;
@@ -126,36 +143,73 @@ internal static class CliApplication
             startInfo.Environment["GOO_DEVTOOLS_AUTOSTART"] = "1";
         ApplyEnvironmentOverrides(startInfo, commandLine);
 
-        using var process = Process.Start(startInfo) ?? throw new CliException($"Could not start '{startInfo.FileName}'.");
-        Console.WriteLine($"[goo] started {startInfo.FileName} (pid {process.Id})");
-        Console.WriteLine($"[goo] descriptors: {runtimeDirectory}");
-
-        using var monitorCancellation = new CancellationTokenSource();
-        var outputTask = Task.WhenAll(
-            ForwardOutputAsync(process.StandardOutput, false, monitorCancellation.Token),
-            ForwardOutputAsync(process.StandardError, true, monitorCancellation.Token));
-        var inspectorTask = commandLine.Has("inspector") || commandLine.Has("focus")
-            ? LaunchInspectorWhenReadyAsync(projectDirectory, process.Id, watch, runtimeDirectory, existingDescriptorPaths, launchStartedAt, commandLine.Has("focus"), ParseWait(commandLine.Get("wait")), monitorCancellation.Token)
-            : Task.CompletedTask;
-
-        await process.WaitForExitAsync();
-        monitorCancellation.Cancel();
+        using var shutdown = new CancellationTokenSource();
+        using var terminateRegistration = RegisterShutdownSignal(PosixSignal.SIGTERM, shutdown);
+        using var interruptRegistration = RegisterShutdownSignal(PosixSignal.SIGINT, shutdown);
+        ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            shutdown.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+        Process? process = null;
         try
         {
-            await Task.WhenAll(outputTask, inspectorTask);
-        }
-        catch (OperationCanceledException)
-        {
-        }
+            process = Process.Start(startInfo) ?? throw new CliException($"Could not start '{startInfo.FileName}'.", "launch-failed", "launch");
+            Console.WriteLine($"[goo] started {startInfo.FileName} (pid {process.Id})");
+            Console.WriteLine($"[goo] descriptors: {runtimeDirectory}");
 
-        Console.WriteLine($"[goo] process exited with code {process.ExitCode}");
-        return process.ExitCode;
+            using var monitorCancellation = new CancellationTokenSource();
+            var outputTask = Task.WhenAll(
+                ForwardOutputAsync(process.StandardOutput, false, monitorCancellation.Token),
+                ForwardOutputAsync(process.StandardError, true, monitorCancellation.Token));
+            var inspectorTask = commandLine.Has("inspector") || commandLine.Has("focus")
+                ? LaunchInspectorWhenReadyAsync(projectDirectory, process.Id, watch, runtimeDirectory, existingDescriptorPaths, launchStartedAt, commandLine.Has("focus"), inspectorWait, monitorCancellation.Token)
+                : Task.CompletedTask;
+
+            var cancelled = false;
+            try
+            {
+                await process.WaitForExitAsync(shutdown.Token);
+            }
+            catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
+            {
+                cancelled = true;
+                await StopOwnedProcessTreeAsync(process);
+            }
+            monitorCancellation.Cancel();
+            try
+            {
+                await Task.WhenAll(outputTask, inspectorTask);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            if (cancelled)
+            {
+                Console.Error.WriteLine("[goo] stopped owned process tree after cancellation");
+                return 130;
+            }
+            Console.WriteLine($"[goo] process exited with code {process.ExitCode}");
+            return process.ExitCode;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+            if (process is not null)
+            {
+                if (!process.HasExited)
+                    await StopOwnedProcessTreeAsync(process);
+                process.Dispose();
+            }
+        }
     }
 
     private static async Task<int> RunAttachAsync(CommandLine commandLine)
     {
         var project = ResolveProject(commandLine.Get("project"));
-        var projectDirectory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var processId = ParseOptionalInt(commandLine.Get("pid"), "pid");
         var descriptors = Discovery.Scan(projectDirectory);
         var descriptor = Discovery.Select(
@@ -176,16 +230,41 @@ internal static class CliApplication
         if (commandLine.Has("once"))
             cancellation.CancelAfter(ParseWait(commandLine.Get("wait")));
         await using var connection = await ConnectAsync(descriptor, cancellation.Token);
-        var handshake = await connection.HandshakeAsync(cancellation.Token);
+        string? handshake;
+        try
+        {
+            handshake = await connection.HandshakeAsync(cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake");
+        }
         ValidateHandshake(handshake, descriptor);
         WriteProtocolLine(handshake!, commandLine.Has("json"));
 
         if (commandLine.Has("once"))
         {
-            var request = await connection.RequestAsync(commandLine.Get("command") ?? "snapshot", ParsePayload(commandLine.Get("payload")), cancellation.Token);
-            if (request is not null)
-                WriteProtocolLine(request.ToJsonString(), commandLine.Has("json"));
-            return request is null || BoolValue(request["ok"]) == false
+            var requestCommand = commandLine.Get("command") ?? "snapshot";
+            var mayHaveApplied = requestCommand is not ("snapshot" or "capture");
+            JsonObject? request;
+            try
+            {
+                request = await connection.RequestAsync(requestCommand, ParsePayload(commandLine.Get("payload")), cancellation.Token);
+            }
+            catch (Exception exception) when (exception is OperationCanceledException or IOException or SocketException)
+            {
+                var consequence = mayHaveApplied ? " It may already have applied. Inspect state before another action." : "";
+                throw new CliException($"The endpoint did not acknowledge the {requestCommand} request.{consequence}", "request-unconfirmed", requestCommand, mayHaveApplied, handshake);
+            }
+            if (request is null)
+            {
+                var consequence = mayHaveApplied ? " It may already have applied. Inspect state before another action." : "";
+                throw new CliException($"The endpoint closed without acknowledging the {requestCommand} request.{consequence}", "request-unconfirmed", requestCommand, mayHaveApplied, handshake);
+            }
+            if (IsError(request))
+                DecorateError(request, requestCommand, mayHaveApplied, handshake);
+            WriteProtocolLine(request.ToJsonString(), commandLine.Has("json"));
+            return BoolValue(request["ok"]) == false
                 || StringValue(request["type"]) == "error" || request["error"] is not null ? 1 : 0;
         }
 
@@ -198,7 +277,7 @@ internal static class CliApplication
         if (commandLine.Positionals.Count != 1)
             throw new CliException("Usage: goo input <click|pointer.move|pointer.down|pointer.up|pointer.cancel|wheel|key.down|key.up|text|reset> [options]");
         var project = ResolveProject(commandLine.Get("project"));
-        var projectDirectory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var processId = ParseOptionalInt(commandLine.Get("pid"), "pid");
         var descriptor = Discovery.Select(Discovery.Scan(projectDirectory), processId,
             commandLine.Get("pipe"), commandLine.Get("app"), commandLine.Get("window"), commandLine.Has("latest"))
@@ -249,7 +328,15 @@ internal static class CliApplication
             throw new CliException("Input request exceeds the endpoint request limit.");
         using var timeout = new CancellationTokenSource(ParseWait(commandLine.Get("wait")));
         await using var connection = await ConnectAsync(descriptor, timeout.Token);
-        var handshake = await connection.HandshakeAsync(timeout.Token);
+        string? handshake;
+        try
+        {
+            handshake = await connection.HandshakeAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake");
+        }
         ValidateHandshake(handshake, descriptor);
         var gestureLease = false;
         var targetHandles = false;
@@ -258,12 +345,12 @@ internal static class CliApplication
             if (!hello.RootElement.TryGetProperty("capabilities", out var capabilities)
                 || capabilities.ValueKind != JsonValueKind.Array
                 || !capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input"))
-                throw new CliException("This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.");
+                throw new CliException("This endpoint does not permit input. Enable GOO_DEVTOOLS=1 and GOO_DEVTOOLS_INPUT=1 in the target application.", "input-disabled", "handshake", false, handshake);
             gestureLease = capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "input.gesture-lease");
             targetHandles = capabilities.EnumerateArray().Any(value => value.ValueKind == JsonValueKind.String && value.GetString() == "target.handles");
         }
         if (commandLine.Has("target") && !targetHandles)
-            throw new CliException("This endpoint does not support opaque target handles. Update the target application's Goo runtime.");
+            throw new CliException("This endpoint does not support opaque target handles. Update the target application's Goo runtime.", "unsupported-capability", "handshake", false, handshake);
         if (gestureLease && gesture is not null)
         {
             payload["gestureId"] = gesture;
@@ -276,8 +363,24 @@ internal static class CliApplication
         }
         if (payload.ToJsonString().Length > 65536)
             throw new CliException("Input request exceeds the endpoint request limit.");
-        var response = await connection.RequestAsync("input", payload, timeout.Token);
-        if (response is null) throw new CliException("The window closed before acknowledging input.");
+        JsonObject? response;
+        try
+        {
+            response = await connection.RequestAsync("input", payload, timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new CliException("Timed out waiting for the input acknowledgement. Inspect state before another action and do not automatically retry input.", "timeout", "input", true, handshake);
+        }
+        catch (Exception exception) when (exception is IOException or SocketException)
+        {
+            throw new CliException($"The input acknowledgement was lost: {exception.Message} Inspect state before another action and do not automatically retry input.", "input-unconfirmed", "input", true, handshake);
+        }
+        if (response is null)
+            throw new CliException("The window closed before acknowledging input. Inspect state before another action and do not automatically retry input.", "input-unconfirmed", "input", true, handshake);
+        if (IsError(response))
+            DecorateError(response, "input", true, handshake);
+        response["runtime"] ??= RuntimeStatus(handshake);
         WriteProtocolLine(response.ToJsonString(), commandLine.Has("json"));
         return response["ok"]?.GetValue<bool>() == true ? 0 : 1;
     }
@@ -285,7 +388,7 @@ internal static class CliApplication
     private static async Task<int> RunCaptureAsync(CommandLine commandLine)
     {
         var project = ResolveProject(commandLine.Get("project"));
-        var projectDirectory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var processId = ParseOptionalInt(commandLine.Get("pid"), "pid");
         var descriptors = Discovery.Scan(projectDirectory);
         var descriptor = Discovery.Select(
@@ -307,17 +410,31 @@ internal static class CliApplication
         }
         catch (OperationCanceledException)
         {
-            throw new CliException("Timed out waiting for the Goo endpoint handshake.");
+            throw new CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake");
         }
         if (handshake is null)
-            throw new CliException("The Goo endpoint closed before completing its protocol handshake.");
+            throw new CliException("The Goo endpoint closed before completing its protocol handshake.", "handshake-closed", "handshake");
         ValidateHandshake(handshake, descriptor);
         var payload = new JsonObject
         {
             ["window"] = commandLine.Get("window"),
             ["format"] = commandLine.Get("format") ?? "png"
         };
-        var response = await RequestCaptureAsync(connection, payload, captureTimeout.Token);
+        JsonObject response;
+        try
+        {
+            response = await RequestCaptureAsync(connection, payload, captureTimeout.Token);
+        }
+        catch (CliException exception)
+        {
+            throw new CliException(exception.Message, exception.Code, exception.Phase, exception.MayHaveApplied, handshake);
+        }
+        if (IsError(response))
+        {
+            DecorateError(response, "capture", false, handshake);
+            var error = response["error"] as JsonObject;
+            throw new CliException(StringValue(error?["message"]) ?? "The endpoint rejected the capture request.", StringValue(error?["code"]) ?? "capture-rejected", "capture", false, handshake);
+        }
         return WriteCapture(response, commandLine.Get("output"));
     }
 
@@ -335,11 +452,11 @@ internal static class CliApplication
             }
             catch (OperationCanceledException)
             {
-                throw new CliException("The capture did not complete before the Goo endpoint wait expired.");
+                throw new CliException("The capture did not complete before the Goo endpoint wait expired.", "timeout", "capture");
             }
 
             if (response is null)
-                throw new CliException("The Goo endpoint closed without returning a capture.");
+                throw new CliException("The Goo endpoint closed without returning a capture.", "capture-unconfirmed", "capture");
             if (!IsCapturePending(response))
                 return response;
 
@@ -349,7 +466,7 @@ internal static class CliApplication
             }
             catch (OperationCanceledException)
             {
-                throw new CliException("The capture did not complete before the Goo endpoint wait expired.");
+                throw new CliException("The capture did not complete before the Goo endpoint wait expired.", "timeout", "capture");
             }
         }
     }
@@ -365,7 +482,7 @@ internal static class CliApplication
     private static async Task<int> RunDoctorAsync(CommandLine commandLine)
     {
         var project = ResolveProject(commandLine.Get("project"));
-        var projectDirectory = project is null ? Environment.CurrentDirectory : Path.GetDirectoryName(project)!;
+        var projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var descriptors = Discovery.Scan(projectDirectory, includeStale: true);
         var checks = new List<DoctorCheck>();
         var dotnet = await CheckDotnetAsync();
@@ -450,6 +567,40 @@ internal static class CliApplication
         }
         catch (OperationCanceledException)
         {
+        }
+    }
+
+    private static PosixSignalRegistration? RegisterShutdownSignal(PosixSignal signal, CancellationTokenSource cancellation)
+    {
+        if (OperatingSystem.IsWindows())
+            return null;
+        return PosixSignalRegistration.Create(signal, context =>
+        {
+            context.Cancel = true;
+            cancellation.Cancel();
+        });
+    }
+
+    private static async Task StopOwnedProcessTreeAsync(Process process)
+    {
+        if (!process.HasExited)
+        {
+            try
+            {
+                process.Kill(true);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new CliException("The owned process tree did not stop within five seconds.", "cleanup-timeout", "shutdown");
         }
     }
 
@@ -695,10 +846,19 @@ internal static class CliApplication
                 ?? StringValue(payload["error"])
                 ?? StringValue(response["message"])
                 ?? StringValue(response["error"]);
+            var code = "capture-rejected";
             if (error is null && payload["error"] is JsonObject errorObject)
+            {
+                code = StringValue(errorObject["code"]) ?? code;
                 error = StringValue(errorObject["message"]) ?? StringValue(errorObject["code"]);
+            }
+            if (response["error"] is JsonObject responseError)
+            {
+                code = StringValue(responseError["code"]) ?? code;
+                error ??= StringValue(responseError["message"]);
+            }
             error ??= "The endpoint rejected the capture request.";
-            throw new CliException(error);
+            throw new CliException(error, code, "capture");
         }
 
         var format = StringValue(payload["format"]);
@@ -771,6 +931,57 @@ internal static class CliApplication
     private static JsonObject CapturePayload(JsonObject response)
     {
         return response["payload"] as JsonObject ?? response;
+    }
+
+    private static bool IsError(JsonObject response)
+    {
+        return BoolValue(response["ok"]) == false
+            || StringValue(response["type"]) == "error"
+            || response["error"] is not null;
+    }
+
+    private static void DecorateError(JsonObject response, string phase, bool defaultMayHaveApplied, string? runtimeHello)
+    {
+        var error = response["error"] as JsonObject
+            ?? (response["payload"] as JsonObject)?["error"] as JsonObject
+            ?? new JsonObject
+            {
+                ["code"] = "request-rejected",
+                ["message"] = StringValue((response["payload"] as JsonObject)?["message"])
+                    ?? StringValue(response["message"])
+                    ?? "The endpoint rejected the request."
+            };
+        var code = StringValue(error["code"]);
+        var rejectedBeforeDispatch = code is "stale-target" or "input-disabled" or "gesture-owned" or "gesture-expired"
+            or "target-not-actionable" or "permission-denied" or "unsupported" or "invalid-request";
+        error["phase"] ??= phase;
+        error["mayHaveApplied"] ??= defaultMayHaveApplied && !rejectedBeforeDispatch;
+        error["cliVersion"] ??= Version;
+        error["runtime"] ??= RuntimeStatus(runtimeHello);
+        if (response["error"] is null)
+            response["error"] = error.DeepClone();
+    }
+
+    private static JsonObject RuntimeStatus(string? handshake)
+    {
+        var hello = string.IsNullOrWhiteSpace(handshake) ? null : JsonNode.Parse(handshake) as JsonObject;
+        var capabilities = hello?["capabilities"]?.DeepClone() ?? new JsonArray();
+        var identity = new JsonObject
+        {
+            ["pid"] = hello?["pid"]?.DeepClone(),
+            ["windowId"] = hello?["windowId"]?.DeepClone(),
+            ["sessionId"] = hello?["sessionId"]?.DeepClone()
+        };
+        return new JsonObject
+        {
+            ["runtimeVersion"] = hello?["runtimeVersion"]?.DeepClone() ?? "unavailable",
+            ["protocol"] = hello?["protocol"]?.DeepClone() ?? "unavailable",
+            ["protocolVersion"] = hello?["version"]?.DeepClone() ?? "unavailable",
+            ["capabilities"] = capabilities,
+            ["identity"] = identity,
+            ["inputPermission"] = capabilities.AsArray().Any(item => StringValue(item) == "input") ? "enabled" : hello is null ? "unavailable" : "disabled",
+            ["inspectMode"] = hello?["inspectMode"]?.DeepClone() ?? "unavailable"
+        };
     }
 
     private static bool IsRgbaFormat(string? format)
@@ -872,6 +1083,19 @@ internal static class CliApplication
         return FindProjectInDirectory(Environment.CurrentDirectory, false);
     }
 
+    private static string ResolveProjectDirectory(string? value, string? project)
+    {
+        if (project is not null)
+            return Path.GetDirectoryName(project)!;
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            var path = Path.GetFullPath(value);
+            if (Directory.Exists(path))
+                return path;
+        }
+        return Environment.CurrentDirectory;
+    }
+
     private static string? FindProjectInDirectory(string directory, bool failOnMultiple = true)
     {
         var projects = Directory.EnumerateFiles(directory, "*.*proj", SearchOption.TopDirectoryOnly)
@@ -931,9 +1155,35 @@ internal static class CliApplication
     {
         if (string.IsNullOrWhiteSpace(value))
             return TimeSpan.FromSeconds(15);
-        if (double.TryParse(value, out var seconds) && seconds > 0)
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) && double.IsFinite(seconds) && seconds > 0)
             return TimeSpan.FromSeconds(Math.Min(seconds, 300));
         throw new CliException("--wait must be a positive number of seconds.");
+    }
+
+    private static void WriteError(string[] args, string message, string code, string phase, bool mayHaveApplied, string? runtimeHello = null)
+    {
+        if (WantsJson(args))
+        {
+            Console.Error.WriteLine(JsonSerializer.Serialize(new
+            {
+                type = "error",
+                error = new { code, message, phase, mayHaveApplied, cliVersion = Version, runtime = RuntimeStatus(runtimeHello) }
+            }));
+            return;
+        }
+        Console.Error.WriteLine($"goo: {message}");
+    }
+
+    private static bool WantsJson(string[] args)
+    {
+        foreach (var argument in args)
+        {
+            if (argument == "--")
+                return false;
+            if (argument == "--json")
+                return true;
+        }
+        return false;
     }
 
     private static void WriteProtocolLine(string line, bool json)
@@ -974,18 +1224,13 @@ internal static class CliApplication
         Console.WriteLine("  --gesture TOKEN      Continue or release a held pointer/key gesture.");
         Console.WriteLine("  --focus              Launch or focus the standalone inspector.");
         Console.WriteLine("  --json               Keep protocol output as JSON lines.");
+        Console.WriteLine("  JSON errors include code, phase, and mayHaveApplied fields.");
         Console.WriteLine();
         Console.WriteLine("Environment:");
         Console.WriteLine("  GOO_DEVTOOLS_DIR         Runtime descriptor directory override.");
         Console.WriteLine("  GOO_DEVTOOLS_INSPECTOR   Standalone inspector executable or DLL.");
         Console.WriteLine("  GOO_DEVTOOLS_INPUT=1     Permit application input when GOO_DEVTOOLS=1 enables diagnostics.");
         return 0;
-    }
-
-    private static int Fail(string message)
-    {
-        Console.Error.WriteLine($"goo: {message}");
-        return 2;
     }
 
     private sealed record LaunchSpec(string FileName, IReadOnlyList<string> Arguments);

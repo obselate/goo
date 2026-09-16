@@ -262,7 +262,7 @@ public sealed class DevToolsCliEndToEndTests
         await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
         var result = await attached.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.NotEqual(0, result.ExitCode);
-        Assert.Contains("cancelled", result.StandardError);
+        Assert.Contains("handshake", result.StandardError);
     }
 
     [Fact]
@@ -510,6 +510,123 @@ public sealed class DevToolsCliEndToEndTests
         Assert.Contains("hot reload requires restart", result.StandardError, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task DevRejectsLauncherOptionsBeforeSpawnAndPreservesTrailingArguments()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        using var directory = TemporaryDirectory.Create();
+        var marker = Path.Combine(directory.Path, "started");
+        var child = Path.Combine(directory.Path, "child.sh");
+        await File.WriteAllTextAsync(child, $"#!/bin/sh\nprintf 'input=%s\\n' \"$GOO_DEVTOOLS_INPUT\"\nprintf 'arg=%s\\n' \"$@\"\ntouch {marker}\n");
+        File.SetUnixFileMode(child, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        var environment = new Dictionary<string, string>
+        {
+            ["GOO_DEVTOOLS_DIR"] = directory.Path,
+            ["GOO_DEVTOOLS_INPUT"] = "1"
+        };
+        foreach (var invalid in new[] { "--input=false", "--unknown", "--wait=NaN", "--wait=Infinity", "--watch --no-watch" })
+        {
+            var options = invalid.Split(' ');
+            var rejected = await RunProcessAsync("dotnet", [Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), "dev", .. options, "--", child], environment);
+            Assert.NotEqual(0, rejected.ExitCode);
+            Assert.False(File.Exists(marker));
+        }
+
+        var forwarded = await RunProcessAsync("dotnet", [Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), "dev", "--no-watch", "--", child, "--input=false", "--unknown=child"], environment);
+        Assert.Equal(0, forwarded.ExitCode);
+        Assert.Contains("arg=--input=false", forwarded.StandardOutput, StringComparison.Ordinal);
+        Assert.Contains("arg=--unknown=child", forwarded.StandardOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PluginConfigurePreservesSettingsAndDoesNotClobberMalformedJson()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var scripts = Path.Combine(directory.Path, "scripts");
+        Directory.CreateDirectory(scripts);
+        var configure = Path.Combine(scripts, "configure.py");
+        File.Copy(Path.Combine(RepositoryRoot, "plugins", "goo", "scripts", "configure.py"), configure);
+        var manifest = Path.Combine(directory.Path, ".mcp.json");
+        var initial = JsonSerializer.Serialize(new
+        {
+            customTop = new { keep = true },
+            mcpServers = new
+            {
+                goo = new { command = "old", args = new[] { "old" }, customServer = true, env = new { GOO_CLI = "/custom/cli", UV_PROJECT_ENVIRONMENT = "/custom/venv", CUSTOM = "keep" } },
+                extra = new { command = "custom", args = new[] { "untouched" } }
+            }
+        });
+        await File.WriteAllTextAsync(manifest, initial);
+        var configured = await RunProcessAsync("python3", configure);
+        Assert.Equal(0, configured.ExitCode);
+        using (var document = JsonDocument.Parse(await File.ReadAllTextAsync(manifest)))
+        {
+            var root = document.RootElement;
+            Assert.True(root.GetProperty("customTop").GetProperty("keep").GetBoolean());
+            Assert.Equal("custom", root.GetProperty("mcpServers").GetProperty("extra").GetProperty("command").GetString());
+            var goo = root.GetProperty("mcpServers").GetProperty("goo");
+            Assert.True(goo.GetProperty("customServer").GetBoolean());
+            Assert.Equal("/custom/cli", goo.GetProperty("env").GetProperty("GOO_CLI").GetString());
+            Assert.Equal("/custom/venv", goo.GetProperty("env").GetProperty("UV_PROJECT_ENVIRONMENT").GetString());
+        }
+        var first = await File.ReadAllBytesAsync(manifest);
+        Assert.Equal(0, (await RunProcessAsync("python3", configure)).ExitCode);
+        Assert.Equal(first, await File.ReadAllBytesAsync(manifest));
+        await File.WriteAllTextAsync(manifest, "{invalid-json");
+        Assert.NotEqual(0, (await RunProcessAsync("python3", configure)).ExitCode);
+        Assert.Equal("{invalid-json", await File.ReadAllTextAsync(manifest));
+    }
+
+    [Fact]
+    public async Task DevSignalCancellationStopsOnlyItsOwnedProcessTree()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        using var directory = TemporaryDirectory.Create();
+        var identities = Path.Combine(directory.Path, "owned");
+        var script = Path.Combine(directory.Path, "owned.sh");
+        await File.WriteAllTextAsync(script, $"#!/bin/sh\ntrap '' TERM INT\nsleep 120 &\necho \"$$ $!\" > {identities}\nwait\n");
+        File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        using var sentinel = Process.Start("sleep", "120") ?? throw new InvalidOperationException("Could not start sentinel.");
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            WorkingDirectory = RepositoryRoot,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        foreach (var argument in new[] { Path.Combine(AppContext.BaseDirectory, "Goo.DevTools.Cli.dll"), "dev", "--no-watch", "--project", directory.Path, "--", script })
+            startInfo.ArgumentList.Add(argument);
+        using var launcher = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start Goo CLI.");
+        var output = launcher.StandardOutput.ReadToEndAsync();
+        var error = launcher.StandardError.ReadToEndAsync();
+        try
+        {
+            await WaitForAsync(() => File.Exists(identities), TimeSpan.FromSeconds(10));
+            var owned = (await File.ReadAllTextAsync(identities)).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
+            Assert.All(owned, processId => Assert.True(IsRunning(processId)));
+            var signal = Process.Start("/bin/kill", $"-TERM {launcher.Id}") ?? throw new InvalidOperationException("Could not signal Goo CLI.");
+            await signal.WaitForExitAsync();
+            await launcher.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            await WaitForAsync(() => owned.All(processId => !IsRunning(processId)), TimeSpan.FromSeconds(3));
+            Assert.False(sentinel.HasExited);
+            Assert.Equal(130, launcher.ExitCode);
+        }
+        finally
+        {
+            if (!launcher.HasExited)
+                launcher.Kill(true);
+            if (!sentinel.HasExited)
+                sentinel.Kill();
+            await Task.WhenAll(output, error);
+        }
+    }
+
     private static string RepositoryRoot
     {
         get
@@ -577,6 +694,27 @@ public sealed class DevToolsCliEndToEndTests
     {
         return await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5))
             ?? throw new InvalidOperationException("The protocol server closed before returning a line.");
+    }
+
+    private static bool IsRunning(int processId)
+    {
+        var path = $"/proc/{processId}/stat";
+        if (!File.Exists(path))
+            return false;
+        var value = File.ReadAllText(path);
+        var separator = value.IndexOf(") ", StringComparison.Ordinal);
+        return separator >= 0 && value[separator + 2] != 'Z';
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var started = Stopwatch.GetTimestamp();
+        while (!condition())
+        {
+            if (Stopwatch.GetElapsedTime(started) >= timeout)
+                throw new TimeoutException("The expected process state did not arrive.");
+            await Task.Delay(25);
+        }
     }
 
     private static byte[] ReadPngImageData(byte[] png)
