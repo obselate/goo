@@ -18,19 +18,13 @@
     <Compile Remove="DiagnosticCaptureSmoke.gs" />
     <Compile Remove="EmbeddedHostSmoke.gs" />
     <Compile Remove="WindowActivationSmoke.gs" />
-    <Compile Remove="WindowSizeConstraintsSmoke.gs" />
-    <Compile Include="../Shared/PrimitiveScene.gs" Link="PrimitiveScene.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
-    <Compile Include="../Shared/EffectsScene.gs" Link="EffectsScene.gs" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
              Link="VendSans-VariableFont_wght.ttf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-chromacheck-colr.ttf"
-             Link="HarfBuzz-chromacheck-colr.ttf"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
