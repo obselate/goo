@@ -3201,37 +3201,9 @@ func RunProtectedTextSmoke() {
     +" ime=1 semantics=1 close=1")
 }
 
-let managedEntryTimestamp = Stopwatch.GetTimestamp()
-Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
-if Environment.GetEnvironmentVariable("GOO_NATIVE_ACCESSIBILITY_SMOKE") == "1" {
-  RunNativeAccessibilitySmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_NATIVE_DROP_SMOKE") == "1" {
-  RunNativeFileDropSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_VIRTUAL_ROWS_SMOKE") == "1" {
-  RunVirtualRowsSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_CUSTOM_LAYOUT_SMOKE") == "1" {
-  RunCustomLayoutSmoke()
-  return
-}
-if !String.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOO_FILE_DIALOG_SMOKE")) {
-  RunFileDialogSmoke()
-  return
-}
-if !String.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOO_CLIPBOARD_SMOKE")) {
-  RunClipboardSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_WINDOW_OWNERSHIP_SMOKE") == "1" {
-  RunWindowOwnershipSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_DEVTOOLS_INPUT_SMOKE") == "1" {
+data struct SmokeMode(Name string, Value string, Run Action) { }
+
+func RunDevToolsInputSmoke() {
   let window = Window{Title: "Goo DevTools input", Width: 560, Height: 520, Root: DevToolsInputSmokeCell{}}.Open()
   let deadline = Environment.TickCount64 + 120000
   let done = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_INPUT_DONE") ?? ""
@@ -3244,196 +3216,76 @@ if Environment.GetEnvironmentVariable("GOO_DEVTOOLS_INPUT_SMOKE") == "1" {
     window.RequestClose()
     window.Pump(0.016)
   }
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_WINDOW_SIZE_CONSTRAINTS_SMOKE") == "1" {
-  WindowSizeConstraintsSmoke.Run()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_WINDOW_ACTIVATION_SMOKE") == "1" {
-  WindowActivationSmoke.Run()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_EMBEDDED_HOST_SMOKE") == "1" {
-  EmbeddedHostSmoke.Run()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE") == "1" {
-  DiagnosticCaptureFixture.Run()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_ALL_BLOB_BENCHMARK") == "1" {
-  RunAllBlobBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PIPELINE_CACHE_BENCHMARK") == "1" {
-  RunPipelineCacheBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_INPUT_LATENCY_SMOKE") == "1" {
-  RunPerformanceLatencyBenchmark(managedEntryTimestamp)
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_GPU_TIMESTAMPS_SMOKE") == "1" {
-  RunGpuTimestampSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_GPU_PATH_BENCHMARK") == "1" {
-  RunGpuPathBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_GPU_GLASS_BENCHMARK") == "1" {
-  RunGpuGlassBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_NATIVE_INPUT_SMOKE") == "1" {
-  RunNativeInputSmoke()
-  return
 }
 
-if Environment.GetEnvironmentVariable("GOO_PERFORMANCE_SMOKE") == "1" {
-  RunPerformanceBenchmark()
-  return
+func RunSelectedSmoke(modes []SmokeMode) bool {
+  for mode in modes {
+    let value = Environment.GetEnvironmentVariable(mode.Name)
+    if (mode.Value == "" && !String.IsNullOrEmpty(value)) || value == mode.Value {
+      mode.Run()
+      return true
+    }
+  }
+  return false
 }
-if Environment.GetEnvironmentVariable("GOO_IDLE_SMOKE") == "1" {
-  RunIdleSmoke()
-  return
+
+let managedEntryTimestamp = Stopwatch.GetTimestamp()
+Window.ConfigureApplication("Goo Readback async readback smoke", "0.1.0", "io.github.obselate.goo.readback.readback")
+let modes = []SmokeMode{
+  SmokeMode("GOO_NATIVE_ACCESSIBILITY_SMOKE", "1", () -> RunNativeAccessibilitySmoke()),
+  SmokeMode("GOO_NATIVE_DROP_SMOKE", "1", () -> RunNativeFileDropSmoke()),
+  SmokeMode("GOO_VIRTUAL_ROWS_SMOKE", "1", () -> RunVirtualRowsSmoke()),
+  SmokeMode("GOO_CUSTOM_LAYOUT_SMOKE", "1", () -> RunCustomLayoutSmoke()),
+  SmokeMode("GOO_FILE_DIALOG_SMOKE", "", () -> RunFileDialogSmoke()),
+  SmokeMode("GOO_CLIPBOARD_SMOKE", "", () -> RunClipboardSmoke()),
+  SmokeMode("GOO_WINDOW_OWNERSHIP_SMOKE", "1", () -> RunWindowOwnershipSmoke()),
+  SmokeMode("GOO_DEVTOOLS_INPUT_SMOKE", "1", () -> RunDevToolsInputSmoke()),
+  SmokeMode("GOO_WINDOW_SIZE_CONSTRAINTS_SMOKE", "1", () -> WindowSizeConstraintsSmoke.Run()),
+  SmokeMode("GOO_WINDOW_ACTIVATION_SMOKE", "1", () -> WindowActivationSmoke.Run()),
+  SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
+  SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
+  SmokeMode("GOO_ALL_BLOB_BENCHMARK", "1", () -> RunAllBlobBenchmark()),
+  SmokeMode("GOO_PIPELINE_CACHE_BENCHMARK", "1", () -> RunPipelineCacheBenchmark()),
+  SmokeMode("GOO_INPUT_LATENCY_SMOKE", "1", () -> RunPerformanceLatencyBenchmark(managedEntryTimestamp)),
+  SmokeMode("GOO_GPU_TIMESTAMPS_SMOKE", "1", () -> RunGpuTimestampSmoke()),
+  SmokeMode("GOO_GPU_PATH_BENCHMARK", "1", () -> RunGpuPathBenchmark()),
+  SmokeMode("GOO_GPU_GLASS_BENCHMARK", "1", () -> RunGpuGlassBenchmark()),
+  SmokeMode("GOO_NATIVE_INPUT_SMOKE", "1", () -> RunNativeInputSmoke()),
+  SmokeMode("GOO_PERFORMANCE_SMOKE", "1", () -> RunPerformanceBenchmark()),
+  SmokeMode("GOO_IDLE_SMOKE", "1", () -> RunIdleSmoke()),
+  SmokeMode("GOO_OFFSCREEN_FAILURE_SMOKE", "1", () -> RunOffscreenFailureSmoke()),
+  SmokeMode("GOO_SCROLLBAR_SMOKE", "1", () -> RunScrollbarSmoke()),
+  SmokeMode("GOO_SHADER_EFFECT_SMOKE", "1", () -> RunShaderEffectSmoke()),
+  SmokeMode("GOO_LIQUID_GLASS_ALPHA_SMOKE", "1", () -> RunLiquidGlassAlphaSmoke()),
+  SmokeMode("GOO_FRAGMENT_CORRECTNESS_SMOKE", "1", () -> RunFragmentCorrectnessSmoke()),
+  SmokeMode("GOO_SHADER_EFFECT_BENCHMARK", "1", () -> RunShaderEffectBenchmark()),
+  SmokeMode("GOO_PIPELINE_IDENTITY_SMOKE", "1", () -> RunPipelineIdentitySmoke()),
+  SmokeMode("GOO_INPUT_ACCESSIBILITY_SMOKE", "1", () -> RunInputAccessibilitySmoke()),
+  SmokeMode("GOO_PROTECTED_TEXT_SMOKE", "1", () -> RunProtectedTextSmoke()),
+  SmokeMode("GOO_TEXT_EDITOR_SMOKE", "1", () -> RunTextEditorSmoke()),
+  SmokeMode("GOO_LIVE_FRAME_PACING_SMOKE", "1", () -> RunLiveFramePacingSmoke()),
+  SmokeMode("GOO_FRAME_PACING_SMOKE", "1", () -> RunFramePacingChecks()),
+  SmokeMode("GOO_VSYNC_SMOKE", "1", () -> RunVSyncSmoke()),
+  SmokeMode("GOO_QUEUE_ISOLATION_SMOKE", "1", () -> RunQueueIsolationSmoke()),
+  SmokeMode("GOO_QUEUE_WAKE_SMOKE", "1", () -> RunQueueWakeSmoke()),
+  SmokeMode("GOO_TIMELINE_COMPLETION_SMOKE", "1", () -> RunTimelineCompletionSmoke()),
+  SmokeMode("GOO_VIRTUAL_TABLE_SMOKE", "1", () -> RunVirtualTableSmoke()),
+  SmokeMode("GOO_VIRTUAL_TABLE_BENCHMARK", "1", () -> RunVirtualTableBenchmark()),
+  SmokeMode("GOO_PRIMITIVE_METRICS_SMOKE", "1", () -> RunPrimitiveUploadMetricsSmoke()),
+  SmokeMode("GOO_PRIMITIVE_UPLOAD_BENCHMARK", "1", () -> RunPrimitiveUploadBenchmark()),
+  SmokeMode("GOO_TEXT_CULLING_SMOKE", "1", () -> RunTextCullingSmoke()),
+  SmokeMode("GOO_TEXT_TRANSPORT_SMOKE", "1", () -> RunTextTransportSmoke()),
+  SmokeMode("GOO_RETENTION_SMOKE", "1", () -> RunRetentionSmoke()),
+  SmokeMode("GOO_IMAGE_FILE_SMOKE", "1", () -> RunImageFileSmoke()),
+  SmokeMode("GOO_IMAGE_STAGING_SMOKE", "1", () -> RunImageStagingSmoke()),
+  SmokeMode("GOO_IMAGE_RETENTION_SMOKE", "1", () -> RunImageRetentionSmoke()),
+  SmokeMode("GOO_EFFECTS_SMOKE", "1", () -> RunEffectsSmoke()),
+  SmokeMode("GOO_ROUNDED_OVERFLOW_SMOKE", "1", () -> RunRoundedOverflowSmoke()),
+  SmokeMode("GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE", "1", () -> RunRoundedResizeFirstFrameSmoke()),
+  SmokeMode("GOO_PADDING_EDGE_OVERFLOW_SMOKE", "1", () -> RunPaddingEdgeOverflowSmoke()),
+  SmokeMode("GOO_VECTOR_QUALITY_SMOKE", "1", () -> RunVectorQualitySmoke()),
+  SmokeMode("GOO_CLIP_CAPTURE_SMOKE", "1", () -> RunClipCaptureSmoke()),
+  SmokeMode("GOO_PRIMITIVE_PIXEL_SMOKE", "1", () -> RunPrimitivePixelSmoke()),
+  SmokeMode("GOO_READBACK_MODE", "measure", () -> RunReadbackReadbackMeasure()),
 }
-if Environment.GetEnvironmentVariable("GOO_OFFSCREEN_FAILURE_SMOKE") == "1" {
-  RunOffscreenFailureSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_SCROLLBAR_SMOKE") == "1" {
-  RunScrollbarSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_SHADER_EFFECT_SMOKE") == "1" {
-  RunShaderEffectSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_LIQUID_GLASS_ALPHA_SMOKE") == "1" {
-  RunLiquidGlassAlphaSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_FRAGMENT_CORRECTNESS_SMOKE") == "1" {
-  RunFragmentCorrectnessSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_SHADER_EFFECT_BENCHMARK") == "1" {
-  RunShaderEffectBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PIPELINE_IDENTITY_SMOKE") == "1" {
-  RunPipelineIdentitySmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_INPUT_ACCESSIBILITY_SMOKE") == "1" {
-  RunInputAccessibilitySmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PROTECTED_TEXT_SMOKE") == "1" {
-  RunProtectedTextSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_TEXT_EDITOR_SMOKE") == "1" {
-  RunTextEditorSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_LIVE_FRAME_PACING_SMOKE") == "1" {
-  RunLiveFramePacingSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_FRAME_PACING_SMOKE") == "1" {
-  RunFramePacingChecks()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_VSYNC_SMOKE") == "1" {
-  RunVSyncSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_QUEUE_ISOLATION_SMOKE") == "1" {
-  RunQueueIsolationSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_QUEUE_WAKE_SMOKE") == "1" {
-  RunQueueWakeSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_TIMELINE_COMPLETION_SMOKE") == "1" {
-  RunTimelineCompletionSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_VIRTUAL_TABLE_SMOKE") == "1" {
-  RunVirtualTableSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_VIRTUAL_TABLE_BENCHMARK") == "1" {
-  RunVirtualTableBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PRIMITIVE_METRICS_SMOKE") == "1" {
-  RunPrimitiveUploadMetricsSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PRIMITIVE_UPLOAD_BENCHMARK") == "1" {
-  RunPrimitiveUploadBenchmark()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_TEXT_CULLING_SMOKE") == "1" {
-  RunTextCullingSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_TEXT_TRANSPORT_SMOKE") == "1" {
-  RunTextTransportSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_RETENTION_SMOKE") == "1" {
-  RunRetentionSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_IMAGE_FILE_SMOKE") == "1" {
-  RunImageFileSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_IMAGE_STAGING_SMOKE") == "1" {
-  RunImageStagingSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_IMAGE_RETENTION_SMOKE") == "1" {
-  RunImageRetentionSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_EFFECTS_SMOKE") == "1" {
-  RunEffectsSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_ROUNDED_OVERFLOW_SMOKE") == "1" {
-  RunRoundedOverflowSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE") == "1" {
-  RunRoundedResizeFirstFrameSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PADDING_EDGE_OVERFLOW_SMOKE") == "1" {
-  RunPaddingEdgeOverflowSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_VECTOR_QUALITY_SMOKE") == "1" {
-  RunVectorQualitySmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_CLIP_CAPTURE_SMOKE") == "1" {
-  RunClipCaptureSmoke()
-  return
-}
-if Environment.GetEnvironmentVariable("GOO_PRIMITIVE_PIXEL_SMOKE") == "1" {
-  RunPrimitivePixelSmoke()
-  return
-}
-let mode = Environment.GetEnvironmentVariable("GOO_READBACK_MODE")
-if mode == "measure" {
-  RunReadbackReadbackMeasure()
-} else {
-  RunReadbackSmoke()
-}
+if !RunSelectedSmoke(modes) { RunReadbackSmoke() }
