@@ -57,8 +57,8 @@ internal class DevToolsInputFixtures {
       send(session, "{\"event\":\"click\",\"nodeId\":" + entry.ToString() + "}")
       send(session, "{\"event\":\"text\",\"text\":\"hello\"}")
       if root.Value != "hello" { return false }
-      send(session, "{\"event\":\"key.down\",\"key\":\"Backspace\"}")
-      send(session, "{\"event\":\"key.up\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.down\",\"gestureId\":\"key-gesture\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.up\",\"gestureId\":\"key-gesture\",\"key\":\"Backspace\"}")
       if root.Value != "hell" { return false }
       root.Show = false
       root.Rebuild()
@@ -77,11 +77,29 @@ internal class DevToolsInputFixtures {
     let session = window.AttachDiagnostics(true)
     try {
       window.UpdateTree()
+      let action = find(session, "action")
       let drag = find(session, "drag")
-      send(session, "{\"event\":\"pointer.down\",\"nodeId\":" + drag.ToString() + "}")
-      send(session, "{\"event\":\"pointer.move\",\"x\":300,\"y\":200}")
+      let gesture = "test-gesture"
+      send(session, "{\"event\":\"pointer.down\",\"gestureId\":\"" + gesture
+        +"\",\"nodeId\":" + action.ToString() + "}")
+      let pressed = session.CaptureSnapshot(true)
+      var pressedState = false
+      for node in pressed.Added { if node.Id == action { pressedState = node.Pressed } }
+      if !pressedState { return false }
+      send(session, "{\"event\":\"pointer.cancel\",\"gestureId\":\"" + gesture + "\"}")
+      let cancelled = session.CaptureSnapshot(true)
+      for node in cancelled.Added { if node.Id == action && node.Pressed { return false } }
+      let dragGesture = "drag-gesture"
+      send(session, "{\"event\":\"pointer.down\",\"gestureId\":\"" + dragGesture
+        +"\",\"nodeId\":" + drag.ToString() + "}")
+      var rejectedOwner = false
+      try { send(session, "{\"event\":\"pointer.move\",\"gestureId\":\"other\",\"x\":300,\"y\":200}") }
+      catch (error DiagnosticGestureException) { rejectedOwner = error.Code == "gesture-owned" }
+      if !rejectedOwner || root.Moves != 0 { return false }
+      send(session, "{\"event\":\"pointer.move\",\"gestureId\":\"" + dragGesture
+        +"\",\"x\":300,\"y\":200}")
       if root.Moves != 1 { return false }
-      send(session, "{\"event\":\"pointer.cancel\"}")
+      send(session, "{\"event\":\"pointer.cancel\",\"gestureId\":\"" + dragGesture + "\"}")
       if root.Cancels != 1 || root.Clicks != 0 { return false }
       var rejected int32
       for json in []string {"{\"event\":\"click\",\"x\":1}", "{\"event\":\"key.down\",\"key\":\"999\"}",

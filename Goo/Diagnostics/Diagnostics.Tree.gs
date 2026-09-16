@@ -115,6 +115,13 @@ internal class DiagnosticTreeState {
       selectionChanged)
   }
 
+  internal func FullSnapshot(current DiagnosticSnapshot) DiagnosticSnapshot {
+    let added = List[DiagnosticNodeSnapshot](previous.Count)
+    for pair in previous { added.Add(pair.Value) }
+    return DiagnosticSnapshot(current.Sequence, true, current.WindowId, current.RootId, current.HoveredId,
+      current.SelectedId, added, List[DiagnosticNodeSnapshot](), List[int64](), false)
+  }
+
   internal func Find(id int64) DiagnosticNodeSnapshot? {
     if previous.TryGetValue(id, out var node) {
       return node

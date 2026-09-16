@@ -1149,7 +1149,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 state = DiagnosticConnectionState.Connected
             }
             localWriter.WriteLine(Handshake())
-            localWriter.WriteLine(RequestLine("snapshot", "{}"))
+            localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
             Signal()
             while true {
                 lock gate {
@@ -1176,7 +1176,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                         if stopRequested || state != DiagnosticConnectionState.Connected {
                             return
                         }
-                        localWriter.WriteLine(RequestLine("snapshot", "{}"))
+                        localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
                     }
                 }
             }

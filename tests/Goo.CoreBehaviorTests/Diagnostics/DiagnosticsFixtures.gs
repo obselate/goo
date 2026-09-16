@@ -33,7 +33,17 @@ internal class DiagnosticsFixtures {
     child.Parent = nil
     let third = state.Capture(root, "window-1", nil, nil)
     if third.RootId != first.RootId || third.Removed.Count != 1 { return false }
-    return third.Removed[0] == childId
+    if third.Removed[0] != childId { return false }
+    root.Children.Add(child)
+    child.Parent = root
+    child.Content = "again"
+    let fourth = state.Capture(root, "window-1", nil, nil)
+    let full = state.FullSnapshot(fourth)
+    if !full.IsFull || full.Added.Count != 2 || full.Updated.Count != 0 { return false }
+    child.Content = "final"
+    let fifth = state.Capture(root, "window-1", nil, nil)
+    return !fifth.IsFull && fifth.Added.Count == 0 && fifth.Updated.Count == 1
+      && fifth.Updated[0].Content == "final"
   }
 
   func CaptureRequestRetriesAfterNotReady() bool {
@@ -92,9 +102,15 @@ internal class DiagnosticsFixtures {
       using let sizeDocument = JsonDocument.Parse("{\"nodeId\":" + nodeId.ToString()
         +",\"value\":\"FontSize = 22px\"}")
       session.OverridePayload(sizeDocument.RootElement)
+      using let widthDocument = JsonDocument.Parse("{\"nodeId\":" + nodeId.ToString()
+        +",\"property\":\"Width\",\"value\":\"100\\t\"}")
+      let response = session.OverridePayload(widthDocument.RootElement)
+      using let parsedResponse = JsonDocument.Parse(response)
+      if parsedResponse.RootElement.GetProperty("value").GetString() != "100\t" { return false }
       window.UpdateTree()
       guard let overridden = window.Tree else { return false }
       if overridden.Color != overrideColor || overridden.FontSize.Value != 22.0F
+        || overridden.Width.Value != 100.0F
         || overridden.Children.Count != 1 || overridden.Children[0].Color != overrideColor
         || overridden.Children[0].FontSize.Value != 22.0F {
           return false
@@ -104,6 +120,7 @@ internal class DiagnosticsFixtures {
       window.UpdateTree()
       guard let restored = window.Tree else { return false }
       return restored.Color == originalColor && restored.FontSize.Value == 14.0F
+        && restored.Width.Value == 200.0F
         && restored.Children.Count == 1 && restored.Children[0].Color == originalColor
         && restored.Children[0].FontSize.Value == 14.0F
     } finally {

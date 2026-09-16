@@ -8,7 +8,7 @@ public sealed class DevToolsInputTests
         Assert.True(new DevToolsInputFixtures().OptInRoutingSettlementAndStaleTargets());
 
     [Fact]
-    public void CapturedDragAlwaysCancelsAndInvalidInputIsRejected() =>
+    public void CapturedDragRejectsForeignClientsThenCancelsAndInvalidInputIsRejected() =>
         Assert.True(new DevToolsInputFixtures().CaptureCancelAndValidation());
 
     [Fact]

@@ -207,12 +207,9 @@ internal partial class DevToolsSession : IDisposable {
   internal func CaptureSnapshot(full bool = false) DiagnosticSnapshot {
     owner.RequireElementHandleThread("DevToolsSession.CaptureSnapshot")
     if disposed { throw ObjectDisposedException("DevToolsSession") }
-    if full { identity.Invalidate()
-      pending = true }
-    guard let current = captureIfNeeded() else {
-      throw InvalidOperationException("The diagnostics snapshot is unavailable.")
-    }
-    return current
+    let current = if full { captureCurrent(true) } else { captureIfNeeded() }
+    guard let available = current else { throw InvalidOperationException("The diagnostics snapshot is unavailable.") }
+    return full ? identity.FullSnapshot(available) : available
   }
 
   internal func PointerEvent(root Node?, kind PointerEventKind, x float32, y float32,
@@ -276,14 +273,7 @@ internal partial class DevToolsSession : IDisposable {
       if disposed { return }
       if inspecting && pointerValid { updateHover(root, pointerX, pointerY) }
       if !pending && int32(effects) == 0 && !layoutChanged && !changed { return }
-      pending = false
-      let next = identity.Capture(root, windowId, hovered, selected)
-      snapshot = next
-      clearRemovedOverrides(next.Removed)
-      if next.HasChanges {
-        let callbacks = List[Action[DiagnosticSnapshot]](snapshotChanged)
-        for callback in callbacks { callback(next) }
-      }
+      captureCurrent(true)
     }
 
   internal func MetadataUpdated() {
@@ -306,28 +296,29 @@ internal partial class DevToolsSession : IDisposable {
     owner.Post(action)
   }
 
-  internal func CapturePayload() string {
+  internal func CapturePayload() string -> CapturePayload(captureTracker)
+
+  internal func CapturePayload(tracker DiagnosticCaptureTracker) string {
     owner.RequireElementHandleThread("DevToolsSession.CapturePayload")
     if disposed { throw ObjectDisposedException("DevToolsSession") }
-    if captureTracker.NeedsRequest {
+    if tracker.NeedsRequest {
       let status = owner.RequestDiagnosticsCapture()
       if status != WindowReadbackRequestStatus.Accepted
         && status != WindowReadbackRequestStatus.NotReady
         && status != WindowReadbackRequestStatus.Busy{
-          captureTracker.Reset()
+          tracker.Reset()
           throw InvalidOperationException("Goo capture request was not accepted: " + status.ToString())
-        }
-      captureTracker.Observe(status)
-      if captureTracker.NeedsRequest {
-        // RequestReadback already drives its prerequisite frame. An extra redraw
-        // can invalidate that frame forever for scenes requiring a full compile.
+      }
+      tracker.Observe(status)
+      if status == WindowReadbackRequestStatus.NotReady {
         return "{\"command\":\"capture\",\"pending\":true}"
       }
     }
     guard let result = owner.PollDiagnosticsCapture() else {
+      tracker.Reset()
       return "{\"command\":\"capture\",\"pending\":true}"
     }
-    captureTracker.Complete()
+    tracker.Complete()
     let pixels = result.Pixels
     return "{\"command\":\"capture\",\"pending\":false,\"format\":\"rgba8-srgb-premultiplied\","
     +"\"origin\":\"top-left\",\"width\":" + result.Width.ToString()
@@ -428,9 +419,19 @@ internal partial class DevToolsSession : IDisposable {
     if let current = snapshot {
       if !pending { return current }
     }
+    return captureCurrent(false)
+  }
+
+  private func captureCurrent(notify bool) DiagnosticSnapshot? {
+    if disposed { return nil }
     let next = identity.Capture(owner.Tree, windowId, hovered, selected)
     snapshot = next
     pending = false
+    clearRemovedOverrides(next.Removed)
+    if notify && next.HasChanges {
+      let callbacks = List[Action[DiagnosticSnapshot]](snapshotChanged)
+      for callback in callbacks { callback(next) }
+    }
     return next
   }
 
@@ -510,5 +511,5 @@ internal partial class DevToolsSession : IDisposable {
     return quote(actual)
   }
 
-  private func quote(value string) string -> "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
+  private func quote(value string) string -> DiagnosticJson.Quote(value)
 }
