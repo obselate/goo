@@ -3,6 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Globalization
+import System.Text
 import System.Text.Json
 
 internal class DiagnosticOverrideValue {
@@ -148,35 +149,51 @@ internal func parseDiagnosticOverride(root JsonElement) DiagnosticOverrideReques
 
 internal func diagnosticOverrideSpec(property string) DiagnosticOverrideSpec {
   let normalized = property.Replace("-", "").Replace("_", "").Trim().ToLowerInvariant()
-  switch normalized {
-    case "backgroundcolor" { return DiagnosticOverrideSpec("BackgroundColor",
-      DiagnosticOverrideValueKind.Color, []StyleField{ StyleField.BackgroundColor }) }
-    case "color" { return DiagnosticOverrideSpec("Color",
-      DiagnosticOverrideValueKind.Color, []StyleField{ StyleField.Color }) }
-    case "opacity" { return DiagnosticOverrideSpec("Opacity",
-      DiagnosticOverrideValueKind.Scalar, []StyleField{ StyleField.Opacity }) }
-    case "width" { return DiagnosticOverrideSpec("Width",
-      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.Width }) }
-    case "height" { return DiagnosticOverrideSpec("Height",
-      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.Height }) }
-    case "padding" { return DiagnosticOverrideSpec("Padding",
+  for spec in diagnosticOverrideSpecs() {
+    if spec.Name.ToLowerInvariant() == normalized { return spec }
+  }
+  throw NotSupportedException("Unsupported runtime override property: " + property)
+}
+
+internal func diagnosticOverrideSpecs() []DiagnosticOverrideSpec -> []DiagnosticOverrideSpec{
+    DiagnosticOverrideSpec("BackgroundColor",
+      DiagnosticOverrideValueKind.Color, []StyleField{ StyleField.BackgroundColor }),
+    DiagnosticOverrideSpec("Color",
+      DiagnosticOverrideValueKind.Color, []StyleField{ StyleField.Color }),
+    DiagnosticOverrideSpec("Opacity",
+      DiagnosticOverrideValueKind.Scalar, []StyleField{ StyleField.Opacity }),
+    DiagnosticOverrideSpec("Width",
+      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.Width }),
+    DiagnosticOverrideSpec("Height",
+      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.Height }),
+    DiagnosticOverrideSpec("Padding",
       DiagnosticOverrideValueKind.Length, []StyleField{
         StyleField.Padding, StyleField.PaddingLeft, StyleField.PaddingTop,
         StyleField.PaddingRight, StyleField.PaddingBottom,
-      }) }
-    case "margin" { return DiagnosticOverrideSpec("Margin",
+      }),
+    DiagnosticOverrideSpec("Margin",
       DiagnosticOverrideValueKind.Length, []StyleField{
         StyleField.Margin, StyleField.MarginLeft, StyleField.MarginTop,
         StyleField.MarginRight, StyleField.MarginBottom,
-      }) }
-    case "gap" { return DiagnosticOverrideSpec("Gap",
-      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.Gap }) }
-    case "borderradius" { return DiagnosticOverrideSpec("BorderRadius",
-      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.BorderRadius }) }
-    case "fontsize" { return DiagnosticOverrideSpec("FontSize",
-      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.FontSize }) }
-    default { throw NotSupportedException("Unsupported runtime override property: " + property) }
+      }),
+    DiagnosticOverrideSpec("Gap",
+      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.Gap }),
+    DiagnosticOverrideSpec("BorderRadius",
+      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.BorderRadius }),
+    DiagnosticOverrideSpec("FontSize",
+      DiagnosticOverrideValueKind.Length, []StyleField{ StyleField.FontSize }),
   }
+
+internal func diagnosticOverridePropertiesPayload() string {
+  let builder = StringBuilder("[")
+  let specs = diagnosticOverrideSpecs()
+  var index int32
+  while index < specs.Length {
+    if index != 0 { builder.Append(",") }
+    builder.Append(DiagnosticJson.Quote(specs[index].Name))
+    index = index + 1
+  }
+  return builder.Append("]").ToString()
 }
 
 internal func diagnosticOverrideEntries(spec DiagnosticOverrideSpec, value string) List[StyleEntry] {

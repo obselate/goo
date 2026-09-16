@@ -356,9 +356,9 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func hello() string {
     let builder = StringBuilder()
-    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append(",\"capabilities\":[\"tree.snapshot\",\"tree.resolved-semantics\",\"target.handles\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\"")
+    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append(",\"capabilities\":[\"tree.snapshot\",\"tree.resolved-semantics\",\"target.handles\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\",\"runtime-overrides.describe\"")
     if session.AllowsInput { builder.Append(",\"input\",\"input.gesture-lease\"") }
-    builder.Append("]}")
+    builder.Append("],\"runtimeOverrideProperties\":").Append(diagnosticOverridePropertiesPayload()).Append("}")
     return builder.ToString()
   }
 

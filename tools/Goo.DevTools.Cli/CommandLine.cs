@@ -6,7 +6,7 @@ internal sealed class CommandLine
     {
         ["help"] = new([], ["json"]),
         ["dev"] = new(["project", "configuration", "env", "wait"], ["watch", "no-watch", "input", "inspector", "focus"]),
-        ["attach"] = new(["project", "pid", "pipe", "app", "window", "wait", "command", "payload"], ["latest", "inspector", "focus", "once", "json"]),
+        ["attach"] = new(["project", "pid", "pipe", "app", "window", "wait", "command", "payload", "require-capabilities", "require-override-property"], ["latest", "inspector", "focus", "once", "json"]),
         ["doctor"] = new(["project"], ["json"]),
         ["list"] = new(["project", "pid", "pipe", "app", "window"], ["json"]),
         ["capture"] = new(["project", "pid", "pipe", "app", "window", "wait", "format", "output"], ["latest", "json"]),

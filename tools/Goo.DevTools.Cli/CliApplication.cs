@@ -48,7 +48,7 @@ internal static class CliApplication
                     Console.WriteLine(JsonSerializer.Serialize(new
                     {
                         version = Version,
-                        features = new[] { "list", "input", "dev.input", "errors.structured", "process-tree-cleanup" }
+                        features = new[] { "list", "input", "dev.input", "errors.structured", "process-tree-cleanup", "attach.require-capabilities" }
                     }));
                 }
                 else
@@ -208,6 +208,12 @@ internal static class CliApplication
 
     private static async Task<int> RunAttachAsync(CommandLine commandLine)
     {
+        if (!commandLine.Has("once") && (commandLine.Has("require-capabilities") || commandLine.Has("require-override-property")))
+            throw new CliException("--require-capabilities and --require-override-property require --once.");
+        if (commandLine.Has("require-capabilities") && string.IsNullOrWhiteSpace(commandLine.Get("require-capabilities")))
+            throw new CliException("--require-capabilities needs a comma-separated list of capability names.");
+        if (commandLine.Has("require-override-property") && string.IsNullOrWhiteSpace(commandLine.Get("require-override-property")))
+            throw new CliException("--require-override-property needs a property name.");
         var project = ResolveProject(commandLine.Get("project"));
         var projectDirectory = ResolveProjectDirectory(commandLine.Get("project"), project);
         var processId = ParseOptionalInt(commandLine.Get("pid"), "pid");
@@ -240,6 +246,7 @@ internal static class CliApplication
             throw new CliException("Timed out waiting for the Goo endpoint handshake.", "timeout", "handshake");
         }
         ValidateHandshake(handshake, descriptor);
+        ValidateRequestRequirements(handshake!, commandLine.Get("require-capabilities"), commandLine.Get("require-override-property"));
         WriteProtocolLine(handshake!, commandLine.Has("json"));
 
         if (commandLine.Has("once"))
@@ -251,7 +258,7 @@ internal static class CliApplication
             {
                 request = await connection.RequestAsync(requestCommand, ParsePayload(commandLine.Get("payload")), cancellation.Token);
             }
-            catch (Exception exception) when (exception is OperationCanceledException or IOException or SocketException)
+            catch (Exception exception) when (exception is OperationCanceledException or IOException or SocketException or JsonException)
             {
                 var consequence = mayHaveApplied ? " It may already have applied. Inspect state before another action." : "";
                 throw new CliException($"The endpoint did not acknowledge the {requestCommand} request.{consequence}", "request-unconfirmed", requestCommand, mayHaveApplied, handshake);
@@ -263,6 +270,11 @@ internal static class CliApplication
             }
             if (IsError(request))
                 DecorateError(request, requestCommand, mayHaveApplied, handshake);
+            else if (BoolValue(request["ok"]) != true)
+            {
+                var consequence = mayHaveApplied ? " It may already have applied. Inspect state before another action." : "";
+                throw new CliException($"The endpoint returned an invalid acknowledgement for {requestCommand}.{consequence}", "request-unconfirmed", requestCommand, mayHaveApplied, handshake);
+            }
             WriteProtocolLine(request.ToJsonString(), commandLine.Has("json"));
             return BoolValue(request["ok"]) == false
                 || StringValue(request["type"]) == "error" || request["error"] is not null ? 1 : 0;
@@ -270,6 +282,36 @@ internal static class CliApplication
 
         await RunInteractiveAsync(connection, commandLine.Has("json"), ParseWait(commandLine.Get("wait")), cancellation.Token);
         return 0;
+    }
+
+    private static void ValidateRequestRequirements(string handshake, string? requiredCapabilities, string? requiredProperty)
+    {
+        if (string.IsNullOrWhiteSpace(requiredCapabilities) && string.IsNullOrWhiteSpace(requiredProperty))
+            return;
+        using var hello = JsonDocument.Parse(handshake);
+        var root = hello.RootElement;
+        if (!root.TryGetProperty("capabilities", out var capabilities) || capabilities.ValueKind != JsonValueKind.Array
+            || capabilities.EnumerateArray().Any(value => value.ValueKind != JsonValueKind.String))
+            throw new CliException("The endpoint did not provide a valid capability list. No request was sent.", "unsupported-capability", "handshake", false, handshake);
+        var available = capabilities.EnumerateArray().Select(value => value.GetString()!).ToHashSet(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(requiredCapabilities))
+        {
+            var required = requiredCapabilities.Split(',', StringSplitOptions.TrimEntries);
+            if (required.Any(string.IsNullOrEmpty))
+                throw new CliException("--require-capabilities needs a comma-separated list of capability names.");
+            var missing = required.Where(capability => !available.Contains(capability)).Distinct(StringComparer.Ordinal).ToArray();
+            if (missing.Length != 0)
+                throw new CliException($"The endpoint does not advertise required capability: {string.Join(", ", missing)}. No request was sent.", "unsupported-capability", "handshake", false, handshake);
+        }
+        if (string.IsNullOrWhiteSpace(requiredProperty))
+            return;
+        if (!available.Contains("runtime-overrides.describe"))
+            throw new CliException("The endpoint does not advertise required capability: runtime-overrides.describe. No request was sent.", "unsupported-capability", "handshake", false, handshake);
+        if (!root.TryGetProperty("runtimeOverrideProperties", out var properties) || properties.ValueKind != JsonValueKind.Array
+            || properties.EnumerateArray().Any(value => value.ValueKind != JsonValueKind.String))
+            throw new CliException("The endpoint did not provide a valid runtime override property list. No request was sent.", "unsupported-property", "handshake", false, handshake);
+        if (!properties.EnumerateArray().Any(value => string.Equals(value.GetString(), requiredProperty, StringComparison.OrdinalIgnoreCase)))
+            throw new CliException($"The endpoint does not advertise runtime override property '{requiredProperty}'. No request was sent.", "unsupported-property", "handshake", false, handshake);
     }
 
     private static async Task<int> RunInputAsync(CommandLine commandLine)
@@ -965,7 +1007,11 @@ internal static class CliApplication
     private static JsonObject RuntimeStatus(string? handshake)
     {
         var hello = string.IsNullOrWhiteSpace(handshake) ? null : JsonNode.Parse(handshake) as JsonObject;
-        var capabilities = hello?["capabilities"]?.DeepClone() ?? new JsonArray();
+        var rawCapabilities = hello?["capabilities"] as JsonArray;
+        var validCapabilities = rawCapabilities is not null && rawCapabilities.All(item => StringValue(item) is not null);
+        var capabilities = validCapabilities
+            ? (JsonArray)rawCapabilities!.DeepClone()
+            : new JsonArray();
         var identity = new JsonObject
         {
             ["pid"] = hello?["pid"]?.DeepClone(),
@@ -978,8 +1024,9 @@ internal static class CliApplication
             ["protocol"] = hello?["protocol"]?.DeepClone() ?? "unavailable",
             ["protocolVersion"] = hello?["version"]?.DeepClone() ?? "unavailable",
             ["capabilities"] = capabilities,
+            ["runtimeOverrideProperties"] = hello?["runtimeOverrideProperties"]?.DeepClone() ?? "unavailable",
             ["identity"] = identity,
-            ["inputPermission"] = capabilities.AsArray().Any(item => StringValue(item) == "input") ? "enabled" : hello is null ? "unavailable" : "disabled",
+            ["inputPermission"] = !validCapabilities ? "unavailable" : capabilities.Any(item => StringValue(item) == "input") ? "enabled" : "disabled",
             ["inspectMode"] = hello?["inspectMode"]?.DeepClone() ?? "unavailable"
         };
     }

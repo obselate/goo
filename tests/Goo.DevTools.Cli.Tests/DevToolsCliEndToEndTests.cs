@@ -224,6 +224,45 @@ public sealed class DevToolsCliEndToEndTests
         Assert.Contains("\"command\":\"snapshot\"", result.StandardOutput, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 2)]
+    public async Task AttachGuardsTypedMutationOnSameConnectionBeforeDispatch(bool supported, int exitCode)
+    {
+        using var directory = TemporaryDirectory.Create();
+        var pipeName = $"goo-guard-{Guid.NewGuid():N}";
+        await WriteDescriptorAsync(directory.Path, pipeName, "goo.devtools/1");
+        using var server = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var cliTask = RunCliAsync(directory.Path, "attach", "--latest", "--once", "--json",
+            "--command", "property.override", "--payload", "{\"target\":\"opaque\",\"property\":\"BackgroundColor\",\"value\":\"#fff\"}",
+            "--require-capabilities", "runtime-overrides,runtime-overrides.describe,target.handles",
+            "--require-override-property", "BackgroundColor", "--wait", "5");
+        await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        using var reader = new StreamReader(server, leaveOpen: true);
+        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
+        await ReadLineAsync(reader);
+        await writer.WriteLineAsync(ServerHello(
+            supported ? ["runtime-overrides", "runtime-overrides.describe", "target.handles"] : ["runtime-overrides"],
+            overrideProperties: supported ? ["BackgroundColor"] : null));
+        if (supported)
+        {
+            using var request = JsonDocument.Parse(await ReadLineAsync(reader));
+            Assert.Equal("property.override", request.RootElement.GetProperty("command").GetString());
+            await writer.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                type = "response", id = request.RootElement.GetProperty("id").GetString(), ok = true,
+                payload = new { property = "BackgroundColor" }
+            }));
+        }
+        var result = await cliTask;
+        Assert.Equal(exitCode, result.ExitCode);
+        if (!supported)
+        {
+            Assert.Contains("No request was sent", result.StandardError, StringComparison.Ordinal);
+            Assert.Null(await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+    }
+
     [Fact]
     public async Task ListedWindowIdsSelectSameTitleWindowsInOneProcess()
     {
@@ -667,7 +706,8 @@ public sealed class DevToolsCliEndToEndTests
         await File.WriteAllTextAsync(Path.Combine(directory, fileName ?? "goo-test.json"), JsonSerializer.Serialize(descriptor));
     }
 
-    private static string ServerHello(string[]? capabilities = null, int? processId = null, string windowId = "window-1") =>
+    private static string ServerHello(string[]? capabilities = null, int? processId = null, string windowId = "window-1",
+        string[]? overrideProperties = null) =>
         JsonSerializer.Serialize(new
         {
             type = "hello",
@@ -675,7 +715,8 @@ public sealed class DevToolsCliEndToEndTests
             pid = processId ?? Environment.ProcessId,
             windowId,
             sessionId = "test-session",
-            capabilities = capabilities ?? []
+            capabilities = capabilities ?? [],
+            runtimeOverrideProperties = overrideProperties
         });
 
     private static bool EndpointCheck(string output)
