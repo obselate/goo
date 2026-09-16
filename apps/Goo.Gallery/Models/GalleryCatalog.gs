@@ -29,36 +29,17 @@ internal class GalleryCatalog {
                 RailLabel: "LAYOUT & FLEX",
             },
             GalleryChapter{
-                Name: "surfaces",
-                TabLabel: "Surfaces",
-                Title: "One State, Many Surfaces",
-                Sentence: "One retained phrase travels through a tactile fridge, drawn ink, and a deterministic cipher.",
-                RailLabel: "RETAINED SURFACES",
-            },
-            GalleryChapter{
                 Name: "motion",
                 TabLabel: "Motion",
                 Title: "Motion & Dynamics",
                 Sentence: "Closed-form physical simulations and continuous velocity retargeting.",
                 RailLabel: "MOTION & DYNAMICS",
             },
-            GalleryChapter{
-                Name: "shaders",
-                TabLabel: "Shaders",
-                Title: "Shader Lab",
-                Sentence: "Three native fragment programs: procedural raycasting, radial light, and dither.",
-                RailLabel: "VULKAN SHADERS",
-            },
         }
         Showcases = []GalleryShowcase{
-            GalleryShowcase{Chapter: -1, Local: 0, Title: "Goo"},
             GalleryShowcase{Chapter: 0, Local: 0, Title: "Keyed Fibonacci tiles"},
             GalleryShowcase{Chapter: 0, Local: 1, Title: "Live modular poster"},
-            GalleryShowcase{Chapter: 1, Local: 0, Title: "One State, Many Surfaces"},
-            GalleryShowcase{Chapter: 2, Local: 0, Title: "Kinetic Physics & UI Dynamics"},
-            GalleryShowcase{Chapter: 3, Local: 0, Title: "3D World"},
-            GalleryShowcase{Chapter: 3, Local: 3, Title: "Radial Light"},
-            GalleryShowcase{Chapter: 3, Local: 7, Title: "Dither"},
+            GalleryShowcase{Chapter: 1, Local: 0, Title: "Kinetic Physics & UI Dynamics"},
         }
         OpeningSentence = "A retained interface rendered as one focused, interactive exhibit at a time."
     }
