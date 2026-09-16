@@ -120,6 +120,8 @@ internal static class CliApplication
             startInfo.ArgumentList.Add(argument);
         startInfo.Environment["GOO_DEVTOOLS"] = "1";
         startInfo.Environment["GOO_DEVTOOLS_DIR"] = runtimeDirectory;
+        if (commandLine.Has("input"))
+            startInfo.Environment["GOO_DEVTOOLS_INPUT"] = "1";
         if (commandLine.Has("inspector") || commandLine.Has("focus"))
             startInfo.Environment["GOO_DEVTOOLS_AUTOSTART"] = "1";
         ApplyEnvironmentOverrides(startInfo, commandLine);
@@ -874,6 +876,7 @@ internal static class CliApplication
         Console.WriteLine("  --latest             Select the newest endpoint.");
         Console.WriteLine("  --wait SECONDS       Wait for a descriptor, up to 300 seconds.");
         Console.WriteLine("  --inspector          Launch the standalone inspector when ready.");
+        Console.WriteLine("  --input              Permit agent input in the app launched by dev.");
         Console.WriteLine("  --focus              Launch or focus the standalone inspector.");
         Console.WriteLine("  --json               Keep protocol output as JSON lines.");
         Console.WriteLine();

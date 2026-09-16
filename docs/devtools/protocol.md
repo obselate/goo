@@ -62,7 +62,7 @@ Clients must inspect the handshake capabilities before enabling optional panels.
 
 ## Application input
 
-Input is separately opt-in: set both `GOO_DEVTOOLS=1` and `GOO_DEVTOOLS_INPUT=1`, or call `DevTools.Attach(window, true)` on the owning UI thread. Attaching without permission keeps inspection available without adding the `input` capability. Permission lasts until that diagnostics session is disposed. This is a trusted local automation endpoint, not a remote control service.
+Input is separately opt-in: launch with `goo dev --input --no-watch --project App.gsproj`, set both `GOO_DEVTOOLS=1` and `GOO_DEVTOOLS_INPUT=1`, or call `DevTools.Attach(window, true)` on the owning UI thread. The CLI flag sets the input environment variable for its child process. Attaching without permission keeps inspection available without adding the `input` capability. Permission lasts until that diagnostics session is disposed. This is a trusted local automation endpoint, not a remote control service.
 
 Send `command: "input"` with an object payload whose `event` is `pointer.move`, `pointer.down`, `pointer.up`, `pointer.cancel`, `wheel`, `key.down`, `key.up`, `text`, `click`, or `reset`. Commands run in arrival order through `PlatformInput` on the selected window's UI queue, including normal bubbling, focus, capture, default editing, and Cell invalidation. Use one client to order a multi-request gesture. Native user input can interleave; use a dedicated test window for deterministic automation.
 
@@ -76,7 +76,7 @@ A successful response has `ok: true` and `payload: {"command":"input","applied":
 Errors use `input-disabled`, `invalid-input`, `stale-target`, `closed`, `busy`, `timeout`, or `command`. Requests are limited to 65,536 characters and the UI queue to 32 pending requests. A five-second server timeout cancels work that has not begun. A handler already running may have applied input: **do not automatically retry timed-out actions**. Release/cancel a gesture explicitly when its result is uncertain. Oversized request lines close the connection. No input worker or frame work is created when diagnostics are disabled.
 
 ```sh
-GOO_DEVTOOLS=1 GOO_DEVTOOLS_INPUT=1 dotnet run --project App.gsproj
+goo dev --input --no-watch --project App.gsproj
 goo input click --pid 1234 --window "Main" --node 42
 goo input text --pid 1234 --window "Main" --text "hello"
 goo input key.down --pid 1234 --window "Main" --key Backspace

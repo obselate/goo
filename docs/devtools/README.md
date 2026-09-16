@@ -48,6 +48,16 @@ applied while the app is running.
 
 For a new project, start with the [quick start](../../README.md#quick-start).
 
+To allow an agent to inspect and interact with the app, launch with `--input`:
+
+```sh
+goo dev --input --no-watch --project HelloGoo/HelloGoo.gsproj
+```
+
+This enables both diagnostics and input in the launched app. No environment
+variables or application code changes are needed. The `--input` option requires
+a CLI build from this checkout until its next release.
+
 ## Inspect an app that is already running
 
 List live endpoints without connecting:

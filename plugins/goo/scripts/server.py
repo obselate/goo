@@ -51,7 +51,7 @@ def document(root: Path, path: str) -> Path:
 def goo_context(repository: str = "") -> dict:
     """List available API guides, template files, source provenance and runtime tool setup. Pass a Goo checkout for current docs."""
     root = source(repository)
-    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": documents(root), "runtime": "Launch with goo dev --no-watch --project App.gsproj. Use goo_targets to discover live windows, then pass an explicit PID and window ID. Input also requires GOO_DEVTOOLS_INPUT=1 in the app. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list and input commands."}
+    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": documents(root), "runtime": "Launch with goo dev --no-watch --project App.gsproj. Add --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option."}
 
 
 @mcp.tool(annotations=READ)
