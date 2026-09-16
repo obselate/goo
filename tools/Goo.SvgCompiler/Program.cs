@@ -20,10 +20,9 @@ internal static class Program
             if (args is ["--check", var checkInput])
             {
                 var bytes = CompileDeterministic(checkInput, out var hash);
-                var asset = Gcv1Reader.Read(bytes);
                 Console.WriteLine(string.Create(
                     CultureInfo.InvariantCulture,
-                    $"gcv1 bytes={bytes.Length} nodes={asset.Nodes} contours={asset.Contours} curves={asset.Curves} paints={asset.Paints} stops={asset.PaintStops} strokes={asset.Strokes} dashes={asset.DashValues} clips={asset.Clips} tracks={asset.Tracks} keyframes={asset.Keyframes} morphCurves={asset.MorphCurves} sha256={hash}"));
+                    $"gcv1 bytes={bytes.Length} sha256={hash}"));
                 return 0;
             }
 
@@ -50,10 +49,9 @@ internal static class Program
                 Directory.CreateDirectory(directory);
             }
             File.WriteAllBytes(args[1], output);
-            var result = Gcv1Reader.Read(output);
             Console.WriteLine(string.Create(
                 CultureInfo.InvariantCulture,
-                $"gcv1 bytes={output.Length} nodes={result.Nodes} contours={result.Contours} curves={result.Curves} paints={result.Paints} stops={result.PaintStops} strokes={result.Strokes} dashes={result.DashValues} clips={result.Clips} tracks={result.Tracks} keyframes={result.Keyframes} morphCurves={result.MorphCurves}"));
+                $"gcv1 bytes={output.Length}"));
             return 0;
         }
         catch (SvgCompileException exception)

@@ -1243,15 +1243,6 @@ internal static class Program
         }, new[] { new InterfaceLocation { Location = 0, Type = "vec4", Name = "outColor" } });
     }
 
-    private static Descriptor[] ClipDescriptors()
-    {
-        return new[]
-        {
-            new Descriptor { Set = 1, Binding = 0, Type = "combined-image-sampler", Count = 1, Stages = new List<string> { "fragment" } },
-            new Descriptor { Set = 1, Binding = 1, Type = "storage-buffer", Count = 1, Stages = new List<string> { "fragment" } }
-        };
-    }
-
     private static Descriptor[] AnalyticDescriptors()
     {
         return new[]
