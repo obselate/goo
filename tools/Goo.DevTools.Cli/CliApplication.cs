@@ -12,6 +12,28 @@ internal static class CliApplication
 {
     private const string Version = "0.5.4";
 
+    internal static DiscoveryDescriptor? SelectInspectorDescriptor(
+        IReadOnlyList<DiscoveryDescriptor> descriptors,
+        int processId,
+        bool watch,
+        string runtimeDirectory,
+        IReadOnlySet<string>? existingDescriptorPaths = null,
+        DateTimeOffset? launchStartedAt = null)
+    {
+        var directory = Path.GetFullPath(runtimeDirectory);
+        var scoped = descriptors
+            .Where(item => string.Equals(Path.GetDirectoryName(item.DescriptorPath), directory, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (watch && existingDescriptorPaths is not null && launchStartedAt.HasValue)
+        {
+            scoped = scoped
+                .Where(item => !existingDescriptorPaths.Contains(item.DescriptorPath)
+                    || item.StartedAt >= launchStartedAt)
+                .ToArray();
+        }
+        return Discovery.Select(scoped, watch ? null : processId, null, null, null, watch);
+    }
+
     public static async Task<int> RunAsync(string[] args)
     {
         try
@@ -83,6 +105,7 @@ internal static class CliApplication
 
     private static async Task<int> RunDevAsync(CommandLine commandLine)
     {
+        var inspectorWait = ParseWait(commandLine.Get("wait"));
         if (commandLine.Has("watch") && commandLine.Has("no-watch"))
             throw new CliException("Use --watch or --no-watch, not both.");
         var project = ResolveProject(commandLine.Get("project"));
@@ -93,6 +116,14 @@ internal static class CliApplication
         var launch = BuildLaunch(commandLine, project, watch);
         var runtimeDirectory = ResolveRuntimeDirectory(projectDirectory);
         Directory.CreateDirectory(runtimeDirectory);
+        var launchStartedAt = DateTimeOffset.UtcNow;
+        var existingDescriptorPaths = watch
+            ? Discovery.Scan(projectDirectory, includeStale: true)
+                .Where(item => string.Equals(Path.GetDirectoryName(item.DescriptorPath), runtimeDirectory, StringComparison.OrdinalIgnoreCase))
+                .Select(item => item.DescriptorPath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         var startInfo = new ProcessStartInfo
         {
             FileName = launch.FileName,
@@ -108,6 +139,8 @@ internal static class CliApplication
         startInfo.Environment["GOO_DEVTOOLS_DIR"] = runtimeDirectory;
         if (commandLine.Has("input"))
             startInfo.Environment["GOO_DEVTOOLS_INPUT"] = "1";
+        if (commandLine.Has("inspector") || commandLine.Has("focus"))
+            startInfo.Environment["GOO_DEVTOOLS_AUTOSTART"] = "1";
         ApplyEnvironmentOverrides(startInfo, commandLine);
 
         using var shutdown = new CancellationTokenSource();
@@ -130,6 +163,10 @@ internal static class CliApplication
             var outputTask = Task.WhenAll(
                 ForwardOutputAsync(process.StandardOutput, false, monitorCancellation.Token),
                 ForwardOutputAsync(process.StandardError, true, monitorCancellation.Token));
+            var inspectorTask = commandLine.Has("inspector") || commandLine.Has("focus")
+                ? LaunchInspectorWhenReadyAsync(projectDirectory, process.Id, watch, runtimeDirectory, existingDescriptorPaths, launchStartedAt, commandLine.Has("focus"), inspectorWait, monitorCancellation.Token)
+                : Task.CompletedTask;
+
             var cancelled = false;
             try
             {
@@ -143,7 +180,7 @@ internal static class CliApplication
             monitorCancellation.Cancel();
             try
             {
-                await outputTask;
+                await Task.WhenAll(outputTask, inspectorTask);
             }
             catch (OperationCanceledException)
             {
@@ -192,6 +229,9 @@ internal static class CliApplication
             descriptor = await WaitForDescriptorAsync(projectDirectory, processId, commandLine, ParseWait(commandLine.Get("wait")));
 
         Console.Error.WriteLine($"[goo] attaching to {descriptor.DisplayName} (pid {descriptor.ProcessId}, {descriptor.Transport}:{descriptor.Pipe})");
+        if (commandLine.Has("inspector") || commandLine.Has("focus"))
+            LaunchInspector(descriptor, commandLine.Has("focus"), projectDirectory);
+
         using var cancellation = new CancellationTokenSource();
         if (commandLine.Has("once"))
             cancellation.CancelAfter(ParseWait(commandLine.Get("wait")));
@@ -503,6 +543,12 @@ internal static class CliApplication
             "endpoint",
             descriptors.Count == 0 ? "No live or stale descriptors found." : $"{descriptors.Count} descriptor(s) found.",
             descriptors.Any(item => item.IsProcessAlive)));
+        var inspector = InspectorLauncher.Find(projectDirectory);
+        checks.Add(new DoctorCheck(
+            "inspector",
+            inspector ?? "Not installed. Set GOO_DEVTOOLS_INSPECTOR to the standalone DevTools executable or DLL.",
+            inspector is not null));
+
         if (commandLine.Has("json"))
         {
             Console.WriteLine(JsonSerializer.Serialize(new { checks, descriptors }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
@@ -600,18 +646,59 @@ internal static class CliApplication
         }
     }
 
+    private static async Task LaunchInspectorWhenReadyAsync(
+        string projectDirectory,
+        int processId,
+        bool watch,
+        string runtimeDirectory,
+        IReadOnlySet<string> existingDescriptorPaths,
+        DateTimeOffset launchStartedAt,
+        bool focus,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var descriptor = await WaitForDescriptorAsync(
+                projectDirectory,
+                watch ? null : processId,
+                null,
+                timeout,
+                cancellationToken,
+                runtimeDirectory,
+                watch,
+                existingDescriptorPaths,
+                launchStartedAt);
+            LaunchInspector(descriptor, focus, projectDirectory);
+        }
+        catch (CliException exception)
+        {
+            Console.Error.WriteLine($"[goo] {exception.Message}");
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     private static async Task<DiscoveryDescriptor> WaitForDescriptorAsync(
         string projectDirectory,
         int? processId,
         CommandLine? commandLine,
         TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? runtimeDirectory = null,
+        bool latest = false,
+        IReadOnlySet<string>? existingDescriptorPaths = null,
+        DateTimeOffset? launchStartedAt = null)
     {
         var started = Stopwatch.GetTimestamp();
         while (Stopwatch.GetElapsedTime(started) < timeout)
         {
-            var descriptors = Discovery.Scan(projectDirectory);
-            var latestSelection = commandLine?.Has("latest") == true;
+            var descriptors = Discovery.Scan(projectDirectory)
+                .Where(item => runtimeDirectory is null
+                    || string.Equals(Path.GetDirectoryName(item.DescriptorPath), Path.GetFullPath(runtimeDirectory), StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            var latestSelection = latest || commandLine?.Has("latest") == true;
             var matches = Discovery.Matching(
                 descriptors,
                 processId,
@@ -620,13 +707,15 @@ internal static class CliApplication
                 commandLine?.Get("window"));
             if (matches.Count > 1 && !latestSelection)
                 throw new CliException("More than one live Goo endpoint matches the selection. Pass --window, --pipe, or --latest.");
-            var descriptor = Discovery.Select(
-                descriptors,
-                processId,
-                commandLine?.Get("pipe"),
-                commandLine?.Get("app"),
-                commandLine?.Get("window"),
-                latestSelection);
+            var descriptor = commandLine is null && runtimeDirectory is not null
+                ? SelectInspectorDescriptor(descriptors, processId ?? 0, latestSelection, runtimeDirectory, existingDescriptorPaths, launchStartedAt)
+                : Discovery.Select(
+                    descriptors,
+                    processId,
+                    commandLine?.Get("pipe"),
+                    commandLine?.Get("app"),
+                    commandLine?.Get("window"),
+                    latestSelection);
             if (descriptor is not null)
                 return descriptor;
             await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
@@ -973,6 +1062,28 @@ internal static class CliApplication
             : null;
     }
 
+    private static void LaunchInspector(DiscoveryDescriptor descriptor, bool focus, string projectDirectory)
+    {
+        var executable = InspectorLauncher.Find(projectDirectory);
+        if (executable is null)
+        {
+            throw new CliException("The standalone Goo DevTools app was not found. Build it or set GOO_DEVTOOLS_INSPECTOR to its executable or DLL.");
+        }
+
+        try
+        {
+            var process = InspectorLauncher.Launch(executable, descriptor, focus);
+            if (process is null)
+                throw new InvalidOperationException("Process.Start returned no process.");
+            process.Dispose();
+            Console.Error.WriteLine($"[goo] launched inspector {executable}");
+        }
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or IOException)
+        {
+            throw new CliException($"Could not launch inspector '{executable}': {exception.Message}");
+        }
+    }
+
     private static LaunchSpec BuildLaunch(CommandLine commandLine, string? project, bool watch)
     {
         if (commandLine.Trailing.Count != 0)
@@ -1142,7 +1253,7 @@ internal static class CliApplication
         Console.WriteLine("Commands:");
         Console.WriteLine("  dev       Start a Goo project with diagnostics enabled and dotnet watch by default.");
         Console.WriteLine("  attach    Attach to a live Goo endpoint and stream protocol events.");
-        Console.WriteLine("  doctor    Check the SDK, project, and endpoint directory.");
+        Console.WriteLine("  doctor    Check the SDK, project, endpoint directory, and inspector installation.");
         Console.WriteLine("  list      List live endpoints without connecting or selecting a window.");
         Console.WriteLine("  capture   Request a screenshot from an attached endpoint.");
         Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.");
@@ -1155,13 +1266,16 @@ internal static class CliApplication
         Console.WriteLine("  --window NAME        Select by stable window ID or window title.");
         Console.WriteLine("  --latest             Select the newest endpoint.");
         Console.WriteLine("  --wait SECONDS       Wait for a descriptor, up to 300 seconds.");
+        Console.WriteLine("  --inspector          Launch the standalone inspector when ready.");
         Console.WriteLine("  --input              Permit agent input in the app launched by dev.");
         Console.WriteLine("  --gesture TOKEN      Continue or release a held pointer/key gesture.");
+        Console.WriteLine("  --focus              Launch or focus the standalone inspector.");
         Console.WriteLine("  --json               Keep protocol output as JSON lines.");
         Console.WriteLine("  JSON errors include code, phase, and mayHaveApplied fields.");
         Console.WriteLine();
         Console.WriteLine("Environment:");
         Console.WriteLine("  GOO_DEVTOOLS_DIR         Runtime descriptor directory override.");
+        Console.WriteLine("  GOO_DEVTOOLS_INSPECTOR   Standalone inspector executable or DLL.");
         Console.WriteLine("  GOO_DEVTOOLS_INPUT=1     Permit application input when GOO_DEVTOOLS=1 enables diagnostics.");
         return 0;
     }

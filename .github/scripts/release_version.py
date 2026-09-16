@@ -17,6 +17,9 @@ PLUGIN_RUNTIME_VERSION = re.compile(
 LITERAL_VERSION_FILES = (
     "README.md",
     "docs/nuget-readme.md",
+    "apps/Goo.DevTools/DiagnosticWire.gs",
+    "apps/Goo.DevTools/Program.gs",
+    "apps/Goo.DevTools/README.md",
     "apps/Goo.Gallery/Program.gs",
     "docs/devtools/README.md",
     "docs/devtools/protocol.md",

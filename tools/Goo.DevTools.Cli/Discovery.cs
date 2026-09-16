@@ -208,7 +208,7 @@ internal static class Discovery
             message += Environment.NewLine + "Checked:" + Environment.NewLine;
             foreach (var directory in RuntimeDirectories(projectDirectory))
                 message += $"  {directory}{Environment.NewLine}";
-            message += "Start the app with `goo dev --watch -- <command>` or set GOO_DEVTOOLS_DIR to the runtime descriptor directory." + Environment.NewLine;
+            message += "Start the app with `goo dev --watch --inspector -- <command>` or set GOO_DEVTOOLS_DIR to the runtime descriptor directory." + Environment.NewLine;
         }
 
         return message.TrimEnd();

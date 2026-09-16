@@ -23,6 +23,37 @@ dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj -c Release
 dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
 ```
 
+Shader and text proof build:
+
+```sh
+dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
+```
+
+## Native presentation qualification
+
+The default proof uses the production window, queue worker, timeline, and retirement
+owners. It checks five accepted presentations, both frame slots, live prior-image
+retirement, capabilities, timestamps, and teardown. Run these maintenance-specific
+routes on a desktop where pending presentation retirement can be observed:
+
+```sh
+export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_READBACK=1 dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_REQUIRE_EXT_MAINTENANCE=1 dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_LIFECYCLE=1 GOO_VK_SKIP_DPI=1 GOO_VK_SKIP_MINIMIZE=1 \
+  dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+GOO_VK_LIFECYCLE=1 GOO_VK_SKIP_DPI=1 GOO_VK_LIFECYCLE_X11=1 \
+  dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+```
+
+Readback retains fixed clear and quad pixels in a direct UNORM target. Lifecycle
+checks real resize, retirement collection, close, and reopen under a held runtime
+lease. The X11 flag selects a test-only native host for minimize/restore. Omit it
+to qualify Wayland. Omit the skip flags to require actual display-scale movement
+and minimize/restore. Skipped probes are reported as deferred. Software CI keeps
+the separate production text, image, timeline, queue, and recovery routes.
+
 ## Local PNG loading
 
 `Goo.ImageLoadingTests` verifies PNG color formats, premultiplication, file and
@@ -171,6 +202,7 @@ Linux native CI runs it through the headless Wayland wrapper.
 | `Goo.VulkanAbiSmoke` | Vulkan bindings, text-provider ABI, retained path encoding, and upload contracts |
 | `Goo.AsyncReadbackSmoke` | Vulkan pixels, clipping, effects, input, pacing, windowing, and performance workloads |
 | `Goo.PackageSmoke` | Clean NuGet consumer, packaged native assets, and public runtime behavior |
+| `Goo.VulkanProof` | Low-level shader, text, image, path, and readback proofs |
 
 ## Linux requirements
 
@@ -188,6 +220,10 @@ Windowed Vulkan checks require:
 Surface and swapchain maintenance extensions select the asynchronous
 presentation-retirement path when available. The compatibility path does not
 require them.
+
+`Goo.VulkanProof` keeps maintenance-specific fast-path proofs; the package
+compatibility smoke is the runtime support gate when those extensions are
+absent.
 
 ## Package verification
 

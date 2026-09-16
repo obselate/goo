@@ -5,8 +5,8 @@ internal sealed class CommandLine
     private static readonly IReadOnlyDictionary<string, OptionSet> Commands = new Dictionary<string, OptionSet>(StringComparer.OrdinalIgnoreCase)
     {
         ["help"] = new([], ["json"]),
-        ["dev"] = new(["project", "configuration", "env"], ["watch", "no-watch", "input"]),
-        ["attach"] = new(["project", "pid", "pipe", "app", "window", "wait", "command", "payload", "require-capabilities", "require-override-property"], ["latest", "once", "json"]),
+        ["dev"] = new(["project", "configuration", "env", "wait"], ["watch", "no-watch", "input", "inspector", "focus"]),
+        ["attach"] = new(["project", "pid", "pipe", "app", "window", "wait", "command", "payload", "require-capabilities", "require-override-property"], ["latest", "inspector", "focus", "once", "json"]),
         ["doctor"] = new(["project"], ["json"]),
         ["list"] = new(["project", "pid", "pipe", "app", "window"], ["json"]),
         ["capture"] = new(["project", "pid", "pipe", "app", "window", "wait", "format", "output"], ["latest", "json"]),
