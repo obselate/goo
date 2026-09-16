@@ -145,7 +145,11 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         if orientation == 1 {
             return "portrait"
         }
-        return if orientation == 2 { "landscape flipped" } else { "portrait flipped" }
+        return if orientation == 2 {
+            "landscape flipped"
+        } else {
+            "portrait flipped"
+        }
     }
 
     private func tileContent() Blob {

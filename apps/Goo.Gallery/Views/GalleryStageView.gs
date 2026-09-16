@@ -4,11 +4,7 @@ import Goo
 
 internal class GalleryStageView {
     shared {
-        internal func Build(
-            catalog GalleryCatalog,
-            currentShowcase int32,
-            compact bool
-        ) Blob {
+        internal func Build(catalog GalleryCatalog, currentShowcase int32, compact bool) Blob {
             let showcase = catalog.Showcases[currentShowcase]
             return Container{
                 Key: "gallery-stage",

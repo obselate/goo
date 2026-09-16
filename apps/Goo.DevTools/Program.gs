@@ -91,7 +91,11 @@ private func IsNewer(candidate string, current string) bool {
     if candidate == "" {
         return false
     }
-    return if current == "" { true } else { String.Compare(candidate, current, StringComparison.Ordinal) > 0 }
+    return if current == "" {
+        true
+    } else {
+        String.Compare(candidate, current, StringComparison.Ordinal) > 0
+    }
 }
 
 private func DirectEndpoint(pipe string, pidText string) DiagnosticEndpoint {

@@ -72,7 +72,11 @@ class GalleryCell : Cell, IDisposable {
     public func OpenSection(name string) bool {
         let chapter = catalog.ChapterIndex(name)
         let index = catalog.FirstShowcase(chapter)
-        return if index < 0 { false } else { OpenShowcase(index) }
+        return if index < 0 {
+            false
+        } else {
+            OpenShowcase(index)
+        }
     }
 
     /// Finds the chapter index by its route name.

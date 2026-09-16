@@ -98,7 +98,11 @@ class DiagnosticWire {
             try {
                 using let document = JsonDocument.Parse(payload)
                 let root = document.RootElement
-                return if root.ValueKind != JsonValueKind.Object { nil } else { Snapshot(root, fallbackWindowId, fullDefault) }
+                return if root.ValueKind != JsonValueKind.Object {
+                    nil
+                } else {
+                    Snapshot(root, fallbackWindowId, fullDefault)
+                }
             } catch (_ JsonException) {
                 return nil
             } catch (_ Exception) {
@@ -325,7 +329,11 @@ class DiagnosticWire {
             || value.Equals("hotReload", StringComparison.OrdinalIgnoreCase) {
                 return DiagnosticMessageKind.HotReload
             }
-            return if value.Equals("error", StringComparison.OrdinalIgnoreCase) { DiagnosticMessageKind.Error } else { DiagnosticMessageKind.Unknown }
+            return if value.Equals("error", StringComparison.OrdinalIgnoreCase) {
+                DiagnosticMessageKind.Error
+            } else {
+                DiagnosticMessageKind.Unknown
+            }
         }
 
         private func Snapshot(root JsonElement, fallbackWindowId string, fullDefault bool) DiagnosticWireSnapshot {
@@ -689,7 +697,11 @@ class DiagnosticWire {
             let y = MetricField(root, []string{"y", "top"})
             let width = MetricField(root, []string{"width", "w"})
             let height = MetricField(root, []string{"height", "h"})
-            return if x != "" || y != "" || width != "" || height != "" { x + ", " + y + " · " + width + " × " + height } else { "" }
+            return if x != "" || y != "" || width != "" || height != "" {
+                x + ", " + y + " · " + width + " × " + height
+            } else {
+                ""
+            }
         }
 
         private func ObjectText(root JsonElement, names[]string) string {
@@ -1197,7 +1209,11 @@ class DiagnosticPipeTransport : DiagnosticTransport {
 
     private func NormalizePipe(value string) string {
         let prefix = "\\\\.\\pipe\\"
-        return if value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) { value.Substring(prefix.Length) } else { value }
+        return if value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) {
+            value.Substring(prefix.Length)
+        } else {
+            value
+        }
     }
 
     private func UpdateCapabilities(message DiagnosticMessage) {
@@ -1475,7 +1491,11 @@ class DiagnosticEndpointDiscovery {
 
         private func Int(root JsonElement, names[]string) int32 {
             let value = Text(root, names)
-            return if Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) { result } else { 0 }
+            return if Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) {
+                result
+            } else {
+                0
+            }
         }
 
         private func Element(root JsonElement, names[]string) JsonElement? {

@@ -1372,5 +1372,4 @@ class DevToolsCell : Cell {
         OnClick: onClick,
         Text{Key: "button-label", Content: label, FontSize: 12, FontWeight: 600, Color: foreground,},
     }
-
 }
