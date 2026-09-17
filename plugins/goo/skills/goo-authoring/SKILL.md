@@ -9,13 +9,13 @@ Use the `goo` MCP tools to look up the actual API and inspect the running applic
 
 ## Source and API
 
-Call `goo_context` once and inspect its preflight result before runtime work. Resolve manifest, CLI feature, source-fingerprint, or restart-required failures using its actions. The loaded server reports only its own definition, not another session. If a standalone Goo checkout is available, pass its absolute path as `repository` to documentation and starter tools. Otherwise the bundled documentation identifies its source commit and file hashes. Compare the consumer's Goo package and G# SDK versions with the starter before reusing an API. A compiler diagnostic or the current checkout takes precedence over a bundled guide.
+Call `goo_context` once and reuse its result. Inspect preflight before runtime work and resolve failures using its actions. Pass an available standalone Goo checkout as `repository`; otherwise use the bundle. Treat `provenance.revision` plus `dirty` as the selected source identity and `compilerCommit` as its compiler pin. The loaded server reports only itself, not another session. A compiler diagnostic or selected checkout takes precedence over a bundled guide.
 
-Use `goo_search` for the needed types and behavior, then `goo_read` for the relevant range. The generated documentation uses XML notation such as `Cell<T>` and `System.Action{T}`. Write G# generic syntax `Cell[T]` and `Action[T]` in source. Do not copy XML signatures as G# declarations. Read adjacent consumer code when exact syntax is unclear.
+Use one focused natural-language or symbol `goo_search`, then `goo_read` the relevant range. `mode=relaxed` means only some `queryTerms` matched; inspect `matchedTerms` and `missingTerms`. `mode=none` proves only that the selected documents contain no match. Each hit and read includes its source hash. The generated documentation uses XML notation such as `Cell<T>` and `System.Action{T}`; write `Cell[T]` and `Action[T]` in G#. Read adjacent consumer code when exact syntax is unclear.
 
 ## Create and edit
 
-For a new app, `goo_starter` returns the official project and Cell counter source, with an explicit `Watch` item for `.gs` files so restart-on-edit observes source changes. Write these into the requested new directory, adapt them, and build the exact `.gsproj`. Existing applications keep their SDK/package choices and architecture.
+For a new app, `goo_starter` returns the official project and Cell counter source, exact source/generated hashes, SDK/package/compiler versions, and an explicit `Watch` item. Use that metadata instead of rereading the templates or CONTRIBUTING.md. Write the files, then run the returned `lint` and `build` commands; checkout-backed builds select its pinned compiler. Existing applications keep their SDK/package choices and architecture. For changed G# in a Goo checkout, run its `tools/Goo.Gslint` strict policy and the exact project build; gslint proves only its finite rules.
 
 Goo is a retained desktop UI framework, not HTML/CSS or Sandbox panels:
 
