@@ -53,7 +53,7 @@ internal class DiagnosticsFixtures {
     if !tracker.NeedsRequest { return false }
     tracker.Observe(WindowReadbackRequestStatus.Accepted)
     if tracker.NeedsRequest { return false }
-    tracker.Complete()
+    tracker.Reset()
     return tracker.NeedsRequest
   }
 

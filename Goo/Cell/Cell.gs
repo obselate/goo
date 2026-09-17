@@ -330,18 +330,7 @@ public open class Cell {
   }
 
   private func registerAnim[T](a Anim[T]) Anim[T] {
-    if let list = anims {
-      list.Add(a.Handle)
-    } else {
-      let list = List[MotionParticle]()
-      list.Add(a.Handle)
-      anims = list
-    }
-    if !disposed {
-      if let pump = motionPump {
-        a.Handle.Bind(pump)
-      }
-    }
+    OwnMotionParticle(a.Handle)
     return a
   }
   internal func BindPump(pump MotionPump) {

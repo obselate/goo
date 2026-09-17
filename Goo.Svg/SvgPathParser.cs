@@ -42,16 +42,16 @@ internal static class SvgPathParser
                 if (command is not ('m' or 'M' or 'l' or 'L' or 'h' or 'H' or 'v' or 'V'
                     or 'c' or 'C' or 's' or 'S' or 'q' or 'Q' or 't' or 'T' or 'a' or 'A'))
                 {
-                    throw Fail(owner, $"path command '{command}' is not supported");
+                    throw SvgParser.Fail(owner, $"path command '{command}' is not supported");
                 }
             }
             else if (command == '\0')
             {
-                throw Fail(owner, "path data must start with a command");
+                throw SvgParser.Fail(owner, "path data must start with a command");
             }
             else if (!tokenIsCommand && command is 'z' or 'Z')
             {
-                throw Fail(owner, "path data cannot continue after close without a command");
+                throw SvgParser.Fail(owner, "path data cannot continue after close without a command");
             }
 
             switch (command)
@@ -182,7 +182,7 @@ internal static class SvgPathParser
                     var end = ReadPoint(scanner, owner, command is 'a', current);
                     if (largeArc is not (0 or 1) || sweep is not (0 or 1))
                     {
-                        throw Fail(owner, "arc flags must be zero or one");
+                        throw SvgParser.Fail(owner, "arc flags must be zero or one");
                     }
                     AddArc(contour!, current, Math.Abs(rx), Math.Abs(ry), rotation,
                         largeArc != 0, sweep != 0, end, ref curveCount);
@@ -197,7 +197,7 @@ internal static class SvgPathParser
         if (contour is not null && contour.Curves.Count != 0) path.Contours.Add(contour);
         if (path.Contours.Count == 0)
         {
-            throw Fail(owner, "path contains no geometry");
+            throw SvgParser.Fail(owner, "path contains no geometry");
         }
         return path;
     }
@@ -210,7 +210,7 @@ internal static class SvgPathParser
         var result = relative ? new SvgPoint(current.X + point.X, current.Y + point.Y) : point;
         if (!result.IsFinite)
         {
-            throw Fail(owner, "path coordinate is not finite");
+            throw SvgParser.Fail(owner, "path coordinate is not finite");
         }
         return result;
     }
@@ -366,14 +366,6 @@ internal static class SvgPathParser
     {
         return Math.Atan2(left.X * right.Y - left.Y * right.X, left.X * right.X + left.Y * right.Y);
     }
-
-    private static SvgParseException Fail(XElement element, string message)
-    {
-        var info = (System.Xml.IXmlLineInfo)element;
-        return info.HasLineInfo()
-            ? new SvgParseException($"line {info.LineNumber}, column {info.LinePosition}: {message}")
-            : new SvgParseException(message);
-    }
 }
 
 internal sealed class PathScanner
@@ -429,7 +421,7 @@ internal sealed class PathScanner
         }
         if (digits == 0)
         {
-            throw Fail($"path contains an invalid number at offset {start}");
+            throw SvgParser.Fail(owner, $"path contains an invalid number at offset {start}");
         }
         if (index < text.Length && text[index] is 'e' or 'E')
         {
@@ -441,12 +433,12 @@ internal sealed class PathScanner
                 index++;
                 exponentDigits++;
             }
-            if (exponentDigits == 0) throw Fail("path contains an invalid exponent");
+            if (exponentDigits == 0) throw SvgParser.Fail(owner, "path contains an invalid exponent");
         }
         if (!double.TryParse(text[start..index], NumberStyles.Float, CultureInfo.InvariantCulture, out var result)
             || !double.IsFinite(result))
         {
-            throw Fail("path contains a non-finite number");
+            throw SvgParser.Fail(owner, "path contains a non-finite number");
         }
         return result;
     }
@@ -454,13 +446,5 @@ internal sealed class PathScanner
     private void SkipSeparators()
     {
         while (index < text.Length && (char.IsWhiteSpace(text[index]) || text[index] == ',')) index++;
-    }
-
-    private SvgParseException Fail(string message)
-    {
-        var info = (System.Xml.IXmlLineInfo)owner;
-        return info.HasLineInfo()
-            ? new SvgParseException($"line {info.LineNumber}, column {info.LinePosition}: {message}")
-            : new SvgParseException(message);
     }
 }
