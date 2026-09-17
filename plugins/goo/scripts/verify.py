@@ -47,8 +47,15 @@ async def main():
 
             context = await call("goo_context")
             (output / "context.json").write_text(context.model_dump_json(indent=2))
-            search = await call("goo_search", query="Cell Rebuild")
-            assert "cell.md" in search.model_dump_json(), search
+            bundled = data(context)
+            assert bundled["provenance"]["kind"] == "bundle"
+            assert bundled["provenance"]["revision"] == bundled["bundleCommit"]
+            assert len(bundled["provenance"]["compilerCommit"]) == 40
+            search = data(await call("goo_search", query="how do I rebuild a cell"))
+            assert search["mode"] == "exact" and search["queryTerms"] == ["rebuild", "cell"], search
+            assert search["results"][0]["path"] == "docs/api/cell.md" and len(search["results"][0]["sha256"]) == 64, search
+            missing = data(await call("goo_search", query="QuantumBananaTeleportation"))
+            assert missing["mode"] == "none" and missing["total"] == 0 and missing["results"] == []
             await call("goo_read", path="docs/api/cell.md", count=25)
             await rejected("goo_read", path="../../.ssh/id_rsa")
 
@@ -60,13 +67,24 @@ async def main():
             fresh.write_text("# Newly added API\n\n## Probe\n\nAgentFreshDocument\n")
             repository = str(checkout)
             assert data(await call("goo_context", repository=repository))["documents"] == ["docs/api/new-api.md"]
-            assert data(await call("goo_search", query="AgentFreshDocument", repository=repository))["total"] == 1
+            current = data(await call("goo_context", repository=repository))
+            assert current["provenance"]["kind"] == "checkout"
+            assert data(await call("goo_search", query="how do I find AgentFreshDocument", repository=repository))["total"] == 1
             assert "AgentFreshDocument" in data(await call("goo_read", path="docs/api/new-api.md", repository=repository))["text"]
             fresh.unlink()
             assert data(await call("goo_search", query="AgentFreshDocument", repository=repository))["total"] == 0
 
             starter = data(await call("goo_starter", name="AgentProbe"))
             assert "--no-watch" in starter["run"]
+            assert starter["build"] == "dotnet build AgentProbe.gsproj -c Release --nologo -warnaserror"
+            assert starter["versions"] == {"gsharpSdk": "0.4.591", "goo": "0.6.2",
+                                           "compilerCommit": bundled["provenance"]["compilerCommit"]}
+            assert starter["lint"] == "unavailable"
+            assert set(starter["provenance"]["sourceFiles"]) == {
+                "templates/Goo.Templates/content/Program.gs",
+                "templates/Goo.Templates/content/GooStarter.gsproj",
+            }
+            assert set(starter["provenance"]["generatedFiles"]) == {"Program.gs", "AgentProbe.gsproj"}
             for name, content in starter["files"].items():
                 (app / name).write_text(content)
             build = subprocess.run(["dotnet", "build", str(app / "AgentProbe.gsproj"), "-c", "Release", "--nologo", "-warnaserror"], capture_output=True, text=True, timeout=180)

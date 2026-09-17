@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -76,6 +77,52 @@ def document(root: Path, path: str) -> Path:
     if not target.is_relative_to(root):
         raise ValueError("Document resolves outside the selected source root")
     return target
+
+
+def text_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def source_provenance(root: Path) -> dict:
+    contributing_path = root / "CONTRIBUTING.md"
+    contributing = contributing_path.read_text() if contributing_path.is_file() else ""
+    compiler = re.search(r"(?:pin is upstream `|https://github.com/DavidObando/gsharp/tree/)([0-9a-f]{40})", contributing)
+    compiler_file = root / "artifacts/gsharp/commit"
+    compiler_commit = "unavailable"
+    if compiler_file.is_file():
+        compiler_commit = compiler_file.read_text().strip()
+    elif compiler:
+        compiler_commit = compiler.group(1)
+    if root == BUNDLE:
+        return {"kind": "bundle", "repository": MANIFEST["repository"], "revision": MANIFEST["commit"],
+                "dirty": False, "compilerCommit": compiler_commit}
+    revision = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True)
+    status = subprocess.run(["git", "-C", str(root), "status", "--porcelain"], capture_output=True, text=True)
+    return {"kind": "checkout", "repository": str(root),
+            "revision": revision.stdout.strip() if revision.returncode == 0 else "unavailable",
+            "dirty": bool(status.stdout) if status.returncode == 0 else "unavailable",
+            "compilerCommit": compiler_commit}
+
+
+STOP_WORDS = {
+    "a", "across", "an", "and", "are", "do", "does", "for", "from", "get",
+    "how", "i", "in", "is", "of", "on", "the", "to", "with",
+}
+
+
+def search_terms(value: str) -> list[str]:
+    expanded = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", value)
+    terms = []
+    for term in re.findall(r"[A-Za-z0-9_]+", expanded.casefold()):
+        if term in STOP_WORDS:
+            continue
+        if term.endswith("ies") and len(term) > 4:
+            term = term[:-3] + "y"
+        elif term.endswith("s") and not term.endswith("ss") and len(term) > 3:
+            term = term[:-1]
+        if term not in terms:
+            terms.append(term)
+    return terms
 
 
 def disk_plugin_fingerprint() -> str:
@@ -189,13 +236,15 @@ def goo_context(repository: str = "") -> dict:
     """List available API guides, template files, source provenance and runtime tool setup. Pass a Goo checkout for current docs."""
     root = source(repository)
     current_fingerprint = disk_plugin_fingerprint()
-    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"], "documents": documents(root), "runtime": "Install Goo.DevTools 0.6.2 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.", "preflight": {"plugin": {"version": LOADED_PLUGIN_VERSION, "loadedSource": str(ROOT), "loadedFingerprint": LOADED_PLUGIN_FINGERPRINT, "diskFingerprint": current_fingerprint, "restartRequired": current_fingerprint != LOADED_PLUGIN_FINGERPRINT}, "configuration": configuration_status(), "cli": cli_preflight(), "scope": "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."}}
+    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"],
+            "provenance": source_provenance(root), "documents": documents(root),
+            "runtime": "Install Goo.DevTools 0.6.2 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.", "preflight": {"plugin": {"version": LOADED_PLUGIN_VERSION, "loadedSource": str(ROOT), "loadedFingerprint": LOADED_PLUGIN_FINGERPRINT, "diskFingerprint": current_fingerprint, "restartRequired": current_fingerprint != LOADED_PLUGIN_FINGERPRINT}, "configuration": configuration_status(), "cli": cli_preflight(), "scope": "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."}}
 
 
 @mcp.tool(annotations=READ)
 def goo_search(query: str, repository: str = "", limit: int = 8) -> dict:
     """Search API and DevTools documentation by symbols or terms. Returns bounded excerpts, document paths and line numbers."""
-    terms = re.findall(r"[\w]+", query.casefold())
+    terms = search_terms(query)
     if not terms or len(query) > 256 or not 1 <= limit <= 20:
         raise ValueError("Supply a query of 1-256 characters and a limit of 1-20")
     root = source(repository)
@@ -203,19 +252,44 @@ def goo_search(query: str, repository: str = "", limit: int = 8) -> dict:
     for relative in documents(root):
         if not relative.endswith(".md"):
             continue
-        lines = document(root, relative).read_text().splitlines()
+        path = document(root, relative)
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        lines = data.decode().splitlines()
         starts = [0] + [i for i, line in enumerate(lines) if i and line.startswith("## ")]
         for start, end in zip(starts, starts[1:] + [len(lines)]):
             body = "\n".join(lines[start:end])
-            folded = body.casefold()
-            if not all(term in folded for term in terms):
+            folded = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", body).casefold()
+            matched = [term for term in terms if term in folded]
+            if not matched:
                 continue
             heading = lines[start] if start < len(lines) else ""
-            hit = next((i for i in range(start, end) if any(term in lines[i].casefold() for term in terms)), start)
-            score = sum(10 for term in terms if term in heading.casefold()) + sum(min(folded.count(term), 5) for term in terms)
-            matches.append((score, {"path": relative, "section": heading, "line": hit + 1, "excerpt": "\n".join(lines[max(start, hit - 2):min(end, hit + 18)])[:2400]}))
-    matches.sort(key=lambda match: (-match[0], match[1]["path"], match[1]["line"]))
-    return {"source": str(root), "total": len(matches), "results": [item for _, item in matches[:limit]]}
+            heading_folded = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", heading).casefold()
+            line_matches = []
+            for index in range(start, end):
+                line = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", lines[index]).casefold()
+                found = [term for term in matched if term in line]
+                weight = sum(len(terms) - terms.index(term) for term in found)
+                line_matches.append((len(found), weight, -index, index))
+            best_line = max(line_matches)
+            hit = best_line[3]
+            exact = len(matched) == len(terms)
+            score = len(matched) * 100 + best_line[0] * 50
+            score += sum(20 for term in matched if term in heading_folded)
+            score += sum(min(folded.count(term), 5) for term in matched)
+            matches.append((exact, score, {"path": relative, "section": heading, "line": hit + 1,
+                            "sha256": digest, "matchedTerms": matched,
+                            "missingTerms": [term for term in terms if term not in folded],
+                            "coverage": round(len(matched) / len(terms), 3),
+                            "excerpt": "\n".join(lines[max(start, hit - 2):min(end, hit + 18)])[:600]}))
+    exact_matches = [match for match in matches if match[0]]
+    selected = exact_matches or matches
+    frequencies = {term: sum(term in match[2]["matchedTerms"] for match in matches) for term in terms}
+    selected.sort(key=lambda match: (-sum(1000 / frequencies[term] for term in match[2]["matchedTerms"]),
+                                     -match[1], match[2]["path"], match[2]["line"]))
+    return {"source": str(root), "queryTerms": terms,
+            "mode": "exact" if exact_matches else "relaxed" if matches else "none",
+            "total": len(selected), "results": [item for _, _, item in selected[:limit]]}
 
 
 @mcp.tool(annotations=READ)
@@ -236,12 +310,36 @@ def goo_starter(name: str = "HelloGoo", repository: str = "") -> dict:
         raise ValueError("Use a simple identifier starting with an ASCII letter, up to 64 characters")
     root = source(repository)
     files = {}
+    source_files = {}
     for filename in ("Program.gs", "GooStarter.gsproj"):
-        content = document(root, "templates/Goo.Templates/content/" + filename).read_text()
+        template = document(root, "templates/Goo.Templates/content/" + filename)
+        content = template.read_text()
+        source_files[template.relative_to(root).as_posix()] = text_hash(template)
         if filename.endswith(".gsproj"):
             content = content.replace("</Project>", '  <ItemGroup>\n    <Watch Include="**/*.gs" Exclude="bin/**;obj/**" />\n  </ItemGroup>\n</Project>')
         files[filename.replace("GooStarter", name)] = content.replace("GooStarter", name)
-    return {"source": str(root), "files": files, "build": f"dotnet build {name}.gsproj", "run": f"goo dev --no-watch --project {name}.gsproj"}
+    project = files[f"{name}.gsproj"]
+    sdk = re.search(r'<Project Sdk="Gsharp.NET.Sdk/([^\"]+)"', project)
+    package = re.search(r'<PackageReference Include="Goo" Version="([^\"]+)"', project)
+    linter = root / "tools/Goo.Gslint/Goo.Gslint.csproj"
+    lint = "unavailable"
+    if linter.is_file():
+        lint = f"dotnet run --project {shlex.quote(str(linter))} -c Release -- --strict --severity GL0005=none --severity GL0006=none Program.gs"
+    build = f"dotnet build {name}.gsproj -c Release --nologo -warnaserror"
+    compiler_path = root / "artifacts/gsharp/compiler/gsc.dll"
+    if compiler_path.is_file():
+        build += f" -p:GsharpCompilerFullPath={shlex.quote(str(compiler_path))}"
+    provenance = source_provenance(root)
+    provenance["sourceFiles"] = source_files
+    provenance["generatedFiles"] = {
+        filename: hashlib.sha256(content.encode()).hexdigest() for filename, content in files.items()
+    }
+    return {"source": str(root), "provenance": provenance,
+            "versions": {"gsharpSdk": sdk.group(1) if sdk else "unavailable",
+                         "goo": package.group(1) if package else "unavailable",
+                         "compilerCommit": provenance["compilerCommit"]},
+            "files": files, "lint": lint, "build": build,
+            "run": f"goo dev --no-watch --project {name}.gsproj"}
 
 
 def cli() -> list[str]:

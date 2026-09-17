@@ -79,6 +79,8 @@ Set `GOO_DEVTOOLS_DIR` in both the app and server environments only when testing
 a custom descriptor directory. Pass a project path to runtime tools for
 project-local discovery.
 
+Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` to use a current checkout. `goo_context` reports whether the source is a bundle or checkout, its revision, dirty state, and compiler pin. Search ignores conversational stop words, splits symbol names, and reports exact or relaxed term coverage plus document hashes. An empty result applies only to the selected documents. `goo_starter` reports its SDK, Goo package, compiler pin, source hashes, generated hashes, and available lint/build commands. Checkout-backed builds select the pinned compiler. Its generated project includes a source Watch item but launches with `--no-watch`.
+
 ## Refresh and verify
 
 Refresh the bundle with `python3 scripts/sync_docs.py /path/to/goo-checkout`. Validate the MCP workflow with:
