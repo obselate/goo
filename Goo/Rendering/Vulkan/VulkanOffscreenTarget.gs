@@ -24,7 +24,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private let allocator VulkanMemoryAllocator
   private let readbackDispatch VulkanReadbackDispatch
   private let extent VkExtent2D
-  private let imageByteSize VkDeviceSize
   private let stagingByteSize VkDeviceSize
   private let resourceByteSize VkDeviceSize
   private let targetFormat VkFormat
@@ -81,13 +80,8 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private var primitiveRenderer VulkanPrimitiveRenderer? = nil
   private var layerPool VulkanOffscreenLayerPool? = nil
 
-  internal prop Image VkImage{ get -> image }
-  internal prop ImageView VkImageView{ get -> imageView }
-  internal prop StagingBuffer VkBuffer{ get -> stagingBuffer }
-  internal prop CommandBuffer VkCommandBuffer{ get -> commandBuffer }
   internal prop PendingSubmissionSerial uint64{ get -> pendingSubmissionSerial }
   internal prop Extent VkExtent2D{ get -> extent }
-  internal prop ImageByteSize VkDeviceSize{ get -> imageByteSize }
   internal prop StagingByteSize VkDeviceSize{ get -> stagingByteSize }
   internal prop ResourceByteSize VkDeviceSize{ get -> resourceByteSize }
   internal prop ReadbackByteSize VkDeviceSize{ get -> readbackByteSize }
@@ -99,33 +93,16 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     get -> queuePending
       && queueMailbox.Phase == VulkanQueueMailboxPhase.SubmitComplete
   }
-  internal prop LastResult VkResult{ get -> lastResult }
   internal prop DeviceLossDetected bool{
     get {
       return lastResult == VkConstants.VK_ERROR_DEVICE_LOST
         || allocator.LastResult == VkConstants.VK_ERROR_DEVICE_LOST
     }
   }
-  internal prop ReadbackReady bool{ get -> state == VulkanOffscreenState.Complete }
   internal prop GpuTimingAvailable bool{ get -> gpuTimingAvailable }
   internal prop GpuSceneReplayNanoseconds uint64{ get -> gpuSceneReplayNanoseconds }
   internal prop GpuCopyNanoseconds uint64{ get -> gpuCopyNanoseconds }
 
-  internal prop LiveObjectCount uint32{
-    get {
-      var count uint32 = 0u
-      if image != 0uL { count = count + 1u }
-      if imageView != 0uL { count = count + 1u }
-      if stagingBuffer != 0uL { count = count + 1u }
-      if commandBuffer != nint(0) { count = count + 1u }
-      if commandPool != 0uL { count = count + 1u }
-      if timestampQueryPool != 0uL { count = count + 1u }
-      if let renderer = primitiveRenderer {
-        count = count + renderer.LiveObjectCount
-      }
-      return count
-    }
-  }
   internal prop ReadbackPointer * void{
     get {
       if disposed {
@@ -241,7 +218,6 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       allocator = nativeAllocator
       readbackDispatch = nativeReadbackDispatch
       extent = targetExtent
-      imageByteSize = VkDeviceSize(selectedImageByteSize)
       stagingByteSize = VkDeviceSize(selectedStagingByteSize)
       resourceByteSize = VkDeviceSize(selectedImageByteSize + selectedStagingByteSize)
       targetFormat = colorFormat

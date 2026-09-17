@@ -171,19 +171,6 @@ internal static class EffectAbi
         }
     }
 
-    private static void RequireSequence<T>(
-        IReadOnlyList<T> actual,
-        IReadOnlyList<T> expected,
-        string path)
-    {
-        Require(actual.Count == expected.Count, $"{path}.count", expected.Count.ToString());
-        for (int index = 0; index < expected.Count; index++)
-        {
-            Require(EqualityComparer<T>.Default.Equals(actual[index], expected[index]),
-                $"{path}[{index}]", expected[index]?.ToString() ?? "null");
-        }
-    }
-
     private static string Render(object? value) => value?.ToString() ?? "null";
 
     private static void Require(bool condition, string path, string expected)
