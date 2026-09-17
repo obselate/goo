@@ -204,7 +204,6 @@ public static class Program
         var edits = new List<SourceEdit>();
         CollectFixEdits(tree.Root, source, edits);
         CollectConditionalReturnEdits(tree.Root, source, edits);
-        CollectDefaultAssignmentEdits(tree.Root, source, edits);
 
         var varFindings = new List<Finding>();
         AddVarFindings(tree.Root, true, varFindings);
@@ -360,122 +359,6 @@ public static class Program
 
         value = false;
         return false;
-    }
-
-    private static void CollectDefaultAssignmentEdits(SyntaxNode node, string source, List<SourceEdit> edits)
-    {
-        if (node is StructDeclarationSyntax declaration)
-        {
-            var fields = declaration.Fields
-                .Where(field => field.Initializer is null && field.VarOrLetKeyword?.Kind == SyntaxKind.VarKeyword)
-                .ToDictionary(field => field.Identifier.Text, StringComparer.Ordinal);
-            foreach (var constructor in declaration.Constructors)
-            {
-                var parameters = constructor.Parameters
-                    .Select(parameter => parameter.Identifier.Text)
-                    .ToHashSet(StringComparer.Ordinal);
-                var redundant = constructor.Body.Statements
-                    .Where(statement => IsRedundantDefaultAssignment(statement, fields, parameters))
-                    .ToList();
-                if (redundant.Count == 0)
-                {
-                    continue;
-                }
-
-                if (redundant.Count == constructor.Body.Statements.Length)
-                {
-                    edits.Add(new SourceEdit(constructor.Body.Span.Start, constructor.Body.Span.Length, "{ }"));
-                    continue;
-                }
-
-                foreach (var statement in redundant)
-                {
-                    edits.Add(WholeLineEdit(statement.Span, source));
-                }
-            }
-        }
-
-        foreach (var child in node.GetChildren())
-        {
-            CollectDefaultAssignmentEdits(child, source, edits);
-        }
-    }
-
-    private static bool IsRedundantDefaultAssignment(
-        StatementSyntax statement,
-        IReadOnlyDictionary<string, FieldDeclarationSyntax> fields,
-        IReadOnlySet<string> parameters)
-    {
-        if (statement is not ExpressionStatementSyntax
-            {
-                Expression: AssignmentExpressionSyntax assignment,
-            }
-            || parameters.Contains(assignment.IdentifierToken.Text)
-            || !fields.TryGetValue(assignment.IdentifierToken.Text, out var field)
-            || assignment.Expression is not LiteralExpressionSyntax literal)
-        {
-            return false;
-        }
-
-        if (literal.Value is null)
-        {
-            return field.Type.IsNullable;
-        }
-
-        if (literal.Value is bool boolean)
-        {
-            return !boolean && field.Type.Identifier?.Text == "bool";
-        }
-
-        if (!IsNumericZero(literal.Value))
-        {
-            return false;
-        }
-
-        return field.Type.Identifier?.Text is "int" or "int8" or "int16" or "int32" or "int64"
-            or "uint" or "uint8" or "uint16" or "uint32" or "uint64"
-            or "nint" or "nuint" or "float" or "float32" or "float64";
-    }
-
-    private static bool IsNumericZero(object value) => value switch
-    {
-        byte number => number == 0,
-        sbyte number => number == 0,
-        short number => number == 0,
-        ushort number => number == 0,
-        int number => number == 0,
-        uint number => number == 0,
-        long number => number == 0,
-        ulong number => number == 0,
-        float number => number == 0,
-        double number => number == 0,
-        decimal number => number == 0,
-        _ => false,
-    };
-
-    private static SourceEdit WholeLineEdit(TextSpan span, string source)
-    {
-        var start = span.Start;
-        while (start > 0 && source[start - 1] is ' ' or '\t')
-        {
-            start--;
-        }
-
-        var end = span.End;
-        while (end < source.Length && source[end] is ' ' or '\t')
-        {
-            end++;
-        }
-        if (end < source.Length && source[end] == '\r')
-        {
-            end++;
-        }
-        if (end < source.Length && source[end] == '\n')
-        {
-            end++;
-        }
-
-        return new SourceEdit(start, end - start, string.Empty);
     }
 
     private static void CollectFixEdits(SyntaxNode node, string source, List<SourceEdit> edits)
