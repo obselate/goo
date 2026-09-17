@@ -14,7 +14,7 @@ Goo applications describe UI as ordinary G# objects. Goo retains mounted state, 
 
 ## Quick start
 
-### Create an app
+### Create a NuGet app
 
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
@@ -52,12 +52,12 @@ third-party tools only when the project contains `<GooShaderEffect>` items:
 Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
 also accepts `slangc` and `spirv-val` on `PATH`.
 
-### Build and run Goo Gallery
+### Build the source Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10, Git, and the pinned
-[custom shader tools](#custom-shaders). The Gallery compiles its shaders during
-the build.
+and shaders. Install .NET 10 and Git. Then download both pinned
+[custom shader tools](#custom-shaders) for your platform and set their SDK
+environment variables. The Gallery compiles its shaders during the build.
 
 ```sh
 git clone https://github.com/obselate/goo.git
@@ -163,10 +163,10 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
   MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
   Vulkan SDK.
 
-- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device. The
-  `Goo.Android` adapter hosts the same Window, Cell, and Blob application in an
-  Android activity or native view. See [Android integration](docs/android.md)
-  for the shared smoke app, NDK builds, packaging, and lifecycle checks.
+- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
+  identity presentation support. The `Goo.Android` adapter hosts the same
+  application in an Android activity or native view. See
+  [Android integration](docs/android.md).
 
 ## Further reading
 

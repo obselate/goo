@@ -14,7 +14,7 @@ Goo applications describe UI as ordinary G# objects. Goo retains mounted state, 
 
 ## Quick start
 
-### Create an app
+### Create a NuGet app
 
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
@@ -35,15 +35,29 @@ dotnet run
 
 The template restores the G# SDK and Goo package through NuGet. A separate G#
 compiler, SDL, or HarfBuzz installation is not required. Apps that add custom
-`<GooShaderEffect>` source need [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16)
-and [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home).
+`<GooShaderEffect>` source need the pinned shader tools listed under
+[custom shaders](#custom-shaders).
 
-### Build and run Goo Gallery
+### Custom shaders
+
+Goo includes the ShaderEffect build adapter and authoring modules. Install these
+third-party tools only when the project contains `<GooShaderEffect>` items:
+
+| Platform | Slang 2026.16 | Vulkan SDK 1.4.357.0 with `spirv-val` |
+| --- | --- | --- |
+| Linux x64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz) | [Download `.tar.xz`](https://sdk.lunarg.com/sdk/download/1.4.357.0/linux/vulkan_sdk.tar.xz) |
+| Windows x64 | [Download `.zip`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-windows-x86_64.zip) | [Download installer](https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe) |
+| macOS arm64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz) | [Download `.zip`](https://sdk.lunarg.com/sdk/download/1.4.357.0/mac/vulkan_sdk.zip) |
+
+Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
+also accepts `slangc` and `spirv-val` on `PATH`.
+
+### Build the source Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10, Git, Slang 2026.16, and Vulkan SDK 1.4.357.0.
-Set `SLANG_SDK` and `VULKAN_SDK` to their SDK roots. The Gallery compiles its
-own shaders during the build.
+and shaders. Install .NET 10 and Git. Then download both pinned
+[custom shader tools](#custom-shaders) for your platform and set their SDK
+environment variables. The Gallery compiles its shaders during the build.
 
 ```sh
 git clone https://github.com/obselate/goo.git
@@ -61,8 +75,9 @@ bootstrap.bat
 dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-The bootstrap builds the pinned G# authoring tools and downloads the released
-native runtime files used by the Gallery.
+The bootstrap builds the pinned G# compiler and formatter, then downloads the
+released Goo package for the Gallery's native runtime files. It does not install
+software globally.
 
 Open **Surfaces > Fridge** to try drag and drop, or **Shaders** for the shader
 examples. Apple silicon users can also download the prebuilt Gallery and its
@@ -148,10 +163,10 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
   MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
   Vulkan SDK.
 
-- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device. The
-  `Goo.Android` adapter hosts the same Window, Cell, and Blob application in an
-  Android activity or native view. See [Android integration](docs/android.md)
-  for the shared smoke app, NDK builds, packaging, and lifecycle checks.
+- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
+  identity presentation support. The `Goo.Android` adapter hosts the same
+  application in an Android activity or native view. See
+  [Android integration](docs/android.md).
 
 ## Further reading
 

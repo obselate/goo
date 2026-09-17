@@ -21,7 +21,7 @@ dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -o artifac
 ```
 
 The graphical inspector is a Goo application. Run the repository bootstrap from
-the [Gallery source instructions](../../README.md#build-and-run-goo-gallery),
+the [Gallery source instructions](../../README.md#build-the-source-gallery),
 then:
 
 ```sh
@@ -71,6 +71,6 @@ direct Cell wrappers and typed Cells whose inputs have not changed. Existing
 Cells and native windows remain mounted. Diagnostics are optional.
 
 This requires a G# runtime that dispatches `MetadataUpdateHandlerAttribute`
-callbacks after applying deltas. The released G# SDK 0.4.1 does not dispatch
-them. See the [local integration test](../../tests/Goo.HotReloadSmoke/README.md)
-for the runtime override, package setup and state-preservation checks.
+callbacks after applying deltas. The
+[local integration test](../../tests/Goo.HotReloadSmoke/README.md) explains how
+to build and select a compatible runtime and records the supported edit scope.
