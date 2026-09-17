@@ -162,7 +162,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
   private var preparedEffectDataVersion uint64
   private var preparedEffectDataNeedsWrite bool
   private var preparedEffectDataWritten bool
-  private var preparedCommandBuffer VkCommandBuffer
   private var lastStats VulkanPrimitiveFrameStats
   private var totalCpuWrittenBytes uint64
   private var totalCpuComparedBytes uint64
@@ -348,7 +347,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       preparedEffectDataVersion = effectDataVersion
       preparedEffectDataWritten = dataBytes == 0uL
       preparedRecords = 0
-      preparedCommandBuffer = nint(0)
       slot.Lifecycle.Begin()
       slot.PreparedByteCount = 0uL
       slot.PreparedRecordCount = 0
@@ -583,7 +581,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       totalRecordedBarriers = SaturatingAdd(totalRecordedBarriers, 1uL)
     }
     slot.Lifecycle.Record(commandBuffer)
-    preparedCommandBuffer = commandBuffer
   }
 
   internal func FlushBeforeSubmit() VkResult {
@@ -593,8 +590,7 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     }
     let slot = slots[preparedSlot]
     if !slot.Lifecycle.Prepared || !slot.Lifecycle.Recorded
-      || !slot.Lifecycle.FlushPrepared
-      || slot.Lifecycle.RecordedCommandBuffer != preparedCommandBuffer{
+      || !slot.Lifecycle.FlushPrepared{
         throw InvalidOperationException("Vulkan primitive frame upload is not ready for submit")
       }
     return VkConstants.VK_SUCCESS
@@ -646,7 +642,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     preparedBytes = 0uL
     preparedRecords = 0
     ResetPreparedMetadata()
-    preparedCommandBuffer = nint(0)
     lastStats.Prepared = false
     lastStats.LastUseSerial = submissionSerial
   }
@@ -664,7 +659,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       preparedBytes = 0uL
       preparedRecords = 0
       ResetPreparedMetadata()
-      preparedCommandBuffer = nint(0)
       lastStats.Prepared = false
       lastStats.LastUseSerial = submissionSerial
       return
@@ -740,7 +734,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     preparedBytes = 0uL
     preparedRecords = 0
     ResetPreparedMetadata()
-    preparedCommandBuffer = nint(0)
     lastStats.Prepared = false
   }
 
@@ -753,7 +746,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     preparedBytes = 0uL
     preparedRecords = 0
     ResetPreparedMetadata()
-    preparedCommandBuffer = nint(0)
     var index int32 = 0
     while index < slots.Length {
       slots[index].Lifecycle.Reset()

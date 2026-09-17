@@ -216,7 +216,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
   private var preparedSlot int32 = -1
   private var preparedBytes VkDeviceSize
   private var preparedRecords int32
-  private var preparedCommandBuffer VkCommandBuffer
   private var lastStats VulkanTextFrameStats
   private var totalSegmentCount uint64
   private var totalRunCount uint64
@@ -472,7 +471,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       preparedSlot = slotIndex
       preparedBytes = logicalBytes
       preparedRecords = recordCount
-      preparedCommandBuffer = nint(0)
       totalSegmentCount = SaturatingAdd(totalSegmentCount, uint64(slot.CandidateSegmentCount))
       totalRunCount = SaturatingAdd(totalRunCount, uint64(runCount))
       totalRecordCount = SaturatingAdd(totalRecordCount, uint64(recordCount))
@@ -554,7 +552,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
         VkConstants.VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT)
     }
     slot.Lifecycle.Record(commandBuffer)
-    preparedCommandBuffer = commandBuffer
   }
 
   internal func FlushBeforeSubmit() VkResult {
@@ -564,8 +561,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     }
     let slot = slots[preparedSlot]
     if !slot.Lifecycle.Prepared || !slot.Lifecycle.Recorded
-      || !slot.Lifecycle.FlushPrepared
-      || slot.Lifecycle.RecordedCommandBuffer != preparedCommandBuffer{
+      || !slot.Lifecycle.FlushPrepared{
         throw InvalidOperationException("Vulkan text frame upload is not ready for submit")
       }
     return VkConstants.VK_SUCCESS
@@ -607,7 +603,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
-    preparedCommandBuffer = nint(0)
     totalLastUseSerial = SaturatingAdd(totalLastUseSerial, submissionSerial)
     lastStats.Prepared = false
     lastStats.LastUseSerial = submissionSerial
@@ -626,7 +621,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       preparedSlot = -1
       preparedBytes = 0uL
       preparedRecords = 0
-      preparedCommandBuffer = nint(0)
       totalLastUseSerial = SaturatingAdd(totalLastUseSerial, submissionSerial)
       lastStats.Prepared = false
       lastStats.LastUseSerial = submissionSerial
@@ -670,7 +664,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
-    preparedCommandBuffer = nint(0)
     lastStats.Prepared = false
   }
 
@@ -682,7 +675,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
-    preparedCommandBuffer = nint(0)
     var index int32 = 0
     while index < slots.Length {
       slots[index].Lifecycle.Reset()
