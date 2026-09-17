@@ -20,13 +20,12 @@ To create its local tool package:
 dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -o artifacts/devtools
 ```
 
-The graphical inspector is a Goo application. Supply the same native runtime
-paths described in the [Gallery source instructions](../../README.md#build-and-run-goo-gallery),
-using `apps/Goo.DevTools/Goo.DevTools.gsproj` as the project instead.
-For example, after extracting the released native assets on Linux:
+The graphical inspector is a Goo application. Run the repository bootstrap from
+the [Gallery source instructions](../../README.md#build-and-run-goo-gallery),
+then:
 
 ```sh
-dotnet run --project apps/Goo.DevTools/Goo.DevTools.gsproj -c Release -p:GooLinuxSdlPath="$PWD/artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so"
+dotnet run --project apps/Goo.DevTools/Goo.DevTools.gsproj -c Release
 ```
 
 For fixture data without a running target, append `-- --sample` to the source

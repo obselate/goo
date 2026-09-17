@@ -208,7 +208,9 @@ internal sealed class SlangCompiler
                 }
             }
         }
-        throw new InvalidOperationException($"Could not find {name} in SLANG_SDK or PATH");
+        throw new InvalidOperationException(
+            $"Could not find {name} in SLANG_SDK or PATH. Download Slang {Version} from "
+            + $"https://github.com/shader-slang/slang/releases/tag/v{Version}");
     }
 
     private static string HashFile(string value)

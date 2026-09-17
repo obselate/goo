@@ -34,48 +34,35 @@ dotnet run
 ```
 
 The template restores the G# SDK and Goo package through NuGet. A separate G#
-compiler, SDL, HarfBuzz, or shader compiler installation is not required for
-this starter application.
+compiler, SDL, or HarfBuzz installation is not required. Apps that add custom
+`<GooShaderEffect>` source need [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16)
+and [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home).
 
 ### Build and run Goo Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10, Git, and the
-[source-build shader tools](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#source-setup):
-Slang 2026.16 and Vulkan SDK 1.4.357.0. Set `SLANG_SDK` and `VULKAN_SDK`
-to their SDK roots. The Gallery compiles its own shaders during the build.
+and shaders. Install .NET 10, Git, Slang 2026.16, and Vulkan SDK 1.4.357.0.
+Set `SLANG_SDK` and `VULKAN_SDK` to their SDK roots. The Gallery compiles its
+own shaders during the build.
 
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+./bootstrap.sh
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-Download [Goo.0.5.4.nupkg](https://github.com/obselate/goo/releases/download/v0.5.4/Goo.0.5.4.nupkg)
-and extract it as a ZIP archive into `artifacts/gallery-native` inside the
-checkout. This supplies the released native libraries without compiling them
-yourself. Keep the archive's directory structure intact.
+On Windows:
 
-From the checkout root, use the command for your platform. `dotnet run` builds
-the Gallery in Release mode and opens it.
-
-**Linux x64 (Wayland):**
-
-```sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooLinuxSdlPath="$PWD/artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so"
+```bat
+git clone https://github.com/obselate/goo.git
+cd goo
+bootstrap.bat
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-**Windows x64 (PowerShell):**
-
-```powershell
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooWindowsSdlPath="$PWD/artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll"
-```
-
-**macOS arm64:**
-
-```sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooMacOsArm64NativeRoot="$PWD/artifacts/gallery-native/runtimes/osx-arm64/native"
-```
+The bootstrap builds the pinned G# authoring tools and downloads the released
+native runtime files used by the Gallery.
 
 Open **Surfaces > Fridge** to try drag and drop, or **Shaders** for the shader
 examples. Apple silicon users can also download the prebuilt Gallery and its

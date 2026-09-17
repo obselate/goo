@@ -34,48 +34,50 @@ dotnet run
 ```
 
 The template restores the G# SDK and Goo package through NuGet. A separate G#
-compiler, SDL, HarfBuzz, or shader compiler installation is not required for
-this starter application.
+compiler, SDL, or HarfBuzz installation is not required. Apps that add custom
+`<GooShaderEffect>` source need the pinned shader tools listed under
+[custom shaders](#custom-shaders).
+
+### Custom shaders
+
+Goo includes the ShaderEffect build adapter and authoring modules. Install these
+third-party tools only when the project contains `<GooShaderEffect>` items:
+
+| Platform | Slang 2026.16 | Vulkan SDK 1.4.357.0 with `spirv-val` |
+| --- | --- | --- |
+| Linux x64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz) | [Download `.tar.xz`](https://sdk.lunarg.com/sdk/download/1.4.357.0/linux/vulkan_sdk.tar.xz) |
+| Windows x64 | [Download `.zip`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-windows-x86_64.zip) | [Download installer](https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe) |
+| macOS arm64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz) | [Download `.zip`](https://sdk.lunarg.com/sdk/download/1.4.357.0/mac/vulkan_sdk.zip) |
+
+Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
+also accepts `slangc` and `spirv-val` on `PATH`.
 
 ### Build and run Goo Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10, Git, and the
-[source-build shader tools](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#source-setup):
-Slang 2026.16 and Vulkan SDK 1.4.357.0. Set `SLANG_SDK` and `VULKAN_SDK`
-to their SDK roots. The Gallery compiles its own shaders during the build.
+and shaders. Install .NET 10, Git, and the pinned
+[custom shader tools](#custom-shaders). The Gallery compiles its shaders during
+the build.
 
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+./bootstrap.sh
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-Download [Goo.0.5.4.nupkg](https://github.com/obselate/goo/releases/download/v0.5.4/Goo.0.5.4.nupkg)
-and extract it as a ZIP archive into `artifacts/gallery-native` inside the
-checkout. This supplies the released native libraries without compiling them
-yourself. Keep the archive's directory structure intact.
+On Windows:
 
-From the checkout root, use the command for your platform. `dotnet run` builds
-the Gallery in Release mode and opens it.
-
-**Linux x64 (Wayland):**
-
-```sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooLinuxSdlPath="$PWD/artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so"
+```bat
+git clone https://github.com/obselate/goo.git
+cd goo
+bootstrap.bat
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-**Windows x64 (PowerShell):**
-
-```powershell
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooWindowsSdlPath="$PWD/artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll"
-```
-
-**macOS arm64:**
-
-```sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooMacOsArm64NativeRoot="$PWD/artifacts/gallery-native/runtimes/osx-arm64/native"
-```
+The bootstrap builds the pinned G# compiler and formatter, then downloads the
+released Goo package for the Gallery's native runtime files. It does not install
+software globally.
 
 Open **Surfaces > Fridge** to try drag and drop, or **Shaders** for the shader
 examples. Apple silicon users can also download the prebuilt Gallery and its

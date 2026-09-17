@@ -71,7 +71,9 @@ internal sealed class SpirvValidator
                 }
             }
         }
-        throw new InvalidOperationException($"Could not find {executable} in VULKAN_SDK or PATH");
+        throw new InvalidOperationException(
+            $"Could not find {executable} in VULKAN_SDK or PATH. Download Vulkan SDK {Sdk} from "
+            + "https://vulkan.lunarg.com/sdk/home");
     }
 
     private static ToolResult Run(string path, IEnumerable<string> arguments)
