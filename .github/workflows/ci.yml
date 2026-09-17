@@ -30,7 +30,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Build pinned upstream G# authoring tools
-        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+        run: ./bootstrap.sh --gsharp-only
 
       - name: Validate onboarding and release metadata
         run: .github/scripts/validate-onboarding.py
@@ -95,7 +95,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Build pinned upstream G# authoring tools
-        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+        run: ./bootstrap.sh --gsharp-only
 
       - name: Install native build tools
         run: brew install cmake meson ninja
@@ -249,7 +249,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Build pinned upstream G# authoring tools
-        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+        run: ./bootstrap.sh --gsharp-only
 
       - name: Install Linux build and Wayland dependencies
         run: |
@@ -847,7 +847,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Build pinned upstream G# authoring tools
-        run: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+        run: ./bootstrap.sh --gsharp-only
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

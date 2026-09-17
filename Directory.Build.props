@@ -2,6 +2,9 @@
   <PropertyGroup>
     <GsharpCompilerFullPath Condition="'$(GsharpCompilerFullPath)' == ''">$(MSBuildThisFileDirectory)artifacts/gsharp/compiler/gsc.dll</GsharpCompilerFullPath>
     <GooReleaseVersion>0.5.4</GooReleaseVersion>
+    <GooLinuxSdlPath Condition="'$(GooLinuxSdlPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so')">$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so</GooLinuxSdlPath>
+    <GooWindowsSdlPath Condition="'$(GooWindowsSdlPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll')">$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll</GooWindowsSdlPath>
+    <GooMacOsArm64NativeRoot Condition="'$(GooMacOsArm64NativeRoot)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/osx-arm64/native/libSDL3.dylib')">$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/osx-arm64/native</GooMacOsArm64NativeRoot>
   </PropertyGroup>
   <!-- Custom Release configurations still require optimized G# output. -->
   <PropertyGroup Condition="$([System.String]::Copy('$(Configuration)').EndsWith('Release'))">

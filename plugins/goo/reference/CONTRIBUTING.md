@@ -10,18 +10,21 @@ SPIR-V and native HarfBuzz payloads:
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+./bootstrap.sh --gsharp-only
 dotnet build Goo/Goo.gsproj -c Release
 ```
+
+On Windows, use `bootstrap.bat --gsharp-only`.
 
 The G# SDK restores from NuGet through `Gsharp.NET.Sdk`. It is not a separate
 system installation.
 
-Install Slang 2026.16 and Vulkan SDK 1.4.357.0 when building Goo Gallery,
-projects with `<GooShaderEffect>` items, or regenerating shaders. Set
-`SLANG_SDK` and `VULKAN_SDK` to their SDK roots. ShaderEffect builds need
+Install [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16)
+and [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home) when building Goo
+Gallery, projects with `<GooShaderEffect>` items, or regenerating shaders. Set
+`SLANG_SDK` and `VULKAN_SDK` to their SDK roots. ShaderEffect builds use
 `slangc` and SPIRV-Tools 2026.3 `spirv-val`. Internal shader regeneration also
-needs `glslc` 2026.3.
+uses the SDK's `glslc` 2026.3.
 
 Linux Vulkan runs also need a native Wayland session, a Vulkan 1.3 driver, and
 a TrueType or OpenType sans-serif font. The CI dependency list in
@@ -39,8 +42,10 @@ The current source uses upstream G# ADR-0180 mixed initializers and the ADR-0179
 formatter. Build the pinned compiler and formatter before building this checkout:
 
 ```sh
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+./bootstrap.sh --gsharp-only
 ```
+
+On Windows, use `bootstrap.bat --gsharp-only`.
 
 The pin is upstream `947be9cb5f4467947ecb95dba06b461f9984d659`. The published
 G# SDK 0.4.591 supplies the MSBuild tasks and runtime libraries. The source-built

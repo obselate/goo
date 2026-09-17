@@ -21,7 +21,6 @@
 !/.github/patches/accesskit/**
 !/.github/scripts/build-accesskit-linux-x64.sh
 !/.github/scripts/validate-accessibility-package.py
-!/.github/scripts/bootstrap-gsharp.py
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/build-text-native-linux-x64.sh
@@ -131,6 +130,8 @@
 !/THIRD-PARTY-NOTICES.md
 !/Directory.Build.props
 !/Directory.Packages.props
+!/bootstrap.sh
+!/bootstrap.bat
 
 **/bin/
 **/obj/
