@@ -9,7 +9,7 @@ internal static class Program
 {
     private const string ShaderDirectory = "tests/Goo.VulkanProof/Shaders";
     private const string ProductionDirectory = "Goo/Shaders/Vulkan";
-    private const string InputManifestName = "shader-manifest.json";
+    private const string ManifestName = "shader-manifest.json";
     private const string GlslcVersionMarker = "1:";
     private const string HarfBuzzTag = "14.3.1";
     private const string HarfBuzzCommit = "ab5ecbb83985034a76214ac0b2b833dcd590d774";
@@ -496,17 +496,16 @@ internal static class Program
         string repositoryRoot = FindRepositoryRoot();
         string shaderRoot = Path.Combine(repositoryRoot, ShaderDirectory.Replace('/', Path.DirectorySeparatorChar));
         string productionRoot = Path.Combine(repositoryRoot, ProductionDirectory.Replace('/', Path.DirectorySeparatorChar));
-        string inputManifestPath = Path.Combine(shaderRoot, InputManifestName);
-        string productionManifestPath = Path.Combine(productionRoot, InputManifestName);
-        byte[] inputManifestBytes = File.ReadAllBytes(inputManifestPath);
-        EnsureLf(inputManifestPath, inputManifestBytes);
-        Manifest manifest = DeserializeManifest(inputManifestPath, inputManifestBytes);
+        string manifestPath = Path.Combine(productionRoot, ManifestName);
+        byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+        EnsureLf(manifestPath, manifestBytes);
+        Manifest manifest = DeserializeManifest(manifestPath, manifestBytes);
         ValidateManifest(manifest);
         ValidateAssemblyFiles(manifest, repositoryRoot);
         string canonicalInput = SerializeManifest(manifest);
-        if (!inputManifestBytes.AsSpan().SequenceEqual(Encoding.UTF8.GetBytes(canonicalInput)))
+        if (!manifestBytes.AsSpan().SequenceEqual(Encoding.UTF8.GetBytes(canonicalInput)))
         {
-            throw new InvalidOperationException($"Manifest is not canonical: {inputManifestPath}");
+            throw new InvalidOperationException($"Manifest is not canonical: {manifestPath}");
         }
 
         string compilerPath = FindTool(manifest.Toolchain.Compiler.Executable, "SLANG_SDK");
@@ -526,12 +525,12 @@ internal static class Program
             if (mode == "generate")
             {
                 WriteProduction(productionRoot, builtShaders, generatedManifestBytes);
-                Console.WriteLine($"Generated {builtShaders.Count} shaders and {productionManifestPath}");
+                Console.WriteLine($"Generated {builtShaders.Count} shaders and {manifestPath}");
                 return 0;
             }
 
             CheckProduction(productionRoot, builtShaders, generatedManifestBytes);
-            Console.WriteLine($"Checked {builtShaders.Count} shaders and {productionManifestPath}");
+            Console.WriteLine($"Checked {builtShaders.Count} shaders and {manifestPath}");
             return 0;
         }
         finally
@@ -817,12 +816,12 @@ internal static class Program
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             File.WriteAllBytes(outputPath, builtShader.Output);
         }
-        File.WriteAllBytes(Path.Combine(productionRoot, InputManifestName), generatedManifestBytes);
+        File.WriteAllBytes(Path.Combine(productionRoot, ManifestName), generatedManifestBytes);
     }
 
     private static void CheckProduction(string productionRoot, IReadOnlyList<BuiltShader> builtShaders, byte[] generatedManifestBytes)
     {
-        RequireByteMatch(generatedManifestBytes, Path.Combine(productionRoot, InputManifestName), "production shader manifest");
+        RequireByteMatch(generatedManifestBytes, Path.Combine(productionRoot, ManifestName), "production shader manifest");
         foreach (BuiltShader builtShader in builtShaders)
         {
             string productionPath = ResolveChildPath(productionRoot, builtShader.Spec.Output, "production output");
@@ -911,13 +910,6 @@ internal static class Program
         RequireShader(manifest.Shaders[14], "hb_gpu_paint_fragment", "fragment", "hb_gpu_paint.frag.wrapper.glsl", "hb_gpu_paint.frag.spv", "hb_gpu_paint_fragment");
         RequireShader(manifest.Shaders[15], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv");
         RequireShader(manifest.Shaders[16], "clip_mask_fragment", "fragment", "clip_mask.frag.slang", "clip_mask.frag.spv");
-        foreach (Shader shader in manifest.Shaders)
-        {
-            if (shader.SourceSha256 is not null || shader.OutputSha256 is not null || shader.OutputBytes is not null)
-            {
-                throw new InvalidOperationException($"Source manifest contains generated hashes: {shader.Id}");
-            }
-        }
         if (manifest.Pipelines.Count != 12)
         {
             throw new InvalidOperationException("pipelines must contain exactly twelve entries");
@@ -1168,10 +1160,6 @@ internal static class Program
         {
             throw new InvalidOperationException("Host packing paths must be file names: textInstanceRecord");
         }
-        if (record.HostPacking.Sha256 is not null || record.HostPacking.Bytes is not null)
-        {
-            throw new InvalidOperationException("Source manifest contains generated host packing metadata: textInstanceRecord");
-        }
     }
 
     private static void RequireMembers(PushConstants actual, IReadOnlyList<PushConstantMember> expected, string path)
@@ -1228,10 +1216,6 @@ internal static class Program
         if (pipeline.HostPacking.Path.Contains('/') || pipeline.HostPacking.Path.Contains('\\'))
         {
             throw new InvalidOperationException($"Host packing paths must be file names: {id}");
-        }
-        if (pipeline.HostPacking.Sha256 is not null || pipeline.HostPacking.Bytes is not null)
-        {
-            throw new InvalidOperationException($"Source manifest contains generated host packing metadata: {id}");
         }
         Require(pipeline.PushConstants.Offset == 0, $"pipeline[{id}].pushConstants.offset", "0");
         Require(pipeline.PushConstants.Size == pushConstantSize, $"pipeline[{id}].pushConstants.size", pushConstantSize.ToString());
@@ -1538,7 +1522,7 @@ internal static class Program
             DirectoryInfo? current = new DirectoryInfo(Path.GetFullPath(start));
             while (current is not null)
             {
-                string manifestPath = Path.Combine(current.FullName, ShaderDirectory.Replace('/', Path.DirectorySeparatorChar), InputManifestName);
+                string manifestPath = Path.Combine(current.FullName, ProductionDirectory.Replace('/', Path.DirectorySeparatorChar), ManifestName);
                 if (File.Exists(manifestPath))
                 {
                     return current.FullName;
