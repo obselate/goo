@@ -136,6 +136,7 @@ public sealed class FixtureContractTests
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LogicalEdgesRespectDirection));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.StaticPositionIgnoresInsets));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.TextEntryUsesIntrinsicLineBoxHeight));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CallbackAnimationContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.CellDisposeContinuesAfterPositionFailureContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.CloseIsolatesWindowPumpContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.DisposeRetainsPartialProgressContract));
@@ -202,10 +203,13 @@ public sealed class FixtureContractTests
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.StateOnlyTransitionFallbackContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.StateStyleRetentionAndEqualityContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextDecorationInheritanceStateAndStorageContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextMaxLinesResolutionStateAndCacheContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextShadowResolutionStorageAndDiffContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextShadowValueValidationContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextStrokeResolutionStorageAndDiffContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextTransformInheritanceStateAndCacheContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TextWrapAndTrimmingStateInheritanceContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.TransformStateTransitionAndGeometryContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TransitionBlobEasingContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TransitionDeclarationContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TransitionDelayAndPropertySelectionContract));
@@ -228,9 +232,11 @@ public sealed class FixtureContractTests
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.StaleTextEventsDropAcrossTransfersAndFocusCycles));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.TextCallbackStateStaysAbsentUntilConfigured));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.UnavailableOrRemovedFocusedClientsDropQueuedText));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.ButtonStyleSpillContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ControlledEntryComposition));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ExplicitControlledEntryValue));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.KeyedReconciliationContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.LeafDirtyUpdateContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.OutputAndKindReplacementContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.PositionalReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.TextEntryControlledValueContract));
@@ -250,6 +256,14 @@ public sealed class FixtureContractTests
         Assert.NotNull(method);
         Assert.True(((Func<bool>)method.CreateDelegate(typeof(Func<bool>), fixture))());
     }
+
+    [Theory]
+    [InlineData("mount-mixed")]
+    [InlineData("diff-mixed")]
+    [InlineData("mount-duplicate")]
+    [InlineData("diff-duplicate")]
+    public void InvalidChildListsAreRejected(string scenario) =>
+        Assert.True(new TreeFixtures().RejectsInvalidChildList(scenario));
 
     private static object[] Contract<TFixture>(string methodName) => [typeof(TFixture), methodName];
 }
