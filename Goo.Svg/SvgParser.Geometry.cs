@@ -1,6 +1,6 @@
-namespace Goo.SvgCompiler;
+namespace Goo.Svg;
 
-internal sealed partial class SvgCompiler
+internal sealed partial class SvgParser
 {
     private SvgPath ParseGeometry(XElement element)
     {

@@ -1,6 +1,6 @@
-namespace Goo.SvgCompiler;
+namespace Goo.Svg;
 
-internal sealed partial class SvgCompiler
+internal sealed partial class SvgParser
 {
     private static bool IsAnimationElement(XElement element)
     {
@@ -61,7 +61,7 @@ internal sealed partial class SvgCompiler
             "stroke-width" or "stroke-miterlimit" or "stroke-linecap" or "stroke-linejoin"
                 or "stroke-dashoffset" => SvgAnimationKind.Stroke,
             "fill-opacity" or "stroke-opacity" or "stroke-dasharray"
-                => throw Fail(element, $"{attributeName} animation is not representable in the GCV1 track ABI"),
+                => throw Fail(element, $"{attributeName} animation is not supported"),
             _ => throw Fail(element, $"attribute '{attributeName}' is not in the controlled animation subset")
         };
         var animation = BuildAnimation(element, kind, attributeName, node.Shape?.Stroke, null);
@@ -233,7 +233,7 @@ internal sealed partial class SvgCompiler
         var fill = ((string?)element.Attribute("fill") ?? "remove").Trim().ToLowerInvariant();
         if (fill != "freeze")
         {
-            throw Fail(element, "animation requires fill='freeze' because the track ABI has no active fill timing");
+            throw Fail(element, "animation requires fill='freeze'");
         }
         if (element.Attribute("end") is not null || element.Attribute("repeatDur") is not null
             || element.Attribute("min") is not null || element.Attribute("max") is not null)

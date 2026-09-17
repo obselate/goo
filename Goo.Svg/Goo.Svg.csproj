@@ -25,11 +25,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Goo/Goo.gsproj" />
-    <Compile Include="../tools/Goo.SvgCompiler/GlobalUsings.cs" Link="GlobalUsings.cs" />
-    <Compile Include="../tools/Goo.SvgCompiler/SvgCompiler.*.cs" Link="%(Filename)%(Extension)" />
-    <Compile Include="../tools/Goo.SvgCompiler/SvgModel.cs" Link="SvgModel.cs" />
-    <Compile Include="../tools/Goo.SvgCompiler/SvgPathParser.cs" Link="SvgPathParser.cs" />
-    <Compile Include="../tools/Goo.SvgCompiler/SvgScanners.cs" Link="SvgScanners.cs" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="../LICENSE" Pack="true" PackagePath="/" />
   </ItemGroup>

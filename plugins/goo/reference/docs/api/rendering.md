@@ -65,98 +65,6 @@ lists use Goo-owned GPU storage and remain a single gradient draw; device storag
 limits still apply. Interpolation uses premultiplied linear color, including
 per-stop alpha and element opacity.
 
-## `CompiledVectorAsset`
-
-Source:
-
-- [`CompiledVector.Asset.gs`](../../Goo/Rendering/CompiledVector.Asset.gs)
-
-Loads, caches, and renders a validated compiled vector asset.
-
-### `Load(System.Byte[])`
-
-Loads a compiled vector asset and throws when the bytes are invalid.
-
-### `PathForNode(int32)`
-
-Returns the cached path for one asset node.
-
-### `Render`
-
-Creates a retained display cell for this asset.
-
-### `Render(string)`
-
-Creates or updates a retained display cell using the supplied key.
-
-### `TryLoad(System.Byte[])`
-
-Loads a compiled vector asset and returns nil when the bytes are invalid.
-
-### `ByteCount`
-
-Gets the encoded asset byte count.
-
-### `ClipCount`
-
-Gets the number of clip paths.
-
-### `ContourCount`
-
-Gets the number of vector contours.
-
-### `CurveCount`
-
-Gets the number of vector curves.
-
-### `Flags`
-
-Gets the compiled asset flags.
-
-### `KeyframeCount`
-
-Gets the number of animation keyframes.
-
-### `MorphCurveCount`
-
-Gets the number of morph curves.
-
-### `NodeCount`
-
-Gets the number of vector nodes.
-
-### `PaintCount`
-
-Gets the number of paints.
-
-### `StrokeCount`
-
-Gets the number of strokes.
-
-### `TrackCount`
-
-Gets the number of animation tracks.
-
-### `Version`
-
-Gets the compiled asset format version.
-
-### `ViewBoxHeight`
-
-Gets the view box height.
-
-### `ViewBoxWidth`
-
-Gets the view box width.
-
-### `ViewBoxX`
-
-Gets the view box origin on the x axis.
-
-### `ViewBoxY`
-
-Gets the view box origin on the y axis.
-
 ## `ShaderEffect`
 
 Source:
@@ -290,17 +198,13 @@ Specifies the visual side of a text position at a directional boundary.
 
 Source:
 
-- [`CompiledVector.Asset.gs`](../../Goo/Rendering/CompiledVector.Asset.gs)
+- [`VectorAsset.Render.gs`](../../Goo/Rendering/VectorAsset.Render.gs)
 
-Owns an immutable vector document shared by authored, runtime SVG, and compiled assets.
+Owns an immutable vector document shared by authored and runtime SVG assets.
 
 ### `new(float64,float64,float64,float64,VectorNode[])`
 
 Snapshots a vector document whose paths use the supplied view-box coordinate space.
-
-### `Load(System.Byte[])`
-
-Decodes a validated compiled vector document.
 
 ### `NodeAt(int32)`
 
@@ -318,14 +222,6 @@ Creates a retained vector display fitted within its parent.
 
 Creates a keyed retained vector display fitted within its parent.
 
-### `TryLoad(System.Byte[])`
-
-Decodes a compiled vector document or returns nil when the bytes are invalid.
-
-### `ByteCount`
-
-Gets the encoded source byte count, or zero for authored documents.
-
 ### `ClipCount`
 
 Gets the clip count.
@@ -337,18 +233,6 @@ Gets the contour count.
 ### `CurveCount`
 
 Gets the quadratic curve count.
-
-### `Flags`
-
-Gets source format flags, or zero for authored documents.
-
-### `KeyframeCount`
-
-Gets the animation keyframe count.
-
-### `MorphCurveCount`
-
-Gets the morph curve count.
 
 ### `NodeCount`
 
@@ -365,14 +249,6 @@ Gets the paint count.
 ### `StrokeCount`
 
 Gets the stroke count.
-
-### `TrackCount`
-
-Gets the animation track count.
-
-### `Version`
-
-Gets the source format version, or zero for authored documents.
 
 ### `ViewBoxHeight`
 

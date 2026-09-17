@@ -340,8 +340,6 @@ jobs:
       - name: Build library and Vulkan verification projects
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tools/Goo.SvgCompiler/Goo.SvgCompiler.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
           dotnet build Goo.Svg/Goo.Svg.csproj \
             -c Release -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj \
@@ -499,11 +497,6 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
-          dotnet pack tools/Goo.SvgCompiler/Goo.SvgCompiler.csproj \
-            -c Release -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true \
-            -p:ContinuousIntegrationBuild=true \
-            -p:RepositoryCommit="$GITHUB_SHA"
           dotnet pack Goo.Svg/Goo.Svg.csproj \
             -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true \
@@ -651,7 +644,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.SvgCompiler.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
 
@@ -674,7 +666,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.SvgCompiler.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -791,10 +782,6 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-          dotnet nuget push "artifacts/packages/Goo.SvgCompiler.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -830,7 +817,6 @@ jobs:
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Svg.$GOO_VERSION.nupkg"
-            "artifacts/packages/Goo.SvgCompiler.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

@@ -1,6 +1,6 @@
-namespace Goo.SvgCompiler;
+namespace Goo.Svg;
 
-internal sealed partial class SvgCompiler
+internal sealed partial class SvgParser
 {
     private SvgShape BuildShape(XElement element, SvgPath path, SvgStyle style)
     {
@@ -14,7 +14,7 @@ internal sealed partial class SvgCompiler
                 ?? throw Fail(element, "stroke paint is empty");
             if (paint.Kind != SvgPaintKind.Solid)
             {
-                throw Fail(element, "gradient stroke paints are not supported in compiled vectors");
+                throw Fail(element, "gradient stroke paints are not supported");
             }
             stroke = new SvgStroke
             {
@@ -132,8 +132,7 @@ internal sealed partial class SvgCompiler
         return new SvgPaint
         {
             Kind = SvgPaintKind.Solid,
-            Color = ParseColor(value, owner),
-            Opacity = opacity
+            Color = ApplyOpacity(ParseColor(value, owner), opacity)
         };
     }
 
@@ -200,8 +199,7 @@ internal sealed partial class SvgCompiler
         }
         var paint = new SvgPaint
         {
-            Kind = name == "linearGradient" ? SvgPaintKind.LinearGradient : SvgPaintKind.RadialGradient,
-            Opacity = opacity
+            Kind = name == "linearGradient" ? SvgPaintKind.LinearGradient : SvgPaintKind.RadialGradient
         };
         if (paint.Kind == SvgPaintKind.LinearGradient)
         {
@@ -220,7 +218,6 @@ internal sealed partial class SvgCompiler
             paint = new SvgPaint
             {
                 Kind = SvgPaintKind.LinearGradient,
-                Opacity = opacity,
                 X0 = first.X,
                 Y0 = first.Y,
                 X1 = second.X,
@@ -260,7 +257,6 @@ internal sealed partial class SvgCompiler
             paint = new SvgPaint
             {
                 Kind = SvgPaintKind.RadialGradient,
-                Opacity = opacity,
                 X0 = center.X,
                 Y0 = center.Y,
                 X1 = edge.X,
@@ -299,11 +295,14 @@ internal sealed partial class SvgCompiler
             {
                 throw Fail(stopElement, "stop opacity must be between zero and one");
             }
-            color = color with { A = (byte)Math.Clamp((int)Math.Round(color.A * stopStyle.Opacity), 0, 255) };
+            color = ApplyOpacity(color, stopStyle.Opacity * opacity);
             paint.Stops.Add(new SvgStop { Offset = offset, Color = color });
         }
         return paint;
     }
+
+    private static SvgColor ApplyOpacity(SvgColor color, double opacity) =>
+        color with { A = (byte)Math.Clamp((int)Math.Round(color.A * opacity), 0, 255) };
 
     private static string? GetHref(XElement element)
     {
@@ -311,7 +310,7 @@ internal sealed partial class SvgCompiler
         {
             null or "" => null,
             var value when value.StartsWith("#", StringComparison.Ordinal) => value[1..],
-            _ => throw new SvgCompileException("external SVG references are not allowed")
+            _ => throw new SvgParseException("external SVG references are not allowed")
         };
     }
 

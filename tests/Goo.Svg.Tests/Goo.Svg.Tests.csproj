@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo.Svg/Goo.Svg.csproj" />
+    <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

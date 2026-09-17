@@ -9,7 +9,7 @@ internal sealed class VectorAssetDisplayCell : Cell[VectorAssetRenderInput] {
   private var asset VectorAsset?
   private var fit ShapeFit
   private var tree Container?
-  private var player CompiledVectorMotionPlayer?
+  private var player VectorAnimationPlayer?
 
   override func Build(input VectorAssetRenderInput) Blob {
     if let current = asset {
@@ -20,8 +20,8 @@ internal sealed class VectorAssetDisplayCell : Cell[VectorAssetRenderInput] {
       }
     }
     let nextTree = input.Asset.BuildStaticTree(input.Fit)
-    let nextPlayer CompiledVectorMotionPlayer? = if input.Asset.HasPlaybackTracks {
-      CompiledVectorMotionPlayer(this, input.Asset, nextTree)
+    let nextPlayer VectorAnimationPlayer? = if input.Asset.HasPlaybackTracks {
+      VectorAnimationPlayer(this, input.Asset, nextTree)
     } else {
       nil
     }

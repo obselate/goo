@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal sealed class CompiledVectorLinearGradient : Gradient {
+internal sealed class VectorLinearGradient : Gradient {
   private let stops IReadOnlyList[GradientStop]
   private let x0 float64
   private let y0 float64
@@ -29,7 +29,7 @@ internal sealed class CompiledVectorLinearGradient : Gradient {
     }
 }
 
-internal sealed class CompiledVectorRadialGradient : Gradient {
+internal sealed class VectorRadialGradient : Gradient {
   private let stops IReadOnlyList[GradientStop]
   private let centerX float64
   private let centerY float64
@@ -58,46 +58,23 @@ internal sealed class CompiledVectorRadialGradient : Gradient {
 public sealed class VectorAsset {
   private const MaxRenderDepth int32 = 1024
   private let document VectorAssetDocument
-  private let serialized CompiledVector?
+  private let animation VectorAssetAnimation?
 
   public init(viewBoxX float64, viewBoxY float64, viewBoxWidth float64,
     viewBoxHeight float64, roots []VectorNode) {
       document = VectorAssetDocument(viewBoxX, viewBoxY, viewBoxWidth,
         viewBoxHeight, roots)
-      serialized = nil
+      animation = nil
     }
 
-  shared {
-    public func Load(bytes []uint8) VectorAsset -> VectorAsset(CompiledVector.Load(bytes))
-
-    public func TryLoad(bytes []uint8) VectorAsset? {
-      guard let parsed = CompiledVector.TryLoad(bytes) else { return nil }
-      return VectorAsset(parsed)
-    }
-  }
-
-  internal init(parsed CompiledVector) {
-    document = VectorAssetDocument(parsed)
-    serialized = parsed
-  }
-
-  public prop Version uint16{
-    get {
-      guard let current = serialized else { return uint16(0) }
-      return current.Version
-    }
-  }
-  public prop Flags uint32{
-    get {
-      guard let current = serialized else { return uint32(0) }
-      return current.Flags
-    }
-  }
-  public prop ByteCount int32{
-    get {
-      guard let current = serialized else { return 0 }
-      return current.ByteCount
-    }
+  internal init(viewBoxX float64, viewBoxY float64, viewBoxWidth float64,
+    viewBoxHeight float64, roots []VectorNode, animation VectorAssetAnimation) {
+      document = VectorAssetDocument(viewBoxX, viewBoxY, viewBoxWidth,
+        viewBoxHeight, roots)
+      if animation.Nodes.Length != document.Nodes.Length {
+        throw ArgumentException("Animation node count does not match the vector asset", "animation")
+      }
+      this.animation = animation
   }
   public prop ViewBoxX float32{ get -> float32(document.ViewBoxX) }
   public prop ViewBoxY float32{ get -> float32(document.ViewBoxY) }
@@ -107,27 +84,9 @@ public sealed class VectorAsset {
   public prop NodeCount int32{ get -> document.Nodes.Length }
   public prop ContourCount int32{ get -> document.ContourCount }
   public prop CurveCount int32{ get -> document.CurveCount }
-  public prop MorphCurveCount int32{
-    get {
-      guard let current = serialized else { return 0 }
-      return current.MorphCurveCount
-    }
-  }
   public prop PaintCount int32{ get -> document.PaintCount }
   public prop StrokeCount int32{ get -> document.StrokeCount }
   public prop ClipCount int32{ get -> document.ClipCount }
-  public prop TrackCount int32{
-    get {
-      guard let current = serialized else { return 0 }
-      return current.TrackCount
-    }
-  }
-  public prop KeyframeCount int32{
-    get {
-      guard let current = serialized else { return 0 }
-      return current.KeyframeCount
-    }
-  }
 
   public func NodeAt(index int32) VectorNode {
     if index < 0 || index >= document.Nodes.Length {
@@ -138,35 +97,50 @@ public sealed class VectorAsset {
 
   public func PathForNode(index int32) VectorPath -> NodeAt(index).Path
 
-  internal func PlayerNodeAt(index int32) CompiledVectorNodeView -> compiled().NodeAt(index)
+  internal func PlayerNodeAt(index int32) VectorAnimationNode -> motion().Nodes[index]
 
-  internal func PlayerPaintAt(index int32) CompiledVectorPaintView -> compiled().PaintAt(index)
+  internal func PlayerPaintAt(index int32) VectorAnimationPaint -> motion().Paints[index]
 
-  internal func PlayerStrokeAt(index int32) CompiledVectorStrokeView -> compiled().StrokeAt(index)
+  internal func PlayerStrokeAt(index int32) VectorAnimationStroke -> motion().Strokes[index]
 
-  internal func PlayerTrackAt(index int32) CompiledVectorTrackView -> compiled().TrackAt(index)
+  internal func PlayerTrackAt(index int32) VectorAnimationTrack -> motion().Tracks[index]
 
-  internal func PlayerMorphKeyframeAt(index int32) CompiledVectorMorphKeyframeView -> compiled().MorphKeyframeAt(index)
+  internal func PlayerMorphKeyframeAt(index int32) VectorAnimationKeyframe -> motion().Keyframes[index]
 
-  internal func PlayerMorphCurveAt(index int32) CompiledVectorMorphCurveView -> compiled().MorphCurveAt(index)
+  internal func PlayerMorphCurveAt(index int32) VectorAnimationCurve -> motion().MorphCurves[index]
 
   internal func PlayerMutablePathForNode(index int32) VectorPath {
-    let path = compiled().MutablePathForNode(index)
+    let path = document.Nodes[index].Path
     guard let owner = path.NormalizedOwner else { return path }
-    return VectorPath.CreateMutableNormalized(owner, 0.0, 0.0,
+    let mutableOwner = VectorPathNormalizedOwner(owner.QuadraticCount,
+      owner.ContourCount, 0.0, 0.0, document.ViewBoxWidth, document.ViewBoxHeight)
+    mutableOwner.Update(owner.Quadratics, owner.QuadraticCount,
+      owner.Contours, owner.ContourCount)
+    return VectorPath.CreateMutableNormalized(mutableOwner, 0.0, 0.0,
       document.ViewBoxWidth, document.ViewBoxHeight)
   }
 
   internal prop HasPlaybackTracks bool{
     get {
-      guard let current = serialized else { return false }
-      return current.TrackCount != 0
+      guard let current = animation else { return false }
+      return current.Tracks.Length != 0
     }
   }
 
-  internal func PlayerKeyframeAt(index int32) CompiledVectorKeyframeView -> compiled().KeyframeAt(index)
+  internal prop PlaybackTrackCount int32{
+    get {
+      guard let current = animation else { return 0 }
+      return current.Tracks.Length
+    }
+  }
 
-  internal func PlayerDashValueAt(index int32) float32 -> compiled().DashValueAt(index)
+  internal prop PlaybackPaintCount int32{ get -> motion().Paints.Length }
+
+  internal prop PlaybackStrokeCount int32{ get -> motion().Strokes.Length }
+
+  internal func PlayerKeyframeAt(index int32) VectorAnimationKeyframe -> motion().Keyframes[index]
+
+  internal func PlayerDashValueAt(index int32) float32 -> motion().DashValues[index]
 
   public func Render(key string?) Blob ->
   Cell.Mount[VectorAssetRenderInput, VectorAssetDisplayCell](key,
@@ -350,51 +324,10 @@ public sealed class VectorAsset {
     TranslateY: -document.ViewBoxY,
   }
 
-  private func compiled() CompiledVector {
-    guard let current = serialized else {
+  private func motion() VectorAssetAnimation {
+    guard let current = animation else {
       throw InvalidOperationException("Authored vector assets have no playback data")
     }
     return current
   }
-}
-
-public sealed class CompiledVectorAsset {
-  private let inner VectorAsset
-
-  private init(parsed CompiledVector) {
-    inner = VectorAsset(parsed)
-  }
-
-  shared {
-    public func Load(bytes []uint8) CompiledVectorAsset ->
-    CompiledVectorAsset(CompiledVector.Load(bytes))
-
-    public func TryLoad(bytes []uint8) CompiledVectorAsset? {
-      guard let parsed = CompiledVector.TryLoad(bytes) else { return nil }
-      return CompiledVectorAsset(parsed)
-    }
-  }
-
-  public prop Version uint16{ get -> inner.Version }
-  public prop Flags uint32{ get -> inner.Flags }
-  public prop ByteCount int32{ get -> inner.ByteCount }
-  public prop ViewBoxX float32{ get -> inner.ViewBoxX }
-  public prop ViewBoxY float32{ get -> inner.ViewBoxY }
-  public prop ViewBoxWidth float32{ get -> inner.ViewBoxWidth }
-  public prop ViewBoxHeight float32{ get -> inner.ViewBoxHeight }
-  public prop NodeCount int32{ get -> inner.NodeCount }
-  public prop ContourCount int32{ get -> inner.ContourCount }
-  public prop CurveCount int32{ get -> inner.CurveCount }
-  public prop MorphCurveCount int32{ get -> inner.MorphCurveCount }
-  public prop PaintCount int32{ get -> inner.PaintCount }
-  public prop StrokeCount int32{ get -> inner.StrokeCount }
-  public prop ClipCount int32{ get -> inner.ClipCount }
-  public prop TrackCount int32{ get -> inner.TrackCount }
-  public prop KeyframeCount int32{ get -> inner.KeyframeCount }
-
-  public func PathForNode(index int32) VectorPath -> inner.PathForNode(index)
-
-  public func Render(key string?) Blob -> inner.Render(key)
-
-  public func Render() Blob -> inner.Render()
 }

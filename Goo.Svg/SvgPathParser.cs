@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 
-namespace Goo.SvgCompiler;
+namespace Goo.Svg;
 
 internal static class SvgPathParser
 {
@@ -253,7 +253,7 @@ internal static class SvgPathParser
         var error = Math.Sqrt(deltaX * deltaX + deltaY * deltaY) * Math.Sqrt(3) / 36;
         if (!control.IsFinite || !double.IsFinite(error))
         {
-            throw new SvgCompileException("path cubic contains non-finite geometry");
+            throw new SvgParseException("path cubic contains non-finite geometry");
         }
         if (error <= 0.0001 || depth >= 10)
         {
@@ -276,11 +276,11 @@ internal static class SvgPathParser
             || !double.IsFinite(curve.CX) || !double.IsFinite(curve.CY)
             || !double.IsFinite(curve.X1) || !double.IsFinite(curve.Y1))
         {
-            throw new SvgCompileException("path contains non-finite geometry");
+            throw new SvgParseException("path contains non-finite geometry");
         }
         if (curveCount >= MaxCurves)
         {
-            throw new SvgCompileException($"path curve count exceeds {MaxCurves}");
+            throw new SvgParseException($"path curve count exceeds {MaxCurves}");
         }
         contour.Curves.Add(curve);
         curveCount++;
@@ -367,12 +367,12 @@ internal static class SvgPathParser
         return Math.Atan2(left.X * right.Y - left.Y * right.X, left.X * right.X + left.Y * right.Y);
     }
 
-    private static SvgCompileException Fail(XElement element, string message)
+    private static SvgParseException Fail(XElement element, string message)
     {
         var info = (System.Xml.IXmlLineInfo)element;
         return info.HasLineInfo()
-            ? new SvgCompileException($"line {info.LineNumber}, column {info.LinePosition}: {message}")
-            : new SvgCompileException(message);
+            ? new SvgParseException($"line {info.LineNumber}, column {info.LinePosition}: {message}")
+            : new SvgParseException(message);
     }
 }
 
@@ -456,11 +456,11 @@ internal sealed class PathScanner
         while (index < text.Length && (char.IsWhiteSpace(text[index]) || text[index] == ',')) index++;
     }
 
-    private SvgCompileException Fail(string message)
+    private SvgParseException Fail(string message)
     {
         var info = (System.Xml.IXmlLineInfo)owner;
         return info.HasLineInfo()
-            ? new SvgCompileException($"line {info.LineNumber}, column {info.LinePosition}: {message}")
-            : new SvgCompileException(message);
+            ? new SvgParseException($"line {info.LineNumber}, column {info.LinePosition}: {message}")
+            : new SvgParseException(message);
     }
 }

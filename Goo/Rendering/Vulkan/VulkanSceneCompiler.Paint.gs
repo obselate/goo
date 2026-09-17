@@ -1104,8 +1104,8 @@ internal partial class VulkanSceneCompiler {
       }
       let stops = gradient.Stops
       let primitive = switch gradient {
-        case linear is CompiledVectorLinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
-        case radial is CompiledVectorRadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
+        case linear is VectorLinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
+        case radial is VectorRadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
         case linear is LinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
         case radial is RadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
         case _: VulkanSceneUnsupportedPrimitive.Gradient
@@ -1131,7 +1131,7 @@ internal partial class VulkanSceneCompiler {
         index = index + 1
       }
       switch gradient {
-        case compiled is CompiledVectorLinearGradient {
+        case compiled is VectorLinearGradient {
           frame.AddLinearGradient(LinearGradientRecord{
             Bounds: bounds,
             RadiusTopLeft: Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
@@ -1149,7 +1149,7 @@ internal partial class VulkanSceneCompiler {
           })
           return
         }
-        case compiled is CompiledVectorRadialGradient {
+        case compiled is VectorRadialGradient {
           frame.AddRadialGradient(RadialGradientRecord{
             Bounds: bounds,
             RadiusTopLeft: Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),

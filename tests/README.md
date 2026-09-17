@@ -205,7 +205,7 @@ The complete package flow is defined in [`.github/workflows/ci.yml`](../.github/
 2. Builds Goo and verification projects with warnings as errors.
 3. Runs portable Vulkan proofs and the M1 MoltenVK window smoke.
 4. Runs API and behavior tests.
-5. Packs Goo and the SVG compiler with all runtime assets.
+5. Packs Goo and Goo.Svg with all runtime assets.
 6. Publishes clean managed and NativeAOT package consumers.
 7. Stages signed macOS and Linux bundles.
 8. Validates native dependencies, checksums, and the bundle size limit.

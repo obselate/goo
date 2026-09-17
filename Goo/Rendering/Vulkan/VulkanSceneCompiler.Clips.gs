@@ -291,8 +291,8 @@ internal partial class VulkanSceneCompiler {
   private func MarkShapePaintUnsupported(node Node) {
     if let gradient = node.BackgroundGradient {
       let primitive = switch gradient {
-        case linear is CompiledVectorLinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
-        case radial is CompiledVectorRadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
+        case linear is VectorLinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
+        case radial is VectorRadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
         case linear is LinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
         case radial is RadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
         case _: VulkanSceneUnsupportedPrimitive.Gradient

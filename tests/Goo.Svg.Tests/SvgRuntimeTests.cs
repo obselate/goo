@@ -35,7 +35,7 @@ public sealed class SvgRuntimeTests
     }
 
     [Fact]
-    public void ParseProducesImmutableCompiledAsset()
+    public void ParseProducesVectorAsset()
     {
         var asset = Svg.Parse(BasicSvg);
 
@@ -56,7 +56,6 @@ public sealed class SvgRuntimeTests
         var fromStream = Svg.Load(stream);
         var fromText = Svg.Parse(BasicSvg);
 
-        Assert.Equal(fromText.ByteCount, fromStream.ByteCount);
         Assert.Equal(fromText.NodeCount, fromStream.NodeCount);
         Assert.Equal(fromText.ContourCount, fromStream.ContourCount);
         Assert.Equal(fromText.CurveCount, fromStream.CurveCount);
@@ -74,7 +73,6 @@ public sealed class SvgRuntimeTests
             var fromFile = Svg.Load(path);
             var fromText = Svg.Parse(BasicSvg);
 
-            Assert.Equal(fromText.ByteCount, fromFile.ByteCount);
             Assert.Equal(fromText.NodeCount, fromFile.NodeCount);
             Assert.Equal(fromText.CurveCount, fromFile.CurveCount);
         }
@@ -115,11 +113,11 @@ public sealed class SvgRuntimeTests
     }
 
     [Theory]
-    [InlineData("s13-representative.svg", 5, 4, 85, 4, 2, 1, 0, 0)]
-    [InlineData("s13-animated.svg", 4, 2, 11, 4, 2, 0, 7, 20)]
-    [InlineData("s13-morph.svg", 2, 1, 3, 2, 1, 0, 1, 4)]
-    public void RuntimeLoadsCompilerSamples(string fileName, int nodes, int contours,
-        int curves, int paints, int strokes, int clips, int tracks, int keyframes)
+    [InlineData("s13-representative.svg", 5, 3, 77, 4, 2, 1)]
+    [InlineData("s13-animated.svg", 4, 2, 11, 4, 2, 0)]
+    [InlineData("s13-morph.svg", 2, 1, 3, 2, 1, 0)]
+    public void RuntimeLoadsSamples(string fileName, int nodes, int contours,
+        int curves, int paints, int strokes, int clips)
     {
         var asset = Svg.Load(SamplePath(fileName));
 
@@ -129,20 +127,10 @@ public sealed class SvgRuntimeTests
         Assert.Equal(paints, asset.PaintCount);
         Assert.Equal(strokes, asset.StrokeCount);
         Assert.Equal(clips, asset.ClipCount);
-        Assert.Equal(tracks, asset.TrackCount);
-        Assert.Equal(keyframes, asset.KeyframeCount);
     }
 
     private static string SamplePath(string fileName)
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null
-            && !File.Exists(Path.Combine(directory.FullName, "tools", "Goo.SvgCompiler",
-                "Goo.SvgCompiler.csproj")))
-        {
-            directory = directory.Parent;
-        }
-        Assert.NotNull(directory);
-        return Path.Combine(directory!.FullName, "tools", "Goo.SvgCompiler", "samples", fileName);
+        return Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
     }
 }

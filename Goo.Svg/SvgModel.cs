@@ -1,11 +1,4 @@
-namespace Goo.SvgCompiler;
-
-internal sealed class SvgCompileException : Exception
-{
-    internal SvgCompileException(string message) : base(message)
-    {
-    }
-}
+namespace Goo.Svg;
 
 internal readonly record struct SvgPoint(double X, double Y)
 {
@@ -38,10 +31,7 @@ internal readonly record struct SvgMatrix(double A, double B, double C, double D
     internal double ScaleY => Math.Sqrt(C * C + D * D);
 }
 
-internal readonly record struct SvgColor(byte R, byte G, byte B, byte A)
-{
-    internal uint Packed => (uint)(R << 24 | G << 16 | B << 8 | A);
-}
+internal readonly record struct SvgColor(byte R, byte G, byte B, byte A);
 
 internal enum SvgPaintKind
 {
@@ -54,12 +44,10 @@ internal sealed class SvgPaint
 {
     internal SvgPaintKind Kind { get; init; }
     internal SvgColor Color { get; init; }
-    internal double Opacity { get; init; }
     internal double X0 { get; init; }
     internal double Y0 { get; init; }
     internal double X1 { get; init; }
     internal double Y1 { get; init; }
-    internal int TrackIndex { get; set; } = -1;
     internal SvgAnimation? Animation { get; set; }
     internal List<SvgStop> Stops { get; } = [];
 }
@@ -77,7 +65,6 @@ internal sealed class SvgStroke
     internal uint Cap { get; init; }
     internal uint Join { get; init; }
     internal double DashOffset { get; init; }
-    internal int TrackIndex { get; set; } = -1;
     internal SvgAnimation? Animation { get; set; }
     internal SvgPaint Paint { get; init; } = null!;
     internal List<double> Dashes { get; } = [];
@@ -144,8 +131,6 @@ internal sealed class SvgAnimationKeyframe
     internal double ControlC { get; init; }
     internal double ControlD { get; init; }
     internal List<SvgQuadratic>? MorphCurves { get; init; }
-    internal uint MorphCurveStart { get; set; }
-    internal uint MorphCurveCount { get; set; }
 }
 
 internal sealed class SvgPath

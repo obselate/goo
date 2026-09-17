@@ -96,8 +96,6 @@
 !/tools/Goo.TextNative/**
 !/tools/Goo.UnicodeGen/
 !/tools/Goo.UnicodeGen/**
-!/tools/Goo.SvgCompiler/
-!/tools/Goo.SvgCompiler/**
 !/tools/Goo.DevTools.Cli/
 !/tools/Goo.DevTools.Cli/**
 !/tools/Goo.Formatting/

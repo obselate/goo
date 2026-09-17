@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal data struct CompiledVectorPlaybackValue {
+internal data struct VectorAnimationValue {
   internal var A float32
   internal var B float32
   internal var C float32
@@ -12,12 +12,12 @@ internal data struct CompiledVectorPlaybackValue {
   internal var F float32
 }
 
-internal data struct CompiledVectorPlaybackState {
-  internal var Value CompiledVectorPlaybackValue
+internal data struct VectorAnimationState {
+  internal var Value VectorAnimationValue
   internal var Initialized bool
 }
 
-private sealed class CompiledVectorMorphState {
+private sealed class VectorMorphState {
   internal let Path VectorPath
   internal let Quadratics []PathQuadratic
   internal let Contours []PathContour
@@ -42,8 +42,7 @@ private sealed class CompiledVectorMorphState {
   }
 }
 
-internal sealed class CompiledVectorMotionPlayer : MotionParticle {
-  private const TransformEpsilon float32 = 0.0000001F
+internal sealed class VectorAnimationPlayer : MotionParticle {
   private let owner Cell
   private let asset VectorAsset
   private let nodeHandles []ElementHandle?
@@ -52,15 +51,15 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
   private let nodes []Node?
   private let fills []Node?
   private let strokes []Node?
-  private let transforms []CompiledVectorPlaybackState
-  private let opacities []CompiledVectorPlaybackState
-  private let paints []CompiledVectorPlaybackState
-  private let strokeValues []CompiledVectorPlaybackState
+  private let transforms []VectorAnimationState
+  private let opacities []VectorAnimationState
+  private let paints []VectorAnimationState
+  private let strokeValues []VectorAnimationState
   private let dynamicDashes []DashPattern?
   private let paintFillTargets []List[int32]?
   private let paintStrokeTargets []List[int32]?
   private let strokeTargets []List[int32]?
-  private let morphStates []CompiledVectorMorphState?
+  private let morphStates []VectorMorphState?
   private let dynamicPaths []VectorPath?
   private let transformNodes List[int32]
   private let opacityNodes List[int32]
@@ -82,15 +81,15 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     nodes = [asset.NodeCount]Node?
     fills = [asset.NodeCount]Node?
     strokes = [asset.NodeCount]Node?
-    transforms = [asset.NodeCount]CompiledVectorPlaybackState
-    opacities = [asset.NodeCount]CompiledVectorPlaybackState
-    paints = [asset.PaintCount]CompiledVectorPlaybackState
-    strokeValues = [asset.StrokeCount]CompiledVectorPlaybackState
-    dynamicDashes = [asset.StrokeCount]DashPattern?
-    paintFillTargets = [asset.PaintCount]List[int32]?
-    paintStrokeTargets = [asset.PaintCount]List[int32]?
-    strokeTargets = [asset.StrokeCount]List[int32]?
-    morphStates = [asset.NodeCount]CompiledVectorMorphState?
+    transforms = [asset.NodeCount]VectorAnimationState
+    opacities = [asset.NodeCount]VectorAnimationState
+    paints = [asset.PlaybackPaintCount]VectorAnimationState
+    strokeValues = [asset.PlaybackStrokeCount]VectorAnimationState
+    dynamicDashes = [asset.PlaybackStrokeCount]DashPattern?
+    paintFillTargets = [asset.PlaybackPaintCount]List[int32]?
+    paintStrokeTargets = [asset.PlaybackPaintCount]List[int32]?
+    strokeTargets = [asset.PlaybackStrokeCount]List[int32]?
+    morphStates = [asset.NodeCount]VectorMorphState?
     dynamicPaths = [asset.NodeCount]VectorPath?
     transformNodes = List[int32]()
     opacityNodes = List[int32]()
@@ -220,7 +219,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
         }
         paintFillTargets[paintIndex]!!.Add(nodeIndex)
         let paint = asset.PlayerPaintAt(paintIndex)
-        if paint.HasTrack && paint.Kind == CompiledVectorPaintKind.Solid {
+        if paint.HasTrack && paint.Kind == VectorPaintKind.Solid {
           addActivePaint(paintIndex)
           addActiveTrack(int32(paint.TrackIndex))
         }
@@ -239,7 +238,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
           }
           paintStrokeTargets[paintIndex]!!.Add(nodeIndex)
           let paint = asset.PlayerPaintAt(paintIndex)
-          if paint.HasTrack && paint.Kind == CompiledVectorPaintKind.Solid {
+          if paint.HasTrack && paint.Kind == VectorPaintKind.Solid {
             addActivePaint(paintIndex)
             addActiveTrack(int32(paint.TrackIndex))
           }
@@ -253,7 +252,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
         }
       }
       if node.HasMorphTrack {
-        morphStates[nodeIndex] = CompiledVectorMorphState(
+        morphStates[nodeIndex] = VectorMorphState(
           asset.PlayerMutablePathForNode(nodeIndex))
         dynamicPaths[nodeIndex] = morphStates[nodeIndex]!!.Path
         morphNodes.Add(nodeIndex)
@@ -292,11 +291,11 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
 
   private func prepareDynamicDashes() {
     var index int32 = 0
-    while index < asset.StrokeCount {
+    while index < asset.PlaybackStrokeCount {
       let stroke = asset.PlayerStrokeAt(index)
       if stroke.HasDashes && stroke.HasTrack {
         let track = asset.PlayerTrackAt(int32(stroke.TrackIndex))
-        if track.Kind == CompiledVectorTrackKind.Stroke {
+        if track.Kind == VectorAnimationKind.Stroke {
           let intervals = [int32(stroke.DashCount)]float64
           var dashIndex int32 = 0
           while dashIndex < intervals.Length {
@@ -351,7 +350,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     startTime = now
     started = true
     index = 0
-    while index < asset.StrokeCount {
+    while index < asset.PlaybackStrokeCount {
       if let pattern = dynamicDashes[index] {
         if let targets = strokeTargets[index] {
           var targetIndex int32 = 0
@@ -406,11 +405,10 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     while index < activeTracks.Count {
       let track = asset.PlayerTrackAt(activeTracks[index])
       if track.KeyframeCount != 0u
-        && (Motion.TimeScale <= 0.0
-          ? (track.Flags & CompiledVectorLimits.TrackLoop) != 0u : ((track.Flags & CompiledVectorLimits.TrackLoop) != 0u
-              || elapsed < float64(track.Duration))) {
-                return true
-              }
+        && ((track.Flags & VectorAnimationFlags.Loop) != 0u
+          || elapsed < float64(track.Duration)) {
+        return true
+      }
       index++
     }
     return false
@@ -421,7 +419,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     let source = asset.PlayerNodeAt(index)
     if !source.HasTransformTrack { return false }
     let trackIndex = int32(source.TransformTrackIndex)
-    var value CompiledVectorPlaybackValue
+    var value VectorAnimationValue
     if !evaluate(trackIndex, elapsed, false, out value) { return false }
     if transforms[index].Initialized && samePlaybackValue(transforms[index].Value, value) {
       return false
@@ -437,7 +435,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     let source = asset.PlayerNodeAt(index)
     if !source.HasOpacityTrack { return false }
     let trackIndex = int32(source.OpacityTrackIndex)
-    var value CompiledVectorPlaybackValue
+    var value VectorAnimationValue
     if !evaluate(trackIndex, elapsed, false, out value) { return false }
     if opacities[index].Initialized && samePlaybackValue(opacities[index].Value, value) {
       return false
@@ -456,7 +454,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     if !source.HasMorphTrack { return false }
     let trackIndex = int32(source.MorphTrackIndex)
     let track = asset.PlayerTrackAt(trackIndex)
-    if track.Kind != CompiledVectorTrackKind.Morph || track.KeyframeCount == 0u {
+    if track.Kind != VectorAnimationKind.Morph || track.KeyframeCount == 0u {
       return false
     }
     let time = trackTime(track, elapsed, float64(track.Duration))
@@ -502,11 +500,11 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
 
   private func applyPaint(index int32, elapsed float64) bool {
     let paint = asset.PlayerPaintAt(index)
-    if !paint.HasTrack || paint.Kind != CompiledVectorPaintKind.Solid {
+    if !paint.HasTrack || paint.Kind != VectorPaintKind.Solid {
       return false
     }
     let trackIndex = int32(paint.TrackIndex)
-    var value CompiledVectorPlaybackValue
+    var value VectorAnimationValue
     if !evaluate(trackIndex, elapsed, false, out value) { return false }
     if paints[index].Initialized && samePlaybackValue(paints[index].Value, value) {
       return false
@@ -549,7 +547,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     let stroke = asset.PlayerStrokeAt(index)
     if !stroke.HasTrack { return false }
     let trackIndex = int32(stroke.TrackIndex)
-    var value CompiledVectorPlaybackValue
+    var value VectorAnimationValue
     if !evaluate(trackIndex, elapsed, true, out value) { return false }
     if strokeValues[index].Initialized && samePlaybackValue(strokeValues[index].Value, value) {
       return false
@@ -596,9 +594,9 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
   }
 
   private func evaluate(index int32, elapsed float64, discrete bool,
-    out result CompiledVectorPlaybackValue) bool{
-      result = CompiledVectorPlaybackValue{}
-      if index < 0 || index >= asset.TrackCount { return false }
+    out result VectorAnimationValue) bool{
+      result = VectorAnimationValue{}
+      if index < 0 || index >= asset.PlaybackTrackCount { return false }
       let track = asset.PlayerTrackAt(index)
       if track.KeyframeCount == 0u { return false }
       let duration = float64(track.Duration)
@@ -619,7 +617,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
         segment++
       }
       let last = asset.PlayerKeyframeAt(start + count - 1)
-      result = CompiledVectorPlaybackValue{
+      result = VectorAnimationValue{
         A: last.A,
         B: last.B,
         C: last.C,
@@ -630,7 +628,7 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
       return true
     }
 
-  private func trackTime(track CompiledVectorTrackView, elapsed float64,
+  private func trackTime(track VectorAnimationTrack, elapsed float64,
     duration float64) float64{
       if Motion.TimeScale <= 0.0 {
         return duration
@@ -638,23 +636,23 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
       if duration <= 0.0 || elapsed <= duration {
         return elapsed <= 0.0 ? 0.0 : elapsed
       }
-      if (track.Flags & CompiledVectorLimits.TrackLoop) == 0u {
+      if (track.Flags & VectorAnimationFlags.Loop) == 0u {
         return duration
       }
       let cycle = Math.Floor(elapsed / duration)
       var phase = elapsed - cycle * duration
       if phase < 0.0 { phase = 0.0 }
-      if (track.Flags & CompiledVectorLimits.TrackPingPong) != 0u
+      if (track.Flags & VectorAnimationFlags.PingPong) != 0u
         && Math.Floor(cycle % 2.0) != 0.0 {
           phase = duration - phase
         }
       return phase
     }
 
-  private func interpolate(first CompiledVectorKeyframeView,
-    second CompiledVectorKeyframeView, progress float32,
-    discrete bool) CompiledVectorPlaybackValue{
-      let value = CompiledVectorPlaybackValue{
+  private func interpolate(first VectorAnimationKeyframe,
+    second VectorAnimationKeyframe, progress float32,
+    discrete bool) VectorAnimationValue{
+      let value = VectorAnimationValue{
         A: first.A + (second.A - first.A) * progress,
         B: first.B + (second.B - first.B) * progress,
         C: discrete ? first.C : first.C + (second.C - first.C) * progress,
@@ -665,10 +663,10 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
       return value
     }
 
-  private func easeProgress(keyframe CompiledVectorKeyframeView, progress float32) float32 {
-    switch CompiledVectorEasingKind(keyframe.Easing) {
-      case CompiledVectorEasingKind.Step { return 0.0F }
-      case CompiledVectorEasingKind.Cubic {
+  private func easeProgress(keyframe VectorAnimationKeyframe, progress float32) float32 {
+    switch VectorEasingKind(keyframe.Easing) {
+      case VectorEasingKind.Step { return 0.0F }
+      case VectorEasingKind.Cubic {
         return cubic(keyframe.ControlA, keyframe.ControlB, keyframe.ControlC,
           keyframe.ControlD, progress)
       }
@@ -676,11 +674,11 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     }
   }
 
-  private func easeMorphProgress(keyframe CompiledVectorMorphKeyframeView,
+  private func easeMorphProgress(keyframe VectorAnimationKeyframe,
     progress float32) float32{
-      switch CompiledVectorEasingKind(keyframe.Easing) {
-        case CompiledVectorEasingKind.Step { return 0.0F }
-        case CompiledVectorEasingKind.Cubic {
+      switch VectorEasingKind(keyframe.Easing) {
+        case VectorEasingKind.Step { return 0.0F }
+        case VectorEasingKind.Cubic {
           return cubic(keyframe.ControlA, keyframe.ControlB, keyframe.ControlC,
             keyframe.ControlD, progress)
         }
@@ -722,8 +720,9 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     +6.0F * inverse * t * (p2 - p1) + 3.0F * t * t * (1.0F - p2)
   }
 
-  private func applyMatrix(node Node, value CompiledVectorPlaybackValue) {
-    let transform = matrixTransform(value)
+  private func applyMatrix(node Node, value VectorAnimationValue) {
+    let transform = VectorAssetAnimation.MatrixTransform(value.A, value.B,
+      value.C, value.D, value.E, value.F)
     Transforming.SetTranslateX(node, transform.TranslateX)
     Transforming.SetTranslateY(node, transform.TranslateY)
     Transforming.SetRotate(node, float32(transform.Rotate))
@@ -734,75 +733,8 @@ internal sealed class CompiledVectorMotionPlayer : MotionParticle {
     Transforming.SetSkewY(node, float32(transform.SkewY))
   }
 
-  private func matrixTransform(value CompiledVectorPlaybackValue) PanelTransform {
-    let a = value.A
-    let b = value.B
-    let c = value.C
-    let d = value.D
-    let firstLength = MathF.Sqrt(a * a + c * c)
-    if firstLength <= TransformEpsilon {
-      let secondLength = MathF.Sqrt(b * b + d * d)
-      if secondLength > TransformEpsilon {
-        let radians = MathF.Atan2(-b, d)
-        return PanelTransform{
-          TranslateX: float64(value.E),
-          TranslateY: float64(value.F),
-          Rotate: float64(radians * 180.0F / MathF.PI),
-          ScaleX: 0.0,
-          ScaleY: float64(secondLength),
-        }
-      }
-      return PanelTransform{
-        TranslateX: float64(value.E),
-        TranslateY: float64(value.F),
-        ScaleX: 0.0,
-        ScaleY: 0.0,
-      }
-    }
-    let radians = MathF.Atan2(c, a)
-    let cosine = MathF.Cos(radians)
-    let sine = MathF.Sin(radians)
-    let secondScale = cosine * d - sine * b
-    if MathF.Abs(secondScale) <= TransformEpsilon {
-      let secondLength = MathF.Sqrt(b * b + d * d)
-      if secondLength > TransformEpsilon {
-        let alternateRadians = MathF.Atan2(-b, d)
-        let alternateCosine = MathF.Cos(alternateRadians)
-        let alternateSine = MathF.Sin(alternateRadians)
-        let alternateScale = alternateCosine * a + alternateSine * c
-        if MathF.Abs(alternateScale) > TransformEpsilon {
-          let tangentY = (-alternateSine * a + alternateCosine * c) / alternateScale
-          return PanelTransform{
-            TranslateX: float64(value.E),
-            TranslateY: float64(value.F),
-            Rotate: float64(alternateRadians * 180.0F / MathF.PI),
-            ScaleX: float64(alternateScale),
-            ScaleY: float64(secondLength),
-            SkewY: float64(MathF.Atan(tangentY) * 180.0F / MathF.PI),
-          }
-        }
-      }
-      return PanelTransform{
-        TranslateX: float64(value.E),
-        TranslateY: float64(value.F),
-        Rotate: float64(radians * 180.0F / MathF.PI),
-        ScaleX: float64(firstLength),
-        ScaleY: 0.0,
-      }
-    }
-    let tangentX = (cosine * b + sine * d) / secondScale
-    return PanelTransform{
-      TranslateX: float64(value.E),
-      TranslateY: float64(value.F),
-      Rotate: float64(radians * 180.0F / MathF.PI),
-      ScaleX: float64(firstLength),
-      ScaleY: float64(secondScale),
-      SkewX: float64(MathF.Atan(tangentX) * 180.0F / MathF.PI),
-    }
-  }
-
-  private func samePlaybackValue(left CompiledVectorPlaybackValue,
-    right CompiledVectorPlaybackValue) bool -> left.A == right.A && left.B == right.B && left.C == right.C
+  private func samePlaybackValue(left VectorAnimationValue,
+    right VectorAnimationValue) bool -> left.A == right.A && left.B == right.B && left.C == right.C
     && left.D == right.D && left.E == right.E && left.F == right.F
 
   private func clamp01(value float32) float32 {

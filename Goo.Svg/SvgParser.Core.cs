@@ -1,47 +1,37 @@
-namespace Goo.SvgCompiler;
+using Goo;
 
-internal sealed partial class SvgCompiler
+namespace Goo.Svg;
+
+internal sealed partial class SvgParser
 {
     private const int MaxInputBytes = 16 * 1024 * 1024;
     private const int MaxXmlCharacters = 32 * 1024 * 1024;
     private const int MaxNodes = 65536;
-    private const int MaxContours = 65536;
     private const int MaxCurves = 262144;
     private const int MaxPaints = 65536;
-    private const int MaxPaintStops = 262144;
     private const int MaxStrokes = 65536;
-    private const int MaxDashValues = 262144;
-    private const int MaxClips = 65536;
     private const int MaxRenderDepth = 1024;
-    private const int MaxAssetBytes = 64 * 1024 * 1024;
     private const double QuadraticTolerance = 0.0001;
 
     private readonly Dictionary<string, SvgGradientDefinition> gradients = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SvgClipDefinition> clips = new(StringComparer.Ordinal);
     private readonly HashSet<string> ids = new(StringComparer.Ordinal);
     private readonly List<SvgNode> nodes = [];
-    private readonly List<SvgPaint> paints = [];
-    private readonly List<SvgStop> stops = [];
-    private readonly List<SvgStroke> strokes = [];
-    private readonly List<double> dashValues = [];
-    private readonly List<SvgContour> contours = [];
-    private readonly List<SvgQuadratic> curves = [];
-    private readonly List<SvgClip> clipRecords = [];
     private int reservedCurveCount;
     private double viewBoxX;
     private double viewBoxY;
     private double viewBoxWidth;
     private double viewBoxHeight;
 
-    private SvgCompiler()
+    private SvgParser()
     {
     }
 
-    internal static byte[] CompileFile(string path)
+    internal static VectorAsset LoadFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            throw new SvgCompileException("input path is empty");
+            throw new SvgParseException("input path is empty");
         }
         byte[] bytes;
         try
@@ -50,42 +40,42 @@ internal sealed partial class SvgCompiler
         }
         catch (Exception exception)
         {
-            throw new SvgCompileException($"cannot read '{path}': {exception.Message}");
+            throw new SvgParseException($"cannot read '{path}': {exception.Message}");
         }
-        return CompileBytes(bytes, path);
+        return ParseBytes(bytes, path);
     }
 
-    internal static byte[] CompileText(string text)
+    internal static VectorAsset ParseText(string text)
     {
         if (text is null)
         {
-            throw new SvgCompileException("input text is null");
+            throw new SvgParseException("input text is null");
         }
         if (Encoding.UTF8.GetByteCount(text) > MaxInputBytes)
         {
-            throw new SvgCompileException($"input exceeds {MaxInputBytes} bytes");
+            throw new SvgParseException($"input exceeds {MaxInputBytes} bytes");
         }
         try
         {
             using var source = new StringReader(text);
             using var reader = XmlReader.Create(source, CreateXmlSettings(), "<string>");
-            return CompileDocument(reader, "<string>");
+            return ParseDocument(reader, "<string>");
         }
-        catch (SvgCompileException)
+        catch (SvgParseException)
         {
             throw;
         }
         catch (Exception exception)
         {
-            throw new SvgCompileException(exception.Message);
+            throw new SvgParseException(exception.Message);
         }
     }
 
-    internal static byte[] CompileStream(Stream stream, string sourceName)
+    internal static VectorAsset LoadStream(Stream stream, string sourceName)
     {
         if (stream is null)
         {
-            throw new SvgCompileException("input stream is null");
+            throw new SvgParseException("input stream is null");
         }
         if (string.IsNullOrWhiteSpace(sourceName))
         {
@@ -105,67 +95,67 @@ internal sealed partial class SvgCompiler
                 }
                 if (total > MaxInputBytes - read)
                 {
-                    throw new SvgCompileException($"input exceeds {MaxInputBytes} bytes");
+                    throw new SvgParseException($"input exceeds {MaxInputBytes} bytes");
                 }
                 copy.Write(buffer, 0, read);
                 total += read;
             }
-            return CompileBytes(copy.ToArray(), sourceName);
+            return ParseBytes(copy.ToArray(), sourceName);
         }
-        catch (SvgCompileException)
+        catch (SvgParseException)
         {
             throw;
         }
         catch (Exception exception)
         {
-            throw new SvgCompileException($"cannot read '{sourceName}': {exception.Message}");
+            throw new SvgParseException($"cannot read '{sourceName}': {exception.Message}");
         }
     }
 
-    private static byte[] CompileBytes(byte[] bytes, string sourceName)
+    private static VectorAsset ParseBytes(byte[] bytes, string sourceName)
     {
         if (bytes.Length > MaxInputBytes)
         {
-            throw new SvgCompileException($"input exceeds {MaxInputBytes} bytes");
+            throw new SvgParseException($"input exceeds {MaxInputBytes} bytes");
         }
         try
         {
             using var stream = new MemoryStream(bytes, writable: false);
             using var reader = XmlReader.Create(stream, CreateXmlSettings(), sourceName);
-            return CompileDocument(reader, sourceName);
+            return ParseDocument(reader, sourceName);
         }
-        catch (SvgCompileException)
+        catch (SvgParseException)
         {
             throw;
         }
         catch (Exception exception)
         {
-            throw new SvgCompileException(exception.Message);
+            throw new SvgParseException(exception.Message);
         }
     }
 
-    private static byte[] CompileDocument(XmlReader reader, string sourceName)
+    private static VectorAsset ParseDocument(XmlReader reader, string sourceName)
     {
         try
         {
             var document = XDocument.Load(reader, LoadOptions.SetLineInfo);
             if (document.Root is null)
             {
-                throw new SvgCompileException("document has no root element");
+                throw new SvgParseException("document has no root element");
             }
-            return new SvgCompiler().Compile(document.Root);
+            return new SvgParser().Parse(document.Root);
         }
-        catch (SvgCompileException)
+        catch (SvgParseException)
         {
             throw;
         }
         catch (XmlException exception)
         {
-            throw new SvgCompileException($"XML line {exception.LineNumber}, column {exception.LinePosition}: {exception.Message}");
+            throw new SvgParseException($"XML line {exception.LineNumber}, column {exception.LinePosition}: {exception.Message}");
         }
         catch (Exception exception)
         {
-            throw new SvgCompileException($"{sourceName}: {exception.Message}");
+            throw new SvgParseException($"{sourceName}: {exception.Message}");
         }
     }
 
@@ -182,7 +172,7 @@ internal sealed partial class SvgCompiler
         };
     }
 
-    private byte[] Compile(XElement root)
+    private VectorAsset Parse(XElement root)
     {
         RequireName(root, "svg");
         ValidateNamespace(root);
@@ -199,19 +189,17 @@ internal sealed partial class SvgCompiler
         nodes.Add(rootNode);
         if (rootStyle.DisplayNone)
         {
-            return WriteAsset();
+            return BuildAsset();
         }
         foreach (var child in root.Elements())
         {
             ParseChild(child, rootNode, rootStyle, false, 1);
         }
-        if (nodes.Count > MaxNodes || contours.Count > MaxContours || curves.Count > MaxCurves
-            || paints.Count > MaxPaints || stops.Count > MaxPaintStops || strokes.Count > MaxStrokes
-            || dashValues.Count > MaxDashValues || clipRecords.Count > MaxClips)
+        if (nodes.Count > MaxNodes)
         {
-            throw Fail(root, "compiled vector section limit exceeded");
+            throw Fail(root, "SVG complexity limit exceeded");
         }
-        return WriteAsset();
+        return BuildAsset();
     }
 
     private void CollectDefinitions(XElement root)
@@ -239,7 +227,7 @@ internal sealed partial class SvgCompiler
             if (name is "style" or "script" or "filter" or "mask" or "foreignObject"
                 or "image" or "text" or "use" or "pattern" or "symbol")
             {
-                throw Fail(element, $"SVG element '{name}' is outside the compiled subset");
+                throw Fail(element, $"SVG element '{name}' is outside the supported subset");
             }
             if (name is "animateMotion" or "animateColor" or "set" or "mpath")
             {
@@ -260,7 +248,7 @@ internal sealed partial class SvgCompiler
                 if (attributeName == "class" || attributeName.StartsWith("on", StringComparison.OrdinalIgnoreCase)
                     || attributeName is "filter" or "mask" or "externalResourcesRequired")
                 {
-                    throw Fail(element, $"SVG attribute '{attributeName}' is outside the compiled subset");
+                    throw Fail(element, $"SVG attribute '{attributeName}' is outside the supported subset");
                 }
                 if (attributeName is "href" or "xlink:href")
                 {
@@ -313,7 +301,7 @@ internal sealed partial class SvgCompiler
         }
         if (depth >= MaxRenderDepth)
         {
-            throw Fail(element, $"compiled node depth exceeds renderer limit {MaxRenderDepth}");
+            throw Fail(element, $"node depth exceeds renderer limit {MaxRenderDepth}");
         }
         if (name == "g")
         {
@@ -365,14 +353,14 @@ internal sealed partial class SvgCompiler
             }
             return;
         }
-        throw Fail(element, $"SVG element '{name}' is outside the compiled subset");
+        throw Fail(element, $"SVG element '{name}' is outside the supported subset");
     }
 
     private SvgNode AddNode(SvgNode parent, SvgMatrix transform, double opacity, SvgShape? shape)
     {
         if (nodes.Count >= MaxNodes)
         {
-            throw new SvgCompileException($"node count exceeds {MaxNodes}");
+            throw new SvgParseException($"node count exceeds {MaxNodes}");
         }
         var node = new SvgNode
         {

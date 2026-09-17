@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Removed the GCV1 binary vector format and the Goo.SvgCompiler tool. Goo.Svg now builds vector assets directly at runtime.
+
 ## 0.5.4 - 2026-09-15
 
 - Added native G# mixed initializers: `Container` and `Button` accept direct children and ordered spreads through `Add`. Examples use dot-free, member-first syntax. The package automatically supplies the upstream compiler/formatter containing G# #3785 while the tagged SDK catches up.
