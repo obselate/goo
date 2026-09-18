@@ -389,6 +389,11 @@ public open class Cell {
   }
 
   shared {
+    /// Describes an unkeyed child component mount using positional identity.
+    /// @typeparam TCell child component type
+    /// @returns a blob that mounts the child component
+    public func Mount[TCell Cell init()]() Blob -> Mount[TCell](nil)
+
     /// Describes a child component mount created by a factory.
     /// @typeparam TCell declared child component type
     /// @param factory creates a fresh child component when the mount has no retained instance

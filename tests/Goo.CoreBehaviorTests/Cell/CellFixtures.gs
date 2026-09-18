@@ -315,7 +315,7 @@ internal class CellFixtures {
 
     var positional = rec.Mount(Container() {
         Text{ Content: "kept" },
-        Cell.Mount[PositionalDisposableCell](nil),
+        Cell.Mount[PositionalDisposableCell](),
       })
     positional = rec.Diff(positional, Container() {
         Text{ Content: "kept"},
