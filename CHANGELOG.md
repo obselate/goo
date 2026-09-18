@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Removed the GCV1 binary vector format and the Goo.SvgCompiler tool. Goo.Svg now builds vector assets directly at runtime.
+- Removed the GCV1 binary vector format and the Goo.SvgCompiler tool. Goo.Svg now builds vector assets directly at runtime. Existing binary assets require migration to SVG sources. See the [GCV1 migration guide](docs/migrations/gcv1.md).
 
 ## 0.5.4 - 2026-09-15
 

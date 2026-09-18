@@ -69,6 +69,8 @@
 !/docs/nuget-readme.md
 !/docs/android.md
 !/docs/images.md
+!/docs/migrations/
+!/docs/migrations/**
 
 !/docs/audio.md
 !/docs/assets/

@@ -2,6 +2,9 @@
 
 `Goo.Svg` is an optional runtime loader for Goo's immutable `VectorAsset` documents.
 
+Upgrading from compiled `.gcv1` assets or `Goo.SvgCompiler`? See the
+[GCV1 migration guide](../docs/migrations/gcv1.md).
+
 ```csharp
 using Goo.Svg;
 
