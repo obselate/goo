@@ -28,10 +28,7 @@ internal class VulkanSceneDamageJournal {
 
   internal prop LatestVersion uint64{
     get {
-      if entryCount == 0 {
-        return 0uL
-      }
-      return entries[entryCount - 1].Version
+      return if entryCount == 0 { 0uL } else { entries[entryCount - 1].Version }
     }
   }
 
@@ -221,10 +218,7 @@ internal class VulkanSceneDamageJournal {
         return false
       }
       region = ToRegion(bounds, scaleX, scaleY, extentWidth, extentHeight)
-      if region.IsEmpty {
-        return false
-      }
-      return true
+      return !(region.IsEmpty)
     }
 
   private func FindEntry(version uint64) int32 {
@@ -257,8 +251,7 @@ internal class VulkanSceneDamageJournal {
 
   private func Union(left ConservativeBounds, right ConservativeBounds) ConservativeBounds {
     if left.IsEmpty { return right }
-    if right.IsEmpty { return left }
-    return unionVulkanSceneBounds(left, right)
+    return if right.IsEmpty { left } else { unionVulkanSceneBounds(left, right) }
   }
 
   private func ToRegion(bounds ConservativeBounds, scaleX float32, scaleY float32,

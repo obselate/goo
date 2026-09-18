@@ -207,7 +207,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         sharedState.PrimitiveDescriptorSetLayout, nativeMaxStorageBufferRange,
         nativePrimitiveFrameSlotCount, nativeObjectAccounting)
       primitiveFrameSlotCount = nativePrimitiveFrameSlotCount
-      primitiveFrameSlot = 0
       textFrameScaleX = 1.0F
       textFrameScaleY = 1.0F
       this.resourceGeneration = expectedGeneration
@@ -435,10 +434,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   internal func FlushPrimitiveFrameBeforeSubmit() VkResult {
     let primitiveResult = primitiveFrameData.FlushBeforeSubmit()
     let textResult = textFrameData.FlushBeforeSubmit()
-    if primitiveResult != VkConstants.VK_SUCCESS {
-      return primitiveResult
-    }
-    return textResult
+    return if primitiveResult != VkConstants.VK_SUCCESS { primitiveResult } else { textResult }
   }
 
   internal func ValidatePrimitiveFrameSubmission(submissionSerial uint64) {
@@ -739,21 +735,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if needed <= primitiveRecordPlan.Length {
       return
     }
-    var next = if primitiveRecordPlan.Length == 0 { 8 } else { primitiveRecordPlan.Length }
-    while next < needed {
-      if next > Int32.MaxValue / 2 {
-        next = needed
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]uint32
-    var index int32 = 0
-    while index < primitiveRecordPlan.Length {
-      replacement[index] = primitiveRecordPlan[index]
-      index++
-    }
-    primitiveRecordPlan = replacement
+    primitiveRecordPlan = GrowArray(primitiveRecordPlan,
+      primitiveRecordPlan.Length, needed, 8)
   }
   private func ComputeMaximumAnalyticRecordCount(frame SceneFrame) uint64 {
     if frame.DrawRefCount < 0 || frame.DrawRefCount > Int32.MaxValue {
@@ -794,10 +777,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       index = index + 1
     }
-    if total == 0uL {
-      return 1uL
-    }
-    return total
+    return if total == 0uL { 1uL } else { total }
   }
 
   private func ValidateBorrowedBackdrop(

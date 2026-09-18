@@ -4,6 +4,14 @@ import Goo
 import System
 import System.Threading
 
+class QueueWakeCell : Cell {
+  override func Build() Blob -> Container {
+    Width: Length.Percent(100),
+    Height: Length.Percent(100),
+    BackgroundColor: Color.Rgb(32, 40, 56),
+  }
+}
+
 func RunQueueWakeSmoke() {
   for phase in 0 ... 2 {
     let window = Window{
@@ -11,7 +19,7 @@ func RunQueueWakeSmoke() {
       Width: 180,
       Height: 96,
       VSync: true,
-      Root: FramePacingIdleCell{},
+      Root: QueueWakeCell{},
     }
     var captured = false
     var pending = true

@@ -157,12 +157,7 @@ internal func lerpBoxShadows(from BoxShadowStack, to BoxShadowStack, work BoxSha
 
 internal func lerpShadowLength(from Length, to Length, t float32) Length -> Length { Unit: LengthUnit.Px, Value: from.Value + (to.Value - from.Value) * t }
 
-internal func normalizedDefault(value Length) Length {
-  if value.Unit == LengthUnit.Unset {
-    return 0
-  }
-  return value
-}
+internal func normalizedDefault(value Length) Length -> if value.Unit == LengthUnit.Unset { 0 } else { value }
 
 internal func validateShadowGeometry(typeName string, value Length, name string) Length {
   if value.Unit == LengthUnit.Unset {
@@ -179,8 +174,5 @@ internal func validateShadowGeometry(typeName string, value Length, name string)
 
 internal func normalizeShadowBlur(typeName string, value Length) Length {
   let geometry = validateShadowGeometry(typeName, value, "Blur")
-  if geometry.Value < 0.0F {
-    return 0
-  }
-  return geometry
+  return if geometry.Value < 0.0F { 0 } else { geometry }
 }

@@ -44,7 +44,7 @@ Gsharp.NET.Sdk 0.4.591.
 
 The compiler and canonical formatter are built without source changes from
 [DavidObando/gsharp commit 947be9cb](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
-`.github/scripts/bootstrap-gsharp.py` builds `src/Compiler/Compiler.csproj` and
+`bootstrap.sh` and `bootstrap.bat` build `src/Compiler/Compiler.csproj` and
 `src/Formatting/Gsfmt.Cli/Gsfmt.Cli.csproj` into ignored
 `artifacts/gsharp/` output. `Goo.Gslint` uses the upstream parser and ADR-0179
 formatter assemblies. Goo redistributes the compiler and formatter under
@@ -112,7 +112,7 @@ The hb-gpu GLSL inputs are the pinned HarfBuzz sources
 `src/hb-gpu-draw-fragment.glsl`, and `src/hb-gpu-paint-fragment.glsl`.
 Goo's Vulkan GLSL compatibility adapters under
 `tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/` and checked-in SPIR-V
-under `tests/Goo.VulkanProof/Generated/Shaders/` are derivative inclusions of
+under `Goo/Shaders/Vulkan/` are derivative inclusions of
 those sources and retain the same attribution and license terms.
 
 ## Yoga.Net 3.2.3, based on Meta Yoga v3.2.1

@@ -46,32 +46,22 @@ public class DevTools {
   }
 }
 
-internal enum DiagnosticCapturePhase { Idle; WaitingForFrame; Accepted }
-
 internal class DiagnosticCaptureTracker {
-  private var phase DiagnosticCapturePhase
+  private var accepted bool
 
-  internal init() {
-    phase = DiagnosticCapturePhase.Idle
-  }
-
-  internal prop NeedsRequest bool{ get -> phase != DiagnosticCapturePhase.Accepted }
+  internal prop NeedsRequest bool{ get -> !accepted }
 
   internal func Observe(status WindowReadbackRequestStatus) {
     if status == WindowReadbackRequestStatus.Accepted {
-      phase = DiagnosticCapturePhase.Accepted
+      accepted = true
     } else if status == WindowReadbackRequestStatus.NotReady
       || status == WindowReadbackRequestStatus.Busy{
-        phase = DiagnosticCapturePhase.WaitingForFrame
+        accepted = false
       }
   }
 
-  internal func Complete() {
-    phase = DiagnosticCapturePhase.Idle
-  }
-
   internal func Reset() {
-    phase = DiagnosticCapturePhase.Idle
+    accepted = false
   }
 }
 
@@ -135,8 +125,6 @@ internal partial class DevToolsSession : IDisposable {
     overrideStore = DiagnosticOverrideStore()
     debugNodes = Dictionary[int64, Node]()
     snapshotChanged = List[Action[DiagnosticSnapshot]]()
-    pipe = nil
-    selectionBeforeInspect = nil
     captureTracker = DiagnosticCaptureTracker()
     pending = true
     inputAllowed = allowInput
@@ -159,6 +147,10 @@ internal partial class DevToolsSession : IDisposable {
     owner.RequireElementHandleThread("DevToolsSession.ExitInspectMode")
     if disposed { return }
     if !inspecting && hovered == nil { return }
+    finishInspectMode()
+  }
+
+  private func finishInspectMode() {
     inspecting = false
     clickLocked = false
     hovered = nil
@@ -258,12 +250,7 @@ internal partial class DevToolsSession : IDisposable {
         return true
       }
       if kind == PointerEventKind.Release && clickLocked {
-        inspecting = false
-        clickLocked = false
-        hovered = nil
-        selectionBeforeInspect = nil
-        pending = true
-        owner.RequestDiagnosticsFrame()
+        finishInspectMode()
         return true
       }
       return false
@@ -272,13 +259,8 @@ internal partial class DevToolsSession : IDisposable {
   internal func KeyEvent(key Key) bool {
     if disposed || !inspecting || key != Key.Escape { return false }
     owner.RequireElementHandleThread("DevToolsSession.EscapeInspectMode")
-    inspecting = false
-    clickLocked = false
-    hovered = nil
     selected = selectionBeforeInspect
-    selectionBeforeInspect = nil
-    pending = true
-    owner.RequestDiagnosticsFrame()
+    finishInspectMode()
     return true
   }
 
@@ -332,7 +314,7 @@ internal partial class DevToolsSession : IDisposable {
       tracker.Reset()
       return "{\"command\":\"capture\",\"pending\":true}"
     }
-    tracker.Complete()
+    tracker.Reset()
     let pixels = result.Pixels
     return "{\"command\":\"capture\",\"pending\":false,\"format\":\"rgba8-srgb-premultiplied\","
     +"\"origin\":\"top-left\",\"width\":" + result.Width.ToString()
@@ -410,8 +392,13 @@ internal partial class DevToolsSession : IDisposable {
 
   internal func WindowClosed() {
     if disposed { return }
+    detach(false)
+  }
+
+  private func detach(requestRebuild bool) {
     resetInjectedInput()
     clearOverrides()
+    if requestRebuild { owner.RequestDiagnosticsRebuild() }
     owner.ClearDiagnostics(this)
     pipe?.Dispose()
     pipe = nil
@@ -427,19 +414,7 @@ internal partial class DevToolsSession : IDisposable {
   public func Dispose() {
     if disposed { return }
     owner.RequireElementHandleThread("DevToolsSession.Dispose")
-    resetInjectedInput()
-    clearOverrides()
-    owner.RequestDiagnosticsRebuild()
-    owner.ClearDiagnostics(this)
-    pipe?.Dispose()
-    pipe = nil
-    disposed = true
-    DevTools.Unregister(this)
-    DiagnosticEndpointDiscovery.Release(endpoint)
-    snapshotChanged.Clear()
-    hovered = nil
-    selected = nil
-    selectionBeforeInspect = nil
+    detach(true)
   }
 
   private func captureIfNeeded() DiagnosticSnapshot? {

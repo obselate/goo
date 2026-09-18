@@ -150,10 +150,7 @@ internal partial class TextInput {
       return false
     }
     if n.Kind == NodeKind.Editor && canReceiveInput(n) {
-      if key == Key.Tab && n.EditorReadOnly {
-        return false
-      }
-      return handleEditorKey(n, key, modifiers)
+      return if key == Key.Tab && n.EditorReadOnly { false } else { handleEditorKey(n, key, modifiers) }
     }
     if key == Key.Tab {
       return false

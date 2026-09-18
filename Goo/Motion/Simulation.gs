@@ -69,8 +69,5 @@ private func tweenSlope(easing Easing, t float64) float64 {
   if easing == Easing.EaseOut {
     return 2.0 * (1.0 - t)
   }
-  if easing == Easing.EaseInOut {
-    return t < 0.5 ? 4.0 * t : 4.0 * (1.0 - t)
-  }
-  return 1.0
+  return if easing == Easing.EaseInOut { t < 0.5 ? 4.0 * t : 4.0 * (1.0 - t) } else { 1.0 }
 }

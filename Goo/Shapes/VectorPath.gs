@@ -349,16 +349,6 @@ public struct VectorPath {
     }
   }
 
-  internal func CommandAt(index int32) VectorPathCommand {
-    guard let d = payload else {
-      throw ArgumentOutOfRangeException("index")
-    }
-    if index < 0 || index >= d.CommandCount {
-      throw ArgumentOutOfRangeException("index")
-    }
-    return d.Commands[index]
-  }
-
   internal func UpdateNormalized(quadratics []PathQuadratic, quadraticCount int32,
     contours []PathContour, contourCount int32) bool{
       guard let d = payload else { return false }

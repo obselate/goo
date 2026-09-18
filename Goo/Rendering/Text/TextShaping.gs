@@ -42,7 +42,7 @@ private struct TextPrimaryFaceKey : IEquatable[TextPrimaryFaceKey] {
   }
 }
 
-internal class TextShaping {
+internal partial class TextShaping {
   shared {
     private let PrimaryFaces Dictionary[TextPrimaryFaceKey, TypefaceResource] =
     Dictionary[TextPrimaryFaceKey, TypefaceResource]()
@@ -132,16 +132,6 @@ internal class TextShaping {
     shaped.Slice(start, end)
 
     internal func GlyphCount(shaped ShapedText) int32 -> shaped.GlyphCount
-
-    internal func PrimaryFaceCacheCountForTests() int32 {
-      lock (PrimaryFacesLock) { return PrimaryFaces.Count }
-    }
-
-    internal func PrimaryFaceCacheByteBudgetForTests() int64 -> PrimaryFaceCacheByteBudget
-
-    internal func PrimaryFaceCacheBytesForTests() int64 {
-      lock (PrimaryFacesLock) { return primaryFaceCacheBytes }
-    }
 
     private func MeasureUncached(text string, families string, size float32, weight int32,
       italic bool, letterSpacing float32, direction int32) float32 ->

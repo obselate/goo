@@ -32,8 +32,7 @@ internal partial class VulkanSceneCompiler {
     }
     let boundedLocal = local >= 1.0F ? 1.0F : local
     let product = parent * boundedLocal
-    if product >= 1.0F { return 1.0F }
-    return product <= 0.0F ? 0.0F : product
+    return if product >= 1.0F { 1.0F } else { product <= 0.0F ? 0.0F : product }
   }
 
   private func BlendModeSupported(value BlendMode) bool {
@@ -775,8 +774,7 @@ internal partial class VulkanSceneCompiler {
       let inset = xInset > yInset ? xInset : yInset
       let result = radius - inset
       let limit = MinDimension(insetBounds) * 0.5F
-      if result <= 0.0F { return 0.0F }
-      return result > limit ? limit : result
+      return if result <= 0.0F { 0.0F } else { result > limit ? limit : result }
     }
 
   private func PaintOutline(
@@ -1106,8 +1104,8 @@ internal partial class VulkanSceneCompiler {
       }
       let stops = gradient.Stops
       let primitive = switch gradient {
-        case linear is CompiledVectorLinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
-        case radial is CompiledVectorRadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
+        case linear is VectorLinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
+        case radial is VectorRadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
         case linear is LinearGradient: VulkanSceneUnsupportedPrimitive.LinearGradient
         case radial is RadialGradient: VulkanSceneUnsupportedPrimitive.RadialGradient
         case _: VulkanSceneUnsupportedPrimitive.Gradient
@@ -1133,7 +1131,7 @@ internal partial class VulkanSceneCompiler {
         index = index + 1
       }
       switch gradient {
-        case compiled is CompiledVectorLinearGradient {
+        case compiled is VectorLinearGradient {
           frame.AddLinearGradient(LinearGradientRecord{
             Bounds: bounds,
             RadiusTopLeft: Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
@@ -1151,7 +1149,7 @@ internal partial class VulkanSceneCompiler {
           })
           return
         }
-        case compiled is CompiledVectorRadialGradient {
+        case compiled is VectorRadialGradient {
           frame.AddRadialGradient(RadialGradientRecord{
             Bounds: bounds,
             RadiusTopLeft: Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds),
@@ -1238,10 +1236,7 @@ internal partial class VulkanSceneCompiler {
     }
     let resolved = value.Unit == LengthUnit.Percent
     ? basis * value.Value / 100.0F : value.Value
-    if !finiteVulkanSceneValue(resolved) || resolved <= 0.0F {
-      return 0.0F
-    }
-    return resolved
+    return if !finiteVulkanSceneValue(resolved) || resolved <= 0.0F { 0.0F } else { resolved }
   }
 
   private func MinDimension(bounds ConservativeBounds) float32 -> bounds.Width < bounds.Height ? bounds.Width : bounds.Height

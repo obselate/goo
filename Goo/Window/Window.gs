@@ -398,21 +398,15 @@ public partial class Window {
     decorated = true
     resizable = true
     resizeBand = 8.0F
-    postedActions = nil
-    pendingPostedActions = 0
     acceptingPosts = true
     dirty = true
-    pendingRebuild = 0
-    pendingPaintResourceInvalidation = 0
     retainedInvalidationGate = Object()
     pendingRetainedEffects = ReconcileEffects.None
-    pendingRetainedInvalidation = 0
     acceptingRetainedInvalidations = true
     imageCompletionGate = Object()
     pendingImageCompletions = List[ImageCompletionWork]()
     imageCompletionBatch = List[ImageCompletionWork]()
     acceptingImageCompletions = true
-    pendingImageCompletion = 0
     pendingReconcileEffects = ReconcileEffects.None
     renderDirty = true
     cellQueueGate = Object()
@@ -420,8 +414,6 @@ public partial class Window {
     deferredCells = List[DirtyCellSubmission]()
     cellBatch = List[DirtyCellSubmission]()
     fiberBatch = List[Cell]()
-    imageCompletionHook = nil
-    retainedInvalidationHook = nil
     childDiffScratch = ChildDiffScratch()
     layout = Layout()
     resolver = Resolver{Owner: this}
@@ -430,8 +422,6 @@ public partial class Window {
     motionPump.Wake = requestReconcile
 
     input = InputCoordinator()
-    diagnosticsSession = nil
-    accessibility = nil
 
     dpi = Vector2(1.0F, 1.0F)
   }

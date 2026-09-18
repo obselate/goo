@@ -53,7 +53,6 @@ internal unsafe sealed class VulkanClipMaskFrameSlot : IDisposable {
         ObjectAccounting: nativeObjectAccounting,
       }
       Lifecycle = VulkanFrameSlotLifecycle{}
-      RetentionValid = false
     }
 
   internal func EnsureCapacity(required VkDeviceSize) {
@@ -690,12 +689,7 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
 
   private func BitValue(value float32) uint32 -> uint32(BitConverter.SingleToInt32Bits(value))
 
-  private func SaturatingAdd(current uint64, value uint64) uint64 {
-    if value > uint64.MaxValue - current {
-      return uint64.MaxValue
-    }
-    return current + value
-  }
+  private func SaturatingAdd(current uint64, value uint64) uint64 -> if value > uint64.MaxValue - current { uint64.MaxValue } else { current + value }
 
   private func CreateDescriptorResources() {
     let poolSizes * VkDescriptorPoolSize = stackalloc[2]VkDescriptorPoolSize

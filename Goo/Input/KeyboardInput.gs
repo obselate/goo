@@ -22,7 +22,6 @@ internal class KeyboardInput {
   internal init(focus FocusManager) {
     this.focus = focus
     queue = List[KeyboardEvent]()
-    queueHead = 0
     heldKey = Key.Unknown
     pressedKey = Key.Unknown
     control = InputDispatchControl()
@@ -176,12 +175,7 @@ internal class KeyboardInput {
       return changed
     }
 
-  internal func Step(root Node?, resolver Resolver, text TextInput, dt float64) bool {
-    if heldKey == Key.Unknown {
-      return false
-    }
-    return Step(root, resolver, text, dt, Stopwatch.GetTimestamp())
-  }
+  internal func Step(root Node?, resolver Resolver, text TextInput, dt float64) bool -> if heldKey == Key.Unknown { false } else { Step(root, resolver, text, dt, Stopwatch.GetTimestamp()) }
 
   internal func Step(root Node?, resolver Resolver, text TextInput, dt float64, nowTicks int64) bool {
     if heldKey == Key.Unknown {
@@ -274,8 +268,7 @@ internal class KeyboardInput {
       if hook(key, modifiers) { return true }
     }
     let dispatch = DispatchKeyDown(focus.FocusedNode(), key, modifiers, false)
-    if dispatch.DefaultPrevented { return false }
-    return HandleKeyDefault(root, resolver, text, key, modifiers)
+    return if dispatch.DefaultPrevented { false } else { HandleKeyDefault(root, resolver, text, key, modifiers) }
   }
 
   internal func HandleButtonPress(root Node?, resolver Resolver, key Key) bool {

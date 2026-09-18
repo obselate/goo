@@ -3,8 +3,8 @@ using System.Linq;
 using System.Text;
 
 internal sealed record ScriptGenerationResult(
-    string ScriptsSource,
-    string ScriptExtensionsSource,
+    byte[] ScriptsData,
+    byte[] ScriptExtensionsData,
     int ScriptRangeCount,
     int ScriptExtensionRangeCount);
 
@@ -13,24 +13,14 @@ internal static class ScriptGenerator
     public static ScriptGenerationResult Generate(
         string scriptsSource,
         string scriptExtensionsSource,
-        string propertyValueAliasesSource,
-        string version,
-        string scriptsSourceUrl,
-        string scriptsSourceSha256,
-        string scriptExtensionsSourceUrl,
-        string scriptExtensionsSourceSha256,
-        string propertyValueAliasesSourceUrl,
-        string propertyValueAliasesSourceSha256)
+        string propertyValueAliasesSource)
     {
         var aliases = ParseAliases(propertyValueAliasesSource);
         var scripts = ParseScripts(scriptsSource, aliases);
         var extensions = ParseScriptExtensions(scriptExtensionsSource, aliases);
         return new ScriptGenerationResult(
-            RenderScripts(scripts, version, scriptsSourceUrl, scriptsSourceSha256,
-                propertyValueAliasesSourceUrl, propertyValueAliasesSourceSha256),
-            RenderScriptExtensions(extensions, version, scriptExtensionsSourceUrl,
-                scriptExtensionsSourceSha256, propertyValueAliasesSourceUrl,
-                propertyValueAliasesSourceSha256),
+            EncodeScripts(scripts),
+            EncodeScriptExtensions(extensions),
             scripts.Count,
             extensions.Ranges.Count);
     }
@@ -160,134 +150,38 @@ internal static class ScriptGenerator
             | (uint)(byte)shortName[3];
     }
 
-    private static string RenderScripts(List<ScriptRange> ranges, string version,
-        string sourceUrl, string sourceSha256, string aliasesUrl, string aliasesSha256)
+    private static byte[] EncodeScripts(List<ScriptRange> ranges) => Encode(writer =>
     {
-        var builder = new StringBuilder();
-        AppendLine(builder, "package Goo");
-        AppendLine(builder, "");
-        AppendLine(builder, "internal data struct UnicodeScriptRange(Start int32, End int32, Tag uint32) { }");
-        AppendLine(builder, "");
-        AppendLine(builder, "internal class UnicodeScriptsData {");
-        AppendLine(builder, "  shared {");
-        AppendLine(builder, $"    internal const SourceVersion string = \"{version}\"");
-        AppendLine(builder, $"    internal const SourceUrl string = \"{sourceUrl}\"");
-        AppendLine(builder, $"    internal const SourceSha256 string = \"{sourceSha256}\"");
-        AppendLine(builder, $"    internal const PropertyValueAliasesSourceUrl string = \"{aliasesUrl}\"");
-        AppendLine(builder, $"    internal const PropertyValueAliasesSourceSha256 string = \"{aliasesSha256}\"");
-        AppendLine(builder, "    internal const CommonTag uint32 = 1517910393u");
-        AppendLine(builder, "    internal const InheritedTag uint32 = 1516858984u");
-        AppendLine(builder, "    internal const UnknownTag uint32 = 1517976186u");
-        AppendLine(builder, "    private let ranges []UnicodeScriptRange = []UnicodeScriptRange{");
+        writer.Write(ranges.Count);
         foreach (var range in ranges)
-            AppendLine(builder, $"      UnicodeScriptRange(0x{range.Start:X}, 0x{range.End:X}, {range.Tag}u),");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "");
-        AppendLine(builder, "    internal func Classify(value int32) uint32 {");
-        AppendLine(builder, "      var low int32 = 0");
-        AppendLine(builder, "      var high = ranges.Length - 1");
-        AppendLine(builder, "      while low <= high {");
-        AppendLine(builder, "        let middle = low + (high - low) / 2");
-        AppendLine(builder, "        let current = ranges[middle]");
-        AppendLine(builder, "        if value < current.Start {");
-        AppendLine(builder, "          high = middle - 1");
-        AppendLine(builder, "        } else if value > current.End {");
-        AppendLine(builder, "          low = middle + 1");
-        AppendLine(builder, "        } else {");
-        AppendLine(builder, "          return current.Tag");
-        AppendLine(builder, "        }");
-        AppendLine(builder, "      }");
-        AppendLine(builder, "      return UnknownTag");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "  }");
-        AppendLine(builder, "}");
-        return builder.ToString();
-    }
+        {
+            writer.Write(range.Start);
+            writer.Write(range.End);
+            writer.Write(range.Tag);
+        }
+    });
 
-    private static string RenderScriptExtensions(ScriptExtensionData data, string version,
-        string sourceUrl, string sourceSha256, string aliasesUrl, string aliasesSha256)
+    private static byte[] EncodeScriptExtensions(ScriptExtensionData data) => Encode(writer =>
     {
-        var builder = new StringBuilder();
-        AppendLine(builder, "package Goo");
-        AppendLine(builder, "");
-        AppendLine(builder, "internal data struct UnicodeScriptExtensionRange(Start int32, End int32, Offset int32, Count int32) { }");
-        AppendLine(builder, "");
-        AppendLine(builder, "internal class UnicodeScriptExtensionsData {");
-        AppendLine(builder, "  shared {");
-        AppendLine(builder, $"    internal const SourceVersion string = \"{version}\"");
-        AppendLine(builder, $"    internal const SourceUrl string = \"{sourceUrl}\"");
-        AppendLine(builder, $"    internal const SourceSha256 string = \"{sourceSha256}\"");
-        AppendLine(builder, $"    internal const PropertyValueAliasesSourceUrl string = \"{aliasesUrl}\"");
-        AppendLine(builder, $"    internal const PropertyValueAliasesSourceSha256 string = \"{aliasesSha256}\"");
-        AppendLine(builder, "    private let offsets []int32 = []int32{");
-        foreach (var offset in data.Offsets)
-            AppendLine(builder, $"      {offset},");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "    private let counts []int32 = []int32{");
-        foreach (var count in data.Counts)
-            AppendLine(builder, $"      {count},");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "    private let tags []uint32 = []uint32{");
+        writer.Write(data.Tags.Count);
         foreach (var tag in data.Tags)
-            AppendLine(builder, $"      {tag}u,");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "    private let ranges []UnicodeScriptExtensionRange = []UnicodeScriptExtensionRange{");
+            writer.Write(tag);
+        writer.Write(data.Ranges.Count);
         foreach (var range in data.Ranges)
         {
-            var offset = data.Offsets[range.SetIndex];
-            var count = data.Counts[range.SetIndex];
-            AppendLine(builder, $"      UnicodeScriptExtensionRange(0x{range.Start:X}, 0x{range.End:X}, {offset}, {count}),");
+            writer.Write(range.Start);
+            writer.Write(range.End);
+            writer.Write(data.Offsets[range.SetIndex]);
+            writer.Write(data.Counts[range.SetIndex]);
         }
-        AppendLine(builder, "    }");
-        AppendLine(builder, "");
-        AppendLine(builder, "    internal func Contains(value int32, script uint32) bool {");
-        AppendLine(builder, "      let index = Find(value)");
-        AppendLine(builder, "      if index < 0 { return UnicodeScriptsData.Classify(value) == script }");
-        AppendLine(builder, "      let entry = ranges[index]");
-        AppendLine(builder, "      var offset = entry.Offset");
-        AppendLine(builder, "      let end = offset + entry.Count");
-        AppendLine(builder, "      while offset < end {");
-        AppendLine(builder, "        if tags[offset] == script { return true }");
-        AppendLine(builder, "        offset++");
-        AppendLine(builder, "      }");
-        AppendLine(builder, "      return false");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "");
-        AppendLine(builder, "    internal func AllowsAny(value int32) bool {");
-        AppendLine(builder, "      let index = Find(value)");
-        AppendLine(builder, "      if index < 0 {");
-        AppendLine(builder, "        let script = UnicodeScriptsData.Classify(value)");
-        AppendLine(builder, "        return script == UnicodeScriptsData.CommonTag || script == UnicodeScriptsData.InheritedTag");
-        AppendLine(builder, "      }");
-        AppendLine(builder, "      let entry = ranges[index]");
-        AppendLine(builder, "      var offset = entry.Offset");
-        AppendLine(builder, "      let end = offset + entry.Count");
-        AppendLine(builder, "      while offset < end {");
-        AppendLine(builder, "        if tags[offset] == UnicodeScriptsData.CommonTag || tags[offset] == UnicodeScriptsData.InheritedTag { return true }");
-        AppendLine(builder, "        offset++");
-        AppendLine(builder, "      }");
-        AppendLine(builder, "      return false");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "");
-        AppendLine(builder, "    private func Find(value int32) int32 {");
-        AppendLine(builder, "      var low int32 = 0");
-        AppendLine(builder, "      var high = ranges.Length - 1");
-        AppendLine(builder, "      while low <= high {");
-        AppendLine(builder, "        let middle = low + (high - low) / 2");
-        AppendLine(builder, "        let current = ranges[middle]");
-        AppendLine(builder, "        if value < current.Start {");
-        AppendLine(builder, "          high = middle - 1");
-        AppendLine(builder, "        } else if value > current.End {");
-        AppendLine(builder, "          low = middle + 1");
-        AppendLine(builder, "        } else {");
-        AppendLine(builder, "          return middle");
-        AppendLine(builder, "        }");
-        AppendLine(builder, "      }");
-        AppendLine(builder, "      return -1");
-        AppendLine(builder, "    }");
-        AppendLine(builder, "  }");
-        AppendLine(builder, "}");
-        return builder.ToString();
+    });
+
+    private static byte[] Encode(Action<BinaryWriter> write)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
+            write(writer);
+        return stream.ToArray();
     }
 
     private static string StripComment(string rawLine)
@@ -309,8 +203,6 @@ internal static class ScriptGenerator
 
     private static int ParseCodePoint(string value) =>
         int.Parse(value.Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-
-    private static void AppendLine(StringBuilder builder, string value) => builder.Append(value).Append('\n');
 
     private sealed record ScriptRange(int Start, int End, uint Tag);
     private sealed record ScriptExtensionRange(int Start, int End, int SetIndex);

@@ -9,22 +9,14 @@ internal class AccessibilityMetadata {
     private let nodeValues ConditionalWeakTable[Node, Accessibility] =
     ConditionalWeakTable[Node, Accessibility]()
 
-    internal func BlobValue(b Blob) Accessibility? {
-      if blobValues.TryGetValue(b, out var value) { return value }
-      return nil
-    }
+    internal func BlobValue(b Blob) Accessibility? -> if blobValues.TryGetValue(b, out var value) { value } else { nil }
 
     internal func SetBlobValue(b Blob, value Accessibility?) {
       blobValues.Remove(b)
       if let next = value { blobValues.Add(b, next) }
     }
 
-    internal func Value(n Node) Accessibility? {
-      if n.HasAccessibilityDeclaration && nodeValues.TryGetValue(n, out var value) {
-        return value
-      }
-      return nil
-    }
+    internal func Value(n Node) Accessibility? -> if n.HasAccessibilityDeclaration && nodeValues.TryGetValue(n, out var value) { value } else { nil }
 
     internal func Sync(n Node, b Blob) bool {
       let next = BlobValue(b)
@@ -97,10 +89,7 @@ internal class AccessibilityNodeStates {
       return fresh
     }
 
-    internal func Get(n Node) RetainedAccessibilityNode? {
-      if n.HasAccessibilityNodeState && values.TryGetValue(n, out var value) { return value }
-      return nil
-    }
+    internal func Get(n Node) RetainedAccessibilityNode? -> if n.HasAccessibilityNodeState && values.TryGetValue(n, out var value) { value } else { nil }
 
     internal func Remove(n Node) {
       if !n.HasAccessibilityNodeState {
@@ -117,12 +106,7 @@ internal class AccessibilityButtonNames {
     private let values ConditionalWeakTable[Node, AccessibilityButtonName] =
     ConditionalWeakTable[Node, AccessibilityButtonName]()
 
-    internal func Get(n Node, fingerprint uint64) string? {
-      if values.TryGetValue(n, out var value) && value.Fingerprint == fingerprint {
-        return value.Name
-      }
-      return nil
-    }
+    internal func Get(n Node, fingerprint uint64) string? -> if values.TryGetValue(n, out var value) && value.Fingerprint == fingerprint { value.Name } else { nil }
 
     internal func Set(n Node, fingerprint uint64, name string) {
       values.Remove(n)

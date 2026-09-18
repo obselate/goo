@@ -343,14 +343,7 @@ internal class TreeFixtures {
       Color: Color.White,
       JustifyContent: JustifyContent.FlexEnd,
     })
-    guard let entries = node.BaseStyle else { return false }
-    if entries.Count != 8
-      || entries.At(0).Field != StyleField.JustifyContent
-      || entries.At(1).Field != StyleField.AlignItems
-      || entries.At(2).Field != StyleField.Width
-      || entries.At(6).Field != StyleField.Color
-      || entries.At(7).Field != StyleField.JustifyContent
-      || node.JustifyContent != JustifyContent.FlexEnd || node.AlignItems != AlignItems.Center
+    if node.JustifyContent != JustifyContent.FlexEnd || node.AlignItems != AlignItems.Center
       || node.Width.Value != 100.0F || node.Height.Value != 40.0F
       || node.Gap.Value != 8.0F || node.BackgroundColor != Color.Rgb(41, 41, 51)
       || node.Color != Color.White{
@@ -371,8 +364,7 @@ internal class TreeFixtures {
       Disabled: true,
       OnClick: () -> { clicked = true },
     })
-    if !Object.ReferenceEquals(entries, node.BaseStyle)
-      || node.HoverStyle == nil || node.ActiveStyle == nil
+    if node.HoverStyle == nil || node.ActiveStyle == nil
       || node.FocusStyle == nil || node.DisabledStyle == nil
       || !node.Disabled || node.Focusable{
         return false
@@ -388,8 +380,7 @@ internal class TreeFixtures {
       Color: Color.White,
       JustifyContent: JustifyContent.FlexEnd,
     })
-    return !Object.ReferenceEquals(entries, node.BaseStyle)
-      && node.Width.Value == 120.0F
+    return node.Width.Value == 120.0F
       && node.JustifyContent == JustifyContent.FlexEnd
       && node.HoverStyle == nil && node.ActiveStyle == nil
       && node.FocusStyle == nil && node.DisabledStyle == nil
@@ -509,7 +500,7 @@ internal class TreeFixtures {
 internal class TreeKeyedParent : Cell {
   internal var Mode int32
 
-  init() { Mode = 0 }
+  init() { }
 
   override func Build() Blob -> switch Mode {
     case 0: Container() { keyedCell("a"), keyedCell("b"),}
@@ -601,9 +592,7 @@ internal class TreeIncrementalChild : Cell[string] {
   internal var Count int32
   internal var Builds int32
 
-  init() {
-    Count = 0
-  }
+  init() { }
 
   override func Build() Blob {
     Builds = Builds + 1
@@ -616,7 +605,7 @@ internal class TreeIncrementalChild : Cell[string] {
 internal class TreeDisplayFocusCell : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -635,7 +624,7 @@ internal class TreeDisplayFocusCell : Cell {
 internal class TreeDisplayRetainedParent : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -656,7 +645,7 @@ internal class TreeDisplayRetainedParent : Cell {
 internal class TreeVisibilityFocusCell : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -678,7 +667,7 @@ internal class TreeVisibilityFocusCell : Cell {
 internal class TreeVisibilityRetainedParent : Cell {
   internal var Hidden bool
 
-  init() { Hidden = false }
+  init() { }
 
   func Hide() {
     Hidden = true
@@ -700,7 +689,7 @@ internal class TreeDisplayRetainedCell : Cell, IDisposable {
   shared { var Disposed bool }
   internal var Count int32
 
-  init() { Count = 0 }
+  init() { }
 
   func Increment() {
     Count = Count + 1

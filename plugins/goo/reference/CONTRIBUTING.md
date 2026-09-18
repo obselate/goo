@@ -10,18 +10,22 @@ SPIR-V and native HarfBuzz payloads:
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+./bootstrap.sh --gsharp-only
 dotnet build Goo/Goo.gsproj -c Release
 ```
 
-The G# SDK restores from NuGet through `Gsharp.NET.Sdk`. It is not a separate
-system installation.
+On Windows, use `bootstrap.bat --gsharp-only`.
 
-Install Slang 2026.16 and Vulkan SDK 1.4.357.0 when building Goo Gallery,
-projects with `<GooShaderEffect>` items, or regenerating shaders. Set
-`SLANG_SDK` and `VULKAN_SDK` to their SDK roots. ShaderEffect builds need
-`slangc` and SPIRV-Tools 2026.3 `spirv-val`. Internal shader regeneration also
-needs `glslc` 2026.3.
+The G# SDK restores from NuGet through `Gsharp.NET.Sdk`. It is not a separate
+system installation. The bootstrap builds the compiler and formatter required
+by this checkout from upstream commit
+[`947be9cb`](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
+
+When building the Gallery or a project with `<GooShaderEffect>` items, install
+the platform downloads listed under [custom shaders](README.md#custom-shaders).
+Set `SLANG_SDK` and `VULKAN_SDK` to their SDK roots, or put `slangc` and
+`spirv-val` on `PATH`. Internal shader regeneration also uses the Vulkan SDK's
+`glslc`.
 
 Linux Vulkan runs also need a native Wayland session, a Vulkan 1.3 driver, and
 a TrueType or OpenType sans-serif font. The CI dependency list in
@@ -33,21 +37,8 @@ For NativeAOT, install the target platform's [.NET NativeAOT
 prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
 NativeAOT publishing must run on the target operating system.
 
-## G# authoring tools
-
-The current source uses upstream G# ADR-0180 mixed initializers and the ADR-0179
-formatter. Build the pinned compiler and formatter before building this checkout:
-
-```sh
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
-```
-
-The pin is upstream `947be9cb5f4467947ecb95dba06b461f9984d659`. The published
-G# SDK 0.4.591 supplies the MSBuild tasks and runtime libraries. The source-built
-compiler supplies the newer language support through `GsharpCompilerFullPath`.
-App samples and code examples use the official four-space formatter with a
-120-column layout budget. Core source retains its existing formatting.
-See [native authoring](docs/native-authoring.md) for construction and spread rules.
+See [native authoring](docs/native-authoring.md) for G# construction, formatting,
+and spread rules used by this repository.
 
 ## Verification
 

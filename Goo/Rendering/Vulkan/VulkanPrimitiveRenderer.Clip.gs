@@ -325,17 +325,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if required <= 0 || required > Int32.MaxValue / 2 {
       throw ArgumentOutOfRangeException("clip mask count")
     }
-    var next = if clipRegions.Length == 0 { 8 } else { clipRegions.Length }
-    while next < required {
-      next = next * 2
-    }
-    let regions = [next]VulkanClipMaskRegion
-    var index int32 = 0
-    while index < clipRegions.Length {
-      regions[index] = clipRegions[index]
-      index++
-    }
-    clipRegions = regions
+    clipRegions = GrowArray(clipRegions, clipRegions.Length, required, 8)
   }
 
   private func ClipScreenBounds(value ClipMaskRecord, transform PrimitiveTransform,

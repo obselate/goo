@@ -61,6 +61,7 @@ public static class Program
     {
         var strict = false;
         var fix = false;
+        var reduce = false;
         var severityOverrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var paths = new List<string>();
         for (var index = 0; index < args.Length; index++)
@@ -74,6 +75,10 @@ public static class Program
             {
                 fix = true;
             }
+            else if (arg == "--reduce")
+            {
+                reduce = true;
+            }
             else if (arg == "--severity")
             {
                 if (++index >= args.Length || !TryParseSeverityOverride(args[index], out var rule, out var severity))
@@ -86,7 +91,7 @@ public static class Program
             }
             else if (arg == "--version")
             {
-                Console.WriteLine("Goo.Gslint 1.0.0");
+                Console.WriteLine("Goo.Gslint 1.2.0");
                 return 0;
             }
             else if (arg.StartsWith("--", StringComparison.Ordinal))
@@ -123,9 +128,9 @@ public static class Program
                 continue;
             }
 
-            if (fix)
+            if (fix || reduce)
             {
-                var rewritten = FixSource(tree, source);
+                var rewritten = reduce ? ReduceSource(source, file) : FixSource(tree, source);
                 if (rewritten != source)
                 {
                     File.WriteAllText(file, rewritten, new System.Text.UTF8Encoding(false));
@@ -150,9 +155,9 @@ public static class Program
             }
         }
 
-        if (fix)
+        if (fix || reduce)
         {
-            Console.WriteLine($"gslint: fixed {fixedFiles} file(s)");
+            Console.WriteLine($"gslint: {(reduce ? "reduced" : "fixed")} {fixedFiles} file(s)");
         }
 
         return failed ? 1 : 0;
@@ -168,8 +173,37 @@ public static class Program
 
     private static string FixSource(SyntaxTree tree, string source)
     {
+        var rewritten = RewriteSource(tree, source);
+        return GSharpFormatter.Format(SourceText.From(rewritten)).Text?.ToString() ?? source;
+    }
+
+    private static string ReduceSource(string source, string file)
+    {
+        for (var pass = 0; pass < 4; pass++)
+        {
+            var tree = SyntaxTree.Parse(SourceText.From(source, file));
+            if (tree.Diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+            {
+                return source;
+            }
+
+            var rewritten = RewriteSource(tree, source);
+            if (rewritten == source)
+            {
+                break;
+            }
+
+            source = rewritten;
+        }
+
+        return source;
+    }
+
+    private static string RewriteSource(SyntaxTree tree, string source)
+    {
         var edits = new List<SourceEdit>();
         CollectFixEdits(tree.Root, source, edits);
+        CollectConditionalReturnEdits(tree.Root, source, edits);
 
         var varFindings = new List<Finding>();
         AddVarFindings(tree.Root, true, varFindings);
@@ -195,7 +229,136 @@ public static class Program
             rewritten = rewritten.Remove(edit.Start, edit.Length).Insert(edit.Start, edit.Text);
         }
 
-        return GSharpFormatter.Format(SourceText.From(rewritten)).Text?.ToString() ?? source;
+        return rewritten;
+    }
+
+    private static void CollectConditionalReturnEdits(SyntaxNode node, string source, List<SourceEdit> edits)
+    {
+        if (node is BlockStatementSyntax block)
+        {
+            for (var index = 0; index < block.Statements.Length; index++)
+            {
+                if (block.Statements[index] is not IfStatementSyntax { Initializer: null } conditional
+                    || !TrySingleReturn(conditional.ThenStatement, out var whenTrue))
+                {
+                    continue;
+                }
+
+                if (conditional.ElseClause is { } clause
+                    && TrySingleReturn(clause.ElseStatement, out var whenFalse))
+                {
+                    AddConditionalReturnEdit(
+                        conditional.Span, conditional.Condition, whenTrue, whenFalse, source, edits);
+                }
+                else if (conditional.ElseClause is null
+                    && index + 1 < block.Statements.Length
+                    && block.Statements[index + 1] is ReturnStatementSyntax trailing
+                    && trailing.Expression is { } trailingExpression
+                    && !trailing.IsRefReturn)
+                {
+                    var span = TextSpan.FromBounds(conditional.Span.Start, trailing.Span.End);
+                    AddConditionalReturnEdit(
+                        span, conditional.Condition, whenTrue, trailingExpression, source, edits);
+                    index++;
+                }
+            }
+        }
+
+        foreach (var child in node.GetChildren())
+        {
+            CollectConditionalReturnEdits(child, source, edits);
+        }
+    }
+
+    private static bool TrySingleReturn(StatementSyntax statement, out ExpressionSyntax expression)
+    {
+        if (statement is BlockStatementSyntax { Statements.Length: 1 } block
+            && block.Statements[0] is ReturnStatementSyntax { Expression: { } value, IsRefReturn: false })
+        {
+            expression = value;
+            return true;
+        }
+
+        if (statement is ReturnStatementSyntax { Expression: { } direct, IsRefReturn: false })
+        {
+            expression = direct;
+            return true;
+        }
+
+        expression = null!;
+        return false;
+    }
+
+    private static void AddConditionalReturnEdit(
+        TextSpan span,
+        ExpressionSyntax condition,
+        ExpressionSyntax whenTrue,
+        ExpressionSyntax whenFalse,
+        string source,
+        List<SourceEdit> edits)
+    {
+        var original = source.Substring(span.Start, span.Length);
+        if (original.Contains("//", StringComparison.Ordinal)
+            || original.Contains("/*", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var test = Source(condition);
+        var success = Source(whenTrue);
+        var failure = Source(whenFalse);
+        if (TryBoolean(whenTrue, out var trueValue)
+            && TryBoolean(whenFalse, out var falseValue)
+            && trueValue != falseValue)
+        {
+            edits.Add(new SourceEdit(span.Start, span.Length,
+                trueValue ? $"return {test}" : $"return !({test})"));
+            return;
+        }
+
+        if (!IsSimpleConditional(test, success, failure))
+        {
+            return;
+        }
+
+        edits.Add(new SourceEdit(span.Start, span.Length,
+            $"return if {test} {{ {success} }} else {{ {failure} }}"));
+
+        string Source(SyntaxNode value) => source.Substring(value.Span.Start, value.Span.Length);
+    }
+
+    private static bool IsSimpleConditional(string condition, string whenTrue, string whenFalse)
+    {
+        var combinedLength = condition.Length + whenTrue.Length + whenFalse.Length;
+        return combinedLength <= 120
+            && !ContainsLineBreak(condition)
+            && !ContainsLineBreak(whenTrue)
+            && !ContainsLineBreak(whenFalse)
+            && !condition.Contains("nil", StringComparison.Ordinal)
+            && !condition.Contains(" is ", StringComparison.Ordinal)
+            && !condition.Contains("let ", StringComparison.Ordinal)
+            && IsSimpleValue(whenTrue)
+            && IsSimpleValue(whenFalse);
+    }
+
+    private static bool IsSimpleValue(string value) =>
+        !value.Contains('{')
+        && !value.Contains('}')
+        && !value.StartsWith("if ", StringComparison.Ordinal)
+        && !value.StartsWith("switch ", StringComparison.Ordinal);
+
+    private static bool ContainsLineBreak(string value) => value.Contains('\r') || value.Contains('\n');
+
+    private static bool TryBoolean(ExpressionSyntax expression, out bool value)
+    {
+        if (expression is LiteralExpressionSyntax { Value: bool literal })
+        {
+            value = literal;
+            return true;
+        }
+
+        value = false;
+        return false;
     }
 
     private static void CollectFixEdits(SyntaxNode node, string source, List<SourceEdit> edits)

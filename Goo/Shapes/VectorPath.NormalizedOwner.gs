@@ -39,11 +39,8 @@ internal sealed class VectorPathNormalizedOwner {
       storedHeight = viewBoxHeight == 1.0 ? 0.0 : viewBoxHeight
       quadratics = [quadraticCapacity]PathQuadratic
       contours = [contourCapacity]PathContour
-      quadraticCount = 0
-      contourCount = 0
       geometryRevision = 1uL
       contentHash = ComputeHash()
-      hasClosedContour = false
     }
 
   internal func Update(values []PathQuadratic, valueCount int32,

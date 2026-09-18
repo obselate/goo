@@ -98,10 +98,11 @@ class DiagnosticWire {
             try {
                 using let document = JsonDocument.Parse(payload)
                 let root = document.RootElement
-                if root.ValueKind != JsonValueKind.Object {
-                    return nil
+                return if root.ValueKind != JsonValueKind.Object {
+                    nil
+                } else {
+                    Snapshot(root, fallbackWindowId, fullDefault)
                 }
-                return Snapshot(root, fallbackWindowId, fullDefault)
             } catch (_ JsonException) {
                 return nil
             } catch (_ Exception) {
@@ -328,10 +329,11 @@ class DiagnosticWire {
             || value.Equals("hotReload", StringComparison.OrdinalIgnoreCase) {
                 return DiagnosticMessageKind.HotReload
             }
-            if value.Equals("error", StringComparison.OrdinalIgnoreCase) {
-                return DiagnosticMessageKind.Error
+            return if value.Equals("error", StringComparison.OrdinalIgnoreCase) {
+                DiagnosticMessageKind.Error
+            } else {
+                DiagnosticMessageKind.Unknown
             }
-            return DiagnosticMessageKind.Unknown
         }
 
         private func Snapshot(root JsonElement, fallbackWindowId string, fullDefault bool) DiagnosticWireSnapshot {
@@ -695,10 +697,11 @@ class DiagnosticWire {
             let y = MetricField(root, []string{"y", "top"})
             let width = MetricField(root, []string{"width", "w"})
             let height = MetricField(root, []string{"height", "h"})
-            if x != "" || y != "" || width != "" || height != "" {
-                return x + ", " + y + " · " + width + " × " + height
+            return if x != "" || y != "" || width != "" || height != "" {
+                x + ", " + y + " · " + width + " × " + height
+            } else {
+                ""
             }
-            return ""
         }
 
         private func ObjectText(root JsonElement, names[]string) string {
@@ -916,7 +919,6 @@ class DiagnosticWireWindow {
         Title = title
         Dimensions = dimensions
         Scale = scale
-        Root = nil
         Nodes = List[DiagnosticWireNode]()
     }
 }
@@ -1002,13 +1004,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         pending = Queue[DiagnosticMessage]()
         state = DiagnosticConnectionState.Disconnected
         capabilities = DiagnosticCapabilities{}
-        wake = nil
-        worker = nil
-        stream = nil
-        reader = nil
-        writer = nil
-        stopRequested = false
-        requestSequence = 0
     }
 
     prop State DiagnosticConnectionState {
@@ -1214,10 +1209,11 @@ class DiagnosticPipeTransport : DiagnosticTransport {
 
     private func NormalizePipe(value string) string {
         let prefix = "\\\\.\\pipe\\"
-        if value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) {
-            return value.Substring(prefix.Length)
+        return if value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) {
+            value.Substring(prefix.Length)
+        } else {
+            value
         }
-        return value
     }
 
     private func UpdateCapabilities(message DiagnosticMessage) {
@@ -1305,7 +1301,6 @@ class DiagnosticDisconnectedTransport : DiagnosticTransport {
             WindowTitle: "",
             StartedAt: "",
         }
-        wake = nil
     }
 
     prop State DiagnosticConnectionState {
@@ -1496,10 +1491,11 @@ class DiagnosticEndpointDiscovery {
 
         private func Int(root JsonElement, names[]string) int32 {
             let value = Text(root, names)
-            if Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) {
-                return result
+            return if Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) {
+                result
+            } else {
+                0
             }
-            return 0
         }
 
         private func Element(root JsonElement, names[]string) JsonElement? {

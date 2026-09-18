@@ -431,10 +431,7 @@ internal unsafe class VulkanUploadRing {
       return value
     }
     let padding = alignment - remainder
-    if value > uint64.MaxValue - padding {
-      return uint64.MaxValue
-    }
-    return value + padding
+    return if value > uint64.MaxValue - padding { uint64.MaxValue } else { value + padding }
   }
 
   private func EnsureOpen() {

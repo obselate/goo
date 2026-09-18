@@ -512,19 +512,11 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       format = selectedFormat
       bytesPerPixel = selectedBytesPerPixel
       generation = nativeGeneration
-      completedSerial = 0uL
       retired = List[VulkanClipMaskAtlasGeneration]()
       regionMap = Dictionary[uint64, VulkanClipMaskRegionRecord]()
       regionOrder = List[VulkanClipMaskRegionRecord](InitialRegionCapacity)
       dirtyRegions = List[VulkanClipMaskDirtyRegion](InitialRegionCapacity)
       freePlacements = List[VulkanClipMaskFreePlacement](InitialRegionCapacity)
-      nextUsageBatchToken = 0uL
-      usageBatchToken = 0uL
-      protectedUsageBatchToken = 0uL
-      usageBatchOpen = false
-      evictionCount = 0uL
-      pressureEventCount = 0uL
-      pressureFailureCount = 0uL
       maximumLayerCount = MaximumLayers(nativeWidth, nativeHeight, selectedBytesPerPixel, byteBudget)
       activeLayerCount = 1u
       layerCursors = [int32(VulkanClipMaskAtlasContract.MaxDepth)]VulkanClipMaskLayerCursor
@@ -1205,10 +1197,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     if record.LastUseSerial == 0uL {
       return true
     }
-    if completedSerial <= record.LastUseSerial {
-      return false
-    }
-    return completedSerial - record.LastUseSerial >= StaleSerialWindow
+    return if completedSerial <= record.LastUseSerial { false } else { completedSerial - record.LastUseSerial >= StaleSerialWindow }
   }
 
   private func IsProtected(record VulkanClipMaskRegionRecord) bool {

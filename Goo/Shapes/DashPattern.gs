@@ -49,7 +49,6 @@ public sealed class DashPattern {
 
     this.intervals = ReadOnlyCollection[float64](normalized)
     this.offset = offset
-    revision = 0uL
   }
 
   internal func SetOffset(next float64) {

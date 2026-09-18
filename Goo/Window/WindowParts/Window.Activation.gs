@@ -19,7 +19,6 @@ public partial class Window {
     if !IsOpen { return WindowActivationResult.Closed }
     if let child = family?.BlockingChild { return child.RequestActivation() }
     guard let native = host else { return WindowActivationResult.Closed }
-    if native.IsClosing { return WindowActivationResult.Closed }
-    return native.RequestActivation()
+    return if native.IsClosing { WindowActivationResult.Closed } else { native.RequestActivation() }
   }
 }

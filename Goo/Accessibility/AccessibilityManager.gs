@@ -76,17 +76,9 @@ internal class AccessibilityManager {
     }
   }
 
-  internal func DiagnosticNodeFor(n Node) AccessibilityNode? {
-    if !semanticSet.Contains(n) { return nil }
-    return AccessibilityNodeStates.Get(n)
-  }
+  internal func DiagnosticNodeFor(n Node) AccessibilityNode? -> if !semanticSet.Contains(n) { nil } else { AccessibilityNodeStates.Get(n) }
 
-  internal func NodeFor(id AccessibilityId) Node? {
-    if nodes.TryGetValue(id.Value, out var node) && !node.Retired {
-      return node
-    }
-    return nil
-  }
+  internal func NodeFor(id AccessibilityId) Node? -> if nodes.TryGetValue(id.Value, out var node) && !node.Retired { node } else { nil }
 
   internal func Supports(id AccessibilityId, action AccessibilityAction) bool {
     guard let node = NodeFor(id) else { return false }
@@ -303,8 +295,7 @@ internal class AccessibilityManager {
     if let metadata = declaration {
       if metadata.Name != "" { return metadata.Name }
     }
-    if role == AccessibilityRole.Button { return buttonName(n) }
-    return ""
+    return if role == AccessibilityRole.Button { buttonName(n) } else { "" }
   }
 
   private func buttonName(n Node) string {
@@ -367,8 +358,7 @@ internal class AccessibilityManager {
     if let metadata = declaration {
       if metadata.Value != "" { return metadata.Value }
     }
-    if n.Kind == NodeKind.Text || n.Kind == NodeKind.Entry { return n.Kind == NodeKind.Text ? n.Content : n.Buffer }
-    return ""
+    return if n.Kind == NodeKind.Text || n.Kind == NodeKind.Entry { n.Kind == NodeKind.Text ? n.Content : n.Buffer } else { "" }
   }
 
   private func resolvedReadOnly(n Node, declaration Accessibility?) bool? {
@@ -383,8 +373,7 @@ internal class AccessibilityManager {
       if metadata.Multiline != nil { return metadata.Multiline }
     }
     if n.Kind == NodeKind.Entry { return false }
-    if n.Kind == NodeKind.Editor { return true }
-    return nil
+    return if n.Kind == NodeKind.Editor { true } else { nil }
   }
 
   private func resolvedActionMask(n Node, role AccessibilityRole, disabled bool,

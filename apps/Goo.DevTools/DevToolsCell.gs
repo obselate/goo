@@ -27,14 +27,10 @@ class DevToolsCell : Cell {
 
     public init() {
         session = DiagnosticSession{}
-        wakePending = 0
-        showCaptures = false
     }
 
     public init(sessionValue DiagnosticSession) {
         session = sessionValue
-        wakePending = 0
-        showCaptures = false
     }
 
     internal func AttachWindow(window Window) {
@@ -1375,18 +1371,5 @@ class DevToolsCell : Cell {
         Cursor: Cursor.Pointer,
         OnClick: onClick,
         Text{Key: "button-label", Content: label, FontSize: 12, FontWeight: 600, Color: foreground,},
-    }
-
-    private func ConnectionColor(value DiagnosticConnectionState) Color {
-        if value == DiagnosticConnectionState.Connected {
-            return DevToolsTheme.Green
-        }
-        if value == DiagnosticConnectionState.Faulted {
-            return DevToolsTheme.Red
-        }
-        if value == DiagnosticConnectionState.Connecting {
-            return DevToolsTheme.Amber
-        }
-        return DevToolsTheme.InkSubtle
     }
 }

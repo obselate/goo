@@ -21,17 +21,20 @@
 !/.github/patches/accesskit/**
 !/.github/scripts/build-accesskit-linux-x64.sh
 !/.github/scripts/validate-accessibility-package.py
-!/.github/scripts/bootstrap-gsharp.py
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/build-text-native-linux-x64.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh
 !/.github/scripts/build-text-native-android.sh
+!/.github/scripts/fetch-sdl-win-x64.sh
+!/.github/scripts/install-shader-toolchain-linux-x64.sh
+!/.github/scripts/install-vulkan-validation-layer-linux-x64.sh
 !/.github/scripts/validate-android-package.py
 !/.github/scripts/validate-text-native-rebuild.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
+!/.github/scripts/stage-windows-x64-nativeaot.sh
 !/.github/scripts/linux-bundle-files.txt
 !/.github/scripts/stage-macos-arm64.sh
 !/.github/scripts/validate-release.py
@@ -66,6 +69,8 @@
 !/docs/nuget-readme.md
 !/docs/android.md
 !/docs/images.md
+!/docs/migrations/
+!/docs/migrations/**
 
 !/docs/audio.md
 !/docs/assets/
@@ -80,11 +85,10 @@
 
 !/tools/
 /tools/*
-!/tools/merge_xml_docs.py
 !/tools/Goo.ApiDocs/
 !/tools/Goo.ApiDocs/**
-!/tools/Goo.VulkanGen/
-!/tools/Goo.VulkanGen/**
+!/tools/Goo.XmlDocsMerge/
+!/tools/Goo.XmlDocsMerge/**
 !/tools/Goo.ShaderGen/
 !/tools/Goo.ShaderGen/**
 !/tools/Goo.ShaderEffectTool/
@@ -93,8 +97,6 @@
 !/tools/Goo.TextNative/**
 !/tools/Goo.UnicodeGen/
 !/tools/Goo.UnicodeGen/**
-!/tools/Goo.SvgCompiler/
-!/tools/Goo.SvgCompiler/**
 !/tools/Goo.DevTools.Cli/
 !/tools/Goo.DevTools.Cli/**
 !/tools/Goo.Formatting/
@@ -130,6 +132,8 @@
 !/THIRD-PARTY-NOTICES.md
 !/Directory.Build.props
 !/Directory.Packages.props
+!/bootstrap.sh
+!/bootstrap.bat
 
 **/bin/
 **/obj/

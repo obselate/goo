@@ -237,15 +237,9 @@ internal class FocusScopes {
       stacks.Remove(root)
     }
 
-    internal func TraversalRoot(root Node) Node {
-      if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) { return stack.Top ?? root }
-      return root
-    }
+    internal func TraversalRoot(root Node) Node -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) { stack.Top ?? root } else { root }
 
-    internal func ModalRoot(root Node) Node? {
-      if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.HasModal { return stack.Top }
-      return nil
-    }
+    internal func ModalRoot(root Node) Node? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.HasModal { stack.Top } else { nil }
 
     internal func Contains(root Node, target Node) bool {
       var current Node? = target
@@ -256,14 +250,8 @@ internal class FocusScopes {
       return false
     }
 
-    internal func ModalStack(root Node) FocusScopeStack? {
-      if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.HasModal { return stack }
-      return nil
-    }
+    internal func ModalStack(root Node) FocusScopeStack? -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) && stack.HasModal { stack } else { nil }
 
-    internal func Allows(root Node, target Node) bool {
-      if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) { return stack.Allows(target) }
-      return true
-    }
+    internal func Allows(root Node, target Node) bool -> if root.HasFocusScopes && stacks.TryGetValue(root, out var stack) { stack.Allows(target) } else { true }
   }
 }

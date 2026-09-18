@@ -212,8 +212,7 @@ internal class DragDropMetadata {
 
     private func nodeBinding(node Node) DragDropBinding? {
       if !node.HasSparseInputState { return nil }
-      if nodeValues.TryGetValue(node, out var value) { return value }
-      return nil
+      return if nodeValues.TryGetValue(node, out var value) { value } else { nil }
     }
 
   }

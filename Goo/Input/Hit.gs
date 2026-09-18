@@ -12,10 +12,7 @@ private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
   if n.OverflowX != Overflow.Visible && (x < n.Rect.X || x >= n.Rect.X + n.Rect.W) {
     return false
   }
-  if n.OverflowY != Overflow.Visible && (y < n.Rect.Y || y >= n.Rect.Y + n.Rect.H) {
-    return false
-  }
-  return true
+  return !(n.OverflowY != Overflow.Visible && (y < n.Rect.Y || y >= n.Rect.Y + n.Rect.H))
 }
 
 private func hitCanTraverseChildrenMapped(n Node, x float32, y float32) bool {
@@ -30,10 +27,7 @@ private func hitsMapped(n Node, x float32, y float32) bool {
   if !hitWithinMapped(n, x, y) || !n.HitTestSelf {
     return false
   }
-  if n.Kind == NodeKind.Shape {
-    return ShapeGeometry.HitTest(n, x, y)
-  }
-  return true
+  return if n.Kind == NodeKind.Shape { ShapeGeometry.HitTest(n, x, y) } else { true }
 }
 
 // Reverse order agrees with Painter's paint order: later children win.
@@ -68,10 +62,7 @@ internal func hitDispatchClick(root Node, x float32, y float32) bool {
 
 internal func hitActivate(root Node?, target Node) bool {
   guard let tree = root else { return false }
-  if !canReceiveInput(target) {
-    return false
-  }
-  return hitFire(target, CellOwnership.Within(tree, target))
+  return if !canReceiveInput(target) { false } else { hitFire(target, CellOwnership.Within(tree, target)) }
 }
 
 // Append the committed path from the root to the topmost node.

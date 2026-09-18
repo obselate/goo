@@ -15,8 +15,8 @@
                       AdditionalProperties="Configuration=VulkanProofTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.VulkanProofFixtures.props" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Generated/Shaders/solid_quad.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Generated/Shaders/solid_quad.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Shaders/Vulkan/solid_quad.vert.spv" Link="solid_quad.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Shaders/Vulkan/solid_quad.frag.spv" Link="solid_quad.frag.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/Text/VendSans.provenance.json" Link="VendSans.provenance.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
@@ -30,13 +30,13 @@
     <Content Include="Assets/Text/HarfBuzz-test-fonts-COPYING.txt" Link="HarfBuzz-test-fonts-COPYING.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Linux')))">
-    <Content Include="Runtime/libgoo-harfbuzz.so" Link="libgoo-harfbuzz.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Runtime/libgoo-harfbuzz-gpu.so" Link="libgoo-harfbuzz-gpu.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Runtime/text-native-build.json" Link="text-native-build.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so" Link="libgoo-harfbuzz.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz-gpu.so" Link="libgoo-harfbuzz-gpu.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Runtime/Vulkan/linux-x64/text-native-build.json" Link="text-native-build.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Windows')))">
-    <Content Include="Runtime/win-x64/goo-harfbuzz.dll" Link="goo-harfbuzz.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Runtime/win-x64/goo-harfbuzz-gpu.dll" Link="goo-harfbuzz-gpu.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Runtime/win-x64/text-native-build.json" Link="text-native-build.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Runtime/Vulkan/win-x64/goo-harfbuzz.dll" Link="goo-harfbuzz.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Runtime/Vulkan/win-x64/goo-harfbuzz-gpu.dll" Link="goo-harfbuzz-gpu.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../Goo/Runtime/Vulkan/win-x64/text-native-build.json" Link="text-native-build.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
 </Project>

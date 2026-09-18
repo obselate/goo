@@ -374,10 +374,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     let baseWord = AllocateWordRange(uint32(wordCount))
     if baseWord == uint32.MaxValue {
       RequestRedraw()
-      if records.TryGetValue(identity.PathId.LogicalId, out var prior) {
-        return BuildRenderable(prior, fillRule)
-      }
-      return EmptyRenderable(fillRule)
+      return if records.TryGetValue(identity.PathId.LogicalId, out var prior) { BuildRenderable(prior, fillRule) } else { EmptyRenderable(fillRule) }
     }
 
     let bounds = EncodingBounds(encoding)
@@ -1261,12 +1258,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     }
   }
 
-  private func IsPathRevisionActive(pathId ResourceId) bool {
-    if !activePathRevisionOwners.TryGetValue(pathId.LogicalId, out var revisions) {
-      return false
-    }
-    return revisions.ContainsKey(pathId.Version)
-  }
+  private func IsPathRevisionActive(pathId ResourceId) bool -> if !activePathRevisionOwners.TryGetValue(pathId.LogicalId, out var revisions) { false } else { revisions.ContainsKey(pathId.Version) }
 
   private func ReleaseAllRecords() {
     for record in records.Values {

@@ -367,29 +367,11 @@ internal sealed class TextPieceBuffer {
   }
 
   private func ensureTextCapacity(required int32) {
-    if text.Length < required {
-      var capacity = text.Length == 0 ? 16 : text.Length
-      while capacity < required {
-        if capacity > 1073741823 { capacity = required }
-        else { capacity = capacity * 2 }
-      }
-      let next = [capacity]char
-      Array.Copy(text, next, length)
-      text = next
-    }
+    text = GrowArray(text, length, required, 16)
   }
 
   private func ensureLineCapacity(required int32) {
-    if lineEnds.Length < required {
-      var capacity = lineEnds.Length == 0 ? 4 : lineEnds.Length
-      while capacity < required {
-        if capacity > 1073741823 { capacity = required }
-        else { capacity = capacity * 2 }
-      }
-      let next = [capacity]int32
-      Array.Copy(lineEnds, next, lineEndCount)
-      lineEnds = next
-    }
+    lineEnds = GrowArray(lineEnds, lineEndCount, required, 4)
   }
 
   internal func CountLineBreaks(start int32, length int32) int32 {
@@ -723,10 +705,7 @@ internal func findLineIndex(root TextPieceNode?, offset int32) int32 {
 internal func lineStartAfter(root TextPieceNode?, breakIndex int32) int32 {
   let start = findTextLineBreakStart(root, breakIndex)
   let next = start + 1
-  if textCharAt(root, start) == '\r' && next < textLength(root) && textCharAt(root, next) == '\n' {
-    return next + 1
-  }
-  return next
+  return if textCharAt(root, start) == '\r' && next < textLength(root) && textCharAt(root, next) == '\n' { next + 1 } else { next }
 }
 
 internal func findTextLineBreakStart(root TextPieceNode?, breakIndex int32) int32 {

@@ -476,7 +476,7 @@ internal class AccessibilityEditorCell(document TextDocument, controller TextEdi
 internal class AccessibilityEquivalentCell : Cell {
   internal var Revision int32
 
-  init() { Revision = 0 }
+  init() { }
 
   func Bump() {
     Revision++
@@ -515,7 +515,7 @@ internal class AccessibilityExternalRelationshipCell(label ElementHandle) : Cell
 internal class AccessibilityTransactionalCell : Cell {
   internal var Invalid bool
 
-  init() { Invalid = false }
+  init() { }
 
   func Fail() {
     Invalid = true
@@ -530,7 +530,7 @@ internal class AccessibilityTransactionalCell : Cell {
 internal class AccessibilityActionCell : Cell {
   internal var HideAction bool
 
-  init() { HideAction = false }
+  init() { }
 
   override func Build() Blob -> Container() {
     Container() {.Disabled: true,.Accessibility: Accessibility{ Role: AccessibilityRole.None },
@@ -549,7 +549,7 @@ internal class AccessibilityActionCell : Cell {
 internal class AccessibilityExclusionCell : Cell {
   private var visible bool
 
-  init() { visible = false }
+  init() { }
 
   func Show() {
     visible = true
@@ -566,7 +566,7 @@ internal class AccessibilityExclusionCell : Cell {
 internal class AccessibilityGeometryCell : Cell {
   private var wide bool
 
-  init() { wide = false }
+  init() { }
 
   func Widen() {
     wide = true
@@ -626,7 +626,7 @@ internal class AccessibilityRelationshipTargetsCell : Cell {
 internal class AccessibilitySyntheticRootCell : Cell {
   private var stage int32
 
-  init() { stage = 0 }
+  init() { }
 
   func One() {
     stage = 1

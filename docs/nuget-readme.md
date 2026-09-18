@@ -28,8 +28,11 @@ dotnet run
 ```
 
 The template restores the G# SDK and Goo package through NuGet. A separate G#
-compiler, SDL, HarfBuzz, or shader compiler installation is not required for
-this starter application.
+compiler, SDL, or HarfBuzz installation is not required. Projects that add
+custom `<GooShaderEffect>` source need the pinned Slang and Vulkan SDK tools.
+Use the platform links in the
+[custom shader setup](https://github.com/obselate/goo#custom-shaders), then set
+`SLANG_SDK` and `VULKAN_SDK` or put `slangc` and `spirv-val` on `PATH`.
 
 ## Example
 

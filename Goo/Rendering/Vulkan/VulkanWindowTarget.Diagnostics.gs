@@ -60,10 +60,7 @@ internal unsafe partial class VulkanWindowTarget {
       || stage == FrameProfileStage.Diff || stage == FrameProfileStage.StyleResolve{
         return VulkanDiagnosticEventIds.Reconciliation
       }
-    if stage == FrameProfileStage.Layout {
-      return VulkanDiagnosticEventIds.Layout
-    }
-    return VulkanDiagnosticEventIds.None
+    return if stage == FrameProfileStage.Layout { VulkanDiagnosticEventIds.Layout } else { VulkanDiagnosticEventIds.None }
   }
 
   private func DiagnosticTimestamp() uint64 {

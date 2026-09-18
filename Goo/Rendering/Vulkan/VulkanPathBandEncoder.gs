@@ -271,16 +271,14 @@ internal sealed class PathBandEncoder {
       if left.Near < right.Near { return true }
       if left.Near > right.Near { return false }
       if left.Far > right.Far { return true }
-      if left.Far < right.Far { return false }
-      return left.Index < right.Index
+      return if left.Far < right.Far { false } else { left.Index < right.Index }
     }
 
     private func precedesReverse(left PathBandCandidate, right PathBandCandidate) bool {
       if left.Far > right.Far { return true }
       if left.Far < right.Far { return false }
       if left.Near < right.Near { return true }
-      if left.Near > right.Near { return false }
-      return left.Index < right.Index
+      return if left.Near > right.Near { false } else { left.Index < right.Index }
     }
 
     private func finiteQuadratic(value PathQuadratic) bool -> finite(value.X0) && finite(value.Y0) && finite(value.CX) && finite(value.CY)
@@ -340,5 +338,3 @@ internal data struct PathBandCandidate {
   internal var Near float32
   internal var Far float32
 }
-
-internal data struct PathBandBuildResult(Bands []PathAnalyticBand, Indices []uint32) { }

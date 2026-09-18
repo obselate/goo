@@ -8,9 +8,8 @@ using System.Text.Json.Serialization;
 internal static class Program
 {
     private const string ShaderDirectory = "tests/Goo.VulkanProof/Shaders";
-    private const string GeneratedDirectory = "tests/Goo.VulkanProof/Generated/Shaders";
     private const string ProductionDirectory = "Goo/Shaders/Vulkan";
-    private const string InputManifestName = "shader-manifest.json";
+    private const string ManifestName = "shader-manifest.json";
     private const string GlslcVersionMarker = "1:";
     private const string HarfBuzzTag = "14.3.1";
     private const string HarfBuzzCommit = "ab5ecbb83985034a76214ac0b2b833dcd590d774";
@@ -496,19 +495,17 @@ internal static class Program
     {
         string repositoryRoot = FindRepositoryRoot();
         string shaderRoot = Path.Combine(repositoryRoot, ShaderDirectory.Replace('/', Path.DirectorySeparatorChar));
-        string generatedRoot = Path.Combine(repositoryRoot, GeneratedDirectory.Replace('/', Path.DirectorySeparatorChar));
         string productionRoot = Path.Combine(repositoryRoot, ProductionDirectory.Replace('/', Path.DirectorySeparatorChar));
-        string inputManifestPath = Path.Combine(shaderRoot, InputManifestName);
-        string generatedManifestPath = Path.Combine(generatedRoot, InputManifestName);
-        byte[] inputManifestBytes = File.ReadAllBytes(inputManifestPath);
-        EnsureLf(inputManifestPath, inputManifestBytes);
-        Manifest manifest = DeserializeManifest(inputManifestPath, inputManifestBytes);
+        string manifestPath = Path.Combine(productionRoot, ManifestName);
+        byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+        EnsureLf(manifestPath, manifestBytes);
+        Manifest manifest = DeserializeManifest(manifestPath, manifestBytes);
         ValidateManifest(manifest);
         ValidateAssemblyFiles(manifest, repositoryRoot);
         string canonicalInput = SerializeManifest(manifest);
-        if (!inputManifestBytes.AsSpan().SequenceEqual(Encoding.UTF8.GetBytes(canonicalInput)))
+        if (!manifestBytes.AsSpan().SequenceEqual(Encoding.UTF8.GetBytes(canonicalInput)))
         {
-            throw new InvalidOperationException($"Manifest is not canonical: {inputManifestPath}");
+            throw new InvalidOperationException($"Manifest is not canonical: {manifestPath}");
         }
 
         string compilerPath = FindTool(manifest.Toolchain.Compiler.Executable, "SLANG_SDK");
@@ -527,13 +524,13 @@ internal static class Program
             byte[] generatedManifestBytes = Encoding.UTF8.GetBytes(generatedManifest);
             if (mode == "generate")
             {
-                WriteGenerated(generatedRoot, builtShaders, hostPackings, generatedManifestBytes);
-                Console.WriteLine($"Generated {builtShaders.Count} shaders and {generatedManifestPath}");
+                WriteProduction(productionRoot, builtShaders, generatedManifestBytes);
+                Console.WriteLine($"Generated {builtShaders.Count} shaders and {manifestPath}");
                 return 0;
             }
 
-            CheckGenerated(generatedRoot, generatedManifestPath, productionRoot, builtShaders, hostPackings, generatedManifestBytes, validatorPath);
-            Console.WriteLine($"Checked {builtShaders.Count} shaders and {generatedManifestPath}");
+            CheckProduction(productionRoot, builtShaders, generatedManifestBytes);
+            Console.WriteLine($"Checked {builtShaders.Count} shaders and {manifestPath}");
             return 0;
         }
         finally
@@ -810,140 +807,25 @@ internal static class Program
         text.Append(value).Append('\n');
     }
 
-    private static void WriteGenerated(string generatedRoot, IReadOnlyList<BuiltShader> builtShaders, IReadOnlyList<HostPackingArtifact> hostPackings, byte[] generatedManifestBytes)
+    private static void WriteProduction(string productionRoot, IReadOnlyList<BuiltShader> builtShaders, byte[] generatedManifestBytes)
     {
-        string parent = Directory.GetParent(generatedRoot)?.FullName
-            ?? throw new InvalidOperationException($"Generated directory has no parent: {generatedRoot}");
-        Directory.CreateDirectory(parent);
-        string publicationRoot = generatedRoot + ".publish-" + Guid.NewGuid().ToString("N");
-        string previousRoot = generatedRoot + ".previous-" + Guid.NewGuid().ToString("N");
-        Directory.CreateDirectory(publicationRoot);
-        try
+        Directory.CreateDirectory(productionRoot);
+        foreach (BuiltShader builtShader in builtShaders)
         {
-            foreach (BuiltShader builtShader in builtShaders)
-            {
-                string outputPath = ResolveChildPath(publicationRoot, builtShader.Spec.Output, "output");
-                Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-                File.WriteAllBytes(outputPath, builtShader.Output);
-            }
-            foreach (HostPackingArtifact hostPacking in hostPackings)
-            {
-                string outputPath = ResolveChildPath(publicationRoot, hostPacking.Path, "host packing");
-                Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-                File.WriteAllBytes(outputPath, hostPacking.Bytes);
-            }
-            File.WriteAllBytes(Path.Combine(publicationRoot, InputManifestName), generatedManifestBytes);
-
-            bool movedPrevious = false;
-            if (Directory.Exists(generatedRoot))
-            {
-                Directory.Move(generatedRoot, previousRoot);
-                movedPrevious = true;
-            }
-            try
-            {
-                Directory.Move(publicationRoot, generatedRoot);
-            }
-            catch
-            {
-                if (movedPrevious && !Directory.Exists(generatedRoot))
-                {
-                    Directory.Move(previousRoot, generatedRoot);
-                }
-                throw;
-            }
-            if (movedPrevious)
-            {
-                Directory.Delete(previousRoot, true);
-            }
+            string outputPath = ResolveChildPath(productionRoot, builtShader.Spec.Output, "production output");
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            File.WriteAllBytes(outputPath, builtShader.Output);
         }
-        finally
-        {
-            if (Directory.Exists(publicationRoot))
-            {
-                Directory.Delete(publicationRoot, true);
-            }
-            if (Directory.Exists(previousRoot) && Directory.Exists(generatedRoot))
-            {
-                Directory.Delete(previousRoot, true);
-            }
-        }
+        File.WriteAllBytes(Path.Combine(productionRoot, ManifestName), generatedManifestBytes);
     }
 
-    private static void CheckGenerated(string generatedRoot, string generatedManifestPath, string productionRoot, IReadOnlyList<BuiltShader> builtShaders, IReadOnlyList<HostPackingArtifact> hostPackings, byte[] generatedManifestBytes, string validatorPath)
+    private static void CheckProduction(string productionRoot, IReadOnlyList<BuiltShader> builtShaders, byte[] generatedManifestBytes)
     {
-        if (!File.Exists(generatedManifestPath))
-        {
-            throw new InvalidOperationException($"Missing generated manifest: {generatedManifestPath}");
-        }
-        HashSet<string> expectedFiles = new(StringComparer.Ordinal)
-        {
-            InputManifestName
-        };
+        RequireByteMatch(generatedManifestBytes, Path.Combine(productionRoot, ManifestName), "production shader manifest");
         foreach (BuiltShader builtShader in builtShaders)
         {
-            expectedFiles.Add(NormalizeRelativePath(builtShader.Spec.Output));
-        }
-        foreach (HostPackingArtifact hostPacking in hostPackings)
-        {
-            expectedFiles.Add(NormalizeRelativePath(hostPacking.Path));
-        }
-        if (!Directory.Exists(generatedRoot))
-        {
-            throw new InvalidOperationException($"Missing generated directory: {generatedRoot}");
-        }
-        foreach (string actualPath in Directory.EnumerateFiles(generatedRoot, "*", SearchOption.AllDirectories))
-        {
-            string relativePath = NormalizeRelativePath(Path.GetRelativePath(generatedRoot, actualPath));
-            if (!expectedFiles.Contains(relativePath))
-            {
-                throw new InvalidOperationException($"Unexpected generated file: {actualPath}");
-            }
-        }
-        byte[] checkedManifestBytes = File.ReadAllBytes(generatedManifestPath);
-        EnsureLf(generatedManifestPath, checkedManifestBytes);
-        if (!checkedManifestBytes.AsSpan().SequenceEqual(generatedManifestBytes))
-        {
-            throw new InvalidOperationException($"Generated manifest differs: {generatedManifestPath}");
-        }
-        foreach (HostPackingArtifact hostPacking in hostPackings)
-        {
-            string hostPackingPath = ResolveChildPath(generatedRoot, hostPacking.Path, "host packing");
-            if (!File.Exists(hostPackingPath))
-            {
-                throw new InvalidOperationException($"Missing generated host packing: {hostPackingPath}");
-            }
-            byte[] checkedHostPackingBytes = File.ReadAllBytes(hostPackingPath);
-            EnsureLf(hostPackingPath, checkedHostPackingBytes);
-            if (!checkedHostPackingBytes.AsSpan().SequenceEqual(hostPacking.Bytes))
-            {
-                throw new InvalidOperationException($"Generated host packing differs: {hostPackingPath}");
-            }
-        }
-
-        foreach (BuiltShader builtShader in builtShaders)
-        {
-            string outputPath = ResolveChildPath(generatedRoot, builtShader.Spec.Output, "output");
-            if (!File.Exists(outputPath))
-            {
-                throw new InvalidOperationException($"Missing generated shader: {outputPath}");
-            }
-            byte[] checkedOutput = File.ReadAllBytes(outputPath);
-            if (!checkedOutput.AsSpan().SequenceEqual(builtShader.Output))
-            {
-                throw new InvalidOperationException($"Generated shader differs: {outputPath}");
-            }
-            ToolResult validatorResult = RunTool(validatorPath, new[] { "--target-env", "vulkan1.3", outputPath });
-            RequireSuccess(validatorPath, validatorResult);
-        }
-
-        string productionManifestPath = Path.Combine(productionRoot, InputManifestName);
-        RequireByteMatch(generatedManifestBytes, productionManifestPath, "production shader manifest");
-        foreach (BuiltShader builtShader in builtShaders)
-        {
-            string generatedPath = ResolveChildPath(generatedRoot, builtShader.Spec.Output, "output");
             string productionPath = ResolveChildPath(productionRoot, builtShader.Spec.Output, "production output");
-            RequireByteMatch(File.ReadAllBytes(generatedPath), productionPath, "production shader mirror");
+            RequireByteMatch(builtShader.Output, productionPath, "production shader");
         }
     }
 
@@ -958,11 +840,6 @@ internal static class Program
         {
             throw new InvalidOperationException($"{description} differs: {actualPath}");
         }
-    }
-
-    private static string NormalizeRelativePath(string path)
-    {
-        return path.Replace(Path.DirectorySeparatorChar, '/').Replace(Path.AltDirectorySeparatorChar, '/');
     }
 
     private static void ValidateManifest(Manifest manifest)
@@ -1033,13 +910,6 @@ internal static class Program
         RequireShader(manifest.Shaders[14], "hb_gpu_paint_fragment", "fragment", "hb_gpu_paint.frag.wrapper.glsl", "hb_gpu_paint.frag.spv", "hb_gpu_paint_fragment");
         RequireShader(manifest.Shaders[15], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv");
         RequireShader(manifest.Shaders[16], "clip_mask_fragment", "fragment", "clip_mask.frag.slang", "clip_mask.frag.spv");
-        foreach (Shader shader in manifest.Shaders)
-        {
-            if (shader.SourceSha256 is not null || shader.OutputSha256 is not null || shader.OutputBytes is not null)
-            {
-                throw new InvalidOperationException($"Source manifest contains generated hashes: {shader.Id}");
-            }
-        }
         if (manifest.Pipelines.Count != 12)
         {
             throw new InvalidOperationException("pipelines must contain exactly twelve entries");
@@ -1243,15 +1113,6 @@ internal static class Program
         }, new[] { new InterfaceLocation { Location = 0, Type = "vec4", Name = "outColor" } });
     }
 
-    private static Descriptor[] ClipDescriptors()
-    {
-        return new[]
-        {
-            new Descriptor { Set = 1, Binding = 0, Type = "combined-image-sampler", Count = 1, Stages = new List<string> { "fragment" } },
-            new Descriptor { Set = 1, Binding = 1, Type = "storage-buffer", Count = 1, Stages = new List<string> { "fragment" } }
-        };
-    }
-
     private static Descriptor[] AnalyticDescriptors()
     {
         return new[]
@@ -1298,10 +1159,6 @@ internal static class Program
         if (record.HostPacking.Path.Contains('/') || record.HostPacking.Path.Contains('\\'))
         {
             throw new InvalidOperationException("Host packing paths must be file names: textInstanceRecord");
-        }
-        if (record.HostPacking.Sha256 is not null || record.HostPacking.Bytes is not null)
-        {
-            throw new InvalidOperationException("Source manifest contains generated host packing metadata: textInstanceRecord");
         }
     }
 
@@ -1359,10 +1216,6 @@ internal static class Program
         if (pipeline.HostPacking.Path.Contains('/') || pipeline.HostPacking.Path.Contains('\\'))
         {
             throw new InvalidOperationException($"Host packing paths must be file names: {id}");
-        }
-        if (pipeline.HostPacking.Sha256 is not null || pipeline.HostPacking.Bytes is not null)
-        {
-            throw new InvalidOperationException($"Source manifest contains generated host packing metadata: {id}");
         }
         Require(pipeline.PushConstants.Offset == 0, $"pipeline[{id}].pushConstants.offset", "0");
         Require(pipeline.PushConstants.Size == pushConstantSize, $"pipeline[{id}].pushConstants.size", pushConstantSize.ToString());
@@ -1669,7 +1522,7 @@ internal static class Program
             DirectoryInfo? current = new DirectoryInfo(Path.GetFullPath(start));
             while (current is not null)
             {
-                string manifestPath = Path.Combine(current.FullName, ShaderDirectory.Replace('/', Path.DirectorySeparatorChar), InputManifestName);
+                string manifestPath = Path.Combine(current.FullName, ProductionDirectory.Replace('/', Path.DirectorySeparatorChar), ManifestName);
                 if (File.Exists(manifestPath))
                 {
                     return current.FullName;

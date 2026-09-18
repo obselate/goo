@@ -118,33 +118,6 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       return updated
     }
 
-  internal func CopyLogicalResources(destination []VulkanLogicalResource) int32 {
-    EnsureOpen()
-    if destination.Length < logicalStats.LogicalCount {
-      throw ArgumentException("Logical resource destination is too small", "destination")
-    }
-    var output int32 = 0
-    for index in 0 ... logicalRecords.Length {
-      let logical = logicalRecords[index]
-      if logical.Id.IsValid
-        && (logical.PhysicalSlot < 0 || !entries[logical.PhysicalSlot].GpuPublished) {
-          destination[output] = VulkanLogicalResource{
-            Id: logical.Id,
-            Source: VulkanResourceSource{
-              ProviderId: logical.ProviderId,
-              SourceId: logical.SourceId,
-              Version: logical.Id.Version,
-              Bytes: logical.Bytes,
-            },
-            Bytes: logical.Bytes,
-            Cacheable: logical.Cacheable,
-          }
-          output++
-        }
-    }
-    return output
-  }
-
   internal func EvictLeastRecentlyUsed() bool {
     EnsureOpen()
     var candidate int32 = -1

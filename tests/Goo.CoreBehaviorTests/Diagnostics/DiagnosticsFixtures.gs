@@ -53,7 +53,7 @@ internal class DiagnosticsFixtures {
     if !tracker.NeedsRequest { return false }
     tracker.Observe(WindowReadbackRequestStatus.Accepted)
     if tracker.NeedsRequest { return false }
-    tracker.Complete()
+    tracker.Reset()
     return tracker.NeedsRequest
   }
 
@@ -133,8 +133,7 @@ internal class DiagnosticsFixtures {
         PointerButton.Primary) {
           return false
         }
-      if !session.KeyEvent(Key.Escape) { return false }
-      return !session.IsInspecting && session.SelectedNodeId == selectedBeforePick
+      return if !session.KeyEvent(Key.Escape) { false } else { !session.IsInspecting && session.SelectedNodeId == selectedBeforePick }
     } finally {
       session.Dispose()
     }

@@ -49,7 +49,7 @@ Add the source to the G# project:
 </ItemGroup>
 ```
 
-Build requires the pinned Slang 2026.16 compiler through `SLANG_SDK` or `PATH` and SPIRV-Tools 2026.3 from Vulkan SDK 1.4.357.0 through `VULKAN_SDK` or `PATH`. Goo compiles and validates the source during the build, writes deterministic intermediates under `obj`, and copies `Shaders/glass.goo-effect` plus `Shaders/glass.goo-effect.json` provenance to build and publish output. The program container can carry separate artifacts for multiple rendering backends. The current compiler emits Vulkan SPIR-V. Set `TargetPath` on `GooShaderEffect` to override the relative output path. Unchanged inputs skip compilation. Tool-version mismatches, compiler errors, validation errors, ABI mismatches, and unsupported capabilities fail the build.
+Build requires [Slang 2026.16](https://github.com/shader-slang/slang/releases/tag/v2026.16) through `SLANG_SDK` or `PATH` and SPIRV-Tools 2026.3 from [Vulkan SDK 1.4.357.0](https://vulkan.lunarg.com/sdk/home) through `VULKAN_SDK` or `PATH`. Goo compiles and validates the source during the build, writes deterministic intermediates under `obj`, and copies `Shaders/glass.goo-effect` plus `Shaders/glass.goo-effect.json` provenance to build and publish output. The program container can carry separate artifacts for multiple rendering backends. The current compiler emits Vulkan SPIR-V. Set `TargetPath` on `GooShaderEffect` to override the relative output path. Unchanged inputs skip compilation. Tool-version mismatches, compiler errors, validation errors, ABI mismatches, and unsupported capabilities fail the build.
 
 The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1, Goo primitive data at set 2, Goo clip data at set 3, optional retained effect data at set 4, and eight `vec4` values in a 128-byte fragment push block. `uv` is normalized to the visible element bounds. `source` and `backdrop` are premultiplied linear colors. Return premultiplied linear color. Goo applies retained clip coverage and element opacity after `gooEffect`. Set `backdropOutset` to the largest displacement or filter radius the shader needs beyond those bounds. When backdrop sampling is disabled, the backdrop argument aliases the source and Goo skips the target copy.
 
@@ -64,98 +64,6 @@ positions for hard color edges. There is no fixed four-stop limit. Larger stop
 lists use Goo-owned GPU storage and remain a single gradient draw; device storage
 limits still apply. Interpolation uses premultiplied linear color, including
 per-stop alpha and element opacity.
-
-## `CompiledVectorAsset`
-
-Source:
-
-- [`CompiledVector.Asset.gs`](../../Goo/Rendering/CompiledVector.Asset.gs)
-
-Loads, caches, and renders a validated compiled vector asset.
-
-### `Load(System.Byte[])`
-
-Loads a compiled vector asset and throws when the bytes are invalid.
-
-### `PathForNode(int32)`
-
-Returns the cached path for one asset node.
-
-### `Render`
-
-Creates a retained display cell for this asset.
-
-### `Render(string)`
-
-Creates or updates a retained display cell using the supplied key.
-
-### `TryLoad(System.Byte[])`
-
-Loads a compiled vector asset and returns nil when the bytes are invalid.
-
-### `ByteCount`
-
-Gets the encoded asset byte count.
-
-### `ClipCount`
-
-Gets the number of clip paths.
-
-### `ContourCount`
-
-Gets the number of vector contours.
-
-### `CurveCount`
-
-Gets the number of vector curves.
-
-### `Flags`
-
-Gets the compiled asset flags.
-
-### `KeyframeCount`
-
-Gets the number of animation keyframes.
-
-### `MorphCurveCount`
-
-Gets the number of morph curves.
-
-### `NodeCount`
-
-Gets the number of vector nodes.
-
-### `PaintCount`
-
-Gets the number of paints.
-
-### `StrokeCount`
-
-Gets the number of strokes.
-
-### `TrackCount`
-
-Gets the number of animation tracks.
-
-### `Version`
-
-Gets the compiled asset format version.
-
-### `ViewBoxHeight`
-
-Gets the view box height.
-
-### `ViewBoxWidth`
-
-Gets the view box width.
-
-### `ViewBoxX`
-
-Gets the view box origin on the x axis.
-
-### `ViewBoxY`
-
-Gets the view box origin on the y axis.
 
 ## `ShaderEffect`
 
@@ -290,17 +198,13 @@ Specifies the visual side of a text position at a directional boundary.
 
 Source:
 
-- [`CompiledVector.Asset.gs`](../../Goo/Rendering/CompiledVector.Asset.gs)
+- [`VectorAsset.Render.gs`](../../Goo/Rendering/VectorAsset.Render.gs)
 
-Owns an immutable vector document shared by authored, runtime SVG, and compiled assets.
+Owns an immutable vector document shared by authored and runtime SVG assets.
 
 ### `new(float64,float64,float64,float64,VectorNode[])`
 
 Snapshots a vector document whose paths use the supplied view-box coordinate space.
-
-### `Load(System.Byte[])`
-
-Decodes a validated compiled vector document.
 
 ### `NodeAt(int32)`
 
@@ -318,14 +222,6 @@ Creates a retained vector display fitted within its parent.
 
 Creates a keyed retained vector display fitted within its parent.
 
-### `TryLoad(System.Byte[])`
-
-Decodes a compiled vector document or returns nil when the bytes are invalid.
-
-### `ByteCount`
-
-Gets the encoded source byte count, or zero for authored documents.
-
 ### `ClipCount`
 
 Gets the clip count.
@@ -337,18 +233,6 @@ Gets the contour count.
 ### `CurveCount`
 
 Gets the quadratic curve count.
-
-### `Flags`
-
-Gets source format flags, or zero for authored documents.
-
-### `KeyframeCount`
-
-Gets the animation keyframe count.
-
-### `MorphCurveCount`
-
-Gets the morph curve count.
 
 ### `NodeCount`
 
@@ -365,14 +249,6 @@ Gets the paint count.
 ### `StrokeCount`
 
 Gets the stroke count.
-
-### `TrackCount`
-
-Gets the animation track count.
-
-### `Version`
-
-Gets the source format version, or zero for authored documents.
 
 ### `ViewBoxHeight`
 

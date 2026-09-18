@@ -152,10 +152,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         throw InvalidOperationException("Vulkan memory heap capacity exceeded")
       }
       let remaining = heap.size - current
-      if minimumSize > remaining || remaining < alignedBaseSize {
-        return minimumSize
-      }
-      return alignedBaseSize
+      return if minimumSize > remaining || remaining < alignedBaseSize { minimumSize } else { alignedBaseSize }
     }
 
   private func CreateBlock(blockSize VkDeviceSize, selection VulkanMemoryTypeSelection,
@@ -370,12 +367,7 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     }
 
   private func PlacementSpan(size VkDeviceSize,
-    propertyFlags VkMemoryPropertyFlags) VkDeviceSize{
-      if IsNonCoherentHostVisible(propertyFlags) {
-        return AlignUp(size, nonCoherentAtomSize)
-      }
-      return size
-    }
+    propertyFlags VkMemoryPropertyFlags) VkDeviceSize-> if IsNonCoherentHostVisible(propertyFlags) { AlignUp(size, nonCoherentAtomSize) } else { size }
 
   private func IsNonCoherentHostVisible(propertyFlags VkMemoryPropertyFlags) bool -> (propertyFlags & uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) != 0u
     && (propertyFlags & uint32(VkConstants.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) == 0u

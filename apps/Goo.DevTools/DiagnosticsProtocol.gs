@@ -106,7 +106,6 @@ class DiagnosticMessage {
         RequestId = ""
         Command = ""
         CapabilitiesText = ""
-        IsResponse = false
         Succeeded = true
         ErrorText = ""
     }
@@ -172,8 +171,6 @@ class SampleDiagnosticTransport : DiagnosticTransport {
         }
         pending = List[DiagnosticMessage]()
         state = DiagnosticConnectionState.Disconnected
-        sequenceNumber = 0
-        wake = nil
     }
 
     prop State DiagnosticConnectionState {
@@ -393,14 +390,10 @@ class DiagnosticSession {
         selectedWindowId = "main-window"
         selectedNodeId = "root"
         query = ""
-        inspecting = false
         activeTab = DiagnosticDetailsTab.Configuration
-        screenshotSequence = 0
         overrideText = "BackgroundColor = #18212A"
-        overrideActive = false
         pendingOverrideAction = ""
         hoveredNodeId = ""
-        captureRequestInFlight = false
         seedWindows()
         seedLogs()
         seedScreenshots()
@@ -415,14 +408,10 @@ class DiagnosticSession {
         selectedWindowId = ""
         selectedNodeId = ""
         query = ""
-        inspecting = false
         activeTab = DiagnosticDetailsTab.Configuration
-        screenshotSequence = 0
         overrideText = "BackgroundColor = #18212A"
-        overrideActive = false
         pendingOverrideAction = ""
         hoveredNodeId = ""
-        captureRequestInFlight = false
         if seedSample {
             seedWindows()
             seedLogs()

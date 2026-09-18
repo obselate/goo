@@ -20,7 +20,6 @@ internal class DiagnosticPipeCompletion {
   internal init() {
     Done = ManualResetEventSlim(false)
     Result = "{}"
-    Error = nil
   }
 
   internal func Begin() bool -> Interlocked.CompareExchange(&state, 1, 0) == 0
@@ -40,7 +39,6 @@ internal class DiagnosticPipeClient {
   internal init(stream NamedPipeServerStream) {
     Stream = stream
     Capture = DiagnosticCaptureTracker()
-    Worker = nil
     deadline = Environment.TickCount64 + InactivityMs
     watchdog = Timer(_ -> {
       if Environment.TickCount64 >= Volatile.Read(&deadline) {
@@ -77,9 +75,6 @@ internal class DiagnosticPipeHost : IDisposable {
     stopped = ManualResetEventSlim(false)
     gate = Object()
     clients = List[DiagnosticPipeClient]()
-    listener = nil
-    worker = nil
-    disposed = false
     try {
       let created = Thread(() -> { run() })
       created.IsBackground = true
@@ -461,10 +456,7 @@ internal class DiagnosticPipeHost : IDisposable {
           }
       }
     }
-    if root.TryGetProperty(name, out var value) {
-      return integer(value, "")
-    }
-    return 0
+    return if root.TryGetProperty(name, out var value) { integer(value, "") } else { 0 }
   }
 
   private func text(root JsonElement, name string) string {

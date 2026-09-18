@@ -55,8 +55,7 @@ goo dev --input --no-watch --project HelloGoo/HelloGoo.gsproj
 ```
 
 This enables both diagnostics and input in the launched app. No environment
-variables or application code changes are needed. The `--input` option requires
-a CLI build from this checkout until its next release.
+variables or application code changes are needed.
 
 ## Inspect an app that is already running
 
@@ -71,7 +70,6 @@ The returned `window` field is a stable window ID. Pass it to `--window` to
 select a window even when several windows share a title. `--window` also accepts
 an unambiguous title substring. Use the same `--project` on subsequent commands
 when the descriptors are stored in the application's `.goo/devtools` directory.
-The `list` command requires a CLI build from this checkout until its next release.
 
 If the app was launched with diagnostics enabled, open the inspector separately:
 

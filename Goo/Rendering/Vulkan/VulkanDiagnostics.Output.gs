@@ -4,12 +4,7 @@ import System.IO
 import System.Text
 
 internal unsafe partial class VulkanDiagnostics {
-  private func OptionalBudgetValue(available uint32, value uint64) string {
-    if available == 0u {
-      return "null"
-    }
-    return value.ToString()
-  }
+  private func OptionalBudgetValue(available uint32, value uint64) string -> if available == 0u { "null" } else { value.ToString() }
 
   private func Hex(buffer [] ? uint8, offset int32, length uint32) string {
     let text = StringBuilder()

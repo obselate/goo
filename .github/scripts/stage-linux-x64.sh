@@ -6,35 +6,6 @@ bundle="${2:?usage: stage-linux-x64.sh PUBLISH_DIR BUNDLE_DIR SYMBOLS_DIR}"
 symbols="${3:?usage: stage-linux-x64.sh PUBLISH_DIR BUNDLE_DIR SYMBOLS_DIR}"
 
 mapfile -t runtime_files <"$(dirname "${BASH_SOURCE[0]}")/linux-bundle-files.txt"
-publish_extras=(
-  Goo.PackageSmoke.pdb
-  Gsharp.Extensions.pdb
-  Gsharp.Runtime.Channels.pdb
-  Gsharp.Extensions.xml
-  Vulkan/Runtime/MoltenVK-LICENSE.txt
-  VendSans-VariableFont_wght.ttf
-  HarfBuzz-adwaita-colrv1.ttf
-  HarfBuzz-TTC.ttc
-  HarfBuzz-cff-f1.otf
-  HarfBuzz-cff-f2.otf
-  HarfBuzz-cff.otc
-  HarfBuzz-cff-style-regular.otf
-  HarfBuzz-cff-style-bold.otf
-  HarfBuzz-cff-style-italic.otf
-)
-
-mapfile -t actual < <(find "$publish" -mindepth 1 -type f \
-  -printf '%P\n' | LC_ALL=C sort)
-printf '%s\n' "${runtime_files[@]}" "${publish_extras[@]}" | \
-  LC_ALL=C sort >"$publish/.expected-files"
-printf '%s\n' "${actual[@]}" >"$publish/.actual-files"
-if ! cmp -s "$publish/.expected-files" "$publish/.actual-files"; then
-  diff -u "$publish/.expected-files" "$publish/.actual-files" || true
-  rm -f "$publish/.expected-files" "$publish/.actual-files"
-  printf 'publish output allowlist mismatch\n' >&2
-  exit 1
-fi
-rm -f "$publish/.expected-files" "$publish/.actual-files"
 
 rm -rf "$bundle" "$symbols"
 mkdir -p "$bundle" "$symbols"

@@ -29,7 +29,6 @@ LITERAL_VERSION_FILES = (
     "templates/Goo.Templates/README.md",
     "tools/Goo.DevTools.Cli/CliApplication.cs",
     "tools/Goo.DevTools.Cli/ProtocolConnection.cs",
-    "tools/Goo.SvgCompiler/README.md",
 )
 
 

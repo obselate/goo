@@ -14,7 +14,7 @@ Goo applications describe UI as ordinary G# objects. Goo retains mounted state, 
 
 ## Quick start
 
-### Create an app
+### Create a NuGet app
 
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
@@ -34,48 +34,50 @@ dotnet run
 ```
 
 The template restores the G# SDK and Goo package through NuGet. A separate G#
-compiler, SDL, HarfBuzz, or shader compiler installation is not required for
-this starter application.
+compiler, SDL, or HarfBuzz installation is not required. Apps that add custom
+`<GooShaderEffect>` source need the pinned shader tools listed under
+[custom shaders](#custom-shaders).
 
-### Build and run Goo Gallery
+### Custom shaders
+
+Goo includes the ShaderEffect build adapter and authoring modules. Install these
+third-party tools only when the project contains `<GooShaderEffect>` items:
+
+| Platform | Slang 2026.16 | Vulkan SDK 1.4.357.0 with `spirv-val` |
+| --- | --- | --- |
+| Linux x64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz) | [Download `.tar.xz`](https://sdk.lunarg.com/sdk/download/1.4.357.0/linux/vulkan_sdk.tar.xz) |
+| Windows x64 | [Download `.zip`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-windows-x86_64.zip) | [Download installer](https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe) |
+| macOS arm64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz) | [Download `.zip`](https://sdk.lunarg.com/sdk/download/1.4.357.0/mac/vulkan_sdk.zip) |
+
+Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
+also accepts `slangc` and `spirv-val` on `PATH`.
+
+### Build the source Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10, Git, and the
-[source-build shader tools](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md#source-setup):
-Slang 2026.16 and Vulkan SDK 1.4.357.0. Set `SLANG_SDK` and `VULKAN_SDK`
-to their SDK roots. The Gallery compiles its own shaders during the build.
+and shaders. Install .NET 10 and Git. Then download both pinned
+[custom shader tools](#custom-shaders) for your platform and set their SDK
+environment variables. The Gallery compiles its shaders during the build.
 
 ```sh
 git clone https://github.com/obselate/goo.git
 cd goo
-python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp
+./bootstrap.sh
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-Download [Goo.0.5.4.nupkg](https://github.com/obselate/goo/releases/download/v0.5.4/Goo.0.5.4.nupkg)
-and extract it as a ZIP archive into `artifacts/gallery-native` inside the
-checkout. This supplies the released native libraries without compiling them
-yourself. Keep the archive's directory structure intact.
+On Windows:
 
-From the checkout root, use the command for your platform. `dotnet run` builds
-the Gallery in Release mode and opens it.
-
-**Linux x64 (Wayland):**
-
-```sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooLinuxSdlPath="$PWD/artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so"
+```bat
+git clone https://github.com/obselate/goo.git
+cd goo
+bootstrap.bat
+dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-**Windows x64 (PowerShell):**
-
-```powershell
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooWindowsSdlPath="$PWD/artifacts/gallery-native/runtimes/win-x64/native/SDL3.dll"
-```
-
-**macOS arm64:**
-
-```sh
-dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release -p:GooMacOsArm64NativeRoot="$PWD/artifacts/gallery-native/runtimes/osx-arm64/native"
-```
+The bootstrap builds the pinned G# compiler and formatter, then downloads the
+released Goo package for the Gallery's native runtime files. It does not install
+software globally.
 
 Open **Surfaces > Fridge** to try drag and drop, or **Shaders** for the shader
 examples. Apple silicon users can also download the prebuilt Gallery and its
@@ -91,14 +93,12 @@ are optional and installed separately. The starter template already references
 | --- | --- | --- |
 | [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, and native runtime assets | `dotnet add package Goo` |
 | [Goo.Svg](https://www.nuget.org/packages/Goo.Svg/) | [Load SVG files at runtime](Goo.Svg/README.md) | `dotnet add package Goo.Svg` |
-| [Goo.SvgCompiler](https://www.nuget.org/packages/Goo.SvgCompiler/) | [Compile SVG assets](tools/Goo.SvgCompiler/README.md) with `goo-svgc` | `dotnet tool install --global Goo.SvgCompiler` |
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
 | [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
 | [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
 Add library packages from your application directory. Install both DevTools
 packages to launch the graphical inspector with `goo dev --inspector`.
-Precompiled SVG assets can be loaded by core `Goo` without `Goo.Svg`.
 
 ## Example
 
@@ -163,10 +163,10 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
   MoltenVK 1.4.2 and selects installed Apple system fonts without requiring a
   Vulkan SDK.
 
-- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device. The
-  `Goo.Android` adapter hosts the same Window, Cell, and Blob application in an
-  Android activity or native view. See [Android integration](docs/android.md)
-  for the shared smoke app, NDK builds, packaging, and lifecycle checks.
+- Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
+  identity presentation support. The `Goo.Android` adapter hosts the same
+  application in an Android activity or native view. See
+  [Android integration](docs/android.md).
 
 ## Further reading
 

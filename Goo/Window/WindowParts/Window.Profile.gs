@@ -64,7 +64,6 @@ internal class FrameProfiler {
   internal init() {
     enabled = Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1"
     warmupFrames = 60
-    totals = nil
   }
 
   internal func Start() FrameProfilePoint -> FrameProfilePoint {
@@ -226,12 +225,7 @@ internal class FrameProfiler {
     return 0
   }
 
-  private func countPerFrame(value int64) string {
-    if frames == 0 {
-      return "0.00"
-    }
-    return (float64(value) / float64(frames)).ToString("F2")
-  }
+  private func countPerFrame(value int64) string -> if frames == 0 { "0.00" } else { (float64(value) / float64(frames)).ToString("F2") }
 
   private func Reset() {
     frames = 0

@@ -268,17 +268,14 @@ internal unsafe func VerifyVulkanTextReadback(
       || result.NonGrayPixels != 0u {
         return false
       }
-    if result.MinInkX < VulkanTextReadbackContract.MinInkX
+    return !(result.MinInkX < VulkanTextReadbackContract.MinInkX
       || result.MinInkX > VulkanTextReadbackContract.MaxInkX
       || result.MinInkY < VulkanTextReadbackContract.MinInkY
       || result.MinInkY > VulkanTextReadbackContract.MaxInkY
       || result.MaxInkX < VulkanTextReadbackContract.MinInkRight
       || result.MaxInkX > VulkanTextReadbackContract.MaxInkRight
       || result.MaxInkY < VulkanTextReadbackContract.MinInkBottom
-      || result.MaxInkY > VulkanTextReadbackContract.MaxInkBottom{
-        return false
-      }
-    return true
+      || result.MaxInkY > VulkanTextReadbackContract.MaxInkBottom)
   }
 
 internal func VerifyVulkanTextEffectReadback(result VulkanTextReadbackResult) bool {

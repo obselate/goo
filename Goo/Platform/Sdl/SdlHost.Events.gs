@@ -348,8 +348,7 @@ internal unsafe partial class SdlHost {
     if button == uint8(1) { return PointerButton.Secondary }
     if button == uint8(2) { return PointerButton.Middle }
     if button == uint8(3) { return PointerButton.Back }
-    if button == uint8(4) { return PointerButton.Forward }
-    return PointerButton.None
+    return if button == uint8(4) { PointerButton.Forward } else { PointerButton.None }
   }
 
   private func ToPointerButtons(button PointerButton) PointerButtons -> switch button {
@@ -363,10 +362,7 @@ internal unsafe partial class SdlHost {
 
   private func MousePressure(buttons PointerButtons) float32 -> (int32(buttons) & int32(PointerButtons.Primary)) != 0 ? 1.0F : 0.0F
 
-  private func NormalizePressure(pressure float32) float32 {
-    if Single.IsNaN(pressure) || pressure <= 0.0F { return 0.0F }
-    return pressure >= 1.0F ? 1.0F : pressure
-  }
+  private func NormalizePressure(pressure float32) float32 -> if Single.IsNaN(pressure) || pressure <= 0.0F { 0.0F } else { pressure >= 1.0F ? 1.0F : pressure }
 
   private func TouchX(normalizedX float32) float32 -> normalizedX * float32(LogicalWidth)
   private func TouchY(normalizedY float32) float32 -> normalizedY * float32(LogicalHeight)

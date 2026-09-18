@@ -259,8 +259,7 @@ internal class LineBreakOpportunities {
       if IsRegionalIndicatorPair(scalars, leftIndex, right) {
         return TextLineBreakAction.Prohibited
       }
-      if IsEmojiModifierSequence(left, right) { return TextLineBreakAction.Prohibited }
-      return TextLineBreakAction.Allowed
+      return if IsEmojiModifierSequence(left, right) { TextLineBreakAction.Prohibited } else { TextLineBreakAction.Allowed }
     }
 
     private func HasZeroWidthBefore(scalars List[TextLineBreakScalar], leftIndex int32) bool {
@@ -426,10 +425,9 @@ internal class LineBreakOpportunities {
             || right.Class == TextLineBreakClass.VI) { return true }
         if left.Class == TextLineBreakClass.VI && IsBrahmicStart(right)
           && baseLeftIndex > 0 && IsBrahmicBase(scalars[BaseIndex(scalars, baseLeftIndex - 1)]) { return true }
-        if IsBrahmicBase(baseLeft) && IsBrahmicStart(right)
+        return IsBrahmicBase(baseLeft) && IsBrahmicStart(right)
           && rightIndex + 1 < scalars.Count
-          && scalars[rightIndex + 1].Class == TextLineBreakClass.VF{ return true }
-        return false
+          && scalars[rightIndex + 1].Class == TextLineBreakClass.VF
       }
 
     private func IsParenthesisSequence(left TextLineBreakScalar, right TextLineBreakScalar) bool {

@@ -203,10 +203,7 @@ public class TextEditorController : IDisposable {
 
   /// Gets the selected text after command interception.
   /// @returns The selected text, or an empty string when canceled.
-  public func Copy() string {
-    if !beginCommand(TextCommand { Kind: TextCommandKind.Copy }) { return "" }
-    return selectedText()
-  }
+  public func Copy() string -> if !beginCommand(TextCommand { Kind: TextCommandKind.Copy }) { "" } else { selectedText() }
 
   /// Gets and deletes the selected text after command interception.
   /// @returns The deleted text, or an empty string when canceled.
@@ -229,18 +226,12 @@ public class TextEditorController : IDisposable {
 
   /// Commits the current transient composition text.
   /// @returns True when default handling ran.
-  public func CommitComposition() bool {
-    if !beginCommand(TextCommand { Kind: TextCommandKind.CommitComposition }) { return false }
-    return commitCompositionDefault(nil)
-  }
+  public func CommitComposition() bool -> if !beginCommand(TextCommand { Kind: TextCommandKind.CommitComposition }) { false } else { commitCompositionDefault(nil) }
 
   /// Commits the supplied text over the current composition or selection.
   /// @param text The committed text.
   /// @returns True when default handling ran.
-  public func CommitComposition(text string) bool {
-    if !beginCommand(TextCommand { Kind: TextCommandKind.CommitComposition, Text: text }) { return false }
-    return commitCompositionDefault(text)
-  }
+  public func CommitComposition(text string) bool -> if !beginCommand(TextCommand { Kind: TextCommandKind.CommitComposition, Text: text }) { false } else { commitCompositionDefault(text) }
 
   /// Marks this controller focused.
   public func Focus() {
@@ -830,10 +821,7 @@ public class TextEditorController : IDisposable {
       let text = document.GetText(textRange)
       return textRange.Start + nextElement(text, offset - textRange.Start)
     }
-    if line + 1 < document.LineCount {
-      return document.GetLineRange(line + 1).Start
-    }
-    return document.Length
+    return if line + 1 < document.LineCount { document.GetLineRange(line + 1).Start } else { document.Length }
   }
 
   private func lineColumn(line int32, offset int32) float64 {
@@ -853,8 +841,7 @@ public class TextEditorController : IDisposable {
     let starts = UnicodeGraphemes.Starts(document.GetText(lineRange))
     let index = int32(column)
     if index <= 0 || starts.Length == 0 { return lineRange.Start }
-    if index >= starts.Length { return lineRange.Start + lineRange.Length }
-    return lineRange.Start + starts[index]
+    return if index >= starts.Length { lineRange.Start + lineRange.Length } else { lineRange.Start + starts[index] }
   }
 
   private func graphemeBoundary(text string, offset int32) bool {
@@ -944,10 +931,7 @@ public class TextEditorController : IDisposable {
     return left <= '\u007F' && right <= '\u007F' && !(left == '\r' && right == '\n')
   }
 
-  private func growWordWindow(window int32, limit int32) int32 {
-    if window >= limit { return limit }
-    return window > limit / 2 ? limit : window * 2
-  }
+  private func growWordWindow(window int32, limit int32) int32 -> if window >= limit { limit } else { window > limit / 2 ? limit : window * 2 }
 
   private func previousWordInText(text string, offset int32) int32 {
     let starts = UnicodeGraphemes.Starts(text)

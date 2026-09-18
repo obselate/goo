@@ -87,8 +87,6 @@ internal class AccessKitNative {
     internal func NodeSetMultiselectable(node nint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_live_atomic", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetLiveAtomic(node nint);
-    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_clips_children", CallingConvention: CallingConvention.Cdecl)
-    internal func NodeSetClipsChildren(node nint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_selected", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetSelected(node nint, value uint8);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_expanded", CallingConvention: CallingConvention.Cdecl)
@@ -151,12 +149,8 @@ internal class AccessKitNative {
     internal func TreeUpdateSetTreeInfo(update nint, info nint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_tree_update_set_focus", CallingConvention: CallingConvention.Cdecl)
     internal func TreeUpdateSetFocus(update nint, focus uint64);
-    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_tree_update_debug", CallingConvention: CallingConvention.Cdecl)
-    internal func TreeUpdateDebug(update nint) nint;
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_action_request_free", CallingConvention: CallingConvention.Cdecl)
     internal func ActionRequestFree(request nint);
-    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_string_free", CallingConvention: CallingConvention.Cdecl)
-    internal func StringFree(value nint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_unix_adapter_new", CallingConvention: CallingConvention.Cdecl)
     internal func UnixNew(activation nint, activationData nint, action nint, actionData nint, deactivation nint, deactivationData nint) nint;
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_unix_adapter_free", CallingConvention: CallingConvention.Cdecl)

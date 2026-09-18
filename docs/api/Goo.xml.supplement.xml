@@ -9,16 +9,10 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
       <summary>Creates vector node options with unit opacity and nonzero winding.</summary>
     </member>
     <member name="T:Goo.VectorAsset">
-      <summary>Owns an immutable vector document shared by authored, runtime SVG, and compiled assets.</summary>
+      <summary>Owns an immutable vector document shared by authored and runtime SVG assets.</summary>
     </member>
     <member name="M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])">
       <summary>Snapshots a vector document whose paths use the supplied view-box coordinate space.</summary>
-    </member>
-    <member name="M:Goo.VectorAsset.Load(System.Byte[])">
-      <summary>Decodes a validated compiled vector document.</summary>
-    </member>
-    <member name="M:Goo.VectorAsset.TryLoad(System.Byte[])">
-      <summary>Decodes a compiled vector document or returns nil when the bytes are invalid.</summary>
     </member>
     <member name="M:Goo.VectorAsset.NodeAt(System.Int32)">
       <summary>Returns the immutable node at a flattened document index.</summary>
@@ -32,9 +26,6 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="M:Goo.VectorAsset.Render(System.String)">
       <summary>Creates a keyed retained vector display fitted within its parent.</summary>
     </member>
-    <member name="P:Goo.VectorAsset.Version"><summary>Gets the source format version, or zero for authored documents.</summary></member>
-    <member name="P:Goo.VectorAsset.Flags"><summary>Gets source format flags, or zero for authored documents.</summary></member>
-    <member name="P:Goo.VectorAsset.ByteCount"><summary>Gets the encoded source byte count, or zero for authored documents.</summary></member>
     <member name="P:Goo.VectorAsset.ViewBoxX"><summary>Gets the view-box x origin.</summary></member>
     <member name="P:Goo.VectorAsset.ViewBoxY"><summary>Gets the view-box y origin.</summary></member>
     <member name="P:Goo.VectorAsset.ViewBoxWidth"><summary>Gets the view-box width.</summary></member>
@@ -43,78 +34,9 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="P:Goo.VectorAsset.NodeCount"><summary>Gets the node count.</summary></member>
     <member name="P:Goo.VectorAsset.ContourCount"><summary>Gets the contour count.</summary></member>
     <member name="P:Goo.VectorAsset.CurveCount"><summary>Gets the quadratic curve count.</summary></member>
-    <member name="P:Goo.VectorAsset.MorphCurveCount"><summary>Gets the morph curve count.</summary></member>
     <member name="P:Goo.VectorAsset.PaintCount"><summary>Gets the paint count.</summary></member>
     <member name="P:Goo.VectorAsset.StrokeCount"><summary>Gets the stroke count.</summary></member>
     <member name="P:Goo.VectorAsset.ClipCount"><summary>Gets the clip count.</summary></member>
-    <member name="P:Goo.VectorAsset.TrackCount"><summary>Gets the animation track count.</summary></member>
-    <member name="P:Goo.VectorAsset.KeyframeCount"><summary>Gets the animation keyframe count.</summary></member>
-    <member name="T:Goo.CompiledVectorAsset">
-      <summary>Loads, caches, and renders a validated compiled vector asset.</summary>
-    </member>
-    <member name="M:Goo.CompiledVectorAsset.Load(System.Byte[])">
-      <summary>Loads a compiled vector asset and throws when the bytes are invalid.</summary>
-    </member>
-    <member name="M:Goo.CompiledVectorAsset.TryLoad(System.Byte[])">
-      <summary>Loads a compiled vector asset and returns nil when the bytes are invalid.</summary>
-    </member>
-    <member name="M:Goo.CompiledVectorAsset.PathForNode(System.Int32)">
-      <summary>Returns the cached path for one asset node.</summary>
-    </member>
-    <member name="M:Goo.CompiledVectorAsset.Render">
-      <summary>Creates a retained display cell for this asset.</summary>
-    </member>
-    <member name="M:Goo.CompiledVectorAsset.Render(System.String)">
-      <summary>Creates or updates a retained display cell using the supplied key.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.Version">
-      <summary>Gets the compiled asset format version.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.Flags">
-      <summary>Gets the compiled asset flags.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ByteCount">
-      <summary>Gets the encoded asset byte count.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ViewBoxX">
-      <summary>Gets the view box origin on the x axis.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ViewBoxY">
-      <summary>Gets the view box origin on the y axis.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ViewBoxWidth">
-      <summary>Gets the view box width.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ViewBoxHeight">
-      <summary>Gets the view box height.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.NodeCount">
-      <summary>Gets the number of vector nodes.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ContourCount">
-      <summary>Gets the number of vector contours.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.CurveCount">
-      <summary>Gets the number of vector curves.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.MorphCurveCount">
-      <summary>Gets the number of morph curves.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.PaintCount">
-      <summary>Gets the number of paints.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.StrokeCount">
-      <summary>Gets the number of strokes.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.ClipCount">
-      <summary>Gets the number of clip paths.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.TrackCount">
-      <summary>Gets the number of animation tracks.</summary>
-    </member>
-    <member name="P:Goo.CompiledVectorAsset.KeyframeCount">
-      <summary>Gets the number of animation keyframes.</summary>
-    </member>
     <member name="T:Goo.DevTools">
       <summary>Attaches Goo DevTools diagnostics to a window.</summary>
     </member>

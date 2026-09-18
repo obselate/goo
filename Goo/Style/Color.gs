@@ -84,10 +84,7 @@ public data struct Color {
       if value.Length == 0 {
         return nil
       }
-      if value[0] == '#' {
-        return parseHexColor(value)
-      }
-      return parseNamedColor(value.ToLowerInvariant())
+      return if value[0] == '#' { parseHexColor(value) } else { parseNamedColor(value.ToLowerInvariant()) }
     }
 
     /// Gets opaque white.
@@ -106,8 +103,7 @@ public func operator implicit (value string) Color -> Color.Parse (value)
 
 internal func clampByte(value int32) int32 {
   if value < 0 { return 0 }
-  if value > 255 { return 255 }
-  return value
+  return if value > 255 { 255 } else { value }
 }
 
 internal func normalizeAlpha(value float64) float32 {
@@ -115,8 +111,7 @@ internal func normalizeAlpha(value float64) float32 {
     throw ArgumentOutOfRangeException("alpha")
   }
   if value <= 0.0 { return 0.0F }
-  if value >= 1.0 { return 1.0F }
-  return float32(value)
+  return if value >= 1.0 { 1.0F } else { float32(value) }
 }
 
 internal func normalizeChannel(value float32, name string) float32 {
@@ -124,8 +119,7 @@ internal func normalizeChannel(value float32, name string) float32 {
     throw ArgumentOutOfRangeException(name)
   }
   if value <= 0.0F { return 0.0F }
-  if value >= 1.0F { return 1.0F }
-  return value
+  return if value >= 1.0F { 1.0F } else { value }
 }
 
 internal func clamp255(value float32) int32 {
@@ -143,31 +137,27 @@ internal func parseHexColor(value string) Color? {
       let r = hexValue(value[1])
       let g = hexValue(value[2])
       let b = hexValue(value[3])
-      if r < 0 || g < 0 || b < 0 { return nil }
-      return Color.Rgba(r * 17, g * 17, b * 17, 255)
+      return if r < 0 || g < 0 || b < 0 { nil } else { Color.Rgba(r * 17, g * 17, b * 17, 255) }
     }
     case 5 {
       let r = hexValue(value[1])
       let g = hexValue(value[2])
       let b = hexValue(value[3])
       let a = hexValue(value[4])
-      if r < 0 || g < 0 || b < 0 || a < 0 { return nil }
-      return Color.Rgba(r * 17, g * 17, b * 17, a * 17)
+      return if r < 0 || g < 0 || b < 0 || a < 0 { nil } else { Color.Rgba(r * 17, g * 17, b * 17, a * 17) }
     }
     case 7 {
       let r = hexByte(value, 1)
       let g = hexByte(value, 3)
       let b = hexByte(value, 5)
-      if r < 0 || g < 0 || b < 0 { return nil }
-      return Color.Rgba(r, g, b, 255)
+      return if r < 0 || g < 0 || b < 0 { nil } else { Color.Rgba(r, g, b, 255) }
     }
     case 9 {
       let r = hexByte(value, 1)
       let g = hexByte(value, 3)
       let b = hexByte(value, 5)
       let a = hexByte(value, 7)
-      if r < 0 || g < 0 || b < 0 || a < 0 { return nil }
-      return Color.Rgba(r, g, b, a)
+      return if r < 0 || g < 0 || b < 0 || a < 0 { nil } else { Color.Rgba(r, g, b, a) }
     }
     case _ { return nil }
   }
@@ -177,15 +167,13 @@ internal func parseHexColor(value string) Color? {
 internal func hexByte(value string, index int32) int32 {
   let high = hexValue(value[index])
   let low = hexValue(value[index + 1])
-  if high < 0 || low < 0 { return -1 }
-  return high * 16 + low
+  return if high < 0 || low < 0 { -1 } else { high * 16 + low }
 }
 
 internal func hexValue(value char) int32 {
   if value >= '0' && value <= '9' { return int32(value) - int32('0') }
   if value >= 'a' && value <= 'f' { return int32(value) - int32('a') + 10 }
-  if value >= 'A' && value <= 'F' { return int32(value) - int32('A') + 10 }
-  return -1
+  return if value >= 'A' && value <= 'F' { int32(value) - int32('A') + 10 } else { -1 }
 }
 
 internal func parseNamedColor(value string) Color? {

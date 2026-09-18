@@ -146,11 +146,6 @@ internal partial class SdlRuntime {
       }
     }
 
-    internal func IsCurrentMainThread() bool {
-      let expected = Volatile.Read(ref mainThreadId)
-      return expected != 0 && Environment.CurrentManagedThreadId == expected
-    }
-
     internal func SetCursor(value Cursor) {
       RequireMainThread("SDL cursor mutation")
       if int32(value) < int32(Cursor.Default) ||

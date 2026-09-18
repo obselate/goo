@@ -3,16 +3,14 @@ package Goo
 import System
 
 internal unsafe sealed class VulkanProductionReadbackCapture : IDisposable {
-  private let pool VulkanReadbackPool
-  private var request VulkanAsyncReadback? = nil
+  private let request VulkanAsyncReadback
   private let defaultRegion VulkanReadbackRegion
   private var lastRequestAllocatedBytes uint64
   private var lastSubmissionSerial uint64
   private var disposed bool
 
-  internal init(resources VulkanReadbackResources, region VulkanReadbackRegion) {
-    pool = resources.Pool
-    request = resources.Request
+  internal init(nativeRequest VulkanAsyncReadback, region VulkanReadbackRegion) {
+    request = nativeRequest
     defaultRegion = region
   }
 
@@ -27,23 +25,16 @@ internal unsafe sealed class VulkanProductionReadbackCapture : IDisposable {
     region VulkanReadbackRegion, textScaleX float32,
     textScaleY float32) VkResult{
       EnsureOpen()
-      if request == nil {
-        request = pool.Acquire()
-      }
-      guard let activeRequest = request else {
-        return VkConstants.VK_NOT_READY
-      }
-      if activeRequest.State != VulkanReadbackState.Idle {
+      if request.State != VulkanReadbackState.Idle {
         throw InvalidOperationException("Vulkan production readback capture is busy")
       }
       let allocatedBefore = GC.GetAllocatedBytesForCurrentThread()
       try {
-        let result = activeRequest.Request(frame, clearColor, region,
+        let result = request.Request(frame, clearColor, region,
           textScaleX, textScaleY)
-        lastSubmissionSerial = activeRequest.SubmissionSerial
+        lastSubmissionSerial = request.SubmissionSerial
         if result == VkConstants.VK_ERROR_DEVICE_LOST {
-          activeRequest.AbandonAfterDeviceLoss()
-          pool.AbandonAfterDeviceLoss()
+          request.AbandonAfterDeviceLoss()
         }
         return result
       } finally {
@@ -54,22 +45,15 @@ internal unsafe sealed class VulkanProductionReadbackCapture : IDisposable {
 
   internal func Poll() VkResult {
     EnsureOpen()
-    guard let activeRequest = request else {
-      return VkConstants.VK_NOT_READY
-    }
-    return activeRequest.PollCompletion()
+    return request.PollCompletion()
   }
 
   internal func Take() VulkanReadbackResult? {
     EnsureOpen()
-    guard let activeRequest = request else {
+    guard let result = request.Result else {
       return nil
     }
-    guard let result = activeRequest.Result else {
-      return nil
-    }
-    pool.Release(activeRequest)
-    request = nil
+    request.Reset()
     return result
   }
 
@@ -77,8 +61,11 @@ internal unsafe sealed class VulkanProductionReadbackCapture : IDisposable {
     if disposed {
       return
     }
-    pool.Dispose()
-    request = nil
+    if request.TargetPending {
+      request.DrainAndDispose()
+    } else {
+      request.Dispose()
+    }
     disposed = true
   }
 
@@ -179,12 +166,12 @@ internal partial class VulkanWindowTarget {
       readbackLease.Release()
       throw InvalidOperationException("Vulkan production readback target creation failed")
     }
-    let resources = VulkanReadbackFactory.Create(activeTarget, readbackLease,
-      activeRuntime.Generation, ReadbackBudgetBytes)
+    let request = VulkanReadbackFactory.Create(activeTarget, readbackLease,
+      activeRuntime.Generation)
     try {
-      return VulkanProductionReadbackCapture(resources, region)
+      return VulkanProductionReadbackCapture(request, region)
     } catch (error Exception) {
-      try { resources.Pool.Dispose() } catch (cleanup Exception) { }
+      try { request.Dispose() } catch (cleanup Exception) { }
       throw error
     }
   }
@@ -196,6 +183,33 @@ internal unsafe partial class VulkanImageResources {
   internal func CreateTinyForProof() VulkanImageResources ->
   VulkanImageResources(device, dispatch, allocator, 1, 1, 96uL, 96uL,
     16uL, 16uL, 1, nil, generation, objectAccounting)
+
+  internal func CopyLogicalResourcesForProof(destination []VulkanLogicalResource) int32 {
+    EnsureOpen()
+    if destination.Length < logicalStats.LogicalCount {
+      throw ArgumentException("Logical resource destination is too small", "destination")
+    }
+    var output int32 = 0
+    for index in 0 ... logicalRecords.Length {
+      let logical = logicalRecords[index]
+      if logical.Id.IsValid
+        && (logical.PhysicalSlot < 0 || !entries[logical.PhysicalSlot].GpuPublished) {
+          destination[output] = VulkanLogicalResource{
+            Id: logical.Id,
+            Source: VulkanResourceSource{
+              ProviderId: logical.ProviderId,
+              SourceId: logical.SourceId,
+              Version: logical.Id.Version,
+              Bytes: logical.Bytes,
+            },
+            Bytes: logical.Bytes,
+            Cacheable: logical.Cacheable,
+          }
+          output++
+        }
+    }
+    return output
+  }
 
   internal func CollectAfterDescriptorRetryForProof(
     id ResourceId,

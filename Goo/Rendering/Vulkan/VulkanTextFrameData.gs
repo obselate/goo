@@ -74,18 +74,11 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
       CandidateVersions = [0]uint64
       CandidateFirstInstances = [0]int32
       CandidateRecordCounts = [0]int32
-      CandidateSegmentCount = 0
-      CandidateTopologyKey = 0uL
       HistoryIds = [0]uint64
       HistoryVersions = [0]uint64
       HistoryFirstInstances = [0]int32
       HistoryRecordCounts = [0]int32
-      HistorySegmentCount = 0
-      HistoryTopologyKey = 0uL
-      HistoryBufferGeneration = 0uL
-      HistoryValid = false
       PreparedRanges = [0]VkBufferCopy
-      PreparedRangeCount = 0
     }
 
   internal func EnsureCapacity(required VkDeviceSize, completedSubmissionSerial uint64) {
@@ -112,15 +105,8 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
     if segmentCount <= CandidateIds.Length && segmentCount <= HistoryIds.Length {
       return
     }
-    var next = if CandidateIds.Length == 0 { 8 } else { CandidateIds.Length }
-    if HistoryIds.Length > next { next = HistoryIds.Length }
-    while next < segmentCount {
-      if next > Int32.MaxValue / 2 {
-        next = segmentCount
-        break
-      }
-      next = next * 2
-    }
+    let next = ArrayGrowthCapacity(Math.Max(CandidateIds.Length, HistoryIds.Length),
+      segmentCount, 8)
     let candidateIds = [next]uint64
     let candidateVersions = [next]uint64
     let candidateFirstInstances = [next]int32
@@ -157,27 +143,7 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
   }
 
   internal func EnsureRangeCapacity(rangeCount int32) {
-    if rangeCount < 0 {
-      throw ArgumentOutOfRangeException("rangeCount")
-    }
-    if rangeCount <= PreparedRanges.Length {
-      return
-    }
-    var next = if PreparedRanges.Length == 0 { 8 } else { PreparedRanges.Length }
-    while next < rangeCount {
-      if next > Int32.MaxValue / 2 {
-        next = rangeCount
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]VkBufferCopy
-    var index int32 = 0
-    while index < PreparedRanges.Length {
-      replacement[index] = PreparedRanges[index]
-      index = index + 1
-    }
-    PreparedRanges = replacement
+    PreparedRanges = GrowArray(PreparedRanges, PreparedRanges.Length, rangeCount, 8)
   }
 
   internal func FlushRanges() uint64 {
@@ -250,7 +216,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
   private var preparedSlot int32 = -1
   private var preparedBytes VkDeviceSize
   private var preparedRecords int32
-  private var preparedCommandBuffer VkCommandBuffer
   private var lastStats VulkanTextFrameStats
   private var totalSegmentCount uint64
   private var totalRunCount uint64
@@ -506,7 +471,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       preparedSlot = slotIndex
       preparedBytes = logicalBytes
       preparedRecords = recordCount
-      preparedCommandBuffer = nint(0)
       totalSegmentCount = SaturatingAdd(totalSegmentCount, uint64(slot.CandidateSegmentCount))
       totalRunCount = SaturatingAdd(totalRunCount, uint64(runCount))
       totalRecordCount = SaturatingAdd(totalRecordCount, uint64(recordCount))
@@ -588,7 +552,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
         VkConstants.VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT)
     }
     slot.Lifecycle.Record(commandBuffer)
-    preparedCommandBuffer = commandBuffer
   }
 
   internal func FlushBeforeSubmit() VkResult {
@@ -598,8 +561,7 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     }
     let slot = slots[preparedSlot]
     if !slot.Lifecycle.Prepared || !slot.Lifecycle.Recorded
-      || !slot.Lifecycle.FlushPrepared
-      || slot.Lifecycle.RecordedCommandBuffer != preparedCommandBuffer{
+      || !slot.Lifecycle.FlushPrepared{
         throw InvalidOperationException("Vulkan text frame upload is not ready for submit")
       }
     return VkConstants.VK_SUCCESS
@@ -641,7 +603,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
-    preparedCommandBuffer = nint(0)
     totalLastUseSerial = SaturatingAdd(totalLastUseSerial, submissionSerial)
     lastStats.Prepared = false
     lastStats.LastUseSerial = submissionSerial
@@ -660,7 +621,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       preparedSlot = -1
       preparedBytes = 0uL
       preparedRecords = 0
-      preparedCommandBuffer = nint(0)
       totalLastUseSerial = SaturatingAdd(totalLastUseSerial, submissionSerial)
       lastStats.Prepared = false
       lastStats.LastUseSerial = submissionSerial
@@ -704,7 +664,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
-    preparedCommandBuffer = nint(0)
     lastStats.Prepared = false
   }
 
@@ -716,7 +675,6 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     preparedSlot = -1
     preparedBytes = 0uL
     preparedRecords = 0
-    preparedCommandBuffer = nint(0)
     var index int32 = 0
     while index < slots.Length {
       slots[index].Lifecycle.Reset()
@@ -933,10 +891,5 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
     return MixTopology(result, value.Version)
   }
 
-  private func SaturatingAdd(current uint64, value uint64) uint64 {
-    if value > uint64.MaxValue - current {
-      return uint64.MaxValue
-    }
-    return current + value
-  }
+  private func SaturatingAdd(current uint64, value uint64) uint64 -> if value > uint64.MaxValue - current { uint64.MaxValue } else { current + value }
 }

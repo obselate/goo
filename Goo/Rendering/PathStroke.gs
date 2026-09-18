@@ -10,10 +10,7 @@ internal func resolveShapeStrokeExtent(width float32, join StrokeJoin,
       let half = width * 0.5F
       if join == StrokeJoin.Miter && miterLimit > 1.0F {
         let extent = half * miterLimit
-        if !Single.IsNaN(extent) && !Single.IsInfinity(extent) {
-          return extent
-        }
-        return Single.MaxValue
+        return if !Single.IsNaN(extent) && !Single.IsInfinity(extent) { extent } else { Single.MaxValue }
       }
       return half
     }
@@ -31,7 +28,6 @@ private sealed class PathStrokePolyline {
 
   internal init() {
     Points = List[PathStrokePoint]()
-    Closed = false
   }
 
   internal func Set(points List[PathStrokePoint], closed bool) {
@@ -54,7 +50,6 @@ private sealed class PathStrokeSubpath {
 
   internal init() {
     Points = List[PathStrokePoint]()
-    Closed = false
   }
 
   internal func Set(points List[PathStrokePoint], closed bool) {
@@ -335,10 +330,7 @@ internal sealed class PathStrokeCache {
       return nil
     }
 
-  private func FindMutable(values List[PathStrokeEntry]) PathStrokeEntry? {
-    if values.Count == 0 { return nil }
-    return values[0]
-  }
+  private func FindMutable(values List[PathStrokeEntry]) PathStrokeEntry? -> if values.Count == 0 { nil } else { values[0] }
 
   private func SameStyle(value PathStrokeEntry, scaleX float32, scaleY float32,
     width float32, cap StrokeCap, join StrokeJoin, miterLimit float32) bool -> value.ScaleX == scaleX && value.ScaleY == scaleY && value.Width == width
@@ -587,10 +579,7 @@ internal sealed class PathStrokeCache {
         && SamePoint(points[0], points[points.Count - 1]) {
           points.RemoveAt(points.Count - 1)
         }
-      if points.Count < 2 {
-        return nil
-      }
-      return scratch.AcquirePolyline(points, contour.Closed)
+      return if points.Count < 2 { nil } else { scratch.AcquirePolyline(points, contour.Closed) }
     }
 
   private func AppendQuadratic(points List[PathStrokePoint], first PathStrokePoint,
@@ -660,10 +649,7 @@ internal sealed class PathStrokeCache {
           return nil
         }
       let point = PathStrokePoint{ X: float32(scaledX), Y: float32(scaledY) }
-      if !Finite(point.X) || !Finite(point.Y) {
-        return nil
-      }
-      return point
+      return if !Finite(point.X) || !Finite(point.Y) { nil } else { point }
     }
 
   private func AddPoint(points List[PathStrokePoint], value PathStrokePoint) {

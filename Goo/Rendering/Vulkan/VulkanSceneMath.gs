@@ -2,12 +2,7 @@ package Goo
 
 import System
 
-internal func nextVulkanSceneVersion(value uint64) uint64 {
-  if value == uint64.MaxValue {
-    return 1uL
-  }
-  return value + 1uL
-}
+internal func nextVulkanSceneVersion(value uint64) uint64 -> if value == uint64.MaxValue { 1uL } else { value + 1uL }
 
 internal func finiteVulkanSceneValue(value float32) bool -> !Single.IsNaN(value) && !Single.IsInfinity(value)
 

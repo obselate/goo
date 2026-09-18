@@ -1025,10 +1025,7 @@ internal class InputFixtures {
     }
     driver.Press(150.0F, 150.0F)
     driver.Press(25.0F, 25.0F)
-    if !after.Children[0].Focused {
-      return false
-    }
-    return focusLossClearsInputState()
+    return if !after.Children[0].Focused { false } else { focusLossClearsInputState() }
   }
 
   func EditHandlesGraphemeClustersAndWordBoundaries() bool {
@@ -1428,10 +1425,7 @@ internal class InputFixtures {
     two.Press(10.0F, 31.5F)
     two.Release(10.0F, 31.5F)
     guard let twoTree = two.Window.Tree else { return false }
-    if twoTree.Children[1].Caret != twoTree.Children[1].Anchor {
-      return false
-    }
-    return queuedPointerSelectionKeepsSdl3Order()
+    return if twoTree.Children[1].Caret != twoTree.Children[1].Anchor { false } else { queuedPointerSelectionKeepsSdl3Order() }
   }
 
   func NestedWheelOwnershipAndBoundary() bool {
@@ -2252,9 +2246,7 @@ internal class ZIndexRuntimeRootCell : Cell {
 internal class ZIndexRuntimeChildCell : Cell {
   internal var Raised bool
 
-  init() {
-    Raised = false
-  }
+  init() { }
 
   override func Build() Blob {
     if Raised {
@@ -2507,7 +2499,7 @@ internal class InputButtonCell : Cell {
   internal var genericClicks int32
   internal var HideSpace bool
 
-  init() { HideSpace = false }
+  init() { }
 
   override func Build() Blob -> Container() {.Width: 300.0,.Height: 100.0,.FlexDirection: FlexDirection.Row,
     Button() {.Key: "enter",.Width: 100.0,.Height: 30.0,.Active: Style{ Opacity: 0.5 },.OnClick: func() { enterClicks++ },
@@ -2820,9 +2812,7 @@ internal class InputDisabledCell : Cell {
 internal class InputDisableFocusedEntryCell : Cell {
   internal var Off bool
 
-  init() {
-    Off = false
-  }
+  init() { }
 
   internal func Disable() {
     Off = true
@@ -3001,9 +2991,7 @@ internal class InputScrollStateCell : Cell {
 internal class InputAxisScrollCell : Cell {
   private var hiddenX bool
 
-  init() {
-    hiddenX = false
-  }
+  init() { }
 
   internal func HideX() {
     hiddenX = true

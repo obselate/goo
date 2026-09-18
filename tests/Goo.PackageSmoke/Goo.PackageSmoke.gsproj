@@ -10,33 +10,6 @@
                       Condition="'$(GooUseProjectReference)' != 'true'" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
                       Condition="'$(GooUseProjectReference)' == 'true'" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
-             Link="VendSans-VariableFont_wght.ttf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-adwaita-colrv1.ttf"
-             Link="HarfBuzz-adwaita-colrv1.ttf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-TTC.ttc"
-             Link="HarfBuzz-TTC.ttc"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-cff-f1.otf"
-             Link="HarfBuzz-cff-f1.otf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-cff-f2.otf"
-             Link="HarfBuzz-cff-f2.otf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-cff.otc"
-             Link="HarfBuzz-cff.otc"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-cff-style-regular.otf"
-             Link="HarfBuzz-cff-style-regular.otf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-cff-style-bold.otf"
-             Link="HarfBuzz-cff-style-bold.otf"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.VulkanProof/Assets/Text/HarfBuzz-cff-style-italic.otf"
-             Link="HarfBuzz-cff-style-italic.otf"
-             CopyToOutputDirectory="PreserveNewest" />
     <None Include="run-windows-qualification.ps1"
           Condition="'$(RuntimeIdentifier)' == 'win-x64'"
           CopyToOutputDirectory="PreserveNewest"

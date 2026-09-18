@@ -73,11 +73,7 @@ internal unsafe sealed class VulkanPrimitiveFrameSlot : IDisposable {
       }
       Lifecycle = VulkanFrameSlotLifecycle{}
       HistoryWords = [0]uint32
-      HistoryRecordCount = 0
-      HistoryBufferGeneration = 0uL
-      HistoryValid = false
       PreparedRanges = [0]VkBufferCopy
-      PreparedRangeCount = 0
     }
 
   internal func EnsureCapacity(required VkDeviceSize, completedSubmissionSerial uint64) {
@@ -98,47 +94,11 @@ internal unsafe sealed class VulkanPrimitiveFrameSlot : IDisposable {
   }
 
   internal func EnsureHistoryWordCapacity(requiredWords int32) {
-    if requiredWords < 0 {
-      throw ArgumentOutOfRangeException("requiredWords")
-    }
-    if requiredWords <= HistoryWords.Length {
-      return
-    }
-    var next = if HistoryWords.Length == 0 { 256 } else { HistoryWords.Length }
-    while next < requiredWords {
-      if next > Int32.MaxValue / 2 {
-        next = requiredWords
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]uint32
-    Array.Copy(HistoryWords, replacement, HistoryWords.Length)
-    HistoryWords = replacement
+    HistoryWords = GrowArray(HistoryWords, HistoryWords.Length, requiredWords, 256)
   }
 
   internal func EnsureRangeCapacity(recordCount int32) {
-    if recordCount < 0 {
-      throw ArgumentOutOfRangeException("recordCount")
-    }
-    if recordCount <= PreparedRanges.Length {
-      return
-    }
-    var next = if PreparedRanges.Length == 0 { 8 } else { PreparedRanges.Length }
-    while next < recordCount {
-      if next > Int32.MaxValue / 2 {
-        next = recordCount
-        break
-      }
-      next = next * 2
-    }
-    let replacement = [next]VkBufferCopy
-    var index int32 = 0
-    while index < PreparedRanges.Length {
-      replacement[index] = PreparedRanges[index]
-      index++
-    }
-    PreparedRanges = replacement
+    PreparedRanges = GrowArray(PreparedRanges, PreparedRanges.Length, recordCount, 8)
   }
 
   internal func DestroyBuffers() {
@@ -202,7 +162,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
   private var preparedEffectDataVersion uint64
   private var preparedEffectDataNeedsWrite bool
   private var preparedEffectDataWritten bool
-  private var preparedCommandBuffer VkCommandBuffer
   private var lastStats VulkanPrimitiveFrameStats
   private var totalCpuWrittenBytes uint64
   private var totalCpuComparedBytes uint64
@@ -388,7 +347,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       preparedEffectDataVersion = effectDataVersion
       preparedEffectDataWritten = dataBytes == 0uL
       preparedRecords = 0
-      preparedCommandBuffer = nint(0)
       slot.Lifecycle.Begin()
       slot.PreparedByteCount = 0uL
       slot.PreparedRecordCount = 0
@@ -623,7 +581,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       totalRecordedBarriers = SaturatingAdd(totalRecordedBarriers, 1uL)
     }
     slot.Lifecycle.Record(commandBuffer)
-    preparedCommandBuffer = commandBuffer
   }
 
   internal func FlushBeforeSubmit() VkResult {
@@ -633,8 +590,7 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     }
     let slot = slots[preparedSlot]
     if !slot.Lifecycle.Prepared || !slot.Lifecycle.Recorded
-      || !slot.Lifecycle.FlushPrepared
-      || slot.Lifecycle.RecordedCommandBuffer != preparedCommandBuffer{
+      || !slot.Lifecycle.FlushPrepared{
         throw InvalidOperationException("Vulkan primitive frame upload is not ready for submit")
       }
     return VkConstants.VK_SUCCESS
@@ -686,7 +642,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     preparedBytes = 0uL
     preparedRecords = 0
     ResetPreparedMetadata()
-    preparedCommandBuffer = nint(0)
     lastStats.Prepared = false
     lastStats.LastUseSerial = submissionSerial
   }
@@ -704,7 +659,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       preparedBytes = 0uL
       preparedRecords = 0
       ResetPreparedMetadata()
-      preparedCommandBuffer = nint(0)
       lastStats.Prepared = false
       lastStats.LastUseSerial = submissionSerial
       return
@@ -780,7 +734,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     preparedBytes = 0uL
     preparedRecords = 0
     ResetPreparedMetadata()
-    preparedCommandBuffer = nint(0)
     lastStats.Prepared = false
   }
 
@@ -793,7 +746,6 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     preparedBytes = 0uL
     preparedRecords = 0
     ResetPreparedMetadata()
-    preparedCommandBuffer = nint(0)
     var index int32 = 0
     while index < slots.Length {
       slots[index].Lifecycle.Reset()
@@ -901,10 +853,5 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
     }
   }
 
-  private func SaturatingAdd(current uint64, value uint64) uint64 {
-    if uint64.MaxValue - current < value {
-      return uint64.MaxValue
-    }
-    return current + value
-  }
+  private func SaturatingAdd(current uint64, value uint64) uint64 -> if uint64.MaxValue - current < value { uint64.MaxValue } else { current + value }
 }

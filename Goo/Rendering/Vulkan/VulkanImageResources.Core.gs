@@ -150,11 +150,8 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       currentReferenceCounts = [imageCapacity]int32
       descriptorPools = List[VkDescriptorPool]()
       generation = initialGeneration
-      highestCompletedFence = 0uL
-      generationLastUseFence = 0uL
       nextTouch = 1uL
       uploadRing = VulkanUploadRing(stagingInitialBytes, uploadRangeCapacity, initialGeneration)
-      flushPrepared = false
       try {
         CreateGeneration()
       } catch (error Exception) {

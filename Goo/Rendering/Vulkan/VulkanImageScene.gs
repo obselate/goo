@@ -112,10 +112,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       }
       if cachedLookupState != 0 && cachedVersion == binding.Version
         && Object.ReferenceEquals(cachedProvider, binding.Source) {
-          if cachedLookupState == 1 {
-            return true
-          }
-          return EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex)
+          return if cachedLookupState == 1 { true } else { EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex) }
         }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
         generation, ImageFormat)

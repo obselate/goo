@@ -2,6 +2,9 @@
 
 `Goo.Svg` is an optional runtime loader for Goo's immutable `VectorAsset` documents.
 
+Upgrading from compiled `.gcv1` assets or `Goo.SvgCompiler`? See the
+[GCV1 migration guide](../docs/migrations/gcv1.md).
+
 ```csharp
 using Goo.Svg;
 
@@ -18,10 +21,8 @@ let icon = Svg.Load("icon.svg")
 Container{Width: 32, Height: 32, icon.Render(),}
 ```
 
-The core `Goo` package also supports `VectorAsset.Load(bytes)` for compiled GCV1
-assets and `VectorAsset(x, y, width, height, roots)` for authored `VectorNode`
-trees. Neither requires the SVG package. `CompiledVectorAsset` remains a compatible
-loading facade over the same document and renderer.
+The core `Goo` package also supports authored `VectorNode` trees through
+`VectorAsset(x, y, width, height, roots)` without the SVG package.
 
 Author paths and transforms in the asset's view-box coordinates. A path's own
 view-box metadata does not independently resize it within a document. Node child
@@ -29,9 +30,8 @@ arrays are copied, paints and strokes are immutable, and nodes can be reused.
 Rendering contains the complete document within its parent while preserving its
 aspect ratio. Strokes, clips, and nested transforms scale with the document.
 
-Text and streams use the same parser and writer as `Goo.SvgCompiler`, so runtime and
-build-time loading produce the same GCV1 representation. `Load(Stream)` reads from the
-current stream position and leaves the caller's stream open.
+Text, stream, and file loading use the same runtime parser. `Load(Stream)` reads from
+the current stream position and leaves the caller's stream open.
 
 The supported subset includes paths, groups, affine transforms, opacity, solid paints,
 linear and radial gradients, strokes, dashes, user-space clips, controlled transform,

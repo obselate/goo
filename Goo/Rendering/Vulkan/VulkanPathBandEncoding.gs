@@ -102,7 +102,6 @@ internal sealed class PathBandEncoding {
       this.verticalCurveIndices = ReadOnlyCollection[uint32](verticalIndexBuffer)
       this.curves = ReadOnlyCollection[PathAnalyticCurve](curveBuffer)
       words = []uint32{}
-      wordCount = 0
       Rebuild(minimumX, minimumY, maximumX, maximumY, horizontalBands,
         verticalBands, horizontalCurveIndices, verticalCurveIndices, curves,
         fillRuleMask, revision)
@@ -230,13 +229,8 @@ internal sealed class PathBandEncoding {
     +(horizontalCurveIndices.Count + verticalCurveIndices.Count) * int32(IndexByteStride / 4)
     +curves.Count * int32(CurveByteStride / 4)
     if requiredWordCount > words.Length {
-      var capacity = words.Length
-      if capacity == 0 { capacity = requiredWordCount }
-      while capacity < requiredWordCount {
-        if capacity > Int32.MaxValue / 2 { capacity = requiredWordCount }
-        else { capacity = capacity * 2 }
-      }
-      words = [capacity]uint32
+      words = [ArrayGrowthCapacity(words.Length, requiredWordCount,
+        requiredWordCount)]uint32
     }
     wordCount = requiredWordCount
     var offset int32 = 0

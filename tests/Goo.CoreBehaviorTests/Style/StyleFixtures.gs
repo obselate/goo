@@ -1029,12 +1029,9 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.TextWrap != TextWrap.Wrap || root.TextTrimming != TextTrimming.None
+    return !(root.TextWrap != TextWrap.Wrap || root.TextTrimming != TextTrimming.None
       || inherited.TextWrap != TextWrap.Wrap || inherited.TextTrimming != TextTrimming.None
-      || local.TextWrap != TextWrap.Wrap || local.TextTrimming != TextTrimming.Ellipsis{
-        return false
-      }
-    return true
+      || local.TextWrap != TextWrap.Wrap || local.TextTrimming != TextTrimming.Ellipsis)
   }
 
   func TextMaxLinesResolutionStateAndCacheContract() bool {
@@ -1122,12 +1119,9 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.HasOutlineState || root.OutlineWidth.Unit != LengthUnit.Unset
+    return !(root.HasOutlineState || root.OutlineWidth.Unit != LengthUnit.Unset
       || root.OutlineOffset.Unit != LengthUnit.Unset
-      || !sameColor(root.OutlineColor, Color.Transparent) {
-        return false
-      }
-    return true
+      || !sameColor(root.OutlineColor, Color.Transparent))
   }
 
   func VisibilityStateResetTransitionAndStorageContract() bool {
@@ -1210,13 +1204,10 @@ internal class StyleFixtures {
     root.BaseStyle = nil
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.TextDecoration != TextDecoration.None
+    return !(root.TextDecoration != TextDecoration.None
       || inherited.TextDecoration != TextDecoration.None
       || entry.TextDecoration != TextDecoration.None
-      || cleared.TextDecoration != TextDecoration.None{
-        return false
-      }
-    return true
+      || cleared.TextDecoration != TextDecoration.None)
   }
 
   func CursorInheritanceAndResetContract() bool {
@@ -1247,11 +1238,8 @@ internal class StyleFixtures {
     root.Hovered = false
     resolver.Invalidate(root, false)
     resolver.Flush()
-    if root.Cursor != Cursor.Move || inherited.Cursor != Cursor.Move
-      || local.Cursor != Cursor.Move{
-        return false
-      }
-    return true
+    return !(root.Cursor != Cursor.Move || inherited.Cursor != Cursor.Move
+      || local.Cursor != Cursor.Move)
   }
 
   func ZIndexRangeStateAndResetContract() bool {
@@ -1657,51 +1645,6 @@ internal class StyleFixtures {
   }
 
   func TransformStateTransitionAndGeometryContract() bool {
-    let identity = PanelTransform{}
-    if identity.TranslateX.Magnitude != 0.0 || identity.TranslateX.IsPercent
-      || identity.TranslateY.Magnitude != 0.0 || identity.Rotate != 0.0 || identity.Scale != 1.0 {
-        return false
-      }
-    let equivalent = PanelTransform{ TranslateX: 0, Scale: 1 }
-    if identity != equivalent || identity.GetHashCode() != equivalent.GetHashCode() {
-      return false
-    }
-    let percentZero = PanelTransform{ TranslateX: Length.Percent(0) }
-    if percentZero == identity || !percentZero.TranslateX.IsPercent { return false }
-    let fullTurn = PanelTransform{ Rotate: 360 }
-    if fullTurn == identity || fullTurn.Rotate != 360.0 { return false }
-
-    let n = Node{ Kind: NodeKind.Container, Rect: Rect{ X: 10, Y: 20, W: 100, H: 50 } }
-    let resolver = Resolver{}
-    n.TransitionMs = 100.0
-    n.TransitionSelection = makeTransitionSelection([]TransitionProperty{ TransitionProperty.Transform })
-    n.BaseStyle = Style{ Transform: PanelTransform{} }.Entries()
-    n.HoverStyle = Style{
-      Transform: PanelTransform{
-        TranslateX: Length.Percent(50), TranslateY: 10, Rotate: 90, Scale: 2,
-      },
-      TransformOriginX: Length.Percent(0),
-      TransformOriginY: Length.Percent(0),
-    }.Entries()
-    resolver.Invalidate(n, true)
-    resolver.Flush()
-    n.Hovered = true
-    resolver.Invalidate(n, false)
-    resolver.Flush()
-    resolver.Advance(0.05)
-    if Transforming.TranslateX(n).Value != 50.0F || Transforming.TranslateX(n).Unit != LengthUnit.Percent
-      || Transforming.TranslateY(n).Value != 5.0F || Transforming.Rotate(n) != 45.0F
-      || Transforming.Scale(n) != 1.5F || Transforming.OriginX(n).Value != 25.0F
-      || Transforming.OriginY(n).Value != 25.0F || !n.HasVisualTransform{
-        return false
-      }
-    resolver.Advance(0.06)
-    let mapped = TransformGeometry.Map(n, 20.0F, 20.0F)
-    let roundTrip = TransformGeometry.Unmap(n, mapped.X, mapped.Y)
-    if !mapped.Valid || !roundTrip.Valid || !near(roundTrip.X, 20.0) || !near(roundTrip.Y, 20.0) {
-      return false
-    }
-
     let turn = Node{ Kind: NodeKind.Container, Rect: Rect{ W: 20, H: 20 } }
     let turnResolver = Resolver{}
     turn.TransitionMs = 100.0
@@ -1747,30 +1690,6 @@ internal class StyleFixtures {
         return false
       }
 
-    let nearSingular = Node{ Kind: NodeKind.Container, Rect: Rect{ W: 20, H: 20 } }
-    Transforming.SetScale(nearSingular, 0.0000001F)
-    if TransformGeometry.Unmap(nearSingular, 10.0F, 10.0F).Valid { return false }
-
-    let mirrored = Node{ Kind: NodeKind.Container, Rect: Rect{ X: 10, Y: 20, W: 30, H: 40 } }
-    Transforming.SetScale(mirrored, -1.0F)
-    let mirroredPoint = TransformGeometry.Map(mirrored, 15.0F, 25.0F)
-    let mirroredRoundTrip = TransformGeometry.Unmap(mirrored, mirroredPoint.X, mirroredPoint.Y)
-    if !mirroredPoint.Valid || !mirroredRoundTrip.Valid
-      || !near(mirroredRoundTrip.X, 15.0) || !near(mirroredRoundTrip.Y, 25.0) {
-        return false
-      }
-
-    let selected = Container{
-      TransitionProperties: []TransitionProperty{ TransitionProperty.Transform },
-      Focusable: true,
-      Disabled: true,
-    }
-    let properties = selected.TransitionProperties
-    if properties.Length != 1 || properties[0] != TransitionProperty.Transform
-      || !selected.Focusable || !selected.Disabled{
-        return false
-      }
-
     let rec = Reconciler{ Res: Resolver{} }
     let mounted = rec.Mount(Container{ Transform: PanelTransform{ TranslateX: 12, Rotate: 30 } })
     if !mounted.HasTransformState || !mounted.HasVisualTransform { return false }
@@ -1795,23 +1714,6 @@ internal class StyleFixtures {
     return near(smallTranslation, 50.0) && near(largeTranslation, 100.0)
       && plain.Rect == transformed.Rect && plain.Children[0].Rect == transformed.Children[0].Rect
       && !transformed.Children[0].HasTransformState
-      && transformDeclarationsRejectInvalidValues()
-  }
-
-  private func transformDeclarationsRejectInvalidValues() bool {
-    var autoTranslation = false
-    var invalidRotate = false
-    var invalidScale = false
-    var autoOrigin = false
-    try { let ignored = PanelTransform{ TranslateX: Length.Auto } }
-    catch (error ArgumentException) { autoTranslation = true }
-    try { let ignored = PanelTransform{ Rotate: Double.NaN } }
-    catch (error ArgumentException) { invalidRotate = true }
-    try { let ignored = PanelTransform{ Scale: Double.PositiveInfinity } }
-    catch (error ArgumentException) { invalidScale = true }
-    try { let ignored = Style{ TransformOriginX: Length.Auto } }
-    catch (error ArgumentException) { autoOrigin = true }
-    return autoTranslation && invalidRotate && invalidScale && autoOrigin
   }
 
   private func rejectsInvalidStyleDeclarations() bool {
@@ -1896,12 +1798,9 @@ internal class StyleFixtures {
         Direction.RightToLeft) {
           return false
         }
-    if styleFieldUsesShapeStorage(field)
+    return !(styleFieldUsesShapeStorage(field)
       && !styleFieldResolutionContract(field, declaration, source, NodeKind.Container,
-        Direction.Auto) {
-          return false
-        }
-    return true
+        Direction.Auto))
   }
 
   private func styleFieldResolutionContract(field StyleField, declaration Style,

@@ -180,13 +180,13 @@ internal func sameGradient(a Gradient?, b Gradient?) bool {
         && radial.CenterY == other.CenterY && radial.Radius == other.Radius
       case _: false
     }
-    case compiled is CompiledVectorLinearGradient: switch right {
-      case other is CompiledVectorLinearGradient: compiled.X0 == other.X0
+    case compiled is VectorLinearGradient: switch right {
+      case other is VectorLinearGradient: compiled.X0 == other.X0
         && compiled.Y0 == other.Y0 && compiled.X1 == other.X1 && compiled.Y1 == other.Y1
       case _: false
     }
-    case compiled is CompiledVectorRadialGradient: switch right {
-      case other is CompiledVectorRadialGradient: compiled.CenterX == other.CenterX
+    case compiled is VectorRadialGradient: switch right {
+      case other is VectorRadialGradient: compiled.CenterX == other.CenterX
         && compiled.CenterY == other.CenterY && compiled.RadiusX == other.RadiusX
         && compiled.RadiusY == other.RadiusY
       case _: false

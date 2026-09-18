@@ -1,286 +1,42 @@
 # Tests
 
-Goo keeps a small set of focused projects. Each project owns one kind of evidence and can run independently from a clean checkout.
+Run the [source setup](../CONTRIBUTING.md#source-setup) before local checks. The
+CI workflow is the source of truth for complete cross-platform verification.
 
-## Fast checks
-
-Public API and documentation:
+## Managed checks
 
 ```sh
 dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
-```
-
-Framework behavior and allocation contracts:
-
-```sh
 dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release
+dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj -c Release
+dotnet test tests/Goo.Svg.Tests/Goo.Svg.Tests.csproj -c Release
+dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.csproj -c Release
 ```
 
-Vulkan ABI and data-layout checks:
+## Vulkan checks
+
+These projects require the platform setup and native assets used by CI:
 
 ```sh
 dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj -c Release
-dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
-```
-
-Shader and text proof build:
-
-```sh
 dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
-```
-
-## Native presentation qualification
-
-The default proof uses the production window, queue worker, timeline, and retirement
-owners. It checks five accepted presentations, both frame slots, live prior-image
-retirement, capabilities, timestamps, and teardown. Run these maintenance-specific
-routes on a desktop where pending presentation retirement can be observed:
-
-```sh
-export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
-dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
-GOO_VK_READBACK=1 dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
-GOO_VK_REQUIRE_EXT_MAINTENANCE=1 dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
-GOO_VK_LIFECYCLE=1 GOO_VK_SKIP_DPI=1 GOO_VK_SKIP_MINIMIZE=1 \
-  dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
-GOO_VK_LIFECYCLE=1 GOO_VK_SKIP_DPI=1 GOO_VK_LIFECYCLE_X11=1 \
-  dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
-```
-
-Readback retains fixed clear and quad pixels in a direct UNORM target. Lifecycle
-checks real resize, retirement collection, close, and reopen under a held runtime
-lease. The X11 flag selects a test-only native host for minimize/restore. Omit it
-to qualify Wayland. Omit the skip flags to require actual display-scale movement
-and minimize/restore. Skipped probes are reported as deferred. Software CI keeps
-the separate production text, image, timeline, queue, and recovery routes.
-
-## Local PNG loading
-
-`Goo.ImageLoadingTests` verifies PNG color formats, premultiplication, file and
-decompression limits, error/retry behavior, shared pixels, independent owners,
-cache capacity, and cancellation. `Goo.ImageLoadingSmoke` loads a packaged PNG
-under Linux/macOS NativeAOT. Async decoder tests run separately from the SDL UI
-fixtures so test continuations cannot change their required main thread.
-`GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1` runs
-the actual Vulkan pixel/alpha/lifetime check in `Goo.AsyncReadbackSmoke`.
-The 2x2 `tests/Shared/Assets/local-rgba.png` fixture is generated for these tests
-and contains four known RGBA colors, including one half-transparent pixel.
-
-## UI audio
-
-`Goo.CoreBehaviorTests` checks PCM ownership/validation and 8-bit/16-bit WAV
-decoding. `Goo.AudioSmoke` checks shared owners, 16 overlapping voices, budget
-rejection, stop, playback progress without frames, and reopening. Run it with
-`SDL_AUDIO_DRIVER=dummy`; use `SDL_AUDIO_DRIVER=goo-unavailable` together with
-`GOO_AUDIO_UNAVAILABLE_SMOKE=1` to check optional device failure. Linux and macOS CI
-publishes and runs both cases as NativeAOT with the packaged SDL payload.
-
-## Native queue wake regression
-
-The native queue wake regression check runs the normal window scheduler while
-deliberately deferring the next frame. Both submit and present completions must
-be processed before the frame deadline or idle timeout, and a held worker must
-still allow a blocking wait:
-
-```sh
 dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Release
-GOO_QUEUE_WAKE_SMOKE=1 dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 ```
 
-CI runs this gate in the portable Vulkan checks through the headless Wayland wrapper.
-`PathIdentityTests` in the core behavior suite also checks allocation-free repeated
-source lookup, structural equality under hash collisions, and mutable path revisions.
+`Goo.VulkanProof` contains the retained text and image proof lanes.
+`Goo.AsyncReadbackSmoke` contains the current window, readback, shader, queue,
+timeline, upload, image, and clipping lanes. Their exact environment variables
+and launch commands are defined in [CI](../.github/workflows/ci.yml).
 
-## Diagnostic capture retry
-
-`GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1` in `Goo.AsyncReadbackSmoke` holds a real
-Vulkan submission, checks that diagnostic capture reports pending during Busy,
-then releases the queue and verifies three image captures. The CLI test suite
-also checks pending retries and timeout without writing a partial image.
-
-## Window activation
-
-`GOO_WINDOW_ACTIVATION_SMOKE=1` exercises repeated native activation requests,
-preserved editor state, minimized-window requests, and closed-window rejection.
-It checks that requests do not synthesize focus changes. The observed native
-focus and window state are reported separately because compositor policy can
-deny activation without reporting an error. Linux CI runs this with Vulkan
-diagnostics through the headless Wayland wrapper.
-
-## Timeline completion
-
-Run the shared graphics timeline completion gate with diagnostics:
-
-```sh
-dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Release
-GOO_VK_DIAGNOSTICS=1 GOO_TIMELINE_COMPLETION_SMOKE=1 \
-  dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-```
-
-The gate checks that validation exception rollback and deferred enqueue consume no serial,
-held-window and offscreen submissions receive consecutive accepted FIFO serials,
-and poll or zero-time waits do not report held work complete. Shared GPU timeline
-completion must still reconcile each CPU mailbox. The gate also validates offscreen
-pixels and closes both windows without Vulkan validation, fatal, or object leaks.
-Linux native CI runs it through the headless Wayland wrapper.
-
-## Primitive upload metrics
-
-`GOO_PRIMITIVE_METRICS_SMOKE=1` runs the native full, unchanged, sparse, abort,
-effect-tail, and flush-call accounting gate in `Goo.AsyncReadbackSmoke`.
-Linux native CI runs it through the headless Wayland wrapper.
-
-`GOO_PRIMITIVE_UPLOAD_BENCHMARK=1` runs the fixed 1,000-box benchmark. Select
-`GOO_PRIMITIVE_UPLOAD_WORKLOAD=unchanged|sparse|full` and configure the existing
-`GOO_PRIMITIVE_UPLOAD_WARMUP` and `GOO_PRIMITIVE_UPLOAD_SAMPLES` counts. Output
-includes frame P50/P95/P99/max, allocation measurements, and measured-interval
-cumulative CPU-written, CPU-compared, CPU-write-operation, and submitted-transfer
-counters.
-
-Primitive frame counters separate CPU staging work, transfer preparation, native command recording, and accepted submissions. They count logical operations and byte lengths, not physical memory-bus traffic or GPU execution time. `SubmittedTransferBytes` means submission succeeded and its completion was reconciled on the host. It does not mean GPU execution or presentation has completed.
-
-| Field | Meaning and accounting point |
-| --- | --- |
-| `CpuWrittenBytes` | Bytes written into mapped staging by record writes, effect-data copies, and the empty-frame sentinel. Counted when written, including work later aborted. |
-| `CpuWriteOperations` | One per 128-byte record write, effect-data copy, or sentinel write. Not individual word stores or map calls. |
-| `CpuComparedBytes` | Bytes examined per operand when comparing staging records with CPU history. Counts the differing word and stops at the first difference. An unchanged 128-byte record compares 128 bytes from each operand. Full preparation skips comparison. |
-| `HistoryCopiedBytes` | Bytes copied from staging into CPU history after successful submission. This is separate from staging writes and comparison reads. |
-| `PlannedTransferBytes` | Sum of dirty primitive and effect-data ranges from a completed preparation. Includes plans subsequently aborted. |
-| `SkippedTransferBytes` | Prepared payload bytes omitted from that transfer plan. These bytes may still have been written and compared by the CPU. |
-| `UploadRangeCount` | Number of planned `VkBufferCopy` regions. Multiple regions can use one native copy command. |
-| `FlushRequests` | Nonempty transfer ranges passed to the allocator's flush helper. Coherent-memory no-ops still count as requests. |
-| `NativeFlushCalls` | Actual calls to `vkFlushMappedMemoryRanges`, including calls that return an error. Coherent-memory early returns count zero. |
-| `RecordedCopyCommands` | Actual `vkCmdCopyBuffer` calls made while recording. Aborting a recorded frame does not erase this CPU work. |
-| `RecordedBarriers` | Transfer-to-shader buffer barrier commands recorded for the primitive payload. |
-| `SubmittedTransferBytes` | Planned bytes accepted at the existing successful-submission/history-publication boundary. Abort adds zero. Repeated reconciliation of the same submission adds zero. |
-| `DirtyRecordCount`, `FullUpload`, `RetainedReuse` | Properties of the completed transfer plan. `FullUpload` describes a full plan, not proof of submission. |
-
-`Total*` fields accumulate the same events over the frame-data owner's lifetime and saturate at `uint64.MaxValue`. Each successful `BeginPrepare` resets the per-preparation snapshot. Abort retains the snapshot and incurred totals. Total full uploads count completed full preparations. Allocation, descriptor updates, scene compilation, text/clip uploads, and driver-internal work are outside these primitive counters.
-
-## All Blob benchmark
-
-`GOO_ALL_BLOB_BENCHMARK=1` runs an optional 1,000-cell retained benchmark for
-`container`, `text`, `image`, `shape`, `button`, `text-entry`, or `text-editor`.
-Select the kind with `GOO_ALL_BLOB_KIND` and select `unchanged`, `sparse`, or
-`full` with `GOO_ALL_BLOB_MODE`. Configure up to 300 warm frames with
-`GOO_ALL_BLOB_WARMUP` and up to 2,000 measured frames with
-`GOO_ALL_BLOB_SAMPLES`.
-
-The root builds once. Each measured update changes only leaf opacity between
-1.0 and 0.75: zero leaves for unchanged, one leaf for sparse, and all 1,000
-leaves for full. The output reports host frame wall time, managed allocation,
-process and managed-memory samples, Goo allocation counters, and Vulkan
-timestamp stages. Main is the outer render-pass scope and upload is separate.
-Effects and offscreen scopes can nest inside main, so stage times must not be
-summed. Two cold update frames are measured after the initial untimed render
-and before warmup. These are not application startup or first-paint times.
-Allocation output includes P50, P95, and P99. On Linux, a post-GC snapshot pairs
-managed retained bytes with RSS and PSS from one `/proc/self/smaps_rollup` read.
-This diagnostic benchmark is not run automatically by CI.
-
-## Pipeline identity
-
-Run the native pipeline identity gate with diagnostics:
-
-```sh
-dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Release
-GOO_VK_DIAGNOSTICS=1 GOO_PIPELINE_IDENTITY_SMOKE=1 \
-  dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-```
-
-The gate checks that separately loaded identical shader programs share a pipeline,
-distinct bytes remain distinct under hash collisions, effect parameters and data stay
-independent, rendered pixels remain correct, and close/reopen releases resources.
-Linux native CI runs it through the headless Wayland wrapper.
-
-## Project map
+## Other platform checks
 
 | Project | Purpose |
 | --- | --- |
-| `Goo.ApiContractTests` | Approved public API and generated XML documentation |
-| `Goo.CoreBehaviorTests` | Cells, reconciliation, layout, style, motion, input, text, accessibility, and allocation behavior |
-| `Goo.VulkanAbiSmoke` | Vulkan bindings, text-provider ABI, retained path encoding, and upload contracts |
-| `Goo.AsyncReadbackSmoke` | Vulkan pixels, clipping, effects, input, pacing, windowing, and performance workloads |
-| `Goo.FailedIdleSmoke` | Multi-window lifecycle, surface loss, device loss, recovery, and terminal failure behavior |
-| `Goo.PackageSmoke` | Clean NuGet consumer, packaged native assets, and public runtime behavior |
-| `Goo.VulkanProof` | Low-level shader, text, image, path, and readback proofs |
+| `Goo.AudioSmoke` | SDL audio behavior and unavailable-device handling |
+| `Goo.ImageLoadingSmoke` | Packaged NativeAOT image loading |
+| `Goo.PackageSmoke` | Clean NuGet consumer and packaged runtime assets |
+| `Goo.AndroidSmoke` | Android packaging, lifecycle, rendering, and input |
+| `Goo.AndroidSmoke.Desktop` | Desktop host for the shared Android scene |
 
-## Linux requirements
-
-Windowed Vulkan checks require:
-
-- Linux x86-64, kernel 6.6 or newer
-- glibc 2.27 or newer
-- Wayland 1.18 or newer
-- Vulkan 1.3
-- `VK_KHR_swapchain`
-- Timeline semaphores, synchronization2, and dynamic rendering
-- `R16G16B16A16_SINT` uniform texel-buffer support
-- Khronos validation layers for validation runs
-
-Surface and swapchain maintenance extensions select the asynchronous
-presentation-retirement path when available. The compatibility path does not
-require them.
-
-`Goo.VulkanProof` keeps maintenance-specific fast-path proofs; the package
-compatibility smoke is the runtime support gate when those extensions are
-absent.
-
-## Package verification
-
-The complete package flow is defined in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). It:
-
-1. Builds pinned Linux x64 and macOS arm64 native payloads.
-2. Builds Goo and verification projects with warnings as errors.
-3. Runs portable Vulkan proofs and the M1 MoltenVK window smoke.
-4. Runs API and behavior tests.
-5. Packs Goo and the SVG compiler with all runtime assets.
-6. Publishes clean managed and NativeAOT package consumers.
-7. Stages signed macOS and Linux bundles.
-8. Validates native dependencies, checksums, and the bundle size limit.
-
-That workflow is the authoritative source for native environment variables and exact release commands.
-
-## Linux compatibility
-
-[`qualify-linux-runtime.sh`](../.github/scripts/qualify-linux-runtime.sh) runs
-the packaged consumer, resolves every native dependency, and optionally runs
-real multi-window Vulkan rendering under a headless Wayland compositor:
-
-```sh
-DOTNET=/opt/dotnet/dotnet \
-GOO_EXPECT_KERNEL_PREFIX=6.6 \
-GOO_EXPECT_GLIBC=2.39 \
-GOO_COMPAT_WINDOW_SMOKE=1 \
-VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
-.github/scripts/qualify-linux-runtime.sh artifacts/linux-x64
-```
-
-The current boundary evidence is recorded in
-[`linux-compatibility.json`](linux-compatibility.json). Distribution names are
-test-fixture details, not support claims.
-
-## Evidence rules
-
-- Run Release builds with warnings treated as errors.
-- Use a clean package cache for package-consumer checks.
-- Enable Khronos validation for Vulkan correctness claims.
-- Do not describe software Vulkan results as hardware performance evidence.
-- Record hardware, driver, runtime, warmup, and sample counts for performance results.
-
-## Embedded host lifecycle
-
-`GOO_EMBEDDED_HOST_SMOKE=1` uses a host-owned native Vulkan surface with separate
-logical and framebuffer sizes. It verifies idle frame demand, suspension, queued
-updates, surface destruction and recreation, retained Cell state, captured pixels,
-and final disposal. Core behavior tests cover owner-thread rules, semantic platform
-input, composition, and touch scrolling without exposing retained nodes.
-
-## Android input connection
-
-The Android smoke APK can run real InputConnection regression checks against the
-shared retained scene. Start its activity with the boolean intent extra
-`goo.input_smoke=true`. Logcat tag `GooInputSmoke` reports `PASS` after checking
-sanitized cursor placement, composing regions, deletion, code points, batched
-edits, password privacy, stale connections, and multiline composition. A failed
-assertion terminates the smoke app with the failing operation.
+Native tests must run on the target operating system. Do not treat software
+Vulkan results as hardware performance evidence.

@@ -79,8 +79,7 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     opacity float32,
     context VulkanSceneTraversalContext,
-    requireNoChildren bool) bool{
-      if (node.Kind != NodeKind.Container && node.Kind != NodeKind.Button)
+    requireNoChildren bool) bool-> !((node.Kind != NodeKind.Container && node.Kind != NodeKind.Button)
         || (requireNoChildren && node.Children.Count != 0)
         || bounds.IsEmpty
         || !finiteVulkanSceneValue(opacity)
@@ -108,11 +107,7 @@ internal partial class VulkanSceneCompiler {
         || node.Hovered || node.Pressed || node.KeyboardPressed
         || node.Focused || node.Disabled
         || node.PointerPressCount != 0
-        || !RetainedLeafContextDefault(context) {
-          return false
-        }
-      return true
-    }
+        || !RetainedLeafContextDefault(context))
 
   private func RetainedBoxEligible(
     node Node,
@@ -124,15 +119,12 @@ internal partial class VulkanSceneCompiler {
         || node.BackgroundColor.A <= 0.0F {
           return false
         }
-      if node.BorderStyle != BorderStyle.Solid
+      return !(node.BorderStyle != BorderStyle.Solid
         || HasBorderWidth(node, bounds)
         || node.BorderTopColor.A > 0.0F
         || node.BorderRightColor.A > 0.0F
         || node.BorderBottomColor.A > 0.0F
-        || node.BorderLeftColor.A > 0.0F {
-          return false
-        }
-      return true
+        || node.BorderLeftColor.A > 0.0F)
     }
 
   private func RetainedBorderVisible(

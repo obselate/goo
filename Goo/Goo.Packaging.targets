@@ -269,7 +269,7 @@
   </Target>
   <Target Name="ValidateGooAuthoringTools" BeforeTargets="GenerateNuspec">
     <Error Condition="!Exists('$(GooGsharpToolsRoot)/compiler/gsc.dll') or !Exists('$(GooGsharpToolsRoot)/formatter/gsfmt.dll')"
-           Text="Build the pinned authoring tools before packing: python3 .github/scripts/bootstrap-gsharp.py artifacts/gsharp" />
+           Text="Build the pinned authoring tools before packing: ./bootstrap.sh --gsharp-only or bootstrap.bat --gsharp-only" />
   </Target>
   <Target Name="IncludeGooImplementationAssemblies"
           DependsOnTargets="BuildOnlySettings;ResolveReferences">
