@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 - 2026-09-18
+
+### Fixed
+
+- Multiline text editors now measure content before applying maximum height, so short prompts remain compact and grow as text is added. Explicit fixed heights remain unchanged.
+
 ## 0.6.0 - 2026-09-18
 
 ### Added

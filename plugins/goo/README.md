@@ -19,7 +19,7 @@ Standalone G# Goo authoring guidance and twelve stdio MCP tools. Requires Python
 
 ## Install
 
-Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.6.0`.
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.6.1`.
 Confirm it is available:
 
 ```sh

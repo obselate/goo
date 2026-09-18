@@ -6,7 +6,7 @@ import System.Collections.Generic
 import System.IO
 
 func Main() {
-    Window.ConfigureApplication("Goo DevTools", "0.6.0", "io.github.obselate.goo.devtools")
+    Window.ConfigureApplication("Goo DevTools", "0.6.1", "io.github.obselate.goo.devtools")
     let sample = Environment.GetEnvironmentVariable("GOO_DEVTOOLS_SAMPLE") == "1"
     || HasArgument("--sample")
     let endpoints = DiagnosticEndpointDiscovery.Scan(Directory.GetCurrentDirectory())
