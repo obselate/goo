@@ -122,7 +122,7 @@ internal partial class TextEditorLayouts {
       height float32, heightMode MeasureMode) YGSize{
         let n = nodeFromYoga(yoga)
         let constraint = widthMode == MeasureMode.Undefined ? -1.0F : width
-        let heightConstraint = heightMode == MeasureMode.Undefined ? -1.0F : height
+        let heightConstraint = if heightMode == MeasureMode.Exactly { height } else { -1.0F }
         let layout = For(n, constraint, heightConstraint)
         return TextLayouts.clampMeasuredSize(layout.Width, layout.Height, width, widthMode, height, heightMode)
       }
