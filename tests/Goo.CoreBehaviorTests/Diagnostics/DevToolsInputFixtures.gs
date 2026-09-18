@@ -35,6 +35,47 @@ internal class DevToolsInputFixtures {
     return 0
   }
 
+  private func findTarget(session DevToolsSession, key string) string {
+    let snapshot = session.CaptureSnapshot(true)
+    for node in snapshot.Added { if node.Key == key { return node.Target } }
+    return ""
+  }
+
+  func OpaqueTargetsRejectOtherWindowsAndRemounts() bool {
+    let firstRoot = DevToolsInputCell{}
+    let secondRoot = DevToolsInputCell{}
+    let firstWindow = Window{Root: firstRoot, Width: 320, Height: 220}
+    let secondWindow = Window{Root: secondRoot, Width: 320, Height: 220}
+    firstWindow.Open()
+    secondWindow.Open()
+    let first = firstWindow.AttachDiagnostics(true)
+    let second = secondWindow.AttachDiagnostics(true)
+    try {
+      firstWindow.UpdateTree()
+      secondWindow.UpdateTree()
+      let firstTarget = findTarget(first, "action")
+      let secondTarget = findTarget(second, "action")
+      if firstTarget == "" || secondTarget == "" || firstTarget == secondTarget { return false }
+      var wrongWindow = false
+      try { send(second, "{\"event\":\"click\",\"target\":\"" + firstTarget + "\"}") }
+      catch (_ KeyNotFoundException) { wrongWindow = true }
+      if !wrongWindow || secondRoot.Clicks != 0 { return false }
+      send(first, "{\"event\":\"click\",\"target\":\"" + firstTarget + "\"}")
+      if firstRoot.Clicks != 1 { return false }
+      firstRoot.Show = false
+      firstRoot.Rebuild()
+      var stale = false
+      try { send(first, "{\"event\":\"click\",\"target\":\"" + firstTarget + "\"}") }
+      catch (_ KeyNotFoundException) { stale = true }
+      return stale && firstRoot.Clicks == 1
+    } finally {
+      first.Dispose()
+      second.Dispose()
+      firstWindow.Close()
+      secondWindow.Close()
+    }
+  }
+
   func OptInRoutingSettlementAndStaleTargets() bool {
     let root = DevToolsInputCell{}
     let window = Window{Root: root, Width: 320, Height: 220}
@@ -57,8 +98,8 @@ internal class DevToolsInputFixtures {
       send(session, "{\"event\":\"click\",\"nodeId\":" + entry.ToString() + "}")
       send(session, "{\"event\":\"text\",\"text\":\"hello\"}")
       if root.Value != "hello" { return false }
-      send(session, "{\"event\":\"key.down\",\"key\":\"Backspace\"}")
-      send(session, "{\"event\":\"key.up\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.down\",\"gestureId\":\"key-gesture\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.up\",\"gestureId\":\"key-gesture\",\"key\":\"Backspace\"}")
       if root.Value != "hell" { return false }
       root.Show = false
       root.Rebuild()
@@ -77,18 +118,37 @@ internal class DevToolsInputFixtures {
     let session = window.AttachDiagnostics(true)
     try {
       window.UpdateTree()
+      let action = find(session, "action")
       let drag = find(session, "drag")
-      send(session, "{\"event\":\"pointer.down\",\"nodeId\":" + drag.ToString() + "}")
-      send(session, "{\"event\":\"pointer.move\",\"x\":300,\"y\":200}")
+      let gesture = "test-gesture"
+      send(session, "{\"event\":\"pointer.down\",\"gestureId\":\"" + gesture
+        +"\",\"nodeId\":" + action.ToString() + "}")
+      let pressed = session.CaptureSnapshot(true)
+      var pressedState = false
+      for node in pressed.Added { if node.Id == action { pressedState = node.Pressed } }
+      if !pressedState { return false }
+      send(session, "{\"event\":\"pointer.cancel\",\"gestureId\":\"" + gesture + "\"}")
+      let cancelled = session.CaptureSnapshot(true)
+      for node in cancelled.Added { if node.Id == action && node.Pressed { return false } }
+      let dragGesture = "drag-gesture"
+      send(session, "{\"event\":\"pointer.down\",\"gestureId\":\"" + dragGesture
+        +"\",\"nodeId\":" + drag.ToString() + "}")
+      var rejectedOwner = false
+      try { send(session, "{\"event\":\"pointer.move\",\"gestureId\":\"other\",\"x\":300,\"y\":200}") }
+      catch (error DiagnosticGestureException) { rejectedOwner = error.Code == "gesture-owned" }
+      if !rejectedOwner || root.Moves != 0 { return false }
+      send(session, "{\"event\":\"pointer.move\",\"gestureId\":\"" + dragGesture
+        +"\",\"x\":300,\"y\":200}")
       if root.Moves != 1 { return false }
-      send(session, "{\"event\":\"pointer.cancel\"}")
+      send(session, "{\"event\":\"pointer.cancel\",\"gestureId\":\"" + dragGesture + "\"}")
       if root.Cancels != 1 || root.Clicks != 0 { return false }
       var rejected int32
       for json in []string {"{\"event\":\"click\",\"x\":1}", "{\"event\":\"key.down\",\"key\":\"999\"}",
-        "{\"event\":\"wheel\",\"x\":1,\"y\":1,\"deltaY\":1e100}"} {
+        "{\"event\":\"wheel\",\"x\":1,\"y\":1,\"deltaY\":1e100}",
+        "{\"event\":\"text\",\"text\":\"ignored\",\"target\":\"foreign\"}"} {
           try { send(session, json) } catch (_ ArgumentException) { rejected++ }
         }
-      return rejected == 3
+      return rejected == 4
     } finally { session.Dispose()
       window.Close() }
   }

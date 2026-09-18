@@ -4,6 +4,17 @@ import System
 
 /// Hosts platform-neutral accessibility semantics for a Goo window.
 public partial class Window {
+  internal func CaptureDiagnosticsAccessibility(root Node?) AccessibilityManager {
+    if let manager = accessibility {
+      manager.CaptureForDiagnostics(root)
+      return manager
+    }
+    let manager = AccessibilityManager(this)
+    accessibility = manager
+    manager.CaptureForDiagnostics(root)
+    return manager
+  }
+
   /// Gets or sets the adapter that receives this window's retained semantic tree.
   public prop AccessibilityAdapter AccessibilityAdapter? {
     get {

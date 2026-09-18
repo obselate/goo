@@ -48,7 +48,30 @@ applied while the app is running.
 
 For a new project, start with the [quick start](../../README.md#quick-start).
 
+To allow an agent to inspect and interact with the app, launch with `--input`:
+
+```sh
+goo dev --input --no-watch --project HelloGoo/HelloGoo.gsproj
+```
+
+This enables both diagnostics and input in the launched app. No environment
+variables or application code changes are needed. The `--input` option requires
+a CLI build from this checkout until its next release.
+
 ## Inspect an app that is already running
+
+List live endpoints without connecting:
+
+```sh
+goo list --json
+goo list --pid 12345 --project HelloGoo/HelloGoo.gsproj --json
+```
+
+The returned `window` field is a stable window ID. Pass it to `--window` to
+select a window even when several windows share a title. `--window` also accepts
+an unambiguous title substring. Use the same `--project` on subsequent commands
+when the descriptors are stored in the application's `.goo/devtools` directory.
+The `list` command requires a CLI build from this checkout until its next release.
 
 If the app was launched with diagnostics enabled, open the inspector separately:
 
@@ -102,3 +125,7 @@ See the setup guides for [VS Code](../../integrations/vscode/README.md) and
 
 For work on DevTools itself, see [development](development.md) and the
 [local protocol](protocol.md).
+
+For AI agents, the [Goo plugin](../../plugins/goo/README.md) exposes documentation,
+starter generation, live target discovery, full snapshots, screenshots, and
+separately opted-in application input as MCP tools.

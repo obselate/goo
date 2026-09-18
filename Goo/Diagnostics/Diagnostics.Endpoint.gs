@@ -4,7 +4,6 @@ import System
 import System.Diagnostics
 import System.Globalization
 import System.IO
-import System.Text
 import System.Threading
 
 internal class DiagnosticEndpointDiscovery {
@@ -24,8 +23,9 @@ internal class DiagnosticEndpointDiscovery {
       let descriptorPath = Path.Combine(root, "goo-" + suffix + ".json")
       let pipeName = "goo-" + suffix
       let windowId = "window-" + suffix
+      let sessionId = Guid.NewGuid().ToString("N")
       let endpoint = DiagnosticEndpoint(processId, processName, protocol, 1, "named-pipe",
-        pipeName, descriptorPath, created, windowId)
+        pipeName, descriptorPath, created, windowId, sessionId)
       lock gate {
         Directory.CreateDirectory(root)
         secureDirectory(root)
@@ -60,9 +60,17 @@ internal class DiagnosticEndpointDiscovery {
     }
 
     private func writeDescriptor(endpoint DiagnosticEndpoint, title string) {
-      let builder = StringBuilder()
-      builder.Append("{\"pid\":").Append(endpoint.ProcessId).Append(",\"process\":\"").Append(escape(endpoint.ProcessName)).Append("\",\"protocol\":\"").Append(endpoint.Protocol).Append("\",\"version\":").Append(endpoint.Version).Append(",\"transport\":\"").Append(endpoint.Transport).Append("\",\"pipe\":\"").Append(escape(endpoint.PipeName)).Append("\",\"createdUtc\":\"").Append(endpoint.CreatedUtc).Append("\",\"startedAt\":\"").Append(endpoint.CreatedUtc).Append("\",\"windows\":[{\"id\":\"").Append(endpoint.WindowId).Append("\",\"title\":\"").Append(escape(title)).Append("\"}]}")
-      File.WriteAllText(endpoint.DescriptorPath, builder.ToString(), Encoding.UTF8)
+      let json = "{\"pid\":" + endpoint.ProcessId.ToString(CultureInfo.InvariantCulture)
+      +",\"process\":" + DiagnosticJson.Quote(endpoint.ProcessName)
+      +",\"protocol\":" + DiagnosticJson.Quote(endpoint.Protocol)
+      +",\"version\":" + endpoint.Version.ToString(CultureInfo.InvariantCulture)
+      +",\"transport\":" + DiagnosticJson.Quote(endpoint.Transport)
+      +",\"pipe\":" + DiagnosticJson.Quote(endpoint.PipeName)
+      +",\"createdUtc\":" + DiagnosticJson.Quote(endpoint.CreatedUtc)
+      +",\"startedAt\":" + DiagnosticJson.Quote(endpoint.CreatedUtc)
+      +",\"windows\":[{\"id\":" + DiagnosticJson.Quote(endpoint.WindowId)
+      +",\"title\":" + DiagnosticJson.Quote(title) + "}]}"
+      File.WriteAllText(endpoint.DescriptorPath, json, System.Text.Encoding.UTF8)
       try {
         if !OperatingSystem.IsWindows() {
           File.SetUnixFileMode(endpoint.DescriptorPath,
@@ -82,9 +90,5 @@ internal class DiagnosticEndpointDiscovery {
       }
     }
 
-    private func escape(value string) string {
-      if value == nil { return "" }
-      return value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")
-    }
   }
 }

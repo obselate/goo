@@ -25,9 +25,11 @@ internal class DiagnosticEndpoint {
   internal prop DescriptorPath string{ get; private set; }
   internal prop CreatedUtc string{ get; private set; }
   internal prop WindowId string{ get; private set; }
+  internal prop SessionId string{ get; private set; }
 
   internal init(processId int32, processName string, protocol string, version int32,
-    transport string, pipeName string, descriptorPath string, createdUtc string, windowId string) {
+    transport string, pipeName string, descriptorPath string, createdUtc string, windowId string,
+    sessionId string) {
       ProcessId = processId
       ProcessName = processName
       Protocol = protocol
@@ -37,11 +39,13 @@ internal class DiagnosticEndpoint {
       DescriptorPath = descriptorPath
       CreatedUtc = createdUtc
       WindowId = windowId
+      SessionId = sessionId
     }
 }
 
 internal class DiagnosticNodeSnapshot {
   internal var Id int64
+  internal var Target string
   internal var ParentId int64?
   internal var ChildIndex int32
   internal var ChildIds IReadOnlyList[int64]
@@ -55,6 +59,12 @@ internal class DiagnosticNodeSnapshot {
   internal var ContentBox DiagnosticRect
   internal var MarginBox DiagnosticRect
   internal var ClipBox DiagnosticRect
+  internal var Visible bool
+  internal var Clipped bool
+  internal var ClipApproximate bool
+  internal var Actionable bool
+  internal var ActionStatus string
+  internal var ActionPoint DiagnosticPoint?
   internal var ScrollOffset DiagnosticPoint
   internal var ContentSize DiagnosticPoint
   internal var Width string
@@ -118,6 +128,7 @@ internal class DiagnosticNodeSnapshot {
   internal var HasPointerHandlers bool
   internal var HasKeyboardHandlers bool
   internal var AccessibilityRole string
+  internal var AccessibilityId int64?
   internal var AccessibilityCustomRole string
   internal var AccessibilityName string
   internal var AccessibilityDescription string
@@ -131,6 +142,12 @@ internal class DiagnosticNodeSnapshot {
   internal var AccessibilityInvalid bool?
   internal var AccessibilityBusy bool?
   internal var AccessibilityState string
+  internal var Text string
+  internal var TextLength int32
+  internal var TextTruncated bool
+  internal var SelectionStart int32?
+  internal var SelectionLength int32?
+  internal var Caret int32?
   internal var Configuration string
   internal var Computed string
   internal var State string
@@ -140,6 +157,7 @@ internal class DiagnosticNodeSnapshot {
 
   internal init() {
     ChildIds = []int64{}
+    Target = ""
     Kind = ""
     Key = ""
     Content = ""
@@ -197,6 +215,8 @@ internal class DiagnosticNodeSnapshot {
     AccessibilityValue = ""
     AccessibilityChecked = ""
     AccessibilityState = ""
+    ActionStatus = ""
+    Text = ""
     Configuration = ""
     Computed = ""
     State = ""

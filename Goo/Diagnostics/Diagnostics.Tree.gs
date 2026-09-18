@@ -9,9 +9,11 @@ import System.Text
 
 internal class DiagnosticNodeIdentityValue {
   internal let Id int64
+  internal let Target string
 
-  internal init(value int64) {
+  internal init(value int64, target string) {
     Id = value
+    Target = target
   }
 }
 
@@ -30,8 +32,14 @@ internal class DiagnosticNodeIdentity {
     }
     let assigned = nextValue
     nextValue = nextValue == Int64.MaxValue ? 1 : nextValue + 1
-    values.Add(n, DiagnosticNodeIdentityValue(assigned))
+    values.Add(n, DiagnosticNodeIdentityValue(assigned, Guid.NewGuid().ToString("N")))
     return assigned
+  }
+
+  internal func Target(n Node) string {
+    Get(n)
+    if values.TryGetValue(n, out var value) { return value.Target }
+    throw InvalidOperationException("Diagnostic target identity is unavailable.")
   }
 
   internal func TryGet(n Node) int64? {
@@ -44,19 +52,23 @@ internal class DiagnosticNodeIdentity {
 }
 
 internal class DiagnosticTreeState {
+  private let owner Window?
   private let identity DiagnosticNodeIdentity
   private var previous Dictionary[int64, DiagnosticNodeSnapshot]
   private var nodes Dictionary[int64, WeakReference]
+  private var targets Dictionary[string, int64]
   private var previousRoot WeakReference?
   private var revisionNumber int64
   private var initialized bool
   private var previousHoveredId int64
   private var previousSelectedId int64
 
-  internal init() {
+  internal init(window Window? = nil) {
+    owner = window
     identity = DiagnosticNodeIdentity()
     previous = Dictionary[int64, DiagnosticNodeSnapshot]()
     nodes = Dictionary[int64, WeakReference]()
+    targets = Dictionary[string, int64](StringComparer.Ordinal)
     previousRoot = nil
     revisionNumber = 0
   }
@@ -65,12 +77,14 @@ internal class DiagnosticTreeState {
     initialized = false
     previous.Clear()
     nodes.Clear()
+    targets.Clear()
     previousRoot = nil
     previousHoveredId = 0
     previousSelectedId = 0
   }
 
-  internal func Capture(root Node?, windowId string, hovered Node?, selected Node?) DiagnosticSnapshot {
+  internal func Capture(root Node?, windowId string, hovered Node?, selected Node?,
+    semantics AccessibilityManager? = nil) DiagnosticSnapshot {
     revisionNumber = revisionNumber == Int64.MaxValue ? 1 : revisionNumber + 1
     let current Dictionary[int64, DiagnosticNodeSnapshot] = Dictionary[int64, DiagnosticNodeSnapshot]()
     let added = List[DiagnosticNodeSnapshot]()
@@ -79,7 +93,7 @@ internal class DiagnosticTreeState {
     var rootId int64
     if let treeRoot = root {
       rootId = identity.Get(treeRoot)
-      collect(treeRoot, nil, 0, current)
+      collect(treeRoot, nil, 0, current, semantics)
       previousRoot = WeakReference(treeRoot)
     } else {
       previousRoot = nil
@@ -103,6 +117,8 @@ internal class DiagnosticTreeState {
       if !current.ContainsKey(pair.Key) { staleNodes.Add(pair.Key) }
     }
     for id in staleNodes { nodes.Remove(id) }
+    targets.Clear()
+    for pair in current { targets[pair.Value.Target] = pair.Key }
     let hoveredId = nodeId(hovered, current)
     let selectedId = nodeId(selected, current)
     let selectionChanged = hoveredId != previousHoveredId || selectedId != previousSelectedId
@@ -113,6 +129,13 @@ internal class DiagnosticTreeState {
     return DiagnosticSnapshot(revisionNumber, full, windowId,
       optionalId(rootId), optionalId(hoveredId), optionalId(selectedId), added, updated, removed,
       selectionChanged)
+  }
+
+  internal func FullSnapshot(current DiagnosticSnapshot) DiagnosticSnapshot {
+    let added = List[DiagnosticNodeSnapshot](previous.Count)
+    for pair in previous { added.Add(pair.Value) }
+    return DiagnosticSnapshot(current.Sequence, true, current.WindowId, current.RootId, current.HoveredId,
+      current.SelectedId, added, List[DiagnosticNodeSnapshot](), List[int64](), false)
   }
 
   internal func Find(id int64) DiagnosticNodeSnapshot? {
@@ -136,6 +159,16 @@ internal class DiagnosticTreeState {
     return node
   }
 
+  internal func FindTarget(target string) Node? {
+    if !targets.TryGetValue(target, out var id) { return nil }
+    return FindNode(id)
+  }
+
+  internal func FindTargetSnapshot(target string) DiagnosticNodeSnapshot? {
+    if !targets.TryGetValue(target, out var id) { return nil }
+    return Find(id)
+  }
+
   private func nodeId(node Node?, values Dictionary[int64, DiagnosticNodeSnapshot]) int64 {
     guard let value = node else { return 0 }
     let id = identity.TryGet(value)
@@ -146,25 +179,27 @@ internal class DiagnosticTreeState {
   private func optionalId(value int64) int64 ? -> value == 0 ? nil : value
 
   private func collect(n Node, parent Node?, childIndex int32,
-    destination Dictionary[int64, DiagnosticNodeSnapshot]) {
+    destination Dictionary[int64, DiagnosticNodeSnapshot], semantics AccessibilityManager?) {
       if n.Retired {
         return
       }
       let id = identity.Get(n)
       nodes[id] = WeakReference(n)
-      let snapshot = makeSnapshot(n, parent, childIndex, id)
+      let snapshot = makeSnapshot(n, parent, childIndex, id, semantics)
       destination.Add(id, snapshot)
       var index int32
       for child in n.Children {
-        collect(child, n, index, destination)
+        collect(child, n, index, destination, semantics)
         index = index + 1
       }
     }
 
-  private func makeSnapshot(n Node, parent Node?, childIndex int32, id int64)
+  private func makeSnapshot(n Node, parent Node?, childIndex int32, id int64,
+    semantics AccessibilityManager?)
   DiagnosticNodeSnapshot{
     let result = DiagnosticNodeSnapshot()
     result.Id = id
+    result.Target = identity.Target(n)
     result.ParentId = if let owner = parent { identity.Get(owner) } else { nil }
     result.ChildIndex = childIndex
     let childIds = List[int64](n.Children.Count)
@@ -217,7 +252,10 @@ internal class DiagnosticTreeState {
       X: float64(margin.X), Y: float64(margin.Y),
       Width: float64(margin.W), Height: float64(margin.H),
     }
-    result.ClipBox = result.BorderBox
+    result.ClipBox = visibleBounds(n, result.BorderBox)
+    result.Visible = result.ClipBox.Width > 0.0 && result.ClipBox.Height > 0.0
+    result.Clipped = !sameRect(result.ClipBox, result.BorderBox)
+    result.ClipApproximate = hasComplexClip(n)
     result.ScrollOffset = DiagnosticPoint{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
     result.ContentSize = DiagnosticPoint{ X: float64(n.ContentW), Y: float64(n.ContentH) }
     result.Width = lengthText(n.Width)
@@ -283,13 +321,15 @@ internal class DiagnosticTreeState {
     result.HasPointerHandlers = n.OnPointerDown != nil || n.OnPointerMove != nil
       || n.OnPointerUp != nil || n.OnPointerCancel != nil || n.OnWheel != nil
     result.HasKeyboardHandlers = InputCallbacks.KeyDown(n) != nil || InputCallbacks.KeyUp(n) != nil
-    if let accessibility = AccessibilityMetadata.Value(n) {
+    let accessibility = if let manager = semantics { manager.DiagnosticNodeFor(n) } else { nil }
+    if let accessibility = accessibility {
+      result.AccessibilityId = accessibility.Id.Value
       result.AccessibilityRole = accessibility.Role.ToString()
       result.AccessibilityCustomRole = accessibility.CustomRole
       result.AccessibilityName = accessibility.Name
       result.AccessibilityDescription = accessibility.Description
       result.AccessibilityValue = accessibility.Value
-      result.AccessibilityHidden = accessibility.Hidden
+      result.AccessibilityHidden = false
       result.AccessibilityChecked = accessibility.Checked.ToString()
       result.AccessibilitySelected = accessibility.Selected
       result.AccessibilityExpanded = accessibility.Expanded
@@ -298,13 +338,171 @@ internal class DiagnosticTreeState {
       result.AccessibilityInvalid = accessibility.Invalid
       result.AccessibilityBusy = accessibility.Busy
       result.AccessibilityState = accessibility.Live.ToString()
+      result.SelectionStart = accessibility.SelectionStart
+      result.SelectionLength = accessibility.SelectionLength
+      result.Caret = accessibility.Caret
+      if let text = accessibility.TextSnapshot {
+        result.TextLength = text.Length
+        result.TextTruncated = text.Length > 16384
+        result.Text = text.GetText(TextRange{Start: 0, Length: Math.Min(text.Length, 16384)})
+      } else {
+        result.Text = accessibility.Value
+        result.TextLength = result.Text.Length
+      }
+    } else {
+      result.AccessibilityHidden = true
     }
+    resolveActionability(n, result)
     result.Configuration = configurationText(result)
     result.Computed = computedText(result)
     result.State = stateText(result)
     result.Events = eventsText(result)
     result.Fingerprint = fingerprint(result)
     return result
+  }
+
+  private func visibleBounds(n Node, border DiagnosticRect) DiagnosticRect {
+    if hidden(n) { return DiagnosticRect{} }
+    var result = border
+    var current Node? = n
+    while let ancestor = current {
+      if ancestor.HasClipPath {
+        if let clipPath = ClipPaths.Get(ancestor) {
+          let mapping = PathGeometry.Map(clipPath.Path, clipPath.Fit,
+            ancestor.Rect.X, ancestor.Rect.Y, ancestor.Rect.W, ancestor.Rect.H)
+          let geometry = PathGeometry.For(clipPath.Path)
+          if mapping.Valid {
+            let path = TransformGeometry.BoundsToWindow(ancestor,
+              geometry.MinX * mapping.ScaleX + mapping.TranslateX,
+              geometry.MinY * mapping.ScaleY + mapping.TranslateY,
+              (geometry.MaxX - geometry.MinX) * mapping.ScaleX,
+              (geometry.MaxY - geometry.MinY) * mapping.ScaleY)
+            result = intersectX(result, float64(path.X), float64(path.X + path.W))
+            result = intersectY(result, float64(path.Y), float64(path.Y + path.H))
+          } else {
+            return DiagnosticRect{}
+          }
+        }
+      }
+      if ancestor != n {
+        let clip = if ancestor.Kind == NodeKind.Editor {
+          TransformGeometry.BoundsToWindow(ancestor, BoxGeometry.ContentLeft(ancestor),
+            BoxGeometry.ContentTop(ancestor), BoxGeometry.ContentWidth(ancestor),
+            BoxGeometry.ContentHeight(ancestor))
+        } else { TransformGeometry.BoundsToWindow(ancestor) }
+        if ancestor.Parent == nil || ancestor.Kind == NodeKind.Editor
+          || ancestor.OverflowX != Overflow.Visible {
+          result = intersectX(result, float64(clip.X), float64(clip.X + clip.W))
+        }
+        if ancestor.Parent == nil || ancestor.Kind == NodeKind.Editor
+          || ancestor.OverflowY != Overflow.Visible {
+          result = intersectY(result, float64(clip.Y), float64(clip.Y + clip.H))
+        }
+      }
+      current = ancestor.Parent
+    }
+    return result
+  }
+
+  private func intersectX(value DiagnosticRect, left float64, right float64) DiagnosticRect {
+    let start = Math.Max(value.X, left)
+    let end = Math.Min(value.X + value.Width, right)
+    return DiagnosticRect{X: start, Y: value.Y, Width: Math.Max(0.0, end - start), Height: value.Height}
+  }
+
+  private func intersectY(value DiagnosticRect, top float64, bottom float64) DiagnosticRect {
+    let start = Math.Max(value.Y, top)
+    let end = Math.Min(value.Y + value.Height, bottom)
+    return DiagnosticRect{X: value.X, Y: start, Width: value.Width, Height: Math.Max(0.0, end - start)}
+  }
+
+  private func hidden(n Node) bool {
+    var current Node? = n
+    while let value = current {
+      if value.PaintInputHidden { return true }
+      current = value.Parent
+    }
+    return false
+  }
+
+  private func disabled(n Node) bool {
+    var current Node? = n
+    while let value = current {
+      if value.Disabled { return true }
+      current = value.Parent
+    }
+    return false
+  }
+
+  private func resolveActionability(n Node, result DiagnosticNodeSnapshot) {
+    guard let window = owner else {
+      result.ActionStatus = "unavailable"
+      return
+    }
+    if window.IsInputBlocked {
+      result.ActionStatus = "window-blocked"
+      return
+    }
+    if hidden(n) {
+      result.ActionStatus = "hidden"
+      return
+    }
+    if disabled(n) {
+      result.ActionStatus = "disabled"
+      return
+    }
+    guard let root = window.Tree else {
+      result.ActionStatus = "detached"
+      return
+    }
+    if !FocusScopes.Allows(root, n) {
+      result.ActionStatus = "modal-blocked"
+      return
+    }
+    if !result.Visible {
+      result.ActionStatus = "clipped"
+      return
+    }
+    if !n.HitTestSelf && !n.Focusable && n.OnClick == nil && n.OnPointerDown == nil
+      && n.OnPointerMove == nil && n.OnPointerUp == nil && n.OnWheel == nil {
+      result.ActionStatus = "not-hit-testable"
+      return
+    }
+    guard let point = verifiedPoint(root, n, result.ClipBox) else {
+      result.ActionStatus = "no-verified-point"
+      return
+    }
+    result.Actionable = true
+    result.ActionStatus = "actionable"
+    result.ActionPoint = point
+  }
+
+  private func verifiedPoint(root Node, target Node, bounds DiagnosticRect) DiagnosticPoint? {
+    let factors = []float64{0.5, 0.25, 0.75, 0.1, 0.9}
+    for y in factors {
+      for x in factors {
+        let point = DiagnosticPoint{X: bounds.X + bounds.Width * x, Y: bounds.Y + bounds.Height * y}
+        if pointTargets(root, target, point) { return point }
+      }
+    }
+    return nil
+  }
+
+  private func pointTargets(root Node, target Node, point DiagnosticPoint) bool {
+    guard let hit = hitTopmost(root, float32(point.X), float32(point.Y)) else { return false }
+    return FocusScopes.Contains(target, hit) && canReceiveInput(hit) && FocusScopes.Allows(root, hit)
+  }
+
+  private func sameRect(left DiagnosticRect, right DiagnosticRect) bool -> left.X == right.X
+    && left.Y == right.Y && left.Width == right.Width && left.Height == right.Height
+
+  private func hasComplexClip(n Node) bool {
+    var current Node? = n
+    while let value = current {
+      if value.HasClipPath || value.HasVisualTransform { return true }
+      current = value.Parent
+    }
+    return false
   }
 
   private func lengthText(value Length) string {
@@ -367,6 +565,16 @@ internal class DiagnosticTreeState {
   private func fingerprint(value DiagnosticNodeSnapshot) string {
     let builder = StringBuilder()
     builder.Append(value.Id).Append('|').Append(value.ParentId).Append('|').Append(value.ChildIndex).Append('|').Append(value.Kind).Append('|').Append(value.Key).Append('|').Append(value.Content).Append('|').Append(value.OwnerType).Append('|').Append(rectText(value.Bounds)).Append('|').Append(rectText(value.BorderBox)).Append('|').Append(rectText(value.PaddingBox)).Append('|').Append(rectText(value.ContentBox)).Append('|').Append(rectText(value.MarginBox)).Append('|').Append(rectText(value.ClipBox)).Append('|').Append(value.ScrollOffset.X).Append('|').Append(value.ScrollOffset.Y).Append('|').Append(value.ContentSize.X).Append('|').Append(value.ContentSize.Y).Append('|').Append(value.Configuration).Append('|').Append(value.Computed).Append('|').Append(value.State).Append('|').Append(value.Events).Append('|').Append(value.AccessibilityRole).Append('|').Append(value.AccessibilityCustomRole).Append('|').Append(value.AccessibilityName).Append('|').Append(value.AccessibilityDescription).Append('|').Append(value.AccessibilityValue).Append('|').Append(value.AccessibilityHidden).Append('|').Append(value.AccessibilityChecked).Append('|').Append(value.AccessibilitySelected).Append('|').Append(value.AccessibilityExpanded).Append('|').Append(value.AccessibilityReadOnly).Append('|').Append(value.AccessibilityRequired).Append('|').Append(value.AccessibilityInvalid).Append('|').Append(value.AccessibilityBusy).Append('|').Append(value.AccessibilityState)
+    builder.Append('|').Append(value.Target).Append('|').Append(value.Visible).Append('|').Append(value.Clipped)
+      .Append('|').Append(value.ClipApproximate).Append('|').Append(value.Actionable).Append('|').Append(value.ActionStatus)
+    if let actionPoint = value.ActionPoint {
+      builder.Append('|').Append(actionPoint.X).Append('|').Append(actionPoint.Y)
+    } else {
+      builder.Append("|null|null")
+    }
+    builder.Append('|').Append(value.AccessibilityId).Append('|').Append(value.Text).Append('|').Append(value.TextLength)
+      .Append('|').Append(value.TextTruncated).Append('|').Append(value.SelectionStart)
+      .Append('|').Append(value.SelectionLength).Append('|').Append(value.Caret)
     for id in value.ChildIds { builder.Append('|').Append(id) }
     return builder.ToString()
   }

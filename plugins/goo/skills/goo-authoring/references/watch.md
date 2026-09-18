@@ -41,6 +41,6 @@ If the user chooses restart-on-edit for this combination, add the following item
 
 Run `dotnet clean App.gsproj`, then `GOO_DEVTOOLS=1 dotnet watch --no-hot-reload --project App.gsproj`. Clean before switching watch modes: the tested output directory otherwise retained a bootstrap reference without its runtime dependency. This fallback reopens windows and loses application state on each restart. It follows the same explicit watch-selection rule above.
 
-The published-package integration run is `/tmp/goo-agent-e2e-k9flf08g/result.json`. All six MCP tools passed, a method delta applied without visible refresh, an added function produced `GSHR1001`, and restart-on-edit changed the PID and visible label. `scripts/verify.py` exercises this published-package scenario, not the local patched-runtime or performance comparison.
+The historical published-package integration run is `/tmp/goo-agent-e2e-k9flf08g/result.json`. Its six MCP tools passed, a method delta applied without visible refresh, an added function produced `GSHR1001`, and restart-on-edit changed the PID and visible label. The current `scripts/verify.py` checks the eight-tool agent workflow without watch. Use `tests/Goo.HotReloadSmoke/verify.py` in the checkout for reload verification.
 
-Goo endpoint descriptors can contain a UTF-8 BOM. Decode JSON accordingly. Runtime snapshots can contain `full: false` and only a delta; a new client must not assume every snapshot is a complete tree.
+Goo endpoint descriptors can contain a UTF-8 BOM. Decode JSON accordingly. Raw runtime snapshots can contain `full: false` and only a delta. Request `payload: {"full":true}` for a complete tree. The MCP `goo_snapshot` tool does this on every call.

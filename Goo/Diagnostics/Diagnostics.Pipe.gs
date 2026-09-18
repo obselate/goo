@@ -28,12 +28,45 @@ internal class DiagnosticPipeCompletion {
   internal func Release() { if Interlocked.Decrement(&references) == 0 { Done.Dispose() } }
 }
 
+internal class DiagnosticPipeClient {
+  private const InactivityMs int64 = 30000
+  internal let Stream NamedPipeServerStream
+  internal let Capture DiagnosticCaptureTracker
+  internal var Worker Thread?
+  private var deadline int64
+  private var watchdog Timer?
+  private var closed int32
+
+  internal init(stream NamedPipeServerStream) {
+    Stream = stream
+    Capture = DiagnosticCaptureTracker()
+    Worker = nil
+    deadline = Environment.TickCount64 + InactivityMs
+    watchdog = Timer(_ -> {
+      if Environment.TickCount64 >= Volatile.Read(&deadline) {
+        try { Stream.Dispose() } catch (_ Exception) { }
+      }
+    }, nil, 1000, 1000)
+  }
+
+  internal func Touch() { Volatile.Write(&deadline, Environment.TickCount64 + InactivityMs) }
+
+  internal func Close() {
+    if Interlocked.Exchange(&closed, 1) != 0 { return }
+    watchdog?.Dispose()
+    watchdog = nil
+    Stream.Dispose()
+  }
+}
+
 internal class DiagnosticPipeHost : IDisposable {
+  private const MaxClients int32 = 8
   private let session DevToolsSession
   private let endpoint DiagnosticEndpoint
   private let stopped ManualResetEventSlim
   private let gate object
-  private var active NamedPipeServerStream?
+  private let clients List[DiagnosticPipeClient]
+  private var listener NamedPipeServerStream?
   private var worker Thread?
   private var disposed bool
   private var queuedRequests int32
@@ -43,7 +76,8 @@ internal class DiagnosticPipeHost : IDisposable {
     endpoint = value
     stopped = ManualResetEventSlim(false)
     gate = Object()
-    active = nil
+    clients = List[DiagnosticPipeClient]()
+    listener = nil
     worker = nil
     disposed = false
     try {
@@ -57,30 +91,79 @@ internal class DiagnosticPipeHost : IDisposable {
   }
 
   public func Dispose() {
-    if disposed { return }
-    disposed = true
-    stopped.Set()
+    let pending = List[DiagnosticPipeClient]()
+    var acceptor Thread?
     lock gate {
-      active?.Dispose()
-      active = nil
+      if disposed { return }
+      disposed = true
+      acceptor = worker
+      listener?.Dispose()
+      listener = nil
+      pending.AddRange(clients)
     }
-    if let thread = worker {
-      thread.Join(1000)
+    stopped.Set()
+    for client in pending { client.Close() }
+    var joined = true
+    if let thread = acceptor {
+      joined = thread.Join(250) && joined
     }
-    stopped.Dispose()
+    let deadline = Environment.TickCount64 + 750
+    for client in pending {
+      if let thread = client.Worker {
+        let remaining = deadline - Environment.TickCount64
+        joined = remaining > 0 && thread.Join(int32(remaining)) && joined
+      }
+    }
+    if joined { stopped.Dispose() }
   }
 
   private func run() {
     while !stopped.IsSet {
       var current NamedPipeServerStream?
       try {
-        let created = NamedPipeServerStream(endpoint.PipeName, PipeDirection.InOut, 1,
+        let created = NamedPipeServerStream(endpoint.PipeName, PipeDirection.InOut, MaxClients,
           PipeTransmissionMode.Byte, PipeOptions.Asynchronous)
         current = created
-        lock gate { active = created }
+        var listening = false
+        lock gate {
+          if !disposed {
+            listener = created
+            listening = true
+          }
+        }
+        if !listening { return }
         created.WaitForConnection()
+        lock gate {
+          if let attached = listener {
+            if Object.ReferenceEquals(created, attached) { listener = nil }
+          }
+        }
         if !stopped.IsSet {
-          serve(created)
+          let client = DiagnosticPipeClient(created)
+          var admitted = false
+          lock gate {
+            if !disposed && clients.Count < MaxClients {
+              clients.Add(client)
+              admitted = true
+            }
+          }
+          if admitted {
+            try {
+              let thread = Thread(() -> { serve(client) })
+              thread.IsBackground = true
+              lock gate {
+                if disposed { throw ObjectDisposedException("DiagnosticPipeHost") }
+                thread.Start()
+                client.Worker = thread
+                current = nil
+              }
+            } catch (_ Exception) {
+              lock gate { clients.Remove(client) }
+              client.Close()
+            }
+          } else {
+            client.Close()
+          }
         }
       } catch (_ IOException) {
         if !stopped.IsSet { stopped.Wait(100) }
@@ -89,8 +172,8 @@ internal class DiagnosticPipeHost : IDisposable {
       } finally {
         lock gate {
           if let created = current {
-            if let attached = active {
-              if Object.ReferenceEquals(created, attached) { active = nil }
+            if let attached = listener {
+              if Object.ReferenceEquals(created, attached) { listener = nil }
             }
           }
         }
@@ -99,19 +182,31 @@ internal class DiagnosticPipeHost : IDisposable {
     }
   }
 
-  private func serve(server NamedPipeServerStream) {
+  private func serve(client DiagnosticPipeClient) {
+    let server = client.Stream
     let utf8 = UTF8Encoding(false)
-    using let reader = StreamReader(server, utf8, false, 16 * 1024, true)
-    using let writer = StreamWriter(server, utf8, 16 * 1024, true)
-    writer.AutoFlush = true
-    writer.NewLine = "\n"
-    writer.WriteLine(hello())
-    while !stopped.IsSet {
-      guard let line = readRequest(reader) else { return }
-      let result = dispatch(line)
-      if result != "" {
-        writer.WriteLine(result)
+    try {
+      using let reader = StreamReader(server, utf8, false, 16 * 1024, true)
+      using let writer = StreamWriter(server, utf8, 16 * 1024, true)
+      writer.AutoFlush = true
+      writer.NewLine = "\n"
+      client.Touch()
+      writer.WriteLine(hello())
+      while !stopped.IsSet {
+        guard let line = readRequest(reader) else { return }
+        client.Touch()
+        let result = dispatch(client, line)
+        if result != "" {
+          client.Touch()
+          writer.WriteLine(result)
+        }
       }
+    } catch (_ InvalidDataException) {
+    } catch (_ IOException) {
+    } catch (_ ObjectDisposedException) {
+    } finally {
+      lock gate { clients.Remove(client) }
+      client.Close()
     }
   }
 
@@ -126,7 +221,7 @@ internal class DiagnosticPipeHost : IDisposable {
     }
   }
 
-  private func dispatch(line string) string {
+  private func dispatch(client DiagnosticPipeClient, line string) string {
     try {
       using let document = JsonDocument.Parse(line)
       let root = document.RootElement
@@ -147,7 +242,7 @@ internal class DiagnosticPipeHost : IDisposable {
         return errorResponse(id, "protocol", "Request command is required.")
       }
       let payload = if root.TryGetProperty("payload", out var body) { body } else { root }
-      return dispatchOnUi(id, command, payload)
+      return dispatchOnUi(client, id, command, payload)
     } catch (error JsonException) {
       return errorResponse("", "invalid-json", error.Message)
     } catch (error Exception) {
@@ -155,7 +250,7 @@ internal class DiagnosticPipeHost : IDisposable {
     }
   }
 
-  private func dispatchOnUi(id string, command string, payload JsonElement) string {
+  private func dispatchOnUi(client DiagnosticPipeClient, id string, command string, payload JsonElement) string {
     if Interlocked.Increment(&queuedRequests) > 32 {
       Interlocked.Decrement(&queuedRequests)
       return errorResponse(id, "busy", "The Goo UI request queue is full.")
@@ -168,10 +263,12 @@ internal class DiagnosticPipeHost : IDisposable {
         try {
           if !completion.Begin() { return }
           try {
-            completion.Result = execute(command, ownedPayload)
+            completion.Result = execute(client, command, ownedPayload)
           } catch (error Exception) {
             completion.Error = error.Message
             completion.ErrorCode = if error is UnauthorizedAccessException { "input-disabled" }
+            else if error is DiagnosticGestureException { error.Code }
+            else if error is DiagnosticInputException { error.Code }
             else if error is KeyNotFoundException { "stale-target" }
             else if error is ObjectDisposedException { "closed" }
             else if error is ArgumentException { "invalid-input" } else { "command" }
@@ -204,15 +301,15 @@ internal class DiagnosticPipeHost : IDisposable {
     }
   }
 
-  private func execute(command string, payload JsonElement) string {
+  private func execute(client DiagnosticPipeClient, command string, payload JsonElement) string {
     if command == "input" { return session.InputPayload(payload) }
     if command == "snapshot" || command == "tree.snapshot" {
-      let full = payload.TryGetProperty("full", out var fullValue) && fullValue.ValueKind == JsonValueKind.True
-      return snapshotPayload(session.CaptureSnapshot(full))
+      return snapshotPayload(session.CaptureSnapshot(true))
     }
     if command == "capture" {
-      return session.CapturePayload()
+      return session.CapturePayload(client.Capture)
     }
+    session.RequireNoInputGesture()
     if command == "inspect.enter" || command == "inspect.start" {
       session.EnterInspectMode()
       return statePayload("inspect.enter", session.IsInspecting, session.SelectedNodeId)
@@ -226,7 +323,21 @@ internal class DiagnosticPipeHost : IDisposable {
       return statePayload("inspect.clear", session.IsInspecting, session.SelectedNodeId)
     }
     if command == "inspect.select" || command == "select" {
-      if payload.TryGetProperty("nodeId", out var nodeIdValue) {
+      let hasTarget = payload.TryGetProperty("target", out var targetValue)
+      let hasNode = payload.TryGetProperty("nodeId", out var nodeIdValue)
+      if hasTarget && hasNode { throw ArgumentException("Use target or nodeId, not both.") }
+      if hasTarget {
+        if targetValue.ValueKind != JsonValueKind.String {
+          throw ArgumentException("target must be text.")
+        }
+        let target = targetValue.GetString() ?? ""
+        if target.Length == 0 || target.Length > 128 {
+          throw ArgumentException("target must contain 1-128 characters.")
+        }
+        let selected = session.SelectTarget(target)
+        return selectPayload(selected, session.SelectedNodeId)
+      }
+      if hasNode {
         let selected = session.SelectNode(integer(nodeIdValue, "nodeId"))
         return selectPayload(selected, session.SelectedNodeId)
       }
@@ -245,9 +356,9 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func hello() string {
     let builder = StringBuilder()
-    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"capabilities\":[\"tree.snapshot\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\"")
-    if session.AllowsInput { builder.Append(",\"input\"") }
-    builder.Append("]}")
+    builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append(",\"capabilities\":[\"tree.snapshot\",\"tree.resolved-semantics\",\"target.handles\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\",\"runtime-overrides.describe\"")
+    if session.AllowsInput { builder.Append(",\"input\",\"input.gesture-lease\"") }
+    builder.Append("],\"runtimeOverrideProperties\":").Append(diagnosticOverridePropertiesPayload()).Append("}")
     return builder.ToString()
   }
 
@@ -266,7 +377,7 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func snapshotPayload(value DiagnosticSnapshot) string {
     let builder = StringBuilder()
-    builder.Append("{\"command\":\"snapshot\",\"sequence\":").Append(value.Sequence).Append(",\"full\":").Append(boolText(value.IsFull)).Append(",\"hasChanges\":").Append(boolText(value.HasChanges)).Append(",\"windowId\":").Append(quote(value.WindowId)).Append(",\"rootId\":").Append(optional(value.RootId)).Append(",\"hoveredId\":").Append(optional(value.HoveredId)).Append(",\"selectedId\":").Append(optional(value.SelectedId)).Append(",\"added\":[")
+    builder.Append("{\"command\":\"snapshot\",\"sequence\":").Append(value.Sequence).Append(",\"full\":").Append(boolText(value.IsFull)).Append(",\"hasChanges\":").Append(boolText(value.HasChanges)).Append(",\"windowId\":").Append(quote(value.WindowId)).Append(",\"targetIdentity\":{\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append("},\"rootId\":").Append(optional(value.RootId)).Append(",\"hoveredId\":").Append(optional(value.HoveredId)).Append(",\"selectedId\":").Append(optional(value.SelectedId)).Append(",\"added\":[")
     appendNodes(builder, value.Added)
     builder.Append("],\"updated\":[")
     appendNodes(builder, value.Updated)
@@ -292,7 +403,21 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func nodePayload(value DiagnosticNodeSnapshot) string {
     let builder = StringBuilder()
-    builder.Append("{\"id\":").Append(value.Id).Append(",\"parentId\":").Append(optional(value.ParentId)).Append(",\"childIndex\":").Append(value.ChildIndex).Append(",\"childIds\":[")
+    builder.Append("{\"id\":").Append(value.Id).Append(",\"target\":").Append(quote(value.Target))
+      .Append(",\"visible\":").Append(boolText(value.Visible))
+      .Append(",\"clipped\":").Append(boolText(value.Clipped))
+      .Append(",\"clipApproximate\":").Append(boolText(value.ClipApproximate))
+      .Append(",\"actionable\":").Append(boolText(value.Actionable))
+      .Append(",\"actionStatus\":").Append(quote(value.ActionStatus))
+      .Append(",\"actionPoint\":").Append(optionalPoint(value.ActionPoint))
+      .Append(",\"accessibilityId\":").Append(optional(value.AccessibilityId))
+      .Append(",\"text\":").Append(quote(value.Text))
+      .Append(",\"textLength\":").Append(value.TextLength)
+      .Append(",\"textTruncated\":").Append(boolText(value.TextTruncated))
+      .Append(",\"selectionStart\":").Append(optional(value.SelectionStart))
+      .Append(",\"selectionLength\":").Append(optional(value.SelectionLength))
+      .Append(",\"caret\":").Append(optional(value.Caret))
+      .Append(",\"parentId\":").Append(optional(value.ParentId)).Append(",\"childIndex\":").Append(value.ChildIndex).Append(",\"childIds\":[")
     var first = true
     for id in value.ChildIds {
       if !first { builder.Append(",") }
@@ -307,6 +432,16 @@ internal class DiagnosticPipeHost : IDisposable {
   +",\"width\":" + numberText(value.Width) + ",\"height\":" + numberText(value.Height) + "}"
 
   private func point(value DiagnosticPoint) string -> "{\"x\":" + numberText(value.X) + ",\"y\":" + numberText(value.Y) + "}"
+
+  private func optionalPoint(value DiagnosticPoint?) string {
+    guard let actual = value else { return "null" }
+    return point(actual)
+  }
+
+  private func optional(value int32?) string {
+    guard let actual = value else { return "null" }
+    return actual.ToString(CultureInfo.InvariantCulture)
+  }
 
   private func number(root JsonElement, name string) float64 {
     if !root.TryGetProperty(name, out var value) { return 0.0 }
@@ -353,8 +488,5 @@ internal class DiagnosticPipeHost : IDisposable {
 
   private func numberText(value float64) string -> value.ToString("R", CultureInfo.InvariantCulture)
 
-  private func quote(value string) string {
-    if value == nil { return "null" }
-    return "\"" + JsonEncodedText.Encode(value).ToString() + "\""
-  }
+  private func quote(value string) string -> DiagnosticJson.Quote(value)
 }
