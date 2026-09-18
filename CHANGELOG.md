@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2 - 2026-09-18
+
+### Fixed
+
+- Padded multiline text editors now include content overflow in their scroll extent, keeping the caret fully visible at the first and last lines.
+
 ## 0.6.1 - 2026-09-18
 
 ### Fixed

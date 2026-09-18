@@ -5,7 +5,7 @@
 ## Install
 
 ```sh
-dotnet tool install --global Goo.DevTools.App --version 0.6.1
+dotnet tool install --global Goo.DevTools.App --version 0.6.2
 ```
 
 ## Use
