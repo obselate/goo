@@ -417,8 +417,20 @@ public sealed class DevToolsCliEndToEndTests
         await ReadLineAsync(reader);
         await writer.WriteLineAsync(ServerHello());
         var requests = 0;
-        while (await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) is { } request)
+        while (true)
         {
+            string? request;
+            try
+            {
+                request = await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (IOException)
+            {
+                // Unix named pipes may report peer shutdown as ECONNRESET instead of EOF.
+                break;
+            }
+            if (request is null)
+                break;
             using var document = JsonDocument.Parse(request);
             await writer.WriteLineAsync(JsonSerializer.Serialize(new
             {
