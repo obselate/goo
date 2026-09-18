@@ -251,10 +251,12 @@ internal partial class TextEditorLayouts {
       }
 
     internal func ScrollExtent(n Node) Point {
-        let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
+        let width = BoxGeometry.ContentWidth(n)
+        let height = BoxGeometry.ContentHeight(n)
+        let layout = For(n, width, height)
       return Point{
-        X: float64(layout.ContentWidth > n.Rect.W ? layout.ContentWidth : n.Rect.W),
-        Y: float64(layout.ContentHeight > n.Rect.H ? layout.ContentHeight : n.Rect.H)
+            X: float64(n.Rect.W + MathF.Max(0.0F, layout.ContentWidth - width)),
+            Y: float64(n.Rect.H + MathF.Max(0.0F, layout.ContentHeight - height)),
         }
     }
 
