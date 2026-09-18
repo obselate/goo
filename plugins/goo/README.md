@@ -19,7 +19,9 @@ Standalone G# Goo authoring guidance and twelve stdio MCP tools. Requires Python
 
 ## Runtime setup
 
-Discovery requires the new `goo list` command. Until the next CLI release, build it from this checkout and set `GOO_CLI` in the MCP server environment:
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.5.4`.
+Discovery requires the new `goo list` command. Until the next CLI release, build
+it from this checkout and set `GOO_CLI` in the MCP server environment:
 
 ```sh
 dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release
