@@ -1,6 +1,6 @@
 # Migrate GCV1 assets to Goo.Svg
 
-The unreleased changes in PR #63 remove the GCV1 binary vector format and the
+Goo 0.6.0 removes the GCV1 binary vector format and the
 `Goo.SvgCompiler` tool. Existing `.gcv1` files cannot be loaded by the new runtime.
 Applications that already use `Goo.Svg.Svg.Parse` or `Svg.Load` keep the same loading
 API. These methods now build `VectorAsset` directly, without a binary round trip.

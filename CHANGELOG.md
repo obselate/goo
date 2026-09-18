@@ -1,8 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 - 2026-09-18
+
+### Added
+
+- Added stable DevTools target discovery, bounded snapshots and waits, opt-in input and gesture dispatch, runtime style inspection, and structured agent preflight diagnostics.
+- Added parameterless `Cell.Mount[TCell]()` for unkeyed mounting of cells with parameterless constructors.
+- Added cross-platform source bootstrap scripts for the pinned G# toolchain and released native runtime assets.
+
+### Changed
 
 - Removed the GCV1 binary vector format and the Goo.SvgCompiler tool. Goo.Svg now builds vector assets directly at runtime. Existing binary assets require migration to SVG sources. See the [GCV1 migration guide](docs/migrations/gcv1.md).
+- Consolidated Vulkan shader, readback, frame, motion, and diagnostic ownership while pruning disconnected generators, proof paths, harnesses, and duplicated test plumbing.
+- Stored generated Unicode data as binary resources and reorganized text layout, Vulkan scene compilation, and SVG parsing by responsibility.
+
+### Fixed
+
+- Preserved diagnostic client isolation, complete snapshots, gesture ownership, plugin configuration, and safe agent launcher behavior.
+- Preserved constructor resets in Gslint reductions, handled named-pipe connection resets in capture timeouts, and retried transient macOS artifact-download failures.
 
 ## 0.5.4 - 2026-09-15
 
