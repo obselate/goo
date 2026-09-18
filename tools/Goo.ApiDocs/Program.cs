@@ -101,6 +101,8 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
     if (directory == "Cell")
         AppendCellInputGuide(text);
     if (directory == "Cell")
+        AppendCellMountGuide(text);
+    if (directory == "Cell")
         AppendCellFactoryGuide(text);
     if (directory == "Rendering")
         AppendShaderEffectGuide(text);
@@ -181,6 +183,24 @@ static void AppendCellInputGuide(StringBuilder text)
     text.AppendLine("Store local Cell state in ordinary fields. Goo rebuilds the owning Cell after its input callbacks. Call `Rebuild()` after mutations outside Goo input dispatch.");
     text.AppendLine();
     text.AppendLine("A packaged G# component derived from `Cell<TInput>` should be an `open class` and override `protected Build(input TInput) Blob`. G# requires the inheritable class declaration because the override is protected. Goo passes the stored immutable snapshot through this typed dispatch path. Existing same-assembly components that override parameterless `Build()` remain valid. If a component overrides both overloads, the typed overload takes precedence. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the component's rebuild policy.");
+}
+
+static void AppendCellMountGuide(StringBuilder text)
+{
+    text.AppendLine();
+    text.AppendLine("## Mount parameterless cells");
+    text.AppendLine();
+    text.AppendLine("Use `Cell.Mount<TCell>()` for a fixed, unkeyed child with a parameterless constructor. Goo retains the mounted Cell by its declared type and sibling position.");
+    text.AppendLine();
+    text.AppendLine("```gsharp");
+    text.AppendLine("Cell.Mount[Counter]()");
+    text.AppendLine("```");
+    text.AppendLine();
+    text.AppendLine("Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, or reordering. A sibling list must be entirely keyed or entirely unkeyed.");
+    text.AppendLine();
+    text.AppendLine("```gsharp");
+    text.AppendLine("Cell.Mount[Counter](\"counter\")");
+    text.AppendLine("```");
 }
 
 static void AppendCellFactoryGuide(StringBuilder text)

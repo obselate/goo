@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "d1b170fb94d0c9849568cdef21c0b0734f52bdef",
+  "commit": "705ef3c58cc07971561d4bc394c61bf6c34780a0",
   "files": {
     "README.md": "3e20ade1043d54c4e1e682f49dce593911739857ecf509e77367cf1ef58395e8",
     "CONTRIBUTING.md": "10adb8e192f35e5d215124aa3c157f2ad0e8e317c672e2af1bb60966b064069d",
@@ -8,7 +8,7 @@
     "docs/api/README.md": "8ae1406a1c6e033b9b4e495fb19c849e936e400c1c7aade28c8cb2ea02f7a58a",
     "docs/api/accessibility.md": "e67c6117764001a949ca20f6e80cff6f16f295eac8a2f735eae83298c0d43966",
     "docs/api/audio.md": "c561073504c539572e2774b85e27f06c4112ace9f7a60b5412ac6a5045964d71",
-    "docs/api/cell.md": "96c8e3c5e2c7baa6707e2cfacdad6207944077f2de981782ec1ea86fbbe89266",
+    "docs/api/cell.md": "290fd329463e75b0fe316f82f1e3aa11cfd8cc1900ab3d8e76981aa2009a067a",
     "docs/api/diagnostics.md": "4cfe078e236e6a9252e69674b4c41533e2ac6fe6ecfb20d78729008844c9d351",
     "docs/api/input.md": "876b9c4f11a539b7190d358ced53710a725faad106f75f488d0a0576973f8f6a",
     "docs/api/layout.md": "c1cf29fd9f7dd3d0664eb0e0fd880496dfa0183dbd7e2569fe76651515e0a49f",

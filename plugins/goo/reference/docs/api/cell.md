@@ -10,6 +10,20 @@ Store local Cell state in ordinary fields. Goo rebuilds the owning Cell after it
 
 A packaged G# component derived from `Cell<TInput>` should be an `open class` and override `protected Build(input TInput) Blob`. G# requires the inheritable class declaration because the override is protected. Goo passes the stored immutable snapshot through this typed dispatch path. Existing same-assembly components that override parameterless `Build()` remain valid. If a component overrides both overloads, the typed overload takes precedence. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the component's rebuild policy.
 
+## Mount parameterless cells
+
+Use `Cell.Mount<TCell>()` for a fixed, unkeyed child with a parameterless constructor. Goo retains the mounted Cell by its declared type and sibling position.
+
+```gsharp
+Cell.Mount[Counter]()
+```
+
+Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, or reordering. A sibling list must be entirely keyed or entirely unkeyed.
+
+```gsharp
+Cell.Mount[Counter]("counter")
+```
+
 ## Mount with a factory
 
 `Cell.Mount<TCell>(factory, key)` accepts a `System.Func<TCell>` and does not require a parameterless constructor. The factory can supply constructor dependencies or create an F# object expression. The existing mounts with configuration, seeding, or typed inputs remain available.
@@ -164,6 +178,14 @@ Describes a child component mount with one-time initialization.
 - `key`: stable sibling key, or nil for positional identity
 - `seed`: initialization applied only when the component mounts
 - `configure`: configuration applied during each parent diff; prefer stable named or cached delegates
+
+Returns: a blob that mounts the child component
+
+### `Mount``1`
+
+Describes an unkeyed child component mount using positional identity.
+
+- `TCell`: child component type
 
 Returns: a blob that mounts the child component
 
