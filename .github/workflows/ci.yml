@@ -156,7 +156,8 @@ jobs:
         run: |
           archive="$RUNNER_TEMP/slang-2026.16-macos-aarch64.tar.gz"
           sdk="$RUNNER_TEMP/slang-2026.16"
-          curl --fail --location --retry 3 \
+          curl --fail --location --retry 5 --retry-delay 2 \
+            --retry-max-time 120 --retry-all-errors \
             --output "$archive" \
             https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz
           echo "5d7edc2c91c38d1914c14a5a410f0fe517bce9a284395336715ba36a091e9d9e  $archive" \

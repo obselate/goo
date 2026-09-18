@@ -78,7 +78,8 @@ output="$(CDPATH= cd -- "$output" && pwd)"
 staging="$work/output"
 mkdir -p "$staging"
 
-curl -fsSL --retry 3 --retry-delay 2 "$hb_url" -o "$work/harfbuzz.tar.xz"
+curl -fsSL --retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-errors \
+  "$hb_url" -o "$work/harfbuzz.tar.xz"
 printf '%s  %s\n' "$hb_sha256" "$work/harfbuzz.tar.xz" | shasum -a 256 -c -
 tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
 python3 "$repo_root/tools/Goo.TextNative/apply-source-patches.py" --manifest "$manifest" --source-root "$work/harfbuzz-14.3.1"

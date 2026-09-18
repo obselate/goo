@@ -12,7 +12,7 @@ for command_name in codesign curl file install_name_tool lipo shasum tar; do
   command -v "$command_name" >/dev/null || { printf 'required command missing: %s\n' "$command_name" >&2; exit 1; }
 done
 
-curl -fsSL --retry 3 --retry-delay 2 \
+curl -fsSL --retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-errors \
   "https://github.com/KhronosGroup/MoltenVK/releases/download/v${version}/MoltenVK-macos.tar" \
   -o "$work/MoltenVK-macos.tar"
 printf '%s  %s\n' "$sha256" "$work/MoltenVK-macos.tar" | shasum -a 256 -c -

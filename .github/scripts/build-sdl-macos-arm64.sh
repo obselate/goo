@@ -13,7 +13,7 @@ for command_name in awk cmake codesign curl file install_name_tool lipo otool sh
 done
 
 mkdir -p "$work/src" "$work/build" "$work/install"
-curl -fsSL --retry 3 --retry-delay 2 \
+curl -fsSL --retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-errors \
   "https://github.com/libsdl-org/SDL/releases/download/release-${version}/SDL3-${version}.tar.gz" \
   -o "$work/SDL3.tar.gz"
 printf '%s  %s\n' "$sha256" "$work/SDL3.tar.gz" | shasum -a 256 -c -
