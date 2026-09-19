@@ -617,6 +617,8 @@ internal static class Program
             compiler.Compile(root, Color.Transparent, 100, 100);
             var depth = 0;
             var borders = 0;
+            var rootBorderDraw = -1;
+            var childPaintDraw = -1;
             for (var i = 0; i < compiler.Frame.DrawRefCount; i++)
             {
                 var draw = compiler.Frame.DrawRefs[i];
@@ -626,12 +628,32 @@ internal static class Program
                     depth--;
                 else if (draw.Kind == SceneDrawKind.PerEdgeBorder)
                 {
-                    if (depth != 1 - borders)
+                    var border = compiler.Frame.PerEdgeBorders[draw.Index];
+                    if (borders == 0 && (depth != 0 || draw.ClipChainId != 0
+                        || border.Bounds.Width != 100 || border.Bounds.Height != 100
+                        || border.RadiusTopLeft != radius))
                         throw new InvalidOperationException("Border clipped by its own overflow scissor");
+                    if (borders == 1 && (border.Bounds.Width != 80 || border.Bounds.Height != 80
+                        || depth != 1 || draw.ClipChainId != 0
+                        || border.RadiusTopLeft != radius))
+                        throw new InvalidOperationException("Child border lost its parent overflow clip: radius="
+                            + radius + " depth=" + depth + " chain=" + draw.ClipChainId
+                            + " chainDepth=" + compiler.Frame.ClipChains[draw.ClipChainId].Depth);
+                    if (borders == 0)
+                        rootBorderDraw = i;
                     borders++;
                 }
+                else if (rootBorderDraw >= 0 && childPaintDraw < 0
+                    && draw.Kind == (radius == 0 ? SceneDrawKind.SolidBox : SceneDrawKind.RoundedBox))
+                {
+                    var width = radius == 0
+                        ? compiler.Frame.SolidBoxes[draw.Index].Bounds.Width
+                        : compiler.Frame.RoundedBoxes[draw.Index].Bounds.Width;
+                    if (width == 80)
+                        childPaintDraw = i;
+                }
             }
-            if (depth != 0 || borders != 2)
+            if (depth != 0 || borders != 2 || childPaintDraw <= rootBorderDraw)
                 throw new InvalidOperationException("Nested overflow border scene is incomplete");
         }
         Console.WriteLine("VULKAN_OVERFLOW_BORDER PASS square and rounded nested borders");
