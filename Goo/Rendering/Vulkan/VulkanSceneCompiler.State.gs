@@ -97,6 +97,14 @@ internal partial class VulkanSceneCompiler {
     root Node?,
     background Color,
     viewportWidth float32,
+    viewportHeight float32) VulkanSceneCompileResult ->
+    Compile(root, nil, background, viewportWidth, viewportHeight)
+
+  internal func Compile(
+    root Node?,
+    overlayRoot Node?,
+    background Color,
+    viewportWidth float32,
     viewportHeight float32) VulkanSceneCompileResult{
       ValidateViewport(viewportWidth, viewportHeight)
       clipViewportWidth = viewportWidth
@@ -147,17 +155,17 @@ internal partial class VulkanSceneCompiler {
       var rootOwnerId uint64 = 0uL
       if let node = root {
         rootOwnerId = OwnerId(node)
-        CompileNode(node, VulkanSceneTraversalContext{
-          ParentTransformIndex: -1,
-          ParentRectClipIndex: -1,
-          ParentOpacity: 1.0F,
-          ParentAxisAligned: true,
-          ParentRectClipDepth: 0,
-          ParentPathClipChainId: 0,
-          ParentIsolation: false,
-          ExactCullContextSafe: true,
-          ActiveClipBounds: viewport,
-        })
+        if !node.IsPortal {
+          CompileNode(node, RootTraversalContext(viewport))
+        }
+      }
+      if let overlays = overlayRoot {
+        let portals = Stacking.Children(overlays)
+        for portal in portals {
+          if Portals.Presented(portal) {
+            CompileNode(portal, RootTraversalContext(viewport))
+          }
+        }
       }
 
       ClassifyRetainedChunks()
@@ -195,5 +203,18 @@ internal partial class VulkanSceneCompiler {
       } else { 0 }
       return lastResult
     }
+
+  private func RootTraversalContext(viewport ConservativeBounds)
+  VulkanSceneTraversalContext -> VulkanSceneTraversalContext{
+    ParentTransformIndex: -1,
+    ParentRectClipIndex: -1,
+    ParentOpacity: 1.0F,
+    ParentAxisAligned: true,
+    ParentRectClipDepth: 0,
+    ParentPathClipChainId: 0,
+    ParentIsolation: false,
+    ExactCullContextSafe: true,
+    ActiveClipBounds: viewport,
+  }
 
 }

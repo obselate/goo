@@ -244,7 +244,7 @@ internal class Layout {
   }
 
   private func syncChildren(yg Facebook.Yoga.Node, n Node) {
-    let count = Portals.LayoutChildCount(n)
+    let count = Portals.SourceChildCount(n)
     let children = [count]Facebook.Yoga.Node
     var index int32
     for child in n.Children {
@@ -849,7 +849,7 @@ internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
 // Reference equality per slot: Diff reuses Node instances, and syncNode reuses
 // their Yoga nodes, so an unchanged child list is the same handles in order.
 internal func childrenAlreadyMatch(yg Facebook.Yoga.Node, n Node) bool {
-  let count = Portals.LayoutChildCount(n)
+  let count = Portals.SourceChildCount(n)
   if uint32(YGNodeAPI.YGNodeGetChildCount(yg)) != uint32(count) {
     return false
   }

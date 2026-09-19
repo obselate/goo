@@ -473,7 +473,7 @@ public partial class Window {
 
   internal func RequestDiagnosticsCapture() WindowReadbackRequestStatus {
     guard let target = windowTarget else { return WindowReadbackRequestStatus.NotReady }
-    return target.RequestCapture(node, Background, dpi)
+    return target.RequestCapture(node, portalRoot, Background, dpi)
   }
 
   internal func PollDiagnosticsCapture() WindowReadbackResult? {

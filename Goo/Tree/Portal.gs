@@ -57,7 +57,16 @@ internal class Portals {
       }
     }
 
-    internal func LayoutChildCount(node Node) int32 {
+    internal func Presented(node Node) bool {
+      var current = node
+      while true {
+        if current.Retired || current.PaintInputHidden { return false }
+        guard let parent = current.Parent else { return true }
+        current = parent
+      }
+    }
+
+    internal func SourceChildCount(node Node) int32 {
       var count int32
       for child in node.Children {
         if !child.IsPortal { count++ }

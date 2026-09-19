@@ -177,10 +177,11 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   internal func Render(root Node?, background Color, dpi Vector2) {
-    Render(root, background, dpi, nil)
+    Render(root, nil, background, dpi, nil)
   }
 
-  public func Render(root Node?, background Color, dpi Vector2, overlay DiagnosticOverlay?) {
+  public func Render(root Node?, portalRoot Node?, background Color, dpi Vector2,
+    overlay DiagnosticOverlay?) {
     if disposed || !frameBegun || frameRendered {
       return
     }
@@ -206,7 +207,8 @@ internal unsafe partial class VulkanWindowTarget {
       textScene?.BeginCompile(completedGraphicsSubmissionSerial)
       imageScene?.BeginCompile()
       let planStart = DiagnosticTimestamp()
-      let compileResult = sceneCompiler.Compile(root, background, logicalWidth, logicalHeight)
+      let compileResult = sceneCompiler.Compile(root, portalRoot, background,
+        logicalWidth, logicalHeight)
       RecordDiagnosticPlan(planStart, compileResult,
         sceneCompiler.Frame.Counters, sceneCompiler.Frame)
       if compileResult.PathResourceDeferred {

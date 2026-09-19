@@ -80,7 +80,7 @@ internal partial class VulkanSceneCompiler {
     opacity float32,
     context VulkanSceneTraversalContext,
     requireNoChildren bool) bool-> !((node.Kind != NodeKind.Container && node.Kind != NodeKind.Button)
-        || (requireNoChildren && node.Children.Count != 0)
+        || (requireNoChildren && Portals.SourceChildCount(node) != 0)
         || bounds.IsEmpty
         || !finiteVulkanSceneValue(opacity)
         || opacity <= 0.0F
@@ -156,7 +156,7 @@ internal partial class VulkanSceneCompiler {
     && finiteVulkanSceneValue(node.BorderLeftColor.A)
 
   private func RetainedBorderCandidate(node Node, bounds ConservativeBounds) bool -> node.Kind == NodeKind.Container || node.Kind == NodeKind.Button
-  ? node.Children.Count == 0
+  ? Portals.SourceChildCount(node) == 0
     && !bounds.IsEmpty
     && node.BackgroundColor.A <= 0.0F
     && HasBorderWidth(node, bounds): false

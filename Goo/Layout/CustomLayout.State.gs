@@ -47,7 +47,7 @@ internal class CustomLayoutState {
   }
 
   internal func SyncChildren() {
-    let count = Portals.LayoutChildCount(Node)
+    let count = Portals.SourceChildCount(Node)
     var changed = Children.Length != count
     if !changed {
       var index int32

@@ -307,11 +307,13 @@ internal partial class VulkanSceneCompiler {
       let children = Stacking.Children(node)
       var index int32 = 0
       while index < children.Count {
-        let child = LayerSubtreeBounds(children[index], transform, activeClipBounds)
-        if result.IsEmpty {
-          result = child
-        } else if !child.IsEmpty {
-          result = unionVulkanSceneBounds(result, child)
+        if !children[index].IsPortal {
+          let child = LayerSubtreeBounds(children[index], transform, activeClipBounds)
+          if result.IsEmpty {
+            result = child
+          } else if !child.IsEmpty {
+            result = unionVulkanSceneBounds(result, child)
+          }
         }
         index = index + 1
       }

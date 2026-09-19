@@ -11,7 +11,9 @@ internal partial class VulkanSceneCompiler {
       let children = Stacking.Children(node)
       var index int32 = 0
       while index < children.Count {
-        CompileNode(children[index], context)
+        if !children[index].IsPortal {
+          CompileNode(children[index], context)
+        }
         index = index + 1
       }
       frame.SetActiveClipChain(context.ParentPathClipChainId)
@@ -41,7 +43,7 @@ internal partial class VulkanSceneCompiler {
       let shaderEffect = if styleMaskHas(node.AppliedMask, StyleField.ShaderEffect) {
         node.ShaderEffect
       } else { nil }
-      let isolatesOpacity = node.Children.Count != 0 && localOpacity < 1.0F
+      let isolatesOpacity = Portals.SourceChildCount(node) != 0 && localOpacity < 1.0F
       let isolatesBlend = blendModeSupported && BlendModeSupported(node.BlendMode)
         && node.BlendMode != BlendMode.Normal
       let combinesEffectAndBlend = shaderEffect != nil && isolatesBlend
@@ -100,7 +102,7 @@ internal partial class VulkanSceneCompiler {
           InvalidateRetainedText(owner)
           IncrementSaturated(ref retainedText.Fallback)
         }
-      } else if node.Children.Count == 0 {
+      } else if Portals.SourceChildCount(node) == 0 {
         InvalidateRetainedText(owner)
         let retainedBorderCandidate = RetainedBorderCandidate(node, bounds)
         if retainedBorderCandidate {
@@ -414,7 +416,9 @@ internal partial class VulkanSceneCompiler {
       var index int32 = 0
       while index < children.Count
         && (node.Kind != NodeKind.Editor || editorContentClipIndex >= 0) {
-          CompileNode(children[index], childContext)
+          if !children[index].IsPortal {
+            CompileNode(children[index], childContext)
+          }
           index = index + 1
         }
 
