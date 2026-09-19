@@ -106,6 +106,7 @@ enum-underlying|Goo.Overflow|System.Int32
 enum-underlying|Goo.PointerButtons|System.Int32
 enum-underlying|Goo.PointerButton|System.Int32
 enum-underlying|Goo.PointerDevice|System.Int32
+enum-underlying|Goo.PortalPlacement|System.Int32
 enum-underlying|Goo.PositionType|System.Int32
 enum-underlying|Goo.ScrollbarVisibility|System.Int32
 enum-underlying|Goo.ShapeFit|System.Int32
@@ -434,6 +435,18 @@ enum|Goo.PointerButton|Secondary|2
 enum|Goo.PointerDevice|Mouse|0
 enum|Goo.PointerDevice|Pen|2
 enum|Goo.PointerDevice|Touch|1
+enum|Goo.PortalPlacement|BottomEnd|2
+enum|Goo.PortalPlacement|BottomStart|0
+enum|Goo.PortalPlacement|Bottom|1
+enum|Goo.PortalPlacement|LeftEnd|11
+enum|Goo.PortalPlacement|LeftStart|9
+enum|Goo.PortalPlacement|Left|10
+enum|Goo.PortalPlacement|RightEnd|8
+enum|Goo.PortalPlacement|RightStart|6
+enum|Goo.PortalPlacement|Right|7
+enum|Goo.PortalPlacement|TopEnd|5
+enum|Goo.PortalPlacement|TopStart|3
+enum|Goo.PortalPlacement|Top|4
 enum|Goo.PositionType|Absolute|1
 enum|Goo.PositionType|Relative|0
 enum|Goo.PositionType|Static|2
@@ -1246,6 +1259,8 @@ property|Goo.PointerEvent|Pressure|System.Double|instance|get:public,init:public
 property|Goo.PointerEvent|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.Point|X|System.Double|instance|get:public,init:public|index:()
 property|Goo.Point|Y|System.Double|instance|get:public,init:public|index:()
+property|Goo.Portal|Anchor|Goo.ElementHandle|instance|get:public,init:public|index:()
+property|Goo.Portal|Placement|Goo.PortalPlacement|instance|get:public,init:public|index:()
 property|Goo.RadialGradient|CenterX|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|CenterY|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|Radius|System.Double|instance|get:public|index:()
@@ -1626,6 +1641,7 @@ type|Goo.PointerButton|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerDevice|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Point|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.PortalPlacement|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Portal|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.PositionType|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.RadialGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:

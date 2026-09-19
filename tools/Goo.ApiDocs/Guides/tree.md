@@ -5,13 +5,46 @@ declaration-site clipping and transforms. Portal children remain logical childre
 keyed reconciliation, Cell disposal, routed events, focus scopes, pointer capture,
 and accessibility keep the same ownership path. Their layout and geometry instead
 start at the logical window viewport, so `ElementHandle.BorderBox` supplies window
-coordinates suitable for anchor placement.
+coordinates.
 
 ```gsharp
 Portal{ZIndex: 20,
   Container{ Width: 240, Height: 160, BackgroundColor: Color.White },
 }
 ```
+
+Set `Anchor` for automatic placement from another mounted element's transformed
+border box. `Placement` defaults to `BottomStart`:
+
+```gsharp
+let trigger = ElementHandle{}
+Container{Handle: trigger, Width: 120, Height: 32}
+Portal{Anchor: trigger, Placement: PortalPlacement.BottomStart,
+  Container{Width: 240, Height: 160, BackgroundColor: Color.White},
+}
+```
+
+Goo tries the preferred side, flips to its opposite when that reduces viewport
+overflow, then clamps the Portal border box inside the viewport. `Start` and `End`
+on top and bottom placements follow the Portal's resolved text direction. On left
+and right placements they mean top and bottom. A popup larger than the viewport is
+capped to the viewport. Use `Overflow.Scroll` when its content must remain reachable.
+Padding on a transparent Portal can provide a gap that follows the popup when it
+flips.
+
+Anchoring changes only geometric placement. Logical ownership remains at the
+declaration site. Goo observes layout, scrolling, transforms, content size, and
+window resize directly, so consumers do not subscribe to handle metrics or rebuild
+a Cell to keep placement current. A set anchor that is unmounted, hidden, from a
+different Window, a descendant, or part of an anchor dependency cycle suppresses
+the Portal until the relationship becomes valid. An unset `Anchor` retains ordinary
+window-level Portal placement. Suppression does not dismiss or unmount the Portal.
+
+With `Anchor` set, automatic border-box placement owns the Portal's window position,
+including computed outer margin offsets. Authored `Left` and `Top` do not move it
+past viewport containment. With `Anchor` unset, ordinary Portal positioning retains
+the authored position and margins. Transforms and descendant overflow still use
+normal rendering semantics and can extend beyond the contained placement box.
 
 Each Window owns one automatic overlay shared by all its Portals. It remains inside
 that native window; Portal does not create a native child window. The normal tree
@@ -28,8 +61,9 @@ opacity, overflow clipping, and transforms do not constrain presented geometry.
 Portal children do not participate in their source container's Yoga or custom
 layout and do not enlarge its scroll extent. Apply size, position, transform,
 overflow, and paint styles to the Portal itself when the overlay needs those
-semantics. Goo does not provide automatic anchor placement, dismissal, or a named
-layer system; compose those policies with handles, input callbacks, and focus scopes.
+semantics. Goo does not infer an anchor from the declaration parent and does not
+provide automatic dismissal or a named layer system; compose those policies with
+handles, input callbacks, and focus scopes.
 
 ## Virtualize complete data sources
 

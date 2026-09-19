@@ -326,6 +326,18 @@ public sealed class PublicDocumentationTests
         "F:Goo.NativeTransferCapabilities.DropPreview",
         "F:Goo.NativeTransferCapabilities.OutboundData",
         "F:Goo.NativeTransferCapabilities.EffectNegotiation",
+        "F:Goo.PortalPlacement.BottomStart",
+        "F:Goo.PortalPlacement.Bottom",
+        "F:Goo.PortalPlacement.BottomEnd",
+        "F:Goo.PortalPlacement.TopStart",
+        "F:Goo.PortalPlacement.Top",
+        "F:Goo.PortalPlacement.TopEnd",
+        "F:Goo.PortalPlacement.RightStart",
+        "F:Goo.PortalPlacement.Right",
+        "F:Goo.PortalPlacement.RightEnd",
+        "F:Goo.PortalPlacement.LeftStart",
+        "F:Goo.PortalPlacement.Left",
+        "F:Goo.PortalPlacement.LeftEnd",
     };
 
     private static readonly HashSet<Type> SynthesizedPrimaryDataTypes =

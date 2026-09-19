@@ -6,10 +6,30 @@ import System.Runtime.CompilerServices
 /// Specifies the preferred side and alignment of an anchored Portal before
 /// automatic edge flipping and viewport containment.
 public enum PortalPlacement {
-  BottomStart; Bottom; BottomEnd;
-  TopStart; Top; TopEnd;
-  RightStart; Right; RightEnd;
-  LeftStart; Left; LeftEnd
+  /// Places the Portal below its anchor and aligns their inline-start edges.
+  BottomStart;
+  /// Places the Portal below its anchor and centers it horizontally.
+  Bottom;
+  /// Places the Portal below its anchor and aligns their inline-end edges.
+  BottomEnd;
+  /// Places the Portal above its anchor and aligns their inline-start edges.
+  TopStart;
+  /// Places the Portal above its anchor and centers it horizontally.
+  Top;
+  /// Places the Portal above its anchor and aligns their inline-end edges.
+  TopEnd;
+  /// Places the Portal to the right of its anchor and aligns their top edges.
+  RightStart;
+  /// Places the Portal to the right of its anchor and centers it vertically.
+  Right;
+  /// Places the Portal to the right of its anchor and aligns their bottom edges.
+  RightEnd;
+  /// Places the Portal to the left of its anchor and aligns their top edges.
+  LeftStart;
+  /// Places the Portal to the left of its anchor and centers it vertically.
+  Left;
+  /// Places the Portal to the left of its anchor and aligns their bottom edges.
+  LeftEnd
 }
 
 internal func validPortalPlacement(value PortalPlacement) bool {
@@ -20,7 +40,8 @@ internal func validPortalPlacement(value PortalPlacement) bool {
 /// Defines a logical child subtree that is laid out against the window viewport and
 /// presented in its Window's shared overlay after the normal tree. The subtree retains
 /// its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility
-/// relationships.
+/// relationships. An optional Anchor changes only its border-box placement, not that
+/// logical ownership.
 public class Portal : Blob {
   private let children IList[Blob] = List[Blob]()
 
@@ -30,9 +51,13 @@ public class Portal : Blob {
   internal prop Children IList[Blob]{ get -> children }
 
   /// Gets the optional mounted element whose transformed border box positions this Portal.
+  /// When set, an unmounted, hidden, wrong-Window, descendant, or cyclic anchor suppresses
+  /// the Portal. An unset Anchor keeps ordinary window-level Portal positioning.
   public prop Anchor ElementHandle? { get; init; }
 
   /// Gets the preferred side and alignment used when Anchor is mounted in this Window.
+  /// Goo flips to the opposite side when that reduces overflow, then contains the Portal
+  /// border box within the viewport. The default is BottomStart.
   public prop Placement PortalPlacement{ get; init; }
 
   /// Initializes an empty child collection.
