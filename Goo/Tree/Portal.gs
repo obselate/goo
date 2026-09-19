@@ -3,6 +3,20 @@ package Goo
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
+/// Specifies the preferred side and alignment of an anchored Portal before
+/// automatic edge flipping and viewport containment.
+public enum PortalPlacement {
+  BottomStart; Bottom; BottomEnd;
+  TopStart; Top; TopEnd;
+  RightStart; Right; RightEnd;
+  LeftStart; Left; LeftEnd
+}
+
+internal func validPortalPlacement(value PortalPlacement) bool {
+  let ordinal = int32(value)
+  return ordinal >= 0 && ordinal <= int32(PortalPlacement.LeftEnd)
+}
+
 /// Defines a logical child subtree that is laid out against the window viewport and
 /// presented in its Window's shared overlay after the normal tree. The subtree retains
 /// its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility
@@ -14,6 +28,12 @@ public class Portal : Blob {
   }
 
   internal prop Children IList[Blob]{ get -> children }
+
+  /// Gets the optional mounted element whose transformed border box positions this Portal.
+  public prop Anchor ElementHandle? { get; init; }
+
+  /// Gets the preferred side and alignment used when Anchor is mounted in this Window.
+  public prop Placement PortalPlacement{ get; init; }
 
   /// Initializes an empty child collection.
   public init() { }

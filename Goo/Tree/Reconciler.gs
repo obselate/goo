@@ -158,8 +158,7 @@ internal class Reconciler {
 
   internal func mountPortal(p Portal) Node {
     let n = Node{ Kind: NodeKind.Container, Key: p.Key, IsPortal: true }
-    applyStyle(n, p, p.Focusable, true)
-    n.HitTestSelf = false
+    applyPortal(n, p, true)
     mountChildren(n, p.Children)
     return n
   }
@@ -956,10 +955,27 @@ internal class Reconciler {
     if !canReuseNode(n, p) {
       return replace(n, p)
     }
-    applyStyle(n, p, p.Focusable, false)
-    n.HitTestSelf = false
+    applyPortal(n, p, false)
     diffChildren(n, p.Children)
     return n
+  }
+
+  private func applyPortal(n Node, p Portal, initial bool) {
+    if !validPortalPlacement(p.Placement) {
+      throw ArgumentOutOfRangeException("Placement")
+    }
+    applyStyle(n, p, p.Focusable, initial)
+    n.HitTestSelf = false
+    if n.PortalAnchor != p.Anchor || n.PortalPlacement != p.Placement {
+      n.PortalAnchor = p.Anchor
+      n.PortalPlacement = p.Placement
+      n.PortalAnchorResolved = false
+      n.PortalPlacementHidden = p.Anchor != nil
+      if !initial {
+        MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint
+          | ReconcileEffects.Input | ReconcileEffects.Accessibility)
+      }
+    }
   }
 
   internal func diffButton(n Node, b Button) Node {

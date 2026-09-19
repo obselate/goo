@@ -44,12 +44,14 @@ internal class Layout {
   private var portalLastHeight float32
   private var portalLaidOut bool
   private var portalStructureDirty bool
+  private let placedPortals HashSet[Node]
 
   // No web defaults: native Yoga's Column direction matches Goo's default.
   internal init() {
     config = YGConfigAPI.YGConfigNew()
     YGConfigAPI.YGConfigSetPointScaleFactor(config, 0.0F)
     scrollNodes = List[Node]()
+    placedPortals = HashSet[Node]()
     scrollListDirty = true
     portalStructureDirty = true
   }
@@ -85,28 +87,29 @@ internal class Layout {
     lastHeight = height
     laidOut = true
     if let overlays = overlayRoot {
-      CalculatePortals(overlays, width, height)
+      CalculatePortals(root, overlays, width, height)
     }
   }
 
-  private func CalculatePortals(root Node, width float32, height float32) {
-    root.Rect = Rect{ W: width, H: height }
-    if portalStructureDirty || root != portalRoot {
-      for portal in root.Children {
+  private func CalculatePortals(sourceRoot Node, overlayRoot Node, width float32, height float32) {
+    overlayRoot.Rect = Rect{ W: width, H: height }
+    if portalStructureDirty || overlayRoot != portalRoot {
+      for portal in overlayRoot.Children {
         syncNode(portal, true)
       }
       portalStructureDirty = false
     }
     let resized = !portalLaidOut || width != portalLastWidth || height != portalLastHeight
-    for portal in root.Children {
+    for portal in overlayRoot.Children {
       guard let yoga = portal.Yoga else { continue }
+      applyPortalConstraints(yoga, portal, width, height)
       if resized || YGNodeAPI.YGNodeIsDirty(yoga) {
         YGNodeAPI.YGNodeCalculateLayout(yoga, width, height,
           yogaDirection(portal.Direction))
-        readRect(portal, 0.0F, 0.0F)
       }
     }
-    portalRoot = root
+    placePortals(sourceRoot, overlayRoot, width, height)
+    portalRoot = overlayRoot
     portalLastWidth = width
     portalLastHeight = height
     portalLaidOut = true
@@ -161,6 +164,7 @@ internal class Layout {
     for portal in overlayRoot.Children {
       guard let portalYoga = portal.Yoga else { return true }
       if YGNodeAPI.YGNodeIsDirty(portalYoga) { return true }
+      if portalPlacementChanged(root, portal) { return true }
     }
     return false
   }
@@ -275,11 +279,232 @@ internal class Layout {
       readRect(root, 0.0F, 0.0F)
     }
     if portalLaidOut {
-      for portal in overlayRoot.Children {
-        readRect(portal, 0.0F, 0.0F)
-      }
+      placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
     }
   }
+
+  private func applyPortalConstraints(yoga Facebook.Yoga.Node, portal Node,
+    width float32, height float32) {
+      if portal.PortalAnchor == nil {
+        restorePortalConstraints(yoga, portal)
+        return
+      }
+      YGNodeStyleAPI.YGNodeStyleSetMinWidth(yoga,
+        portalMinimum(portal.MinWidth, width))
+      YGNodeStyleAPI.YGNodeStyleSetMinHeight(yoga,
+        portalMinimum(portal.MinHeight, height))
+      YGNodeStyleAPI.YGNodeStyleSetMaxWidth(yoga,
+        portalMaximum(portal.MaxWidth, width))
+      YGNodeStyleAPI.YGNodeStyleSetMaxHeight(yoga,
+        portalMaximum(portal.MaxHeight, height))
+    }
+
+  private func restorePortalConstraints(yoga Facebook.Yoga.Node, portal Node) {
+    markYogaStyle(portal, StyleField.MinWidth)
+    markYogaStyle(portal, StyleField.MinHeight)
+    markYogaStyle(portal, StyleField.MaxWidth)
+    markYogaStyle(portal, StyleField.MaxHeight)
+    applyMinMax(yoga, portal)
+  }
+
+  private func portalMinimum(value Length, available float32) float32 {
+    if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
+    if value.Unit == LengthUnit.Percent {
+      return clampPortalSize(available * value.Value / 100.0F, available)
+    }
+    return Single.NaN
+  }
+
+  private func portalMaximum(value Length, available float32) float32 {
+    if value.Unit == LengthUnit.Px { return clampPortalSize(value.Value, available) }
+    if value.Unit == LengthUnit.Percent {
+      return clampPortalSize(available * value.Value / 100.0F, available)
+    }
+    return available
+  }
+
+  private func clampPortalSize(value float32, available float32) float32 {
+    if value < 0.0F { return 0.0F }
+    return value < available ? value : available
+  }
+
+  private func portalPlacementChanged(sourceRoot Node, portal Node) bool {
+    if portal.PortalAnchor == nil {
+      return portal.PortalAnchorResolved || portal.PortalPlacementHidden
+    }
+    guard let anchor = portalAnchor(sourceRoot, portal) else {
+      return portal.PortalAnchorResolved || !portal.PortalPlacementHidden
+    }
+    let bounds = TransformGeometry.BoundsToWindow(anchor)
+    return !portal.PortalAnchorResolved
+      || !samePortalRect(portal.PortalAnchorBounds, bounds)
+  }
+
+  private func placePortals(sourceRoot Node, overlayRoot Node, width float32,
+    height float32) {
+      placedPortals.Clear()
+      var pass int32
+      while pass < overlayRoot.Children.Count {
+        var progressed = false
+        for portal in overlayRoot.Children {
+          if placedPortals.Contains(portal) { continue }
+          if portal.PortalAnchor == nil {
+            portal.PortalAnchorResolved = false
+            portal.PortalPlacementHidden = false
+            readRect(portal, 0.0F, 0.0F)
+            placedPortals.Add(portal)
+            progressed = true
+            continue
+          }
+          guard let anchor = portalAnchor(sourceRoot, portal) else {
+            hidePortal(portal, false, TransformBounds{})
+            placedPortals.Add(portal)
+            progressed = true
+            continue
+          }
+          let bounds = TransformGeometry.BoundsToWindow(anchor)
+          var dependencyInvalid = false
+          if !portalDependenciesReady(anchor, portal, out dependencyInvalid) { continue }
+          if dependencyInvalid {
+            hidePortal(portal, true, bounds)
+            placedPortals.Add(portal)
+            progressed = true
+            continue
+          }
+          let origin = portalOrigin(portal, bounds, width, height)
+          portal.PortalAnchorBounds = Rect{
+            X: bounds.X, Y: bounds.Y, W: bounds.W, H: bounds.H,
+          }
+          portal.PortalAnchorResolved = true
+          portal.PortalPlacementHidden = false
+          readPortalRect(portal, origin.X, origin.Y)
+          placedPortals.Add(portal)
+          progressed = true
+        }
+        if !progressed { break }
+        pass++
+      }
+      for portal in overlayRoot.Children {
+        if placedPortals.Contains(portal) { continue }
+        if let anchor = portalAnchor(sourceRoot, portal) {
+          hidePortal(portal, true, TransformGeometry.BoundsToWindow(anchor))
+        } else {
+          hidePortal(portal, false, TransformBounds{})
+        }
+      }
+    }
+
+  private func portalAnchor(sourceRoot Node, portal Node) Node? {
+    guard let handle = portal.PortalAnchor, let anchor = handle.AttachedNode() else {
+      return nil
+    }
+    if anchor.Retired || !ElementHandles.Owns(anchor, handle) { return nil }
+    var current = anchor
+    while true {
+      if current == portal || current.PaintInputState != 0 { return nil }
+      guard let parent = current.Parent else { return current == sourceRoot ? anchor : nil }
+      current = parent
+    }
+  }
+
+  private func portalDependenciesReady(node Node, portal Node,
+    out invalid bool) bool {
+    invalid = false
+    var current = node
+    while true {
+      if current.IsPortal {
+        if current == portal {
+          invalid = true
+          return true
+        }
+        if !placedPortals.Contains(current) { return false }
+        if current.PortalPlacementHidden {
+          invalid = true
+          return true
+        }
+      }
+      guard let parent = current.Parent else { return true }
+      current = parent
+    }
+  }
+
+  private func hidePortal(portal Node, resolved bool, bounds TransformBounds) {
+    portal.PortalAnchorResolved = resolved
+    if resolved {
+      portal.PortalAnchorBounds = Rect{
+        X: bounds.X, Y: bounds.Y, W: bounds.W, H: bounds.H,
+      }
+    }
+    portal.PortalPlacementHidden = true
+  }
+
+  private func readPortalRect(portal Node, x float32, y float32) {
+    guard let yoga = portal.Yoga else { return }
+    readRect(portal, 0.0F, 0.0F,
+      x - YGNodeLayoutAPI.YGNodeLayoutGetLeft(yoga),
+      y - YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga))
+  }
+
+  private func portalOrigin(portal Node, anchor TransformBounds, width float32,
+    height float32) Rect {
+      guard let yoga = portal.Yoga else { return Rect{} }
+      let popupWidth = YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga)
+      let popupHeight = YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga)
+      let placement = portal.PortalPlacement
+      let bottom = placement == PortalPlacement.BottomStart
+        || placement == PortalPlacement.Bottom || placement == PortalPlacement.BottomEnd
+      let top = placement == PortalPlacement.TopStart
+        || placement == PortalPlacement.Top || placement == PortalPlacement.TopEnd
+      let start = placement == PortalPlacement.BottomStart
+        || placement == PortalPlacement.TopStart || placement == PortalPlacement.RightStart
+        || placement == PortalPlacement.LeftStart
+      let center = placement == PortalPlacement.Bottom || placement == PortalPlacement.Top
+        || placement == PortalPlacement.Right || placement == PortalPlacement.Left
+      var x = anchor.X
+      var y = anchor.Y + anchor.H
+      if bottom || top {
+        let rtl = portal.Direction == Direction.RightToLeft
+        if center { x = anchor.X + (anchor.W - popupWidth) * 0.5F }
+        else if (start && rtl) || (!start && !rtl) {
+          x = anchor.X + anchor.W - popupWidth
+        }
+        if top { y = anchor.Y - popupHeight }
+        let opposite = bottom ? anchor.Y - popupHeight : anchor.Y + anchor.H
+        if portalOverflow(y, popupHeight, height) > portalOverflow(opposite,
+          popupHeight, height) { y = opposite }
+      } else {
+        y = anchor.Y
+        if center { y = anchor.Y + (anchor.H - popupHeight) * 0.5F }
+        else if !start { y = anchor.Y + anchor.H - popupHeight }
+        let right = placement == PortalPlacement.RightStart
+          || placement == PortalPlacement.Right || placement == PortalPlacement.RightEnd
+        x = right ? anchor.X + anchor.W : anchor.X - popupWidth
+        let opposite = right ? anchor.X - popupWidth : anchor.X + anchor.W
+        if portalOverflow(x, popupWidth, width) > portalOverflow(opposite,
+          popupWidth, width) { x = opposite }
+      }
+      return Rect{
+        X: clampPortalOrigin(x, popupWidth, width),
+        Y: clampPortalOrigin(y, popupHeight, height),
+      }
+    }
+
+  private func portalOverflow(origin float32, size float32, available float32) float32 {
+    var result = origin < 0.0F ? -origin : 0.0F
+    let far = origin + size
+    if far > available { result = result + far - available }
+    return result
+  }
+
+  private func clampPortalOrigin(origin float32, size float32,
+    available float32) float32 {
+      if size >= available || origin < 0.0F { return 0.0F }
+      let maximum = available - size
+      return origin > maximum ? maximum : origin
+    }
+
+  private func samePortalRect(left Rect, right TransformBounds) bool ->
+  left.X == right.X && left.Y == right.Y && left.W == right.W && left.H == right.H
 
   // Yoga positions are parent-relative; accumulate origin so Rect is absolute.
   // Scroll containers clamp their offsets and shift their children's origin.

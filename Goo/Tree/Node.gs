@@ -34,6 +34,11 @@ internal class Node {
 
   internal prop Kind NodeKind{ get; set; }
   internal var IsPortal bool
+  internal var PortalAnchor ElementHandle?
+  internal var PortalPlacement PortalPlacement
+  internal var PortalAnchorBounds Rect
+  internal var PortalAnchorResolved bool
+  internal var PortalPlacementHidden bool
   internal prop HasCustomLayout bool{
     get -> (nodeState & (int32(1) << 12)) != 0
     set -> nodeState = value ? nodeState | (int32(1) << 12) : nodeState & ^(int32(1) << 12)
@@ -289,7 +294,7 @@ internal class Node {
     }
   }
   internal prop PaintInputState int32{ get -> nodeState & int32(3) }
-  internal prop PaintInputHidden bool{ get -> (nodeState & int32(3)) != 0 }
+  internal prop PaintInputHidden bool{ get -> (nodeState & int32(3)) != 0 || PortalPlacementHidden }
   internal prop StackingChildren bool{
     get -> (nodeState & (int32(1) << 24)) != 0
     set {
