@@ -456,7 +456,7 @@ public partial class Window {
       Width: width,
       Height: height,
     }
-    return target.RequestReadback(node, background, dpi, region)
+    return target.RequestReadback(node, portalRoot, background, dpi, region)
   }
 
   internal func RequestReadbackForTest() WindowReadbackRequestStatus -> RequestReadbackForTest(64u, 64u)

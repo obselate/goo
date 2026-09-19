@@ -466,5 +466,6 @@ let modes = []SmokeMode{
   SmokeMode("GOO_IMAGE_STAGING_SMOKE", "1", () -> RunImageStagingSmoke()),
   SmokeMode("GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE", "1", () -> RunRoundedResizeFirstFrameSmoke()),
   SmokeMode("GOO_CLIP_CAPTURE_SMOKE", "1", () -> RunClipCaptureSmoke()),
+  SmokeMode("GOO_PORTAL_CAPTURE_SMOKE", "1", () -> RunPortalCaptureSmoke()),
 }
 if !RunSelectedSmoke(modes) { RunReadbackSmoke() }

@@ -13,6 +13,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Motion/MotionFixtures.gs" Link="MotionFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Tree/TreeFixtures.gs" Link="TreeFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Tree/ElementHandleFixtures.gs" Link="ElementHandleFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tree/PortalFixtures.gs" Link="PortalFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Style/StyleFixtures.gs" Link="StyleFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Rendering/ShapeGeometryFixtures.gs" Link="ShapeGeometryFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Diagnostics/DiagnosticsFixtures.gs" Link="DiagnosticsFixtures.gs" />

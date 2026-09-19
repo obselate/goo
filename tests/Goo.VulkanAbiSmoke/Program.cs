@@ -19,6 +19,7 @@ internal static class Program
 
 
         RunOverflowBorderGate();
+        RunPortalRetentionGate();
         if (Environment.GetEnvironmentVariable("GOO_VK_OVERFLOW_BORDER") == "1")
             return 0;
 
@@ -657,6 +658,119 @@ internal static class Program
                 throw new InvalidOperationException("Nested overflow border scene is incomplete");
         }
         Console.WriteLine("VULKAN_OVERFLOW_BORDER PASS square and rounded nested borders");
+    }
+
+    private static void RunPortalRetentionGate()
+    {
+        var root = new Node
+        {
+            Kind = NodeKind.Container,
+            Rect = new Rect { X = 0, Y = 0, W = 200, H = 100 },
+            BackgroundColor = Color.Rgb(18, 24, 36),
+        };
+        var source = new Node
+        {
+            Kind = NodeKind.Container,
+            Parent = root,
+            Rect = new Rect { X = 0, Y = 0, W = 20, H = 20 },
+            Opacity = 0,
+            OverflowX = Overflow.Hidden,
+            OverflowY = Overflow.Hidden,
+        };
+        var foreground = new Node
+        {
+            Kind = NodeKind.Container,
+            Parent = root,
+            Rect = new Rect { X = 80, Y = 10, W = 70, H = 50 },
+            BackgroundColor = Color.Rgb(180, 40, 40),
+        };
+        Node PortalNode(int z, int x, Color color)
+        {
+            var portal = new Node
+            {
+                Kind = NodeKind.Container,
+                IsPortal = true,
+                Parent = source,
+                Rect = new Rect { X = x, Y = 20, W = 60, H = 40 },
+                ZIndex = z,
+            };
+            var content = new Node
+            {
+                Kind = NodeKind.Container,
+                Parent = portal,
+                Rect = new Rect { X = x, Y = 20, W = 60, H = 40 },
+                BackgroundColor = color,
+            };
+            portal.Children.Add(content);
+            source.Children.Add(portal);
+            return portal;
+        }
+        var first = PortalNode(5, 70, Color.Rgb(30, 170, 80));
+        var second = PortalNode(5, 90, Color.Rgb(40, 90, 210));
+        root.Children.Add(source);
+        root.Children.Add(foreground);
+        var overlay = new Node
+        {
+            Kind = NodeKind.Container,
+            Rect = new Rect { X = 0, Y = 0, W = 200, H = 100 },
+            HitTestSelf = false,
+        };
+        Portals.Sync(root, overlay);
+
+        var warm = new VulkanSceneCompiler(8);
+        warm.Compile(root, overlay, Color.Transparent, 200, 100);
+        var hits = warm.RetainedLeafHitCount + warm.RetainedParentBoxHitCount;
+        warm.Compile(root, overlay, Color.Transparent, 200, 100);
+        if (warm.RetainedLeafHitCount + warm.RetainedParentBoxHitCount <= hits)
+            throw new InvalidOperationException("Portal scene did not exercise retained box reuse");
+        AssertPortalDrawOrder(warm.Frame, Color.Rgb(30, 170, 80), Color.Rgb(40, 90, 210));
+
+        first.ZIndex = 10;
+        var warmResult = warm.Compile(root, overlay, Color.Transparent, 200, 100);
+        var cold = new VulkanSceneCompiler(8);
+        var coldResult = cold.Compile(root, overlay, Color.Transparent, 200, 100);
+        if (warmResult.HasUnsupported || coldResult.HasUnsupported)
+            throw new InvalidOperationException("Portal comparison produced an unsupported scene");
+        AssertPortalDrawOrder(warm.Frame, Color.Rgb(40, 90, 210), Color.Rgb(30, 170, 80));
+        AssertSemanticSceneEqual(warm.Frame, cold.Frame);
+        Console.WriteLine("VULKAN_PORTAL_RETENTION PASS cold and warm semantic scenes match");
+    }
+
+    private static void AssertSemanticSceneEqual(SceneFrame expected, SceneFrame actual)
+    {
+        if (expected.DrawRefCount != actual.DrawRefCount)
+            throw new InvalidOperationException("Portal semantic draw counts differ");
+        for (var i = 0; i < expected.DrawRefCount; i++)
+        {
+            var left = expected.DrawRefs[i];
+            var right = actual.DrawRefs[i];
+            if (left.Kind != right.Kind || left.Flags != right.Flags
+                || left.ClipChainId != right.ClipChainId)
+                throw new InvalidOperationException("Portal semantic draw order differs at " + i);
+            if (left.Kind != SceneDrawKind.SolidBox
+                || !expected.SolidBoxes[left.Index].Equals(actual.SolidBoxes[right.Index]))
+                throw new InvalidOperationException("Portal semantic payload differs at " + i);
+        }
+    }
+
+    private static void AssertPortalDrawOrder(SceneFrame frame, Color first, Color second)
+    {
+        if (frame.DrawRefCount != 4)
+            throw new InvalidOperationException("Portal scene did not emit four boxes");
+        var expected = new[]
+        {
+            Color.Rgb(18, 24, 36).ToPackedRgba(),
+            Color.Rgb(180, 40, 40).ToPackedRgba(),
+            first.ToPackedRgba(),
+            second.ToPackedRgba(),
+        };
+        for (var i = 0; i < expected.Length; i++)
+        {
+            var draw = frame.DrawRefs[i];
+            if (draw.Kind != SceneDrawKind.SolidBox
+                || frame.SolidBoxes[draw.Index].Color != expected[i])
+                throw new InvalidOperationException("Portal draw order differs at " + i);
+        }
     }
 
     private static void RunRetainedPrimitiveSpanGate()
