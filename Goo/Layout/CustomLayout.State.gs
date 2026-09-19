@@ -47,22 +47,28 @@ internal class CustomLayoutState {
   }
 
   internal func SyncChildren() {
-    var changed = Children.Length != Node.Children.Count
+    let count = Portals.LayoutChildCount(Node)
+    var changed = Children.Length != count
     if !changed {
-      for i in 0 ... Children.Length {
-        if Children[i].Node != Node.Children[i] {
+      var index int32
+      for child in Node.Children {
+        if !child.IsPortal && Children[index].Node != child {
           changed = true
           break
         }
+        if !child.IsPortal { index++ }
       }
     }
     if changed {
       let old = Dictionary[Node, CustomLayoutChild]()
       for child in Children { old[child.Node] = child }
-      let next = [Node.Children.Count]CustomLayoutChild
-      for i in 0 ... next.Length {
-        let child = Node.Children[i]
-        next[i] = if old.TryGetValue(child, out var retained) { retained } else { CustomLayoutChild{Node: child} }
+      let next = [count]CustomLayoutChild
+      var index int32
+      for child in Node.Children {
+        if !child.IsPortal {
+          next[index] = if old.TryGetValue(child, out var retained) { retained } else { CustomLayoutChild{Node: child} }
+          index++
+        }
       }
       Children = next
       Invalidate()

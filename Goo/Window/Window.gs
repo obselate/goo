@@ -320,6 +320,7 @@ public partial class Window {
   }
 
   private var node Node?
+  private let portalRoot Node
   private var dirty bool
   private var pendingReconcileEffects ReconcileEffects
   private var pendingRebuild int32
@@ -415,6 +416,7 @@ public partial class Window {
     cellBatch = List[DirtyCellSubmission]()
     fiberBatch = List[Cell]()
     childDiffScratch = ChildDiffScratch()
+    portalRoot = Node{Kind: NodeKind.Container}
     layout = Layout()
     resolver = Resolver{Owner: this}
     profiler = FrameProfiler()

@@ -110,6 +110,7 @@ internal class Reconciler {
     let result = switch b {
       case v is VirtualBlobBase: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
+      case p is Portal: mountPortal(p)
       case bt is Button: mountButton(bt)
       case c is Container: mountContainer(c)
       case t is Text: mountText(t)
@@ -152,6 +153,14 @@ internal class Reconciler {
     let n = Node{ Kind: NodeKind.Container, Key: c.Key }
     applyContainer(n, c, true)
     mountChildren(n, c.Children)
+    return n
+  }
+
+  internal func mountPortal(p Portal) Node {
+    let n = Node{ Kind: NodeKind.Container, Key: p.Key, IsPortal: true }
+    applyStyle(n, p, p.Focusable, true)
+    n.HitTestSelf = false
+    mountChildren(n, p.Children)
     return n
   }
 
@@ -602,6 +611,7 @@ internal class Reconciler {
     }
     let result = switch b {
       case v is VirtualBlobBase: diffVirtual(n, v)
+      case p is Portal: diffPortal(n, p)
       case bt is Button: diffButton(n, bt)
       case c is Container: diffContainer(n, c)
       case t is Text: diffText(n, t)
@@ -942,6 +952,16 @@ internal class Reconciler {
     return n
   }
 
+  internal func diffPortal(n Node, p Portal) Node {
+    if !canReuseNode(n, p) {
+      return replace(n, p)
+    }
+    applyStyle(n, p, p.Focusable, false)
+    n.HitTestSelf = false
+    diffChildren(n, p.Children)
+    return n
+  }
+
   internal func diffButton(n Node, b Button) Node {
     if !canReuseNode(n, b) {
       return replace(n, b)
@@ -1039,8 +1059,12 @@ internal class Reconciler {
       case button is Button {
         return n.Fiber == nil && n.Kind == NodeKind.Button && n.Key == b.Key
       }
+      case portal is Portal {
+        return n.Fiber == nil && n.Kind == NodeKind.Container && n.IsPortal
+          && n.Key == b.Key
+      }
       case container is Container {
-        return n.Fiber == nil && n.Kind == NodeKind.Container && n.Key == b.Key
+        return n.Fiber == nil && n.Kind == NodeKind.Container && !n.IsPortal && n.Key == b.Key
           && Virtualization.State(n) == nil
       }
       case text is Text {

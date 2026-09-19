@@ -58,6 +58,9 @@ internal class Stacking {
       if let parent = n.Parent {
         invalidate(parent)
       }
+      if n.IsPortal {
+        Portals.InvalidateStacking(n)
+      }
     }
 
     internal func InvalidateStructure(parent Node) {

@@ -714,6 +714,7 @@ public partial class Window {
 
     let tree = node
     node = nil
+    Portals.Sync(nil, portalRoot)
     if let current = tree {
       firstError = captureCleanupError(firstError, () -> NodeLifecycle.DisposeTree(current))
     }

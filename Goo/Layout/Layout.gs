@@ -39,6 +39,11 @@ internal class Layout {
   internal var scrollListDirty bool
   internal var scrollSeen int64
   private var scrollRoot Node?
+  private var portalRoot Node?
+  private var portalLastWidth float32
+  private var portalLastHeight float32
+  private var portalLaidOut bool
+  private var portalStructureDirty bool
 
   // No web defaults: native Yoga's Column direction matches Goo's default.
   internal init() {
@@ -46,11 +51,20 @@ internal class Layout {
     YGConfigAPI.YGConfigSetPointScaleFactor(config, 0.0F)
     scrollNodes = List[Node]()
     scrollListDirty = true
+    portalStructureDirty = true
   }
 
   // Walk only when structure changed; targeted style pushes keep Yoga current,
   // and Yoga's setters propagate dirt to the root for the clean early-out.
   internal func Calculate(root Node, width float32, height float32) {
+    CalculateCore(root, nil, width, height)
+  }
+
+  internal func Calculate(root Node, overlayRoot Node, width float32, height float32) {
+    CalculateCore(root, overlayRoot, width, height)
+  }
+
+  private func CalculateCore(root Node, overlayRoot Node?, width float32, height float32) {
     if CustomLayouts.Depth != 0 { throw InvalidOperationException("A custom layout callback cannot reenter window layout") }
     if structureDirty || root != lastRoot || root.Yoga == nil {
       syncNode(root, true)
@@ -59,25 +73,49 @@ internal class Layout {
     guard let yg = root.Yoga else {
       return
     }
-    if laidOut && root == lastRoot
-      && width == lastWidth && height == lastHeight
-      && !YGNodeAPI.YGNodeIsDirty(yg) {
-        return
-      }
-    let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
-    ? Single.NaN : height
-    YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
+    if !root.IsPortal && (!laidOut || root != lastRoot
+      || width != lastWidth || height != lastHeight || YGNodeAPI.YGNodeIsDirty(yg)) {
+      let availableHeight = root.Kind == NodeKind.Entry && root.Height.Unit == LengthUnit.Unset
+      ? Single.NaN : height
+      YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
+      readRect(root, 0.0F, 0.0F)
+    }
     lastRoot = root
     lastWidth = width
     lastHeight = height
     laidOut = true
-    readRect(root, 0.0F, 0.0F)
+    if let overlays = overlayRoot {
+      CalculatePortals(overlays, width, height)
+    }
+  }
+
+  private func CalculatePortals(root Node, width float32, height float32) {
+    if portalStructureDirty || root != portalRoot {
+      for portal in root.Children {
+        syncNode(portal, true)
+      }
+      portalStructureDirty = false
+    }
+    let resized = !portalLaidOut || width != portalLastWidth || height != portalLastHeight
+    for portal in root.Children {
+      guard let yoga = portal.Yoga else { continue }
+      if resized || YGNodeAPI.YGNodeIsDirty(yoga) {
+        YGNodeAPI.YGNodeCalculateLayout(yoga, width, height,
+          yogaDirection(portal.Direction))
+        readRect(portal, 0.0F, 0.0F)
+      }
+    }
+    portalRoot = root
+    portalLastWidth = width
+    portalLastHeight = height
+    portalLaidOut = true
   }
 
   // Raised on every reconcile (and by structural test edits); style-only
   // frames never walk.
   internal func MarkStructureDirty() {
     structureDirty = true
+    portalStructureDirty = true
     scrollListDirty = true
   }
 
@@ -106,19 +144,33 @@ internal class Layout {
     }
   }
 
-  internal func NeedsLayout(root Node) bool -> NeedsLayout(root, lastWidth, lastHeight)
+  internal func NeedsLayout(root Node) bool -> NormalNeedsLayout(root, lastWidth, lastHeight)
 
-  internal func NeedsLayout(root Node, width float32, height float32) bool {
-    if structureDirty || root != lastRoot {
+  internal func NeedsLayout(root Node, overlayRoot Node) bool ->
+  NeedsLayout(root, overlayRoot, lastWidth, lastHeight)
+
+  internal func NeedsLayout(root Node, overlayRoot Node, width float32, height float32) bool {
+    if NormalNeedsLayout(root, width, height) {
       return true
     }
-    if !laidOut || width != lastWidth || height != lastHeight {
-      return true
+    if portalStructureDirty || overlayRoot != portalRoot || !portalLaidOut
+      || width != portalLastWidth || height != portalLastHeight {
+        return true
+      }
+    for portal in overlayRoot.Children {
+      guard let portalYoga = portal.Yoga else { return true }
+      if YGNodeAPI.YGNodeIsDirty(portalYoga) { return true }
     }
-    guard let yg = root.Yoga else {
-      return true
-    }
-    return YGNodeAPI.YGNodeIsDirty(yg)
+    return false
+  }
+
+  private func NormalNeedsLayout(root Node, width float32, height float32) bool {
+    if structureDirty || root != lastRoot || !laidOut
+      || width != lastWidth || height != lastHeight {
+        return true
+      }
+    guard let yoga = root.Yoga else { return true }
+    return !root.IsPortal && YGNodeAPI.YGNodeIsDirty(yoga)
   }
 
   // Structure-only walk: attaches Yoga (with a one-time full style sync) for
@@ -158,7 +210,9 @@ internal class Layout {
       if YGNodeAPI.YGNodeGetChildCount(yg) != nuint(0) { YGNodeAPI.YGNodeSetChildrenRetaining(yg, []Facebook.Yoga.Node{}) }
       YGNodeAPI.YGNodeSetContext(yg, n)
       YGNodeAPI.YGNodeSetMeasureFunc(yg, CustomLayouts.Measure)
-      for child in n.Children { syncNode(child, true) }
+      for child in n.Children {
+        if !child.IsPortal { syncNode(child, true) }
+      }
       custom.SyncChildren()
       return
     }
@@ -166,6 +220,7 @@ internal class Layout {
     if n.Kind == NodeKind.Editor {
       for i in 0 ... n.Children.Count {
         let child = n.Children[i]
+        if child.IsPortal { continue }
         syncNode(child, true)
         if let childYoga = child.Yoga {
           YGNodeAPI.YGNodeSetContext(childYoga, child)
@@ -178,7 +233,7 @@ internal class Layout {
       return
     }
     for i in 0 ... n.Children.Count {
-      syncNode(n.Children[i], false)
+      if !n.Children[i].IsPortal { syncNode(n.Children[i], false) }
     }
     // Rebuilding the Yoga child list dirties the whole subtree, so only when
     // Diff actually changed the children.
@@ -189,22 +244,40 @@ internal class Layout {
   }
 
   private func syncChildren(yg Facebook.Yoga.Node, n Node) {
-    let children = [n.Children.Count]Facebook.Yoga.Node
-    for i in 0 ... n.Children.Count {
-      guard let childYg = n.Children[i].Yoga else {
-        throw InvalidOperationException("child Yoga node is unavailable")
+    let count = Portals.LayoutChildCount(n)
+    let children = [count]Facebook.Yoga.Node
+    var index int32
+    for child in n.Children {
+      if !child.IsPortal {
+        guard let childYg = child.Yoga else {
+          throw InvalidOperationException("child Yoga node is unavailable")
+        }
+        children[index] = childYg
+        index++
       }
-      children[i] = childYg
     }
     YGNodeAPI.YGNodeSetChildrenRetaining(yg, children)
   }
 
   // Rect-only refresh for scroll changes; Yoga is untouched so it is cheap.
   internal func RefreshRects(root Node) {
+    if laidOut && !root.IsPortal {
+      readRect(root, 0.0F, 0.0F)
+    }
+  }
+
+  internal func RefreshRects(root Node, overlayRoot Node) {
     if !laidOut {
       return
     }
-    readRect(root, 0.0F, 0.0F)
+    if !root.IsPortal {
+      readRect(root, 0.0F, 0.0F)
+    }
+    if portalLaidOut {
+      for portal in overlayRoot.Children {
+        readRect(portal, 0.0F, 0.0F)
+      }
+    }
   }
 
   // Yoga positions are parent-relative; accumulate origin so Rect is absolute.
@@ -247,7 +320,9 @@ internal class Layout {
         return
       }
       for i in 0 ... n.Children.Count {
-        readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY)
+        if !n.Children[i].IsPortal {
+          readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY)
+        }
       }
     }
 
@@ -255,6 +330,7 @@ internal class Layout {
     let contentWidth = BoxGeometry.ContentWidth(n)
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
+      if child.IsPortal { continue }
       guard let yoga = child.Yoga else { continue }
       let availableWidth = child.EditorSlotBlock ? contentWidth : Single.NaN
       YGNodeAPI.YGNodeCalculateLayout(yoga, availableWidth, Single.NaN,
@@ -281,6 +357,7 @@ internal class Layout {
       ch = extent.Height
     } else {
       for i in 0 ... n.Children.Count {
+        if n.Children[i].IsPortal { continue }
         guard let cy = n.Children[i].Yoga else {
           continue
         }
@@ -772,15 +849,20 @@ internal func applyDisplay(yg Facebook.Yoga.Node, n Node) {
 // Reference equality per slot: Diff reuses Node instances, and syncNode reuses
 // their Yoga nodes, so an unchanged child list is the same handles in order.
 internal func childrenAlreadyMatch(yg Facebook.Yoga.Node, n Node) bool {
-  if uint32(YGNodeAPI.YGNodeGetChildCount(yg)) != uint32(n.Children.Count) {
+  let count = Portals.LayoutChildCount(n)
+  if uint32(YGNodeAPI.YGNodeGetChildCount(yg)) != uint32(count) {
     return false
   }
-  for i in 0 ... n.Children.Count {
-    guard let childYg = n.Children[i].Yoga else {
-      return false
-    }
-    if YGNodeAPI.YGNodeGetChild(yg, nuint(i)) != childYg {
-      return false
+  var index int32
+  for child in n.Children {
+    if !child.IsPortal {
+      guard let childYg = child.Yoga else {
+        return false
+      }
+      if YGNodeAPI.YGNodeGetChild(yg, nuint(index)) != childYg {
+        return false
+      }
+      index++
     }
   }
   return true

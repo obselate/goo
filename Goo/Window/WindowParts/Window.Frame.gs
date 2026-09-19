@@ -141,6 +141,7 @@ public partial class Window {
       dirty = true
     }
     guard let cell = Root else {
+      Portals.Sync(nil, portalRoot)
       input.AfterTreeUpdated(nil, resolver, true)
       family?.NativeDrop?.Validate()
       stopImageCompletions()
@@ -224,11 +225,14 @@ public partial class Window {
     var metricsChanged bool
     var layoutChanged bool
     if let n = node {
+      if hasEffect(effects, ReconcileEffects.Structure) {
+        Portals.Sync(n, portalRoot)
+      }
       let viewW = float32(Width)
       let viewH = float32(Height)
       let shouldLayout = hasEffect(effects, ReconcileEffects.Structure)
         || hasEffect(effects, ReconcileEffects.Layout)
-        || layout.NeedsLayout(n, viewW, viewH)
+        || layout.NeedsLayout(n, portalRoot, viewW, viewH)
       if shouldLayout {
         calculateLayout(n, viewW, viewH)
         layoutChanged = true
@@ -236,7 +240,7 @@ public partial class Window {
         metricsChanged = true
       }
       if hasEffect(effects, ReconcileEffects.Rect) {
-        layout.RefreshRects(n)
+        layout.RefreshRects(n, portalRoot)
         accessibilityLayout = true
         metricsChanged = true
       }
@@ -247,11 +251,12 @@ public partial class Window {
         effects = combineEffects(effects, virtualEffects)
         if hasEffect(virtualEffects, ReconcileEffects.Structure) {
           layout.MarkStructureDirty()
+          Portals.Sync(n, portalRoot)
         }
-        if layout.NeedsLayout(n, viewW, viewH) {
+        if layout.NeedsLayout(n, portalRoot, viewW, viewH) {
           calculateLayout(n, viewW, viewH)
         } else {
-          layout.RefreshRects(n)
+          layout.RefreshRects(n, portalRoot)
         }
         layoutChanged = true
         accessibilityLayout = true
@@ -270,7 +275,7 @@ public partial class Window {
             profiler.Record(FrameProfileStage.InputTree, inputTreeProfile)
           }
           effects = combineEffects(effects, resolver.FlushEffects())
-          if layout.NeedsLayout(n, viewW, viewH) {
+          if layout.NeedsLayout(n, portalRoot, viewW, viewH) {
             calculateLayout(n, viewW, viewH)
             layoutChanged = true
             accessibilityLayout = true
@@ -289,24 +294,25 @@ public partial class Window {
             changed = true
             accessibilityScroll = true
             metricsChanged = true
-            layout.RefreshRects(n)
+            layout.RefreshRects(n, portalRoot)
             let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
             let virtualEffects = refreshVirtualization(n)
             if virtualEffects != ReconcileEffects.None {
               effects = combineEffects(effects, virtualEffects)
               if hasEffect(virtualEffects, ReconcileEffects.Structure) {
                 layout.MarkStructureDirty()
+                Portals.Sync(n, portalRoot)
               }
-              if layout.NeedsLayout(n, viewW, viewH) {
+              if layout.NeedsLayout(n, portalRoot, viewW, viewH) {
                 calculateLayout(n, viewW, viewH)
               } else {
-                layout.RefreshRects(n)
+                layout.RefreshRects(n, portalRoot)
               }
               layoutChanged = true
               accessibilityLayout = true
               input.AfterTreeUpdated(n, resolver, true)
               effects = combineEffects(effects, resolver.FlushEffects())
-              if layout.NeedsLayout(n, viewW, viewH) {
+              if layout.NeedsLayout(n, portalRoot, viewW, viewH) {
                 calculateLayout(n, viewW, viewH)
               }
             }
@@ -372,11 +378,11 @@ public partial class Window {
 
   private func calculateLayout(n Node, width float32, height float32) {
     if !profiler.Active {
-      layout.Calculate(n, width, height)
+      layout.Calculate(n, portalRoot, width, height)
       return
     }
     let point = profiler.Start()
-    layout.Calculate(n, width, height)
+    layout.Calculate(n, portalRoot, width, height)
     profiler.Record(FrameProfileStage.Layout, point)
   }
 
