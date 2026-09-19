@@ -78,7 +78,7 @@ internal partial class PointerInput {
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
       if (vertical ? maxScrollY(n) : maxScrollX(n)) > 0.0F { return n }
-      if n.FocusScopeBoundary {
+      if n.FocusScopeBoundary || n.IsPortal {
         break
       }
     }

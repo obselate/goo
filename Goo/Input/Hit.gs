@@ -2,8 +2,6 @@ package Goo
 
 import System.Collections.Generic
 
-internal enum HitResult { Miss; Unhandled; Handled; Blocked }
-
 private func hitWithinMapped(n Node, x float32, y float32) bool -> !n.PaintInputHidden && n.Rect.Contains(x, y)
 
 private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
@@ -30,9 +28,20 @@ private func hitsMapped(n Node, x float32, y float32) bool {
   return if n.Kind == NodeKind.Shape { ShapeGeometry.HitTest(n, x, y) } else { true }
 }
 
-// Reverse order agrees with Painter's paint order: later children win.
-// A child that hits at the point is committed to, not skipped.
 internal func hitTopmost(root Node, x float32, y float32) Node? {
+  if let overlay = Portals.Overlay(root) {
+    let portals = Stacking.Children(overlay)
+    for var i = portals.Count; i > 0; i-- {
+      let portal = portals[i - 1]
+      if Portals.Presented(portal) {
+        if let hit = hitTreeTopmost(portal, x, y) { return hit }
+      }
+    }
+  }
+  return hitTreeTopmost(root, x, y)
+}
+
+private func hitTreeTopmost(root Node, x float32, y float32) Node? {
   let point = TransformGeometry.Unmap(root, x, y)
   if !point.Valid || !hitCanTraverseMapped(root, point.X, point.Y) {
     return nil
@@ -41,8 +50,8 @@ internal func hitTopmost(root Node, x float32, y float32) Node? {
     let children = Stacking.Children(root)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]
-      if let hit = hitTopmost(child, point.X, point.Y) {
-        return hit
+      if !child.IsPortal {
+        if let hit = hitTreeTopmost(child, point.X, point.Y) { return hit }
       }
     }
   }
@@ -50,14 +59,15 @@ internal func hitTopmost(root Node, x float32, y float32) Node? {
 }
 
 internal func hitDispatchClick(root Node, x float32, y float32) bool {
-  if root.HasFocusScopes {
-    if let target = hitTopmost(root, x, y) {
-      if !FocusScopes.Allows(root, target) {
-        return false
-      }
-    }
+  let chain = List[Node]()
+  hitChainInto(root, x, y, chain)
+  if chain.Count == 0 || !canReceiveInput(chain[chain.Count - 1]) { return false }
+  for var i = chain.Count; i > 0; i-- {
+    let n = chain[i - 1]
+    if n.OnClick != nil && hitFire(n, CellOwnership.InRoute(chain, i - 1)) { return true }
+    if n.FocusScopeBoundary { return false }
   }
-  return hitDispatch(root, x, y, nil) == HitResult.Handled
+  return false
 }
 
 internal func hitActivate(root Node?, target Node) bool {
@@ -67,7 +77,27 @@ internal func hitActivate(root Node?, target Node) bool {
 
 // Append the committed path from the root to the topmost node.
 internal func hitChainInto(n Node, x float32, y float32, sink List[Node]) {
+  if let overlay = Portals.Overlay(n) {
+    let portals = Stacking.Children(overlay)
+    for var i = portals.Count; i > 0; i-- {
+      let portal = portals[i - 1]
+      let start = sink.Count
+      if Portals.Presented(portal) && appendHitChain(portal, x, y, sink) {
+        prependPortalAncestors(portal, start, sink)
+        return
+      }
+      while sink.Count > start { sink.RemoveAt(sink.Count - 1) }
+    }
+  }
   appendHitChain(n, x, y, sink)
+}
+
+private func prependPortalAncestors(portal Node, start int32, sink List[Node]) {
+  var current = portal.Parent
+  while let ancestor = current {
+    sink.Insert(start, ancestor)
+    current = ancestor.Parent
+  }
 }
 
 private func appendHitChain(n Node, x float32, y float32, sink List[Node]) bool {
@@ -79,7 +109,7 @@ private func appendHitChain(n Node, x float32, y float32, sink List[Node]) bool 
     let children = Stacking.Children(n)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]
-      if appendHitChain(child, point.X, point.Y, sink) { return true }
+      if !child.IsPortal && appendHitChain(child, point.X, point.Y, sink) { return true }
     }
   }
   if hitsMapped(n, point.X, point.Y) { return true }
@@ -87,32 +117,6 @@ private func appendHitChain(n Node, x float32, y float32, sink List[Node]) bool 
   return false
 }
 
-// Commit to the topmost child. Do not pass through an occluding sibling.
-private func hitDispatch(n Node, x float32, y float32, inherited Cell?) HitResult {
-  let point = TransformGeometry.Unmap(n, x, y)
-  if !point.Valid || !hitCanTraverseMapped(n, point.X, point.Y) { return HitResult.Miss }
-  if n.Disabled { return HitResult.Blocked }
-  let owner = CellOwnership.Inherit(n, inherited)
-  if hitCanTraverseChildrenMapped(n, point.X, point.Y) {
-    let children = Stacking.Children(n)
-    for var i = children.Count; i > 0; i-- {
-      let child = children[i - 1]
-      let result = hitDispatch(child, point.X, point.Y, owner)
-      if result == HitResult.Handled || result == HitResult.Blocked {
-        return result
-      }
-      if result == HitResult.Unhandled {
-        return hitFire(n, owner) ? HitResult.Handled : (
-          n.FocusScopeBoundary ? HitResult.Blocked : HitResult.Unhandled)
-      }
-    }
-  }
-  if !hitsMapped(n, point.X, point.Y) { return HitResult.Miss }
-  return hitFire(n, owner) ? HitResult.Handled : (n.FocusScopeBoundary ? HitResult.Blocked : HitResult.Unhandled)
-}
-
-// A handler presumably mutated its own cell's state; mark it dirty so
-// plain fields rebuild without Track or manual Rebuild calls.
 private func hitFire(n Node, owner Cell?) bool {
   if let handler = n.OnClick {
     handler()

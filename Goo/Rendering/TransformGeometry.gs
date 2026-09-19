@@ -129,13 +129,16 @@ internal class TransformGeometry {
     }
 
     internal func WindowToNode(n Node, x float32, y float32) TransformPoint {
-      let point = if let parent = n.Parent { WindowToNode(parent, x, y) } else { TransformPoint{ Valid: true, X: x, Y: y } }
+      if n.IsPortal { return Unmap(n, x, y) }
+      let point = if let parent = n.Parent { WindowToNode(parent, x, y) }
+      else { TransformPoint{ Valid: true, X: x, Y: y } }
       return if !point.Valid { point } else { Unmap(n, point.X, point.Y) }
     }
 
     internal func NodeToWindow(n Node, x float32, y float32) TransformPoint {
       let point = Map(n, x, y)
       if !point.Valid { return point }
+      if n.IsPortal { return point }
       return if let parent = n.Parent { NodeToWindow(parent, point.X, point.Y) } else { point }
     }
 

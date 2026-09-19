@@ -416,7 +416,7 @@ public partial class Window {
     cellBatch = List[DirtyCellSubmission]()
     fiberBatch = List[Cell]()
     childDiffScratch = ChildDiffScratch()
-    portalRoot = Node{Kind: NodeKind.Container}
+    portalRoot = Node{Kind: NodeKind.Container, HitTestSelf: false}
     layout = Layout()
     resolver = Resolver{Owner: this}
     profiler = FrameProfiler()

@@ -23,6 +23,7 @@ internal partial class PointerInput {
           }
           return
         }
+      if n.IsPortal { break }
     }
   }
 
@@ -70,7 +71,7 @@ internal partial class PointerInput {
           remainingY = remainingY - float32(moved.Y)
         }
       }
-        target = n.Parent
+        target = n.IsPortal ? nil : n.Parent
       }
       return true
     }

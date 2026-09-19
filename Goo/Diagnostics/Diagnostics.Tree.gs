@@ -189,7 +189,7 @@ internal class DiagnosticTreeState {
       if !child.Retired { childIds.Add(identity.Get(child)) }
     }
     result.ChildIds = childIds
-    result.Kind = n.Kind.ToString()
+    result.Kind = n.IsPortal ? "Portal" : n.Kind.ToString()
     result.Key = n.Key ?? ""
     result.Content = n.Content
     result.OwnerType = if let owner = n.Fiber { owner.GetType().Name } else { "" }
@@ -372,14 +372,21 @@ internal class DiagnosticTreeState {
             BoxGeometry.ContentTop(ancestor), BoxGeometry.ContentWidth(ancestor),
             BoxGeometry.ContentHeight(ancestor))
         } else { TransformGeometry.BoundsToWindow(ancestor) }
-        if ancestor.Parent == nil || ancestor.Kind == NodeKind.Editor
+        if (ancestor.Parent == nil && !ancestor.IsPortal) || ancestor.Kind == NodeKind.Editor
           || ancestor.OverflowX != Overflow.Visible {
           result = intersectX(result, float64(clip.X), float64(clip.X + clip.W))
         }
-        if ancestor.Parent == nil || ancestor.Kind == NodeKind.Editor
+        if (ancestor.Parent == nil && !ancestor.IsPortal) || ancestor.Kind == NodeKind.Editor
           || ancestor.OverflowY != Overflow.Visible {
           result = intersectY(result, float64(clip.Y), float64(clip.Y + clip.H))
         }
+      }
+      if ancestor.IsPortal {
+        if let window = owner {
+          result = intersectX(result, 0.0, float64(window.Width))
+          result = intersectY(result, 0.0, float64(window.Height))
+        }
+        break
       }
       current = ancestor.Parent
     }
@@ -482,6 +489,7 @@ internal class DiagnosticTreeState {
     var current Node? = n
     while let value = current {
       if value.HasClipPath || value.HasVisualTransform { return true }
+      if value.IsPortal { break }
       current = value.Parent
     }
     return false

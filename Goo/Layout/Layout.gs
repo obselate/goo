@@ -90,6 +90,7 @@ internal class Layout {
   }
 
   private func CalculatePortals(root Node, width float32, height float32) {
+    root.Rect = Rect{ W: width, H: height }
     if portalStructureDirty || root != portalRoot {
       for portal in root.Children {
         syncNode(portal, true)

@@ -29,13 +29,22 @@ public class Portal : Blob {
 internal class Portals {
   shared {
     private let roots ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
+    private let overlays ConditionalWeakTable[Node, Node] = ConditionalWeakTable[Node, Node]()
+    private let sources ConditionalWeakTable[Node, PortalSource] = ConditionalWeakTable[Node, PortalSource]()
 
     internal func Sync(root Node?, overlayRoot Node) {
+      if sources.TryGetValue(overlayRoot, out var prior) {
+        if let source = prior.Root { overlays.Remove(source) }
+        sources.Remove(overlayRoot)
+      }
       for portal in overlayRoot.Children {
         roots.Remove(portal)
       }
       overlayRoot.Children.Clear()
       if let current = root {
+        overlays.Remove(current)
+        overlays.Add(current, overlayRoot)
+        sources.Add(overlayRoot, PortalSource{ Root: current })
         Collect(current, overlayRoot)
       }
       Stacking.InvalidateStructure(overlayRoot)
@@ -57,6 +66,8 @@ internal class Portals {
       }
     }
 
+    internal func Overlay(root Node) Node? -> overlays.TryGetValue(root, out var overlay) ? overlay : nil
+
     internal func Presented(node Node) bool {
       var current = node
       while true {
@@ -75,4 +86,8 @@ internal class Portals {
     }
 
   }
+}
+
+internal class PortalSource {
+  internal var Root Node?
 }

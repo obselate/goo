@@ -68,22 +68,24 @@ internal partial class PointerInput {
       if chainDisabled(scratchChain) { return false }
       for var i = scratchChain.Count; i > 0; i-- {
         let n = scratchChain[i - 1]
-        if scrollbarAlpha(n) <= 0.0F { continue }
-        if n.Kind == NodeKind.Editor {
-          ScrollState.SyncEditor(n) }
-        let point = TransformGeometry.WindowToNode(n, x, y)
-        if !point.Valid { continue }
-        var geometry ScrollThumbGeometry
-        if verticalScrollThumb(n, out geometry)
-          && scrollThumbContains(n, geometry, point.X, point.Y) {
-            beginScrollDrag(n, true, point.Y - geometry.Bounds.Y, resolver)
-            return true
+        if scrollbarAlpha(n) > 0.0F {
+          if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
+          let point = TransformGeometry.WindowToNode(n, x, y)
+          if point.Valid {
+            var geometry ScrollThumbGeometry
+            if verticalScrollThumb(n, out geometry)
+              && scrollThumbContains(n, geometry, point.X, point.Y) {
+                beginScrollDrag(n, true, point.Y - geometry.Bounds.Y, resolver)
+                return true
+              }
+            if horizontalScrollThumb(n, out geometry)
+              && scrollThumbContains(n, geometry, point.X, point.Y) {
+                beginScrollDrag(n, false, point.X - geometry.Bounds.X, resolver)
+                return true
+              }
           }
-        if horizontalScrollThumb(n, out geometry)
-          && scrollThumbContains(n, geometry, point.X, point.Y) {
-            beginScrollDrag(n, false, point.X - geometry.Bounds.X, resolver)
-            return true
-          }
+        }
+        if n.IsPortal { break }
       }
       return false
     } finally {

@@ -124,15 +124,15 @@ public partial class Window {
     requireUiThread("ElementHandle.ScrollIntoView")
     if n.Retired { return false }
     var subject = n
-    var parent = n.Parent
+    var parent = n.IsPortal ? nil : n.Parent
     while parent != nil {
       let ancestor = parent
       if ancestor.Kind == NodeKind.Editor || ancestor.OverflowX == Overflow.Scroll
         || ancestor.OverflowY == Overflow.Scroll{
           scrollSubjectIntoAncestor(subject, ancestor)
           subject = ancestor
-        }
-      parent = ancestor.Parent
+      }
+      parent = ancestor.IsPortal ? nil : ancestor.Parent
     }
     accessibility?.MarkDirty()
     return true

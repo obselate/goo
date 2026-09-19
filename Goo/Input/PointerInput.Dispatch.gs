@@ -117,24 +117,45 @@ internal partial class PointerInput {
   private func mapRoutePositions(route List[Node], x float32, y float32,
     positions List[Point]) bool{
       positions.Clear()
+      let portal = deepestPortal(route)
       var mappedX = x
       var mappedY = y
+      var valid = true
       for i in 0 ... route.Count {
         let n = route[i]
-        let point = TransformGeometry.Unmap(n, mappedX, mappedY)
-        if !point.Valid {
-          positions.Clear()
-          return false
+        if n.IsPortal {
+          mappedX = x
+          mappedY = y
+          valid = true
         }
-        mappedX = point.X
-        mappedY = point.Y
-        positions.Add(Point{
-          X: float64(mappedX - n.Rect.X),
-          Y: float64(mappedY - n.Rect.Y),
-        })
+        let point = if valid { TransformGeometry.Unmap(n, mappedX, mappedY) }
+        else { TransformPoint{} }
+        if !point.Valid {
+          if i >= portal {
+            positions.Clear()
+            return false
+          }
+          valid = false
+          positions.Add(Point{ X: float64(x - n.Rect.X), Y: float64(y - n.Rect.Y) })
+        } else {
+          mappedX = point.X
+          mappedY = point.Y
+          positions.Add(Point{
+            X: float64(mappedX - n.Rect.X),
+            Y: float64(mappedY - n.Rect.Y),
+          })
+        }
       }
       return true
     }
+
+  private func deepestPortal(route List[Node]) int32 {
+    var result = -1
+    for i in 0 ... route.Count {
+      if route[i].IsPortal { result = i }
+    }
+    return result
+  }
 
   private func routeHasTransform(route List[Node]) bool {
     for i in 0 ... route.Count {
@@ -147,31 +168,48 @@ internal partial class PointerInput {
     previousX float32, previousY float32) bool{
       routePositions.Clear()
       routeDeltas.Clear()
+      let portal = deepestPortal(route)
       var mappedX = x
       var mappedY = y
       var mappedPreviousX = previousX
       var mappedPreviousY = previousY
+      var valid = true
       for i in 0 ... route.Count {
         let n = route[i]
-        let point = TransformGeometry.Unmap(n, mappedX, mappedY)
-        let previous = TransformGeometry.Unmap(n, mappedPreviousX, mappedPreviousY)
-        if !point.Valid || !previous.Valid {
-          routePositions.Clear()
-          routeDeltas.Clear()
-          return false
+        if n.IsPortal {
+          mappedX = x
+          mappedY = y
+          mappedPreviousX = previousX
+          mappedPreviousY = previousY
+          valid = true
         }
-        mappedX = point.X
-        mappedY = point.Y
-        mappedPreviousX = previous.X
-        mappedPreviousY = previous.Y
-        routePositions.Add(Point{
-          X: float64(mappedX - n.Rect.X),
-          Y: float64(mappedY - n.Rect.Y),
-        })
-        routeDeltas.Add(Point{
-          X: float64(mappedX - mappedPreviousX),
-          Y: float64(mappedY - mappedPreviousY),
-        })
+        let point = if valid { TransformGeometry.Unmap(n, mappedX, mappedY) }
+        else { TransformPoint{} }
+        let previous = if valid { TransformGeometry.Unmap(n, mappedPreviousX, mappedPreviousY) }
+        else { TransformPoint{} }
+        if !point.Valid || !previous.Valid {
+          if i >= portal {
+            routePositions.Clear()
+            routeDeltas.Clear()
+            return false
+          }
+          valid = false
+          routePositions.Add(Point{ X: float64(x - n.Rect.X), Y: float64(y - n.Rect.Y) })
+          routeDeltas.Add(Point{ X: float64(x - previousX), Y: float64(y - previousY) })
+        } else {
+          mappedX = point.X
+          mappedY = point.Y
+          mappedPreviousX = previous.X
+          mappedPreviousY = previous.Y
+          routePositions.Add(Point{
+            X: float64(mappedX - n.Rect.X),
+            Y: float64(mappedY - n.Rect.Y),
+          })
+          routeDeltas.Add(Point{
+            X: float64(point.X - previous.X),
+            Y: float64(point.Y - previous.Y),
+          })
+        }
       }
       return true
     }
