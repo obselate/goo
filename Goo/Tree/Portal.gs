@@ -3,23 +3,23 @@ package Goo
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
-/// Defines a logical child subtree that is presented in the window overlay.
+/// Defines a logical child subtree that is laid out against the window viewport and
+/// presented in its Window's shared overlay after the normal tree. The subtree retains
+/// its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility
+/// relationships.
 public class Portal : Blob {
-  private var children IList[Blob] = List[Blob]()
+  private let children IList[Blob] = List[Blob]()
 
   internal override func coreBlob() {
   }
 
-  /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
-  /// Give all siblings stable keys, or give no sibling a key.
-  public prop Children IList[Blob]{ get -> children
-    init -> children = value.IsReadOnly ? List[Blob](value) : value
-  }
+  internal prop Children IList[Blob]{ get -> children }
 
   /// Initializes an empty child collection.
   public init() { }
 
-  /// Adds a child to the end of the ordered child collection.
+  /// Adds a child for mixed composite initialization. Give all siblings stable keys,
+  /// or give no sibling a key.
   /// @param child The child to add.
   public func Add(child Blob) {
     Children.Add(child)

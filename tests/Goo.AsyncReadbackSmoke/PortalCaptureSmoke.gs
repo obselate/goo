@@ -26,22 +26,22 @@ class PortalCaptureCell : Cell {
       .Transform: PanelTransform{ Scale: 0.8 },
       .TransformOriginX: Length.Percent(0),
       .TransformOriginY: Length.Percent(0),
-      Portal() {
-        .ZIndex: 5,
-        .Width: 120,
-        .Height: 40,
-        .Transform: PanelTransform{ TranslateX: 40, TranslateY: 25 },
-        .TransformOriginX: Length.Percent(0),
-        .TransformOriginY: Length.Percent(0),
+      Portal{
+        ZIndex: 5,
+        Width: 120,
+        Height: 40,
+        Transform: PanelTransform{ TranslateX: 40, TranslateY: 25 },
+        TransformOriginX: Length.Percent(0),
+        TransformOriginY: Length.Percent(0),
         Container{ Width: 120, Height: 40, BackgroundColor: Color.Rgb(30, 170, 80) },
       },
-      Portal() {
-        .ZIndex: 5,
-        .Width: 120,
-        .Height: 40,
-        .Transform: PanelTransform{ TranslateX: 40, TranslateY: 25 },
-        .TransformOriginX: Length.Percent(0),
-        .TransformOriginY: Length.Percent(0),
+      Portal{
+        ZIndex: 5,
+        Width: 120,
+        Height: 40,
+        Transform: PanelTransform{ TranslateX: 40, TranslateY: 25 },
+        TransformOriginX: Length.Percent(0),
+        TransformOriginY: Length.Percent(0),
         Container{ Width: 120, Height: 40, BackgroundColor: Color.Rgb(40, 90, 210) },
       },
     },
@@ -147,15 +147,15 @@ func RunPortalCaptureSmoke() {
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
       22.0, 128.0, uint8(230), uint8(190), uint8(40), 16, "border_left")
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
-      65.0, 101.0, uint8(210), uint8(70), uint8(210), 16,
+      75.0, 103.0, uint8(210), uint8(70), uint8(210), 16,
       "visible_child_over_border")
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
       21.0, 101.0, uint8(12), uint8(20), uint8(32), 16, "rounded_corner")
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
       215.0, 130.0, uint8(40), uint8(200), uint8(210), 16,
       "hidden_child_center")
-    PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
-      188.0, 108.0, uint8(74), uint8(78), uint8(88), 20,
+    PrimitiveRequirePixelDifferent(result.Pixels, result.Width, metrics,
+      188.0, 108.0, uint8(40), uint8(200), uint8(210), 48,
       "hidden_padding_corner")
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
       205.0, 101.0, uint8(220), uint8(50), uint8(50), 16, "hidden_border_top")

@@ -33,6 +33,7 @@ ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<
 ctor|Goo.NativeAccessibilityAdapter|public|()
 ctor|Goo.PathBuilder|public|()
 ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double)
+ctor|Goo.Portal|public|()
 ctor|Goo.RadialGradient|public|(centerX:System.Double,centerY:System.Double,radius:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.RadialGradient|public|(params colors:Goo.Color[])
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
@@ -783,6 +784,7 @@ method|Goo.Point|GetHashCode|instance|public|generic:|()->System.Int32
 method|Goo.Point|ToString|instance|public|generic:|()->System.String
 method|Goo.Point|op_Equality|static|public|generic:|(arg0:Goo.Point,arg1:Goo.Point)->System.Boolean
 method|Goo.Point|op_Inequality|static|public|generic:|(arg0:Goo.Point,arg1:Goo.Point)->System.Boolean
+method|Goo.Portal|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:|(bytes:System.Byte[])->System.Void
@@ -1624,6 +1626,7 @@ type|Goo.PointerButton|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerDevice|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Point|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.Portal|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.PositionType|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.RadialGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:
 type|Goo.ScrollbarVisibility|enum|public|base:System.Enum|interfaces:|generic:

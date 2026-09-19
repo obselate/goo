@@ -4,6 +4,37 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Tree`](../../Goo/Tree)
 
+## Present content above the normal tree
+
+Use `Portal` for popups, menus, tooltips, and other content that must escape its
+declaration-site clipping and transforms. Portal children remain logical children:
+keyed reconciliation, Cell disposal, routed events, focus scopes, pointer capture,
+and accessibility keep the same ownership path. Their layout and geometry instead
+start at the logical window viewport, so `ElementHandle.BorderBox` supplies window
+coordinates suitable for anchor placement.
+
+```gsharp
+Portal{ZIndex: 20, Container{Width: 240, Height: 160, BackgroundColor: Color.White},}
+```
+
+Each Window owns one automatic overlay shared by all its Portals. It remains inside
+that native window; Portal does not create a native child window. The normal tree
+paints completely before the overlay. Direct Portal peers are ordered by `ZIndex`;
+equal values keep declaration order.
+
+Portal itself is not a pointer target. Input checks its children first and falls
+through to the normal tree on an ordinary geometry hit-test miss, not according to
+painted pixel alpha. Opacity zero therefore retains normal Goo hit-test behavior.
+`Visibility.Hidden` and `Display.None` on a Portal or source ancestor suppress the
+Portal. `Disabled` and focus-scope policies follow the logical tree, while source
+opacity, overflow clipping, and transforms do not constrain presented geometry.
+
+Portal children do not participate in their source container's Yoga or custom
+layout and do not enlarge its scroll extent. Apply size, position, transform,
+overflow, and paint styles to the Portal itself when the overlay needs those
+semantics. Goo does not provide automatic anchor placement, dismissal, or a named
+layer system; compose those policies with handles, input callbacks, and focus scopes.
+
 ## Virtualize complete data sources
 
 `Virtual(items, itemWidth, itemHeight, itemKey, itemBuilder)` accepts the complete `IReadOnlyList<T>` source and one positive, finite logical width and height shared by every item. Goo derives list or wrapped-grid placement from `FlexDirection` and `FlexWrap`, then mounts only the viewport window plus one overscan line. The caller does not calculate a range, supply an item count, or choose a list or grid primitive.
@@ -631,6 +662,24 @@ Creates the lease Goo owns and disposes for one mounted element.
 ### `ContentVersion`
 
 Gets the content version used to invalidate mounted image bindings.
+
+## `Portal`
+
+Source:
+
+- [`Portal.gs`](../../Goo/Tree/Portal.gs)
+
+Defines a logical child subtree that is laid out against the window viewport and presented in its Window's shared overlay after the normal tree. The subtree retains its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility relationships.
+
+### `new`
+
+Initializes an empty child collection.
+
+### `Add(Blob)`
+
+Adds a child for mixed composite initialization. Give all siblings stable keys, or give no sibling a key.
+
+- `child`: The child to add.
 
 ## `ScrollbarVisibility`
 
