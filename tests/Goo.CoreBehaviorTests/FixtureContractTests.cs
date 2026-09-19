@@ -177,6 +177,8 @@ public sealed class FixtureContractTests
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.WindowCloseTraversesSiblingCellsContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.WindowOwnsMotionClockContract));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.KeyedLifecycleFocusAccessibilityAndCaptureContract));
+        yield return Contract<PortalFixtures>(nameof(PortalFixtures.AnchoredPlacementLifecycleAndDependencyContract));
+        yield return Contract<PortalFixtures>(nameof(PortalFixtures.AnchoredPlacementTracksViewportAndGeometryContract));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.OverlayOrderingInputAndGeometryContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.GeometryRenderingAndVisibilityContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PointerDragAndCancellationContract));

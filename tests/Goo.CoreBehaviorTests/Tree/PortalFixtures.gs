@@ -103,11 +103,137 @@ internal class PortalFixtures {
       && findPortalAccessibility(adapter.Tree?.Root, "portal target") == nil
     return result
   }
+
+  func AnchoredPlacementTracksViewportAndGeometryContract() bool {
+    let cell = PortalPlacementCell{}
+    let window = Window{ Root: cell, Width: 240, Height: 160 }
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 150.0, 50.0, 90.0, 50.0) {
+      return false
+    }
+    window.InputForTest.QueuePointerPress(160.0F, 60.0F)
+    window.InputForTest.QueuePointerRelease(160.0F, 60.0F)
+    window.DrainQueuedInputForTest()
+    if cell.Clicks != 1 || !cell.Scroll.JumpTo(50.0, 40.0) { return false }
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 120.0, 80.0, 90.0, 50.0) {
+      return false
+    }
+    guard let anchor = cell.Anchor.AttachedNode() else { return false }
+    let builds = cell.Builds
+    Transforming.SetTranslateX(anchor,
+      Length{ Unit: LengthUnit.Px, Value: -20.0F })
+    window.UpdateTree()
+    if cell.Builds != builds
+      || !samePortalBox(cell.Popup.BorderBox, 100.0, 80.0, 90.0, 50.0) {
+        return false
+      }
+    window.HandleResize(180, 100)
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 90.0, 10.0, 90.0, 50.0) {
+      return false
+    }
+    cell.PopupWidth = 300.0
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 0.0, 10.0, 180.0, 50.0) {
+      return false
+    }
+    window.HandleResize(240, 160)
+    cell.PopupWidth = 90.0
+    cell.RightToLeft = true
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 30.0, 80.0, 90.0, 50.0) {
+      return false
+    }
+    cell.RightToLeft = false
+    cell.Placement = PortalPlacement.Bottom
+    cell.Rebuild()
+    window.UpdateTree()
+    return samePortalBox(cell.Popup.BorderBox, 65.0, 80.0, 90.0, 50.0)
+  }
+
+  func AnchoredPlacementLifecycleAndDependencyContract() bool {
+    let otherAnchor = ElementHandle{}
+    let other = Window{ Root: PortalForeignAnchorCell(otherAnchor),
+      Width: 40, Height: 40 }
+    other.UpdateTree()
+    let cell = PortalAnchorLifecycleCell{}
+    let adapter = AccessibilityTestAdapter{}
+    let window = Window{ Root: cell, Width: 200, Height: 120 }
+    window.AccessibilityAdapter = adapter
+    window.UpdateTree()
+    guard let initial = window.Tree else { return false }
+    if !samePortalBox(cell.Popup.BorderBox, 11.0, 13.0, 30.0, 20.0)
+      || !samePortalBox(cell.ForwardPopup.BorderBox, 80.0, 45.0, 30.0, 20.0)
+      || initial.Children[2].PaintInputHidden || initial.Children[3].PaintInputHidden
+      || !initial.Children[4].PaintInputHidden || !initial.Children[5].PaintInputHidden
+      || window.PortalLayoutNeedsForTest() {
+        return false
+      }
+
+    cell.SelectedAnchor = cell.Anchor
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 60.0, 50.0, 30.0, 20.0) {
+      return false
+    }
+    cell.SelectedAnchor = nil
+    cell.Rebuild()
+    window.UpdateTree()
+    if !samePortalBox(cell.Popup.BorderBox, 11.0, 13.0, 30.0, 20.0) {
+      return false
+    }
+
+    cell.SelectedAnchor = otherAnchor
+    cell.Rebuild()
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    if cell.PopupTarget.Focus() || hitTopmost(root, 16.0F, 18.0F)?.Key == "toggle-target"
+      || findPortalAccessibility(adapter.Tree?.Root, "anchored target") != nil {
+        return false
+      }
+    cell.SelectedAnchor = cell.Anchor
+    cell.Rebuild()
+    window.UpdateTree()
+    if findPortalAccessibility(adapter.Tree?.Root, "anchored target") == nil
+      || !cell.PopupTarget.Focus() {
+        return false
+      }
+    guard let target = cell.PopupTarget.AttachedNode() else { return false }
+    cell.ShowAnchor = false
+    cell.Rebuild()
+    window.UpdateTree()
+    guard let updated = window.Tree else { return false }
+    if target.Focused || hitTopmost(updated, 65.0F, 55.0F)?.Key == "toggle-target"
+      || findPortalAccessibility(adapter.Tree?.Root, "anchored target") != nil
+      || window.PortalLayoutNeedsForTest() {
+        return false
+      }
+    cell.ShowAnchor = true
+    cell.Rebuild()
+    window.UpdateTree()
+    guard let restored = window.Tree else { return false }
+    return findPortalAccessibility(adapter.Tree?.Root, "anchored target") != nil
+      && !restored.Children[2].PaintInputHidden
+      && !restored.Children[3].PaintInputHidden
+      && !window.PortalLayoutNeedsForTest()
+  }
 }
 
 public partial class Window {
   internal prop InputForTest InputCoordinator { get -> input }
+
+  internal func PortalLayoutNeedsForTest() bool {
+    guard let root = node else { return false }
+    return layout.NeedsLayout(root, portalRoot, float32(Width), float32(Height))
+  }
 }
+
+internal func samePortalBox(value ElementRect, x float64, y float64,
+  width float64, height float64) bool -> value.X == x && value.Y == y
+  && value.Width == width && value.Height == height
 
 internal func findPortalAccessibility(node AccessibilityNode?, name string) AccessibilityNode? {
   guard let current = node else { return nil }
@@ -226,4 +352,84 @@ internal class PortalLifecycleCell : Cell {
     }
     return root
   }
+}
+
+internal class PortalPlacementCell : Cell {
+  internal let Scroll ElementHandle = ElementHandle{}
+  internal let Anchor ElementHandle = ElementHandle{}
+  internal let Popup ElementHandle = ElementHandle{}
+  internal var PopupWidth float64 = 90.0
+  internal var RightToLeft bool
+  internal var Placement PortalPlacement
+  internal var Clicks int32
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return Container{Width: Length.Percent(100), Height: Length.Percent(100),
+      Container{Handle: Scroll, Width: 200, Height: 120, Overflow: Overflow.Scroll,
+        Container{Width: 300, Height: 300, Position: PositionType.Relative,
+          Container{Handle: Anchor, Position: PositionType.Absolute,
+            Left: 170, Top: 100, Width: 20, Height: 20},
+          Portal{Handle: Popup, Anchor: Anchor,
+            Placement: Placement,
+            Direction: RightToLeft ? Direction.RightToLeft : Direction.LeftToRight,
+            Overflow: Overflow.Scroll,
+            Container{Width: PopupWidth, Height: 50,
+              OnClick: () -> Clicks++},
+          },
+        },
+      },
+    }
+  }
+}
+
+internal class PortalAnchorLifecycleCell : Cell {
+  internal let Anchor ElementHandle = ElementHandle{}
+  internal let Popup ElementHandle = ElementHandle{}
+  internal let PopupTarget ElementHandle = ElementHandle{}
+  internal let ForwardAnchor ElementHandle = ElementHandle{}
+  internal let ForwardPopup ElementHandle = ElementHandle{}
+  internal let CycleA ElementHandle = ElementHandle{}
+  internal let CycleB ElementHandle = ElementHandle{}
+  internal var SelectedAnchor ElementHandle?
+  internal var ShowAnchor bool = true
+
+  override func Build() Blob -> Container{Width: 200, Height: 120,
+    if ShowAnchor {
+      Container{Key: "anchor", Handle: Anchor, Position: PositionType.Absolute,
+        Left: 60, Top: 40, Width: 20, Height: 10}
+    } else {
+      Container{Key: "anchor-missing", Width: 1, Height: 1}
+    },
+    Portal{Key: "toggle", Handle: Popup, Anchor: SelectedAnchor,
+      Position: PositionType.Absolute, Left: 11, Top: 13, Width: 30, Height: 20,
+      Container{Key: "toggle-target", Handle: PopupTarget,
+        Width: 30, Height: 20, Focusable: true,
+        Accessibility: Accessibility{Role: AccessibilityRole.Generic,
+          Name: "anchored target"}},
+    },
+    Portal{Key: "forward", Handle: ForwardPopup, Anchor: ForwardAnchor,
+      Placement: PortalPlacement.RightEnd, Width: 30, Height: 20,
+      Container{Width: 30, Height: 20},
+    },
+    Portal{Key: "forward-host", Anchor: Anchor, Width: 50, Height: 50,
+      Container{Handle: ForwardAnchor, Position: PositionType.Absolute,
+        Left: 10, Top: 5, Width: 10, Height: 10},
+    },
+    Portal{Key: "cycle-a", Anchor: CycleB, Width: 10, Height: 10,
+      Container{Handle: CycleA, Width: 10, Height: 10}},
+    Portal{Key: "cycle-b", Anchor: CycleA, Width: 10, Height: 10,
+      Container{Handle: CycleB, Width: 10, Height: 10}},
+  }
+}
+
+internal class PortalForeignAnchorCell : Cell {
+  private let handle ElementHandle
+
+  internal init(handle ElementHandle) {
+    this.handle = handle
+  }
+
+  override func Build() Blob -> Container{Handle: handle, Width: 10, Height: 10}
 }

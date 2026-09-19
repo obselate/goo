@@ -6,6 +6,9 @@ import System
 import System.IO
 
 class PortalCaptureCell : Cell {
+  private let anchor ElementHandle = ElementHandle{}
+  internal var AnchorX float64 = 150.0
+
   override func Build() Blob -> Container() {
     .Width: Length.Percent(100),
     .Height: Length.Percent(100),
@@ -109,6 +112,23 @@ class PortalCaptureCell : Cell {
         BackgroundColor: Color.Rgb(40, 200, 210),
       },
     },
+    Container{
+      Handle: anchor,
+      Position: PositionType.Absolute,
+      Left: AnchorX,
+      Top: 155,
+      Width: 15,
+      Height: 15,
+      BackgroundColor: Color.Rgb(235, 200, 40),
+    },
+    Portal{
+      Anchor: anchor,
+      Placement: PortalPlacement.BottomStart,
+      Width: 30,
+      Height: 30,
+      Container{Width: 30, Height: 30,
+        BackgroundColor: Color.Rgb(230, 100, 20)},
+    },
   }
 }
 
@@ -119,12 +139,13 @@ func RunPortalCaptureSmoke() {
   let originalError = Console.Error
   var window Window? = nil
   try {
+    let cell = PortalCaptureCell{}
     let opened = Window{
       Title: "Goo Portal capture gate",
       Width: 280,
       Height: 180,
       VSync: false,
-      Root: PortalCaptureCell{},
+      Root: cell,
     }
     window = opened
     Console.SetError(capturedError)
@@ -167,6 +188,19 @@ func RunPortalCaptureSmoke() {
     PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
       182.0, 130.0, uint8(230), uint8(190), uint8(40), 16,
       "hidden_border_left")
+    PrimitiveRequirePixelNear(result.Pixels, result.Width, metrics,
+      160.0, 135.0, uint8(230), uint8(100), uint8(20), 8,
+      "anchored_portal_flipped")
+    cell.AnchorX = 100.0
+    cell.Rebuild()
+    WindowReadbackTestFixture.Pump(opened, 0.0)
+    let moved = ClipCaptureReadback(opened, metrics)
+    PrimitiveRequirePixelNear(moved.Pixels, moved.Width, metrics,
+      110.0, 135.0, uint8(230), uint8(100), uint8(20), 8,
+      "anchored_portal_moved")
+    PrimitiveRequirePixelNear(moved.Pixels, moved.Width, metrics,
+      160.0, 135.0, uint8(12), uint8(20), uint8(32), 8,
+      "anchored_portal_old_position_cleared")
     opened.RequestClose()
     WindowReadbackTestFixture.Pump(opened, 0.0)
     Require(!opened.IsOpen, "Portal capture window did not close")
@@ -185,5 +219,5 @@ func RunPortalCaptureSmoke() {
   Require(!diagnostics.Contains("\"event\":325")
       && !diagnostics.Contains("\"event\":326"),
     "Portal capture emitted unsupported-scene diagnostics")
-  Console.WriteLine("portal-capture-gate: overlay=validated rounded_asymmetric_border=validated visible_overflow=validated close=1")
+  Console.WriteLine("portal-capture-gate: overlay=validated anchored_placement=validated rounded_asymmetric_border=validated visible_overflow=validated close=1")
 }
