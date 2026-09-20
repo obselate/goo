@@ -8,12 +8,6 @@ internal class InputPolicy {
     // Test knob; defaults to the running OS.
     internal var Mac bool = OperatingSystem.IsMacOS()
 
-    // Primary shortcut modifier: Command on macOS, Ctrl elsewhere.
-    internal func Primary(m KeyModifiers) bool -> Mac ? m.Super : m.Ctrl
-
-    // Word navigation and word deletes: Option on macOS, Ctrl elsewhere.
-    internal func Word(m KeyModifiers) bool -> Mac ? m.Alt : m.Ctrl
-
     // Logical pixels per SDL wheel unit. SDL prescales macOS precise
     // trackpad deltas by 0.1, so 10 restores 1:1; verify on macOS pass.
     internal func WheelUnit() float32 -> Mac ? 10.0F : 48.0F

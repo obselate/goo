@@ -76,6 +76,15 @@ public class PlatformInput {
     drain()
   }
 
+  /// Cancels the current in-app drag and releases its pointer capture.
+  /// @returns True when an active drag was canceled.
+  public func CancelDrag() bool {
+    requireThread()
+    let result = input.CancelDrag(owner.Tree, resolver)
+    finish()
+    return result
+  }
+
   /// Dispatches wheel deltas at a window logical position.
   public func PointerWheel(x float32, y float32, deltaX float32, deltaY float32,
     modifiers KeyModifiers) {
@@ -180,7 +189,8 @@ public class PlatformInput {
     return result
   }
 
-  /// Executes shared semantic navigation, editing, clipboard, or submit behavior.
+  /// Executes shared semantic navigation, editing, clipboard, submit, or entry CancelEdit behavior.
+  /// Paste without Text reads the clipboard. Supplied paste text retains Paste interception and undo grouping.
   public func Execute(command TextCommand) bool {
     requireInput()
     let result = input.ExecuteEditorCommand(owner.Tree, resolver, command)

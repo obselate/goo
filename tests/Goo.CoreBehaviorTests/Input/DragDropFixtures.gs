@@ -104,6 +104,8 @@ internal class DragDropFixtures {
     }
 
     input.HandleKey(root, resolver, Key.Escape, KeyModifiers{})
+    if events.Count != 2 { return false }
+    input.CancelDrag(root, resolver)
     if events.Count != 4 || events[2] != "Leave" || events[3] != "end:Canceled" {
       return false
     }
@@ -403,7 +405,7 @@ internal class DragDropFixtures {
     cleanupInput.Drain(cleanupRoot, resolver, 0.0, nil)
     cleanupInput.QueuePointerMove(80.0F, 10.0F)
     cleanupInput.Drain(cleanupRoot, resolver, 1.0, nil)
-    cleanupInput.HandleKey(cleanupRoot, resolver, Key.Escape, KeyModifiers{})
+    cleanupInput.CancelDrag(cleanupRoot, resolver)
     captureAfterStart = false
     cleanupInput.QueuePointerMove(110.0F, 10.0F)
     cleanupInput.Drain(cleanupRoot, resolver, 2.0, nil)
@@ -537,7 +539,7 @@ internal class DragDropFixtures {
       value.Input.QueuePointerRelease(80.0F, 10.0F)
       value.Input.Drain(value.Root, value.Resolver, 1.0, nil)
     } else {
-      value.Input.HandleKey(value.Root, value.Resolver, Key.Escape, KeyModifiers{})
+      value.Input.CancelDrag(value.Root, value.Resolver)
     }
     GC.Collect()
     GC.WaitForPendingFinalizers()

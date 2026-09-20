@@ -53,6 +53,29 @@ public partial class Window {
     return result
   }
 
+  internal func ActivateElement(n Node) bool {
+    requireUiThread("ElementHandle.Activate")
+    if IsInputBlocked || n.Kind != NodeKind.Button { return false }
+    let result = hitActivate(node, n)
+    if result { markDirtyAndRender() }
+    return result
+  }
+
+  internal func BeginElementPress(n Node) bool {
+    requireUiThread("ElementHandle.BeginPress")
+    if IsInputBlocked { return false }
+    let result = input.BeginPress(resolver, n)
+    if result { markDirtyAndRender() }
+    return result
+  }
+
+  internal func EndElementPress(n Node, activate bool) bool {
+    requireUiThread("ElementHandle.EndPress")
+    let result = input.EndPress(node, resolver, n, activate && !IsInputBlocked)
+    if result { markDirtyAndRender() }
+    return result
+  }
+
   internal func BeginFocusScope(n Node, options FocusScopeOptions) FocusScope {
     requireUiThread("ElementHandle.BeginFocusScope")
     guard let tree = node else {

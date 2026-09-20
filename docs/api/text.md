@@ -177,6 +177,11 @@ Selects a semantic text-editor operation.
 - `UpdateComposition`
 - `CommitComposition`
 - `CancelComposition`
+- `CancelEdit`
+
+### `CancelEdit`
+
+Restores the focused TextEntry's value from focus time and blurs it through PlatformInput.
 
 ## `TextComposition`
 

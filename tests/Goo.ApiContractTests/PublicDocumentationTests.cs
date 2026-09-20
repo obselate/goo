@@ -106,6 +106,9 @@ public sealed class PublicDocumentationTests
         "M:Goo.ElementHandle.#ctor",
         "M:Goo.ElementHandle.BeginFocusScope(Goo.FocusScopeOptions)",
         "M:Goo.ElementHandle.Blur",
+        "M:Goo.ElementHandle.Activate",
+        "M:Goo.ElementHandle.BeginPress",
+        "M:Goo.ElementHandle.EndPress(System.Boolean)",
         "M:Goo.ElementHandle.Focus",
         "M:Goo.ElementHandle.JumpTo(System.Double,System.Double)",
         "M:Goo.ElementHandle.ScrollIntoView",
@@ -157,6 +160,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.PlatformInput.Execute(Goo.TextCommand)",
         "M:Goo.PlatformInput.FinishComposition",
         "M:Goo.PlatformInput.FocusLost",
+        "M:Goo.PlatformInput.CancelDrag",
         "M:Goo.PlatformInput.KeyPress(Goo.Key,Goo.KeyModifiers)",
         "M:Goo.PlatformInput.KeyRelease(Goo.Key)",
         "M:Goo.PlatformInput.MoveFocus(System.Boolean)",
@@ -317,6 +321,7 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedEnumFieldIds =
     {
+        "F:Goo.TextCommandKind.CancelEdit",
         "F:Goo.ImageFit.Contain",
         "F:Goo.ImageFit.Cover",
         "F:Goo.ImageFit.Fill",
@@ -370,6 +375,10 @@ public sealed class PublicDocumentationTests
             ["M:Goo.DragData.#ctor(System.Object,Goo.DragEffect)"] = new(["value", "allowedEffects"], [], false),
             ["M:Goo.DragSource.#ctor(System.Func{Goo.DragStartEvent,Goo.DragData},System.Action{Goo.DragEndEvent})"] = new(["create", "end"], [], false),
             ["M:Goo.DropTarget.#ctor(System.Func{Goo.DragEvent,Goo.DragEffect},System.Action{Goo.DragEvent})"] = new(["query", "changed"], [], false),
+            ["M:Goo.PlatformInput.CancelDrag"] = new([], [], true),
+            ["M:Goo.ElementHandle.EndPress(System.Boolean)"] = new(["activate"], [], true),
+            ["M:Goo.ElementHandle.Activate"] = new([], [], true),
+            ["M:Goo.ElementHandle.BeginPress"] = new([], [], true),
             ["M:Goo.Anim`1.Set(`0)"] = new(["value"], [], false),
             ["M:Goo.Anim`1.Snap(`0)"] = new(["value"], [], false),
             ["M:Goo.Anim`1.To(`0)"] = new(["target"], [], false),
@@ -618,7 +627,7 @@ public sealed class PublicDocumentationTests
     {
         var input = ReadApiPage("input.md");
 
-        Assert.Contains("start at the currently focused element and bubble through its parents",
+        Assert.Contains("first bubble from the focused element through its parents",
             input, StringComparison.Ordinal);
         Assert.Contains("updates the old and new `Focused` states first",
             input, StringComparison.Ordinal);

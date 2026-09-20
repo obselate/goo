@@ -8,6 +8,10 @@ internal class KeyboardInput {
   private let focus FocusManager
   private var queue List[KeyboardEvent]
   private var queueHead int32
+  private let releases Dictionary[Key, PendingKeyRelease] = Dictionary[Key, PendingKeyRelease]()
+  private var heldTarget Node?
+  private var heldFocusGeneration int64
+  private var dispatchingKey Key
   private var heldKey Key
   private var heldModifiers KeyModifiers
   private var heldT float64
@@ -15,6 +19,7 @@ internal class KeyboardInput {
   private var skipRepeatStep bool
   private var pressedButton Node?
   private var pressedKey Key
+  private var pressedFocusGeneration int64
   private var control InputDispatchControl
   private var diagnosticsHook((Key, KeyModifiers) -> bool)?
   private var dispatchGeneration int64
@@ -24,6 +29,7 @@ internal class KeyboardInput {
     queue = List[KeyboardEvent]()
     heldKey = Key.Unknown
     pressedKey = Key.Unknown
+    dispatchingKey = Key.Unknown
     control = InputDispatchControl()
   }
 
@@ -115,31 +121,22 @@ internal class KeyboardInput {
                 callback(e.Key, e.Modifiers)
                 }
               }
-              if pointer?.HandleDragKey(root, e.Key, e.Modifiers) == true {
-                changed = true
-                StopKeyRepeat(e.Key)
-                continue
-              }
-              let dispatch = DispatchKeyDown(focus.FocusedNode(), e.Key, e.Modifiers, false)
-              let handled = !dispatch.DefaultPrevented
-                && HandleKeyDefault(root, resolver, text, e.Key, e.Modifiers)
-              if dispatch.Routed || handled {
+              pointer?.UpdateDragModifiers(root, e.Modifiers)
+              let target = focus.FocusedNode() ?? root
+              let dispatch = DispatchKeyDown(target, e.Key, e.Modifiers, false)
+              if dispatch.Repeat && focus.FocusedNode() == target {
                 StartKeyRepeat(e.Key, e.Modifiers, repeatStartTicks)
               }
-              if handled { changed = true }
+              if dispatch.Handled { changed = true }
             } else if e.Kind == KeyboardEventKind.Release {
               try {
-                if pointer?.HandleDragKey(root, e.Key, e.Modifiers) == true {
-                  changed = true
-                  continue
-                }
-                let dispatch = DispatchKeyUp(focus.FocusedNode(), e.Key, e.Modifiers)
-                if HandleButtonRelease(root, resolver, e.Key, !dispatch.DefaultPrevented) {
+                pointer?.UpdateDragModifiers(root, e.Modifiers)
+                if DispatchKeyUp(focus.FocusedNode() ?? root, e.Key, e.Modifiers).Handled {
                   changed = true
                 }
               } finally {
-                // Never leave key release state armed when a public callback throws.
-                HandleButtonRelease(root, resolver, e.Key, false)
+                if e.Key == pressedKey { EndPress(root, resolver, pressedButton, false) }
+                releases.Remove(e.Key)
                 StopKeyRepeat(e.Key)
               }
             } else if let value = e.Text {
@@ -178,6 +175,13 @@ internal class KeyboardInput {
   internal func Step(root Node?, resolver Resolver, text TextInput, dt float64) bool -> if heldKey == Key.Unknown { false } else { Step(root, resolver, text, dt, Stopwatch.GetTimestamp()) }
 
   internal func Step(root Node?, resolver Resolver, text TextInput, dt float64, nowTicks int64) bool {
+    if let target = heldTarget {
+      if target != focus.FocusedNode() || heldFocusGeneration != focus.Generation || !canReceiveInput(target) {
+        resetRepeat()
+      }
+    } else {
+      resetRepeat()
+    }
     if heldKey == Key.Unknown {
       return false
     }
@@ -225,6 +229,7 @@ internal class KeyboardInput {
 
   internal func Reset(resolver Resolver) {
     queue.Clear()
+    releases.Clear()
     queueHead = 0
     resetRepeat()
     clearButtonPress(resolver)
@@ -232,24 +237,28 @@ internal class KeyboardInput {
 
   internal func AfterTreeUpdated(resolver Resolver) {
     clearButtonPressAfterFocusMove(resolver)
+    if releases.Count > 0 {
+      let stale = List[Key]()
+      for item in releases {
+        if item.Value.Target != focus.FocusedNode() || item.Value.Generation != focus.Generation
+          || !canReceiveInput(item.Value.Target) {
+          stale.Add(item.Key)
+        }
+      }
+      for key in stale { releases.Remove(key) }
+    }
     guard let focused = focus.FocusedNode() else {
       resetRepeat()
       return
     }
-    if focused.Retired || (focused.Kind != NodeKind.Entry && focused.Kind != NodeKind.Editor)
-      || !canReceiveInput(focused) {
-        resetRepeat()
-      }
-  }
-
-  internal func StartKeyRepeat(key Key, modifiers KeyModifiers) {
-    StartKeyRepeat(key, modifiers, 0)
+    if focused != heldTarget || heldFocusGeneration != focus.Generation || !canReceiveInput(focused) {
+      resetRepeat()
+    }
   }
 
   private func StartKeyRepeat(key Key, modifiers KeyModifiers, repeatStartTicks int64) {
-    if !repeats(key) {
-      return
-    }
+    heldTarget = focus.FocusedNode()
+    heldFocusGeneration = focus.Generation
     heldKey = key
     heldModifiers = modifiers
     heldT = 0.0
@@ -267,52 +276,35 @@ internal class KeyboardInput {
     if let hook = diagnosticsHook {
       if hook(key, modifiers) { return true }
     }
-    let dispatch = DispatchKeyDown(focus.FocusedNode(), key, modifiers, false)
-    return if dispatch.DefaultPrevented { false } else { HandleKeyDefault(root, resolver, text, key, modifiers) }
+    return DispatchKeyDown(focus.FocusedNode() ?? root, key, modifiers, false).Handled
   }
 
-  internal func HandleButtonPress(root Node?, resolver Resolver, key Key) bool {
-    if key != Key.Enter && key != Key.Space {
-      return false
-    }
-    guard let n = focus.FocusedNode() else { return false }
-    if n.Kind != NodeKind.Button || !canReceiveInput(n) {
+  internal func BeginPress(resolver Resolver, n Node) bool {
+    if n.Kind != NodeKind.Button || focus.FocusedNode() != n || !canReceiveInput(n) {
       return false
     }
     clearButtonPress(resolver)
     pressedButton = n
-    pressedKey = key
+    pressedKey = dispatchingKey
+    pressedFocusGeneration = focus.Generation
     n.KeyboardPressed = true
     n.Pressed = true
     resolver.Invalidate(n, false)
-    if key == Key.Enter {
-      hitActivate(root, n)
-    }
     return true
   }
 
-  internal func HandleButtonRelease(root Node?, resolver Resolver, key Key,
-    activate bool) bool{
-      if key != pressedKey {
-        return false
-      }
-      guard let n = pressedButton else {
-        pressedKey = Key.Unknown
-        return false
-      }
-      let shouldActivate = activate && key == Key.Space && focus.FocusedNode() == n
-      clearButtonPress(resolver)
-      if shouldActivate {
-        hitActivate(root, n)
-      }
-      return true
-    }
-
-  private func repeats(key Key) bool -> key == Key.Left || key == Key.Right || key == Key.Backspace
-    || key == Key.Delete || key == Key.Home || key == Key.End || key == Key.Up || key == Key.Down
-    || key == Key.PageUp || key == Key.PageDown
+  internal func EndPress(root Node?, resolver Resolver, target Node?, activate bool) bool {
+    guard let n = pressedButton else { return false }
+    if n != target { return false }
+    let shouldActivate = activate && focus.FocusedNode() == n
+      && pressedFocusGeneration == focus.Generation && canReceiveInput(n)
+    clearButtonPress(resolver)
+    if shouldActivate { hitActivate(root, n) }
+    return true
+  }
 
   private func resetRepeat() {
+    heldTarget = nil
     heldKey = Key.Unknown
     heldModifiers = KeyModifiers{}
     heldT = 0.0
@@ -321,27 +313,10 @@ internal class KeyboardInput {
   }
 
   private func HandleRepeatedKey(root Node?, resolver Resolver, text TextInput) bool {
-    let dispatch = DispatchKeyDown(focus.FocusedNode(), heldKey, heldModifiers, true)
-    if dispatch.DefaultPrevented { return false }
-    let handled = HandleKeyDefault(root, resolver, text, heldKey, heldModifiers)
-    return handled
+    let dispatch = DispatchKeyDown(heldTarget, heldKey, heldModifiers, true)
+    if !dispatch.Repeat { resetRepeat() }
+    return dispatch.Handled
   }
-
-  private func HandleKeyDefault(root Node?, resolver Resolver, text TextInput, key Key,
-    modifiers KeyModifiers) bool{
-      var handled = text.HandleKey(root, resolver, key, modifiers)
-      if !handled && key == Key.Tab {
-      focus.MoveFocus(root, resolver, !modifiers.Shift)
-      handled = true
-    }
-    if handled {
-        clearButtonPressAfterFocusMove(resolver)
-      }
-      if !handled {
-        handled = HandleButtonPress(root, resolver, key)
-      }
-      return handled
-    }
 
   private func DispatchKeyDown(target Node?, key Key, modifiers KeyModifiers, repeat bool)
   KeyboardDispatchResult -> dispatchKey(target, key, modifiers, repeat, true)
@@ -358,24 +333,64 @@ internal class KeyboardInput {
       dispatchGeneration++
       let generation = dispatchGeneration
       control.Begin(generation)
+      let previousKey = dispatchingKey
+      dispatchingKey = down ? key : Key.Unknown
       try {
+        let focusGeneration = focus.Generation
+        var last = start
         var current Node? = start
         while current != nil {
           let node = current
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
-            result.Routed = true
             handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
               Control: control, Generation: generation })
             CellOwnership.Nearest(node)?.Rebuild()
           }
+          last = node
           if control.PropagationStopped || node.FocusScopeBoundary { break }
           current = node.Parent
         }
-        result.DefaultPrevented = control.DefaultPrevented
+        if control.DefaultPrevented || focusGeneration != focus.Generation || !canReceiveInput(start) {
+          return result
+        }
+        current = start
+        while current != nil {
+          let node = current
+          if !down && releases.TryGetValue(key, out var pending)
+            && pending.Target == start && pending.Owner == node && pending.Generation == focus.Generation {
+              result.Handled = true
+              pending.Action()
+              CellOwnership.Nearest(node)?.Rebuild()
+              return result
+            }
+          if down {
+            if let bindings = InputCallbacks.Bindings(node) {
+              for binding in bindings {
+                if binding.Key != key || binding.Modifiers != modifiers { continue }
+                if binding.Action == nil && binding.OnRelease == nil { continue }
+                result.Handled = true
+                result.Repeat = binding.Repeat
+                if !repeat || binding.Repeat {
+                  if !repeat {
+                    if let release = binding.OnRelease {
+                      releases[key] = PendingKeyRelease{ Target: start, Owner: node, Action: release, Generation: focus.Generation }
+                    }
+                  }
+                  binding.Action?.Invoke()
+                  CellOwnership.Nearest(node)?.Rebuild()
+                }
+                return result
+              }
+            }
+          }
+          if node == last { break }
+          current = node.Parent
+        }
         return result
       } finally {
         control.Finish(generation)
+        dispatchingKey = previousKey
       }
     }
 
@@ -385,7 +400,7 @@ internal class KeyboardInput {
 
   private func clearButtonPressAfterFocusMove(resolver Resolver) bool {
     if let n = pressedButton {
-      if focus.FocusedNode() != n || !canReceiveInput(n) {
+      if focus.FocusedNode() != n || pressedFocusGeneration != focus.Generation || !canReceiveInput(n) {
         clearButtonPress(resolver)
         return true
       }
@@ -427,6 +442,13 @@ internal data struct KeyboardEvent {
 }
 
 internal data struct KeyboardDispatchResult {
-  internal var Routed bool
-  internal var DefaultPrevented bool
+  internal var Handled bool
+  internal var Repeat bool
+}
+
+internal data struct PendingKeyRelease {
+  internal var Target Node
+  internal var Generation int64
+  internal var Owner Node
+  internal var Action Action
 }

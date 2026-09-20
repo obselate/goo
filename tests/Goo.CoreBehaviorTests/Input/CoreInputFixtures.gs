@@ -265,6 +265,7 @@ internal class InputFixtures {
   func KeyboardRepeatCancelsWhenFocusedEntryBecomesUnavailable() bool {
     let cell = InputDisableFocusedEntryCell{}
     let driver = InputFixtureDriver(cell, 200, 50)
+    driver.UseBindings()
     driver.Press(10.0F, 10.0F)
     driver.Input.QueueKeyPress(Key.Backspace, KeyModifiers{})
     driver.Drain()
@@ -666,6 +667,7 @@ internal class InputFixtures {
 
   func PointerAndKeyboardPressesShareStateSafely() bool {
     let driver = InputFixtureDriver(InputPressedOwnershipCell{}, 100, 50)
+    driver.UseBindings()
     guard let tree = driver.Window.Tree else { return false }
     if !driver.Input.FocusElement(driver.Resolver, tree) { return false }
     driver.Input.QueuePointerPress(25.0F, 25.0F, PointerButton.Primary, KeyModifiers{})
@@ -890,6 +892,7 @@ internal class InputFixtures {
 
   func FocusTransferAndTraversal() bool {
     let clear = InputFixtureDriver(InputFocusCell{}, 200, 200)
+    clear.UseBindings()
     clear.Press(25.0F, 25.0F)
     guard let clearRoot = clear.Window.Tree else { return false }
     if !clearRoot.Children[0].Focused || clearRoot.Children[0].Opacity != 0.5 {
@@ -901,6 +904,7 @@ internal class InputFixtures {
     }
 
     let transfer = InputFixtureDriver(InputTwoFocusCell{}, 200, 200)
+    transfer.UseBindings()
     transfer.Press(25.0F, 25.0F)
     transfer.Press(75.0F, 25.0F)
     guard let transferRoot = transfer.Window.Tree else { return false }
@@ -909,6 +913,7 @@ internal class InputFixtures {
     }
 
     let traversal = InputFixtureDriver(InputTabCell{}, 300, 200)
+    traversal.UseBindings()
     traversal.Key(Key.Tab, false, false)
     if focusedKey(traversal.Window.Tree) != "a" {
       return false
@@ -931,6 +936,7 @@ internal class InputFixtures {
 
     let disabled = InputDisabledCell{}
     let disabledDriver = InputFixtureDriver(disabled, 400, 100)
+    disabledDriver.UseBindings()
     guard let disabledRoot = disabledDriver.Window.Tree else { return false }
     guard let button = findByKey(disabledRoot, "button") else { return false }
     guard let disabledEntry = findByKey(disabledRoot, "entry") else { return false }
@@ -972,6 +978,7 @@ internal class InputFixtures {
 
     let dynamicCell = InputDisableFocusedEntryCell{}
     let dynamic = InputFixtureDriver(dynamicCell, 200, 50)
+    dynamic.UseBindings()
     dynamic.Press(10.0F, 10.0F)
     guard let before = dynamic.Window.Tree else { return false }
     if !before.Focused || !before.Pressed {
@@ -990,6 +997,7 @@ internal class InputFixtures {
 
   func AutoFocusSelectsFirstEligibleNodeOnlyWhenFocusIsEmpty() bool {
     let driver = InputFixtureDriver(InputAutoFocusCell{}, 200, 160)
+    driver.UseBindings()
     if focusedKey(driver.Window.Tree) != "first" {
       return false
     }
@@ -1253,6 +1261,7 @@ internal class InputFixtures {
 
     let idleCell = InputEntryCell{ value: "ab" }
     let idle = InputFixtureDriver(idleCell, 300, 100)
+    idle.UseBindings()
     idle.Input.QueueKeyPress(Key.Backspace, KeyModifiers{})
     idle.Drain()
     idle.Press(10.0F, 10.0F)
@@ -1263,6 +1272,7 @@ internal class InputFixtures {
 
     let buttons = InputButtonCell{}
     let buttonDriver = InputFixtureDriver(buttons, 300, 100)
+    buttonDriver.UseBindings()
     guard let initialRoot = buttonDriver.Window.Tree else { return false }
     guard let initialEnter = findByKey(initialRoot, "enter") else { return false }
     let buttonRect = initialEnter.Rect
@@ -1326,6 +1336,7 @@ internal class InputFixtures {
 
     let cancelledCell = InputButtonCell{}
     let cancelled = InputFixtureDriver(cancelledCell, 300, 100)
+    cancelled.UseBindings()
     cancelled.Key(Key.Tab, false, false)
     cancelled.Key(Key.Tab, false, false)
     cancelled.Input.QueueKeyPress(Key.Space, KeyModifiers{})
@@ -1341,6 +1352,7 @@ internal class InputFixtures {
 
     let hiddenCell = InputButtonCell{}
     let hidden = InputFixtureDriver(hiddenCell, 300, 100)
+    hidden.UseBindings()
     hidden.Key(Key.Tab, false, false)
     hidden.Key(Key.Tab, false, false)
     hidden.Input.QueueKeyPress(Key.Space, KeyModifiers{})
@@ -1701,6 +1713,7 @@ internal class InputFixtures {
 
   private func entryDriver(cell InputEntryCell) InputFixtureDriver {
     let driver = InputFixtureDriver(cell, 300, 100)
+    driver.UseBindings()
     driver.Press(10.0F, 10.0F)
     driver.Release(10.0F, 10.0F)
     return driver
@@ -1711,6 +1724,7 @@ internal class InputFixtures {
   private func focusLossClearsInputState() bool {
     let cell = InputEntryCell{ value: "ab" }
     let driver = InputFixtureDriver(cell, 300, 100)
+    driver.UseBindings()
     driver.Input.QueuePointerPress(10.0F, 10.0F)
     driver.Input.QueueKeyPress(Key.Backspace, KeyModifiers{})
     driver.Drain()
@@ -1731,6 +1745,7 @@ internal class InputFixtures {
         return false
       }
     let queued = InputFixtureDriver(InputEntryCell{ value: "queued" }, 300, 100)
+    queued.UseBindings()
     queued.Input.QueuePointerPress(77, PointerDevice.Touch, 10.0F, 10.0F,
       PointerButton.Primary, KeyModifiers{})
     queued.Input.FocusLost(queued.Window.Tree, queued.Resolver)
@@ -1784,7 +1799,7 @@ internal class InputFixtures {
     let textFocus = FocusManager()
     let events = List[string]()
     var stale KeyEvent
-    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 100,.Height: 30,.OnFocus: (e FocusEvent) -> { events.Add("focus:root") },.OnBlur: (e FocusEvent) -> { events.Add("blur:root") },.OnKeyDown: (e KeyEvent) -> {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, Action: () -> {} } },.Width: 100,.Height: 30,.OnFocus: (e FocusEvent) -> { events.Add("focus:root") },.OnBlur: (e FocusEvent) -> { events.Add("blur:root") },.OnKeyDown: (e KeyEvent) -> {
         events.Add("down:root:" + e.Key.ToString() + ":" + (e.Modifiers.Ctrl ? "1" : "0")
           +":" + (e.Repeat ? "1" : "0"))
       },.OnKeyUp: (e KeyEvent) -> {
@@ -1844,7 +1859,7 @@ internal class InputFixtures {
   }
 
   func KeyboardDefaultPreventionPreservesTextAndButtonRelease() bool {
-    let textFocus = FocusManager()
+    let input = InputCoordinator()
     var buttonClicks = 0
     let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 100,.Height: 60,
         TextEntry{
@@ -1866,27 +1881,26 @@ internal class InputFixtures {
         },
       })
     let resolver = Resolver{}
-    let text = TextInput(textFocus)
-    let keyboard = KeyboardInput(textFocus)
+    FixtureKeyBindings.Install(root, input, resolver)
     let entry = root.Children[0]
     let button = root.Children[2]
-    textFocus.SetFocus(resolver, entry)
-    keyboard.QueueKeyPress(Key.Backspace, KeyModifiers{})
-    keyboard.Drain(root, resolver, text, nil)
+    input.FocusElement(resolver, entry)
+    input.QueueKeyPress(Key.Backspace, KeyModifiers{})
+    input.Drain(root, resolver, 0, nil)
     if entry.Buffer != "x" { return false }
-    keyboard.QueueKeyPress(Key.Tab, KeyModifiers{})
-    keyboard.Drain(root, resolver, text, nil)
+    input.QueueKeyPress(Key.Tab, KeyModifiers{})
+    input.Drain(root, resolver, 0, nil)
     if !entry.Focused { return false }
-    textFocus.SetFocus(resolver, button)
-    keyboard.QueueKeyPress(Key.Enter, KeyModifiers{})
-    keyboard.QueueKeyPress(Key.Space, KeyModifiers{})
-    keyboard.QueueKeyRelease(Key.Space, KeyModifiers{})
-    keyboard.Drain(root, resolver, text, nil)
+    input.FocusElement(resolver, button)
+    input.QueueKeyPress(Key.Enter, KeyModifiers{})
+    input.QueueKeyPress(Key.Space, KeyModifiers{})
+    input.QueueKeyRelease(Key.Space)
+    input.Drain(root, resolver, 0, nil)
     return buttonClicks == 0 && !button.Pressed
   }
 
   func KeyboardCallbackFailuresCleanUpAndKeepQueuedSuffix() bool {
-    let textFocus = FocusManager()
+    let input = InputCoordinator()
     let repeatTextFocus = FocusManager()
     var releaseThrows = true
     var buttonClicks = 0
@@ -1905,24 +1919,24 @@ internal class InputFixtures {
       OnClick: () -> { buttonClicks++ },
     })
     let resolver = Resolver{}
-    let text = TextInput(textFocus)
-    let keyboard = KeyboardInput(textFocus)
-    textFocus.SetFocus(resolver, button)
-    keyboard.QueueKeyPress(Key.Space, KeyModifiers{})
-    keyboard.QueueKeyRelease(Key.Space, KeyModifiers{})
-    keyboard.QueueKeyPress(Key.A, KeyModifiers{})
+    FixtureKeyBindings.Install(button, input, resolver)
+    input.FocusElement(resolver, button)
+    input.QueueKeyPress(Key.Space, KeyModifiers{})
+    input.QueueKeyRelease(Key.Space)
+    input.QueueKeyPress(Key.A, KeyModifiers{})
     var threw = false
     try {
-      keyboard.Drain(button, resolver, text, nil)
+      input.Drain(button, resolver, 0, nil)
     } catch (e Exception) {
       threw = true
     }
     if !threw || button.Pressed || buttonClicks != 0 { return false }
-    keyboard.Drain(button, resolver, text, nil)
+    input.Drain(button, resolver, 0, nil)
     if queuedSuffix != 1 { return false }
 
     var repeatThrows = true
     let repeatRoot = Reconciler{ Res: Resolver{} }.Mount(Container{
+      KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, Action: () -> {} } },
       Width: 100, Height: 30, Focusable: true,
       OnKeyDown: (e KeyEvent) -> {
         if e.Repeat && repeatThrows {
@@ -2124,7 +2138,7 @@ internal class InputFixtures {
     input.QueueKeyPress(Key.Left, KeyModifiers{})
     let pressed = input.Drain(window.Tree, resolver, 0.0, nil)
     let repeated = input.Step(window.Tree, resolver, 0.5)
-    return !pressed && !repeated && cell.Calls == 2 && !window.UpdateTree(0.5)
+    return !pressed && !repeated && cell.Calls == 1 && !window.UpdateTree(0.5)
   }
 
   func GenericTextCallbackRebuildStaysPresentationIdle() bool {
@@ -2147,6 +2161,7 @@ internal class InputFixtures {
     let events = List[string]()
     let cell = InputKeyboardFocusLifecycleCell{ Events: events }
     let driver = InputFixtureDriver(cell, 100, 30)
+    driver.UseBindings()
     driver.Press(10.0F, 10.0F)
     cell.Disable()
     driver.Update()
@@ -2261,6 +2276,7 @@ internal class InputFixtureDriver {
   internal var Input InputCoordinator
   internal var Resolver Resolver
   internal var Time float64
+  private var bindings bool
 
   init(root Cell, width int32, height int32) {
     Window = Window{ Width: width, Height: height, Root: root }
@@ -2270,8 +2286,14 @@ internal class InputFixtureDriver {
     Input.AfterTreeUpdated(Window.Tree, Resolver, true)
   }
 
+  internal func UseBindings() {
+    bindings = true
+    if let root = Window.Tree { FixtureKeyBindings.Install(root, Input, Resolver) }
+  }
+
   internal func Update() {
     Window.UpdateTree()
+    if bindings { UseBindings() }
     Input.AfterTreeUpdated(Window.Tree, Resolver, true)
   }
 
@@ -2324,6 +2346,7 @@ internal class InputFixtureDriver {
     Time = Time + dt
     Input.Step(Window.Tree, Resolver, dt)
     Window.UpdateTree(dt)
+    if bindings { UseBindings() }
     Input.RefreshHover(Window.Tree, Resolver)
     Input.AfterTreeUpdated(Window.Tree, Resolver, true)
   }

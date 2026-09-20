@@ -11,6 +11,7 @@ internal class TextEditorInputFixtures {
       using let controller = TextEditorController(document)
       let cell = TextEditorInputCell(document, controller)
       let driver = InputFixtureDriver(cell, 320, 120)
+      driver.UseBindings()
       let start = editorPoint(driver.Window.Tree!!,
         TextPosition{ Offset: 0, Affinity: TextAffinity.Upstream })
       driver.Press(start.X, start.Y)
@@ -56,6 +57,7 @@ internal class TextEditorInputFixtures {
     using let controller = TextEditorController(document)
     let cell = TextEditorInputCell(document, controller)
     let driver = InputFixtureDriver(cell, 320, 120)
+    driver.UseBindings()
     let editor = driver.Window.Tree!!
     let word = editorPoint(editor, TextPosition{ Offset: 1, Affinity: TextAffinity.Downstream })
 
@@ -100,6 +102,7 @@ internal class TextEditorInputFixtures {
     using let readOnlyController = TextEditorController(readOnlyDocument)
     let readOnlyDriver = InputFixtureDriver(
       TextEditorInputReadOnlyCell(readOnlyDocument, readOnlyController), 320, 120)
+      readOnlyDriver.UseBindings()
     readOnlyDriver.Press(6.0F, 6.0F)
     if !readOnlyController.IsFocused { return false }
     readOnlyDriver.Key(Key.Tab, KeyModifiers{})
@@ -115,6 +118,7 @@ internal class TextEditorInputFixtures {
     }
     controller.OnCommand = cancel
     let driver = InputFixtureDriver(TextEditorInputCell(document, controller), 320, 120)
+    driver.UseBindings()
     driver.Press(6.0F, 6.0F)
     driver.Char("x")
     driver.Key(Key.Enter, KeyModifiers{})
@@ -128,6 +132,7 @@ internal class TextEditorInputFixtures {
       let document = TextDocument("one\ntwo\nthree\nfour\nfive\nsix\nseven\neight")
       using let controller = TextEditorController(document)
       let driver = InputFixtureDriver(TextEditorInputCell(document, controller), 320, 120)
+      driver.UseBindings()
       driver.Press(6.0F, 6.0F)
       if driver.Input.NextTickDeadlineSeconds() > 0.51 { return false }
       let before = driver.Window.Tree!!.BlinkT
@@ -150,6 +155,7 @@ internal class TextEditorInputFixtures {
       let document = TextDocument("a\nb\nc")
       using let controller = TextEditorController(document)
       let driver = InputFixtureDriver(TextEditorInputCell(document, controller), 320, 120)
+      driver.UseBindings()
       let start = editorPoint(driver.Window.Tree!!,
         TextPosition{ Offset: startOffset, Affinity: TextAffinity.Upstream })
       driver.Press(start.X, start.Y)
@@ -175,6 +181,7 @@ internal class TextEditorInputFixtures {
       let document = TextDocument("a\nb\nc")
       using let controller = TextEditorController(document)
       let driver = InputFixtureDriver(TextEditorInputCell(document, controller), 320, 120)
+      driver.UseBindings()
       let start = editorPoint(driver.Window.Tree!!,
         TextPosition{ Offset: startOffset, Affinity: TextAffinity.Upstream })
       driver.Press(start.X, start.Y)

@@ -36,6 +36,8 @@ public enum TextCommandKind {
   UpdateComposition;
   CommitComposition;
   CancelComposition;
+  /// Restores the focused TextEntry's value from focus time and blurs it through PlatformInput.
+  CancelEdit;
 }
 
 /// Describes an operation with a Kind, Text, and ExtendSelection flag.
@@ -196,6 +198,7 @@ public class TextEditorController : IDisposable {
         return commitCompositionDefault(String.IsNullOrEmpty(command.Text) ? nil : command.Text)
       }
       case TextCommandKind.CancelComposition { return cancelCompositionDefault() }
+      case TextCommandKind.CancelEdit { return false }
       case _ { throw ArgumentOutOfRangeException("command") }
     }
     return false
@@ -351,7 +354,7 @@ public class TextEditorController : IDisposable {
 
   private func validateCommand(command TextCommand) {
     if int32(command.Kind) < int32(TextCommandKind.Insert)
-      || int32(command.Kind) > int32(TextCommandKind.CancelComposition) {
+      || int32(command.Kind) > int32(TextCommandKind.CancelEdit) {
         throw ArgumentOutOfRangeException("command")
       }
     if (command.Kind == TextCommandKind.Insert || command.Kind == TextCommandKind.Paste

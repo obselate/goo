@@ -14,12 +14,12 @@ public struct KeyEvent {
   internal prop Control InputDispatchControl? { get; init; }
   internal prop Generation int64{ get; init; }
 
-  /// Stops this event before the next ancestor callback without preventing its default behavior.
+  /// Stops this event before the next ancestor callback and binding without preventing local bindings.
   public func StopPropagation() {
     if let control = Control { control.Stop(Generation) }
   }
 
-  /// Prevents the default keyboard behavior without stopping ancestor callbacks.
+  /// Prevents assigned key bindings without stopping ancestor callbacks.
   public func PreventDefault() {
     if let control = Control { control.Prevent(Generation) }
   }
@@ -37,6 +37,7 @@ public struct FocusEvent {
 }
 
 internal class InputCallbackSet {
+  internal var Bindings ([]KeyBinding)?
   internal var OnKeyDown((KeyEvent) -> void)?
   internal var OnKeyUp((KeyEvent) -> void)?
   internal var OnFocus((FocusEvent) -> void)?
@@ -45,7 +46,7 @@ internal class InputCallbackSet {
   internal var OnPointerLeave((PointerEvent) -> void)?
 
   internal func Empty() bool -> OnKeyDown == nil && OnKeyUp == nil && OnFocus == nil && OnBlur == nil
-    && OnPointerEnter == nil && OnPointerLeave == nil
+    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil
 }
 
 // Sparse callback state keeps ordinary declarations and retained nodes unchanged.
@@ -55,6 +56,28 @@ internal class InputCallbacks {
     ConditionalWeakTable[Blob, InputCallbackSet]()
     private let nodeValues ConditionalWeakTable[Node, InputCallbackSet] =
     ConditionalWeakTable[Node, InputCallbackSet]()
+
+    internal func SetBlobBindings(blob Blob, value ([]KeyBinding)?) {
+      let callbacks = blobCallbacks(blob, value != nil && value.Length > 0)
+      if callbacks == nil { return }
+      callbacks.Bindings = if let bindings = value {
+        bindings.Length == 0 ? nil : copyBindings(bindings)
+      } else { nil }
+      finishBlob(blob, callbacks)
+    }
+
+    internal func BlobBindings(blob Blob) ([]KeyBinding)? {
+      guard let bindings = blobCallbacks(blob, false)?.Bindings else { return nil }
+      return copyBindings(bindings)
+    }
+
+    private func copyBindings(values []KeyBinding) []KeyBinding {
+      let result = [values.Length]KeyBinding
+      Array.Copy(values, result, values.Length)
+      return result
+    }
+
+    internal func Bindings(node Node) ([]KeyBinding)? -> nodeCallbacks(node)?.Bindings
 
     internal func SetBlobKeyDown(blob Blob, value((KeyEvent) -> void)?) bool {
       let callbacks = blobCallbacks(blob, value != nil)
@@ -130,6 +153,7 @@ internal class InputCallbacks {
         nodeValues.Add(node, destination)
       }
       destination.OnKeyDown = source.OnKeyDown
+      destination.Bindings = source.Bindings
       destination.OnKeyUp = source.OnKeyUp
       destination.OnFocus = source.OnFocus
       destination.OnBlur = source.OnBlur
@@ -186,6 +210,7 @@ internal class InputCallbacks {
       if value.OnBlur != nil { result = result | 8 }
       if value.OnPointerEnter != nil { result = result | 16 }
       if value.OnPointerLeave != nil { result = result | 32 }
+      if value.Bindings != nil { result = result | 64 }
       return result
     }
   }

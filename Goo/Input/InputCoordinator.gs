@@ -146,6 +146,16 @@ internal class InputCoordinator {
     return focus.FocusedNode() == target
   }
 
+  internal func CancelDrag(root Node?, resolver Resolver) bool {
+    try { return pointer.CancelDrag(root) }
+    finally { resolver.Flush() }
+  }
+
+  internal func BeginPress(resolver Resolver, target Node) bool -> keyboard.BeginPress(resolver, target)
+
+  internal func EndPress(root Node?, resolver Resolver, target Node, activate bool) bool ->
+    keyboard.EndPress(root, resolver, target, activate)
+
   internal func BeginFocusScope(owner Window, root Node, scopeRoot Node, options FocusScopeOptions) FocusScope {
     if disposed {
       throw ObjectDisposedException("InputCoordinator")
@@ -276,7 +286,8 @@ internal class InputCoordinator {
 
   internal func HandleKey(root Node?, resolver Resolver, key Key, modifiers KeyModifiers) bool {
     try {
-      return if pointer.HandleDragKey(root, key, modifiers) { true } else { keyboard.HandleKey(root, resolver, text, key, modifiers) }
+      pointer.UpdateDragModifiers(root, modifiers)
+      return keyboard.HandleKey(root, resolver, text, key, modifiers)
     } finally {
       resolver.Flush()
     }
@@ -391,10 +402,6 @@ internal class InputCoordinator {
 
   internal func QueuePointerCancel(pointerId int64, device PointerDevice) {
     pointer.QueueCancel(pointerId, device)
-  }
-
-  internal func StartKeyRepeat(key Key, modifiers KeyModifiers) {
-    keyboard.StartKeyRepeat(key, modifiers)
   }
 
   internal func HitInfo(root Node?, x float32, y float32) InputHitInfo ->

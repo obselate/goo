@@ -365,28 +365,26 @@ internal partial class PointerInput {
     return candidate || active
   }
 
-  internal func HandleDragKey(root Node?, key Key, modifiers KeyModifiers) bool {
-    guard let session = dragSession else { return false }
+  internal func CancelDrag(root Node?) bool -> cancelDrag(root)
+
+  internal func UpdateDragModifiers(root Node?, modifiers KeyModifiers) {
+    guard let session = dragSession else { return }
     if session.Device != PointerDevice.Mouse {
-      guard let contact = findContact(session.PointerId, session.Device, false) else { return false }
+      guard let contact = findContact(session.PointerId, session.Device, false) else { return }
       current = contact
     } else {
       current = mouse
     }
     try {
-      if key == Key.Escape {
-        terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, nil)
-        return true
-      }
-      guard let tree = root else { return false }
-      if sameDragModifiers(current.LastModifiers, modifiers) { return false }
+      guard let tree = root else { return }
+      if sameDragModifiers(current.LastModifiers, modifiers) { return }
       current.LastModifiers = modifiers
       try {
         updateDragTarget(tree, current.LastEventX, current.LastEventY, modifiers, true)
       } catch (error Exception) {
         terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
       }
-      return false
+      return
     } finally {
       current = mouse
     }

@@ -84,6 +84,28 @@ public class ElementHandle {
     return owner.BlurElement(n)
   }
 
+  /// Invokes this eligible mounted button's click callback and rebuilds its owning cell.
+  /// @returns False when unmounted, ineligible, or not a button with a click callback.
+  public func Activate() bool {
+    guard let n = mountedNode(), let owner = window else { return false }
+    return owner.ActivateElement(n)
+  }
+
+  /// Begins a press on this focused button. Focus loss or removal cancels it.
+  /// @returns False when unmounted, ineligible, or not a focused button.
+  public func BeginPress() bool {
+    guard let n = mountedNode(), let owner = window else { return false }
+    return owner.BeginElementPress(n)
+  }
+
+  /// Ends this button's press, optionally activating it if it still owns focus and is eligible.
+  /// @param activate Whether to invoke the click callback on a valid release.
+  /// @returns False when this button has no pending press.
+  public func EndPress(activate bool) bool {
+    guard let n = mountedNode(), let owner = window else { return false }
+    return owner.EndElementPress(n, activate)
+  }
+
   /// Sets this element's logical scroll target.
   /// @param x The non-negative horizontal target.
   /// @param y The non-negative vertical target.

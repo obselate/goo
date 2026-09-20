@@ -206,8 +206,8 @@ internal class TreeFixtures {
     let resolver = Resolver{}
     window.UpdateTree()
     input.AfterTreeUpdated(window.Tree, resolver, true)
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
+    input.MoveEditorFocus(window.Tree, resolver, true)
+    input.MoveEditorFocus(window.Tree, resolver, true)
     guard let before = window.Tree else { return false }
     if !before.Children[1].Children[0].Focused { return false }
     cell.Hide()
@@ -215,9 +215,9 @@ internal class TreeFixtures {
     input.AfterTreeUpdated(window.Tree, resolver, true)
     guard let hidden = window.Tree else { return false }
     if hidden.Children[1].Children[0].Focused || input.HandleChar(window.Tree, "x") { return false }
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
+    input.MoveEditorFocus(window.Tree, resolver, true)
     if !hidden.Children[0].Focused { return false }
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
+    input.MoveEditorFocus(window.Tree, resolver, true)
     return hidden.Children[2].Focused
   }
 
@@ -267,8 +267,8 @@ internal class TreeFixtures {
     let resolver = Resolver{}
     window.UpdateTree()
     input.AfterTreeUpdated(window.Tree, resolver, true)
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
+    input.MoveEditorFocus(window.Tree, resolver, true)
+    input.MoveEditorFocus(window.Tree, resolver, true)
     guard let before = window.Tree else { return false }
     if !before.Children[1].Children[0].Focused { return false }
     cell.Hide()
@@ -276,9 +276,9 @@ internal class TreeFixtures {
     input.AfterTreeUpdated(window.Tree, resolver, true)
     guard let hidden = window.Tree else { return false }
     if hidden.Children[1].Children[0].Focused || input.HandleChar(window.Tree, "x") { return false }
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
+    input.MoveEditorFocus(window.Tree, resolver, true)
     if !hidden.Children[0].Focused { return false }
-    input.HandleKey(window.Tree, resolver, Key.Tab, false, false)
+    input.MoveEditorFocus(window.Tree, resolver, true)
     return hidden.Children[2].Focused
   }
 

@@ -472,6 +472,7 @@ enum|Goo.TextAlign|Right|2
 enum|Goo.TextAlign|Start|3
 enum|Goo.TextCommandKind|BeginComposition|27
 enum|Goo.TextCommandKind|CancelComposition|30
+enum|Goo.TextCommandKind|CancelEdit|31
 enum|Goo.TextCommandKind|CommitComposition|29
 enum|Goo.TextCommandKind|Copy|18
 enum|Goo.TextCommandKind|Cut|19
@@ -652,8 +653,11 @@ method|Goo.Color|op_Inequality|static|public|generic:|(arg0:Goo.Color,arg1:Goo.C
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window)->System.IDisposable
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window,allowInput:System.Boolean)->System.IDisposable
+method|Goo.ElementHandle|Activate|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|BeginFocusScope|instance|public|generic:|(options:Goo.FocusScopeOptions=null)->Goo.FocusScope
+method|Goo.ElementHandle|BeginPress|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|Blur|instance|public|generic:|()->System.Boolean
+method|Goo.ElementHandle|EndPress|instance|public|generic:|(activate:System.Boolean)->System.Boolean
 method|Goo.ElementHandle|Focus|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
 method|Goo.ElementHandle|ScrollIntoView|instance|public|generic:|()->System.Boolean
@@ -769,6 +773,7 @@ method|Goo.PathBuilder|MoveTo|instance|public|generic:|(x:System.Double,y:System
 method|Goo.PathBuilder|Polyline|instance|public|generic:|(points:Goo.Point[],close:System.Boolean)->Goo.PathBuilder
 method|Goo.PathBuilder|QuadraticTo|instance|public|generic:|(controlX:System.Double,controlY:System.Double,x:System.Double,y:System.Double)->Goo.PathBuilder
 method|Goo.PlatformInput|CancelComposition|instance|public|generic:|()->System.Boolean
+method|Goo.PlatformInput|CancelDrag|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|ClearFocus|instance|public|generic:|()->System.Void
 method|Goo.PlatformInput|CommitText|instance|public|generic:|(value:System.String)->System.Boolean
 method|Goo.PlatformInput|DeleteSurroundingText|instance|public|generic:|(beforeLength:System.Int32,afterLength:System.Int32)->System.Boolean
@@ -1068,6 +1073,7 @@ property|Goo.Blob|Focusable|System.Boolean|instance|get:public,init:public|index
 property|Goo.Blob|Focus|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Blob|Handle|Goo.ElementHandle|instance|get:public,init:public|index:()
 property|Goo.Blob|Hover|Goo.Style|instance|get:public,init:public|index:()
+property|Goo.Blob|KeyBindings|Goo.KeyBinding[]|instance|get:public,init:public|index:()
 property|Goo.Blob|Key|System.String|instance|get:public,init:public|index:()
 property|Goo.Blob|LayoutTransition|System.Nullable`1<Goo.LayoutTransition>|instance|get:public,init:public|index:()
 property|Goo.Blob|OnBlur|System.Action`1<Goo.FocusEvent>|instance|get:public,init:public|index:()
@@ -1213,6 +1219,11 @@ property|Goo.ImageSource|Width|System.Int32|instance|get:public|index:()
 property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,init:public|index:()
 property|Goo.Image|Path|System.String|instance|get:public,init:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider|instance|get:public,init:public|index:()
+property|Goo.KeyBinding|Action|System.Action|instance|get:public,init:public|index:()
+property|Goo.KeyBinding|Key|Goo.Key|instance|get:public,init:public|index:()
+property|Goo.KeyBinding|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
+property|Goo.KeyBinding|OnRelease|System.Action|instance|get:public,init:public|index:()
+property|Goo.KeyBinding|Repeat|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyEvent|Key|Goo.Key|instance|get:public,init:public|index:()
 property|Goo.KeyEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.KeyEvent|Repeat|System.Boolean|instance|get:public,init:public|index:()
@@ -1617,6 +1628,7 @@ type|Goo.ImageSourceProvider|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageSource|sealed-class|public|base:System.Object|interfaces:Goo.ImageSourceProvider,System.IDisposable|generic:
 type|Goo.Image|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.JustifyContent|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.KeyBinding|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyModifiers|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Key|enum|public|base:System.Enum|interfaces:|generic:

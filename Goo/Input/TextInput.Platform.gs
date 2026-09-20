@@ -298,18 +298,31 @@ internal partial class TextInput {
       return true
     }
 
-  internal func ExecuteEditorCommand(root Node?, resolver Resolver, command TextCommand) bool {
+  internal func ExecuteEditorCommand(root Node?, resolver Resolver, requested TextCommand) bool {
+    var command = requested
     guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
+    if command.Kind == TextCommandKind.CancelEdit {
+      if n.Kind != NodeKind.Entry { return false }
+      HandleCompositionCancel(root)
+      commitEdit(root, n, editState(n), EditState{
+        Text: n.PreFocus, Anchor: n.PreFocus.Length, Caret: n.PreFocus.Length })
+      if focus.FocusedNode() == n { focus.SetFocus(resolver, nil) }
+      return true
+    }
     if command.Kind == TextCommandKind.CancelComposition { return HandleCompositionCancel(root) }
     if command.Kind == TextCommandKind.CommitComposition { return FinishComposition(root) }
     if command.Kind == TextCommandKind.UpdateComposition || command.Kind == TextCommandKind.BeginComposition {
       return HandleComposition(root, command.Text ?? "", 0, 0)
     }
-    if command.Kind == TextCommandKind.Insert || command.Kind == TextCommandKind.Paste {
+    if command.Kind == TextCommandKind.Insert {
       return HandleChar(root, command.Text ?? "")
     }
-    if !FinishComposition(root) { return false }
+    if command.Kind == TextCommandKind.Paste && command.Text == nil {
+      command = TextCommand{ Kind: TextCommandKind.Paste, Text: clipboardGet() }
+    }
+    if (n.Kind != NodeKind.Editor || command.Kind != TextCommandKind.Paste)
+      && !FinishComposition(root) { return false }
     if n.Kind == NodeKind.Editor {
       if n.EditorReadOnly && !readOnlyCommand(command.Kind) { return false }
       guard let controller = n.EditorController else { return false }
@@ -324,7 +337,10 @@ internal partial class TextInput {
         return true
       }
       let result = controller.Execute(command)
-      if result { updateTextInputArea(n) }
+      if result {
+        n.BlinkT = 0.0
+        updateTextInputArea(n)
+      }
       return result
     }
     if n.Kind != NodeKind.Entry { return false }
@@ -359,6 +375,7 @@ internal partial class TextInput {
         clipboardSet(edit.Selected(before))
         after = edit.Insert(before, "")
       }
+      case TextCommandKind.Paste { after = edit.Insert(before, sanitize(command.Text ?? "")) }
       case TextCommandKind.Submit {
         n.OnSubmit?.Invoke(n.Buffer)
         CellOwnership.Within(root, n)?.Rebuild()

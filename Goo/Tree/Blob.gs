@@ -167,6 +167,14 @@ public open class Blob : Style {
       updateSparseInputState()
     }
   }
+  /// Gets explicit key bindings. Primitives have no built-in keyboard bindings.
+  public prop KeyBindings ([]KeyBinding)? {
+    get -> InputCallbacks.BlobBindings(this)
+    init {
+      InputCallbacks.SetBlobBindings(this, value)
+      updateSparseInputState()
+    }
+  }
   internal prop HasSparseInputState bool{ get -> (blobState & int32(32)) != 0 }
   /// Gets the style that applies while the pointer hovers this element.
   public prop Hover Style? { get; init; }

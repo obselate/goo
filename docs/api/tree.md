@@ -183,6 +183,10 @@ Gets the style that applies while the pointer hovers this element.
 
 Gets the stable key within the sibling list.
 
+### `KeyBindings`
+
+Gets explicit key bindings. Primitives have no built-in keyboard bindings.
+
 ### `LayoutTransition`
 
 Gets the opt-in transition for computed layout position changes.
@@ -347,6 +351,12 @@ Occurs after this mounted element reaches a new stable geometry or scroll state.
 
 Initializes an unmounted element handle.
 
+### `Activate`
+
+Invokes this eligible mounted button's click callback and rebuilds its owning cell.
+
+Returns: False when unmounted, ineligible, or not a button with a click callback.
+
 ### `BeginFocusScope(FocusScopeOptions)`
 
 Begins a nested focus scope on this mounted, visible, enabled, focusable element.
@@ -355,11 +365,25 @@ Begins a nested focus scope on this mounted, visible, enabled, focusable element
 
 Returns: A scope to dispose when the overlay closes; removal also closes it automatically.
 
+### `BeginPress`
+
+Begins a press on this focused button. Focus loss or removal cancels it.
+
+Returns: False when unmounted, ineligible, or not a focused button.
+
 ### `Blur`
 
 Removes keyboard focus when this element owns it.
 
 Returns: False when the handle is unmounted or does not own focus.
+
+### `EndPress(bool)`
+
+Ends this button's press, optionally activating it if it still owns focus and is eligible.
+
+- `activate`: Whether to invoke the click callback on a valid release.
+
+Returns: False when this button has no pending press.
 
 ### `Focus`
 

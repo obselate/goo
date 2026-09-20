@@ -3,6 +3,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)../Shared/FixtureAssemblyInfo.gs" Link="FixtureAssemblyInfo.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Accessibility/AccessibilityFixtures.gs" Link="AccessibilityFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Cell/CellFixtures.gs" Link="CellFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input/FixtureKeyBindings.gs" Link="FixtureKeyBindings.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/CoreInputFixtures.gs" Link="CoreInputFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/DragDropFixtures.gs" Link="DragDropFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/TextInputPrimitivesFixtures.gs" Link="TextInputPrimitivesFixtures.gs" />
