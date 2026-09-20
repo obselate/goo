@@ -62,6 +62,8 @@
 !/apps/Goo.Gallery/**
 !/apps/Goo.DevTools/
 !/apps/Goo.DevTools/**
+!/apps/Shared/
+!/apps/Shared/AppKeyBindings.gs
 
 !/docs/
 /docs/*

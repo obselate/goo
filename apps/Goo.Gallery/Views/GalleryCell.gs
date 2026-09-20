@@ -1,6 +1,7 @@
 package GooGallery
 
 import Goo
+import GooSamples
 import System
 
 class GalleryCell : Cell, IDisposable {
@@ -101,6 +102,7 @@ class GalleryCell : Cell, IDisposable {
 
     override func Build() Blob -> Container{
         Key: "root",
+        KeyBindings: AppKeyBindings.Editing(attachedWindow?.PlatformInput),
         Width: Length.Percent(100),
         Height: Length.Percent(100),
         Handle: rootHandle,

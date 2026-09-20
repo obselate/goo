@@ -7,6 +7,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../Shared/AppKeyBindings.gs" Link="AppKeyBindings.gs" />
     <ProjectReference Include="../../Goo/Goo.gsproj" />
   </ItemGroup>
   <ItemGroup>

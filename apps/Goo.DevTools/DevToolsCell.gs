@@ -1,6 +1,7 @@
 package GooDevTools
 
 import Goo
+import GooSamples
 import System
 import System.Collections.Generic
 import System.Threading
@@ -73,6 +74,7 @@ class DevToolsCell : Cell {
 
     private func BuildRoot() Container -> Container{
         Key: "devtools-root",
+        KeyBindings: AppKeyBindings.Editing(window?.PlatformInput),
         Width: Length.Percent(100),
         Height: Length.Percent(100),
         FlexDirection: FlexDirection.Column,
