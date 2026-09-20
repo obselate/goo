@@ -8,11 +8,6 @@ void main()
     vec2 pixelsPerEm = 1.0 / fwidth(v_texcoord);
     float coverage = _hb_gpu_slug(v_texcoord, pixelsPerEm, v_glyphLoc);
     uint effectMode = floatBitsToUint(v_effectAndOrigin.y);
-    if (effectMode == 0u)
-    {
-        float brightness = dot(v_foreground.rgb / max(v_foreground.a, 0.0001), vec3(0.2126, 0.7152, 0.0722));
-        coverage = hb_gpu_stem_darken(coverage, brightness, hb_gpu_ppem(v_texcoord, v_glyphLoc));
-    }
     if (effectMode == 2u && v_effectAndOrigin.x > 0.0)
     {
         const vec2 directions[8] = vec2[8](

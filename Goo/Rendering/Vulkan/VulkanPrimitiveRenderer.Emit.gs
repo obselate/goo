@@ -539,6 +539,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var push = VulkanPrimitiveGpuRecord{}
       FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
       push.radii_x = value.Opacity
+      push.radii_y = 1.0F
       let targetWidth = float32(value.ExtentWidth)
       let targetHeight = float32(value.ExtentHeight)
       push.params_x = (value.Bounds.X - value.OriginX) / targetWidth

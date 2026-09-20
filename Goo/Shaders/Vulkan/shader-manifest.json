@@ -215,7 +215,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_draw.frag.wrapper.glsl",
-          "sha256": "f5ae5b4e01ba22ff58b3c94f810fa3e09ed328442921ee107aec8b1f54a06fe5"
+          "sha256": "9ea724a292a12b8bd12508581d99eb4a9a87936e06f05ee30f8036a565521be6"
         }
       ]
     },
@@ -363,9 +363,9 @@
       "source": "analytic_sampled_image.frag.slang",
       "output": "analytic_sampled_image.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "9e78f171ee53300ac9069fefe19819267e9cc1edf205940846f4c7c1f48e620e",
-      "outputSha256": "f06f2d9e35eda71a018575beaa630c876960477bc9fcde2c45456bf0e47da694",
-      "outputBytes": 6092,
+      "sourceSha256": "54955effdf3fbf4e6aa8ce5df182c6d696914f294faf393302c329dced80d46e",
+      "outputSha256": "0f0c78bbb5e5d64edd77c57e019a8990f0e1c63a4ffe28fc03bc8099d6ece25e",
+      "outputBytes": 6172,
       "capabilities": [
         1
       ]
@@ -430,9 +430,9 @@
       "output": "hb_gpu_draw.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_draw_fragment",
-      "sourceSha256": "7ed609c89e70f0dfe337cb92eeb17b99eba40c1e24461f4ca4c49dc83eb041dc",
-      "outputSha256": "4fd4ee44dfeb69dd1c9d21f75f9824b6fec5c07588776cb1a3e38f45cfeba167",
-      "outputBytes": 134920,
+      "sourceSha256": "a4fc087ab1c588cf2683daea9dcc74514d6e17f40346542056efb356c502288b",
+      "outputSha256": "22c12aaf49331acd1799227c4fe847b66f3434b3a7645d6a4a5c590fd08cd7eb",
+      "outputBytes": 134172,
       "capabilities": [
         1,
         46
@@ -1451,7 +1451,7 @@
       "colorFormat": "swapchain-sRGB",
       "sampleCount": 1,
       "blend": "source-over-premultiplied-linear",
-      "colorPacking": "straight-srgb-rgba8-sampled-to-premultiplied-linear",
+      "colorPacking": "straight-or-premultiplied-srgb-rgba8-sampled-to-premultiplied-linear",
       "depthStencil": "disabled",
       "cullMode": "none",
       "frontFace": "counter-clockwise",

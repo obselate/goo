@@ -15,7 +15,8 @@ void shade()
     float4 sampleColor = imageTexture.Sample(sourceUv);
     float opacity = clamp(pc.radii.x, 0.0, 1.0);
     float alpha = sampleColor.a * opacity;
-    outColor = float4(sampleColor.rgb * alpha, alpha) * gooClipCoverage();
+    float colorScale = pc.radii.y > 0.5 ? opacity : alpha;
+    outColor = float4(sampleColor.rgb * colorScale, alpha) * gooClipCoverage();
 }
 
 #include "analytic_fragment_entry.slang"
