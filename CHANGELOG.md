@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.3 - 2026-09-19
+
+### Added
+
+- Added `Portal` overlays for popups, menus, tooltips, and other content that must render and receive input above the normal tree while preserving logical ownership, focus, accessibility, and lifecycle.
+- Added optional `Portal.Anchor` and `Portal.Placement` APIs with automatic alignment, opposite-side flipping, viewport containment, and live geometry updates.
+
+### Changed
+
+- Container borders now render before descendants so child content can paint above them while retaining normal clipping behavior.
+- Goo authoring tools now report source provenance and hashes, use focused coverage-aware API search, and return exact starter SDK, package, compiler, lint, and build metadata.
+
 ## 0.6.2 - 2026-09-18
 
 ### Fixed

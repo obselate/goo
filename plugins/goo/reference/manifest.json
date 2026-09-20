@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "0483cbd73fc7382dbacee3533edf0600f8e28b03",
+  "commit": "648de914ce936dca57d0ded3f58a03241482e10e",
   "files": {
-    "README.md": "7420529d24a8f21e929d9a97e2310c58da5d63b114ff0d14b5c61310d70db8a4",
+    "README.md": "2b993b73a362bc9e41cf1c81aca69cb007a5b8e59465ebd05ce27fe1adf8ea73",
     "CONTRIBUTING.md": "10adb8e192f35e5d215124aa3c157f2ad0e8e317c672e2af1bb60966b064069d",
     "docs/native-authoring.md": "839c508a9a72910004088050b8dbc631edbf43d2cd6b5496e2c5ca16c52545da",
     "docs/api/README.md": "8ae1406a1c6e033b9b4e495fb19c849e936e400c1c7aade28c8cb2ea02f7a58a",
@@ -18,12 +18,12 @@
     "docs/api/shapes.md": "e2727b6c18a22da4076e0e1be26abbbb6184cd1858cd8b99d429ee297945ffcc",
     "docs/api/style.md": "dbe4615bd53c8db4b85cf3235dde4a3d7b62df0b1b1797bbbeb10b863b15ca52",
     "docs/api/text.md": "8ce2ee570bd79d6558ee6db7b0009239c3d4b378e21d097ad2c01569dfc77a0d",
-    "docs/api/tree.md": "295892bbf41d9f6a1a4b8e1d8b43439d715bc1f63fd5278f8760799c67f18aae",
+    "docs/api/tree.md": "9ab8afa3543f56b5ee0d05f1fea4c4660faac797737971c0c135e66eb9b0d91c",
     "docs/api/window.md": "0eb45d36a03371213e64cc9d19ea3c7cda758e00d8d4a0a110012a1fb17695f1",
-    "docs/devtools/README.md": "a4d1cc3427bffe97680d719803a73273137eb6e9df4a10d82998102462fe8c3c",
+    "docs/devtools/README.md": "41552ca0a181396c4cd89a8e32ed7bc811eed83d6e91c5d2ebdf49d637d41277",
     "docs/devtools/development.md": "2401bc33efd58ca7565e732d8c87425ab5428d22c5728e47f4f1c2c4ab1e20a9",
-    "docs/devtools/protocol.md": "09af2b1c9e9020644f6112c5d700b535174a37ddcda9bde326706373736b13b4",
+    "docs/devtools/protocol.md": "0b9c1c7f2f9dd313dae6f8cf2905bc1e67f8b40f0904e6b7a4703f076e8db88d",
     "templates/Goo.Templates/content/Program.gs": "93a6a005631ee61def5af29c150982a6ed4bf51503db10b75bd6e3e81b8dcb79",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "7b81b8d1a553bc473bf6913c78b7099cdf8223f568252f63d61a3e7fb1f6a004"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "b05743c97e770055670698394bac1a5df1b290e5324cde420b8c11b350748ee8"
   }
 }

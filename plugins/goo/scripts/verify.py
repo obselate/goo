@@ -77,7 +77,7 @@ async def main():
             starter = data(await call("goo_starter", name="AgentProbe"))
             assert "--no-watch" in starter["run"]
             assert starter["build"] == "dotnet build AgentProbe.gsproj -c Release --nologo -warnaserror"
-            assert starter["versions"] == {"gsharpSdk": "0.4.591", "goo": "0.6.2",
+            assert starter["versions"] == {"gsharpSdk": "0.4.591", "goo": "0.6.3",
                                            "compilerCommit": bundled["provenance"]["compilerCommit"]}
             assert starter["lint"] == "unavailable"
             assert set(starter["provenance"]["sourceFiles"]) == {
