@@ -6,8 +6,21 @@ layout(location = 0) out vec4 outColor;
 void main()
 {
     vec2 pixelsPerEm = 1.0 / fwidth(v_texcoord);
-    float coverage = _hb_gpu_slug(v_texcoord, pixelsPerEm, v_glyphLoc);
+    vec2 dx = dFdx(v_texcoord) * 0.25;
+    vec2 dy = dFdy(v_texcoord) * 0.25;
     uint effectMode = floatBitsToUint(v_effectAndOrigin.y);
+    float ppem = hb_gpu_ppem(v_texcoord, v_glyphLoc);
+    float coverage = _hb_gpu_slug(v_texcoord, pixelsPerEm, v_glyphLoc);
+    if (effectMode == 0u && ppem > 24.0)
+    {
+        vec2 subpixelScale = pixelsPerEm * 2.0;
+        float integrated = 0.25 * (
+            _hb_gpu_slug_single(v_texcoord - dx - dy, subpixelScale, v_glyphLoc) +
+            _hb_gpu_slug_single(v_texcoord + dx - dy, subpixelScale, v_glyphLoc) +
+            _hb_gpu_slug_single(v_texcoord - dx + dy, subpixelScale, v_glyphLoc) +
+            _hb_gpu_slug_single(v_texcoord + dx + dy, subpixelScale, v_glyphLoc));
+        coverage = mix(coverage, integrated, smoothstep(24.0, 48.0, ppem));
+    }
     if (effectMode == 2u && v_effectAndOrigin.x > 0.0)
     {
         const vec2 directions[8] = vec2[8](
