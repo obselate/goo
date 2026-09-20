@@ -106,11 +106,15 @@ internal partial class VulkanWindowTarget {
     }
     let layers = frame.Layers
     for index in 0 ... frame.LayerCount {
+      let originX = layers[index].OriginX * scaleX
+      let originY = layers[index].OriginY * scaleY
+      let right = MathF.Ceiling(originX + float32(layers[index].ExtentWidth) * scaleX)
+      let bottom = MathF.Ceiling(originY + float32(layers[index].ExtentHeight) * scaleY)
       layers[index].Bounds = ScaleBounds(layers[index].Bounds, scaleX, scaleY)
-      layers[index].OriginX = layers[index].OriginX * scaleX
-      layers[index].OriginY = layers[index].OriginY * scaleY
-      layers[index].ExtentWidth = uint32(MathF.Ceiling(float32(layers[index].ExtentWidth) * scaleX))
-      layers[index].ExtentHeight = uint32(MathF.Ceiling(float32(layers[index].ExtentHeight) * scaleY))
+      layers[index].OriginX = MathF.Floor(originX)
+      layers[index].OriginY = MathF.Floor(originY)
+      layers[index].ExtentWidth = uint32(right - layers[index].OriginX)
+      layers[index].ExtentHeight = uint32(bottom - layers[index].OriginY)
     }
   }
 
