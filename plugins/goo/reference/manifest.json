@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "648de914ce936dca57d0ded3f58a03241482e10e",
+  "commit": "bdbc0b1f8cfe14e9bd82791e9017aa6af7466f47",
   "files": {
-    "README.md": "2b993b73a362bc9e41cf1c81aca69cb007a5b8e59465ebd05ce27fe1adf8ea73",
+    "README.md": "b8e674dc2117409a27b1f979b19c7d82a2009fbfb0ba08aaae39f51e9c749fa0",
     "CONTRIBUTING.md": "10adb8e192f35e5d215124aa3c157f2ad0e8e317c672e2af1bb60966b064069d",
     "docs/native-authoring.md": "839c508a9a72910004088050b8dbc631edbf43d2cd6b5496e2c5ca16c52545da",
     "docs/api/README.md": "8ae1406a1c6e033b9b4e495fb19c849e936e400c1c7aade28c8cb2ea02f7a58a",
@@ -10,20 +10,20 @@
     "docs/api/audio.md": "c561073504c539572e2774b85e27f06c4112ace9f7a60b5412ac6a5045964d71",
     "docs/api/cell.md": "290fd329463e75b0fe316f82f1e3aa11cfd8cc1900ab3d8e76981aa2009a067a",
     "docs/api/diagnostics.md": "4cfe078e236e6a9252e69674b4c41533e2ac6fe6ecfb20d78729008844c9d351",
-    "docs/api/input.md": "876b9c4f11a539b7190d358ced53710a725faad106f75f488d0a0576973f8f6a",
+    "docs/api/input.md": "2672cffa0fcfb83b96b82ea333da0eef8c0b04c4786d69c523def20a624394d8",
     "docs/api/layout.md": "c1cf29fd9f7dd3d0664eb0e0fd880496dfa0183dbd7e2569fe76651515e0a49f",
     "docs/api/motion.md": "f2fcee76e91d675536017fcae2080ebee2631e19a2e7b56e227e4b56ba1590eb",
     "docs/api/platform.md": "6a317dbb5873dc545032ea2897a3552cb360926ee649363a1ae67b88022f9bff",
     "docs/api/rendering.md": "7f48bf9d0b731fa4bd0a5947411d69264b3e75f9a52db6864ca655f9b2693af8",
     "docs/api/shapes.md": "e2727b6c18a22da4076e0e1be26abbbb6184cd1858cd8b99d429ee297945ffcc",
-    "docs/api/style.md": "dbe4615bd53c8db4b85cf3235dde4a3d7b62df0b1b1797bbbeb10b863b15ca52",
-    "docs/api/text.md": "8ce2ee570bd79d6558ee6db7b0009239c3d4b378e21d097ad2c01569dfc77a0d",
-    "docs/api/tree.md": "9ab8afa3543f56b5ee0d05f1fea4c4660faac797737971c0c135e66eb9b0d91c",
+    "docs/api/style.md": "da44502b8e6a27daa4caa7618bf6dce0caacffcd5e6cc594a12b8f27e8f52606",
+    "docs/api/text.md": "491558a50be35a5cde7ddc44fa58bc0bba4c18dd118bb1fe90fb3d0016077927",
+    "docs/api/tree.md": "b4e36b75ffe557caea48ccb8e21f8b3a5a633fe19ecd0ae20aadcbb3d5c2a83e",
     "docs/api/window.md": "0eb45d36a03371213e64cc9d19ea3c7cda758e00d8d4a0a110012a1fb17695f1",
-    "docs/devtools/README.md": "41552ca0a181396c4cd89a8e32ed7bc811eed83d6e91c5d2ebdf49d637d41277",
+    "docs/devtools/README.md": "66ee349237b1a6537f48a4e3c01671fbdf50353e85d17aa1b341a517a49e691b",
     "docs/devtools/development.md": "2401bc33efd58ca7565e732d8c87425ab5428d22c5728e47f4f1c2c4ab1e20a9",
-    "docs/devtools/protocol.md": "0b9c1c7f2f9dd313dae6f8cf2905bc1e67f8b40f0904e6b7a4703f076e8db88d",
+    "docs/devtools/protocol.md": "9d9518bbab4e5d2e9ec7d59b4b6285aa5cfc51e03035d9dc8154084c5e863f7a",
     "templates/Goo.Templates/content/Program.gs": "93a6a005631ee61def5af29c150982a6ed4bf51503db10b75bd6e3e81b8dcb79",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "b05743c97e770055670698394bac1a5df1b290e5324cde420b8c11b350748ee8"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "03116ae98f2fdf3814932daa76037c1b1c1631ad7c59d253ee573c9f1cf0357e"
   }
 }

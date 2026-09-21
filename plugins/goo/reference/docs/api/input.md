@@ -21,9 +21,14 @@ still reports its original press count; capture does not turn a drag into a clic
 Mouse and pen sequences belong to their pointer contact. Touch contacts end on up,
 so separate taps report one; pen proximity cancellation resets its sequence.
 
-Single-line text entry selects a word for counts two and three. TextEditor uses
-one for the caret, two for a word, and three for a line. Applications keep control
-over what generic double/triple presses do.
+TextEntry and TextEditor use one click for the caret, two for a word, and three
+for a logical line. A TextEntry line is its entire value. TextEditor line selection
+includes the line ending. Word selection keeps grapheme clusters intact and
+separates word, whitespace, punctuation, and symbol runs. Underscores belong to
+words. Dragging after a double/triple click extends by whole words/lines and
+preserves the original selected unit when the pointer reverses direction. Small
+pointer movement within the four-pixel tolerance preserves the selection.
+Applications keep control over what generic double/triple presses do.
 
 `PointerEvent.IsFromInteractiveChild` identifies a clickable or focusable descendant
 below the current handler on a routed down, move, up, or cancel path. A parent can
@@ -32,13 +37,70 @@ It excludes the current handler itself; unrouted hover notifications report fals
 
 ## Route keyboard and focus callbacks
 
-`OnKeyDown` and `OnKeyUp` start at the currently focused element and bubble through its parents, so an ancestor can own shortcuts for a subtree. `KeyEvent.StopPropagation()` ends that route before the next ancestor without canceling Goo's default action. `KeyEvent.PreventDefault()` cancels the default action without stopping the remaining callbacks. Both controls are active only during that route; retaining the event value cannot affect a later dispatch.
+Primitives have no automatic keyboard bindings, including editing, submit, button activation, or focus traversal. Assign `KeyBindings` on a primitive or ancestor just like other UI properties. Native text and IME input still insert text independently of physical keys.
 
-Key-down defaults run after the route and include text editing, `Tab` or `Shift+Tab` traversal, and `Button` Enter or Space press behavior. Preventing the matching Space key-up cancels release activation. Repeated key downs use the same route with `Repeat: true` and resolve the current focus target again for each repeat.
+```gsharp
+controller.UseTabs = false
+controller.IndentWidth = 2
+controller.TabWidth = 8
+
+TextEditor(controller){
+    KeyBindings: []KeyBinding{
+        KeyBinding{
+            Key: Key.Tab,
+            Action: () -> {
+                controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
+            }
+        },
+        KeyBinding{
+            Key: Key.Tab,
+            Modifiers: KeyModifiers{Shift: true},
+            Action: () -> {
+                controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
+            }
+        },
+        KeyBinding{
+            Key: Key.Left,
+            Repeat: true,
+            Action: () -> {
+                controller.Execute(TextCommand{Kind: TextCommandKind.MoveLeft})
+            }
+        },
+    },
+}
+```
+
+Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
+
+`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings without stopping callbacks. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
+
+Use `window.PlatformInput.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
+
+`SelectWord` and `SelectLine` act at the caret, or at an explicit `TextCommand.Position`.
+They work through `PlatformInput.Execute` for either text primitive and through
+`TextEditorController.Execute` for an editor. `ExtendSelection` preserves the anchor.
+Mouse selection uses the same core operations.
+
+For an editor's Tab policy, bind `InsertTab` to Tab and `Outdent` to Shift+Tab.
+`UseTabs` selects literal tabs or spaces. `IndentWidth` sets the space indentation
+level and its insertion stops. `TabWidth` sets displayed tab stops without changing
+document text. All three settings are per controller. Their defaults preserve
+literal tabs and four-column indentation and display.
+
+With no selection, `InsertTab` inserts a literal tab or enough spaces to reach the
+next indentation stop. With a selection, `InsertTab` and `Indent` add one level to
+every affected logical line. `Outdent` removes leading mixed tab and space
+indentation through one indentation stop. A selected range ending at the next
+line's start excludes that next line. Each action is one undo step. Source tabs
+remain one character for selection, clipboard, caret, and hit testing. No Tab
+binding is installed automatically. The sample applications assign this policy
+explicitly and use focus traversal for single-line and read-only controls.
+
+Bind `window.PlatformInput.MoveFocus(true)` and `MoveFocus(false)` explicitly for forward and backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 
 A focus transfer updates the old and new `Focused` states first, then routes `OnBlur` from the old element to its parents and `OnFocus` from the new element to its parents. These lifecycle callbacks cannot cancel the transfer. `FocusEvent.StopPropagation()` only skips the remaining ancestors. A reentrant focus request from `OnBlur` or `OnFocus` wins over the superseded transfer.
 
-Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. `Tab` and `Shift+Tab` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
+Set `Focusable: true` on a generic Blob. `Button`, `TextEntry`, and `TextEditor` are focusable by default; explicitly setting `Focusable: false` removes them from keyboard focus. During a rebuilt tree update, `AutoFocus` selects the first eligible element only when nothing else holds focus. Calls to `PlatformInput.MoveFocus` visit enabled, visible focusables in depth-first tree order and wrap at the ends. An unprevented primary pointer press focuses the deepest focusable element in its hit route. `ElementHandle.Focus()` and `ElementHandle.Blur()` use the same mounted, visible, enabled eligibility rules.
 
 ## Mounted focus scopes
 
@@ -47,8 +109,9 @@ for example from `MetricsChanged`, and dispose the returned `FocusScope` when an
 overlay closes. The visible, enabled root must be focusable. On the next stable
 input/tree update, Goo uses the eligible `InitialFocus` handle, an `AutoFocus`
 descendant, the first descendant tab stop, or the root when no child accepts
-focus. Tab and Shift+Tab wrap within the top scope and skip the scope root unless
-it is the fallback. Editors retain their normal Tab indentation behavior.
+focus. Explicit `MoveFocus` bindings wrap within the top scope and skip the scope
+root unless it is the fallback. Bind `InsertTab` and `Outdent` explicitly when an
+editor should handle Tab itself.
 
 `Modal: true` blocks input and accessibility outside the latest modal scope and
 any nonmodal scopes opened after it. This lets menus and submenus remain usable
@@ -90,9 +153,23 @@ Attach an optional `DragSource` or `DropTarget` descriptor to a `Blob`. Goo reco
 
 The selected target receives `Enter`, `Move`, `Leave`, and `Drop` snapshots through `Changed`. Positions are current target-local and logical-window coordinates. A successful `Drop` remains successful when its callback removes or reparents the target or source. Goo makes no further callback to a detached owner.
 
-Escape, pointer cancellation, focus loss, window close, source removal or disablement, and callback failure cancel the session. Internal termination and capture cleanup run once. `DragSource.End` runs at most once only while its source remains mounted. Goo strongly retains the payload through an eligible `End`, then releases it. Goo never calls `Dispose` on consumer payloads. Callback cleanup preserves the original exception.
+Call `window.PlatformInput.CancelDrag()` to cancel the session, and bind Escape explicitly when desired. Pointer cancellation, focus loss, window close, source removal or disablement, and callback failure also cancel it. Internal termination and capture cleanup run once. `DragSource.End` runs at most once only while its source remains mounted. Goo strongly retains the payload through an eligible `End`, then releases it. Goo never calls `Dispose` on consumer payloads. Callback cleanup preserves the original exception.
 
-One in-app pointer drag can be active per window. Goo provides no visual drag preview, automatic scrolling, or generic keyboard target navigation. Applications must expose an equivalent keyboard and accessibility action when drag movement affects application state.
+Use `window.PlatformInput.BeginDrag(sourceHandle)` to start the same lifecycle
+without a pointer. `UpdateDrag(targetHandle, modifiers)` selects an explicit
+mounted target and negotiates from it through its ancestors. `DropDrag()` queries
+the target again, delivers the drop, and terminates the session. `CancelDrag()`
+cancels either kind of drag. These methods return whether the operation succeeded.
+Bind them with ordinary `KeyBindings` callbacks. The consumer chooses target
+navigation and key assignments. Handle targets must belong to the same window.
+
+A drag started through `BeginDrag` uses element centers for event positions and
+reports `IsPointer: false` in start/target events. It does not press, capture, or
+move a pointer. PointerId and Device are not meaningful for that session. It shares
+target negotiation, modifiers, cancellation, and cleanup with pointer drags. A
+second drag cannot start while a drag or pointer press is active. Only one in-app
+drag can be active per window. Goo provides no visual drag preview or automatic
+scrolling.
 
 ### Native file drops
 
@@ -201,6 +278,10 @@ Gets the pointer device type.
 
 Gets the effect selected by this target, or None while querying.
 
+### `IsPointer`
+
+Reports whether a pointer started this drag. PointerId and Device apply only when true.
+
 ### `Kind`
 
 Gets the lifecycle phase.
@@ -248,12 +329,12 @@ Defines payload creation and terminal notification for an in-app drag source.
 
 Creates a source descriptor.
 
-- `create`: callback that creates or rejects drag data at the threshold
+- `create`: callback that creates or rejects drag data when a drag begins
 - `end`: optional terminal callback
 
 ### `Create`
 
-Gets the callback invoked once after the pointer crosses the drag threshold.
+Gets the callback invoked at the pointer threshold or by PlatformInput.BeginDrag.
 
 ### `End`
 
@@ -265,11 +346,15 @@ Source:
 
 - [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
-Describes the pointer state when a source crosses the drag threshold.
+Describes the source position and input when an in-app drag begins.
 
 ### `Device`
 
 Gets the pointer device type.
+
+### `IsPointer`
+
+Reports whether a pointer started this drag. PointerId and Device apply only when true.
 
 ### `Modifiers`
 
@@ -507,6 +592,34 @@ Identifies a physical keyboard key.
 - `SuperRight`
 - `Menu`
 
+## `KeyBinding`
+
+Source:
+
+- [`KeyBinding.gs`](../../Goo/Input/KeyBinding.gs)
+
+Assigns callbacks to one exact physical key and modifier combination.
+
+### `Action`
+
+Gets the callback invoked on key down.
+
+### `Key`
+
+Gets the physical key to match.
+
+### `Modifiers`
+
+Gets the exact modifiers to match. Omitted modifiers mean no modifiers.
+
+### `OnRelease`
+
+Gets the callback invoked on key up.
+
+### `Repeat`
+
+Enables repeated key downs while this key stays held and its target keeps focus.
+
 ## `KeyEvent`
 
 Source:
@@ -517,11 +630,11 @@ Describes a keyboard callback.
 
 ### `PreventDefault`
 
-Prevents the default keyboard behavior without stopping ancestor callbacks.
+Prevents assigned key bindings without stopping ancestor callbacks.
 
 ### `StopPropagation`
 
-Stops this event before the next ancestor callback without preventing its default behavior.
+Stops this event before the next ancestor callback and binding without preventing local bindings.
 
 ### `Key`
 
@@ -623,9 +736,19 @@ Routes platform events and semantic editing through the window's existing input 
 
 Reports settled focus, text, selection, composition, and caret-area changes.
 
+### `BeginDrag(ElementHandle,KeyModifiers)`
+
+Starts an in-app drag from a mounted source, using its center as the event position. Uses the source's DragSource callback without pressing or capturing a pointer.
+
 ### `CancelComposition`
 
 Discards preedit and restores the committed value and selection.
+
+### `CancelDrag`
+
+Cancels the current in-app drag and releases any pointer capture.
+
+Returns: True when an active drag was canceled.
 
 ### `ClearFocus`
 
@@ -639,9 +762,15 @@ Replaces the current selection or preedit with committed text.
 
 Deletes UTF-16 lengths outside the union of selection and composition, retaining both. Deletion expands to whole grapheme clusters without committing preedit.
 
+### `DropDrag`
+
+Completes the active drag through its negotiated target and terminal source callback.
+
+Returns: True when a drop was delivered, or false when no target accepted it.
+
 ### `Execute(TextCommand)`
 
-Executes shared semantic navigation, editing, clipboard, or submit behavior.
+Executes shared semantic navigation, editing, clipboard, submit, or entry CancelEdit behavior. Paste without Text reads the clipboard. Supplied paste text retains Paste interception and undo grouping.
 
 ### `FinishComposition`
 
@@ -694,6 +823,12 @@ Marks an existing effective UTF-16 range as composing text.
 ### `SetSelection(int32,int32)`
 
 Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters. Selection direction and composing ranges remain independent.
+
+### `UpdateDrag(ElementHandle,KeyModifiers)`
+
+Targets a drag started with BeginDrag at an element's center, negotiating with its ancestors.
+
+Returns: True when a drop target accepts the drag.
 
 ### `Editor`
 

@@ -118,7 +118,11 @@ Source:
 
 - [`TextEditorController.gs`](../../Goo/Text/TextEditorController.gs)
 
-Describes an operation with a Kind, Text, and ExtendSelection flag.
+Describes an operation with a Kind, Text, ExtendSelection flag, and optional Position.
+
+### `Position`
+
+Gets the optional source position for SelectWord or SelectLine. Omission uses the caret.
 
 ## `TextCommandEvent`
 
@@ -177,6 +181,26 @@ Selects a semantic text-editor operation.
 - `UpdateComposition`
 - `CommitComposition`
 - `CancelComposition`
+- `CancelEdit`
+- `SelectWord`
+- `SelectLine`
+- `InsertTab`
+
+### `CancelEdit`
+
+Restores the focused TextEntry's value from focus time and blurs it through PlatformInput.
+
+### `InsertTab`
+
+Inserts a tab at the caret, or indents every selected logical line.
+
+### `SelectLine`
+
+Selects the logical line at Position or the caret, including its line ending.
+
+### `SelectWord`
+
+Selects the word, whitespace, punctuation, or symbol run at Position or the caret.
 
 ## `TextComposition`
 
@@ -413,6 +437,10 @@ Gets the desired horizontal caret position used by vertical movement.
 
 Gets the document edited by this controller.
 
+### `IndentWidth`
+
+Gets or sets the number of columns in one indentation level.
+
 ### `IsFocused`
 
 Gets whether this controller currently owns editor focus.
@@ -440,6 +468,14 @@ Gets the vertical scroll target in logical pixels.
 ### `Selection`
 
 Gets or sets the current selection.
+
+### `TabWidth`
+
+Gets or sets the number of columns between displayed tab stops.
+
+### `UseTabs`
+
+Gets or sets whether indentation inserts tabs instead of spaces.
 
 ## `TextPosition`
 

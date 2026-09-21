@@ -1,19 +1,36 @@
 # Changelog
 
-## Unreleased
+## 0.6.4 - 2026-09-21
 
 ### Added
 
 - Added configurable per-axis `Scrollbar` descriptors with optional ordinary
   `Track` and `Thumb` parts, `Auto`/`Always`/`Hidden` visibility, immediate
   dragging, one-viewport paging, and overlay or `ReserveSpace` gutters.
+- Added explicit `KeyBinding` callbacks, primitive activation and press actions,
+  focused text commands, and keyboard-operated drag-and-drop actions.
+- Added configurable text-editor tab width, indentation width, tabs-or-spaces
+  policy, and semantic word and line selection commands.
 
 ### Changed
 
+- Primitives no longer install automatic editing, submit, button activation, or
+  focus traversal key bindings. Applications must assign the desired bindings.
 - Moved scrollbar visibility to ordered `Style` axis and shorthand entries.
   Removed the pre-1.0 `Blob.ScrollbarVisibility` authored-value getter.
   Applications that relied on the legacy built-in thumb appearance must author
   `Track` and `Thumb`.
+- Double- and triple-click text selection now extends by whole words and logical
+  lines while preserving grapheme clusters and the original selected unit.
+
+### Fixed
+
+- Preserved sharp text and offscreen layer placement at fractional display
+  scales, and preserved premultiplied color when compositing offscreen layers.
+- Fixed text-editor mouse selection, selection dragging, and explicit Tab and
+  Shift+Tab indentation behavior.
+- Preserved mouse-button release events during captured native window drags.
+
 
 ## 0.6.3 - 2026-09-19
 
