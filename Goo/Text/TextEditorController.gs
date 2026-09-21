@@ -38,10 +38,19 @@ public enum TextCommandKind {
   CancelComposition;
   /// Restores the focused TextEntry's value from focus time and blurs it through PlatformInput.
   CancelEdit;
+  /// Selects the word, whitespace, punctuation, or symbol run at Position or the caret.
+  SelectWord;
+  /// Selects the logical line at Position or the caret, including its line ending.
+  SelectLine;
+  /// Inserts a tab at the caret, or indents every selected logical line.
+  InsertTab;
 }
 
-/// Describes an operation with a Kind, Text, and ExtendSelection flag.
-public data struct TextCommand(Kind TextCommandKind, Text string, ExtendSelection bool) { }
+/// Describes an operation with a Kind, Text, ExtendSelection flag, and optional Position.
+public data struct TextCommand(Kind TextCommandKind, Text string, ExtendSelection bool) {
+  /// Gets the optional source position for SelectWord or SelectLine. Omission uses the caret.
+  public prop Position TextPosition? { get; init; }
+}
 
 /// Provides mutable cancellation state before a text-editor command runs.
 public class TextCommandEvent {
@@ -176,6 +185,11 @@ public class TextEditorController : IDisposable {
       case TextCommandKind.PageUp { return moveVertical(-10, command.ExtendSelection) }
       case TextCommandKind.PageDown { return moveVertical(10, command.ExtendSelection) }
       case TextCommandKind.SelectAll { return selectAllDefault() }
+      case TextCommandKind.SelectWord { return selectUnit(command, false) }
+      case TextCommandKind.SelectLine { return selectUnit(command, true) }
+      case TextCommandKind.InsertTab {
+        return selectedRange().Length == 0 ? insertDefault("\t", TextCommandKind.InsertTab) : indentDefault(false)
+      }
       case TextCommandKind.Copy { return true }
       case TextCommandKind.Cut { return cutDefault() }
       case TextCommandKind.Paste { return insertDefault(command.Text, TextCommandKind.Paste) }
@@ -354,7 +368,7 @@ public class TextEditorController : IDisposable {
 
   private func validateCommand(command TextCommand) {
     if int32(command.Kind) < int32(TextCommandKind.Insert)
-      || int32(command.Kind) > int32(TextCommandKind.CancelEdit) {
+      || int32(command.Kind) > int32(TextCommandKind.InsertTab) {
         throw ArgumentOutOfRangeException("command")
       }
     if (command.Kind == TextCommandKind.Insert || command.Kind == TextCommandKind.Paste
@@ -470,6 +484,16 @@ public class TextEditorController : IDisposable {
       Active: TextPosition{ Offset: document.Length, Affinity: TextAffinity.Downstream },
     }
     setSelection(next, true)
+    return true
+  }
+
+  private func selectUnit(command TextCommand, line bool) bool {
+    let position = normalizePosition(command.Position ?? selection.Active)
+    let textRange = line ? TextSelectionRanges.Line(document, position.Offset)
+      : TextSelectionRanges.Word(document.GetText(), position.Offset)
+    let origin = command.ExtendSelection
+      ? TextRange{ Start: selection.Anchor.Offset, Length: 0 } : textRange
+    setSelection(TextSelectionRanges.Extend(origin, textRange), true)
     return true
   }
 

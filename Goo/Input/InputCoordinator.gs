@@ -151,6 +151,21 @@ internal class InputCoordinator {
     finally { resolver.Flush() }
   }
 
+  internal func BeginDrag(root Node?, resolver Resolver, source Node, modifiers KeyModifiers) bool {
+    try { return pointer.BeginDrag(root, source, modifiers) }
+    finally { resolver.Flush() }
+  }
+
+  internal func UpdateDrag(root Node?, resolver Resolver, target Node, modifiers KeyModifiers) bool {
+    try { return pointer.UpdateDrag(root, target, modifiers) }
+    finally { resolver.Flush() }
+  }
+
+  internal func DropDrag(root Node?, resolver Resolver) bool {
+    try { return pointer.DropDrag(root) }
+    finally { resolver.Flush() }
+  }
+
   internal func BeginPress(resolver Resolver, target Node) bool -> keyboard.BeginPress(resolver, target)
 
   internal func EndPress(root Node?, resolver Resolver, target Node, activate bool) bool ->

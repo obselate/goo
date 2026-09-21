@@ -20,7 +20,7 @@ internal class FixtureKeyBindings {
         bindings.Add(KeyBinding{ Key: Key.Tab, Modifiers: modifiers, Action: () -> {
           if node.Kind == NodeKind.Editor && !node.EditorReadOnly {
             input.ExecuteEditorCommand(root, resolver, TextCommand{
-              Kind: extend ? TextCommandKind.Outdent : TextCommandKind.Indent })
+              Kind: extend ? TextCommandKind.Outdent : TextCommandKind.InsertTab })
           } else { input.MoveEditorFocus(root, resolver, !extend) }
         } })
         if node.Kind == NodeKind.Button {

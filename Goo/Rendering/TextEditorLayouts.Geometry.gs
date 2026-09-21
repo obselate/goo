@@ -93,7 +93,7 @@ internal partial class TextEditorLayouts {
       return result
     }
 
-    internal func HitTest(line TextEditorVisualLine, x float32) TextHit {
+    internal func HitTest(line TextEditorVisualLine, x float32, inside bool = false) TextHit {
       var adjusted = x
       for i in 0 ... line.Slots.Count {
         let slot = line.Slots[i]
@@ -119,7 +119,7 @@ internal partial class TextEditorLayouts {
           let clamped = if local < 0.0F { 0.0F }
           else if local > shape.Width { shape.Width } else { local }
           let distance = local - clamped < 0.0F ? clamped - local : local - clamped
-          let hit = shape.HitTest(clamped)
+          let hit = shape.HitTest(clamped, inside)
           if distance < nearestDistance {
             nearestDistance = distance
             nearest = TextHit{
@@ -131,7 +131,7 @@ internal partial class TextEditorLayouts {
         }
         return nearest
       }
-      return if let shape = line.Shape { shape.HitTest(adjusted) } else { TextHit{} }
+      return if let shape = line.Shape { shape.HitTest(adjusted, inside) } else { TextHit{} }
     }
 
     internal func CopySelectionRectsForGeometry(line TextEditorVisualLine, start int32,

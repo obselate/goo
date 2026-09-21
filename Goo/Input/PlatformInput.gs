@@ -76,13 +76,40 @@ public class PlatformInput {
     drain()
   }
 
-  /// Cancels the current in-app drag and releases its pointer capture.
+  /// Starts an in-app drag from a mounted source, using its center as the event position.
+  /// Uses the source's DragSource callback without pressing or capturing a pointer.
+  public func BeginDrag(source ElementHandle, modifiers KeyModifiers = default(KeyModifiers)) bool {
+    requireInput()
+    if source == nil { throw ArgumentNullException("source") }
+    guard let target = source.AttachedNodeFor(owner) else { return false }
+    try { return input.BeginDrag(owner.Tree, resolver, target, modifiers) }
+    finally { finish() }
+  }
+
+  /// Targets a drag started with BeginDrag at an element's center, negotiating with its ancestors.
+  /// @returns True when a drop target accepts the drag.
+  public func UpdateDrag(target ElementHandle, modifiers KeyModifiers = default(KeyModifiers)) bool {
+    requireInput()
+    if target == nil { throw ArgumentNullException("target") }
+    guard let node = target.AttachedNodeFor(owner) else { return false }
+    try { return input.UpdateDrag(owner.Tree, resolver, node, modifiers) }
+    finally { finish() }
+  }
+
+  /// Completes the active drag through its negotiated target and terminal source callback.
+  /// @returns True when a drop was delivered, or false when no target accepted it.
+  public func DropDrag() bool {
+    requireInput()
+    try { return input.DropDrag(owner.Tree, resolver) }
+    finally { finish() }
+  }
+
+  /// Cancels the current in-app drag and releases any pointer capture.
   /// @returns True when an active drag was canceled.
   public func CancelDrag() bool {
     requireThread()
-    let result = input.CancelDrag(owner.Tree, resolver)
-    finish()
-    return result
+    try { return input.CancelDrag(owner.Tree, resolver) }
+    finally { finish() }
   }
 
   /// Dispatches wheel deltas at a window logical position.

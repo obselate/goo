@@ -120,7 +120,7 @@ internal class ClickSequenceFixtures {
       input.QueueRelease(2.0F, 10.0F)
       input.Drain(root, resolver, float64(i) * 0.05, text)
       if count != i + 1 || up != count { return false }
-      if i > 0 && (root.Anchor != 0 || root.Caret != 5) { return false }
+      if i > 0 && (root.Anchor != 0 || root.Caret != (i == 2 ? 11 : 5)) { return false }
     }
     capture = true
     input.QueuePress(2.0F, 10.0F)

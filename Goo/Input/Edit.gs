@@ -61,33 +61,9 @@ internal class Edit {
 
   internal func SelectAll(s EditState) EditState -> EditState { Text: s.Text, Caret: s.Text.Length, Anchor: 0 }
 
-  // The caret follows the run. Gaps select the non-word run.
   internal func SelectWordAt(s EditState, index int32) EditState {
-    if s.Text.Length == 0 { return EditState{ Text: s.Text, Caret: 0, Anchor: 0 } }
-    var i = index
-    if i < 0 { i = 0 }
-    if i >= s.Text.Length { i = s.Text.Length - 1 }
-    let starts = UnicodeGraphemes.Starts(s.Text)
-    let start = elementStart(starts, s.Text.Length, i)
-    let word = isWord(s.Text, start)
-    var lo int32 = 0
-    var scan int32 = 0
-    var runWord = false
-    while scan <= start {
-      let currentWord = isWord(s.Text, scan)
-      if scan == 0 || currentWord != runWord {
-        lo = scan
-        runWord = currentWord
-      }
-      let next = nextElement(starts, s.Text.Length, scan)
-      if next > start { break }
-      scan = next
-    }
-    var hi = start
-    while hi < s.Text.Length && isWord(s.Text, hi) == word {
-      hi = nextElement(starts, s.Text.Length, hi)
-    }
-    return EditState{ Text: s.Text, Caret: hi, Anchor: lo }
+    let selected = TextSelectionRanges.Word(s.Text, index)
+    return EditState{ Text: s.Text, Anchor: selected.Start, Caret: selected.Start + selected.Length }
   }
 
   internal func place(s EditState, index int32, extend bool) EditState {
@@ -178,5 +154,5 @@ internal class Edit {
     return if low == 0 { 0 } else { starts[low - 1] }
   }
 
-  private func isWord(text string, elementStart int32) bool -> Char.IsLetterOrDigit(text, elementStart)
+  private func isWord(text string, elementStart int32) bool -> TextSelectionRanges.IsWord(text, elementStart)
 }

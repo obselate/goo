@@ -31,7 +31,14 @@ internal class AppKeyBindings {
                         Key: Key.Tab,
                         Modifiers: plain,
                         Action: () -> {
-                            input.MoveFocus(!shift)
+                            let editor = input.Editor
+                            if editor?.IsMultiline == true && editor?.IsReadOnly == false {
+                                input.Execute(
+                                    TextCommand{Kind: shift ? TextCommandKind.Outdent: TextCommandKind.InsertTab}
+                                )
+                            } else {
+                                input.MoveFocus(!shift)
+                            }
                         }
                     }
                 )

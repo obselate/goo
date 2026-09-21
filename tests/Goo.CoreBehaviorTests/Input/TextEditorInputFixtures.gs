@@ -70,7 +70,7 @@ internal class TextEditorInputFixtures {
     }
     driver.Press(word.X, word.Y)
     driver.Release(word.X, word.Y)
-    if controller.Selection.Anchor.Offset != 0 || controller.Selection.Active.Offset != 7 {
+    if controller.Selection.Anchor.Offset != 0 || controller.Selection.Active.Offset != 8 {
       return false
     }
 

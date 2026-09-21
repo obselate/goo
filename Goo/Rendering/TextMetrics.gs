@@ -157,10 +157,10 @@ internal class TextMetrics {
       int32(n.CaretAffinity))
   }
 
-  internal func HitAt(n Node, localX float32) TextHit {
+  internal func HitAt(n Node, localX float32, inside bool = false) TextHit {
     let shaped = BufferShape(n)
     let contentX = localX - EntryOffset(n, shaped) + n.EditScrollX
-    let hit = shaped.HitTest(contentX)
+    let hit = shaped.HitTest(contentX, inside)
     return TextHit{ Index: entrySourceOffset(n.EntryShape!!, hit.Index), Affinity: hit.Affinity }
   }
 

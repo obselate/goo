@@ -7,17 +7,11 @@ internal class TextEditorInputAdapter {
     internal func SelectAt(n Node, localX float32, localY float32, extend bool,
       clickCount int32) bool{
         guard let controller = n.EditorController else { return false }
-        let position = TextEditorLayouts.HitTest(n, localX, localY)
-        if clickCount >= 3 {
-          let line = controller.Document.GetLineIndex(position.Offset)
-          let textRange = controller.Document.GetLineRange(line)
-          controller.Selection = TextSelection{
-            Anchor: TextPosition{ Offset: textRange.Start, Affinity: TextAffinity.Upstream },
-            Active: TextPosition{ Offset: textRange.Start + textRange.Length,
-              Affinity: TextAffinity.Downstream },
-          }
-        } else if clickCount == 2 {
-          controller.Selection = wordSelection(controller, position)
+        let position = TextEditorLayouts.HitTest(n, localX, localY, clickCount >= 2)
+        if clickCount >= 2 {
+          if !controller.Execute(TextCommand{
+            Kind: clickCount >= 3 ? TextCommandKind.SelectLine : TextCommandKind.SelectWord,
+            Position: position, ExtendSelection: extend }) { return false }
         } else {
           controller.Selection = TextSelection{
             Anchor: extend ? controller.Selection.Anchor : position,
@@ -28,12 +22,18 @@ internal class TextEditorInputAdapter {
         return true
       }
 
-    internal func DragTo(n Node, localX float32, localY float32) bool {
+    internal func DragTo(n Node, localX float32, localY float32, clicks int32, origin TextRange) bool {
       guard let controller = n.EditorController else { return false }
-      let position = TextEditorLayouts.HitTest(n, localX, localY)
-      controller.Selection = TextSelection{
-        Anchor: controller.Selection.Anchor,
-        Active: position,
+      let position = TextEditorLayouts.HitTest(n, localX, localY, clicks >= 2)
+      if clicks >= 2 {
+        let target = clicks >= 3 ? TextSelectionRanges.Line(controller.Document, position.Offset)
+          : TextSelectionRanges.Word(controller.Document.GetText(), position.Offset)
+        controller.Selection = TextSelectionRanges.Extend(origin, target)
+      } else {
+        controller.Selection = TextSelection{
+          Anchor: controller.Selection.Anchor,
+          Active: position,
+        }
       }
       n.BlinkT = 0.0
       return true
@@ -70,31 +70,6 @@ internal class TextEditorInputAdapter {
         let height = int32(bottom - top) > 0 ? int32(bottom - top) : 1
         host.SetImeArea(int32(left), int32(top), width, height, 0)
       }
-
-    private func wordSelection(controller TextEditorController, position TextPosition) TextSelection {
-      let text = controller.Document.GetText()
-      if text.Length == 0 {
-        return TextSelection{ Anchor: position, Active: position }
-      }
-      let starts = UnicodeGraphemes.Starts(text)
-      var index int32 = 0
-      while index < starts.Length && starts[index] < position.Offset { index++ }
-      if index == starts.Length || starts[index] > position.Offset {
-        index--
-      }
-      if index < 0 || !Char.IsLetterOrDigit(text, starts[index]) {
-        return TextSelection{ Anchor: position, Active: position }
-      }
-      var first = index
-      while first > 0 && Char.IsLetterOrDigit(text, starts[first - 1]) { first-- }
-      var last = index + 1
-      while last < starts.Length && Char.IsLetterOrDigit(text, starts[last]) { last++ }
-      let end = last < starts.Length ? starts[last] : text.Length
-      return TextSelection{
-        Anchor: TextPosition{ Offset: starts[first], Affinity: TextAffinity.Upstream },
-        Active: TextPosition{ Offset: end, Affinity: TextAffinity.Downstream },
-      }
-    }
 
     private func setImeArea(host WindowHost, n Node, x float32, y float32, width float32,
       height float32) {

@@ -34,6 +34,7 @@ internal partial class PointerInput {
   private var dragPointerDevice PointerDevice
   private var dragHitPath List[Node]?
   private var dragGeneration int64
+  private var creatingDrag bool
 
   internal init(focus FocusManager) {
     this.focus = focus
@@ -517,6 +518,7 @@ internal partial class PointerInput {
   private func maskCanceledButtons(buttons PointerButtons) PointerButtons -> PointerButtons(int32(buttons) & (int32(-1) ^ int32(current.CanceledButtons)))
 
   internal func AfterTreeUpdated(root Node?, resolver Resolver) {
+    if dragSession?.IsPointer == false && root == nil { cancelDrag(root) }
     current = mouse
     afterTreeUpdatedCurrent(root, resolver)
     if let values = contacts {
@@ -561,7 +563,7 @@ internal partial class PointerInput {
     if let d = current.DragEditor {
       if !nodeVisibleInTree(tree, d, false) || !canReceiveInput(d) {
         current.DragEditor = nil
-        current.DragEditorStarted = false
+        current.DragSelectionStarted = false
       }
     }
     if let pan = current.TouchPan {
@@ -643,7 +645,7 @@ internal partial class PointerInput {
         return true
       }
       if dragCandidate != nil {
-        if prevented || current.CaptureTarget != nil || current.DragEntry != nil || current.DragEditorStarted {
+        if prevented || current.CaptureTarget != nil || current.DragEntry != nil || current.DragSelectionStarted {
           if dragCandidate != nil && dragPointerMatches() { clearDragCandidate() }
         } else if startDragIfReady(root, x, y, modifiers) {
           handleMove(root, resolver, x, y,
@@ -686,6 +688,10 @@ internal partial class PointerInput {
             current.DragEntry = nil
             return changed
           }
+          if !current.DragSelectionStarted && dragThresholdCrossed(x, y) {
+            current.DragSelectionStarted = true
+          }
+          if !current.DragSelectionStarted { return changed }
           let caret = d.Caret
           let affinity = d.CaretAffinity
           let scrollX = d.EditScrollX
@@ -696,9 +702,19 @@ internal partial class PointerInput {
             return changed
           }
           let local = point.X - BoxGeometry.ContentLeft(d)
-          let hit = TextMetrics().HitAt(d, local)
-          d.Caret = hit.Index
-          d.CaretAffinity = TextAffinity(hit.Affinity)
+          let hit = TextMetrics().HitAt(d, local, current.LastPressCount >= 2)
+          if current.LastPressCount >= 2 {
+            let target = current.LastPressCount >= 3 ? TextRange{ Start: 0, Length: d.Buffer.Length }
+              : TextSelectionRanges.Word(d.Buffer, hit.Index)
+            let selected = TextSelectionRanges.Extend(current.DragSelectionOrigin, target)
+            d.Anchor = selected.Anchor.Offset
+            d.Caret = selected.Active.Offset
+            d.AnchorAffinity = selected.Anchor.Affinity
+            d.CaretAffinity = selected.Active.Affinity
+          } else {
+            d.Caret = hit.Index
+            d.CaretAffinity = TextAffinity(hit.Affinity)
+          }
           d.BlinkT = 0.0
           FollowCaret(d)
           if d.Caret != caret || d.CaretAffinity != affinity
@@ -709,21 +725,22 @@ internal partial class PointerInput {
         if let d = current.DragEditor {
           if !canReceiveInput(d) {
             current.DragEditor = nil
-            current.DragEditorStarted = false
+            current.DragSelectionStarted = false
             return changed
           }
           let point = TransformGeometry.WindowToNode(d, x, y)
           if !point.Valid {
             current.DragEditor = nil
-            current.DragEditorStarted = false
+            current.DragSelectionStarted = false
             return changed
           }
-          if !current.DragEditorStarted && (MathF.Abs(x - current.LastPressX) >= 4.0F
+          if !current.DragSelectionStarted && (MathF.Abs(x - current.LastPressX) >= 4.0F
               || MathF.Abs(y - current.LastPressY) >= 4.0F) {
-                current.DragEditorStarted = true
+                current.DragSelectionStarted = true
               }
-          if current.DragEditorStarted
-            && TextEditorInputAdapter.DragTo(d, point.X - d.Rect.X, point.Y - d.Rect.Y) {
+          if current.DragSelectionStarted
+            && TextEditorInputAdapter.DragTo(d, point.X - d.Rect.X, point.Y - d.Rect.Y,
+              current.LastPressCount, current.DragSelectionOrigin) {
               changed = true
             }
         }
@@ -742,7 +759,7 @@ internal partial class PointerInput {
       current.ClickTarget = nil
       current.DragEntry = nil
       current.DragEditor = nil
-      current.DragEditorStarted = false
+      current.DragSelectionStarted = false
       hitChainInto(tree, x, y, current.PressChain)
       if chainDisabled(current.PressChain) {
         current.PressChain.Clear()
@@ -784,20 +801,22 @@ internal partial class PointerInput {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
           let local = point.X - BoxGeometry.ContentLeft(entry)
-          let hit = TextMetrics().HitAt(entry, local)
+          let hit = TextMetrics().HitAt(entry, local, current.LastPressCount >= 2)
           let index = hit.Index
           if current.LastPressCount >= 2 {
-            let selection = Edit().SelectWordAt(EditState{ Text: entry.Buffer, Caret: entry.Caret, Anchor: entry.Anchor }, index)
-            entry.Caret = selection.Caret
-            entry.Anchor = selection.Anchor
-            entry.CaretAffinity = TextAffinity.Upstream
-            entry.AnchorAffinity = TextAffinity.Downstream
+            text.ExecuteEditorCommand(tree, resolver, TextCommand{
+              Kind: current.LastPressCount >= 3 ? TextCommandKind.SelectLine : TextCommandKind.SelectWord,
+              Position: TextPosition{ Offset: index, Affinity: TextAffinity(hit.Affinity) },
+              ExtendSelection: modifiers.Shift,
+            })
           } else {
             entry.Caret = index
-            entry.Anchor = index
+            if !modifiers.Shift { entry.Anchor = index }
             entry.CaretAffinity = TextAffinity(hit.Affinity)
-            entry.AnchorAffinity = entry.CaretAffinity
+            if !modifiers.Shift { entry.AnchorAffinity = entry.CaretAffinity }
           }
+          current.DragSelectionOrigin = TextRange{ Start: Math.Min(entry.Anchor, entry.Caret),
+            Length: Math.Abs(entry.Caret - entry.Anchor) }
           entry.BlinkT = 0.0
           FollowCaret(entry)
           text.RefreshInputArea(entry)
@@ -809,6 +828,11 @@ internal partial class PointerInput {
             modifiers.Shift, current.LastPressCount) {
               text.RefreshInputArea(entry)
               current.DragEditor = entry
+              if let selected = entry.EditorController?.Selection {
+                current.DragSelectionOrigin = TextRange{
+                  Start: Math.Min(selected.Anchor.Offset, selected.Active.Offset),
+                  Length: Math.Abs(selected.Active.Offset - selected.Anchor.Offset) }
+              }
             }
         }
       }
@@ -871,7 +895,7 @@ internal partial class PointerInput {
       clearPressChain(resolver)
       current.DragEntry = nil
       current.DragEditor = nil
-      current.DragEditorStarted = false
+      current.DragSelectionStarted = false
       current.ClickTarget = nil
       return if let activate = target { hitActivate(root, activate) } else { false }
     }
@@ -932,7 +956,7 @@ internal partial class PointerInput {
           clearPressChain(resolver)
           current.DragEntry = nil
           current.DragEditor = nil
-          current.DragEditorStarted = false
+          current.DragSelectionStarted = false
           clearScrollDrag()
           clearTouchPan()
           current.ClickTarget = nil
@@ -1084,7 +1108,8 @@ internal class PointerContact {
   internal var ClickTarget Node?
   internal var DragEntry Node?
   internal var DragEditor Node?
-  internal var DragEditorStarted bool
+  internal var DragSelectionStarted bool
+  internal var DragSelectionOrigin TextRange
   internal var LastPressT float64
   internal var LastPressX float32
   internal var LastPressY float32

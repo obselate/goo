@@ -99,7 +99,7 @@ internal partial class PointerInput {
       current.ClickTarget = nil
       current.DragEntry = nil
       current.DragEditor = nil
-      current.DragEditorStarted = false
+      current.DragSelectionStarted = false
       PointerScrollStates.Begin(current, n, vertical, grabOffset)
     ScrollState.Touch(n)
   }

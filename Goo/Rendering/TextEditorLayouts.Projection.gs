@@ -79,9 +79,27 @@ internal partial class TextEditorLayouts {
           let boundary = nextStyleBoundary(styles, absolute, start + text.Length)
           if boundary > absolute { end = boundary - start }
           if end <= cursor { end = cursor + 1 }
-          appendTransformedSource(result, ref display, text.Substring(cursor, end - cursor),
+          appendTabbedSource(result, ref display, text.Substring(cursor, end - cursor),
             absolute, style)
           cursor = end
+        }
+      }
+
+    private func appendTabbedSource(result TextEditorResolvedParagraph, ref display string,
+      text string, start int32, style TextResolvedStyle) {
+        var cursor int32 = 0
+        while cursor < text.Length {
+          let tab = text.IndexOf('\t', cursor)
+          let end = tab < 0 ? text.Length : tab
+          if end > cursor {
+            appendTransformedSource(result, ref display, text.Substring(cursor, end - cursor),
+              start + cursor, style)
+          }
+          if tab < 0 { return }
+          let columns = UnicodeGraphemes.Starts(display).Length
+          appendResolvedSource(result, ref display, String(' ', 4 - columns % 4),
+            start + tab, 1, style, true)
+          cursor = tab + 1
         }
       }
 

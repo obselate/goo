@@ -9,16 +9,22 @@ internal class PointerDragSession {
   internal let Data DragData
   internal let PointerId int64
   internal let Device PointerDevice
+  internal let IsPointer bool
+  internal var RequestedTarget Node?
+  internal var X float32
+  internal var Y float32
+  internal var Modifiers KeyModifiers
   internal var Target Node?
   internal var Effect DragEffect
   internal var Terminating bool
   internal var EndDelivered bool
 
-  internal init(source Node, data DragData, pointerId int64, device PointerDevice) {
+  internal init(source Node, data DragData, pointerId int64, device PointerDevice, isPointer bool) {
     Source = source
     Data = data
     PointerId = pointerId
     Device = device
+    IsPointer = isPointer
   }
 }
 
@@ -59,6 +65,12 @@ internal partial class PointerInput {
       guard let source = dragCandidate else { return false }
       if !dragPointerMatches() || !dragThresholdCrossed(x, y) { return false }
       clearDragCandidate()
+      return beginDrag(root, source, x, y, modifiers, true)
+    }
+
+  private func beginDrag(root Node?, source Node, x float32, y float32,
+    modifiers KeyModifiers, isPointer bool) bool {
+      if dragSession != nil || creatingDrag { return false }
       guard let tree = root else { return false }
       if !containsPath(tree, source) || !canReceiveInput(source) { return false }
       guard let descriptor = DragDropMetadata.Source(source) else { return false }
@@ -66,10 +78,12 @@ internal partial class PointerInput {
       let mapped = TransformGeometry.WindowToNode(source, x, y)
       if !mapped.Valid { return false }
       var data DragData?
+      creatingDrag = true
       try {
         data = descriptor.Create(DragStartEvent{
-          PointerId: current.Id,
-          Device: current.Device,
+          IsPointer: isPointer,
+          PointerId: isPointer ? current.Id : 0,
+          Device: isPointer ? current.Device : PointerDevice.Mouse,
           Modifiers: modifiers,
           Position: Point{ X: float64(mapped.X - source.Rect.X),
             Y: float64(mapped.Y - source.Rect.Y) },
@@ -77,28 +91,34 @@ internal partial class PointerInput {
         })
       CellOwnership.Within(tree, source)?.Rebuild()
       } catch (error Exception) {
-        current.ClickTarget = nil
+        if isPointer { current.ClickTarget = nil }
         ExceptionDispatchInfo.Capture(error).Throw()
-      }
+      } finally { creatingDrag = false }
       guard let payload = data else { return false }
       if dragGeneration != generation { return false }
       if !containsPath(tree, source) || !canReceiveInput(source)
         || DragDropMetadata.Source(source) == nil {
           return false
         }
-      let session = PointerDragSession(source, payload, current.Id, current.Device)
+      let session = PointerDragSession(source, payload, isPointer ? current.Id : 0,
+        isPointer ? current.Device : PointerDevice.Mouse, isPointer)
       dragSession = session
-      dragPointerId = current.Id
-      dragPointerDevice = current.Device
-      current.ClickTarget = nil
-      current.DragEntry = nil
-      current.DragEditor = nil
-      current.DragEditorStarted = false
-      current.CaptureTarget = source
-      current.CaptureButton = PointerButton.Primary
-      if !rebuildCapturePath(tree) {
-        terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, false, nil)
-        return false
+      session.X = x
+      session.Y = y
+      session.Modifiers = modifiers
+      if isPointer {
+        dragPointerId = current.Id
+        dragPointerDevice = current.Device
+        current.ClickTarget = nil
+        current.DragEntry = nil
+        current.DragEditor = nil
+        current.DragSelectionStarted = false
+        current.CaptureTarget = source
+        current.CaptureButton = PointerButton.Primary
+        if !rebuildCapturePath(tree) {
+          terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, false, nil)
+          return false
+        }
       }
       try {
         updateDragTarget(tree, x, y, modifiers, true)
@@ -109,7 +129,7 @@ internal partial class PointerInput {
     }
 
   private func activeDragMatches() bool -> if let session = dragSession {
-    !session.Terminating && session.PointerId == current.Id
+    !session.Terminating && session.IsPointer && session.PointerId == current.Id
       && session.Device == current.Device
   } else { false }
 
@@ -132,13 +152,22 @@ internal partial class PointerInput {
   private func dragEvent(session PointerDragSession, target Node, kind DragEventKind,
     x float32, y float32, modifiers KeyModifiers, effect DragEffect) DragEvent? ->
     DragTargetRouting.CreateEvent(session.Data, target, kind, x, y, modifiers,
-      session.Data.AllowedEffects, effect, session.PointerId, session.Device)
+      session.Data.AllowedEffects, effect, session.PointerId, session.Device, session.IsPointer)
 
   private func queryDragTarget(root Node, session PointerDragSession, x float32, y float32,
     modifiers KeyModifiers) Node? {
       let path = dragTargetPath()
       path.Clear()
-      hitChainInto(root, x, y, path)
+      if session.IsPointer { hitChainInto(root, x, y, path) }
+      else {
+        var target = session.RequestedTarget
+        while let node = target {
+          path.Add(node)
+          if node.FocusScopeBoundary { break }
+          target = node.Parent
+        }
+        path.Reverse()
+      }
       if !DragTargetRouting.AllowsPath(path) {
         path.Clear()
         session.Effect = DragEffect.None
@@ -203,6 +232,9 @@ internal partial class PointerInput {
     notifyMove bool) {
       guard let session = dragSession else { return }
       if session.Terminating { return }
+      session.X = x
+      session.Y = y
+      session.Modifiers = modifiers
       if !ensureDragSession(root, session) { return }
       let previous = session.Target
       let selected = queryDragTarget(root, session, x, y, modifiers)
@@ -240,31 +272,33 @@ internal partial class PointerInput {
       }
     }
 
-  private func dropDrag(root Node, x float32, y float32, modifiers KeyModifiers) {
-    guard let session = dragSession else { return }
+  private func dropDrag(root Node, x float32, y float32, modifiers KeyModifiers) bool {
+    guard let session = dragSession else { return false }
     try {
       updateDragTarget(root, x, y, modifiers, false)
-      if !dragSessionCurrent(session) { return }
+      if !dragSessionCurrent(session) { return false }
       guard let target = session.Target else {
         terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, nil)
-        return
+        return false
       }
       let effect = session.Effect
       if !DragTargetRouting.Available(root, target) {
         terminateDrag(root, DragEndKind.Canceled, DragEffect.None, false, nil)
-        return
+        return false
       }
       if !dispatchDrop(root, session, target, x, y, modifiers, effect) {
         terminateDrag(root, DragEndKind.Canceled, DragEffect.None, false, nil)
-        return
+        return false
       }
-      if !dragSessionCurrent(session) { return }
+      if !dragSessionCurrent(session) { return false }
       terminateDrag(root, DragEndKind.Dropped, effect, false, nil)
+      return true
     } catch (error Exception) {
       if dragSession == session {
         terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, error)
       }
       ExceptionDispatchInfo.Capture(error).Throw()
+      return false
     }
   }
 
@@ -299,7 +333,7 @@ internal partial class PointerInput {
             if let target = session.Target {
               try {
                 notifyDragTarget(tree, session, target, DragEventKind.Leave,
-                  current.LastEventX, current.LastEventY, current.LastModifiers, DragEffect.None)
+                  session.X, session.Y, session.Modifiers, DragEffect.None)
               } catch (error Exception) {
                 if failure == nil { failure = error }
               }
@@ -328,9 +362,11 @@ internal partial class PointerInput {
         session.Effect = DragEffect.None
         if dragSession == session { dragSession = nil }
         dragGeneration++
-        clearCapture()
+        if session.IsPointer {
+          clearCapture()
+          current.ClickTarget = nil
+        }
         clearDragCandidate()
-        current.ClickTarget = nil
       }
       if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
     }
@@ -340,7 +376,8 @@ internal partial class PointerInput {
     clearDragCandidate()
     if !active { dragGeneration++ }
     guard let session = dragSession else { return false }
-    if !activeDragMatches() {
+    let previous = current
+    if session.IsPointer && !activeDragMatches() {
       if session.Device == PointerDevice.Mouse {
         current = mouse
       } else if let contact = findContact(session.PointerId, session.Device, false) {
@@ -350,7 +387,7 @@ internal partial class PointerInput {
     try {
       terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, nil)
     } finally {
-      current = mouse
+      current = previous
     }
     return active
   }
@@ -367,8 +404,60 @@ internal partial class PointerInput {
 
   internal func CancelDrag(root Node?) bool -> cancelDrag(root)
 
+  internal func BeginDrag(root Node?, source Node, modifiers KeyModifiers) bool {
+    if dragCandidate != nil || mouse.HeldButtons != PointerButtons.None
+      || hasHeldContact(PointerDevice.Touch) || hasHeldContact(PointerDevice.Pen) { return false }
+    let point = TransformGeometry.NodeToWindow(source, source.Rect.X + source.Rect.W / 2.0F,
+      source.Rect.Y + source.Rect.H / 2.0F)
+    return point.Valid && beginDrag(root, source, point.X, point.Y, modifiers, false)
+  }
+
+  internal func UpdateDrag(root Node?, target Node?, modifiers KeyModifiers) bool {
+    guard let tree = root, let session = dragSession else { return false }
+    if session.IsPointer || session.Terminating { return false }
+    session.RequestedTarget = target
+    var x = session.X
+    var y = session.Y
+    if let node = target {
+      let point = TransformGeometry.NodeToWindow(node, node.Rect.X + node.Rect.W / 2.0F,
+        node.Rect.Y + node.Rect.H / 2.0F)
+      if point.Valid && containsPath(tree, node) && canReceiveInput(node) {
+        x = point.X
+        y = point.Y
+      } else { session.RequestedTarget = nil }
+    }
+    try {
+      updateDragTarget(tree, x, y, modifiers, true)
+      return dragSessionCurrent(session) && session.Target != nil
+    } catch (error Exception) {
+      if dragSession == session {
+        terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
+      }
+      throw error
+    }
+  }
+
+  internal func DropDrag(root Node?) bool {
+    guard let tree = root, let session = dragSession else { return false }
+    if session.Terminating { return false }
+    let previous = current
+    if session.IsPointer {
+      guard let contact = findContact(session.PointerId, session.Device, false) else { return false }
+      current = contact
+    }
+    try { return dropDrag(tree, session.X, session.Y, session.Modifiers) }
+    finally { current = previous }
+  }
+
   internal func UpdateDragModifiers(root Node?, modifiers KeyModifiers) {
     guard let session = dragSession else { return }
+    if !session.IsPointer {
+      if sameDragModifiers(session.Modifiers, modifiers) { return }
+      if let tree = root {
+        UpdateDrag(tree, session.RequestedTarget, modifiers)
+      }
+      return
+    }
     if session.Device != PointerDevice.Mouse {
       guard let contact = findContact(session.PointerId, session.Device, false) else { return }
       current = contact
@@ -395,7 +484,8 @@ internal partial class PointerInput {
     && left.Super == right.Super
 
   private func afterDragTreeUpdated(root Node) {
-    if !currentOwnsDragState() { return }
+    if dragSession?.IsPointer == false && current != mouse { return }
+    if !currentOwnsDragState() && dragSession?.IsPointer != false { return }
     if let candidate = dragCandidate {
       if !containsPath(root, candidate) || !canReceiveInput(candidate)
         || DragDropMetadata.Source(candidate) == nil {
@@ -409,7 +499,9 @@ internal partial class PointerInput {
         return
       }
     try {
-      updateDragTarget(root, current.LastEventX, current.LastEventY, current.LastModifiers, true)
+      if session.IsPointer {
+        updateDragTarget(root, current.LastEventX, current.LastEventY, current.LastModifiers, true)
+      } else { UpdateDrag(root, session.RequestedTarget, session.Modifiers) }
     } catch (error Exception) {
       terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, error)
     }

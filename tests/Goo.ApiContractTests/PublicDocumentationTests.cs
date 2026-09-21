@@ -161,6 +161,9 @@ public sealed class PublicDocumentationTests
         "M:Goo.PlatformInput.FinishComposition",
         "M:Goo.PlatformInput.FocusLost",
         "M:Goo.PlatformInput.CancelDrag",
+        "M:Goo.PlatformInput.BeginDrag(Goo.ElementHandle,Goo.KeyModifiers)",
+        "M:Goo.PlatformInput.UpdateDrag(Goo.ElementHandle,Goo.KeyModifiers)",
+        "M:Goo.PlatformInput.DropDrag",
         "M:Goo.PlatformInput.KeyPress(Goo.Key,Goo.KeyModifiers)",
         "M:Goo.PlatformInput.KeyRelease(Goo.Key)",
         "M:Goo.PlatformInput.MoveFocus(System.Boolean)",
@@ -322,6 +325,9 @@ public sealed class PublicDocumentationTests
     private static readonly string[] ExpectedEnumFieldIds =
     {
         "F:Goo.TextCommandKind.CancelEdit",
+        "F:Goo.TextCommandKind.SelectWord",
+        "F:Goo.TextCommandKind.SelectLine",
+        "F:Goo.TextCommandKind.InsertTab",
         "F:Goo.ImageFit.Contain",
         "F:Goo.ImageFit.Cover",
         "F:Goo.ImageFit.Fill",
@@ -376,6 +382,8 @@ public sealed class PublicDocumentationTests
             ["M:Goo.DragSource.#ctor(System.Func{Goo.DragStartEvent,Goo.DragData},System.Action{Goo.DragEndEvent})"] = new(["create", "end"], [], false),
             ["M:Goo.DropTarget.#ctor(System.Func{Goo.DragEvent,Goo.DragEffect},System.Action{Goo.DragEvent})"] = new(["query", "changed"], [], false),
             ["M:Goo.PlatformInput.CancelDrag"] = new([], [], true),
+            ["M:Goo.PlatformInput.UpdateDrag(Goo.ElementHandle,Goo.KeyModifiers)"] = new([], [], true),
+            ["M:Goo.PlatformInput.DropDrag"] = new([], [], true),
             ["M:Goo.ElementHandle.EndPress(System.Boolean)"] = new(["activate"], [], true),
             ["M:Goo.ElementHandle.Activate"] = new([], [], true),
             ["M:Goo.ElementHandle.BeginPress"] = new([], [], true),
@@ -709,7 +717,7 @@ public sealed class PublicDocumentationTests
                 .Select(property => $"P:{type.FullName}.{property.Name}"));
         var eventIds = types.SelectMany(type => type.GetEvents(PublicDeclared)
             .Select(@event => $"E:{type.FullName}.{@event.Name}"));
-        return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Concat(eventIds)
+        return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Append("P:Goo.TextCommand.Position").Concat(eventIds)
             .Append("P:Goo.Cell`1.Input")
             .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})");
     }

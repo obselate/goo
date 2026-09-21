@@ -481,6 +481,7 @@ enum|Goo.TextCommandKind|DeleteForward|2
 enum|Goo.TextCommandKind|DeleteWordBackward|3
 enum|Goo.TextCommandKind|DeleteWordForward|4
 enum|Goo.TextCommandKind|Indent|23
+enum|Goo.TextCommandKind|InsertTab|34
 enum|Goo.TextCommandKind|Insert|0
 enum|Goo.TextCommandKind|MoveDocumentEnd|14
 enum|Goo.TextCommandKind|MoveDocumentStart|13
@@ -498,6 +499,8 @@ enum|Goo.TextCommandKind|PageUp|15
 enum|Goo.TextCommandKind|Paste|20
 enum|Goo.TextCommandKind|Redo|22
 enum|Goo.TextCommandKind|SelectAll|17
+enum|Goo.TextCommandKind|SelectLine|33
+enum|Goo.TextCommandKind|SelectWord|32
 enum|Goo.TextCommandKind|Submit|25
 enum|Goo.TextCommandKind|ToggleOverwrite|26
 enum|Goo.TextCommandKind|Undo|21
@@ -772,11 +775,13 @@ method|Goo.PathBuilder|LineTo|instance|public|generic:|(x:System.Double,y:System
 method|Goo.PathBuilder|MoveTo|instance|public|generic:|(x:System.Double,y:System.Double)->Goo.PathBuilder
 method|Goo.PathBuilder|Polyline|instance|public|generic:|(points:Goo.Point[],close:System.Boolean)->Goo.PathBuilder
 method|Goo.PathBuilder|QuadraticTo|instance|public|generic:|(controlX:System.Double,controlY:System.Double,x:System.Double,y:System.Double)->Goo.PathBuilder
+method|Goo.PlatformInput|BeginDrag|instance|public|generic:|(source:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
 method|Goo.PlatformInput|CancelComposition|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|CancelDrag|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|ClearFocus|instance|public|generic:|()->System.Void
 method|Goo.PlatformInput|CommitText|instance|public|generic:|(value:System.String)->System.Boolean
 method|Goo.PlatformInput|DeleteSurroundingText|instance|public|generic:|(beforeLength:System.Int32,afterLength:System.Int32)->System.Boolean
+method|Goo.PlatformInput|DropDrag|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|Execute|instance|public|generic:|(command:Goo.TextCommand)->System.Boolean
 method|Goo.PlatformInput|FinishComposition|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|FocusLost|instance|public|generic:|()->System.Void
@@ -791,6 +796,7 @@ method|Goo.PlatformInput|PointerWheel|instance|public|generic:|(x:System.Single,
 method|Goo.PlatformInput|SetCompositionRange|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.PlatformInput|SetComposition|instance|public|generic:|(value:System.String,selectionStart:System.Int32,selectionLength:System.Int32)->System.Boolean
 method|Goo.PlatformInput|SetSelection|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
+method|Goo.PlatformInput|UpdateDrag|instance|public|generic:|(target:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
 method|Goo.PointerEvent|Capture|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|ReleaseCapture|instance|public|generic:|()->System.Void
@@ -1139,6 +1145,7 @@ property|Goo.DragEvent|AllowedEffects|Goo.DragEffect|instance|get:public,init:pu
 property|Goo.DragEvent|Data|Goo.DragData|instance|get:public,init:public|index:()
 property|Goo.DragEvent|Device|Goo.PointerDevice|instance|get:public,init:public|index:()
 property|Goo.DragEvent|Effect|Goo.DragEffect|instance|get:public,init:public|index:()
+property|Goo.DragEvent|IsPointer|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.DragEvent|Kind|Goo.DragEventKind|instance|get:public,init:public|index:()
 property|Goo.DragEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.DragEvent|PointerId|System.Int64|instance|get:public,init:public|index:()
@@ -1147,6 +1154,7 @@ property|Goo.DragEvent|WindowPosition|Goo.Point|instance|get:public,init:public|
 property|Goo.DragSource|Create|System.Func`2<Goo.DragStartEvent,Goo.DragData>|instance|get:public|index:()
 property|Goo.DragSource|End|System.Action`1<Goo.DragEndEvent>|instance|get:public|index:()
 property|Goo.DragStartEvent|Device|Goo.PointerDevice|instance|get:public,init:public|index:()
+property|Goo.DragStartEvent|IsPointer|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.DragStartEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.DragStartEvent|PointerId|System.Int64|instance|get:public,init:public|index:()
 property|Goo.DragStartEvent|Position|Goo.Point|instance|get:public,init:public|index:()
@@ -1407,6 +1415,7 @@ property|Goo.TextCommandEvent|Cancel|System.Boolean|instance|get:public,set:publ
 property|Goo.TextCommandEvent|Command|Goo.TextCommand|instance|get:public|index:()
 property|Goo.TextCommand|ExtendSelection|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.TextCommand|Kind|Goo.TextCommandKind|instance|get:public,init:public|index:()
+property|Goo.TextCommand|Position|System.Nullable`1<Goo.TextPosition>|instance|get:public,init:public|index:()
 property|Goo.TextCommand|Text|System.String|instance|get:public,init:public|index:()
 property|Goo.TextCompositionEvent|SelectionLength|System.Int32|instance|get:public,init:public|index:()
 property|Goo.TextCompositionEvent|SelectionStart|System.Int32|instance|get:public,init:public|index:()

@@ -177,9 +177,14 @@ internal class TextGeometry {
     return 0.0F
   }
 
-  internal func HitTest(x float32) TextHit {
+  internal func HitTest(x float32, inside bool = false) TextHit {
     if stops.Length == 0 { return TextHit(0, 1) }
     if Single.IsNaN(x) || Single.IsInfinity(x) { return stops[0].Hit() }
+    if inside {
+      for box in boxes {
+        if x >= box.X0 && x < box.X1 { return TextHit(box.LogicalStart, 0) }
+      }
+    }
     let upper = lowerBoundTextStops(stops, x)
     if upper == 0 { return stops[0].Hit() }
     if upper == stops.Length { return stops[lowerBoundTextStops(stops, stops[upper - 1].X)].Hit() }

@@ -36,8 +36,10 @@ public sealed class DragData {
   }
 }
 
-/// Describes the pointer state when a source crosses the drag threshold.
+/// Describes the source position and input when an in-app drag begins.
 public struct DragStartEvent {
+  /// Reports whether a pointer started this drag. PointerId and Device apply only when true.
+  public prop IsPointer bool{ get; init; }
   /// Gets the stable pointer identifier.
   public prop PointerId int64{ get; init; }
   /// Gets the pointer device type.
@@ -52,6 +54,8 @@ public struct DragStartEvent {
 
 /// Describes one callback in the lifetime of an accepting drop target.
 public struct DragEvent {
+  /// Reports whether a pointer started this drag. PointerId and Device apply only when true.
+  public prop IsPointer bool{ get; init; }
   /// Gets the lifecycle phase.
   public prop Kind DragEventKind{ get; init; }
   /// Gets the drag data.
@@ -84,13 +88,13 @@ public struct DragEndEvent {
 public sealed class DragSource {
   private let create((DragStartEvent) -> DragData?)
   private let end Action[DragEndEvent]?
-  /// Gets the callback invoked once after the pointer crosses the drag threshold.
+  /// Gets the callback invoked at the pointer threshold or by PlatformInput.BeginDrag.
   public prop Create((DragStartEvent) -> DragData?) { get -> create }
   /// Gets the optional callback invoked after the operation terminates.
   public prop End Action[DragEndEvent]? { get -> end }
 
   /// Creates a source descriptor.
-  /// @param create callback that creates or rejects drag data at the threshold
+  /// @param create callback that creates or rejects drag data when a drag begins
   /// @param end optional terminal callback
   public init(create((DragStartEvent) -> DragData?), end Action[DragEndEvent]? = nil) {
     if create == nil { throw ArgumentNullException("create") }

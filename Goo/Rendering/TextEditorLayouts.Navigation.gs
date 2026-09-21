@@ -317,11 +317,11 @@ internal partial class TextEditorLayouts {
       return nil
     }
 
-    internal func HitTest(n Node, localX float32, localY float32) TextPosition {
+    internal func HitTest(n Node, localX float32, localY float32, inside bool = false) TextPosition {
       let width = BoxGeometry.ContentWidth(n)
       let height = BoxGeometry.ContentHeight(n)
       let layout = For(n, width, height)
-      return HitTest(n, layout, localX, localY)
+      return HitTest(n, layout, localX, localY, inside)
     }
 
     internal func TryHitTestForGeometry(n Node, localX float32, localY float32,
@@ -351,7 +351,7 @@ internal partial class TextEditorLayouts {
     private func validTextAffinity(value TextAffinity) bool -> value == TextAffinity.Upstream || value == TextAffinity.Downstream
 
     private func HitTest(n Node, layout TextEditorVisualLayout, localX float32,
-      localY float32) TextPosition{
+      localY float32, inside bool = false) TextPosition{
         let width = BoxGeometry.ContentWidth(n)
         let contentLeft = BoxGeometry.ContentLeft(n) - n.Rect.X
         let contentTop = BoxGeometry.ContentTop(n) - n.Rect.Y
@@ -373,7 +373,7 @@ internal partial class TextEditorLayouts {
           return TextPosition{ Offset: 0, Affinity: TextAffinity.Downstream }
         }
         let hitX = x - editorLineOffset(n, line, width)
-        let hit = HitTest(line, hitX)
+        let hit = HitTest(line, hitX, inside)
         let display = line.DisplayStart + hit.Index
         return TextPosition{ Offset: SourceOffsetForDisplay(line.Paragraph, display,
           TextAffinity(hit.Affinity)), Affinity: TextAffinity(hit.Affinity) }

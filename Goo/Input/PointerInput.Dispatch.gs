@@ -338,7 +338,7 @@ internal partial class PointerInput {
       clearPressChain(resolver)
       current.DragEntry = nil
       current.DragEditor = nil
-      current.DragEditorStarted = false
+      current.DragSelectionStarted = false
       clearScrollDrag()
       clearTouchPan()
       current.ClickTarget = nil

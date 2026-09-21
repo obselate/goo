@@ -72,7 +72,7 @@ internal sealed class ShapedText : IDisposable {
     }
   }
 
-  internal func HitTest(x float32) TextHit -> Geometry().HitTest(x)
+  internal func HitTest(x float32, inside bool = false) TextHit -> Geometry().HitTest(x, inside)
 
   internal func PrepareGeometry() {
     let prepared = Geometry()

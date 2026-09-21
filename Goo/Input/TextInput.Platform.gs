@@ -365,6 +365,17 @@ internal partial class TextInput {
       case TextCommandKind.MoveDocumentStart { after = edit.Home(before, command.ExtendSelection) }
       case TextCommandKind.MoveDocumentEnd { after = edit.End(before, command.ExtendSelection) }
       case TextCommandKind.SelectAll { after = edit.SelectAll(before) }
+      case TextCommandKind.SelectWord {
+        let position = command.Position?.Offset ?? before.Caret
+        after = edit.SelectWordAt(before, position)
+        if command.ExtendSelection {
+          let selected = TextSelectionRanges.Extend(TextRange{ Start: before.Anchor },
+            TextRange{ Start: after.Anchor, Length: after.Caret - after.Anchor })
+          after.Anchor = selected.Anchor.Offset
+          after.Caret = selected.Active.Offset
+        }
+      }
+      case TextCommandKind.SelectLine { after = edit.SelectAll(before) }
       case TextCommandKind.Copy {
         if n.Password { return false }
         clipboardSet(edit.Selected(before))
@@ -443,6 +454,7 @@ internal partial class TextInput {
 
   private func readOnlyCommand(kind TextCommandKind) bool -> kind == TextCommandKind.Copy
     || kind == TextCommandKind.SelectAll || kind == TextCommandKind.Submit
+    || kind == TextCommandKind.SelectWord || kind == TextCommandKind.SelectLine
     || (kind >= TextCommandKind.MoveLeft && kind <= TextCommandKind.PageDown)
 
   private func textBoundary(value string, offset int32, forward bool) int32 {
