@@ -351,6 +351,28 @@ public partial class Window {
   windowTarget as VulkanWindowTarget?
 
   private func SdlHostForTest() SdlHost ? -> host as SdlHost?
+  internal func NativeHitTestForTest(x int32, y int32) SDLHitTestResult {
+    guard let host = SdlHostForTest() else {
+      throw InvalidOperationException("Native hit test requires an SDL host")
+    }
+    return host.HitTestForTest(x, y)
+  }
+
+  internal func PushNativeMouseMotionForTest(x float32, y float32, buttons PointerButtons) {
+    guard let host = SdlHostForTest() else {
+      throw InvalidOperationException("Native mouse motion requires an SDL host")
+    }
+    host.PushNativeMouseMotionForTest(x, y, buttons)
+  }
+
+  internal func PushNativeMouseButtonForTest(x float32, y float32, button PointerButton,
+    down bool) {
+    guard let host = SdlHostForTest() else {
+      throw InvalidOperationException("Native mouse button requires an SDL host")
+    }
+    host.PushNativeMouseButtonForTest(x, y, button, down)
+  }
+
   internal func ImageResourceStatsForTest() VulkanImageResourceStats ->
   VulkanTargetForTest()?.ImageResourceStatsForTest() ?? VulkanImageResourceStats{}
 
@@ -598,7 +620,7 @@ public partial class Window {
     return target.PrimitiveFrameRetentionSnapshotForTest()
   }
 }
-internal partial class SdlHost {
+internal unsafe partial class SdlHost {
   internal func SetMetricsForTest(logicalWidth int32, logicalHeight int32,
     framebufferWidth int32, framebufferHeight int32) {
       LogicalWidth = logicalWidth
@@ -607,6 +629,70 @@ internal partial class SdlHost {
       FramebufferHeight = framebufferHeight
     }
 
+  internal func HitTestForTest(x int32, y int32) SDLHitTestResult {
+    var point = SdlHostPoint(x, y)
+    return HitTest(windowHandle, nint(&point), nint(0))
+  }
+
+  internal func PushNativeMouseMotionForTest(x float32, y float32, buttons PointerButtons) {
+    var nativeEvent = SDLEvent{
+      Type: uint32(SDLEventType.MouseMotion),
+      Motion: SDLMouseMotionEvent{
+        Type: SDLEventType.MouseMotion,
+        WindowID: windowId,
+        Which: 0u,
+        State: NativeMouseStateForTest(buttons),
+        X: x,
+        Y: y,
+      },
+    }
+    PushNativeEventForTest(&nativeEvent)
+  }
+
+  internal func PushNativeMouseButtonForTest(x float32, y float32, button PointerButton,
+    down bool) {
+    let eventType = down ? SDLEventType.MouseButtonDown : SDLEventType.MouseButtonUp
+    var nativeEvent = SDLEvent{
+      Type: uint32(eventType),
+      Button: SDLMouseButtonEvent{
+        Type: eventType,
+        WindowID: windowId,
+        Which: 0u,
+        Button: NativeSdlButtonForTest(button),
+        Down: down ? uint8(1) : uint8(0),
+        Clicks: uint8(1),
+        X: x,
+        Y: y,
+      },
+    }
+    PushNativeEventForTest(&nativeEvent)
+  }
+
+  private func NativeMouseStateForTest(buttons PointerButtons) uint32 {
+    var state uint32
+    if (int32(buttons) & int32(PointerButtons.Primary)) != 0 {
+      state = state | NativePointerMask(SDL.SDL_BUTTON_LEFT)
+    }
+    if (int32(buttons) & int32(PointerButtons.Secondary)) != 0 {
+      state = state | NativePointerMask(SDL.SDL_BUTTON_RIGHT)
+    }
+    return state
+  }
+
+  private func NativeSdlButtonForTest(button PointerButton) uint8 -> switch button {
+    case PointerButton.Primary: uint8(SDL.SDL_BUTTON_LEFT)
+    case PointerButton.Secondary: uint8(SDL.SDL_BUTTON_RIGHT)
+    case PointerButton.Middle: uint8(SDL.SDL_BUTTON_MIDDLE)
+    case PointerButton.Back: uint8(SDL.SDL_BUTTON_X1)
+    case PointerButton.Forward: uint8(SDL.SDL_BUTTON_X2)
+    case _: uint8(0)
+  }
+
+  private func PushNativeEventForTest(nativeEvent *SDLEvent) {
+    if !SDL.PushEvent(nativeEvent) {
+      throw InvalidOperationException("SDL_PushEvent failed: " + SDL.GetErrorS())
+    }
+  }
 }
 internal class WindowReadbackTestFixture {
   shared {
@@ -761,6 +847,26 @@ internal class WindowReadbackTestFixture {
 
     internal func InputQueuePointerRelease(window Window, x float64, y float64) {
       window.InputQueuePointerReleaseForTest(x, y)
+    }
+
+    internal func NativeHitTest(window Window, x int32, y int32) SDLHitTestResult ->
+    window.NativeHitTestForTest(x, y)
+
+    internal func NativeMouseMove(window Window, x float64, y float64, buttons PointerButtons) {
+      window.PushNativeMouseMotionForTest(float32(x), float32(y), buttons)
+      PumpNativeEvents()
+    }
+
+    internal func NativeMousePress(window Window, x float64, y float64,
+      button PointerButton = PointerButton.Primary) {
+      window.PushNativeMouseButtonForTest(float32(x), float32(y), button, true)
+      PumpNativeEvents()
+    }
+
+    internal func NativeMouseRelease(window Window, x float64, y float64,
+      button PointerButton = PointerButton.Primary) {
+      window.PushNativeMouseButtonForTest(float32(x), float32(y), button, false)
+      PumpNativeEvents()
     }
 
     internal func Poll(window Window) VkResult -> window.PollReadbackForTest()

@@ -484,7 +484,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   private func HitTest(nativeWindow nint, pointAddress nint, userData nint) SDLHitTestResult {
-    if !hitTestEnabled {
+    if !hitTestEnabled || pointerButtons != PointerButtons.None ||
+    SDL.GetMouseState(nil, nil) != 0u {
       return SDLHitTestResult.Normal
     }
     let point = *SdlHostPoint(pointAddress)

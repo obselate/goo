@@ -1,6 +1,7 @@
 package GooAsyncReadbackSmoke
 
 import Goo
+import Hexa.NET.SDL3
 import System
 import System.IO
 
@@ -52,6 +53,8 @@ func RunScrollbarSmoke() {
             Width: 180,
             Height: 140,
             VSync: false,
+            Decorated: false,
+            Resizable: true,
             Root: cell,
         }
         window = opened
@@ -118,6 +121,53 @@ func RunScrollbarSmoke() {
             int32(movedPixel[1]) > int32(movedPixel[0]) + 100
             && int32(movedPixel[1]) > int32(movedPixel[2]) + 70,
             "Dragged scrollbar thumb visual was not rendered: " + PrimitivePixelText(movedPixel)
+        )
+
+        let nativeThumb = ScrollbarSmokeCell.Thumb.BorderBox
+        let nativeX = nativeThumb.X + nativeThumb.Width * 0.5
+        let nativeY = nativeThumb.Y + nativeThumb.Height * 0.5
+        let outsideX = -20.0
+        let outsideY = nativeY - 20.0
+        let edgeX = 0
+        let edgeY = opened.Height / 2
+        WindowReadbackTestFixture.NativeMousePress(opened, nativeX, nativeY)
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, edgeX, edgeY) == SDLHitTestResult.Normal
+            && WindowReadbackTestFixture.NativeHitTest(opened, -20, edgeY) == SDLHitTestResult.Normal,
+            "Held native press did not suppress resize hit-test"
+        )
+        WindowReadbackTestFixture.NativeMouseMove(opened, outsideX, outsideY, PointerButtons.Primary)
+        WindowReadbackTestFixture.ForceRender(opened, 0.0)
+        let outsideThumb = ScrollbarSmokeCell.Thumb.BorderBox
+        Require(outsideThumb.Y < nativeThumb.Y - 8.0, "Held primary motion outside did not drag")
+        let heldY = outsideThumb.Y
+        WindowReadbackTestFixture.NativeMousePress(opened, outsideX, outsideY, PointerButton.Secondary)
+        WindowReadbackTestFixture.NativeMouseRelease(opened, outsideX, outsideY, PointerButton.Secondary)
+        WindowReadbackTestFixture.NativeMouseMove(opened, outsideX, outsideY - 24.0, PointerButtons.Primary)
+        WindowReadbackTestFixture.ForceRender(opened, 0.0)
+        Require(
+            ScrollbarSmokeCell.Thumb.BorderBox.Y < heldY - 4.0,
+            "Secondary release stopped primary drag"
+        )
+        let releasedY = ScrollbarSmokeCell.Thumb.BorderBox.Y
+        WindowReadbackTestFixture.NativeMouseRelease(opened, outsideX, outsideY - 24.0)
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, edgeX, edgeY) == SDLHitTestResult.ResizeLeft,
+            "Outside native release did not restore resize hit-test"
+        )
+        WindowReadbackTestFixture.NativeMouseMove(opened, nativeX, nativeY, PointerButtons.None)
+        WindowReadbackTestFixture.ForceRender(opened, 0.0)
+        Require(ScrollbarSmokeCell.Thumb.BorderBox.Y == releasedY, "Outside native release did not stop drag")
+        let fresh = ScrollbarSmokeCell.Thumb.BorderBox
+        let freshX = fresh.X + fresh.Width * 0.5
+        let freshY = fresh.Y + fresh.Height * 0.5
+        WindowReadbackTestFixture.NativeMousePress(opened, freshX, freshY)
+        WindowReadbackTestFixture.NativeMouseMove(opened, freshX, dragY, PointerButtons.Primary)
+        WindowReadbackTestFixture.NativeMouseRelease(opened, freshX, dragY)
+        WindowReadbackTestFixture.ForceRender(opened, 0.0)
+        Require(
+            ScrollbarSmokeCell.Thumb.BorderBox.Y > releasedY + 8.0,
+            "Fresh native press did not drag"
         )
 
         opened.RequestClose()
