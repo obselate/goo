@@ -574,8 +574,16 @@ internal partial class PointerInput {
     }
     if let state = scrollDragState() {
       if let target = state.Target {
-        if !nodeVisibleInTree(tree, target, false) || !scrollThumbAvailable(target) {
+        if !nodeVisibleInTree(tree, target, false) || !scrollThumbAvailable(target, state.Vertical) {
           clearScrollDrag()
+          clearScrollbarPartPress(resolver)
+        }
+      }
+    }
+    if let state = scrollbarPartPressState() {
+      if let target = state.Target {
+        if target.Retired || !nodeVisibleInTree(tree, target, false) {
+          clearScrollbarPartPress(resolver)
         }
       }
     }
@@ -620,7 +628,9 @@ internal partial class PointerInput {
       if touchPanActive() { return updateTouchPan(root, resolver, x, y, false) }
       if hasScrollDrag() {
         clearDragCandidate()
-        return updateScrollDrag(root, x, y)
+        let prevented = dispatchPointer(root, PointerEventKind.Move, x, y, delta.X, delta.Y,
+          PointerButton.None, modifiers)
+        return prevented || updateScrollDrag(root, x, y)
       }
       var prevented bool
       try {
@@ -654,8 +664,12 @@ internal partial class PointerInput {
         }
       }
       if updateTouchPan(root, resolver, x, y, prevented) { return true }
-      return handleMove(root, resolver, x, y, current.Device == PointerDevice.Mouse && !prevented,
+      let moved = handleMove(root, resolver, x, y,
+        current.Device == PointerDevice.Mouse && !prevented,
         isSemanticPrimary() && !prevented)
+      let scrollbarHoverChanged = current.Device == PointerDevice.Mouse && !prevented
+        ? updateScrollHover(root, x, y, resolver) : false
+      return moved || scrollbarHoverChanged
     }
 
   private func handleMove(root Node?, resolver Resolver, x float32, y float32, allowHover bool,
@@ -857,15 +871,17 @@ internal partial class PointerInput {
       current.HeldButtons = hasButtons ? maskCanceledButtons(buttons) : addPointerButton(current.HeldButtons, button)
       updatePressure(eventPressure, hasPressure)
       let semantic = acquireSemanticPrimary(button)
-      if button == PointerButton.Primary && semantic {
-        if let tree = root {
-          if tryBeginScrollDrag(tree, resolver, x, y) { resetClickSequence()
-            return true }
-        }
-      }
       let prevented = dispatchPointer(root, PointerEventKind.Press, x, y, 0.0F, 0.0F, button, modifiers, timeS)
       if button != PointerButton.Primary || prevented {
         return false
+      }
+      if semantic {
+        if let tree = root {
+          if tryBeginScrollInteraction(tree, resolver, x, y) {
+            resetClickSequence()
+            return true
+          }
+        }
       }
       let handled = HandlePress(root, resolver, text, timeS, x, y, modifiers, semantic, true)
       if semantic {
@@ -927,7 +943,11 @@ internal partial class PointerInput {
           return updateTouchPan(root, resolver, x, y, false)
         }
         if button == PointerButton.Primary && hasScrollDrag() {
-          updateScrollDrag(root, x, y)
+          let prevented = dispatchPointer(root, PointerEventKind.Release, x, y,
+            0.0F, 0.0F, button, modifiers)
+          if !prevented {
+            updateScrollDrag(root, x, y)
+          }
           return true
         }
         if button == PointerButton.Primary && semantic && activeDragMatches() {
@@ -958,6 +978,7 @@ internal partial class PointerInput {
           current.DragEditor = nil
           current.DragSelectionStarted = false
           clearScrollDrag()
+          clearScrollbarPartPress(resolver)
           clearTouchPan()
           current.ClickTarget = nil
           if dragCandidate != nil && dragPointerMatches() { clearDragCandidate() }
@@ -1042,8 +1063,13 @@ internal partial class PointerInput {
     if root == target {
       return !nowHidden
     }
-    for i in 0 ... root.Children.Count {
-      if nodeVisibleInTree(root.Children[i], target, nowHidden) {
+    for child in root.Children {
+      if nodeVisibleInTree(child, target, nowHidden) {
+        return true
+      }
+    }
+    for child in ScrollbarParts.Children(root) {
+      if nodeVisibleInTree(child, target, nowHidden) {
         return true
       }
     }

@@ -20,6 +20,14 @@ internal class BoxGeometry {
       return height > 0.0F ? height : 0.0F
     }
 
+    internal func ViewportLeft(n Node) float32 -> ContentLeft(n)
+
+    internal func ViewportTop(n Node) float32 -> ContentTop(n)
+
+    internal func ViewportWidth(n Node) float32 -> scrollViewportWidth(n)
+
+    internal func ViewportHeight(n Node) float32 -> scrollViewportHeight(n)
+
     private func padding(n Node, edge YGEdge) float32 -> resolveEdgePadding(n, edge, 0.0F)
 
     private func borderPx(n Node, edge YGEdge) float32 {

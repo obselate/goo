@@ -19,6 +19,60 @@ internal partial class VulkanSceneCompiler {
       frame.SetActiveClipChain(context.ParentPathClipChainId)
     }
 
+  private func CompileScrollbarParts(
+    node Node,
+    ownerId uint64,
+    bounds ConservativeBounds,
+    context VulkanSceneTraversalContext,
+    transform VulkanSceneTransformState,
+    activePathClipChainId int32,
+    ownerClipIndex int32,
+    ownerOpacity float32) {
+      let parts = ScrollbarParts.ActiveChildren(node)
+      if parts.Count == 0 { return }
+      let parentClipIndex = ownerClipIndex >= 0
+        ? ownerClipIndex : context.ParentRectClipIndex
+      let parentClipDepth = context.ParentRectClipDepth + (ownerClipIndex >= 0 ? 1 : 0)
+      let resolvedTransform = ResolveCompilerFrameTransform(transform.Index)
+      let activeBounds = IntersectBounds(context.ActiveClipBounds,
+        TransformCompilerBounds(bounds, resolvedTransform))
+      frame.SetActiveClipChain(activePathClipChainId)
+      frame.BeginChunk(ownerId, frameVersion, bounds, false)
+      let sidecarClipIndex = frame.AddRectClipBegin(RectClipRecord{
+        Bounds: bounds,
+        TransformIndex: transform.Index,
+        ParentIndex: parentClipIndex,
+      })
+      clipCount = clipCount + 1
+      frame.EndChunk()
+      let partContext = VulkanSceneTraversalContext{
+        ParentTransformIndex: transform.Index,
+        ParentRectClipIndex: sidecarClipIndex,
+        ParentOpacity: ownerOpacity,
+        ParentAxisAligned: context.ParentAxisAligned && transform.AxisAligned,
+        ParentRectClipDepth: parentClipDepth + 1,
+        ParentPathClipChainId: activePathClipChainId,
+        ParentIsolation: context.ParentIsolation || transform.Index != context.ParentTransformIndex
+          || node.HasClipPath || ownerClipIndex >= 0,
+        ExactCullContextSafe: context.ExactCullContextSafe,
+        ActiveClipBounds: activeBounds,
+      }
+      for part in parts {
+        let alpha = scrollbarAlpha(node, ScrollbarParts.IsVertical(node, part))
+        var childContext = partContext
+        childContext.ParentOpacity = ownerOpacity * alpha
+        CompileNode(part, childContext)
+      }
+      frame.SetActiveClipChain(context.ParentPathClipChainId)
+      frame.BeginChunk(ownerId, frameVersion, bounds, false)
+      frame.AddRectClipEnd(RectClipRecord{
+        Bounds: bounds,
+        TransformIndex: transform.Index,
+        ParentIndex: parentClipIndex,
+      })
+      frame.EndChunk()
+    }
+
   private func CompileNode(
     node Node,
     context VulkanSceneTraversalContext) {
@@ -53,13 +107,14 @@ internal partial class VulkanSceneCompiler {
         scrollNodeCount = scrollNodeCount + 1
       }
       let bounds = NodeBounds(node)
+      let hasActiveScrollbarParts = ScrollbarParts.HasActive(node)
       let earlyOverflowPreflight = PreflightRectOverflowClip(
         node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
       let exactCandidate = ExactTextClipCullEligible(node, bounds,
         context.ExactCullContextSafe, context.ParentAxisAligned, earlyOverflowPreflight)
       if exactCandidate {
         exactTextClipCandidateCount = exactTextClipCandidateCount + 1
-        if exactTextClipCullEnabled
+        if exactTextClipCullEnabled && !hasActiveScrollbarParts
           && IntersectBounds(bounds, context.ActiveClipBounds).IsEmpty{
             InvalidateRetainedBox(owner)
             InvalidateRetainedText(owner)
@@ -72,7 +127,7 @@ internal partial class VulkanSceneCompiler {
       let viewportCulled = StrictTextViewportCulled(
         node, owner, bounds, context.ActiveClipBounds,
         context.ParentTransformIndex, context.ParentAxisAligned, context.ParentIsolation)
-      if viewportCulled {
+      if viewportCulled && !hasActiveScrollbarParts {
         cachedTextPaintCullCount = cachedTextPaintCullCount + 1
         InvalidateRetainedBox(owner)
         if node.Kind == NodeKind.Text
@@ -91,6 +146,7 @@ internal partial class VulkanSceneCompiler {
         InvalidateRetainedBox(owner)
         IncrementSaturated(ref retainedText.Total)
         retainedTextEligible = RetainedTextEligible(node, owner, bounds, opacity, context)
+        if hasActiveScrollbarParts { retainedTextEligible = false }
         if retainedTextEligible {
           if TryAppendRetainedText(node, owner, bounds, opacity,
             context.ParentTransformIndex, context.ParentRectClipIndex, context.ParentRectClipDepth,
@@ -102,7 +158,7 @@ internal partial class VulkanSceneCompiler {
           InvalidateRetainedText(owner)
           IncrementSaturated(ref retainedText.Fallback)
         }
-      } else if Portals.SourceChildCount(node) == 0 {
+      } else if Portals.SourceChildCount(node) == 0 && !hasActiveScrollbarParts {
         InvalidateRetainedText(owner)
         let retainedBorderCandidate = RetainedBorderCandidate(node, bounds)
         if retainedBorderCandidate {
@@ -145,7 +201,7 @@ internal partial class VulkanSceneCompiler {
         InvalidateRetainedText(owner)
         let retainedParentBoxEligible = RetainedParentBoxEligible(
           node, bounds, opacity, context)
-        if retainedParentBoxEligible {
+        if retainedParentBoxEligible && !hasActiveScrollbarParts {
           IncrementSaturated(ref retainedParentBox.Total)
           if TryAppendRetainedBox(node, owner, ownerId, bounds, opacity, false) {
             emittedNodeCount = emittedNodeCount + 1
@@ -449,12 +505,8 @@ internal partial class VulkanSceneCompiler {
           PaintBorder(node, bounds, contentOpacity, transform.Index)
           frame.EndChunk()
         }
-      if HasScrollBars(node) {
-        frame.SetActiveClipChain(activePathClipChainId)
-        frame.BeginChunk(ownerId, frameVersion, bounds, true)
-        PaintScrollBars(node, contentOpacity, transform.Index)
-        frame.EndChunk()
-      }
+      CompileScrollbarParts(node, ownerId, bounds, context, transform,
+        activePathClipChainId, clipIndex, contentOpacity)
       let outlineBounds = OutlineBounds(node, bounds)
       if !outlineBounds.IsEmpty {
         frame.SetActiveClipChain(activePathClipChainId)

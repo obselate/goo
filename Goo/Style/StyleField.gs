@@ -42,7 +42,8 @@ internal enum StyleField {
   TransformScaleX; TransformScaleY; TransformSkewX; TransformSkewY;
   BackgroundImageSource;
   ClipPathFillRule;
-  ShaderEffect
+  ShaderEffect;
+  ScrollbarVisibilityX; ScrollbarVisibilityY; ScrollbarX; ScrollbarY
 }
 
 internal data struct StyleMask {
@@ -208,6 +209,8 @@ internal func entryImageSource(entry StyleEntry) ImageSourceProvider ? -> entry.
 
 internal func entryShaderEffect(entry StyleEntry) ShaderEffect ? -> entry.Payload as ShaderEffect?
 
+internal func entryScrollbar(entry StyleEntry) Scrollbar ? -> entry.Payload as Scrollbar?
+
 internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
   if left.A != right.A || left.B != right.B || left.C != right.C || left.D != right.D {
     return false
@@ -219,7 +222,9 @@ internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
     && samePath(entryPath(left), entryPath(right))
     && entryImageSource(left) == entryImageSource(right)
     && entryShaderEffect(left) == entryShaderEffect(right)
+    && sameScrollbar(entryScrollbar(left), entryScrollbar(right))
 }
+
 
 internal func samePath(left VectorPath, right VectorPath) bool {
   if left.payload == right.payload { return true }

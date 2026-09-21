@@ -940,44 +940,6 @@ internal partial class VulkanSceneCompiler {
     || node.Kind == NodeKind.Editor || node.Kind == NodeKind.Shape
     || node.Kind == NodeKind.Image
 
-  private func HasScrollBars(node Node) bool {
-    if scrollbarAlpha(node) <= 0.0F { return false }
-    var geometry ScrollThumbGeometry
-    return verticalScrollThumb(node, out geometry)
-      || horizontalScrollThumb(node, out geometry)
-  }
-
-  private func PaintScrollBars(node Node, opacity float32, transformIndex int32) {
-    let alpha = scrollbarAlpha(node)
-    if alpha <= 0.0F || opacity <= 0.0F { return }
-    var geometry ScrollThumbGeometry
-    if verticalScrollThumb(node, out geometry) {
-      PaintScrollThumb(geometry, opacity * alpha, transformIndex)
-    }
-    if horizontalScrollThumb(node, out geometry) {
-      PaintScrollThumb(geometry, opacity * alpha, transformIndex)
-    }
-  }
-
-  private func PaintScrollThumb(geometry ScrollThumbGeometry, opacity float32,
-    transformIndex int32) {
-      let bounds = geometry.Bounds
-      frame.AddRoundedBox(RoundedBoxRecord{
-        Bounds: ConservativeBounds{
-          X: bounds.X,
-          Y: bounds.Y,
-          Width: bounds.W,
-          Height: bounds.H,
-        },
-        RadiusTopLeft: 2.0F,
-        RadiusTopRight: 2.0F,
-        RadiusBottomRight: 2.0F,
-        RadiusBottomLeft: 2.0F,
-        Color: Color.White.ToPackedRgba(),
-        Opacity: opacity * 0.35F,
-        TransformIndex: transformIndex,
-      })
-    }
 
   private func PaintSolid(
     color Color,

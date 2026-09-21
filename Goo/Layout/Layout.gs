@@ -81,6 +81,7 @@ internal class Layout {
       ? Single.NaN : height
       YGNodeAPI.YGNodeCalculateLayout(yg, width, availableHeight, yogaDirection(root.Direction))
       readRect(root, 0.0F, 0.0F)
+      ScrollbarParts.Arrange(root)
     }
     lastRoot = root
     lastWidth = width
@@ -268,6 +269,7 @@ internal class Layout {
   internal func RefreshRects(root Node) {
     if laidOut && !root.IsPortal {
       readRect(root, 0.0F, 0.0F)
+      ScrollbarParts.Arrange(root)
     }
   }
 
@@ -277,6 +279,7 @@ internal class Layout {
     }
     if !root.IsPortal {
       readRect(root, 0.0F, 0.0F)
+      ScrollbarParts.Arrange(root)
     }
     if portalLaidOut {
       placePortals(root, overlayRoot, overlayRoot.Rect.W, overlayRoot.Rect.H)
@@ -553,7 +556,7 @@ internal class Layout {
     }
 
   private func readEditorSlotRects(n Node) {
-    let contentWidth = BoxGeometry.ContentWidth(n)
+    let contentWidth = BoxGeometry.ViewportWidth(n)
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       if child.IsPortal { continue }
@@ -1099,6 +1102,12 @@ internal func clampOffset(v float32, max float32) float32 {
   return if v > max { max } else { v }
 }
 
-internal func maxScrollX(n Node) float32 -> if n.OverflowX != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F } else { n.ContentW > n.Rect.W ? n.ContentW - n.Rect.W : 0.0F }
+internal func maxScrollX(n Node) float32 ->
+  if n.OverflowX != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
+  else { let viewport = scrollViewportWidth(n)
+    n.ContentW > viewport ? n.ContentW - viewport : 0.0F }
 
-internal func maxScrollY(n Node) float32 -> if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F } else { n.ContentH > n.Rect.H ? n.ContentH - n.Rect.H : 0.0F }
+internal func maxScrollY(n Node) float32 ->
+  if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
+  else { let viewport = scrollViewportHeight(n)
+    n.ContentH > viewport ? n.ContentH - viewport : 0.0F }

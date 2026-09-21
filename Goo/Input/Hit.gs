@@ -17,8 +17,14 @@ private func hitCanTraverseChildrenMapped(n Node, x float32, y float32) bool {
   if n.Kind != NodeKind.Editor { return true }
   let left = BoxGeometry.ContentLeft(n)
   let top = BoxGeometry.ContentTop(n)
-  return x >= left && x < left + BoxGeometry.ContentWidth(n)
-    && y >= top && y < top + BoxGeometry.ContentHeight(n)
+  if x >= left && x < left + BoxGeometry.ContentWidth(n)
+    && y >= top && y < top + BoxGeometry.ContentHeight(n) {
+      return true
+    }
+  for part in ScrollbarParts.ActiveChildren(n) {
+    if part.Rect.Contains(x, y) { return true }
+  }
+  return false
 }
 
 private func hitsMapped(n Node, x float32, y float32) bool {
@@ -47,6 +53,11 @@ private func hitTreeTopmost(root Node, x float32, y float32) Node? {
     return nil
   }
   if hitCanTraverseChildrenMapped(root, point.X, point.Y) {
+    let parts = ScrollbarParts.ActiveChildren(root)
+    for var i = parts.Count; i > 0; i-- {
+      let child = parts[i - 1]
+      if let hit = hitTreeTopmost(child, point.X, point.Y) { return hit }
+    }
     let children = Stacking.Children(root)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]
@@ -106,6 +117,11 @@ private func appendHitChain(n Node, x float32, y float32, sink List[Node]) bool 
   let start = sink.Count
   sink.Add(n)
   if hitCanTraverseChildrenMapped(n, point.X, point.Y) {
+    let parts = ScrollbarParts.ActiveChildren(n)
+    for var i = parts.Count; i > 0; i-- {
+      let child = parts[i - 1]
+      if appendHitChain(child, point.X, point.Y, sink) { return true }
+    }
     let children = Stacking.Children(n)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]

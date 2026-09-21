@@ -21,12 +21,19 @@ internal class NodeLifecycle {
         AccessibilityNodeStates.Remove(n)
       }
       var firstError Exception?
+      try {
+        ScrollbarParts.Dispose(n)
+      } catch (error Exception) {
+        firstError = error
+      }
       if let cell = n.Fiber {
         n.Fiber = nil
         try {
           cell.DisposeMounted()
         } catch (error Exception) {
-          firstError = error
+          if firstError == nil {
+            firstError = error
+          }
         }
       }
       TextLayouts.Dispose(n)

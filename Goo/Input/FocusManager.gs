@@ -137,6 +137,11 @@ internal class FocusManager {
         return found
       }
     }
+    for child in ScrollbarParts.ActiveChildren(n) {
+      if let found = findAutoFocus(child) {
+        return found
+      }
+    }
     return nil
   }
 
@@ -157,6 +162,9 @@ internal class FocusManager {
       sink.Add(n)
     }
     for child in n.Children {
+      collectFocusables(child, sink)
+    }
+    for child in ScrollbarParts.ActiveChildren(n) {
       collectFocusables(child, sink)
     }
   }

@@ -70,6 +70,9 @@ public open class Style {
   internal func pushShaderEffect(f StyleField, value ShaderEffect?) {
     addEntry(StyleEntry{ Field: f, Payload: value })
   }
+  internal func pushScrollbar(f StyleField, value Scrollbar?) {
+    addEntry(StyleEntry{ Field: f, Payload: value })
+  }
 
   internal func pushTransform(value PanelTransform) {
     pushLength(StyleField.TransformTranslateX, value.TranslateX)
@@ -182,6 +185,36 @@ public open class Style {
   public prop OverflowX Overflow{ init -> pushEnumOrdinal(StyleField.OverflowX, int32(value)) }
   /// Sets vertical overflow handling.
   public prop OverflowY Overflow{ init -> pushEnumOrdinal(StyleField.OverflowY, int32(value)) }
+  /// Sets scrollbar visibility on both axes.
+  public prop ScrollbarVisibility ScrollbarVisibility{
+    init{
+      pushEnumOrdinal(StyleField.ScrollbarVisibilityX, int32(value))
+      pushEnumOrdinal(StyleField.ScrollbarVisibilityY, int32(value))
+    }
+  }
+  /// Sets horizontal scrollbar visibility.
+  public prop ScrollbarVisibilityX ScrollbarVisibility{
+    init -> pushEnumOrdinal(StyleField.ScrollbarVisibilityX, int32(value))
+  }
+  /// Sets vertical scrollbar visibility.
+  public prop ScrollbarVisibilityY ScrollbarVisibility{
+    init -> pushEnumOrdinal(StyleField.ScrollbarVisibilityY, int32(value))
+  }
+  /// Sets scrollbar presentation on both axes.
+  public prop Scrollbar Scrollbar?{
+    init{
+      pushScrollbar(StyleField.ScrollbarX, value)
+      pushScrollbar(StyleField.ScrollbarY, value)
+    }
+  }
+  /// Sets horizontal scrollbar presentation.
+  public prop ScrollbarX Scrollbar?{
+    init -> pushScrollbar(StyleField.ScrollbarX, value)
+  }
+  /// Sets vertical scrollbar presentation.
+  public prop ScrollbarY Scrollbar?{
+    init -> pushScrollbar(StyleField.ScrollbarY, value)
+  }
   /// Sets the inherited system pointer cursor.
   public prop Cursor Cursor{ init -> pushEnumOrdinal(StyleField.Cursor, int32(value)) }
   /// Sets the background color.

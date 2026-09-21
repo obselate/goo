@@ -59,27 +59,43 @@ internal class Reconciler {
   }
 
   internal func FlushStyles() {
-    guard let profiler = Profiler else {
-      Res.Flush()
-      MarkEffects(Res.FlushEffects())
+    let profiler = Profiler
+    guard let value = profiler else {
+      flushStylesCore()
       styleRetryRoot = nil
       return
     }
-    let start = profiler.Start()
-    let nodes = Res.Flush()
-    let elapsed = profiler.Elapsed(start)
+    let start = value.Start()
+    let nodes = flushStylesCore()
+    let elapsed = value.Elapsed(start)
     ProfileResolveTicks = ProfileResolveTicks + elapsed.Ticks
     ProfileResolveBytes = ProfileResolveBytes + elapsed.Bytes
     if nodes > 0 {
       ProfileResolveCalls++
-      profiler.RecordStyleResolveNodes(nodes)
+      value.RecordStyleResolveNodes(nodes)
     }
-    MarkEffects(Res.FlushEffects())
     styleRetryRoot = nil
+  }
+
+  private func flushStylesCore() int64 {
+    var nodes int64
+    while true {
+      nodes = nodes + Res.Flush()
+      MarkEffects(Res.FlushEffects())
+      operationDepth++
+      var parts bool
+      try {
+        parts = ScrollbarParts.Flush(this)
+      } finally {
+        operationDepth--
+      }
+      if !parts { return nodes }
+    }
   }
 
   internal func DiscardStyles() {
     Res.DiscardPending()
+    ScrollbarParts.Discard()
     if let root = styleRetryRoot {
       retryStyles(root)
     }
@@ -278,14 +294,7 @@ internal class Reconciler {
       invalidateStyle(n, initial)
       MarkEffects(ReconcileEffects.Style)
     }
-    let scrollbarVisibilityChanged = n.ScrollbarVisibility != b.ScrollbarVisibility
-    if scrollbarVisibilityChanged {
-      n.ScrollbarVisibility = b.ScrollbarVisibility
-      ScrollState.ResetActivity(n)
-      MarkEffects(ReconcileEffects.Paint)
-    }
-
-    var inputChanged = disabledChanged || scrollbarVisibilityChanged
+    var inputChanged = disabledChanged
     if n.TabStop != b.TabStop {
       n.TabStop = b.TabStop
       inputChanged = true
