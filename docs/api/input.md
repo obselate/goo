@@ -40,19 +40,23 @@ It excludes the current handler itself; unrouted hover notifications report fals
 Primitives have no automatic keyboard bindings, including editing, submit, button activation, or focus traversal. Assign `KeyBindings` on a primitive or ancestor just like other UI properties. Native text and IME input still insert text independently of physical keys.
 
 ```gsharp
+controller.UseTabs = false
+controller.IndentWidth = 2
+controller.TabWidth = 8
+
 TextEditor(controller){
     KeyBindings: []KeyBinding{
         KeyBinding{
-            Key: Key.Enter,
+            Key: Key.Tab,
             Action: () -> {
-                submit()
+                controller.Execute(TextCommand{Kind: TextCommandKind.InsertTab})
             }
         },
         KeyBinding{
-            Key: Key.Enter,
+            Key: Key.Tab,
             Modifiers: KeyModifiers{Shift: true},
             Action: () -> {
-                controller.Execute(TextCommand{Kind: TextCommandKind.Insert, Text: "\n"})
+                controller.Execute(TextCommand{Kind: TextCommandKind.Outdent})
             }
         },
         KeyBinding{
@@ -78,14 +82,19 @@ They work through `PlatformInput.Execute` for either text primitive and through
 Mouse selection uses the same core operations.
 
 For an editor's Tab policy, bind `InsertTab` to Tab and `Outdent` to Shift+Tab.
-`InsertTab` inserts a literal tab at an empty selection and indents every selected
-logical line otherwise. `Indent` always indents the affected lines. `Outdent`
-removes one leading tab or up to four leading spaces. A selected range ending at
-the next line's start excludes that next line. Each action is one undo step.
-Literal tabs display at four-column tab stops while selection, clipboard, and
-caret positions retain the original one-character source tab. No Tab binding is
-installed automatically. The sample applications assign this policy explicitly
-and use focus traversal for single-line and read-only controls.
+`UseTabs` selects literal tabs or spaces. `IndentWidth` sets the space indentation
+level and its insertion stops. `TabWidth` sets displayed tab stops without changing
+document text. All three settings are per controller. Their defaults preserve
+literal tabs and four-column indentation and display.
+
+With no selection, `InsertTab` inserts a literal tab or enough spaces to reach the
+next indentation stop. With a selection, `InsertTab` and `Indent` add one level to
+every affected logical line. `Outdent` removes leading mixed tab and space
+indentation through one indentation stop. A selected range ending at the next
+line's start excludes that next line. Each action is one undo step. Source tabs
+remain one character for selection, clipboard, caret, and hit testing. No Tab
+binding is installed automatically. The sample applications assign this policy
+explicitly and use focus traversal for single-line and read-only controls.
 
 Bind `window.PlatformInput.MoveFocus(true)` and `MoveFocus(false)` explicitly for forward and backward traversal. For buttons, `ElementHandle.Activate()` performs a click. To show a held press and activate on release, bind `Action: () -> { handle.BeginPress() }` and `OnRelease: () -> { handle.EndPress(true) }`. `EndPress(false)` cancels the press. Focus loss, removal, and a canceled or failing key release clear the pressed state.
 

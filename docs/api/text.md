@@ -437,6 +437,10 @@ Gets the desired horizontal caret position used by vertical movement.
 
 Gets the document edited by this controller.
 
+### `IndentWidth`
+
+Gets or sets the number of columns in one indentation level.
+
 ### `IsFocused`
 
 Gets whether this controller currently owns editor focus.
@@ -464,6 +468,14 @@ Gets the vertical scroll target in logical pixels.
 ### `Selection`
 
 Gets or sets the current selection.
+
+### `TabWidth`
+
+Gets or sets the number of columns between displayed tab stops.
+
+### `UseTabs`
+
+Gets or sets whether indentation inserts tabs instead of spaces.
 
 ## `TextPosition`
 
