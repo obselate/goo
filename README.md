@@ -55,7 +55,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 ### Build the source Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10 and Git. Then download both pinned
+and shaders. Install .NET 10 SDK 10.0.401 and Git. Then download both pinned
 [custom shader tools](#custom-shaders) for your platform and set their SDK
 environment variables. The Gallery compiles its shaders during the build.
 

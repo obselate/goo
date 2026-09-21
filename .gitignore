@@ -2,6 +2,7 @@
 /*
 !/.gitignore
 !/.gitattributes
+!/global.json
 !/.github/
 /.github/*
 !/.github/workflows/
