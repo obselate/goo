@@ -95,6 +95,9 @@ public class TextEditorController : IDisposable {
   private var scrollTargetY float64
   private var focused bool
   private var overwrite bool
+  private var useTabs bool
+  private var indentWidth int32
+  private var tabWidth int32
   private var onCommand Action[TextCommandEvent]?
   private var onSubmit Action?
   private var undoGroup object?
@@ -116,6 +119,9 @@ public class TextEditorController : IDisposable {
       Anchor: TextPosition{ Offset: 0, Affinity: TextAffinity.Upstream },
       Active: TextPosition{ Offset: 0, Affinity: TextAffinity.Upstream },
     }
+    useTabs = true
+    indentWidth = 4
+    tabWidth = 4
     document.Committed += onDocumentChanged
   }
 
@@ -147,6 +153,38 @@ public class TextEditorController : IDisposable {
         breakUndoGroup()
         changed()
       }
+    }
+  }
+  /// Gets or sets whether indentation inserts tabs instead of spaces.
+  public prop UseTabs bool{
+    get -> useTabs
+    set(v) {
+      if useTabs == v { return }
+      useTabs = v
+      breakUndoGroup()
+      changed()
+    }
+  }
+  /// Gets or sets the number of columns in one indentation level.
+  public prop IndentWidth int32{
+    get -> indentWidth
+    set(v) {
+      if v <= 0 { throw ArgumentOutOfRangeException("IndentWidth") }
+      if indentWidth == v { return }
+      indentWidth = v
+      breakUndoGroup()
+      changed()
+    }
+  }
+  /// Gets or sets the number of columns between displayed tab stops.
+  public prop TabWidth int32{
+    get -> tabWidth
+    set(v) {
+      if v <= 0 { throw ArgumentOutOfRangeException("TabWidth") }
+      if tabWidth == v { return }
+      tabWidth = v
+      breakUndoGroup()
+      changed()
     }
   }
   /// Gets or sets the interceptor called before every semantic command.
@@ -188,7 +226,9 @@ public class TextEditorController : IDisposable {
       case TextCommandKind.SelectWord { return selectUnit(command, false) }
       case TextCommandKind.SelectLine { return selectUnit(command, true) }
       case TextCommandKind.InsertTab {
-        return selectedRange().Length == 0 ? insertDefault("\t", TextCommandKind.InsertTab) : indentDefault(false)
+        return selectedRange().Length == 0
+          ? insertDefault(tabInsertion(selection.Active.Offset), TextCommandKind.InsertTab)
+          : indentDefault(false)
       }
       case TextCommandKind.Copy { return true }
       case TextCommandKind.Cut { return cutDefault() }
@@ -539,18 +579,18 @@ public class TextEditorController : IDisposable {
       last--
     }
     let changes = List[TextChange]()
+    let indentation = useTabs ? "\t" : String(' ', indentWidth)
     for line in first ... last + 1 {
       let lineRange = document.GetLineRange(line)
       let lineText = document.GetLineText(line)
       if !outdent {
-        changes.Add(TextChange{ Range: TextRange{ Start: lineRange.Start, Length: 0 }, InsertedText: "\t" })
-      } else if lineText.StartsWith("\t") {
-        changes.Add(TextChange{ Range: TextRange{ Start: lineRange.Start, Length: 1 }, InsertedText: "" })
+        changes.Add(TextChange{ Range: TextRange{ Start: lineRange.Start, Length: 0 },
+          InsertedText: indentation })
       } else {
-        var count int32 = 0
-        while count < lineText.Length && count < 4 && lineText[count] == ' ' { count++ }
+        let count = indentationRemoval(lineText)
         if count != 0 {
-          changes.Add(TextChange{ Range: TextRange{ Start: lineRange.Start, Length: count }, InsertedText: "" })
+          changes.Add(TextChange{ Range: TextRange{ Start: lineRange.Start, Length: count },
+            InsertedText: "" })
         }
       }
     }
@@ -566,6 +606,37 @@ public class TextEditorController : IDisposable {
     }
     changed()
     return true
+  }
+
+  private func tabInsertion(offset int32) string {
+    if useTabs { return "\t" }
+    let line = document.GetLineRange(document.GetLineIndex(offset))
+    let text = document.GetText(TextRange{ Start: line.Start, Length: offset - line.Start })
+    var column int32 = 0
+    for start in UnicodeGraphemes.Starts(text) {
+      if text[start] == '\t' {
+        column = column + tabWidth - column % tabWidth
+      } else {
+        column++
+      }
+    }
+    return String(' ', indentWidth - column % indentWidth)
+  }
+
+  private func indentationRemoval(text string) int32 {
+    var count int32 = 0
+    var column int32 = 0
+    while count < text.Length && column < indentWidth {
+      if text[count] == ' ' {
+        column++
+      } else if text[count] == '\t' {
+        column = column + tabWidth - column % tabWidth
+      } else {
+        break
+      }
+      count++
+    }
+    return count
   }
 
   private func expandAtomicDeletions(changes List[TextChange]) []TextChange {

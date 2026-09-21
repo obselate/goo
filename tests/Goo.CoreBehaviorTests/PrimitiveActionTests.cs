@@ -126,6 +126,70 @@ public sealed class PrimitiveActionTests
     }
 
     [Fact]
+    public void EditorIndentationSettingsControlCommandsAndTabGeometry()
+    {
+        using var controller = new TextEditorController(new TextDocument("a\tb\n  \tcd\nef")) {
+            UseTabs = false,
+            IndentWidth = 2,
+            TabWidth = 8
+        };
+        var handle = new ElementHandle();
+        var window = new Window { Width = 420, Height = 160, Root = new BuildCell(() => new TextEditor(controller) {
+            Handle = handle, FontFamily = "monospace", FontSize = 16,
+            KeyBindings = new[] {
+                new KeyBinding { Key = Key.Tab, Action = () => controller.Execute(new TextCommand { Kind = TextCommandKind.InsertTab }) },
+                new KeyBinding { Key = Key.Tab, Modifiers = new KeyModifiers { Shift = true },
+                    Action = () => controller.Execute(new TextCommand { Kind = TextCommandKind.Outdent }) }
+            }
+        }) };
+        try
+        {
+            window.UpdateTree();
+            Assert.True(handle.Focus());
+            controller.Selection = new TextSelection { Anchor = Position(1), Active = Position(1) };
+            window.PlatformInput.KeyPress(Key.Tab, default);
+            window.PlatformInput.KeyRelease(Key.Tab);
+            Assert.Equal("a \tb\n  \tcd\nef", controller.Document.GetText());
+            Assert.Equal(2, controller.Selection.Active.Offset);
+            window.UpdateTree();
+            var wide = Caret(handle, 3).X - Caret(handle, 0).X;
+            var expectedWide = TextShaping.MeasureLineUncached("a       ", 0, 8, "monospace", 16, 400, false, 0, 0);
+            Assert.InRange(wide, expectedWide - 0.2, expectedWide + 0.2);
+            controller.TabWidth = 4;
+            window.UpdateTree();
+            var narrow = Caret(handle, 3).X - Caret(handle, 0).X;
+            var expectedNarrow = TextShaping.MeasureLineUncached("a   ", 0, 4, "monospace", 16, 400, false, 0, 0);
+            Assert.InRange(narrow, expectedNarrow - 0.2, expectedNarrow + 0.2);
+            Assert.True(handle.TryGetTextPositionAt(
+                new Point { X = (Caret(handle, 2).X + Caret(handle, 3).X) / 2, Y = Caret(handle, 2).Y + 2 },
+                TextCoordinateSpace.Window, out var hit));
+            Assert.Contains(hit.Offset, new[] { 2, 3 });
+            controller.Execute(new TextCommand { Kind = TextCommandKind.Undo });
+            Assert.Equal("a\tb\n  \tcd\nef", controller.Document.GetText());
+
+            controller.Selection = new TextSelection { Anchor = Position(10), Active = Position(0) };
+            controller.Execute(new TextCommand { Kind = TextCommandKind.Indent });
+            Assert.Equal("  a\tb\n    \tcd\nef", controller.Document.GetText());
+            Assert.True(controller.Selection.Anchor.Offset > controller.Selection.Active.Offset);
+            controller.Execute(new TextCommand { Kind = TextCommandKind.Outdent });
+            Assert.Equal("a\tb\n  \tcd\nef", controller.Document.GetText());
+            controller.Execute(new TextCommand { Kind = TextCommandKind.Undo });
+            Assert.Equal("  a\tb\n    \tcd\nef", controller.Document.GetText());
+            controller.Execute(new TextCommand { Kind = TextCommandKind.Redo });
+            Assert.Equal("a\tb\n  \tcd\nef", controller.Document.GetText());
+
+            controller.Selection = new TextSelection { Anchor = Position(4), Active = Position(9) };
+            controller.Execute(new TextCommand { Kind = TextCommandKind.Outdent });
+            Assert.Equal("a\tb\n\tcd\nef", controller.Document.GetText());
+            controller.OnCommand = e => e.Cancel = e.Command.Kind == TextCommandKind.InsertTab;
+            controller.Selection = new TextSelection { Anchor = Position(0), Active = Position(0) };
+            Assert.False(controller.Execute(new TextCommand { Kind = TextCommandKind.InsertTab }));
+            Assert.Equal("a\tb\n\tcd\nef", controller.Document.GetText());
+        }
+        finally { window.Close(); }
+    }
+
+    [Fact]
     public void BoundDragActionsNegotiateDropAndCleanUpWithoutPointerCapture()
     {
         var source = new ElementHandle();

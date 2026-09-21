@@ -27,7 +27,7 @@ internal partial class TextEditorLayouts {
         let start = projection.Range.Start > cursor ? projection.Range.Start : cursor
         if start > cursor {
           appendSourceSegment(result, ref display, snapshot.GetText(TextRange{ Start: cursor,
-            Length: start - cursor }), cursor, styles, baseStyle)
+            Length: start - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth)
         }
         if projection.Range.Start >= source.Start && (projection.Range.Start < sourceEnd || insertion) {
           let style = editorStyleAt(styles, projection.Range.Start, baseStyle)
@@ -59,7 +59,7 @@ internal partial class TextEditorLayouts {
       }
       if cursor < sourceEnd {
         appendSourceSegment(result, ref display, snapshot.GetText(TextRange{ Start: cursor,
-          Length: sourceEnd - cursor }), cursor, styles, baseStyle)
+          Length: sourceEnd - cursor }), cursor, styles, baseStyle, state.Controller.TabWidth)
       }
       result.Text = display
       result.Resolution = state.ParagraphResolution(n, display, fingerprint)
@@ -70,7 +70,8 @@ internal partial class TextEditorLayouts {
       transform TextTransform) int32-> if transform == TextTransform.None { offset } else { TextLayouts.transformText(text.Substring(0, offset), transform).Length }
 
     private func appendSourceSegment(result TextEditorResolvedParagraph, ref display string,
-      text string, start int32, styles List[TextEditorPresentationStyle], baseStyle TextResolvedStyle) {
+      text string, start int32, styles List[TextEditorPresentationStyle],
+      baseStyle TextResolvedStyle, tabWidth int32) {
         var cursor int32 = 0
         while cursor < text.Length {
           let absolute = start + cursor
@@ -80,13 +81,13 @@ internal partial class TextEditorLayouts {
           if boundary > absolute { end = boundary - start }
           if end <= cursor { end = cursor + 1 }
           appendTabbedSource(result, ref display, text.Substring(cursor, end - cursor),
-            absolute, style)
+            absolute, style, tabWidth)
           cursor = end
         }
       }
 
     private func appendTabbedSource(result TextEditorResolvedParagraph, ref display string,
-      text string, start int32, style TextResolvedStyle) {
+      text string, start int32, style TextResolvedStyle, tabWidth int32) {
         var cursor int32 = 0
         while cursor < text.Length {
           let tab = text.IndexOf('\t', cursor)
@@ -97,8 +98,8 @@ internal partial class TextEditorLayouts {
           }
           if tab < 0 { return }
           let columns = UnicodeGraphemes.Starts(display).Length
-          appendResolvedSource(result, ref display, String(' ', 4 - columns % 4),
-            start + tab, 1, style, true)
+          appendResolvedSource(result, ref display,
+            String(' ', tabWidth - columns % tabWidth), start + tab, 1, style, true)
           cursor = tab + 1
         }
       }

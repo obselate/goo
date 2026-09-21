@@ -11,6 +11,7 @@ internal sealed class TextEditorBinding : IDisposable {
   private var composition TextComposition?
   private var scrollTargetX float64
   private var scrollTargetY float64
+  private var tabWidth int32
   private var disposed bool
   internal let RenderState TextEditorRenderState
   internal prop Controller TextEditorController{
@@ -32,6 +33,7 @@ internal sealed class TextEditorBinding : IDisposable {
       composition = controller.Composition
       scrollTargetX = controller.ScrollTargetX
       scrollTargetY = controller.ScrollTargetY
+      tabWidth = controller.TabWidth
       document.Committed += onDocumentCommitted
       document.Changed += onDocumentChanged
       controller.Changed = onControllerChanged
@@ -112,10 +114,12 @@ internal sealed class TextEditorBinding : IDisposable {
 
   private func onControllerChanged() {
     let current = controller.Composition
-    let intrinsic = !sameEditorComposition(composition, current)
+    let compositionChanged = !sameEditorComposition(composition, current)
+    let tabWidthChanged = tabWidth != controller.TabWidth
+    let intrinsic = compositionChanged || tabWidthChanged
     let scrollChanged = scrollTargetX != controller.ScrollTargetX
       || scrollTargetY != controller.ScrollTargetY
-    if intrinsic {
+    if compositionChanged {
       if let previous = composition {
         RenderState.InvalidateParagraphs(previous.Range)
       }
@@ -123,7 +127,11 @@ internal sealed class TextEditorBinding : IDisposable {
         RenderState.InvalidateParagraphs(next.Range)
       }
     }
+    if tabWidthChanged {
+      RenderState.ClearParagraphs()
+    }
     composition = current
+    tabWidth = controller.TabWidth
     scrollTargetX = controller.ScrollTargetX
     scrollTargetY = controller.ScrollTargetY
     node.BlinkT = 0.0
