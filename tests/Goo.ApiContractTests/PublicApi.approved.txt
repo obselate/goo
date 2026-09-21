@@ -36,6 +36,7 @@ ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewB
 ctor|Goo.Portal|public|()
 ctor|Goo.RadialGradient|public|(centerX:System.Double,centerY:System.Double,radius:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.RadialGradient|public|(params colors:Goo.Color[])
+ctor|Goo.Scrollbar|public|()
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
 ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[])
 ctor|Goo.ShaderEffect|public|(program:Goo.ShaderEffectProgram,samplesBackdrop:System.Boolean=false,backdropOutset:System.Single=0)
@@ -1098,7 +1099,6 @@ property|Goo.Blob|OnTextCompositionCancel|System.Action|instance|get:public,init
 property|Goo.Blob|OnTextComposition|System.Action`1<Goo.TextCompositionEvent>|instance|get:public,init:public|index:()
 property|Goo.Blob|OnTextInput|System.Action`1<System.String>|instance|get:public,init:public|index:()
 property|Goo.Blob|OnWheel|System.Action`1<Goo.WheelEvent>|instance|get:public,init:public|index:()
-property|Goo.Blob|ScrollbarVisibility|Goo.ScrollbarVisibility|instance|get:public,init:public|index:()
 property|Goo.Blob|TabStop|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionDelayMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Blob|TransitionEasing|Goo.Easing|instance|get:public,init:public|index:()
@@ -1284,6 +1284,15 @@ property|Goo.RadialGradient|CenterX|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|CenterY|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|Radius|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|instance|get:public|index:()
+property|Goo.Scrollbar|FadeMs|System.Double|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|HideDelayMs|System.Double|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|HitThickness|System.Double|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|Inset|System.Double|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|MinThumbLength|System.Double|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|ReserveSpace|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|Thickness|System.Double|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|Thumb|Goo.Container|instance|get:public,init:public|index:()
+property|Goo.Scrollbar|Track|Goo.Container|instance|get:public,init:public|index:()
 property|Goo.ShaderEffectData|ByteLength|System.Int32|instance|get:public|index:()
 property|Goo.ShaderEffectData|ContentVersion|System.UInt64|instance|get:public|index:()
 property|Goo.ShaderEffectData|IsDisposed|System.Boolean|instance|get:public|index:()
@@ -1387,6 +1396,12 @@ property|Goo.Style|Padding|Goo.Length|instance|init:public|index:()
 property|Goo.Style|Position|Goo.PositionType|instance|init:public|index:()
 property|Goo.Style|Right|Goo.Length|instance|init:public|index:()
 property|Goo.Style|RowGap|Goo.Length|instance|init:public|index:()
+property|Goo.Style|ScrollbarVisibilityX|Goo.ScrollbarVisibility|instance|init:public|index:()
+property|Goo.Style|ScrollbarVisibilityY|Goo.ScrollbarVisibility|instance|init:public|index:()
+property|Goo.Style|ScrollbarVisibility|Goo.ScrollbarVisibility|instance|init:public|index:()
+property|Goo.Style|ScrollbarX|Goo.Scrollbar|instance|init:public|index:()
+property|Goo.Style|ScrollbarY|Goo.Scrollbar|instance|init:public|index:()
+property|Goo.Style|Scrollbar|Goo.Scrollbar|instance|init:public|index:()
 property|Goo.Style|ShaderEffect|Goo.ShaderEffect|instance|init:public|index:()
 property|Goo.Style|Start|Goo.Length|instance|init:public|index:()
 property|Goo.Style|TextAlign|Goo.TextAlign|instance|init:public|index:()
@@ -1670,6 +1685,7 @@ type|Goo.Portal|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.PositionType|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.RadialGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:
 type|Goo.ScrollbarVisibility|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.Scrollbar|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShaderEffectData|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ShaderEffectProgram|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShaderEffect|class|public|base:System.Object|interfaces:|generic:

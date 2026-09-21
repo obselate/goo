@@ -1882,6 +1882,7 @@ internal class StyleFixtures {
     case FieldKind.KPath: entry.Payload != nil
     case FieldKind.KImageSource: entry.Payload == nil
     case FieldKind.KShaderEffect: entry.Payload != nil
+    case FieldKind.KScrollbar: entryScrollbar(entry) != nil
   }
 
   private func styleFieldEntry(entries StyleEntries, field StyleField) StyleEntry? {
@@ -2019,6 +2020,18 @@ internal class StyleFixtures {
           86, 83, 80, 86, 20, 0, 0, 0,
           3, 2, 35, 7, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
         })) }
+      }
+      case StyleField.ScrollbarVisibilityX {
+        return Style{ ScrollbarVisibilityX: ScrollbarVisibility.Always }
+      }
+      case StyleField.ScrollbarVisibilityY {
+        return Style{ ScrollbarVisibilityY: ScrollbarVisibility.Always }
+      }
+      case StyleField.ScrollbarX {
+        return Style{ ScrollbarX: Scrollbar{ Thumb: Container{} } }
+      }
+      case StyleField.ScrollbarY {
+        return Style{ ScrollbarY: Scrollbar{ Thumb: Container{} } }
       }
       default { return nil }
     }

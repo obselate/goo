@@ -2188,6 +2188,46 @@ class MotionChapter : Cell {
 
     private func buildComponentGalleryContent() Blob {
         let cards = List[Blob]()
+        let customScrollbar = Scrollbar{
+            Thickness: 8,
+            HitThickness: 18,
+            Inset: 4,
+            MinThumbLength: 28,
+            HideDelayMs: 1000,
+            FadeMs: 250,
+            ReserveSpace: true,
+            Track: Container{
+                BackgroundColor: Color.FromNormalized(0.10F, 0.12F, 0.20F, 0.95F),
+                BorderWidth: 1,
+                BorderColor: Color.FromNormalized(0.24F, 0.30F, 0.52F, 0.9F),
+                BorderRadius: 4,
+            },
+            Thumb: Container{
+                BackgroundColor: GalleryTheme.AccentStrong,
+                BorderWidth: 1,
+                BorderColor: Color.Rgb(199, 210, 254),
+                BorderRadius: 4,
+            },
+        }
+        let scrollbarChildren = List[Blob]()
+        scrollbarChildren.Add(
+            Container{
+                FlexDirection: FlexDirection.Column,
+                Gap: 4,
+                Text{Content: "Track + thumb containers", FontSize: 11, FontWeight: 600, Color: GalleryTheme.Ink,},
+                Text{
+                    Content: "Always visible · reserved gutter · 18 px hit target",
+                    FontSize: 9,
+                    Color: GalleryTheme.InkSubtle,
+                },
+                Text{
+                    Content: "Scroll this panel to reveal the styled thumb.",
+                    FontSize: 9,
+                    Color: GalleryTheme.InkMuted,
+                },
+            }
+        )
+        cards.Add(compCard("Custom scrollbar", scrollbarChildren))
 
         // Group 1: Inputs & Forms
         if compCategory == 0 || compCategory == 1 {
@@ -2389,6 +2429,9 @@ class MotionChapter : Cell {
                 BackgroundColor: Color.Rgb(12, 14, 18),
                 Padding: 14,
                 OverflowY: Overflow.Scroll,
+                OverflowX: Overflow.Hidden,
+                ScrollbarY: customScrollbar,
+                ScrollbarVisibilityY: ScrollbarVisibility.Always,
                 Container{
                     Width: Length.Percent(100),
                     FlexDirection: FlexDirection.Row,

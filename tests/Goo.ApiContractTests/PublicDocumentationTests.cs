@@ -190,6 +190,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.WheelEvent.StopPropagation",
         "M:Goo.RadialGradient.#ctor(Goo.Color[])",
         "M:Goo.RadialGradient.#ctor(System.Double,System.Double,System.Double,Goo.GradientStop[])",
+        "M:Goo.Scrollbar.#ctor",
         "M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single)",
         "M:Goo.ShaderEffect.SetParameter(System.Int32,System.Numerics.Vector4)",
         "M:Goo.ShaderEffect.SetData(System.Int32,Goo.ShaderEffectData)",

@@ -117,11 +117,63 @@ Subscription state is sparse. Handles without a listener and ordinary blobs and 
 
 ## Control scrolling
 
-Set `OverflowX` or `OverflowY` to `Scroll` and attach an `ElementHandle`. `ScrollTo` updates the smoothed target, `JumpTo` applies an immediate clamped offset, and `ScrollIntoView` adjusts every scrollable ancestor. `ScrollOffset` is the displayed position and `ScrollRange` is the maximum legal X/Y offset.
+Set `OverflowX` or `OverflowY` to `Scroll` and attach an `ElementHandle`.
+`ScrollTo` updates the smoothed target, `JumpTo` applies an immediate clamped
+offset, and `ScrollIntoView` adjusts every scrollable ancestor. `ScrollOffset`
+is the displayed position and `ScrollRange` is the maximum legal X/Y offset.
 
-`ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic, or drag interaction and then fades it. `Always` keeps the thumb rendered and draggable without creating idle frame demand. `Hidden` suppresses only the built-in thumb; scrolling and custom scrollbar composition continue working.
+Scrollbar presentation is configured through `Style` entries:
 
-A custom thumb can derive content size as viewport size plus scroll range. Its length is `track * viewport / content`, and its position is `(track - thumb) * offset / range`. Use `JumpTo` while dragging so content stays under the pointer.
+- `Scrollbar` supplies one descriptor to both axes. `ScrollbarX` and
+  `ScrollbarY` replace the descriptor for one axis.
+- `ScrollbarVisibility` writes both axis modes. `ScrollbarVisibilityX` and
+  `ScrollbarVisibilityY` override one axis.
+- Declarations use normal ordered style precedence. `BasedOn` copies entries at
+  its declaration position, and later entries win. A later shorthand overwrites
+  an earlier axis override. An axis descriptor replaces the whole descriptor,
+  not selected fields.
+- `ScrollbarX: nil` or `ScrollbarY: nil` clears that axis. There is no implicit
+  ancestor inheritance. Use descriptor spread to make a variant, for example
+  `ScrollbarY: Scrollbar{ ...bars, Thickness: 12.0 }`.
+
+`Scrollbar` has no default visual language. A nil axis descriptor, or a
+descriptor whose `Track` and `Thumb` are both nil, leaves scrolling enabled but
+paints and interacts with no built-in part. `ReserveSpace` may still reserve its
+declared gutter when both parts are nil. `Track` and `Thumb` are independent
+ordinary `Container` declarations. Supplying only one mounts only that part:
+the track can page without a thumb, and a thumb can drag without a track.
+Mounted parts retain normal styles, transitions, child content, callbacks,
+focus, accessibility, reconciliation, and disposal. Their fixed viewport slots
+are outside content children and do not contribute to content measurement,
+virtualization, or scroll extents.
+
+`ScrollbarVisibility.Auto` starts faded, reveals on scrolling or pointer entry
+into its track region even when its alpha is zero, and fades after its idle
+delay. Hover and pointer capture hold the axis visible. `Always` shows the
+configured parts while the axis overflows and does not create continuing idle
+frame demand. `Hidden` removes that axis's built-in parts and capture without
+changing wheel, keyboard, programmatic, or custom scrolling.
+
+Pressing a thumb starts a captured drag. Dragging updates the clamped scroll
+offset immediately. Pressing the track on either side of the thumb moves by one
+viewport toward the pointer. Consumer pointer callbacks on the mounted part
+route run before these native default actions. Calling `PreventDefault` cancels
+the drag or page action. Capture also ends on release, cancellation, focus loss,
+disablement, retirement, loss of overflow, or a switch to `Hidden`.
+
+By default, bars use overlay geometry. They do not change the viewport, scroll
+range, or content layout. Set `ReserveSpace` to reserve a cross-axis gutter
+when that axis overflows and is not `Hidden`. The reserved size is
+`Thickness + Inset`; `HitThickness` expands only the pointer target and never
+changes layout, scroll range, or track length. A fading bar keeps its track
+geometry and reserved gutter stable until overflow, mode, or descriptor geometry
+changes.
+
+Horizontal and vertical reservation is coupled. Each reserved gutter shortens
+the other axis's viewport, and overflow is reevaluated until both axes settle.
+Two-axis tracks stop at the shared corner rather than overlapping. Reservation
+is independent of alpha, so a faded `Auto` bar does not cause content or
+virtualized item geometry to jump.
 
 ## Position a custom IME
 
@@ -257,7 +309,8 @@ Gets the callback that receives pointer wheel movement.
 
 ### `ScrollbarVisibility`
 
-Controls whether Goo auto-hides, always shows, or suppresses built-in scrollbars.
+Sets the inherited style entry that controls one or both built-in scrollbar axes.
+This initializer is write-only and has no authored-value getter.
 
 ### `TabStop`
 
@@ -820,19 +873,89 @@ Places the Portal above its anchor and aligns their inline-end edges.
 
 Places the Portal above its anchor and aligns their inline-start edges.
 
+## `Scrollbar`
+
+Source:
+
+- [`Scrollbar.gs`](../../Goo/Style/Scrollbar.gs)
+
+Describes one configured scrollbar axis. The descriptor has no runtime state and
+does not provide default visual declarations.
+
+### `new`
+
+Initializes an axis descriptor with these defaults:
+
+| Member | Type | Default |
+| --- | --- | --- |
+| `Thickness` | `float64` | `4.0` |
+| `HitThickness` | `float64` | `10.0` |
+| `Inset` | `float64` | `2.0` |
+| `MinThumbLength` | `float64` | `24.0` |
+| `HideDelayMs` | `float64` | `1000.0` |
+| `FadeMs` | `float64` | `250.0` |
+| `ReserveSpace` | `bool` | `false` |
+| `Track` | `Container?` | `nil` |
+| `Thumb` | `Container?` | `nil` |
+
+Distances are logical pixels and delays are milliseconds. All numeric values
+must be finite and non-negative. `Thickness` and `MinThumbLength` must be
+positive.
+
+### `FadeMs`
+
+Gets the automatic fade duration after `HideDelayMs`.
+
+### `HideDelayMs`
+
+Gets the idle delay before an `Auto` axis starts fading.
+
+### `HitThickness`
+
+Gets the minimum cross-axis pointer target. It does not change layout, the
+reserved gutter, or the thumb track.
+
+### `Inset`
+
+Gets the distance between the track slot and the viewport edge.
+
+### `MinThumbLength`
+
+Gets the minimum along-axis thumb slot length, capped by the available track.
+
+### `ReserveSpace`
+
+Gets whether an overflowing axis reserves a gutter instead of overlaying its
+content. The gutter is `Thickness + Inset`; `HitThickness` is not included.
+
+### `Thickness`
+
+Gets the painted cross-axis size of the track and thumb slots.
+
+### `Thumb`
+
+Gets the optional ordinary `Container` declaration mounted in the moving thumb
+slot. Nil leaves the thumb unpainted and undraggable.
+
+### `Track`
+
+Gets the optional ordinary `Container` declaration mounted in the fixed track
+slot. Nil leaves the track unpainted and disables track paging.
+
 ## `ScrollbarVisibility`
 
 Source:
 
-- [`Blob.gs`](../../Goo/Tree/Blob.gs)
+- [`Scrollbar.gs`](../../Goo/Style/Scrollbar.gs)
 
-Controls the built-in scrollbar presentation without changing scroll behavior.
+Controls one axis's built-in scrollbar presentation without changing scrolling.
 
 ### Values
 
-- `Auto`
-- `Always`
-- `Hidden`
+- `Auto`: Reveals while scrolling or while its track is hovered or captured,
+  then delays and fades.
+- `Always`: Shows configured parts while the axis overflows.
+- `Hidden`: Removes the built-in parts and pointer interaction for that axis.
 
 ## `Text`
 

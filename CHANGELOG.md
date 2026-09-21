@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added configurable per-axis `Scrollbar` descriptors with optional ordinary
+  `Track` and `Thumb` parts, `Auto`/`Always`/`Hidden` visibility, immediate
+  dragging, one-viewport paging, and overlay or `ReserveSpace` gutters.
+
+### Changed
+
+- Moved scrollbar visibility to ordered `Style` axis and shorthand entries.
+  Removed the pre-1.0 `Blob.ScrollbarVisibility` authored-value getter.
+  Applications that relied on the legacy built-in thumb appearance must author
+  `Track` and `Thumb`.
+
 ## 0.6.3 - 2026-09-19
 
 ### Added
