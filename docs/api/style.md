@@ -596,6 +596,68 @@ Gets the normalized radius above 0 and at most 1.
 
 Gets the ordered color stops.
 
+## `Scrollbar`
+
+Source:
+
+- [`Scrollbar.gs`](../../Goo/Style/Scrollbar.gs)
+
+Describes the presentation and interaction of one built-in scrollbar axis.
+
+### `new`
+
+Creates a scrollbar descriptor with overlay geometry and no visual parts.
+
+### `FadeMs`
+
+Gets the fade duration after automatic hiding starts.
+
+### `HideDelayMs`
+
+Gets the delay before automatic hiding.
+
+### `HitThickness`
+
+Gets the pointer hit thickness.
+
+### `Inset`
+
+Gets the inset from the content edge.
+
+### `MinThumbLength`
+
+Gets the minimum thumb length.
+
+### `ReserveSpace`
+
+Gets whether the overflowing content reserves a gutter.
+
+### `Thickness`
+
+Gets the painted thumb thickness.
+
+### `Thumb`
+
+Gets the optional thumb element.
+
+### `Track`
+
+Gets the optional track element.
+
+## `ScrollbarVisibility`
+
+Source:
+
+- [`Scrollbar.gs`](../../Goo/Style/Scrollbar.gs)
+
+Controls one built-in scrollbar axis.
+
+### Values
+
+- `Auto`
+- `Always`
+- `Hidden`
+
 ## `Style`
 
 Source:
@@ -951,6 +1013,30 @@ Sets the right position offset.
 ### `RowGap`
 
 Sets the gap between rows.
+
+### `Scrollbar`
+
+Sets scrollbar presentation on both axes.
+
+### `ScrollbarVisibility`
+
+Sets scrollbar visibility on both axes.
+
+### `ScrollbarVisibilityX`
+
+Sets horizontal scrollbar visibility.
+
+### `ScrollbarVisibilityY`
+
+Sets vertical scrollbar visibility.
+
+### `ScrollbarX`
+
+Sets horizontal scrollbar presentation.
+
+### `ScrollbarY`
+
+Sets vertical scrollbar presentation.
 
 ### `ShaderEffect`
 
