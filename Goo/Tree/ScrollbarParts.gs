@@ -261,27 +261,22 @@ internal class ScrollbarParts {
 
         private func layoutTree(node Node) {
             if let state = stateFor(node, false) {
-                if let track = state.HorizontalTrack {
-                    var geometry ScrollThumbGeometry
-                    if horizontalScrollThumb(node, out geometry) {
+                var geometry ScrollThumbGeometry
+                if (state.HorizontalTrack != nil || state.HorizontalThumb != nil)
+                    && horizontalScrollThumb(node, out geometry) {
+                    if let track = state.HorizontalTrack {
                         layoutPart(track, geometry.TrackBounds)
                     }
-                }
-                if let thumb = state.HorizontalThumb {
-                    var geometry ScrollThumbGeometry
-                    if horizontalScrollThumb(node, out geometry) {
+                    if let thumb = state.HorizontalThumb {
                         layoutPart(thumb, geometry.Bounds)
                     }
                 }
-                if let track = state.VerticalTrack {
-                    var geometry ScrollThumbGeometry
-                    if verticalScrollThumb(node, out geometry) {
+                if (state.VerticalTrack != nil || state.VerticalThumb != nil)
+                    && verticalScrollThumb(node, out geometry) {
+                    if let track = state.VerticalTrack {
                         layoutPart(track, geometry.TrackBounds)
                     }
-                }
-                if let thumb = state.VerticalThumb {
-                    var geometry ScrollThumbGeometry
-                    if verticalScrollThumb(node, out geometry) {
+                    if let thumb = state.VerticalThumb {
                         layoutPart(thumb, geometry.Bounds)
                     }
                 }

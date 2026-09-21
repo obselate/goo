@@ -57,10 +57,14 @@ internal func verticalScrollThumb(n Node, out geometry ScrollThumbGeometry) bool
   guard let descriptor = n.ScrollbarY else { return false }
   if descriptor.Track == nil && descriptor.Thumb == nil { return false }
   if n.ScrollbarVisibilityY == ScrollbarVisibility.Hidden { return false }
-  let maximum = maxScrollY(n)
-  let viewport = scrollViewportHeight(n)
+  let gutters = scrollbarGutters(n)
+  let contentHeight = BoxGeometry.ContentHeight(n)
+  let viewport = MathF.Max(0.0F, contentHeight - gutters.Horizontal)
+  let maximum = if n.OverflowY != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
+    else { n.ContentH > viewport ? n.ContentH - viewport : 0.0F }
   if maximum <= 0.0F || viewport <= 0.0F || n.ContentH <= 0.0F { return false }
-  let horizontalSlot = horizontalScrollbarSlot(n)
+  let horizontalSlot = reservedHorizontalSlot(n,
+    BoxGeometry.ContentWidth(n) - gutters.Vertical, contentHeight - gutters.Horizontal)
   let track = verticalTrackBounds(n, descriptor, horizontalSlot)
   if track.W <= 0.0F || track.H <= 0.0F { return false }
   var thumb = track.H * viewport / n.ContentH
@@ -92,10 +96,14 @@ internal func horizontalScrollThumb(n Node, out geometry ScrollThumbGeometry) bo
   guard let descriptor = n.ScrollbarX else { return false }
   if descriptor.Track == nil && descriptor.Thumb == nil { return false }
   if n.ScrollbarVisibilityX == ScrollbarVisibility.Hidden { return false }
-  let maximum = maxScrollX(n)
-  let viewport = scrollViewportWidth(n)
+  let gutters = scrollbarGutters(n)
+  let contentWidth = BoxGeometry.ContentWidth(n)
+  let viewport = MathF.Max(0.0F, contentWidth - gutters.Vertical)
+  let maximum = if n.OverflowX != Overflow.Scroll && n.Kind != NodeKind.Editor { 0.0F }
+    else { n.ContentW > viewport ? n.ContentW - viewport : 0.0F }
   if maximum <= 0.0F || viewport <= 0.0F || n.ContentW <= 0.0F { return false }
-  let verticalSlot = verticalScrollbarSlot(n)
+  let verticalSlot = reservedVerticalSlot(n,
+    contentWidth - gutters.Vertical, BoxGeometry.ContentHeight(n) - gutters.Horizontal)
   let track = horizontalTrackBounds(n, descriptor, verticalSlot)
   if track.W <= 0.0F || track.H <= 0.0F { return false }
   var thumb = track.W * viewport / n.ContentW

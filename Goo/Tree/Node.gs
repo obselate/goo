@@ -402,8 +402,16 @@ internal class Node {
   internal prop ScrollTargetY float32{ get; set; }
   internal prop ContentW float32{ get; set; }
   internal prop ContentH float32{ get; set; }
-  internal prop ScrollBarAlpha float32{ get; set; }
-  internal prop ScrollIdle float32{ get; set; }
+  internal prop ScrollBarAlpha float32{
+    get -> if let state = ScrollActivityStates.TryGet(this) {
+      MathF.Max(state.Horizontal.Alpha, state.Vertical.Alpha)
+    } else { 0.0F }
+  }
+  internal prop ScrollIdle float32{
+    get -> if let state = ScrollActivityStates.TryGet(this) {
+      MathF.Max(state.Horizontal.Idle, state.Vertical.Idle)
+    } else { 0.0F }
+  }
   internal prop ScrollbarVisibilityX ScrollbarVisibility{
     get -> ScrollbarStyles.GetVisibilityX(this)
     set(v) -> ScrollbarStyles.SetVisibilityX(this, v)

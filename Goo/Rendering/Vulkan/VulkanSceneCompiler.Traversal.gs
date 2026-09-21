@@ -2,6 +2,7 @@ package Goo
 
 import Facebook.Yoga
 import System
+import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 internal partial class VulkanSceneCompiler {
@@ -21,6 +22,7 @@ internal partial class VulkanSceneCompiler {
 
   private func CompileScrollbarParts(
     node Node,
+    parts IList[Node],
     ownerId uint64,
     bounds ConservativeBounds,
     context VulkanSceneTraversalContext,
@@ -28,7 +30,6 @@ internal partial class VulkanSceneCompiler {
     activePathClipChainId int32,
     ownerClipIndex int32,
     ownerOpacity float32) {
-      let parts = ScrollbarParts.ActiveChildren(node)
       if parts.Count == 0 { return }
       let parentClipIndex = ownerClipIndex >= 0
         ? ownerClipIndex : context.ParentRectClipIndex
@@ -107,7 +108,8 @@ internal partial class VulkanSceneCompiler {
         scrollNodeCount = scrollNodeCount + 1
       }
       let bounds = NodeBounds(node)
-      let hasActiveScrollbarParts = ScrollbarParts.HasActive(node)
+      let scrollbarParts = ScrollbarParts.ActiveChildren(node)
+      let hasActiveScrollbarParts = scrollbarParts.Count != 0
       let earlyOverflowPreflight = PreflightRectOverflowClip(
         node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
       let exactCandidate = ExactTextClipCullEligible(node, bounds,
@@ -529,7 +531,7 @@ internal partial class VulkanSceneCompiler {
           PaintBorder(node, bounds, contentOpacity, transform.Index)
           frame.EndChunk()
         }
-      CompileScrollbarParts(node, ownerId, bounds, context, transform,
+      CompileScrollbarParts(node, scrollbarParts, ownerId, bounds, context, transform,
         activePathClipChainId, clipIndex, contentOpacity)
       let outlineBounds = OutlineBounds(node, bounds)
       if !outlineBounds.IsEmpty {

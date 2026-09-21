@@ -25,6 +25,9 @@ internal class ScrollActivityStates {
     ConditionalWeakTable[Node, ScrollNodeActivity]()
 
     internal func For(n Node) ScrollNodeActivity -> values.GetOrCreateValue(n)
+
+    internal func TryGet(n Node) ScrollNodeActivity? ->
+    if values.TryGetValue(n, out var state) { state } else { nil }
   }
 }
 
@@ -50,8 +53,11 @@ internal class ScrollState {
     (vertical ? maxScrollY(n) : maxScrollX(n)) > 0.0F
 
     private func syncAxis(n Node, vertical bool) bool {
-      let state = axis(n, vertical)
       let nextDescriptor = descriptor(n, vertical)
+      if nextDescriptor == nil && ScrollActivityStates.TryGet(n) == nil {
+        return false
+      }
+      let state = axis(n, vertical)
       let nextVisibility = visibility(n, vertical)
       var changed bool
       if !Object.ReferenceEquals(state.Descriptor, nextDescriptor)
@@ -85,16 +91,9 @@ internal class ScrollState {
       return changed
     }
 
-    private func publish(n Node) {
-      let state = ScrollActivityStates.For(n)
-      n.ScrollBarAlpha = MathF.Max(state.Horizontal.Alpha, state.Vertical.Alpha)
-      n.ScrollIdle = MathF.Max(state.Horizontal.Idle, state.Vertical.Idle)
-    }
-
     private func sync(n Node) {
       syncAxis(n, false)
       syncAxis(n, true)
-      publish(n)
     }
 
     internal func To(n Node, x float32, y float32, immediate bool = false, activity bool = true) bool {
@@ -185,52 +184,32 @@ internal class ScrollState {
     }
 
     internal func TouchAxis(n Node, vertical bool) {
-      touchAxes(n, !vertical, vertical)
+      syncAxis(n, vertical)
+      guard let nodeState = ScrollActivityStates.TryGet(n) else { return }
+      let state = vertical ? nodeState.Vertical : nodeState.Horizontal
+      guard let current = state.Descriptor else { return }
+      if state.Visibility == ScrollbarVisibility.Hidden || !overflowing(n, vertical) {
+        return
+      }
+      state.Alpha = 1.0F
+      state.Idle = 0.0F
+      scheduleHide(state, current)
     }
 
     private func touchAxes(n Node, horizontal bool, vertical bool) {
-      var changed bool
-      if horizontal {
-        syncAxis(n, false)
-        let state = axis(n, false)
-        if state.Descriptor != nil && state.Visibility != ScrollbarVisibility.Hidden
-          && overflowing(n, false) {
-            if state.Alpha != 1.0F || state.Idle != 0.0F {
-              state.Alpha = 1.0F
-              state.Idle = 0.0F
-              changed = true
-            }
-            scheduleHide(state, state.Descriptor!!)
-          }
-      }
-      if vertical {
-        syncAxis(n, true)
-        let state = axis(n, true)
-        if state.Descriptor != nil && state.Visibility != ScrollbarVisibility.Hidden
-          && overflowing(n, true) {
-            if state.Alpha != 1.0F || state.Idle != 0.0F {
-              state.Alpha = 1.0F
-              state.Idle = 0.0F
-              changed = true
-            }
-            scheduleHide(state, state.Descriptor!!)
-          }
-      }
-      if changed || horizontal || vertical {
-        publish(n)
-      }
+      if horizontal { TouchAxis(n, false) }
+      if vertical { TouchAxis(n, true) }
     }
 
     internal func Hover(n Node, vertical bool, value bool) bool {
       syncAxis(n, vertical)
-      let state = axis(n, vertical)
+      guard let nodeState = ScrollActivityStates.TryGet(n) else { return false }
+      let state = vertical ? nodeState.Vertical : nodeState.Horizontal
       if state.Descriptor == nil || state.Visibility == ScrollbarVisibility.Hidden
         || !overflowing(n, vertical) {
-          publish(n)
           return false
         }
       if state.Hovered == value {
-        publish(n)
         return false
       }
       state.Hovered = value
@@ -242,20 +221,18 @@ internal class ScrollState {
         state.Idle = 0.0F
         scheduleHide(state, state.Descriptor!!)
       }
-      publish(n)
       return true
     }
 
     internal func Capture(n Node, vertical bool, value bool) bool {
       syncAxis(n, vertical)
-      let state = axis(n, vertical)
+      guard let nodeState = ScrollActivityStates.TryGet(n) else { return false }
+      let state = vertical ? nodeState.Vertical : nodeState.Horizontal
       if state.Descriptor == nil || state.Visibility == ScrollbarVisibility.Hidden
         || !overflowing(n, vertical) {
-          publish(n)
           return false
         }
       if state.Captured == value {
-        publish(n)
         return false
       }
       state.Captured = value
@@ -267,12 +244,11 @@ internal class ScrollState {
         state.Idle = 0.0F
         scheduleHide(state, state.Descriptor!!)
       }
-      publish(n)
       return true
     }
 
     internal func ResetActivity(n Node) {
-      let state = ScrollActivityStates.For(n)
+      guard let state = ScrollActivityStates.TryGet(n) else { return }
       state.Horizontal.Alpha = 0.0F
       state.Horizontal.Idle = 0.0F
       state.Horizontal.Hovered = false
@@ -283,24 +259,28 @@ internal class ScrollState {
       state.Vertical.Hovered = false
       state.Vertical.Captured = false
       state.Vertical.HideDeadlineTicks = 0.0
-      publish(n)
     }
 
     internal func Alpha(n Node, vertical bool) float32 {
       sync(n)
-      return axis(n, vertical).Alpha
+      if let state = ScrollActivityStates.TryGet(n) {
+        return vertical ? state.Vertical.Alpha : state.Horizontal.Alpha
+      }
+      return 0.0F
     }
 
     internal func HasDemand(n Node) bool {
       sync(n)
-      let state = ScrollActivityStates.For(n)
+      guard let state = ScrollActivityStates.TryGet(n) else {
+        return n.ScrollX != n.ScrollTargetX || n.ScrollY != n.ScrollTargetY
+      }
       return n.ScrollX != n.ScrollTargetX || n.ScrollY != n.ScrollTargetY
         || fadeDemand(state.Horizontal) || fadeDemand(state.Vertical)
     }
 
     internal func DeadlineSeconds(n Node) float64 {
       sync(n)
-      let state = ScrollActivityStates.For(n)
+      guard let state = ScrollActivityStates.TryGet(n) else { return Double.PositiveInfinity }
       return Math.Min(deadlineSeconds(state.Horizontal), deadlineSeconds(state.Vertical))
     }
 
@@ -341,12 +321,12 @@ internal class ScrollState {
       changed = fadeAxis(n, false, dt) || changed
       changed = syncAxis(n, true) || changed
       changed = fadeAxis(n, true, dt) || changed
-      publish(n)
       return changed
     }
 
     private func fadeAxis(n Node, vertical bool, dt float32) bool {
-      let state = axis(n, vertical)
+      guard let nodeState = ScrollActivityStates.TryGet(n) else { return false }
+      let state = vertical ? nodeState.Vertical : nodeState.Horizontal
       guard let descriptor = state.Descriptor else {
         return false
       }
