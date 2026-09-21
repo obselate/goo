@@ -20,6 +20,24 @@ internal class BoxGeometry {
       return height > 0.0F ? height : 0.0F
     }
 
+    internal func PaddingEdgeLeft(n Node) float32 -> n.Rect.X + borderPx(n, YGEdge.Left)
+
+    internal func PaddingEdgeTop(n Node) float32 -> n.Rect.Y + borderPx(n, YGEdge.Top)
+
+    internal func PaddingEdgeWidth(n Node) float32 {
+      let width = n.Rect.W - borderPx(n, YGEdge.Left) - borderPx(n, YGEdge.Right)
+      return width > 0.0F ? width : 0.0F
+    }
+
+    internal func PaddingEdgeHeight(n Node) float32 {
+      let height = n.Rect.H - borderPx(n, YGEdge.Top) - borderPx(n, YGEdge.Bottom)
+      return height > 0.0F ? height : 0.0F
+    }
+
+    internal func PaddingRight(n Node) float32 -> padding(n, YGEdge.Right)
+
+    internal func PaddingBottom(n Node) float32 -> padding(n, YGEdge.Bottom)
+
     internal func ViewportLeft(n Node) float32 -> ContentLeft(n)
 
     internal func ViewportTop(n Node) float32 -> ContentTop(n)

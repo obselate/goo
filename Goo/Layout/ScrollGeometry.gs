@@ -60,8 +60,8 @@ internal func verticalScrollThumb(n Node, out geometry ScrollThumbGeometry) bool
   let maximum = maxScrollY(n)
   let viewport = scrollViewportHeight(n)
   if maximum <= 0.0F || viewport <= 0.0F || n.ContentH <= 0.0F { return false }
-  let horizontalGutter = horizontalScrollbarGutter(n)
-  let track = verticalTrackBounds(n, descriptor, horizontalGutter)
+  let horizontalSlot = horizontalScrollbarSlot(n)
+  let track = verticalTrackBounds(n, descriptor, horizontalSlot)
   if track.W <= 0.0F || track.H <= 0.0F { return false }
   var thumb = track.H * viewport / n.ContentH
   if thumb < float32(descriptor.MinThumbLength) { thumb = float32(descriptor.MinThumbLength) }
@@ -95,8 +95,8 @@ internal func horizontalScrollThumb(n Node, out geometry ScrollThumbGeometry) bo
   let maximum = maxScrollX(n)
   let viewport = scrollViewportWidth(n)
   if maximum <= 0.0F || viewport <= 0.0F || n.ContentW <= 0.0F { return false }
-  let verticalGutter = verticalScrollbarGutter(n)
-  let track = horizontalTrackBounds(n, descriptor, verticalGutter)
+  let verticalSlot = verticalScrollbarSlot(n)
+  let track = horizontalTrackBounds(n, descriptor, verticalSlot)
   if track.W <= 0.0F || track.H <= 0.0F { return false }
   var thumb = track.W * viewport / n.ContentW
   if thumb < float32(descriptor.MinThumbLength) { thumb = float32(descriptor.MinThumbLength) }
@@ -156,18 +156,38 @@ private func scrollbarGutters(n Node) ScrollbarGutters {
   return ScrollbarGutters{ Vertical: vertical, Horizontal: horizontal }
 }
 
-private func reservedVerticalGutter(n Node, width float32, height float32) float32 {
+private func reservedVerticalSlot(n Node, width float32, height float32) float32 {
   guard let descriptor = n.ScrollbarY else { return 0.0F }
   if !descriptor.ReserveSpace || n.ScrollbarVisibilityY == ScrollbarVisibility.Hidden
     || !scrollAxisOverflowsY(n, height) { return 0.0F }
   return float32(descriptor.Thickness + descriptor.Inset)
 }
 
-private func reservedHorizontalGutter(n Node, width float32, height float32) float32 {
+private func reservedHorizontalSlot(n Node, width float32, height float32) float32 {
   guard let descriptor = n.ScrollbarX else { return 0.0F }
   if !descriptor.ReserveSpace || n.ScrollbarVisibilityX == ScrollbarVisibility.Hidden
     || !scrollAxisOverflowsX(n, width) { return 0.0F }
   return float32(descriptor.Thickness + descriptor.Inset)
+}
+
+private func reservedVerticalGutter(n Node, width float32, height float32) float32 ->
+  MathF.Max(0.0F, reservedVerticalSlot(n, width, height) - BoxGeometry.PaddingRight(n))
+
+private func reservedHorizontalGutter(n Node, width float32, height float32) float32 ->
+  MathF.Max(0.0F, reservedHorizontalSlot(n, width, height) - BoxGeometry.PaddingBottom(n))
+
+private func verticalScrollbarSlot(n Node) float32 {
+  let gutters = scrollbarGutters(n)
+  return reservedVerticalSlot(n,
+    BoxGeometry.ContentWidth(n) - gutters.Vertical,
+    BoxGeometry.ContentHeight(n) - gutters.Horizontal)
+}
+
+private func horizontalScrollbarSlot(n Node) float32 {
+  let gutters = scrollbarGutters(n)
+  return reservedHorizontalSlot(n,
+    BoxGeometry.ContentWidth(n) - gutters.Vertical,
+    BoxGeometry.ContentHeight(n) - gutters.Horizontal)
 }
 
 private func scrollAxisOverflowsX(n Node, viewport float32) bool ->
@@ -178,51 +198,53 @@ private func scrollAxisOverflowsY(n Node, viewport float32) bool ->
   viewport > 0.0F && n.ContentH > viewport &&
   (n.OverflowY == Overflow.Scroll || n.Kind == NodeKind.Editor)
 
-private func verticalTrackBounds(n Node, descriptor Scrollbar, horizontalGutter float32) Rect {
-  let contentX = BoxGeometry.ContentLeft(n)
-  let contentY = BoxGeometry.ContentTop(n)
-  let contentWidth = BoxGeometry.ContentWidth(n)
-  let contentHeight = BoxGeometry.ContentHeight(n)
-  let right = MathF.Max(contentX,
-    contentX + contentWidth - float32(descriptor.Inset))
-  let left = MathF.Max(contentX, right - float32(descriptor.Thickness))
-  let top = MathF.Min(contentY + contentHeight,
-    contentY + float32(descriptor.Inset))
-  let bottom = MathF.Max(contentY,
-    contentY + contentHeight - float32(descriptor.Inset) - horizontalGutter)
+private func verticalTrackBounds(n Node, descriptor Scrollbar, horizontalSlot float32) Rect {
+  let paddingX = BoxGeometry.PaddingEdgeLeft(n)
+  let paddingY = BoxGeometry.PaddingEdgeTop(n)
+  let paddingWidth = BoxGeometry.PaddingEdgeWidth(n)
+  let paddingHeight = BoxGeometry.PaddingEdgeHeight(n)
+  let right = MathF.Max(paddingX,
+    paddingX + paddingWidth - float32(descriptor.Inset))
+  let left = MathF.Max(paddingX, right - float32(descriptor.Thickness))
+  let top = MathF.Min(paddingY + paddingHeight,
+    paddingY + float32(descriptor.Inset))
+  let bottom = MathF.Max(paddingY,
+    paddingY + paddingHeight - float32(descriptor.Inset) - horizontalSlot)
   return Rect{ X: left, Y: top, W: MathF.Max(0.0F, right - left), H: MathF.Max(0.0F, bottom - top) }
 }
 
-private func horizontalTrackBounds(n Node, descriptor Scrollbar, verticalGutter float32) Rect {
-  let contentX = BoxGeometry.ContentLeft(n)
-  let contentY = BoxGeometry.ContentTop(n)
-  let contentWidth = BoxGeometry.ContentWidth(n)
-  let contentHeight = BoxGeometry.ContentHeight(n)
-  let left = MathF.Min(contentX + contentWidth,
-    contentX + float32(descriptor.Inset))
-  let right = MathF.Max(contentX,
-    contentX + contentWidth - float32(descriptor.Inset) - verticalGutter)
-  let bottom = MathF.Max(contentY,
-    contentY + contentHeight - float32(descriptor.Inset))
-  let top = MathF.Max(contentY, bottom - float32(descriptor.Thickness))
+private func horizontalTrackBounds(n Node, descriptor Scrollbar, verticalSlot float32) Rect {
+  let paddingX = BoxGeometry.PaddingEdgeLeft(n)
+  let paddingY = BoxGeometry.PaddingEdgeTop(n)
+  let paddingWidth = BoxGeometry.PaddingEdgeWidth(n)
+  let paddingHeight = BoxGeometry.PaddingEdgeHeight(n)
+  let left = MathF.Min(paddingX + paddingWidth,
+    paddingX + float32(descriptor.Inset))
+  let right = MathF.Max(paddingX,
+    paddingX + paddingWidth - float32(descriptor.Inset) - verticalSlot)
+  let bottom = MathF.Max(paddingY,
+    paddingY + paddingHeight - float32(descriptor.Inset))
+  let top = MathF.Max(paddingY, bottom - float32(descriptor.Thickness))
   return Rect{ X: left, Y: top, W: MathF.Max(0.0F, right - left), H: MathF.Max(0.0F, bottom - top) }
 }
 
 private func verticalHitBounds(n Node, descriptor Scrollbar, bounds Rect) Rect {
   let thickness = float32(descriptor.HitThickness)
   let center = bounds.X + bounds.W * 0.5F
-  let contentX = BoxGeometry.ContentLeft(n)
-  let left = MathF.Max(contentX, center - thickness * 0.5F)
-  let right = MathF.Min(contentX + BoxGeometry.ContentWidth(n), center + thickness * 0.5F)
+  let paddingX = BoxGeometry.PaddingEdgeLeft(n)
+  let left = MathF.Max(paddingX, center - thickness * 0.5F)
+  let right = MathF.Min(paddingX + BoxGeometry.PaddingEdgeWidth(n),
+    center + thickness * 0.5F)
   return Rect{ X: left, Y: bounds.Y, W: MathF.Max(0.0F, right - left), H: bounds.H }
 }
 
 private func horizontalHitBounds(n Node, descriptor Scrollbar, bounds Rect) Rect {
   let thickness = float32(descriptor.HitThickness)
   let center = bounds.Y + bounds.H * 0.5F
-  let contentY = BoxGeometry.ContentTop(n)
-  let top = MathF.Max(contentY, center - thickness * 0.5F)
-  let bottom = MathF.Min(contentY + BoxGeometry.ContentHeight(n), center + thickness * 0.5F)
+  let paddingY = BoxGeometry.PaddingEdgeTop(n)
+  let top = MathF.Max(paddingY, center - thickness * 0.5F)
+  let bottom = MathF.Min(paddingY + BoxGeometry.PaddingEdgeHeight(n),
+    center + thickness * 0.5F)
   return Rect{ X: bounds.X, Y: top, W: bounds.W, H: MathF.Max(0.0F, bottom - top) }
 }
 

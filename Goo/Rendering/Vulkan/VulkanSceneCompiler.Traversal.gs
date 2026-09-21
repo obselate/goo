@@ -278,6 +278,7 @@ internal partial class VulkanSceneCompiler {
       let bothAxes = overflowPreflight.BothAxes
       let hasRadius = overflowPreflight.HasRadius
       let paddingEdgeBounds = PaddingEdgeBounds(node, bounds)
+      let scrollbarContentBounds = ScrollbarViewportBounds(node, paddingEdgeBounds)
       var overflowPathClipChainId = activePathClipChainId
       var roundedOverflowClip = false
       var mixedOverflowClip = false
@@ -389,7 +390,19 @@ internal partial class VulkanSceneCompiler {
       PaintNode(node, bounds, contentOpacity, transform.Index, axisAligned, childClipDepth,
         shapePaintClip, nodeContentClipChainId, overflowPathClipChainId,
       shapeGeometry, out textComplete)
-      let inheritedChildClipIndex = clipIndex >= 0 ? clipIndex : context.ParentRectClipIndex
+      let ownerContentClipIndex = clipIndex >= 0 ? clipIndex : context.ParentRectClipIndex
+      var scrollbarContentClipIndex int32 = -1
+      if !scrollbarContentBounds.IsEmpty {
+        scrollbarContentClipIndex = frame.AddRectClipBegin(RectClipRecord{
+          Bounds: scrollbarContentBounds,
+          TransformIndex: transform.Index,
+          ParentIndex: ownerContentClipIndex,
+        })
+        clipCount = clipCount + 1
+        childClipDepth = childClipDepth + 1
+      }
+      let inheritedChildClipIndex = scrollbarContentClipIndex >= 0
+      ? scrollbarContentClipIndex : ownerContentClipIndex
       var editorContentClipIndex int32 = -1
       var editorContentBounds ConservativeBounds
       if node.Kind == NodeKind.Editor {
@@ -429,6 +442,10 @@ internal partial class VulkanSceneCompiler {
       if clipIndex >= 0 {
         childClipBounds = IntersectBounds(childClipBounds,
           TransformCompilerBounds(paddingEdgeBounds, resolvedTransform))
+      }
+      if scrollbarContentClipIndex >= 0 {
+        childClipBounds = IntersectBounds(childClipBounds,
+          TransformCompilerBounds(scrollbarContentBounds, resolvedTransform))
       }
       if pathClip.Emitted {
         childClipBounds = IntersectBounds(childClipBounds,
@@ -478,7 +495,7 @@ internal partial class VulkanSceneCompiler {
           index = index + 1
         }
 
-      if editorContentClipIndex >= 0 || clipIndex >= 0 {
+      if editorContentClipIndex >= 0 || scrollbarContentClipIndex >= 0 || clipIndex >= 0 {
         frame.SetActiveClipChain(context.ParentPathClipChainId)
         frame.BeginChunk(ownerId, frameVersion, bounds, false)
         if editorContentClipIndex >= 0 {
@@ -486,6 +503,13 @@ internal partial class VulkanSceneCompiler {
             Bounds: editorContentBounds,
             TransformIndex: transform.Index,
             ParentIndex: inheritedChildClipIndex,
+          })
+        }
+        if scrollbarContentClipIndex >= 0 {
+          frame.AddRectClipEnd(RectClipRecord{
+            Bounds: scrollbarContentBounds,
+            TransformIndex: transform.Index,
+            ParentIndex: ownerContentClipIndex,
           })
         }
         if clipIndex >= 0 {

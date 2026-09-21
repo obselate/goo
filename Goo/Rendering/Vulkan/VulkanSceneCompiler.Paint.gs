@@ -751,6 +751,25 @@ internal partial class VulkanSceneCompiler {
     }
   }
 
+  private func ScrollbarViewportBounds(node Node,
+    paddingBounds ConservativeBounds) ConservativeBounds {
+      let vertical = verticalScrollbarGutter(node)
+      let horizontal = horizontalScrollbarGutter(node)
+      if vertical <= 0.0F && horizontal <= 0.0F { return ConservativeBounds{} }
+      let leftPadding = BoxGeometry.ContentLeft(node) - BoxGeometry.PaddingEdgeLeft(node)
+      let topPadding = BoxGeometry.ContentTop(node) - BoxGeometry.PaddingEdgeTop(node)
+      let width = vertical > 0.0F
+      ? leftPadding + scrollViewportWidth(node) : paddingBounds.Width
+      let height = horizontal > 0.0F
+      ? topPadding + scrollViewportHeight(node) : paddingBounds.Height
+      return ConservativeBounds{
+        X: paddingBounds.X,
+        Y: paddingBounds.Y,
+        Width: MathF.Max(0.0F, width),
+        Height: MathF.Max(0.0F, height),
+      }
+    }
+
   private func PaddingEdgeRadius(
     node Node,
     value Length,
