@@ -45,8 +45,11 @@ internal partial class PointerInput {
   private func appendPath(root Node, target Node, path List[Node]) bool {
     path.Add(root)
     if root == target { return true }
-    for i in 0 ... root.Children.Count {
-      if appendPath(root.Children[i], target, path) { return true }
+    for child in root.Children {
+      if appendPath(child, target, path) { return true }
+    }
+    for child in ScrollbarParts.Children(root) {
+      if appendPath(child, target, path) { return true }
     }
     path.RemoveAt(path.Count - 1)
     return false
@@ -340,6 +343,7 @@ internal partial class PointerInput {
       current.DragEditor = nil
       current.DragSelectionStarted = false
       clearScrollDrag()
+      clearScrollbarPartPress(resolver)
       clearTouchPan()
       current.ClickTarget = nil
       if isSemanticPrimary() {
@@ -410,8 +414,11 @@ internal partial class PointerInput {
 
 internal func containsPath(root Node, target Node) bool {
   if root == target { return true }
-  for i in 0 ... root.Children.Count {
-    if containsPath(root.Children[i], target) { return true }
+  for child in root.Children {
+    if containsPath(child, target) { return true }
+  }
+  for child in ScrollbarParts.Children(root) {
+    if containsPath(child, target) { return true }
   }
   return false
 }

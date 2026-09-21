@@ -126,6 +126,7 @@ internal class InputCoordinator {
       } else {
         pointer.FocusLost(root, resolver)
       }
+      pointer.ResetScrollbars(resolver)
     } finally {
       focus.SetNativeFocus(false)
       resolver.Flush()
@@ -239,6 +240,7 @@ internal class InputCoordinator {
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
+    pointer.ResetScrollbars(resolver)
     try {
       focus.SetFocus(resolver, nil)
     } catch (error Exception) {

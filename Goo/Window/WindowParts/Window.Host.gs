@@ -592,7 +592,8 @@ public partial class Window {
     return pacingWait < idle ? pacingWait : idle
   }
 
-  internal func SchedulerTimedServiceDue() bool -> input.NextTickDeadlineSeconds() <= 0.0
+  internal func SchedulerTimedServiceDue() bool ->
+  Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds()) <= 0.0
 
   internal func RefreshSchedulerMetrics() {
     host?.RefreshMetricsIfChanged()
@@ -603,9 +604,21 @@ public partial class Window {
   // otherwise-idle window still blocks (near-0 CPU) instead of polling, but
   // wakes itself in time to render each blink transition.
   private func idleWaitMs() int32 {
-    let deadline = Math.Min(0.25, input.NextTickDeadlineSeconds())
+    let deadline = Math.Min(0.25,
+      Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds()))
     let ms = int32(Math.Ceiling(deadline * 1000.0))
     return ms < 1 ? 1 : ms
+  }
+
+  private func nextScrollDeadlineSeconds() float64 {
+    guard let n = node else { return Double.PositiveInfinity }
+    let scrollers = layout.ScrollNodes(n)
+    var deadline = Double.PositiveInfinity
+    for i in 0 ... scrollers.Count {
+      let candidate = ScrollState.DeadlineSeconds(scrollers[i])
+      if candidate < deadline { deadline = candidate }
+    }
+    return deadline
   }
 
   private func hasScrollDemand() bool {
@@ -614,11 +627,9 @@ public partial class Window {
     }
     let scrollers = layout.ScrollNodes(n)
     for i in 0 ... scrollers.Count {
-      let s = scrollers[i]
-      if s.ScrollX != s.ScrollTargetX || s.ScrollY != s.ScrollTargetY
-        || (s.ScrollbarVisibility == ScrollbarVisibility.Auto && s.ScrollBarAlpha > 0.0F) {
-          return true
-        }
+      if ScrollState.HasDemand(scrollers[i]) {
+        return true
+      }
     }
     return false
   }

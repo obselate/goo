@@ -2,8 +2,6 @@ package Goo
 
 import System
 
-/// Controls the built-in scrollbar presentation without changing scroll behavior.
-public enum ScrollbarVisibility { Auto; Always; Hidden }
 
 /// Defines the common surface for Goo-owned declarative elements.
 public open class Blob : Style {
@@ -22,8 +20,6 @@ public open class Blob : Style {
   /// Gets the stable key within the sibling list.
   public prop Key string? { get -> authoredKey; init -> authoredKey = value }
   internal func SetVirtualKey(value string) { authoredKey = value }
-  /// Controls whether Goo auto-hides, always shows, or suppresses built-in scrollbars.
-  public prop ScrollbarVisibility ScrollbarVisibility{ get; init; }
   /// Gets the consumer-owned handle attached while this element is mounted.
   public prop Handle ElementHandle? {
     get {

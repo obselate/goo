@@ -181,6 +181,9 @@ internal class AccessibilityManager {
       }
     }
     for i in 0 ... n.Children.Count { collectForced(n.Children[i], nowHidden) }
+    for child in ScrollbarParts.ActiveChildren(n) {
+      collectForced(child, nowHidden)
+    }
   }
 
   private func collectHandles(handles []ElementHandle) {
@@ -214,6 +217,9 @@ internal class AccessibilityManager {
         for i in 0 ... n.Children.Count {
           appendNode(n.Children[i], target, false, disabled, suppressAutoText)
         }
+        for child in ScrollbarParts.ActiveChildren(n) {
+          appendNode(child, target, false, disabled, suppressAutoText)
+        }
         return
       }
       if suppressAutoText && n.Kind == NodeKind.Text && declaration == nil {
@@ -225,6 +231,9 @@ internal class AccessibilityManager {
         for i in 0 ... n.Children.Count {
           appendNode(n.Children[i], target, false, disabled, suppressAutoText)
         }
+        for child in ScrollbarParts.ActiveChildren(n) {
+          appendNode(child, target, false, disabled, suppressAutoText)
+        }
         return
       }
       let disabled = inheritedDisabled || n.Disabled
@@ -234,6 +243,9 @@ internal class AccessibilityManager {
         let suppressChildText = role == AccessibilityRole.Button && !hasExplicitName
         for i in 0 ... n.Children.Count {
           appendNode(n.Children[i], childValues, false, disabled, suppressChildText)
+        }
+        for child in ScrollbarParts.ActiveChildren(n) {
+          appendNode(child, childValues, false, disabled, suppressChildText)
         }
         let view = stateFor(n)
         let valueRange = declaration?.Range

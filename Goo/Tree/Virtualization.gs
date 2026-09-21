@@ -222,8 +222,8 @@ internal sealed class VirtualStorage[T] : VirtualStorage {
       return VirtualWindow{ Direction: n.FlexDirection, Wrap: n.FlexWrap }
     }
 
-    let viewportW = BoxGeometry.ContentWidth(n)
-    let viewportH = BoxGeometry.ContentHeight(n)
+    let viewportW = BoxGeometry.ViewportWidth(n)
+    let viewportH = BoxGeometry.ViewportHeight(n)
     let originX = BoxGeometry.ContentLeft(n) - n.Rect.X
     let originY = BoxGeometry.ContentTop(n) - n.Rect.Y
     let rowGap = virtualGap(n.RowGap, n.Gap, viewportW)

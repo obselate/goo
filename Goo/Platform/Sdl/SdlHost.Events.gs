@@ -48,6 +48,7 @@ internal unsafe partial class SdlHost {
         if button != PointerButton.None {
           pointerButtons = PointerButtons(
             int32(pointerButtons) | int32(ToPointerButtons(button)))
+          SDL.CaptureMouse(true)
           PointerPressed?.Invoke(MousePointerId, PointerDevice.Mouse,
             nativeEvent.Button.X, nativeEvent.Button.Y, button, pointerButtons,
             MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
@@ -61,6 +62,9 @@ internal unsafe partial class SdlHost {
         if button != PointerButton.None {
           pointerButtons = PointerButtons(
             int32(pointerButtons) & ^int32(ToPointerButtons(button)))
+          if pointerButtons == PointerButtons.None {
+            SDL.CaptureMouse(false)
+          }
           PointerReleased?.Invoke(MousePointerId, PointerDevice.Mouse,
             nativeEvent.Button.X, nativeEvent.Button.Y, button, pointerButtons,
             MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
@@ -263,6 +267,7 @@ internal unsafe partial class SdlHost {
       FocusChanged?.Invoke(true)
     } else if eventType == SDLEventType.WindowFocusLost {
       pointerButtons = PointerButtons.None
+      SDL.CaptureMouse(false)
       FocusChanged?.Invoke(false)
     } else if eventType == SDLEventType.WindowCloseRequested {
       RequestClose()

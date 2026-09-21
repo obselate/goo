@@ -180,8 +180,12 @@ public sealed class FixtureContractTests
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.AnchoredPlacementLifecycleAndDependencyContract));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.AnchoredPlacementTracksViewportAndGeometryContract));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.OverlayOrderingInputAndGeometryContract));
-        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.GeometryRenderingAndVisibilityContract));
-        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PointerDragAndCancellationContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.DescriptorGeometryAndVisibilityContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ThumbDragHitThicknessAndCancellationContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.TrackPagingAndPreventDefaultContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.AutoHoverAndFadeContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ReservedGutterAndCoupledAxesContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.MountedPartHandleAndCallbackContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PublicMetricsAndJumpContract));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.GeneratedStrokeMappingUsesFullShapeBounds));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.MutableOpenContoursRefreshImplicitFillClosure));

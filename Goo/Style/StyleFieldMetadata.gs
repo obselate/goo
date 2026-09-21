@@ -5,7 +5,7 @@ import System.Collections.Generic
 
 internal enum FieldKind {
   KLength; KColor; KScalar; KEnum; KString; KGradient; KBoxShadows; KPath;
-  KImageSource; KShaderEffect
+  KImageSource; KShaderEffect; KScrollbar
 }
 
 @Flags
@@ -234,8 +234,16 @@ private func createStyleFieldInfo() []StyleFieldInfo {
         A: float32(int32(FillRule.NonZero)) }),
     styleFieldInfo(StyleField.ShaderEffect, FieldKind.KShaderEffect,
       ReconcileEffects.Paint, init),
+    styleFieldInfo(StyleField.ScrollbarVisibilityX, FieldKind.KEnum, layoutPaintInput, init,
+      StyleEntry{ Field: StyleField.ScrollbarVisibilityX,
+        A: float32(int32(ScrollbarVisibility.Auto)) }),
+    styleFieldInfo(StyleField.ScrollbarVisibilityY, FieldKind.KEnum, layoutPaintInput, init,
+      StyleEntry{ Field: StyleField.ScrollbarVisibilityY,
+        A: float32(int32(ScrollbarVisibility.Auto)) }),
+    styleFieldInfo(StyleField.ScrollbarX, FieldKind.KScrollbar, layoutPaintInput, init),
+    styleFieldInfo(StyleField.ScrollbarY, FieldKind.KScrollbar, layoutPaintInput, init),
   }
-  let expected = int32(StyleField.ShaderEffect) + 1
+  let expected = int32(StyleField.ScrollbarY) + 1
   if result.Length != expected {
     throw InvalidOperationException("StyleField metadata count mismatch")
   }

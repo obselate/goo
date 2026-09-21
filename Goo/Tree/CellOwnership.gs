@@ -31,7 +31,7 @@ internal class CellOwnership {
         guard let parent = current.Parent else {
           return nil
         }
-        if !parent.Children.Contains(current) {
+        if !parent.Children.Contains(current) && !ScrollbarParts.Children(parent).Contains(current) {
           return nil
         }
         current = parent

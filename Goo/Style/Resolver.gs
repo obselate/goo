@@ -131,7 +131,7 @@ internal class Resolver {
     pending.Add(n)
   }
 
-  private func invalidateInherited(n Node, fields StyleMask) {
+  internal func InvalidateInherited(n Node, fields StyleMask) {
     if styleMaskEmpty(fields) {
       return
     }
@@ -164,7 +164,7 @@ internal class Resolver {
       return visits
     }
     var changed = StyleMask{}
-    if n.Children.Count == 0 {
+    if n.Children.Count == 0 && ScrollbarParts.Children(n).Count == 0 {
       resolveNode(n, initial)
     } else {
       changed = resolveNodeChanged(n, initial)
@@ -172,8 +172,9 @@ internal class Resolver {
     n.StyleResolvedPass = stylePass
     if !styleMaskEmpty(changed) {
       for i in 0 ... n.Children.Count {
-        invalidateInherited(n.Children[i], changed)
+        InvalidateInherited(n.Children[i], changed)
       }
+      ScrollbarParts.InvalidateInherited(this, n, changed)
     }
     return visits + 1
   }
@@ -579,6 +580,21 @@ internal class Resolver {
       }
       propagateInherited(child, f)
     }
+    for child in ScrollbarParts.Children(parent) {
+      if styleMaskHas(child.LocalMask, f) {
+        continue
+      }
+      if let store = DebugOverrides {
+        if let state = store.State(child) {
+          if state.Values.ContainsKey(f) { continue }
+        }
+      }
+      finishTransition(child, f)
+      if writeDirectWithInvalidation(child, readField(parent, f), PaintResourceInvalidated, Owner) {
+        recordResolvedChange(f)
+      }
+      propagateInherited(child, f)
+    }
   }
 
   private func recordResolvedChange(f StyleField) {
@@ -683,6 +699,24 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.Bottom { n.Bottom = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.Display { n.Display = Display(int32(e.A)) }
     case StyleField.Visibility { n.Visibility = Visibility(int32(e.A)) }
+    case StyleField.ScrollbarVisibilityX {
+      n.ScrollbarVisibilityX = ScrollbarVisibility(int32(e.A))
+      ScrollState.ResetActivity(n)
+    }
+    case StyleField.ScrollbarVisibilityY {
+      n.ScrollbarVisibilityY = ScrollbarVisibility(int32(e.A))
+      ScrollState.ResetActivity(n)
+    }
+    case StyleField.ScrollbarX {
+      n.ScrollbarX = entryScrollbar(e)
+      ScrollState.ResetActivity(n)
+      ScrollbarParts.Queue(n)
+    }
+    case StyleField.ScrollbarY {
+      n.ScrollbarY = entryScrollbar(e)
+      ScrollState.ResetActivity(n)
+      ScrollbarParts.Queue(n)
+    }
     case StyleField.BorderStyle { n.BorderStyle = BorderStyle(int32(e.A)) }
     case StyleField.BlendMode { n.BlendMode = BlendMode(int32(e.A)) }
     case StyleField.OverflowX {
@@ -824,6 +858,14 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.Bottom { return StyleEntry{ Field: f, A: n.Bottom.Value, B: float32(int32(n.Bottom.Unit)) } }
     case StyleField.Display { return StyleEntry{ Field: f, A: float32(int32(n.Display)) } }
     case StyleField.Visibility { return StyleEntry{ Field: f, A: float32(int32(n.Visibility)) } }
+    case StyleField.ScrollbarVisibilityX {
+      return StyleEntry{ Field: f, A: float32(int32(n.ScrollbarVisibilityX)) }
+    }
+    case StyleField.ScrollbarVisibilityY {
+      return StyleEntry{ Field: f, A: float32(int32(n.ScrollbarVisibilityY)) }
+    }
+    case StyleField.ScrollbarX { return StyleEntry{ Field: f, Payload: n.ScrollbarX } }
+    case StyleField.ScrollbarY { return StyleEntry{ Field: f, Payload: n.ScrollbarY } }
     case StyleField.BorderStyle { return StyleEntry{ Field: f, A: float32(int32(n.BorderStyle)) } }
     case StyleField.BlendMode { return StyleEntry{ Field: f, A: float32(int32(n.BlendMode)) } }
     case StyleField.OverflowX { return StyleEntry{ Field: f, A: float32(int32(n.OverflowX)) } }
