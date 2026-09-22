@@ -174,7 +174,7 @@ internal class GlassMaterialPanelCell : Cell {
         return Button{
             Key: terminal ? "terminal-glass": "liquid-glass",
             Height: 36,
-            Padding: EdgeLengths{Left: 16, Right: 16,},
+            Padding: Edges{Left: 16, Right: 16,},
             BorderRadius: 18,
             BorderWidth: 1,
             BorderColor: active ? Color.Rgba(39, 72, 82, 62): Color.Rgba(39, 72, 82, 24),
@@ -203,7 +203,7 @@ internal class GlassMaterialPanelCell : Cell {
 
     private func buildProjectRail() Container -> Container{
         Width: 176,
-        Padding: EdgeLengths{Left: 18, Top: 18, Right: 14,},
+        Padding: Edges{Left: 18, Top: 18, Right: 14,},
         Gap: 12,
         BorderRightWidth: 1,
         BorderRightColor: terminalMode ? Color.Rgba(226, 238, 242, 24): Color.Rgba(31, 70, 80, 32),
@@ -225,7 +225,7 @@ internal class GlassMaterialPanelCell : Cell {
         terminalLine("  Goo", secondaryInk()),
         terminalLine("  Rendering", secondaryInk()),
         Container{
-            Padding: EdgeLengths{Left: 8, Top: 7, Bottom: 7,},
+            Padding: Edges{Left: 8, Top: 7, Bottom: 7,},
             BorderRadius: 7,
             BackgroundColor: terminalMode ? Color.Rgba(116, 196, 176, 24): Color.Rgba(25, 113, 91, 20),
             terminalLine("  Vulkan", accentInk(), true),
@@ -237,7 +237,7 @@ internal class GlassMaterialPanelCell : Cell {
     private func buildTerminal() Container -> Container{
         FlexGrow: 1,
         MinWidth: 0,
-        Padding: EdgeLengths{Left: 22, Top: 20, Right: 22,},
+        Padding: Edges{Left: 22, Top: 20, Right: 22,},
         Gap: 10,
         terminalLine("~/Projects/goo-gsharp", secondaryInk()),
         terminalLine("$ goo verify --target gallery", primaryInk(), true),
@@ -308,7 +308,7 @@ internal class GlassMaterialPanelCell : Cell {
             BackgroundColor: Color.Transparent,
             Container{
                 Height: 54,
-                Padding: EdgeLengths{Left: 20, Right: 20,},
+                Padding: Edges{Left: 20, Right: 20,},
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 10,
@@ -330,7 +330,7 @@ internal class GlassMaterialPanelCell : Cell {
                 },
                 Container{FlexGrow: 1.0},
                 Container{
-                    Padding: EdgeLengths{Left: 10, Right: 10, Top: 5, Bottom: 5,},
+                    Padding: Edges{Left: 10, Right: 10, Top: 5, Bottom: 5,},
                     BorderRadius: 12,
                     BackgroundColor: Color.Rgba(109, 222, 166, 22),
                     terminalLine("ready", accentInk(), true),
@@ -345,7 +345,7 @@ internal class GlassMaterialPanelCell : Cell {
             },
             Container{
                 Height: 34,
-                Padding: EdgeLengths{Left: 18, Right: 18,},
+                Padding: Edges{Left: 18, Right: 18,},
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 14,
@@ -410,7 +410,7 @@ internal class GlassMaterialRootCell : Cell {
         Width: Length.Percent(100),
         Height: Length.Percent(100),
         Position: PositionType.Relative,
-        Padding: EdgeLengths{Left: 28, Right: 28,},
+        Padding: Edges{Left: 28, Right: 28,},
         AlignItems: AlignItems.Center,
         JustifyContent: JustifyContent.Center,
         BackgroundColor: Color.Rgb(226, 239, 235),

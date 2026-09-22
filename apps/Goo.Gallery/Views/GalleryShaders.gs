@@ -593,7 +593,7 @@ class ShaderLabCell : Cell {
                     OverflowY: Overflow.Hidden,
                     Container{
                         Height: 42,
-                        Padding: EdgeLengths{Left: 16, Right: 16,},
+                        Padding: Edges{Left: 16, Right: 16,},
                         FlexDirection: FlexDirection.Row,
                         AlignItems: AlignItems.Center,
                         Gap: 8,
@@ -604,7 +604,7 @@ class ShaderLabCell : Cell {
                         Container{Width: 8, Height: 8, BorderRadius: 4, BackgroundColor: Color.Rgb(83, 190, 126)},
                         Text{
                             Content: "goo / gallery",
-                            Margin: EdgeLengths{Left: 8},
+                            Margin: Edges{Left: 8},
                             FontFamily: "monospace",
                             FontSize: 11,
                             LetterSpacing: 0.5,
@@ -612,7 +612,7 @@ class ShaderLabCell : Cell {
                         },
                         Container{FlexGrow: 1.0},
                         Button{
-                            Padding: EdgeLengths{Left: 8, Right: 8, Top: 3, Bottom: 3,},
+                            Padding: Edges{Left: 8, Right: 8, Top: 3, Bottom: 3,},
                             BorderRadius: 4,
                             BackgroundColor: Color.Rgba(56, 189, 248, 38),
                             Hover: Style{BackgroundColor: Color.Rgba(56, 189, 248, 80)},
@@ -637,7 +637,7 @@ class ShaderLabCell : Cell {
                         },
                     },
                     Container{
-                        Padding: EdgeLengths{Left: 20, Top: 18, Right: 20,},
+                        Padding: Edges{Left: 20, Top: 18, Right: 20,},
                         FlexDirection: FlexDirection.Column,
                         Gap: 9,
                         Text{

@@ -907,7 +907,7 @@ class StudioCell : Cell {
                         Width: Length.Percent(100),
                         Placeholder: "Title",
                         Height: 38,
-                        Padding: EdgeLengths{Left: 10, Right: 10,},
+                        Padding: Edges{Left: 10, Right: 10,},
                         Color: GalleryTheme.Ink,
                         FontSize: 13,
                         BackgroundColor: GalleryTheme.SurfaceRaised,

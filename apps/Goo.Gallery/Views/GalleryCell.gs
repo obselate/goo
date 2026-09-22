@@ -156,7 +156,7 @@ class GalleryCell : Cell, IDisposable {
                 Position: PositionType.Relative,
                 OverflowX: Overflow.Hidden,
                 OverflowY: Overflow.Hidden,
-                Padding: EdgeLengths{
+                Padding: Edges{
                     Left: if Compact {
                         20
                     } else {

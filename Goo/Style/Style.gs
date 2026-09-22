@@ -100,13 +100,13 @@ public open class Style {
   /// Sets the preferred width-to-height ratio.
   public prop AspectRatio float64{ init -> pushScalar(StyleField.AspectRatio, checkedNonNegative(value, "AspectRatio")) }
   /// Sets padding in CSS top, right, bottom, left order.
-  public prop Padding EdgeLengths{ init -> pushEdges(value, true) }
+  public prop Padding Edges{ init -> pushEdges(value, true) }
   /// Sets padding at the inline start edge.
   public prop PaddingStart Length{ init -> pushCheckedLength(StyleField.PaddingStart, value, "PaddingStart", false, true, false) }
   /// Sets padding at the inline end edge.
   public prop PaddingEnd Length{ init -> pushCheckedLength(StyleField.PaddingEnd, value, "PaddingEnd", false, true, false) }
   /// Sets margins in CSS top, right, bottom, left order.
-  public prop Margin EdgeLengths{ init -> pushEdges(value, false) }
+  public prop Margin Edges{ init -> pushEdges(value, false) }
   /// Sets the margin at the inline start edge.
   public prop MarginStart Length{ init -> pushCheckedLength(StyleField.MarginStart, value, "MarginStart", true, true, false) }
   /// Sets the margin at the inline end edge.
@@ -372,7 +372,7 @@ public open class Style {
   /// Sets inherited invariant casing for static Text. TextEntry is unchanged.
   public prop TextTransform TextTransform{ init -> pushEnumOrdinal(StyleField.TextTransform, int32(value)) }
 
-  internal func pushEdges(value EdgeLengths, padding bool) {
+  internal func pushEdges(value Edges, padding bool) {
     let name = padding ? "Padding" : "Margin"
     let allowNegative = !padding
     if value.Uniform {

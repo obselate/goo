@@ -306,11 +306,11 @@ Selects the curve that shapes transition progress; Ease curves are quadratic.
 - `EaseOut`
 - `EaseInOut`
 
-## `EdgeLengths`
+## `Edges`
 
 Source:
 
-- [`EdgeLengths.gs`](../../Goo/Style/EdgeLengths.gs)
+- [`Edges.gs`](../../Goo/Style/Edges.gs)
 
 Specifies CSS-style top, right, bottom, and left lengths. One value applies to all edges. Two values mean vertical and horizontal. Three values mean top, horizontal, and bottom.
 
@@ -344,7 +344,7 @@ Applies top, right, bottom, and left lengths in CSS order.
 - `bottom`: bottom length
 - `left`: left length
 
-### `op_Implicit(float64)~EdgeLengths`
+### `op_Implicit(float64)~Edges`
 
 Converts pixel values into a uniform edge value.
 
@@ -352,7 +352,7 @@ Converts pixel values into a uniform edge value.
 
 Returns: a uniform edge value
 
-### `op_Implicit(int32)~EdgeLengths`
+### `op_Implicit(int32)~Edges`
 
 Converts integer pixels into a uniform edge value.
 
@@ -479,7 +479,7 @@ Creates a percentage of the available size.
 
 Returns: a percentage length
 
-### `op_Implicit(Length)~EdgeLengths`
+### `op_Implicit(Length)~Edges`
 
 Converts a length into a uniform edge value.
 

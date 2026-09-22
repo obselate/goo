@@ -3,7 +3,7 @@ package Goo
 /// Specifies CSS-style top, right, bottom, and left lengths.
 /// One value applies to all edges. Two values mean vertical and horizontal.
 /// Three values mean top, horizontal, and bottom.
-public struct EdgeLengths {
+public struct Edges {
     private var top Length
     private var right Length
     private var bottom Length
@@ -108,18 +108,14 @@ public struct EdgeLengths {
 /// Converts a length into a uniform edge value.
 /// @param value length for every edge
 /// @returns a uniform edge value
-public func operator implicit(value Length) EdgeLengths -> EdgeLengths(value)
+public func operator implicit(value Length) Edges -> Edges(value)
 
 /// Converts integer pixels into a uniform edge value.
 /// @param value pixel length for every edge
 /// @returns a uniform edge value
-public func operator implicit(value int32) EdgeLengths -> EdgeLengths(
-    Length{Unit: LengthUnit.Px, Value: float32(value)}
-)
+public func operator implicit(value int32) Edges -> Edges(Length{Unit: LengthUnit.Px, Value: float32(value)})
 
 /// Converts pixel values into a uniform edge value.
 /// @param value pixel length for every edge
 /// @returns a uniform edge value
-public func operator implicit(value float64) EdgeLengths -> EdgeLengths(
-    Length{Unit: LengthUnit.Px, Value: float32(value)}
-)
+public func operator implicit(value float64) Edges -> Edges(Length{Unit: LengthUnit.Px, Value: float32(value)})
