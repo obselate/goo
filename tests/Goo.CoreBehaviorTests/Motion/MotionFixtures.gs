@@ -363,8 +363,8 @@ internal class MotionFixtures {
     let pixels Length = 10.0
     let anim = cell.Animate(pixels)
     try {
-      let targetFails = throws(() -> anim.To(Length.Percent(25.0), clockEchoSpec))
-      let setFails = throws(() -> anim.Set(Length.Percent(25.0)))
+      let targetFails = throws(() -> anim.To(Percent(25.0), clockEchoSpec))
+      let setFails = throws(() -> anim.Set(Percent(25.0)))
       let autoFails = throws(() -> {
         let ignored = cell.Animate(Length.Auto)
       })

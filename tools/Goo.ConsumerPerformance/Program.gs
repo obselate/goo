@@ -9,8 +9,8 @@ import System.Threading
 
 class ConsumerScene : Cell {
   override func Build() Blob -> Container{
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
+    Width: Percent(100),
+    Height: Percent(100),
     Padding: 32,
     Gap: 12,
     BackgroundColor: Color.Rgb(18, 24, 34),

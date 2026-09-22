@@ -103,8 +103,8 @@ class GalleryCell : Cell, IDisposable {
     override func Build() Blob -> Container{
         Key: "root",
         KeyBindings: AppKeyBindings.Editing(attachedWindow?.PlatformInput),
-        Width: Length.Percent(100),
-        Height: Length.Percent(100),
+        Width: Percent(100),
+        Height: Percent(100),
         Handle: rootHandle,
         BackgroundColor: GalleryTheme.Background,
         FontFamily: GalleryTheme.GalleryFontFamily,
@@ -134,7 +134,7 @@ class GalleryCell : Cell, IDisposable {
         Container{
             Key: "gallery-showcase-region",
             Handle: showcaseHandle,
-            Width: Length.Percent(100),
+            Width: Percent(100),
             MinHeight: 0,
             FlexGrow: 1.0,
             FlexShrink: 1.0,
@@ -152,7 +152,7 @@ class GalleryCell : Cell, IDisposable {
                 Key: "gallery-content",
                 FlexGrow: 1.0,
                 FlexShrink: 1.0,
-                Height: Length.Percent(100),
+                Height: Percent(100),
                 Position: PositionType.Relative,
                 OverflowX: Overflow.Hidden,
                 OverflowY: Overflow.Hidden,

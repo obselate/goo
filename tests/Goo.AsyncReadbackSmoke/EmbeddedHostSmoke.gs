@@ -23,7 +23,7 @@ internal class EmbeddedSmokeCell : Cell, IDisposable {
   public override func Build() Blob {
     Builds++
     return Container{
-      Width: Length.Percent(100), Height: Length.Percent(100),
+      Width: Percent(100), Height: Percent(100),
       BackgroundColor: Red ? Color.Rgb(180, 20, 30) : Color.Rgb(10, 40, 90),
     }
   }

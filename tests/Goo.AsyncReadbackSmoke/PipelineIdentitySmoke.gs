@@ -21,7 +21,7 @@ class PipelineIdentityCell : Cell {
     second = secondEffect
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
     Container{
         Handle: PipelineIdentityCell.First,
         Position: PositionType.Absolute,

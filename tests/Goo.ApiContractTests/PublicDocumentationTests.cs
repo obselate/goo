@@ -143,7 +143,6 @@ public sealed class PublicDocumentationTests
         "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
         "M:Goo.ImageSourceLease.Dispose",
         "M:Goo.ImageSourceLease.Fail",
-        "M:Goo.Length.Percent(System.Double)",
         "M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges",
         "M:Goo.Length.op_Implicit(System.Double)~Goo.Length",
         "M:Goo.Length.op_Implicit(System.Int32)~Goo.Length",
@@ -457,7 +456,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ImageSourceProvider.Acquire"] = new([], [], false),
             ["M:Goo.ImageSourceLease.Complete(Goo.ImageSource)"] = new(["source"], [], true),
             ["M:Goo.ImageSourceLease.Fail"] = new([], [], true),
-            ["M:Goo.Length.Percent(System.Double)"] = new(["value"], [], true),
+            ["M:Goo.Percent(System.Double)"] = new(["value"], [], true),
             ["M:Goo.Length.op_Implicit(Goo.Length)~Goo.Edges"] = new(["value"], [], true),
             ["M:Goo.Length.op_Implicit(System.Double)~Goo.Length"] = new(["value"], [], true),
             ["M:Goo.Length.op_Implicit(System.Int32)~Goo.Length"] = new(["value"], [], true),
@@ -737,7 +736,8 @@ public sealed class PublicDocumentationTests
             .Select(@event => $"E:{type.FullName}.{@event.Name}"));
         return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Append("P:Goo.TextCommand.Position").Concat(eventIds)
             .Append("P:Goo.Cell`1.Input")
-            .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})");
+            .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
+            .Append("M:Goo.Percent(System.Double)");
     }
 
     private static IEnumerable<Type> ApiTypes()

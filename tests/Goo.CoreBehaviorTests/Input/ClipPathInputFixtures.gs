@@ -129,7 +129,7 @@ internal class ClipPathTransformCell : Cell {
         Height: 100.0,
         HitTestSelf: true,
       },
-      Container() {.Key: "clip",.Position: PositionType.Absolute,.Width: 100.0,.Height: 100.0,.Transform: PanelTransform{ TranslateX: 100 },.TransformOriginX: Length.Percent(0),.TransformOriginY: Length.Percent(0),.ClipPath: leftHalf(),.HitTestSelf: false,
+      Container() {.Key: "clip",.Position: PositionType.Absolute,.Width: 100.0,.Height: 100.0,.Transform: PanelTransform{ TranslateX: 100 },.TransformOriginX: Percent(0),.TransformOriginY: Percent(0),.ClipPath: leftHalf(),.HitTestSelf: false,
       Container{
             Key: "clipped",
             Position: PositionType.Absolute,

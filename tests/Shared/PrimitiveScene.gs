@@ -24,7 +24,7 @@ class PrimitiveSmokeCell : Cell {
     let FrontStack ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: PrimitiveSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Handle: PrimitiveSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
     Container{
         Position: PositionType.Absolute,
         Left: 10,

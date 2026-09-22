@@ -14,8 +14,8 @@ class ScrollbarSmokeCell : Cell {
     internal var ThumbPresses int32
 
     override func Build() Blob -> Container(){
-        .Width: Length.Percent(100),
-        .Height: Length.Percent(100),
+        .Width: Percent(100),
+        .Height: Percent(100),
         .BackgroundColor: Color.Rgb(12, 20, 32),
         .OverflowY: Overflow.Scroll,
         .ScrollbarVisibilityY: ScrollbarVisibility.Always,
@@ -37,7 +37,7 @@ class ScrollbarSmokeCell : Cell {
                 OnPointerDown: (e PointerEvent) -> ThumbPresses++,
             },
         },
-        Container{Width: Length.Percent(100), Height: 420, FlexShrink: 0, BackgroundColor: Color.Rgb(28, 84, 180),},
+        Container{Width: Percent(100), Height: 420, FlexShrink: 0, BackgroundColor: Color.Rgb(28, 84, 180),},
     }
 }
 

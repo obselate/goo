@@ -14,16 +14,16 @@ class ReadbackSmokeCell : Cell {
     let Root ElementHandle = ElementHandle{}
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: ReadbackSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Handle: ReadbackSmokeCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
     Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 48,.Height: 40,.Opacity: 0.5,
       Container{
-            Width: Length.Percent(100),
-            Height: Length.Percent(100),
+            Width: Percent(100),
+            Height: Percent(100),
             BackgroundColor: Color.Rgb(220, 40, 64),
           },
           Container{
-            Width: Length.Percent(100),
-            Height: Length.Percent(100),
+            Width: Percent(100),
+            Height: Percent(100),
             BackgroundColor: Color.Rgb(40, 80, 220),
       },
     },

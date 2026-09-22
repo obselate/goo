@@ -471,14 +471,6 @@ Source:
 
 Specifies a layout length.
 
-### `Percent(float64)`
-
-Creates a percentage of the available size.
-
-- `value`: percentage of the available size
-
-Returns: a percentage length
-
 ### `op_Implicit(Length)~Edges`
 
 Converts a length into a uniform edge value.
@@ -620,6 +612,22 @@ Gets or sets the horizontal pixel or percentage translation. An explicit percent
 ### `TranslateY`
 
 Gets or sets the vertical pixel or percentage translation. An explicit percentage unit is retained at zero for transitions.
+
+## `Percent`
+
+Source:
+
+- [`Length.gs`](../../Goo/Style/Length.gs)
+
+Creates a percentage of the available size. @param value percentage of the available size @returns a percentage length
+
+### `Percent(float64)`
+
+Creates a percentage of the available size.
+
+- `value`: percentage of the available size
+
+Returns: a percentage length
 
 ## `PositionType`
 

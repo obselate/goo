@@ -637,8 +637,8 @@ class MotionChapter : Cell {
         return Container{
             Key: "anchor-" + index.ToString(),
             Position: PositionType.Absolute,
-            Left: Length.Percent(leftPct),
-            Top: Length.Percent(topPct),
+            Left: Percent(leftPct),
+            Top: Percent(topPct),
             Width: 32,
             Height: 32,
             BorderRadius: 16,
@@ -691,7 +691,7 @@ class MotionChapter : Cell {
         let p = physicsPuckPos.Value
         let isRunning = physicsPuckPos.Running || puckDragging
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             Height: 30,
             Padding: Edges{Left: 12, Right: 12,},
             BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
@@ -776,7 +776,7 @@ class MotionChapter : Cell {
         arenaChildren.Add(puckBlob())
 
         return Container{
-            Height: Length.Percent(100),
+            Height: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinWidth: 0,
@@ -825,8 +825,8 @@ class MotionChapter : Cell {
                 OnPointerUp: (e PointerEvent) -> handleArenaPointerUp(e),
                 OnPointerCancel: (e PointerEvent) -> handleArenaPointerUp(e),
                 Container{
-                    Width: Length.Percent(100),
-                    Height: Length.Percent(100),
+                    Width: Percent(100),
+                    Height: Percent(100),
                     Position: PositionType.Relative,
                     Children: arenaChildren,
                 },
@@ -847,7 +847,7 @@ class MotionChapter : Cell {
     }
 
     private func switchBlob() Blob -> Container{
-        Width: Length.Percent(100),
+        Width: Percent(100),
         Padding: 10,
         BackgroundColor: GalleryTheme.SurfaceRaised,
         BorderWidth: 1,
@@ -926,7 +926,7 @@ class MotionChapter : Cell {
             default: "Click or toss mid-flight: instantaneous momentum is seamlessly carried over."
         }
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             Padding: 10,
             BackgroundColor: GalleryTheme.SurfaceRaised,
             BorderWidth: 1,
@@ -974,7 +974,7 @@ class MotionChapter : Cell {
             default: ("γ = 18.0 /s", "ω = 32.0 rad/s", "High Frequency (Stiff)")
         }
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             Padding: 10,
             BackgroundColor: GalleryTheme.SurfaceRaised,
             BorderWidth: 1,
@@ -1005,7 +1005,7 @@ class MotionChapter : Cell {
     }
 
     private func impulseBlob() Blob -> Container{
-        Width: Length.Percent(100),
+        Width: Percent(100),
         Padding: 8,
         BackgroundColor: GalleryTheme.SurfaceRaised,
         BorderWidth: 1,
@@ -1029,7 +1029,7 @@ class MotionChapter : Cell {
             },
         },
         Button{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             Height: 28,
             BackgroundColor: GalleryTheme.Accent,
             BorderWidth: 1,
@@ -1056,7 +1056,7 @@ class MotionChapter : Cell {
         let panelWidth Length = 280
         let panelMinWidth Length = 0
         let width Length = if Compact {
-            Length.Percent(100)
+            Percent(100)
         } else {
             panelWidth
         }
@@ -1081,8 +1081,8 @@ class MotionChapter : Cell {
     }
 
     private func buildPhysicsLabContent() Blob -> Container{
-        Width: Length.Percent(100),
-        Height: Length.Percent(100),
+        Width: Percent(100),
+        Height: Percent(100),
         FlexGrow: 1.0,
         FlexShrink: 1.0,
         MinHeight: 0,
@@ -1413,7 +1413,7 @@ class MotionChapter : Cell {
     private func compCard(title string, children List[Blob]) Container -> Container{
         FlexGrow: 1.0,
         FlexShrink: 0.0,
-        FlexBasis: Length.Percent(48),
+        FlexBasis: Percent(48),
         MinWidth: 340,
         Padding: 16,
         BorderRadius: 6,
@@ -1522,7 +1522,7 @@ class MotionChapter : Cell {
     }
 
     private func compRadio(label string, desc string, isSelected bool, onSelect Action) Button -> Button{
-        Width: Length.Percent(100),
+        Width: Percent(100),
         FlexDirection: FlexDirection.Row,
         AlignItems: AlignItems.Center,
         Padding: 8,
@@ -1769,21 +1769,16 @@ class MotionChapter : Cell {
                     sliderDragging = false
                 },
                 Container{
-                    Width: Length.Percent(100),
+                    Width: Percent(100),
                     Height: 6,
                     BorderRadius: 2,
                     BackgroundColor: Color.FromNormalized(0.18F, 0.18F, 0.22F, 0.9F),
                     Position: PositionType.Relative,
-                    Container{
-                        Width: Length.Percent(pct),
-                        Height: 6,
-                        BorderRadius: 2,
-                        BackgroundColor: GalleryTheme.Accent,
-                    },
+                    Container{Width: Percent(pct), Height: 6, BorderRadius: 2, BackgroundColor: GalleryTheme.Accent,},
                 },
                 Container{
                     Position: PositionType.Absolute,
-                    Left: Length.Percent(pct),
+                    Left: Percent(pct),
                     Top: 0.0,
                     Width: 28,
                     Height: 28,
@@ -1831,16 +1826,11 @@ class MotionChapter : Cell {
                 },
             },
             Container{
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 Height: 8,
                 BorderRadius: 2,
                 BackgroundColor: Color.FromNormalized(0.15F, 0.15F, 0.18F, 0.9F),
-                Container{
-                    Width: Length.Percent(pct),
-                    Height: 8,
-                    BorderRadius: 2,
-                    BackgroundColor: Color.Rgb(56, 189, 248),
-                },
+                Container{Width: Percent(pct), Height: 8, BorderRadius: 2, BackgroundColor: Color.Rgb(56, 189, 248),},
             },
             Button{
                 Height: 24,
@@ -2368,7 +2358,7 @@ class MotionChapter : Cell {
         }
 
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
@@ -2422,7 +2412,7 @@ class MotionChapter : Cell {
                 ScrollbarY: customScrollbar,
                 ScrollbarVisibilityY: ScrollbarVisibility.Always,
                 Container{
-                    Width: Length.Percent(100),
+                    Width: Percent(100),
                     FlexDirection: FlexDirection.Row,
                     FlexWrap: FlexWrap.Wrap,
                     Gap: 12,
@@ -2431,7 +2421,7 @@ class MotionChapter : Cell {
                 },
             },
             Container{
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 Height: 26,
                 Padding: Edges{Left: 12, Right: 12,},
                 BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),

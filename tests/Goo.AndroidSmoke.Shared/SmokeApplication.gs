@@ -38,7 +38,7 @@ class SmokeCell : Cell, IDisposable {
     font.Register()
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Overflow: Overflow.Scroll,.Padding: 20,.Gap: 14,
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Overflow: Overflow.Scroll,.Padding: 20,.Gap: 14,
     Text{ Content: "Goo Vulkan", FontFamily: "Smoke Vend Sans", FontSize: 30, Color: Color.White },
       Text{ Content: "System fallback: Hello, Android!", FontFamily: "sans-serif", FontSize: 16, Color: Color.White },
       Button() {.Height: 48,.BackgroundColor: Color.Rgb(37, 99, 235),.BorderRadius: 10,.OnClick: () -> { count++ },

@@ -12,7 +12,7 @@ class LiquidGlassAlphaCell : Cell {
     effect = value
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
     Container{
         Position: PositionType.Absolute,
         Left: 0,

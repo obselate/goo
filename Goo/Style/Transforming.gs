@@ -65,12 +65,12 @@ internal class Transforming {
 
     internal func OriginX(n Node) Length {
       if let value = Get(n) { return value.OriginX }
-      return Length.Percent(50.0)
+      return Percent(50.0)
     }
 
     internal func OriginY(n Node) Length {
       if let value = Get(n) { return value.OriginY }
-      return Length.Percent(50.0)
+      return Percent(50.0)
     }
 
     internal func GetVectorViewport(n Node) VectorViewport? {
@@ -255,8 +255,8 @@ internal class TransformValue {
     Scale = 1.0F
     ScaleX = 1.0F
     ScaleY = 1.0F
-    OriginX = Length.Percent(50.0)
-    OriginY = Length.Percent(50.0)
+    OriginX = Percent(50.0)
+    OriginY = Percent(50.0)
     Cos = 1.0F
   }
 }

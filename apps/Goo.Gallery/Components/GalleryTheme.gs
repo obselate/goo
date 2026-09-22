@@ -71,7 +71,7 @@ class GalleryTheme {
         func Hint(content string) Text -> Text{
             Key: "spec-hint",
             Content: content,
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FontSize: 12,
             Color: InkMuted,
             FlexShrink: 0.0,
@@ -88,8 +88,8 @@ class GalleryTheme {
         }
 
         func Frame(children List[Blob]) Container -> Container{
-            Width: Length.Percent(100),
-            Height: Length.Percent(100),
+            Width: Percent(100),
+            Height: Percent(100),
             MinWidth: 0,
             MinHeight: 0,
             FlexGrow: 1.0,

@@ -23,7 +23,7 @@ internal class DragDropFixtures {
             (e DragEndEvent) -> events.Add("end:" + e.Kind.ToString()
               +":" + e.Effect.ToString())),
         },
-        Container() {.Key: "target",.Position: PositionType.Absolute,.Width: 40,.Height: 40,.OverflowX: Overflow.Hidden,.Transform: PanelTransform{ TranslateX: 100, Scale: 2 },.TransformOriginX: Length.Percent(0),.TransformOriginY: Length.Percent(0),.DropTarget: DropTarget(
+        Container() {.Key: "target",.Position: PositionType.Absolute,.Width: 40,.Height: 40,.OverflowX: Overflow.Hidden,.Transform: PanelTransform{ TranslateX: 100, Scale: 2 },.TransformOriginX: Percent(0),.TransformOriginY: Percent(0),.DropTarget: DropTarget(
             (e DragEvent) -> {
               events.Add("query:" + int32(e.Position.X).ToString())
               return e.Modifiers.Ctrl ? DragEffect.Copy : DragEffect.Move

@@ -269,11 +269,11 @@ internal class PortalInputCell : Cell {
   override func Build() Blob -> Container() {.Width: 200,.Height: 100,
     Container() {.Key: "source",.Width: 40,.Height: 40,.Layout: PortalFixtureLayout{},.Overflow: Overflow.Hidden,.Opacity: 0.0,.Transform: PanelTransform{ Scale: 0 },.OnPointerDown: (e PointerEvent) -> SourceDowns++,
       Container{ Key: "flow", Width: 20, Height: 20 },
-      Portal{Key: "low", ZIndex: 10, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 120, TranslateY: 20 }, TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      Portal{Key: "low", ZIndex: 10, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 120, TranslateY: 20 }, TransformOriginX: Percent(0), TransformOriginY: Percent(0),
         Container{ Key: "low-target", Width: 40, Height: 40,
           OnClick: () -> LowClicks++ },
       },
-      Portal{Key: "equal", ZIndex: EqualZ, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 120, TranslateY: 20 }, TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      Portal{Key: "equal", ZIndex: EqualZ, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 120, TranslateY: 20 }, TransformOriginX: Percent(0), TransformOriginY: Percent(0),
         Container{ Key: "equal-target", Handle: EqualHandle, Width: 40, Height: 40,
           OnClick: () -> EqualClicks++,
           OnPointerDown: (e PointerEvent) -> {
@@ -282,15 +282,15 @@ internal class PortalInputCell : Cell {
           },
         },
       },
-      Portal{Key: "miss", ZIndex: 20, Width: 20, Height: 20, Transform: PanelTransform{ TranslateX: 170, TranslateY: 70 }, TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      Portal{Key: "miss", ZIndex: 20, Width: 20, Height: 20, Transform: PanelTransform{ TranslateX: 170, TranslateY: 70 }, TransformOriginX: Percent(0), TransformOriginY: Percent(0),
         Container{ Width: 20, Height: 20, OnClick: () -> EqualClicks++ },
       },
-      Portal{Key: "resize", Width: Length.Percent(50), Height: 10,
-        Container{ Handle: ResizeHandle, Width: Length.Percent(100), Height: 10 },
+      Portal{Key: "resize", Width: Percent(50), Height: 10,
+        Container{ Handle: ResizeHandle, Width: Percent(100), Height: 10 },
       },
     },
     Container{ Key: "normal", Position: PositionType.Absolute,
-      Width: Length.Percent(100), Height: Length.Percent(100),
+      Width: Percent(100), Height: Percent(100),
       OnClick: () -> NormalClicks++ },
   }
 }
@@ -339,7 +339,7 @@ internal class PortalLifecycleCell : Cell {
       root.Add(tail)
       return root
     }
-    let portal = Portal{Key: "portal", ZIndex: 5, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 40 }, TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+    let portal = Portal{Key: "portal", ZIndex: 5, Width: 40, Height: 40, Transform: PanelTransform{ TranslateX: 40 }, TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       Cell.Mount[PortalRetainedInput, PortalRetainedCell]("retained",
         PortalRetainedInput(TargetHandle)),
     }
@@ -366,7 +366,7 @@ internal class PortalPlacementCell : Cell {
 
   override func Build() Blob {
     Builds++
-    return Container{Width: Length.Percent(100), Height: Length.Percent(100),
+    return Container{Width: Percent(100), Height: Percent(100),
       Container{Handle: Scroll, Width: 200, Height: 120, Overflow: Overflow.Scroll,
         Container{Width: 300, Height: 300, Position: PositionType.Relative,
           Container{Handle: Anchor, Position: PositionType.Absolute,

@@ -30,7 +30,7 @@ class RoundedOverflowCell : Cell {
     let InnerClipPath VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 1.0).LineTo(0.0, 1.0).Close().Build()
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Handle: RoundedOverflowCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Handle: RoundedOverflowCell.Root,.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
     Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 120,.Height: 48,.OverflowX: Overflow.Scroll,.OverflowY: Overflow.Visible,.Handle: RoundedOverflowCell.HorizontalViewport,.BackgroundColor: Color.Rgb(18, 32, 52),
       Container() {.Position: PositionType.Absolute,.Width: 240,.Height: 72,.Handle: RoundedOverflowCell.HorizontalContent,.BackgroundColor: Color.Rgb(52, 196, 112),
         Container{

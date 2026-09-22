@@ -113,7 +113,7 @@ public class PublicApiTests
         var packageMethods = typeof(Window).Assembly.GetTypes()
             .Where(IsPackageContainer)
             .SelectMany(type => type.GetMethods(PublicDeclared));
-        foreach (var name in new[] { "Virtual", "VirtualRows" })
+        foreach (var name in new[] { "Percent", "Virtual", "VirtualRows" })
         {
             var method = Assert.Single(packageMethods, method => method.Name == name);
             records.Add($"function|Goo|{name}|{Visibility(method)}|generic:{DescribeGenericParameters(method.GetGenericArguments())}|({DescribeParameters(method.GetParameters())})->{TypeIdentity(method.ReturnType)}");

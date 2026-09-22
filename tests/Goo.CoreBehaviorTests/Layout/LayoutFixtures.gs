@@ -45,7 +45,7 @@ internal class LayoutFixtures {
     }
 
     let otherLayout = Layout()
-    let other = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: Length.Percent(100), Container{ Width: Length.Percent(100), Height: 10},
+    let other = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: Percent(100), Container{ Width: Percent(100), Height: 10},
     })
     otherLayout.Calculate(other, 100.0F, 100.0F)
     layout.Calculate(root, 200.0F, 200.0F)
@@ -219,7 +219,7 @@ internal class LayoutFixtures {
         },
         TextEntry{
           Key: "placeholder", Placeholder: "Search", FontSize: 16, LineHeight: 1.25,
-          Padding: Edges{ Top: Length.Percent(5), Bottom: Length.Percent(5) }, BorderWidth: 2,
+          Padding: Edges{ Top: Percent(5), Bottom: Percent(5) }, BorderWidth: 2,
         },
         TextEntry{
           Key: "explicit", Value: "hello", Height: 31, FontSize: 16, LineHeight: 1.25,
@@ -248,7 +248,7 @@ internal class LayoutFixtures {
         },
         TextEntry{
           Key: "placeholder", Placeholder: "Search", FontSize: 16, LineHeight: 1.25,
-          Padding: Edges{ Top: Length.Percent(5), Bottom: Length.Percent(5) }, BorderWidth: 2,
+          Padding: Edges{ Top: Percent(5), Bottom: Percent(5) }, BorderWidth: 2,
         },
         TextEntry{
           Key: "explicit", Value: "hello", Height: 31, FontSize: 20, LineHeight: 1.5,
@@ -284,7 +284,7 @@ internal class LayoutFixtures {
 
   private func layoutScene(firstHeight float64) Container -> Container() {.Width: 400,.Height: 296,.Gap: 4,
     Container{ Key: "hidden", Width: 50, Height: 50, Display: Display.None },
-      Container{ Key: "percent", Width: Length.Percent(50), Height: firstHeight },
+      Container{ Key: "percent", Width: Percent(50), Height: firstHeight },
       Container{ Key: "unset", Height: 20 },
       Container() {.Key: "nested",.Height: 30,.Padding: 5, Container{ Key: "leaf", Width: 10, Height: 10} },
       Container{ Key: "grow-one", FlexGrow: 1.0 },

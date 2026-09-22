@@ -10,8 +10,8 @@ class PortalCaptureCell : Cell {
   internal var AnchorX float64 = 150.0
 
   override func Build() Blob -> Container() {
-    .Width: Length.Percent(100),
-    .Height: Length.Percent(100),
+    .Width: Percent(100),
+    .Height: Percent(100),
     .Position: PositionType.Relative,
     .BackgroundColor: Color.Rgb(12, 20, 32),
     Container() {
@@ -27,15 +27,15 @@ class PortalCaptureCell : Cell {
       .BorderWidth: 3,
       .BorderColor: Color.Rgb(240, 220, 120),
       .Transform: PanelTransform{ Scale: 0.8 },
-      .TransformOriginX: Length.Percent(0),
-      .TransformOriginY: Length.Percent(0),
+      .TransformOriginX: Percent(0),
+      .TransformOriginY: Percent(0),
       Portal{
         ZIndex: 5,
         Width: 120,
         Height: 40,
         Transform: PanelTransform{ TranslateX: 40, TranslateY: 25 },
-        TransformOriginX: Length.Percent(0),
-        TransformOriginY: Length.Percent(0),
+        TransformOriginX: Percent(0),
+        TransformOriginY: Percent(0),
         Container{ Width: 120, Height: 40, BackgroundColor: Color.Rgb(30, 170, 80) },
       },
       Portal{
@@ -43,8 +43,8 @@ class PortalCaptureCell : Cell {
         Width: 120,
         Height: 40,
         Transform: PanelTransform{ TranslateX: 40, TranslateY: 25 },
-        TransformOriginX: Length.Percent(0),
-        TransformOriginY: Length.Percent(0),
+        TransformOriginX: Percent(0),
+        TransformOriginY: Percent(0),
         Container{ Width: 120, Height: 40, BackgroundColor: Color.Rgb(40, 90, 210) },
       },
     },

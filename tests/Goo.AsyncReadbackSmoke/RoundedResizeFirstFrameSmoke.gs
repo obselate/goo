@@ -20,8 +20,8 @@ class PendingPathReadinessCell : Cell {
   }
 
   override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
+    Width: Percent(100),
+    Height: Percent(100),
     ClipPath: clip,
     ClipPathFit: ShapeFit.Fill,
     BackgroundColor: Color.Rgb(48, 208, 112),
@@ -29,10 +29,10 @@ class PendingPathReadinessCell : Cell {
 }
 
 class RoundedResizeFirstFrameCell : Cell {
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.BorderRadius: 24,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,.BackgroundColor: Color.Rgb(220, 48, 64),
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.BorderRadius: 24,.OverflowX: Overflow.Hidden,.OverflowY: Overflow.Hidden,.BackgroundColor: Color.Rgb(220, 48, 64),
     Container{
-        Width: Length.Percent(100),
-        Height: Length.Percent(100),
+        Width: Percent(100),
+        Height: Percent(100),
         BackgroundColor: Color.Rgb(48, 208, 112),
     },
   }

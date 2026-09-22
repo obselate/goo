@@ -45,7 +45,7 @@ class SmokeCell : Cell {
     } else {
       SmokeCell.SharedImageSource
     }
-    return Container {Width: Length.Percent(100),Height: Length.Percent(100),Handle: SmokeCell.Root,Padding: 12,Gap: 8,Position: PositionType.Relative,BackgroundColor: Color.Rgb(12, 20, 32),
+    return Container {Width: Percent(100),Height: Percent(100),Handle: SmokeCell.Root,Padding: 12,Gap: 8,Position: PositionType.Relative,BackgroundColor: Color.Rgb(12, 20, 32),
       Text{
           Content: TextValue,
           FontSize: 24,

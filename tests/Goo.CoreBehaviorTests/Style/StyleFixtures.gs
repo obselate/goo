@@ -381,11 +381,11 @@ internal class StyleFixtures {
     let three = reconciler.Mount(Container{ Padding: Edges(4, 8, 12) })
     let four = reconciler.Mount(Container{ Margin: Edges(-1, 2, -3, 4) })
     let uniformOverride = reconciler.Mount(Container{ Padding: Edges(4){.Top: 6} })
-    let percent = reconciler.Mount(Container{ Padding: Length.Percent(10) })
+    let percent = reconciler.Mount(Container{ Padding: Percent(10) })
     let edgeValue = Edges(4){.Top: 6}
     let partial = reconciler.Mount(Container{
       BasedOn: Style{ Padding: 5 },
-      Padding: Edges{ Left: Length.Percent(10) },
+      Padding: Edges{ Left: Percent(10) },
     })
     var invalidPadding = false
     var invalidMargin = false
@@ -563,7 +563,7 @@ internal class StyleFixtures {
     var percentOffset = false
     var autoBlur = false
     var invalidNumber = false
-    try { let ignored = TextShadow{ OffsetX: Length.Percent(10) } }
+    try { let ignored = TextShadow{ OffsetX: Percent(10) } }
     catch (error ArgumentException) { percentOffset = true }
     try { let ignored = TextShadow{ Blur: Length.Auto } }
     catch (error ArgumentException) { autoBlur = true }
@@ -1702,10 +1702,10 @@ internal class StyleFixtures {
       TransitionProperty.Transform,
     })
     percent.BaseStyle = Style{
-      Transform: PanelTransform{ TranslateX: Length.Percent(0) },
+      Transform: PanelTransform{ TranslateX: Percent(0) },
     }.Entries()
     percent.HoverStyle = Style{
-      Transform: PanelTransform{ TranslateX: Length.Percent(50) },
+      Transform: PanelTransform{ TranslateX: Percent(50) },
     }.Entries()
     percentResolver.Invalidate(percent, true)
     percentResolver.Flush()
@@ -1729,15 +1729,15 @@ internal class StyleFixtures {
     if mounted.HasTransformState || mounted.HasVisualTransform { return false }
 
     let plain = rec.Mount(Container() {.Width: 40,.Height: 30, Container{ Width: 12, Height: 8} })
-    let transformed = rec.Mount(Container() {.Width: 40,.Height: 30,.Transform: PanelTransform{ TranslateX: Length.Percent(50), Rotate: 25, Scale: 1.5 },
+    let transformed = rec.Mount(Container() {.Width: 40,.Height: 30,.Transform: PanelTransform{ TranslateX: Percent(50), Rotate: 25, Scale: 1.5 },
         Container{ Width: 12, Height: 8},
     })
     let layout = Layout()
     layout.Calculate(plain, 100.0F, 100.0F)
     layout.Calculate(transformed, 100.0F, 100.0F)
     let responsive = rec.Mount(Container{
-      Width: Length.Percent(50), Height: 20,
-      Transform: PanelTransform{ TranslateX: Length.Percent(100) },
+      Width: Percent(50), Height: 20,
+      Transform: PanelTransform{ TranslateX: Percent(100) },
     })
     layout.Calculate(responsive, 100.0F, 100.0F)
     let smallTranslation = TransformGeometry.Matrix(responsive).TX
@@ -1761,7 +1761,7 @@ internal class StyleFixtures {
       negativeSize = true
     }
     try {
-      let ignored = Style{ BorderRadius: Length.Percent(10) }
+      let ignored = Style{ BorderRadius: Percent(10) }
     } catch (error ArgumentException) {
       invalidUnit = true
     }
@@ -1776,7 +1776,7 @@ internal class StyleFixtures {
       negativeOutline = true
     }
     try {
-      let ignored = Style{ OutlineOffset: Length.Percent(10) }
+      let ignored = Style{ OutlineOffset: Percent(10) }
     } catch (error ArgumentException) {
       percentOutline = true
     }
@@ -1800,7 +1800,7 @@ internal class StyleFixtures {
     catch (error ArgumentException) { margin = true }
     try { let ignored = Style{ Start: Length.Auto } }
     catch (error ArgumentException) { position = true }
-    try { let ignored = Style{ BorderEndWidth: Length.Percent(10) } }
+    try { let ignored = Style{ BorderEndWidth: Percent(10) } }
     catch (error ArgumentException) { border = true }
     return padding && margin && position && border
   }

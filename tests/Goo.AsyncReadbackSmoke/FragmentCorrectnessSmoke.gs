@@ -12,7 +12,7 @@ class FragmentCorrectnessCell : Cell {
     crtEffect = effect
   }
 
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
     Container() {.Position: PositionType.Absolute,.Left: 160,.Top: 16,.Width: 640,.Height: 96,.BackgroundColor: Color.Transparent,.ShaderEffect: crtEffect,
       Container{
             Position: PositionType.Absolute,

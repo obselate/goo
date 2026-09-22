@@ -167,8 +167,8 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             GalleryTheme.GhostButton("Go workers", () -> runWorkers()),
         }
         let spiral = Container{
-            Height: Length.Percent(100),
-            MaxWidth: Length.Percent(100),
+            Height: Percent(100),
+            MaxWidth: Percent(100),
             MinWidth: 0,
             MinHeight: 0,
             AspectRatio: if orientation % 2 == 0 {
@@ -186,7 +186,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             Children: buildTiles(),
         }
         let grid = Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             MinWidth: 0,
             MinHeight: 0,
             FlexGrow: 1.0,
@@ -196,7 +196,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             spiral,
         }
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
@@ -235,10 +235,10 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                 Container{
                     Key: "tile-" + tile.Index.ToString(),
                     Position: PositionType.Absolute,
-                    Left: Length.Percent(placement.Left / layoutWidth * 100.0),
-                    Top: Length.Percent(placement.Top / layoutHeight * 100.0),
-                    Width: Length.Percent(placement.Size / layoutWidth * 100.0),
-                    Height: Length.Percent(placement.Size / layoutHeight * 100.0),
+                    Left: Percent(placement.Left / layoutWidth * 100.0),
+                    Top: Percent(placement.Top / layoutHeight * 100.0),
+                    Width: Percent(placement.Size / layoutWidth * 100.0),
+                    Height: Percent(placement.Size / layoutHeight * 100.0),
                     MinWidth: 0,
                     MinHeight: 0,
                     BorderWidth: 1,
@@ -285,7 +285,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
         let gapOffset = posterGapReflow.Offset
         let wrapOffset = posterWrapReflow.Offset
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
@@ -307,7 +307,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
             ),
             Container{
                 Key: "poster-stage",
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 MinWidth: 0,
                 MinHeight: 0,
                 FlexGrow: 1.0,
@@ -317,7 +317,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                 Container{
                     Key: "poster",
                     Width: posterWidth,
-                    MaxWidth: Length.Percent(100),
+                    MaxWidth: Percent(100),
                     MinWidth: 0,
                     Height: if narrowPoster {
                         600
@@ -336,7 +336,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                     OverflowY: Overflow.Hidden,
                     Container{
                         Key: "poster-head",
-                        Width: Length.Percent(100),
+                        Width: Percent(100),
                         Height: 52,
                         MinHeight: 52,
                         Padding: Edges{Left: 18, Right: 18,},
@@ -363,7 +363,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                     },
                     Container{
                         Key: "poster-grid",
-                        Width: Length.Percent(100),
+                        Width: Percent(100),
                         MinWidth: 0,
                         MinHeight: 0,
                         FlexGrow: 1.0,

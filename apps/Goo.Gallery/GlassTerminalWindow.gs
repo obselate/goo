@@ -128,8 +128,8 @@ public class GlassTerminalCell : Cell {
 
         return Container{
             Key: "glass-terminal-root",
-            Width: Length.Percent(100),
-            Height: Length.Percent(100),
+            Width: Percent(100),
+            Height: Percent(100),
             BorderRadius: cornerInt,
             OverflowX: Overflow.Hidden,
             OverflowY: Overflow.Hidden,
@@ -145,7 +145,7 @@ public class GlassTerminalCell : Cell {
     private func buildWindowChrome() Container {
         let titleBar = Container{
             Key: "custom-titlebar",
-            Width: Length.Percent(100),
+            Width: Percent(100),
             Height: 36,
             Position: PositionType.Relative,
             FlexDirection: FlexDirection.Row,

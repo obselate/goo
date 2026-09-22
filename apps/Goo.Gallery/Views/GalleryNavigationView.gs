@@ -98,7 +98,7 @@ internal class GalleryNavigationView {
 
         private func RailSectionHeader(title string, itemKey string) Container -> Container{
             Key: itemKey,
-            Width: Length.Percent(100),
+            Width: Percent(100),
             Padding: Edges{Top: 10, Bottom: 4, Left: 8,},
             Text{Content: title, FontSize: 9, FontWeight: 800, LetterSpacing: 1.2, Color: GalleryTheme.InkSubtle,},
         }
@@ -113,7 +113,7 @@ internal class GalleryNavigationView {
             let isActive = currentShowcase == index
             return Button{
                 Key: "rail-item-" + index.ToString(),
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 Height: 30,
                 Padding: Edges{Left: 8, Right: 8,},
                 FlexDirection: FlexDirection.Row,
@@ -205,7 +205,7 @@ internal class GalleryNavigationView {
             }
             let bar = Container{
                 Key: "gallery-top-bar",
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 Height: 48,
                 MinHeight: 48,
                 Padding: Edges{
@@ -306,7 +306,7 @@ internal class GalleryNavigationView {
             return Container{
                 Key: "gallery-rail",
                 Width: 220,
-                Height: Length.Percent(100),
+                Height: Percent(100),
                 Display: if compact {
                     Display.None
                 } else {
@@ -331,7 +331,7 @@ internal class GalleryNavigationView {
             }
             return Container{
                 Key: "gallery-status-bar",
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 Height: 26,
                 MinHeight: 26,
                 Padding: Edges{

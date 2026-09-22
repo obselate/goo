@@ -7,7 +7,7 @@ import System.IO
 import System.Threading
 
 class TimelineCompletionCell : Cell {
-  override func Build() Blob -> Container() {.Width: Length.Percent(100),.Height: Length.Percent(100),.BackgroundColor: Color.Rgb(18, 30, 46),
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.BackgroundColor: Color.Rgb(18, 30, 46),
     Container{
         Position: PositionType.Absolute,
         Left: 12,

@@ -10,7 +10,7 @@ internal class InputFixtures {
     let tree = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
       Transform: PanelTransform{ TranslateX: 40 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       OnPointerDown: (e PointerEvent) -> {
         events.Add(e.Position.X.ToString() + ":" + e.Position.Y.ToString())
       },
@@ -32,11 +32,11 @@ internal class InputFixtures {
     }
 
     let nestedEvents = List[string]()
-    let nested = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 20,.Height: 20,.Transform: PanelTransform{ TranslateX: 20 },.TransformOriginX: Length.Percent(0),.TransformOriginY: Length.Percent(0),
+    let nested = Reconciler{ Res: Resolver{} }.Mount(Container() {.Width: 20,.Height: 20,.Transform: PanelTransform{ TranslateX: 20 },.TransformOriginX: Percent(0),.TransformOriginY: Percent(0),
         Container{
         Width: 10, Height: 10,
         Transform: PanelTransform{ TranslateX: 10 },
-        TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+        TransformOriginX: Percent(0), TransformOriginY: Percent(0),
         OnPointerDown: (e PointerEvent) -> {
           nestedEvents.Add(e.Position.X.ToString() + ":" + e.Position.Y.ToString())
         },
@@ -58,7 +58,7 @@ internal class InputFixtures {
       Width: 100, Height: 100,
       Path: PathBuilder().MoveTo(0.5, 0.0).ArcTo(0.5, 0.5, 0.0, false, true, 0.5, 1.0).ArcTo(0.5, 0.5, 0.0, false, true, 0.5, 0.0).Close().Build(),
       Transform: PanelTransform{ TranslateX: 50 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       OnClick: () -> {},
     })
     Layout().Calculate(shape, 200.0F, 100.0F)
@@ -71,7 +71,7 @@ internal class InputFixtures {
     let captured = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
       Transform: PanelTransform{ TranslateX: 40 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       OnPointerDown: (e PointerEvent) -> { e.Capture() },
       OnPointerMove: (e PointerEvent) -> {
         capturedEvents.Add(e.Position.X.ToString() + ":" + e.Delta.X.ToString())
@@ -88,7 +88,7 @@ internal class InputFixtures {
     let scaledInput = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
       Transform: PanelTransform{ TranslateX: 40, Scale: 2 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       OnPointerMove: (e PointerEvent) -> {
         scaledEvents.Add(e.Position.X.ToString() + ":" + e.Delta.X.ToString())
       },
@@ -104,7 +104,7 @@ internal class InputFixtures {
     let rotatedInput = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 10,
       Transform: PanelTransform{ TranslateX: 20, Rotate: 90 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       OnPointerMove: (e PointerEvent) -> { rotatedEvents.Add(e) },
     })
     Layout().Calculate(rotatedInput, 100.0F, 100.0F)
@@ -124,7 +124,7 @@ internal class InputFixtures {
     let entry = Reconciler{ Res: Resolver{} }.Mount(TextEntry{
       Value: "WW", Width: 200, Height: 30, FontSize: 20,
       Transform: PanelTransform{ TranslateX: 40 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
     })
     Layout().Calculate(entry, 240.0F, 40.0F)
     let metrics = TextMetrics()
@@ -640,7 +640,7 @@ internal class InputFixtures {
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
       Transform: PanelTransform{ TranslateX: 40 },
-      TransformOriginX: Length.Percent(0), TransformOriginY: Length.Percent(0),
+      TransformOriginX: Percent(0), TransformOriginY: Percent(0),
       OnPointerEnter: (e PointerEvent) -> { events.Add(e) },
       OnPointerLeave: (e PointerEvent) -> { events.Add(e) },
     })

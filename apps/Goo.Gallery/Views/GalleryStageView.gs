@@ -64,8 +64,8 @@ internal class GalleryStageView {
             let transient = Transient(catalog, currentShowcase, compact, assets, programs)
             return Container{
                 Key: "gallery-stage",
-                Width: Length.Percent(100),
-                Height: Length.Percent(100),
+                Width: Percent(100),
+                Height: Percent(100),
                 MinWidth: 0,
                 MinHeight: 0,
                 Position: PositionType.Relative,

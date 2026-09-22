@@ -596,6 +596,7 @@ event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|a
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
+function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|VirtualRows|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,estimatedItemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 function|Goo|Virtual|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemWidth:System.Double,itemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 method|Goo.AccessibilityActionRequest|Scroll|static|public|generic:|(x:System.Double,y:System.Double)->Goo.AccessibilityActionRequest
@@ -762,7 +763,6 @@ method|Goo.LayoutTransition|GetHashCode|instance|public|generic:|()->System.Int3
 method|Goo.LayoutTransition|ToString|instance|public|generic:|()->System.String
 method|Goo.LayoutTransition|op_Equality|static|public|generic:|(arg0:Goo.LayoutTransition,arg1:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(arg0:Goo.LayoutTransition,arg1:Goo.LayoutTransition)->System.Boolean
-method|Goo.Length|Percent|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.Edges
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.Length

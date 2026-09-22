@@ -152,8 +152,8 @@ public sealed class VectorAsset {
 
   internal func BuildStaticTree(fit ShapeFit) Container {
     let result = Container{
-      Width: Length.Percent(100.0),
-      Height: Length.Percent(100.0),
+      Width: Percent(100.0),
+      Height: Percent(100.0),
       Position: PositionType.Relative,
       AspectRatio: document.ViewBoxWidth / document.ViewBoxHeight,
     }
@@ -163,8 +163,8 @@ public sealed class VectorAsset {
       Position: PositionType.Absolute,
       Left: 0.0,
       Top: 0.0,
-      TransformOriginX: Length.Percent(0.0),
-      TransformOriginY: Length.Percent(0.0),
+      TransformOriginX: Percent(0.0),
+      TransformOriginY: Percent(0.0),
       Transform: ViewBoxTransform(),
       VectorViewport: VectorViewport{
         NativeWidth: document.ViewBoxWidth,
@@ -188,20 +188,20 @@ public sealed class VectorAsset {
     let hasClip = clipIndex >= 0
     let result = Container{
       Key: if let key = node.Key { key } else { "node-" + index.ToString() },
-      Width: Length.Percent(100.0),
-      Height: Length.Percent(100.0),
+      Width: Percent(100.0),
+      Height: Percent(100.0),
       Position: PositionType.Absolute,
       Left: 0.0,
       Top: 0.0,
-      TransformOriginX: Length.Percent(0.0),
-      TransformOriginY: Length.Percent(0.0),
+      TransformOriginX: Percent(0.0),
+      TransformOriginY: Percent(0.0),
       Transform: node.Transform,
       Opacity: node.Opacity,
     }
     let content = if hasClip {
       Container{
-        Width: Length.Percent(100.0),
-        Height: Length.Percent(100.0),
+        Width: Percent(100.0),
+        Height: Percent(100.0),
         Position: PositionType.Absolute,
         Left: 0.0,
         Top: 0.0,
@@ -236,8 +236,8 @@ public sealed class VectorAsset {
           Path: node.Path,
           Fit: fit,
           FillRule: node.FillRule,
-          Width: Length.Percent(100.0),
-          Height: Length.Percent(100.0),
+          Width: Percent(100.0),
+          Height: Percent(100.0),
           Position: PositionType.Absolute,
           Left: 0.0,
           Top: 0.0,
@@ -249,8 +249,8 @@ public sealed class VectorAsset {
           Path: node.Path,
           Fit: fit,
           FillRule: node.FillRule,
-          Width: Length.Percent(100.0),
-          Height: Length.Percent(100.0),
+          Width: Percent(100.0),
+          Height: Percent(100.0),
           Position: PositionType.Absolute,
           Left: 0.0,
           Top: 0.0,
@@ -278,8 +278,8 @@ public sealed class VectorAsset {
           Dashes: stroke.Dashes,
           BorderWidth: stroke.Width,
           BorderColor: stroke.Paint.Color,
-          Width: Length.Percent(100.0),
-          Height: Length.Percent(100.0),
+          Width: Percent(100.0),
+          Height: Percent(100.0),
           Position: PositionType.Absolute,
           Left: 0.0,
           Top: 0.0,
@@ -306,8 +306,8 @@ public sealed class VectorAsset {
         content
       }
       let result = Container{
-        Width: Length.Percent(100.0),
-        Height: Length.Percent(100.0),
+        Width: Percent(100.0),
+        Height: Percent(100.0),
         Position: PositionType.Absolute,
         Left: 0.0,
         Top: 0.0,

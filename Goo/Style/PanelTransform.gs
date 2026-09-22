@@ -120,7 +120,7 @@ internal func checkedTransformScalar(value float64, name string) float32 {
 
 internal func normalizeTransformOrigin(value Length, name string) Length {
   if value.Unit == LengthUnit.Unset {
-    return Length.Percent(50.0)
+    return Percent(50.0)
   }
   if value.Unit == LengthUnit.Auto {
     throw ArgumentException(name + " does not support auto", name)

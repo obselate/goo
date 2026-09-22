@@ -629,8 +629,8 @@ class StudioCell : Cell {
                         Position: PositionType.Absolute,
                         Left: 0,
                         Top: 0,
-                        Width: Length.Percent(100),
-                        Height: Length.Percent(100),
+                        Width: Percent(100),
+                        Height: Percent(100),
                         Source: assets.Mandelbrot,
                         Fit: ImageFit.Fill,
                     }
@@ -714,7 +714,7 @@ class StudioCell : Cell {
             } else {
                 "studio-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: Canvas,
             Position: PositionType.Relative,
@@ -781,9 +781,9 @@ class StudioCell : Cell {
             Container{
                 Key: "studio-c0",
                 Width: if Compact {
-                    Length.Percent(100)
+                    Percent(100)
                 } else {
-                    Length.Percent(48)
+                    Percent(48)
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
@@ -807,9 +807,9 @@ class StudioCell : Cell {
             Container{
                 Key: "studio-c1",
                 Width: if Compact {
-                    Length.Percent(100)
+                    Percent(100)
                 } else {
-                    Length.Percent(48)
+                    Percent(48)
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
@@ -833,9 +833,9 @@ class StudioCell : Cell {
             Container{
                 Key: "studio-c2",
                 Width: if Compact {
-                    Length.Percent(100)
+                    Percent(100)
                 } else {
-                    Length.Percent(48)
+                    Percent(48)
                 },
                 FlexGrow: 0.0,
                 FlexShrink: 1.0,
@@ -864,7 +864,7 @@ class StudioCell : Cell {
         let panelWidth Length = 380
         let panelMinWidth Length = 0
         let body = Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
@@ -878,7 +878,7 @@ class StudioCell : Cell {
             Container{
                 Key: "studio-panel",
                 Width: if Compact {
-                    Length.Percent(100)
+                    Percent(100)
                 } else {
                     panelWidth
                 },
@@ -904,7 +904,7 @@ class StudioCell : Cell {
                     TextEntry{
                         Key: "title",
                         Value: title,
-                        Width: Length.Percent(100),
+                        Width: Percent(100),
                         Placeholder: "Title",
                         Height: 38,
                         Padding: Edges{Left: 10, Right: 10,},
@@ -989,7 +989,7 @@ class StudioCell : Cell {
         return GallerySpecimen(
             "Final Synthesis",
             "Shader programs are loading",
-            Container{Width: Length.Percent(100), Height: 120, BackgroundColor: GalleryTheme.SurfaceRaised,}
+            Container{Width: Percent(100), Height: 120, BackgroundColor: GalleryTheme.SurfaceRaised,}
         )
     }
 }

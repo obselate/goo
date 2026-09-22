@@ -214,10 +214,10 @@ class World3DCell : Cell {
             overlayChildren.Add(
                 Container{
                     Position: PositionType.Absolute,
-                    Left: Length.Percent(0),
-                    Top: Length.Percent(0),
-                    Width: Length.Percent(100),
-                    Height: Length.Percent(100),
+                    Left: Percent(0),
+                    Top: Percent(0),
+                    Width: Percent(100),
+                    Height: Percent(100),
                     BackgroundColor: Color.Rgba(36, 0, 0, 180),
                     AlignItems: AlignItems.Center,
                     JustifyContent: JustifyContent.Center,
@@ -243,10 +243,10 @@ class World3DCell : Cell {
             overlayChildren.Add(
                 Container{
                     Position: PositionType.Absolute,
-                    Left: Length.Percent(0),
-                    Top: Length.Percent(0),
-                    Width: Length.Percent(100),
-                    Height: Length.Percent(100),
+                    Left: Percent(0),
+                    Top: Percent(0),
+                    Width: Percent(100),
+                    Height: Percent(100),
                     BackgroundColor: Color.Rgba(0, 36, 12, 180),
                     AlignItems: AlignItems.Center,
                     JustifyContent: JustifyContent.Center,
@@ -271,7 +271,7 @@ class World3DCell : Cell {
         }
 
         return Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Children: overlayChildren,
             Handle: Canvas,

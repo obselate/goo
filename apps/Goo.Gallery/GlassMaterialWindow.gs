@@ -256,7 +256,7 @@ internal class GlassMaterialPanelCell : Cell {
     }
 
     private func buildSurface() Container -> Container{
-        Width: Length.Percent(100),
+        Width: Percent(100),
         MaxWidth: 700,
         Height: 420,
         Position: PositionType.Relative,
@@ -360,7 +360,7 @@ internal class GlassMaterialPanelCell : Cell {
     }
 
     public override func Build() Blob -> Container{
-        Width: Length.Percent(100),
+        Width: Percent(100),
         MaxWidth: 760,
         Gap: 18,
         AlignItems: AlignItems.Center,
@@ -407,8 +407,8 @@ internal class GlassMaterialRootCell : Cell {
     }
 
     public override func Build() Blob -> Container{
-        Width: Length.Percent(100),
-        Height: Length.Percent(100),
+        Width: Percent(100),
+        Height: Percent(100),
         Position: PositionType.Relative,
         Padding: Edges{Left: 28, Right: 28,},
         AlignItems: AlignItems.Center,

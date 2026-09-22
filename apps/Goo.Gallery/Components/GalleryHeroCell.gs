@@ -265,8 +265,8 @@ class HeroCell : Cell {
         return Container{
             Key: key,
             Position: PositionType.Absolute,
-            Left: Length.Percent(point.X * 100.0),
-            Top: Length.Percent(point.Y * 100.0),
+            Left: Percent(point.X * 100.0),
+            Top: Percent(point.Y * 100.0),
             Width: size,
             Height: size,
             Transform: PanelTransform{TranslateX: -size * 0.5, TranslateY: -size * 0.5,},
@@ -289,11 +289,7 @@ class HeroCell : Cell {
 
     override func Build() Blob {
         guard let programs = Programs else {
-            return Container{
-                Width: Length.Percent(100),
-                Height: Length.Percent(100),
-                BackgroundColor: GalleryTheme.Background,
-            }
+            return Container{Width: Percent(100), Height: Percent(100), BackgroundColor: GalleryTheme.Background,}
         }
         let effect = programs.Hero
         var liveEffect ShaderEffect? = nil
@@ -340,8 +336,8 @@ class HeroCell : Cell {
             effect.SetParameter(7, Vector4(float32(secondOVelocity.X), float32(secondOVelocity.Y), 0.0F, 0.0F))
         }
         let content = Container{
-            Width: Length.Percent(100),
-            Height: Length.Percent(100),
+            Width: Percent(100),
+            Height: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
@@ -350,7 +346,7 @@ class HeroCell : Cell {
             Container{
                 Key: "goo-memory-surface",
                 Handle: hostHandle,
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 MinHeight: 0,
                 FlexGrow: 1.0,
                 FlexShrink: 1.0,
@@ -429,7 +425,7 @@ class HeroCell : Cell {
             },
             Container{
                 Key: "goo-memory-controls",
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 FlexDirection: FlexDirection.Row,
                 FlexWrap: FlexWrap.Wrap,
                 Gap: 8,

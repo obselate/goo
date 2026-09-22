@@ -6,8 +6,8 @@ import System.Threading
 
 class QueueWakeCell : Cell {
   override func Build() Blob -> Container {
-    Width: Length.Percent(100),
-    Height: Length.Percent(100),
+    Width: Percent(100),
+    Height: Percent(100),
     BackgroundColor: Color.Rgb(32, 40, 56),
   }
 }

@@ -224,7 +224,7 @@ class ShaderLabCell : Cell {
         children.Add(Container{Key: "spec-content", FontFamily: GalleryTheme.ElementFontFamily, content,})
         children.Add(GalleryTheme.Hint(hint))
         let frame = GalleryTheme.Frame(children)
-        return Container{Key: "spec-" + name, Width: Length.Percent(100), frame,}
+        return Container{Key: "spec-" + name, Width: Percent(100), frame,}
     }
 
     private func effectsReady() bool -> Active
@@ -264,7 +264,7 @@ class ShaderLabCell : Cell {
             } else {
                 "chrome-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: ChromeCanvas,
             BackgroundColor: GalleryTheme.SurfaceRaised,
@@ -319,7 +319,7 @@ class ShaderLabCell : Cell {
             } else {
                 "corridor-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: CorridorCanvas,
             BackgroundColor: GalleryTheme.SurfaceRaised,
@@ -337,7 +337,7 @@ class ShaderLabCell : Cell {
             } else {
                 "radial-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: RadialCanvas,
             BackgroundColor: GalleryTheme.SurfaceRaised,
@@ -405,8 +405,8 @@ class ShaderLabCell : Cell {
                     Position: PositionType.Absolute,
                     Left: 0,
                     Top: 0,
-                    Width: Length.Percent(100),
-                    Height: Length.Percent(100),
+                    Width: Percent(100),
+                    Height: Percent(100),
                     Source: assets.Mandelbrot,
                     Fit: ImageFit.Fill,
                 }
@@ -430,7 +430,7 @@ class ShaderLabCell : Cell {
             } else {
                 "ripple-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: RippleCanvas,
             Position: PositionType.Relative,
@@ -481,7 +481,7 @@ class ShaderLabCell : Cell {
             } else {
                 "terminal-glass-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Position: PositionType.Relative,
             BackgroundColor: Color.Rgb(12, 19, 28),
@@ -530,10 +530,10 @@ class ShaderLabCell : Cell {
             },
             Container{
                 Position: PositionType.Absolute,
-                Left: Length.Percent(7),
-                Top: Length.Percent(10),
-                Right: Length.Percent(7),
-                Bottom: Length.Percent(10),
+                Left: Percent(7),
+                Top: Percent(10),
+                Right: Percent(7),
+                Bottom: Percent(10),
                 Handle: GlassCanvas,
                 BackgroundColor: Color.Transparent,
                 BorderRadius: 14,
@@ -682,7 +682,7 @@ class ShaderLabCell : Cell {
             } else {
                 "volume-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: VolumeCanvas,
             BackgroundColor: GalleryTheme.SurfaceRaised,
@@ -703,7 +703,7 @@ class ShaderLabCell : Cell {
             } else {
                 "dither-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: DitherCanvas,
             Position: PositionType.Relative,
@@ -804,7 +804,7 @@ class ShaderLabCell : Cell {
         Gap: 7,
         Text{Content: "SHAPE", FontSize: 10, FontWeight: 700, LetterSpacing: 0.8, Color: GalleryTheme.InkMuted,},
         Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexDirection: FlexDirection.Row,
             Gap: 6,
             ditherChoice(
@@ -842,7 +842,7 @@ class ShaderLabCell : Cell {
         Gap: 7,
         Text{Content: "DITHER LEVEL", FontSize: 10, FontWeight: 700, LetterSpacing: 0.8, Color: GalleryTheme.InkMuted,},
         Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexDirection: FlexDirection.Row,
             Gap: 6,
             ditherChoice(
@@ -882,7 +882,7 @@ class ShaderLabCell : Cell {
             } else {
                 "aurora-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: AuroraCanvas,
             Position: PositionType.Relative,
@@ -912,7 +912,7 @@ class ShaderLabCell : Cell {
             } else {
                 "silk-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: SilkCanvas,
             Position: PositionType.Relative,
@@ -942,7 +942,7 @@ class ShaderLabCell : Cell {
             } else {
                 "crt-idle"
             },
-            Width: Length.Percent(100),
+            Width: Percent(100),
             AspectRatio: 16.0 / 9.0,
             Handle: CrtCanvas,
             Position: PositionType.Relative,
@@ -1001,7 +1001,7 @@ class ShaderLabCell : Cell {
         change Action[float64]
     ) Container -> Container{
         Key: "control-" + key,
-        Width: Length.Percent(100),
+        Width: Percent(100),
         Cell.Mount[GalleryRange](
             key,
             func (slider GalleryRange) {
@@ -1020,7 +1020,7 @@ class ShaderLabCell : Cell {
             name = "3D World"
             hint = "W/S move; A/D strafe; drag to look; click to fire; R reload"
             var wolf Blob = Container{
-                Width: Length.Percent(100),
+                Width: Percent(100),
                 AspectRatio: 16.0 / 9.0,
                 BackgroundColor: GalleryTheme.SurfaceRaised,
             }
@@ -1099,7 +1099,7 @@ class ShaderLabCell : Cell {
             controls.Add(
                 Container{
                     Key: "lab-play",
-                    Width: Length.Percent(100),
+                    Width: Percent(100),
                     GalleryTheme.GhostButton(
                         if Playing {
                             "Pause ambient motion"
@@ -1168,7 +1168,7 @@ class ShaderLabCell : Cell {
                 Container{
                     Key: "lab-controls",
                     Width: if Compact || Showcase == 7 {
-                        Length.Percent(100)
+                        Percent(100)
                     } else {
                         controlsWidth
                     },
@@ -1190,7 +1190,7 @@ class ShaderLabCell : Cell {
         }
 
         let body = Container{
-            Width: Length.Percent(100),
+            Width: Percent(100),
             FlexGrow: 1.0,
             FlexShrink: 1.0,
             MinHeight: 0,
@@ -1233,7 +1233,7 @@ class ShaderLabCell : Cell {
         return GallerySpecimen(
             "Shader Lab",
             "Shader programs are loading",
-            Container{Width: Length.Percent(100), Height: 120, BackgroundColor: GalleryTheme.SurfaceRaised,}
+            Container{Width: Percent(100), Height: 120, BackgroundColor: GalleryTheme.SurfaceRaised,}
         )
     }
 }

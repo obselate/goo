@@ -228,7 +228,7 @@ class GalleryRange : Cell {
                         Position: PositionType.Absolute,
                         Left: 0,
                         Top: 0,
-                        Width: Length.Percent(percent),
+                        Width: Percent(percent),
                         Height: 4,
                         BorderRadius: 2,
                         BackgroundColor: GalleryTheme.InkMuted,
@@ -236,7 +236,7 @@ class GalleryRange : Cell {
                     Container{
                         Key: "thumb",
                         Position: PositionType.Absolute,
-                        Left: Length.Percent(percent),
+                        Left: Percent(percent),
                         Top: -4,
                         Width: 12,
                         Height: 12,
