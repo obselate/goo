@@ -156,18 +156,20 @@ class GalleryCell : Cell, IDisposable {
                 Position: PositionType.Relative,
                 OverflowX: Overflow.Hidden,
                 OverflowY: Overflow.Hidden,
-                PaddingLeft: if Compact {
-                    20
-                } else {
-                    36
+                Padding: EdgeLengths{
+                    Left: if Compact {
+                        20
+                    } else {
+                        36
+                    },
+                    Right: if Compact {
+                        20
+                    } else {
+                        36
+                    },
+                    Top: 18,
+                    Bottom: 18,
                 },
-                PaddingRight: if Compact {
-                    20
-                } else {
-                    36
-                },
-                PaddingTop: 18,
-                PaddingBottom: 18,
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
                 GalleryStageView.Build(catalog, currentShowcase, Compact, Assets, Programs),

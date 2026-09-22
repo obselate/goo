@@ -122,8 +122,8 @@ internal class StyleFixtures {
     let blue = Color.Rgb(0, 0, 255)
     let ltr = Reconciler{ Res: Resolver{} }.Mount(Container{
       Direction: Direction.LeftToRight,
-      MarginLeft: 1, MarginStart: 2, MarginRight: 3, MarginEnd: 4,
-      PaddingLeft: 5, PaddingStart: 6, PaddingRight: 7, PaddingEnd: 8,
+      Margin: EdgeLengths{ Left: 1, Right: 3 }, MarginStart: 2, MarginEnd: 4,
+      Padding: EdgeLengths{ Left: 5, Right: 7 }, PaddingStart: 6, PaddingEnd: 8,
       Left: 9, Start: 10, Right: 11, End: 12,
       BorderLeftWidth: 13, BorderStartWidth: 14, BorderRightWidth: 15, BorderEndWidth: 16,
       BorderLeftColor: red, BorderStartColor: blue, BorderRightColor: red, BorderEndColor: blue,
@@ -138,14 +138,14 @@ internal class StyleFixtures {
 
     let physicalLater = Reconciler{ Res: Resolver{} }.Mount(Container{
       Direction: Direction.LeftToRight,
-      MarginStart: 2, MarginLeft: 1,
+      MarginStart: 2, Margin: EdgeLengths{ Left: 1 },
     })
     if physicalLater.MarginLeft.Value != 1.0F { return false }
 
     let rtl = Reconciler{ Res: Resolver{} }.Mount(Container{
       Direction: Direction.RightToLeft,
-      MarginRight: 1, MarginStart: 2, MarginLeft: 3, MarginEnd: 4,
-      PaddingRight: 5, PaddingStart: 6, PaddingLeft: 7, PaddingEnd: 8,
+      Margin: EdgeLengths{ Right: 1, Left: 3 }, MarginStart: 2, MarginEnd: 4,
+      Padding: EdgeLengths{ Right: 5, Left: 7 }, PaddingStart: 6, PaddingEnd: 8,
       Right: 9, Start: 10, Left: 11, End: 12,
       BorderRightWidth: 13, BorderStartWidth: 14, BorderLeftWidth: 15, BorderEndWidth: 16,
       BorderRightColor: red, BorderStartColor: blue, BorderLeftColor: red, BorderEndColor: blue,
@@ -173,7 +173,7 @@ internal class StyleFixtures {
 
     root.BaseStyle = Style{
       Direction: Direction.RightToLeft, TextAlign: TextAlign.Start,
-      MarginRight: 2, PaddingRight: 3, Right: 4,
+      Margin: EdgeLengths{ Right: 2 }, Padding: EdgeLengths{ Right: 3 }, Right: 4,
       BorderRightWidth: 5, BorderRightColor: red,
     }.Entries()
     resolver.Invalidate(root, false)
@@ -217,7 +217,7 @@ internal class StyleFixtures {
     let reverse = Node{ Kind: NodeKind.Container }
     let reverseResolver = Resolver{}
     reverse.BaseStyle = Style{ Direction: Direction.LeftToRight, MarginStart: 1 }.Entries()
-    reverse.HoverStyle = Style{ MarginLeft: 9 }.Entries()
+    reverse.HoverStyle = Style{ Margin: EdgeLengths{ Left: 9 } }.Entries()
     reverseResolver.Invalidate(reverse, true)
     reverseResolver.Flush()
     reverse.Hovered = true
@@ -375,6 +375,39 @@ internal class StyleFixtures {
       && logicalState.Margin.Unit == LengthUnit.Unset && logicalState.Padding.Unit == LengthUnit.Unset
   }
 
+  func EdgeLengthsContract() bool {
+    let reconciler = Reconciler{ Res: Resolver{} }
+    let two = reconciler.Mount(Container{ Padding: EdgeLengths(4, 8) })
+    let three = reconciler.Mount(Container{ Padding: EdgeLengths(4, 8, 12) })
+    let four = reconciler.Mount(Container{ Margin: EdgeLengths(-1, 2, -3, 4) })
+    let uniformOverride = reconciler.Mount(Container{ Padding: EdgeLengths(4){.Top: 6} })
+    let percent = reconciler.Mount(Container{ Padding: Length.Percent(10) })
+    let edgeValue = EdgeLengths(4){.Top: 6}
+    let partial = reconciler.Mount(Container{
+      BasedOn: Style{ Padding: 5 },
+      Padding: EdgeLengths{ Left: Length.Percent(10) },
+    })
+    var invalidPadding = false
+    var invalidMargin = false
+    try { let ignored = Style{ Padding: EdgeLengths{ Bottom: -1 } } }
+    catch (error ArgumentException) { invalidPadding = true }
+    try { let ignored = Style{ Margin: EdgeLengths(Length.Auto, 2) } }
+    catch (error ArgumentException) { invalidMargin = true }
+    return two.PaddingTop.Value == 4.0F && two.PaddingRight.Value == 8.0F
+      && two.PaddingBottom.Value == 4.0F && two.PaddingLeft.Value == 8.0F
+      && three.PaddingTop.Value == 4.0F && three.PaddingRight.Value == 8.0F
+      && three.PaddingBottom.Value == 12.0F && three.PaddingLeft.Value == 8.0F
+      && four.MarginTop.Value == -1.0F && four.MarginRight.Value == 2.0F
+      && four.MarginBottom.Value == -3.0F && four.MarginLeft.Value == 4.0F
+      && uniformOverride.PaddingTop.Value == 6.0F
+      && uniformOverride.PaddingRight.Value == 4.0F
+      && edgeValue.Top.Value == 6.0F && edgeValue.Right.Value == 4.0F
+      && percent.PaddingTop.IsPercent && percent.PaddingLeft.Value == 10.0F
+      && partial.PaddingTop.Value == 5.0F && partial.PaddingRight.Value == 5.0F
+      && partial.PaddingBottom.Value == 5.0F && partial.PaddingLeft.IsPercent
+      && partial.PaddingLeft.Value == 10.0F && invalidPadding && invalidMargin
+  }
+
   func DeclarationInlineSpillOrderContract() bool {
     let declaration = Style{}
     declaration.pushLength(StyleField.Width, Length{ Unit: LengthUnit.Px, Value: 10 })
@@ -400,18 +433,17 @@ internal class StyleFixtures {
     let red = Color.Rgb(255, 0, 0)
     let gradient = LinearGradient(Color.Black, Color.White)
     let baseStyle = Style{
-      Padding: 4,
-      PaddingLeft: 6,
+      Padding: EdgeLengths(4){.Left: 6},
       BackgroundColor: red,
       BackgroundGradient: gradient,
     }
-    let baseLater = Container{ PaddingLeft: 9, BasedOn: baseStyle }
+    let baseLater = Container{ Padding: EdgeLengths{ Left: 9 }, BasedOn: baseStyle }
     let derivedStyle = Style{
       BasedOn: baseStyle,
-      PaddingLeft: 9,
+      Padding: EdgeLengths{ Left: 9 },
       BackgroundGradient: nil,
     }
-    let localLater = Container{ BasedOn: derivedStyle, PaddingTop: 8 }
+    let localLater = Container{ BasedOn: derivedStyle, Padding: EdgeLengths{ Top: 8 } }
     baseStyle.pushLength(StyleField.PaddingLeft,
       Length{ Unit: LengthUnit.Px, Value: 99 })
 
@@ -1903,15 +1935,15 @@ internal class StyleFixtures {
       case StyleField.MaxHeight { return Style{ MaxHeight: 7 } }
       case StyleField.AspectRatio { return Style{ AspectRatio: 2 } }
       case StyleField.Padding { return Style{ Padding: 7 } }
-      case StyleField.PaddingLeft { return Style{ PaddingLeft: 7 } }
-      case StyleField.PaddingTop { return Style{ PaddingTop: 7 } }
-      case StyleField.PaddingRight { return Style{ PaddingRight: 7 } }
-      case StyleField.PaddingBottom { return Style{ PaddingBottom: 7 } }
+      case StyleField.PaddingLeft { return Style{ Padding: EdgeLengths{ Left: 7 } } }
+      case StyleField.PaddingTop { return Style{ Padding: EdgeLengths{ Top: 7 } } }
+      case StyleField.PaddingRight { return Style{ Padding: EdgeLengths{ Right: 7 } } }
+      case StyleField.PaddingBottom { return Style{ Padding: EdgeLengths{ Bottom: 7 } } }
       case StyleField.Margin { return Style{ Margin: 7 } }
-      case StyleField.MarginLeft { return Style{ MarginLeft: 7 } }
-      case StyleField.MarginTop { return Style{ MarginTop: 7 } }
-      case StyleField.MarginRight { return Style{ MarginRight: 7 } }
-      case StyleField.MarginBottom { return Style{ MarginBottom: 7 } }
+      case StyleField.MarginLeft { return Style{ Margin: EdgeLengths{ Left: 7 } } }
+      case StyleField.MarginTop { return Style{ Margin: EdgeLengths{ Top: 7 } } }
+      case StyleField.MarginRight { return Style{ Margin: EdgeLengths{ Right: 7 } } }
+      case StyleField.MarginBottom { return Style{ Margin: EdgeLengths{ Bottom: 7 } } }
       case StyleField.Gap { return Style{ Gap: 7 } }
       case StyleField.RowGap { return Style{ RowGap: 7 } }
       case StyleField.ColumnGap { return Style{ ColumnGap: 7 } }

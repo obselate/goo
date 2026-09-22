@@ -151,8 +151,7 @@ public class GlassTerminalCell : Cell {
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
             JustifyContent: JustifyContent.SpaceBetween,
-            PaddingLeft: 16,
-            PaddingRight: 16,
+            Padding: EdgeLengths{Left: 16, Right: 16,},
             BackgroundColor: Color.Transparent,
             buildTrafficLights(),
             buildTitleInfo(),
@@ -246,10 +245,7 @@ public class GlassTerminalCell : Cell {
             Gap: 8,
             Button{
                 Key: "quick-corner-toggle",
-                PaddingLeft: 9,
-                PaddingRight: 9,
-                PaddingTop: 4,
-                PaddingBottom: 4,
+                Padding: EdgeLengths{Left: 9, Right: 9, Top: 4, Bottom: 4,},
                 BorderRadius: btnRadius,
                 BackgroundColor: Color.Rgba(255, 255, 255, 14),
                 Hover: Style{BackgroundColor: Color.Rgba(255, 255, 255, 30)},
@@ -274,10 +270,7 @@ public class GlassTerminalCell : Cell {
     private func buildTerminalCanvas() Container -> Container{
         Key: "terminal-canvas",
         FlexGrow: 1,
-        PaddingLeft: 22,
-        PaddingRight: 22,
-        PaddingTop: 18,
-        PaddingBottom: 72,
+        Padding: EdgeLengths{Left: 22, Right: 22, Top: 18, Bottom: 72,},
         // Leave room for floating glass control dock
         Gap: 6,
         OverflowY: Overflow.Scroll,
@@ -448,10 +441,7 @@ public class GlassTerminalCell : Cell {
             JustifyContent: JustifyContent.Center,
             Container{
                 Key: "floating-control-dock",
-                PaddingLeft: 14,
-                PaddingRight: 14,
-                PaddingTop: 8,
-                PaddingBottom: 8,
+                Padding: EdgeLengths{Left: 14, Right: 14, Top: 8, Bottom: 8,},
                 BorderRadius: dockRadius,
                 BackgroundColor: Color.Rgba(10, 15, 26, 210),
                 BorderWidth: 1,
@@ -618,10 +608,7 @@ public class GlassTerminalCell : Cell {
         }
 
         return Button{
-            PaddingLeft: 8,
-            PaddingRight: 8,
-            PaddingTop: 4,
-            PaddingBottom: 4,
+            Padding: EdgeLengths{Left: 8, Right: 8, Top: 4, Bottom: 4,},
             BorderRadius: radius,
             BackgroundColor: bg,
             Hover: Style{

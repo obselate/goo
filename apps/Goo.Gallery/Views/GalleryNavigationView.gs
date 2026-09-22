@@ -13,8 +13,7 @@ internal class GalleryNavigationView {
         ) Button -> Button{
             Key: "chapter-tab-" + targetIndex.ToString(),
             Height: 28,
-            PaddingLeft: 10,
-            PaddingRight: 10,
+            Padding: EdgeLengths{Left: 10, Right: 10,},
             BackgroundColor: if isActive {
                 GalleryTheme.SurfaceRaised
             } else {
@@ -100,9 +99,7 @@ internal class GalleryNavigationView {
         private func RailSectionHeader(title string, itemKey string) Container -> Container{
             Key: itemKey,
             Width: Length.Percent(100),
-            PaddingTop: 10,
-            PaddingBottom: 4,
-            PaddingLeft: 8,
+            Padding: EdgeLengths{Top: 10, Bottom: 4, Left: 8,},
             Text{Content: title, FontSize: 9, FontWeight: 800, LetterSpacing: 1.2, Color: GalleryTheme.InkSubtle,},
         }
 
@@ -118,8 +115,7 @@ internal class GalleryNavigationView {
                 Key: "rail-item-" + index.ToString(),
                 Width: Length.Percent(100),
                 Height: 30,
-                PaddingLeft: 8,
-                PaddingRight: 8,
+                Padding: EdgeLengths{Left: 8, Right: 8,},
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.FlexStart,
@@ -164,7 +160,7 @@ internal class GalleryNavigationView {
                     } else {
                         GalleryTheme.InkSubtle
                     },
-                    MarginRight: 8,
+                    Margin: EdgeLengths{Right: 8},
                 },
                 Text{
                     Key: "title",
@@ -212,12 +208,14 @@ internal class GalleryNavigationView {
                 Width: Length.Percent(100),
                 Height: 48,
                 MinHeight: 48,
-                PaddingLeft: if compact {
-                    16
-                } else {
-                    20
+                Padding: EdgeLengths{
+                    Left: if compact {
+                        16
+                    } else {
+                        20
+                    },
+                    Right: 6,
                 },
-                PaddingRight: 6,
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.SpaceBetween,
@@ -319,10 +317,7 @@ internal class GalleryNavigationView {
                 BorderRightWidth: 1,
                 BorderColor: GalleryTheme.Border,
                 OverflowY: Overflow.Scroll,
-                PaddingTop: 6,
-                PaddingBottom: 16,
-                PaddingLeft: 6,
-                PaddingRight: 6,
+                Padding: EdgeLengths{Top: 6, Bottom: 16, Left: 6, Right: 6,},
                 Gap: 1,
                 Children: items,
             }
@@ -339,15 +334,17 @@ internal class GalleryNavigationView {
                 Width: Length.Percent(100),
                 Height: 26,
                 MinHeight: 26,
-                PaddingLeft: if compact {
-                    20
-                } else {
-                    28
-                },
-                PaddingRight: if compact {
-                    16
-                } else {
-                    20
+                Padding: EdgeLengths{
+                    Left: if compact {
+                        20
+                    } else {
+                        28
+                    },
+                    Right: if compact {
+                        16
+                    } else {
+                        20
+                    },
                 },
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,

@@ -12,6 +12,10 @@ ctor|Goo.DashPattern|public|(intervals:System.Double[],offset:System.Double)
 ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect)
 ctor|Goo.DragSource|public|(create:System.Func`2<Goo.DragStartEvent,Goo.DragData>,end:System.Action`1<Goo.DragEndEvent>=null)
 ctor|Goo.DropTarget|public|(query:System.Func`2<Goo.DragEvent,Goo.DragEffect>,changed:System.Action`1<Goo.DragEvent>=null)
+ctor|Goo.EdgeLengths|public|(all:Goo.Length)
+ctor|Goo.EdgeLengths|public|(top:Goo.Length,horizontal:Goo.Length,bottom:Goo.Length)
+ctor|Goo.EdgeLengths|public|(top:Goo.Length,right:Goo.Length,bottom:Goo.Length,left:Goo.Length)
+ctor|Goo.EdgeLengths|public|(vertical:Goo.Length,horizontal:Goo.Length)
 ctor|Goo.ElementHandle|public|()
 ctor|Goo.EmbeddedWindowHost|public|()
 ctor|Goo.FileDialogFilter|public|(name:System.String,pattern:System.String)
@@ -657,6 +661,8 @@ method|Goo.Color|op_Inequality|static|public|generic:|(arg0:Goo.Color,arg1:Goo.C
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window)->System.IDisposable
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window,allowInput:System.Boolean)->System.IDisposable
+method|Goo.EdgeLengths|op_Implicit|static|public|generic:|(value:System.Double)->Goo.EdgeLengths
+method|Goo.EdgeLengths|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.EdgeLengths
 method|Goo.ElementHandle|Activate|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|BeginFocusScope|instance|public|generic:|(options:Goo.FocusScopeOptions=null)->Goo.FocusScope
 method|Goo.ElementHandle|BeginPress|instance|public|generic:|()->System.Boolean
@@ -757,6 +763,7 @@ method|Goo.LayoutTransition|ToString|instance|public|generic:|()->System.String
 method|Goo.LayoutTransition|op_Equality|static|public|generic:|(arg0:Goo.LayoutTransition,arg1:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(arg0:Goo.LayoutTransition,arg1:Goo.LayoutTransition)->System.Boolean
 method|Goo.Length|Percent|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.EdgeLengths
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.Length
 method|Goo.MotionVelocity|Add|instance|public|generic:|(other:Goo.MotionVelocity)->Goo.MotionVelocity
@@ -1164,6 +1171,10 @@ property|Goo.DragStartEvent|Position|Goo.Point|instance|get:public,init:public|i
 property|Goo.DragStartEvent|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.DropTarget|Changed|System.Action`1<Goo.DragEvent>|instance|get:public|index:()
 property|Goo.DropTarget|Query|System.Func`2<Goo.DragEvent,Goo.DragEffect>|instance|get:public|index:()
+property|Goo.EdgeLengths|Bottom|Goo.Length|instance|get:public,init:public|index:()
+property|Goo.EdgeLengths|Left|Goo.Length|instance|get:public,init:public|index:()
+property|Goo.EdgeLengths|Right|Goo.Length|instance|get:public,init:public|index:()
+property|Goo.EdgeLengths|Top|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.ElementHandle|BorderBox|Goo.ElementRect|instance|get:public|index:()
 property|Goo.ElementHandle|ContentBox|Goo.ElementRect|instance|get:public|index:()
 property|Goo.ElementHandle|IsMounted|System.Boolean|instance|get:public|index:()
@@ -1371,13 +1382,9 @@ property|Goo.Style|JustifyContent|Goo.JustifyContent|instance|init:public|index:
 property|Goo.Style|Left|Goo.Length|instance|init:public|index:()
 property|Goo.Style|LetterSpacing|Goo.Length|instance|init:public|index:()
 property|Goo.Style|LineHeight|System.Double|instance|init:public|index:()
-property|Goo.Style|MarginBottom|Goo.Length|instance|init:public|index:()
 property|Goo.Style|MarginEnd|Goo.Length|instance|init:public|index:()
-property|Goo.Style|MarginLeft|Goo.Length|instance|init:public|index:()
-property|Goo.Style|MarginRight|Goo.Length|instance|init:public|index:()
 property|Goo.Style|MarginStart|Goo.Length|instance|init:public|index:()
-property|Goo.Style|MarginTop|Goo.Length|instance|init:public|index:()
-property|Goo.Style|Margin|Goo.Length|instance|init:public|index:()
+property|Goo.Style|Margin|Goo.EdgeLengths|instance|init:public|index:()
 property|Goo.Style|MaxHeight|Goo.Length|instance|init:public|index:()
 property|Goo.Style|MaxWidth|Goo.Length|instance|init:public|index:()
 property|Goo.Style|MinHeight|Goo.Length|instance|init:public|index:()
@@ -1389,13 +1396,9 @@ property|Goo.Style|OutlineWidth|Goo.Length|instance|init:public|index:()
 property|Goo.Style|OverflowX|Goo.Overflow|instance|init:public|index:()
 property|Goo.Style|OverflowY|Goo.Overflow|instance|init:public|index:()
 property|Goo.Style|Overflow|Goo.Overflow|instance|init:public|index:()
-property|Goo.Style|PaddingBottom|Goo.Length|instance|init:public|index:()
 property|Goo.Style|PaddingEnd|Goo.Length|instance|init:public|index:()
-property|Goo.Style|PaddingLeft|Goo.Length|instance|init:public|index:()
-property|Goo.Style|PaddingRight|Goo.Length|instance|init:public|index:()
 property|Goo.Style|PaddingStart|Goo.Length|instance|init:public|index:()
-property|Goo.Style|PaddingTop|Goo.Length|instance|init:public|index:()
-property|Goo.Style|Padding|Goo.Length|instance|init:public|index:()
+property|Goo.Style|Padding|Goo.EdgeLengths|instance|init:public|index:()
 property|Goo.Style|Position|Goo.PositionType|instance|init:public|index:()
 property|Goo.Style|Right|Goo.Length|instance|init:public|index:()
 property|Goo.Style|RowGap|Goo.Length|instance|init:public|index:()
@@ -1631,6 +1634,7 @@ type|Goo.DragSource|class|public|base:System.Object|interfaces:|generic:
 type|Goo.DragStartEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.DropTarget|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Easing|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.EdgeLengths|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.ElementHandle|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ElementMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.ElementRect|struct|public|base:System.ValueType|interfaces:|generic:

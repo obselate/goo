@@ -235,7 +235,7 @@ class World3DCell : Cell {
                         FontWeight: 600,
                         LetterSpacing: 1.5,
                         Color: Color.Rgb(220, 220, 220),
-                        MarginTop: 14,
+                        Margin: EdgeLengths{Top: 14},
                     },
                 }
             )
@@ -264,7 +264,7 @@ class World3DCell : Cell {
                         FontWeight: 600,
                         LetterSpacing: 1.5,
                         Color: Color.Rgb(200, 240, 210),
-                        MarginTop: 14,
+                        Margin: EdgeLengths{Top: 14},
                     },
                 }
             )

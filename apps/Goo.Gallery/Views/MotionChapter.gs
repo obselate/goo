@@ -543,8 +543,7 @@ class MotionChapter : Cell {
     }
 
     private func actionBtn(label string, isAct bool, onClick Action) Button -> Button{
-        PaddingLeft: 8,
-        PaddingRight: 8,
+        Padding: EdgeLengths{Left: 8, Right: 8,},
         Height: 24,
         BackgroundColor: if isAct {
             GalleryTheme.Accent
@@ -694,8 +693,7 @@ class MotionChapter : Cell {
         return Container{
             Width: Length.Percent(100),
             Height: 30,
-            PaddingLeft: 12,
-            PaddingRight: 12,
+            Padding: EdgeLengths{Left: 12, Right: 12,},
             BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
             BorderTopWidth: 1,
             BorderColor: GalleryTheme.Border,
@@ -734,8 +732,7 @@ class MotionChapter : Cell {
                 },
             },
             Container{
-                PaddingLeft: 6,
-                PaddingRight: 6,
+                Padding: EdgeLengths{Left: 6, Right: 6,},
                 Height: 18,
                 BorderRadius: 4,
                 BackgroundColor: if isRunning {
@@ -1362,8 +1359,7 @@ class MotionChapter : Cell {
     private func compCategoryBtn(label string, cat int32) Button {
         let isSel = compCategory == cat
         return Button{
-            PaddingLeft: 10,
-            PaddingRight: 10,
+            Padding: EdgeLengths{Left: 10, Right: 10,},
             Height: 26,
             BorderRadius: 2,
             BackgroundColor: if isSel {
@@ -1581,8 +1577,7 @@ class MotionChapter : Cell {
     }
 
     private func compSmallPresetBtn(label string, onClick Action) Button -> Button{
-        PaddingLeft: 6,
-        PaddingRight: 6,
+        Padding: EdgeLengths{Left: 6, Right: 6,},
         Height: 18,
         BorderRadius: 2,
         BackgroundColor: Color.FromNormalized(0.16F, 0.16F, 0.20F, 0.8F),
@@ -1629,8 +1624,7 @@ class MotionChapter : Cell {
                 FlexGrow: 1.0,
                 FlexShrink: 1.0,
                 Height: 32,
-                PaddingLeft: 10,
-                PaddingRight: 10,
+                Padding: EdgeLengths{Left: 10, Right: 10,},
                 FontSize: 11,
                 FontWeight: 500,
                 Color: GalleryTheme.Ink,
@@ -1903,8 +1897,7 @@ class MotionChapter : Cell {
             },
         },
         Button{
-            PaddingLeft: 10,
-            PaddingRight: 10,
+            Padding: EdgeLengths{Left: 10, Right: 10,},
             Height: 24,
             BorderRadius: 4,
             BackgroundColor: if isFollowing {
@@ -2095,8 +2088,7 @@ class MotionChapter : Cell {
     }
 
     private func compSegmentBtn(icon string, label string, isSel bool, onClick Action) Button -> Button{
-        PaddingLeft: 10,
-        PaddingRight: 10,
+        Padding: EdgeLengths{Left: 10, Right: 10,},
         Height: 24,
         BorderRadius: 2,
         BackgroundColor: if isSel {
@@ -2149,8 +2141,7 @@ class MotionChapter : Cell {
     }
 
     private func compOutlineBtn(label string, onClick Action) Button -> Button{
-        PaddingLeft: 8,
-        PaddingRight: 8,
+        Padding: EdgeLengths{Left: 8, Right: 8,},
         Height: 24,
         BorderRadius: 4,
         BackgroundColor: Color.Transparent,
@@ -2168,8 +2159,7 @@ class MotionChapter : Cell {
     }
 
     private func compDangerBtn(label string, onClick Action) Button -> Button{
-        PaddingLeft: 8,
-        PaddingRight: 8,
+        Padding: EdgeLengths{Left: 8, Right: 8,},
         Height: 24,
         BorderRadius: 4,
         BackgroundColor: Color.FromNormalized(0.25F, 0.08F, 0.08F, 0.5F),
@@ -2401,8 +2391,7 @@ class MotionChapter : Cell {
                     compCategoryBtn("Display & Feedback", 4),
                 },
                 Button{
-                    PaddingLeft: 8,
-                    PaddingRight: 8,
+                    Padding: EdgeLengths{Left: 8, Right: 8,},
                     Height: 24,
                     BorderRadius: 4,
                     BackgroundColor: GalleryTheme.SurfaceRaised,
@@ -2444,8 +2433,7 @@ class MotionChapter : Cell {
             Container{
                 Width: Length.Percent(100),
                 Height: 26,
-                PaddingLeft: 12,
-                PaddingRight: 12,
+                Padding: EdgeLengths{Left: 12, Right: 12,},
                 BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
                 BorderRadius: 4,
                 BorderWidth: 1,

@@ -1,3 +1,17 @@
+## Padding and margin
+
+`Padding` and `Margin` accept pixel numbers or `EdgeLengths`. The two, three,
+and four argument forms follow CSS order. Named edges change only the specified
+sides, so they can override a `BasedOn` style without clearing the other sides.
+`PaddingStart`, `PaddingEnd`, `MarginStart`, and `MarginEnd` remain available for
+direction-aware edges.
+
+```gsharp
+Container{ Padding: 8, Margin: EdgeLengths(4, 12) }
+Container{ Padding: EdgeLengths(4, 12, 8), Margin: EdgeLengths(4, 8, 12, 16) }
+Container{ BasedOn: cardStyle, Padding: EdgeLengths{ Left: 16 } }
+```
+
 ## Retained custom layout
 
 Set `Container.Layout` to an immutable `LayoutAlgorithm` to replace the container's

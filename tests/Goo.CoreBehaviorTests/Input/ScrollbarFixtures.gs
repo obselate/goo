@@ -208,7 +208,7 @@ internal class ScrollbarFixtures {
     let padded = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 100.0,
       Height: 100.0,
-      PaddingRight: 14.0,
+      Padding: EdgeLengths{ Right: 14.0 },
       OverflowY: Overflow.Scroll,
       ScrollbarY: paddedBar,
       ScrollbarVisibilityY: ScrollbarVisibility.Always,

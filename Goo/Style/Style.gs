@@ -99,34 +99,18 @@ public open class Style {
   public prop MaxHeight Length{ init -> pushCheckedLength(StyleField.MaxHeight, value, "MaxHeight", false, true, false) }
   /// Sets the preferred width-to-height ratio.
   public prop AspectRatio float64{ init -> pushScalar(StyleField.AspectRatio, checkedNonNegative(value, "AspectRatio")) }
-  /// Sets padding on all edges.
-  public prop Padding Length{ init -> pushCheckedLength(StyleField.Padding, value, "Padding", false, true, false) }
-  /// Sets left padding.
-  public prop PaddingLeft Length{ init -> pushCheckedLength(StyleField.PaddingLeft, value, "PaddingLeft", false, true, false) }
+  /// Sets padding in CSS top, right, bottom, left order.
+  public prop Padding EdgeLengths{ init -> pushEdges(value, true) }
   /// Sets padding at the inline start edge.
   public prop PaddingStart Length{ init -> pushCheckedLength(StyleField.PaddingStart, value, "PaddingStart", false, true, false) }
-  /// Sets top padding.
-  public prop PaddingTop Length{ init -> pushCheckedLength(StyleField.PaddingTop, value, "PaddingTop", false, true, false) }
-  /// Sets right padding.
-  public prop PaddingRight Length{ init -> pushCheckedLength(StyleField.PaddingRight, value, "PaddingRight", false, true, false) }
   /// Sets padding at the inline end edge.
   public prop PaddingEnd Length{ init -> pushCheckedLength(StyleField.PaddingEnd, value, "PaddingEnd", false, true, false) }
-  /// Sets bottom padding.
-  public prop PaddingBottom Length{ init -> pushCheckedLength(StyleField.PaddingBottom, value, "PaddingBottom", false, true, false) }
-  /// Sets margins on all edges.
-  public prop Margin Length{ init -> pushCheckedLength(StyleField.Margin, value, "Margin", true, true, false) }
-  /// Sets the left margin.
-  public prop MarginLeft Length{ init -> pushCheckedLength(StyleField.MarginLeft, value, "MarginLeft", true, true, false) }
+  /// Sets margins in CSS top, right, bottom, left order.
+  public prop Margin EdgeLengths{ init -> pushEdges(value, false) }
   /// Sets the margin at the inline start edge.
   public prop MarginStart Length{ init -> pushCheckedLength(StyleField.MarginStart, value, "MarginStart", true, true, false) }
-  /// Sets the top margin.
-  public prop MarginTop Length{ init -> pushCheckedLength(StyleField.MarginTop, value, "MarginTop", true, true, false) }
-  /// Sets the right margin.
-  public prop MarginRight Length{ init -> pushCheckedLength(StyleField.MarginRight, value, "MarginRight", true, true, false) }
   /// Sets the margin at the inline end edge.
   public prop MarginEnd Length{ init -> pushCheckedLength(StyleField.MarginEnd, value, "MarginEnd", true, true, false) }
-  /// Sets the bottom margin.
-  public prop MarginBottom Length{ init -> pushCheckedLength(StyleField.MarginBottom, value, "MarginBottom", true, true, false) }
   /// Sets the gap between rows and columns.
   public prop Gap Length{ init -> pushCheckedLength(StyleField.Gap, value, "Gap", false, true, false) }
   /// Sets the gap between rows.
@@ -387,6 +371,31 @@ public open class Style {
   }
   /// Sets inherited invariant casing for static Text. TextEntry is unchanged.
   public prop TextTransform TextTransform{ init -> pushEnumOrdinal(StyleField.TextTransform, int32(value)) }
+
+  internal func pushEdges(value EdgeLengths, padding bool) {
+    let name = padding ? "Padding" : "Margin"
+    let allowNegative = !padding
+    if value.Uniform {
+      pushCheckedLength(padding ? StyleField.Padding : StyleField.Margin,
+        value.UniformValue, name, allowNegative, true, false)
+    }
+    if value.HasTop {
+      pushCheckedLength(padding ? StyleField.PaddingTop : StyleField.MarginTop,
+        value.Top, name + ".Top", allowNegative, true, false)
+    }
+    if value.HasRight {
+      pushCheckedLength(padding ? StyleField.PaddingRight : StyleField.MarginRight,
+        value.Right, name + ".Right", allowNegative, true, false)
+    }
+    if value.HasBottom {
+      pushCheckedLength(padding ? StyleField.PaddingBottom : StyleField.MarginBottom,
+        value.Bottom, name + ".Bottom", allowNegative, true, false)
+    }
+    if value.HasLeft {
+      pushCheckedLength(padding ? StyleField.PaddingLeft : StyleField.MarginLeft,
+        value.Left, name + ".Left", allowNegative, true, false)
+    }
+  }
 
   internal func pushCheckedLength(field StyleField, value Length, name string,
     allowsNegative bool, allowsPercent bool, allowsAuto bool) {

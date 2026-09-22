@@ -306,6 +306,76 @@ Selects the curve that shapes transition progress; Ease curves are quadratic.
 - `EaseOut`
 - `EaseInOut`
 
+## `EdgeLengths`
+
+Source:
+
+- [`EdgeLengths.gs`](../../Goo/Style/EdgeLengths.gs)
+
+Specifies CSS-style top, right, bottom, and left lengths. One value applies to all edges. Two values mean vertical and horizontal. Three values mean top, horizontal, and bottom.
+
+### `new(Length)`
+
+Applies one length to every edge.
+
+- `all`: length for every edge
+
+### `new(Length,Length)`
+
+Applies one length vertically and another horizontally.
+
+- `vertical`: top and bottom length
+- `horizontal`: right and left length
+
+### `new(Length,Length,Length)`
+
+Applies top, horizontal, and bottom lengths.
+
+- `top`: top length
+- `horizontal`: right and left length
+- `bottom`: bottom length
+
+### `new(Length,Length,Length,Length)`
+
+Applies top, right, bottom, and left lengths in CSS order.
+
+- `top`: top length
+- `right`: right length
+- `bottom`: bottom length
+- `left`: left length
+
+### `op_Implicit(float64)~EdgeLengths`
+
+Converts pixel values into a uniform edge value.
+
+- `value`: pixel length for every edge
+
+Returns: a uniform edge value
+
+### `op_Implicit(int32)~EdgeLengths`
+
+Converts integer pixels into a uniform edge value.
+
+- `value`: pixel length for every edge
+
+Returns: a uniform edge value
+
+### `Bottom`
+
+Sets the bottom edge independently.
+
+### `Left`
+
+Sets the left edge independently.
+
+### `Right`
+
+Sets the right edge independently.
+
+### `Top`
+
+Sets the top edge independently.
+
 ## `FlexDirection`
 
 Source:
@@ -408,6 +478,14 @@ Creates a percentage of the available size.
 - `value`: percentage of the available size
 
 Returns: a percentage length
+
+### `op_Implicit(Length)~EdgeLengths`
+
+Converts a length into a uniform edge value.
+
+- `value`: length for every edge
+
+Returns: a uniform edge value
 
 ### `op_Implicit(float64)~Length`
 
@@ -904,31 +982,15 @@ Sets the line-height multiplier.
 
 ### `Margin`
 
-Sets margins on all edges.
-
-### `MarginBottom`
-
-Sets the bottom margin.
+Sets margins in CSS top, right, bottom, left order.
 
 ### `MarginEnd`
 
 Sets the margin at the inline end edge.
 
-### `MarginLeft`
-
-Sets the left margin.
-
-### `MarginRight`
-
-Sets the right margin.
-
 ### `MarginStart`
 
 Sets the margin at the inline start edge.
-
-### `MarginTop`
-
-Sets the top margin.
 
 ### `MaxHeight`
 
@@ -976,31 +1038,15 @@ Sets vertical overflow handling.
 
 ### `Padding`
 
-Sets padding on all edges.
-
-### `PaddingBottom`
-
-Sets bottom padding.
+Sets padding in CSS top, right, bottom, left order.
 
 ### `PaddingEnd`
 
 Sets padding at the inline end edge.
 
-### `PaddingLeft`
-
-Sets left padding.
-
-### `PaddingRight`
-
-Sets right padding.
-
 ### `PaddingStart`
 
 Sets padding at the inline start edge.
-
-### `PaddingTop`
-
-Sets top padding.
 
 ### `Position`
 

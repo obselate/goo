@@ -199,6 +199,7 @@ public sealed class FixtureContractTests
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.CursorInheritanceAndResetContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.DeclarationInlineSpillOrderContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.DirectionAndLogicalEdgeContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.EdgeLengthsContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.OrderedCompositionAndGradientClearContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.OutlineStateResetTransitionAndStorageContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ResolvePrecedenceAndResetContract));

@@ -219,7 +219,7 @@ internal class LayoutFixtures {
         },
         TextEntry{
           Key: "placeholder", Placeholder: "Search", FontSize: 16, LineHeight: 1.25,
-          PaddingTop: Length.Percent(5), PaddingBottom: Length.Percent(5), BorderWidth: 2,
+          Padding: EdgeLengths{ Top: Length.Percent(5), Bottom: Length.Percent(5) }, BorderWidth: 2,
         },
         TextEntry{
           Key: "explicit", Value: "hello", Height: 31, FontSize: 16, LineHeight: 1.25,
@@ -248,7 +248,7 @@ internal class LayoutFixtures {
         },
         TextEntry{
           Key: "placeholder", Placeholder: "Search", FontSize: 16, LineHeight: 1.25,
-          PaddingTop: Length.Percent(5), PaddingBottom: Length.Percent(5), BorderWidth: 2,
+          Padding: EdgeLengths{ Top: Length.Percent(5), Bottom: Length.Percent(5) }, BorderWidth: 2,
         },
         TextEntry{
           Key: "explicit", Value: "hello", Height: 31, FontSize: 20, LineHeight: 1.5,
@@ -356,7 +356,8 @@ internal class LayoutFixtures {
   private func resetEdgesAndGaps() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     let first = Container() {.Width: 200,.Height: 100,.FlexDirection: FlexDirection.Row,.Gap: 5,.ColumnGap: 10,
-      Container() {.Key: "target",.Width: 50,.Height: 50,.MarginLeft: 20,.PaddingLeft: 15,
+      Container() {.Key: "target",.Width: 50,.Height: 50,
+        .Margin: EdgeLengths{ Left: 20 },.Padding: EdgeLengths{ Left: 15 },
         Container{ Key: "leaf", Width: 10, Height: 10} },
         Container{ Key: "sibling", Width: 20, Height: 20 },
       }
