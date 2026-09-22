@@ -205,8 +205,8 @@ internal class GlassMaterialPanelCell : Cell {
         Width: 176,
         Padding: Edges{Left: 18, Top: 18, Right: 14,},
         Gap: 12,
-        BorderRightWidth: 1,
-        BorderRightColor: terminalMode ? Color.Rgba(226, 238, 242, 24): Color.Rgba(31, 70, 80, 32),
+        BorderWidth: Edges{Right: 1},
+        BorderColor: Edges[Color]{Right: terminalMode ? Color.Rgba(226, 238, 242, 24): Color.Rgba(31, 70, 80, 32)},
         Text{
             Content: "Workspace",
             FontFamily: "monospace",
@@ -312,8 +312,10 @@ internal class GlassMaterialPanelCell : Cell {
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 10,
-                BorderBottomWidth: 1,
-                BorderBottomColor: terminalMode ? Color.Rgba(226, 238, 242, 28): Color.Rgba(31, 70, 80, 34),
+                BorderWidth: Edges{Bottom: 1},
+                BorderColor: Edges[Color]{
+                    Bottom: terminalMode ? Color.Rgba(226, 238, 242, 28): Color.Rgba(31, 70, 80, 34)
+                },
                 Container{Width: 9, Height: 9, BorderRadius: 5, BackgroundColor: Color.Rgb(112, 213, 174)},
                 Text{
                     Content: "Goo",
@@ -349,8 +351,10 @@ internal class GlassMaterialPanelCell : Cell {
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 14,
-                BorderTopWidth: 1,
-                BorderTopColor: terminalMode ? Color.Rgba(226, 238, 242, 22): Color.Rgba(31, 70, 80, 28),
+                BorderWidth: Edges{Top: 1},
+                BorderColor: Edges[Color]{
+                    Top: terminalMode ? Color.Rgba(226, 238, 242, 22): Color.Rgba(31, 70, 80, 28)
+                },
                 terminalLine("main", terminalMode ? Color.Rgba(157, 196, 233, 178): Color.Rgb(47, 96, 150)),
                 terminalLine("Vulkan", secondaryInk()),
                 Container{FlexGrow: 1.0},

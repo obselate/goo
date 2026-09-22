@@ -125,8 +125,8 @@ internal class StyleFixtures {
       Margin: Edges{ Left: 1, Right: 3 }, MarginStart: 2, MarginEnd: 4,
       Padding: Edges{ Left: 5, Right: 7 }, PaddingStart: 6, PaddingEnd: 8,
       Left: 9, Start: 10, Right: 11, End: 12,
-      BorderLeftWidth: 13, BorderStartWidth: 14, BorderRightWidth: 15, BorderEndWidth: 16,
-      BorderLeftColor: red, BorderStartColor: blue, BorderRightColor: red, BorderEndColor: blue,
+      BorderWidth: Edges{Left: 13, Right: 15}, BorderStartWidth: 14, BorderEndWidth: 16,
+      BorderColor: Edges[Color]{Left: red, Right: red}, BorderStartColor: blue, BorderEndColor: blue,
     })
     if ltr.MarginLeft.Value != 2.0F || ltr.MarginRight.Value != 4.0F
       || ltr.PaddingLeft.Value != 6.0F || ltr.PaddingRight.Value != 8.0F
@@ -147,8 +147,8 @@ internal class StyleFixtures {
       Margin: Edges{ Right: 1, Left: 3 }, MarginStart: 2, MarginEnd: 4,
       Padding: Edges{ Right: 5, Left: 7 }, PaddingStart: 6, PaddingEnd: 8,
       Right: 9, Start: 10, Left: 11, End: 12,
-      BorderRightWidth: 13, BorderStartWidth: 14, BorderLeftWidth: 15, BorderEndWidth: 16,
-      BorderRightColor: red, BorderStartColor: blue, BorderLeftColor: red, BorderEndColor: blue,
+      BorderWidth: Edges{Right: 13, Left: 15}, BorderStartWidth: 14, BorderEndWidth: 16,
+      BorderColor: Edges[Color]{Right: red, Left: red}, BorderStartColor: blue, BorderEndColor: blue,
     })
     if rtl.MarginRight.Value != 2.0F || rtl.MarginLeft.Value != 4.0F
       || rtl.PaddingRight.Value != 6.0F || rtl.PaddingLeft.Value != 8.0F
@@ -174,7 +174,7 @@ internal class StyleFixtures {
     root.BaseStyle = Style{
       Direction: Direction.RightToLeft, TextAlign: TextAlign.Start,
       Margin: Edges{ Right: 2 }, Padding: Edges{ Right: 3 }, Right: 4,
-      BorderRightWidth: 5, BorderRightColor: red,
+      BorderWidth: Edges{Right: 5}, BorderColor: Edges[Color]{Right: red},
     }.Entries()
     resolver.Invalidate(root, false)
     resolver.Flush()
@@ -820,10 +820,8 @@ internal class StyleFixtures {
     let green = Color.Rgb(0, 255, 0)
     let blue = Color.Rgb(0, 0, 255)
     let shorthandThenEdge = Reconciler{ Res: Resolver{} }.Mount(Container{
-      BorderWidth: 2,
-      BorderLeftWidth: 5,
-      BorderColor: red,
-      BorderTopColor: green,
+      BorderWidth: Edges(2){.Left: 5},
+      BorderColor: Edges[Color](red){.Top: green},
     })
     if shorthandThenEdge.BorderLeftWidth.Value != 5.0F
       || shorthandThenEdge.BorderTopWidth.Value != 2.0F
@@ -837,9 +835,8 @@ internal class StyleFixtures {
       }
 
     let edgeThenShorthand = Reconciler{ Res: Resolver{} }.Mount(Container{
-      BorderLeftWidth: 5,
+      BasedOn: Style{BorderWidth: Edges{Left: 5}, BorderColor: Edges[Color]{Top: green}},
       BorderWidth: 2,
-      BorderTopColor: green,
       BorderColor: red,
     })
     if edgeThenShorthand.BorderLeftWidth.Value != 2.0F
@@ -850,7 +847,7 @@ internal class StyleFixtures {
     let n = Node{ Kind: NodeKind.Container }
     let resolver = Resolver{}
     n.BaseStyle = Style{ BorderWidth: 1, BorderColor: red }.Entries()
-    n.HoverStyle = Style{ BorderRightWidth: 4, BorderRightColor: blue }.Entries()
+    n.HoverStyle = Style{ BorderWidth: Edges{Right: 4}, BorderColor: Edges[Color]{Right: blue} }.Entries()
     resolver.Invalidate(n, true)
     resolver.Flush()
     n.Hovered = true
@@ -911,10 +908,8 @@ internal class StyleFixtures {
     resolver.FlushEffects()
 
     n.HoverStyle = Style{
-      BorderLeftWidth: 10, BorderTopWidth: 11,
-      BorderRightWidth: 12, BorderBottomWidth: 13,
-      BorderLeftColor: blue, BorderTopColor: blue,
-      BorderRightColor: blue, BorderBottomColor: blue,
+      BorderWidth: Edges{Left: 10, Top: 11, Right: 12, Bottom: 13},
+      BorderColor: Edges[Color]{Left: blue, Top: blue, Right: blue, Bottom: blue},
     }.Entries()
     n.Hovered = true
     resolver.Invalidate(n, false)
@@ -1970,14 +1965,14 @@ internal class StyleFixtures {
       case StyleField.BorderTopRightRadius { return Style{ BorderTopRightRadius: 7 } }
       case StyleField.BorderBottomLeftRadius { return Style{ BorderBottomLeftRadius: 7 } }
       case StyleField.BorderBottomRightRadius { return Style{ BorderBottomRightRadius: 7 } }
-      case StyleField.BorderLeftWidth { return Style{ BorderLeftWidth: 7 } }
-      case StyleField.BorderTopWidth { return Style{ BorderTopWidth: 7 } }
-      case StyleField.BorderRightWidth { return Style{ BorderRightWidth: 7 } }
-      case StyleField.BorderBottomWidth { return Style{ BorderBottomWidth: 7 } }
-      case StyleField.BorderLeftColor { return Style{ BorderLeftColor: Color.White } }
-      case StyleField.BorderTopColor { return Style{ BorderTopColor: Color.White } }
-      case StyleField.BorderRightColor { return Style{ BorderRightColor: Color.White } }
-      case StyleField.BorderBottomColor { return Style{ BorderBottomColor: Color.White } }
+      case StyleField.BorderLeftWidth { return Style{ BorderWidth: Edges{Left: 7} } }
+      case StyleField.BorderTopWidth { return Style{ BorderWidth: Edges{Top: 7} } }
+      case StyleField.BorderRightWidth { return Style{ BorderWidth: Edges{Right: 7} } }
+      case StyleField.BorderBottomWidth { return Style{ BorderWidth: Edges{Bottom: 7} } }
+      case StyleField.BorderLeftColor { return Style{ BorderColor: Edges[Color]{Left: Color.White} } }
+      case StyleField.BorderTopColor { return Style{ BorderColor: Edges[Color]{Top: Color.White} } }
+      case StyleField.BorderRightColor { return Style{ BorderColor: Edges[Color]{Right: Color.White} } }
+      case StyleField.BorderBottomColor { return Style{ BorderColor: Edges[Color]{Bottom: Color.White} } }
       case StyleField.Opacity { return Style{ Opacity: 0.5 } }
       case StyleField.BoxShadows {
         return Style{ BoxShadow: BoxShadow{ OffsetX: 7, Color: Color.White } }

@@ -80,14 +80,8 @@ class DevToolsCell : Cell {
         FlexDirection: FlexDirection.Column,
         BorderRadius: 8,
         Overflow: Overflow.Hidden,
-        BorderTopWidth: 1,
-        BorderRightWidth: 1,
-        BorderBottomWidth: 1,
-        BorderLeftWidth: 1,
-        BorderTopColor: DevToolsTheme.Border,
-        BorderRightColor: DevToolsTheme.Border,
-        BorderBottomColor: DevToolsTheme.Border,
-        BorderLeftColor: DevToolsTheme.Border,
+        BorderWidth: 1,
+        BorderColor: DevToolsTheme.Border,
         BackgroundColor: DevToolsTheme.Background,
         BuildTopbar(),
         BuildBody(),
@@ -154,8 +148,8 @@ class DevToolsCell : Cell {
                 AlignItems: AlignItems.Center,
                 Gap: 10,
                 BackgroundColor: DevToolsTheme.Surface,
-                BorderBottomWidth: 1,
-                BorderBottomColor: DevToolsTheme.Border,
+                BorderWidth: Edges{Bottom: 1},
+                BorderColor: Edges[Color]{Bottom: DevToolsTheme.Border},
                 Children: children,
             }
         )
@@ -407,8 +401,8 @@ class DevToolsCell : Cell {
             FlexWrap: FlexWrap.Wrap,
             AlignItems: AlignItems.Center,
             Gap: 4,
-            BorderBottomWidth: 1,
-            BorderBottomColor: DevToolsTheme.Border,
+            BorderWidth: Edges{Bottom: 1},
+            BorderColor: Edges[Color]{Bottom: DevToolsTheme.Border},
             Children: children,
         }
     }
@@ -494,8 +488,8 @@ class DevToolsCell : Cell {
             FlexDirection: FlexDirection.Column,
             OverflowY: Overflow.Scroll,
             BackgroundColor: DevToolsTheme.Surface,
-            BorderBottomWidth: 1,
-            BorderBottomColor: DevToolsTheme.Border,
+            BorderWidth: Edges{Bottom: 1},
+            BorderColor: Edges[Color]{Bottom: DevToolsTheme.Border},
             Children: buttons,
         }
     }
@@ -817,8 +811,8 @@ class DevToolsCell : Cell {
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 5,
-                BorderBottomWidth: 1,
-                BorderBottomColor: DevToolsTheme.Border,
+                BorderWidth: Edges{Bottom: 1},
+                BorderColor: Edges[Color]{Bottom: DevToolsTheme.Border},
                 ActionButton(
                     "drawer-console",
                     "Console " + session.Logs.Count.ToString(),
@@ -1015,8 +1009,8 @@ class DevToolsCell : Cell {
                 Width: Percent(100),
                 Margin: Edges{Top: 16},
                 Gap: 8,
-                BorderTopWidth: 1,
-                BorderTopColor: DevToolsTheme.Border,
+                BorderWidth: Edges{Top: 1},
+                BorderColor: Edges[Color]{Top: DevToolsTheme.Border},
                 Padding: Edges{Top: 8},
                 FlexDirection: FlexDirection.Column,
                 ActionButton(
@@ -1055,8 +1049,8 @@ class DevToolsCell : Cell {
             FlexShrink: 0.0,
             FlexDirection: FlexDirection.Column,
             BackgroundColor: DevToolsTheme.Surface,
-            BorderLeftWidth: 1,
-            BorderLeftColor: DevToolsTheme.Border,
+            BorderWidth: Edges{Left: 1},
+            BorderColor: Edges[Color]{Left: DevToolsTheme.Border},
             Container{
                 Key: "inspector-header",
                 Width: Percent(100),
@@ -1066,8 +1060,8 @@ class DevToolsCell : Cell {
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 8,
-                BorderBottomWidth: 1,
-                BorderBottomColor: DevToolsTheme.Border,
+                BorderWidth: Edges{Bottom: 1},
+                BorderColor: Edges[Color]{Bottom: DevToolsTheme.Border},
                 Text{
                     Key: "inspector-node-name",
                     Content: node.DisplayName,
@@ -1127,12 +1121,14 @@ class DevToolsCell : Cell {
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
             BackgroundColor: DevToolsTheme.Surface,
-            BorderBottomWidth: if selected {
-                2
-            } else {
-                0
+            BorderWidth: Edges{
+                Bottom: if selected {
+                    2
+                } else {
+                    0
+                }
             },
-            BorderBottomColor: DevToolsTheme.Accent,
+            BorderColor: Edges[Color]{Bottom: DevToolsTheme.Accent},
             Hover: Style{BackgroundColor: DevToolsTheme.SurfaceRaised},
             Cursor: Cursor.Pointer,
             OnClick: () -> {
@@ -1206,8 +1202,8 @@ class DevToolsCell : Cell {
         AlignItems: AlignItems.FlexStart,
         Gap: 10,
         BackgroundColor: DevToolsTheme.Surface,
-        BorderBottomWidth: 1,
-        BorderBottomColor: DevToolsTheme.Border,
+        BorderWidth: Edges{Bottom: 1},
+        BorderColor: Edges[Color]{Bottom: DevToolsTheme.Border},
         Text{
             Key: "detail-label",
             Content: label,

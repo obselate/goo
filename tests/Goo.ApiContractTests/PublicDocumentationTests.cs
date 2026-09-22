@@ -70,6 +70,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.Color.Rgba(System.Int32,System.Int32,System.Int32,System.Int32)",
         "M:Goo.Color.TryParse(System.String)",
         "M:Goo.Color.WithAlpha(System.Double)",
+        "M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}",
         "M:Goo.Color.op_Implicit(System.String)~Goo.Color",
         "M:Goo.VectorAsset.#ctor(System.Double,System.Double,System.Double,System.Double,Goo.VectorNode[])",
         "M:Goo.VectorAsset.NodeAt(System.Int32)",
@@ -118,6 +119,10 @@ public sealed class PublicDocumentationTests
         "M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)",
         "M:Goo.ElementHandle.TryGetTextCaretRect(Goo.TextPosition,Goo.TextCoordinateSpace,Goo.ElementRect@)",
         "M:Goo.ElementHandle.TryGetTextPositionAt(Goo.Point,Goo.TextCoordinateSpace,Goo.TextPosition@)",
+        "M:Goo.Edges`1.#ctor(`0)",
+        "M:Goo.Edges`1.#ctor(`0,`0)",
+        "M:Goo.Edges`1.#ctor(`0,`0,`0)",
+        "M:Goo.Edges`1.#ctor(`0,`0,`0,`0)",
         "M:Goo.Edges.#ctor(Goo.Length)",
         "M:Goo.Edges.#ctor(Goo.Length,Goo.Length)",
         "M:Goo.Edges.#ctor(Goo.Length,Goo.Length,Goo.Length)",
@@ -428,6 +433,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.Color.Rgba(System.Int32,System.Int32,System.Int32,System.Int32)"] = new(["r", "g", "b", "a"], [], true),
             ["M:Goo.Color.TryParse(System.String)"] = new(["value"], [], true),
             ["M:Goo.Color.WithAlpha(System.Double)"] = new(["alpha"], [], true),
+            ["M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}"] = new(["value"], [], true),
             ["M:Goo.Color.op_Implicit(System.String)~Goo.Color"] = new(["value"], [], true),
             ["M:Goo.Container.Add(Goo.Blob)"] = new(["child"], [], false),
             ["M:Goo.DashPattern.#ctor(System.Double[],System.Double)"] = new(["intervals", "offset"], [], false),
@@ -444,6 +450,10 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)"] = new(["required"], [], true),
             ["M:Goo.ElementHandle.TryGetTextCaretRect(Goo.TextPosition,Goo.TextCoordinateSpace,Goo.ElementRect@)"] = new([], [], true),
             ["M:Goo.ElementHandle.TryGetTextPositionAt(Goo.Point,Goo.TextCoordinateSpace,Goo.TextPosition@)"] = new([], [], true),
+            ["M:Goo.Edges`1.#ctor(`0)"] = new(["all"], [], false),
+            ["M:Goo.Edges`1.#ctor(`0,`0)"] = new(["vertical", "horizontal"], [], false),
+            ["M:Goo.Edges`1.#ctor(`0,`0,`0)"] = new(["top", "horizontal", "bottom"], [], false),
+            ["M:Goo.Edges`1.#ctor(`0,`0,`0,`0)"] = new(["top", "right", "bottom", "left"], [], false),
             ["M:Goo.Edges.#ctor(Goo.Length)"] = new(["all"], [], false),
             ["M:Goo.Edges.#ctor(Goo.Length,Goo.Length)"] = new(["vertical", "horizontal"], [], false),
             ["M:Goo.Edges.#ctor(Goo.Length,Goo.Length,Goo.Length)"] = new(["top", "horizontal", "bottom"], [], false),
@@ -554,6 +564,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.Window.TryPost(System.Action)"] = new(["action"], [], true),
             ["T:Goo.Anim`1"] = new([], ["T"], false),
             ["T:Goo.Cell`1"] = new([], ["TInput"], false),
+            ["T:Goo.Edges`1"] = new([], ["T"], false),
             ["T:Goo.MotionConverter`1"] = new([], ["T"], false),
         };
 
@@ -632,7 +643,7 @@ public sealed class PublicDocumentationTests
 
         Assert.Contains("Displays a vector path with fill and one uniform stroke.",
             shapes, StringComparison.Ordinal);
-        Assert.Contains("Sets every box border width or the uniform Shape stroke width.",
+        Assert.Contains("A uniform value also sets the Shape stroke width.",
             style, StringComparison.Ordinal);
     }
 

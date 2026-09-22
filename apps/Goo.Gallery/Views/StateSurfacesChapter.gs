@@ -835,7 +835,7 @@ class StateSurfacesChapter : Cell {
             Bottom: 0,
             Height: Percent(34),
             BackgroundGradient: LinearGradient(90.0, Color.Rgb(116, 86, 62), Color.Rgb(73, 54, 43)),
-            BorderTopWidth: 2,
+            BorderWidth: Edges{Top: 2},
             BorderColor: Color.Rgba(35, 25, 20, 120),
         },
         Container{

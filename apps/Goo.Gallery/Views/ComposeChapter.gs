@@ -344,7 +344,7 @@ open class ComposeChapter : Cell[ComposeChapterInput], IDisposable {
                         AlignItems: AlignItems.Center,
                         JustifyContent: JustifyContent.SpaceBetween,
                         BackgroundColor: paper,
-                        BorderBottomWidth: 2,
+                        BorderWidth: Edges{Bottom: 2},
                         BorderColor: ink,
                         Text{
                             Content: "MODULAR / SYSTEM 03",

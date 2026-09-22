@@ -695,7 +695,7 @@ class MotionChapter : Cell {
             Height: 30,
             Padding: Edges{Left: 12, Right: 12,},
             BackgroundColor: Color.FromNormalized(0.06F, 0.07F, 0.09F, 0.90F),
-            BorderTopWidth: 1,
+            BorderWidth: Edges{Top: 1},
             BorderColor: GalleryTheme.Border,
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
@@ -1702,8 +1702,7 @@ class MotionChapter : Cell {
             Container{
                 Width: 32,
                 Height: 26,
-                BorderLeftWidth: 1,
-                BorderRightWidth: 1,
+                BorderWidth: Edges{Left: 1, Right: 1},
                 BorderColor: GalleryTheme.Border,
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.Center,
@@ -2050,7 +2049,7 @@ class MotionChapter : Cell {
         if isOpen {
             Container{
                 Padding: 10,
-                BorderTopWidth: 1,
+                BorderWidth: Edges{Top: 1},
                 BorderColor: GalleryTheme.Border,
                 BackgroundColor: Color.FromNormalized(0.07F, 0.07F, 0.09F, 0.9F),
                 FlexDirection: FlexDirection.Column,

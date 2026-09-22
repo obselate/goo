@@ -238,48 +238,20 @@ public open class Style {
   public prop BorderBottomLeftRadius Length{ init -> pushCheckedLength(StyleField.BorderBottomLeftRadius, value, "BorderBottomLeftRadius", false, false, false) }
   /// Sets the bottom-right border radius.
   public prop BorderBottomRightRadius Length{ init -> pushCheckedLength(StyleField.BorderBottomRightRadius, value, "BorderBottomRightRadius", false, false, false) }
-  /// Sets every box border width or the uniform Shape stroke width.
-  public prop BorderWidth Length{
-    init{
-      pushCheckedLength(StyleField.ShapeStrokeWidth, value, "BorderWidth", false, false, false)
-      pushCheckedLength(StyleField.BorderTopWidth, value, "BorderWidth", false, false, false)
-      pushCheckedLength(StyleField.BorderRightWidth, value, "BorderWidth", false, false, false)
-      pushCheckedLength(StyleField.BorderBottomWidth, value, "BorderWidth", false, false, false)
-    }
-  }
-  /// Sets the left box border width.
-  public prop BorderLeftWidth Length{ init -> pushCheckedLength(StyleField.BorderLeftWidth, value, "BorderLeftWidth", false, false, false) }
+  /// Sets box border widths in CSS top, right, bottom, left order.
+  /// A uniform value also sets the Shape stroke width.
+  public prop BorderWidth Edges{ init -> pushBorderWidths(value) }
   /// Sets the box border width at the inline start edge.
   public prop BorderStartWidth Length{ init -> pushCheckedLength(StyleField.BorderStartWidth, value, "BorderStartWidth", false, false, false) }
-  /// Sets the top box border width.
-  public prop BorderTopWidth Length{ init -> pushCheckedLength(StyleField.BorderTopWidth, value, "BorderTopWidth", false, false, false) }
-  /// Sets the right box border width.
-  public prop BorderRightWidth Length{ init -> pushCheckedLength(StyleField.BorderRightWidth, value, "BorderRightWidth", false, false, false) }
   /// Sets the box border width at the inline end edge.
   public prop BorderEndWidth Length{ init -> pushCheckedLength(StyleField.BorderEndWidth, value, "BorderEndWidth", false, false, false) }
-  /// Sets the bottom box border width.
-  public prop BorderBottomWidth Length{ init -> pushCheckedLength(StyleField.BorderBottomWidth, value, "BorderBottomWidth", false, false, false) }
-  /// Sets every box border color or the uniform Shape stroke color.
-  public prop BorderColor Color{
-    init{
-      pushColor(StyleField.ShapeStrokeColor, value)
-      pushColor(StyleField.BorderTopColor, value)
-      pushColor(StyleField.BorderRightColor, value)
-      pushColor(StyleField.BorderBottomColor, value)
-    }
-  }
-  /// Sets the left box border color.
-  public prop BorderLeftColor Color{ init -> pushColor(StyleField.BorderLeftColor, value) }
+  /// Sets box border colors in CSS top, right, bottom, left order.
+  /// A uniform value also sets the Shape stroke color.
+  public prop BorderColor Edges[Color]{ init -> pushBorderColors(value) }
   /// Sets the box border color at the inline start edge.
   public prop BorderStartColor Color{ init -> pushColor(StyleField.BorderStartColor, value) }
-  /// Sets the top box border color.
-  public prop BorderTopColor Color{ init -> pushColor(StyleField.BorderTopColor, value) }
-  /// Sets the right box border color.
-  public prop BorderRightColor Color{ init -> pushColor(StyleField.BorderRightColor, value) }
   /// Sets the box border color at the inline end edge.
   public prop BorderEndColor Color{ init -> pushColor(StyleField.BorderEndColor, value) }
-  /// Sets the bottom box border color.
-  public prop BorderBottomColor Color{ init -> pushColor(StyleField.BorderBottomColor, value) }
   /// Sets how box border edges paint. Dashed and Dotted stroke one ring
   /// using the top border width and color. Shape strokes are unchanged.
   public prop BorderStyle BorderStyle{ init -> pushEnumOrdinal(StyleField.BorderStyle, int32(value)) }
@@ -395,6 +367,40 @@ public open class Style {
       pushCheckedLength(padding ? StyleField.PaddingLeft : StyleField.MarginLeft,
         value.Left, name + ".Left", allowNegative, true, false)
     }
+  }
+
+  internal func pushBorderWidths(value Edges) {
+    if value.Uniform {
+      pushCheckedLength(StyleField.ShapeStrokeWidth, value.UniformValue, "BorderWidth", false, false, false)
+      pushCheckedLength(StyleField.BorderTopWidth, value.UniformValue, "BorderWidth", false, false, false)
+      pushCheckedLength(StyleField.BorderRightWidth, value.UniformValue, "BorderWidth", false, false, false)
+      pushCheckedLength(StyleField.BorderBottomWidth, value.UniformValue, "BorderWidth", false, false, false)
+    }
+    if value.HasTop {
+      pushCheckedLength(StyleField.BorderTopWidth, value.Top, "BorderWidth.Top", false, false, false)
+    }
+    if value.HasRight {
+      pushCheckedLength(StyleField.BorderRightWidth, value.Right, "BorderWidth.Right", false, false, false)
+    }
+    if value.HasBottom {
+      pushCheckedLength(StyleField.BorderBottomWidth, value.Bottom, "BorderWidth.Bottom", false, false, false)
+    }
+    if value.HasLeft {
+      pushCheckedLength(StyleField.BorderLeftWidth, value.Left, "BorderWidth.Left", false, false, false)
+    }
+  }
+
+  internal func pushBorderColors(value Edges[Color]) {
+    if value.Uniform {
+      pushColor(StyleField.ShapeStrokeColor, value.UniformValue)
+      pushColor(StyleField.BorderTopColor, value.UniformValue)
+      pushColor(StyleField.BorderRightColor, value.UniformValue)
+      pushColor(StyleField.BorderBottomColor, value.UniformValue)
+    }
+    if value.HasTop { pushColor(StyleField.BorderTopColor, value.Top) }
+    if value.HasRight { pushColor(StyleField.BorderRightColor, value.Right) }
+    if value.HasBottom { pushColor(StyleField.BorderBottomColor, value.Bottom) }
+    if value.HasLeft { pushColor(StyleField.BorderLeftColor, value.Left) }
   }
 
   internal func pushCheckedLength(field StyleField, value Length, name string,

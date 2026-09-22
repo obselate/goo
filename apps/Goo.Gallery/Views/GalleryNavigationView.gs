@@ -220,7 +220,7 @@ internal class GalleryNavigationView {
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.SpaceBetween,
                 BackgroundColor: GalleryTheme.Surface,
-                BorderBottomWidth: 1,
+                BorderWidth: Edges{Bottom: 1},
                 BorderColor: GalleryTheme.Border,
                 Container{
                     Key: "gallery-brand",
@@ -314,7 +314,7 @@ internal class GalleryNavigationView {
                 },
                 FlexDirection: FlexDirection.Column,
                 BackgroundColor: GalleryTheme.SidebarBackground,
-                BorderRightWidth: 1,
+                BorderWidth: Edges{Right: 1},
                 BorderColor: GalleryTheme.Border,
                 OverflowY: Overflow.Scroll,
                 Padding: Edges{Top: 6, Bottom: 16, Left: 6, Right: 6,},
@@ -350,7 +350,7 @@ internal class GalleryNavigationView {
                 AlignItems: AlignItems.Center,
                 JustifyContent: JustifyContent.FlexStart,
                 BackgroundColor: GalleryTheme.Surface,
-                BorderTopWidth: 1,
+                BorderWidth: Edges{Top: 1},
                 BorderColor: GalleryTheme.Border,
                 Text{
                     Content: sentence,
