@@ -73,6 +73,7 @@ internal unsafe partial class VulkanWindowTarget {
           0uL)
         VulkanWindowTarget.RetainTerminalTarget(this)
         if let currentDiagnostics = diagnostics {
+          CaptureDiagnosticLiveMemory(VulkanDiagnosticEventIds.LiveMemory)
           currentDiagnostics.Seal()
           try { currentDiagnostics.FlushNdjson(Console.Error) } catch (cleanup Exception) { }
         }
@@ -95,6 +96,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     CaptureDiagnosticWsi()
     CaptureDiagnosticResources()
+    CaptureDiagnosticLiveMemory(VulkanDiagnosticEventIds.LiveMemory)
     let liveTargetsRemain = VulkanDeviceRecoveryCoordinator.Count > 0
     var deviceIdleCompleted = device == nint(0)
     var idleResult VkResult = if deviceIdleCompleted {

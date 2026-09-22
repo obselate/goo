@@ -358,6 +358,7 @@ Sources:
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 - [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
+- [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
 - [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
@@ -476,6 +477,14 @@ Opens the window and processes frames until all open Goo windows close.
 ### `SetClipboardText(string)`
 
 Sets the native clipboard text on the window UI thread. Native set failures throw.
+
+### `SetInterval(System.Action,float64)`
+
+Runs a callback repeatedly on the UI thread at the requested interval.
+
+### `SetTimeout(System.Action,float64)`
+
+Runs a callback once on the UI thread after the delay.
 
 ### `ShowFileDialogAsync(FileDialogKind,FileDialogOptions)`
 
@@ -675,6 +684,22 @@ Identifies the requested state of a window.
 - `Minimized`
 - `Maximized`
 - `Fullscreen`
+
+## `WindowTimer`
+
+Source:
+
+- [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
+
+A cancellable callback scheduled on a Window's UI thread.
+
+### `Dispose`
+
+Cancels the callback. Call this on the Window's UI thread.
+
+### `IsActive`
+
+Reports whether the callback remains scheduled.
 
 ## `WindowTitlebarEvent`
 

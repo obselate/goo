@@ -124,6 +124,13 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var pendingSubmitStart uint64
   private var pendingPresentStart uint64
   private var pendingPresentFence VkFence
+  private var startupRendererStart uint64
+  private var startupFirstSwapchainRecorded bool
+  private var startupFirstRendererRecorded bool
+  private var startupFirstSceneRecorded bool
+  private var startupFirstSubmitRecorded bool
+  private var startupFirstPresentRecorded bool
+  private var startupFirstPresentTicks uint64
 
   public prop ProfileSink FrameProfileSink{ get -> this }
 

@@ -68,6 +68,7 @@ internal unsafe partial class VulkanWindowTarget {
     var desiredExtent = VkExtent2D{}
     desiredExtent.width = uint32(width)
     desiredExtent.height = uint32(height)
+    let swapStart = DiagnosticTimestamp()
     let next = VulkanSwapchainGeneration(
       device,
       dispatch,
@@ -83,6 +84,11 @@ internal unsafe partial class VulkanWindowTarget {
       windowObjectAccounting,
       host.PreferRequestedFramebufferExtent)
     generation = next
+    if !startupFirstSwapchainRecorded {
+      startupFirstSwapchainRecorded = true
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainCreate,
+        VulkanDiagnosticCategories.Window, swapStart)
+    }
     if let previous = old {
       InvalidateLastPresentedImageState()
       retiredSwapchains.Enqueue(previous, presentationRetirement)
@@ -137,6 +143,11 @@ internal unsafe partial class VulkanWindowTarget {
         diagnostics)
     }
     primitiveRenderer!!.SetLayerPool(layerPool)
+    if !startupFirstRendererRecorded {
+      startupFirstRendererRecorded = true
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.PerWindowRenderer,
+        VulkanDiagnosticCategories.Window, startupRendererStart)
+    }
     if surfaceRecovery {
       primitiveRenderer!!.InvalidateClipFrameRetention()
       clipMaskFrameStats = primitiveRenderer!!.ClipMaskFrameStats

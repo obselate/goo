@@ -53,6 +53,16 @@ internal class VulkanDiagnosticEventIds {
     const VulkanResult uint64 = 400uL
     const ValidationMessage uint64 = 401uL
     const FatalSnapshot uint64 = 402uL
+    const StartupOrigin uint64 = 500uL
+    const SdlWindowCreate uint64 = 501uL
+    const VulkanLibrary uint64 = 502uL
+    const SharedResources uint64 = 503uL
+    const PipelineCacheLoad uint64 = 504uL
+    const PerWindowRenderer uint64 = 505uL
+    const FirstSceneCompile uint64 = 506uL
+    const FirstSubmit uint64 = 507uL
+    const FirstSuccessfulPresent uint64 = 508uL
+    const LiveMemory uint64 = 509uL
   }
 }
 
@@ -247,6 +257,21 @@ internal data struct VulkanDiagnosticCounterSnapshot {
   var layerPoolFailureCount uint64
   var layerPoolPassCount uint64
   var layerPoolCompositeCount uint64
+}
+
+internal data struct VulkanDiagnosticLiveSnapshot {
+  var eventId uint64
+  var ticks uint64
+  var managedAllocatedBytes uint64
+  var privateBytes uint64
+  var workingSetBytes uint64
+  var vulkanObjectCount uint64
+  var vulkanDeviceMemoryBytes uint64
+  var heapAllocated uint64
+  var driverHeapUsage uint64
+  var heapBudget uint64
+  var allocatorBytes uint64
+  var cacheBytes uint64
 }
 
 internal data struct VulkanDiagnosticTextAtlasContribution {

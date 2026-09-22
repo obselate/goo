@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics
 import System.Threading
 
 internal unsafe partial class VulkanDiagnostics {
@@ -79,9 +80,41 @@ internal unsafe partial class VulkanDiagnostics {
   private var fatalCounters VulkanDiagnosticCounterSnapshot
   private var writerState int32 = WriterOpen
   private var activeWriters int32
+  private var originTicks uint64
+  private var originFrequency uint64
+  private var liveFirstPresent VulkanDiagnosticLiveSnapshot
+  private var livePreTeardown VulkanDiagnosticLiveSnapshot
+  private var liveFirstPresentClaimed int32
+  private var livePreTeardownClaimed int32
 
   shared {
-    func Create(enabled bool) VulkanDiagnostics? -> if !enabled { nil } else { VulkanDiagnostics() }
+    private var openOriginTicks uint64
+    private var openOriginFrequency uint64
+
+    func Create(enabled bool) VulkanDiagnostics? {
+      if !enabled {
+        return nil
+      }
+      let created = VulkanDiagnostics()
+      if created.originTicks != 0uL {
+        created.Record(
+          0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+          VulkanDiagnosticEventIds.StartupOrigin,
+          VulkanDiagnosticCategories.Runtime,
+          0uL, 0, created.originFrequency, created.originTicks)
+      }
+      return created
+    }
+
+    internal func BindOpenOrigin(ticks uint64) {
+      if ticks == 0uL {
+        return
+      }
+      if openOriginFrequency == 0uL {
+        openOriginFrequency = uint64(Stopwatch.Frequency)
+      }
+      Interlocked.Exchange(ref openOriginTicks, ticks)
+    }
   }
 
   internal prop ValidationErrorCount int64{ get -> Interlocked.Read(ref validationErrors) }
@@ -89,6 +122,7 @@ internal unsafe partial class VulkanDiagnostics {
   internal prop ResultWriteCount int64{ get -> Interlocked.Read(ref resultWrite) }
   internal prop ValidationWriteCount int64{ get -> Interlocked.Read(ref validationWrite) }
   internal prop IsSealed bool{ get -> Volatile.Read(ref writerState) == WriterSealed }
+  internal prop OriginTicks uint64{ get -> originTicks }
   internal prop Counters VulkanDiagnosticCounterSnapshot{ get -> counters.Snapshot }
   internal prop Fatal VulkanDiagnosticFatalSnapshot{
     get {
@@ -146,6 +180,8 @@ internal unsafe partial class VulkanDiagnostics {
     counters = VulkanDiagnosticCounters()
     textAtlasContributionGate = Object()
     textAtlasContributions = List[VulkanDiagnosticTextAtlasContribution]()
+    originTicks = Interlocked.Exchange(ref openOriginTicks, 0uL)
+    originFrequency = openOriginFrequency
   }
 
   internal func Record(run uint64, workload uint64, process uint64, window uint64,
@@ -252,6 +288,72 @@ internal unsafe partial class VulkanDiagnostics {
       Record(run, workload, process, window, frame, sample, queue, submission, fence,
         0uL, eventId, category, 0uL, 0, startTicks, endTicks)
     }
+
+  internal func CaptureLiveMemory(eventId uint64, ticks uint64) {
+    let firstPresent = eventId == VulkanDiagnosticEventIds.FirstSuccessfulPresent
+    if firstPresent {
+      if Interlocked.CompareExchange(ref liveFirstPresentClaimed, 1, 0) != 0 {
+        return
+      }
+    } else if Interlocked.CompareExchange(ref livePreTeardownClaimed, 1, 0) != 0 {
+      return
+    }
+    var managed uint64 = 0uL
+    var privateBytes uint64 = 0uL
+    var workingSet uint64 = 0uL
+    try {
+      let total = GC.GetTotalMemory(false)
+      if total > 0L {
+        managed = uint64(total)
+      }
+    } catch (cleanup Exception) { }
+    try {
+      using let process = Process.GetCurrentProcess()
+      process.Refresh()
+      let privateValue = process.PrivateMemorySize64
+      let workingValue = process.WorkingSet64
+      if privateValue > 0L {
+        privateBytes = uint64(privateValue)
+      }
+      if workingValue > 0L {
+        workingSet = uint64(workingValue)
+      }
+    } catch (cleanup Exception) { }
+    if !EnterWriter() {
+      return
+    }
+    try {
+      if managed != 0uL {
+        counters.SetManagedAllocatedBytes(managed)
+      }
+      let snapshot = counters.Snapshot
+      let liveTicks = if ticks != 0uL { ticks } else { uint64(Stopwatch.GetTimestamp()) }
+      let live = VulkanDiagnosticLiveSnapshot{
+        eventId: eventId,
+        ticks: liveTicks,
+        managedAllocatedBytes: managed,
+        privateBytes: privateBytes,
+        workingSetBytes: workingSet,
+        vulkanObjectCount: snapshot.vulkanObjectCount,
+        vulkanDeviceMemoryBytes: snapshot.vulkanDeviceMemoryBytes,
+        heapAllocated: snapshot.vulkanDeviceMemoryBytes,
+        driverHeapUsage: snapshot.driverHeapUsage,
+        heapBudget: snapshot.heapBudget,
+        allocatorBytes: snapshot.allocatorBytes,
+        cacheBytes: snapshot.cacheBytes,
+      }
+      if firstPresent {
+        liveFirstPresent = live
+      } else {
+        livePreTeardown = live
+      }
+      RecordCore(0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+        VulkanDiagnosticEventIds.LiveMemory, VulkanDiagnosticCategories.Timing,
+        0uL, 0, managed, workingSet)
+    } finally {
+      ExitWriter()
+    }
+  }
 
   internal func RecordResult(eventId uint64, result int32) {
     RecordResult(eventId, result, 0uL, 0uL, 0uL, 0uL)

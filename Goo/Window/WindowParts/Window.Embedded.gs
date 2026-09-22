@@ -140,6 +140,8 @@ public partial class Window {
     if suspended || windowTarget == nil || framebufferWidth <= 0 || framebufferHeight <= 0 {
       return Double.PositiveInfinity
     }
-    return if hasDemand() { 0.0 } else { input.NextTickDeadlineSeconds() }
+    return if hasDemand() { 0.0 } else {
+      Math.Min(nextTimerDeadlineSeconds(), input.NextTickDeadlineSeconds())
+    }
   }
 }

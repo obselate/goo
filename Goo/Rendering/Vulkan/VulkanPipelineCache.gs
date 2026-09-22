@@ -18,6 +18,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
   private const MaximumCacheBytes int32 = 64 * 1024 * 1024
   private const HeaderBytes int32 = 32
   private const CacheSchema string = "v1"
+  private const CacheRetentionDays int32 = 30
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let objectAccounting VulkanObjectAccounting?
@@ -238,6 +239,8 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         pin.Free()
       }
     } catch (error Exception) {
+    } finally {
+      RemoveObsoleteCaches()
     }
   }
 
@@ -258,6 +261,48 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       } catch (cleanup Exception) {
       }
     }
+  }
+
+  private func RemoveObsoleteCaches() {
+    try {
+      let directory = Path.GetDirectoryName(cachePath) ?? ""
+      if directory == "" {
+        return
+      }
+      let cutoff = DateTime.UtcNow.AddDays(-float64(CacheRetentionDays))
+      let current = Path.GetFileName(cachePath)
+      for path in Directory.EnumerateFiles(directory, CacheSchema + "-*.bin",
+        SearchOption.TopDirectoryOnly) {
+          try {
+            let name = Path.GetFileName(path)
+            if !IsOwnedCacheFile(name)
+              || String.Equals(name, current, StringComparison.OrdinalIgnoreCase)
+              || File.GetLastWriteTimeUtc(path) >= cutoff {
+                continue
+              }
+            File.Delete(path)
+          } catch (error Exception) {
+          }
+        }
+    } catch (error Exception) {
+    }
+  }
+
+  private func IsOwnedCacheFile(name string) bool {
+    if name.Length != 83
+      || !name.StartsWith(CacheSchema + "-", StringComparison.Ordinal)
+      || !name.EndsWith(".bin", StringComparison.Ordinal) {
+        return false
+      }
+    for i in 3 ... 79 {
+      let c = name[i]
+      if i == 11 || i == 20 || i == 29 || i == 62 {
+        if c != '-' { return false }
+      } else if !Char.IsAsciiHexDigit(c) {
+        return false
+      }
+    }
+    return true
   }
 
   private func DisposeCore(save bool) {

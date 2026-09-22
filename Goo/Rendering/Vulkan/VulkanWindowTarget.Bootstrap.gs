@@ -1,16 +1,27 @@
 package Goo
 
 import System
+import System.Diagnostics
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
   private func Bootstrap() {
+    var libraryStart uint64 = 0uL
+    var libraryEnd uint64 = 0uL
     if !vulkanLoaded {
+      let captureLibrary = diagnostics != nil
+        || Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1"
+      if captureLibrary {
+        libraryStart = uint64(Stopwatch.GetTimestamp())
+      }
       if !host.LoadVulkanLibrary() {
         throw InvalidOperationException("Vulkan loader initialization failed")
       }
       vulkanLoaded = true
       getProcAddress = host.GetVulkanGetInstanceProcAddr()
+      if captureLibrary {
+        libraryEnd = uint64(Stopwatch.GetTimestamp())
+      }
     }
     if getProcAddress == nint(0) {
       throw InvalidOperationException("Vulkan global procedure lookup is unavailable")
@@ -18,8 +29,11 @@ internal unsafe partial class VulkanWindowTarget {
     if let shared = VulkanSharedRuntime.TryAcquire() {
       runtime = shared
       ApplySharedRuntime(shared)
+      let surfaceStart = DiagnosticTimestamp()
       CreateSurface()
       ValidateSharedPresentationSupport()
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
+        VulkanDiagnosticCategories.Window, surfaceStart)
     } else {
       if diagnostics == nil {
         diagnostics = VulkanDiagnostics.Create(
@@ -30,13 +44,34 @@ internal unsafe partial class VulkanWindowTarget {
         sharedObjectAccounting = VulkanObjectAccounting(objectAccounting)
         windowObjectAccounting = VulkanObjectAccounting(objectAccounting)
       }
+      if libraryStart != 0uL {
+        try {
+          if let current = diagnostics {
+            current.RecordStage(
+              0uL, 0uL, 0uL, DiagnosticWindowValue(), 0uL, 0uL, 0uL, 0uL, 0uL,
+              VulkanDiagnosticEventIds.VulkanLibrary,
+              VulkanDiagnosticCategories.Runtime,
+              libraryStart,
+              libraryEnd)
+          }
+        } catch (cleanup Exception) { }
+      }
+      let instanceStart = DiagnosticTimestamp()
       CreateInstance()
       LoadInstanceDispatch()
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeInstance,
+        VulkanDiagnosticCategories.Runtime, instanceStart)
+      let surfaceStart = DiagnosticTimestamp()
       CreateSurface()
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
+        VulkanDiagnosticCategories.Window, surfaceStart)
       SelectPhysicalDevice()
+      let deviceStart = DiagnosticTimestamp()
       CreateDevice()
       LoadDeviceDispatch()
       AcquireQueue()
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeDevice,
+        VulkanDiagnosticCategories.Runtime, deviceStart)
       var sharedMemoryProperties = VkPhysicalDeviceMemoryProperties{}
       let getMemoryProperties = instanceDispatch.vkGetPhysicalDeviceMemoryProperties
       getMemoryProperties(physicalDevice, &sharedMemoryProperties)
@@ -727,6 +762,7 @@ internal unsafe partial class VulkanWindowTarget {
     guard let activeRuntime = runtime else {
       throw InvalidOperationException("Vulkan shared runtime is unavailable")
     }
+    startupRendererStart = DiagnosticTimestamp()
     memoryAllocator = activeRuntime.MemoryAllocator
     imageResources = activeRuntime.ImageResources
     pathResources = activeRuntime.PathResources

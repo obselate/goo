@@ -222,6 +222,11 @@ internal unsafe partial class VulkanWindowTarget {
         host.Wake()
         return
       }
+      if !startupFirstSceneRecorded {
+        startupFirstSceneRecorded = true
+        RecordDiagnosticTiming(VulkanDiagnosticEventIds.FirstSceneCompile,
+          VulkanDiagnosticCategories.FramePlan, planStart)
+      }
       if let debugOverlay = overlay {
         sceneCompiler.AppendDebugOverlay(debugOverlay, compileResult.FrameVersion,
           logicalWidth, logicalHeight)

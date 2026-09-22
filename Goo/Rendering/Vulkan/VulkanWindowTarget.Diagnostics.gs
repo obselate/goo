@@ -393,6 +393,71 @@ internal unsafe partial class VulkanWindowTarget {
     } catch (cleanup Exception) { }
   }
 
+  internal func RecordSdlWindowCreate(startTicks uint64, endTicks uint64) {
+    if startTicks == 0uL || endTicks == 0uL {
+      return
+    }
+    try {
+      if let current = diagnostics {
+        current.RecordStage(
+          0uL,
+          0uL,
+          0uL,
+          DiagnosticWindowValue(),
+          0uL,
+          0uL,
+          0uL,
+          0uL,
+          0uL,
+          VulkanDiagnosticEventIds.SdlWindowCreate,
+          VulkanDiagnosticCategories.Window,
+          startTicks,
+          endTicks)
+      }
+    } catch (cleanup Exception) { }
+  }
+
+  private func RecordFirstSuccessfulPresent() {
+    if startupFirstPresentRecorded || diagnostics == nil {
+      return
+    }
+    startupFirstPresentRecorded = true
+    let end = uint64(Stopwatch.GetTimestamp())
+    startupFirstPresentTicks = end
+    try {
+      if let current = diagnostics {
+        let start = if current.OriginTicks == 0uL { end } else { current.OriginTicks }
+        current.RecordStage(
+          0uL,
+          0uL,
+          0uL,
+          DiagnosticWindowValue(),
+          activeFrameId,
+          0uL,
+          DiagnosticQueueValue(),
+          DiagnosticSubmissionValue(),
+          0uL,
+          VulkanDiagnosticEventIds.FirstSuccessfulPresent,
+          VulkanDiagnosticCategories.Timing,
+          start,
+          end)
+      }
+    } catch (cleanup Exception) { }
+  }
+
+  private func CaptureDiagnosticLiveMemory(eventId uint64) {
+    try {
+      if let current = diagnostics {
+        current.CaptureLiveMemory(eventId,
+          if eventId == VulkanDiagnosticEventIds.FirstSuccessfulPresent {
+            startupFirstPresentTicks
+          } else {
+            0uL
+          })
+      }
+    } catch (cleanup Exception) { }
+  }
+
   private func RecordDiagnosticPlan(start uint64, result VulkanSceneCompileResult,
     planCounters ScenePlanCounters, frame SceneFrame) {
       try {
@@ -553,6 +618,11 @@ internal unsafe partial class VulkanWindowTarget {
   private func RecordDiagnosticSubmit(start uint64) {
     try {
       if let current = diagnostics {
+        if !startupFirstSubmitRecorded {
+          startupFirstSubmitRecorded = true
+          RecordDiagnosticTiming(VulkanDiagnosticEventIds.FirstSubmit,
+            VulkanDiagnosticCategories.Timing, start)
+        }
         current.AddSubmit(1uL)
         RecordDiagnosticTiming(VulkanDiagnosticEventIds.Submit,
           VulkanDiagnosticCategories.Timing, start)

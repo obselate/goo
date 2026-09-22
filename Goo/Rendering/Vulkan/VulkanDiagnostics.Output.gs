@@ -6,6 +6,10 @@ import System.Text
 internal unsafe partial class VulkanDiagnostics {
   private func OptionalBudgetValue(available uint32, value uint64) string -> if available == 0u { "null" } else { value.ToString() }
 
+  private func FlushLiveSnapshot(writer TextWriter, snapshot VulkanDiagnosticLiveSnapshot) {
+    writer.WriteLine("{\"kind\":\"live\",\"event\":${snapshot.eventId},\"ticks\":${snapshot.ticks},\"originKind\":\"window_open\",\"originTicks\":${originTicks},\"frequency\":${originFrequency},\"managedAllocatedBytes\":${snapshot.managedAllocatedBytes},\"privateBytes\":${snapshot.privateBytes},\"workingSetBytes\":${snapshot.workingSetBytes},\"vulkanObjectCount\":${snapshot.vulkanObjectCount},\"vulkanDeviceMemoryBytes\":${snapshot.vulkanDeviceMemoryBytes},\"heapAllocated\":${snapshot.heapAllocated},\"driverHeapUsage\":${snapshot.driverHeapUsage},\"heapBudget\":${snapshot.heapBudget},\"allocatorBytes\":${snapshot.allocatorBytes},\"cacheBytes\":${snapshot.cacheBytes}}")
+  }
+
   private func Hex(buffer [] ? uint8, offset int32, length uint32) string {
     let text = StringBuilder()
     if let bytes = buffer {
@@ -75,6 +79,12 @@ internal unsafe partial class VulkanDiagnostics {
           index++
         }
       }
+    }
+    if liveFirstPresent.ticks != 0uL {
+      FlushLiveSnapshot(writer, liveFirstPresent)
+    }
+    if livePreTeardown.ticks != 0uL {
+      FlushLiveSnapshot(writer, livePreTeardown)
     }
     let snapshot = counters.Snapshot
     writer.WriteLine("{\"kind\":\"clip_mask_atlas\",\"clipMaskAtlasByteBudget\":${snapshot.clipMaskAtlasByteBudget},\"clipMaskAtlasResidentBytes\":${snapshot.clipMaskAtlasResidentBytes},\"clipMaskAtlasRegionCount\":${snapshot.clipMaskAtlasRegionCount},\"clipMaskAtlasFreePlacementCount\":${snapshot.clipMaskAtlasFreePlacementCount},\"clipMaskAtlasActiveLayerCount\":${snapshot.clipMaskAtlasActiveLayerCount},\"clipMaskAtlasMaximumLayerCount\":${snapshot.clipMaskAtlasMaximumLayerCount},\"clipMaskAtlasRetiredGenerationCount\":${snapshot.clipMaskAtlasRetiredGenerationCount},\"clipMaskAtlasEvictionCount\":${snapshot.clipMaskAtlasEvictionCount},\"clipMaskAtlasPressureEventCount\":${snapshot.clipMaskAtlasPressureEventCount},\"clipMaskAtlasPressureFailureCount\":${snapshot.clipMaskAtlasPressureFailureCount}}")

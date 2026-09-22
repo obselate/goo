@@ -437,6 +437,9 @@ internal unsafe partial class VulkanWindowTarget {
             || presentResult == VkConstants.VK_SUBOPTIMAL_KHR)
           && (markedPresent == VkConstants.VK_SUCCESS
               || markedPresent == VkConstants.VK_SUBOPTIMAL_KHR)
+        if completed {
+          RecordFirstSuccessfulPresent()
+        }
         if completed && presentId != 0uL {
           let handoffTimestamp = Stopwatch.GetTimestamp()
           presentationRetirement.AttachPendingPresentationLatency(
@@ -475,6 +478,10 @@ internal unsafe partial class VulkanWindowTarget {
     } finally {
       queueStage = QueueStageIdle
       CaptureDiagnosticResources()
+      if startupFirstPresentTicks != 0uL {
+        CaptureDiagnosticLiveMemory(VulkanDiagnosticEventIds.FirstSuccessfulPresent)
+        startupFirstPresentTicks = 0uL
+      }
       CaptureDiagnosticValidationBoundary()
       CloseDiagnosticFrame(completed)
       ClearActiveFrame()

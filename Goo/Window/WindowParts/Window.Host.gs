@@ -240,8 +240,14 @@ public partial class Window {
     ownerThreadRegistered = true
     uiThreadBound = true
     try {
+      let captureStartup = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1"
+      let originTicks = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
+      if originTicks != 0uL {
+        VulkanDiagnostics.BindOpenOrigin(originTicks)
+      }
       prepare()
       constrainSize()
+      let sdlStart = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       let native = SdlHost(
         Title,
         Width,
@@ -255,6 +261,7 @@ public partial class Window {
         transparent,
         VSync,
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
+      let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
       SyncTitlebarHook()
       configureOwnership(native)
@@ -262,6 +269,9 @@ public partial class Window {
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }
       let target = VulkanWindowTarget(native)
       windowTarget = target
+      if captureStartup {
+        target.RecordSdlWindowCreate(sdlStart, sdlEnd)
+      }
       configureHost(native)
       profiler.Sink = target.ProfileSink
       if !applyNativeResize(
@@ -461,6 +471,13 @@ public partial class Window {
 
       // Pump drains each fixed Post batch here, after close decisions and before input.
       drainPostedActions()
+      drainTimers(float64(Stopwatch.GetTimestamp()))
+      if !IsOpen {
+        if profiling {
+          profiler.EndFrame(frameProfile, false)
+        }
+        return
+      }
 
       // Drain returns true only for visually relevant input; bare moves stay quiet.
       let inputProfile = profiling ? profiler.Start() : FrameProfilePoint{}
@@ -593,7 +610,8 @@ public partial class Window {
   }
 
   internal func SchedulerTimedServiceDue() bool ->
-  Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds()) <= 0.0
+  Math.Min(nextTimerDeadlineSeconds(),
+    Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds())) <= 0.0
 
   internal func RefreshSchedulerMetrics() {
     host?.RefreshMetricsIfChanged()
@@ -604,8 +622,8 @@ public partial class Window {
   // otherwise-idle window still blocks (near-0 CPU) instead of polling, but
   // wakes itself in time to render each blink transition.
   private func idleWaitMs() int32 {
-    let deadline = Math.Min(0.25,
-      Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds()))
+    let deadline = Math.Min(0.25, Math.Min(nextTimerDeadlineSeconds(),
+      Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds())))
     let ms = int32(Math.Ceiling(deadline * 1000.0))
     return ms < 1 ? 1 : ms
   }
@@ -714,6 +732,7 @@ public partial class Window {
     Window.UnregisterLiveWindow(this)
     var firstError = family?.CloseError
     if let state = family { state.CloseError = nil }
+    firstError = captureCleanupError(firstError, () -> clearTimers())
     firstError = captureCleanupError(firstError, () -> stopPosts())
     firstError = captureCleanupError(firstError, () -> stopImageCompletions())
     firstError = captureCleanupError(firstError, () -> stopRetainedInvalidations())

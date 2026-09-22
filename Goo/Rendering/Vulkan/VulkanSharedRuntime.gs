@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Threading
+import System.Diagnostics
 
 internal data struct VulkanSharedDeviceFacts {
   var ApiVersion uint32
@@ -217,6 +218,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
         var pathIdentityRegistry VulkanPathIdentityRegistry? = nil
         var createdImageIdentityRegistry bool = false
         var createdPathIdentityRegistry bool = false
+        let sharedStart = if nativeDiagnostics == nil { 0uL } else { uint64(Stopwatch.GetTimestamp()) }
         try {
           let createdBudget = VulkanMemoryBudgetState(
             nativePhysicalDevice,
@@ -253,6 +255,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             generationSeed,
             nativeSharedObjectAccounting)
           imageResources = createdImageResources
+          let cacheStart = if nativeDiagnostics == nil { 0uL } else { uint64(Stopwatch.GetTimestamp()) }
           let createdPipelineCache = VulkanPipelineCache(
             nativeDevice,
             nativeDispatch,
@@ -262,6 +265,16 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             nativePipelineCacheUuid,
             nativeSharedObjectAccounting)
           pipelineCache = createdPipelineCache
+          if cacheStart != 0uL {
+            if let current = nativeDiagnostics {
+              current.RecordStage(
+                0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+                VulkanDiagnosticEventIds.PipelineCacheLoad,
+                VulkanDiagnosticCategories.Pipeline,
+                cacheStart,
+                uint64(Stopwatch.GetTimestamp()))
+            }
+          }
           let createdPrimitiveState = VulkanSharedPrimitiveState(
             nativeDevice,
             nativeDispatch,
@@ -341,6 +354,16 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             generationSeed,
             nativeObjectAccounting,
             nativeSharedObjectAccounting)
+          if sharedStart != 0uL {
+            if let current = nativeDiagnostics {
+              current.RecordStage(
+                0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL, 0uL,
+                VulkanDiagnosticEventIds.SharedResources,
+                VulkanDiagnosticCategories.Runtime,
+                sharedStart,
+                uint64(Stopwatch.GetTimestamp()))
+            }
+          }
           let lease = VulkanSharedLease(owner)
           current = owner
           return lease
