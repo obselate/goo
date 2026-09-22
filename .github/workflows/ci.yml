@@ -521,6 +521,16 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Collect advisory consumer publish report
+        run: |
+          python3 tools/Goo.ConsumerPerformance/run.py \
+            --output artifacts/consumer-performance \
+            --rid linux-x64 \
+            --package-version "$GOO_VERSION" \
+            --package-source "$PWD/artifacts/packages" \
+            --publish-only
+
+
       - name: Pack and validate native accessibility runtimes
         run: |
           dotnet pack Goo.Accessibility/Goo.Accessibility.csproj -c Release -o artifacts/packages \
@@ -661,6 +671,9 @@ jobs:
             artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
+            artifacts/consumer-performance/*.json
+            artifacts/consumer-performance/raw/*.log
+            artifacts/consumer-performance/reports/
 
       - name: Upload symbols separately
         uses: actions/upload-artifact@v7
@@ -670,6 +683,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
+            artifacts/consumer-performance/stage/*/symbols/
 
       - name: Upload release candidates
         uses: actions/upload-artifact@v7

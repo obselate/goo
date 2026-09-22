@@ -35,7 +35,19 @@ drivers. A minimum supported Windows version has not yet been established.
 
 For NativeAOT, install the target platform's [.NET NativeAOT
 prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
-NativeAOT publishing must run on the target operating system.
+NativeAOT publishing must run on the target operating system and must specify
+that RID, for example `-r linux-x64`, `-r win-x64`, or `-r osx-arm64`. Do not
+publish a framework-dependent application without a RID. NativeAOT is the
+preferred desktop release mode. Do not treat trimmed JIT as a validated
+release profile.
+
+Applications that do not read dependency XML documentation at runtime may add
+`-p:PublishReferencesDocumentationFiles=false` to their publish command. The
+verified NativeAOT consumer removed only `Gsharp.Extensions.xml` (51,781 bytes);
+all other staged files and hashes were unchanged. This is optional and is not a
+repository default. Do not replace it with filename-based XML deletion:
+generic staging must preserve arbitrary XML, notices, licenses, globalization
+data, and features.
 
 See [native authoring](docs/native-authoring.md) for G# construction, formatting,
 and spread rules used by this repository.
@@ -73,6 +85,27 @@ environment-specific. The CI workflow provisions the pinned shader tools,
 builds both platform payloads, installs the locally packed template and .NET
 tools, and exercises the clean package consumer. Use that workflow for release
 parity instead of substituting system SDL or unpinned shader tools.
+
+For advisory package-consumer size and runtime measurements, use the isolated
+fixture with an explicit RID, package version, package feed, and new output path:
+
+```sh
+python3 tools/Goo.ConsumerPerformance/run.py \
+  --output /absolute/new/goo-consumer-report \
+  --rid linux-x64 \
+  --package-version 0.6.4 \
+  --package-source /absolute/path/to/package-feed
+```
+
+Use `--publish-only` when only raw publish, staged runtime, and separate symbol
+artifacts are needed. The full command needs a working display and Vulkan
+driver. Results are advisory and must not become timing or memory gates.
+
+The fixture can also run outside the checkout to verify package isolation.
+Record the exact package, feed, SDK, RID, source and asset hashes, and run order.
+Compare timing or memory only when admitted samples report one identical
+framebuffer and display scale. Preserve rejected rows, but do not let them erase
+valid independent distributions or enter a comparison.
 
 Packing `Goo` directly requires explicit compatible SDL paths:
 
