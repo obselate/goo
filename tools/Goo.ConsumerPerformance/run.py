@@ -570,7 +570,7 @@ class Benchmark:
                 "--self-contained", "true",
                 "--artifacts-path", str(self.output / "build" / mode),
                 "--configfile", str(self.config),
-                "-p:GooPackageVersion=" + self.args.package_version,
+                "-p:GooReleaseVersion=" + self.args.package_version,
                 "-p:TreatWarningsAsErrors=true",
                 "-o", str(publish),
             ]
