@@ -836,6 +836,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          notes_file="$RUNNER_TEMP/goo-release-notes.md"
+          python3 .github/scripts/release_version.py --notes > "$notes_file"
           release_flags=()
           if [[ "$GOO_VERSION" == *-* ]]; then
             release_flags+=(--prerelease)
@@ -856,13 +858,14 @@ jobs:
             "artifacts/macos-candidate/install-goo-gallery-macos.sh"
           )
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file "$notes_file"
             gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
           else
             gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               "${release_flags[@]}" \
               --verify-tag \
               --title "Goo $GOO_VERSION" \
-              --notes-file CHANGELOG.md
+              --notes-file "$notes_file"
           fi
 
   android:

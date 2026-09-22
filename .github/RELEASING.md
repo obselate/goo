@@ -23,7 +23,8 @@ Goo uses Semantic Versioning.
 2. Run `python3 .github/scripts/release_version.py --write` to synchronize the
    application template, app identities, protocol strings, install commands,
    and integration metadata.
-3. Add the dated release entry to `CHANGELOG.md`. Build Goo in Release mode,
+3. Add the dated release entry to `CHANGELOG.md`. The tag workflow publishes
+   only this version's entry as the GitHub Release notes. Build Goo in Release mode,
    regenerate API documentation with `dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release`,
    and refresh the plugin reference with `python3 plugins/goo/scripts/sync_docs.py "$PWD"`.
    Run `.github/scripts/validate-onboarding.py`.

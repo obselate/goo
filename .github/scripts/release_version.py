@@ -52,6 +52,24 @@ def read_release_version() -> str:
     return version
 
 
+def extract_release_notes(text: str, version: str) -> str:
+    pattern = re.compile(
+        rf"^## {re.escape(version)} - \d{{4}}-\d{{2}}-\d{{2}}[ \t]*$",
+        re.MULTILINE,
+    )
+    entries = list(pattern.finditer(text))
+    if not entries:
+        fail(f"CHANGELOG.md: release entry for Goo {version} is missing")
+    if len(entries) > 1:
+        fail(f"CHANGELOG.md: duplicate release entries for Goo {version}")
+    entry = entries[0]
+    next_heading = re.search(r"^## ", text[entry.end():], re.MULTILINE)
+    end = entry.end() + next_heading.start() if next_heading else len(text)
+    if not text[entry.end():end].strip():
+        fail(f"CHANGELOG.md: release entry for Goo {version} is empty")
+    return text[entry.start():end].rstrip() + "\n"
+
+
 def expected_literal_text(path: Path, version: str) -> str:
     text = path.read_text(encoding="utf-8")
     if INLINE_VERSION.search(text) is None:
@@ -140,9 +158,16 @@ def main() -> None:
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--print", action="store_true", dest="print_version")
     mode.add_argument("--write", action="store_true")
+    mode.add_argument("--notes", action="store_true")
     args = parser.parse_args()
     release_version = read_release_version()
-    if args.print_version:
+    if args.notes:
+        notes = extract_release_notes(
+            (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
+            release_version,
+        )
+        print(notes, end="")
+    elif args.print_version:
         print(release_version)
     elif args.write:
         write(release_version)
