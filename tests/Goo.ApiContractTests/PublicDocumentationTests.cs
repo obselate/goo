@@ -286,7 +286,10 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.RequestClose",
         "M:Goo.Window.Run",
         "M:Goo.Window.SetClipboardText(System.String)",
+        "M:Goo.Window.SetInterval(System.Action,System.Double)",
+        "M:Goo.Window.SetTimeout(System.Action,System.Double)",
         "M:Goo.Window.TryPost(System.Action)",
+        "M:Goo.WindowTimer.Dispose",
     };
 
     private static readonly string[] ExpectedProtectedMethodIds =

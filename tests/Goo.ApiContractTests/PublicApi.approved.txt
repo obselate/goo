@@ -959,6 +959,7 @@ method|Goo.WindowMetrics|GetHashCode|instance|public|generic:|()->System.Int32
 method|Goo.WindowMetrics|ToString|instance|public|generic:|()->System.String
 method|Goo.WindowMetrics|op_Equality|static|public|generic:|(arg0:Goo.WindowMetrics,arg1:Goo.WindowMetrics)->System.Boolean
 method|Goo.WindowMetrics|op_Inequality|static|public|generic:|(arg0:Goo.WindowMetrics,arg1:Goo.WindowMetrics)->System.Boolean
+method|Goo.WindowTimer|Dispose|instance|public|generic:|()->System.Void
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
@@ -975,6 +976,8 @@ method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowActiv
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
+method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
+method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
@@ -1549,6 +1552,7 @@ property|Goo.WindowMetrics|FramebufferHeight|System.Int32|instance|get:public,in
 property|Goo.WindowMetrics|FramebufferWidth|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalWidth|System.Int32|instance|get:public,init:public|index:()
+property|Goo.WindowTimer|IsActive|System.Boolean|instance|get:public|index:()
 property|Goo.WindowTitlebarEvent|Handled|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.WindowTitlebarEvent|Position|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.Window|AccessibilityAdapter|Goo.AccessibilityAdapter|instance|get:public,set:public|index:()
@@ -1738,5 +1742,6 @@ type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowActivationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowTimer|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.WindowTitlebarEvent|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Window|sealed-class|public|base:System.Object|interfaces:|generic:
