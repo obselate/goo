@@ -197,6 +197,14 @@ Returns this color with a normalized alpha channel.
 
 Returns: A color with the specified alpha channel.
 
+### `op_Implicit(Color)~Edges{Color}`
+
+Converts a color into a uniform edge value.
+
+- `value`: color for every edge
+
+Returns: a uniform edge value
+
 ### `op_Implicit(string)~Color`
 
 Converts a CSS color string to Color.
@@ -359,6 +367,60 @@ Converts integer pixels into a uniform edge value.
 - `value`: pixel length for every edge
 
 Returns: a uniform edge value
+
+### `Bottom`
+
+Sets the bottom edge independently.
+
+### `Left`
+
+Sets the left edge independently.
+
+### `Right`
+
+Sets the right edge independently.
+
+### `Top`
+
+Sets the top edge independently.
+
+## `Edges<T>`
+
+Source:
+
+- [`Edges.Generic.gs`](../../Goo/Style/Edges.Generic.gs)
+
+Specifies typed values for the top, right, bottom, and left edges.
+
+### `new(T)`
+
+Applies one value to every edge.
+
+- `all`: value for every edge
+
+### `new(T,T)`
+
+Applies one value vertically and another horizontally.
+
+- `vertical`: top and bottom value
+- `horizontal`: right and left value
+
+### `new(T,T,T)`
+
+Applies top, horizontal, and bottom values.
+
+- `top`: top value
+- `horizontal`: right and left value
+- `bottom`: bottom value
+
+### `new(T,T,T,T)`
+
+Applies values in CSS top, right, bottom, left order.
+
+- `top`: top value
+- `right`: right value
+- `bottom`: bottom value
+- `left`: left value
 
 ### `Bottom`
 
@@ -800,10 +862,6 @@ Copies another style's ordered declarations at this declaration position. The co
 
 Sets how this element and its descendants composite with the backdrop.
 
-### `BorderBottomColor`
-
-Sets the bottom box border color.
-
 ### `BorderBottomLeftRadius`
 
 Sets the bottom-left border radius.
@@ -812,13 +870,9 @@ Sets the bottom-left border radius.
 
 Sets the bottom-right border radius.
 
-### `BorderBottomWidth`
-
-Sets the bottom box border width.
-
 ### `BorderColor`
 
-Sets every box border color or the uniform Shape stroke color.
+Sets box border colors in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke color.
 
 ### `BorderEndColor`
 
@@ -828,25 +882,9 @@ Sets the box border color at the inline end edge.
 
 Sets the box border width at the inline end edge.
 
-### `BorderLeftColor`
-
-Sets the left box border color.
-
-### `BorderLeftWidth`
-
-Sets the left box border width.
-
 ### `BorderRadius`
 
 Sets the radius of all border corners.
-
-### `BorderRightColor`
-
-Sets the right box border color.
-
-### `BorderRightWidth`
-
-Sets the right box border width.
 
 ### `BorderStartColor`
 
@@ -860,10 +898,6 @@ Sets the box border width at the inline start edge.
 
 Sets how box border edges paint. Dashed and Dotted stroke one ring using the top border width and color. Shape strokes are unchanged.
 
-### `BorderTopColor`
-
-Sets the top box border color.
-
 ### `BorderTopLeftRadius`
 
 Sets the top-left border radius.
@@ -872,13 +906,9 @@ Sets the top-left border radius.
 
 Sets the top-right border radius.
 
-### `BorderTopWidth`
-
-Sets the top box border width.
-
 ### `BorderWidth`
 
-Sets every box border width or the uniform Shape stroke width.
+Sets box border widths in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke width.
 
 ### `Bottom`
 

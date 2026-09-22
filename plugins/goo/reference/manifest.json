@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "76fa6ecce56c71b0e5fc70bb85296175c4906f79",
+  "commit": "ac78ae37568ac7d76992494f27a1d6222f896917",
   "files": {
     "README.md": "dc925c7935b50acea89b8481efad5d8ea76a1071bcdfea7544afe23987dbeb6f",
     "CONTRIBUTING.md": "67554bff996d0b4c137dfb007cbd3ecead6add8851b7ea2c12d27ccd55af36a6",
@@ -11,12 +11,12 @@
     "docs/api/cell.md": "290fd329463e75b0fe316f82f1e3aa11cfd8cc1900ab3d8e76981aa2009a067a",
     "docs/api/diagnostics.md": "4cfe078e236e6a9252e69674b4c41533e2ac6fe6ecfb20d78729008844c9d351",
     "docs/api/input.md": "2672cffa0fcfb83b96b82ea333da0eef8c0b04c4786d69c523def20a624394d8",
-    "docs/api/layout.md": "e244f47fa7b6ac74b108f59cb8288711a25af1e82e56418df74c5edd514632a0",
+    "docs/api/layout.md": "d95d30eaa278d1cc859652b78d079d76bbb9f461f7203c2d314ddc9a756e7f0a",
     "docs/api/motion.md": "f2fcee76e91d675536017fcae2080ebee2631e19a2e7b56e227e4b56ba1590eb",
     "docs/api/platform.md": "6a317dbb5873dc545032ea2897a3552cb360926ee649363a1ae67b88022f9bff",
     "docs/api/rendering.md": "7f48bf9d0b731fa4bd0a5947411d69264b3e75f9a52db6864ca655f9b2693af8",
     "docs/api/shapes.md": "e2727b6c18a22da4076e0e1be26abbbb6184cd1858cd8b99d429ee297945ffcc",
-    "docs/api/style.md": "cdf0230438e9b7681a1766fe17b70435c134dbce74676296ef1d38ee21dc139b",
+    "docs/api/style.md": "54d724c8d8ebc735870360c952060e0981539e0b3eb88036db892a7254e4b987",
     "docs/api/text.md": "491558a50be35a5cde7ddc44fa58bc0bba4c18dd118bb1fe90fb3d0016077927",
     "docs/api/tree.md": "b4e36b75ffe557caea48ccb8e21f8b3a5a633fe19ecd0ae20aadcbb3d5c2a83e",
     "docs/api/window.md": "98e9b5a920c7dd36289d2f780f92aa3a3deb615e880aa91175710ba7056a4dbb",
