@@ -7,14 +7,22 @@ import xml.etree.ElementTree as element_tree
 ROOT = Path(__file__).resolve().parents[2]
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
 INLINE_VERSION = re.compile(r"\b0\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\b")
+PLUGIN_PREREQUISITE_VERSION = re.compile(
+    r"(and Goo\.DevTools )[^ ]+?(\. The server uses)"
+)
 PLUGIN_INSTALL_VERSION = re.compile(
     r"(Install the runtime CLI with `dotnet tool install --global Goo\.DevTools --version )"
     r"[^`]+(`\.)"
+)
+PLUGIN_RECOVERY_VERSION = re.compile(
+    r"(Run `dotnet tool update --global Goo\.DevTools --version )"
+    r"[^`]+(`\. Set GOO_CLI only when testing a compatible source build\.)"
 )
 PLUGIN_RUNTIME_VERSION = re.compile(
     r'("runtime": "Install Goo\.DevTools )[^" ]+( and launch with goo dev --project)'
 )
 LITERAL_VERSION_FILES = (
+    "CONTRIBUTING.md",
     "README.md",
     "docs/nuget-readme.md",
     "apps/Goo.DevTools/DiagnosticWire.gs",
@@ -75,8 +83,11 @@ def expected_template_config(version: str) -> str:
 def expected_plugin_readme(version: str) -> str:
     path = ROOT / "plugins/goo/README.md"
     text = path.read_text(encoding="utf-8")
-    expected, count = PLUGIN_INSTALL_VERSION.subn(rf"\g<1>{version}\g<2>", text)
-    if count != 1:
+    expected, prerequisite_count = PLUGIN_PREREQUISITE_VERSION.subn(rf"\g<1>{version}\g<2>", text)
+    if prerequisite_count != 1:
+        fail(f"{path.relative_to(ROOT)}: expected one current CLI prerequisite version")
+    expected, install_count = PLUGIN_INSTALL_VERSION.subn(rf"\g<1>{version}\g<2>", expected)
+    if install_count != 1:
         fail(f"{path.relative_to(ROOT)}: expected one current CLI install version")
     return expected
 
@@ -84,9 +95,12 @@ def expected_plugin_readme(version: str) -> str:
 def expected_plugin_server(version: str) -> str:
     path = ROOT / "plugins/goo/scripts/server.py"
     text = path.read_text(encoding="utf-8")
-    expected, count = PLUGIN_RUNTIME_VERSION.subn(rf"\g<1>{version}\g<2>", text)
-    if count != 1:
+    expected, runtime_count = PLUGIN_RUNTIME_VERSION.subn(rf"\g<1>{version}\g<2>", text)
+    if runtime_count != 1:
         fail(f"{path.relative_to(ROOT)}: expected one current runtime version")
+    expected, recovery_count = PLUGIN_RECOVERY_VERSION.subn(rf"\g<1>{version}\g<2>", expected)
+    if recovery_count != 2:
+        fail(f"{path.relative_to(ROOT)}: expected two current CLI recovery versions")
     return expected
 
 

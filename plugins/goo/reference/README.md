@@ -20,7 +20,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.6.4
+dotnet new install Goo.Templates@0.6.5
 
 mkdir hello-goo
 cd hello-goo
@@ -55,7 +55,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 ### Build the source Gallery
 
 The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10 and Git. Then download both pinned
+and shaders. Install .NET 10 SDK 10.0.401 and Git. Then download both pinned
 [custom shader tools](#custom-shaders) for your platform and set their SDK
 environment variables. The Gallery compiles its shaders during the build.
 
@@ -172,6 +172,7 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
 
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
+- [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
 - [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
 - [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)
 - [Contributing and source builds](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md)

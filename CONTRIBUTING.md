@@ -93,7 +93,7 @@ fixture with an explicit RID, package version, package feed, and new output path
 python3 tools/Goo.ConsumerPerformance/run.py \
   --output /absolute/new/goo-consumer-report \
   --rid linux-x64 \
-  --package-version 0.6.4 \
+  --package-version 0.6.5 \
   --package-source /absolute/path/to/package-feed
 ```
 

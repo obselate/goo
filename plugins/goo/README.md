@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-Standalone G# Goo authoring guidance and twelve stdio MCP tools. The plugin requires [uv](https://docs.astral.sh/uv/), which manages its required Python runtime and locked environment. Goo applications require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.6.4. The server uses the official MCP Python SDK.
+Standalone G# Goo authoring guidance and twelve stdio MCP tools. The plugin requires [uv](https://docs.astral.sh/uv/), which manages its required Python runtime and locked environment. Goo applications require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.6.5. The server uses the official MCP Python SDK.
 
 | Tool | Purpose |
 | --- | --- |
@@ -19,7 +19,7 @@ Standalone G# Goo authoring guidance and twelve stdio MCP tools. The plugin requ
 
 ## Install
 
-Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.6.4`.
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.6.5`.
 Confirm it is available:
 
 ```sh

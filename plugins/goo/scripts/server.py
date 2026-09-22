@@ -221,7 +221,7 @@ def cli_preflight(timeout: float = 5) -> dict:
         "version": version_status.get("version", "unavailable") if isinstance(version_status, dict) else "unavailable",
         "features": sorted(features),
         "issues": issues,
-        "actions": [] if compatible else ["Run `dotnet tool update --global Goo.DevTools --version 0.6.4`. Set GOO_CLI only when testing a compatible source build."],
+        "actions": [] if compatible else ["Run `dotnet tool update --global Goo.DevTools --version 0.6.5`. Set GOO_CLI only when testing a compatible source build."],
     }
     _cli_preflight_cache = (cache_key, status)
     return status
@@ -257,7 +257,7 @@ def goo_context(repository: str = "") -> dict:
     current_fingerprint = disk_plugin_fingerprint()
     return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"],
             "provenance": source_provenance(root), "documents": documents(root),
-            "runtime": "Install Goo.DevTools 0.6.4 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.", "preflight": {"plugin": {"version": LOADED_PLUGIN_VERSION, "loadedSource": str(ROOT), "loadedFingerprint": LOADED_PLUGIN_FINGERPRINT, "diskFingerprint": current_fingerprint, "restartRequired": current_fingerprint != LOADED_PLUGIN_FINGERPRINT}, "configuration": configuration_status(), "cli": cli_preflight(), "scope": "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."}}
+            "runtime": "Install Goo.DevTools 0.6.5 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.", "preflight": {"plugin": {"version": LOADED_PLUGIN_VERSION, "loadedSource": str(ROOT), "loadedFingerprint": LOADED_PLUGIN_FINGERPRINT, "diskFingerprint": current_fingerprint, "restartRequired": current_fingerprint != LOADED_PLUGIN_FINGERPRINT}, "configuration": configuration_status(), "cli": cli_preflight(), "scope": "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."}}
 
 
 @mcp.tool(annotations=READ)
@@ -458,7 +458,7 @@ def mutation_response(pid: int, window: str, project: str, command: str, payload
                          context={"cliVersion": status.get("version", "unavailable")})
     if "attach.require-capabilities" not in status.get("features", []):
         raise GooFailure("cli-incompatible", "The configured Goo CLI cannot guard typed mutations before dispatch.", "preflight",
-                         action="Run `dotnet tool update --global Goo.DevTools --version 0.6.4`. Set GOO_CLI only when testing a compatible source build.",
+                         action="Run `dotnet tool update --global Goo.DevTools --version 0.6.5`. Set GOO_CLI only when testing a compatible source build.",
                          context={"cliVersion": status.get("version", "unavailable")})
     body = json.dumps(payload, separators=(",", ":"))
     if len(body) > 65536:

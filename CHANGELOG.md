@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.6.5 - 2026-09-22
+
+### Added
+
+- Added native Codex marketplace installation and portable OMP support for the
+  Goo agent plugin. `uv` manages its locked Python runtime, so installation no
+  longer requires manual Python or MCP configuration, a working-directory
+  change, or absolute paths.
+- Added an internal package-consumer benchmark with isolated package inputs,
+  provenance, separate runtime and symbol staging, and advisory size, startup,
+  idle, and memory reports. CI reports measurements without numeric performance
+  thresholds and uploads symbols separately.
+
+### Changed
+
+- Pinned source and CI builds to .NET SDK 10.0.401.
+- Goo agent preflight now gives the published `Goo.DevTools` global update
+  command as the normal CLI recovery path and reserves `GOO_CLI` for compatible
+  source-build testing.
+
+### Fixed
+
+- Corrected the package-consumer benchmark to use the canonical
+  `GooReleaseVersion` property.
+
+
 ## 0.6.4 - 2026-09-21
 
 ### Added
