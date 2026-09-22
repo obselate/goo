@@ -645,12 +645,18 @@ jobs:
           .github/scripts/stage-linux-x64.sh \
             artifacts/publish artifacts/linux-x64 artifacts/symbols
 
-      - name: Validate package, native ABI, checksums, and 20 MiB bundle
+      - name: Validate package, native ABI, checksums, and bundle size
         run: |
           .github/scripts/validate-release.py \
             --package "artifacts/packages/Goo.$GOO_VERSION.nupkg" \
             --symbols "artifacts/packages/Goo.$GOO_VERSION.snupkg" \
             --bundle artifacts/linux-x64
+          mkdir -p artifacts/reports
+          size=$(find artifacts/linux-x64 -type f -printf '%s\n' | awk '{s+=$1} END {print s+0}')
+          printf '%s\n' "$size" >artifacts/reports/linux-bundle-size.txt
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            printf 'Linux x64 bundle size: %s bytes (advisory)\n' "$size" >>"$GITHUB_STEP_SUMMARY"
+          fi
           dotnet artifacts/linux-x64/Goo.PackageSmoke.dll
 
       - name: Archive release candidates

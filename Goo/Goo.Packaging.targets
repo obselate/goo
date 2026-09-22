@@ -9,12 +9,12 @@
     <GooEffectiveRuntimeIdentifier Condition="'$(GooEffectiveRuntimeIdentifier)' == '' and '$(NETCoreSdkRuntimeIdentifier)' != ''">$(NETCoreSdkRuntimeIdentifier)</GooEffectiveRuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
-    <GooNativePayload Include="$(GooNativeRuntimeRoot)/android-arm64/libgoo-harfbuzz.so;$(GooNativeRuntimeRoot)/android-arm64/libgoo-harfbuzz-gpu.so;$(GooNativeRuntimeRoot)/android-arm64/text-native-build.json">
+    <GooNativePayload Include="$(GooNativeRuntimeRoot)/android-arm64/libgoo-harfbuzz.so;$(GooNativeRuntimeRoot)/android-arm64/libgoo-harfbuzz-gpu.so">
       <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
       <TargetFileName>%(Filename)%(Extension)</TargetFileName>
       <Required>true</Required>
     </GooNativePayload>
-    <GooNativePayload Include="$(GooNativeRuntimeRoot)/android-x64/libgoo-harfbuzz.so;$(GooNativeRuntimeRoot)/android-x64/libgoo-harfbuzz-gpu.so;$(GooNativeRuntimeRoot)/android-x64/text-native-build.json">
+    <GooNativePayload Include="$(GooNativeRuntimeRoot)/android-x64/libgoo-harfbuzz.so;$(GooNativeRuntimeRoot)/android-x64/libgoo-harfbuzz-gpu.so">
       <RuntimeIdentifier>android-x64</RuntimeIdentifier>
       <TargetFileName>%(Filename)%(Extension)</TargetFileName>
       <Required>true</Required>
@@ -29,11 +29,10 @@
       <TargetFileName>libgoo-harfbuzz-gpu.so</TargetFileName>
       <Required>true</Required>
     </GooNativePayload>
-    <GooNativePayload Include="$(GooNativeRuntimeRoot)/linux-x64/text-native-build.json">
+    <GooNativeEvidence Include="$(GooNativeRuntimeRoot)/linux-x64/text-native-build.json">
       <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
-      <TargetFileName>text-native-build.json</TargetFileName>
       <Required>true</Required>
-    </GooNativePayload>
+    </GooNativeEvidence>
     <GooNativePayload Include="$(GooNativeRuntimeRoot)/win-x64/goo-harfbuzz.dll">
       <RuntimeIdentifier>win-x64</RuntimeIdentifier>
       <TargetFileName>goo-harfbuzz.dll</TargetFileName>
@@ -44,11 +43,10 @@
       <TargetFileName>goo-harfbuzz-gpu.dll</TargetFileName>
       <Required>true</Required>
     </GooNativePayload>
-    <GooNativePayload Include="$(GooNativeRuntimeRoot)/win-x64/text-native-build.json">
+    <GooNativeEvidence Include="$(GooNativeRuntimeRoot)/win-x64/text-native-build.json">
       <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-      <TargetFileName>text-native-build.json</TargetFileName>
       <Required>true</Required>
-    </GooNativePayload>
+    </GooNativeEvidence>
     <GooNativePayload Include="$(GooLinuxSdlPath)"
                       Condition="'$(GooLinuxSdlPath)' != '' and Exists('$(GooLinuxSdlPath)')">
       <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
@@ -83,12 +81,19 @@
       <TargetFileName>libgoo-harfbuzz-gpu.dylib</TargetFileName>
       <Required>true</Required>
     </GooNativePayload>
-    <GooNativePayload Include="$(GooMacOsArm64NativeRoot)/text-native-build.json"
+    <GooNativeEvidence Include="$(GooMacOsArm64NativeRoot)/text-native-build.json"
                       Condition="'$(GooMacOsArm64NativeRoot)' != ''">
       <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
-      <TargetFileName>text-native-build.json</TargetFileName>
       <Required>true</Required>
-    </GooNativePayload>
+    </GooNativeEvidence>
+    <GooNativeEvidence Include="$(GooNativeRuntimeRoot)/android-arm64/text-native-build.json">
+      <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+      <Required>true</Required>
+    </GooNativeEvidence>
+    <GooNativeEvidence Include="$(GooNativeRuntimeRoot)/android-x64/text-native-build.json">
+      <RuntimeIdentifier>android-x64</RuntimeIdentifier>
+      <Required>true</Required>
+    </GooNativeEvidence>
   </ItemGroup>
   <ItemGroup>
     <!--
@@ -114,7 +119,7 @@
           Pack="true" PackagePath="tools/net10.0/any/Goo.ShaderEffectTool.deps.json" />
     <None Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.runtimeconfig.json"
           Pack="true" PackagePath="tools/net10.0/any/Goo.ShaderEffectTool.runtimeconfig.json" />
-    <None Remove="@(GooNativePayload)" />
+    <None Remove="@(GooNativePayload);@(GooNativeEvidence)" />
     <None Include="@(GooNativePayload)"
           Pack="true"
           PackagePath="runtimes/%(RuntimeIdentifier)/native/%(TargetFileName)">
@@ -122,22 +127,23 @@
       <CopyToOutputDirectory Condition="'%(RuntimeIdentifier)' == '$(GooEffectiveRuntimeIdentifier)'">PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory Condition="'%(RuntimeIdentifier)' == '$(GooEffectiveRuntimeIdentifier)'">Always</CopyToPublishDirectory>
     </None>
+    <None Include="@(GooNativeEvidence)"
+          Pack="true"
+          PackagePath="contentFiles/any/any/Vulkan/Runtime/%(RuntimeIdentifier)/%(Filename)%(Extension)"
+          PackageBuildAction="None"
+          PackageCopyToOutput="false" />
 
-    <None Update="$(GooVulkanShaderRoot)/*.spv"
-          Pack="true"
-          PackagePath="contentFiles/any/any/Vulkan/Shaders/%(Filename)%(Extension)"
-          PackageBuildAction="None"
-          PackageCopyToOutput="true" />
-    <None Update="$(GooVulkanShaderRoot)/shader-manifest.json"
-          Pack="true"
-          PackagePath="contentFiles/any/any/Vulkan/Shaders/shader-manifest.json"
-          PackageBuildAction="None"
-          PackageCopyToOutput="true" />
+    <None Update="$(GooVulkanShaderRoot)/*.spv;$(GooVulkanShaderRoot)/shader-manifest.json"
+          Pack="false"
+          CopyToOutputDirectory="Never"
+          CopyToPublishDirectory="Never" />
     <None Update="$(GooVulkanShaderRoot)/harfbuzz-14.3.1.provenance.json"
           Pack="true"
           PackagePath="contentFiles/any/any/Vulkan/Shaders/harfbuzz-14.3.1.provenance.json"
           PackageBuildAction="None"
-          PackageCopyToOutput="true" />
+          PackageCopyToOutput="false"
+          CopyToOutputDirectory="Never"
+          CopyToPublishDirectory="Never" />
     <None Update="$(MSBuildProjectDirectory)/Shaders/Authoring/goo_effect.glsl"
           Pack="true"
           PackagePath="contentFiles/any/any/Vulkan/Shaders/Authoring/goo_effect.glsl"
@@ -159,18 +165,6 @@
           PackageBuildAction="None"
           PackageCopyToOutput="true" />
 
-    <None Update="$(GooVulkanShaderRoot)/*.spv"
-          Link="Vulkan/Shaders/%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="Always" />
-    <None Update="$(GooVulkanShaderRoot)/shader-manifest.json"
-          Link="Vulkan/Shaders/shader-manifest.json"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="Always" />
-    <None Update="$(GooVulkanShaderRoot)/harfbuzz-14.3.1.provenance.json"
-          Link="Vulkan/Shaders/harfbuzz-14.3.1.provenance.json"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="Always" />
     <None Update="$(GooNativeRuntimeRoot)/HarfBuzz-COPYING.txt"
           Link="Vulkan/Runtime/HarfBuzz-COPYING.txt"
           CopyToOutputDirectory="PreserveNewest"
@@ -179,12 +173,40 @@
           Link="Vulkan/Runtime/MoltenVK-LICENSE.txt"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Always" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/**/*.cs"
+                                Exclude="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/**/*.cs;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/obj/**/*.cs" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderGen/SpirvReflection.cs" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../Directory.Build.props" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../Directory.Packages.props" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../global.json" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../Directory.Build.targets"
+                                Condition="Exists('$(MSBuildProjectDirectory)/../Directory.Build.targets')" />
   </ItemGroup>
 
-  <Target Name="BuildGooShaderEffectToolForPackage">
+  <Target Name="_RecordGooShaderEffectToolPackageInputs">
+    <WriteLinesToFile File="$(IntermediateOutputPath)Goo.ShaderEffectToolPackage.inputs"
+                      Lines="@(_GooShaderEffectToolSource->'%(FullPath)')"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)Goo.ShaderEffectToolPackage.inputs" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="BuildGooShaderEffectToolForPackage"
+          DependsOnTargets="_RecordGooShaderEffectToolPackageInputs"
+          Inputs="@(_GooShaderEffectToolSource);$(IntermediateOutputPath)Goo.ShaderEffectToolPackage.inputs"
+          Outputs="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.deps.json;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.runtimeconfig.json">
     <MSBuild Projects="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj"
              Targets="Restore;Build"
              Properties="Configuration=$(Configuration);TreatWarningsAsErrors=true" />
+    <Touch Files="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll"
+           Condition="Exists('$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll')" />
+    <Touch Files="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.deps.json"
+           Condition="Exists('$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.deps.json')" />
+    <Touch Files="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.runtimeconfig.json"
+           Condition="Exists('$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.runtimeconfig.json')" />
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll')"
            Text="Goo ShaderEffect build tool is missing." />
   </Target>
@@ -213,6 +235,8 @@
   <Target Name="ValidateGooNativePayloads" BeforeTargets="Build;Pack">
     <Error Condition="'%(GooNativePayload.Required)' == 'true' and !Exists('%(GooNativePayload.FullPath)')"
            Text="Required Goo native payload is missing: %(GooNativePayload.FullPath)" />
+    <Error Condition="'%(GooNativeEvidence.Required)' == 'true' and !Exists('%(GooNativeEvidence.FullPath)')"
+           Text="Required Goo native provenance is missing: %(GooNativeEvidence.FullPath)" />
   </Target>
 
   <Target Name="ValidateGooLinuxSdlPackageAsset" BeforeTargets="Pack">
@@ -249,15 +273,44 @@
     <GooXmlSupplement>$(MSBuildProjectDirectory)/../docs/api/Goo.xml.supplement.xml</GooXmlSupplement>
     <GooXmlDocsMergeProject>$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/Goo.XmlDocsMerge.csproj</GooXmlDocsMergeProject>
     <GooXmlDocsMergePath>$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/bin/$(Configuration)/net10.0/Goo.XmlDocsMerge.dll</GooXmlDocsMergePath>
+    <_GooXmlDocsMergeDeps>$([System.IO.Path]::ChangeExtension('$(GooXmlDocsMergePath)', '.deps.json'))</_GooXmlDocsMergeDeps>
+    <_GooXmlDocsMergeRuntimeConfig>$([System.IO.Path]::ChangeExtension('$(GooXmlDocsMergePath)', '.runtimeconfig.json'))</_GooXmlDocsMergeRuntimeConfig>
     <GooXmlDocsDotNetHost Condition="'$(GooXmlDocsDotNetHost)' == '' and '$(DotNetHostPath)' != ''">$(DotNetHostPath)</GooXmlDocsDotNetHost>
     <GooXmlDocsDotNetHost Condition="'$(GooXmlDocsDotNetHost)' == ''">dotnet</GooXmlDocsDotNetHost>
   </PropertyGroup>
-  <Target Name="BuildGooXmlDocsMerge"
+  <ItemGroup>
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/Goo.XmlDocsMerge.csproj" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/**/*.cs"
+                            Exclude="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/bin/**/*.cs;$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/obj/**/*.cs" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../Directory.Build.props" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../Directory.Packages.props" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../global.json" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../Directory.Build.targets"
+                            Condition="Exists('$(MSBuildProjectDirectory)/../Directory.Build.targets')" />
+  </ItemGroup>
+  <Target Name="_RecordGooXmlDocsMergeInputs"
           Condition="'$(DocumentationFile)' != ''">
+    <WriteLinesToFile File="$(IntermediateOutputPath)Goo.XmlDocsMerge.inputs"
+                      Lines="@(_GooXmlDocsMergeSource->'%(FullPath)')"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)Goo.XmlDocsMerge.inputs" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="BuildGooXmlDocsMerge"
+          DependsOnTargets="_RecordGooXmlDocsMergeInputs"
+          Condition="'$(DocumentationFile)' != ''"
+          Inputs="@(_GooXmlDocsMergeSource);$(IntermediateOutputPath)Goo.XmlDocsMerge.inputs"
+          Outputs="$(GooXmlDocsMergePath);$([System.IO.Path]::ChangeExtension('$(GooXmlDocsMergePath)', '.deps.json'));$([System.IO.Path]::ChangeExtension('$(GooXmlDocsMergePath)', '.runtimeconfig.json'))">
     <MSBuild Projects="$(GooXmlDocsMergeProject)"
              Targets="Restore;Build"
              RemoveProperties="RuntimeIdentifier;SelfContained;PublishAot"
              Properties="Configuration=$(Configuration);TreatWarningsAsErrors=true" />
+    <Touch Files="$(GooXmlDocsMergePath)" Condition="Exists('$(GooXmlDocsMergePath)')" />
+    <Touch Files="$(_GooXmlDocsMergeDeps)" Condition="Exists('$(_GooXmlDocsMergeDeps)')" />
+    <Touch Files="$(_GooXmlDocsMergeRuntimeConfig)" Condition="Exists('$(_GooXmlDocsMergeRuntimeConfig)')" />
   </Target>
   <Target Name="MergeGooXmlSupplement"
           AfterTargets="CoreCompile"

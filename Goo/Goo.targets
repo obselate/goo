@@ -11,8 +11,11 @@
         Condition="'$(GooShaderEffectToolPath)' == '' and Exists('$(MSBuildThisFileDirectory)..\tools\net10.0\any\Goo.ShaderEffectTool.dll')">$(MSBuildThisFileDirectory)..\tools\net10.0\any\Goo.ShaderEffectTool.dll</GooShaderEffectToolPath>
     <GooShaderEffectToolProject
         Condition="'$(GooShaderEffectToolProject)' == '' and Exists('$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\Goo.ShaderEffectTool.csproj')">$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\Goo.ShaderEffectTool.csproj</GooShaderEffectToolProject>
+    <_GooShaderEffectToolDir Condition="'$(GooShaderEffectToolProject)' != ''">$([System.IO.Path]::GetDirectoryName('$(GooShaderEffectToolProject)'))</_GooShaderEffectToolDir>
     <GooShaderEffectToolPath
-        Condition="'$(GooShaderEffectToolPath)' == '' and '$(GooShaderEffectToolProject)' != ''">$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\bin\$(Configuration)\net10.0\Goo.ShaderEffectTool.dll</GooShaderEffectToolPath>
+        Condition="'$(GooShaderEffectToolPath)' == '' and '$(_GooShaderEffectToolDir)' != ''">$(_GooShaderEffectToolDir)\bin\$(Configuration)\net10.0\Goo.ShaderEffectTool.dll</GooShaderEffectToolPath>
+    <_GooShaderEffectToolDeps>$([System.IO.Path]::ChangeExtension('$(GooShaderEffectToolPath)', '.deps.json'))</_GooShaderEffectToolDeps>
+    <_GooShaderEffectToolRuntimeConfig>$([System.IO.Path]::ChangeExtension('$(GooShaderEffectToolPath)', '.runtimeconfig.json'))</_GooShaderEffectToolRuntimeConfig>
     <GooShaderEffectAuthoringRoot
         Condition="'$(GooShaderEffectAuthoringRoot)' == '' and Exists('$(MSBuildThisFileDirectory)Shaders\Authoring\goo_effect.slang')">$(MSBuildThisFileDirectory)Shaders\Authoring</GooShaderEffectAuthoringRoot>
     <GooShaderEffectAuthoringRoot
@@ -25,6 +28,19 @@
         Condition="'$(GooShaderEffectIntermediateRoot)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', '$(Configuration)', '$(TargetFramework)', '$(RuntimeIdentifier)', 'Goo', 'ShaderEffects'))</GooShaderEffectIntermediateRoot>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(_GooShaderEffectToolDir)' != ''">
+    <_GooShaderEffectToolSource Include="$(GooShaderEffectToolProject)" />
+    <_GooShaderEffectToolSource Include="$(_GooShaderEffectToolDir)\**\*.cs"
+                                Exclude="$(_GooShaderEffectToolDir)\bin\**\*.cs;$(_GooShaderEffectToolDir)\obj\**\*.cs" />
+    <_GooShaderEffectToolSource Include="$(_GooShaderEffectToolDir)\..\Goo.ShaderGen\SpirvReflection.cs"
+                                Condition="Exists('$(_GooShaderEffectToolDir)\..\Goo.ShaderGen\SpirvReflection.cs')" />
+    <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\Directory.Build.props" />
+    <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\Directory.Packages.props" />
+    <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\global.json" />
+    <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\Directory.Build.targets"
+                                Condition="Exists('$(MSBuildThisFileDirectory)..\Directory.Build.targets')" />
+  </ItemGroup>
+
   <ItemGroup Condition="'@(GooShaderEffect)' != ''">
     <_GooShaderEffect Include="@(GooShaderEffect)">
       <ProgramPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(Filename).goo-effect</ProgramPath>
@@ -34,18 +50,35 @@
     </_GooShaderEffect>
   </ItemGroup>
 
-  <Target Name="_BuildGooShaderEffectTool"
+  <Target Name="_RecordGooShaderEffectToolInputs"
           Condition="'@(_GooShaderEffect)' != '' and '$(GooShaderEffectToolProject)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <WriteLinesToFile File="$(IntermediateOutputPath)Goo.ShaderEffectTool.inputs"
+                      Lines="@(_GooShaderEffectToolSource->'%(FullPath)')"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)Goo.ShaderEffectTool.inputs" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_BuildGooShaderEffectTool"
+          DependsOnTargets="_RecordGooShaderEffectToolInputs"
+          Condition="'@(_GooShaderEffect)' != '' and '$(GooShaderEffectToolProject)' != '' and '$(DesignTimeBuild)' != 'true'"
+          Inputs="@(_GooShaderEffectToolSource);$(IntermediateOutputPath)Goo.ShaderEffectTool.inputs"
+          Outputs="$(GooShaderEffectToolPath);$([System.IO.Path]::ChangeExtension('$(GooShaderEffectToolPath)', '.deps.json'));$([System.IO.Path]::ChangeExtension('$(GooShaderEffectToolPath)', '.runtimeconfig.json'))">
     <MSBuild Projects="$(GooShaderEffectToolProject)"
              Targets="Restore;Build"
              RemoveProperties="RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot"
              Properties="Configuration=$(Configuration);TreatWarningsAsErrors=true" />
+    <Touch Files="$(GooShaderEffectToolPath)" Condition="Exists('$(GooShaderEffectToolPath)')" />
+    <Touch Files="$(_GooShaderEffectToolDeps)" Condition="Exists('$(_GooShaderEffectToolDeps)')" />
+    <Touch Files="$(_GooShaderEffectToolRuntimeConfig)" Condition="Exists('$(_GooShaderEffectToolRuntimeConfig)')" />
   </Target>
 
   <Target Name="GooCompileShaderEffects"
           DependsOnTargets="_BuildGooShaderEffectTool"
           Condition="'@(_GooShaderEffect)' != '' and '$(DesignTimeBuild)' != 'true'"
-          Inputs="@(_GooShaderEffect->'%(FullPath)');$(GooShaderEffectAuthoringRoot)\goo_effect.slang;$(GooShaderEffectAuthoringRoot)\goo_effect.glsl;$(GooShaderEffectToolPath)"
+          Inputs="@(_GooShaderEffect->'%(FullPath)');$(GooShaderEffectAuthoringRoot)\goo_effect.slang;$(GooShaderEffectAuthoringRoot)\goo_effect.glsl;$(GooShaderEffectToolPath);$(MSBuildThisFileFullPath)"
           Outputs="@(_GooShaderEffect->'%(ProgramPath)');@(_GooShaderEffect->'%(ManifestPath)')">
     <Error Condition="!Exists('$(GooShaderEffectToolPath)')"
            Text="Goo ShaderEffect compiler is missing: $(GooShaderEffectToolPath)" />

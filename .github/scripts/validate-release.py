@@ -44,45 +44,27 @@ PACKAGE_FILES = {
     "contentFiles/any/any/Vulkan/Shaders/Authoring/goo_effect.glsl",
     "contentFiles/any/any/Vulkan/Shaders/Authoring/goo_effect.slang",
     "contentFiles/any/any/Vulkan/Runtime/HarfBuzz-COPYING.txt",
-    "contentFiles/any/any/Vulkan/Shaders/analytic.vert.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_blend.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_shadow.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_border.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_linear4.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_radial4.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_sampled_image.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/analytic_solid.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/clip_mask.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/clip_mask.vert.spv",
-    "contentFiles/any/any/Vulkan/Shaders/hb_gpu.vert.spv",
-    "contentFiles/any/any/Vulkan/Shaders/hb_gpu_draw.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/hb_gpu_paint.frag.spv",
     "contentFiles/any/any/Vulkan/Shaders/harfbuzz-14.3.1.provenance.json",
     "contentFiles/any/any/Vulkan/Runtime/MoltenVK-LICENSE.txt",
-    "contentFiles/any/any/Vulkan/Shaders/path_band.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/path_band.vert.spv",
-    "contentFiles/any/any/Vulkan/Shaders/shader-manifest.json",
-    "contentFiles/any/any/Vulkan/Shaders/solid_quad.frag.spv",
-    "contentFiles/any/any/Vulkan/Shaders/solid_quad.vert.spv",
     "runtimes/linux-x64/native/libSDL3.so",
     "runtimes/linux-x64/native/libgoo-harfbuzz-gpu.so",
     "runtimes/linux-x64/native/libgoo-harfbuzz.so",
-    "runtimes/linux-x64/native/text-native-build.json",
+    "contentFiles/any/any/Vulkan/Runtime/linux-x64/text-native-build.json",
     "runtimes/android-arm64/native/libgoo-harfbuzz.so",
     "runtimes/android-arm64/native/libgoo-harfbuzz-gpu.so",
-    "runtimes/android-arm64/native/text-native-build.json",
+    "contentFiles/any/any/Vulkan/Runtime/android-arm64/text-native-build.json",
     "runtimes/android-x64/native/libgoo-harfbuzz.so",
     "runtimes/android-x64/native/libgoo-harfbuzz-gpu.so",
-    "runtimes/android-x64/native/text-native-build.json",
+    "contentFiles/any/any/Vulkan/Runtime/android-x64/text-native-build.json",
     "runtimes/osx-arm64/native/libMoltenVK.dylib",
     "runtimes/osx-arm64/native/libSDL3.dylib",
     "runtimes/osx-arm64/native/libgoo-harfbuzz-gpu.dylib",
     "runtimes/osx-arm64/native/libgoo-harfbuzz.dylib",
-    "runtimes/osx-arm64/native/text-native-build.json",
+    "contentFiles/any/any/Vulkan/Runtime/osx-arm64/text-native-build.json",
     "runtimes/win-x64/native/goo-harfbuzz-gpu.dll",
     "runtimes/win-x64/native/goo-harfbuzz.dll",
     "runtimes/win-x64/native/SDL3.dll",
-    "runtimes/win-x64/native/text-native-build.json",
+    "contentFiles/any/any/Vulkan/Runtime/win-x64/text-native-build.json",
     "tools/net10.0/any/Goo.ShaderEffectTool.deps.json",
     "tools/net10.0/any/Goo.ShaderEffectTool.dll",
     "tools/net10.0/any/Goo.ShaderEffectTool.runtimeconfig.json",
@@ -411,6 +393,35 @@ def validate_package(path: Path) -> str:
         missing = PACKAGE_FILES - names
         if missing:
             raise SystemExit(f"package is missing required assets: {sorted(missing)}")
+        leaked_shaders = [
+            name for name in names
+            if name.endswith(".spv") or name.endswith("/shader-manifest.json")
+        ]
+        if leaked_shaders:
+            raise SystemExit(
+                f"package contains loose runtime shaders: {sorted(leaked_shaders)}")
+        leaked_runtime_provenance = [
+            name for name in names
+            if name.startswith("runtimes/") and name.endswith("/text-native-build.json")
+        ]
+        if leaked_runtime_provenance:
+            raise SystemExit(
+                f"package deploys native provenance: {sorted(leaked_runtime_provenance)}")
+        goo_dll = archive.read("lib/net10.0/Goo.dll")
+        shader_manifest = json.loads(
+            (ROOT / "Goo/Shaders/Vulkan/shader-manifest.json").read_text())
+        required_shader_resources = {
+            "Goo.Vulkan.Shaders.shader-manifest.json",
+            *(f"Goo.Vulkan.Shaders.{shader['output']}"
+              for shader in shader_manifest["shaders"]),
+        }
+        missing_shader_resources = sorted(
+            name for name in required_shader_resources
+            if name.encode() not in goo_dll)
+        if missing_shader_resources:
+            raise SystemExit(
+                "packaged Goo.dll is missing embedded shader resources: "
+                f"{missing_shader_resources}")
         package_sources = {
             "README.md": ROOT / "docs/nuget-readme.md",
             "CHANGELOG.md": ROOT / "CHANGELOG.md",
@@ -420,7 +431,7 @@ def validate_package(path: Path) -> str:
         for name, source in package_sources.items():
             if archive.read(name) != source.read_bytes():
                 raise SystemExit(f"package {name} differs from the release tree")
-        if 17 not in pe_debug_types(archive.read("lib/net10.0/Goo.dll")):
+        if 17 not in pe_debug_types(goo_dll):
             raise SystemExit("packaged Goo.dll does not contain embedded debug symbols")
         if archive.read("buildTransitive/Goo.targets") != (ROOT / "Goo/Goo.targets").read_bytes():
             raise SystemExit("packaged Goo.targets differs from the release tree")
@@ -459,10 +470,11 @@ def validate_package(path: Path) -> str:
                 for name in macos_names
             }
             macos_payloads["text-native-build.json"] = archive.read(
-                "runtimes/osx-arm64/native/text-native-build.json")
+                "contentFiles/any/any/Vulkan/Runtime/osx-arm64/text-native-build.json")
             validate_macos_payloads(macos_payloads)
             for rid in ("android-arm64", "android-x64"):
-                provenance = json.loads(archive.read(f"runtimes/{rid}/native/text-native-build.json"))
+                provenance = json.loads(archive.read(
+                    f"contentFiles/any/any/Vulkan/Runtime/{rid}/text-native-build.json"))
                 if provenance["buildEvidence"]["target"] != rid:
                     raise SystemExit(f"Android provenance target mismatch: {rid}")
                 for artifact in provenance["artifacts"].values():
@@ -488,6 +500,19 @@ def validate_bundle(path: Path, package_sdl_digest: str) -> None:
         raise SystemExit("bundle must not contain symlinks")
     files = [item for item in path.rglob("*") if item.is_file()]
     names = {item.relative_to(path).as_posix() for item in files}
+    leaked_shaders = [
+        name for name in names
+        if name.endswith(".spv") or name.endswith("/shader-manifest.json")
+    ]
+    if leaked_shaders:
+        raise SystemExit(
+            f"bundle contains loose runtime shaders: {sorted(leaked_shaders)}")
+    leaked_provenance = [
+        name for name in names if name.endswith("text-native-build.json")
+    ]
+    if leaked_provenance:
+        raise SystemExit(
+            f"bundle contains native provenance: {sorted(leaked_provenance)}")
     missing = BUNDLE_FILES - names
     unexpected = names - BUNDLE_FILES
     if missing or unexpected:

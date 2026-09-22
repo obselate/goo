@@ -19,7 +19,8 @@ test -f "$publish/libMoltenVK.dylib"
 test -f "$publish/libSDL3.dylib"
 test -f "$publish/libgoo-harfbuzz.dylib"
 test -f "$publish/libgoo-harfbuzz-gpu.dylib"
-test -f "$publish/Vulkan/Shaders/shader-manifest.json"
+test -f "$publish/Vulkan/Runtime/HarfBuzz-COPYING.txt"
+test -f "$publish/Vulkan/Runtime/MoltenVK-LICENSE.txt"
 
 rm -rf "$app" "$symbols"
 mkdir -p "$macos" "$resources" "$symbols"
@@ -29,9 +30,11 @@ install -m0644 "$plist" "$app/Contents/Info.plist"
 
 while IFS= read -r -d '' source; do
   relative="${source#"$publish/"}"
-  if [[ "$relative" == *.pdb || "$relative" == *.dSYM/* ]]; then
-    continue
-  fi
+  case "$relative" in
+    *.pdb|*.dbg|*.xml|*.dSYM/*|Vulkan/Shaders/*|*/Authoring/*|Goo.ShaderEffectTool.*|*.so|SDL3.dll|goo-harfbuzz.dll|goo-harfbuzz-gpu.dll|gsc.dll|gsfmt.dll|text-native-build.json|*/text-native-build.json)
+      continue
+      ;;
+  esac
   if [[ "$relative" == "$executable" || "$relative" == *.dylib ]]; then
     destination="$macos/$relative"
   else

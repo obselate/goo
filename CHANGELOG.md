@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `Window.SetTimeout` and `Window.SetInterval` provide cancellable UI-thread callbacks.
+
+### Changed
+
+- Embedded runtime Vulkan shaders ship only in `Goo.dll`. Release staging omits loose shaders, authoring tools, symbols, and native provenance. Required licenses remain.
+- Vulkan diagnostics can record startup stages and a live memory snapshot at first successful presentation and before teardown.
+- Owned pipeline-cache files older than 30 days are removed when a cache is saved.
+- An unchanged shader-tool or XML-merge build is skipped. Adding, removing, or timestamp-preserving renaming a tool source file rebuilds it. A missing tool DLL, dependency file, or runtime config also rebuilds it.
+
 ## 0.6.5 - 2026-09-22
 
 ### Added

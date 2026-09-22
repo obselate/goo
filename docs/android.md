@@ -127,9 +127,9 @@ mode nor explicitly permitted inherited mode is available.
 Use existing `FontSource` and premultiplied RGBA `ImageSource` APIs. A shared
 library can embed a font with `EmbeddedResource`, read its bytes, and register a
 FontSource on either platform. Android system `sans-serif` resolves to the
-platform's Roboto font with generic Noto Sans fallback. The shared Vulkan shader
-loader reads published files when present and otherwise reads the same shaders
-embedded in Goo.dll, including within an APK. No extraction directory is needed.
+platform's Roboto font with generic Noto Sans fallback. Runtime Vulkan shaders
+are embedded in Goo.dll, including within an APK. No extraction directory is
+needed.
 
 The main Goo package contains HarfBuzz and hb-gpu for both Android RIDs.
 The `Goo.Android` source build creates a native archive for project references.

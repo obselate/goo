@@ -37,7 +37,6 @@ source_path="$work/Goo Gallery.app"
 test -x "$source_path/Contents/MacOS/Goo.Gallery"
 test -f "$source_path/Contents/MacOS/libMoltenVK.dylib"
 test -f "$source_path/Contents/MacOS/libSDL3.dylib"
-test -f "$source_path/Contents/MacOS/Vulkan/Shaders/shader-manifest.json"
 
 mkdir -p "$install_root"
 if [[ -e "$install_path" ]]; then
