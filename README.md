@@ -2,15 +2,13 @@
   <img src="https://raw.githubusercontent.com/obselate/goo/main/docs/assets/goo-readme-banner.gif" alt="Goo" width="1200">
 </p>
 
-<p align="center">A retained UI framework for G#, rendered directly with Vulkan.</p>
+<p align="center">A declarative retained GUI framework for .NET. Written in G# and rendered directly with Vulkan.</p>
 
 <p align="center">
   <a href="https://github.com/obselate/goo/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/obselate/goo/ci.yml?branch=main&amp;style=flat-square&amp;label=ci" alt="CI status"></a>
   <a href="https://www.nuget.org/packages/Goo/"><img src="https://img.shields.io/nuget/v/Goo?style=flat-square" alt="NuGet version"></a>
   <a href="https://github.com/obselate/goo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/obselate/goo?style=flat-square" alt="MIT license"></a>
 </p>
-
-Goo applications describe UI as ordinary G# objects. Goo retains mounted state, rebuilds only dirty `Cell` boundaries, lays out with Yoga, and renders through Vulkan 1.3.
 
 ## Quick start
 
@@ -27,37 +25,21 @@ cd hello-goo
 dotnet new goo
 ```
 
-Replace `Program.gs` with the example below, then run:
+Run the provided Goo template app with
 
 ```sh
 dotnet run
 ```
 
-The template restores the G# SDK and Goo package through NuGet. A separate G#
-compiler, SDL, or HarfBuzz installation is not required. Apps that add custom
-`<GooShaderEffect>` source need the pinned shader tools listed under
-[custom shaders](#custom-shaders).
-
-### Custom shaders
-
-Goo includes the ShaderEffect build adapter and authoring modules. Install these
-third-party tools only when the project contains `<GooShaderEffect>` items:
-
-| Platform | Slang 2026.16 | Vulkan SDK 1.4.357.0 with `spirv-val` |
-| --- | --- | --- |
-| Linux x64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz) | [Download `.tar.xz`](https://sdk.lunarg.com/sdk/download/1.4.357.0/linux/vulkan_sdk.tar.xz) |
-| Windows x64 | [Download `.zip`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-windows-x86_64.zip) | [Download installer](https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe) |
-| macOS arm64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz) | [Download `.zip`](https://sdk.lunarg.com/sdk/download/1.4.357.0/mac/vulkan_sdk.zip) |
-
-Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
-also accepts `slangc` and `spirv-val` on `PATH`.
-
 ### Build the source Gallery
 
-The Gallery lets you try Goo's controls, layout, animation, drag and drop,
-and shaders. Install .NET 10 SDK 10.0.401 and Git. Then download both pinned
-[custom shader tools](#custom-shaders) for your platform and set their SDK
-environment variables. The Gallery compiles its shaders during the build.
+The Gallery gives you a representative preview of Goo's capabilities. 
+Install .NET 10 SDK 10.0.401 and Git. Then download both pinned [custom shader tools](#custom-shaders) 
+for your platform and set their SDK environment variables. 
+
+The Gallery compiles its shaders during the build.
+
+### On Linux:
 
 ```sh
 git clone https://github.com/obselate/goo.git
@@ -66,7 +48,7 @@ cd goo
 dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 ```
 
-On Windows:
+### On Windows:
 
 ```bat
 git clone https://github.com/obselate/goo.git
@@ -78,10 +60,6 @@ dotnet run --project apps/Goo.Gallery/Goo.Gallery.gsproj -c Release
 The bootstrap builds the pinned G# compiler and formatter, then downloads the
 released Goo package for the Gallery's native runtime files. It does not install
 software globally.
-
-Open **Surfaces > Fridge** to try drag and drop, or **Shaders** for the shader
-examples. Apple silicon users can also download the prebuilt Gallery and its
-installer from the [latest release](https://github.com/obselate/goo/releases/latest).
 
 ## Packages
 
@@ -100,10 +78,21 @@ are optional and installed separately. The starter template already references
 Add library packages from your application directory. Install both DevTools
 packages to launch the graphical inspector with `goo dev --inspector`.
 
+## Goo Extras
+
+Goo is built on a core that exposes APIs for the broadest cases. As a result, goo may
+end up being verbose if written from core alone. The idea is that the core is the
+"substrate" that other packages and libraries can be built on. For both convenience
+and as a working example, there are a few published libraries that work with Goo:
+
+| Package | Purpose | Install |
+| --- | --- | --- |
+| [Goo Widgets](https://github.com/obselate/goo-widgets/) | Pre-built UI widgets | `dotnet add package Goo.Widgets` |
+| [Goo Animations](https://github.com/obselate/goo-animations/) | A library for Animation and Motion factories | `dotnet add package Goo.Animations` |
+
 ## Example
 
-This example runs with the starter above. Goo supplies the upstream G# compiler
-needed for direct child composition automatically.
+The Goo.Templates app:
 
 ```gsharp
 package CounterApp
@@ -138,21 +127,40 @@ func Main() {
 }
 ```
 
-`Cell` owns local state. Input callbacks automatically rebuild their owning Cell,
-so the button only changes `count`. Ordinary G# interpolation formats the label.
-Direct children and spreads use `Add` in source order; no child-list wrapper or
-builder API is needed. See the [native authoring guide](docs/native-authoring.md)
-for composition, typed Cell inputs, and current language conventions.
+Concepts that may be confusing at first:
 
-`Style.BasedOn` applies declarations at its exact position; later overrides win.
-`Virtual` uses fixed item extents. `VirtualRows` measures varying row heights and
-preserves stable-key scroll positions as content changes.
+`Blob` is a UI primitive. Goo core only contains UI primitives that have unique behavior
+that cannot be satisfied with composition with the exception of the semantic `Button`.
+
+`Cell` is a state management primitive. It encapsulates UI state, identity, and rebuild behaviors.
+In the template app, input callbacks automatically rebuild their owning `Cell`, so the button only changes `count`.
+
+UI elements can be composed and reused through ordinary functions and methods, with built-in overrides
+for changing specific properties using `with`:
+
+```gsharp
+let baseButton = ActionButton{Height: 38.0, MinWidth: 112.0, OnClick: () -> { },}
+
+let primaryButton = baseButton with{Content = "Primary",}
+
+let successButton = baseButton with{
+    Content = "Success",
+    BackgroundColor = Color.Parse("#166534"),
+    TextColor = Color.Parse("#fafafa"),
+    HoverBackgroundColor = Color.Parse("#15803d"),
+    ActiveBackgroundColor = Color.Parse("#14532d"),
+}
+
+let disabledButton = baseButton with{Content = "Disabled", Disabled = true,}
+```
+
+Direct children and spreads use `Add` in source order. 
+See the [native authoring guide](docs/native-authoring.md) for composition, typed Cell inputs, and current language conventions.
 
 ## Platforms
 
 Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
-and Android x64. The
-renderer requires the Vulkan 1.3 feature set used by Goo.
+and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
 
 - Windows x64 is tested on Windows 11 with current vendor Vulkan drivers. The
   minimum supported Windows version is not yet established.
@@ -167,6 +175,20 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
   identity presentation support. The `Goo.Android` adapter hosts the same
   application in an Android activity or native view. See
   [Android integration](docs/android.md).
+
+### Custom shaders
+
+Goo includes the ShaderEffect build adapter and authoring modules. Install these
+third-party tools only when the project contains `<GooShaderEffect>` items:
+
+| Platform | Slang 2026.16 | Vulkan SDK 1.4.357.0 with `spirv-val` |
+| --- | --- | --- |
+| Linux x64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz) | [Download `.tar.xz`](https://sdk.lunarg.com/sdk/download/1.4.357.0/linux/vulkan_sdk.tar.xz) |
+| Windows x64 | [Download `.zip`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-windows-x86_64.zip) | [Download installer](https://sdk.lunarg.com/sdk/download/1.4.357.0/windows/vulkan_sdk.exe) |
+| macOS arm64 | [Download `.tar.gz`](https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-macos-aarch64.tar.gz) | [Download `.zip`](https://sdk.lunarg.com/sdk/download/1.4.357.0/mac/vulkan_sdk.zip) |
+
+Set `SLANG_SDK` and `VULKAN_SDK` to the extracted or installed SDK roots. Goo
+also accepts `slangc` and `spirv-val` on `PATH`.
 
 ## Further reading
 
