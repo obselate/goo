@@ -591,44 +591,6 @@ public sealed class DevToolsCliEndToEndTests
         Assert.Contains("arg=--unknown=child", forwarded.StandardOutput, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task PluginConfigurePreservesSettingsAndDoesNotClobberMalformedJson()
-    {
-        using var directory = TemporaryDirectory.Create();
-        var scripts = Path.Combine(directory.Path, "scripts");
-        Directory.CreateDirectory(scripts);
-        var configure = Path.Combine(scripts, "configure.py");
-        File.Copy(Path.Combine(RepositoryRoot, "plugins", "goo", "scripts", "configure.py"), configure);
-        var manifest = Path.Combine(directory.Path, ".mcp.json");
-        var initial = JsonSerializer.Serialize(new
-        {
-            customTop = new { keep = true },
-            mcpServers = new
-            {
-                goo = new { command = "old", args = new[] { "old" }, customServer = true, env = new { GOO_CLI = "/custom/cli", UV_PROJECT_ENVIRONMENT = "/custom/venv", CUSTOM = "keep" } },
-                extra = new { command = "custom", args = new[] { "untouched" } }
-            }
-        });
-        await File.WriteAllTextAsync(manifest, initial);
-        var configured = await RunProcessAsync("python3", configure);
-        Assert.Equal(0, configured.ExitCode);
-        using (var document = JsonDocument.Parse(await File.ReadAllTextAsync(manifest)))
-        {
-            var root = document.RootElement;
-            Assert.True(root.GetProperty("customTop").GetProperty("keep").GetBoolean());
-            Assert.Equal("custom", root.GetProperty("mcpServers").GetProperty("extra").GetProperty("command").GetString());
-            var goo = root.GetProperty("mcpServers").GetProperty("goo");
-            Assert.True(goo.GetProperty("customServer").GetBoolean());
-            Assert.Equal("/custom/cli", goo.GetProperty("env").GetProperty("GOO_CLI").GetString());
-            Assert.Equal("/custom/venv", goo.GetProperty("env").GetProperty("UV_PROJECT_ENVIRONMENT").GetString());
-        }
-        var first = await File.ReadAllBytesAsync(manifest);
-        Assert.Equal(0, (await RunProcessAsync("python3", configure)).ExitCode);
-        Assert.Equal(first, await File.ReadAllBytesAsync(manifest));
-        await File.WriteAllTextAsync(manifest, "{invalid-json");
-        Assert.NotEqual(0, (await RunProcessAsync("python3", configure)).ExitCode);
-        Assert.Equal("{invalid-json", await File.ReadAllTextAsync(manifest));
-    }
 
     [Fact]
     public async Task DevSignalCancellationStopsOnlyItsOwnedProcessTree()

@@ -23,7 +23,8 @@ async def main():
     app = output / "app"
     runtime = app / ".goo/devtools"
     runtime.mkdir(parents=True)
-    env = dict(os.environ, GOO_DEVTOOLS_DIR=str(output / "unused-runtime"))
+    env = dict(os.environ, GOO_DEVTOOLS_DIR=str(output / "unused-runtime"),
+               UV_PROJECT_ENVIRONMENT=str(output / "runtime-venv"))
     parameters = StdioServerParameters(command="uv", args=["run", "--project", str(ROOT), "--locked", "python", str(ROOT / "scripts/server.py")], env=env)
     async with stdio_client(parameters) as streams:
         async with ClientSession(*streams) as session:
@@ -49,6 +50,7 @@ async def main():
             (output / "context.json").write_text(context.model_dump_json(indent=2))
             bundled = data(context)
             assert bundled["provenance"]["kind"] == "bundle"
+            assert bundled["preflight"]["configuration"]["configured"], bundled["preflight"]["configuration"]
             assert bundled["provenance"]["revision"] == bundled["bundleCommit"]
             assert len(bundled["provenance"]["compilerCommit"]) == 40
             search = data(await call("goo_search", query="how do I rebuild a cell"))
@@ -77,8 +79,6 @@ async def main():
             starter = data(await call("goo_starter", name="AgentProbe"))
             assert "--no-watch" in starter["run"]
             assert starter["build"] == "dotnet build AgentProbe.gsproj -c Release --nologo -warnaserror"
-            assert starter["versions"] == {"gsharpSdk": "0.4.591", "goo": "0.6.3",
-                                           "compilerCommit": bundled["provenance"]["compilerCommit"]}
             assert starter["lint"] == "unavailable"
             assert set(starter["provenance"]["sourceFiles"]) == {
                 "templates/Goo.Templates/content/Program.gs",

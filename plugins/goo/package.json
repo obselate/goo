@@ -1,0 +1,19 @@
+{
+  "name": "goo-agent-plugin",
+  "version": "0.1.0",
+  "description": "G# Goo authoring, API lookup, live UI inspection and opt-in input automation.",
+  "license": "MIT",
+  "files": [
+    "README.md",
+    "mcp.json",
+    "plugin.json",
+    "pyproject.toml",
+    "reference",
+    "scripts/server.py",
+    "scripts/sync_docs.py",
+    "scripts/verify.py",
+    "skills",
+    "uv.lock"
+  ],
+  "omp": {}
+}

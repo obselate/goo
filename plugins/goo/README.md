@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-Standalone G# Goo authoring guidance and twelve stdio MCP tools. Requires Python 3.11+, uv, and .NET 10 for applications. The server uses the official MCP Python SDK.
+Standalone G# Goo authoring guidance and twelve stdio MCP tools. The plugin requires [uv](https://docs.astral.sh/uv/), which manages its required Python runtime and locked environment. Goo applications require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.6.4. The server uses the official MCP Python SDK.
 
 | Tool | Purpose |
 | --- | --- |
@@ -26,21 +26,31 @@ Confirm it is available:
 goo list --json
 ```
 
-Run this once from the plugin directory:
+### OMP
+
+Link the package from the Goo checkout:
 
 ```sh
-python3 scripts/configure.py
+omp plugin link ./plugins/goo
 ```
 
-Configure your MCP client to run:
+The Agent Plugins manifests provide the `goo-authoring` skill and MCP server
+without a generated local configuration. Start a new OMP session after linking.
+
+### Codex
+
+Install the Git-backed marketplace and plugin with a current Codex CLI:
 
 ```sh
-uv run --project /absolute/path/to/plugins/goo --locked python /absolute/path/to/plugins/goo/scripts/server.py
+codex plugin marketplace add obselate/goo
+codex plugin add goo@obselate-goo
 ```
 
-Keep the plugin directory in place after installation. Run
-`python3 scripts/configure.py` again if you move it. No API key or hosted model
-service is required.
+Git and network access are required while Codex downloads the marketplace.
+Codex installs the portable package, discovers its `goo-authoring` skill, and
+starts its MCP server from the installed plugin path. Start a new Codex session
+after installation. No manual MCP configuration, checkout mutation, directory
+change, or absolute path is required.
 
 ## Use
 
@@ -83,11 +93,13 @@ Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` to use
 
 ## Refresh and verify
 
-Refresh the bundle with `python3 scripts/sync_docs.py /path/to/goo-checkout`. Validate the MCP workflow with:
+Refresh the bundle with `python3 scripts/sync_docs.py /path/to/goo-checkout`.
+Validate the MCP workflow with:
 
 ```sh
 GOO_CLI=/absolute/path/to/Goo.DevTools.Cli.dll uv run --locked python scripts/verify.py
 ```
 
-Also run `python3 scripts/configure.py --check`. Reinstall the local plugin and
-start a new Codex thread after changing its skills or MCP tool definitions.
+For OMP, run `omp plugin doctor goo-agent-plugin`. Reinstall or refresh the
+plugin through the host plugin manager after changing its source, then start a
+new session. Skill-only changes can be loaded in OMP with `/reload-plugins`.

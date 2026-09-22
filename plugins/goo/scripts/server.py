@@ -6,6 +6,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -19,7 +20,7 @@ from mcp.types import ToolAnnotations
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "reference"
 MANIFEST = json.loads((BUNDLE / "manifest.json").read_text())
-PLUGIN_MANIFEST = json.loads((ROOT / ".codex-plugin/plugin.json").read_text())
+PLUGIN_MANIFEST = json.loads((ROOT / "plugin.json").read_text())
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 INPUT = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
 MUTATION = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -127,7 +128,13 @@ def search_terms(value: str) -> list[str]:
 
 def disk_plugin_fingerprint() -> str:
     digest = hashlib.sha256()
-    for path in (ROOT / ".codex-plugin/plugin.json", ROOT / "scripts/server.py", ROOT / "skills/goo-authoring/SKILL.md", ROOT / "reference/manifest.json"):
+    for path in (
+        ROOT / "plugin.json",
+        ROOT / "mcp.json",
+        ROOT / "scripts/server.py",
+        ROOT / "skills/goo-authoring/SKILL.md",
+        ROOT / "reference/manifest.json",
+    ):
         digest.update(path.relative_to(ROOT).as_posix().encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -138,32 +145,44 @@ LOADED_PLUGIN_FINGERPRINT = disk_plugin_fingerprint()
 
 
 def configuration_status() -> dict:
-    path = ROOT / ".mcp.json"
-    expected = ["run", "--project", str(ROOT), "--locked", "python", str(ROOT / "scripts/server.py")]
+    path = ROOT / "mcp.json"
+    expected_arguments = ["run", "--project", "${PLUGIN_ROOT}", "--locked", "python",
+                          "${PLUGIN_ROOT}/scripts/server.py"]
     issues = []
     try:
         config = json.loads(path.read_text())
         server = config.get("mcpServers", {}).get("goo", {})
-        configured = server.get("command") == "uv" and server.get("args") == expected
-        declared_environment = server.get("env", {})
-        if not isinstance(declared_environment, dict):
-            configured = False
-            issues.append("The Goo MCP server environment is not a JSON object.")
-        else:
-            for name in ("GOO_CLI", "GOO_SOURCE_ROOT", "GOO_DEVTOOLS_DIR"):
-                if name in declared_environment and str(declared_environment[name]) != os.environ.get(name):
-                    configured = False
-                    issues.append(f"{name} differs from the environment loaded by this server process.")
+        environment = server.get("env", {})
+        if config.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
+            issues.append("The Goo MCP manifest does not use the portable Agent Plugins schema.")
+        if server.get("type") != "stdio" or server.get("command") != "uv" or server.get("args") != expected_arguments:
+            issues.append("The Goo MCP manifest does not declare the portable uv server command.")
+        if not isinstance(environment, dict) or environment.get("UV_PROJECT_ENVIRONMENT") != "${PLUGIN_DATA}/runtime-venv":
+            issues.append("The Goo MCP manifest does not isolate its locked Python environment in plugin data.")
     except (OSError, ValueError, AttributeError) as error:
-        configured = False
         issues.append(f"The Goo MCP manifest is unreadable: {error}")
-    if not configured and not issues:
-        issues.append("The Goo MCP manifest is not configured for this loaded plugin source.")
+
+    runtime_environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
+    if not runtime_environment:
+        issues.append("The host did not resolve the plugin data path for the Goo runtime environment.")
+    else:
+        runtime_path = Path(runtime_environment).expanduser()
+        if not runtime_path.is_absolute():
+            issues.append("The resolved Goo runtime environment path is not absolute.")
+        elif runtime_path.resolve() != Path(sys.prefix).resolve():
+            issues.append("The loaded Python environment does not match the Goo plugin runtime environment.")
+        elif runtime_path.resolve().is_relative_to(ROOT):
+            issues.append("The Goo runtime environment is inside the installed plugin package.")
+
+    configured = not issues
     return {
         "configured": configured,
         "manifest": str(path),
+        "runtimeEnvironment": runtime_environment or "unavailable",
         "issues": issues,
-        "actions": [] if configured else [f"Run `python3 {ROOT / 'scripts/configure.py'} --check`, reinstall Goo, and start a new thread."],
+        "actions": [] if configured else [
+            "Refresh or reinstall Goo through the host plugin manager, then start a new session."
+        ],
     }
 
 
@@ -202,7 +221,7 @@ def cli_preflight(timeout: float = 5) -> dict:
         "version": version_status.get("version", "unavailable") if isinstance(version_status, dict) else "unavailable",
         "features": sorted(features),
         "issues": issues,
-        "actions": [] if compatible else ["Build the current tools/Goo.DevTools.Cli project and set GOO_CLI to its output DLL."],
+        "actions": [] if compatible else ["Run `dotnet tool update --global Goo.DevTools --version 0.6.4`. Set GOO_CLI only when testing a compatible source build."],
     }
     _cli_preflight_cache = (cache_key, status)
     return status
@@ -439,7 +458,7 @@ def mutation_response(pid: int, window: str, project: str, command: str, payload
                          context={"cliVersion": status.get("version", "unavailable")})
     if "attach.require-capabilities" not in status.get("features", []):
         raise GooFailure("cli-incompatible", "The configured Goo CLI cannot guard typed mutations before dispatch.", "preflight",
-                         action="Build the current tools/Goo.DevTools.Cli project and set GOO_CLI to its output DLL.",
+                         action="Run `dotnet tool update --global Goo.DevTools --version 0.6.4`. Set GOO_CLI only when testing a compatible source build.",
                          context={"cliVersion": status.get("version", "unavailable")})
     body = json.dumps(payload, separators=(",", ":"))
     if len(body) > 65536:

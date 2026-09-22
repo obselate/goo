@@ -1,0 +1,20 @@
+{
+  "name": "obselate-goo",
+  "interface": {
+    "displayName": "Obselate Goo"
+  },
+  "plugins": [
+    {
+      "name": "goo",
+      "source": {
+        "source": "local",
+        "path": "./plugins/goo"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

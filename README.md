@@ -172,6 +172,7 @@ renderer requires the Vulkan 1.3 feature set used by Goo.
 
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
+- [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
 - [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
 - [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)
 - [Contributing and source builds](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md)
