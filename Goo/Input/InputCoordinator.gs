@@ -27,6 +27,8 @@ internal class InputCoordinator {
       keyboard.SetDiagnosticsHook(keyboardHook)
     }
 
+  internal func SetWheelScrollScale(value float32) { pointer.WheelScrollScale = value }
+
   internal func SyncControlledEntry(n Node, value string) bool -> text.SyncControlledEntry(n, value)
 
   internal func Attach(host WindowHost) {

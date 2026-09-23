@@ -1445,7 +1445,7 @@ internal class InputFixtures {
     nested.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
     guard let nestedRoot = nested.Window.Tree else { return false }
     guard let nestedInner = findByKey(nestedRoot, "inner") else { return false }
-    if nestedInner.ScrollTargetY != 48.0F || nestedRoot.ScrollTargetY != 0.0F {
+    if nestedInner.ScrollTargetY != InputPolicy.WheelUnit(true, scrollViewportHeight(nestedInner)) || nestedRoot.ScrollTargetY != 0.0F {
       return false
     }
 
@@ -1453,7 +1453,7 @@ internal class InputFixtures {
     sibling.Wheel(50.0F, 150.0F, 0.0F, -1.0F)
     guard let siblingRoot = sibling.Window.Tree else { return false }
     guard let siblingInner = findByKey(siblingRoot, "inner") else { return false }
-    if siblingInner.ScrollTargetY != 0.0F || siblingRoot.ScrollTargetY != 48.0F {
+    if siblingInner.ScrollTargetY != 0.0F || siblingRoot.ScrollTargetY != InputPolicy.WheelUnit(true, scrollViewportHeight(siblingRoot)) {
       return false
     }
 
@@ -1461,7 +1461,7 @@ internal class InputFixtures {
     boundary.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
     guard let boundaryRoot = boundary.Window.Tree else { return false }
     guard let boundaryInner = findByKey(boundaryRoot, "inner") else { return false }
-    if boundaryInner.ScrollTargetY != 0.0F || boundaryRoot.ScrollTargetY != 48.0F {
+    if boundaryInner.ScrollTargetY != 0.0F || boundaryRoot.ScrollTargetY != InputPolicy.WheelUnit(true, scrollViewportHeight(boundaryRoot)) {
       return false
     }
 
@@ -1557,8 +1557,8 @@ internal class InputFixtures {
     let driver = InputFixtureDriver(cell, 100, 100)
     driver.Wheel(50.0F, 50.0F, -1.0F, -1.0F)
     guard let scroll = driver.Window.Tree else { return false }
-    if scroll.ScrollTargetX != 48.0F || scroll.ScrollTargetY != 0.0F { return false }
-    scroll.ScrollX = 48.0F
+    if scroll.ScrollTargetX != InputPolicy.WheelUnit(false, scrollViewportWidth(scroll)) || scroll.ScrollTargetY != 0.0F { return false }
+    scroll.ScrollX = scroll.ScrollTargetX
     cell.HideX()
     driver.Update()
     guard let reset = driver.Window.Tree else { return false }
@@ -1704,8 +1704,9 @@ internal class InputFixtures {
       driver.Wheel(50.0F, 50.0F, -0.5F, 0.0F)
       if scroll.ScrollTargetX != 15.0F { return false }
       InputPolicy.Mac = false
+      driver.Input.SetWheelScrollScale(2.0F)
       driver.Wheel(50.0F, 50.0F, -1.0F, 0.0F)
-      return scroll.ScrollTargetX == 63.0F
+      return scroll.ScrollTargetX == 15.0F + InputPolicy.WheelUnit(false, scrollViewportWidth(scroll)) * 2.0F
     } finally {
       InputPolicy.Mac = saved
     }

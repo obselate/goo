@@ -61,13 +61,13 @@ internal partial class PointerInput {
     var consumed = false
     if dy != 0.0F {
       if let target = deepestScrollable(chain, true) {
-        let moved = ScrollState.By(target, 0.0F, -dy * InputPolicy.WheelUnit())
+        let moved = ScrollState.By(target, 0.0F, -dy * InputPolicy.WheelUnit(true, scrollViewportHeight(target)) * WheelScrollScale)
         consumed = moved.Y != 0.0
       }
     }
     if dx != 0.0F {
       if let target = deepestScrollable(chain, false) {
-        let moved = ScrollState.By(target, -dx * InputPolicy.WheelUnit(), 0.0F)
+        let moved = ScrollState.By(target, -dx * InputPolicy.WheelUnit(false, scrollViewportWidth(target)) * WheelScrollScale, 0.0F)
         consumed = consumed || moved.X != 0.0
       }
     }

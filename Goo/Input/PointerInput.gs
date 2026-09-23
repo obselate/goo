@@ -28,6 +28,7 @@ internal partial class PointerInput {
   private var dispatchGeneration int64
   private var wheelControl InputDispatchControl
   private var wheelDispatchGeneration int64
+  internal var WheelScrollScale float32 = 1.0F
   private var dragCandidate Node?
   private var dragSession PointerDragSession?
   private var dragPointerId int64
