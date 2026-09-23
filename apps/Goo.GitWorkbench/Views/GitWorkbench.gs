@@ -5,7 +5,7 @@ import System
 import System.Collections.Generic
 import System.IO
 
-class GitWorkbench : Cell {
+class GitWorkbench : Cell, IDisposable {
     private var directory string = ""
     private var directoryInput string
     private var branch string = ""
@@ -15,6 +15,8 @@ class GitWorkbench : Cell {
     private var selectedCommit GitCommit?
     private var detail string = ""
     private var commitMessage string = ""
+    private let commitDescription TextEditorController = TextEditorController(TextDocument())
+    private var historyTab bool
     private var notice string = ""
     private var noticeIsError bool
 
@@ -35,7 +37,19 @@ class GitWorkbench : Cell {
         }
         directory = result.Output.Trim()
         directoryInput = directory
+        historyTab = false
+        selectedChange = nil
+        selectedCommit = nil
+        commitMessage = ""
+        clearDescription()
         refresh()
+    }
+
+    private func clearDescription() {
+        let document = commitDescription.Document
+        if document.Length > 0 {
+            document.Apply(TextChange{Range: TextRange{Start: 0, Length: document.Length}, InsertedText: ""})
+        }
     }
 
     private func refresh() {
@@ -47,35 +61,45 @@ class GitWorkbench : Cell {
             showError(gitError(status))
             return
         }
-        let previous = selectedChange
+        let previousChange = selectedChange
+        let previousCommit = selectedCommit
         changes = readChanges(status.Output)
         branch = runGit(directory, List[string]{"branch", "--show-current"}).Output.Trim()
         history = readHistory(runGit(directory, List[string]{"log", "-n", "40", "--format=%H%x00%s%x00%an"}).Output)
         selectedChange = nil
-        if let old = previous {
-            for change in changes {
-                if change.Path == old.Path && change.Staged == old.Staged {
-                    selectedChange = change
-                    break
-                }
-            }
-            if selectedChange == nil {
-                for change in changes {
-                    if change.Path == old.Path {
-                        selectedChange = change
+        selectedCommit = nil
+        if historyTab {
+            if let old = previousCommit {
+                for commit in history {
+                    if commit.Id == old.Id {
+                        selectedCommit = commit
                         break
                     }
                 }
             }
-        }
-        if selectedChange == nil && changes.Count > 0 {
-            selectedChange = changes[0]
-        }
-        if selectedChange != nil {
-            selectedCommit = nil
-        }
-        if selectedChange == nil && selectedCommit == nil && history.Count > 0 {
-            selectedCommit = history[0]
+            if selectedCommit == nil && history.Count > 0 {
+                selectedCommit = history[0]
+            }
+        } else {
+            if let old = previousChange {
+                for change in changes {
+                    if change.Path == old.Path && change.Staged == old.Staged {
+                        selectedChange = change
+                        break
+                    }
+                }
+                if selectedChange == nil {
+                    for change in changes {
+                        if change.Path == old.Path {
+                            selectedChange = change
+                            break
+                        }
+                    }
+                }
+            }
+            if selectedChange == nil && changes.Count > 0 {
+                selectedChange = changes[0]
+            }
         }
         loadDetail()
         notice = ""
@@ -129,33 +153,17 @@ class GitWorkbench : Cell {
         detail = "No changes or commits to show."
     }
 
-    private func stageSelected() {
-        guard let change = selectedChange else {
-            return
+    private func toggleStage(change GitChange) {
+        let result = if change.Staged {
+            runGit(directory, List[string]{"restore", "--staged", "--", change.Path})
+        } else {
+            runGit(directory, List[string]{"add", "--", change.Path})
         }
-        if change.Staged {
-            return
-        }
-        let result = runGit(directory, List[string]{"add", "--", change.Path})
         if !result.Ok {
             showError(gitError(result))
             return
         }
-        refresh()
-    }
-
-    private func unstageSelected() {
-        guard let change = selectedChange else {
-            return
-        }
-        if !change.Staged {
-            return
-        }
-        let result = runGit(directory, List[string]{"restore", "--staged", "--", change.Path})
-        if !result.Ok {
-            showError(gitError(result))
-            return
-        }
+        selectedChange = change
         refresh()
     }
 
@@ -176,14 +184,55 @@ class GitWorkbench : Cell {
             showError("Stage at least one file first.")
             return
         }
-        let result = runGit(directory, List[string]{"commit", "-m", message})
+        let args = List[string]{"commit", "-m", message}
+        let description = commitDescription.Document.GetText().Trim()
+        if description != "" {
+            args.Add("-m")
+            args.Add(description)
+        }
+        let result = runGit(directory, args)
         if !result.Ok {
             showError(gitError(result))
             return
         }
         commitMessage = ""
+        clearDescription()
         refresh()
         notice = "Commit created."
+    }
+
+    private func showChanges() {
+        if !historyTab {
+            return
+        }
+        historyTab = false
+        selectedCommit = nil
+        selectedChange = if changes.Count > 0 {
+            changes[0]
+        } else {
+            nil
+        }
+        notice = ""
+        loadDetail()
+    }
+
+    private func showHistory() {
+        if historyTab {
+            return
+        }
+        historyTab = true
+        selectedChange = nil
+        selectedCommit = if history.Count > 0 {
+            history[0]
+        } else {
+            nil
+        }
+        notice = ""
+        loadDetail()
+    }
+
+    public func Dispose() {
+        commitDescription.Dispose()
     }
 
     private func showError(message string) {
@@ -200,6 +249,77 @@ class GitWorkbench : Cell {
         return false
     }
 
+    private func sidebarContent() Blob {
+        if historyTab {
+            let children = List[Blob]()
+            children.Add(
+                HistoryPane(
+                    history,
+                    selectedCommit,
+                    (commit GitCommit) -> {
+                        selectedCommit = commit
+                        loadDetail()
+                    }
+                ).render()
+            )
+            if notice != "" {
+                children.Add(
+                    Text{
+                        Content: notice,
+                        Height: 28,
+                        Padding: 8,
+                        FontSize: 11,
+                        Color: if noticeIsError {
+                            GitTheme.Error
+                        } else {
+                            GitTheme.Muted
+                        }
+                    }
+                )
+            }
+            return Container{
+                Width: Length.Percent(100),
+                Height: 0,
+                FlexGrow: 1,
+                MinHeight: 0,
+                FlexDirection: FlexDirection.Column,
+                Children: children,
+            }
+        }
+        return Container{
+            Width: Length.Percent(100),
+            Height: 0,
+            FlexGrow: 1,
+            MinHeight: 0,
+            FlexDirection: FlexDirection.Column,
+            ChangesPane(
+                changes,
+                selectedChange,
+                (change GitChange) -> {
+                    selectedChange = change
+                    loadDetail()
+                },
+                (change GitChange) -> {
+                    toggleStage(change)
+                }
+            ).render(),
+            CommitPane(
+                commitMessage,
+                commitDescription,
+                branch,
+                directory != "" && hasStagedChanges() && commitMessage.Trim() != "",
+                notice,
+                noticeIsError,
+                (value string) -> {
+                    commitMessage = value
+                },
+                () -> {
+                    commit()
+                }
+            ).render(),
+        }
+    }
+
     override func Build() Blob -> Container{
         Width: Length.Percent(100),
         Height: Length.Percent(100),
@@ -207,54 +327,20 @@ class GitWorkbench : Cell {
         MinHeight: 0,
         FlexDirection: FlexDirection.Column,
         BackgroundColor: GitTheme.Background,
-        Container{
-            Width: Length.Percent(100),
-            Padding: 14,
-            FlexDirection: FlexDirection.Row,
-            AlignItems: AlignItems.Center,
-            Gap: 10,
-            BackgroundColor: GitTheme.Surface,
-            BorderWidth: 1,
-            BorderColor: GitTheme.Border,
-            Text{Content: "Git workbench", FontSize: 16, FontWeight: 600, Color: GitTheme.Text},
-            Text{
-                Content: if directory == "" {
-                    ""
-                } else {
-                    "/ ${DirectoryInfo(directory).Name}"
-                },
-                FontSize: 14,
-                Color: GitTheme.Accent
+        WorkbenchToolbar(
+            directory,
+            branch,
+            directoryInput,
+            (value string) -> {
+                directoryInput = value
             },
-            Container{FlexGrow: 1},
-            Text{Content: branch, FontSize: 12, Color: GitTheme.Muted},
-        },
-        Container{
-            Width: Length.Percent(100),
-            Padding: 10,
-            FlexDirection: FlexDirection.Row,
-            Gap: 8,
-            appInput(
-                directoryInput,
-                "Repository directory",
-                (value string) -> {
-                    directoryInput = value
-                }
-            ),
-            appButton(
-                "Open",
-                () -> {
-                    openRepository(directoryInput)
-                }
-            ),
-            appButton(
-                "Refresh",
-                () -> {
-                    refresh()
-                },
-                directory != ""
-            ),
-        },
+            () -> {
+                openRepository(directoryInput)
+            },
+            () -> {
+                refresh()
+            }
+        ).render(),
         Container{
             Width: Length.Percent(100),
             Height: 0,
@@ -265,77 +351,23 @@ class GitWorkbench : Cell {
             BackgroundColor: GitTheme.Border,
             Container{
                 Width: 340,
-                MinWidth: 250,
+                MinWidth: 280,
                 Height: Length.Percent(100),
                 MinHeight: 0,
                 FlexDirection: FlexDirection.Column,
-                Gap: 1,
-                BackgroundColor: GitTheme.Border,
-                ChangesPane(
-                    changes,
-                    selectedChange,
-                    (change GitChange) -> {
-                        selectedChange = change
-                        selectedCommit = nil
-                        loadDetail()
+                BackgroundColor: GitTheme.Surface,
+                SidebarTabs(
+                    historyTab,
+                    () -> {
+                        showChanges()
+                    },
+                    () -> {
+                        showHistory()
                     }
                 ).render(),
-                HistoryPane(
-                    history,
-                    selectedCommit,
-                    (commit GitCommit) -> {
-                        selectedChange = nil
-                        selectedCommit = commit
-                        loadDetail()
-                    }
-                ).render(),
+                sidebarContent(),
             },
-            DetailPane(
-                selectedChange,
-                selectedCommit,
-                detail,
-                () -> {
-                    stageSelected()
-                },
-                () -> {
-                    unstageSelected()
-                }
-            ).render(),
-        },
-        Container{
-            Width: Length.Percent(100),
-            Padding: 10,
-            FlexDirection: FlexDirection.Row,
-            Gap: 8,
-            BackgroundColor: GitTheme.Surface,
-            BorderWidth: 1,
-            BorderColor: GitTheme.Border,
-            appInput(
-                commitMessage,
-                "Commit message",
-                (value string) -> {
-                    commitMessage = value
-                }
-            ),
-            appButton(
-                "Commit staged",
-                () -> {
-                    commit()
-                },
-                directory != "" && hasStagedChanges() && commitMessage.Trim() != "",
-                true
-            ),
-        },
-        Text{
-            Content: notice,
-            Height: 28,
-            Padding: 8,
-            FontSize: 12,
-            Color: if noticeIsError {
-                GitTheme.Error
-            } else {
-                GitTheme.Muted
-            }
+            DetailPane(selectedChange, selectedCommit, detail).render(),
         },
     }
 }

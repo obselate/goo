@@ -97,8 +97,9 @@ class HistoryPane {
         }
         return Container{
             Width: Length.Percent(100),
-            Height: 280,
-            MinHeight: 160,
+            Height: 0,
+            FlexGrow: 1,
+            MinHeight: 0,
             FlexDirection: FlexDirection.Column,
             BackgroundColor: GitTheme.Surface,
             Container{
@@ -110,7 +111,7 @@ class HistoryPane {
                 BorderBottomWidth: 1,
                 BorderBottomColor: GitTheme.Border,
                 BackgroundColor: GitTheme.Surface,
-                Text{Content: "History", FontSize: 14, FontWeight: 600, Color: GitTheme.Text}
+                Text{Content: "Recent commits", FontSize: 12, FontWeight: 600, Color: GitTheme.Text}
             },
             Container{
                 Width: Length.Percent(100),

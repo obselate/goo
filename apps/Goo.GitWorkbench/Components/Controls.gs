@@ -3,26 +3,37 @@ package GooGitWorkbench
 import Goo
 import System
 
-func appButton(label string, callback Action, enabled bool = true, primary bool = false) Button -> Button{
+func appButton(
+    label string,
+    callback Action,
+    enabled bool = true,
+    primary bool = false,
+    fullWidth bool = false
+) Button -> Button{
     Disabled: !enabled,
+    Width: if fullWidth {
+        Length.Percent(100)
+    } else {
+        Length.Auto
+    },
     Padding: 8,
     BackgroundColor: if !enabled {
         GitTheme.Surface
     } else if primary {
-        GitTheme.Success
+        GitTheme.Primary
     } else {
         GitTheme.Button
     },
     BorderWidth: 1,
     BorderColor: if primary && enabled {
-        GitTheme.Success
+        GitTheme.Primary
     } else {
         GitTheme.Border
     },
     BorderRadius: 6,
     Hover: Style{
         BackgroundColor: if primary {
-            GitTheme.SuccessHover
+            GitTheme.PrimaryHover
         } else {
             GitTheme.Border
         }

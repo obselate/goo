@@ -7,107 +7,130 @@ class ChangesPane {
     private let changes List[GitChange]
     private let selectedChange GitChange?
     private let onSelect Action[GitChange]
+    private let onToggle Action[GitChange]
 
-    init(changes List[GitChange], selectedChange GitChange?, onSelect Action[GitChange]) {
+    init(changes List[GitChange], selectedChange GitChange?, onSelect Action[GitChange], onToggle Action[GitChange]) {
         this.changes = changes
         this.selectedChange = selectedChange
         this.onSelect = onSelect
+        this.onToggle = onToggle
     }
 
-    private func changeRow(change GitChange) Button -> Button{
-        Width: Length.Percent(100),
-        Height: 34,
-        Padding: 8,
-        FlexDirection: FlexDirection.Row,
-        JustifyContent: JustifyContent.FlexStart,
-        AlignItems: AlignItems.Center,
-        Gap: 8,
-        BackgroundColor: if Object.ReferenceEquals(selectedChange, change) {
-            GitTheme.Button
-        } else {
-            GitTheme.Surface
-        },
-        BorderWidth: if Object.ReferenceEquals(selectedChange, change) {
-            1
-        } else {
-            0
-        },
-        BorderColor: if Object.ReferenceEquals(selectedChange, change) {
-            GitTheme.Accent
-        } else {
-            GitTheme.Surface
-        },
-        BorderRadius: 3,
-        Hover: Style{BackgroundColor: GitTheme.Button},
-        OnClick: () -> {
-            onSelect(change)
-        },
-        Text{
-            Content: change.Code,
-            Width: 18,
-            FontSize: 12,
-            Color: if Object.ReferenceEquals(selectedChange, change) {
+    private func changeRow(change GitChange) Container {
+        let isSelected = Object.ReferenceEquals(selectedChange, change)
+
+        return Container{
+            Width: Length.Percent(100),
+            Height: 36,
+            PaddingLeft: 6,
+            PaddingRight: 8,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 4,
+            BackgroundColor: if isSelected {
+                GitTheme.Button
+            } else {
+                GitTheme.Surface
+            },
+            BorderLeftWidth: 3,
+            BorderLeftColor: if isSelected {
                 GitTheme.Accent
             } else {
-                GitTheme.Muted
-            }
-        },
-        Text{
-            Content: change.Path,
-            Width: 0,
-            FlexGrow: 1,
-            MinWidth: 0,
-            FontSize: 12,
-            Color: GitTheme.Text,
-            TextWrap: TextWrap.NoWrap
-        },
-    }
-
-    private func sectionHeader(label string, count int32) Container -> Container{
-        Width: Length.Percent(100),
-        Padding: 9,
-        FlexDirection: FlexDirection.Row,
-        AlignItems: AlignItems.Center,
-        JustifyContent: JustifyContent.SpaceBetween,
-        BackgroundColor: GitTheme.Background,
-        Text{Content: label, FontSize: 11, FontWeight: 600, Color: GitTheme.Muted},
-        Text{Content: count.ToString(), FontSize: 11, Color: GitTheme.Muted},
-    }
-
-    private func emptySection(message string) Text -> Text{
-        Content: message,
-        Width: Length.Percent(100),
-        Padding: 10,
-        FontSize: 12,
-        Color: GitTheme.Muted
+                GitTheme.Surface
+            },
+            BorderBottomWidth: 1,
+            BorderBottomColor: GitTheme.Border,
+            Button{
+                Width: 28,
+                Height: 28,
+                Padding: 0,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.Center,
+                BackgroundColor: Color.Transparent,
+                BorderWidth: 0,
+                BorderRadius: 3,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                Hover: Style{BackgroundColor: GitTheme.Border},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
+                Accessibility: Accessibility{
+                    Role: AccessibilityRole.Checkbox,
+                    Name: if change.Staged {
+                        "Unstage " + change.Path
+                    } else {
+                        "Stage " + change.Path
+                    },
+                    Checked: if change.Staged {
+                        AccessibilityChecked.True
+                    } else {
+                        AccessibilityChecked.False
+                    }
+                },
+                OnClick: () -> onToggle(change),
+                Container{
+                    Width: 14,
+                    Height: 14,
+                    BorderRadius: 2,
+                    BorderWidth: 1,
+                    BorderColor: if change.Staged {
+                        GitTheme.Accent
+                    } else {
+                        GitTheme.Muted
+                    },
+                    BackgroundColor: if change.Staged {
+                        GitTheme.Accent
+                    } else {
+                        Color.Transparent
+                    },
+                    AlignItems: AlignItems.Center,
+                    JustifyContent: JustifyContent.Center,
+                    Text{
+                        Content: if change.Staged {
+                            "✓"
+                        } else {
+                            ""
+                        },
+                        FontSize: 11,
+                        FontWeight: 600,
+                        Color: GitTheme.Background
+                    }
+                },
+            },
+            Button{
+                Width: 0,
+                Height: Length.Percent(100),
+                FlexGrow: 1,
+                Padding: 0,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                JustifyContent: JustifyContent.FlexStart,
+                BackgroundColor: Color.Transparent,
+                BorderWidth: 0,
+                Cursor: Cursor.Pointer,
+                Focusable: true,
+                Hover: Style{BackgroundColor: GitTheme.Button},
+                Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
+                Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: change.Path},
+                OnClick: () -> onSelect(change),
+                Text{
+                    Width: Length.Percent(100),
+                    Content: change.Path,
+                    FontSize: 12,
+                    Color: GitTheme.Text,
+                    TextWrap: TextWrap.NoWrap,
+                    TextTrimming: TextTrimming.Ellipsis
+                },
+            },
+        }
     }
 
     func render() Blob {
-        var stagedCount = 0
-        var unstagedCount = 0
-        for change in changes {
-            if change.Staged {
-                stagedCount++
-            } else {
-                unstagedCount++
-            }
-        }
-
         let rows = List[Blob]()
-        rows.Add(
-            Container{
-                Width: Length.Percent(100),
-                Padding: 12,
-                FlexDirection: FlexDirection.Row,
-                AlignItems: AlignItems.Center,
-                JustifyContent: JustifyContent.SpaceBetween,
-                BorderWidth: 1,
-                BorderColor: GitTheme.Border,
-                Text{Content: "Changes", FontSize: 14, FontWeight: 600, Color: GitTheme.Text},
-                Text{Content: changes.Count.ToString(), FontSize: 12, Color: GitTheme.Muted},
-            }
-        )
-
+        let paths = HashSet[string]()
+        for change in changes {
+            paths.Add(change.Path)
+        }
         if changes.Count == 0 {
             rows.Add(
                 Container{
@@ -121,26 +144,8 @@ class ChangesPane {
                 }
             )
         } else {
-            rows.Add(sectionHeader("Staged", stagedCount))
-            if stagedCount == 0 {
-                rows.Add(emptySection("No staged changes"))
-            } else {
-                for change in changes {
-                    if change.Staged {
-                        rows.Add(changeRow(change))
-                    }
-                }
-            }
-
-            rows.Add(sectionHeader("Unstaged", unstagedCount))
-            if unstagedCount == 0 {
-                rows.Add(emptySection("No unstaged changes"))
-            } else {
-                for change in changes {
-                    if !change.Staged {
-                        rows.Add(changeRow(change))
-                    }
-                }
+            for change in changes {
+                rows.Add(changeRow(change))
             }
         }
 
@@ -150,9 +155,37 @@ class ChangesPane {
             FlexGrow: 1,
             MinHeight: 0,
             FlexDirection: FlexDirection.Column,
-            OverflowY: Overflow.Scroll,
             BackgroundColor: GitTheme.Surface,
-            Children: rows,
+            Container{
+                Width: Length.Percent(100),
+                Height: 36,
+                PaddingLeft: 14,
+                PaddingRight: 12,
+                FlexDirection: FlexDirection.Row,
+                AlignItems: AlignItems.Center,
+                BorderBottomWidth: 1,
+                BorderBottomColor: GitTheme.Border,
+                BackgroundColor: GitTheme.Surface,
+                Text{
+                    Content: if paths.Count == 1 {
+                        "1 changed file"
+                    } else {
+                        paths.Count.ToString() + " changed files"
+                    },
+                    FontSize: 12,
+                    FontWeight: 600,
+                    Color: GitTheme.Text
+                },
+            },
+            Container{
+                Width: Length.Percent(100),
+                Height: 0,
+                FlexGrow: 1,
+                MinHeight: 0,
+                OverflowY: Overflow.Scroll,
+                BackgroundColor: GitTheme.Surface,
+                Children: rows,
+            },
         }
     }
 }
