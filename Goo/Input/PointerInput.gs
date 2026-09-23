@@ -1077,13 +1077,9 @@ internal partial class PointerInput {
   }
 
   private func pressChainVisible(root Node) bool {
-    for i in 0 ... current.PressChain.Count {
-      let n = current.PressChain[i]
-      if !nodeVisibleInTree(root, n, false) || !canReceiveInput(n) {
-        return false
-      }
-    }
-    return true
+    if current.PressChain.Count == 0 { return true }
+    let target = current.PressChain[current.PressChain.Count - 1]
+    return nodeVisibleInTree(root, target, false) && canReceiveInput(target)
   }
 
   private func clearPressChain(resolver Resolver) {
