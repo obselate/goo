@@ -1,6 +1,6 @@
 # Git workbench
 
-A small desktop Git workbench built with published Goo 0.6.5. Open a repository, switch between Changes and History, inspect line-numbered diffs, stage or unstage files with the checkboxes, and commit with a summary and optional description. Git is invoked directly without a shell.
+A small desktop Git workbench built with published Goo 0.6.5. Open a repository, switch local branches, move between Changes and History, inspect line-numbered diffs, stage or unstage files with the checkboxes, and commit with a summary and optional description. Git is invoked directly without a shell.
 
 Requires .NET 10, Git, and [Goo's platform requirements](../../README.md#platforms). Run it from a repository or pass one:
 
