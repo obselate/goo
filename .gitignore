@@ -68,6 +68,9 @@
 !/apps/Goo.Gallery/**
 !/apps/Goo.DevTools/
 !/apps/Goo.DevTools/**
+!/apps/Goo.GitWorkbench/
+!/apps/Goo.GitWorkbench/**
+/apps/Goo.GitWorkbench/.goo/
 !/apps/Shared/
 !/apps/Shared/AppKeyBindings.gs
 
