@@ -9,6 +9,7 @@ class GitWorkbench : Cell, IDisposable {
     private var directory string = ""
     private var directoryInput string
     private var branch string = ""
+    private var branches List[string] = List[string]()
     private var changes List[GitChange] = List[GitChange]()
     private var history List[GitCommit] = List[GitCommit]()
     private var selectedChange GitChange?
@@ -19,10 +20,19 @@ class GitWorkbench : Cell, IDisposable {
     private var historyTab bool
     private var notice string = ""
     private var noticeIsError bool
+    private var repositorySelectorOpen bool
+    private var branchSelectorOpen bool
+    private var attachedWindow Window?
+    private let repositoryHandle ElementHandle = ElementHandle{}
+    private let branchHandle ElementHandle = ElementHandle{}
 
     init(startDirectory string) {
         directoryInput = startDirectory
         openRepository(startDirectory)
+    }
+
+    internal func AttachWindow(window Window) {
+        attachedWindow = window
     }
 
     private func openRepository(path string) {
@@ -37,6 +47,8 @@ class GitWorkbench : Cell, IDisposable {
         }
         directory = result.Output.Trim()
         directoryInput = directory
+        repositorySelectorOpen = false
+        branchSelectorOpen = false
         historyTab = false
         selectedChange = nil
         selectedCommit = nil
@@ -56,6 +68,8 @@ class GitWorkbench : Cell, IDisposable {
         if directory == "" {
             return
         }
+        notice = ""
+        noticeIsError = false
         let status = runGit(directory, List[string]{"-c", "core.quotepath=false", "status", "--porcelain=v1", "-z"})
         if !status.Ok {
             showError(gitError(status))
@@ -64,7 +78,20 @@ class GitWorkbench : Cell, IDisposable {
         let previousChange = selectedChange
         let previousCommit = selectedCommit
         changes = readChanges(status.Output)
-        branch = runGit(directory, List[string]{"branch", "--show-current"}).Output.Trim()
+        let currentBranch = runGit(directory, List[string]{"branch", "--show-current"})
+        if currentBranch.Ok {
+            branch = currentBranch.Output.Trim()
+        } else {
+            branch = ""
+            showError(gitError(currentBranch))
+        }
+        let branchResult = listLocalBranches(directory)
+        if branchResult.Ok {
+            branches = readBranches(branchResult.Output)
+        } else {
+            branches = List[string]()
+            showError(gitError(branchResult))
+        }
         history = readHistory(runGit(directory, List[string]{"log", "-n", "40", "--format=%H%x00%s%x00%an"}).Output)
         selectedChange = nil
         selectedCommit = nil
@@ -102,7 +129,21 @@ class GitWorkbench : Cell, IDisposable {
             }
         }
         loadDetail()
-        notice = ""
+    }
+
+    private func selectBranch(target string) {
+        if target == branch {
+            branchSelectorOpen = false
+            return
+        }
+        let result = switchGitBranch(directory, target)
+        if !result.Ok {
+            showError(gitError(result))
+            return
+        }
+        branchSelectorOpen = false
+        refresh()
+        notice = "Switched to $target."
         noticeIsError = false
     }
 
@@ -327,10 +368,16 @@ class GitWorkbench : Cell, IDisposable {
         MinHeight: 0,
         FlexDirection: FlexDirection.Column,
         BackgroundColor: GitTheme.Background,
+        WorkbenchWindowChrome(attachedWindow!!),
         WorkbenchToolbar(
             directory,
             branch,
+            branches,
             directoryInput,
+            repositorySelectorOpen,
+            branchSelectorOpen,
+            repositoryHandle,
+            branchHandle,
             (value string) -> {
                 directoryInput = value
             },
@@ -339,6 +386,17 @@ class GitWorkbench : Cell, IDisposable {
             },
             () -> {
                 refresh()
+            },
+            () -> {
+                repositorySelectorOpen = !repositorySelectorOpen
+                branchSelectorOpen = false
+            },
+            () -> {
+                branchSelectorOpen = !branchSelectorOpen
+                repositorySelectorOpen = false
+            },
+            (target string) -> {
+                selectBranch(target)
             }
         ).render(),
         Container{

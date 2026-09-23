@@ -15,6 +15,19 @@ func Main(args[]string) int32 {
         Directory.GetCurrentDirectory()
     }
     Window.ConfigureApplication("Goo Git workbench", "0.1.0", "com.obselate.goo.gitworkbench")
-    Window{Title: "Git workbench", Width: 1200, Height: 800, Root: GitWorkbench(directory)}.Run()
+    let root = GitWorkbench(directory)
+    let window = Window{
+        Title: "Git workbench",
+        Width: 1200,
+        Height: 800,
+        Decorated: false,
+        Transparent: true,
+        ResizeBand: 8.0F,
+        Resizable: true,
+        Background: Color.Transparent,
+        Root: root,
+    }
+    root.AttachWindow(window)
+    window.Run()
     return 0
 }

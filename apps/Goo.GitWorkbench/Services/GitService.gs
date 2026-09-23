@@ -93,6 +93,27 @@ func readHistory(output string) List[GitCommit] {
     return commits
 }
 
+func readBranches(output string) List[string] {
+    let branches = List[string]()
+    for line in output.Split('\n') {
+        let name = line.Trim()
+        if name != "" {
+            branches.Add(name)
+        }
+    }
+    return branches
+}
+
+func listLocalBranches(directory string) GitResult -> runGit(
+    directory,
+    List[string]{"branch", "--format=%(refname:short)"}
+)
+
+func switchGitBranch(directory string, branch string) GitResult -> runGit(
+    directory,
+    List[string]{"switch", "--", branch}
+)
+
 func gitError(result GitResult) string -> if result.Error != "" {
     result.Error
 } else if result.Output != "" {
