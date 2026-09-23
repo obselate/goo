@@ -146,14 +146,14 @@ private sealed class PathStrokeScratch {
   internal func EnsureOutput(curveCount int32, contourCount int32) {
     if OutputQuadratics.Length < curveCount {
       let previous = OutputQuadratics
-      OutputQuadratics = [curveCount]PathQuadratic
+      OutputQuadratics = [Math.Max(curveCount, Math.Max(16, previous.Length * 2))]PathQuadratic
       if OutputQuadraticCount > 0 {
         Array.Copy(previous, OutputQuadratics, OutputQuadraticCount)
       }
     }
     if OutputContours.Length < contourCount {
       let previous = OutputContours
-      OutputContours = [contourCount]PathContour
+      OutputContours = [Math.Max(contourCount, Math.Max(16, previous.Length * 2))]PathContour
       if OutputContourCount > 0 {
         Array.Copy(previous, OutputContours, OutputContourCount)
       }
