@@ -3,6 +3,26 @@ package GooGitWorkbench
 import Goo
 import System
 
+func headerIconButton(symbol string, name string, action Action, enabled bool, keyboardFocus bool) Button -> Button{
+    Width: 26,
+    Height: 26,
+    Padding: 0,
+    FlexShrink: 0,
+    AlignItems: AlignItems.Center,
+    JustifyContent: JustifyContent.Center,
+    BackgroundColor: Color.Transparent,
+    BorderWidth: 0,
+    BorderRadius: 3,
+    Disabled: !enabled,
+    Cursor: Cursor.Pointer,
+    Hover: Style{BackgroundColor: GitTheme.RowHover},
+    Focus: GitTheme.FocusRing(keyboardFocus),
+    Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: name},
+    OnClick: action,
+    KeyBindings: WorkbenchButtonBindings(action),
+    GitTheme.Icon(symbol, 18),
+}
+
 func stageCheckbox(
     checked AccessibilityChecked,
     name string,

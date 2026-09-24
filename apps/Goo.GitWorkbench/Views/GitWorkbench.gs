@@ -37,6 +37,9 @@ class GitWorkbench : Cell, IDisposable {
     private var keyboardFocus bool
     private var attachedWindow Window?
     private let branchHandle ElementHandle = ElementHandle{}
+    private let changesViewport ElementHandle = ElementHandle{}
+    private let historyViewport ElementHandle = ElementHandle{}
+    private let detailViewport ElementHandle = ElementHandle{}
 
     init(startDirectory string, logo ImageSource) {
         this.startDirectory = startDirectory
@@ -393,6 +396,68 @@ class GitWorkbench : Cell, IDisposable {
         loadDetail()
     }
 
+    private func currentPosition() int32 {
+        if historyTab {
+            if let commit = selectedCommit {
+                return history.IndexOf(commit)
+            }
+        } else if let change = selectedChange {
+            return changes.IndexOf(change)
+        }
+        return -1
+    }
+
+    private func selectAdjacent(offset int32) {
+        let index = currentPosition() + offset
+        if historyTab {
+            if index < 0 || index >= history.Count {
+                return
+            }
+            selectedCommit = history[index]
+            loadDetail()
+            Rebuild()
+            revealRow(historyViewport, index, 62.0)
+        } else {
+            if index < 0 || index >= changes.Count {
+                return
+            }
+            selectedChange = changes[index]
+            loadDetail()
+            Rebuild()
+            revealRow(changesViewport, index, 34.0)
+        }
+    }
+
+    private func revealRow(viewport ElementHandle, index int32, height float64) {
+        if !viewport.IsMounted {
+            return
+        }
+        let current = viewport.ScrollOffset
+        let top = float64(index) * height
+        let bottom = top + height
+        let visibleBottom = current.Y + viewport.ContentBox.Height
+        let target = if top < current.Y {
+            top
+        } else if bottom > visibleBottom {
+            bottom - viewport.ContentBox.Height
+        } else {
+            current.Y
+        }
+        if target != current.Y {
+            viewport.JumpTo(current.X, Math.Max(0.0, Math.Min(viewport.ScrollRange.Y, target)))
+        }
+    }
+
+    private func pageDetail(direction int32) {
+        if !detailViewport.IsMounted {
+            return
+        }
+        let current = detailViewport.ScrollOffset
+        let page = Math.Max(24.0, detailViewport.ContentBox.Height - 48.0)
+        let target = Math.Max(0.0, Math.Min(detailViewport.ScrollRange.Y, current.Y + float64(direction) * page))
+        detailViewport.JumpTo(current.X, target)
+    }
+
     /// Releases editor and window subscriptions.
     public func Dispose() {
         disposed = true
@@ -430,7 +495,8 @@ class GitWorkbench : Cell, IDisposable {
                             loadDetail()
                         }
                     },
-                    keyboardFocus
+                    keyboardFocus,
+                    historyViewport
                 ).render()
             )
         } else {
@@ -447,7 +513,8 @@ class GitWorkbench : Cell, IDisposable {
                     (change GitChange) -> toggleStage(change),
                     (stage bool) -> toggleAllStage(stage),
                     keyboardFocus,
-                    !busy
+                    !busy,
+                    changesViewport
                 ).render()
             )
         }
@@ -523,6 +590,21 @@ class GitWorkbench : Cell, IDisposable {
                     branchSelectorOpen = false
                     branchHandle.Focus()
                     event.PreventDefault()
+                } else if !branchSelectorOpen && window.PlatformInput.Editor == nil
+                && !event.Modifiers.Alt && !event.Modifiers.Shift && !event.Modifiers.Super {
+                    if event.Modifiers.Ctrl && event.Key == Key.PageUp {
+                        selectAdjacent(-1)
+                        event.PreventDefault()
+                    } else if event.Modifiers.Ctrl && event.Key == Key.PageDown {
+                        selectAdjacent(1)
+                        event.PreventDefault()
+                    } else if !event.Modifiers.Ctrl && event.Key == Key.PageUp {
+                        pageDetail(-1)
+                        event.PreventDefault()
+                    } else if !event.Modifiers.Ctrl && event.Key == Key.PageDown {
+                        pageDetail(1)
+                        event.PreventDefault()
+                    }
                 }
             },
             WorkbenchWindowChrome(window, keyboardFocus, logo),
@@ -575,7 +657,23 @@ class GitWorkbench : Cell, IDisposable {
                 },
                 Cell.Mount[DetailPaneInput, DetailPane](
                     "workbench-detail",
-                    DetailPaneInput(selectedChange, selectedCommit, detailRows, detailLoading, detailVersion)
+                    DetailPaneInput(
+                        selectedChange,
+                        selectedCommit,
+                        detailRows,
+                        detailLoading,
+                        detailVersion,
+                        detailViewport,
+                        currentPosition(),
+                        if historyTab {
+                            history.Count
+                        } else {
+                            changes.Count
+                        },
+                        () -> selectAdjacent(-1),
+                        () -> selectAdjacent(1),
+                        keyboardFocus
+                    )
                 ),
             },
         }

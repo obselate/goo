@@ -4,39 +4,12 @@ import Goo
 import System
 import System.Collections.Generic
 
-open class DetailPane : Cell[DetailPaneInput], IDisposable {
-    private let viewport ElementHandle = ElementHandle{}
+open class DetailPane : Cell[DetailPaneInput] {
     private let rowBuilder Func[DiffRow, Blob]
-    private let onWidth Action[float64]
-    private var rows List[DiffRow] = List[DiffRow]()
     private var version int32
-    private var viewportWidth float64
-    private var contentWidth float64
 
     public init() {
-        viewport.MetricsChanged += trackViewport
-        onWidth = (width float64) -> {
-            if width > contentWidth {
-                contentWidth = width
-                Rebuild()
-            }
-        }
-        rowBuilder = (row DiffRow) -> Cell.Mount[DiffLineInput, DiffLine](
-            row.Index.ToString(),
-            DiffLineInput(row, onWidth)
-        )
-    }
-
-    private func trackViewport(metrics ElementMetrics) {
-        if metrics.IsMounted && metrics.ContentBox.Width != viewportWidth {
-            viewportWidth = metrics.ContentBox.Width
-            Rebuild()
-        }
-    }
-
-    /// Releases the viewport metrics subscription.
-    public func Dispose() {
-        viewport.MetricsChanged -= trackViewport
+        rowBuilder = (row DiffRow) -> Cell.Mount[DiffRow, DiffLine](row.Index.ToString(), row)
     }
 
     private func content(input DetailPaneInput) Blob {
@@ -68,28 +41,22 @@ open class DetailPane : Cell[DetailPaneInput], IDisposable {
                 Text{Content: "Loading diff…", FontSize: 13, Color: GitTheme.Muted},
             }
         }
-        rows = input.Rows
         if version != input.Version {
-            contentWidth = 0
             version = input.Version
         }
-        return Virtual(
-            rows,
-            Math.Max(1.0, Math.Max(viewportWidth, contentWidth)),
-            24.0,
-            (row DiffRow) -> row.Index.ToString(),
-            rowBuilder
-        ){
+        return VirtualRows(input.Rows, 24.0, (row DiffRow) -> row.Index.ToString(), rowBuilder){
             Key = "diff-rows-" + version.ToString(),
-            Handle = viewport,
+            Handle = input.Viewport,
             Width = Length.Percent(100),
             Height = 0,
             FlexGrow = 1,
             MinWidth = 0,
             MinHeight = 0,
             FlexDirection = FlexDirection.Column,
-            OverflowX = Overflow.Scroll,
+            OverflowX = Overflow.Hidden,
             OverflowY = Overflow.Scroll,
+            ScrollbarY = GitTheme.ScrollbarY,
+            ScrollbarVisibilityY = ScrollbarVisibility.Always,
         }
     }
 
@@ -153,6 +120,43 @@ open class DetailPane : Cell[DetailPaneInput], IDisposable {
                     FontSize: 11,
                     Color: GitTheme.Muted,
                     TextWrap: TextWrap.NoWrap,
+                },
+                if input.Total > 1 {
+                    Container{
+                        FlexDirection: FlexDirection.Row,
+                        AlignItems: AlignItems.Center,
+                        Gap: 2,
+                        headerIconButton(
+                            "\uE5CB",
+                            if input.Commit != nil {
+                                "Previous commit (Ctrl+Page Up)"
+                            } else {
+                                "Previous change (Ctrl+Page Up)"
+                            },
+                            input.Previous,
+                            input.Position > 0,
+                            input.KeyboardFocus
+                        ),
+                        Text{
+                            Content: "${input.Position + 1} / ${input.Total}",
+                            FontSize: 11,
+                            Color: GitTheme.Muted,
+                            TextWrap: TextWrap.NoWrap,
+                        },
+                        headerIconButton(
+                            "\uE5CC",
+                            if input.Commit != nil {
+                                "Next commit (Ctrl+Page Down)"
+                            } else {
+                                "Next change (Ctrl+Page Down)"
+                            },
+                            input.Next,
+                            input.Position + 1 < input.Total,
+                            input.KeyboardFocus
+                        ),
+                    }
+                } else {
+                    Container{Width: 0, Height: 0}
                 },
             },
             content(input),

@@ -37,6 +37,19 @@ class GitTheme {
         let SyntaxConstant Style = Style{Color: Color.Parse("#79c0ff")}
         let SyntaxType Style = Style{Color: Color.Parse("#ffa657")}
         let SyntaxFunction Style = Style{Color: Color.Parse("#d2a8ff")}
+        let ScrollbarY Scrollbar = Scrollbar{
+            Thickness: 8,
+            HitThickness: 14,
+            Inset: 0,
+            MinThumbLength: 32,
+            ReserveSpace: true,
+            Track: Container{BackgroundColor: Button},
+            Thumb: Container{
+                BackgroundColor: Color.Parse("#6e7681"),
+                BorderRadius: 4,
+                Hover: Style{BackgroundColor: Color.Parse("#8b949e")},
+            },
+        }
         let Mono string = if OperatingSystem.IsWindows() {
             "Consolas"
         } else if OperatingSystem.IsMacOS() {

@@ -8,18 +8,28 @@ class HistoryPane {
     private let selectedCommit GitCommit?
     private let onSelect Action[GitCommit]
     private let keyboardFocus bool
+    private let viewport ElementHandle
 
-    public init(history List[GitCommit], selectedCommit GitCommit?, onSelect Action[GitCommit], keyboardFocus bool) {
+    public init(
+        history List[GitCommit],
+        selectedCommit GitCommit?,
+        onSelect Action[GitCommit],
+        keyboardFocus bool,
+        viewport ElementHandle
+    ) {
         commits = history
         this.selectedCommit = selectedCommit
         this.onSelect = onSelect
         this.keyboardFocus = keyboardFocus
+        this.viewport = viewport
     }
 
     private func commitRow(commit GitCommit) Button {
         let isSelected = Object.ReferenceEquals(selectedCommit, commit)
         return Button{
             Width: Length.Percent(100),
+            Height: 62,
+            FlexShrink: 0,
             Padding: 10,
             PaddingLeft: 12,
             FlexDirection: FlexDirection.Column,
@@ -130,6 +140,9 @@ class HistoryPane {
                 FlexGrow: 1,
                 MinHeight: 0,
                 OverflowY: Overflow.Scroll,
+                Handle: viewport,
+                ScrollbarY: GitTheme.ScrollbarY,
+                ScrollbarVisibilityY: ScrollbarVisibility.Always,
                 BackgroundColor: GitTheme.Surface,
                 Children: rows,
             },

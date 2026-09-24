@@ -4,30 +4,7 @@ import Goo
 import System
 import System.Collections.Generic
 
-open class DiffLine : Cell[DiffLineInput], IDisposable {
-    private let textHandle ElementHandle = ElementHandle{}
-    private var current DiffLineInput
-
-    public init() {
-        textHandle.MetricsChanged += trackWidth
-    }
-
-    private func trackWidth(metrics ElementMetrics) {
-        if metrics.IsMounted {
-            let leading = if current.Row.Kind == DiffRowKind.File {
-                16.0
-            } else {
-                112.0
-            }
-            current.OnWidth(metrics.BorderBox.Width + leading)
-        }
-    }
-
-    /// Releases the realized line's text metrics subscription.
-    public func Dispose() {
-        textHandle.MetricsChanged -= trackWidth
-    }
-
+open class DiffLine : Cell[DiffRow] {
     private func number(value string) Text -> Text{
         Width: 44,
         Height: Length.Percent(100),
@@ -46,9 +23,7 @@ open class DiffLine : Cell[DiffLineInput], IDisposable {
         TextWrap: TextWrap.NoWrap,
     }
 
-    protected override func Build(input DiffLineInput) Blob {
-        current = input
-        let row = input.Row
+    protected override func Build(row DiffRow) Blob {
         let color = switch row.Kind {
             case DiffRowKind.Added: GitTheme.DiffAdded
             case DiffRowKind.Removed: GitTheme.DiffRemoved
@@ -64,11 +39,13 @@ open class DiffLine : Cell[DiffLineInput], IDisposable {
             default: GitTheme.Background
         }
         let text = Text{
-            Handle: textHandle,
-            Width: Length.Auto,
-            FlexShrink: 0,
+            Width: 0,
+            FlexGrow: 1,
+            MinWidth: 0,
             PaddingLeft: 4,
             PaddingRight: 8,
+            PaddingTop: 3,
+            PaddingBottom: 3,
             Content: row.Content,
             StyleRanges: syntaxRanges(row.Syntax),
             FontFamily: GitTheme.Mono,
@@ -79,16 +56,16 @@ open class DiffLine : Cell[DiffLineInput], IDisposable {
                 400
             },
             Color: color,
-            TextWrap: TextWrap.NoWrap,
+            TextWrap: TextWrap.Wrap,
         }
         if row.Kind == DiffRowKind.File {
             return Container{
                 Width: Length.Percent(100),
-                Height: 24,
+                MinHeight: 24,
                 PaddingLeft: 8,
                 PaddingRight: 8,
                 FlexDirection: FlexDirection.Row,
-                AlignItems: AlignItems.Center,
+                AlignItems: AlignItems.Stretch,
                 BackgroundColor: background,
                 BorderBottomWidth: 1,
                 BorderBottomColor: GitTheme.Border,
@@ -97,9 +74,9 @@ open class DiffLine : Cell[DiffLineInput], IDisposable {
         }
         return Container{
             Width: Length.Percent(100),
-            Height: 24,
+            MinHeight: 24,
             FlexDirection: FlexDirection.Row,
-            AlignItems: AlignItems.Center,
+            AlignItems: AlignItems.Stretch,
             BackgroundColor: background,
             number(row.OldNumber),
             number(row.NewNumber),

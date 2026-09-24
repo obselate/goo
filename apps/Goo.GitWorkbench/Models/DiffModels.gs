@@ -1,5 +1,6 @@
 package GooGitWorkbench
 
+import Goo
 import System
 import System.Collections.Generic
 
@@ -27,5 +28,16 @@ data struct DiffRow(Index int32, OldNumber string, NewNumber string, Marker stri
     var Syntax[]?SyntaxSpan
 }
 
-data struct DetailPaneInput(Change GitChange?, Commit GitCommit?, Rows List[DiffRow], Loading bool, Version int32)
-data struct DiffLineInput(Row DiffRow, OnWidth Action[float64])
+data struct DetailPaneInput(
+    Change GitChange?,
+    Commit GitCommit?,
+    Rows List[DiffRow],
+    Loading bool,
+    Version int32,
+    Viewport ElementHandle,
+    Position int32,
+    Total int32,
+    Previous Action,
+    Next Action,
+    KeyboardFocus bool
+)

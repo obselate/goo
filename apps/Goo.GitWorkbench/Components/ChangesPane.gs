@@ -13,6 +13,7 @@ class ChangesPane {
     private let onToggleAll Action[bool]
     private let keyboardFocus bool
     private let canStage bool
+    private let viewport ElementHandle
 
     init(
         changes List[GitChange],
@@ -21,7 +22,8 @@ class ChangesPane {
         onToggle Action[GitChange],
         onToggleAll Action[bool],
         keyboardFocus bool,
-        canStage bool
+        canStage bool,
+        viewport ElementHandle
     ) {
         this.changes = changes
         this.selectedChange = selectedChange
@@ -30,6 +32,7 @@ class ChangesPane {
         this.onToggleAll = onToggleAll
         this.keyboardFocus = keyboardFocus
         this.canStage = canStage
+        this.viewport = viewport
     }
 
     private func changeRow(input ChangeRowInput) Container {
@@ -193,6 +196,9 @@ class ChangesPane {
                     FlexDirection = FlexDirection.Column,
                     OverflowX = Overflow.Hidden,
                     OverflowY = Overflow.Scroll,
+                    Handle = viewport,
+                    ScrollbarY = GitTheme.ScrollbarY,
+                    ScrollbarVisibilityY = ScrollbarVisibility.Always,
                     BackgroundColor = GitTheme.Surface,
                 }
             },
