@@ -28,6 +28,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var textInputActive bool
   private var hitTestEnabled bool
   private var pointerButtons PointerButtons
+  private var pixelDensity float32
+  private var pixelDensityChange bool
   private let touchPointers Dictionary[TouchContactKey, int64] =
   Dictionary[TouchContactKey, int64]()
   private var penPressures Dictionary[int64, float32]?
@@ -63,6 +65,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         SetState(state)
         SetVSync(vsync)
         RefreshMetrics()
+        if LogicalWidth > 0 && FramebufferWidth > 0 {
+          pixelDensity = float32(FramebufferWidth) / float32(LogicalWidth)
+        }
         RefreshPosition()
         RefreshDisplayPacing(true)
       } catch (e Exception) {
@@ -473,6 +478,17 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   private func RaiseMetrics() {
+    if LogicalWidth > 100 && LogicalHeight > 100 &&
+    FramebufferWidth > 0 && FramebufferHeight > 0 {
+      let densityX = float32(FramebufferWidth) / float32(LogicalWidth)
+      let densityY = float32(FramebufferHeight) / float32(LogicalHeight)
+      if Math.Abs(densityX - densityY) > 0.1F ||
+      pixelDensity > 0.0F && !pixelDensityChange && Math.Abs(densityX - pixelDensity) > 0.1F {
+        return
+      }
+      pixelDensity = densityX
+      pixelDensityChange = false
+    }
     MetricsChanged?.Invoke(LogicalWidth, LogicalHeight, FramebufferWidth, FramebufferHeight)
   }
 

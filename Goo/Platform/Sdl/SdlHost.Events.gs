@@ -246,6 +246,7 @@ internal unsafe partial class SdlHost {
     } else if eventType == SDLEventType.WindowDisplayChanged ||
     eventType == SDLEventType.WindowDisplayScaleChanged{
       RefreshDisplayPacing(true)
+      pixelDensityChange = true
       RefreshMetrics()
       RaiseMetrics()
     } else if eventType == SDLEventType.WindowMinimized {
