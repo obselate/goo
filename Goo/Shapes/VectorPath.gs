@@ -207,6 +207,7 @@ internal class VectorPathData {
   public override func GetHashCode() int32 -> int32((Hash ^ (Hash >> 32)) & uint64(2147483647))
 
   private func equalsData(other VectorPathData) bool {
+    if Object.ReferenceEquals(this, other) { return true }
     if Hash != other.Hash || ViewBoxX != other.ViewBoxX || ViewBoxY != other.ViewBoxY
       || StoredWidth != other.StoredWidth || StoredHeight != other.StoredHeight{
         return false

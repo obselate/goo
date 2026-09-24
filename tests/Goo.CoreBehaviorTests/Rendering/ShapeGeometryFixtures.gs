@@ -1,6 +1,39 @@
 package Goo
 
 internal class ShapeGeometryFixtures {
+  func LargeStrokeConstructionHasBoundedAllocation() bool {
+    let builder = PathBuilder(0.0, 0.0, 1024.0, 64.0)
+    for index in 0 ... 128 {
+      builder.MoveTo(float64(index) * 8.0, 8.0).LineTo(float64(index) * 8.0 + 0.01, 8.0)
+    }
+    let path = builder.Build()
+    let mapping = PathGeometry.Map(path, ShapeFit.Fill, 0.0F, 0.0F, 1024.0F, 64.0F)
+    let cache = PathStrokeCache()
+    let before = GC.GetAllocatedBytesForCurrentThread()
+    let outline = cache.Resolve(path, mapping, 2.0F, StrokeCap.Round, StrokeJoin.Round, 4.0F, nil)
+    let allocated = GC.GetAllocatedBytesForCurrentThread() - before
+    return allocated < 67108864L && PathGeometry.For(outline).HasClosedContour
+      && PathBandEncoder.Encode(outline).WordCount > 0
+  }
+
+  func RetainedPathReconciliationHasBoundedAllocation() bool {
+    let builder = PathBuilder(0.0, 0.0, 1024.0, 64.0)
+    for index in 0 ... 512 {
+      builder.MoveTo(float64(index) * 2.0, 8.0).LineTo(float64(index) * 2.0 + 0.01, 8.0)
+    }
+    let path = builder.Build()
+    let reconciler = Reconciler{Res: Resolver{}}
+    let node = reconciler.Mount(Shape{Width: 1024, Height: 64, Path: path, BorderWidth: 2, BorderColor: Color.White})
+    let next = Shape{Width: 1024, Height: 64, Path: path, BorderWidth: 2, BorderColor: Color.White}
+    reconciler.Diff(node, next)
+    let before = GC.GetAllocatedBytesForCurrentThread()
+    for index in 0 ... 32 {
+      reconciler.Diff(node, Shape{Width: 1024, Height: 64, Path: path, BorderWidth: 2, BorderColor: Color.White})
+    }
+    return GC.GetAllocatedBytesForCurrentThread() - before < 1048576L
+      && node.ShapePath.Hash == path.Hash
+  }
+
   func OpenContoursUseImplicitFillClosure() bool {
     let path = PathBuilder(0.0, 0.0, 10.0, 10.0).MoveTo(1.0, 1.0).LineTo(9.0, 1.0).LineTo(1.0, 9.0).Build()
     let geometry = PathGeometry.For(path)

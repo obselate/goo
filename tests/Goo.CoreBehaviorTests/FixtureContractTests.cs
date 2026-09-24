@@ -187,6 +187,8 @@ public sealed class FixtureContractTests
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ReservedGutterAndCoupledAxesContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.MountedPartHandleAndCallbackContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PublicMetricsAndJumpContract));
+        yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.LargeStrokeConstructionHasBoundedAllocation));
+        yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.RetainedPathReconciliationHasBoundedAllocation));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.GeneratedStrokeMappingUsesFullShapeBounds));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.MutableOpenContoursRefreshImplicitFillClosure));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.OpenContoursRemainOpenForStrokeConstruction));
