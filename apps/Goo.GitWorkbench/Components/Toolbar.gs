@@ -10,6 +10,7 @@ class WorkbenchToolbar {
     private let branches List[string]
     private let pull GitPullState
     private let busy bool
+    private let pulling bool
     private let branchOpen bool
     private let branchHandle ElementHandle
     private let onOpen Action
@@ -24,6 +25,7 @@ class WorkbenchToolbar {
         branches List[string],
         pull GitPullState,
         busy bool,
+        pulling bool,
         branchOpen bool,
         branchHandle ElementHandle,
         onOpen Action,
@@ -37,6 +39,7 @@ class WorkbenchToolbar {
         this.branches = branches
         this.pull = pull
         this.busy = busy
+        this.pulling = pulling
         this.branchOpen = branchOpen
         this.branchHandle = branchHandle
         this.onOpen = onOpen
@@ -206,7 +209,7 @@ class WorkbenchToolbar {
             FlexDirection: FlexDirection.Column,
             Gap: 3,
             Text{
-                Content: if busy {
+                Content: if pulling {
                     "Pulling origin…"
                 } else {
                     "Pull origin"
@@ -222,7 +225,7 @@ class WorkbenchToolbar {
             },
             Text{
                 Width: Length.Percent(100),
-                Content: if busy {
+                Content: if pulling {
                     "Contacting origin…"
                 } else {
                     pull.Message

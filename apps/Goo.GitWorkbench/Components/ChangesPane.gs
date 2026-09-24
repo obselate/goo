@@ -3,6 +3,8 @@ package GooGitWorkbench
 import Goo
 import System.Collections.Generic
 
+data struct ChangeRowInput(Change GitChange, Selected bool, KeyboardFocus bool, CanStage bool)
+
 class ChangesPane {
     private let changes List[GitChange]
     private let selectedChange GitChange?
@@ -10,6 +12,7 @@ class ChangesPane {
     private let onToggle Action[GitChange]
     private let onToggleAll Action[bool]
     private let keyboardFocus bool
+    private let canStage bool
 
     init(
         changes List[GitChange],
@@ -17,7 +20,8 @@ class ChangesPane {
         onSelect Action[GitChange],
         onToggle Action[GitChange],
         onToggleAll Action[bool],
-        keyboardFocus bool
+        keyboardFocus bool,
+        canStage bool
     ) {
         this.changes = changes
         this.selectedChange = selectedChange
@@ -25,20 +29,15 @@ class ChangesPane {
         this.onToggle = onToggle
         this.onToggleAll = onToggleAll
         this.keyboardFocus = keyboardFocus
+        this.canStage = canStage
     }
 
-    private func changeRow(change GitChange, duplicate bool) Container {
-        let isSelected = Object.ReferenceEquals(selectedChange, change)
+    private func changeRow(input ChangeRowInput) Container {
+        let change = input.Change
+        let isSelected = input.Selected
 
         return Container{
-            Key: (
-                if duplicate {
-                    "worktree:"
-                } else {
-                    "file:"
-                }
-            ) +
-                change.Path,
+            Key: change.RowKey,
             Width: Length.Percent(100),
             Height: 34,
             FlexShrink: 0,
@@ -76,7 +75,9 @@ class ChangesPane {
                 ) +
                     change.Path,
                 () -> onToggle(change),
-                keyboardFocus
+                input.KeyboardFocus,
+                true,
+                !input.CanStage
             ),
             Button{
                 Width: 0,
@@ -90,7 +91,7 @@ class ChangesPane {
                 BorderWidth: 0,
                 Cursor: Cursor.Pointer,
                 Focusable: true,
-                Focus: GitTheme.FocusRing(keyboardFocus),
+                Focus: GitTheme.FocusRing(input.KeyboardFocus),
                 Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: change.Path},
                 OnClick: () -> onSelect(change),
                 KeyBindings: WorkbenchButtonBindings(() -> onSelect(change)),
@@ -107,33 +108,17 @@ class ChangesPane {
     }
 
     func render() Blob {
-        let rows = List[Blob]()
+        let items = List[ChangeRowInput](changes.Count)
         let paths = HashSet[string]()
         var staged = 0
         for change in changes {
+            paths.Add(change.Path)
             if change.Staged {
                 staged++
             }
+            items.Add(ChangeRowInput(change, Object.ReferenceEquals(selectedChange, change), keyboardFocus, canStage))
         }
         let allStaged = changes.Count > 0 && staged == changes.Count
-        if changes.Count == 0 {
-            rows.Add(
-                Container{
-                    Width: Length.Percent(100),
-                    Height: 0,
-                    FlexGrow: 1,
-                    MinHeight: 0,
-                    JustifyContent: JustifyContent.Center,
-                    AlignItems: AlignItems.Center,
-                    Text{Content: "Working tree clean", FontSize: 13, Color: GitTheme.Muted},
-                }
-            )
-        } else {
-            for change in changes {
-                rows.Add(changeRow(change, !paths.Add(change.Path)))
-            }
-        }
-
         return Container{
             Key: "changes-pane",
             Width: Length.Percent(100),
@@ -169,7 +154,8 @@ class ChangesPane {
                     },
                     () -> onToggleAll(!allStaged),
                     keyboardFocus,
-                    changes.Count > 0
+                    changes.Count > 0,
+                    !canStage
                 ),
                 Text{
                     Content: if paths.Count == 1 {
@@ -182,14 +168,33 @@ class ChangesPane {
                     Color: GitTheme.Muted
                 },
             },
-            Container{
-                Width: Length.Percent(100),
-                Height: 0,
-                FlexGrow: 1,
-                MinHeight: 0,
-                OverflowY: Overflow.Scroll,
-                BackgroundColor: GitTheme.Surface,
-                Children: rows,
+            if changes.Count == 0 {
+                Container{
+                    Width: Length.Percent(100),
+                    Height: 0,
+                    FlexGrow: 1,
+                    MinHeight: 0,
+                    JustifyContent: JustifyContent.Center,
+                    AlignItems: AlignItems.Center,
+                    Text{Content: "Working tree clean", FontSize: 13, Color: GitTheme.Muted},
+                }
+            } else {
+                Virtual(
+                    items,
+                    GitTheme.SidebarWidth,
+                    34.0,
+                    (item ChangeRowInput) -> item.Change.RowKey,
+                    (item ChangeRowInput) -> changeRow(item)
+                ){
+                    Width = Length.Percent(100),
+                    Height = 0,
+                    FlexGrow = 1,
+                    MinHeight = 0,
+                    FlexDirection = FlexDirection.Column,
+                    OverflowX = Overflow.Hidden,
+                    OverflowY = Overflow.Scroll,
+                    BackgroundColor = GitTheme.Surface,
+                }
             },
         }
     }

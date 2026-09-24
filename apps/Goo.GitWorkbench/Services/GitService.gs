@@ -74,19 +74,6 @@ func readPullState(directory string, branch string) GitPullState {
     }
 }
 
-func pullGitOrigin(directory string, branchRef string) GitResult -> runGit(
-    directory,
-    List[string]{"pull", "--ff-only", "--no-rebase", "--no-autostash", "--no-edit", "origin", branchRef}
-)
-
-func pullGitOriginInBackground(directory string, branchRef string, completed Action[GitResult]) {
-    try {
-        completed(pullGitOrigin(directory, branchRef))
-    } catch (error Exception) {
-        Console.Error.WriteLine("Pull worker failed: " + error.Message)
-    }
-}
-
 func readChanges(output string) List[GitChange] {
     let changes = List[GitChange]()
     let records = output.Split('\0')
@@ -116,7 +103,8 @@ func readChanges(output string) List[GitChange] {
                         unstaged.ToString()
                     },
                     false,
-                    staged == '?'
+                    staged == '?',
+                    staged != ' ' && staged != '?'
                 )
             )
         }
@@ -145,16 +133,6 @@ func readBranches(output string) List[string] {
     }
     return branches
 }
-
-func listLocalBranches(directory string) GitResult -> runGit(
-    directory,
-    List[string]{"branch", "--format=%(refname:short)"}
-)
-
-func switchGitBranch(directory string, branch string) GitResult -> runGit(
-    directory,
-    List[string]{"switch", "--", branch}
-)
 
 func gitError(result GitResult) string -> if result.Error != "" {
     result.Error

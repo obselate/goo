@@ -3,7 +3,7 @@ package GooGitWorkbench
 import Goo
 import System
 
-func WorkbenchWindowChrome(window Window, keyboardFocus bool) Container -> Container{
+func WorkbenchWindowChrome(window Window, keyboardFocus bool, logo ImageSource) Container -> Container{
     Width: Length.Percent(100),
     Height: 32,
     FlexShrink: 0,
@@ -18,9 +18,12 @@ func WorkbenchWindowChrome(window Window, keyboardFocus bool) Container -> Conta
             Width: 0,
             Height: Length.Percent(100),
             FlexGrow: 1,
-            PaddingLeft: 12,
-            JustifyContent: JustifyContent.Center,
-            Text{Content: "Git workbench", FontSize: 12, Color: GitTheme.Muted},
+            PaddingLeft: 10,
+            FlexDirection: FlexDirection.Row,
+            AlignItems: AlignItems.Center,
+            Gap: 6,
+            Image{Source: logo, Width: 22, Height: 22, FlexShrink: 0},
+            Text{Content: "Gituit", FontSize: 12, Color: GitTheme.Muted},
         }
     ),
     WindowControl(

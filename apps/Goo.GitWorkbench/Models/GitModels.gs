@@ -7,12 +7,21 @@ class GitPullState {
 }
 
 class GitChange {
+    let RowKey string
     let Path string
     let Code string
     let Staged bool
     let Untracked bool
 
-    init(path string, code string, staged bool, untracked bool) {
+    init(path string, code string, staged bool, untracked bool, duplicate bool = false) {
+        RowKey = (
+            if duplicate {
+                "worktree:"
+            } else {
+                "file:"
+            }
+        ) +
+            path
         Path = path
         Code = code
         Staged = staged

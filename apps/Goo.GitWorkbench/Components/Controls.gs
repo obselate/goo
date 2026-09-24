@@ -8,7 +8,8 @@ func stageCheckbox(
     name string,
     callback Action,
     keyboardFocus bool,
-    enabled bool = true
+    enabled bool = true,
+    busy bool = false
 ) Button -> Button{
     Width: 28,
     Height: 28,
@@ -22,7 +23,7 @@ func stageCheckbox(
     Cursor: Cursor.Pointer,
     Disabled: !enabled,
     Focus: GitTheme.FocusRing(keyboardFocus),
-    Accessibility: Accessibility{Role: AccessibilityRole.Checkbox, Name: name, Checked: checked},
+    Accessibility: Accessibility{Role: AccessibilityRole.Checkbox, Name: name, Checked: checked, Busy: busy},
     OnClick: callback,
     KeyBindings: WorkbenchButtonBindings(callback),
     Container{

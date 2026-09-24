@@ -14,7 +14,7 @@ func Main(args[]string) int32 {
     } else {
         Directory.GetCurrentDirectory()
     }
-    Window.ConfigureApplication("Goo Git workbench", "0.1.0", "com.obselate.goo.gitworkbench")
+    Window.ConfigureApplication("Gituit", "0.1.0", "com.obselate.goo.gitworkbench")
     using let iconFont = FontSource(
         GitTheme.IconFamily,
         400,
@@ -22,9 +22,14 @@ func Main(args[]string) int32 {
         File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "MaterialIconsRound.otf"))
     )
     iconFont.Register()
-    let root = GitWorkbench(directory)
+    using let images = ImageSourceCache()
+    using let logo = images
+        .LoadAsync(Path.Combine(AppContext.BaseDirectory, "Assets", "GituitTitlebar.png"))
+        .GetAwaiter()
+        .GetResult()
+    let root = GitWorkbench(directory, logo)
     let window = Window{
-        Title: "Git workbench",
+        Title: "Gituit",
         Width: 1200,
         Height: 800,
         MinWidth: 780,
