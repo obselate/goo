@@ -31,6 +31,12 @@ class GitTheme {
         let DiffHunk Color = Color.Parse("#79c0ff")
         let DiffAddedBackground Color = Color.Parse("#12281c")
         let DiffRemovedBackground Color = Color.Parse("#301c22")
+        let SyntaxComment Style = Style{Color: Color.Parse("#919ba7")}
+        let SyntaxKeyword Style = Style{Color: Color.Parse("#ff7b72")}
+        let SyntaxString Style = Style{Color: Color.Parse("#a5d6ff")}
+        let SyntaxConstant Style = Style{Color: Color.Parse("#79c0ff")}
+        let SyntaxType Style = Style{Color: Color.Parse("#ffa657")}
+        let SyntaxFunction Style = Style{Color: Color.Parse("#d2a8ff")}
         let Mono string = if OperatingSystem.IsWindows() {
             "Consolas"
         } else if OperatingSystem.IsMacOS() {

@@ -19,6 +19,15 @@ func executeGitWork(work GitWork, completed Action[GitWorkResult]) {
         } else {
             let text = readGitDetail(directory, work.Change, work.Commit)
             result.Rows = DiffParser.Parse(text, work.Change?.Untracked == true, work.Commit != nil)
+            let path = work.Change?.Path ?? ""
+            if SyntaxHighlighter.CanHighlight(result.Rows, path) {
+                SyntaxHighlighter.Apply(
+                    result.Rows,
+                    path,
+                    (rows List[DiffRow]) -> completed(GitWorkResult{Rows: rows, DetailPending: true}),
+                    work.IsCancelled
+                )
+            }
         }
     } catch (error Exception) {
         result.Error = error.Message

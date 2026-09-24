@@ -68,10 +68,10 @@ open class DetailPane : Cell[DetailPaneInput], IDisposable {
                 Text{Content: "Loading diff…", FontSize: 13, Color: GitTheme.Muted},
             }
         }
-        if !Object.ReferenceEquals(rows, input.Rows) {
-            rows = input.Rows
+        rows = input.Rows
+        if version != input.Version {
             contentWidth = 0
-            version++
+            version = input.Version
         }
         return Virtual(
             rows,

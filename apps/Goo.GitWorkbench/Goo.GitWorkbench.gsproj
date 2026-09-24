@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Goo" Version="0.6.5" />
+    <PackageReference Include="TextMateSharp" Version="2.0.4" />
     <Content Include="Assets/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Watch Include="**/*.gs" Exclude="bin/**;obj/**" />
   </ItemGroup>

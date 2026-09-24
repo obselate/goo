@@ -21,6 +21,7 @@ class GitWorkbench : Cell, IDisposable {
     private var detailRows List[DiffRow] = List[DiffRow]()
     private var detailLoading bool
     private var detailInFlight bool
+    private var detailWork GitWork?
     private var detailVersion int32
     private var historyDetailKey string = ""
     private var historyDetailRows List[DiffRow] = List[DiffRow]()
@@ -215,6 +216,7 @@ class GitWorkbench : Cell, IDisposable {
     }
 
     private func loadDetail() {
+        detailWork?.Cancel()
         detailVersion++
         if selectedChange == nil && selectedCommit == nil {
             detailRows = List[DiffRow]()
@@ -244,15 +246,20 @@ class GitWorkbench : Cell, IDisposable {
         detailInFlight = true
         let version = detailVersion
         let work = GitWork{Directory: directory, Change: selectedChange, Commit: selectedCommit}
+        detailWork = work
         let completed Action[GitWorkResult] = (result GitWorkResult) -> {
             window.TryPost(
                 () -> {
                     if disposed {
                         return
                     }
-                    detailInFlight = false
+                    if !result.DetailPending {
+                        detailInFlight = false
+                    }
                     if version != detailVersion {
-                        startDetailRead()
+                        if !result.DetailPending {
+                            startDetailRead()
+                        }
                         return
                     }
                     detailRows = if result.Error == "" {
@@ -262,7 +269,7 @@ class GitWorkbench : Cell, IDisposable {
                     }
                     detailLoading = false
                     if let commit = work.Commit {
-                        if result.Error == "" {
+                        if result.Error == "" && !result.DetailPending {
                             historyDetailKey = work.Directory + "\0" + commit.Id
                             historyDetailRows = detailRows
                         }
@@ -389,6 +396,7 @@ class GitWorkbench : Cell, IDisposable {
     /// Releases editor and window subscriptions.
     public func Dispose() {
         disposed = true
+        detailWork?.Cancel()
         if let window = attachedWindow {
             window.MetricsChanged -= start
         }
@@ -567,7 +575,7 @@ class GitWorkbench : Cell, IDisposable {
                 },
                 Cell.Mount[DetailPaneInput, DetailPane](
                     "workbench-detail",
-                    DetailPaneInput(selectedChange, selectedCommit, detailRows, detailLoading)
+                    DetailPaneInput(selectedChange, selectedCommit, detailRows, detailLoading, detailVersion)
                 ),
             },
         }

@@ -12,15 +12,29 @@ class GitSnapshot {
 }
 
 class GitWork {
+    private var cancelled bool
     var Directory string = ""
     var Arguments List[string]?
     var ResolveRoot bool
     var Snapshot bool
     var Change GitChange?
     var Commit GitCommit?
+
+    func Cancel() {
+        lock this {
+            cancelled = true
+        }
+    }
+
+    func IsCancelled() bool {
+        lock this {
+            return cancelled
+        }
+    }
 }
 
 class GitWorkResult {
+    var DetailPending bool
     var Error string = ""
     var Snapshot GitSnapshot?
     var Rows List[DiffRow] = List[DiffRow]()

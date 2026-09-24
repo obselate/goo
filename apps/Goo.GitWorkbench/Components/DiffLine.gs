@@ -2,6 +2,7 @@ package GooGitWorkbench
 
 import Goo
 import System
+import System.Collections.Generic
 
 open class DiffLine : Cell[DiffLineInput], IDisposable {
     private let textHandle ElementHandle = ElementHandle{}
@@ -69,6 +70,7 @@ open class DiffLine : Cell[DiffLineInput], IDisposable {
             PaddingLeft: 4,
             PaddingRight: 8,
             Content: row.Content,
+            StyleRanges: syntaxRanges(row.Syntax),
             FontFamily: GitTheme.Mono,
             FontSize: 13,
             FontWeight: if row.Kind == DiffRowKind.File {
@@ -113,5 +115,24 @@ open class DiffLine : Cell[DiffLineInput], IDisposable {
             },
             text,
         }
+    }
+
+    private func syntaxRanges(syntax[]?SyntaxSpan)[]TextStyleRange {
+        guard let spans = syntax else {
+            return []TextStyleRange{}
+        }
+        let ranges = List[TextStyleRange]()
+        for span in spans {
+            let style = switch span.Kind {
+                case SyntaxKind.Comment: GitTheme.SyntaxComment
+                case SyntaxKind.Keyword: GitTheme.SyntaxKeyword
+                case SyntaxKind.String: GitTheme.SyntaxString
+                case SyntaxKind.Constant: GitTheme.SyntaxConstant
+                case SyntaxKind.Type: GitTheme.SyntaxType
+                default: GitTheme.SyntaxFunction
+            }
+            ranges.Add(TextStyleRange(TextRange(span.Start, span.Length), style))
+        }
+        return ranges.ToArray()
     }
 }

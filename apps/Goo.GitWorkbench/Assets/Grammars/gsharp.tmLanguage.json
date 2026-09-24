@@ -1,0 +1,479 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GSharp",
+  "scopeName": "source.gsharp",
+  "fileTypes": ["gs"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#characters" },
+    { "include": "#numbers" },
+    { "include": "#annotations" },
+    { "include": "#declarations" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#operators" },
+    { "include": "#function-calls" },
+    { "include": "#identifiers" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.documentation.gsharp",
+          "begin": "///",
+          "end": "$",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.comment.documentation.gsharp" }
+          },
+          "patterns": [
+            {
+              "name": "storage.type.class.gsharp.doc",
+              "match": "@(summary|remarks|param|typeparam|returns|value|exception|seealso|inheritdoc)\\b"
+            }
+          ]
+        },
+        {
+          "name": "comment.block.gsharp",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "name": "comment.line.double-slash.gsharp",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        { "include": "#interpreted-string" },
+        { "include": "#raw-string" }
+      ]
+    },
+    "interpreted-string": {
+      "name": "string.quoted.double.gsharp",
+      "begin": "\"",
+      "end": "\"",
+      "applyEndPatternLast": true,
+      "patterns": [
+        { "include": "#string-escape" },
+        {
+          "name": "constant.character.escape.dollar.gsharp",
+          "match": "\\$\\$"
+        },
+        { "include": "#interpolation-braced" },
+        { "include": "#interpolation-ident" }
+      ]
+    },
+    "string-escape": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.gsharp",
+          "match": "\\\\(['\"\\\\0abfnrtv]|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})"
+        },
+        {
+          "name": "invalid.illegal.unrecognized-string-escape.gsharp",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "raw-string": {
+      "name": "string.quoted.raw.backtick.gsharp",
+      "begin": "`",
+      "end": "`"
+    },
+    "interpolation-braced": {
+      "name": "meta.interpolation.gsharp",
+      "begin": "\\$\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.interpolation.begin.gsharp" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.interpolation.end.gsharp" }
+      },
+      "patterns": [
+        { "include": "#interpolation-conditional" },
+        { "include": "#interpolation-format" },
+        { "include": "#interpolation-alignment" },
+        { "include": "#interpolation-nested-braces" },
+        { "include": "#interpolation-nested-parentheses" },
+        { "include": "#interpolation-nested-brackets" },
+        { "include": "source.gsharp" }
+      ]
+    },
+    "interpolation-conditional": {
+      "name": "meta.conditional.interpolation.gsharp",
+      "begin": "(?<!\\?)\\?(?![?.\\[])",
+      "end": ":",
+      "patterns": [
+        { "include": "#interpolation-conditional" },
+        { "include": "#interpolation-nested-braces" },
+        { "include": "#interpolation-nested-parentheses" },
+        { "include": "#interpolation-nested-brackets" },
+        { "include": "source.gsharp" }
+      ]
+    },
+    "interpolation-alignment": {
+      "match": ",\\s*(-?[0-9]+)",
+      "captures": {
+        "1": { "name": "constant.numeric.alignment.gsharp" }
+      }
+    },
+    "interpolation-format": {
+      "match": ":([^}]*)",
+      "captures": {
+        "1": { "name": "string.unquoted.format.gsharp" }
+      }
+    },
+    "interpolation-nested-braces": {
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        { "include": "#interpolation-conditional" },
+        { "include": "#interpolation-nested-braces" },
+        { "include": "#interpolation-nested-parentheses" },
+        { "include": "#interpolation-nested-brackets" },
+        { "include": "source.gsharp" }
+      ]
+    },
+    "interpolation-nested-parentheses": {
+      "begin": "\\(",
+      "end": "\\)",
+      "patterns": [
+        { "include": "#interpolation-conditional" },
+        { "include": "#interpolation-nested-braces" },
+        { "include": "#interpolation-nested-parentheses" },
+        { "include": "#interpolation-nested-brackets" },
+        { "include": "source.gsharp" }
+      ]
+    },
+    "interpolation-nested-brackets": {
+      "begin": "\\[",
+      "end": "\\]",
+      "patterns": [
+        { "include": "#interpolation-conditional" },
+        { "include": "#interpolation-nested-braces" },
+        { "include": "#interpolation-nested-parentheses" },
+        { "include": "#interpolation-nested-brackets" },
+        { "include": "source.gsharp" }
+      ]
+    },
+    "interpolation-ident": {
+      "match": "(\\$)([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "punctuation.definition.interpolation.begin.gsharp" },
+        "2": { "name": "variable.other.interpolation.gsharp" }
+      }
+    },
+    "characters": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.gsharp",
+          "match": "'(\\\\.|[^'\\\\])'"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.gsharp",
+          "match": "\\b0[xX][0-9a-fA-F_]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.gsharp",
+          "match": "\\b0[bB][01_]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.gsharp",
+          "match": "\\b[0-9][0-9_]*\\.[0-9][0-9_]*([eE][+-]?[0-9_]+)?[fFdDmM]?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.gsharp",
+          "match": "\\b[0-9][0-9_]*[lLuU]*\\b"
+        }
+      ]
+    },
+    "annotations": {
+      "patterns": [
+        {
+          "name": "meta.annotation.assembly.gsharp",
+          "match": "(@)(assembly)(:)([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.annotation.gsharp" },
+            "2": { "name": "storage.modifier.annotation-target.gsharp" },
+            "3": { "name": "punctuation.separator.annotation-target.gsharp" },
+            "4": { "name": "storage.type.annotation.gsharp" }
+          }
+        },
+        {
+          "name": "meta.annotation.gsharp",
+          "match": "(@)([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.annotation.gsharp" },
+            "2": { "name": "storage.type.annotation.gsharp" }
+          }
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "comment": "Explicit-interface function: `func (IFoo) Name(...)`",
+          "match": "\\b(func)\\s+(\\()([A-Za-z_][A-Za-z0-9_.]*(?:\\[[^\\]\\r\\n]+\\])?)(\\))\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.gsharp" },
+            "2": { "name": "punctuation.definition.interface.begin.gsharp" },
+            "3": { "name": "entity.name.type.interface.gsharp" },
+            "4": { "name": "punctuation.definition.interface.end.gsharp" },
+            "5": { "name": "entity.name.function.gsharp" }
+          }
+        },
+        {
+          "comment": "Explicit-interface property/indexer: `prop (IFoo) Name T`",
+          "match": "\\b(prop)\\s+(\\()([A-Za-z_][A-Za-z0-9_.]*(?:\\[[^\\]\\r\\n]+\\])?)(\\))\\s+(this|[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.gsharp" },
+            "2": { "name": "punctuation.definition.interface.begin.gsharp" },
+            "3": { "name": "entity.name.type.interface.gsharp" },
+            "4": { "name": "punctuation.definition.interface.end.gsharp" },
+            "5": { "name": "entity.name.variable.property.gsharp" }
+          }
+        },
+        {
+          "comment": "Explicit-interface event: `event (IFoo) Changed Handler`",
+          "match": "\\b(event)\\s+(\\()([A-Za-z_][A-Za-z0-9_.]*(?:\\[[^\\]\\r\\n]+\\])?)(\\))\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.gsharp" },
+            "2": { "name": "punctuation.definition.interface.begin.gsharp" },
+            "3": { "name": "entity.name.type.interface.gsharp" },
+            "4": { "name": "punctuation.definition.interface.end.gsharp" },
+            "5": { "name": "entity.name.variable.event.gsharp" }
+          }
+        },
+        {
+          "comment": "Aggregate declarations per ADR-0078: `class|struct|enum|interface Name`",
+          "match": "\\b(class|struct|enum|interface)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.gsharp" },
+            "2": { "name": "entity.name.type.gsharp" }
+          }
+        },
+        {
+          "comment": "Delegate type alias per ADR-0078: `type Name = delegate ...`",
+          "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.gsharp" },
+            "2": { "name": "entity.name.type.gsharp" }
+          }
+        },
+        {
+          "comment": "Function/sequence declaration: `func Name(...)` or `sequence Name(...)`",
+          "match": "\\b(func|sequence)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.gsharp" },
+            "2": { "name": "entity.name.function.gsharp" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.gsharp",
+          "match": "\\b(if|else|for|while|do|guard|switch|case|default|break|continue|return|goto|fallthrough|range|select)\\b"
+        },
+        {
+          "name": "keyword.control.flow.gsharp",
+          "match": "\\b(try|catch|finally|throw|defer|lock)\\b"
+        },
+        {
+          "name": "keyword.control.async.gsharp",
+          "match": "\\b(async|await|go)\\b"
+        },
+        {
+          "name": "keyword.declaration.gsharp",
+          "match": "\\b(func|class|struct|enum|interface|type|operator|sequence)\\b"
+        },
+        {
+          "name": "keyword.modifier.gsharp",
+          "match": "\\b(public|private|protected|internal|open|sealed|override|const)\\b"
+        },
+        {
+          "name": "keyword.modifier.contextual.gsharp",
+          "match": "\\b(and|checked|convenience|data|deinit|delegate|event|explicit|extension|fixed|implicit|in|init|inline|make|nameof|not|or|out|params|partial|prop|raise|record|ref|remove|scoped|shared|sizeof|stackalloc|typeof|unchecked|unmanaged|unsafe|when|with|yield)\\b"
+        },
+        {
+          "name": "keyword.other.accessor.gsharp",
+          "match": "\\b(get|set|add|remove|raise)\\b"
+        },
+        {
+          "name": "keyword.other.gsharp",
+          "match": "\\b(import|package|using|var|let|is|as|scope|chan|map)\\b"
+        },
+        {
+          "name": "keyword.declaration.anonymous-object.gsharp",
+          "match": "\\bobject(?=\\s*(?:\\{|:))"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.gsharp",
+          "match": "\\b(bool|uint8|int8|int16|uint16|int32|uint32|int64|uint64|nint|nuint|float32|float64|decimal|char|string|object|void|byte|sbyte|short|ushort|int|uint|long|ulong|float|double)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.true.gsharp",
+          "match": "\\btrue\\b"
+        },
+        {
+          "name": "constant.language.boolean.false.gsharp",
+          "match": "\\bfalse\\b"
+        },
+        {
+          "name": "constant.language.null.gsharp",
+          "match": "\\bnil\\b"
+        },
+        {
+          "name": "variable.language.this.gsharp",
+          "match": "\\b(this|base)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "comment": "Patterns are ordered longest-match-first so multi-character operators win over their single-character prefixes.",
+      "patterns": [
+        {
+          "name": "keyword.operator.spread.gsharp",
+          "match": "\\.\\.\\."
+        },
+        {
+          "name": "keyword.operator.range.gsharp",
+          "match": "\\.\\."
+        },
+        {
+          "name": "keyword.operator.assignment.gsharp",
+          "match": "<<=|>>>=|>>="
+        },
+        {
+          "name": "keyword.operator.null-coalescing.gsharp",
+          "match": "\\?\\?="
+        },
+        {
+          "name": "keyword.operator.bitwise.gsharp",
+          "match": "&\\^="
+        },
+        {
+          "name": "keyword.operator.arrow.gsharp",
+          "match": "->|=>"
+        },
+        {
+          "name": "keyword.operator.channel.gsharp",
+          "match": "<-"
+        },
+        {
+          "name": "keyword.operator.increment.gsharp",
+          "match": "\\+\\+|--"
+        },
+        {
+          "name": "keyword.operator.bitwise.gsharp",
+          "match": "&\\^"
+        },
+        {
+          "name": "keyword.operator.assignment.gsharp",
+          "match": ":="
+        },
+        {
+          "name": "keyword.operator.null-coalescing.gsharp",
+          "match": "\\?\\?"
+        },
+        {
+          "name": "keyword.operator.null-conditional.gsharp",
+          "match": "\\?\\.|\\?\\["
+        },
+        {
+          "name": "keyword.operator.null-forgiving.gsharp",
+          "match": "!!"
+        },
+        {
+          "name": "keyword.operator.bitwise.gsharp",
+          "match": "<<|>>>|>>"
+        },
+        {
+          "name": "keyword.operator.logical.gsharp",
+          "match": "&&|\\|\\|"
+        },
+        {
+          "name": "keyword.operator.comparison.gsharp",
+          "match": "==|!=|<=|>="
+        },
+        {
+          "name": "keyword.operator.assignment.gsharp",
+          "match": "\\+=|-=|\\*=|/=|%=|&=|\\|=|\\^="
+        },
+        {
+          "name": "keyword.operator.ternary.gsharp",
+          "match": "\\?|:"
+        },
+        {
+          "name": "keyword.operator.comparison.gsharp",
+          "match": "<|>"
+        },
+        {
+          "name": "keyword.operator.logical.gsharp",
+          "match": "!"
+        },
+        {
+          "name": "keyword.operator.bitwise.gsharp",
+          "match": "&|\\||\\^|~"
+        },
+        {
+          "name": "keyword.operator.arithmetic.gsharp",
+          "match": "\\+|-|\\*|/|%"
+        },
+        {
+          "name": "keyword.operator.assignment.gsharp",
+          "match": "="
+        }
+      ]
+    },
+    "function-calls": {
+      "patterns": [
+        {
+          "name": "meta.function-call.gsharp",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()",
+          "captures": {
+            "1": { "name": "entity.name.function.gsharp" }
+          }
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.gsharp",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.gsharp",
+          "match": "[;,.]"
+        },
+        {
+          "name": "punctuation.bracket.gsharp",
+          "match": "[{}()\\[\\]]"
+        }
+      ]
+    }
+  }
+}
