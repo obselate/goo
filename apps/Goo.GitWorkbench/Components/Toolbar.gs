@@ -8,48 +8,42 @@ class WorkbenchToolbar {
     private let directory string
     private let branch string
     private let branches List[string]
-    private let directoryInput string
-    private let repositoryOpen bool
+    private let pull GitPullState
+    private let busy bool
     private let branchOpen bool
-    private let repositoryHandle ElementHandle
     private let branchHandle ElementHandle
-    private let onInput Action[string]
     private let onOpen Action
-    private let onRefresh Action
-    private let onToggleRepository Action
+    private let onPull Action
     private let onToggleBranch Action
     private let onSelectBranch Action[string]
+    private let keyboardFocus bool
 
     init(
         directory string,
         branch string,
         branches List[string],
-        directoryInput string,
-        repositoryOpen bool,
+        pull GitPullState,
+        busy bool,
         branchOpen bool,
-        repositoryHandle ElementHandle,
         branchHandle ElementHandle,
-        onInput Action[string],
         onOpen Action,
-        onRefresh Action,
-        onToggleRepository Action,
+        onPull Action,
         onToggleBranch Action,
-        onSelectBranch Action[string]
+        onSelectBranch Action[string],
+        keyboardFocus bool
     ) {
         this.directory = directory
         this.branch = branch
         this.branches = branches
-        this.directoryInput = directoryInput
-        this.repositoryOpen = repositoryOpen
+        this.pull = pull
+        this.busy = busy
         this.branchOpen = branchOpen
-        this.repositoryHandle = repositoryHandle
         this.branchHandle = branchHandle
-        this.onInput = onInput
         this.onOpen = onOpen
-        this.onRefresh = onRefresh
-        this.onToggleRepository = onToggleRepository
+        this.onPull = onPull
         this.onToggleBranch = onToggleBranch
         this.onSelectBranch = onSelectBranch
+        this.keyboardFocus = keyboardFocus
     }
 
     private func repositoryName() string -> if directory == "" {
@@ -60,97 +54,75 @@ class WorkbenchToolbar {
         DirectoryInfo(directory).Name
     }
 
-    private func repositoryControl() Blob -> Button{
-        Handle: repositoryHandle,
+    private func selector(
+        icon string,
+        label string,
+        value string,
+        action Action,
+        enabled bool,
+        name string,
+        handle ElementHandle? = nil
+    ) Button -> Button{
+        Handle: handle,
+        Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: name},
         Width: Length.Percent(100),
         Height: Length.Percent(100),
-        Padding: 12,
-        FlexDirection: FlexDirection.Column,
-        AlignItems: AlignItems.Stretch,
-        JustifyContent: JustifyContent.Center,
-        Gap: 5,
-        BackgroundColor: GitTheme.Surface,
+        PaddingLeft: 14,
+        PaddingRight: 14,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 12,
+        BackgroundColor: GitTheme.Toolbar,
         BorderWidth: 0,
-        Hover: Style{BackgroundColor: GitTheme.Button},
-        Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
-        OnClick: onToggleRepository,
-        Text{Content: "Current Repository", FontSize: 13, FontWeight: 600, Color: GitTheme.Text},
+        Disabled: !enabled,
+        Hover: Style{BackgroundColor: GitTheme.Border},
+        Focus: GitTheme.FocusRing(keyboardFocus),
+        OnClick: action,
+        KeyBindings: WorkbenchButtonBindings(action),
+        GitTheme.Icon(icon, 22),
         Container{
-            Width: Length.Percent(100),
-            FlexDirection: FlexDirection.Row,
-            AlignItems: AlignItems.Center,
-            Gap: 8,
+            Width: 0,
+            FlexGrow: 1,
+            MinWidth: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 3,
+            Text{Content: label, FontSize: 12, Color: GitTheme.Muted, TextWrap: TextWrap.NoWrap},
             Text{
-                Content: repositoryName(),
-                Width: 0,
-                FlexGrow: 1,
+                Content: value,
+                Width: Length.Percent(100),
                 MinWidth: 0,
                 FontSize: 15,
                 FontWeight: 600,
-                Color: GitTheme.Muted,
-                TextWrap: TextWrap.NoWrap
+                Color: GitTheme.Text,
+                TextWrap: TextWrap.NoWrap,
+                TextTrimming: TextTrimming.Ellipsis,
             },
-            Text{Content: "▼", FontSize: 11, Color: GitTheme.Muted},
         },
+        GitTheme.Icon("\uE5CF", 18),
     }
 
-    private func branchControl() Blob -> Button{
-        Handle: branchHandle,
-        Width: Length.Percent(100),
-        Height: Length.Percent(100),
-        Padding: 12,
-        FlexDirection: FlexDirection.Column,
-        AlignItems: AlignItems.Stretch,
-        JustifyContent: JustifyContent.Center,
-        Gap: 5,
-        BackgroundColor: GitTheme.Surface,
-        BorderWidth: 0,
-        Disabled: directory == "",
-        Hover: Style{BackgroundColor: GitTheme.Button},
-        Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
-        OnClick: onToggleBranch,
-        Text{Content: "Current Branch", FontSize: 13, FontWeight: 600, Color: GitTheme.Text},
-        Container{
-            Width: Length.Percent(100),
-            FlexDirection: FlexDirection.Row,
-            AlignItems: AlignItems.Center,
-            Gap: 8,
-            Text{
-                Content: if branch == "" {
-                    "Detached HEAD"
-                } else {
-                    branch
-                },
-                Width: 0,
-                FlexGrow: 1,
-                MinWidth: 0,
-                FontSize: 16,
-                FontWeight: 600,
-                Color: GitTheme.Muted,
-                TextWrap: TextWrap.NoWrap
-            },
-            Text{Content: "▼", FontSize: 11, Color: GitTheme.Muted},
-        },
-    }
+    private func repositoryControl() Blob -> selector(
+        "\uE2C8",
+        "Current Repository",
+        repositoryName(),
+        onOpen,
+        !busy,
+        "Open repository"
+    )
 
-    private func repositoryPopover() Blob -> Portal{
-        Anchor: repositoryHandle,
-        Placement: PortalPlacement.BottomStart,
-        ZIndex: 20,
-        Container{
-            Width: 420,
-            Padding: 12,
-            FlexDirection: FlexDirection.Row,
-            AlignItems: AlignItems.Center,
-            Gap: 8,
-            BackgroundColor: GitTheme.Surface,
-            BorderWidth: 1,
-            BorderColor: GitTheme.Border,
-            BorderRadius: 6,
-            appInput(directoryInput, "Repository path", onInput),
-            appButton("Open", onOpen),
+    private func branchControl() Blob -> selector(
+        "\uE97A",
+        "Current Branch",
+        if branch == "" {
+            "Detached HEAD"
+        } else {
+            branch
         },
-    }
+        onToggleBranch,
+        !busy && directory != "",
+        "Current Branch",
+        branchHandle
+    )
 
     private func branchItem(name string) Blob -> Button{
         Width: Length.Percent(100),
@@ -158,10 +130,16 @@ class WorkbenchToolbar {
         Padding: 9,
         FlexDirection: FlexDirection.Row,
         AlignItems: AlignItems.Center,
-        BackgroundColor: GitTheme.Surface,
+        BackgroundColor: if name == branch {
+            GitTheme.Selection
+        } else {
+            GitTheme.Surface
+        },
         BorderWidth: 0,
-        Hover: Style{BackgroundColor: GitTheme.Button},
+        Hover: Style{BackgroundColor: GitTheme.RowHover},
         OnClick: () -> onSelectBranch(name),
+        KeyBindings: WorkbenchButtonBindings(() -> onSelectBranch(name)),
+        Focus: GitTheme.FocusRing(keyboardFocus),
         Text{
             Content: name,
             Width: Length.Percent(100),
@@ -204,40 +182,76 @@ class WorkbenchToolbar {
         }
     }
 
-    private func refreshControl() Blob -> Button{
+    private func pullControl() Blob -> Button{
         Width: Length.Percent(100),
         Height: Length.Percent(100),
-        Padding: 12,
-        FlexDirection: FlexDirection.Column,
-        AlignItems: AlignItems.Stretch,
-        JustifyContent: JustifyContent.Center,
-        Gap: 5,
-        BackgroundColor: GitTheme.Surface,
+        PaddingLeft: 14,
+        PaddingRight: 14,
+        Disabled: busy || !pull.Available,
+        FlexDirection: FlexDirection.Row,
+        AlignItems: AlignItems.Center,
+        Gap: 12,
+        BackgroundColor: GitTheme.Toolbar,
         BorderWidth: 0,
-        Hover: Style{BackgroundColor: GitTheme.Button},
-        Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
-        OnClick: onRefresh,
-        Text{Content: "Refresh", FontSize: 15, FontWeight: 600, Color: GitTheme.Text},
-        Text{Content: "Reload files and history", FontSize: 13, Color: GitTheme.Muted},
+        Hover: Style{BackgroundColor: GitTheme.Border},
+        Focus: GitTheme.FocusRing(keyboardFocus),
+        Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: "Pull origin"},
+        OnClick: onPull,
+        KeyBindings: WorkbenchButtonBindings(onPull),
+        GitTheme.Icon("\uE5DB", 22),
+        Container{
+            Width: 0,
+            FlexGrow: 1,
+            MinWidth: 0,
+            FlexDirection: FlexDirection.Column,
+            Gap: 3,
+            Text{
+                Content: if busy {
+                    "Pulling origin…"
+                } else {
+                    "Pull origin"
+                },
+                FontSize: 15,
+                FontWeight: 600,
+                Color: if pull.Available {
+                    GitTheme.Text
+                } else {
+                    GitTheme.Muted
+                },
+                TextWrap: TextWrap.NoWrap,
+            },
+            Text{
+                Width: Length.Percent(100),
+                Content: if busy {
+                    "Contacting origin…"
+                } else {
+                    pull.Message
+                },
+                FontSize: 12,
+                Color: GitTheme.Muted,
+                TextWrap: TextWrap.NoWrap,
+                TextTrimming: TextTrimming.Ellipsis,
+            },
+        },
     }
 
     func render() Blob {
         let children = List[Blob]()
         children.Add(
             Container{
-                Width: Length.Percent(26),
-                MinWidth: 240,
+                Width: GitTheme.SidebarWidth,
+                FlexShrink: 0,
                 Height: Length.Percent(100),
-                BackgroundColor: GitTheme.Surface,
+                BackgroundColor: GitTheme.Toolbar,
                 repositoryControl(),
             }
         )
         children.Add(
             Container{
                 Width: Length.Percent(26),
-                MinWidth: 240,
+                MinWidth: 200,
                 Height: Length.Percent(100),
-                BackgroundColor: GitTheme.Surface,
+                BackgroundColor: GitTheme.Toolbar,
                 branchControl(),
             }
         )
@@ -246,24 +260,24 @@ class WorkbenchToolbar {
                 Width: Length.Percent(26),
                 MinWidth: 220,
                 Height: Length.Percent(100),
-                BackgroundColor: GitTheme.Surface,
-                refreshControl(),
+                BackgroundColor: GitTheme.Toolbar,
+                pullControl(),
             }
         )
-        children.Add(Container{Width: 0, FlexGrow: 1, Height: Length.Percent(100), BackgroundColor: GitTheme.Surface,})
-        if repositoryOpen {
-            children.Add(repositoryPopover())
-        }
+        children.Add(Container{Width: 0, FlexGrow: 1, Height: Length.Percent(100), BackgroundColor: GitTheme.Toolbar,})
         if branchOpen {
             children.Add(branchPopover())
         }
         return Container{
             Width: Length.Percent(100),
-            Height: 82,
+            Height: GitTheme.ToolbarHeight,
+            FlexShrink: 0,
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Stretch,
             Gap: 1,
-            BackgroundColor: GitTheme.Border,
+            BackgroundColor: GitTheme.BorderStrong,
+            BorderBottomWidth: 1,
+            BorderBottomColor: GitTheme.BorderStrong,
             Children: children,
         }
     }

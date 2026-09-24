@@ -3,60 +3,81 @@ package GooGitWorkbench
 import Goo
 import System
 
-func WorkbenchWindowChrome(window Window) Container -> Window.DragRegion(
-    Container{
-        Width: Length.Percent(100),
-        Height: 32,
-        FlexShrink: 0.0,
-        FlexDirection: FlexDirection.Row,
-        AlignItems: AlignItems.Center,
-        Gap: 8,
-        PaddingLeft: 16,
-        BackgroundColor: GitTheme.Surface,
-        BorderBottomWidth: 1,
-        BorderBottomColor: GitTheme.Border,
-        WindowControl(
-            "close",
-            Color.Parse("#ff5f57"),
-            Color.Parse("#ff827b"),
-            () -> {
-                window.RequestClose()
+func WorkbenchWindowChrome(window Window, keyboardFocus bool) Container -> Container{
+    Width: Length.Percent(100),
+    Height: 32,
+    FlexShrink: 0,
+    FlexDirection: FlexDirection.Row,
+    AlignItems: AlignItems.Center,
+    BackgroundColor: GitTheme.TitleBar,
+    BorderBottomWidth: 1,
+    BorderBottomColor: GitTheme.Border,
+    Window.DragRegion(
+        Container{
+            Key: "window-chrome-drag-area",
+            Width: 0,
+            Height: Length.Percent(100),
+            FlexGrow: 1,
+            PaddingLeft: 12,
+            JustifyContent: JustifyContent.Center,
+            Text{Content: "Git workbench", FontSize: 12, Color: GitTheme.Muted},
+        }
+    ),
+    WindowControl(
+        "minimize",
+        "\uE15B",
+        GitTheme.Button,
+        () -> {
+            window.State = WindowState.Minimized
+        },
+        keyboardFocus
+    ),
+    WindowControl(
+        "maximize",
+        "\uE3C6",
+        GitTheme.Button,
+        () -> {
+            window.State = if window.State == WindowState.Maximized {
+                WindowState.Normal
+            } else {
+                WindowState.Maximized
             }
-        ),
-        WindowControl(
-            "minimize",
-            Color.Parse("#febc2e"),
-            Color.Parse("#ffd15c"),
-            () -> {
-                window.State = WindowState.Minimized
-            }
-        ),
-        WindowControl(
-            "maximize",
-            Color.Parse("#28c840"),
-            Color.Parse("#50dc61"),
-            () -> {
-                window.State = if window.State == WindowState.Maximized {
-                    WindowState.Normal
-                } else {
-                    WindowState.Maximized
-                }
-            }
-        ),
-        Container{Key: "window-chrome-drag-area", Width: 0, Height: Length.Percent(100), FlexGrow: 1.0,},
-    }
-)
+        },
+        keyboardFocus
+    ),
+    WindowControl(
+        "close",
+        "\uE5CD",
+        Color.Parse("#b62324"),
+        () -> {
+            window.RequestClose()
+        },
+        keyboardFocus
+    ),
+}
 
-private func WindowControl(key string, color Color, hover Color, action Action) Button -> Button{
+private func WindowControl(key string, symbol string, hover Color, action Action, keyboardFocus bool) Button -> Button{
     Key: "window-" + key,
-    Width: 12,
-    Height: 12,
+    Width: 40,
+    Height: Length.Percent(100),
     Padding: 0,
     Margin: 0,
-    BorderRadius: 999,
-    BackgroundColor: color,
+    BorderWidth: 0,
+    BorderRadius: 0,
+    AlignItems: AlignItems.Center,
+    JustifyContent: JustifyContent.Center,
+    BackgroundColor: Color.Transparent,
     Hover: Style{BackgroundColor: hover},
-    Cursor: Cursor.Pointer,
+    Focus: GitTheme.FocusRing(keyboardFocus),
     Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: key},
     OnClick: action,
+    KeyBindings: WorkbenchButtonBindings(action),
+    Text{
+        Content: symbol,
+        FontFamily: GitTheme.IconFamily,
+        FontSize: 18,
+        FontWeight: 400,
+        TextAlign: TextAlign.Center,
+        Color: GitTheme.Text,
+    },
 }

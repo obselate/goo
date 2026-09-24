@@ -7,17 +7,23 @@ class SidebarTabs {
     private let showHistory bool
     private let onChanges Action
     private let onHistory Action
+    private let keyboardFocus bool
 
-    init(showHistory bool, onChanges Action, onHistory Action) {
+    init(showHistory bool, onChanges Action, onHistory Action, keyboardFocus bool) {
         this.showHistory = showHistory
         this.onChanges = onChanges
         this.onHistory = onHistory
+        this.keyboardFocus = keyboardFocus
     }
 
     private func tab(label string, selected bool, onClick Action) Button -> Button{
         Width: Length.Percent(50),
-        Height: 42,
-        BackgroundColor: GitTheme.Surface,
+        Height: GitTheme.PaneHeaderHeight,
+        BackgroundColor: if selected {
+            GitTheme.Surface
+        } else {
+            GitTheme.TitleBar
+        },
         BorderBottomWidth: 2,
         BorderBottomColor: if selected {
             GitTheme.Accent
@@ -25,11 +31,17 @@ class SidebarTabs {
             GitTheme.Border
         },
         Hover: Style{BackgroundColor: GitTheme.Button},
-        Focus: Style{BorderBottomColor: GitTheme.Accent},
+        Focus: GitTheme.FocusRing(keyboardFocus),
         OnClick: onClick,
+        KeyBindings: WorkbenchButtonBindings(onClick),
         Text{
             Content: label,
             FontSize: 13,
+            FontWeight: if selected {
+                600
+            } else {
+                400
+            },
             Color: if selected {
                 GitTheme.Text
             } else {
@@ -40,8 +52,9 @@ class SidebarTabs {
 
     func render() Blob -> Container{
         Width: Length.Percent(100),
-        Height: 42,
+        Height: GitTheme.PaneHeaderHeight,
         FlexDirection: FlexDirection.Row,
+        FlexShrink: 0,
         tab("Changes", !showHistory, onChanges),
         tab("History", showHistory, onHistory),
     }

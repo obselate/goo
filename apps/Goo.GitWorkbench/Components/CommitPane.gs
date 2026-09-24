@@ -8,35 +8,34 @@ class CommitPane {
     private let description TextEditorController
     private let branch string
     private let canCommit bool
-    private let notice string
-    private let noticeIsError bool
     private let onSummary Action[string]
     private let onCommit Action
+    private let keyboardFocus bool
 
     init(
         summary string,
         description TextEditorController,
         branch string,
         canCommit bool,
-        notice string,
-        noticeIsError bool,
         onSummary Action[string],
-        onCommit Action
+        onCommit Action,
+        keyboardFocus bool
     ) {
         this.summary = summary
         this.description = description
         this.branch = branch
         this.canCommit = canCommit
-        this.notice = notice
-        this.noticeIsError = noticeIsError
         this.onSummary = onSummary
         this.onCommit = onCommit
+        this.keyboardFocus = keyboardFocus
     }
 
     func render() Blob -> Container{
+        Key: "commit-form",
         Width: Length.Percent(100),
-        Height: 255,
-        Padding: 12,
+        Height: 238,
+        FlexShrink: 0,
+        Padding: 14,
         FlexDirection: FlexDirection.Column,
         Gap: 8,
         BackgroundColor: GitTheme.Surface,
@@ -44,34 +43,30 @@ class CommitPane {
         BorderTopColor: GitTheme.Border,
         Container{
             Width: Length.Percent(100),
-            Height: 32,
+            Height: 34,
+            FlexShrink: 0,
             FlexDirection: FlexDirection.Row,
-            appInput(summary, "Summary", onSummary),
+            appInput(summary, "Summary", onSummary, keyboardFocus),
         },
         TextEditor(description){
+            Accessibility = Accessibility{
+                Role: AccessibilityRole.TextEditor,
+                Name: "Commit description",
+                Multiline: true
+            },
             Width = Length.Percent(100),
             Height = 0,
             FlexGrow = 1,
             MinHeight = 70,
             Padding = 8,
             Placeholder = "Description (optional)",
-            FontSize = 12,
+            FontSize = 13,
             Color = GitTheme.Text,
             BackgroundColor = GitTheme.Background,
             BorderWidth = 1,
             BorderColor = GitTheme.Border,
-            BorderRadius = 6,
-            Focus = Style{BorderColor: GitTheme.Accent},
-        },
-        Text{
-            Content: notice,
-            Height: 17,
-            FontSize: 11,
-            Color: if noticeIsError {
-                GitTheme.Error
-            } else {
-                GitTheme.Muted
-            }
+            BorderRadius = 4,
+            Focus = GitTheme.FocusBorder(keyboardFocus),
         },
         appButton(
             if branch == "" {
@@ -82,7 +77,8 @@ class CommitPane {
             onCommit,
             canCommit,
             true,
-            true
+            true,
+            keyboardFocus
         ),
     }
 }

@@ -1,5 +1,11 @@
 package GooGitWorkbench
 
+class GitPullState {
+    var Available bool
+    var BranchRef string = ""
+    var Message string = "Open a repository first"
+}
+
 class GitChange {
     let Path string
     let Code string

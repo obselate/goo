@@ -8,95 +8,76 @@ class ChangesPane {
     private let selectedChange GitChange?
     private let onSelect Action[GitChange]
     private let onToggle Action[GitChange]
+    private let onToggleAll Action[bool]
+    private let keyboardFocus bool
 
-    init(changes List[GitChange], selectedChange GitChange?, onSelect Action[GitChange], onToggle Action[GitChange]) {
+    init(
+        changes List[GitChange],
+        selectedChange GitChange?,
+        onSelect Action[GitChange],
+        onToggle Action[GitChange],
+        onToggleAll Action[bool],
+        keyboardFocus bool
+    ) {
         this.changes = changes
         this.selectedChange = selectedChange
         this.onSelect = onSelect
         this.onToggle = onToggle
+        this.onToggleAll = onToggleAll
+        this.keyboardFocus = keyboardFocus
     }
 
-    private func changeRow(change GitChange) Container {
+    private func changeRow(change GitChange, duplicate bool) Container {
         let isSelected = Object.ReferenceEquals(selectedChange, change)
 
         return Container{
+            Key: (
+                if duplicate {
+                    "worktree:"
+                } else {
+                    "file:"
+                }
+            ) +
+                change.Path,
             Width: Length.Percent(100),
-            Height: 36,
-            PaddingLeft: 6,
+            Height: 34,
+            FlexShrink: 0,
+            PaddingLeft: 10,
             PaddingRight: 8,
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
-            Gap: 4,
+            Gap: 6,
             BackgroundColor: if isSelected {
-                GitTheme.Button
-            } else {
-                GitTheme.Surface
-            },
-            BorderLeftWidth: 3,
-            BorderLeftColor: if isSelected {
-                GitTheme.Accent
+                GitTheme.Selection
             } else {
                 GitTheme.Surface
             },
             BorderBottomWidth: 1,
             BorderBottomColor: GitTheme.Border,
-            Button{
-                Width: 28,
-                Height: 28,
-                Padding: 0,
-                FlexDirection: FlexDirection.Row,
-                AlignItems: AlignItems.Center,
-                JustifyContent: JustifyContent.Center,
-                BackgroundColor: Color.Transparent,
-                BorderWidth: 0,
-                BorderRadius: 3,
-                Cursor: Cursor.Pointer,
-                Focusable: true,
-                Hover: Style{BackgroundColor: GitTheme.Border},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
-                Accessibility: Accessibility{
-                    Role: AccessibilityRole.Checkbox,
-                    Name: if change.Staged {
-                        "Unstage " + change.Path
-                    } else {
-                        "Stage " + change.Path
-                    },
-                    Checked: if change.Staged {
-                        AccessibilityChecked.True
-                    } else {
-                        AccessibilityChecked.False
-                    }
-                },
-                OnClick: () -> onToggle(change),
-                Container{
-                    Width: 14,
-                    Height: 14,
-                    BorderRadius: 2,
-                    BorderWidth: 1,
-                    BorderColor: if change.Staged {
-                        GitTheme.Accent
-                    } else {
-                        GitTheme.Muted
-                    },
-                    BackgroundColor: if change.Staged {
-                        GitTheme.Accent
-                    } else {
-                        Color.Transparent
-                    },
-                    AlignItems: AlignItems.Center,
-                    JustifyContent: JustifyContent.Center,
-                    Text{
-                        Content: if change.Staged {
-                            "✓"
-                        } else {
-                            ""
-                        },
-                        FontSize: 11,
-                        FontWeight: 600,
-                        Color: GitTheme.Background
-                    }
-                },
+            Hover: Style{
+                BackgroundColor: if isSelected {
+                    GitTheme.SelectionHover
+                } else {
+                    GitTheme.RowHover
+                }
             },
+            stageCheckbox(
+                if change.Staged {
+                    AccessibilityChecked.True
+                } else {
+                    AccessibilityChecked.False
+                },
+                (
+                    if change.Staged {
+                        "Unstage "
+                    } else {
+                        "Stage "
+                    }
+                ) +
+                    change.Path,
+                () -> onToggle(change),
+                keyboardFocus
+            ),
             Button{
                 Width: 0,
                 Height: Length.Percent(100),
@@ -109,14 +90,14 @@ class ChangesPane {
                 BorderWidth: 0,
                 Cursor: Cursor.Pointer,
                 Focusable: true,
-                Hover: Style{BackgroundColor: GitTheme.Button},
-                Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
+                Focus: GitTheme.FocusRing(keyboardFocus),
                 Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: change.Path},
                 OnClick: () -> onSelect(change),
+                KeyBindings: WorkbenchButtonBindings(() -> onSelect(change)),
                 Text{
                     Width: Length.Percent(100),
                     Content: change.Path,
-                    FontSize: 12,
+                    FontSize: 13,
                     Color: GitTheme.Text,
                     TextWrap: TextWrap.NoWrap,
                     TextTrimming: TextTrimming.Ellipsis
@@ -128,9 +109,13 @@ class ChangesPane {
     func render() Blob {
         let rows = List[Blob]()
         let paths = HashSet[string]()
+        var staged = 0
         for change in changes {
-            paths.Add(change.Path)
+            if change.Staged {
+                staged++
+            }
         }
+        let allStaged = changes.Count > 0 && staged == changes.Count
         if changes.Count == 0 {
             rows.Add(
                 Container{
@@ -140,16 +125,17 @@ class ChangesPane {
                     MinHeight: 0,
                     JustifyContent: JustifyContent.Center,
                     AlignItems: AlignItems.Center,
-                    Text{Content: "Working tree clean", FontSize: 12, Color: GitTheme.Muted},
+                    Text{Content: "Working tree clean", FontSize: 13, Color: GitTheme.Muted},
                 }
             )
         } else {
             for change in changes {
-                rows.Add(changeRow(change))
+                rows.Add(changeRow(change, !paths.Add(change.Path)))
             }
         }
 
         return Container{
+            Key: "changes-pane",
             Width: Length.Percent(100),
             Height: 0,
             FlexGrow: 1,
@@ -158,23 +144,42 @@ class ChangesPane {
             BackgroundColor: GitTheme.Surface,
             Container{
                 Width: Length.Percent(100),
-                Height: 36,
-                PaddingLeft: 14,
-                PaddingRight: 12,
+                Height: 34,
+                FlexShrink: 0,
+                PaddingLeft: 10,
+                PaddingRight: 8,
+                Gap: 6,
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 BorderBottomWidth: 1,
                 BorderBottomColor: GitTheme.Border,
                 BackgroundColor: GitTheme.Surface,
+                stageCheckbox(
+                    if allStaged {
+                        AccessibilityChecked.True
+                    } else if staged > 0 {
+                        AccessibilityChecked.Mixed
+                    } else {
+                        AccessibilityChecked.False
+                    },
+                    if allStaged {
+                        "Unstage all files"
+                    } else {
+                        "Stage all files"
+                    },
+                    () -> onToggleAll(!allStaged),
+                    keyboardFocus,
+                    changes.Count > 0
+                ),
                 Text{
                     Content: if paths.Count == 1 {
                         "1 changed file"
                     } else {
                         paths.Count.ToString() + " changed files"
                     },
-                    FontSize: 12,
-                    FontWeight: 600,
-                    Color: GitTheme.Text
+                    FontSize: 13,
+                    FontWeight: 400,
+                    Color: GitTheme.Muted
                 },
             },
             Container{

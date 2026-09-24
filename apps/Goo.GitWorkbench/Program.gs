@@ -15,11 +15,20 @@ func Main(args[]string) int32 {
         Directory.GetCurrentDirectory()
     }
     Window.ConfigureApplication("Goo Git workbench", "0.1.0", "com.obselate.goo.gitworkbench")
+    using let iconFont = FontSource(
+        GitTheme.IconFamily,
+        400,
+        false,
+        File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "MaterialIconsRound.otf"))
+    )
+    iconFont.Register()
     let root = GitWorkbench(directory)
     let window = Window{
         Title: "Git workbench",
         Width: 1200,
         Height: 800,
+        MinWidth: 780,
+        MinHeight: 560,
         Decorated: false,
         Transparent: true,
         ResizeBand: 8.0F,

@@ -7,11 +7,13 @@ class HistoryPane {
     private let commits List[GitCommit]
     private let selectedCommit GitCommit?
     private let onSelect Action[GitCommit]
+    private let keyboardFocus bool
 
-    public init(history List[GitCommit], selectedCommit GitCommit?, onSelect Action[GitCommit]) {
+    public init(history List[GitCommit], selectedCommit GitCommit?, onSelect Action[GitCommit], keyboardFocus bool) {
         commits = history
         this.selectedCommit = selectedCommit
         this.onSelect = onSelect
+        this.keyboardFocus = keyboardFocus
     }
 
     private func commitRow(commit GitCommit) Button {
@@ -24,7 +26,7 @@ class HistoryPane {
             AlignItems: AlignItems.FlexStart,
             Gap: 4,
             BackgroundColor: if isSelected {
-                GitTheme.Button
+                GitTheme.Selection
             } else {
                 GitTheme.Surface
             },
@@ -39,10 +41,17 @@ class HistoryPane {
             Cursor: Cursor.Pointer,
             Focusable: true,
             TransitionMs: 100.0,
-            Hover: Style{BackgroundColor: GitTheme.Border},
-            Focus: Style{OutlineWidth: 1, OutlineColor: GitTheme.Accent},
+            Hover: Style{
+                BackgroundColor: if isSelected {
+                    GitTheme.SelectionHover
+                } else {
+                    GitTheme.RowHover
+                }
+            },
+            Focus: GitTheme.FocusRing(keyboardFocus),
             Accessibility: Accessibility{Role: AccessibilityRole.Button, Name: commit.Subject},
             OnClick: () -> onSelect(commit),
+            KeyBindings: WorkbenchButtonBindings(() -> onSelect(commit)),
             Text{
                 Width: Length.Percent(100),
                 Content: if commit.Subject == "" {
@@ -96,6 +105,7 @@ class HistoryPane {
             }
         }
         return Container{
+            Key: "history-pane",
             Width: Length.Percent(100),
             Height: 0,
             FlexGrow: 1,
@@ -104,14 +114,15 @@ class HistoryPane {
             BackgroundColor: GitTheme.Surface,
             Container{
                 Width: Length.Percent(100),
-                Height: 40,
+                Height: 34,
+                FlexShrink: 0,
                 Padding: 12,
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 BorderBottomWidth: 1,
                 BorderBottomColor: GitTheme.Border,
                 BackgroundColor: GitTheme.Surface,
-                Text{Content: "Recent commits", FontSize: 12, FontWeight: 600, Color: GitTheme.Text}
+                Text{Content: "Recent commits", FontSize: 13, FontWeight: 400, Color: GitTheme.Text}
             },
             Container{
                 Width: Length.Percent(100),

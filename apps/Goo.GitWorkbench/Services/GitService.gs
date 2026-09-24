@@ -32,9 +32,10 @@ func runGit(directory string, arguments List[string]) GitResult {
             return result
         }
         try {
+            let errors = process.StandardError.ReadToEndAsync()
             result.Output = process.StandardOutput.ReadToEnd()
-            result.Error = process.StandardError.ReadToEnd().Trim()
             process.WaitForExit()
+            result.Error = errors.GetAwaiter().GetResult().Trim()
             result.Ok = process.ExitCode == 0
         } finally {
             process.Dispose()
@@ -43,6 +44,47 @@ func runGit(directory string, arguments List[string]) GitResult {
         result.Error = error.Message
     }
     return result
+}
+
+func readPullState(directory string, branch string) GitPullState {
+    if branch == "" {
+        return GitPullState{Message: "Select a local branch to pull"}
+    }
+    let origin = runGit(directory, List[string]{"remote", "get-url", "origin"})
+    if !origin.Ok {
+        return GitPullState{Message: "No origin remote configured"}
+    }
+    let remote = runGit(directory, List[string]{"config", "--get", "branch." + branch + ".remote"})
+    if remote.Ok && remote.Output.Trim() != "origin" {
+        return GitPullState{Message: "Branch tracks " + remote.Output.Trim()}
+    }
+    let merge = runGit(directory, List[string]{"config", "--get", "branch." + branch + ".merge"})
+    let branchRef = if merge.Ok && remote.Ok {
+        merge.Output.Trim()
+    } else {
+        "refs/heads/" + branch
+    }
+    if !branchRef.StartsWith("refs/heads/") || branchRef.Contains('\n') {
+        return GitPullState{Message: "Branch has no single pull target"}
+    }
+    return GitPullState{
+        Available: true,
+        BranchRef: branchRef,
+        Message: "Fast-forward from origin/" + branchRef.Substring(11),
+    }
+}
+
+func pullGitOrigin(directory string, branchRef string) GitResult -> runGit(
+    directory,
+    List[string]{"pull", "--ff-only", "--no-rebase", "--no-autostash", "--no-edit", "origin", branchRef}
+)
+
+func pullGitOriginInBackground(directory string, branchRef string, completed Action[GitResult]) {
+    try {
+        completed(pullGitOrigin(directory, branchRef))
+    } catch (error Exception) {
+        Console.Error.WriteLine("Pull worker failed: " + error.Message)
+    }
 }
 
 func readChanges(output string) List[GitChange] {
