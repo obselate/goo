@@ -72,7 +72,27 @@ TextEditor(controller){
 
 Keys match physical `Key` values and exact `Modifiers`. Omitted modifiers mean none. The first matching binding on the nearest element wins. `Action` runs on press. `OnRelease` is paired with that press and runs only if the original target still owns focus, even if modifiers were released first. Changing focus, disabling, or removing the target cancels the pending release. `Repeat: true` repeats the action after 400 ms and then at 30 Hz while focus remains on the original target. It works on any focusable primitive and any key.
 
+Share an application action with `Command(execute, canExecute)`. Assign the same
+instance to `Button.Command`, `KeyBinding.Command`, or call `Execute()` from a
+menu. `Execute()` checks `CanExecute` each time and returns false when unavailable.
+The command takes precedence over `Button.OnClick` and `KeyBinding.Action`. An
+unavailable key command consumes its matching binding and does not repeat or arm
+its release callback. Button pointer, handle, keyboard activation, and default
+accessibility actions use the same command. Rebuild the owning cell when
+availability changes so the button's disabled styling, focusability, and
+accessibility state update. Invocation checks availability even before that
+rebuild. No shortcut is installed by assigning a command. Text operations still
+use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
+
 `OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings without stopping callbacks. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
+
+Pointer, keyboard, text, and native focus changes share an ordered ingress queue.
+Input injected from an input callback runs after the current event finishes.
+Synchronous nested focus callbacks preserve the outer event's cancellation
+controls. Controls expire when their dispatch finishes and cannot cancel work
+after an asynchronous continuation. A failing callback propagates its exception
+after terminal pointer, drag, or focus cleanup, and its input event is not replayed.
+`PlatformInput.KeyRelease(key, modifiers)` preserves modifiers still held on release.
 
 Use `window.PlatformInput.Execute(TextCommand)` for focused text actions and clipboard access. `Paste` without `Text` reads the clipboard. Supplied paste text keeps `Paste` command interception and its separate undo group. `CancelEdit` restores a TextEntry's value from when it gained focus, reports the change, and blurs it. `CancelComposition` remains a separate action. A TextEditor controller accepts document commands directly.
 
@@ -187,6 +207,34 @@ The bridge accepts at most 4,096 paths, 32,768 UTF-16 units per path, 1,048,576 
 composite widget to exclude them from sequential Tab navigation while preserving
 pointer, `ElementHandle.Focus()`, and accessibility focus. Keep one enabled child
 as the tab stop and move focus explicitly for arrow-key navigation.
+
+## Scroll nested and transformed content
+
+Wheel input preserves fractional deltas and platform scroll scaling. `Window.WheelScrollScale` adjusts that distance. When a scroller reaches an edge, unused wheel movement passes to its scrollable ancestors. Scroll chaining stops at portal and focus-scope boundaries. `PreventDefault()` suppresses the default scroll operation.
+
+Primary touch begins a pan after eight logical window units when pointer callbacks, capture, text selection, or drag-and-drop have not claimed the interaction. Panning cancels the pending press and click, follows the pointer directly in each scroller's transformed local coordinates, and passes unused movement to ancestors. Recent movement can continue as bounded momentum after release. A new scroll action, input reset, or reduced-motion preference stops momentum. Reduced motion also makes ordinary scroll targets immediate on the next frame.
+
+`ElementHandle.ScrollIntoView()` uses the usable viewport, including reserved scrollbar gutters. Scroll interpolation and momentum run on the owning UI thread through the existing frame clock.
+
+## `Command`
+
+Source:
+
+- [`Command.gs`](../../Goo/Input/Command.gs)
+
+Shares an application action and its current availability across explicit bindings and controls. Rebuild the owning cell when availability changes to update button disabled styling and semantics.
+
+### `new(System.Action,System.Func{bool})`
+
+Creates an application action with an optional availability predicate.
+
+### `Execute`
+
+Rechecks availability and invokes the action. Returns false when unavailable.
+
+### `CanExecute`
+
+Evaluates whether the action can execute now.
 
 ## `DragData`
 
@@ -602,7 +650,11 @@ Assigns callbacks to one exact physical key and modifier combination.
 
 ### `Action`
 
-Gets the callback invoked on key down.
+Gets the callback invoked on key down when Command is absent.
+
+### `Command`
+
+Gets the shared action invoked on key down. An unavailable command consumes the binding.
 
 ### `Key`
 
@@ -764,7 +816,7 @@ Deletes UTF-16 lengths outside the union of selection and composition, retaining
 
 ### `DropDrag`
 
-Completes the active drag through its negotiated target and terminal source callback.
+Completes the active drag through its negotiated target and terminal source callback. Calls from the same drag's negotiation or terminal callback return false.
 
 Returns: True when a drop was delivered, or false when no target accepted it.
 
@@ -787,6 +839,10 @@ Dispatches a physical key press through the existing keyboard routing.
 ### `KeyRelease(Key)`
 
 Releases a physical key and stops its repeat state.
+
+### `KeyRelease(Key,KeyModifiers)`
+
+Releases a physical key with the modifiers still held after the release.
 
 ### `MoveFocus(bool)`
 
@@ -826,7 +882,7 @@ Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters.
 
 ### `UpdateDrag(ElementHandle,KeyModifiers)`
 
-Targets a drag started with BeginDrag at an element's center, negotiating with its ancestors.
+Targets a drag started with BeginDrag at an element's center, negotiating with its ancestors. Calls from the same drag's negotiation or terminal callback return false.
 
 Returns: True when a drop target accepts the drag.
 

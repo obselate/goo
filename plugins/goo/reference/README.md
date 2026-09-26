@@ -61,6 +61,16 @@ The bootstrap builds the pinned G# compiler and formatter, then downloads the
 released Goo package for the Gallery's native runtime files. It does not install
 software globally.
 
+### Run the Git workbench
+
+The [Git workbench](apps/Goo.GitWorkbench/README.md) is a small Goo app for reviewing
+changes and commits, staging files, and committing. It uses the published Goo package.
+With .NET 10 and Git installed, run it from a clone of this repository:
+
+```sh
+dotnet run --project apps/Goo.GitWorkbench/Goo.GitWorkbench.gsproj -c Release -- /path/to/repo
+```
+
 ## Packages
 
 `Goo` is the framework package referenced by your application. The other packages
