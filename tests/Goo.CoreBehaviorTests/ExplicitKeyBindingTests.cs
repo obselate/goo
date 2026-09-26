@@ -158,6 +158,19 @@ public sealed class ExplicitKeyBindingTests
             Assert.True(other.Focus());
             window.InputForTest.Step(window.Tree, new Resolver(), 0.5);
             Assert.Equal(3, presses);
+            Assert.True(handle.Focus());
+            input.KeyPress(Key.J, new KeyModifiers { Ctrl = true });
+            Assert.True(handle.AttachedNode()!.Pressed);
+            var bounds = other.BorderBox;
+            input.PointerPress(0, PointerDevice.Mouse, (float)bounds.X + 5, (float)bounds.Y + 5,
+                PointerButton.Primary, default, 0);
+            Assert.True(other.AttachedNode()!.Focused);
+            Assert.False(handle.AttachedNode()!.KeyboardPressed);
+            Assert.False(handle.AttachedNode()!.Pressed);
+            input.PointerRelease(0, PointerDevice.Mouse, (float)bounds.X + 5, (float)bounds.Y + 5,
+                PointerButton.Primary, default, 0);
+            input.KeyRelease(Key.J);
+            Assert.Equal(1, releases);
         }
         finally { window.Close(); }
     }
@@ -214,9 +227,19 @@ public sealed class ExplicitKeyBindingTests
             OnKeyDown = e => {
                 events.Add(e.Key.ToString());
                 if (e.Key == Key.A) { window.PlatformInput.KeyPress(Key.B, default); e.PreventDefault(); }
+                if (e.Key == Key.C && e.Repeat)
+                {
+                    events.Add("repeat-start");
+                    window.PlatformInput.KeyPress(Key.B, default);
+                    window.PlatformInput.KeyRelease(Key.C);
+                    events.Add("repeat-end");
+                }
             },
-            OnKeyUp = e => releaseModifiers = e.Modifiers,
-            KeyBindings = new[] { new KeyBinding { Key = Key.A, Action = () => actions++ } },
+            OnKeyUp = e => { releaseModifiers = e.Modifiers; if (e.Key == Key.C) events.Add("up:C"); },
+            KeyBindings = new[] {
+                new KeyBinding { Key = Key.A, Action = () => actions++ },
+                new KeyBinding { Key = Key.C, Repeat = true, Action = () => { } }
+            },
             OnPointerDown = e => { downs++; e.Capture(); window.PlatformInput.PointerCancel(0, PointerDevice.Mouse); },
             OnPointerCancel = _ => cancels++, OnClick = () => actions++
         }) };
@@ -230,6 +253,12 @@ public sealed class ExplicitKeyBindingTests
             Assert.Equal(0, actions);
             input.KeyRelease(Key.A, new KeyModifiers { Shift = true });
             Assert.True(releaseModifiers.Shift);
+            input.KeyPress(Key.C, default);
+            events.Clear();
+            window.InputForTest.Step(window.Tree, new Resolver(), 0.5);
+            Assert.Equal(new[] { "C", "repeat-start", "repeat-end", "B", "up:C" }, events);
+            window.InputForTest.Step(window.Tree, new Resolver(), 0.5);
+            Assert.Equal(5, events.Count);
             events.Clear();
             window.InputForTest.QueueKeyPress(Key.C, default);
             window.InputForTest.FocusLost(window.Tree, new Resolver());

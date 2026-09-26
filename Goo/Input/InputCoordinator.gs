@@ -4,12 +4,12 @@ import System
 import System.Collections.Generic
 import System.Runtime.ExceptionServices
 
-internal class InputCoordinator {
+internal partial class InputCoordinator {
   private let focus FocusManager
   private let queue InputEventQueue
-  private var keyboard KeyboardInput
-  private var pointer PointerInput
-  private var text TextInput
+  private let keyboard KeyboardInput
+  private let pointer PointerInput
+  private let text TextInput
   private var attachedHost WindowHost?
   private var scopes FocusScopeStack?
   private var disposed bool
@@ -61,41 +61,6 @@ internal class InputCoordinator {
     }
   }
 
-  internal func Drain(root Node?, resolver Resolver, timeS float64,
-    onKeyPress Action[Key, KeyModifiers]?) bool ->
-  Drain(root, resolver, timeS, onKeyPress, 0)
-
-  internal func Drain(root Node?, resolver Resolver, timeS float64,
-    onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64) bool{
-      if !queue.Begin() { return false }
-      let ingressFocusGeneration = focus.Generation
-      var changed = false
-      try {
-        refreshScopes(root, resolver)
-        resolver.Flush()
-        while queue.Take(out var e) {
-          if e.IsFocusLost {
-            loseFocus(root, resolver)
-            changed = true
-            continue
-          }
-          if e.IsFocusGained {
-            focus.SetNativeFocus(true)
-            changed = true
-            continue
-          }
-          if !focus.NativeFocusAllowed { continue }
-          if !e.IsPointer && e.Keyboard.TextFocusGeneration >= ingressFocusGeneration {
-            e.Keyboard.TextFocusGeneration = focus.Generation
-          }
-          let dispatched = if e.IsPointer { pointer.Dispatch(e.Pointer, root, resolver, timeS, text) }
-            else { keyboard.Dispatch(e.Keyboard, root, resolver, text, onKeyPress, repeatStartTicks, pointer) }
-          if dispatched { changed = true }
-        }
-      } finally { queue.Finish() }
-      return changed
-    }
-
   internal func AfterTreeUpdated(root Node?, resolver Resolver, rebuilt bool) {
     refreshScopes(root, resolver)
     if !rebuilt {
@@ -106,24 +71,6 @@ internal class InputCoordinator {
       text.RefreshFocus()
       keyboard.AfterTreeUpdated(resolver)
       pointer.AfterTreeUpdated(root, resolver)
-    } finally {
-      resolver.Flush()
-    }
-  }
-
-  internal func Step(root Node?, resolver Resolver, dt float64) bool {
-    try {
-      let blinked = text.Step(dt)
-      return keyboard.Step(root, resolver, text, dt) || blinked
-    } finally {
-      resolver.Flush()
-    }
-  }
-
-  internal func Step(root Node?, resolver Resolver, dt float64, nowTicks int64) bool {
-    try {
-      let blinked = text.Step(dt)
-      return keyboard.Step(root, resolver, text, dt, nowTicks) || blinked
     } finally {
       resolver.Flush()
     }
@@ -265,33 +212,6 @@ internal class InputCoordinator {
     return true
   }
 
-  internal func Reset(root Node?, resolver Resolver, preserveQueue bool = false) {
-    ScrollState.StopMomentumTree(root)
-    var failure Exception?
-    try {
-      keyboard.Reset(resolver, !preserveQueue)
-    } catch (error Exception) {
-      failure = error
-    }
-    try {
-      pointer.Reset(root, resolver, !preserveQueue)
-    } catch (error Exception) {
-      if failure == nil { failure = error }
-    }
-    pointer.ResetScrollbars(resolver)
-    try {
-      focus.SetFocus(resolver, nil)
-    } catch (error Exception) {
-      if failure == nil { failure = error }
-    }
-    try {
-      resolver.Flush()
-    } catch (error Exception) {
-      if failure == nil { failure = error }
-    }
-    if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
-  }
-
   internal func Dispose() {
     if disposed {
       return
@@ -342,7 +262,7 @@ internal class InputCoordinator {
   internal func HandleKey(root Node?, resolver Resolver, key Key, modifiers KeyModifiers) bool {
     try {
       pointer.UpdateDragModifiers(root, modifiers)
-      return keyboard.HandleKey(root, resolver, text, key, modifiers)
+      return keyboard.HandleKey(root, key, modifiers)
     } finally {
       resolver.Flush()
     }

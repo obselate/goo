@@ -38,8 +38,6 @@ internal partial class PointerInput {
   private var creatingDrag bool
   private var resetting bool
 
-  internal convenience init(focus FocusManager) { init(focus, InputEventQueue()) }
-
   internal init(focus FocusManager, queue InputEventQueue) {
     this.focus = focus
     this.queue = queue
@@ -174,17 +172,6 @@ internal partial class PointerInput {
     host.Wheel += QueueWheel
   }
 
-  internal func Drain(root Node?, resolver Resolver, timeS float64, text TextInput) bool {
-    if !queue.Begin() { return false }
-    var changed = false
-    try {
-      while queue.Take(out var e) {
-        if Dispatch(e.Pointer, root, resolver, timeS, text) { changed = true }
-      }
-    } finally { queue.Finish() }
-    return changed
-  }
-
   internal func Dispatch(e QueuedPointerEvent, root Node?, resolver Resolver,
     timeS float64, text TextInput) bool {
       gestureTime = timeS
@@ -231,7 +218,6 @@ internal partial class PointerInput {
       return changed
     } finally {
       current = mouse
-      resolver.Flush()
     }
   }
 
@@ -348,40 +334,18 @@ internal partial class PointerInput {
       })
     }
 
-  internal func QueueCancel() {
-    QueueCancel(0, PointerDevice.Mouse)
-  }
-
   internal func QueueCancel(pointerId int64, device PointerDevice) {
     queue.Add(QueuedPointerEvent{ Kind: PointerEventKind.Cancel, PointerId: pointerId, Device: device })
   }
 
-  internal func FocusLost(root Node?, resolver Resolver) {
-    try {
-      cancelDrag(root)
-      clearHover(resolver)
-    } finally {
-      cursorValid = false
-      QueueCancel()
-      if let values = contacts {
-        for i in 0 ... values.Count {
-          let contact = values[i]
-          queue.Add(QueuedPointerEvent{
-            Kind: PointerEventKind.Cancel, PointerId: contact.Id, Device: contact.Device,
-          })
-        }
-      }
-    }
-  }
-
-  internal func Reset(root Node?, resolver Resolver, clearQueue bool = true) {
+  internal func Reset(root Node?, resolver Resolver) {
     if resetting { return }
     resetting = true
-    try { reset(root, resolver, clearQueue) }
+    try { reset(root, resolver) }
     finally { resetting = false }
   }
 
-  private func reset(root Node?, resolver Resolver, clearQueue bool) {
+  private func reset(root Node?, resolver Resolver) {
     var failure Exception?
     try {
       cancelDrag(root)
@@ -410,7 +374,6 @@ internal partial class PointerInput {
     touchSequenceActive = false
     penSequenceActive = false
     current = mouse
-    if clearQueue { queue.Clear() }
     try {
       clearHover(resolver)
     } catch (error Exception) {

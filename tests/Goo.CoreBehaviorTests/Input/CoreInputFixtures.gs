@@ -5,7 +5,6 @@ import System.Collections.Generic
 
 internal class InputFixtures {
   func TransformRoutesHitsAndLocalPositions() bool {
-    let focusManager = FocusManager()
     let events = List[string]()
     let tree = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
@@ -22,11 +21,11 @@ internal class InputFixtures {
     if hitTopmost(tree, 45.0F, 5.0F) != tree || hitTopmost(tree, 5.0F, 5.0F) != nil {
       return false
     }
-    let input = PointerInput(focusManager)
+    let input = InputCoordinator()
     let resolver = Resolver{}
-    input.QueuePress(45.0F, 5.0F)
-    input.QueueWheel(45.0F, 5.0F, 0.0F, 1.0F)
-    input.Drain(tree, resolver, 0.0, TextInput(focusManager))
+    input.QueuePointerPress(45.0F, 5.0F)
+    input.QueuePointerWheel(45.0F, 5.0F, 0.0F, 1.0F)
+    input.Drain(tree, resolver, 0.0, nil)
     if events.Count != 2 || events[0] != "5:5" || events[1] != "wheel:5:5" {
       return false
     }
@@ -43,9 +42,9 @@ internal class InputFixtures {
       },
     })
     Layout().Calculate(nested, 100.0F, 100.0F)
-    let nestedInput = PointerInput(focusManager)
-    nestedInput.QueuePress(35.0F, 5.0F)
-    nestedInput.Drain(nested, Resolver{}, 0.0, TextInput(focusManager))
+    let nestedInput = InputCoordinator()
+    nestedInput.QueuePointerPress(35.0F, 5.0F)
+    nestedInput.Drain(nested, Resolver{}, 0.0, nil)
     if nestedEvents.Count != 1 || nestedEvents[0] != "5:5" { return false }
 
     let singular = Reconciler{ Res: Resolver{} }.Mount(Container{
@@ -78,10 +77,10 @@ internal class InputFixtures {
       },
     })
     Layout().Calculate(captured, 100.0F, 100.0F)
-    let capturedInput = PointerInput(focusManager)
-    capturedInput.QueuePress(45.0F, 5.0F)
-    capturedInput.QueueMove(65.0F, 5.0F)
-    capturedInput.Drain(captured, Resolver{}, 0.0, TextInput(focusManager))
+    let capturedInput = InputCoordinator()
+    capturedInput.QueuePointerPress(45.0F, 5.0F)
+    capturedInput.QueuePointerMove(65.0F, 5.0F)
+    capturedInput.Drain(captured, Resolver{}, 0.0, nil)
     if capturedEvents.Count != 1 || capturedEvents[0] != "25:20" { return false }
 
     let scaledEvents = List[string]()
@@ -94,10 +93,10 @@ internal class InputFixtures {
       },
     })
     Layout().Calculate(scaledInput, 100.0F, 100.0F)
-    let scaledPointer = PointerInput(focusManager)
-    scaledPointer.QueueMove(45.0F, 5.0F)
-    scaledPointer.QueueMove(65.0F, 5.0F)
-    scaledPointer.Drain(scaledInput, Resolver{}, 0.0, TextInput(focusManager))
+    let scaledPointer = InputCoordinator()
+    scaledPointer.QueuePointerMove(45.0F, 5.0F)
+    scaledPointer.QueuePointerMove(65.0F, 5.0F)
+    scaledPointer.Drain(scaledInput, Resolver{}, 0.0, nil)
     if scaledEvents.Count != 2 || scaledEvents[1] != "12.5:10" { return false }
 
     let rotatedEvents = List[PointerEvent]()
@@ -108,10 +107,10 @@ internal class InputFixtures {
       OnPointerMove: (e PointerEvent) -> { rotatedEvents.Add(e) },
     })
     Layout().Calculate(rotatedInput, 100.0F, 100.0F)
-    let rotatedPointer = PointerInput(focusManager)
-    rotatedPointer.QueueMove(15.0F, 5.0F)
-    rotatedPointer.QueueMove(15.0F, 15.0F)
-    rotatedPointer.Drain(rotatedInput, Resolver{}, 0.0, TextInput(focusManager))
+    let rotatedPointer = InputCoordinator()
+    rotatedPointer.QueuePointerMove(15.0F, 5.0F)
+    rotatedPointer.QueuePointerMove(15.0F, 15.0F)
+    rotatedPointer.Drain(rotatedInput, Resolver{}, 0.0, nil)
     if rotatedEvents.Count != 2 { return false }
     let rotatedEvent = rotatedEvents[1]
     if Math.Abs(rotatedEvent.Position.X - 15.0) > 0.001
@@ -131,7 +130,7 @@ internal class InputFixtures {
     let entryShape = metrics.BufferShape(entry)
     let origin = metrics.EntryOriginX(entry, entryShape)
     let gap = entryShape.CaretX(1, int32(TextAffinity.Downstream))
-    PointerInput(focusManager).HandlePress(entry, Resolver{}, TextInput(focusManager), 0.0,
+    InputCoordinator().HandlePress(entry, Resolver{}, 0.0,
       40.0F + origin + gap, entry.Rect.Y + entry.Rect.H * 0.5F)
     return entry.Caret == 1
   }
@@ -193,7 +192,6 @@ internal class InputFixtures {
   }
 
   func PointerDrainConsumesThrowingEventOnceAndRetainsRest() bool {
-    let focusManager = FocusManager()
     let events = List[string]()
     var throwNext = true
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{
@@ -208,31 +206,29 @@ internal class InputFixtures {
       },
     })
     Layout().Calculate(root, 100.0F, 30.0F)
-    let input = PointerInput(focusManager)
-    input.QueueMove(10.0F, 10.0F)
-    input.QueueMove(20.0F, 10.0F)
-    input.QueueMove(30.0F, 10.0F)
+    let input = InputCoordinator()
+    input.QueuePointerMove(10.0F, 10.0F)
+    input.QueuePointerMove(20.0F, 10.0F)
+    input.QueuePointerMove(30.0F, 10.0F)
     var threw = false
     try {
-      input.Drain(root, Resolver{}, 0.0, TextInput(focusManager))
+      input.Drain(root, Resolver{}, 0.0, nil)
     } catch (e Exception) {
       threw = true
     }
     if !threw || events.Count != 1 || events[0] != "10" {
       return false
     }
-    input.Drain(root, Resolver{}, 0.0, TextInput(focusManager))
+    input.Drain(root, Resolver{}, 0.0, nil)
     if events.Count != 3 || events[1] != "20" || events[2] != "30" {
       return false
     }
-    input.Drain(root, Resolver{}, 0.0, TextInput(focusManager))
+    input.Drain(root, Resolver{}, 0.0, nil)
     return events.Count == 3
   }
 
   func KeyboardDrainConsumesThrowingEventOnceAndRetainsRest() bool {
-    let textFocus = FocusManager()
-    let keyboard = KeyboardInput(textFocus)
-    let text = TextInput(textFocus)
+    let keyboard = InputCoordinator()
     let seen = List[Key]()
     var throwNext = true
     let onKeyPress(Key, KeyModifiers) -> void = (key Key, modifiers KeyModifiers) -> {
@@ -247,18 +243,18 @@ internal class InputFixtures {
     keyboard.QueueKeyPress(Key.C, KeyModifiers{})
     var threw = false
     try {
-      keyboard.Drain(nil, Resolver{}, text, onKeyPress)
+      keyboard.Drain(nil, Resolver{}, 0.0, onKeyPress)
     } catch (e Exception) {
       threw = true
     }
     if !threw || seen.Count != 1 || seen[0] != Key.A {
       return false
     }
-    keyboard.Drain(nil, Resolver{}, text, onKeyPress)
+    keyboard.Drain(nil, Resolver{}, 0.0, onKeyPress)
     if seen.Count != 3 || seen[1] != Key.B || seen[2] != Key.C {
       return false
     }
-    keyboard.Drain(nil, Resolver{}, text, onKeyPress)
+    keyboard.Drain(nil, Resolver{}, 0.0, onKeyPress)
     return seen.Count == 3
   }
 
@@ -635,7 +631,6 @@ internal class InputFixtures {
   }
 
   private func hoverTransformOrder() bool {
-    let focusManager = FocusManager()
     let events = List[PointerEvent]()
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
@@ -645,7 +640,7 @@ internal class InputFixtures {
       OnPointerLeave: (e PointerEvent) -> { events.Add(e) },
     })
     Layout().Calculate(root, 100.0F, 100.0F)
-    let input = PointerInput(focusManager)
+    let input = InputCoordinator()
     let resolver = Resolver{}
     input.HandleMove(root, resolver, 45.0F, 5.0F)
     input.HandleMove(root, resolver, 75.0F, 5.0F)
@@ -1807,7 +1802,6 @@ internal class InputFixtures {
   }
 
   func KeyboardCallbacksBubbleStopAndRepeat() bool {
-    let textFocus = FocusManager()
     let events = List[string]()
     var stale KeyEvent
     let root = Reconciler{ Res: Resolver{} }.Mount(Container() {.KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.Left, Repeat: true, Action: () -> {} } },.Width: 100,.Height: 30,.OnFocus: (e FocusEvent) -> { events.Add("focus:root") },.OnBlur: (e FocusEvent) -> { events.Add("blur:root") },.OnKeyDown: (e KeyEvent) -> {
@@ -1832,24 +1826,23 @@ internal class InputFixtures {
         },
       })
     let resolver = Resolver{}
-    let text = TextInput(textFocus)
-    let keyboard = KeyboardInput(textFocus)
-    textFocus.SetFocus(resolver, root.Children[0])
+    let keyboard = InputCoordinator()
+    keyboard.FocusElement(resolver, root.Children[0])
     keyboard.QueueKeyPress(Key.A, KeyModifiers{ Ctrl: true })
     keyboard.QueueKeyPress(Key.B, KeyModifiers{})
     keyboard.QueueKeyPress(Key.Left, KeyModifiers{})
     keyboard.QueueKeyRelease(Key.Left, KeyModifiers{ Alt: true })
-    keyboard.Drain(root, resolver, text, nil)
+    keyboard.Drain(root, resolver, 0.0, nil)
     keyboard.QueueKeyPress(Key.Left, KeyModifiers{})
-    keyboard.Drain(root, resolver, text, nil)
-    keyboard.Step(root, resolver, text, 0.5)
+    keyboard.Drain(root, resolver, 0.0, nil)
+    keyboard.Step(root, resolver, 0.5)
     keyboard.QueueKeyRelease(Key.Left, KeyModifiers{})
-    keyboard.Drain(root, resolver, text, nil)
+    keyboard.Drain(root, resolver, 0.0, nil)
     stale.StopPropagation()
     stale.PreventDefault()
     keyboard.QueueKeyPress(Key.C, KeyModifiers{})
-    keyboard.Drain(root, resolver, text, nil)
-    textFocus.SetFocus(resolver, nil)
+    keyboard.Drain(root, resolver, 0.0, nil)
+    keyboard.ClearEditorFocus(resolver)
     let expected = []string{
       "focus:leaf", "focus:root",
       "down:leaf:A:1:0", "down:root:A:1:0",
@@ -1912,7 +1905,6 @@ internal class InputFixtures {
 
   func KeyboardCallbackFailuresCleanUpAndKeepQueuedSuffix() bool {
     let input = InputCoordinator()
-    let repeatTextFocus = FocusManager()
     var releaseThrows = true
     var buttonClicks = 0
     var queuedSuffix = 0
@@ -1956,18 +1948,17 @@ internal class InputFixtures {
         }
       },
     })
-    let repeatText = TextInput(repeatTextFocus)
-    let repeatKeyboard = KeyboardInput(repeatTextFocus)
-    repeatTextFocus.SetFocus(resolver, repeatRoot)
+    let repeatKeyboard = InputCoordinator()
+    repeatKeyboard.FocusElement(resolver, repeatRoot)
     repeatKeyboard.QueueKeyPress(Key.Left, KeyModifiers{})
-    repeatKeyboard.Drain(repeatRoot, resolver, repeatText, nil)
+    repeatKeyboard.Drain(repeatRoot, resolver, 0.0, nil)
     threw = false
     try {
-      repeatKeyboard.Step(repeatRoot, resolver, repeatText, 0.5)
+      repeatKeyboard.Step(repeatRoot, resolver, 0.5)
     } catch (e Exception) {
       threw = true
     }
-    return threw && repeatKeyboard.RepeatDeadlineSeconds() >= 0.99
+    return threw && repeatKeyboard.NextTickDeadlineSeconds() >= 0.99
   }
 
   func CallbackReplacementUsesNewestDelegateWithoutInputEffect() bool {
