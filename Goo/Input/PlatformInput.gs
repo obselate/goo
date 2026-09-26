@@ -87,6 +87,7 @@ public class PlatformInput {
   }
 
   /// Targets a drag started with BeginDrag at an element's center, negotiating with its ancestors.
+  /// Calls from the same drag's negotiation or terminal callback return false.
   /// @returns True when a drop target accepts the drag.
   public func UpdateDrag(target ElementHandle, modifiers KeyModifiers = default(KeyModifiers)) bool {
     requireInput()
@@ -97,6 +98,7 @@ public class PlatformInput {
   }
 
   /// Completes the active drag through its negotiated target and terminal source callback.
+  /// Calls from the same drag's negotiation or terminal callback return false.
   /// @returns True when a drop was delivered, or false when no target accepted it.
   public func DropDrag() bool {
     requireInput()
@@ -129,8 +131,13 @@ public class PlatformInput {
 
   /// Releases a physical key and stops its repeat state.
   public func KeyRelease(key Key) {
+    KeyRelease(key, KeyModifiers{})
+  }
+
+  /// Releases a physical key with the modifiers still held after the release.
+  public func KeyRelease(key Key, modifiers KeyModifiers) {
     requireThread()
-    input.QueueKeyRelease(key)
+    input.QueueKeyRelease(key, modifiers)
     drain()
   }
 
@@ -226,6 +233,7 @@ public class PlatformInput {
   }
 
   internal func Refresh() {
+    if input.IsDispatching { return }
     let current = input.EditorSnapshot()
     if published == nil && current == nil { return }
     if let prior = published, let next = current {
@@ -243,12 +251,14 @@ public class PlatformInput {
   }
 
   private func drain() {
-    input.Drain(owner.Tree, resolver, float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency),
-      owner.PlatformKeyPressedCallbacks)
-    finish()
+    try {
+      input.Drain(owner.Tree, resolver, float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency),
+        owner.PlatformKeyPressedCallbacks)
+    } finally { finish() }
   }
 
   private func finish() {
+    if input.IsDispatching { return }
     resolver.Flush()
     owner.InvalidatePlatformInput()
     Refresh()

@@ -37,6 +37,7 @@ public struct FocusEvent {
 }
 
 internal class InputCallbackSet {
+  internal var Command Command?
   internal var Bindings ([]KeyBinding)?
   internal var OnKeyDown((KeyEvent) -> void)?
   internal var OnKeyUp((KeyEvent) -> void)?
@@ -46,7 +47,7 @@ internal class InputCallbackSet {
   internal var OnPointerLeave((PointerEvent) -> void)?
 
   internal func Empty() bool -> OnKeyDown == nil && OnKeyUp == nil && OnFocus == nil && OnBlur == nil
-    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil
+    && OnPointerEnter == nil && OnPointerLeave == nil && Bindings == nil && Command == nil
 }
 
 // Sparse callback state keeps ordinary declarations and retained nodes unchanged.
@@ -56,6 +57,16 @@ internal class InputCallbacks {
     ConditionalWeakTable[Blob, InputCallbackSet]()
     private let nodeValues ConditionalWeakTable[Node, InputCallbackSet] =
     ConditionalWeakTable[Node, InputCallbackSet]()
+
+    internal func SetBlobCommand(blob Blob, value Command?) {
+      guard let callbacks = blobCallbacks(blob, value != nil) else { return }
+      callbacks.Command = value
+      finishBlob(blob, callbacks)
+    }
+
+    internal func BlobCommand(blob Blob) Command? -> blobCallbacks(blob, false)?.Command
+
+    internal func Command(node Node) Command? -> nodeCallbacks(node)?.Command
 
     internal func SetBlobBindings(blob Blob, value ([]KeyBinding)?) {
       let callbacks = blobCallbacks(blob, value != nil && value.Length > 0)
@@ -153,6 +164,7 @@ internal class InputCallbacks {
         nodeValues.Add(node, destination)
       }
       destination.OnKeyDown = source.OnKeyDown
+      destination.Command = source.Command
       destination.Bindings = source.Bindings
       destination.OnKeyUp = source.OnKeyUp
       destination.OnFocus = source.OnFocus
@@ -211,6 +223,7 @@ internal class InputCallbacks {
       if value.OnPointerEnter != nil { result = result | 16 }
       if value.OnPointerLeave != nil { result = result | 32 }
       if value.Bindings != nil { result = result | 64 }
+      if value.Command != nil { result = result | 128 }
       return result
     }
   }

@@ -289,8 +289,9 @@ public partial class Window {
           if fadeScrollBars(scrollers, dtf) {
             changed = true
           }
-          let k = 1.0F - MathF.Exp(-dtf * 20.0F)
-          if stepScroll(scrollers, k) {
+          let reducedMotion = Preferences.ReducedMotion == true
+          let k = reducedMotion ? 1.0F : 1.0F - MathF.Exp(-dtf * 20.0F)
+          if stepScroll(scrollers, k, dtf, reducedMotion) {
             changed = true
             accessibilityScroll = true
             metricsChanged = true
@@ -503,10 +504,11 @@ public partial class Window {
     }
   }
 
-  private func stepScroll(scrollers List[Node], k float32) bool {
+  private func stepScroll(scrollers List[Node], k float32, dt float32,
+    reducedMotion bool) bool {
     var moved = false
     for i in 0 ... scrollers.Count {
-      if ScrollState.Step(scrollers[i], k) {
+      if ScrollState.Step(scrollers[i], k, dt, reducedMotion) {
         moved = true
       }
     }

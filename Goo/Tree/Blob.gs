@@ -260,7 +260,7 @@ public open class Blob : Style {
     }
   }
 
-  private func updateSparseInputState() {
+  internal func updateSparseInputState() {
     blobState = InputMetadata.HasState(this) ? blobState | int32(32) : blobState & ^int32(32)
   }
 }

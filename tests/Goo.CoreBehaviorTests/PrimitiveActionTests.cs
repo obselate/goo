@@ -198,6 +198,12 @@ public sealed class PrimitiveActionTests
         var reject = false;
         var fail = false;
         var disabled = false;
+        var reenterDrop = true;
+        var reenterQuery = true;
+        var nestedUpdate = true;
+        var nestedQueryDrop = true;
+        var nestedDrop = true;
+        var nestedCancel = true;
         Window window = null!;
         var cell = new BuildCell(() => new Container {
             KeyBindings = new[] {
@@ -210,9 +216,25 @@ public sealed class PrimitiveActionTests
                     DragSource = new DragSource(e => { Assert.False(e.IsPointer); events.Add("start"); return new DragData("value", DragEffect.Copy | DragEffect.Move); },
                         e => events.Add("end:" + e.Kind)) },
                 new Container { Handle = target, Width = 80, Height = 40, Disabled = disabled,
-                    DropTarget = new DropTarget(e => { Assert.False(e.IsPointer); if (fail) throw new InvalidOperationException("query");
+                    DropTarget = new DropTarget(e => {
+                            Assert.False(e.IsPointer);
+                            if (fail) throw new InvalidOperationException("query");
+                            if (reenterQuery)
+                            {
+                                reenterQuery = false;
+                                nestedUpdate = window.PlatformInput.UpdateDrag(target);
+                                nestedQueryDrop = window.PlatformInput.DropDrag();
+                            }
                             return reject ? DragEffect.None : e.Modifiers.Ctrl ? DragEffect.Copy : DragEffect.Move; },
-                        e => { if (e.Kind != DragEventKind.Move) events.Add(e.Kind + ":" + e.Effect); }) }
+                        e => {
+                            if (e.Kind != DragEventKind.Move) events.Add(e.Kind + ":" + e.Effect);
+                            if (e.Kind == DragEventKind.Drop && reenterDrop)
+                            {
+                                reenterDrop = false;
+                                nestedDrop = window.PlatformInput.DropDrag();
+                                nestedCancel = window.PlatformInput.CancelDrag();
+                            }
+                        }) }
             }
         });
         window = new Window { Width = 320, Height = 160, Root = cell };
@@ -229,6 +251,10 @@ public sealed class PrimitiveActionTests
             input.KeyPress(Key.Enter, default);
             input.KeyRelease(Key.Enter);
             Assert.Equal(new[] { "start", "Enter:Move", "Drop:Move", "end:Dropped" }, events);
+            Assert.False(nestedDrop);
+            Assert.False(nestedCancel);
+            Assert.False(nestedUpdate);
+            Assert.False(nestedQueryDrop);
             Assert.False(input.CancelDrag());
             Assert.True(input.BeginDrag(source));
             Assert.True(input.UpdateDrag(target));

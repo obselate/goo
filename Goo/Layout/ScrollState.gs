@@ -17,6 +17,8 @@ internal class ScrollAxisActivity {
 internal class ScrollNodeActivity {
   internal let Horizontal ScrollAxisActivity = ScrollAxisActivity{}
   internal let Vertical ScrollAxisActivity = ScrollAxisActivity{}
+  internal var Momentum ScrollMomentum?
+  internal var MomentumElapsed float64
 }
 
 internal class ScrollActivityStates {
@@ -31,7 +33,7 @@ internal class ScrollActivityStates {
   }
 }
 
-internal class ScrollState {
+internal partial class ScrollState {
   shared {
     private func axis(n Node, vertical bool) ScrollAxisActivity {
       let state = ScrollActivityStates.For(n)
@@ -97,15 +99,17 @@ internal class ScrollState {
     }
 
     internal func To(n Node, x float32, y float32, immediate bool = false, activity bool = true) bool {
+      StopMomentum(n)
       SyncEditor(n)
       return setTarget(n, x, y, immediate, activity)
     }
 
-    internal func By(n Node, dx float32, dy float32) Point {
+    internal func By(n Node, dx float32, dy float32, immediate bool = false) Point {
+      StopMomentum(n)
       SyncEditor(n)
-      let previousX = n.ScrollTargetX
-      let previousY = n.ScrollTargetY
-      setTarget(n, previousX + dx, previousY + dy, false, true, dy != 0.0F)
+      let previousX = immediate ? n.ScrollX : n.ScrollTargetX
+      let previousY = immediate ? n.ScrollY : n.ScrollTargetY
+      setTarget(n, previousX + dx, previousY + dy, immediate, true, dy != 0.0F)
       return Point{X: float64(n.ScrollTargetX - previousX), Y: float64(n.ScrollTargetY - previousY)}
     }
 
@@ -249,6 +253,7 @@ internal class ScrollState {
 
     internal func ResetActivity(n Node) {
       guard let state = ScrollActivityStates.TryGet(n) else { return }
+      state.Momentum = nil
       state.Horizontal.Alpha = 0.0F
       state.Horizontal.Idle = 0.0F
       state.Horizontal.Hovered = false
@@ -275,6 +280,7 @@ internal class ScrollState {
         return n.ScrollX != n.ScrollTargetX || n.ScrollY != n.ScrollTargetY
       }
       return n.ScrollX != n.ScrollTargetX || n.ScrollY != n.ScrollTargetY
+        || state.Momentum != nil
         || fadeDemand(state.Horizontal) || fadeDemand(state.Vertical)
     }
 
@@ -288,8 +294,13 @@ internal class ScrollState {
       guard let descriptor = state.Descriptor else { return false }
       return state.Visibility == ScrollbarVisibility.Auto && state.Alpha > 0.0F
         && !state.Hovered && !state.Captured
-        && state.Idle >= float32(descriptor.HideDelayMs) * 0.001F
+        && (state.Idle >= float32(descriptor.HideDelayMs) * 0.001F
+          || hideDeadlineReached(state))
     }
+
+    private func hideDeadlineReached(state ScrollAxisActivity) bool ->
+    state.HideDeadlineTicks > 0.0
+      && float64(Stopwatch.GetTimestamp()) >= state.HideDeadlineTicks
 
     private func deadlineSeconds(state ScrollAxisActivity) float64 {
       guard let descriptor = state.Descriptor else { return Double.PositiveInfinity }
@@ -297,9 +308,7 @@ internal class ScrollState {
         || state.Hovered || state.Captured {
           return Double.PositiveInfinity
         }
-      if state.Idle >= float32(descriptor.HideDelayMs) * 0.001F {
-        return 0.0
-      }
+      if fadeDemand(state) { return Double.PositiveInfinity }
       if state.HideDeadlineTicks <= 0.0 {
         scheduleHide(state, descriptor)
       }
@@ -307,13 +316,15 @@ internal class ScrollState {
         / float64(Stopwatch.Frequency)
       return remaining > 0.0 ? remaining : 0.0
     }
-    internal func Step(n Node, k float32) bool {
+    internal func Step(n Node, k float32, dt float32 = 0.0F,
+      reducedMotion bool = false) bool {
+      let momentumChanged = stepMomentum(n, dt, reducedMotion)
       let x = approach(n.ScrollX, n.ScrollTargetX, k)
       let y = approach(n.ScrollY, n.ScrollTargetY, k)
       let changed = x != n.ScrollX || y != n.ScrollY
       n.ScrollX = x
       n.ScrollY = y
-      return changed
+      return changed || momentumChanged
     }
 
     internal func Fade(n Node, dt float32) bool {
@@ -334,9 +345,12 @@ internal class ScrollState {
         || state.Hovered || state.Captured {
           return false
         }
+      let hideDelay = float32(descriptor.HideDelayMs) * 0.001F
+      if hideDeadlineReached(state) && state.Idle < hideDelay {
+        state.Idle = hideDelay
+      }
       let previousIdle = state.Idle
       state.Idle = state.Idle + dt
-      let hideDelay = float32(descriptor.HideDelayMs) * 0.001F
       if state.Idle <= hideDelay {
         return false
       }

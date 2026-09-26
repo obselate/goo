@@ -8,6 +8,17 @@ public class Button : Blob {
   internal override func coreBlob() {
   }
 
+  /// Gets the shared activation action, taking precedence over OnClick.
+  /// Availability is checked for every pointer, keyboard, handle, and accessibility activation.
+  /// Rebuild the owning cell when availability changes to refresh disabled styling and semantics.
+  public prop Command Command? {
+    get -> InputCallbacks.BlobCommand(this)
+    init {
+      InputCallbacks.SetBlobCommand(this, value)
+      updateSparseInputState()
+    }
+  }
+
   /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
   /// Give all siblings stable keys, or give no sibling a key.
   public prop Children IList[Blob]{ get -> children

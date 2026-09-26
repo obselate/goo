@@ -167,8 +167,8 @@ public partial class Window {
     }
     let left = BoxGeometry.ContentLeft(ancestor)
     let top = BoxGeometry.ContentTop(ancestor)
-    let right = left + BoxGeometry.ContentWidth(ancestor)
-    let bottom = top + BoxGeometry.ContentHeight(ancestor)
+    let right = left + scrollViewportWidth(ancestor)
+    let bottom = top + scrollViewportHeight(ancestor)
     var targetX = ancestor.ScrollX
     var targetY = ancestor.ScrollY
     if ancestor.OverflowX == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {

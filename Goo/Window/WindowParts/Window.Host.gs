@@ -478,7 +478,14 @@ public partial class Window {
 
   internal func SchedulerTimedServiceDue() bool ->
   Math.Min(nextTimerDeadlineSeconds(),
-    Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds())) <= 0.0
+    Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds())) <= 0.0
+
+  private func nextInputDeadlineSeconds() float64 {
+    let elapsed = schedulerLastTicks > 0.0
+      ? Math.Max(0.0, (float64(Stopwatch.GetTimestamp()) - schedulerLastTicks)
+        / float64(Stopwatch.Frequency)) : 0.0
+    return input.NextTickDeadlineSeconds(elapsed)
+  }
 
   internal func RefreshSchedulerMetrics() {
     host?.RefreshMetricsIfChanged()
@@ -490,12 +497,13 @@ public partial class Window {
   // wakes itself in time to render each blink transition.
   private func idleWaitMs() int32 {
     let deadline = Math.Min(0.25, Math.Min(nextTimerDeadlineSeconds(),
-      Math.Min(input.NextTickDeadlineSeconds(), nextScrollDeadlineSeconds())))
+      Math.Min(nextInputDeadlineSeconds(), nextScrollDeadlineSeconds())))
     let ms = int32(Math.Ceiling(deadline * 1000.0))
     return ms < 1 ? 1 : ms
   }
 
   private func nextScrollDeadlineSeconds() float64 {
+    if !IsVisible { return Double.PositiveInfinity }
     guard let n = node else { return Double.PositiveInfinity }
     let scrollers = layout.ScrollNodes(n)
     var deadline = Double.PositiveInfinity

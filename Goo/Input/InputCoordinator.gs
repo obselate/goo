@@ -6,17 +6,20 @@ import System.Runtime.ExceptionServices
 
 internal class InputCoordinator {
   private let focus FocusManager
+  private let queue InputEventQueue
   private var keyboard KeyboardInput
   private var pointer PointerInput
   private var text TextInput
   private var attachedHost WindowHost?
   private var scopes FocusScopeStack?
   private var disposed bool
+  internal prop IsDispatching bool{ get -> queue.IsDispatching }
 
   internal init() {
     focus = FocusManager()
-    keyboard = KeyboardInput(focus)
-    pointer = PointerInput(focus)
+    queue = InputEventQueue()
+    keyboard = KeyboardInput(focus, queue)
+    pointer = PointerInput(focus, queue)
     text = TextInput(focus)
   }
 
@@ -64,10 +67,33 @@ internal class InputCoordinator {
 
   internal func Drain(root Node?, resolver Resolver, timeS float64,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64) bool{
-      refreshScopes(root, resolver)
-      let pointerChanged = pointer.Drain(root, resolver, timeS, text)
-      return keyboard.Drain(root, resolver, text, onKeyPress, repeatStartTicks, pointer)
-        || pointerChanged
+      if !queue.Begin() { return false }
+      let ingressFocusGeneration = focus.Generation
+      var changed = false
+      try {
+        refreshScopes(root, resolver)
+        resolver.Flush()
+        while queue.Take(out var e) {
+          if e.IsFocusLost {
+            loseFocus(root, resolver)
+            changed = true
+            continue
+          }
+          if e.IsFocusGained {
+            focus.SetNativeFocus(true)
+            changed = true
+            continue
+          }
+          if !focus.NativeFocusAllowed { continue }
+          if !e.IsPointer && e.Keyboard.TextFocusGeneration >= ingressFocusGeneration {
+            e.Keyboard.TextFocusGeneration = focus.Generation
+          }
+          let dispatched = if e.IsPointer { pointer.Dispatch(e.Pointer, root, resolver, timeS, text) }
+            else { keyboard.Dispatch(e.Keyboard, root, resolver, text, onKeyPress, repeatStartTicks, pointer) }
+          if dispatched { changed = true }
+        }
+      } finally { queue.Finish() }
+      return changed
     }
 
   internal func AfterTreeUpdated(root Node?, resolver Resolver, rebuilt bool) {
@@ -104,8 +130,8 @@ internal class InputCoordinator {
   }
 
   // Shortens idle waits to the next caret blink or key-repeat edge.
-  internal func NextTickDeadlineSeconds() float64 ->
-  Math.Min(text.BlinkDeadlineSeconds(), keyboard.RepeatDeadlineSeconds())
+  internal func NextTickDeadlineSeconds(elapsed float64 = 0.0) float64 ->
+  Math.Min(text.BlinkDeadlineSeconds() - elapsed, keyboard.RepeatDeadlineSeconds())
 
   internal func RefreshHover(root Node?, resolver Resolver) bool {
     try {
@@ -119,27 +145,36 @@ internal class InputCoordinator {
   internal func ConsumeScrollRectsDirty() bool -> pointer.ConsumeScrollRectsDirty()
 
   internal func FocusLost(root Node?, resolver Resolver) {
-    try {
-      focus.SetNativeFocus(false)
-      keyboard.Reset(resolver)
-      focus.SetFocus(resolver, nil)
-      if root != nil {
-        pointer.Reset(root, resolver)
-      } else {
-        pointer.FocusLost(root, resolver)
-      }
-      pointer.ResetScrollbars(resolver)
-    } finally {
-      focus.SetNativeFocus(false)
-      resolver.Flush()
+    if queue.IsDispatching || queue.HasPending {
+      queue.AddFocusLost()
+      return
     }
+    loseFocus(root, resolver)
+  }
+
+  private func loseFocus(root Node?, resolver Resolver) {
+    var failure Exception?
+    try { focus.SetNativeFocus(false) }
+    catch (error Exception) { failure = error }
+    try {
+      Reset(root, resolver, true)
+    } catch (error Exception) {
+      failure ??= error
+    } finally {
+      try { focus.SetNativeFocus(false) }
+      catch (error Exception) { failure ??= error }
+    }
+    if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   internal func FocusLost(resolver Resolver) {
     FocusLost(nil, resolver)
   }
 
-  internal func FocusGained() -> focus.SetNativeFocus(true)
+  internal func FocusGained() {
+    if queue.IsDispatching || queue.HasPending { queue.AddFocusGained() }
+    else { focus.SetNativeFocus(true) }
+  }
 
   internal func FocusElement(resolver Resolver, target Node) bool {
     if !focus.CanFocus(target) {
@@ -230,15 +265,16 @@ internal class InputCoordinator {
     return true
   }
 
-  internal func Reset(root Node?, resolver Resolver) {
+  internal func Reset(root Node?, resolver Resolver, preserveQueue bool = false) {
+    ScrollState.StopMomentumTree(root)
     var failure Exception?
     try {
-      keyboard.Reset(resolver)
+      keyboard.Reset(resolver, !preserveQueue)
     } catch (error Exception) {
       failure = error
     }
     try {
-      pointer.Reset(root, resolver)
+      pointer.Reset(root, resolver, !preserveQueue)
     } catch (error Exception) {
       if failure == nil { failure = error }
     }
@@ -335,8 +371,8 @@ internal class InputCoordinator {
     keyboard.QueueKeyPress(key, modifiers)
   }
 
-  internal func QueueKeyRelease(key Key) {
-    keyboard.QueueKeyRelease(key)
+  internal func QueueKeyRelease(key Key, modifiers KeyModifiers = default(KeyModifiers)) {
+    keyboard.QueueKeyRelease(key, modifiers)
   }
 
   internal func QueueText(value string) {

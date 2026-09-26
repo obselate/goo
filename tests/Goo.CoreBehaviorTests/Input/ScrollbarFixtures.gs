@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Diagnostics
 
 internal class ScrollbarFixtures {
   func DescriptorGeometryAndVisibilityContract() bool {
@@ -169,7 +170,73 @@ internal class ScrollbarFixtures {
       return false
     }
     window.UpdateTree(0.05)
-    return root.ScrollBarAlpha == 0.0F && ScrollbarParts.ActiveChildren(root).Count == 0
+    if root.ScrollBarAlpha != 0.0F || ScrollbarParts.ActiveChildren(root).Count != 0 {
+      return false
+    }
+    ScrollState.Hover(root, true, true)
+    ScrollState.Hover(root, true, false)
+    ScrollActivityStates.For(root).Vertical.HideDeadlineTicks = 1.0
+    if !ScrollState.HasDemand(root) || !Double.IsPositiveInfinity(ScrollState.DeadlineSeconds(root)) {
+      return false
+    }
+    window.UpdateTree(0.025)
+    if root.ScrollBarAlpha < 0.74F || root.ScrollBarAlpha > 0.76F { return false }
+    window.UpdateTree(0.1)
+    return root.ScrollBarAlpha == 0.0F && !ScrollState.HasDemand(root)
+  }
+
+  func IdleCaretDeadlineAndTouchMomentumContract() bool {
+    let caretWindow = Window{ Root: ScrollIdleCaretCell{}, Width: 100, Height: 30 }
+    caretWindow.UpdateTree()
+    guard let caret = caretWindow.Tree else { return false }
+    caretWindow.SchedulerIdleElapsedForTest(0.6)
+    if !caretWindow.SchedulerTimedServiceDue() { return false }
+    caretWindow.UpdateTree(0.6, 0.0)
+    caretWindow.SchedulerIdleElapsedForTest(0.0)
+    if caret.BlinkT != 0.6 || caretWindow.SchedulerTimedServiceDue() { return false }
+
+    for capture in []bool{ false, true } {
+      let cell = ScrollTouchCell{ Capture: capture }
+      let window = Window{ Root: cell, Width: 220, Height: 220 }
+      window.UpdateTree()
+      guard let root = window.Tree else { return false }
+      let input = window.InputForTest
+      input.QueuePointerPress(1, PointerDevice.Touch, 30.0F, 140.0F,
+        PointerButton.Primary, KeyModifiers{})
+      window.DrainQueuedInputForTest()
+      window.UpdateTree(0.02)
+      input.QueuePointerMove(1, PointerDevice.Touch, 30.0F, 120.0F, KeyModifiers{})
+      input.QueuePointerMove(1, PointerDevice.Touch, 30.0F, 100.0F, KeyModifiers{})
+      window.DrainQueuedInputForTest()
+      if capture {
+        if root.ScrollY != 0.0F || cell.Cancels != 0 { return false }
+        input.QueuePointerCancel(1, PointerDevice.Touch)
+        window.DrainQueuedInputForTest()
+        continue
+      }
+      if root.ScrollY != 20.0F || root.ScrollTargetY != 20.0F || cell.Cancels != 1
+        || !input.ConsumeScrollRectsDirty() { return false }
+      input.QueuePointerRelease(1, PointerDevice.Touch, 30.0F, 100.0F,
+        PointerButton.Primary, KeyModifiers{})
+      window.DrainQueuedInputForTest()
+      window.UpdateTree(0.05)
+      if root.ScrollY <= 20.0F || cell.Clicks != 0 { return false }
+      let settled = root.ScrollY
+      input.QueuePointerPress(2, PointerDevice.Touch, 30.0F, 100.0F,
+        PointerButton.Primary, KeyModifiers{})
+      input.QueuePointerCancel(2, PointerDevice.Touch)
+      window.DrainQueuedInputForTest()
+      window.UpdateTree(0.3)
+      if root.ScrollY != settled || ScrollState.HasDemand(root) { return false }
+      ScrollState.StartMomentum(root, 0.0F, 1000.0F)
+      input.Reset(root, Resolver{})
+      window.UpdateTree(0.1)
+      if root.ScrollY != settled || ScrollState.HasDemand(root) { return false }
+      ScrollState.StartMomentum(root, 0.0F, 1000.0F)
+      ScrollState.Step(root, 1.0F, 0.1F, true)
+      if root.ScrollY != settled || ScrollState.HasDemand(root) { return false }
+    }
+    return true
   }
 
   func ReservedGutterAndCoupledAxesContract() bool {
@@ -378,6 +445,32 @@ internal class ScrollbarFixtures {
       Track: Container{ BackgroundColor: Color.Rgb(20, 30, 40) },
       Thumb: Container{ BackgroundColor: Color.Rgb(40, 50, 60) },
     }
+}
+
+public partial class Window {
+  internal func SchedulerIdleElapsedForTest(elapsed float64) {
+    schedulerLastTicks = float64(Stopwatch.GetTimestamp()) - elapsed * float64(Stopwatch.Frequency)
+  }
+}
+
+internal class ScrollIdleCaretCell : Cell {
+  override func Build() Blob -> TextEntry{ Value: "caret", AutoFocus: true, Width: 100, Height: 30 }
+}
+
+internal class ScrollTouchCell : Cell {
+  internal prop Capture bool { get; init; }
+  internal var Cancels int32
+  internal var Clicks int32
+
+  override func Build() Blob -> Container{
+    Width: 100, Height: 100, OverflowY: Overflow.Scroll,
+    Transform: PanelTransform{ Scale: 2 },
+    TransformOriginX: Percent(0), TransformOriginY: Percent(0),
+    OnPointerDown: (e PointerEvent) -> { if Capture { e.Capture() } },
+    OnPointerCancel: (e PointerEvent) -> { Cancels++ },
+    OnClick: () -> { Clicks++ },
+    Container{ Width: 100, Height: 300, FlexShrink: 0 },
+  }
 }
 
 internal class ScrollbarPublicCell(handle ElementHandle) : Cell {

@@ -4,6 +4,13 @@ import System.Collections.Generic
 
 internal class DragTargetRouting {
   shared {
+    internal func RouteStart(path List[Node]) int32 {
+      for var i = path.Count; i > 0; i-- {
+        if path[i - 1].FocusScopeBoundary { return i - 1 }
+      }
+      return 0
+    }
+
     internal func AllowsPath(path List[Node]) bool -> path.Count > 0
       && canReceiveInput(path[path.Count - 1])
 

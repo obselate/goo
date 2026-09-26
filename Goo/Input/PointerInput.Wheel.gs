@@ -59,29 +59,22 @@ internal partial class PointerInput {
 
   private func applyWheelScroll(chain List[Node], dx float32, dy float32) bool {
     var consumed = false
-    if dy != 0.0F {
-      if let target = deepestScrollable(chain, true) {
-        let moved = ScrollState.By(target, 0.0F, -dy * InputPolicy.WheelUnit(true, scrollViewportHeight(target)) * WheelScrollScale)
-        consumed = moved.Y != 0.0
-      }
-    }
-    if dx != 0.0F {
-      if let target = deepestScrollable(chain, false) {
-        let moved = ScrollState.By(target, -dx * InputPolicy.WheelUnit(false, scrollViewportWidth(target)) * WheelScrollScale, 0.0F)
-        consumed = consumed || moved.X != 0.0
-      }
-    }
-    return consumed
-  }
-
-  private func deepestScrollable(chain List[Node], vertical bool) Node? {
+    var remainingX = -dx
+    var remainingY = -dy
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
-      if (vertical ? maxScrollY(n) : maxScrollX(n)) > 0.0F { return n }
-      if n.FocusScopeBoundary || n.IsPortal {
-        break
+      let unitX = InputPolicy.WheelUnit(false, scrollViewportWidth(n)) * WheelScrollScale
+      let unitY = InputPolicy.WheelUnit(true, scrollViewportHeight(n)) * WheelScrollScale
+      let x = maxScrollX(n) > 0.0F ? remainingX * unitX : 0.0F
+      let y = maxScrollY(n) > 0.0F ? remainingY * unitY : 0.0F
+      if x != 0.0F || y != 0.0F {
+        let moved = ScrollState.By(n, x, y)
+        consumed = consumed || moved.X != 0.0 || moved.Y != 0.0
+        if unitX > 0.0F { remainingX = remainingX - float32(moved.X) / unitX }
+        if unitY > 0.0F { remainingY = remainingY - float32(moved.Y) / unitY }
       }
+      if n.FocusScopeBoundary || n.IsPortal { break }
     }
-    return nil
+    return consumed
   }
 }

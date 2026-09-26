@@ -254,7 +254,8 @@ internal class Reconciler {
     let active = b.Active?.Entries()
     let focus = b.Focus?.Entries()
     let disabled = b.DisabledStyle?.Entries()
-    let nextFocusable = focusable && !b.Disabled
+    let nextDisabled = b.Disabled || InputCallbacks.BlobCommand(b)?.CanExecute == false
+    let nextFocusable = focusable && !nextDisabled
     let baseChanged = !sameStyleEntries(n.BaseStyle, entries)
     let hoverChanged = !sameStyleEntries(n.HoverStyle, hover)
     let activeChanged = !sameStyleEntries(n.ActiveStyle, active)
@@ -265,7 +266,7 @@ internal class Reconciler {
       || n.TransitionEasing != b.TransitionEasing
       || !sameTransitionSelection(n.TransitionSelection, b.TransitionSelection)
     let layoutTransitionChanged = !sameLayoutTransition(LayoutTransitions.Value(n), b.LayoutTransition)
-    let disabledChanged = n.Disabled != b.Disabled
+    let disabledChanged = n.Disabled != nextDisabled
     let styleChanged = initial
       || baseChanged
       || hoverChanged
@@ -290,7 +291,7 @@ internal class Reconciler {
       if layoutTransitionChanged {
         LayoutTransitions.Configure(n, b.LayoutTransition, Pump, RetainedInvalidated)
       }
-      if disabledChanged { n.Disabled = b.Disabled }
+      if disabledChanged { n.Disabled = nextDisabled }
       invalidateStyle(n, initial)
       MarkEffects(ReconcileEffects.Style)
     }

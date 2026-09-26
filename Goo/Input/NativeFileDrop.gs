@@ -118,13 +118,16 @@ internal class NativeDropRouter {
         hitChainInto(root, x, y, path)
         var selected Node?
         if DragTargetRouting.AllowsPath(path) {
-          for var i = path.Count; i > 0; i-- {
+          let start = DragTargetRouting.RouteStart(path)
+          for var i = path.Count; i > start; i-- {
             let target = path[i - 1]
             if !DragTargetRouting.Available(root, target) { continue }
             if let descriptor = DragDropMetadata.Target(target) {
               if let event = Event(session, target, DragEventKind.Move, DragEffect.None) {
-                let accepted = acceptedDragEffect(descriptor.Query(event), DragEffect.Copy)
-                Rebuild(root, target)
+                let owner = CellOwnership.Within(root, target)
+                var accepted DragEffect
+                try { accepted = acceptedDragEffect(descriptor.Query(event), DragEffect.Copy) }
+                finally { Rebuild(owner) }
                 if current != session || !canReceive() { return }
                 if accepted == DragEffect.Copy && DragTargetRouting.Available(root, target) { selected = target
                   break }
@@ -161,11 +164,12 @@ internal class NativeDropRouter {
 
   private func Notify(root Node, session NativeDropSession, target Node, kind DragEventKind, effect DragEffect) {
     guard let descriptor = DragDropMetadata.Target(target), let event = Event(session, target, kind, effect) else { return }
-    descriptor.Changed?.Invoke(event)
-    Rebuild(root, target)
+    let owner = CellOwnership.Within(root, target)
+    try { descriptor.Changed?.Invoke(event) }
+    finally { Rebuild(owner) }
   }
-  private func Rebuild(root Node, target Node) {
-    CellOwnership.Within(root, target)?.Rebuild()
+  private func Rebuild(owner Cell?) {
+    owner?.Rebuild()
     invalidate()
   }
 }

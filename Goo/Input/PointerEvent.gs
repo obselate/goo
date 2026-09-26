@@ -1,6 +1,29 @@
 package Goo
 
+import System.Collections.Generic
+
+internal class PointerDispatchFrame {
+  internal var Generation int64
+  internal var PropagationStopped bool
+  internal var DefaultPrevented bool
+  internal var CurrentTarget Node?
+  internal var CaptureOwner Node?
+  internal var CaptureTarget Node?
+  internal var ReleaseTarget Node?
+  internal init(generation int64, stopped bool, prevented bool, target Node?,
+    captureOwner Node?, captureTarget Node?, releaseTarget Node?) {
+      Generation = generation
+      PropagationStopped = stopped
+      DefaultPrevented = prevented
+      CurrentTarget = target
+      CaptureOwner = captureOwner
+      CaptureTarget = captureTarget
+      ReleaseTarget = releaseTarget
+    }
+}
+
 internal class PointerDispatchControl {
+  private var frames Stack[PointerDispatchFrame]?
   internal var Active bool
   internal var Generation int64
   internal var PropagationStopped bool
@@ -11,6 +34,11 @@ internal class PointerDispatchControl {
   internal var ReleaseTarget Node?
 
   internal func Begin(generation int64, captureOwner Node?) {
+    if Active {
+      frames ??= Stack[PointerDispatchFrame]()
+      frames!!.Push(PointerDispatchFrame(Generation, PropagationStopped, DefaultPrevented,
+        CurrentTarget, CaptureOwner, CaptureTarget, ReleaseTarget))
+    }
     Generation = generation
     PropagationStopped = false
     DefaultPrevented = false
@@ -23,6 +51,17 @@ internal class PointerDispatchControl {
 
   internal func Finish(generation int64) {
     if Active && Generation == generation {
+      if frames != nil && frames!!.Count > 0 {
+        let previous = frames!!.Pop()
+        Generation = previous.Generation
+        PropagationStopped = previous.PropagationStopped
+        DefaultPrevented = previous.DefaultPrevented
+        CurrentTarget = previous.CurrentTarget
+        CaptureOwner = previous.CaptureOwner
+        CaptureTarget = previous.CaptureTarget
+        ReleaseTarget = previous.ReleaseTarget
+        return
+      }
       Active = false
       CurrentTarget = nil
       CaptureOwner = nil
@@ -31,12 +70,21 @@ internal class PointerDispatchControl {
     }
   }
 
+  private func saved(generation int64) PointerDispatchFrame? {
+    if let stack = frames {
+      for frame in stack { if frame.Generation == generation { return frame } }
+    }
+    return nil
+  }
+
   internal func Stop(generation int64) {
     if Active && Generation == generation { PropagationStopped = true }
+    else if let previous = saved(generation) { previous.PropagationStopped = true }
   }
 
   internal func Prevent(generation int64) {
     if Active && Generation == generation { DefaultPrevented = true }
+    else if let previous = saved(generation) { previous.DefaultPrevented = true }
   }
 
   internal func SetCurrentTarget(generation int64, target Node) {
@@ -50,6 +98,8 @@ internal class PointerDispatchControl {
   internal func Capture(generation int64) {
     if Active && Generation == generation {
       if let target = CurrentTarget { CaptureTarget = target }
+    } else if let previous = saved(generation) {
+      previous.CaptureTarget = previous.CurrentTarget
     }
   }
 
@@ -59,6 +109,10 @@ internal class PointerDispatchControl {
         if let target = CurrentTarget {
           if owner == target { ReleaseTarget = target }
         }
+      }
+    } else if let previous = saved(generation) {
+      if previous.CaptureOwner == previous.CurrentTarget {
+        previous.ReleaseTarget = previous.CurrentTarget
       }
     }
   }

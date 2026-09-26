@@ -16,9 +16,9 @@ internal partial class PointerInput {
   private var penSequenceActive bool
   private var cursor Vector2
   private var cursorValid bool
-  private var queue List[QueuedPointerEvent]
-  private var queueHead int32
+  private let queue InputEventQueue
   private var hoverChain List[Node]
+  private var hoverGeneration int64
   private var scratchChain List[Node]
   private var hitChain List[Node]
   private var routePositions List[Point]
@@ -36,10 +36,13 @@ internal partial class PointerInput {
   private var dragHitPath List[Node]?
   private var dragGeneration int64
   private var creatingDrag bool
+  private var resetting bool
 
-  internal init(focus FocusManager) {
+  internal convenience init(focus FocusManager) { init(focus, InputEventQueue()) }
+
+  internal init(focus FocusManager, queue InputEventQueue) {
     this.focus = focus
-    queue = List[QueuedPointerEvent]()
+    this.queue = queue
     mouse = PointerContact(0, PointerDevice.Mouse)
     current = mouse
     hoverChain = List[Node]()
@@ -172,75 +175,64 @@ internal partial class PointerInput {
   }
 
   internal func Drain(root Node?, resolver Resolver, timeS float64, text TextInput) bool {
+    if !queue.Begin() { return false }
     var changed = false
-    queueHead = 0
     try {
-      while queueHead < queue.Count {
-        let e = queue[queueHead]
-        queueHead = queueHead + 1
-        try {
-          let createsContact = e.Kind == PointerEventKind.Press
-            || (e.Kind == PointerEventKind.Move && e.Device == PointerDevice.Pen)
-          if e.Device == PointerDevice.Mouse {
-            current = mouse
-          } else {
-            guard let contact = findContact(e.PointerId, e.Device, createsContact) else {
-              continue
-            }
-            current = contact
-          }
-          if e.Kind == PointerEventKind.Move {
-            if e.HasButtons { current.HeldButtons = maskCanceledButtons(e.Buttons) }
-            updatePressure(e.Pressure, e.HasPressure)
-            if HandlePointerMove(root, resolver, e.X, e.Y, e.Modifiers) {
-              changed = true
-            }
-          } else if e.Kind == PointerEventKind.Wheel {
-            if HandleWheel(root, e.X, e.Y, e.DX, e.DY, e.Modifiers) {
-              changed = true
-            }
-          } else if e.Kind == PointerEventKind.Press {
-            HandlePointerPress(root, resolver, text, timeS, e.X, e.Y, e.Button, e.Buttons,
-              e.HasButtons, e.Pressure, e.HasPressure, e.Modifiers)
-            if current.PressChain.Count > 0 || current.DragEntry != nil || current.DragEditor != nil
-              || dragCandidate != nil || dragSession != nil {
-                changed = true
-              }
-          } else if e.Kind == PointerEventKind.Cancel {
-            var diagnosticsConsumed = false
-            if let hook = diagnosticsHook {
-              diagnosticsConsumed = hook(root, PointerEventKind.Cancel, e.X, e.Y, e.Button)
-            }
-            let canceled = cancelInteraction(root, resolver)
-            if diagnosticsConsumed || canceled {
-              changed = true
-            }
-            if current != mouse { removeCurrentContact() }
-          } else {
-            let hadPress = current.PressChain.Count > 0 || current.DragEntry != nil || current.DragEditor != nil
-              || currentOwnsDragState()
-            if HandlePointerRelease(root, resolver, e.X, e.Y, e.Button, e.Buttons,
-              e.HasButtons, e.Pressure, e.HasPressure, e.Modifiers) || hadPress{
-                changed = true
-              }
-            if current.Device == PointerDevice.Touch && current.HeldButtons == PointerButtons.None {
-              removeCurrentContact()
-            } else if current.Device == PointerDevice.Pen && current.HeldButtons == PointerButtons.None {
-              endDeviceSequenceIfIdle(PointerDevice.Pen)
-            }
-          }
-          current = mouse
-        } finally {
-          resolver.Flush()
-        }
+      while queue.Take(out var e) {
+        if Dispatch(e.Pointer, root, resolver, timeS, text) { changed = true }
       }
-    } finally {
-      if queueHead > 0 {
-        queue.RemoveRange(0, queueHead)
-      }
-      queueHead = 0
-    }
+    } finally { queue.Finish() }
     return changed
+  }
+
+  internal func Dispatch(e QueuedPointerEvent, root Node?, resolver Resolver,
+    timeS float64, text TextInput) bool {
+      gestureTime = timeS
+    try {
+      let createsContact = e.Kind == PointerEventKind.Press
+        || (e.Kind == PointerEventKind.Move && e.Device == PointerDevice.Pen)
+      if e.Device == PointerDevice.Mouse {
+        current = mouse
+      } else {
+        guard let contact = findContact(e.PointerId, e.Device, createsContact) else { return false }
+        current = contact
+      }
+      if e.Kind == PointerEventKind.Move {
+        if e.HasButtons { current.HeldButtons = maskCanceledButtons(e.Buttons) }
+        updatePressure(e.Pressure, e.HasPressure)
+        return HandlePointerMove(root, resolver, e.X, e.Y, e.Modifiers)
+      }
+      if e.Kind == PointerEventKind.Wheel {
+        return HandleWheel(root, e.X, e.Y, e.DX, e.DY, e.Modifiers)
+      }
+      if e.Kind == PointerEventKind.Press {
+        HandlePointerPress(root, resolver, text, timeS, e.X, e.Y, e.Button, e.Buttons,
+          e.HasButtons, e.Pressure, e.HasPressure, e.Modifiers)
+        return current.PressChain.Count > 0 || current.DragEntry != nil || current.DragEditor != nil
+          || dragCandidate != nil || dragSession != nil
+      }
+      if e.Kind == PointerEventKind.Cancel {
+        var diagnosticsConsumed = false
+        if let hook = diagnosticsHook {
+          diagnosticsConsumed = hook(root, PointerEventKind.Cancel, e.X, e.Y, e.Button)
+        }
+        try { return cancelInteraction(root, resolver) || diagnosticsConsumed }
+        finally { if current != mouse { removeCurrentContact() } }
+      }
+      let hadPress = current.PressChain.Count > 0 || current.DragEntry != nil || current.DragEditor != nil
+        || currentOwnsDragState()
+      let changed = HandlePointerRelease(root, resolver, e.X, e.Y, e.Button, e.Buttons,
+        e.HasButtons, e.Pressure, e.HasPressure, e.Modifiers) || hadPress
+      if current.Device == PointerDevice.Touch && current.HeldButtons == PointerButtons.None {
+        removeCurrentContact()
+      } else if current.Device == PointerDevice.Pen && current.HeldButtons == PointerButtons.None {
+        endDeviceSequenceIfIdle(PointerDevice.Pen)
+      }
+      return changed
+    } finally {
+      current = mouse
+      resolver.Flush()
+    }
   }
 
   internal func QueueMove(x float32, y float32) {
@@ -382,7 +374,14 @@ internal partial class PointerInput {
     }
   }
 
-  internal func Reset(root Node?, resolver Resolver) {
+  internal func Reset(root Node?, resolver Resolver, clearQueue bool = true) {
+    if resetting { return }
+    resetting = true
+    try { reset(root, resolver, clearQueue) }
+    finally { resetting = false }
+  }
+
+  private func reset(root Node?, resolver Resolver, clearQueue bool) {
     var failure Exception?
     try {
       cancelDrag(root)
@@ -411,8 +410,7 @@ internal partial class PointerInput {
     touchSequenceActive = false
     penSequenceActive = false
     current = mouse
-    queue.Clear()
-    queueHead = 0
+    if clearQueue { queue.Clear() }
     try {
       clearHover(resolver)
     } catch (error Exception) {
@@ -449,14 +447,21 @@ internal partial class PointerInput {
   private func hoverPositionY() float32 -> cursorValid ? cursor.Y : current.LastEventY
 
   private func commitHoverRoute(resolver Resolver, x float32, y float32) {
+    hoverGeneration++
+    let generation = hoverGeneration
     let shared = sharedHoverPrefix(hoverChain, scratchChain)
     setHoverState(hoverChain, shared, hoverChain.Count, false, resolver)
     setHoverState(scratchChain, shared, scratchChain.Count, true, resolver)
     let tmp = hoverChain
     hoverChain = scratchChain
     scratchChain = tmp
-    dispatchHoverLeaves(scratchChain, shared, x, y)
-    dispatchHoverEnters(hoverChain, shared, x, y)
+    let leaveFailure = dispatchHoverLeaves(scratchChain, shared, x, y)
+    if generation != hoverGeneration {
+      if let error = leaveFailure { ExceptionDispatchInfo.Capture(error).Throw() }
+      return
+    }
+    let enterFailure = dispatchHoverEnters(hoverChain, shared, x, y)
+    if let error = leaveFailure ?? enterFailure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   private func sharedHoverPrefix(left List[Node], right List[Node]) int32 {
@@ -479,24 +484,36 @@ internal partial class PointerInput {
       }
     }
 
-  private func dispatchHoverLeaves(route List[Node], shared int32, x float32, y float32) {
+  private func dispatchHoverLeaves(route List[Node], shared int32, x float32, y float32) Exception? {
+    var failure Exception?
+    let generation = hoverGeneration
     for var i = route.Count; i > shared; i-- {
       let n = route[i - 1]
       if let callback = InputCallbacks.PointerLeave(n) {
-        callback(hoverEvent(n, x, y))
-        CellOwnership.InRoute(route, i - 1)?.Rebuild()
+        let owner = CellOwnership.InRoute(route, i - 1)
+        try { callback(hoverEvent(n, x, y)) }
+        catch (error Exception) { failure ??= error }
+        finally { owner?.Rebuild() }
       }
+      if generation != hoverGeneration { break }
     }
+    return failure
   }
 
-  private func dispatchHoverEnters(route List[Node], shared int32, x float32, y float32) {
+  private func dispatchHoverEnters(route List[Node], shared int32, x float32, y float32) Exception? {
+    var failure Exception?
+    let generation = hoverGeneration
     for i in shared ... route.Count {
       let n = route[i]
       if let callback = InputCallbacks.PointerEnter(n) {
-        callback(hoverEvent(n, x, y))
-        CellOwnership.InRoute(route, i)?.Rebuild()
+        let owner = CellOwnership.InRoute(route, i)
+        try { callback(hoverEvent(n, x, y)) }
+        catch (error Exception) { failure ??= error }
+        finally { owner?.Rebuild() }
       }
+      if generation != hoverGeneration || n.Retired { break }
     }
+    return failure
   }
 
   private func hoverEvent(n Node, x float32, y float32) PointerEvent {
@@ -941,7 +958,7 @@ internal partial class PointerInput {
       let semantic = isSemanticPrimary()
       try {
         if button == PointerButton.Primary && touchPanActive() {
-          return updateTouchPan(root, resolver, x, y, false)
+          return finishTouchPan(root, resolver, x, y)
         }
         if button == PointerButton.Primary && hasScrollDrag() {
           let prevented = dispatchPointer(root, PointerEventKind.Release, x, y,
@@ -960,7 +977,9 @@ internal partial class PointerInput {
             terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, error)
           }
           releaseCaptureAfterUp(button)
-          if let tree = root {
+          if prevented {
+            terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, nil)
+          } else if let tree = root {
             dropDrag(tree, x, y, modifiers)
           } else {
             terminateDrag(nil, DragEndKind.Canceled, DragEffect.None, false, nil)
@@ -1017,7 +1036,7 @@ internal partial class PointerInput {
 
   private func deepestClickable(chain List[Node]) Node? {
     for var i = chain.Count; i > 0; i-- {
-      if chain[i - 1].OnClick != nil {
+      if hasActivation(chain[i - 1]) {
         return chain[i - 1]
       }
       if chain[i - 1].FocusScopeBoundary {
@@ -1125,6 +1144,7 @@ internal class PointerContact {
   internal var ActivePositions List[Point]
   internal var HeldButtons PointerButtons
   internal var CanceledButtons PointerButtons
+  internal var Canceling bool
   internal var CaptureTarget Node?
   internal var CaptureButton PointerButton
   internal var ActiveTarget Node?

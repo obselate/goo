@@ -263,6 +263,8 @@ internal partial class PointerInput {
       dispatchGeneration++
       let generation = dispatchGeneration
       control.Begin(generation, current.CaptureTarget)
+      let contact = current
+      let routeCount = route.Count
       var prevented = false
       var interactiveChild = false
       try {
@@ -286,23 +288,18 @@ internal partial class PointerInput {
             Generation: generation,
           }
           control.SetCurrentTarget(generation, n)
+          let callback = if kind == PointerEventKind.Press { n.OnPointerDown }
+            else if kind == PointerEventKind.Move { n.OnPointerMove } else { n.OnPointerUp }
+          let owner = callback != nil ? CellOwnership.InRoute(route, i - 1) : nil
           try {
-            if kind == PointerEventKind.Press {
-              if let callback = n.OnPointerDown {
-                callback(event)
-                CellOwnership.InRoute(route, i - 1)?.Rebuild()
-              }
-            } else if kind == PointerEventKind.Move {
-              if let callback = n.OnPointerMove {
-                callback(event)
-                CellOwnership.InRoute(route, i - 1)?.Rebuild()
-              }
-            } else if let callback = n.OnPointerUp {
-              callback(event)
-              CellOwnership.InRoute(route, i - 1)?.Rebuild()
-            }
+            callback?.Invoke(event)
           } finally {
             control.ClearCurrentTarget(generation)
+            owner?.Rebuild()
+          }
+          if current != contact || route.Count != routeCount || n.Retired {
+            current = contact
+            return true
           }
           if control.PropagationStopped || n.FocusScopeBoundary { break }
           interactiveChild = interactiveChild || isInteractiveContent(n)
@@ -317,6 +314,7 @@ internal partial class PointerInput {
     }
 
   private func cancelInteraction(root Node?, resolver Resolver) bool {
+    if current.Canceling { return false }
     let hadInteraction = current.HeldButtons != PointerButtons.None || current.PressChain.Count > 0
       || current.DragEntry != nil || current.DragEditor != nil || hasScrollDrag()
       || current.ClickTarget != nil || current.CaptureTarget != nil || current.ActiveTarget != nil
@@ -324,6 +322,8 @@ internal partial class PointerInput {
     if !hadInteraction { resetClickSequence()
       return false }
     let canceled = current.HeldButtons
+    let contact = current
+    contact.Canceling = true
     var failure Exception?
     try {
       try {
@@ -337,6 +337,7 @@ internal partial class PointerInput {
         if failure == nil { failure = error }
       }
     } finally {
+      current = contact
       current.CanceledButtons = PointerButtons(int32(current.CanceledButtons) | int32(canceled))
       clearPressChain(resolver)
       current.DragEntry = nil
@@ -349,7 +350,9 @@ internal partial class PointerInput {
       if isSemanticPrimary() {
         if let focusTarget = current.FocusTarget {
           if focus.FocusedNode() == focusTarget {
-            focus.SetFocus(resolver, nil) }
+            try { focus.SetFocus(resolver, nil) }
+            catch (error Exception) { if failure == nil { failure = error } }
+          }
         }
       }
       current.FocusTarget = nil
@@ -357,6 +360,7 @@ internal partial class PointerInput {
       clearActiveRoute()
       current.HeldButtons = PointerButtons.None
       resetClickSequence()
+      contact.Canceling = false
       if current.Device == PointerDevice.Touch && primaryTouch == current {
         primaryTouch = nil
       } else if current.Device == PointerDevice.Pen && primaryPen == current {
@@ -377,6 +381,8 @@ internal partial class PointerInput {
     dispatchGeneration++
     let generation = dispatchGeneration
     control.Begin(generation, nil)
+    let contact = current
+    let routeCount = route.Count
     var interactiveChild = false
     try {
       for var i = route.Count; i > 0; i-- {
@@ -396,15 +402,17 @@ internal partial class PointerInput {
           Generation: generation,
         }
         control.SetCurrentTarget(generation, n)
+        let owner = n.OnPointerCancel != nil ? CellOwnership.InRoute(route, i - 1) : nil
         try {
           if let callback = n.OnPointerCancel {
             callback(event)
-            CellOwnership.InRoute(route, i - 1)?.Rebuild()
           }
         } finally {
           control.ClearCurrentTarget(generation)
+          owner?.Rebuild()
         }
-        if control.PropagationStopped { break }
+        if current != contact || route.Count != routeCount { return }
+        if control.PropagationStopped || n.FocusScopeBoundary { break }
         interactiveChild = interactiveChild || isInteractiveContent(n)
       }
     } finally {

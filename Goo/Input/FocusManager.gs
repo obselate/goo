@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Runtime.ExceptionServices
 
 internal class FocusManager {
   private var focused Node?
@@ -62,26 +63,40 @@ internal class FocusManager {
     if nextTarget != nil {
       nativeFocusAllowed = true
     }
+    var failure Exception?
     if let old = previous {
-      BeforeBlur?.Invoke(old)
       old.Focused = false
       resolver.Invalidate(old, false)
     }
     if let next = nextTarget {
       next.Focused = true
       resolver.Invalidate(next, false)
-      AfterFocus?.Invoke(next)
     }
-    Changed?.Invoke()
     if let old = previous {
-      dispatchFocus(old, false)
-      if changeGeneration != generation {
-        return
+      try { BeforeBlur?.Invoke(old) }
+      catch (error Exception) { failure ??= error }
+    }
+    if changeGeneration == generation {
+      if let next = nextTarget {
+        try { AfterFocus?.Invoke(next) }
+        catch (error Exception) { failure ??= error }
       }
     }
-    if let next = nextTarget {
-      dispatchFocus(next, true)
+    try { Changed?.Invoke() }
+    catch (error Exception) { failure ??= error }
+    if let old = previous {
+      if changeGeneration == generation {
+        try { dispatchFocus(old, false) }
+        catch (error Exception) { failure ??= error }
+      }
     }
+    if changeGeneration == generation {
+      if let next = nextTarget {
+        try { dispatchFocus(next, true) }
+        catch (error Exception) { failure ??= error }
+      }
+    }
+    if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
   internal func MoveFocus(root Node?, resolver Resolver, forward bool) bool {
@@ -179,8 +194,9 @@ internal class FocusManager {
         let node = current
         let callback = received ? InputCallbacks.Focus(node) : InputCallbacks.Blur(node)
         if let handler = callback {
-          handler(FocusEvent{Control: control, Generation: generation})
-          CellOwnership.Nearest(node)?.Rebuild()
+          let owner = CellOwnership.Nearest(node)
+          try { handler(FocusEvent{Control: control, Generation: generation}) }
+          finally { owner?.Rebuild() }
         }
         if control.PropagationStopped || node.FocusScopeBoundary {
           break

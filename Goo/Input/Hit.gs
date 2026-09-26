@@ -77,7 +77,7 @@ internal func hitDispatchClick(root Node, x float32, y float32) bool {
   if chain.Count == 0 || !canReceiveInput(chain[chain.Count - 1]) { return false }
   for var i = chain.Count; i > 0; i-- {
     let n = chain[i - 1]
-    if n.OnClick != nil && hitFire(n, CellOwnership.InRoute(chain, i - 1)) { return true }
+    if hasActivation(n) { return hitFire(n, CellOwnership.InRoute(chain, i - 1)) }
     if n.FocusScopeBoundary { return false }
   }
   return false
@@ -135,12 +135,16 @@ private func appendHitChain(n Node, x float32, y float32, sink List[Node]) bool 
   return false
 }
 
+internal func hasActivation(n Node) bool -> n.OnClick != nil || InputCallbacks.Command(n) != nil
+
 private func hitFire(n Node, owner Cell?) bool {
+  if let command = InputCallbacks.Command(n) {
+    try { return command.Execute() }
+    finally { owner?.Rebuild() }
+  }
   if let handler = n.OnClick {
-    handler()
-    if let c = owner {
-      c.Rebuild()
-    }
+    try { handler() }
+    finally { owner?.Rebuild() }
     return true
   }
   return false

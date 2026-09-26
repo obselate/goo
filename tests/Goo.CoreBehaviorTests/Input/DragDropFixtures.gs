@@ -7,6 +7,7 @@ internal class DragDropFixtures {
   func ThresholdNegotiationTargetingAndClickContract() bool {
     let events = List[string]()
     var clicks int32
+    var preventDrop bool
     let reconciler = Reconciler{ Res: Resolver{} }
     let root = reconciler.Mount(Container() {.Width: 240,.Height: 80,
         Container{
@@ -15,6 +16,7 @@ internal class DragDropFixtures {
           Width: 40,
           Height: 40,
           OnClick: () -> clicks++,
+          OnPointerUp: (e PointerEvent) -> { if preventDrop { e.PreventDefault() } },
           DragSource: DragSource(
             (e DragStartEvent) -> {
               events.Add("create:" + int32(e.Position.X).ToString())
@@ -68,7 +70,21 @@ internal class DragDropFixtures {
     for i in 0 ... expected.Length {
       if events[i] != expected[i] { return false }
     }
-    return true
+    events.Clear()
+    preventDrop = true
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(120.0F, 10.0F)
+    input.QueuePointerRelease(120.0F, 10.0F)
+    input.Drain(root, resolver, 2.0, nil)
+    if events.Count != 5 || events[3] != "Leave:None" || events[4] != "end:Canceled:None" { return false }
+    events.Clear()
+    preventDrop = false
+    root.Children[1].Children[0].FocusScopeBoundary = true
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(120.0F, 10.0F)
+    input.QueuePointerRelease(120.0F, 10.0F)
+    input.Drain(root, resolver, 3.0, nil)
+    return events.Count == 2 && events[1] == "end:Canceled:None" && clicks == 1
   }
 
   func CancellationContactAndCleanupContract() bool {

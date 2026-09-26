@@ -1448,6 +1448,16 @@ internal class InputFixtures {
     if nestedInner.ScrollTargetY != InputPolicy.WheelUnit(true, scrollViewportHeight(nestedInner)) || nestedRoot.ScrollTargetY != 0.0F {
       return false
     }
+    let innerUnit = InputPolicy.WheelUnit(true, scrollViewportHeight(nestedInner))
+    let outerUnit = InputPolicy.WheelUnit(true, scrollViewportHeight(nestedRoot))
+    ScrollState.To(nestedInner, 0.0F, maxScrollY(nestedInner) - innerUnit * 0.5F, true, false)
+    nested.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
+    if nestedInner.ScrollTargetY != maxScrollY(nestedInner)
+      || MathF.Abs(nestedRoot.ScrollTargetY - outerUnit * 0.5F) > 0.001F {
+        return false
+      }
+    nested.Wheel(50.0F, 50.0F, 0.0F, -1.0F)
+    if MathF.Abs(nestedRoot.ScrollTargetY - outerUnit * 1.5F) > 0.001F { return false }
 
     let sibling = InputFixtureDriver(InputNestedScrollCell{}, 200, 200)
     sibling.Wheel(50.0F, 150.0F, 0.0F, -1.0F)

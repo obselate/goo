@@ -6,8 +6,7 @@ import System.Diagnostics
 
 internal class KeyboardInput {
   private let focus FocusManager
-  private var queue List[KeyboardEvent]
-  private var queueHead int32
+  private let queue InputEventQueue
   private let releases Dictionary[Key, PendingKeyRelease] = Dictionary[Key, PendingKeyRelease]()
   private var heldTarget Node?
   private var heldFocusGeneration int64
@@ -24,9 +23,11 @@ internal class KeyboardInput {
   private var diagnosticsHook((Key, KeyModifiers) -> bool)?
   private var dispatchGeneration int64
 
-  internal init(focus FocusManager) {
+  internal convenience init(focus FocusManager) { init(focus, InputEventQueue()) }
+
+  internal init(focus FocusManager, queue InputEventQueue) {
     this.focus = focus
-    queue = List[KeyboardEvent]()
+    this.queue = queue
     heldKey = Key.Unknown
     pressedKey = Key.Unknown
     dispatchingKey = Key.Unknown
@@ -101,76 +102,61 @@ internal class KeyboardInput {
   internal func Drain(root Node?, resolver Resolver, text TextInput,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64,
     pointer PointerInput?) bool{
+      if !queue.Begin() { return false }
       var changed = clearButtonPressAfterFocusMove(resolver)
-      queueHead = 0
       try {
         resolver.Flush()
-        while queueHead < queue.Count {
-          let e = queue[queueHead]
-          queueHead = queueHead + 1
-          try {
-            if e.Kind == KeyboardEventKind.Press {
-              if let hook = diagnosticsHook {
-                if hook(e.Key, e.Modifiers) {
-                  changed = true
-                  continue
-                }
-              }
-              if root == nil || FocusScopes.ModalRoot(root) == nil {
-                if let callback = onKeyPress {
-                callback(e.Key, e.Modifiers)
-                }
-              }
-              pointer?.UpdateDragModifiers(root, e.Modifiers)
-              let target = focus.FocusedNode() ?? root
-              let dispatch = DispatchKeyDown(target, e.Key, e.Modifiers, false)
-              if dispatch.Repeat && focus.FocusedNode() == target {
-                StartKeyRepeat(e.Key, e.Modifiers, repeatStartTicks)
-              }
-              if dispatch.Handled { changed = true }
-            } else if e.Kind == KeyboardEventKind.Release {
-              try {
-                pointer?.UpdateDragModifiers(root, e.Modifiers)
-                if DispatchKeyUp(focus.FocusedNode() ?? root, e.Key, e.Modifiers).Handled {
-                  changed = true
-                }
-              } finally {
-                if e.Key == pressedKey { EndPress(root, resolver, pressedButton, false) }
-                releases.Remove(e.Key)
-                StopKeyRepeat(e.Key)
-              }
-            } else if let value = e.Text {
-              if e.TextFocusGeneration != focus.Generation {
-                continue
-              }
-              if e.Kind == KeyboardEventKind.Text && text.HandleChar(root, value) {
-                changed = true
-              }
-              if e.Kind == KeyboardEventKind.Composition
-                && text.HandleComposition(root, value, e.SelectionStart, e.SelectionLength) {
-                  changed = true
-                }
-            } else if e.Kind == KeyboardEventKind.CompositionCandidates {
-              if e.TextFocusGeneration == focus.Generation {
-                text.HandleCompositionCandidates(e.Candidates, e.SelectedCandidate, e.CandidatesHorizontal)
-              }
-            } else if e.Kind == KeyboardEventKind.CompositionCancel {
-              if e.TextFocusGeneration == focus.Generation && text.HandleCompositionCancel(root) {
-                changed = true
-              }
-            }
-          } finally {
-            resolver.Flush()
+        while queue.Take(out var e) {
+          if Dispatch(e.Keyboard, root, resolver, text, onKeyPress, repeatStartTicks, pointer) {
+            changed = true
           }
         }
-      } finally {
-        if queueHead > 0 {
-          queue.RemoveRange(0, queueHead)
-        }
-        queueHead = 0
-      }
+      } finally { queue.Finish() }
       return changed
     }
+
+  internal func Dispatch(e KeyboardEvent, root Node?, resolver Resolver, text TextInput,
+    onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64, pointer PointerInput?) bool {
+    try {
+      clearButtonPressAfterFocusMove(resolver)
+      if e.Kind == KeyboardEventKind.Press {
+        if let hook = diagnosticsHook {
+          if hook(e.Key, e.Modifiers) { return true }
+        }
+        if root == nil || FocusScopes.ModalRoot(root) == nil {
+          onKeyPress?.Invoke(e.Key, e.Modifiers)
+        }
+        pointer?.UpdateDragModifiers(root, e.Modifiers)
+        let target = focus.FocusedNode() ?? root
+        let dispatch = DispatchKeyDown(target, e.Key, e.Modifiers, false)
+        if dispatch.Repeat && focus.FocusedNode() == target {
+          StartKeyRepeat(e.Key, e.Modifiers, repeatStartTicks)
+        }
+        return dispatch.Handled
+      }
+      if e.Kind == KeyboardEventKind.Release {
+        try {
+          pointer?.UpdateDragModifiers(root, e.Modifiers)
+          return DispatchKeyUp(focus.FocusedNode() ?? root, e.Key, e.Modifiers).Handled
+        } finally {
+          if e.Key == pressedKey { EndPress(root, resolver, pressedButton, false) }
+          releases.Remove(e.Key)
+          StopKeyRepeat(e.Key)
+        }
+      }
+      if e.TextFocusGeneration != focus.Generation { return false }
+      if let value = e.Text {
+        if e.Kind == KeyboardEventKind.Text { return text.HandleChar(root, value) }
+        if e.Kind == KeyboardEventKind.Composition {
+          return text.HandleComposition(root, value, e.SelectionStart, e.SelectionLength)
+        }
+      }
+      if e.Kind == KeyboardEventKind.CompositionCandidates {
+        text.HandleCompositionCandidates(e.Candidates, e.SelectedCandidate, e.CandidatesHorizontal)
+      }
+      return e.Kind == KeyboardEventKind.CompositionCancel && text.HandleCompositionCancel(root)
+    } finally { resolver.Flush() }
+  }
 
   internal func Step(root Node?, resolver Resolver, text TextInput, dt float64) bool -> if heldKey == Key.Unknown { false } else { Step(root, resolver, text, dt, Stopwatch.GetTimestamp()) }
 
@@ -227,10 +213,9 @@ internal class KeyboardInput {
     return remaining <= 0.0 ? 0.0 : remaining
   }
 
-  internal func Reset(resolver Resolver) {
-    queue.Clear()
+  internal func Reset(resolver Resolver, clearQueue bool = true) {
+    if clearQueue { queue.Clear() }
     releases.Clear()
-    queueHead = 0
     resetRepeat()
     clearButtonPress(resolver)
   }
@@ -343,9 +328,11 @@ internal class KeyboardInput {
           let node = current
           let callback = down ? InputCallbacks.KeyDown(node) : InputCallbacks.KeyUp(node)
           if let handler = callback {
-            handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
-              Control: control, Generation: generation })
-            CellOwnership.Nearest(node)?.Rebuild()
+            let owner = CellOwnership.Nearest(node)
+            try {
+              handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
+                Control: control, Generation: generation })
+            } finally { owner?.Rebuild() }
           }
           last = node
           if control.PropagationStopped || node.FocusScopeBoundary { break }
@@ -360,25 +347,33 @@ internal class KeyboardInput {
           if !down && releases.TryGetValue(key, out var pending)
             && pending.Target == start && pending.Owner == node && pending.Generation == focus.Generation {
               result.Handled = true
-              pending.Action()
-              CellOwnership.Nearest(node)?.Rebuild()
+              let owner = CellOwnership.Nearest(node)
+              try { pending.Action() }
+              finally { owner?.Rebuild() }
               return result
             }
           if down {
             if let bindings = InputCallbacks.Bindings(node) {
               for binding in bindings {
                 if binding.Key != key || binding.Modifiers != modifiers { continue }
-                if binding.Action == nil && binding.OnRelease == nil { continue }
+                if binding.Action == nil && binding.Command == nil && binding.OnRelease == nil { continue }
                 result.Handled = true
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
-                  if !repeat {
-                    if let release = binding.OnRelease {
-                      releases[key] = PendingKeyRelease{ Target: start, Owner: node, Action: release, Generation: focus.Generation }
+                  let owner = CellOwnership.Nearest(node)
+                  try {
+                    if let command = binding.Command {
+                      if !command.Execute() {
+                        result.Repeat = false
+                        return result
+                      }
+                    } else { binding.Action?.Invoke() }
+                    if !repeat {
+                      if let release = binding.OnRelease {
+                        releases[key] = PendingKeyRelease{ Target: start, Owner: node, Action: release, Generation: focusGeneration }
+                      }
                     }
-                  }
-                  binding.Action?.Invoke()
-                  CellOwnership.Nearest(node)?.Rebuild()
+                  } finally { owner?.Rebuild() }
                 }
                 return result
               }
