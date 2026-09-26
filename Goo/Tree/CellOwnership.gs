@@ -9,7 +9,7 @@ internal class CellOwnership {
     internal func Nearest(node Node) Cell? {
       var current Node? = node
       while let value = current {
-        if let owner = value.Fiber {
+        if let owner = renderingCell(value) {
           return owner
         }
         current = value.Parent
@@ -24,7 +24,7 @@ internal class CellOwnership {
       var current = target
       var owner Cell?
       while true {
-        owner ??= current.Fiber
+        owner ??= renderingCell(current)
         if current == root {
           return owner
         }
@@ -43,11 +43,19 @@ internal class CellOwnership {
       for var i = index;
       i >= 0;
       i-- {
-        if let owner = route[i].Fiber {
+        if let owner = renderingCell(route[i]) {
           return owner
         }
       }
       return nil
+    }
+
+    private func renderingCell(node Node) Cell? {
+      var owner = node.Fiber
+      while let child = owner?.directChild {
+        owner = child
+      }
+      return owner
     }
   }
 }

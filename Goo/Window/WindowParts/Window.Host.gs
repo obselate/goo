@@ -429,7 +429,7 @@ public partial class Window {
   // latch Pump into an unpaced, unrendered poll spin instead of a bounded
   // sleep. idleWaitMs() below is where their timing actually gets honored.
   private func hasDemand() bool -> motionPump.Active || resolver.Animating.Count > 0
-    || renderDirty || pendingRebuild != 0
+    || renderDirty || pendingRebuild != 0 || resolver.Scrollbars.HasPending
     || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || hasScrollDemand()
     || accessibility?.HasDemand == true || hasPostedActions() || MetricSubscriptions.HasDemand(this)
     || windowTarget?.NeedsRender == true || windowTarget?.QueueWorkPending == true
@@ -627,6 +627,7 @@ public partial class Window {
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.ClearWindow(this))
     firstError = captureCleanupError(firstError, () -> motionPump.Clear())
+    resolver.DiscardPending()
     pendingRebuild = 0
     pendingPaintResourceInvalidation = 0
     lock cellQueueGate {

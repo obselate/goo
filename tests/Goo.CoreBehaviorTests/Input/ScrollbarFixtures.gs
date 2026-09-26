@@ -340,6 +340,45 @@ internal class ScrollbarFixtures {
     return thumbPresses == 1 && root.ScrollY > 0.0F
   }
 
+  func HoverPartsRemainOwnedByTheirWindow() bool {
+    let handle = ElementHandle{}
+    let first = Window{ Root: ScrollbarHoverCell(handle), Width: 100, Height: 100 }
+    let otherRoot = Cell{}
+    let other = Window{ Root: otherRoot, Width: 100, Height: 100 }
+    try {
+      first.UpdateTree()
+      other.UpdateTree()
+      first.PlatformInput.PointerMove(1L, PointerDevice.Mouse, 10.0F, 10.0F, KeyModifiers{}, 0.0F)
+      otherRoot.Rebuild()
+      other.UpdateTree()
+      if handle.IsMounted { return false }
+      first.UpdateTree()
+      if !handle.IsMounted || handle.AttachedWindow() != first { return false }
+      first.PlatformInput.PointerMove(1L, PointerDevice.Mouse, -10.0F, -10.0F, KeyModifiers{}, 0.0F)
+      first.UpdateTree()
+      return !handle.IsMounted
+    } finally {
+      first.Close()
+      other.Close()
+    }
+  }
+
+  func PartDisposalContinuesAfterCallbackFailure() bool {
+    RetirementDisposableCell.Reset()
+    let descriptor = Scrollbar{
+      Track: Container(){ Cell.Mount[string, RetirementDisposableCell]("first", "first"), },
+      Thumb: Container(){ Cell.Mount[string, RetirementDisposableCell]("later", "later"), },
+    }
+    let window = Window{ Root: ScrollbarFadeCell(descriptor), Width: 100, Height: 100 }
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    var threw bool
+    try { window.Close() }
+    catch (error InvalidOperationException) { threw = error.Message == "retire-first" }
+    return threw && RetirementDisposableCell.FirstDisposals == 1
+      && RetirementDisposableCell.LaterDisposals == 1 && ScrollbarParts.Children(root).Count == 0
+  }
+
   func WarmDragBytes() int64 {
     let root = mountScrollViewport(false, ScrollbarVisibility.Always)
     let resolver = Resolver{}
@@ -503,5 +542,14 @@ internal class ScrollbarFadeCell(descriptor Scrollbar) : Cell {
     ScrollbarY: descriptor,
     ScrollbarVisibilityY: ScrollbarVisibility.Auto,
     Container{ Width: 100.0, Height: 300.0, FlexShrink: 0.0 },
+  }
+}
+
+internal class ScrollbarHoverCell(handle ElementHandle) : Cell {
+  override func Build() Blob -> Container{
+    Width: 100, Height: 100, OverflowY: Overflow.Scroll,
+    ScrollbarVisibilityY: ScrollbarVisibility.Always,
+    Hover: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
+    Container{ Width: 100, Height: 300, FlexShrink: 0 },
   }
 }

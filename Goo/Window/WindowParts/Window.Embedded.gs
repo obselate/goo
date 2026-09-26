@@ -136,7 +136,8 @@ public partial class Window {
   internal func EmbeddedFrameDelay(suspended bool) float64 {
     if !IsOpen { return Double.PositiveInfinity }
     if SchedulerHasImmediateService() || pendingMetrics || pendingRebuild != 0
-      || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0 || (dirty && Root != nil) {
+      || pendingImageCompletion != 0 || pendingRetainedInvalidation != 0
+      || resolver.Scrollbars.HasPending || (dirty && Root != nil) {
         return 0.0
       }
     if suspended || windowTarget == nil || framebufferWidth <= 0 || framebufferHeight <= 0 {

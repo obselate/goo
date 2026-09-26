@@ -154,7 +154,7 @@ public partial class Window {
     }
     var changed = false
     var effects = combineEffects(pendingReconcileEffects, retainedEffects)
-    if dirty {
+    if dirty || resolver.Scrollbars.HasPending {
       dirty = false
       let reconcileProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       beginCellTransaction()

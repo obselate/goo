@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal class Reconciler {
+internal partial class Reconciler {
   internal prop Owner Window? {
     get;
     init;
@@ -85,7 +85,7 @@ internal class Reconciler {
       operationDepth++
       var parts bool
       try {
-        parts = ScrollbarParts.Flush(this)
+        parts = Res.Scrollbars.Flush(this)
       } finally {
         operationDepth--
       }
@@ -95,7 +95,6 @@ internal class Reconciler {
 
   internal func DiscardStyles() {
     Res.DiscardPending()
-    ScrollbarParts.Discard()
     if let root = styleRetryRoot {
       retryStyles(root)
     }
@@ -1236,78 +1235,10 @@ internal class Reconciler {
     } catch (error Exception) {
       if !committed {
         rollbackReplacements(scratchScope)
-        disposeProvisional(scratchScope)
+        disposeTrees(scratchScope.Provisional)
         rollbackHandleReplacements(scratchScope)
       }
       throw error
-    }
-  }
-
-  private func disposeTrees(nodes List[Node]) Exception? {
-    var firstError Exception?
-    var i int32
-    while i < nodes.Count {
-      try {
-        NodeLifecycle.DisposeTree(nodes[i])
-      } catch (error Exception) {
-        if firstError == nil {
-          firstError = error
-        }
-      }
-      i++
-    }
-    return firstError
-  }
-
-  private func rollbackReplacements(scratchScope ChildDiffScratchScope) {
-    var i int32
-    while i < scratchScope.Replacements.Count {
-      let replacement = scratchScope.Replacements[i]
-      replacement.Replacement.Fiber = nil
-      replacement.Old.Fiber = replacement.Cell
-      replacement.Old.Key = replacement.OldKey
-      replacement.Old.Retired = replacement.OldRetired
-      replacement.Cell.outputKey = replacement.OldOutputKey
-      if let mounted = replacement.OldMountedNode {
-        replacement.Cell.AttachMount(mounted, replacement.OldMountedOwner)
-      } else {
-        replacement.Cell.mountedNode = nil
-        replacement.Cell.mountedOwner = replacement.OldMountedOwner
-      }
-      replacement.Cell.RefreshDirectMounts(replacement.Old)
-      var child = replacement.Cell.directChild
-      while let descendant = child {
-        descendant.MarkDirtyFromInput()
-        child = descendant.directChild
-      }
-      replacement.Cell.RestoreDirtyAndSubmit()
-      NodeLifecycle.DisposeTree(replacement.Replacement)
-      if let handle = replacement.OldHandle {
-        ElementHandles.Bind(replacement.Old, handle, Owner)
-      }
-      i++
-    }
-  }
-
-  private func disposeProvisional(scratchScope ChildDiffScratchScope) {
-    var i int32
-    while i < scratchScope.Provisional.Count {
-      NodeLifecycle.DisposeTree(scratchScope.Provisional[i])
-      i++
-    }
-  }
-
-  private func rollbackHandleReplacements(scratchScope ChildDiffScratchScope) {
-    var i int32
-    while i < scratchScope.HandleReplacements.Count {
-      let replacement = scratchScope.HandleReplacements[i]
-      if let current = replacement.OldHandle.AttachedNode() {
-        if current != replacement.Old {
-          ElementHandles.Detach(current)
-        }
-      }
-      ElementHandles.Bind(replacement.Old, replacement.OldHandle, Owner)
-      i++
     }
   }
 

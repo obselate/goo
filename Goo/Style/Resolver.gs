@@ -72,6 +72,7 @@ internal partial class Resolver {
   internal prop PaintResourceInvalidated Action? { get; set; }
   internal prop ShaderEffectInvalidated Action? { get; set; }
   private let pending List[Node]
+  internal let Scrollbars ScrollbarParts = ScrollbarParts()
   private let inheritedScratch []StyleEntry
   private var pendingCursor int32
   private var stylePass int64
@@ -113,6 +114,7 @@ internal partial class Resolver {
 
   internal func DiscardPending() {
     pending.Clear()
+    Scrollbars.Discard()
     pendingCursor = 0
     pendingEffects = ReconcileEffects.None
   }
@@ -394,6 +396,9 @@ internal partial class Resolver {
       || (fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B) {
         finishTransition(n, e.Field)
         if writeDirectWithInvalidation(n, e, invalidationFor(e.Field), Owner) {
+          if e.Field == StyleField.ScrollbarX || e.Field == StyleField.ScrollbarY {
+            Scrollbars.Queue(n)
+          }
           recordResolvedChange(e.Field)
         }
         return
@@ -711,12 +716,10 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.ScrollbarX {
       n.ScrollbarX = entryScrollbar(e)
       ScrollState.ResetActivity(n)
-      ScrollbarParts.Queue(n)
     }
     case StyleField.ScrollbarY {
       n.ScrollbarY = entryScrollbar(e)
       ScrollState.ResetActivity(n)
-      ScrollbarParts.Queue(n)
     }
     case StyleField.BorderStyle { n.BorderStyle = BorderStyle(int32(e.A)) }
     case StyleField.BlendMode { n.BlendMode = BlendMode(int32(e.A)) }

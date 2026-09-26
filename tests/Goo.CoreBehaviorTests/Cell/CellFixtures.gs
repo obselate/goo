@@ -298,6 +298,29 @@ internal class CellFixtures {
       && after.Children.Count == 0
   }
 
+  func DirectCompositionCallbacksRebuildRenderingCell() bool {
+    let child = DirectCallbackCell{}
+    let root = DirectCallbackParent(DirectCallbackParent(child))
+    let window = Window{ Root: root, Width: 100, Height: 100 }
+    try {
+      window.UpdateTree()
+      guard let node = window.Tree else { return false }
+      let input = window.PlatformInput
+      input.PointerMove(1, PointerDevice.Mouse, 10.0F, 10.0F, KeyModifiers{}, 0.0F)
+      input.PointerPress(1, PointerDevice.Mouse, 10.0F, 10.0F,
+        PointerButton.Primary, KeyModifiers{}, 1.0F)
+      input.PointerRelease(1, PointerDevice.Mouse, 10.0F, 10.0F,
+        PointerButton.Primary, KeyModifiers{}, 0.0F)
+      window.UpdateTree()
+      window.UpdateTree()
+      return window.Tree == node && node.Fiber == root
+        && child.Count == 1 && child.Builds == 2
+        && node.Children.Count == 1 && node.Children[0].Content == "clicked:1"
+    } finally {
+      window.Close()
+    }
+  }
+
   func DisposesEachUnmountedCellExactlyOnce() bool {
     KeyedDisposableCell.Disposals = 0
     PositionalDisposableCell.Disposals = 0
@@ -356,6 +379,36 @@ internal class CellFixtures {
       && root.Children[0].Key == "kept"
       && RetirementDisposableCell.FirstDisposals == 1
       && RetirementDisposableCell.LaterDisposals == 1
+  }
+
+  func KeyedRollbackContinuesAfterDisposeFailures() bool {
+    let root = KeyedRollbackParent{}
+    let window = Window{ Root: root, Width: 100, Height: 100 }
+    try {
+      window.UpdateTree()
+      let original = root.Handle.AttachedNode()
+      guard let before = window.Tree else { return false }
+      let retained = before.Children[0]
+      guard let changed = retained.Fiber as KeyedRollbackChangingCell? else { return false }
+      root.Fail = true
+      root.Rebuild()
+      var failure Exception?
+      try {
+        window.UpdateTree()
+      } catch (error Exception) {
+        failure = error
+      }
+      guard let node = window.Tree else { return false }
+      return failure == root.Failure
+        && root.First.Disposals == 1 && root.Second.Disposals == 1
+        && !root.First.Handle.IsMounted && !root.Second.Handle.IsMounted
+        && changed.Child.Disposals == 1 && !changed.Child.Handle.IsMounted
+        && changed.Handle.AttachedNode() == retained && retained.Fiber == changed
+        && original != nil && root.Handle.AttachedNode() == original
+        && node.Children.Count == 2 && node.Children[0] == retained && node.Children[1] == original
+    } finally {
+      window.Close()
+    }
   }
 
   func PositionalRetirementContinuesAfterDisposeFailures() bool {
@@ -921,6 +974,89 @@ internal class DirectChildCell : Cell {
   }
 
   override func Build() Blob -> Text { Content: "direct:$count" }
+}
+
+internal class DirectCallbackParent : Cell {
+  private let child Cell
+
+  init(child Cell) { this.child = child }
+
+  override func Build() Blob -> Cell.Mount[Cell](() -> child, nil)
+}
+
+internal class DirectCallbackCell : Cell {
+  internal var Count int32
+  internal var Builds int32
+
+  override func Build() Blob {
+    Builds++
+    return Button{
+      Width: 100,
+      Height: 100,
+      OnClick: () -> { Count++ },
+      Text{ Content: "clicked:$Count" },
+    }
+  }
+}
+
+internal class KeyedRollbackParent : Cell {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal let First KeyedRollbackDisposableCell = KeyedRollbackDisposableCell(true)
+  internal let Second KeyedRollbackDisposableCell = KeyedRollbackDisposableCell(false)
+  internal let Failure Exception = InvalidOperationException("mount failed")
+  internal var Fail bool
+
+  override func Build() Blob {
+    if !Fail {
+      return Container() {
+        Cell.Mount[bool, KeyedRollbackChangingCell]("replacement", false),
+        Text{ Key: "keep", Handle: Handle, Content: "kept" },
+      }
+    }
+    return Container() {
+      Cell.Mount[bool, KeyedRollbackChangingCell]("replacement", true),
+      Text{ Key: "moved", Handle: Handle, Content: "moved" },
+      Cell.Mount[KeyedRollbackDisposableCell](() -> First, "first"),
+      Cell.Mount[KeyedRollbackDisposableCell](() -> Second, "second"),
+      Cell.Mount[KeyedRollbackFailureCell](() -> KeyedRollbackFailureCell(Failure), "failure"),
+    }
+  }
+}
+
+internal class KeyedRollbackChangingCell : Cell[bool] {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal let Child KeyedRollbackDisposableCell = KeyedRollbackDisposableCell(true)
+
+  override func Build() Blob {
+    if !Input { return Text{ Handle: Handle, Content: "original" } }
+    return Container{
+      Handle: Handle,
+      Cell.Mount[KeyedRollbackDisposableCell](() -> Child, nil),
+    }
+  }
+}
+
+internal class KeyedRollbackDisposableCell : Cell, IDisposable {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal var Disposals int32
+  private let fail bool
+
+  init(fail bool) { this.fail = fail }
+
+  override func Build() Blob -> Container{ Handle: Handle, Width: 10, Height: 10 }
+
+  func Dispose() {
+    Disposals++
+    if fail { throw InvalidOperationException("dispose failed") }
+  }
+}
+
+internal class KeyedRollbackFailureCell : Cell {
+  private let failure Exception
+
+  init(failure Exception) { this.failure = failure }
+
+  override func Build() Blob { throw failure }
 }
 
 internal class KeyedDisposableCell : Cell, IDisposable {

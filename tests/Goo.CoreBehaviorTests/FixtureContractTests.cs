@@ -23,6 +23,7 @@ public sealed class FixtureContractTests
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.ValidationAndRetryContract));
         yield return Contract<CellFixtures>(nameof(CellFixtures.DirectChildQueuesCanonicalParentOnce));
         yield return Contract<CellFixtures>(nameof(CellFixtures.DirectCompositionAddsNoRenderNode));
+        yield return Contract<CellFixtures>(nameof(CellFixtures.DirectCompositionCallbacksRebuildRenderingCell));
         yield return Contract<CellFixtures>(nameof(CellFixtures.DirtyParentRunsBeforeAndSubsumesDirtyChild));
         yield return Contract<CellFixtures>(nameof(CellFixtures.DirtySiblingFailureResubmitsRemaining));
         yield return Contract<CellFixtures>(nameof(CellFixtures.DirtySiblingsRebuildOnceInOneUpdate));
@@ -35,6 +36,7 @@ public sealed class FixtureContractTests
         yield return Contract<CellFixtures>(nameof(CellFixtures.FailedDirectChildRebuildResubmitsCanonicalParent));
         yield return Contract<CellFixtures>(nameof(CellFixtures.InputEqualitySchedulesOneBuild));
         yield return Contract<CellFixtures>(nameof(CellFixtures.KeyedRetirementContinuesAfterDisposeFailures));
+        yield return Contract<CellFixtures>(nameof(CellFixtures.KeyedRollbackContinuesAfterDisposeFailures));
         yield return Contract<CellFixtures>(nameof(CellFixtures.PositionalRetirementContinuesAfterDisposeFailures));
         yield return Contract<CellFixtures>(nameof(CellFixtures.RebuildRequestedDuringTransactionRunsOnNextUpdate));
         yield return Contract<CellFixtures>(nameof(CellFixtures.RemovedQueuedCellIsNotRebuiltAndDisposesOnce));
@@ -187,6 +189,8 @@ public sealed class FixtureContractTests
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.IdleCaretDeadlineAndTouchMomentumContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ReservedGutterAndCoupledAxesContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.MountedPartHandleAndCallbackContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.HoverPartsRemainOwnedByTheirWindow));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PartDisposalContinuesAfterCallbackFailure));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PublicMetricsAndJumpContract));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.LargeStrokeConstructionHasBoundedAllocation));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.RetainedPathReconciliationHasBoundedAllocation));
