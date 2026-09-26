@@ -133,7 +133,6 @@ enum-underlying|Goo.TextTrimming|System.Int32
 enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
-enum-underlying|Goo.WindowActivationResult|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
 enum-underlying|Goo.WindowOperationResult|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
@@ -588,10 +587,6 @@ enum|Goo.TransitionProperty|Transform|51
 enum|Goo.TransitionProperty|Width|1
 enum|Goo.Visibility|Hidden|1
 enum|Goo.Visibility|Visible|0
-enum|Goo.WindowActivationResult|Accepted|0
-enum|Goo.WindowActivationResult|Closed|1
-enum|Goo.WindowActivationResult|Failed|3
-enum|Goo.WindowActivationResult|Unsupported|2
 enum|Goo.WindowCapabilities|Focusability|4
 enum|Goo.WindowCapabilities|None|0
 enum|Goo.WindowCapabilities|ShowWithoutActivation|2
@@ -1017,7 +1012,7 @@ method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.V
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
 method|Goo.Window|ReadClipboardFiles|instance|public|generic:|()->Goo.ClipboardFiles
 method|Goo.Window|ReadClipboardImage|instance|public|generic:|()->Goo.ClipboardImage
-method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowActivationResult
+method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
@@ -1802,7 +1797,6 @@ type|Goo.VectorPath|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.VectorStroke|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
-type|Goo.WindowActivationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowOperationResult|enum|public|base:System.Enum|interfaces:|generic:

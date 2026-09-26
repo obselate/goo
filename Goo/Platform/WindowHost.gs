@@ -72,13 +72,13 @@ internal interface WindowHost {
   func SetMaximumSize(width int32, height int32);
   func SetPosition(x int32, y int32);
   func SetState(value WindowState);
-  func RequestActivation() WindowActivationResult;
+  func RequestActivation() WindowOperationResult;
   func SetBorder(decorated bool, resizable bool);
   func SetVSync(value bool);
   func SetCursor(value Cursor);
   func SetFocusable(value bool);
   func SetTopmost(value bool);
-  func Show(activate bool) WindowOperationResult;
+  func ShowWithoutActivation() WindowOperationResult;
   func Hide() WindowOperationResult;
   func StartTextInput() bool;
   func StopTextInput();

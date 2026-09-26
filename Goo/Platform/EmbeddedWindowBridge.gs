@@ -79,13 +79,13 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   }
   public func SetPosition(x int32, y int32) { }
   public func SetState(value WindowState) { }
-  public func RequestActivation() WindowActivationResult -> WindowActivationResult.Unsupported
+  public func RequestActivation() WindowOperationResult -> WindowOperationResult.Unsupported
   public func SetBorder(decorated bool, resizable bool) { }
   public func SetVSync(value bool) { }
   public func SetCursor(value Cursor) { host.ChangeCursor(value) }
   public func SetFocusable(value bool) { throw NotSupportedException("Embedded hosts own their viewport focusability") }
   public func SetTopmost(value bool) { throw NotSupportedException("Embedded hosts own their viewport stacking") }
-  public func Show(activate bool) WindowOperationResult -> WindowOperationResult.Unsupported
+  public func ShowWithoutActivation() WindowOperationResult -> WindowOperationResult.Unsupported
   public func Hide() WindowOperationResult -> WindowOperationResult.Unsupported
   public func StartTextInput() bool {
     textInputActive = host.BeginTextInput()

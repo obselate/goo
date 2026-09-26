@@ -19,6 +19,16 @@ internal class WindowActivationSmoke {
       if !value { throw InvalidOperationException(message) }
     }
 
+    private func CloseWindow(window Window) {
+      window.RequestClose()
+      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+      while window.IsOpen && Stopwatch.GetTimestamp() < deadline {
+        window.PumpScheduled(0.0)
+        Thread.Sleep(1)
+      }
+      Require(!window.IsOpen, "Activation smoke window did not close")
+    }
+
     internal func Run() {
       let root = WindowActivationCell{}
       let window = Window{
@@ -51,7 +61,7 @@ internal class WindowActivationSmoke {
         for attempt in 0 ... 3 {
           let focused = window.IsFocused
           let events = notifications
-          Require(window.RequestActivation() == WindowActivationResult.Accepted,
+          Require(window.RequestActivation() == WindowOperationResult.Accepted,
             "Native activation request was not accepted")
           Require(window.IsFocused == focused && notifications == events,
             "Activation request synthesized native focus")
@@ -69,7 +79,7 @@ internal class WindowActivationSmoke {
           window.Pump(0.0)
           Thread.Sleep(1)
         }
-        Require(window.RequestActivation() == WindowActivationResult.Accepted,
+        Require(window.Show() == WindowOperationResult.Accepted,
           "Minimized window activation request was not accepted")
         let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 2
         while Stopwatch.GetTimestamp() < deadline {
@@ -82,7 +92,7 @@ internal class WindowActivationSmoke {
           "Hide discarded the retained tree or retained focus")
         if (window.Capabilities & WindowCapabilities.Focusability) != WindowCapabilities.None {
           window.Focusable = false
-          Require(window.RequestActivation() == WindowActivationResult.Unsupported,
+          Require(window.RequestActivation() == WindowOperationResult.Unsupported,
             "Nonfocusable window accepted activation")
           Require(window.Show() == WindowOperationResult.Accepted && !window.IsFocused,
             "Nonfocusable show failed or synthesized focus")
@@ -95,18 +105,29 @@ internal class WindowActivationSmoke {
           window.Topmost = false
         }
         Require(visibility >= 3, "Native lifecycle did not report visibility changes")
-        Console.WriteLine("window-activation: requests=4 visibility=verified editor=preserved synchronous_focus=unchanged"
+        let child = Window{
+          Title: "Goo modal activation smoke", Root: WindowActivationCell{},
+          Width: 320, Height: 100, Owner: window, Modal: true,
+        }.Open()
+        try {
+          Require(window.IsInputBlocked, "Modal child did not block its owner")
+          let focused = window.IsFocused
+          let events = notifications
+          Require(window.Show() == WindowOperationResult.Accepted,
+            "Activating Show did not route to the modal child")
+          Require(window.IsInputBlocked && child.IsVisible
+              && window.IsFocused == focused && notifications == events,
+            "Activating Show bypassed the modal child or synthesized owner focus")
+        } finally {
+          CloseWindow(child)
+        }
+        Require(!window.IsInputBlocked, "Closing the modal child retained its input block")
+        Console.WriteLine("window-activation: requests=4 visibility=verified modal_show=verified editor=preserved synchronous_focus=unchanged"
           +" observed_focus=" + window.IsFocused.ToString()
           +" observed_state=" + window.State.ToString())
       } finally {
-        window.RequestClose()
-        let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
-        while window.IsOpen && Stopwatch.GetTimestamp() < deadline {
-          window.PumpScheduled(0.0)
-          Thread.Sleep(1)
-        }
-        Require(!window.IsOpen, "Activation smoke window did not close")
-        Require(window.RequestActivation() == WindowActivationResult.Closed,
+        CloseWindow(window)
+        Require(window.RequestActivation() == WindowOperationResult.Closed,
           "Closed window accepted activation")
       }
     }

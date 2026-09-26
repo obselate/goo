@@ -283,16 +283,16 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
   }
 
-  public func RequestActivation() WindowActivationResult {
-    if disposed || IsClosing { return WindowActivationResult.Closed }
+  public func RequestActivation() WindowOperationResult {
+    if disposed || IsClosing { return WindowOperationResult.Closed }
     let flags = SDL.GetWindowFlags(window)
     if (flags & uint64(SDLWindowFlags.Minimized)) != 0uL && !SDL.RestoreWindow(window) {
-      return WindowActivationResult.Failed
+      return WindowOperationResult.Failed
     }
     if (flags & uint64(SDLWindowFlags.Hidden)) != 0uL && !SDL.ShowWindow(window) {
-      return WindowActivationResult.Failed
+      return WindowOperationResult.Failed
     }
-    return SDL.RaiseWindow(window) ? WindowActivationResult.Accepted : WindowActivationResult.Failed
+    return SDL.RaiseWindow(window) ? WindowOperationResult.Accepted : WindowOperationResult.Failed
   }
 
   public func SetBorder(decorated bool, resizable bool) {

@@ -9,7 +9,7 @@ public partial class Window {
   /// Gets the current host snapshot. Unsupported preferences remain unknown.
   public prop Preferences PlatformPreferences { get -> preferences }
 
-  /// Reports preference changes after layout and motion policy are invalidated on the owner thread.
+  /// Reports preference changes after affected layout and motion policy are updated on the owner thread.
   public event PreferencesChanged Action[PlatformPreferences] {
     add {
       requireUiThread("Window.PreferencesChanged")
@@ -23,8 +23,13 @@ public partial class Window {
 
   private func applyPreferences(value PlatformPreferences) {
     if preferences == value { return }
+    let previous = preferences
     preferences = value
-    PreferenceLayoutChanged()
+    if (previous.TextScaleFactor ?? 1.0F) != (value.TextScaleFactor ?? 1.0F) { textScaleChanged() }
+    if (previous.ReducedMotion == true) != (value.ReducedMotion == true) {
+      motionPump.ReducedMotion = value.ReducedMotion == true
+      requestRender()
+    }
     notifications.RaisePreferencesChanged(value)
   }
 }

@@ -6,12 +6,14 @@
 the mounted tree, cancels transient input and suspends presentation. Callbacks and
 timers still run while hidden. Hidden windows remain open until closed.
 
-`Show` and `Hide` return `WindowOperationResult`: `Accepted`, `Closed`,
+`Show`, `Hide` and `RequestActivation` return `WindowOperationResult`: `Accepted`, `Closed`,
 `Unsupported` or `Failed`. Accepted means the native request was submitted.
 Observe `IsVisible` and `VisibilityChanged` for visibility, and `IsFocused` and
 `FocusChanged` for keyboard focus. Visibility does not guarantee that another
-window does not cover this one. `RequestActivation()` restores a minimized window
-and requests focus without changing the focused Goo element synchronously.
+window does not cover this one. `Show()` uses `RequestActivation()` for focusable
+windows, restoring minimized windows and requesting focus without changing the
+focused Goo element synchronously. Activation redirects to an active modal child
+and returns `Unsupported` while a native chooser blocks the owner.
 
 `Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
 the owner thread afterward. Nonfocusable windows never request activation when

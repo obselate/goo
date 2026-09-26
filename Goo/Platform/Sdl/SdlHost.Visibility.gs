@@ -33,12 +33,8 @@ internal unsafe partial class SdlHost {
     Require(SDL.SetWindowAlwaysOnTop(window, value), "SDL_SetWindowAlwaysOnTop")
   }
 
-  public func Show(activate bool = true) WindowOperationResult {
+  public func ShowWithoutActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
-    if activate {
-      if !SDL.ShowWindow(window) || !SDL.RaiseWindow(window) { return WindowOperationResult.Failed }
-      return WindowOperationResult.Accepted
-    }
     if (Capabilities & WindowCapabilities.ShowWithoutActivation) == WindowCapabilities.None {
       return WindowOperationResult.Unsupported
     }

@@ -78,16 +78,15 @@ public partial class Window {
   }
 
   /// Shows an open desktop window, optionally requesting activation. The mounted tree survives Hide.
-  /// Nonfocusable windows never request activation. Embedded hosts return Unsupported.
+  /// Activation follows RequestActivation, including modal child routing. Nonfocusable windows show passively.
+  /// Embedded hosts return Unsupported.
   public func Show(activate bool = true) WindowOperationResult {
     requireUiThread("Window.Show")
+    if activate && focusable { return RequestActivation() }
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
-    let result = native.Show(activate && focusable && !IsInputBlocked)
+    let result = native.ShowWithoutActivation()
     observeVisibility()
-    if result == WindowOperationResult.Accepted && activate && IsInputBlocked {
-      family?.BlockingChild?.RequestActivation()
-    }
     return result
   }
 

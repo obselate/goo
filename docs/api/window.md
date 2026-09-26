@@ -12,12 +12,14 @@ Source: [`Goo/Window`](../../Goo/Window)
 the mounted tree, cancels transient input and suspends presentation. Callbacks and
 timers still run while hidden. Hidden windows remain open until closed.
 
-`Show` and `Hide` return `WindowOperationResult`: `Accepted`, `Closed`,
+`Show`, `Hide` and `RequestActivation` return `WindowOperationResult`: `Accepted`, `Closed`,
 `Unsupported` or `Failed`. Accepted means the native request was submitted.
 Observe `IsVisible` and `VisibilityChanged` for visibility, and `IsFocused` and
 `FocusChanged` for keyboard focus. Visibility does not guarantee that another
-window does not cover this one. `RequestActivation()` restores a minimized window
-and requests focus without changing the focused Goo element synchronously.
+window does not cover this one. `Show()` uses `RequestActivation()` for focusable
+windows, restoring minimized windows and requesting focus without changing the
+focused Goo element synchronously. Activation redirects to an active modal child
+and returns `Unsupported` while a native chooser blocks the owner.
 
 `Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
 the owner thread afterward. Nonfocusable windows never request activation when
@@ -443,7 +445,7 @@ Occurs after the native window reports a new stable size or display scale. Callb
 
 ### `PreferencesChanged`
 
-Reports preference changes after layout and motion policy are invalidated on the owner thread.
+Reports preference changes after affected layout and motion policy are updated on the owner thread.
 
 ### `StateChanged`
 
@@ -542,7 +544,7 @@ Returns: Owned encoded bytes with a MIME type and explicit read status.
 
 ### `RequestActivation`
 
-Requests restoration of a minimized window, raising, and keyboard activation. Call on the owning UI thread in response to a user action. Desktop policy controls the outcome; observe IsFocused and FocusChanged for actual focus. Maximized/fullscreen state and the focused Goo element are preserved. Returns Closed before Open or after close, Unsupported for embedded hosts, or Failed if the native request reports an immediate error. Asynchronous policy denials are not reported by the desktop backend. Wayland requests use SDL's xdg-activation token and recent input serial.
+Requests restoration of a minimized window, raising, and keyboard activation. Call on the owning UI thread in response to a user action. Desktop policy controls the outcome; observe IsFocused and FocusChanged for actual focus. Maximized/fullscreen state and the focused Goo element are preserved. Redirects to the active modal child. Returns Closed before Open or after close, Unsupported for embedded hosts, nonfocusable windows, or an active native chooser, or Failed if the native request reports an immediate error. Asynchronous policy denials are not reported by the desktop backend. Wayland requests use SDL's xdg-activation token and recent input serial.
 
 ### `RequestClose`
 
@@ -566,7 +568,7 @@ Runs a callback once on the UI thread after the delay.
 
 ### `Show(bool)`
 
-Shows an open desktop window, optionally requesting activation. The mounted tree survives Hide. Nonfocusable windows never request activation. Embedded hosts return Unsupported.
+Shows an open desktop window, optionally requesting activation. The mounted tree survives Hide. Activation follows RequestActivation, including modal child routing. Nonfocusable windows show passively. Embedded hosts return Unsupported.
 
 ### `ShowFileDialogAsync(FileDialogKind,FileDialogOptions)`
 
@@ -732,21 +734,6 @@ Gets or sets the requested horizontal position.
 ### `Y`
 
 Gets or sets the requested vertical position.
-
-## `WindowActivationResult`
-
-Source:
-
-- [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
-
-Reports whether a native window activation request could be submitted. Accepted does not confirm focus; desktop policy may deny or ignore the request.
-
-### Values
-
-- `Accepted`
-- `Closed`
-- `Unsupported`
-- `Failed`
 
 ## `WindowCapabilities`
 

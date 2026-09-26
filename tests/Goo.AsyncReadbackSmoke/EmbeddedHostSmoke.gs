@@ -52,7 +52,7 @@ internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
     native = SdlHost("Goo embedded lifecycle", 64, 64, 0, 0, false,
       WindowState.Normal, true, false, false, true,
       (x int32, y int32) -> WindowHitResult.Normal)
-    native!!.Show()
+    native!!.RequestActivation()
   }
   internal func DestroyNative() {
     native?.Dispose()
@@ -96,6 +96,12 @@ internal class EmbeddedHostSmoke {
       let density = window.CurrentWindowMetrics().DisplayScaleX
       var notifications = 0
       window.PreferencesChanged += (value PlatformPreferences) -> { notifications++ }
+      host.UpdatePreferences(PlatformPreferences{Theme: SystemTheme.Dark, HighContrast: true,
+        TextScaleFactor: 1.0F, ReducedMotion: false})
+      Require(notifications == 1 && window.Preferences.Theme == SystemTheme.Dark
+          && window.Preferences.HighContrast == true
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "Appearance-only preferences scheduled tree work or lost their notification")
       let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
       host.UpdatePreferences(preferences)
       host.UpdatePreferences(preferences)
@@ -104,7 +110,7 @@ internal class EmbeddedHostSmoke {
       Require(initial.Width > 0.0 && initial.Height > 0.0
           && scaled.Width > initial.Width * 1.7 && scaled.Height > initial.Height * 1.7,
         "Platform text scale did not resize explicitly sized mounted text")
-      Require(notifications == 1 && window.Preferences.ReducedMotion == true
+      Require(notifications == 2 && window.Preferences.ReducedMotion == true
           && window.CurrentWindowMetrics().DisplayScaleX == density,
         "Preference delivery changed density, lost motion policy or duplicated a snapshot")
       host.UpdatePreferences(PlatformPreferences{})
