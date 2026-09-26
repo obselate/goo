@@ -105,7 +105,6 @@ public sealed partial class NativeAccessibilityAdapter {
   }
 
   private func UpdateTextGeometry(source Node?, retained NativeAccessibilityNodeCache) {
-    if source != nil { TextGeometryQueries.Prepare(source) }
     for i in 0 ... retained.Runs.Count {
       let run = retained.Runs[i]
       if source == nil || source.Password || !ReadTextGeometry(source, run) {

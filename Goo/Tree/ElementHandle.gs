@@ -1168,14 +1168,7 @@ internal class TextGeometryQueries {
 
     private func cachedEntryShape(n Node) ShapedText? {
       guard let cached = n.EntryShape, let shape = cached.Shape else { return nil }
-      if cached.Content != n.Buffer || cached.FontFamily != n.FontFamily || cached.Language != n.Language
-        || cached.FontSize != TextLayouts.fontSize(n) || cached.FontWeight != n.FontWeight
-        || cached.Italic != (n.FontStyle == FontStyle.Italic)
-        || cached.Spacing != TextLayouts.letterSpacing(n) || cached.Direction != int32(n.Direction)
-        || cached.Password != n.Password{
-          return nil
-        }
-      return shape
+      return cached.Matches(n) ? shape : nil
     }
 
     private func entryOffset(n Node, shape ShapedText) float32 {

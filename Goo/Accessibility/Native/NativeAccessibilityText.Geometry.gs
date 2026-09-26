@@ -76,8 +76,7 @@ public sealed partial class NativeAccessibilityAdapter {
       let finish = boundaries[end + 1]
       if text[finish - 1] == '\n' { return end + 1 }
       if start >= geometryEnd { break }
-      if source != nil && !source.Password
-        && TextGeometryQueries.CaretRect(source, TextPosition{Offset: start, Affinity: TextAffinity.Downstream},
+      if TextGeometryQueries.CaretRect(source, TextPosition{Offset: start, Affinity: TextAffinity.Downstream},
           TextCoordinateSpace.Element, out var leading)
         && TextGeometryQueries.CaretRect(source, TextPosition{Offset: finish, Affinity: TextAffinity.Upstream},
           TextCoordinateSpace.Element, out var trailing) {

@@ -29,6 +29,12 @@ internal class EntryShapeState {
     Language = ""
     Placeholder = ""
   }
+
+  internal func Matches(n Node) bool -> Content == n.Buffer && Language == n.Language
+    && FontFamily == n.FontFamily && FontSize == TextLayouts.fontSize(n)
+    && FontWeight == n.FontWeight && Italic == (n.FontStyle == FontStyle.Italic)
+    && Spacing == TextLayouts.letterSpacing(n) && Direction == int32(n.Direction)
+    && Password == n.Password
 }
 
 internal class EntryLayouts {
@@ -89,16 +95,12 @@ internal class TextMetrics {
   internal func BufferShape(n Node) ShapedText {
     if let cached = n.EntryShape {
       if let shape = cached.Shape {
-        if cached.Content == n.Buffer && cached.Language == n.Language && cached.FontFamily == n.FontFamily
-          && cached.FontSize == TextLayouts.fontSize(n) && cached.FontWeight == n.FontWeight
-          && cached.Italic == (n.FontStyle == FontStyle.Italic)
-          && cached.Spacing == Spacing(n) && cached.Direction == int32(n.Direction)
-          && cached.Password == n.Password{
-            if n.HasElementHandle {
-              shape.PrepareGeometry()
-            }
-            return shape
+        if cached.Matches(n) {
+          if n.HasElementHandle {
+            shape.PrepareGeometry()
           }
+          return shape
+        }
         shape.Dispose()
       }
       cached.PlaceholderShape?.Dispose()
