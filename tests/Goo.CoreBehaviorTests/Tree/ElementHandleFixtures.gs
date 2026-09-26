@@ -81,9 +81,24 @@ internal class ElementHandleFixtures {
     if !childHandle.ScrollIntoView() || inner.ScrollTargetY != 50.0F
       || root.ScrollTargetY != 100.0F {
         return false
-      }
+    }
     NodeLifecycle.DisposeTree(root)
-    return !rootHandle.ScrollTo(0.0, 0.0)
+    if rootHandle.ScrollTo(0.0, 0.0) { return false }
+    let gutterTarget = ElementHandle{}
+    let gutterRoot = mount(Reconciler{ Res: Resolver{} }, owner, Container{
+      Width: 100, Height: 100, Overflow: Overflow.Scroll,
+      Scrollbar: Scrollbar{ Thickness: 10, Inset: 0, ReserveSpace: true },
+      Container{ Width: 200, Height: 200, FlexShrink: 0 },
+      Container{
+        Handle: gutterTarget, Position: PositionType.Absolute,
+        Left: 85, Top: 85, Width: 10, Height: 10,
+      },
+    })
+    Layout().Calculate(gutterRoot, 100.0F, 100.0F)
+    let visible = gutterTarget.ScrollIntoView()
+      && gutterRoot.ScrollTargetX == 5.0F && gutterRoot.ScrollTargetY == 5.0F
+    NodeLifecycle.DisposeTree(gutterRoot)
+    return visible
   }
 
   func DuplicateAndCellContract() bool {
@@ -258,12 +273,15 @@ internal class ElementHandleFixtures {
 
   func VirtualContract() bool {
     let cell = VirtualFixtureCell(1000, false)
+    let semantics = AccessibilityTestAdapter{}
     let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.AccessibilityAdapter = semantics
     window.UpdateTree()
     guard let root = window.Tree else { return false }
     let listInvalid = root.Children.Count <= 0 || root.Children.Count > 5
       || cell.Builds.Count > 5 || cell.Handle.ScrollRange.Y != 19940.0
-      || !cell.Handles[0].IsMounted
+      || !cell.Handles[0].IsMounted || semantics.Tree?.Root?.SizeOfSet != 1000
+      || semantics.Tree?.Root?.Children[0].PositionInSet != 0
     if listInvalid {
       return false
     }
@@ -275,7 +293,7 @@ internal class ElementHandleFixtures {
     window.UpdateTree()
     let movedInvalid = root.Children.Count <= 0 || root.Children.Count > 5
       || cell.Builds.Count > 5 || cell.Handles[0].IsMounted
-      || !cell.Handles[500].IsMounted
+      || !cell.Handles[500].IsMounted || semantics.Tree?.Root?.Children[0].PositionInSet != 499
     if movedInvalid {
       return false
     }
@@ -287,7 +305,7 @@ internal class ElementHandleFixtures {
     if cell.Builds.Count != 1 || cell.Builds[0] != 500 { return false }
     cell.Items.Add(VirtualFixtureItem{ Id: 1000 })
     window.UpdateTree()
-    if cell.Handle.ScrollRange.Y != 19960.0 { return false }
+    if cell.Handle.ScrollRange.Y != 19960.0 || semantics.Tree?.Root?.SizeOfSet != 1001 { return false }
     window.Close()
     if Virtualization.State(root) != nil || cell.Handles[500].IsMounted { return false }
 

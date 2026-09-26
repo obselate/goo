@@ -22,37 +22,42 @@ internal class NativeAccessibilityTextRun {
 }
 
 public sealed partial class NativeAccessibilityAdapter {
-  private func UpdateText(node AccessibilityNode, retained NativeAccessibilityNodeCache) bool {
+  private func UpdateText(node AccessibilityNode, retained NativeAccessibilityNodeCache, source Node?) bool {
     let editable = node.SelectionStart != nil || node.TextSnapshot != nil
     let textual = editable || node.Role == AccessibilityRole.Text
-    let version = node.TextSnapshot?.Version ?? -1
-    if textual && version == retained.TextVersion && node.Value == retained.Value && retained.Runs.Count > 0 { return false }
-    let text = if !textual { "" } else if let snapshot = node.TextSnapshot { snapshot.GetText() } else { node.Value }
-    retained.TextVersion = version
-    retained.Value = node.Value
+    let snapshot = node.TextSnapshot
+    let unchanged = textual && Object.ReferenceEquals(snapshot, retained.Snapshot)
+      && node.Value == retained.Value && retained.Boundaries != nil
+    let text = if !textual { "" } else if unchanged { retained.Text }
+      else if let current = snapshot { current.GetText() } else { node.Value }
     var count = 0
     var changed = false
     if textual {
-      let boundaries = TextBoundaries(text)
+      if source != nil { TextGeometryQueries.Prepare(source) }
+      let layout = TextPartitionLayout(source)
+      if unchanged && TextPartitionsCurrent(retained, layout) { return false }
+      let boundaries = if unchanged { retained.Boundaries!! } else { TextBoundaries(text) }
+      retained.TextPartitionsValid = false
+      retained.Snapshot = snapshot
+      retained.Value = node.Value
+      retained.Text = text
+      retained.Boundaries = boundaries
       var first = 0
       var trailing = text.EndsWith("\n", StringComparison.Ordinal)
       while first < boundaries.Count - 1 || count == 0 || trailing {
         if first == boundaries.Count - 1 { trailing = false }
-        var end = first
-        while end < boundaries.Count - 1 && end - first < 200 {
-          end++
-          if text[boundaries[end] - 1] == '\n' { break }
-        }
+        let end = TextRunEnd(source, layout, text, boundaries, first)
         let start = boundaries[first]
-        let value = text.Substring(start, boundaries[end] - start)
+        let valueLength = boundaries[end] - start
         var run NativeAccessibilityTextRun
-        if count < retained.Runs.Count && retained.Runs[count].Text == value {
+        if count < retained.Runs.Count && retained.Runs[count].Text.Length == valueLength
+          && String.CompareOrdinal(text, start, retained.Runs[count].Text, 0, valueLength) == 0 {
           run = retained.Runs[count]
         } else {
           run = NativeAccessibilityTextRun()
           run.Id = nextTextId++
           run.Owner = node.Id
-          run.Text = value
+          run.Text = text.Substring(start, valueLength)
           let length = end - first
           run.Starts = [length + 1]int32
           run.Lengths = [length]uint8
@@ -67,7 +72,7 @@ public sealed partial class NativeAccessibilityAdapter {
             if word && !previousWord { words.Add(uint8(i)) }
             previousWord = word
           }
-          run.Starts[length] = value.Length
+          run.Starts[length] = valueLength
           run.Words = words.ToArray()
           if count < retained.Runs.Count {
             textRuns.Remove(retained.Runs[count].Id)
@@ -81,6 +86,15 @@ public sealed partial class NativeAccessibilityAdapter {
         first = end
         if first == boundaries.Count - 1 && !trailing { break }
       }
+      RetainTextPartitionLayout(retained, layout)
+    } else {
+      retained.Snapshot = nil
+      retained.Value = node.Value
+      retained.Text = ""
+      retained.Boundaries = nil
+      retained.TextLayout = nil
+      retained.TextLines = nil
+      retained.TextPartitionsValid = false
     }
     while retained.Runs.Count > count {
       textRuns.Remove(retained.Runs[retained.Runs.Count - 1].Id)

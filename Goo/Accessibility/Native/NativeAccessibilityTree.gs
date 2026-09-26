@@ -8,12 +8,17 @@ import System.Text
 internal class NativeAccessibilityNodeCache {
   internal var Revision int64 = -1
   internal var Generation int64
-  internal var TextVersion int64 = -1
+  internal var Snapshot TextSnapshot?
+  internal var TextLayout object?
+  internal var TextLines List[TextEditorVisualLine]?
+  internal var TextPartitionsValid bool
   internal var ScrollX float64
   internal var ScrollY float64
   internal var ScrollMaxX float64
   internal var ScrollMaxY float64
   internal var Value string = ""
+  internal var Text string = ""
+  internal var Boundaries List[int32]?
   internal let Runs List[NativeAccessibilityTextRun] = List[NativeAccessibilityTextRun]()
 }
 
@@ -89,7 +94,7 @@ public sealed partial class NativeAccessibilityAdapter {
     let scrollExtent = if let current = source { scrollRange(current) } else { Point{} }
     let scrollChanged = scrollX != retained.ScrollX || scrollY != retained.ScrollY
       || scrollExtent.X != retained.ScrollMaxX || scrollExtent.Y != retained.ScrollMaxY
-    let textChanged = UpdateText(node, retained)
+    let textChanged = UpdateText(node, retained, source)
     UpdateTextGeometry(source, retained)
     if all || retained.Revision != revision || textChanged || scrollChanged {
       let nativeNode = AccessKitNative.NodeNew(NodeRole(node))
@@ -171,6 +176,8 @@ public sealed partial class NativeAccessibilityAdapter {
       if node.HasPopup == true { AccessKitNative.NodeSetHasPopup(target, node.Role == AccessibilityRole.ComboBox ? uint8(1) : uint8(0)) }
       AccessKitNative.NodeSetLive(target, uint8(node.Live))
       if let value = node.Level { AccessKitNative.NodeSetLevel(target, uint64(value)) }
+      if let value = node.PositionInSet { AccessKitNative.NodeSetPositionInSet(target, nuint(value)) }
+      if let value = node.SizeOfSet { AccessKitNative.NodeSetSizeOfSet(target, nuint(value)) }
       if let value = node.ValueNow { AccessKitNative.NodeSetNumericValue(target, value) }
       if let value = node.ValueMinimum { AccessKitNative.NodeSetMinNumericValue(target, value) }
       if let value = node.ValueMaximum { AccessKitNative.NodeSetMaxNumericValue(target, value) }

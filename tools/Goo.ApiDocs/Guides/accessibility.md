@@ -67,7 +67,12 @@ Text offsets translate between Goo UTF-16 positions and AccessKit character
 positions, including emoji and combining sequences. Protected entries expose
 only their masked value. `SetSelection(start, length, caret)` preserves either
 active endpoint; the two-argument overload continues to place the caret at the
-end. Text geometry is supplied where Goo exposes a contiguous visual run;
-wrapped or mixed-direction runs retain their text and selection when optional
-character geometry is unavailable. Wayland does not expose global window
-positions, so clients should use window-relative geometry.
+end. Native text runs split at visual line and direction boundaries, so wrapping
+and mixed-direction text retain character geometry and logical selection offsets.
+Wayland does not expose global window positions, so clients should use
+window-relative geometry.
+
+`Accessibility.PositionInSet` is the zero-based logical item index.
+`SizeOfSet` belongs on the collection container and counts all logical items,
+including those outside the realized viewport. `Virtual` and `VirtualRows` supply
+list/list-item semantics and this metadata from their existing collection state.

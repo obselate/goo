@@ -111,6 +111,10 @@ internal class AccessKitNative {
     internal func NodeSetMaxNumericValue(node nint, value float64);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_level", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetLevel(node nint, value uint64);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_position_in_set", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetPositionInSet(node nint, value nuint);
+    @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_size_of_set", CallingConvention: CallingConvention.Cdecl)
+    internal func NodeSetSizeOfSet(node nint, value nuint);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_bounds", CallingConvention: CallingConvention.Cdecl)
     internal func NodeSetBounds(node nint, value AccessKitRect);
     @DllImport("goo-accesskit-0.23", EntryPoint: "accesskit_node_set_text_selection", CallingConvention: CallingConvention.Cdecl)

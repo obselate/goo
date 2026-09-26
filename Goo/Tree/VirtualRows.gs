@@ -18,6 +18,7 @@ public func VirtualRows[T](items IReadOnlyList[T], estimatedItemHeight float64,
     if itemKey == nil { throw ArgumentNullException("itemKey") }
     if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
     return VirtualRowsBlob[T](items, estimate, itemKey, itemBuilder) {
+      Accessibility = Accessibility{ Role: AccessibilityRole.List },
       Position = PositionType.Relative,
       OverflowX = Overflow.Hidden,
       OverflowY = Overflow.Scroll,
@@ -82,6 +83,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
     return false
   }
 
+  internal override func ItemCount() int32 -> metadata?.Rows.Length ?? 0
   internal override func NeedsContinuation(n Node) bool -> NeedsRefresh(n)
   internal override func Extent() VirtualExtent ? -> if metadata == nil { nil } else { VirtualExtent{Width: window.ContentW, Height: window.ContentH} }
   internal override func OffsetForKey(n Node, key string) Point? {
@@ -169,7 +171,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       if unchanged && samePlacement { output.Add(marker) }
       else {
         let child = if unchanged { marker } else { virtualItem(build(row.Item), row.Key) }
-        output.Add(Container() {.Key: row.Key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: float64(placement.W),.FlexShrink: 0.0,
+        output.Add(Container() {.Accessibility: Accessibility{Role: AccessibilityRole.ListItem, PositionInSet: index},.Key: row.Key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: float64(placement.W),.FlexShrink: 0.0,
             child,
         })
       }

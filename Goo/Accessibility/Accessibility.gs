@@ -171,6 +171,10 @@ public class Accessibility {
   public prop Busy bool? { get; init; }
   /// Gets the heading level when explicitly specified.
   public prop Level int32? { get; init; }
+  /// Gets the zero-based logical item position within its collection, including unrealized items.
+  public prop PositionInSet int32? { get; init; }
+  /// Gets the logical item count on a collection container, including unrealized items.
+  public prop SizeOfSet int32? { get; init; }
   /// Gets the orientation when explicitly specified.
   public prop Orientation AccessibilityOrientation{ get; init; }
   /// Gets whether the item is modal when explicitly specified.
@@ -222,6 +226,12 @@ public class Accessibility {
     }
     if let heading = Level {
       if heading <= 0 { throw ArgumentOutOfRangeException("Level") }
+    }
+    if let position = PositionInSet {
+      if position < 0 { throw ArgumentOutOfRangeException("PositionInSet") }
+    }
+    if let size = SizeOfSet {
+      if size < 0 { throw ArgumentOutOfRangeException("SizeOfSet") }
     }
     Range?.Validate()
     Relationships?.Validate()
@@ -449,6 +459,10 @@ public interface AccessibilityNode {
   prop Busy bool? { get; }
   /// Gets the resolved heading level.
   prop Level int32? { get; }
+  /// Gets the zero-based logical collection item position.
+  prop PositionInSet int32? { get; }
+  /// Gets the total logical item count on a collection container.
+  prop SizeOfSet int32? { get; }
   /// Gets the resolved orientation.
   prop Orientation AccessibilityOrientation { get; }
   /// Gets the resolved modal state.
@@ -504,6 +518,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
   private var invalid bool?
   private var busy bool?
   private var level int32?
+  private var positionInSet int32?
+  private var sizeOfSet int32?
   private var orientation AccessibilityOrientation
   private var modal bool?
   private var multiline bool?
@@ -540,6 +556,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
   public prop Invalid bool? { get -> invalid }
   public prop Busy bool? { get -> busy }
   public prop Level int32? { get -> level }
+  public prop PositionInSet int32? { get -> positionInSet }
+  public prop SizeOfSet int32? { get -> sizeOfSet }
   public prop Orientation AccessibilityOrientation{ get -> orientation }
   public prop Modal bool? { get -> modal }
   public prop Multiline bool? { get -> multiline }
@@ -578,7 +596,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
     checked AccessibilityChecked, selected bool?, expanded bool?, disabled bool, readOnly bool?,
     required bool?, invalid bool?, busy bool?, level int32?, orientation AccessibilityOrientation,
     modal bool?, multiline bool?, multiSelectable bool?, hasPopup bool?, live AccessibilityLive,
-    atomic bool?, focused bool, bounds ElementRect, actionMask int32) bool{
+    atomic bool?, focused bool, bounds ElementRect, actionMask int32,
+    positionInSet int32? = nil, sizeOfSet int32? = nil) bool{
       let changed = this.role != role || this.customRole != customRole || this.name != name
         || this.description != description || this.value != value || this.valueText != valueText
         || this.valueNow != valueNow || this.valueMinimum != valueMinimum
@@ -588,7 +607,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
         || this.checked != checked || this.selected != selected
         || this.expanded != expanded || this.disabled != disabled || this.readOnly != readOnly
         || this.required != required || this.invalid != invalid || this.busy != busy
-        || this.level != level || this.orientation != orientation || this.modal != modal
+        || this.level != level || this.positionInSet != positionInSet || this.sizeOfSet != sizeOfSet
+        || this.orientation != orientation || this.modal != modal
         || this.multiline != multiline || this.multiSelectable != multiSelectable
         || this.hasPopup != hasPopup || this.live != live || this.atomic != atomic
         || this.focused != focused || !sameAccessibilityRect(this.bounds, bounds) || !sameActionMask(actionMask)
@@ -616,6 +636,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
       this.invalid = invalid
       this.busy = busy
       this.level = level
+      this.positionInSet = positionInSet
+      this.sizeOfSet = sizeOfSet
       this.orientation = orientation
       this.modal = modal
       this.multiline = multiline

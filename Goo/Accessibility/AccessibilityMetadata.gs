@@ -51,6 +51,7 @@ private func sameAccessibility(left Accessibility?, right Accessibility?) bool {
     && a.Description == b.Description && a.Value == b.Value && sameValue(a.Range, b.Range)
     && a.Checked == b.Checked && a.Selected == b.Selected && a.Expanded == b.Expanded
     && a.ReadOnly == b.ReadOnly && a.Required == b.Required && a.Invalid == b.Invalid
+    && a.PositionInSet == b.PositionInSet && a.SizeOfSet == b.SizeOfSet
     && a.Busy == b.Busy && a.Level == b.Level && a.Orientation == b.Orientation
     && a.Modal == b.Modal && a.Multiline == b.Multiline && a.MultiSelectable == b.MultiSelectable
     && a.HasPopup == b.HasPopup && a.Live == b.Live && a.Atomic == b.Atomic && a.Hidden == b.Hidden

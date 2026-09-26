@@ -12,6 +12,7 @@ public func Virtual[T](items IReadOnlyList[T], itemWidth float64, itemHeight flo
     if itemKey == nil { throw ArgumentNullException("itemKey") }
     if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
     return VirtualBlob[T](items, width, height, itemKey, itemBuilder) {
+      Accessibility = Accessibility{ Role: AccessibilityRole.List },
       Position = PositionType.Relative,
       OverflowX = Overflow.Scroll,
       OverflowY = Overflow.Scroll,
@@ -65,6 +66,7 @@ internal data struct VirtualPlacement {
 internal data struct VirtualWindow {
   internal var Start int32
   internal var Count int32
+  internal var Total int32
   internal var ContentW float32
   internal var ContentH float32
   internal var Columns int32
@@ -85,6 +87,7 @@ internal data struct VirtualExtent {
 }
 
 internal open class VirtualStorage {
+  internal open func ItemCount() int32;
   internal open func NeedsContinuation(n Node) bool -> false
   internal open func OffsetForKey(n Node, key string) Point ? -> nil
   internal open func NeedsRefresh(n Node) bool;
@@ -155,6 +158,8 @@ internal sealed class VirtualStorage[T] : VirtualStorage {
     }
     return prepare(n, items, itemW, itemH, itemKey, itemBuilder)
   }
+
+  internal override func ItemCount() int32 -> currentWindow.Total
 
   internal override func Extent() VirtualExtent? {
     if !hasCurrentWindow { return nil }
@@ -271,6 +276,7 @@ internal sealed class VirtualStorage[T] : VirtualStorage {
     return VirtualWindow{
       Start: start,
       Count: visibleCount,
+      Total: count,
       ContentW: contentW,
       ContentH: contentH,
       Columns: columns,
@@ -380,6 +386,7 @@ internal sealed class VirtualNodeState {
   }
 
   internal func Extent() VirtualExtent ? -> current?.Extent()
+  internal func ItemCount() int32? -> current?.ItemCount()
 
   internal func Commit() {
     guard let storage = pending else {
@@ -412,7 +419,7 @@ internal sealed class VirtualNodeState {
   }
 }
 
-internal func virtualWrapper(key string, child Blob, placement VirtualPlacement) Blob -> Container() {.Key: key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: float64(placement.W),.Height: float64(placement.H),.FlexShrink: 0.0,
+internal func virtualWrapper(key string, child Blob, placement VirtualPlacement) Blob -> Container() {.Accessibility: Accessibility{Role: AccessibilityRole.ListItem, PositionInSet: placement.Index},.Key: key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: float64(placement.W),.Height: float64(placement.H),.FlexShrink: 0.0,
   child,
 }
 
