@@ -13,6 +13,8 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public event Moved Action[int32, int32]
   public event StateChanged Action[WindowState]
   public event FocusChanged Action[bool]
+  public event VisibilityChanged Action
+  public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
@@ -48,6 +50,11 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public prop SchedulerPacingAvailable bool{ get -> false }
   public prop NativeResizable bool{ get -> false }
   public prop CanMove bool{ get -> false }
+  public prop IsVisible bool { get -> host.IsPresentationAttached && !host.IsSuspended }
+  public prop Capabilities WindowCapabilities { get -> WindowCapabilities.None }
+  public prop Preferences PlatformPreferences { get -> host.Preferences }
+  internal func RaisePreferencesChanged(value PlatformPreferences) { PreferencesChanged?.Invoke(value) }
+  internal func RaiseVisibilityChanged() { VisibilityChanged?.Invoke() }
   public prop Transparent bool{ get -> Owner.Transparent }
   public prop VSync bool{ get -> Owner.VSync }
   public prop WindowHandle nint{ get -> host.NativeHandle() }
@@ -76,7 +83,10 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func SetBorder(decorated bool, resizable bool) { }
   public func SetVSync(value bool) { }
   public func SetCursor(value Cursor) { host.ChangeCursor(value) }
-  public func Show() { }
+  public func SetFocusable(value bool) { throw NotSupportedException("Embedded hosts own their viewport focusability") }
+  public func SetTopmost(value bool) { throw NotSupportedException("Embedded hosts own their viewport stacking") }
+  public func Show(activate bool) WindowOperationResult -> WindowOperationResult.Unsupported
+  public func Hide() WindowOperationResult -> WindowOperationResult.Unsupported
   public func StartTextInput() bool {
     textInputActive = host.BeginTextInput()
     return textInputActive

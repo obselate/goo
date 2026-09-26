@@ -2017,6 +2017,7 @@ internal class StyleFixtures {
       case StyleField.TextStrokeWidth { return Style{ TextStrokeWidth: 7 } }
       case StyleField.TextStrokeColor { return Style{ TextStrokeColor: Color.White } }
       case StyleField.Direction { return Style{ Direction: Direction.RightToLeft } }
+      case StyleField.Language { return Style{ Language: "sr" } }
       case StyleField.MarginStart { return Style{ MarginStart: 7 } }
       case StyleField.MarginEnd { return Style{ MarginEnd: 7 } }
       case StyleField.PaddingStart { return Style{ PaddingStart: 7 } }

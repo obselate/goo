@@ -683,7 +683,7 @@ private func validatePresentationStyle(style Style) {
   }
 }
 
-internal func inlinePresentationStyleField(field StyleField) bool -> field == StyleField.Color || field == StyleField.FontFamily
+internal func inlinePresentationStyleField(field StyleField) bool -> field == StyleField.Color || field == StyleField.Language || field == StyleField.FontFamily
   || field == StyleField.FontSize || field == StyleField.FontStyle
   || field == StyleField.FontWeight || field == StyleField.LetterSpacing
   || field == StyleField.LineHeight || field == StyleField.TextDecoration

@@ -344,6 +344,7 @@ internal partial class TextEditorLayouts {
     private func editorFontFingerprint(n Node) int32 {
       var result int32 = 17
       result = result * 31 + n.FontFamily.GetHashCode()
+      result = result * 31 + n.Language.GetHashCode()
       result = result * 31 + TextLayouts.fontSize(n).GetHashCode()
       result = result * 31 + n.FontWeight.GetHashCode()
       result = result * 31 + int32(n.FontStyle)

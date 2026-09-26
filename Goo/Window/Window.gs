@@ -34,6 +34,8 @@ internal struct WindowNotifications {
   private event stateChanged Action[WindowState]
   private event keyPressed Action[Key, KeyModifiers]
   private event focusChanged Action[bool]
+  private event visibilityChanged Action[bool]
+  private event preferencesChanged Action[PlatformPreferences]
 
   internal func AddStateChanged(callback Action[WindowState]) { stateChanged += callback }
   internal func RemoveStateChanged(callback Action[WindowState]) { stateChanged -= callback }
@@ -46,6 +48,12 @@ internal struct WindowNotifications {
   internal func AddFocusChanged(callback Action[bool]) { focusChanged += callback }
   internal func RemoveFocusChanged(callback Action[bool]) { focusChanged -= callback }
   internal func RaiseFocusChanged(value bool) { focusChanged?.Invoke(value) }
+  internal func AddVisibilityChanged(callback Action[bool]) { visibilityChanged += callback }
+  internal func RemoveVisibilityChanged(callback Action[bool]) { visibilityChanged -= callback }
+  internal func RaiseVisibilityChanged(value bool) { visibilityChanged?.Invoke(value) }
+  internal func AddPreferencesChanged(callback Action[PlatformPreferences]) { preferencesChanged += callback }
+  internal func RemovePreferencesChanged(callback Action[PlatformPreferences]) { preferencesChanged -= callback }
+  internal func RaisePreferencesChanged(value PlatformPreferences) { preferencesChanged?.Invoke(value) }
 }
 
 /// Hosts a Goo tree on one process-wide UI thread.
@@ -174,10 +182,10 @@ public partial class Window {
       if state == v {
         return
       }
-      state = v
       if let native = host {
         native.SetState(v)
       }
+      state = v
     }
   }
 

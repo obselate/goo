@@ -80,6 +80,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public event Moved Action[int32, int32]
   public event StateChanged Action[WindowState]
   public event FocusChanged Action[bool]
+  public event VisibilityChanged Action
+  public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
@@ -318,11 +320,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     SdlRuntime.SetCursor(value)
   }
 
-  public func Show() {
-    ThrowIfDisposed()
-    Require(SDL.ShowWindow(window), "SDL_ShowWindow")
-  }
-
   public func StartTextInput() bool {
     ThrowIfDisposed()
     if textInputActive {
@@ -441,6 +438,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   public func RefreshMetricsIfChanged() {
+    RefreshPreferences(false)
     let logicalWidth = LogicalWidth
     let logicalHeight = LogicalHeight
     let framebufferWidth = FramebufferWidth

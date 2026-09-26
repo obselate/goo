@@ -56,6 +56,9 @@ public partial class Window {
 
   private func validateOwnership() {
     if Modal && Owner == nil { throw InvalidOperationException("A modal window requires an Owner") }
+    if Modal && (!initiallyVisible || !focusable) {
+      throw InvalidOperationException("Modal windows must open visible and focusable")
+    }
     if let parent = Owner {
       parent.requireUiThread("Owned Window.Open")
       if !parent.IsOpen || parent.host?.IsClosing == true || parent.family?.Closing == true {
@@ -63,6 +66,7 @@ public partial class Window {
       }
       if parent.embeddedHost != nil { throw NotSupportedException("Embedded viewports cannot own native Goo windows") }
       if parent.IsInputBlocked { throw InvalidOperationException("Use the active modal window as the owner of a nested window") }
+      if Modal && !parent.IsVisible { throw InvalidOperationException("A modal window requires a visible owner") }
     }
     if let state = family { state.Closing = false }
   }

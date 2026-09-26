@@ -9,11 +9,12 @@ internal data struct TextSourceSnapshot(Source string, Display string, Transform
 
 internal data struct TextParagraphAnalysis(Start int32, End int32, Text string,
   Resolution BidiResolution?, FontFamily string, FontSize float32, FontWeight float64,
-  Italic bool, LetterSpacing float32, Direction Direction) { }
+  Italic bool, LetterSpacing float32, Direction Direction, Language string = "") { }
 
 internal class TextAnalysis {
   internal prop Snapshot TextSourceSnapshot{ get; set; }
   internal prop FontFamily string{ get; set; }
+  internal prop Language string{ get; set; }
   internal prop FontSize float32{ get; set; }
   internal prop FontWeight float64{ get; set; }
   internal prop Italic bool{ get; set; }
@@ -26,6 +27,7 @@ internal class TextAnalysis {
   internal init() {
     Snapshot = TextSourceSnapshot("", "", TextTransform.None)
     FontFamily = ""
+    Language = ""
   }
 
   internal func Paragraph(index int32) TextParagraphAnalysis -> if index == 0 { First } else { Additional!! [index - 1] }
@@ -197,7 +199,7 @@ internal class PassiveTextPresentations {
         if let entries = ranges[i].Style.Entries() {
           for entryIndex in 0 ... entries.Count {
             let field = entries.At(entryIndex).Field
-            if field == StyleField.FontFamily || field == StyleField.FontSize
+            if field == StyleField.Language || field == StyleField.FontFamily || field == StyleField.FontSize
               || field == StyleField.FontWeight || field == StyleField.FontStyle
               || field == StyleField.LetterSpacing || field == StyleField.LineHeight
               || field == StyleField.Direction || field == StyleField.TextTransform{
@@ -220,6 +222,7 @@ internal func copyPassiveTextStyleRanges(values []TextStyleRange) []TextStyleRan
 internal data class TextResolvedStyle {
   internal prop Color Color{ get; set; }
   internal prop FontFamily string{ get; set; }
+  internal prop Language string{ get; set; }
   internal prop FontSize float32{ get; set; }
   internal prop FontWeight float64{ get; set; }
   internal prop FontStyle FontStyle{ get; set; }
@@ -231,6 +234,7 @@ internal data class TextResolvedStyle {
   internal prop Shadows BoxShadowStack? { get; set; }
   internal prop Direction Direction{ get; set; }
   internal prop Transform TextTransform{ get; set; }
+  internal prop TextScaleFactor float32{ get; set; }
 }
 
 internal class TextPaintRun {
@@ -301,20 +305,20 @@ internal class TextRichLayout {
 
 internal class TextResolvedStyles {
   shared {
-    internal func Base(n Node) TextResolvedStyle -> TextResolvedStyle { Color: n.Color, FontFamily: n.FontFamily,
+    internal func Base(n Node) TextResolvedStyle -> TextResolvedStyle { Color: n.Color, FontFamily: n.FontFamily, Language: n.Language,
       FontSize: TextLayouts.fontSize(n), FontWeight: n.FontWeight,
       FontStyle: n.FontStyle, LetterSpacing: TextLayouts.letterSpacing(n),
       LineHeight: float32(n.LineHeight), Decoration: n.TextDecoration,
       StrokeWidth: n.TextStrokeWidth.Px,
       StrokeColor: n.TextStrokeColor, Shadows: n.TextShadows, Direction: n.Direction,
-      Transform: n.TextTransform }
+      Transform: n.TextTransform, TextScaleFactor: n.TextScaleFactor }
 
-    internal func Copy(source TextResolvedStyle) TextResolvedStyle -> TextResolvedStyle { Color: source.Color, FontFamily: source.FontFamily,
+    internal func Copy(source TextResolvedStyle) TextResolvedStyle -> TextResolvedStyle { Color: source.Color, FontFamily: source.FontFamily, Language: source.Language,
       FontSize: source.FontSize, FontWeight: source.FontWeight, FontStyle: source.FontStyle,
       LetterSpacing: source.LetterSpacing, LineHeight: source.LineHeight,
       Decoration: source.Decoration, StrokeWidth: source.StrokeWidth,
       StrokeColor: source.StrokeColor, Shadows: source.Shadows, Direction: source.Direction,
-      Transform: source.Transform }
+      Transform: source.Transform, TextScaleFactor: source.TextScaleFactor }
 
     internal func At(n Node, ranges []TextStyleRange, offset int32) TextResolvedStyle {
       let result = Base(n)
@@ -338,7 +342,7 @@ internal class TextResolvedStyles {
       return result
     }
 
-    internal func AffectsWidth(left TextResolvedStyle, right TextResolvedStyle) bool -> left.FontFamily != right.FontFamily || left.FontSize != right.FontSize
+    internal func AffectsWidth(left TextResolvedStyle, right TextResolvedStyle) bool -> left.Language != right.Language || left.FontFamily != right.FontFamily || left.FontSize != right.FontSize
       || left.FontWeight != right.FontWeight || left.FontStyle != right.FontStyle
       || left.LetterSpacing != right.LetterSpacing || left.Direction != right.Direction
       || left.Transform != right.Transform
@@ -351,9 +355,10 @@ internal class TextResolvedStyles {
             case StyleField.Color {
               result.Color = Color.FromNormalized(entry.A, entry.B, entry.C, entry.D)
             }
+            case StyleField.Language { result.Language = entryText(entry) ?? result.Language }
             case StyleField.FontFamily { result.FontFamily = entryText(entry) ?? result.FontFamily }
             case StyleField.FontSize {
-              if LengthUnit(int32(entry.B)) == LengthUnit.Px { result.FontSize = entry.A }
+              if LengthUnit(int32(entry.B)) == LengthUnit.Px { result.FontSize = entry.A * result.TextScaleFactor }
             }
             case StyleField.FontWeight { result.FontWeight = float64(entry.A) }
             case StyleField.FontStyle { result.FontStyle = FontStyle(int32(entry.A)) }
@@ -383,7 +388,7 @@ internal class TextLineShaper {
   shared {
     internal func Base(paragraph TextParagraphAnalysis, start int32, end int32) ShapedText -> TextShaping.ShapeLine(paragraph.Text, start, end - start, paragraph.FontFamily,
       paragraph.FontSize, int32(paragraph.FontWeight), paragraph.Italic,
-      paragraph.LetterSpacing, int32(paragraph.Direction), paragraph.Resolution)
+      paragraph.LetterSpacing, int32(paragraph.Direction), paragraph.Resolution, paragraph.Language)
 
     internal func Styled(paragraph TextParagraphAnalysis, start int32, end int32,
       style TextResolvedStyle) ShapedText{
@@ -402,13 +407,13 @@ internal class TextLineShaper {
     private func shapeStyled(text string, resolution BidiResolution?, start int32, end int32,
       style TextResolvedStyle) ShapedText -> TextShaping.ShapeLine(text, start, end - start, style.FontFamily, style.FontSize,
         int32(style.FontWeight), style.FontStyle == FontStyle.Italic, style.LetterSpacing,
-        int32(style.Direction), resolution)
+        int32(style.Direction), resolution, style.Language)
 
     internal func Entry(n Node, text string) ShapedText {
       let paragraph = TextParagraphAnalysis(0, text.Length, text,
         TextShaping.ResolveParagraph(text, int32(n.Direction)), n.FontFamily,
         TextLayouts.fontSize(n), n.FontWeight, n.FontStyle == FontStyle.Italic,
-        TextLayouts.letterSpacing(n), n.Direction)
+        TextLayouts.letterSpacing(n), n.Direction, n.Language)
       return Base(paragraph, 0, text.Length)
     }
   }
@@ -461,10 +466,10 @@ internal class TextAnalyses {
         }
         return buildInto(current, n.Content, n.TextTransform, n.FontFamily,
           TextLayouts.fontSize(n), n.FontWeight, n.FontStyle == FontStyle.Italic,
-          TextLayouts.letterSpacing(n), n.Direction)
+          TextLayouts.letterSpacing(n), n.Direction, n.Language)
       }
       let next = build(n.Content, n.TextTransform, n.FontFamily, TextLayouts.fontSize(n),
-        n.FontWeight, n.FontStyle == FontStyle.Italic, TextLayouts.letterSpacing(n), n.Direction)
+        n.FontWeight, n.FontStyle == FontStyle.Italic, TextLayouts.letterSpacing(n), n.Direction, n.Language)
       store.Value = next
       return next
     }
@@ -479,21 +484,22 @@ internal class TextAnalyses {
     internal func ShapeEntry(n Node, text string) ShapedText -> TextLineShaper.Entry(n, text)
 
     private func matches(value TextAnalysis, n Node) bool -> value.Snapshot.Source == n.Content && value.Snapshot.Transform == n.TextTransform
-      && value.FontFamily == n.FontFamily && value.FontSize == TextLayouts.fontSize(n)
+      && value.Language == n.Language && value.FontFamily == n.FontFamily && value.FontSize == TextLayouts.fontSize(n)
       && value.FontWeight == n.FontWeight && value.Italic == (n.FontStyle == FontStyle.Italic)
       && value.LetterSpacing == TextLayouts.letterSpacing(n) && value.Direction == n.Direction
 
     private func build(source string, transform TextTransform, fontFamily string,
       fontSize float32, fontWeight float64, italic bool, letterSpacing float32,
-      direction Direction) TextAnalysis -> buildInto(TextAnalysis(), source, transform, fontFamily, fontSize, fontWeight,
-        italic, letterSpacing, direction)
+      direction Direction, language string) TextAnalysis -> buildInto(TextAnalysis(), source, transform, fontFamily, fontSize, fontWeight,
+        italic, letterSpacing, direction, language)
 
     private func buildInto(result TextAnalysis, source string, transform TextTransform,
       fontFamily string, fontSize float32, fontWeight float64, italic bool,
-      letterSpacing float32, direction Direction) TextAnalysis{
+      letterSpacing float32, direction Direction, language string) TextAnalysis{
         let snapshot = TextSourceSnapshot(source, TextLayouts.transformText(source, transform),
           transform)
         result.Snapshot = snapshot
+        result.Language = language
         result.FontFamily = fontFamily
         result.FontSize = fontSize
         result.FontWeight = fontWeight
@@ -557,7 +563,7 @@ internal class TextAnalyses {
       analysis.SetParagraph(index, TextParagraphAnalysis(start, end, text,
         TextShaping.ResolveParagraph(text, int32(analysis.Direction)), analysis.FontFamily,
         analysis.FontSize, analysis.FontWeight, analysis.Italic, analysis.LetterSpacing,
-        analysis.Direction))
+        analysis.Direction, analysis.Language))
     }
   }
 }

@@ -282,7 +282,8 @@ internal partial class SdlRuntime {
 
     private func DispatchOne(nativeEvent SDLEvent) {
       let eventType = SDLEventType(nativeEvent.Type)
-      if eventType == SDLEventType.Quit || eventType == SDLEventType.Terminating {
+      if eventType == SDLEventType.Quit || eventType == SDLEventType.Terminating
+        || eventType == SDLEventType.SystemThemeChanged {
         events.RouteAll(nativeEvent)
       } else if eventType >= SDLEventType.DisplayFirst &&
       eventType <= SDLEventType.DisplayLast{

@@ -47,7 +47,7 @@ internal class ResolverDiagnostics {
   }
 }
 
-internal class Resolver {
+internal partial class Resolver {
   shared {
     private var nextStylePass int64
 
@@ -195,6 +195,7 @@ internal class Resolver {
   private func changedField(mask StyleMask, before StyleEntry, n Node, field StyleField) StyleMask -> if sameStyleEntry(before, readField(n, field)) { mask } else { styleMaskWith(mask, field) }
 
   private func resolveNode(n Node, initial bool) {
+    ApplyTextScale(n)
     writeField(n, StyleEntry{ Field: StyleField.Direction,
       A: float32(int32(effectiveDirection(n))) }, initial)
     var localMask = StyleMask{}
@@ -388,7 +389,7 @@ internal class Resolver {
       finishTransition(n, e.Field)
       return
     }
-    if initial || n.TransitionMs <= 0.0 || !lerpable(e.Field)
+    if initial || Owner?.Preferences.ReducedMotion == true || n.TransitionMs <= 0.0 || !lerpable(e.Field)
       || !transitionSelected(n.TransitionSelection, e.Field)
       || (fieldKind(e.Field) == FieldKind.KLength && cur.B != e.B) {
         finishTransition(n, e.Field)
@@ -406,7 +407,7 @@ internal class Resolver {
       finishTransition(n, StyleField.BoxShadows)
       return
     }
-    if initial || n.TransitionMs <= 0.0
+    if initial || Owner?.Preferences.ReducedMotion == true || n.TransitionMs <= 0.0
       || !transitionSelected(n.TransitionSelection, StyleField.BoxShadows)
       || !boxShadowListsCompatible(entryShadows(cur), entryShadows(e)) {
         finishTransition(n, StyleField.BoxShadows)
@@ -504,7 +505,7 @@ internal class Resolver {
       let list = unwrapped
       for var ti = list.Count; ti > 0; ti-- {
         var tr = list[ti - 1]
-        tr.Elapsed = tr.Elapsed + dt
+        tr.Elapsed = Owner?.Preferences.ReducedMotion == true ? Math.Max(tr.Duration, 1.0) : tr.Elapsed + dt
         if tr.Elapsed <= 0.0 {
           list[ti - 1] = tr
           continue
@@ -772,6 +773,7 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.FontSize { n.FontSize = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.Color { n.Color = Color.FromNormalized(e.A, e.B, e.C, e.D) }
     case StyleField.FontFamily { n.FontFamily = entryText(e) ?? "" }
+    case StyleField.Language { n.Language = entryText(e) ?? "" }
     case StyleField.FontWeight { n.FontWeight = float64(e.A) }
     case StyleField.FontStyle { n.FontStyle = FontStyle(int32(e.A)) }
     case StyleField.LetterSpacing { n.LetterSpacing = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
@@ -910,6 +912,7 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.FontSize { return StyleEntry{ Field: f, A: n.FontSize.Value, B: float32(int32(n.FontSize.Unit)) } }
     case StyleField.Color { return StyleEntry{ Field: f, A: n.Color.R, B: n.Color.G, C: n.Color.B, D: n.Color.A } }
     case StyleField.FontFamily { return StyleEntry{ Field: f, Payload: n.FontFamily } }
+    case StyleField.Language { return StyleEntry{ Field: f, Payload: n.Language } }
     case StyleField.FontWeight { return StyleEntry{ Field: f, A: float32(n.FontWeight) } }
     case StyleField.FontStyle { return StyleEntry{ Field: f, A: float32(int32(n.FontStyle)) } }
     case StyleField.LetterSpacing { return StyleEntry{ Field: f, A: n.LetterSpacing.Value, B: float32(int32(n.LetterSpacing.Unit)) } }

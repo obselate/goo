@@ -70,21 +70,21 @@ internal partial class TextShaping {
 
     internal func MeasureLineUncached(paragraph string, start int32, length int32,
       families string, size float32, weight int32, italic bool, letterSpacing float32,
-      direction int32) float32{
+      direction int32, language string = "") float32{
         validateRange(paragraph, start, length, direction)
         let shaped = ShapeUncached(paragraph, start, length, families, size, weight, italic,
-          letterSpacing, direction, nil)
+          letterSpacing, direction, nil, language)
         try { return shaped.Width } finally { shaped.Dispose() }
       }
 
     internal func Ellipsize(text string, families string, size float32, weight int32, italic bool,
-      letterSpacing float32, direction int32, maxWidth float32) string{
+      letterSpacing float32, direction int32, maxWidth float32, language string = "") string{
         let ellipsis = "\u2026"
         let baseDirection = BaseDirection(text, direction)
         let elements = UnicodeGraphemes.Starts(text)
         if elements.Length == 0 { return ellipsis }
         if MeasureUncached(ellipsis, families, size, weight, italic, letterSpacing,
-          baseDirection) > maxWidth{ return ellipsis }
+          baseDirection, language) > maxWidth{ return ellipsis }
         var low int32 = 0
         var high = elements.Length
         while low < high {
@@ -92,7 +92,7 @@ internal partial class TextShaping {
           let end = if middle < elements.Length { elements[middle] } else { text.Length }
           let candidate = text.Substring(0, end) + ellipsis
           if MeasureUncached(candidate, families, size, weight, italic, letterSpacing,
-            baseDirection) <= maxWidth{
+            baseDirection, language) <= maxWidth{
               low = middle
             } else {
               high = middle - 1
@@ -103,21 +103,21 @@ internal partial class TextShaping {
       }
 
     internal func Shape(text string, families string, size float32, weight int32, italic bool,
-      letterSpacing float32, direction int32) ShapedText ->
+      letterSpacing float32, direction int32, language string = "") ShapedText ->
     ShapeLine(text, 0, text.Length, families, size, weight, italic, letterSpacing,
-      direction, nil)
+      direction, nil, language)
 
     internal func ShapeLine(paragraph string, start int32, length int32, families string,
-      size float32, weight int32, italic bool, letterSpacing float32, direction int32)
+      size float32, weight int32, italic bool, letterSpacing float32, direction int32, language string = "")
     ShapedText -> ShapeLine(paragraph, start, length, families, size, weight, italic,
-      letterSpacing, direction, nil)
+      letterSpacing, direction, nil, language)
 
     internal func ShapeLine(paragraph string, start int32, length int32, families string,
       size float32, weight int32, italic bool, letterSpacing float32, direction int32,
-      resolution BidiResolution?) ShapedText{
+      resolution BidiResolution?, language string = "") ShapedText{
         validateRange(paragraph, start, length, direction)
         return ShapeUncached(paragraph, start, length, families, size, weight, italic,
-          letterSpacing, direction, resolution)
+          letterSpacing, direction, resolution, language)
       }
 
     internal func ResolveParagraph(text string, direction int32) BidiResolution ->
@@ -134,13 +134,13 @@ internal partial class TextShaping {
     internal func GlyphCount(shaped ShapedText) int32 -> shaped.GlyphCount
 
     private func MeasureUncached(text string, families string, size float32, weight int32,
-      italic bool, letterSpacing float32, direction int32) float32 ->
+      italic bool, letterSpacing float32, direction int32, language string) float32 ->
     MeasureLineUncached(text, 0, text.Length, families, size, weight, italic,
-      letterSpacing, direction)
+      letterSpacing, direction, language)
 
     private func ShapeUncached(paragraph string, lineStart int32, lineLength int32,
       families string, size float32, weight int32, italic bool, letterSpacing float32,
-      direction int32, paragraphResolution BidiResolution?) ShapedText{
+      direction int32, paragraphResolution BidiResolution?, language string) ShapedText{
         let text = paragraph.Substring(lineStart, lineLength)
         let primary = ResolveCachedPrimary(families, weight, italic)
         let metrics = MetricsFor(primary.Provider.Metrics, size)
@@ -168,7 +168,7 @@ internal partial class TextShaping {
             appendDirectionalRange(paragraph, lineStart, lineLength, lineStart, direction == 2,
               families, weight, italic, size, letterSpacing, primary, fallbackCandidates,
               runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
-              scratch, scriptRuns)
+              scratch, scriptRuns, language)
             return ShapedText(text, runs, cursor + extra, ascent, descent,
               direction == 2)
           }
@@ -194,7 +194,7 @@ internal partial class TextShaping {
             appendDirectionalRange(paragraph, visualRun.Start, visualRun.Length, lineStart, rtl,
               families, weight, italic, size, letterSpacing, primary, fallbackCandidates,
               runs, ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
-              scratch, scriptRuns)
+              scratch, scriptRuns, language)
           }
           return ShapedText(text, runs, cursor + extra, ascent, descent,
             rightToLeft)
@@ -218,7 +218,7 @@ internal partial class TextShaping {
       letterSpacing float32, primary TypefaceLease, fallbackCandidates List[TypefaceLease],
       runs List[ShapedRun], ref cursor float32, ref extra float32, ref ascent float32,
       ref descent float32, ref hasCluster bool, ref priorCluster uint32,
-      scratch UnicodeTextAnalysisScratchScope, scriptRuns List[UnicodeScriptRun]) {
+      scratch UnicodeTextAnalysisScratchScope, scriptRuns List[UnicodeScriptRun], language string) {
         let rangeEnd = rangeStart + rangeLength
         if rtl {
           var scriptIndex = scriptRuns.Count
@@ -232,7 +232,7 @@ internal partial class TextShaping {
               appendScriptRange(paragraph, start, end - start, lineStart, rtl, families, weight,
                 italic, size, letterSpacing, primary, fallbackCandidates, runs, ref cursor,
                 ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch,
-                scriptRun.Script)
+                scriptRun.Script, language)
             }
           }
         } else {
@@ -246,7 +246,7 @@ internal partial class TextShaping {
               appendScriptRange(paragraph, start, end - start, lineStart, rtl, families, weight,
                 italic, size, letterSpacing, primary, fallbackCandidates, runs, ref cursor,
                 ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster, scratch,
-                scriptRun.Script)
+                scriptRun.Script, language)
             }
             scriptIndex++
           }
@@ -258,10 +258,10 @@ internal partial class TextShaping {
       letterSpacing float32, primary TypefaceLease, fallbackCandidates List[TypefaceLease],
       runs List[ShapedRun], ref cursor float32, ref extra float32, ref ascent float32,
       ref descent float32, ref hasCluster bool, ref priorCluster uint32,
-      scratch UnicodeTextAnalysisScratchScope, script uint32) {
+      scratch UnicodeTextAnalysisScratchScope, script uint32, language string) {
         let text = paragraph.Substring(textStart, textLength)
         let direction = if rtl { 5u } else { 4u }
-        let shaped = ShapeProvider(text, primary.Provider, direction, script)
+        let shaped = ShapeProvider(text, primary.Provider, direction, script, language)
         let count = shaped.Count
         let workspace = shaped.Workspace
         if !HasMissingGlyphs(workspace.GlyphBuffer, count) {
@@ -297,7 +297,7 @@ internal partial class TextShaping {
             var candidate int32 = 1
             while candidate < fallbackCandidates.Count {
               let candidateShaped = ShapeProvider(clusterText,
-                fallbackCandidates[candidate].Provider, direction, script)
+                fallbackCandidates[candidate].Provider, direction, script, language)
               let candidateCount = candidateShaped.Count
               let candidateWorkspace = candidateShaped.Workspace
               if HasUsableGlyphs(candidateWorkspace.GlyphBuffer, candidateCount) {
@@ -318,7 +318,7 @@ internal partial class TextShaping {
             while startIndex > 0 && selected[startIndex - 1] == selection { startIndex-- }
             appendFallbackGroup(text, textStart, lineStart, rtl, boundaries[startIndex],
               if endIndex < boundaries.Count { boundaries[endIndex] } else { text.Length },
-              size, letterSpacing, fallbackCandidates[selection], direction, script, runs,
+              size, letterSpacing, fallbackCandidates[selection], direction, script, language, runs,
               ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
               scratch)
             endIndex = startIndex
@@ -331,7 +331,7 @@ internal partial class TextShaping {
             while endIndex < boundaries.Count && selected[endIndex] == selection { endIndex++ }
             appendFallbackGroup(text, textStart, lineStart, rtl, boundaries[startIndex],
               if endIndex < boundaries.Count { boundaries[endIndex] } else { text.Length },
-              size, letterSpacing, fallbackCandidates[selection], direction, script, runs,
+              size, letterSpacing, fallbackCandidates[selection], direction, script, language, runs,
               ref cursor, ref extra, ref ascent, ref descent, ref hasCluster, ref priorCluster,
               scratch)
             startIndex = endIndex
@@ -341,11 +341,11 @@ internal partial class TextShaping {
 
     private func appendFallbackGroup(text string, rangeStart int32, lineStart int32, rtl bool,
       groupStart int32, groupEnd int32, size float32, letterSpacing float32,
-      selected TypefaceLease, direction uint32, script uint32, runs List[ShapedRun],
+      selected TypefaceLease, direction uint32, script uint32, language string, runs List[ShapedRun],
       ref cursor float32, ref extra float32, ref ascent float32, ref descent float32,
       ref hasCluster bool, ref priorCluster uint32, scratch UnicodeTextAnalysisScratchScope) {
         let groupText = text.Substring(groupStart, groupEnd - groupStart)
-        let shaped = ShapeProvider(groupText, selected.Provider, direction, script)
+        let shaped = ShapeProvider(groupText, selected.Provider, direction, script, language)
         let count = shaped.Count
         let workspace = shaped.Workspace
         appendGlyphRange(groupText, rangeStart + groupStart, lineStart, rtl, size, letterSpacing,
@@ -429,10 +429,10 @@ internal partial class TextShaping {
       }
 
     private func ShapeProvider(text string, provider VulkanTextProvider, direction uint32,
-      script uint32)
+      script uint32, language string)
     TextProviderShapeResult{
       let options = VulkanTextShapingOptions{
-        Direction: direction, Script: script, Language: nil, ClusterLevel: 0u, Flags: 0u,
+        Direction: direction, Script: script, Language: language == "" ? nil : language, ClusterLevel: 0u, Flags: 0u,
         Features: nil,
       }
       var workspace = ShapingWorkspace(0)

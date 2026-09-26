@@ -50,6 +50,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         }
         Holder!.AddCallback(this);
         window.Attach(host);
+        RefreshPreferences();
         window.PlatformInput.EditorChanged += OnEditorChanged;
     }
 
@@ -68,9 +69,29 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (disposed)
             return;
         resumed = true;
+        RefreshPreferences();
         lastFrameTime = 0;
         host.Resume();
         host.SetFocused(HasWindowFocus);
+    }
+
+    protected override void OnConfigurationChanged(global::Android.Content.Res.Configuration? newConfig)
+    {
+        base.OnConfigurationChanged(newConfig);
+        RefreshPreferences();
+    }
+
+    private void RefreshPreferences()
+    {
+        var configuration = Resources?.Configuration;
+        var mode = configuration?.UiMode & global::Android.Content.Res.UiMode.NightMask;
+        host.UpdatePreferences(new PlatformPreferences
+        {
+            Theme = mode == global::Android.Content.Res.UiMode.NightYes ? SystemTheme.Dark
+                : mode == global::Android.Content.Res.UiMode.NightNo ? SystemTheme.Light : SystemTheme.Unknown,
+            TextScaleFactor = configuration?.FontScale,
+            ReducedMotion = !global::Android.Animation.ValueAnimator.AreAnimatorsEnabled()
+        });
     }
 
     public void Pause()

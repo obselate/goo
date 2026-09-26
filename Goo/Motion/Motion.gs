@@ -87,6 +87,7 @@ internal class MotionPump {
   }
 
   internal prop Now float64{ get -> clock.Now }
+  internal var ReducedMotion bool
 
   // True while any animation is still running.
   internal prop Active bool{ get -> logicalCount > 0 }

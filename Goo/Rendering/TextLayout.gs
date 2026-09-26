@@ -25,6 +25,7 @@ internal class TextLayout {
 
   internal prop Content string{ get; init; }
   internal prop FontFamily string{ get; init; }
+  internal prop Language string{ get; init; }
   internal prop FontSize float32{ get; init; }
   internal prop FontWeight float64{ get; init; }
   internal prop FontRegistryGeneration uint64{ get; init; }
@@ -51,6 +52,7 @@ internal class TextLayout {
   internal init() {
     Content = ""
     FontFamily = ""
+    Language = ""
     Lines = List[TextLine]()
   }
 }
@@ -71,22 +73,22 @@ internal class TextLayoutGeometry {
 
 internal class TextLayouts {
   shared {
-    internal func For(n Node, maxWidth float32) TextLayout {
+    internal func For(n Node, maxWidth float32, geometry bool = false) TextLayout {
       if let cached = n.TextLayout {
-        if matches(cached, n, maxWidth) {
+        if matches(cached, n, maxWidth) && (!geometry || cached.Geometry != nil) {
           return cached
         }
       }
       if let cache = n.TextLayoutCache {
         for i in 0 ... cache.Count {
           let cached = cache[i]
-          if matches(cached, n, maxWidth) {
+          if matches(cached, n, maxWidth) && (!geometry || cached.Geometry != nil) {
             n.TextLayout = cached
             return cached
           }
         }
       }
-      let layout = build(n, maxWidth)
+      let layout = build(n, maxWidth, geometry)
       if n.TextLayoutCache == nil {
         n.TextLayoutCache = List[TextLayout]()
       }
@@ -168,7 +170,7 @@ internal class TextLayouts {
       n.TextLayoutCache = nil
     }
 
-    internal func IsShapingField(f StyleField) bool -> f == StyleField.FontFamily || f == StyleField.FontSize
+    internal func IsShapingField(f StyleField) bool -> f == StyleField.Language || f == StyleField.FontFamily || f == StyleField.FontSize
       || f == StyleField.FontWeight || f == StyleField.FontStyle
       || f == StyleField.LetterSpacing || f == StyleField.LineHeight
       || f == StyleField.TextWrap || f == StyleField.TextTrimming
@@ -239,14 +241,14 @@ internal class TextLayouts {
         }
     }
 
-    internal func build(n Node, maxWidth float32) TextLayout {
+    internal func build(n Node, maxWidth float32, requireGeometry bool = false) TextLayout {
       let analysis = TextAnalyses.For(n)
       let ranges = PassiveTextPresentations.Read(n)
-      let geometry TextLayoutGeometry? = n.HasElementHandle ? TextLayoutGeometry() : nil
+      let geometry TextLayoutGeometry? = n.HasElementHandle || requireGeometry ? TextLayoutGeometry() : nil
       let rich TextRichLayout? = if ranges != nil { TextRichLayout() } else { nil }
       let result = TextLayout{
         Content: n.Content,
-        FontFamily: n.FontFamily,
+        FontFamily: n.FontFamily, Language: n.Language,
         FontRegistryGeneration: FontRegistry.Generation,
         FontSize: fontSize(n),
         FontWeight: n.FontWeight,
@@ -541,7 +543,7 @@ internal class TextLayouts {
         }
         return TextShaping.Shape(inlineText(n, text, style), style.FontFamily, style.FontSize,
           int32(style.FontWeight), style.FontStyle == FontStyle.Italic,
-          style.LetterSpacing, int32(style.Direction))
+          style.LetterSpacing, int32(style.Direction), style.Language)
       }
 
     private func disposeRichLine(line TextRichLine) {
@@ -572,11 +574,11 @@ internal class TextLayouts {
         }
         let direction = TextShaping.BaseDirection(text, int32(n.Direction))
         let display = TextShaping.Ellipsize(text, n.FontFamily, fontSize(n), int32(n.FontWeight),
-          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth)
+          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language)
         let logicalWidth = whole.Width
         whole.Shape?.Dispose()
         let shaped = TextShaping.Shape(display, n.FontFamily, fontSize(n), int32(n.FontWeight),
-          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction)
+          n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)
         return TextLine{
           Content: display,
           Shape: shaped,
@@ -595,10 +597,10 @@ internal class TextLayouts {
       }
       let display = maxWidth < 0.0F
       ? line.Content + "\u2026" : TextShaping.Ellipsize(line.Content, n.FontFamily, fontSize(n), int32(n.FontWeight),
-        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth)
+        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, maxWidth, n.Language)
       line.Shape?.Dispose()
       let shaped = TextShaping.Shape(display, n.FontFamily, fontSize(n), int32(n.FontWeight),
-        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction)
+        n.FontStyle == FontStyle.Italic, letterSpacing(n), direction, n.Language)
       return TextLine{
         Content: display,
         Shape: shaped,
@@ -606,7 +608,7 @@ internal class TextLayouts {
       }
     }
 
-    internal func matches(layout TextLayout, n Node, maxWidth float32) bool -> layout.Content == n.Content && layout.FontFamily == n.FontFamily
+    internal func matches(layout TextLayout, n Node, maxWidth float32) bool -> layout.Content == n.Content && layout.Language == n.Language && layout.FontFamily == n.FontFamily
       && layout.FontRegistryGeneration == FontRegistry.Generation
       && layout.FontSize == fontSize(n) && layout.FontWeight == n.FontWeight
       && layout.Policy == textPolicy(n) && layout.LetterSpacing == letterSpacing(n)
@@ -622,7 +624,7 @@ internal class TextLayouts {
       default: content
     }
 
-    internal func fontSize(n Node) float32 -> n.FontSize.Px
+    internal func fontSize(n Node) float32 -> n.FontSize.Px * n.TextScaleFactor
 
     internal func letterSpacing(n Node) float32 -> n.LetterSpacing.Px
 

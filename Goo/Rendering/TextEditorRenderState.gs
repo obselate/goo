@@ -197,8 +197,8 @@ internal sealed class TextEditorRenderState : IDisposable {
     if n.Placeholder == "" { return nil }
     let spacing = n.LetterSpacing.Px
     let fingerprint = n.Placeholder.GetHashCode() ^ n.FontFamily.GetHashCode()
-    ^int32(TextLayouts.fontSize(n)) ^ int32(n.FontWeight) ^ int32(n.FontStyle)
-    ^int32(spacing) ^ int32(n.Direction)
+    ^TextLayouts.fontSize(n).GetHashCode() ^ n.FontWeight.GetHashCode() ^ int32(n.FontStyle)
+    ^spacing.GetHashCode() ^ int32(n.Direction) ^ n.Language.GetHashCode()
     if PlaceholderShape == nil || placeholderText != n.Placeholder || placeholderFingerprint != fingerprint {
       PlaceholderShape?.Dispose()
       PlaceholderShape = TextAnalyses.ShapeEntry(n, n.Placeholder)

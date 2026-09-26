@@ -6,151 +6,6 @@ import System.Diagnostics
 import System.Numerics
 import System.Threading
 
-internal class WindowScheduler {
-  private const EventBudget int32 = 64
-  private const DefaultWaitMs int32 = 250
-  private let windows List[Window] = List[Window]()
-  private let windowsGate object = Object()
-  private var snapshot []Window = []Window{}
-  private var snapshotCount int32
-  private var nextWindow int32
-  private var running bool
-
-  private func EnsureSnapshotCapacity(required int32) {
-    if required <= snapshot.Length {
-      return
-    }
-    var capacity = snapshot.Length
-    if capacity == 0 {
-      capacity = 4
-    }
-    while capacity < required {
-      if capacity > 1073741823 {
-        capacity = required
-      } else {
-        capacity = capacity * 2
-      }
-    }
-    snapshot = [capacity]Window
-  }
-
-  private func CaptureSnapshot() int32 {
-    let count = windows.Count
-    EnsureSnapshotCapacity(count)
-    if count < snapshotCount {
-      Array.Clear(snapshot, count, snapshotCount - count)
-    }
-    var index int32
-    while index < count {
-      snapshot[index] = windows[index]
-      index = index + 1
-    }
-    snapshotCount = count
-    return count
-  }
-
-  internal func Register(window Window) {
-    lock windowsGate {
-      if !windows.Contains(window) {
-        windows.Add(window)
-      }
-    }
-  }
-
-  internal func Unregister(window Window) {
-    lock windowsGate {
-      let index = windows.IndexOf(window)
-      if index < 0 {
-        return
-      }
-      windows.RemoveAt(index)
-      if windows.Count == 0 {
-        nextWindow = 0
-      } else if nextWindow >= windows.Count {
-        nextWindow = 0
-      }
-    }
-  }
-
-  internal func RequestHotReload() {
-    let pending = List[Window]()
-    lock windowsGate { pending.AddRange(windows) }
-    for window in pending { window.TryPost(window.RebuildAfterHotReload) }
-  }
-
-  internal func Run() {
-    if running {
-      throw InvalidOperationException("Window scheduler is already running")
-    }
-    running = true
-    nextWindow = 0
-    try {
-      while true {
-        let currentCount = CaptureSnapshot()
-        if currentCount == 0 {
-          break
-        }
-        var hasOpenWindow bool
-        let now = float64(Stopwatch.GetTimestamp())
-        var waitMs int32 = DefaultWaitMs
-        var currentIndex int32
-        while currentIndex < currentCount {
-          let window = snapshot[currentIndex]
-          if !window.IsOpen || window.ExternallyDriven {
-            currentIndex = currentIndex + 1
-            continue
-          }
-          hasOpenWindow = true
-          let candidate = window.SchedulerWaitMs(now)
-          if candidate < waitMs {
-            waitMs = candidate
-          }
-          currentIndex = currentIndex + 1
-        }
-        if !hasOpenWindow {
-          break
-        }
-        if waitMs == 0 {
-          SdlRuntime.PumpEvents(EventBudget)
-        } else {
-          SdlRuntime.WaitEventsBounded(waitMs, EventBudget)
-        }
-        let afterEventsCount = CaptureSnapshot()
-        var afterEventsIndex int32
-        while afterEventsIndex < afterEventsCount {
-          let window = snapshot[afterEventsIndex]
-          if window.IsOpen && !window.ExternallyDriven {
-            window.RefreshSchedulerMetrics()
-          }
-          afterEventsIndex = afterEventsIndex + 1
-        }
-        let afterEventsNow = float64(Stopwatch.GetTimestamp())
-        let count = afterEventsCount
-        if count == 0 {
-          break
-        }
-        let start = nextWindow % count
-        var offset int32
-        while offset < count {
-          let window = snapshot[(start + offset) % count]
-          if window.IsOpen && !window.ExternallyDriven {
-            let service = window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork()
-            let timed = window.SchedulerTimedServiceDue()
-            let frameDue = window.SchedulerFrameDue(afterEventsNow)
-            if service || timed || frameDue {
-              window.SchedulerPump(afterEventsNow, frameDue)
-            }
-          }
-          offset = offset + 1
-        }
-        nextWindow = (start + 1) % count
-      }
-    } finally {
-      running = false
-    }
-  }
-}
-
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   private var schedulerLastTicks float64
@@ -263,6 +118,8 @@ public partial class Window {
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
+      if !focusable { native.SetFocusable(false) }
+      if topmost { native.SetTopmost(true) }
       SyncTitlebarHook()
       configureOwnership(native)
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(minWidth, minHeight) }
@@ -288,7 +145,13 @@ public partial class Window {
       family?.NativeDrop?.Bind(native)
       if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.Bind(native) }
       registerOwnership()
-      native.Show()
+      applyPreferences(native.Preferences)
+      if initiallyVisible {
+        let shown = Show()
+        if shown != WindowOperationResult.Accepted {
+          throw InvalidOperationException("Native window show failed: " + shown.ToString())
+        }
+      }
       schedulerLastTicks = float64(Stopwatch.GetTimestamp())
       schedulerSimulationBank = 0.0
       Window.RegisterLiveWindow(this)
@@ -301,6 +164,8 @@ public partial class Window {
   }
 
   private func configureHost(native WindowHost) {
+    native.PreferencesChanged += applyPreferences
+    native.VisibilityChanged += observeVisibility
     native.MetricsChanged += (logicalWidth int32, logicalHeight int32,
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)
@@ -326,9 +191,10 @@ public partial class Window {
   }
 
   internal func handleFocusChanged(hasFocus bool) {
-    let changed = IsFocused != hasFocus
-    IsFocused = hasFocus
-    if hasFocus {
+    let focused = hasFocus && focusable
+    let changed = IsFocused != focused
+    IsFocused = focused
+    if focused {
       input.FocusGained()
     } else {
       input.FocusLost(node, resolver)
@@ -336,8 +202,8 @@ public partial class Window {
     }
     RefreshPlatformInput()
     if changed {
-      if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.FocusChanged(hasFocus) }
-      notifications.RaiseFocusChanged(hasFocus)
+      if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.FocusChanged(focused) }
+      notifications.RaiseFocusChanged(focused)
     }
   }
 
@@ -507,7 +373,8 @@ public partial class Window {
       // and misreads two far-apart clicks as a double-click -- only the
       // simulation step is bounded; UpdateTree's wallDt/simDt split keeps them
       // separate.
-      let stepDt = frameAllowed ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
+      let allowFrame = frameAllowed && IsVisible
+      let stepDt = allowFrame ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
       let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       UpdateTree(dt, stepDt)
       RefreshPlatformInput()
@@ -522,7 +389,7 @@ public partial class Window {
         native.MarkFrame(float64(Stopwatch.GetTimestamp()))
       }
       let frameNeeded = needsRenderFrame(resolver.VisualDirty)
-      if frameAllowed && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
+      if allowFrame && IsVisible && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
         let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         let currentProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         windowTarget?.BeginFrame()
@@ -579,7 +446,7 @@ public partial class Window {
     guard let native = host else {
       return false
     }
-    return hasDemand() && native.SchedulerPacingAvailable &&
+    return IsVisible && hasDemand() && native.SchedulerPacingAvailable &&
     native.IsFrameDue(nowTicks)
   }
 
@@ -588,7 +455,7 @@ public partial class Window {
       return 0
     }
     let idle = idleWaitMs()
-    let demand = hasDemand()
+    let demand = IsVisible && hasDemand()
     let timed = SchedulerTimedServiceDue()
     if timed {
       return 0
@@ -709,6 +576,7 @@ public partial class Window {
     renderDirty = true
     Interlocked.Exchange(&closeRequested, 0)
     IsFocused = false
+    observedVisible = false
 
     if let current = target {
       firstError = captureCleanupError(firstError, () -> current.Dispose())

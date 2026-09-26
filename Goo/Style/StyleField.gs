@@ -43,7 +43,7 @@ internal enum StyleField {
   BackgroundImageSource;
   ClipPathFillRule;
   ShaderEffect;
-  ScrollbarVisibilityX; ScrollbarVisibilityY; ScrollbarX; ScrollbarY
+  ScrollbarVisibilityX; ScrollbarVisibilityY; ScrollbarX; ScrollbarY; Language
 }
 
 internal data struct StyleMask {

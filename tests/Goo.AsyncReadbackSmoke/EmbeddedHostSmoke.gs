@@ -30,6 +30,14 @@ internal class EmbeddedSmokeCell : Cell, IDisposable {
   public func Dispose() { Disposals++ }
 }
 
+internal class EmbeddedPreferenceCell : Cell {
+  internal let TextHandle ElementHandle = ElementHandle()
+  public override func Build() Blob -> Container{
+    AlignItems: AlignItems.FlexStart,
+    Text{Handle: TextHandle, Content: "Scaled text", FontSize: 16},
+  }
+}
+
 internal open class EmbeddedSmokeHost : EmbeddedWindowHost {
   private var native SdlHost?
   internal var Creates int32
@@ -75,6 +83,37 @@ internal class EmbeddedHostSmoke {
   shared {
     private func Require(value bool, message string) {
       if !value { throw InvalidOperationException(message) }
+    }
+
+    private func VerifyPreferences() {
+      using let host = EmbeddedSmokeHost()
+      let root = EmbeddedPreferenceCell()
+      let window = Window{Root: root}
+      host.Resize(640, 200, 1280, 400)
+      window.Attach(host)
+      host.RenderFrame(0.0)
+      let initial = root.TextHandle.BorderBox
+      let density = window.CurrentWindowMetrics().DisplayScaleX
+      var notifications = 0
+      window.PreferencesChanged += (value PlatformPreferences) -> { notifications++ }
+      let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
+      host.UpdatePreferences(preferences)
+      host.UpdatePreferences(preferences)
+      host.RenderFrame(0.0)
+      let scaled = root.TextHandle.BorderBox
+      Require(initial.Width > 0.0 && initial.Height > 0.0
+          && scaled.Width > initial.Width * 1.7 && scaled.Height > initial.Height * 1.7,
+        "Platform text scale did not resize explicitly sized mounted text")
+      Require(notifications == 1 && window.Preferences.ReducedMotion == true
+          && window.CurrentWindowMetrics().DisplayScaleX == density,
+        "Preference delivery changed density, lost motion policy or duplicated a snapshot")
+      host.UpdatePreferences(PlatformPreferences{})
+      host.RenderFrame(0.0)
+      Require(Math.Abs(root.TextHandle.BorderBox.Width - initial.Width) < 0.1,
+        "Removing host text scale did not restore mounted text geometry")
+      Require(window.Show() == WindowOperationResult.Unsupported
+          && window.Hide() == WindowOperationResult.Unsupported,
+        "Embedded lifecycle operations claimed native window support")
     }
 
     private func Settle(host EmbeddedSmokeHost) {
@@ -218,6 +257,7 @@ internal class EmbeddedHostSmoke {
       }
 
     internal func Run() {
+      VerifyPreferences()
       let host = EmbeddedSmokeHost()
       let root = EmbeddedSmokeCell()
       let window = Window{ Root: root }

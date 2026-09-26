@@ -371,7 +371,7 @@ public class Anim[T] {
     if !running {
       return false
     }
-    if Motion.TimeScale <= 0.0 {
+    if Motion.TimeScale <= 0.0 || boundPump?.ReducedMotion == true {
       converter.Read(toT, work)
       currentT = toT
       running = false

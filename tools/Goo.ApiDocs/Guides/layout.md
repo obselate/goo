@@ -96,3 +96,17 @@ class VerticalLayout : LayoutAlgorithm {
   }
 }
 ```
+
+
+## Text language and user scaling
+
+`Style.Language` accepts an inherited BCP 47 language tag such as `sr` or `ja`.
+The empty string uses the shaper's default. Language applies to passive text,
+entries, editor paragraphs, styled spans, fallback glyphs, and ellipsis shaping.
+Changing it invalidates the existing text layout caches. Direction remains a
+separate style property.
+
+`Window.Preferences.TextScaleFactor` scales text measurement, including explicit
+font sizes and styled spans, independently of display density. The declared
+`FontSize` values remain unchanged. Changes invalidate mounted text layouts and
+flow through the normal layout and paint passes.

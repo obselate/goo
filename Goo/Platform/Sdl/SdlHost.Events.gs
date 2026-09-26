@@ -10,6 +10,10 @@ internal unsafe partial class SdlHost {
   private func Dispatch(nativeEvent SDLEvent) {
     pendingEvents = true
     let eventType = SDLEventType(nativeEvent.Type)
+    if eventType == SDLEventType.SystemThemeChanged {
+      RefreshPreferences(true)
+      return
+    }
     if eventType == SDLEventType.Quit || eventType == SDLEventType.Terminating {
       RequestClose()
       return
@@ -255,6 +259,9 @@ internal unsafe partial class SdlHost {
       StateChanged?.Invoke(WindowState.Maximized)
     } else if eventType == SDLEventType.WindowShown {
       RefreshDisplayPacing(true)
+      VisibilityChanged?.Invoke()
+    } else if eventType == SDLEventType.WindowHidden {
+      VisibilityChanged?.Invoke()
     } else if eventType == SDLEventType.WindowRestored {
       RefreshDisplayPacing(true)
       StateChanged?.Invoke(WindowState.Normal)

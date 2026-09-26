@@ -10,6 +10,7 @@ internal class EntryShapeState {
   internal prop Display string{ get; init; }
   internal prop SourceStarts []int32{ get; init; }
   internal prop FontFamily string{ get; init; }
+  internal prop Language string{ get; init; }
   internal prop FontSize float32{ get; init; }
   internal prop FontWeight float64{ get; init; }
   internal prop Italic bool{ get; init; }
@@ -25,6 +26,7 @@ internal class EntryShapeState {
     Display = ""
     SourceStarts = []int32{}
     FontFamily = ""
+    Language = ""
     Placeholder = ""
   }
 }
@@ -87,7 +89,7 @@ internal class TextMetrics {
   internal func BufferShape(n Node) ShapedText {
     if let cached = n.EntryShape {
       if let shape = cached.Shape {
-        if cached.Content == n.Buffer && cached.FontFamily == n.FontFamily
+        if cached.Content == n.Buffer && cached.Language == n.Language && cached.FontFamily == n.FontFamily
           && cached.FontSize == TextLayouts.fontSize(n) && cached.FontWeight == n.FontWeight
           && cached.Italic == (n.FontStyle == FontStyle.Italic)
           && cached.Spacing == Spacing(n) && cached.Direction == int32(n.Direction)
@@ -107,7 +109,7 @@ internal class TextMetrics {
     let shaped = Shape(n, display)
     n.EntryShape = EntryShapeState{
       Content: n.Buffer, Display: display, SourceStarts: starts,
-      FontFamily: n.FontFamily, FontSize: TextLayouts.fontSize(n),
+      FontFamily: n.FontFamily, Language: n.Language, FontSize: TextLayouts.fontSize(n),
       FontWeight: n.FontWeight, Italic: n.FontStyle == FontStyle.Italic,
       Spacing: Spacing(n), Direction: int32(n.Direction), Password: n.Password, Shape: shaped,
     }

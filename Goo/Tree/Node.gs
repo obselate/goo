@@ -184,6 +184,8 @@ internal class Node {
     set -> TextStroking.SetColor(this, value)
   }
   internal prop FontFamily string{ get; set; }
+  internal prop Language string{ get; set; }
+  internal var TextScaleFactor float32 = 1.0F
   internal prop TextMaxLines int32{ get; set; }
   internal prop TextLayout TextLayout? { get; set; }
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
@@ -476,6 +478,7 @@ internal class Node {
     Children = List[Node]()
     Content = ""
     FontFamily = ""
+    Language = ""
     Buffer = ""
     PreFocus = ""
     Placeholder = ""

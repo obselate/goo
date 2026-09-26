@@ -295,6 +295,15 @@ public open class Style {
   public prop TextShadows []TextShadow{ init -> pushTextShadowStack(copyTextShadows(value)) }
   /// Sets the preferred font family.
   public prop FontFamily string{ init -> pushText(StyleField.FontFamily, value) }
+
+  /// Sets the inherited BCP 47 language used for text shaping. Empty uses the shaper default.
+  public prop Language string{
+    init {
+      if value == nil { throw ArgumentNullException("Language") }
+      if value.Length > 64 || value.IndexOf('\0') >= 0 { throw ArgumentException("Language must fit a 64-character language tag", "Language") }
+      pushText(StyleField.Language, value)
+    }
+  }
   /// Sets the font size.
   public prop FontSize Length{ init -> pushCheckedLength(StyleField.FontSize, value, "FontSize", false, false, false) }
   /// Sets the text color.

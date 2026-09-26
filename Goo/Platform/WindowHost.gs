@@ -22,6 +22,8 @@ internal interface WindowHost {
   event Moved Action[int32, int32]
   event StateChanged Action[WindowState]
   event FocusChanged Action[bool]
+  event VisibilityChanged Action
+  event PreferencesChanged Action[PlatformPreferences]
   event CloseRequested Action
   event Exposed Action
   event PointerMoved Action[int64, PointerDevice, float32, float32,
@@ -51,6 +53,9 @@ internal interface WindowHost {
   prop SchedulerPacingAvailable bool { get; }
   prop NativeResizable bool { get; }
   prop CanMove bool { get; }
+  prop IsVisible bool { get; }
+  prop Capabilities WindowCapabilities { get; }
+  prop Preferences PlatformPreferences { get; }
 
   func PollEvents();
   func WaitEvents(timeoutMs int32);
@@ -71,7 +76,10 @@ internal interface WindowHost {
   func SetBorder(decorated bool, resizable bool);
   func SetVSync(value bool);
   func SetCursor(value Cursor);
-  func Show();
+  func SetFocusable(value bool);
+  func SetTopmost(value bool);
+  func Show(activate bool) WindowOperationResult;
+  func Hide() WindowOperationResult;
   func StartTextInput() bool;
   func StopTextInput();
   func SetImeArea(x int32, y int32, width int32, height int32, cursor int32) bool;

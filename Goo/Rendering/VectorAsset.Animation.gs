@@ -103,7 +103,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
   }
 
   internal override func Tick(now float64) bool {
-    if disposed {
+    if disposed || registrationPump?.ReducedMotion == true {
       return false
     }
     guard let root = owner.MountedNode() else {

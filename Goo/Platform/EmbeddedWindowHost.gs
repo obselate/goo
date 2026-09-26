@@ -12,6 +12,19 @@ public open class EmbeddedWindowHost : IDisposable {
   private var framebufferWidth int32
   private var framebufferHeight int32
   private var suspended bool
+  private var preferences PlatformPreferences
+
+  /// Gets the most recent preference snapshot supplied by this host.
+  public prop Preferences PlatformPreferences { get -> preferences }
+
+  /// Updates platform preferences on the owner thread, before or after attaching a window.
+  public func UpdatePreferences(value PlatformPreferences) {
+    RequireOwnerThread()
+    if preferences == value { return }
+    preferences = value
+    Bridge?.RaisePreferencesChanged(value)
+    RequestFrame()
+  }
 
   /// Gets the attached Goo window, or nil after disposal.
   public prop Window Window? { get -> Bridge?.Owner }
@@ -45,6 +58,7 @@ public open class EmbeddedWindowHost : IDisposable {
   public func AttachPresentation() {
     RequireOwnerThread()
     RequireWindow().AttachEmbeddedPresentation()
+    Bridge?.RaiseVisibilityChanged()
     RequestFrame()
   }
 
@@ -53,6 +67,7 @@ public open class EmbeddedWindowHost : IDisposable {
   public func DetachPresentation() {
     RequireOwnerThread()
     Window?.DetachEmbeddedPresentation()
+    Bridge?.RaiseVisibilityChanged()
   }
 
   /// Advances a completed graphics submission into presentation without
@@ -82,6 +97,7 @@ public open class EmbeddedWindowHost : IDisposable {
     if suspended { return }
     suspended = true
     Window?.handleFocusChanged(false)
+    Bridge?.RaiseVisibilityChanged()
   }
 
   /// Resumes frame service without applying elapsed background time to animations.
@@ -90,6 +106,7 @@ public open class EmbeddedWindowHost : IDisposable {
     if !suspended { return }
     suspended = false
     Window?.ResetEmbeddedClock()
+    Bridge?.RaiseVisibilityChanged()
     RequestFrame()
   }
 

@@ -100,7 +100,7 @@ internal sealed class LayoutTransitionState : MotionParticle {
       offsetY = 0.0F
       return
     }
-    if duration <= 0.0 || (x == 0.0F && y == 0.0F) {
+    if pump.ReducedMotion || duration <= 0.0 || (x == 0.0F && y == 0.0F) {
       offsetX = 0.0F
       offsetY = 0.0F
       pump.Deregister(this)
@@ -116,7 +116,7 @@ internal sealed class LayoutTransitionState : MotionParticle {
     if disposed || node.Retired {
       return false
     }
-    let t = Math.Min(1.0, (now - startTime) / duration)
+    let t = pump?.ReducedMotion == true ? 1.0 : Math.Min(1.0, (now - startTime) / duration)
     let remaining = float32(1.0 - ease(easing, t))
     offsetX = startOffsetX * remaining
     offsetY = startOffsetY * remaining

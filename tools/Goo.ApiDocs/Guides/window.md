@@ -1,3 +1,58 @@
+## Visibility, activation and stacking
+
+`Open` shows the desktop window by default. Set `InitiallyVisible: false` before
+`Open` to create and mount it while hidden, then call `Show()` or `Show(false)`.
+`Show(false)` reveals the window without requesting activation. `Hide()` retains
+the mounted tree, cancels transient input and suspends presentation. Callbacks and
+timers still run while hidden. Hidden windows remain open until closed.
+
+`Show` and `Hide` return `WindowOperationResult`: `Accepted`, `Closed`,
+`Unsupported` or `Failed`. Accepted means the native request was submitted.
+Observe `IsVisible` and `VisibilityChanged` for visibility, and `IsFocused` and
+`FocusChanged` for keyboard focus. Visibility does not guarantee that another
+window does not cover this one. `RequestActivation()` restores a minimized window
+and requests focus without changing the focused Goo element synchronously.
+
+`Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
+the owner thread afterward. Nonfocusable windows never request activation when
+shown. Unsupported assignments throw before changing the configured value.
+`Capabilities` reports operations supported by the current host, or `None` before
+opening. Windows, macOS and X11 expose visibility, passive show, focusability and
+topmost requests. Wayland exposes visibility but reports the other three as
+unsupported for top-level windows. Final activation and stacking remain subject
+to desktop policy. Embedded hosts own their viewport lifecycle and return
+`Unsupported` for `Show` and `Hide`.
+
+Modal windows must open visible and focusable with a visible owner. `Hide` returns
+`Unsupported` for a modal window or an owner blocked by a modal child or chooser.
+Close the modal window to release its owner. This prevents an invisible modal
+window from retaining the input block.
+
+## Platform preferences
+
+`Window.Preferences` is an immutable `PlatformPreferences` snapshot.
+`Theme` is `Unknown`, `Light` or `Dark`. `ReducedMotion`, `HighContrast` and
+`TextScaleFactor` are nullable so unsupported values remain distinct from false
+or the default scale. Text scale must be finite and positive and is independent
+of display density. It affects text measurement, shaping and geometry, including
+explicit font sizes and styled spans, without changing declared sizes or DPI.
+
+Subscribe to `PreferencesChanged` on the owner thread. Equal snapshots do not
+notify. Goo updates its layout and motion policy before calling subscribers.
+Applications choose theme colors and contrast styling from the snapshot.
+Reduced motion settles animations and transitions and stops automatic vector
+playback at its current frame. Completed animations require a new target. A later
+rebuild or rebind can resume vector playback when the preference permits it.
+Embedded adapters publish snapshots with `EmbeddedWindowHost.UpdatePreferences`,
+before or after attaching the window.
+
+Desktop theme follows SDL system theme notifications. The desktop event loop also
+refreshes available preferences at most once per second. Windows reports client
+area animation and high contrast settings. macOS reports reduced motion and
+increased contrast. Desktop text scale remains unknown when the backend cannot
+report it. Android reports theme, font scale and disabled animations on attach,
+resume and configuration changes. Other unsupported preferences remain unknown.
+
 ## Native owned and modal windows
 
 Set `Owner` and optional `Modal: true` before `Open`. The owner must already be

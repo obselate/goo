@@ -828,6 +828,9 @@ private func sameWindowMetrics(left WindowMetrics, right WindowMetrics) bool -> 
 internal class TextGeometryQueries {
   shared {
     internal func Prepare(n Node) {
+      if n.Kind == NodeKind.Text {
+        TextLayouts.For(n, BoxGeometry.ContentWidth(n), true)
+      }
       if n.Kind == NodeKind.Entry {
         var rect Rect
         entryCaretRect(n, TextPosition{ Offset: 0, Affinity: TextAffinity.Downstream }, out rect)
@@ -1165,7 +1168,7 @@ internal class TextGeometryQueries {
 
     private func cachedEntryShape(n Node) ShapedText? {
       guard let cached = n.EntryShape, let shape = cached.Shape else { return nil }
-      if cached.Content != n.Buffer || cached.FontFamily != n.FontFamily
+      if cached.Content != n.Buffer || cached.FontFamily != n.FontFamily || cached.Language != n.Language
         || cached.FontSize != TextLayouts.fontSize(n) || cached.FontWeight != n.FontWeight
         || cached.Italic != (n.FontStyle == FontStyle.Italic)
         || cached.Spacing != TextLayouts.letterSpacing(n) || cached.Direction != int32(n.Direction)
