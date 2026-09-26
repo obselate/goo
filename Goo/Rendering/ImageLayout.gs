@@ -31,6 +31,21 @@ internal open class ImageSourceBinding {
   }
 
   private func BindSource(source ImageSourceProvider, minimumVersion uint64) {
+    let registration = () -> {
+      dispatchToOwner(() -> {
+        if Object.ReferenceEquals(Source, source) {
+          var version uint64
+          try { version = source.ContentVersion } catch (error Exception) { return }
+          if version == 0uL || version <= contentVersionSnapshot { return }
+          RebindSource(source)
+          sourceChangedHandler?.Invoke()
+        }
+      })
+    }
+    sourceChangedRegistration = registration
+    try {
+      source.ContentChanged += registration
+    } catch (error Exception) { }
     var lease ImageSourceLease?
     var acceptedVersion uint64
     var observedVersion uint64
@@ -91,21 +106,6 @@ internal open class ImageSourceBinding {
         currentToken = ImageSourceBindingToken(this, source, currentLease, acceptedVersion)
       }
     }
-    let registration = () -> {
-      dispatchToOwner(() -> {
-        if Object.ReferenceEquals(Source, source) {
-          var version uint64
-          try { version = source.ContentVersion } catch (error Exception) { return }
-          if version == 0uL || version <= contentVersionSnapshot { return }
-          RebindSource(source)
-          sourceChangedHandler?.Invoke()
-        }
-      })
-    }
-    sourceChangedRegistration = registration
-    try {
-      source.ContentChanged += registration
-    } catch (error Exception) { }
   }
 
   private func dispatchToOwner(action Action) {
@@ -322,12 +322,12 @@ internal class ImageLayouts {
         if n.Retired { return }
         guard let current = sourceState(n) else { return }
         if current != value { return }
-        if Refresh(n, value) {
+        guard let lease = value.Lease else { return }
+        if lease.IsComplete {
           if let callback = completed, let token = value.CurrentToken() { callback(n, token) }
+          else { Refresh(n, value) }
           return
         }
-        guard let lease = value.Lease else { return }
-        if lease.IsComplete { return }
         value.WatchSource((token ImageSourceBindingToken) -> {
           ImageLayouts.invalidateSource(n, value, token, completed)
         })
