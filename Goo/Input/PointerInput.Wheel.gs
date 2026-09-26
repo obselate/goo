@@ -3,8 +3,6 @@ package Goo
 import System.Collections.Generic
 
 internal partial class PointerInput {
-  internal func HandleWheel(root Node?, x float32, y float32, dx float32, dy float32) bool -> HandleWheel(root, x, y, dx, dy, KeyModifiers {})
-
   internal func HandleWheel(root Node?, x float32, y float32, dx float32, dy float32,
     modifiers KeyModifiers) bool{
       guard let tree = root else { return false }
@@ -46,8 +44,9 @@ internal partial class PointerInput {
             Generation: generation,
           }
           if let callback = n.OnWheel {
-            callback(event)
-            CellOwnership.InRoute(route, i - 1)?.Rebuild()
+            let owner = CellOwnership.InRoute(route, i - 1)
+            try { callback(event) }
+            finally { owner?.Rebuild() }
           }
           if wheelControl.PropagationStopped || n.FocusScopeBoundary { break }
         }

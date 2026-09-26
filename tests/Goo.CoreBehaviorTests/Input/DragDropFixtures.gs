@@ -119,7 +119,8 @@ internal class DragDropFixtures {
       return false
     }
 
-    input.HandleKey(root, resolver, Key.Escape, KeyModifiers{})
+    input.QueueKeyPress(Key.Escape, KeyModifiers{})
+    input.Drain(root, resolver, 0.0, nil)
     if events.Count != 2 { return false }
     input.CancelDrag(root, resolver)
     if events.Count != 4 || events[2] != "Leave" || events[3] != "end:Canceled" {
@@ -250,12 +251,13 @@ internal class DragDropFixtures {
     throwQuery = true
     var threw = false
     try {
-      input.HandleKey(root, resolver, Key.ControlLeft, KeyModifiers{ Ctrl: true })
+      input.QueueKeyPress(Key.ControlLeft, KeyModifiers{ Ctrl: true })
+      input.Drain(root, resolver, 0.0, nil)
     } catch (error InvalidOperationException) {
       threw = error.Message == "drag query"
     }
     let afterFailure = queryCount
-    input.HandleKey(root, resolver, Key.ShiftLeft, KeyModifiers{ Shift: true })
+    input.QueueKeyPress(Key.ShiftLeft, KeyModifiers{ Shift: true })
     input.QueuePointerRelease(60.0F, 10.0F)
     input.Drain(root, resolver, 1.0, nil)
     if !threw || endCount != 1 || queryCount != afterFailure { return false }

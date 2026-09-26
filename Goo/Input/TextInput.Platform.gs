@@ -289,10 +289,15 @@ internal partial class TextInput {
         n.Caret = selected.Active.Offset
         n.BlinkT = 0.0
         FollowCaret(n)
-        if before.Text != committed {
-          n.OnChange?.Invoke(committed)
-          CellOwnership.Within(root, n)?.Rebuild()
+        let changed = before.Text != committed
+        let owner = changed ? CellOwnership.Within(root, n) : nil
+        try {
+          if changed { n.OnChange?.Invoke(committed) }
+        } finally {
+          owner?.Rebuild()
+          updateTextInputArea(n)
         }
+        return true
       }
       updateTextInputArea(n)
       return true
@@ -388,8 +393,9 @@ internal partial class TextInput {
       }
       case TextCommandKind.Paste { after = edit.Insert(before, sanitize(command.Text ?? "")) }
       case TextCommandKind.Submit {
-        n.OnSubmit?.Invoke(n.Buffer)
-        CellOwnership.Within(root, n)?.Rebuild()
+        let owner = CellOwnership.Within(root, n)
+        try { n.OnSubmit?.Invoke(n.Buffer) }
+        finally { owner?.Rebuild() }
         return true
       }
       case _ { return false }

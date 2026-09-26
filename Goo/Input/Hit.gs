@@ -71,18 +71,6 @@ private func hitTreeTopmost(root Node, x float32, y float32) Node? {
   return hitsMapped(root, point.X, point.Y) ? root : nil
 }
 
-internal func hitDispatchClick(root Node, x float32, y float32) bool {
-  let chain = List[Node]()
-  hitChainInto(root, x, y, chain)
-  if chain.Count == 0 || !canReceiveInput(chain[chain.Count - 1]) { return false }
-  for var i = chain.Count; i > 0; i-- {
-    let n = chain[i - 1]
-    if hasActivation(n) { return hitFire(n, CellOwnership.InRoute(chain, i - 1)) }
-    if n.FocusScopeBoundary { return false }
-  }
-  return false
-}
-
 internal func hitActivate(root Node?, target Node) bool {
   guard let tree = root else { return false }
   return if !canReceiveInput(target) { false } else { hitFire(target, CellOwnership.Within(tree, target)) }

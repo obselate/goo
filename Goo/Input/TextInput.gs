@@ -212,9 +212,11 @@ internal partial class TextInput {
       let values = candidates ?? TextInputCallbacks.EmptyCandidates()
       let selectedCandidate = selected >= 0 && selected < values.Count ? selected : -1
       if let callback = TextInputCallbacks.TextCandidates(n) {
-        callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
-          Horizontal: horizontal })
-      CellOwnership.Nearest(n)?.Rebuild()
+        let owner = CellOwnership.Nearest(n)
+        try {
+          callback(TextCandidateEvent{ Candidates: values, SelectedCandidate: selectedCandidate,
+            Horizontal: horizontal })
+        } finally { owner?.Rebuild() }
       }
     }
 
@@ -236,22 +238,25 @@ internal partial class TextInput {
 
   private func dispatchTextInput(n Node, value string) {
     if let callback = TextInputCallbacks.TextInput(n) {
-      callback(value)
-      CellOwnership.Nearest(n)?.Rebuild()
+      let owner = CellOwnership.Nearest(n)
+      try { callback(value) }
+      finally { owner?.Rebuild() }
     }
   }
 
   private func dispatchTextComposition(n Node, value TextCompositionEvent) {
     if let callback = TextInputCallbacks.TextComposition(n) {
-      callback(value)
-      CellOwnership.Nearest(n)?.Rebuild()
+      let owner = CellOwnership.Nearest(n)
+      try { callback(value) }
+      finally { owner?.Rebuild() }
     }
   }
 
   private func dispatchTextCompositionCancel(n Node) {
     if let callback = TextInputCallbacks.TextCompositionCancel(n) {
-      callback()
-      CellOwnership.Nearest(n)?.Rebuild()
+      let owner = CellOwnership.Nearest(n)
+      try { callback() }
+      finally { owner?.Rebuild() }
     }
   }
 
@@ -331,14 +336,14 @@ internal partial class TextInput {
       ? TextAffinity.Downstream : TextAffinity.Upstream
     }
     n.BlinkT = 0.0
-    if after.Text != before.Text {
-      if let h = n.OnChange {
-        h(after.Text)
-        CellOwnership.Within(root, n)?.Rebuild()
-      }
+    let callback = after.Text != before.Text ? n.OnChange : nil
+    let owner = callback != nil ? CellOwnership.Within(root, n) : nil
+    try { callback?.Invoke(after.Text) }
+    finally {
+      owner?.Rebuild()
+      FollowCaret(n)
+      updateTextInputArea(n)
     }
-    FollowCaret(n)
-    updateTextInputArea(n)
   }
 
   private func commitVisualMove(n Node, delta int32, extend bool) {

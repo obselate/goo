@@ -438,12 +438,9 @@ public partial class Window {
   }
 
   internal func AccessibilityClickForTest(x float32, y float32) bool {
-    let changed = input.HandleClick(node, x, y)
-    if changed {
-      accessibility?.MarkDirty()
-      resolver.VisualDirty = true
-    }
-    return changed
+    input.QueuePointerPress(x, y)
+    input.QueuePointerRelease(x, y)
+    return DrainQueuedInputForTest()
   }
 }
 

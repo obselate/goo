@@ -120,6 +120,37 @@ internal class TextInputPrimitivesFixtures {
     return changed && root.Buffer == "ab" && observerCalls == 2
   }
 
+  func ThrowingPlatformCommitSettlesEditorAndRebuildsOwner() bool {
+    let cell = ThrowingEntryCallbackCell{}
+    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    try {
+      window.UpdateTree()
+      if !cell.Handle.Focus() { return false }
+      window.UpdateTree()
+      let input = window.PlatformInput
+      input.Refresh()
+      var changes int32
+      var published = ""
+      input.EditorChanged += (snapshot FocusedEditorSnapshot?) -> {
+        changes++
+        published = snapshot?.Text ?? ""
+      }
+      window.markFrameRendered()
+      var threw = false
+      try { input.CommitText("x") }
+      catch (error Exception) { threw = error.Message == "observer" }
+      if !threw || cell.Value != "x" || input.Editor?.Text != "x"
+        || changes != 1 || published != "x" || !window.RenderPending() { return false }
+      window.UpdateTree()
+      if window.Tree?.Children[1].Content != "mirror:x" { return false }
+      cell.ThrowOnChange = false
+      if !input.CommitText("y") { return false }
+      window.UpdateTree()
+      return cell.Value == "xy" && input.Editor?.Text == "xy"
+        && window.Tree?.Children[1].Content == "mirror:xy" && published == "xy"
+    } finally { window.Close() }
+  }
+
   func UnavailableOrRemovedFocusedClientsDropQueuedText() bool {
     var calls int32
     let root = Reconciler{ Res: Resolver{} }.Mount(Container{
@@ -187,8 +218,10 @@ internal class TextInputPrimitivesFixtures {
     })
     let input = InputCoordinator()
     input.FocusElement(resolver, root)
-    input.HandleKey(root, resolver, Key.A, KeyModifiers{})
-    input.HandleChar(root, "a")
+    input.QueueKeyPress(Key.A, KeyModifiers{})
+    input.QueueKeyRelease(Key.A)
+    input.QueueText("a")
+    input.Drain(root, resolver, 0.0, nil)
     if keyCalls != 1 || text != "first:a" { return false }
 
     root = rec.Diff(root, Container{
@@ -196,8 +229,10 @@ internal class TextInputPrimitivesFixtures {
       OnKeyDown: (value KeyEvent) -> { keyCalls = keyCalls + 10 },
       OnTextInput: (value string) -> { text = "newest:" + value },
     })
-    input.HandleKey(root, resolver, Key.B, KeyModifiers{})
-    input.HandleChar(root, "b")
+    input.QueueKeyPress(Key.B, KeyModifiers{})
+    input.QueueKeyRelease(Key.B)
+    input.QueueText("b")
+    input.Drain(root, resolver, 0.0, nil)
     NodeLifecycle.DisposeTree(root)
     return keyCalls == 11 && text == "newest:b"
   }
@@ -333,6 +368,8 @@ internal class TextInputPrimitivesFixtures {
 }
 
 public partial class Window {
+  internal prop ResolverForTest Resolver { get -> resolver }
+
   internal prop KeyPressedCallbacksForTest Action[Key, KeyModifiers]? {
     get -> notifications.KeyPressedCallbacks
   }
@@ -358,7 +395,24 @@ public partial class Window {
   internal func NativeTextInputActiveForTest() bool -> host?.IsTextInputActive == true
 
   internal func NativeFocusLostForTest() {
-    input.FocusLost(resolver)
+    input.FocusLost(node, resolver)
+  }
+}
+
+internal class ThrowingEntryCallbackCell : Cell {
+  internal let Handle ElementHandle = ElementHandle{}
+  internal var Value string = ""
+  internal var ThrowOnChange bool = true
+
+  override func Build() Blob -> Container() {
+    TextEntry{
+      Handle: Handle, Width: 160, Height: 30, Value: Value,
+      OnChange: (value string) -> {
+        Value = value
+        if ThrowOnChange { throw InvalidOperationException("observer") }
+      },
+    },
+    Text{ Content: "mirror:" + Value },
   }
 }
 

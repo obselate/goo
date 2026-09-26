@@ -196,7 +196,11 @@ internal class TreeFixtures {
     hidden.Children.Add(Node{ Kind: NodeKind.Container, Rect: Rect{ X: 0.0F, Y: 0.0F, W: 100.0F, H: 100.0F }, OnClick: func() { hiddenHits = hiddenHits + 1 } })
     root.Children.Add(visible)
     root.Children.Add(hidden)
-    return hitDispatchClick(root, 25.0F, 25.0F) && visibleHits == 1 && hiddenHits == 0
+    let input = InputCoordinator()
+    input.QueuePointerPress(25.0F, 25.0F)
+    input.QueuePointerRelease(25.0F, 25.0F)
+    input.Drain(root, Resolver{}, 0.0, nil)
+    return visibleHits == 1 && hiddenHits == 0
   }
 
   func DisplayNoneFocusContract() bool {
@@ -214,7 +218,8 @@ internal class TreeFixtures {
     window.UpdateTree()
     input.AfterTreeUpdated(window.Tree, resolver, true)
     guard let hidden = window.Tree else { return false }
-    if hidden.Children[1].Children[0].Focused || input.HandleChar(window.Tree, "x") { return false }
+    input.QueueText("x")
+    if hidden.Children[1].Children[0].Focused || input.Drain(window.Tree, resolver, 0.0, nil) { return false }
     input.MoveEditorFocus(window.Tree, resolver, true)
     if !hidden.Children[0].Focused { return false }
     input.MoveEditorFocus(window.Tree, resolver, true)
@@ -257,7 +262,11 @@ internal class TreeFixtures {
       OnClick: () -> { hiddenHits++ } })
     root.Children.Add(visible)
     root.Children.Add(hidden)
-    return hitDispatchClick(root, 25.0F, 25.0F) && visibleHits == 1 && hiddenHits == 0
+    let input = InputCoordinator()
+    input.QueuePointerPress(25.0F, 25.0F)
+    input.QueuePointerRelease(25.0F, 25.0F)
+    input.Drain(root, Resolver{}, 0.0, nil)
+    return visibleHits == 1 && hiddenHits == 0
   }
 
   func VisibilityFocusContract() bool {
@@ -275,7 +284,8 @@ internal class TreeFixtures {
     window.UpdateTree()
     input.AfterTreeUpdated(window.Tree, resolver, true)
     guard let hidden = window.Tree else { return false }
-    if hidden.Children[1].Children[0].Focused || input.HandleChar(window.Tree, "x") { return false }
+    input.QueueText("x")
+    if hidden.Children[1].Children[0].Focused || input.Drain(window.Tree, resolver, 0.0, nil) { return false }
     input.MoveEditorFocus(window.Tree, resolver, true)
     if !hidden.Children[0].Focused { return false }
     input.MoveEditorFocus(window.Tree, resolver, true)

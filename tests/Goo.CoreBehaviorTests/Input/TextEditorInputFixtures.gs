@@ -164,7 +164,6 @@ internal class TextEditorInputFixtures {
       let startTicks = Stopwatch.GetTimestamp()
       driver.Input.Drain(driver.Window.Tree, driver.Resolver, driver.Time,
         driver.Window.KeyPressedCallbacksForTest, startTicks)
-      driver.Update()
       if controller.Selection.Active.Offset != firstOffset { return false }
 
       let delayTicks = int64(Math.Ceiling(0.4 * float64(Stopwatch.Frequency)))
@@ -190,7 +189,6 @@ internal class TextEditorInputFixtures {
       driver.Input.QueueKeyPress(key, KeyModifiers{})
       driver.Input.Drain(driver.Window.Tree, driver.Resolver, driver.Time,
         driver.Window.KeyPressedCallbacksForTest, startTicks)
-      driver.Update()
       driver.Input.Step(driver.Window.Tree, driver.Resolver, 1.0, startTicks + delayTicks)
       if controller.Selection.Active.Offset != firstOffset { return false }
       driver.Input.QueueKeyRelease(key)

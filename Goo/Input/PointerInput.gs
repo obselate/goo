@@ -589,14 +589,6 @@ internal partial class PointerInput {
     return if hoverChain.Count == 0 { Cursor.Default } else { hoverChain[hoverChain.Count - 1].Cursor }
   }
 
-  internal func HandleClick(root Node?, x float32, y float32) bool {
-    current = mouse
-    guard let tree = root else {
-      return false
-    }
-    return hitDispatchClick(tree, x, y)
-  }
-
   internal func HandleMove(root Node?, resolver Resolver, x float32, y float32) bool -> handleMove(root, resolver, x, y, true, true)
 
   internal func HandlePointerMove(root Node?, resolver Resolver, x float32, y float32,
@@ -743,10 +735,8 @@ internal partial class PointerInput {
       return changed
     }
 
-  internal func HandlePress(root Node?, resolver Resolver, text TextInput, timeS float64, x float32, y float32) bool -> HandlePress(root, resolver, text, timeS, x, y, KeyModifiers {}, true)
-
-  private func HandlePress(root Node?, resolver Resolver, text TextInput, timeS float64, x float32,
-    y float32, modifiers KeyModifiers, semantic bool, normalized bool = false) bool{
+  private func HandlePress(root Node?, resolver Resolver, text TextInput, x float32,
+    y float32, modifiers KeyModifiers, semantic bool) bool{
       guard let tree = root else {
         return false
       }
@@ -761,7 +751,6 @@ internal partial class PointerInput {
         current.ClickTarget = nil
         return false
       }
-      if !normalized { beginClickSequence(current.PressChain, timeS, x, y, PointerButton.Primary) }
       for i in 0 ... current.PressChain.Count {
         let pressed = current.PressChain[i]
         pressed.PointerPressCount++
@@ -864,15 +853,13 @@ internal partial class PointerInput {
           }
         }
       }
-      let handled = HandlePress(root, resolver, text, timeS, x, y, modifiers, semantic, true)
+      let handled = HandlePress(root, resolver, text, x, y, modifiers, semantic)
       if semantic {
         rememberDragCandidate()
         beginTouchPan(x, y)
       }
       return handled
     }
-
-  internal func HandleRelease(root Node?, resolver Resolver, x float32, y float32) bool -> HandleRelease(root, resolver, x, y, true)
 
   private func HandleRelease(root Node?, resolver Resolver, x float32, y float32,
     allowClick bool) bool{

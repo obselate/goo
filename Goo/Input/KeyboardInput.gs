@@ -221,13 +221,6 @@ internal class KeyboardInput {
     }
   }
 
-  internal func HandleKey(root Node?, key Key, modifiers KeyModifiers) bool {
-    if let hook = diagnosticsHook {
-      if hook(key, modifiers) { return true }
-    }
-    return DispatchKeyDown(focus.FocusedNode() ?? root, key, modifiers, false).Handled
-  }
-
   internal func BeginPress(resolver Resolver, n Node) bool {
     if n.Kind != NodeKind.Button || focus.FocusedNode() != n || !canReceiveInput(n) {
       return false

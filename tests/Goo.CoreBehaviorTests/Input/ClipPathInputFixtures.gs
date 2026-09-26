@@ -16,7 +16,6 @@ internal class ClipPathInputFixtures {
 
     driver.Move(90.0F, 25.0F)
     if !fallback.Hovered || clipped.Hovered { return false }
-    driver.Input.QueuePointerMove(90.0F, 25.0F)
     driver.Input.QueuePointerPress(90.0F, 25.0F, PointerButton.Primary, KeyModifiers{})
     driver.Input.QueuePointerRelease(90.0F, 25.0F, PointerButton.Primary, KeyModifiers{})
     driver.Input.QueuePointerWheel(90.0F, 25.0F, 0.0F, 1.0F)
@@ -31,7 +30,6 @@ internal class ClipPathInputFixtures {
     events.Clear()
     driver.Move(20.0F, 25.0F)
     if !currentClipped.Hovered || currentFallback.Hovered { return false }
-    driver.Input.QueuePointerMove(20.0F, 25.0F)
     driver.Input.QueuePointerPress(20.0F, 25.0F, PointerButton.Primary, KeyModifiers{})
     driver.Input.QueuePointerRelease(20.0F, 25.0F, PointerButton.Primary, KeyModifiers{})
     driver.Input.QueuePointerWheel(20.0F, 25.0F, 0.0F, 1.0F)

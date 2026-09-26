@@ -144,92 +144,83 @@ public class PlatformInput {
   /// Clears editor focus, composition, pressed keys, and pointer capture.
   public func FocusLost() {
     requireThread()
-    input.FocusLost(owner.Tree, resolver)
-    drain()
+    try { input.FocusLost(owner.Tree, resolver) }
+    finally { drain() }
   }
 
   /// Removes editor focus and cancels transient composition.
   public func ClearFocus() {
     requireThread()
-    input.ClearEditorFocus(resolver)
-    finish()
+    try { input.ClearEditorFocus(resolver) }
+    finally { finish() }
   }
 
   /// Moves focus in the retained focus order, independent of editor indentation.
   public func MoveFocus(forward bool) bool {
     requireInput()
-    let result = input.MoveEditorFocus(owner.Tree, resolver, forward)
-    finish()
-    return result
+    try { return input.MoveEditorFocus(owner.Tree, resolver, forward) }
+    finally { finish() }
   }
 
   /// Replaces the current selection or preedit with committed text.
   public func CommitText(value string) bool {
     requireInput()
     if value == nil { throw ArgumentNullException("value") }
-    let result = input.CommitEditorText(owner.Tree, value)
-    finish()
-    return result
+    try { return input.CommitEditorText(owner.Tree, value) }
+    finally { finish() }
   }
 
   /// Updates preedit and its selected UTF-16 segment without committing the value.
   public func SetComposition(value string, selectionStart int32, selectionLength int32) bool {
     requireInput()
     if value == nil { throw ArgumentNullException("value") }
-    let result = input.SetEditorComposition(owner.Tree, value, selectionStart, selectionLength)
-    finish()
-    return result
+    try { return input.SetEditorComposition(owner.Tree, value, selectionStart, selectionLength) }
+    finally { finish() }
   }
 
   /// Marks an existing effective UTF-16 range as composing text.
   public func SetCompositionRange(start int32, end int32) bool {
     requireInput()
-    let result = input.SetEditorCompositionRange(owner.Tree, start, end)
-    finish()
-    return result
+    try { return input.SetEditorCompositionRange(owner.Tree, start, end) }
+    finally { finish() }
   }
 
   /// Commits the existing preedit without changing its text.
   public func FinishComposition() bool {
     requireInput()
-    let result = input.FinishEditorComposition(owner.Tree)
-    finish()
-    return result
+    try { return input.FinishEditorComposition(owner.Tree) }
+    finally { finish() }
   }
 
   /// Discards preedit and restores the committed value and selection.
   public func CancelComposition() bool {
     requireThread()
-    let result = input.CancelEditorComposition(owner.Tree)
-    finish()
-    return result
+    try { return input.CancelEditorComposition(owner.Tree) }
+    finally { finish() }
   }
 
   /// Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters.
   /// Selection direction and composing ranges remain independent.
   public func SetSelection(start int32, end int32) bool {
     requireInput()
-    let result = input.SetEditorSelection(owner.Tree, start, end)
-    finish()
-    return result
+    try { return input.SetEditorSelection(owner.Tree, start, end) }
+    finally { finish() }
   }
 
   /// Deletes UTF-16 lengths outside the union of selection and composition, retaining both.
   /// Deletion expands to whole grapheme clusters without committing preedit.
   public func DeleteSurroundingText(beforeLength int32, afterLength int32) bool {
     requireInput()
-    let result = input.DeleteEditorSurroundingText(owner.Tree, beforeLength, afterLength)
-    finish()
-    return result
+    try { return input.DeleteEditorSurroundingText(owner.Tree, beforeLength, afterLength) }
+    finally { finish() }
   }
 
   /// Executes shared semantic navigation, editing, clipboard, submit, or entry CancelEdit behavior.
   /// Paste without Text reads the clipboard. Supplied paste text retains Paste interception and undo grouping.
   public func Execute(command TextCommand) bool {
     requireInput()
-    let result = input.ExecuteEditorCommand(owner.Tree, resolver, command)
-    finish()
-    return result
+    try { return input.ExecuteEditorCommand(owner.Tree, resolver, command) }
+    finally { finish() }
   }
 
   internal func Refresh() {

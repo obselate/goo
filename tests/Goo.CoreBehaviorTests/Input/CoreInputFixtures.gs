@@ -130,8 +130,9 @@ internal class InputFixtures {
     let entryShape = metrics.BufferShape(entry)
     let origin = metrics.EntryOriginX(entry, entryShape)
     let gap = entryShape.CaretX(1, int32(TextAffinity.Downstream))
-    InputCoordinator().HandlePress(entry, Resolver{}, 0.0,
-      40.0F + origin + gap, entry.Rect.Y + entry.Rect.H * 0.5F)
+    let entryInput = InputCoordinator()
+    entryInput.QueuePointerPress(40.0F + origin + gap, entry.Rect.Y + entry.Rect.H * 0.5F)
+    entryInput.Drain(entry, Resolver{}, 0.0, nil)
     return entry.Caret == 1
   }
 
@@ -642,8 +643,10 @@ internal class InputFixtures {
     Layout().Calculate(root, 100.0F, 100.0F)
     let input = InputCoordinator()
     let resolver = Resolver{}
-    input.HandleMove(root, resolver, 45.0F, 5.0F)
-    input.HandleMove(root, resolver, 75.0F, 5.0F)
+    input.QueuePointerMove(45.0F, 5.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    input.QueuePointerMove(75.0F, 5.0F)
+    input.Drain(root, resolver, 0.0, nil)
     return events.Count == 2 && Math.Abs(events[0].Position.X - 5.0) < 0.001
       && Math.Abs(events[1].Position.X - 35.0) < 0.001
   }
@@ -1592,22 +1595,30 @@ internal class InputFixtures {
     }
     root.Children.Add(side)
     root.Children.Add(bottom)
+    let input = InputCoordinator()
+    let resolver = Resolver{}
+    input.QueuePointerPress(125.0F, 25.0F)
+    input.QueuePointerRelease(125.0F, 25.0F)
+    input.QueuePointerPress(25.0F, 125.0F)
+    input.QueuePointerRelease(25.0F, 125.0F)
+    input.Drain(root, resolver, 0.0, nil)
     let chain = List[Node]()
     hitChainInto(root, 125.0F, 25.0F, chain)
     if chain.Count != 2 || chain[0] != root || chain[1] != side
       || hitTopmost(root, 125.0F, 25.0F) != side
-      || !hitDispatchClick(root, 125.0F, 25.0F)
-      || hitDispatchClick(root, 25.0F, 125.0F)
       || sideClicks != 1 || bottomClicks != 0 {
         return false
       }
 
     root.OverflowX = Overflow.Hidden
     root.OverflowY = Overflow.Visible
+    input.QueuePointerPress(125.0F, 25.0F)
+    input.QueuePointerRelease(125.0F, 25.0F)
+    input.QueuePointerPress(25.0F, 125.0F)
+    input.QueuePointerRelease(25.0F, 125.0F)
+    input.Drain(root, resolver, 1.0, nil)
     return hitTopmost(root, 125.0F, 25.0F) == nil
       && hitTopmost(root, 25.0F, 125.0F) == bottom
-      && !hitDispatchClick(root, 125.0F, 25.0F)
-      && hitDispatchClick(root, 25.0F, 125.0F)
       && sideClicks == 1 && bottomClicks == 1
   }
 
@@ -2282,8 +2293,8 @@ internal class InputFixtureDriver {
 
   init(root Cell, width int32, height int32) {
     Window = Window{ Width: width, Height: height, Root: root }
-    Input = InputCoordinator()
-    Resolver = Resolver{}
+    Input = Window.InputForTest
+    Resolver = Window.ResolverForTest
     Window.UpdateTree()
     Input.AfterTreeUpdated(Window.Tree, Resolver, true)
   }
@@ -2305,15 +2316,18 @@ internal class InputFixtureDriver {
   }
 
   internal func Move(x float32, y float32) {
-    Input.HandleMove(Window.Tree, Resolver, x, y)
+    Input.QueuePointerMove(x, y)
+    Input.Drain(Window.Tree, Resolver, Time, Window.KeyPressedCallbacksForTest)
   }
 
   internal func Press(x float32, y float32) {
-    Input.HandlePress(Window.Tree, Resolver, Time, x, y)
+    Input.QueuePointerPress(x, y)
+    Input.Drain(Window.Tree, Resolver, Time, Window.KeyPressedCallbacksForTest)
   }
 
   internal func Release(x float32, y float32) {
-    Input.HandleRelease(Window.Tree, Resolver, x, y)
+    Input.QueuePointerRelease(x, y)
+    Input.Drain(Window.Tree, Resolver, Time, Window.KeyPressedCallbacksForTest)
   }
 
   internal func PointerDown(x float32, y float32, button PointerButton) {
@@ -2325,28 +2339,30 @@ internal class InputFixtureDriver {
   }
 
   internal func FocusLost() {
-    Input.FocusLost(Resolver)
+    Input.FocusLost(Window.Tree, Resolver)
   }
 
   internal func Wheel(x float32, y float32, dx float32, dy float32) {
-    Input.HandleWheel(Window.Tree, x, y, dx, dy)
+    Input.QueuePointerWheel(x, y, dx, dy)
+    Input.Drain(Window.Tree, Resolver, Time, Window.KeyPressedCallbacksForTest)
   }
 
-  internal func Key(key Key, shift bool, ctrl bool) {
-    Input.HandleKey(Window.Tree, Resolver, key, shift, ctrl)
-  }
+  internal func Key(key Key, shift bool, ctrl bool) -> Key(key, KeyModifiers{ Shift: shift, Ctrl: ctrl })
 
   internal func Key(key Key, modifiers KeyModifiers) {
-    Input.HandleKey(Window.Tree, Resolver, key, modifiers)
+    Input.QueueKeyPress(key, modifiers)
+    Input.QueueKeyRelease(key, modifiers)
+    Input.Drain(Window.Tree, Resolver, Time, Window.KeyPressedCallbacksForTest)
   }
 
   internal func Char(value string) {
-    Input.HandleChar(Window.Tree, value)
+    Input.QueueText(value)
+    Input.Drain(Window.Tree, Resolver, Time, Window.KeyPressedCallbacksForTest)
   }
 
   internal func Step(dt float64) {
+    if bindings { Update() }
     Time = Time + dt
-    Input.Step(Window.Tree, Resolver, dt)
     Window.UpdateTree(dt)
     if bindings { UseBindings() }
     Input.RefreshHover(Window.Tree, Resolver)

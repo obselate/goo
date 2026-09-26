@@ -114,10 +114,6 @@ internal partial class InputCoordinator {
     if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
-  internal func FocusLost(resolver Resolver) {
-    FocusLost(nil, resolver)
-  }
-
   internal func FocusGained() {
     if queue.IsDispatching || queue.HasPending { queue.AddFocusGained() }
     else { focus.SetNativeFocus(true) }
@@ -222,53 +218,6 @@ internal partial class InputCoordinator {
     focus.Dispose()
     text.Dispose()
   }
-
-  internal func HandleClick(root Node?, x float32, y float32) bool ->
-  pointer.HandleClick(root, x, y)
-
-  internal func HandleWheel(root Node?, x float32, y float32, dx float32, dy float32) bool ->
-  pointer.HandleWheel(root, x, y, dx, dy)
-
-  internal func HandleWheel(root Node?, x float32, y float32, dx float32, dy float32,
-    modifiers KeyModifiers) bool -> pointer.HandleWheel(root, x, y, dx, dy, modifiers)
-
-  internal func HandleMove(root Node?, resolver Resolver, x float32, y float32) bool {
-    try {
-      return pointer.HandleMove(root, resolver, x, y)
-    } finally {
-      resolver.Flush()
-    }
-  }
-
-  internal func HandlePress(root Node?, resolver Resolver, timeS float64, x float32, y float32) bool {
-    try {
-      return pointer.HandlePress(root, resolver, text, timeS, x, y)
-    } finally {
-      resolver.Flush()
-    }
-  }
-
-  internal func HandleRelease(root Node?, resolver Resolver, x float32, y float32) bool {
-    try {
-      return pointer.HandleRelease(root, resolver, x, y)
-    } finally {
-      resolver.Flush()
-    }
-  }
-
-  internal func HandleKey(root Node?, resolver Resolver, key Key, shift bool, ctrl bool) bool ->
-  HandleKey(root, resolver, key, KeyModifiers{ Shift: shift, Ctrl: ctrl })
-
-  internal func HandleKey(root Node?, resolver Resolver, key Key, modifiers KeyModifiers) bool {
-    try {
-      pointer.UpdateDragModifiers(root, modifiers)
-      return keyboard.HandleKey(root, key, modifiers)
-    } finally {
-      resolver.Flush()
-    }
-  }
-
-  internal func HandleChar(root Node?, value string) bool -> text.HandleChar(root, value)
 
   internal func SetClipboardFallback(value string) {
     text.SetClipboardFallback(value)
