@@ -244,6 +244,31 @@ public sealed class ImageSourceCacheTests : IDisposable
         Assert.False(node.HasBackgroundImageState);
     }
 
+    [Fact]
+    public void ClipboardAndStreamImagesUseMountedLeaseOwnershipAndBoundedDecoding()
+    {
+        var bytes = Png(1, 1, 8, 6, [0, 200, 100, 50, 128]);
+        var clipboard = new ClipboardImage(ClipboardReadStatus.Success, "image/png", bytes);
+        var node = new Node();
+        using var source = ImageSource.Decode(clipboard.Bytes);
+        ImageLayouts.ApplySource(node, source, ImageFit.Contain, null, null);
+        source.Dispose();
+        Assert.Equal(new byte[] { 100, 50, 25, 128 }, node.DecodedImage!.Pixels());
+        var mounted = node.DecodedImage;
+        ImageLayouts.Dispose(node);
+        Assert.False(mounted.IsValid);
+
+        using var stream = new MemoryStream(new byte[] { 42 }.Concat(bytes).ToArray());
+        stream.Position = 1;
+        using var streamed = ImageSource.Decode(stream);
+        using var lease = streamed.Acquire();
+        Assert.Equal(new byte[] { 100, 50, 25, 128 }, lease.Result()!.Pixels());
+        Assert.True(stream.CanRead);
+        using var malformed = new MemoryStream(Png(1, 1, 8, 6, new byte[1000000]));
+        Assert.Throws<InvalidDataException>(() => ImageSource.Decode(malformed));
+        Assert.True(malformed.CanRead);
+    }
+
     private string Write(string name, byte[] bytes)
     {
         var path = Path.Combine(directory, name);

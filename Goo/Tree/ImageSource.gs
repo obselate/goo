@@ -12,7 +12,7 @@ public interface ImageSourceProvider {
 }
 
 /// Owns one immutable premultiplied RGBA image resource.
-public class ImageSource : ImageSourceProvider, IDisposable {
+public partial class ImageSource : ImageSourceProvider, IDisposable {
   shared {
     /// Creates an immutable source by taking ownership of an exact pixel buffer.
     /// @param width The positive pixel width.

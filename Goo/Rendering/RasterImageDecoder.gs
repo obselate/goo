@@ -15,17 +15,28 @@ internal partial class RasterImageDecoder {
 
     internal func Load(path string, token CancellationToken) ImageSource {
       using let file = File.OpenRead(path)
-      if file.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
+      return Load(file, token)
+    }
+
+    internal func Load(stream Stream, token CancellationToken) ImageSource {
+      if stream.CanSeek && stream.Length - stream.Position > MaxEncodedBytes {
+        throw InvalidDataException("Encoded image exceeds 16 MiB")
+      }
       using let encoded = MemoryStream()
       let buffer = [65536]uint8
       while true {
         token.ThrowIfCancellationRequested()
-        let count = file.Read(buffer, 0, buffer.Length)
+        let count = stream.Read(buffer, 0, buffer.Length)
         if count == 0 { break }
         if encoded.Length + count > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
         encoded.Write(buffer, 0, count)
       }
-      let bytes = encoded.ToArray()
+      return Decode(encoded.ToArray(), token)
+    }
+
+    internal func Decode(bytes []uint8, token CancellationToken) ImageSource {
+      token.ThrowIfCancellationRequested()
+      if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
       ValidateFormat(bytes, token)
       token.ThrowIfCancellationRequested()
       guard let image = StbImageSharp.ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha) else {
@@ -44,6 +55,12 @@ internal partial class RasterImageDecoder {
         offset += 4
       }
       return ImageSource.Transfer(image.Width, image.Height, pixels, () -> { })
+    }
+
+    internal func Decode(bytes ReadOnlyMemory[uint8], token CancellationToken) ImageSource {
+      token.ThrowIfCancellationRequested()
+      if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
+      return Decode(bytes.ToArray(), token)
     }
 
     // Preflight the complete bounded zlib stream before stb can expand it. Header

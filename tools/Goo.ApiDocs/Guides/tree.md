@@ -120,3 +120,19 @@ A custom thumb can derive content size as viewport size plus scroll range. Its l
 ## Position a custom IME
 
 A focused generic text client can call `ElementHandle.SetTextInputArea` with a finite, non-negative logical-window rectangle. Goo floors the origin, ceils the far edge, and passes cursor offset zero to the native IME. The call returns false for unmounted, unfocused, built-in, closed-window, nonparticipating, or native-IME-unavailable elements. Invalid and out-of-range rectangles throw.
+
+
+## Decode owned image data
+
+Use `ImageSource.Decode(clipboard.Bytes)` for encoded clipboard images, or pass a
+readable `Stream` positioned at the image. Both overloads share the local-file
+loader's PNG, JPEG, and first-frame GIF decoder and validation. Decoding is
+synchronous, so perform expensive decoding in a worker. The stream stays open.
+The optional cancellation token is checked between reads, during validation,
+and before publication.
+
+Inputs are limited to 16 MiB encoded data, 8192 pixels per dimension, and 64 MiB
+of decoded premultiplied RGBA pixels. Assign the returned source to `Image.Source`.
+The caller owns and disposes the source. Mounted leases keep their pixels alive
+until the image unmounts, even after source disposal. `ImageSourceCache.LoadAsync`
+continues to provide bounded path-based sharing for local assets.
