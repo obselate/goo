@@ -4,6 +4,61 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Window`](../../Goo/Window)
 
+## Visibility, activation and stacking
+
+`Open` shows the desktop window by default. Set `InitiallyVisible: false` before
+`Open` to create and mount it while hidden, then call `Show()` or `Show(false)`.
+`Show(false)` reveals the window without requesting activation. `Hide()` retains
+the mounted tree, cancels transient input and suspends presentation. Callbacks and
+timers still run while hidden. Hidden windows remain open until closed.
+
+`Show` and `Hide` return `WindowOperationResult`: `Accepted`, `Closed`,
+`Unsupported` or `Failed`. Accepted means the native request was submitted.
+Observe `IsVisible` and `VisibilityChanged` for visibility, and `IsFocused` and
+`FocusChanged` for keyboard focus. Visibility does not guarantee that another
+window does not cover this one. `RequestActivation()` restores a minimized window
+and requests focus without changing the focused Goo element synchronously.
+
+`Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
+the owner thread afterward. Nonfocusable windows never request activation when
+shown. Unsupported assignments throw before changing the configured value.
+`Capabilities` reports operations supported by the current host, or `None` before
+opening. Windows, macOS and X11 expose visibility, passive show, focusability and
+topmost requests. Wayland exposes visibility but reports the other three as
+unsupported for top-level windows. Final activation and stacking remain subject
+to desktop policy. Embedded hosts own their viewport lifecycle and return
+`Unsupported` for `Show` and `Hide`.
+
+Modal windows must open visible and focusable with a visible owner. `Hide` returns
+`Unsupported` for a modal window or an owner blocked by a modal child or chooser.
+Close the modal window to release its owner. This prevents an invisible modal
+window from retaining the input block.
+
+## Platform preferences
+
+`Window.Preferences` is an immutable `PlatformPreferences` snapshot.
+`Theme` is `Unknown`, `Light` or `Dark`. `ReducedMotion`, `HighContrast` and
+`TextScaleFactor` are nullable so unsupported values remain distinct from false
+or the default scale. Text scale must be finite and positive and is independent
+of display density. It affects text measurement, shaping and geometry, including
+explicit font sizes and styled spans, without changing declared sizes or DPI.
+
+Subscribe to `PreferencesChanged` on the owner thread. Equal snapshots do not
+notify. Goo updates its layout and motion policy before calling subscribers.
+Applications choose theme colors and contrast styling from the snapshot.
+Reduced motion settles animations and transitions and stops automatic vector
+playback at its current frame. Completed animations require a new target. A later
+rebuild or rebind can resume vector playback when the preference permits it.
+Embedded adapters publish snapshots with `EmbeddedWindowHost.UpdatePreferences`,
+before or after attaching the window.
+
+Desktop theme follows SDL system theme notifications. The desktop event loop also
+refreshes available preferences at most once per second. Windows reports client
+area animation and high contrast settings. macOS reports reduced motion and
+increased contrast. Desktop text scale remains unknown when the backend cannot
+report it. Android reports theme, font scale and disabled animations on attach,
+resume and configuration changes. Other unsupported preferences remain unknown.
+
 ## Native owned and modal windows
 
 Set `Owner` and optional `Modal: true` before `Open`. The owner must already be
@@ -364,10 +419,13 @@ Sources:
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
+- [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
+- [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 - [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
 - [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
 - [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
+- [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
@@ -383,6 +441,10 @@ Occurs for each physical key press before focused-element routing.
 
 Occurs after the native window reports a new stable size or display scale. Callbacks run on the window UI thread after native metrics and layout settle.
 
+### `PreferencesChanged`
+
+Reports preference changes after layout and motion policy are invalidated on the owner thread.
+
 ### `StateChanged`
 
 Occurs after the native window reports a new window state.
@@ -390,6 +452,10 @@ Occurs after the native window reports a new window state.
 ### `TitlebarDoubleClicked`
 
 Occurs before a native titlebar double-click performs its default action. Uses platform click-sequence recognition; clickable/focusable content is excluded. Set Handled to replace the action. Subscribe and handle on the window UI thread.
+
+### `VisibilityChanged`
+
+Reports observed viewport visibility changes on the owner thread.
 
 ### `new`
 
@@ -430,6 +496,10 @@ Returns: An owned format list and explicit query status.
 ### `GetClipboardText`
 
 Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard or native copy failure.
+
+### `Hide`
+
+Hides an open desktop window and cancels transient input without destroying its tree. Modal windows and owners blocked by a modal child or chooser cannot be hidden.
 
 ### `Open`
 
@@ -494,6 +564,10 @@ Runs a callback repeatedly on the UI thread at the requested interval.
 
 Runs a callback once on the UI thread after the delay.
 
+### `Show(bool)`
+
+Shows an open desktop window, optionally requesting activation. The mounted tree survives Hide. Nonfocusable windows never request activation. Embedded hosts return Unsupported.
+
 ### `ShowFileDialogAsync(FileDialogKind,FileDialogOptions)`
 
 Starts one owner-modal chooser on the open window's UI thread; other windows continue rendering.
@@ -523,13 +597,25 @@ Gets or sets the window clear color.
 
 Reports whether programmatic window movement is available.
 
+### `Capabilities`
+
+Gets supported native lifecycle operations, or None before Open or Attach.
+
 ### `Decorated`
 
 Gets or sets whether the system draws window decorations.
 
+### `Focusable`
+
+Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
+
 ### `Height`
 
 Gets or sets the window height.
+
+### `InitiallyVisible`
+
+Gets or sets whether Open shows the desktop window. Configure before Open.
 
 ### `IsFocused`
 
@@ -542,6 +628,10 @@ Gets whether a modal child or native chooser blocks this window's native, platfo
 ### `IsOpen`
 
 Reports whether the window is open.
+
+### `IsVisible`
+
+Gets whether the host currently reports a visible viewport. This does not imply focus or lack of occlusion.
 
 ### `LastAccessibilityError`
 
@@ -591,6 +681,10 @@ Gets or sets the native owner before Open. The owner must be an open desktop win
 
 Gets the owner-thread platform input and focused-editor contract.
 
+### `Preferences`
+
+Gets the current host snapshot. Unsupported preferences remain unknown.
+
 ### `Resizable`
 
 Gets or sets whether the user can resize the window.
@@ -611,6 +705,10 @@ Gets or sets the window state.
 
 Gets or sets the window title.
 
+### `Topmost`
+
+Gets or sets requested desktop topmost stacking. Desktop policy controls the final stacking order. Unsupported hosts throw before changing the requested value.
+
 ### `Transparent`
 
 Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparency requires the GPU renderer.
@@ -618,6 +716,10 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 ### `VSync`
 
 Gets or sets per-window GPU presentation synchronization. True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run applies internal display-rate pacing for either value.
+
+### `WheelScrollScale`
+
+Scales the platform wheel distance for this window. The default is 1.
 
 ### `Width`
 
@@ -645,6 +747,22 @@ Reports whether a native window activation request could be submitted. Accepted 
 - `Closed`
 - `Unsupported`
 - `Failed`
+
+## `WindowCapabilities`
+
+Source:
+
+- [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
+
+Reports native lifecycle operations supported by the current host.
+
+### Values
+
+- `None`
+- `Visibility`
+- `ShowWithoutActivation`
+- `Focusability`
+- `Topmost`
 
 ## `WindowMetrics`
 
@@ -677,6 +795,21 @@ Gets the reported logical height.
 ### `LogicalWidth`
 
 Gets the reported logical width.
+
+## `WindowOperationResult`
+
+Source:
+
+- [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
+
+Reports whether a window operation was submitted to the host. Accepted does not guarantee that desktop policy grants activation or stacking.
+
+### Values
+
+- `Accepted`
+- `Closed`
+- `Unsupported`
+- `Failed`
 
 ## `WindowState`
 

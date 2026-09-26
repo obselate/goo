@@ -7,6 +7,7 @@ ctor|Goo.Accessibility|public|()
 ctor|Goo.Button|public|()
 ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
+ctor|Goo.Command|public|(execute:System.Action,canExecute:System.Func`1<System.Boolean>=null)
 ctor|Goo.Container|public|()
 ctor|Goo.DashPattern|public|(intervals:System.Double[],offset:System.Double)
 ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect)
@@ -121,6 +122,7 @@ enum-underlying|Goo.ScrollbarVisibility|System.Int32
 enum-underlying|Goo.ShapeFit|System.Int32
 enum-underlying|Goo.StrokeCap|System.Int32
 enum-underlying|Goo.StrokeJoin|System.Int32
+enum-underlying|Goo.SystemTheme|System.Int32
 enum-underlying|Goo.TextAffinity|System.Int32
 enum-underlying|Goo.TextAlign|System.Int32
 enum-underlying|Goo.TextCommandKind|System.Int32
@@ -132,6 +134,8 @@ enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
 enum-underlying|Goo.WindowActivationResult|System.Int32
+enum-underlying|Goo.WindowCapabilities|System.Int32
+enum-underlying|Goo.WindowOperationResult|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
 enum|Goo.AccessibilityAction|Activate|1
 enum|Goo.AccessibilityAction|Collapse|9
@@ -472,6 +476,9 @@ enum|Goo.StrokeCap|Square|2
 enum|Goo.StrokeJoin|Bevel|2
 enum|Goo.StrokeJoin|Miter|0
 enum|Goo.StrokeJoin|Round|1
+enum|Goo.SystemTheme|Dark|2
+enum|Goo.SystemTheme|Light|1
+enum|Goo.SystemTheme|Unknown|0
 enum|Goo.TextAffinity|Downstream|1
 enum|Goo.TextAffinity|Upstream|0
 enum|Goo.TextAlign|Center|1
@@ -585,6 +592,15 @@ enum|Goo.WindowActivationResult|Accepted|0
 enum|Goo.WindowActivationResult|Closed|1
 enum|Goo.WindowActivationResult|Failed|3
 enum|Goo.WindowActivationResult|Unsupported|2
+enum|Goo.WindowCapabilities|Focusability|4
+enum|Goo.WindowCapabilities|None|0
+enum|Goo.WindowCapabilities|ShowWithoutActivation|2
+enum|Goo.WindowCapabilities|Topmost|8
+enum|Goo.WindowCapabilities|Visibility|1
+enum|Goo.WindowOperationResult|Accepted|0
+enum|Goo.WindowOperationResult|Closed|1
+enum|Goo.WindowOperationResult|Failed|3
+enum|Goo.WindowOperationResult|Unsupported|2
 enum|Goo.WindowState|Fullscreen|3
 enum|Goo.WindowState|Maximized|2
 enum|Goo.WindowState|Minimized|1
@@ -598,8 +614,10 @@ event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
+event|Goo.Window|PreferencesChanged|System.Action`1<Goo.PlatformPreferences>|instance|add:public,remove:public
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
+event|Goo.Window|VisibilityChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 function|Goo|Percent|public|generic:|(value:System.Double)->Goo.Length
 function|Goo|VirtualRows|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,estimatedItemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
 function|Goo|Virtual|public|generic:T[attrs:0,constraints:]|(items:System.Collections.Generic.IReadOnlyList`1<!!0>,itemWidth:System.Double,itemHeight:System.Double,itemKey:System.Func`2<!!0,System.String>,itemBuilder:System.Func`2<!!0,Goo.Blob>)->Goo.Blob
@@ -664,6 +682,7 @@ method|Goo.Color|op_Equality|static|public|generic:|(arg0:Goo.Color,arg1:Goo.Col
 method|Goo.Color|op_Implicit|static|public|generic:|(value:Goo.Color)->Goo.Edges`1<Goo.Color>
 method|Goo.Color|op_Implicit|static|public|generic:|(value:System.String)->Goo.Color
 method|Goo.Color|op_Inequality|static|public|generic:|(arg0:Goo.Color,arg1:Goo.Color)->System.Boolean
+method|Goo.Command|Execute|instance|public|generic:|()->System.Boolean
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window)->System.IDisposable
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window,allowInput:System.Boolean)->System.IDisposable
@@ -706,6 +725,7 @@ method|Goo.EmbeddedWindowHost|Resume|instance|public|generic:|()->System.Void
 method|Goo.EmbeddedWindowHost|ServicePendingSubmission|instance|public|generic:|()->System.Boolean
 method|Goo.EmbeddedWindowHost|SetFocused|instance|public|generic:|(value:System.Boolean)->System.Void
 method|Goo.EmbeddedWindowHost|Suspend|instance|public|generic:|()->System.Void
+method|Goo.EmbeddedWindowHost|UpdatePreferences|instance|public|generic:|(value:Goo.PlatformPreferences)->System.Void
 method|Goo.FocusEvent|StopPropagation|instance|public|generic:|()->System.Void
 method|Goo.FocusScope|Dispose|instance|public|generic:|()->System.Void
 method|Goo.FocusedEditorSnapshot|Deconstruct|instance|public|generic:|(out FocusId:System.Int64&,out Text:System.String&,out SelectionStart:System.Int32&,out SelectionEnd:System.Int32&,out CompositionStart:System.Int32&,out CompositionEnd:System.Int32&,out IsPassword:System.Boolean&,out IsMultiline:System.Boolean&,out IsReadOnly:System.Boolean&,out CaretArea:Goo.ElementRect&)->System.Void
@@ -739,6 +759,10 @@ method|Goo.ImageSourceLease|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSourceLease|Fail|instance|public|generic:|()->System.Boolean
 method|Goo.ImageSourceProvider|Acquire|abstract|public|generic:|()->Goo.ImageSourceLease
 method|Goo.ImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
+method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>)->Goo.ImageSource
+method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream)->Goo.ImageSource
+method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSource|Transfer|static|public|generic:|(width:System.Int32,height:System.Int32,pixels:System.Byte[],released:System.Action)->Goo.ImageSource
 method|Goo.KeyEvent|PreventDefault|instance|public|generic:|()->System.Void
@@ -800,6 +824,7 @@ method|Goo.PlatformInput|FinishComposition|instance|public|generic:|()->System.B
 method|Goo.PlatformInput|FocusLost|instance|public|generic:|()->System.Void
 method|Goo.PlatformInput|KeyPress|instance|public|generic:|(key:Goo.Key,modifiers:Goo.KeyModifiers)->System.Void
 method|Goo.PlatformInput|KeyRelease|instance|public|generic:|(key:Goo.Key)->System.Void
+method|Goo.PlatformInput|KeyRelease|instance|public|generic:|(key:Goo.Key,modifiers:Goo.KeyModifiers)->System.Void
 method|Goo.PlatformInput|MoveFocus|instance|public|generic:|(forward:System.Boolean)->System.Boolean
 method|Goo.PlatformInput|PointerCancel|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice)->System.Void
 method|Goo.PlatformInput|PointerMove|instance|public|generic:|(pointerId:System.Int64,device:Goo.PointerDevice,x:System.Single,y:System.Single,modifiers:Goo.KeyModifiers,pressure:System.Single)->System.Void
@@ -810,6 +835,13 @@ method|Goo.PlatformInput|SetCompositionRange|instance|public|generic:|(start:Sys
 method|Goo.PlatformInput|SetComposition|instance|public|generic:|(value:System.String,selectionStart:System.Int32,selectionLength:System.Int32)->System.Boolean
 method|Goo.PlatformInput|SetSelection|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.PlatformInput|UpdateDrag|instance|public|generic:|(target:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
+method|Goo.PlatformPreferences|Deconstruct|instance|public|generic:|(out theme:Goo.SystemTheme&,out reducedMotion:System.Nullable`1<System.Boolean>&,out highContrast:System.Nullable`1<System.Boolean>&,out textScaleFactor:System.Nullable`1<System.Single>&)->System.Void
+method|Goo.PlatformPreferences|Equals|instance|public|generic:|(arg0:Goo.PlatformPreferences)->System.Boolean
+method|Goo.PlatformPreferences|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.PlatformPreferences|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.PlatformPreferences|ToString|instance|public|generic:|()->System.String
+method|Goo.PlatformPreferences|op_Equality|static|public|generic:|(arg0:Goo.PlatformPreferences,arg1:Goo.PlatformPreferences)->System.Boolean
+method|Goo.PlatformPreferences|op_Inequality|static|public|generic:|(arg0:Goo.PlatformPreferences,arg1:Goo.PlatformPreferences)->System.Boolean
 method|Goo.PointerEvent|Capture|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.PointerEvent|ReleaseCapture|instance|public|generic:|()->System.Void
@@ -978,6 +1010,7 @@ method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.Strin
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|GetClipboardFormats|instance|public|generic:|()->Goo.ClipboardFormats
 method|Goo.Window|GetClipboardText|instance|public|generic:|()->System.String
+method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Void
@@ -991,6 +1024,7 @@ method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String
 method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
+method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
 method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
@@ -1022,6 +1056,7 @@ property|Goo.AccessibilityNode|MultiSelectable|System.Nullable`1<System.Boolean>
 property|Goo.AccessibilityNode|Multiline|System.Nullable`1<System.Boolean>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|Name|System.String|abstract|get:public|index:()
 property|Goo.AccessibilityNode|Orientation|Goo.AccessibilityOrientation|abstract|get:public|index:()
+property|Goo.AccessibilityNode|PositionInSet|System.Nullable`1<System.Int32>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|ReadOnly|System.Nullable`1<System.Boolean>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|Relationships|Goo.AccessibilityRelationshipIds|abstract|get:public|index:()
 property|Goo.AccessibilityNode|Required|System.Nullable`1<System.Boolean>|abstract|get:public|index:()
@@ -1029,6 +1064,7 @@ property|Goo.AccessibilityNode|Role|Goo.AccessibilityRole|abstract|get:public|in
 property|Goo.AccessibilityNode|Selected|System.Nullable`1<System.Boolean>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|SelectionLength|System.Nullable`1<System.Int32>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|SelectionStart|System.Nullable`1<System.Int32>|abstract|get:public|index:()
+property|Goo.AccessibilityNode|SizeOfSet|System.Nullable`1<System.Int32>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|TextSnapshot|Goo.TextSnapshot|abstract|get:public|index:()
 property|Goo.AccessibilityNode|ValueMaximum|System.Nullable`1<System.Double>|abstract|get:public|index:()
 property|Goo.AccessibilityNode|ValueMinimum|System.Nullable`1<System.Double>|abstract|get:public|index:()
@@ -1073,12 +1109,14 @@ property|Goo.Accessibility|Multiline|System.Nullable`1<System.Boolean>|instance|
 property|Goo.Accessibility|Name|System.String|instance|get:public,init:public|index:()
 property|Goo.Accessibility|OnAction|System.Func`2<Goo.AccessibilityActionRequest,System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Orientation|Goo.AccessibilityOrientation|instance|get:public,init:public|index:()
+property|Goo.Accessibility|PositionInSet|System.Nullable`1<System.Int32>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Range|Goo.AccessibilityValue|instance|get:public,init:public|index:()
 property|Goo.Accessibility|ReadOnly|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Relationships|Goo.AccessibilityRelationships|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Required|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Role|Goo.AccessibilityRole|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Selected|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
+property|Goo.Accessibility|SizeOfSet|System.Nullable`1<System.Int32>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Value|System.String|instance|get:public,init:public|index:()
 property|Goo.Anim`1|Running|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Target|!0|instance|get:public|index:()
@@ -1126,6 +1164,7 @@ property|Goo.BoxShadow|OffsetX|Goo.Length|instance|get:public,init:public|index:
 property|Goo.BoxShadow|OffsetY|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.BoxShadow|Spread|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.Button|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
+property|Goo.Button|Command|Goo.Command|instance|get:public,init:public|index:()
 property|Goo.Cell`1|Input|!0|instance|get:protected|index:()
 property|Goo.ClipboardFiles|Error|System.String|instance|get:public|index:()
 property|Goo.ClipboardFiles|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
@@ -1146,6 +1185,7 @@ property|Goo.Color|G|System.Single|instance|get:public|index:()
 property|Goo.Color|R|System.Single|instance|get:public|index:()
 property|Goo.Color|Transparent|Goo.Color|static|get:public|index:()
 property|Goo.Color|White|Goo.Color|static|get:public|index:()
+property|Goo.Command|CanExecute|System.Boolean|instance|get:public|index:()
 property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Layout|Goo.LayoutAlgorithm|instance|get:public,init:public|index:()
@@ -1201,6 +1241,7 @@ property|Goo.ElementRect|Y|System.Double|instance|get:public,init:public|index:(
 property|Goo.EmbeddedWindowHost|IsPresentationAttached|System.Boolean|instance|get:public|index:()
 property|Goo.EmbeddedWindowHost|IsSuspended|System.Boolean|instance|get:public|index:()
 property|Goo.EmbeddedWindowHost|NextFrameDelaySeconds|System.Double|instance|get:public|index:()
+property|Goo.EmbeddedWindowHost|Preferences|Goo.PlatformPreferences|instance|get:public|index:()
 property|Goo.EmbeddedWindowHost|Window|Goo.Window|instance|get:public|index:()
 property|Goo.FileDialogFilter|Name|System.String|instance|get:public|index:()
 property|Goo.FileDialogFilter|Pattern|System.String|instance|get:public|index:()
@@ -1251,6 +1292,7 @@ property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,init:public|index:()
 property|Goo.Image|Path|System.String|instance|get:public,init:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Action|System.Action|instance|get:public,init:public|index:()
+property|Goo.KeyBinding|Command|Goo.Command|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Key|Goo.Key|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|OnRelease|System.Action|instance|get:public,init:public|index:()
@@ -1287,6 +1329,10 @@ property|Goo.PanelTransform|SkewY|System.Double|instance|get:public,init:public|
 property|Goo.PanelTransform|TranslateX|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|TranslateY|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.PlatformInput|Editor|System.Nullable`1<Goo.FocusedEditorSnapshot>|instance|get:public|index:()
+property|Goo.PlatformPreferences|HighContrast|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
+property|Goo.PlatformPreferences|ReducedMotion|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
+property|Goo.PlatformPreferences|TextScaleFactor|System.Nullable`1<System.Single>|instance|get:public,init:public|index:()
+property|Goo.PlatformPreferences|Theme|Goo.SystemTheme|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|Buttons|Goo.PointerButtons|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|Button|Goo.PointerButton|instance|get:public,init:public|index:()
 property|Goo.PointerEvent|ClickCount|System.Int32|instance|get:public,init:public|index:()
@@ -1380,6 +1426,7 @@ property|Goo.Style|FontWeight|System.Double|instance|init:public|index:()
 property|Goo.Style|Gap|Goo.Length|instance|init:public|index:()
 property|Goo.Style|Height|Goo.Length|instance|init:public|index:()
 property|Goo.Style|JustifyContent|Goo.JustifyContent|instance|init:public|index:()
+property|Goo.Style|Language|System.String|instance|init:public|index:()
 property|Goo.Style|Left|Goo.Length|instance|init:public|index:()
 property|Goo.Style|LetterSpacing|Goo.Length|instance|init:public|index:()
 property|Goo.Style|LineHeight|System.Double|instance|init:public|index:()
@@ -1562,11 +1609,15 @@ property|Goo.WindowTitlebarEvent|Position|Goo.Point|instance|get:public,init:pub
 property|Goo.Window|AccessibilityAdapter|Goo.AccessibilityAdapter|instance|get:public,set:public|index:()
 property|Goo.Window|Background|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|CanMove|System.Boolean|instance|get:public|index:()
+property|Goo.Window|Capabilities|Goo.WindowCapabilities|instance|get:public|index:()
 property|Goo.Window|Decorated|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|Focusable|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Height|System.Int32|instance|get:public,set:public|index:()
+property|Goo.Window|InitiallyVisible|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.Window|IsInputBlocked|System.Boolean|instance|get:public|index:()
 property|Goo.Window|IsOpen|System.Boolean|instance|get:public,set:private|index:()
+property|Goo.Window|IsVisible|System.Boolean|instance|get:public|index:()
 property|Goo.Window|LastAccessibilityError|System.Exception|instance|get:public|index:()
 property|Goo.Window|LastNativeFileDropError|System.String|instance|get:public|index:()
 property|Goo.Window|MaxHeight|System.Int32|instance|get:public,set:public|index:()
@@ -1579,11 +1630,13 @@ property|Goo.Window|NativeTransferCapabilities|Goo.NativeTransferCapabilities|in
 property|Goo.Window|OnClosing|System.Func`1<System.Boolean>|instance|get:public,set:public|index:()
 property|Goo.Window|Owner|Goo.Window|instance|get:public,set:public|index:()
 property|Goo.Window|PlatformInput|Goo.PlatformInput|instance|get:public|index:()
+property|Goo.Window|Preferences|Goo.PlatformPreferences|instance|get:public|index:()
 property|Goo.Window|Resizable|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|ResizeBand|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Root|Goo.Cell|instance|get:public,init:public|index:()
 property|Goo.Window|State|Goo.WindowState|instance|get:public,set:public|index:()
 property|Goo.Window|Title|System.String|instance|get:public,set:public|index:()
+property|Goo.Window|Topmost|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Transparent|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|VSync|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|WheelScrollScale|System.Single|instance|get:public,set:public|index:()
@@ -1620,6 +1673,7 @@ type|Goo.ClipboardFormats|sealed-class|public|base:System.Object|interfaces:|gen
 type|Goo.ClipboardImage|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.Command|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Container|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Cursor|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.DashPattern|class|public|base:System.Object|interfaces:|generic:
@@ -1686,6 +1740,7 @@ type|Goo.Overflow|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PanelTransform|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.PanelTransform>|generic:
 type|Goo.PathBuilder|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.PlatformInput|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.PlatformPreferences|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.PointerButtons|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerButton|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerDevice|enum|public|base:System.Enum|interfaces:|generic:
@@ -1709,6 +1764,7 @@ type|Goo.SoundSource|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.StrokeCap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:
+type|Goo.SystemTheme|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAffinity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAlign|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextCandidateEvent|struct|public|base:System.ValueType|interfaces:|generic:
@@ -1747,7 +1803,9 @@ type|Goo.VectorStroke|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowActivationResult|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.WindowOperationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowTimer|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.WindowTitlebarEvent|sealed-class|public|base:System.Object|interfaces:|generic:

@@ -1006,6 +1006,10 @@ Sets the preferred height.
 
 Sets main-axis item distribution.
 
+### `Language`
+
+Sets the inherited BCP 47 language used for text shaping. Empty uses the shaper default.
+
 ### `Left`
 
 Sets the left position offset.

@@ -112,6 +112,10 @@ Pauses simulation and presentation and cancels transient input state.
 
 Releases the loader reference acquired by LoadVulkanLibrary.
 
+### `UpdatePreferences(PlatformPreferences)`
+
+Updates platform preferences on the owner thread, before or after attaching a window.
+
 ### `IsPresentationAttached`
 
 Reports whether a Vulkan presentation surface is attached.
@@ -124,6 +128,48 @@ Reports whether frame simulation and presentation are suspended.
 
 Gets seconds until frame service is needed, or positive infinity while idle.
 
+### `Preferences`
+
+Gets the most recent preference snapshot supplied by this host.
+
 ### `Window`
 
 Gets the attached Goo window, or nil after disposal.
+
+## `PlatformPreferences`
+
+Source:
+
+- [`PlatformPreferences.gs`](../../Goo/Platform/PlatformPreferences.gs)
+
+Holds platform preferences independently of framebuffer density. Nil values mean the host cannot report that preference.
+
+### `HighContrast`
+
+Gets whether increased contrast is requested, or nil when unavailable.
+
+### `ReducedMotion`
+
+Gets whether nonessential motion should be reduced, or nil when unavailable.
+
+### `TextScaleFactor`
+
+Gets the positive user text scale, independently of display density, or nil when unavailable.
+
+### `Theme`
+
+Gets the preferred theme, or Unknown when unavailable.
+
+## `SystemTheme`
+
+Source:
+
+- [`PlatformPreferences.gs`](../../Goo/Platform/PlatformPreferences.gs)
+
+Identifies the platform's preferred application color theme.
+
+### Values
+
+- `Unknown`
+- `Light`
+- `Dark`

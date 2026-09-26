@@ -114,6 +114,9 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="M:Goo.FontVariation.op_Inequality(Goo.FontVariation,Goo.FontVariation)">
       <summary>Tests whether two variations are different.</summary>
     </member>
+    <member name="T:Goo.ImageSource">
+      <summary>Owns one immutable premultiplied RGBA image resource.</summary>
+    </member>
     <member name="P:Goo.ImageSourceProvider.ContentVersion">
       <summary>Gets the content version used to invalidate mounted image bindings.</summary>
     </member>

@@ -127,6 +127,22 @@ A custom thumb can derive content size as viewport size plus scroll range. Its l
 
 A focused generic text client can call `ElementHandle.SetTextInputArea` with a finite, non-negative logical-window rectangle. Goo floors the origin, ceils the far edge, and passes cursor offset zero to the native IME. The call returns false for unmounted, unfocused, built-in, closed-window, nonparticipating, or native-IME-unavailable elements. Invalid and out-of-range rectangles throw.
 
+
+## Decode owned image data
+
+Use `ImageSource.Decode(clipboard.Bytes)` for encoded clipboard images, or pass a
+readable `Stream` positioned at the image. Both overloads share the local-file
+loader's PNG, JPEG, and first-frame GIF decoder and validation. Decoding is
+synchronous, so perform expensive decoding in a worker. The stream stays open.
+The optional cancellation token is checked between reads, during validation,
+and before publication.
+
+Inputs are limited to 16 MiB encoded data, 8192 pixels per dimension, and 64 MiB
+of decoded premultiplied RGBA pixels. Assign the returned source to `Image.Source`.
+The caller owns and disposes the source. Mounted leases keep their pixels alive
+until the image unmounts, even after source disposal. `ImageSourceCache.LoadAsync`
+continues to provide bounded path-based sharing for local assets.
+
 ## `Blob`
 
 Source:
@@ -296,6 +312,10 @@ Adds a child to the end of the ordered child collection.
 ### `Children`
 
 Gets the mutable child list. Read-only lists supplied during initialization are copied. Give all siblings stable keys, or give no sibling a key.
+
+### `Command`
+
+Gets the shared activation action, taking precedence over OnClick. Availability is checked for every pointer, keyboard, handle, and accessibility activation. Rebuild the owning cell when availability changes to refresh disabled styling and semantics.
 
 ## `Container`
 
@@ -574,8 +594,9 @@ Paints the image at its intrinsic size without scaling.
 
 ## `ImageSource`
 
-Source:
+Sources:
 
+- [`ImageSource.Decoding.gs`](../../Goo/Tree/ImageSource.Decoding.gs)
 - [`ImageSource.gs`](../../Goo/Tree/ImageSource.gs)
 
 Owns one immutable premultiplied RGBA image resource.
@@ -597,6 +618,22 @@ Copies exactly Width times Height premultiplied RGBA pixels into an owned image.
 Creates an already-completed binding that retains this source until release.
 
 Returns: The completed binding for this source.
+
+### `Decode(System.IO.Stream)`
+
+Decodes from the stream's current position and leaves the stream open. Uses the same limits and synchronous decoding as the encoded-byte overload.
+
+### `Decode(System.IO.Stream,System.Threading.CancellationToken)`
+
+Decodes a stream with cancellation between reads and during validation. Leaves the stream open, including on cancellation or decoding failure.
+
+### `Decode(System.ReadOnlyMemory{System.Byte})`
+
+Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source. Encoded input is limited to 16 MiB, dimensions to 8192 pixels, and decoded pixels to 64 MiB. Decoding is synchronous. Call from a worker when loading outside the UI thread.
+
+### `Decode(System.ReadOnlyMemory{System.Byte},System.Threading.CancellationToken)`
+
+Decodes encoded bytes with cancellation during validation and before publication.
 
 ### `Dispose`
 
