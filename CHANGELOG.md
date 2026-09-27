@@ -1,17 +1,58 @@
 # Changelog
 
-## Unreleased
+## 0.6.6 - 2026-09-27
 
 ### Added
 
-- `Window.SetTimeout` and `Window.SetInterval` provide cancellable UI-thread callbacks.
+- Added cancellable UI-thread callbacks through `Window.SetTimeout` and
+  `Window.SetInterval`.
+- Added reusable `Command` actions for buttons, key bindings, and menus, with
+  availability checked on each execution.
+- Added bounded synchronous `ImageSource.Decode` overloads for encoded memory
+  and streams, with optional cancellation.
+- Added window show, hide, initial visibility, topmost, focusability,
+  capability, visibility event, and presentation preference APIs.
+- Added virtual-collection accessibility metadata and visual text geometry.
+- Added language-aware text shaping, package-level `Percent`, configurable
+  wheel scaling, and platform key-release injection.
 
 ### Changed
 
-- Embedded runtime Vulkan shaders ship only in `Goo.dll`. Release staging omits loose shaders, authoring tools, symbols, and native provenance. Required licenses remain.
-- Vulkan diagnostics can record startup stages and a live memory snapshot at first successful presentation and before teardown.
-- Owned pipeline-cache files older than 30 days are removed when a cache is saved.
-- An unchanged shader-tool or XML-merge build is skipped. Adding, removing, or timestamp-preserving renaming a tool source file rebuilds it. A missing tool DLL, dependency file, or runtime config also rebuilds it.
+- `ElementHandle.ScrollTo` and ordinary overflow scrolling now animate toward
+  their targets. `JumpTo` remains immediate, and reduced-motion preferences
+  disable scroll animation.
+- `Padding`, `Margin`, `BorderWidth`, and `BorderColor` now use CSS-style
+  `Edges` values. Uniform values remain supported.
+- Window activation now returns the shared `WindowOperationResult` used by
+  `Show`, `Hide`, and `RequestActivation`.
+- Wheel scrolling now preserves fractional platform-scaled deltas, chains
+  unused movement to eligible ancestors, and supports bounded touch momentum.
+- Embedded runtime shaders ship only in `Goo.dll`. Release bundles retain
+  runtime payloads and required licenses while omitting loose shaders,
+  authoring tools, symbols, and native provenance.
+- Vulkan diagnostics can record startup stages and live memory snapshots.
+  Owned pipeline-cache files older than 30 days are removed when a cache is
+  saved.
+- Unchanged shader-tool and XML-merge builds are skipped unless an input or
+  required output changes.
+
+### Fixed
+
+- Preserved input arrival order, cancellation, and callback settlement across
+  queued keyboard, pointer, text, drag, and scrolling dispatch.
+- Preserved a modal button press when its tree updates before release.
+- Ignored inconsistent SDL resize metrics while a window is being maximized.
+- Published asynchronous image replacements through the owning window and
+  prevented retained tree, cell, scrollbar, and frame work from outliving its
+  owner.
+
+### Removed
+
+- Removed `Length.Percent`, `WindowActivationResult`, and the individual
+  padding, margin, border-width, and border-color side properties in favor of
+  `Percent`, `WindowOperationResult`, and `Edges`.
+- Moved Gituit to its own repository and removed the temporary bundled
+  `apps/Goo.GitWorkbench` application.
 
 ## 0.6.5 - 2026-09-22
 
