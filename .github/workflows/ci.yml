@@ -8,6 +8,12 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
+    inputs:
+      diagnostic_artifact_run:
+        description: "Reuse release-candidates from this run for Windows-only diagnostics"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -23,6 +29,7 @@ env:
 
 jobs:
   quality:
+    if: github.event_name != 'workflow_dispatch' || inputs.diagnostic_artifact_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
@@ -711,7 +718,11 @@ jobs:
             artifacts/macos-candidate/install-goo-gallery-macos.sh
 
   windows-x64:
+    if: always() && (needs.linux-x64.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.diagnostic_artifact_run != ''))
     needs: linux-x64
+    permissions:
+      contents: read
+      actions: read
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
@@ -723,6 +734,8 @@ jobs:
         with:
           name: release-candidates
           path: artifacts
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.diagnostic_artifact_run || github.run_id }}
       - name: Install software Vulkan for native Windows checks
         uses: jakoch/install-vulkan-sdk-action@ae57d335f36a1cd380da18748c28ea65feea4a17
         with:
@@ -749,31 +762,23 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = (Resolve-Path artifacts/windows-smoke).Path
-          $dumpFolder = Join-Path $publishDir "results-crashdump"
-          New-Item -ItemType Directory -Path $dumpFolder -Force | Out-Null
-          $registryKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Goo.PackageSmoke.exe"
-          New-Item -Path $registryKey -Force | Out-Null
-          New-ItemProperty -Path $registryKey -Name DumpFolder -PropertyType ExpandString -Value $dumpFolder -Force | Out-Null
-          New-ItemProperty -Path $registryKey -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
-          $started = Get-Date
           & artifacts/windows-smoke/run-windows-qualification.ps1
           $qualificationExitCode = $LASTEXITCODE
           if ($qualificationExitCode -ne 0) {
             try {
-              $events = Get-WinEvent -FilterHashtable @{ LogName = "Application"; ProviderName = "Application Error"; Id = 1000; StartTime = $started } -ErrorAction SilentlyContinue |
-                Where-Object { $_.Message -match "Goo\.PackageSmoke\.exe" }
-              if ($events) {
-                $events | ForEach-Object { $_.Message } | Tee-Object -FilePath (Join-Path $dumpFolder "application-errors.txt")
-              } else {
-                Write-Warning "No Application Error event (ID 1000) for Goo.PackageSmoke.exe."
-              }
+              $dumpFolder = Join-Path $publishDir "results-crashdump"
+              New-Item -ItemType Directory -Path $dumpFolder -Force | Out-Null
               $cdb = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\Debuggers\x64\cdb.exe"
-              $dumps = @(Get-ChildItem -Path $dumpFolder -Filter "Goo.PackageSmoke*.dmp")
-              if (-not $dumps.Count) { Write-Warning "WER did not create a dump in $dumpFolder." }
-              foreach ($dump in $dumps) {
-                Write-Host "WER dump: $($dump.FullName) ($($dump.Length) bytes)"
-                $analysis = Join-Path $dumpFolder ($dump.BaseName + ".analysis.txt")
-                & $cdb -y "$publishDir;srv*$env:RUNNER_TEMP\goo-symbols*https://msdl.microsoft.com/download/symbols" -i $publishDir -logo $analysis -c "!analyze -v; .ecxr; kv; q" -z $dump.FullName
+              if (-not (Test-Path $cdb)) {
+                Write-Warning "CDB is missing at $cdb"
+              } else {
+                $env:GOO_WINDOWS_QUALIFICATION = "1"
+                $env:GOO_VK_DIAGNOSTICS = "1"
+                $dump = Join-Path $dumpFolder "benchmark.dmp"
+                $analysis = Join-Path $dumpFolder "benchmark-cdb.txt"
+                $commands = "sxd -c2 `".exr -1; !analyze -v; .ecxr; r; kv; .dump /m $dump; q`" av; g"
+                & $cdb -hd -G -y "$publishDir;srv*$env:RUNNER_TEMP\goo-symbols*https://msdl.microsoft.com/download/symbols" -logo $analysis -c $commands (Join-Path $publishDir "Goo.PackageSmoke.exe")
+                if (-not (Test-Path $dump)) { Write-Warning "No second-chance AV dump at $dump. See $analysis." }
               }
             } catch {
               Write-Warning "Native crash diagnostics failed: $_"
@@ -787,7 +792,7 @@ jobs:
           path: artifacts/windows-smoke/results-*/
 
   release-goo:
-    if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'workflow_dispatch' && github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
     needs: [linux-x64, android, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
