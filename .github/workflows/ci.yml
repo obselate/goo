@@ -748,8 +748,38 @@ jobs:
       - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
         shell: pwsh
         run: |
+          $publishDir = (Resolve-Path artifacts/windows-smoke).Path
+          $dumpFolder = Join-Path $publishDir "results-crashdump"
+          New-Item -ItemType Directory -Path $dumpFolder -Force | Out-Null
+          $registryKey = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Goo.PackageSmoke.exe"
+          New-Item -Path $registryKey -Force | Out-Null
+          New-ItemProperty -Path $registryKey -Name DumpFolder -PropertyType ExpandString -Value $dumpFolder -Force | Out-Null
+          New-ItemProperty -Path $registryKey -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
+          $started = Get-Date
           & artifacts/windows-smoke/run-windows-qualification.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $qualificationExitCode = $LASTEXITCODE
+          if ($qualificationExitCode -ne 0) {
+            try {
+              $events = Get-WinEvent -FilterHashtable @{ LogName = "Application"; ProviderName = "Application Error"; Id = 1000; StartTime = $started } -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -match "Goo\.PackageSmoke\.exe" }
+              if ($events) {
+                $events | ForEach-Object { $_.Message } | Tee-Object -FilePath (Join-Path $dumpFolder "application-errors.txt")
+              } else {
+                Write-Warning "No Application Error event (ID 1000) for Goo.PackageSmoke.exe."
+              }
+              $cdb = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\Debuggers\x64\cdb.exe"
+              $dumps = @(Get-ChildItem -Path $dumpFolder -Filter "Goo.PackageSmoke*.dmp")
+              if (-not $dumps.Count) { Write-Warning "WER did not create a dump in $dumpFolder." }
+              foreach ($dump in $dumps) {
+                Write-Host "WER dump: $($dump.FullName) ($($dump.Length) bytes)"
+                $analysis = Join-Path $dumpFolder ($dump.BaseName + ".analysis.txt")
+                & $cdb -y "$publishDir;srv*$env:RUNNER_TEMP\goo-symbols*https://msdl.microsoft.com/download/symbols" -i $publishDir -logo $analysis -c "!analyze -v; .ecxr; kv; q" -z $dump.FullName
+              }
+            } catch {
+              Write-Warning "Native crash diagnostics failed: $_"
+            }
+            exit $qualificationExitCode
+          }
       - uses: actions/upload-artifact@v7
         if: always()
         with:
