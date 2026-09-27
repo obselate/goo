@@ -177,18 +177,21 @@ internal unsafe sealed class VulkanQueueMailbox {
       return
     }
     var fenceInfo = VkSwapchainPresentFenceInfoEXT{}
+    var presentFence VkFence
     var swapchain = PresentSwapchain
     var imageIndex = PresentImageIndex
+    var waitSemaphore = PresentWaitSemaphore
     var presentInfo = VkPresentInfoKHR{}
     presentInfo.sType = VkConstants.VK_STRUCTURE_TYPE_PRESENT_INFO_KHR
     if PresentFenceEnabled {
+      presentFence = PresentFence
       fenceInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT
       fenceInfo.swapchainCount = 1u
-      fenceInfo.pFences = &PresentFence
+      fenceInfo.pFences = &presentFence
       presentInfo.pNext = *void(&fenceInfo)
     }
     presentInfo.waitSemaphoreCount = 1u
-    presentInfo.pWaitSemaphores = &PresentWaitSemaphore
+    presentInfo.pWaitSemaphores = &waitSemaphore
     presentInfo.swapchainCount = 1u
     presentInfo.pSwapchains = &swapchain
     presentInfo.pImageIndices = &imageIndex

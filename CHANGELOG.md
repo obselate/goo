@@ -38,6 +38,8 @@
 
 ### Fixed
 
+- Kept Vulkan present semaphore and fence pointers valid across garbage
+  collection.
 - Preserved input arrival order, cancellation, and callback settlement across
   queued keyboard, pointer, text, drag, and scrolling dispatch.
 - Preserved a modal button press when its tree updates before release.
