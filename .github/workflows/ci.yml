@@ -730,6 +730,13 @@ jobs:
           install_runtime: true
           install_lavapipe: true
           cache: true
+      - name: Enable cached Vulkan runtime
+        shell: pwsh
+        run: |
+          $runtime = Join-Path $env:VULKAN_SDK "runtime\x64"
+          $runtime | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & (Join-Path $runtime "vulkaninfo.exe") --summary
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build NativeAOT consumer using the packaged G# compiler
         shell: pwsh
         run: |
