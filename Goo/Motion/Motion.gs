@@ -50,7 +50,9 @@ public class Motion {
   }
 }
 
-/// Identifies why an animation reached its terminal value.
+/// Identifies why an animation reached its terminal value. Finished means all
+/// simulations ended naturally. ReducedMotion means the host requested less motion.
+/// Disabled means Motion.TimeScale is zero or negative and takes precedence.
 public enum MotionCompletionReason { Finished; ReducedMotion; Disabled }
 
 internal class MotionClock {

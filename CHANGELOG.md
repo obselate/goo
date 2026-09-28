@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.7 - 2026-09-28
+
+- Added `Anim<T>.Completed` with distinct natural, reduced-motion, and disabled-motion
+  reasons. Completion runs after motion registry updates so libraries can safely
+  chain animations without retaining a separate Window dispatcher.
+- Cancelled stale completion when an animation is replaced, snapped, or disposed.
+- Added `Anim<T>.IsDisposed` for library lifecycle checks and stopped frame work
+  when a completion callback closes its owning window.
+- Recorded production desktop and mobile extension priorities, ownership, and
+  acceptance checks in [production readiness](https://github.com/obselate/goo/blob/v0.6.7/docs/production-readiness.md).
+
 ## 0.6.6 - 2026-09-27
 
 ### Added

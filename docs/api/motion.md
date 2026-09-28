@@ -14,7 +14,7 @@ Bridges scalar simulations to a Cell-owned animated value.
 
 ### `Completed`
 
-Reports a natural or policy-forced terminal animation after the owning motion pump settles.
+Reports completion once after the owning motion pump settles, on its UI thread. Retarget, Set, Snap, and disposal cancel pending delivery. A handler may retarget this animation; the new run advances on a later pump. Handler failures propagate after the remaining completion batch is delivered, unless the window closes.
 
 ### `Set(T)`
 
@@ -117,7 +117,7 @@ Source:
 
 - [`Motion.gs`](../../Goo/Motion/Motion.gs)
 
-Identifies why an animation reached its terminal value.
+Identifies why an animation reached its terminal value. Finished means all simulations ended naturally. ReducedMotion means the host requested less motion. Disabled means Motion.TimeScale is zero or negative and takes precedence.
 
 ### Values
 

@@ -4,11 +4,11 @@ Goo releases use annotated `vX.Y.Z` tags from `main`.
 
 ## Versioning
 
-Goo uses Semantic Versioning.
+Goo remains below 1.0.0 while its public contracts mature.
 
-- Increase `MAJOR` for an incompatible public change after 1.0.0.
-- Increase `MINOR` for a compatible feature or an incompatible 0.x change.
-- Increase `PATCH` for a compatible fix.
+- Increase `PATCH` for compatible fixes and small feature additions.
+- Increase `MINOR` for substantial feature batches.
+- Do not release 1.0.0 or higher without an explicit change to this policy.
 - Use `-name.number` for a prerelease.
 
 ## One-time NuGet setup

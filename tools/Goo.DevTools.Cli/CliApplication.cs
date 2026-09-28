@@ -10,7 +10,7 @@ namespace Goo.DevTools.Cli;
 
 internal static class CliApplication
 {
-    private const string Version = "0.6.6";
+    private const string Version = "0.6.7";
 
     internal static DiscoveryDescriptor? SelectInspectorDescriptor(
         IReadOnlyList<DiscoveryDescriptor> descriptors,
@@ -1240,7 +1240,7 @@ internal static class CliApplication
 
     private static int PrintHelp()
     {
-        Console.WriteLine("Goo DevTools CLI 0.6.6");
+        Console.WriteLine("Goo DevTools CLI 0.6.7");
         Console.WriteLine();
         Console.WriteLine("Usage:");
         Console.WriteLine("  goo dev [options] -- <command> [args]");

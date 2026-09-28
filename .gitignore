@@ -75,6 +75,7 @@
 /docs/*
 !/docs/native-authoring.md
 !/docs/nuget-readme.md
+!/docs/production-readiness.md
 !/docs/android.md
 !/docs/images.md
 !/docs/migrations/

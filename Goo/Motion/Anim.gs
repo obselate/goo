@@ -68,7 +68,10 @@ public class Anim[T] {
   private var memoValid bool
   private var pendingCompletion MotionCompletionReason?
 
-  /// Reports a natural or policy-forced terminal animation after the owning motion pump settles.
+  /// Reports completion once after the owning motion pump settles, on its UI thread.
+  /// Retarget, Set, Snap, and disposal cancel pending delivery. A handler may retarget
+  /// this animation; the new run advances on a later pump. Handler failures propagate
+  /// after the remaining completion batch is delivered, unless the window closes.
   public event Completed Action[MotionCompletionReason]
 
   internal init(initial T, converter MotionConverter[T], invalidate Action?, onChange Action[T]?) {

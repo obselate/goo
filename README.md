@@ -18,7 +18,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.6.6
+dotnet new install Goo.Templates@0.6.7
 
 mkdir hello-goo
 cd hello-goo
@@ -197,5 +197,6 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 - [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
 - [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
 - [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)
+- [Production desktop and mobile priorities](docs/production-readiness.md)
 - [Contributing and source builds](https://github.com/obselate/goo/blob/main/CONTRIBUTING.md)
 - [Release notes](https://github.com/obselate/goo/blob/main/CHANGELOG.md)
