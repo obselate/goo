@@ -84,7 +84,11 @@ Source:
 
 - [`LayoutTransition.gs`](../../Goo/Motion/LayoutTransition.gs)
 
-Describes an opt-in transition for computed layout position changes using DurationMs and Easing.
+Describes an opt-in position transition using DurationMs and Easing, or a custom SimulationFactory.
+
+### `SimulationFactory`
+
+Creates an optional simulation for each position axis. Omission uses DurationMs and Easing. The simulation starts at from with the supplied velocity and settles at to.
 
 ## `Motion`
 

@@ -135,6 +135,8 @@ enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
+enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
+enum-underlying|Goo.WindowFramePacing|System.Int32
 enum-underlying|Goo.WindowOperationResult|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
 enum|Goo.AccessibilityAction|Activate|1
@@ -596,6 +598,15 @@ enum|Goo.WindowCapabilities|None|0
 enum|Goo.WindowCapabilities|ShowWithoutActivation|2
 enum|Goo.WindowCapabilities|Topmost|8
 enum|Goo.WindowCapabilities|Visibility|1
+enum|Goo.WindowCaptureRequestStatus|Accepted|0
+enum|Goo.WindowCaptureRequestStatus|BudgetExceeded|2
+enum|Goo.WindowCaptureRequestStatus|Busy|1
+enum|Goo.WindowCaptureRequestStatus|DeviceLost|5
+enum|Goo.WindowCaptureRequestStatus|Failed|4
+enum|Goo.WindowCaptureRequestStatus|NotReady|3
+enum|Goo.WindowCaptureRequestStatus|Unsupported|6
+enum|Goo.WindowFramePacing|Display|0
+enum|Goo.WindowFramePacing|Uncapped|1
 enum|Goo.WindowOperationResult|Accepted|0
 enum|Goo.WindowOperationResult|Closed|1
 enum|Goo.WindowOperationResult|Failed|3
@@ -615,6 +626,7 @@ event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:publi
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
 event|Goo.Window|PreferencesChanged|System.Action`1<Goo.PlatformPreferences>|instance|add:public,remove:public
+event|Goo.Window|PresentationAccepted|System.Action`1<Goo.WindowPresentationAccepted>|instance|add:public,remove:public
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
 event|Goo.Window|VisibilityChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
@@ -812,6 +824,7 @@ method|Goo.PathBuilder|LineTo|instance|public|generic:|(x:System.Double,y:System
 method|Goo.PathBuilder|MoveTo|instance|public|generic:|(x:System.Double,y:System.Double)->Goo.PathBuilder
 method|Goo.PathBuilder|Polyline|instance|public|generic:|(points:Goo.Point[],close:System.Boolean)->Goo.PathBuilder
 method|Goo.PathBuilder|QuadraticTo|instance|public|generic:|(controlX:System.Double,controlY:System.Double,x:System.Double,y:System.Double)->Goo.PathBuilder
+method|Goo.PathBuilder|Reset|instance|public|generic:|()->Goo.PathBuilder
 method|Goo.PlatformInput|BeginDrag|instance|public|generic:|(source:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
 method|Goo.PlatformInput|CancelComposition|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|CancelDrag|instance|public|generic:|()->System.Boolean
@@ -856,6 +869,7 @@ method|Goo.Point|op_Inequality|static|public|generic:|(arg0:Goo.Point,arg1:Goo.P
 method|Goo.Portal|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
+method|Goo.ShaderEffectData|Publish|instance|public|generic:T[attrs:24,constraints:System.ValueType]|(values:System.ReadOnlySpan`1<!!0>)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:|(bytes:System.Byte[])->System.Void
 method|Goo.ShaderEffectData|Transfer|static|public|generic:|(bytes:System.Byte[],released:System.Action)->Goo.ShaderEffectData
 method|Goo.ShaderEffectProgram|Load|static|public|generic:|(path:System.String)->Goo.ShaderEffectProgram
@@ -996,6 +1010,13 @@ method|Goo.VectorAsset|Render|instance|public|generic:|()->Goo.Blob
 method|Goo.VectorAsset|Render|instance|public|generic:|(key:System.String)->Goo.Blob
 method|Goo.WheelEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.WheelEvent|StopPropagation|instance|public|generic:|()->System.Void
+method|Goo.WindowDisplayId|Deconstruct|instance|public|generic:|(out nativeValue:System.UInt32&)->System.Void
+method|Goo.WindowDisplayId|Equals|instance|public|generic:|(arg0:Goo.WindowDisplayId)->System.Boolean
+method|Goo.WindowDisplayId|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.WindowDisplayId|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.WindowDisplayId|ToString|instance|public|generic:|()->System.String
+method|Goo.WindowDisplayId|op_Equality|static|public|generic:|(arg0:Goo.WindowDisplayId,arg1:Goo.WindowDisplayId)->System.Boolean
+method|Goo.WindowDisplayId|op_Inequality|static|public|generic:|(arg0:Goo.WindowDisplayId,arg1:Goo.WindowDisplayId)->System.Boolean
 method|Goo.WindowMetrics|Deconstruct|instance|public|generic:|(out logicalWidth:System.Int32&,out logicalHeight:System.Int32&,out framebufferWidth:System.Int32&,out framebufferHeight:System.Int32&,out displayScaleX:System.Double&,out displayScaleY:System.Double&)->System.Void
 method|Goo.WindowMetrics|Equals|instance|public|generic:|(arg0:Goo.WindowMetrics)->System.Boolean
 method|Goo.WindowMetrics|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
@@ -1003,6 +1024,13 @@ method|Goo.WindowMetrics|GetHashCode|instance|public|generic:|()->System.Int32
 method|Goo.WindowMetrics|ToString|instance|public|generic:|()->System.String
 method|Goo.WindowMetrics|op_Equality|static|public|generic:|(arg0:Goo.WindowMetrics,arg1:Goo.WindowMetrics)->System.Boolean
 method|Goo.WindowMetrics|op_Inequality|static|public|generic:|(arg0:Goo.WindowMetrics,arg1:Goo.WindowMetrics)->System.Boolean
+method|Goo.WindowPresentationAccepted|Deconstruct|instance|public|generic:|(out frameIndex:System.UInt64&,out acceptedTicks:System.Int64&)->System.Void
+method|Goo.WindowPresentationAccepted|Equals|instance|public|generic:|(arg0:Goo.WindowPresentationAccepted)->System.Boolean
+method|Goo.WindowPresentationAccepted|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.WindowPresentationAccepted|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.WindowPresentationAccepted|ToString|instance|public|generic:|()->System.String
+method|Goo.WindowPresentationAccepted|op_Equality|static|public|generic:|(arg0:Goo.WindowPresentationAccepted,arg1:Goo.WindowPresentationAccepted)->System.Boolean
+method|Goo.WindowPresentationAccepted|op_Inequality|static|public|generic:|(arg0:Goo.WindowPresentationAccepted,arg1:Goo.WindowPresentationAccepted)->System.Boolean
 method|Goo.WindowTimer|Dispose|instance|public|generic:|()->System.Void
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
@@ -1010,14 +1038,17 @@ method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.Strin
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|GetClipboardFormats|instance|public|generic:|()->Goo.ClipboardFormats
 method|Goo.Window|GetClipboardText|instance|public|generic:|()->System.String
+method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
+method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture
 method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Void
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
 method|Goo.Window|ReadClipboardFiles|instance|public|generic:|()->Goo.ClipboardFiles
 method|Goo.Window|ReadClipboardImage|instance|public|generic:|()->Goo.ClipboardImage
 method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowOperationResult
+method|Goo.Window|RequestCapture|instance|public|generic:|()->Goo.WindowCaptureRequestStatus
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
@@ -1026,6 +1057,8 @@ method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,de
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
 method|Goo.Window|Show|instance|public|generic:|(activate:System.Boolean=true)->Goo.WindowOperationResult
 method|Goo.Window|TryPost|instance|public|generic:|(action:System.Action)->System.Boolean
+method|Goo.Window|TrySetFullscreenDisplay|instance|public|generic:|(display:Goo.WindowDisplayId)->Goo.WindowOperationResult
+method|Goo.Window|TrySetTopmost|instance|public|generic:|(value:System.Boolean)->Goo.WindowOperationResult
 property|Goo.AccessibilityActionRequest|Action|Goo.AccessibilityAction|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollX|System.Double|instance|get:public|index:()
 property|Goo.AccessibilityActionRequest|ScrollY|System.Double|instance|get:public|index:()
@@ -1310,6 +1343,7 @@ property|Goo.LayoutSize|Height|System.Double|instance|get:public,init:public|ind
 property|Goo.LayoutSize|Width|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutTransition|DurationMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutTransition|Easing|Goo.Easing|instance|get:public,init:public|index:()
+property|Goo.LayoutTransition|SimulationFactory|System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>|instance|get:public,init:public|index:()
 property|Goo.Length|Auto|Goo.Length|static|get:public|index:()
 property|Goo.Length|HasMagnitude|System.Boolean|instance|get:public|index:()
 property|Goo.Length|IsPercent|System.Boolean|instance|get:public|index:()
@@ -1375,7 +1409,9 @@ property|Goo.Shape|Fit|Goo.ShapeFit|instance|get:public,init:public|index:()
 property|Goo.Shape|MiterLimit|System.Double|instance|get:public,init:public|index:()
 property|Goo.Shape|Path|Goo.VectorPath|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeCap|Goo.StrokeCap|instance|get:public,init:public|index:()
+property|Goo.Shape|StrokeEnd|System.Double|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
+property|Goo.Shape|StrokeStart|System.Double|instance|get:public,init:public|index:()
 property|Goo.SoundPlayback|IsPlaying|System.Boolean|instance|get:public|index:()
 property|Goo.SoundSource|Channels|System.Int32|instance|get:public,set:private|index:()
 property|Goo.SoundSource|DurationSeconds|System.Double|instance|get:public|index:()
@@ -1598,12 +1634,26 @@ property|Goo.WheelEvent|Delta|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Position|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
+property|Goo.WindowCapture|Height|System.UInt32|instance|get:public|index:()
+property|Goo.WindowCapture|OriginTopLeft|System.Boolean|instance|get:public|index:()
+property|Goo.WindowCapture|Pixels|System.Byte[]|instance|get:public|index:()
+property|Goo.WindowCapture|Premultiplied|System.Boolean|instance|get:public|index:()
+property|Goo.WindowCapture|RowBytes|System.UInt32|instance|get:public|index:()
+property|Goo.WindowCapture|SrgbEncoded|System.Boolean|instance|get:public|index:()
+property|Goo.WindowCapture|Width|System.UInt32|instance|get:public|index:()
+property|Goo.WindowDisplay|Bounds|Goo.ElementRect|instance|get:public|index:()
+property|Goo.WindowDisplay|ContentScale|System.Single|instance|get:public|index:()
+property|Goo.WindowDisplay|Id|Goo.WindowDisplayId|instance|get:public|index:()
+property|Goo.WindowDisplay|Name|System.String|instance|get:public|index:()
+property|Goo.WindowDisplay|UsableBounds|System.Nullable`1<Goo.ElementRect>|instance|get:public|index:()
 property|Goo.WindowMetrics|DisplayScaleX|System.Double|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|DisplayScaleY|System.Double|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|FramebufferHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|FramebufferWidth|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalWidth|System.Int32|instance|get:public,init:public|index:()
+property|Goo.WindowPresentationAccepted|AcceptedTicks|System.Int64|instance|get:public,init:public|index:()
+property|Goo.WindowPresentationAccepted|FrameIndex|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.WindowTimer|IsActive|System.Boolean|instance|get:public|index:()
 property|Goo.WindowTitlebarEvent|Handled|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.WindowTitlebarEvent|Position|Goo.Point|instance|get:public,init:public|index:()
@@ -1613,6 +1663,7 @@ property|Goo.Window|CanMove|System.Boolean|instance|get:public|index:()
 property|Goo.Window|Capabilities|Goo.WindowCapabilities|instance|get:public|index:()
 property|Goo.Window|Decorated|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Focusable|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|FramePacing|Goo.WindowFramePacing|instance|get:public,set:public|index:()
 property|Goo.Window|Height|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|InitiallyVisible|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|index:()
@@ -1632,6 +1683,7 @@ property|Goo.Window|OnClosing|System.Func`1<System.Boolean>|instance|get:public,
 property|Goo.Window|Owner|Goo.Window|instance|get:public,set:public|index:()
 property|Goo.Window|PlatformInput|Goo.PlatformInput|instance|get:public|index:()
 property|Goo.Window|Preferences|Goo.PlatformPreferences|instance|get:public|index:()
+property|Goo.Window|QueueWorkPending|System.Boolean|instance|get:public|index:()
 property|Goo.Window|Resizable|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|ResizeBand|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Root|Goo.Cell|instance|get:public,init:public|index:()
@@ -1805,8 +1857,14 @@ type|Goo.VectorStroke|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowCapabilities|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowCaptureRequestStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowCapture|class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowDisplayId|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.WindowDisplay|class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowOperationResult|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowPresentationAccepted|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowTimer|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.WindowTitlebarEvent|sealed-class|public|base:System.Object|interfaces:|generic:

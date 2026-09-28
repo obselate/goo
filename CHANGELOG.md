@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.7.0 - 2026-09-28
+
+### Added
+
+- Added explicit display-paced and uncapped `Window.FramePacing`, native queue
+  readiness, and UI-thread `PresentationAccepted` receipts. Receipts report
+  queue handoff acceptance, not display scanout.
+- Added asynchronous `Window.RequestCapture` and `PollCapture` with caller-owned
+  RGBA pixels and exclusive request ownership shared with DevTools capture.
+- Added `SourceIndependent` shader generators that draw without capturing the
+  unused source subtree. Layout, input, clipping, opacity and required blend
+  isolation remain intact.
+- Added `ShaderEffectData.Publish<T unmanaged>(ReadOnlySpan<T>)` for one owned
+  copy of typed shader data in native memory layout.
+- Added `Shape.StrokeStart` and `StrokeEnd` to trim flattened path arc length
+  before dashing, with matching stroke hit geometry.
+- Added `PathBuilder.Reset` to reuse builder storage while preserving immutable
+  paths already returned by `Build`.
+- Added `LayoutTransition.SimulationFactory` for custom position simulations
+  that preserve incoming velocity when interrupted.
+- Added display inventory and explicit fullscreen display selection, including
+  Wayland output targeting without enabling unsupported windowed movement.
+- Added `Window.TrySetTopmost` with explicit operation results.
+
+### Fixed
+
+- Suppressed owner invalidation for unchanged running animation samples while
+  preserving completion and reduced-motion behavior.
+- Coalesced shader-data publication from layout metrics callbacks into the
+  current paint instead of scheduling another paint.
+- Reused flattened stroke contours across dash-phase and trim changes. CPU
+  dashing and outline construction still run when their inputs change.
+- Removed the intermediate list allocation from immutable `DashPattern` values.
+- Kept unsupported topmost preferences from aborting window creation on Wayland.
+
 ## 0.6.7 - 2026-09-28
 
 - Added `Anim<T>.Completed` with distinct natural, reduced-motion, and disabled-motion

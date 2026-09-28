@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Runtime.CompilerServices
 
-/// Describes an opt-in transition for computed layout position changes.
+/// Describes an opt-in position transition using DurationMs and Easing, or a custom SimulationFactory.
 public data struct LayoutTransition(DurationMs float64, Easing Easing) {
   /// Creates an optional simulation for each position axis. Omission uses DurationMs and Easing.
   /// The simulation starts at from with the supplied velocity and settles at to.

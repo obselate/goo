@@ -38,6 +38,11 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.ShowFileDialogAsync(Goo.FileDialogKind,Goo.FileDialogOptions)",
         "M:Goo.Window.Show(System.Boolean)",
         "M:Goo.Window.Hide",
+        "M:Goo.Window.GetDisplays",
+        "M:Goo.Window.TrySetFullscreenDisplay(Goo.WindowDisplayId)",
+        "M:Goo.Window.TrySetTopmost(System.Boolean)",
+        "M:Goo.Window.RequestCapture",
+        "M:Goo.Window.PollCapture",
         "M:Goo.Window.CancelFileDialog",
         "M:Goo.LayoutAlgorithm.Measure(Goo.LayoutContext,Goo.LayoutSize)",
         "M:Goo.LayoutAlgorithm.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
@@ -241,6 +246,8 @@ public sealed class PublicDocumentationTests
         "M:Goo.SoundSource.FromWav(System.Byte[])",
         "M:Goo.SoundSource.LoadWav(System.IO.Stream)",
         "M:Goo.Style.#ctor",
+        "M:Goo.PathBuilder.Reset",
+        "M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})",
         "M:Goo.Text.#ctor",
         "M:Goo.Text.#ctor(System.String)",
         "M:Goo.TextDocument.#ctor",
@@ -446,6 +453,9 @@ public sealed class PublicDocumentationTests
             ["M:Goo.Color.op_Implicit(Goo.Color)~Goo.Edges{Goo.Color}"] = new(["value"], [], true),
             ["M:Goo.Color.op_Implicit(System.String)~Goo.Color"] = new(["value"], [], true),
             ["M:Goo.Container.Add(Goo.Blob)"] = new(["child"], [], false),
+            ["M:Goo.PathBuilder.Reset"] = new([], [], true),
+            ["M:Goo.ShaderEffectData.Publish``1(System.ReadOnlySpan{``0})"] = new(["values"], ["T"], false),
+            ["M:Goo.Window.TrySetTopmost(System.Boolean)"] = new([], [], true),
             ["M:Goo.DashPattern.#ctor(System.Double[],System.Double)"] = new(["intervals", "offset"], [], false),
             ["M:Goo.DevTools.Attach(Goo.Window)"] = new(["window"], [], true),
             ["M:Goo.DevTools.Attach(Goo.Window,System.Boolean)"] = new(["window", "allowInput"], [], true),
@@ -756,6 +766,7 @@ public sealed class PublicDocumentationTests
         var eventIds = types.SelectMany(type => type.GetEvents(PublicDeclared)
             .Select(@event => $"E:{type.FullName}.{@event.Name}"));
         return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Append("P:Goo.TextCommand.Position").Concat(eventIds)
+            .Append("P:Goo.LayoutTransition.SimulationFactory")
             .Append("P:Goo.Cell`1.Input")
             .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
             .Append("M:Goo.Percent(System.Double)");

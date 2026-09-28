@@ -19,6 +19,25 @@ pause/resume lifecycle handling. Those areas need platform qualification, not
 replacement implementations. See the [API index](api/README.md),
 [Android integration](android.md), and [supported platforms](../README.md#platforms).
 
+## Showreel follow-up
+
+Goo 0.7.0 adds explicit frame pacing, queue acceptance receipts, coordinated
+pixel capture, source-independent shader generators, typed shader publications,
+stroke trim and flatten reuse, reusable path builders, layout simulation
+factories, topmost operation results and fullscreen display selection.
+Goo.Animations 0.2.4 adds deterministic stagger offsets and sampling guidance.
+These changes provide framework primitives. Applications still own scene clocks,
+video encoding, design-resolution scaling and domain-specific shader fields.
+
+Native verification on 2026-09-28 found a test-host limitation: bundled SDL 3.4.0
+crashes in `wl_proxy_marshal` under an isolated KWin 6.7.5 virtual compositor.
+A minimal C program reproduces it without Goo. That harness and Goo's capture,
+generator, pacing and window fixtures pass with system SDL 3.4.16. The complete
+core behavior suite, including native window creation, passes on the ordinary
+desktop with the exact bundled SDL 3.4.0 binary. The failure is not established
+for ordinary KWin sessions. Shipped-payload verification uses Weston CI, while
+the virtual-compositor failure remains a separate native test-host investigation.
+
 ## Core priorities
 
 Priority 0 blocks a common supported-platform workflow or access requirement.

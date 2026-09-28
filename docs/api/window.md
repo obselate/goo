@@ -23,7 +23,10 @@ and returns `Unsupported` while a native chooser blocks the owner.
 
 `Focusable` defaults to true and `Topmost` to false. Set them before `Open` or on
 the owner thread afterward. Nonfocusable windows never request activation when
-shown. Unsupported assignments throw before changing the configured value.
+shown. Unsupported `Focusable` assignments throw before changing the configured
+value. `Topmost` is a requested preference, so unsupported hosts retain it without
+changing stacking or failing `Open`. Call `TrySetTopmost(value)` to distinguish
+`Accepted`, `Unsupported`, `Closed` and `Failed` on an open window.
 `Capabilities` reports operations supported by the current host, or `None` before
 opening. Windows, macOS and X11 expose visibility, passive show, focusability and
 topmost requests. Wayland exposes visibility but reports the other three as
@@ -127,7 +130,72 @@ Subscribe to `Window.MetricsChanged` on the UI thread. Goo delivers an immutable
 
 The snapshot reports the dimensions from the latest native metrics event. A zero framebuffer dimension is reported as zero and its corresponding display scale is zero. Goo keeps the prior render target while minimized or otherwise zero-sized.
 
+Metrics callbacks run after layout and before scene compilation. Publish retained
+shader data there when it depends on current `ElementHandle.BorderBox` values.
+That publication joins the current paint. Reading a handle during `Build` still
+returns the preceding completed layout. Native startup dimensions are snapshots,
+not a promise that the compositor has finished changing scale. Continue applying
+later metrics notifications, including display and fractional-scale changes.
+
 Equal snapshots do not notify. A listener added after another listener has already received the current snapshot waits for a real change. Removing the final listener resets that listener stream, so a later first listener receives a new initial snapshot.
+
+## Frame pacing and manual capture
+
+`VSync` selects the preferred native presentation mode. `FramePacing` separately
+controls `Window.Run`: `Display` is the default and `Uncapped` schedules demanded
+frames as soon as the native queue is ready. Uncapped mode does not override a
+compositor's presentation policy or render hidden and unavailable windows.
+
+`Pump(dt)` advances simulation by the supplied seconds even when native work is
+pending. A manual clock can advance once, then service the window with `Pump(0)`
+while `QueueWorkPending` is true. Keep pumping to deliver input, close requests
+and posted callbacks. A running animation does not rebuild its owner when its
+sampled value is unchanged.
+
+`PresentationAccepted` reports a successful Vulkan queue-present handoff on the
+UI thread in a later pump. `FrameIndex` counts accepted presentations for that
+window opening. `AcceptedTicks` is the monotonic `Stopwatch` timestamp when Goo
+observed acceptance. Neither value identifies display scanout or a screenshot.
+
+After applying a deterministic simulation step and pumping layout, call
+`RequestCapture()`. Retry `Busy` or `NotReady` while pumping with zero delta.
+Once accepted, call `PollCapture()` until it returns a `WindowCapture`. The result
+owns top-left-origin RGBA8 pixels with a byte row stride, sRGB encoding and
+premultiplied alpha. A failed readback throws and releases the request. DevTools
+and public capture cannot take each other's accepted request.
+Stop retrying if the window closes or the request reports a failure status.
+
+Capture replays the current scene offscreen and may submit an additional native
+present. It requires an open desktop window and does not capture a specific prior
+presentation. Embedded hosts return `Unsupported`. The application owns its
+manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
+
+## Fullscreen displays
+
+Call `window.GetDisplays()` on an open window's UI thread for an owned read-only
+snapshot of connected desktop displays. Each `WindowDisplay` contains an opaque
+`WindowDisplayId`, name, SDL screen-coordinate bounds, optional usable bounds and
+expected content scale. Content scale is separate from the current window's
+framebuffer scale. IDs can become stale after hotplug or SDL teardown. Embedded
+hosts return an empty inventory.
+
+`TrySetFullscreenDisplay(id)` requests borderless fullscreen on that display,
+including output changes for an existing fullscreen window. It returns `Accepted`, `Closed`,
+`Unsupported` or `Failed`. `Accepted` means SDL accepted the request, not that
+the compositor moved the window. A compositor may keep the current output when
+an already-fullscreen window is retargeted. A default or disconnected display ID
+fails. Use a hidden initial window to inspect the inventory and select an output
+before showing it.
+
+KWin 6.7.5 can ignore an output change while fullscreen. To request another
+output there, set `State` to `Normal`, wait for `StateChanged` to report
+`Normal`, then call `TrySetFullscreenDisplay(id)` again. The app must wait for
+the native state event before sending the next request.
+
+Wayland supports fullscreen output selection while normal windowed placement
+remains compositor-controlled. This API does not enable `CanMove` or switch the
+monitor into an exclusive video mode. `State = WindowState.Fullscreen` remains
+available when no explicit output selection is needed.
 
 ## Observe window notifications
 
@@ -412,6 +480,7 @@ Sources:
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
 - [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
+- [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
 - [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
 - [`Window.Embedded.gs`](../../Goo/Window/WindowParts/Window.Embedded.gs)
@@ -446,6 +515,10 @@ Occurs after the native window reports a new stable size or display scale. Callb
 ### `PreferencesChanged`
 
 Reports preference changes after affected layout and motion policy are updated on the owner thread.
+
+### `PresentationAccepted`
+
+Occurs on the UI thread through the posted-action queue after Vulkan accepts a present request. Acceptance does not establish a display scanout time.
 
 ### `StateChanged`
 
@@ -499,6 +572,10 @@ Returns: An owned format list and explicit query status.
 
 Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard or native copy failure.
 
+### `GetDisplays`
+
+Gets an immutable snapshot of the current host's displays. Open the window first and call on its UI thread. IDs can become stale after hotplug or SDL restart. Embedded hosts return an empty list.
+
 ### `Hide`
 
 Hides an open desktop window and cancels transient input without destroying its tree. Modal windows and owners blocked by a modal child or chooser cannot be hidden.
@@ -517,6 +594,10 @@ Routes one platform-neutral accessibility action to a mounted semantic node.
 - `request`: The requested supported operation.
 
 Returns: False when the node is unavailable or the action is unsupported.
+
+### `PollCapture`
+
+Takes a completed capture, or returns nil while it is pending. Failed readback throws and releases this request's ownership.
 
 ### `Post(System.Action)`
 
@@ -545,6 +626,10 @@ Returns: Owned encoded bytes with a MIME type and explicit read status.
 ### `RequestActivation`
 
 Requests restoration of a minimized window, raising, and keyboard activation. Call on the owning UI thread in response to a user action. Desktop policy controls the outcome; observe IsFocused and FocusChanged for actual focus. Maximized/fullscreen state and the focused Goo element are preserved. Redirects to the active modal child. Returns Closed before Open or after close, Unsupported for embedded hosts, nonfocusable windows, or an active native chooser, or Failed if the native request reports an immediate error. Asynchronous policy denials are not reported by the desktop backend. Wayland requests use SDL's xdg-activation token and recent input serial.
+
+### `RequestCapture`
+
+Starts an asynchronous offscreen replay of the current scene. This may submit a native present and does not sample a specific display scanout. Call PollCapture on the UI thread until it returns pixels.
 
 ### `RequestClose`
 
@@ -587,6 +672,16 @@ Attempts to queue an action for the UI thread. A successful enqueue can still be
 
 Returns: True when the action was accepted into the queue.
 
+### `TrySetFullscreenDisplay(WindowDisplayId)`
+
+Requests borderless fullscreen on the selected display, including retargeting an already-fullscreen window. This must run on the window's UI thread. Returns Closed before Open or after close, Unsupported for embedded hosts, Failed for a stale ID or native failure, and Accepted when SDL accepts the request. Acceptance does not guarantee compositor placement. The compositor may keep the current display when retargeting fullscreen.
+
+### `TrySetTopmost(bool)`
+
+Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
+
+Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
+
 ### `AccessibilityAdapter`
 
 Gets or sets the adapter that receives this window's retained semantic tree.
@@ -610,6 +705,10 @@ Gets or sets whether the system draws window decorations.
 ### `Focusable`
 
 Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
+
+### `FramePacing`
+
+Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
 
 ### `Height`
 
@@ -687,6 +786,10 @@ Gets the owner-thread platform input and focused-editor contract.
 
 Gets the current host snapshot. Unsupported preferences remain unknown.
 
+### `QueueWorkPending`
+
+Reports whether the native target has pending GPU submit or present work. Use Pump(0) to service pending work without advancing the simulation.
+
 ### `Resizable`
 
 Gets or sets whether the user can resize the window.
@@ -709,7 +812,7 @@ Gets or sets the window title.
 
 ### `Topmost`
 
-Gets or sets requested desktop topmost stacking. Desktop policy controls the final stacking order. Unsupported hosts throw before changing the requested value.
+Gets or sets the requested desktop topmost preference. Unsupported hosts retain the request without changing native stacking. Desktop policy controls the final stacking order.
 
 ### `Transparent`
 
@@ -717,7 +820,7 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 
 ### `VSync`
 
-Gets or sets per-window GPU presentation synchronization. True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run applies internal display-rate pacing for either value.
+Gets or sets per-window GPU presentation synchronization. True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
 
 ### `WheelScrollScale`
 
@@ -750,6 +853,109 @@ Reports native lifecycle operations supported by the current host.
 - `ShowWithoutActivation`
 - `Focusability`
 - `Topmost`
+
+## `WindowCapture`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Owns RGBA8, sRGB, premultiplied pixels copied from a completed scene capture.
+
+### `Height`
+
+Gets the captured height in pixels.
+
+### `OriginTopLeft`
+
+Reports that the first pixel is at the top left.
+
+### `Pixels`
+
+Gets the caller-owned, top-left-origin RGBA8 pixel array.
+
+### `Premultiplied`
+
+Reports that color channels are premultiplied by alpha.
+
+### `RowBytes`
+
+Gets the row stride in bytes.
+
+### `SrgbEncoded`
+
+Reports that color channels use sRGB encoding.
+
+### `Width`
+
+Gets the captured width in pixels.
+
+## `WindowCaptureRequestStatus`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Reports whether an asynchronous window capture request was accepted.
+
+### Values
+
+- `Accepted`
+- `Busy`
+- `BudgetExceeded`
+- `NotReady`
+- `Failed`
+- `DeviceLost`
+- `Unsupported`
+
+## `WindowDisplay`
+
+Source:
+
+- [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
+
+Describes one display from an immutable SDL inventory snapshot.
+
+### `Bounds`
+
+Gets the display bounds in SDL screen coordinates.
+
+### `ContentScale`
+
+Gets SDL's expected content scale for the display, or zero if SDL cannot provide it. A window scale can differ.
+
+### `Id`
+
+Gets the opaque process-local display ID.
+
+### `Name`
+
+Gets the SDL display name.
+
+### `UsableBounds`
+
+Gets usable non-fullscreen bounds, or nil if SDL could not provide them.
+
+## `WindowDisplayId`
+
+Source:
+
+- [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
+
+Identifies one SDL display in the current process. The value can become stale after display changes.
+
+## `WindowFramePacing`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Controls how Window.Run schedules frames that have visual demand.
+
+### Values
+
+- `Display`
+- `Uncapped`
 
 ## `WindowMetrics`
 
@@ -797,6 +1003,22 @@ Reports whether a window operation was submitted to the host. Accepted does not 
 - `Closed`
 - `Unsupported`
 - `Failed`
+
+## `WindowPresentationAccepted`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Reports a successful queue-present handoff, not display scanout.
+
+### `AcceptedTicks`
+
+Gets the monotonic Stopwatch timestamp when Goo observed that acceptance.
+
+### `FrameIndex`
+
+Gets the one-based accepted presentation number for this window opening.
 
 ## `WindowState`
 

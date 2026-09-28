@@ -138,6 +138,12 @@ Adds a quadratic Bézier curve to a point.
 
 Returns: This builder.
 
+### `Reset`
+
+Clears the commands and reopens this builder while retaining its view box and storage. Previously built paths remain immutable. Each Build still copies the commands.
+
+Returns: This builder.
+
 ## `Point`
 
 Source:
@@ -194,9 +200,17 @@ Gets or sets the vector path to display.
 
 Gets or sets the stroke cap style. The default is Butt.
 
+### `StrokeEnd`
+
+Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke; fill remains unchanged. Trim precedes dashes, whose phase starts at each trimmed contour. Trim preserves fully included closed contours; partial contours use StrokeCap at their open ends.
+
 ### `StrokeJoin`
 
 Gets or sets the stroke join style. The default is Miter.
+
+### `StrokeStart`
+
+Gets or sets the stroke start in [0, 1]. Lengths use flattened geometry after fit mapping, summed across contours in path order. On mount, StrokeStart must not exceed StrokeEnd.
 
 ## `ShapeFit`
 
