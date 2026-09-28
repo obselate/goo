@@ -172,6 +172,7 @@ public sealed class FixtureContractTests
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PumpWakesOnlyOnFirstRegistrationContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.RetargetAcrossDifferentSpanPreservesRealVelocityContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.RetargetPreservesVelocityContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.RunningUnchangedTicksDoNotNotifyContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.SameClockScaleChangeRecomputesValueContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.SetDuringBuildLeavesAnimUnchangedContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.SetStopsAndAllowsReuseContract));

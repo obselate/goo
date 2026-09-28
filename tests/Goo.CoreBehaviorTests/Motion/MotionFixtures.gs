@@ -59,6 +59,27 @@ internal class MotionFixtures {
     }
   }
 
+  func RunningUnchangedTicksDoNotNotifyContract() bool {
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    var calls = 0
+    let anim = cell.Animate(0.0, (value float64) -> { calls++ })
+    try {
+      anim.To(10.0, Motion.Tween(1.0))
+      pump.Sweep(0.0)
+      if calls != 0 || !anim.Running { return false }
+      pump.Sweep(0.25)
+      if calls != 1 { return false }
+      pump.Sweep(0.0)
+      pump.Sweep(0.0)
+      if calls != 1 { return false }
+      pump.Sweep(0.75)
+      return calls == 2 && !anim.Running && anim.Value == 10.0
+    } finally {
+      cell.DisposeMounted()
+    }
+  }
+
   func CompletionChainsAfterCompactionContract() bool {
     let cell = MotionFixtureCell{}
     cell.BindPump(pump)

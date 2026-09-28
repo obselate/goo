@@ -49,6 +49,7 @@ public class Anim[T] {
   private let sims []Simulation?
   private let nextSims []Simulation?
   private let work []float64
+  private let notified []float64
   private let toDims []float64
   private let velDims []float64
   private let velRead []float64
@@ -86,10 +87,12 @@ public class Anim[T] {
     sims = [dimensions]Simulation?
     nextSims = [dimensions]Simulation?
     work = [dimensions]float64
+    notified = [dimensions]float64
     toDims = [dimensions]float64
     velDims = [dimensions]float64
     velRead = [dimensions]float64
     converter.Read(initial, work)
+    for var i = 0; i < dimensions; i++ { notified[i] = work[i] }
     currentT = initial
     toT = initial
     memoValue = initial
@@ -205,6 +208,7 @@ public class Anim[T] {
       }
       for var i = 0; i < work.Length; i++ {
         work[i] = toDims[i]
+        notified[i] = toDims[i]
         sims[i] = nil
         nextSims[i] = nil
       }
@@ -420,11 +424,18 @@ public class Anim[T] {
       return false
     }
     let value = memoize(now)
-    notifyOwner(value)
+    var changed = false
+    for var i = 0; i < work.Length; i++ {
+      if work[i] != notified[i] { changed = true }
+    }
+    if changed {
+      notifyOwner(value)
+    }
     return true
   }
 
   private func notifyOwner(value T) {
+    for var i = 0; i < work.Length; i++ { notified[i] = work[i] }
     if let rebuild = invalidate {
       rebuild()
     }
