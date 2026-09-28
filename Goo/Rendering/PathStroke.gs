@@ -25,6 +25,7 @@ internal data struct PathStrokePoint {
 private sealed class PathStrokePolyline {
   internal var Points List[PathStrokePoint]
   internal var Closed bool
+  internal var Length float64
 
   internal init() {
     Points = List[PathStrokePoint]()
@@ -38,9 +39,16 @@ private sealed class PathStrokePolyline {
 
 private sealed class PathStrokeSource {
   internal let Geometry PathGeometry
+  internal let Polylines List[PathStrokePolyline]
+  internal var GeometryRevision uint64
+  internal var ScaleX float32
+  internal var ScaleY float32
+  internal var TotalLength float64
+  internal var Flattened bool
 
   internal init(geometry PathGeometry) {
     Geometry = geometry
+    Polylines = List[PathStrokePolyline]()
   }
 }
 
@@ -168,6 +176,8 @@ private sealed class PathStrokeEntry {
   internal var Cap StrokeCap
   internal var Join StrokeJoin
   internal var MiterLimit float32
+  internal var StrokeStart float64
+  internal var StrokeEnd float64
   internal var Dashes DashPattern?
   internal var DashRevision uint64
   internal var GeometryRevision uint64
@@ -175,7 +185,8 @@ private sealed class PathStrokeEntry {
   internal var Owner VectorPathNormalizedOwner
 
   internal init(scaleX float32, scaleY float32, width float32, cap StrokeCap,
-    join StrokeJoin, miterLimit float32, dashes DashPattern?, geometryRevision uint64,
+    join StrokeJoin, miterLimit float32, dashes DashPattern?, strokeStart float64,
+    strokeEnd float64, geometryRevision uint64,
     path VectorPath, owner VectorPathNormalizedOwner) {
       ScaleX = scaleX
       ScaleY = scaleY
@@ -183,6 +194,8 @@ private sealed class PathStrokeEntry {
       Cap = cap
       Join = join
       MiterLimit = miterLimit
+      StrokeStart = strokeStart
+      StrokeEnd = strokeEnd
       Dashes = dashes
       DashRevision = if let value = dashes { value.Revision } else { 0uL }
       GeometryRevision = geometryRevision
@@ -206,6 +219,7 @@ internal sealed class PathStrokeCache {
   private let sources ConditionalWeakTable[VectorPathData, PathStrokeSource]
   private let gate object
   private let scratch PathStrokeScratch
+  internal var FlattenCount int32
 
   internal init() {
     entries = ConditionalWeakTable[VectorPathData, List[PathStrokeEntry]]()
@@ -215,11 +229,14 @@ internal sealed class PathStrokeCache {
   }
 
   internal func Resolve(path VectorPath, mapping PathMapping, width float32,
-    cap StrokeCap, join StrokeJoin, miterLimit float32, dashes DashPattern?) VectorPath{
+    cap StrokeCap, join StrokeJoin, miterLimit float32, dashes DashPattern?,
+    strokeStart float64, strokeEnd float64) VectorPath{
       guard let data = path.payload else { return VectorPath.Empty }
       if !mapping.Valid || !Finite(mapping.ScaleX) || !Finite(mapping.ScaleY)
         || mapping.ScaleX <= 0.0F || mapping.ScaleY <= 0.0F
-        || !Finite(width) || width <= 0.0F || !Finite(miterLimit) || miterLimit < 0.0F {
+        || !Finite(width) || width <= 0.0F || !Finite(miterLimit) || miterLimit < 0.0F
+        || !Finite64(strokeStart) || !Finite64(strokeEnd)
+        || strokeStart < 0.0 || strokeEnd > 1.0 || strokeStart >= strokeEnd {
           return VectorPath.Empty
         }
       let mutable = data.NormalizedOwner != nil
@@ -228,13 +245,15 @@ internal sealed class PathStrokeCache {
           if entries.TryGetValue(data, out var retained) {
             if let hit = FindMutable(retained) {
               let sameStyle = SameStyle(hit, mapping.ScaleX, mapping.ScaleY,
-                width, cap, join, miterLimit)
+                width, cap, join, miterLimit, strokeStart, strokeEnd)
               let sameDash = hit.DashRevision == dashRevision(dashes)
+                && (Object.ReferenceEquals(hit.Dashes, dashes)
+                  || SameDashes(hit.Dashes, dashes))
               if sameStyle && sameDash && hit.GeometryRevision == data.GeometryRevision {
                 return hit.Path
               }
               if !Build(path, data, mapping.ScaleX, mapping.ScaleY, width,
-                cap, join, miterLimit, dashes) {
+                cap, join, miterLimit, dashes, strokeStart, strokeEnd) {
                   return VectorPath.Empty
                 }
               hit.ScaleX = mapping.ScaleX
@@ -243,20 +262,23 @@ internal sealed class PathStrokeCache {
               hit.Cap = cap
               hit.Join = join
               hit.MiterLimit = miterLimit
+              hit.StrokeStart = strokeStart
+              hit.StrokeEnd = strokeEnd
               hit.Dashes = dashes
               UpdateEntry(hit, path, data, dashes)
               return hit.Path
             }
           }
           if !Build(path, data, mapping.ScaleX, mapping.ScaleY, width,
-            cap, join, miterLimit, dashes) {
+            cap, join, miterLimit, dashes, strokeStart, strokeEnd) {
               return VectorPath.Empty
             }
           let built = CreateOutputPath(path, scratch.OutputQuadraticCount,
             scratch.OutputContourCount)
           guard let owner = built.NormalizedOwner else { return VectorPath.Empty }
           let entry = PathStrokeEntry(mapping.ScaleX, mapping.ScaleY, width,
-            cap, join, miterLimit, dashes, data.GeometryRevision, built, owner)
+            cap, join, miterLimit, dashes, strokeStart, strokeEnd,
+            data.GeometryRevision, built, owner)
           UpdateEntry(entry, path, data, dashes)
           if entries.TryGetValue(data, out var bucket) {
             bucket.Add(entry)
@@ -270,7 +292,7 @@ internal sealed class PathStrokeCache {
       }
       if entries.TryGetValue(data, out var existing) {
         if let hit = Find(existing, mapping.ScaleX, mapping.ScaleY, width,
-          cap, join, miterLimit, dashes) {
+          cap, join, miterLimit, dashes, strokeStart, strokeEnd) {
             if hit.GeometryRevision == data.GeometryRevision
               && hit.DashRevision == dashRevision(dashes) {
                 return hit.Path
@@ -280,9 +302,9 @@ internal sealed class PathStrokeCache {
       lock (gate) {
         if entries.TryGetValue(data, out var retained) {
           if let hit = Find(retained, mapping.ScaleX, mapping.ScaleY, width,
-            cap, join, miterLimit, dashes) {
+            cap, join, miterLimit, dashes, strokeStart, strokeEnd) {
               if !Build(path, data, mapping.ScaleX, mapping.ScaleY, width,
-                cap, join, miterLimit, dashes) {
+                cap, join, miterLimit, dashes, strokeStart, strokeEnd) {
                   return VectorPath.Empty
                 }
               UpdateEntry(hit, path, data, dashes)
@@ -290,14 +312,15 @@ internal sealed class PathStrokeCache {
             }
         }
         if !Build(path, data, mapping.ScaleX, mapping.ScaleY, width,
-          cap, join, miterLimit, dashes) {
+          cap, join, miterLimit, dashes, strokeStart, strokeEnd) {
             return VectorPath.Empty
           }
         let built = CreateOutputPath(path, scratch.OutputQuadraticCount,
           scratch.OutputContourCount)
         guard let owner = built.NormalizedOwner else { return VectorPath.Empty }
         let entry = PathStrokeEntry(mapping.ScaleX, mapping.ScaleY, width,
-          cap, join, miterLimit, dashes, data.GeometryRevision, built, owner)
+          cap, join, miterLimit, dashes, strokeStart, strokeEnd,
+          data.GeometryRevision, built, owner)
         UpdateEntry(entry, path, data, dashes)
         if entries.TryGetValue(data, out var bucket) {
           if bucket.Count >= MaximumEntriesPerSource {
@@ -315,12 +338,13 @@ internal sealed class PathStrokeCache {
 
   private func Find(values List[PathStrokeEntry], scaleX float32, scaleY float32,
     width float32, cap StrokeCap, join StrokeJoin, miterLimit float32,
-    dashes DashPattern?) PathStrokeEntry? {
+    dashes DashPattern?, strokeStart float64, strokeEnd float64) PathStrokeEntry? {
       var index int32 = 0
       while index < values.Count {
         let value = values[index]
         if value.ScaleX == scaleX && value.ScaleY == scaleY && value.Width == width
           && value.Cap == cap && value.Join == join && value.MiterLimit == miterLimit
+          && value.StrokeStart == strokeStart && value.StrokeEnd == strokeEnd
           && (Object.ReferenceEquals(value.Dashes, dashes)
               || SameDashes(value.Dashes, dashes)) {
                 return value
@@ -333,8 +357,10 @@ internal sealed class PathStrokeCache {
   private func FindMutable(values List[PathStrokeEntry]) PathStrokeEntry? -> if values.Count == 0 { nil } else { values[0] }
 
   private func SameStyle(value PathStrokeEntry, scaleX float32, scaleY float32,
-    width float32, cap StrokeCap, join StrokeJoin, miterLimit float32) bool -> value.ScaleX == scaleX && value.ScaleY == scaleY && value.Width == width
+    width float32, cap StrokeCap, join StrokeJoin, miterLimit float32,
+    strokeStart float64, strokeEnd float64) bool -> value.ScaleX == scaleX && value.ScaleY == scaleY && value.Width == width
     && value.Cap == cap && value.Join == join && value.MiterLimit == miterLimit
+    && value.StrokeStart == strokeStart && value.StrokeEnd == strokeEnd
 
   private func dashRevision(value DashPattern?) uint64 {
     if let pattern = value { return pattern.Revision }
@@ -364,16 +390,36 @@ internal sealed class PathStrokeCache {
 
   private func Build(path VectorPath, data VectorPathData, scaleX float32, scaleY float32,
     width float32,
-    cap StrokeCap, join StrokeJoin, miterLimit float32, dashes DashPattern?) bool{
+    cap StrokeCap, join StrokeJoin, miterLimit float32, dashes DashPattern?,
+    strokeStart float64, strokeEnd float64) bool{
       guard let source = SourceFor(path, data) else {
         return false
       }
       scratch.Begin()
-      var contourIndex int32 = 0
-      while contourIndex < source.Geometry.ContourCount {
-        let contour = source.Geometry.Contours[contourIndex]
-        guard let current = FlattenContour(source.Geometry, contour, scaleX, scaleY) else {
-          return false
+      if !FlattenedFor(source, data.GeometryRevision, scaleX, scaleY) {
+        return false
+      }
+      let trimStart = strokeStart * source.TotalLength
+      let trimEnd = strokeEnd * source.TotalLength
+      let fullStroke = strokeStart == 0.0 && strokeEnd == 1.0
+      var contourStart float64 = 0.0
+      for contour in source.Polylines {
+        let contourEnd = contourStart + contour.Length
+        if trimStart >= contourEnd || trimEnd <= contourStart {
+          contourStart = contourEnd
+          continue
+        }
+        let localStart = Math.Max(0.0, trimStart - contourStart)
+        let localEnd = Math.Min(contour.Length, trimEnd - contourStart)
+        let current = if fullStroke
+          || (trimStart <= contourStart && trimEnd >= contourEnd) {
+          contour
+        } else {
+          TrimContour(contour, localStart, localEnd)
+        }
+        if current == nil {
+          contourStart = contourEnd
+          continue
         }
         if !StrokeCoordinatesSafe(current.Points, width, join, miterLimit) {
           return false
@@ -386,10 +432,76 @@ internal sealed class PathStrokeCache {
             width, cap, join, miterLimit, scaleX, scaleY, scratch.Commands)
           subpathIndex++
         }
-        contourIndex++
+        contourStart = contourEnd
       }
       return NormalizeCommands(path)
     }
+
+  private func FlattenedFor(source PathStrokeSource, revision uint64,
+    scaleX float32, scaleY float32) bool {
+    if source.Flattened && source.GeometryRevision == revision
+      && source.ScaleX == scaleX && source.ScaleY == scaleY {
+      return true
+    }
+    source.Flattened = false
+    source.Polylines.Clear()
+    source.TotalLength = 0.0
+    var index int32 = 0
+    while index < source.Geometry.ContourCount {
+      let contour = source.Geometry.Contours[index]
+      guard let current = FlattenContour(source.Geometry, contour, scaleX, scaleY) else {
+        return false
+      }
+      FlattenCount++
+      let points = List[PathStrokePoint](current.Points.Count)
+      for point in current.Points { points.Add(point) }
+      let retained = PathStrokePolyline()
+      retained.Set(points, current.Closed)
+      let edgeCount = if retained.Closed { points.Count } else { points.Count - 1 }
+      var edge int32 = 0
+      while edge < edgeCount {
+        let first = points[edge]
+        let last = points[if edge + 1 == points.Count { 0 } else { edge + 1 }]
+        let dx = float64(last.X) - float64(first.X)
+        let dy = float64(last.Y) - float64(first.Y)
+        retained.Length += Math.Sqrt(dx * dx + dy * dy)
+        edge++
+      }
+      source.TotalLength += retained.Length
+      source.Polylines.Add(retained)
+      index++
+    }
+    source.GeometryRevision = revision
+    source.ScaleX = scaleX
+    source.ScaleY = scaleY
+    source.Flattened = true
+    return true
+  }
+
+  private func TrimContour(contour PathStrokePolyline, start float64,
+    end float64) PathStrokePolyline? {
+    let points = scratch.AcquirePoints()
+    let edgeCount = if contour.Closed { contour.Points.Count } else { contour.Points.Count - 1 }
+    var distance float64 = 0.0
+    var edge int32 = 0
+    while edge < edgeCount && distance < end {
+      let first = contour.Points[edge]
+      let last = contour.Points[if edge + 1 == contour.Points.Count { 0 } else { edge + 1 }]
+      let dx = float64(last.X) - float64(first.X)
+      let dy = float64(last.Y) - float64(first.Y)
+      let length = Math.Sqrt(dx * dx + dy * dy)
+      let next = distance + length
+      if length > 0.0 && next > start && distance < end {
+        let from = Math.Max(start, distance)
+        let to = Math.Min(end, next)
+        AddPoint(points, Interpolate(first, last, float32((from - distance) / length)))
+        AddPoint(points, Interpolate(first, last, float32((to - distance) / length)))
+      }
+      distance = next
+      edge++
+    }
+    return if points.Count < 2 { nil } else { scratch.AcquirePolyline(points, false) }
+  }
 
   private func CreateOutputPath(path VectorPath, curveCount int32,
     contourCount int32) VectorPath{

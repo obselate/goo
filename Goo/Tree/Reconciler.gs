@@ -835,6 +835,9 @@ internal partial class Reconciler {
   }
 
   internal func applyShape(n Node, s Shape, initial bool) {
+    if s.StrokeStart > s.StrokeEnd {
+      throw ArgumentOutOfRangeException("StrokeStart")
+    }
     applyStyle(n, s, s.Focusable, initial)
     var contentChanged = false
     var layoutChanged = false
@@ -870,6 +873,12 @@ internal partial class Reconciler {
     }
     if n.MiterLimit != s.MiterLimit {
       n.MiterLimit = s.MiterLimit
+      paintChanged = true
+      hitGeometryChanged = true
+    }
+    if n.StrokeStart != s.StrokeStart || n.StrokeEnd != s.StrokeEnd {
+      n.StrokeStart = s.StrokeStart
+      n.StrokeEnd = s.StrokeEnd
       paintChanged = true
       hitGeometryChanged = true
     }

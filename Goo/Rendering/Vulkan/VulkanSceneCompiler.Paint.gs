@@ -915,7 +915,8 @@ internal partial class VulkanSceneCompiler {
         }
       if node.Kind == NodeKind.Shape {
         let width = ResolveLength(node.BorderLeftWidth, MinDimension(bounds))
-        if width > 0.0F && node.BorderLeftColor.A > 0.0F {
+        if width > 0.0F && node.BorderLeftColor.A > 0.0F
+          && node.StrokeStart < node.StrokeEnd {
           result = result.Inflate(resolveShapeStrokeExtent(width, node.ShapeStrokeJoin,
             float32(node.MiterLimit)))
         }

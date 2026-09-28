@@ -440,6 +440,8 @@ internal class Node {
   internal prop ShapeStrokeCap StrokeCap{ get; set; }
   internal prop ShapeStrokeJoin StrokeJoin{ get; set; }
   internal prop MiterLimit float64{ get; set; }
+  internal prop StrokeStart float64{ get; set; }
+  internal prop StrokeEnd float64{ get; set; }
   internal prop ShapeCornerRadius float64{ get; set; }
   internal prop Dashes DashPattern? { get; set; }
   internal prop ShapeStrokeInset bool{ get; set; }
@@ -493,6 +495,7 @@ internal class Node {
     ShapeStrokeJoin = StrokeJoin.Miter
     ShapeStrokeInset = true
     MiterLimit = 4.0
+    StrokeEnd = 1.0
     HitTestSelf = true
     transitionSelection = allTransitionSelection()
     ApplyAllDefaults(this)

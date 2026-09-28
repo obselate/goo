@@ -19,6 +19,8 @@ public enum StrokeJoin { Miter; Round; Bevel }
 public class Shape : Blob {
   private var miterLimit float64
   private var cornerRadius float64
+  private var strokeStart float64
+  private var strokeEnd float64
 
   internal override func coreBlob() {
   }
@@ -55,6 +57,31 @@ public class Shape : Blob {
   }
   /// Gets or sets the stroke dash pattern.
   public prop Dashes DashPattern? { get; init; }
+  /// Gets or sets the stroke start in [0, 1]. Lengths use flattened geometry
+  /// after fit mapping, summed across contours in path order.
+  /// On mount, StrokeStart must not exceed StrokeEnd.
+  public prop StrokeStart float64{
+    get -> strokeStart
+    init{
+      if !motionFiniteFloat32(value) || value < 0.0 || value > 1.0 {
+        throw ArgumentOutOfRangeException("StrokeStart")
+      }
+      strokeStart = value
+    }
+  }
+  /// Gets or sets the stroke end in [0, 1]. Equal bounds omit the stroke;
+  /// fill remains unchanged. Trim precedes dashes, whose phase starts at each
+  /// trimmed contour. Trim preserves fully included closed contours; partial
+  /// contours use StrokeCap at their open ends.
+  public prop StrokeEnd float64{
+    get -> strokeEnd
+    init{
+      if !motionFiniteFloat32(value) || value < 0.0 || value > 1.0 {
+        throw ArgumentOutOfRangeException("StrokeEnd")
+      }
+      strokeEnd = value
+    }
+  }
 
   internal prop StrokeInset bool{ get; init; }
 
@@ -67,5 +94,6 @@ public class Shape : Blob {
     StrokeJoin = StrokeJoin.Miter
     StrokeInset = true
     miterLimit = 4.0
+    strokeEnd = 1.0
   }
 }

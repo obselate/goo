@@ -25,7 +25,8 @@ public sealed class DashPattern {
       throw ArgumentOutOfRangeException("offset")
     }
 
-    let normalized = List[float64]()
+    let count = intervals.Length
+    let normalized = [if count % 2 == 0 { count } else { count * 2 }]float64
     var allZero = true
     for i in 0 ... intervals.Length {
       let interval = intervals[i]
@@ -35,15 +36,14 @@ public sealed class DashPattern {
       if interval != 0.0 {
         allZero = false
       }
-      normalized.Add(interval)
+      normalized[i] = interval
     }
-    if normalized.Count > 0 && allZero {
+    if count > 0 && allZero {
       throw ArgumentException("intervals must not all be zero", "intervals")
     }
-    if normalized.Count % 2 != 0 {
-      let count = normalized.Count
+    if count % 2 != 0 {
       for i in 0 ... count {
-        normalized.Add(normalized[i])
+        normalized[count + i] = normalized[i]
       }
     }
 

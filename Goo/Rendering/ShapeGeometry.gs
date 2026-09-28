@@ -30,13 +30,17 @@ internal class ShapeGeometry {
       let mapping = PathGeometry.Map(n.ShapePath, n.ShapeFit, content.X, content.Y, content.W, content.H)
       let path = mapping.Valid
       ? PathRoundedCache.Shared.Resolve(n.ShapePath, mapping, n.ShapeCornerRadius) : VectorPath.Empty
+      let strokeVisible = strokeWidth > 0.0F && n.BorderLeftColor.A > 0.0F
+        && n.StrokeStart < n.StrokeEnd
       return ResolvedShapeGeometry{
         Content: content,
         Mapping: mapping,
         Path: path,
         StrokeWidth: strokeWidth,
-        StrokeExtent: resolveShapeStrokeExtent(strokeWidth, n.ShapeStrokeJoin, float32(n.MiterLimit)),
-        StrokeVisible: strokeWidth > 0.0F && n.BorderLeftColor.A > 0.0F,
+        StrokeExtent: if strokeVisible {
+          resolveShapeStrokeExtent(strokeWidth, n.ShapeStrokeJoin, float32(n.MiterLimit))
+        } else { 0.0F },
+        StrokeVisible: strokeVisible,
       }
     }
 
@@ -51,7 +55,9 @@ internal class ShapeGeometry {
         n.ShapeStrokeCap,
         n.ShapeStrokeJoin,
         float32(n.MiterLimit),
-        n.Dashes)
+        n.Dashes,
+        n.StrokeStart,
+        n.StrokeEnd)
     }
 
     internal func HitTest(n Node, x float32, y float32) bool {
