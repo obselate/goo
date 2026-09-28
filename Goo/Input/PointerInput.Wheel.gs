@@ -9,9 +9,7 @@ internal partial class PointerInput {
       scratchChain.Clear()
       try {
         hitChainInto(tree, x, y, scratchChain)
-        if chainDisabled(scratchChain) {
-          return false
-        }
+        if !trimDisabledWheelRoute(scratchChain) { return false }
         let prevented = dispatchWheel(scratchChain, x, y, dx, dy, modifiers)
         var consumed = false
         if !prevented {
@@ -22,6 +20,22 @@ internal partial class PointerInput {
         scratchChain.Clear()
       }
     }
+
+  private func trimDisabledWheelRoute(route List[Node]) bool {
+    if route.Count == 0 { return false }
+    if route[0].HasFocusScopes && !FocusScopes.Allows(route[0], route[route.Count - 1]) {
+      return false
+    }
+    for i in 0 ... route.Count {
+      if !route[i].Disabled { continue }
+      for j in i ... route.Count {
+        if route[j].FocusScopeBoundary || route[j].IsPortal { return false }
+      }
+      while route.Count > i { route.RemoveAt(route.Count - 1) }
+      break
+    }
+    return route.Count > 0
+  }
 
   private func dispatchWheel(route List[Node], x float32, y float32, dx float32, dy float32,
     modifiers KeyModifiers) bool{

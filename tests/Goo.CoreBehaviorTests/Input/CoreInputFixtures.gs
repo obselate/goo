@@ -1529,6 +1529,44 @@ internal class InputFixtures {
       && stopped.CaptureMoves == 1 && stopped.FirstClicks == 0 && stopped.SecondClicks == 1
   }
 
+  func DisabledWheelReachesEnabledAncestorsWithoutCrossingModalScope() bool {
+    let cell = InputDisabledWheelCell{}
+    let window = Window{ Root: cell, Width: 100, Height: 100 }
+    window.UpdateTree()
+    guard let root = window.Tree, let scroller = cell.ScopeHandle.AttachedNode() else { return false }
+    if maxScrollY(root) <= 0.0F || maxScrollY(scroller) <= 0.0F { return false }
+    window.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    window.DrainQueuedInputForTest()
+    if cell.RowWheels != 0 || cell.ScopeWheels != 1 || cell.OuterWheels != 1
+      || scroller.ScrollTargetY <= 0.0F || root.ScrollTargetY != 0.0F { return false }
+
+    let disabledCell = InputDisabledWheelCell{}
+    let disabledWindow = Window{ Root: disabledCell, Width: 100, Height: 100 }
+    disabledWindow.UpdateTree()
+    guard let disabledRoot = disabledWindow.Tree,
+      let disabledScroller = disabledCell.ScopeHandle.AttachedNode() else { return false }
+    disabledScroller.Disabled = true
+    disabledWindow.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    disabledWindow.DrainQueuedInputForTest()
+    if disabledCell.RowWheels != 0 || disabledCell.ScopeWheels != 0
+      || disabledCell.OuterWheels != 1 || disabledScroller.ScrollTargetY != 0.0F
+      || disabledRoot.ScrollTargetY <= 0.0F { return false }
+
+    let modalCell = InputDisabledWheelCell{}
+    let modalWindow = Window{ Root: modalCell, Width: 100, Height: 100 }
+    modalWindow.UpdateTree()
+    guard let modalRoot = modalWindow.Tree,
+      let modalScroller = modalCell.ScopeHandle.AttachedNode() else { return false }
+    using let modalRegistration = modalCell.ScopeHandle.BeginFocusScope(FocusScopeOptions{ Modal: true })
+    modalCell.DisableScopeOnWheel = true
+    modalWindow.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    modalWindow.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    modalWindow.DrainQueuedInputForTest()
+    return modalCell.RowWheels == 0 && modalCell.ScopeWheels == 1
+      && modalCell.OuterWheels == 0 && modalScroller.Disabled
+      && modalScroller.FocusScopeBoundary && modalRoot.ScrollTargetY == 0.0F
+  }
+
   func UnhandledWheelStaysPresentationIdle() bool {
     let window = Window{ Root: InputWheelQuietCell{}, Width: 100, Height: 100 }
     window.UpdateTree()
@@ -2999,6 +3037,35 @@ internal class InputWheelCell : Cell {
     Events.Add(name + ":" + e.Position.X.ToString() + ":" + e.Position.Y.ToString()
       +":" + e.Delta.X.ToString() + ":" + e.Delta.Y.ToString()
       +":" + (e.Modifiers.Ctrl ? "1" : "0"))
+  }
+}
+
+internal class InputDisabledWheelCell : Cell {
+  internal let ScopeHandle ElementHandle = ElementHandle{}
+  internal var RowWheels int32
+  internal var ScopeWheels int32
+  internal var OuterWheels int32
+  internal var DisableScopeOnWheel bool
+
+  override func Build() Blob -> Container() {
+    .Key: "outer",.Width: 100.0,.Height: 100.0,.Overflow: Overflow.Scroll,
+    .OnWheel: (e WheelEvent) -> { OuterWheels++ },
+    Container() {
+      .Key: "scope",.Handle: ScopeHandle,.Width: 100.0,.Height: 100.0,
+      .FlexShrink: 0.0,.Focusable: true,.Overflow: Overflow.Scroll,
+      .OnWheel: (e WheelEvent) -> {
+        ScopeWheels++
+        if DisableScopeOnWheel {
+          if let node = ScopeHandle.AttachedNode() { node.Disabled = true }
+        }
+      },
+      Container {
+        Key: "row", Width: 100.0, Height: 100.0, FlexShrink: 0.0,
+        Disabled: true, OnWheel: (e WheelEvent) -> { RowWheels++ },
+      },
+      Container{ Key: "inner-fill", Width: 100.0, Height: 100.0, FlexShrink: 0.0 },
+    },
+    Container{ Key: "outer-fill", Width: 100.0, Height: 100.0, FlexShrink: 0.0 },
   }
 }
 

@@ -210,7 +210,7 @@ as the tab stop and move focus explicitly for arrow-key navigation.
 
 ## Scroll nested and transformed content
 
-Wheel input preserves fractional deltas and platform scroll scaling. `Window.WheelScrollScale` adjusts that distance. When a scroller reaches an edge, unused wheel movement passes to its scrollable ancestors. Scroll chaining stops at portal and focus-scope boundaries. `PreventDefault()` suppresses the default scroll operation.
+Wheel input preserves fractional deltas and platform scroll scaling. `Window.WheelScrollScale` adjusts that distance. When a scroller reaches an edge, unused wheel movement passes to its scrollable ancestors. A disabled child receives no wheel callback, but enabled ancestors can handle and scroll under the pointer. Scrolling does not cross portal or active focus-scope boundaries. `PreventDefault()` suppresses the default scroll operation.
 
 Primary touch begins a pan after eight logical window units when pointer callbacks, capture, text selection, or drag-and-drop have not claimed the interaction. Panning cancels the pending press and click, follows the pointer directly in each scroller's transformed local coordinates, and passes unused movement to ancestors. Recent movement can continue as bounded momentum after release. A new scroll action, input reset, or reduced-motion preference stops momentum. Reduced motion also makes ordinary scroll targets immediate on the next frame.
 

@@ -107,6 +107,7 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.MacWheelUnitScrollsTenPerUnit));
         yield return Contract<InputFixtures>(nameof(InputFixtures.MouseRemainsPrimaryWhileTouchIsHeld));
         yield return Contract<InputFixtures>(nameof(InputFixtures.NestedWheelOwnershipAndBoundary));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.DisabledWheelReachesEnabledAncestorsWithoutCrossingModalScope));
         yield return Contract<InputFixtures>(nameof(InputFixtures.PenHoverKeepsContactStateUntilCancel));
         yield return Contract<InputFixtures>(nameof(InputFixtures.PenIdentityIsDistinctFromTouchIdentity));
         yield return Contract<InputFixtures>(nameof(InputFixtures.PointerAndKeyboardPressesShareStateSafely));

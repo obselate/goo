@@ -8,6 +8,8 @@
 - Cancelled stale completion when an animation is replaced, snapped, or disposed.
 - Added `Anim<T>.IsDisposed` for library lifecycle checks and stopped frame work
   when a completion callback closes its owning window.
+- Wheel input over a disabled child now reaches enabled scroll ancestors without
+  invoking disabled handlers or crossing modal scope boundaries.
 - Recorded production desktop and mobile extension priorities, ownership, and
   acceptance checks in [production readiness](https://github.com/obselate/goo/blob/v0.6.7/docs/production-readiness.md).
 
