@@ -72,6 +72,8 @@ internal interface WindowHost {
   func SetMaximumSize(width int32, height int32);
   func SetPosition(x int32, y int32);
   func SetState(value WindowState);
+  func GetDisplays() IReadOnlyList[WindowDisplay];
+  func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult;
   func RequestActivation() WindowOperationResult;
   func SetBorder(decorated bool, resizable bool);
   func SetVSync(value bool);

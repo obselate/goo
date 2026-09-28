@@ -77,6 +77,10 @@ internal data struct VulkanWindowFramebufferExtentTestSnapshot {
   internal var Width int32
   internal var Height int32
 }
+internal data struct WindowNativeDisplayStateForTest {
+  internal var DisplayId uint32
+  internal var Fullscreen bool
+}
 internal data struct VulkanPathCompileProbeTestSnapshot {
   internal var PathResourceDeferred bool
   internal var PathClipCount int32
@@ -1123,6 +1127,16 @@ internal unsafe partial class VulkanWindowTarget {
 }
 
 public partial class Window {
+  internal func NativeDisplayStateForTest() WindowNativeDisplayStateForTest {
+    guard let native = host as SdlHost? else { return WindowNativeDisplayStateForTest{} }
+    let nativeWindow = native.NativeWindow
+    let flags = SDL.GetWindowFlags(nativeWindow)
+    return WindowNativeDisplayStateForTest{
+      DisplayId: SDL.GetDisplayForWindow(nativeWindow),
+      Fullscreen: (flags & uint64(SDLWindowFlags.Fullscreen)) != 0uL,
+    }
+  }
+
   internal func AbortPrimitiveMetricsForTest(finish bool) VulkanPrimitiveFrameStats ->
   VulkanTargetForTest()!!.AbortPrimitiveMetricsForTest(finish)
   internal func VerifyFlushMetricsForTest() {
