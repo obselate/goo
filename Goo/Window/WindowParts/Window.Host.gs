@@ -377,6 +377,10 @@ public partial class Window {
       let stepDt = allowFrame ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
       let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       UpdateTree(dt, stepDt)
+      if !IsOpen {
+        if profiling { profiler.EndFrame(frameProfile, false) }
+        return
+      }
       RefreshPlatformInput()
       if profiling {
         profiler.Record(FrameProfileStage.Tree, treeProfile)

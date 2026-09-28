@@ -50,6 +50,9 @@ public class Motion {
   }
 }
 
+/// Identifies why an animation reached its terminal value.
+public enum MotionCompletionReason { Finished; ReducedMotion; Disabled }
+
 internal class MotionClock {
   internal var now float64
 
@@ -74,7 +77,10 @@ internal class MotionPump {
   private let clock MotionClock
   private let active List[MotionPumpEntry]
   private let deferred List[MotionPumpEntry]
+  private let completed List[MotionParticle]
   private var sweeping bool
+  private var dispatching bool
+  private var clearVersion int64
   private var logicalCount int32
   private var nextGeneration int64
 
@@ -84,9 +90,11 @@ internal class MotionPump {
     clock = MotionClock()
     active = List[MotionPumpEntry]()
     deferred = List[MotionPumpEntry]()
+    completed = List[MotionParticle]()
   }
 
   internal prop Now float64{ get -> clock.Now }
+  internal prop ClearVersion int64{ get -> clearVersion }
   internal var ReducedMotion bool
 
   // True while any animation is still running.
@@ -134,7 +142,7 @@ internal class MotionPump {
   }
 
   internal func Sweep(dt float64) {
-    if sweeping {
+    if sweeping || dispatching {
       throw InvalidOperationException("MotionPump.Sweep cannot be reentered")
     }
     if !motionFinite(dt) || dt < 0.0 {
@@ -145,6 +153,7 @@ internal class MotionPump {
     let originalCount = active.Count
     var processed int32 = 0
     var retained int32 = 0
+    var failure Exception?
     sweeping = true
     try {
       while processed < originalCount {
@@ -153,7 +162,18 @@ internal class MotionPump {
           processed++
           continue
         }
-        let keep = entry.Particle.Tick(now)
+        var keep bool
+        try {
+          keep = entry.Particle.Tick(now)
+        } catch (error Exception) {
+          if entry.Particle.HasCompletion() {
+            invalidate(entry.Particle, entry.Generation)
+            completed.Add(entry.Particle)
+            processed++
+          }
+          failure = error
+          break
+        }
         processed++
         if keep {
           if isValid(entry) {
@@ -162,6 +182,7 @@ internal class MotionPump {
           }
         } else {
           invalidate(entry.Particle, entry.Generation)
+          if entry.Particle.HasCompletion() { completed.Add(entry.Particle) }
         }
       }
     } finally {
@@ -198,13 +219,34 @@ internal class MotionPump {
       }
       deferred.Clear()
     }
+    if completed.Count != 0 {
+      let batch = completed.ToArray()
+      completed.Clear()
+      let version = clearVersion
+      dispatching = true
+      try {
+        for particle in batch {
+          if clearVersion != version { break }
+          try {
+            particle.DeliverCompletion()
+          } catch (error Exception) {
+            if failure == nil { failure = error }
+          }
+        }
+      } finally {
+        dispatching = false
+      }
+    }
+    if let error = failure { throw error }
   }
 
   internal func Clear() {
+    clearVersion++
     clearEntries(active)
     clearEntries(deferred)
     active.Clear()
     deferred.Clear()
+    completed.Clear()
     logicalCount = 0
     sweeping = false
   }

@@ -12,6 +12,10 @@ Source:
 
 Bridges scalar simulations to a Cell-owned animated value.
 
+### `Completed`
+
+Reports a natural or policy-forced terminal animation after the owning motion pump settles.
+
 ### `Set(T)`
 
 Snaps to value, stops all scalar simulations, and notifies the owner.
@@ -53,6 +57,10 @@ Animates toward target with one shared or one-per-dimension specification.
 - `target`: value to animate toward
 - `spec`: first specification
 - `specs`: remaining specifications, empty for shared behavior
+
+### `IsDisposed`
+
+Gets whether the owning Cell has disposed this animation.
 
 ### `Running`
 
@@ -102,6 +110,20 @@ Gets or sets the sim factory used by To(target) when no spec is given. Core wire
 ### `TimeScale`
 
 Gets or sets the global playback rate. 1 is normal speed; 0 or lower lands every running animation on its target on the next tick.
+
+## `MotionCompletionReason`
+
+Source:
+
+- [`Motion.gs`](../../Goo/Motion/Motion.gs)
+
+Identifies why an animation reached its terminal value.
+
+### Values
+
+- `Finished`
+- `ReducedMotion`
+- `Disabled`
 
 ## `MotionConverter<T>`
 

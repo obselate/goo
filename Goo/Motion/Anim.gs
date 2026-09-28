@@ -7,22 +7,31 @@ internal open class MotionParticle {
   internal var registrationGeneration int64
 
   internal open func Tick(now float64) bool;
+  internal open func HasCompletion() bool -> false
+  internal open func DeliverCompletion() { }
   internal open func Dispose();
   internal open func Bind(pump MotionPump);
 }
 
 internal class AnimHandle : MotionParticle {
   private let tick(float64) -> bool
+  private let hasCompletion() -> bool
+  private let complete() -> void
   private let dispose() -> void
   private let bind(MotionPump) -> void
 
-  internal init(tick(float64) -> bool, dispose() -> void, bind(MotionPump) -> void) {
+  internal init(tick(float64) -> bool, hasCompletion() -> bool, complete() -> void,
+    dispose() -> void, bind(MotionPump) -> void) {
     this.tick = tick
+    this.hasCompletion = hasCompletion
+    this.complete = complete
     this.dispose = dispose
     this.bind = bind
   }
 
   internal override func Tick(now float64) bool -> tick(now)
+  internal override func HasCompletion() bool -> hasCompletion()
+  internal override func DeliverCompletion() { complete() }
 
   internal override func Dispose() {
     dispose()
@@ -57,6 +66,10 @@ public class Anim[T] {
   private var memoScale float64
   private var memoValue T
   private var memoValid bool
+  private var pendingCompletion MotionCompletionReason?
+
+  /// Reports a natural or policy-forced terminal animation after the owning motion pump settles.
+  public event Completed Action[MotionCompletionReason]
 
   internal init(initial T, converter MotionConverter[T], invalidate Action?, onChange Action[T]?) {
     if converter == nil {
@@ -79,7 +92,7 @@ public class Anim[T] {
     memoValue = initial
     this.invalidate = invalidate
     this.onChange = onChange
-    handle = AnimHandle(tickInternal, disposeInternal, bindInternal)
+    handle = AnimHandle(tickInternal, hasCompletionInternal, completeInternal, disposeInternal, bindInternal)
   }
 
   /// Gets the current value at the current motion clock time.
@@ -119,6 +132,9 @@ public class Anim[T] {
 
   /// Gets whether any scalar simulation is still running.
   public prop Running bool{ get -> running }
+
+  /// Gets whether the owning Cell has disposed this animation.
+  public prop IsDisposed bool{ get -> disposed }
 
   internal prop Handle MotionParticle{ get -> handle }
 
@@ -193,6 +209,7 @@ public class Anim[T] {
       toT = value
       memoValid = false
       running = false
+      pendingCompletion = nil
       if let owner = handle.registrationPump {
         owner.Deregister(handle)
       }
@@ -285,6 +302,7 @@ public class Anim[T] {
   }
 
   private func commitRetarget(target T, now float64) {
+    pendingCompletion = nil
     for var i = 0; i < sims.Length; i++ {
       sims[i] = nextSims[i]
       nextSims[i] = nil
@@ -355,6 +373,7 @@ public class Anim[T] {
       }
     } finally {
       running = false
+      pendingCompletion = nil
       if let owner = handle.registrationPump {
         owner.Deregister(handle)
       }
@@ -376,6 +395,8 @@ public class Anim[T] {
       currentT = toT
       running = false
       clearSims()
+      pendingCompletion = if Motion.TimeScale <= 0.0 { MotionCompletionReason.Disabled }
+        else { MotionCompletionReason.ReducedMotion }
       notifyOwner(currentT)
       return false
     }
@@ -391,6 +412,7 @@ public class Anim[T] {
       running = false
       clearSims()
       memoValid = false
+      pendingCompletion = MotionCompletionReason.Finished
       notifyOwner(currentT)
       return false
     }
@@ -417,6 +439,13 @@ public class Anim[T] {
     } finally {
       mutating = wasMutating
     }
+  }
+  private func hasCompletionInternal() bool -> pendingCompletion != nil
+
+  private func completeInternal() {
+    guard let reason = pendingCompletion else { return }
+    pendingCompletion = nil
+    if !disposed { Completed?.Invoke(reason) }
   }
   private func currentNow() float64 {
     guard let pump = boundPump else {

@@ -132,10 +132,12 @@ public partial class Window {
     prepare()
     let profiling = profiler.Active
     let motionProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+    let motionVersion = motionPump.ClearVersion
     motionPump.Sweep(simDt)
     if profiling {
       profiler.Record(FrameProfileStage.Motion, motionProfile)
     }
+    if motionPump.ClearVersion != motionVersion { return false }
     let retainedEffects = drainRetainedInvalidations()
     if Interlocked.Exchange(&pendingRebuild, 0) != 0 {
       dirty = true

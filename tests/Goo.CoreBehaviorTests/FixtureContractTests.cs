@@ -139,6 +139,12 @@ public sealed class FixtureContractTests
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.StaticPositionIgnoresInsets));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.TextEntryUsesIntrinsicLineBoxHeight));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.CallbackAnimationContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CompletionChainsAfterCompactionContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CompletionCanCloseOwningWindowContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CompletionFailureDrainsBatchAndAllowsReuseContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CompletionReasonsAndCancellationContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CompletionRetargetCancelsQueuedSignalContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.CompletionTeardownCancelsRemainingBatchContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.CellDisposeContinuesAfterPositionFailureContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.CloseIsolatesWindowPumpContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.DisposeRetainsPartialProgressContract));
@@ -171,6 +177,8 @@ public sealed class FixtureContractTests
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.ThrowingSpecLeavesAnimReusableContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.TimeScaleZeroCompletesInstantlyContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.TypedColorAnimationContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.TerminalChangeFailureStillCompletesContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.UnboundZeroDurationCompletionWaitsForPumpContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.VelocityGetterMatchesRetargetSeedContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.VelocityGetterPreservesRawColorComponentsContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.VelocityGetterReportsLiveAndRestingVelocityContract));

@@ -111,6 +111,7 @@ enum-underlying|Goo.FontStyle|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
+enum-underlying|Goo.MotionCompletionReason|System.Int32
 enum-underlying|Goo.NativeTransferCapabilities|System.Int32
 enum-underlying|Goo.Overflow|System.Int32
 enum-underlying|Goo.PointerButtons|System.Int32
@@ -424,6 +425,9 @@ enum|Goo.Key|W|41
 enum|Goo.Key|X|42
 enum|Goo.Key|Y|43
 enum|Goo.Key|Z|44
+enum|Goo.MotionCompletionReason|Disabled|2
+enum|Goo.MotionCompletionReason|Finished|0
+enum|Goo.MotionCompletionReason|ReducedMotion|1
 enum|Goo.NativeTransferCapabilities|DropPreview|2
 enum|Goo.NativeTransferCapabilities|EffectNegotiation|8
 enum|Goo.NativeTransferCapabilities|FileDrop|1
@@ -600,6 +604,7 @@ enum|Goo.WindowState|Fullscreen|3
 enum|Goo.WindowState|Maximized|2
 enum|Goo.WindowState|Minimized|1
 enum|Goo.WindowState|Normal|0
+event|Goo.Anim`1|Completed|System.Action`1<Goo.MotionCompletionReason>|instance|add:public,remove:public
 event|Goo.ElementHandle|MetricsChanged|System.Action`1<Goo.ElementMetrics>|instance|add:public,remove:public
 event|Goo.ImageSourceLease|Released|System.Action|instance|add:public,remove:public
 event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,remove:public
@@ -1113,6 +1118,7 @@ property|Goo.Accessibility|Role|Goo.AccessibilityRole|instance|get:public,init:p
 property|Goo.Accessibility|Selected|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|SizeOfSet|System.Nullable`1<System.Int32>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Value|System.String|instance|get:public,init:public|index:()
+property|Goo.Anim`1|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Running|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Target|!0|instance|get:public|index:()
 property|Goo.Anim`1|Value|!0|instance|get:public|index:()
@@ -1725,6 +1731,7 @@ type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.LayoutTransition|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Length|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.LinearGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:
+type|Goo.MotionCompletionReason|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.MotionConverter`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.MotionVelocity|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Motion|sealed-class|public|base:System.Object|interfaces:|generic:

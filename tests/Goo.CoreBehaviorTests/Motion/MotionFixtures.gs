@@ -59,6 +59,213 @@ internal class MotionFixtures {
     }
   }
 
+  func CompletionChainsAfterCompactionContract() bool {
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    var changes = 0
+    let anim = cell.Animate(0.0, (value float64) -> { changes++ })
+    var completions = 0
+    var reasonsCorrect = true
+    var rejectedReentry = false
+    anim.Completed += (reason MotionCompletionReason) -> {
+      completions++
+      reasonsCorrect = reasonsCorrect && reason == MotionCompletionReason.Finished
+      if completions == 1 {
+        try {
+          pump.Sweep(0.0)
+        } catch (error InvalidOperationException) {
+          rejectedReentry = true
+        }
+        anim.To(20.0, Motion.Tween(1.0))
+      }
+    }
+    try {
+      anim.To(10.0, Motion.Tween(1.0))
+      pump.Sweep(1.0)
+      if completions != 1 || !reasonsCorrect || !rejectedReentry
+        || !anim.Running || anim.Value != 10.0 || !pump.Active { return false }
+      pump.Sweep(1.0)
+      pump.Sweep(1.0)
+      return completions == 2 && reasonsCorrect && changes == 2
+        && !anim.Running && !pump.Active && anim.Value == 20.0
+    } finally {
+      cell.DisposeMounted()
+    }
+  }
+
+  func CompletionReasonsAndCancellationContract() bool {
+    let originalScale = Motion.TimeScale
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    let anim = cell.Animate(0.0)
+    var finished = 0
+    var disabled = 0
+    var reduced = 0
+    anim.Completed += (reason MotionCompletionReason) -> {
+      if reason == MotionCompletionReason.Finished { finished++ }
+      if reason == MotionCompletionReason.Disabled { disabled++ }
+      if reason == MotionCompletionReason.ReducedMotion { reduced++ }
+    }
+    try {
+      Motion.TimeScale = 1.0
+      anim.To(1.0, Motion.Tween(1.0))
+      anim.To(2.0, Motion.Tween(0.0))
+      pump.Sweep(0.0)
+      if finished != 1 { return false }
+      anim.To(3.0, Motion.Tween(1.0))
+      anim.Set(4.0)
+      anim.To(5.0, Motion.Tween(1.0))
+      anim.Snap(6.0)
+      pump.Sweep(1.0)
+      if finished != 1 || disabled != 0 || reduced != 0 { return false }
+      Motion.TimeScale = 0.0
+      anim.To(7.0, Motion.Tween(1.0))
+      pump.Sweep(0.0)
+      if disabled != 1 { return false }
+      Motion.TimeScale = 1.0
+      pump.ReducedMotion = true
+      anim.To(8.0, Motion.Tween(1.0))
+      pump.Sweep(0.0)
+      if reduced != 1 { return false }
+      anim.To(9.0, Motion.Tween(1.0))
+      cell.DisposeMounted()
+      pump.Sweep(1.0)
+      return anim.IsDisposed && !anim.Running
+        && finished == 1 && disabled == 1 && reduced == 1
+    } finally {
+      Motion.TimeScale = originalScale
+      cell.DisposeMounted()
+    }
+  }
+
+  func UnboundZeroDurationCompletionWaitsForPumpContract() bool {
+    let cell = MotionFixtureCell{}
+    let anim = cell.Animate(0.0)
+    var completions = 0
+    anim.Completed += (reason MotionCompletionReason) -> { completions++ }
+    try {
+      anim.To(1.0, Motion.Tween(0.0))
+      if completions != 0 || !anim.Running { return false }
+      cell.BindPump(pump)
+      pump.Sweep(0.0)
+      return completions == 1 && !anim.Running && anim.Value == 1.0
+    } finally {
+      cell.DisposeMounted()
+    }
+  }
+
+  func CompletionFailureDrainsBatchAndAllowsReuseContract() bool {
+    let firstCell = MotionFixtureCell{}
+    let secondCell = MotionFixtureCell{}
+    firstCell.BindPump(pump)
+    secondCell.BindPump(pump)
+    let first = firstCell.Animate(0.0)
+    let second = secondCell.Animate(0.0)
+    var delivered = 0
+    let fail Action[MotionCompletionReason] = (reason MotionCompletionReason) -> {
+      throw InvalidOperationException("completion failed")
+    }
+    first.Completed += fail
+    second.Completed += (reason MotionCompletionReason) -> { delivered++ }
+    try {
+      first.To(1.0, Motion.Tween(0.0))
+      second.To(1.0, Motion.Tween(0.0))
+      let failed = throws(() -> pump.Sweep(0.0))
+      if !failed || delivered != 1 || pump.Active { return false }
+      first.Completed -= fail
+      first.To(2.0, Motion.Tween(0.0))
+      pump.Sweep(0.0)
+      return delivered == 1 && !first.Running && !pump.Active
+    } finally {
+      firstCell.DisposeMounted()
+      secondCell.DisposeMounted()
+    }
+  }
+
+  func CompletionRetargetCancelsQueuedSignalContract() bool {
+    let firstCell = MotionFixtureCell{}
+    let secondCell = MotionFixtureCell{}
+    firstCell.BindPump(pump)
+    secondCell.BindPump(pump)
+    let first = firstCell.Animate(0.0)
+    let second = secondCell.Animate(0.0)
+    var delivered = 0
+    first.Completed += (reason MotionCompletionReason) -> {
+      second.To(2.0, Motion.Tween(1.0))
+    }
+    second.Completed += (reason MotionCompletionReason) -> { delivered++ }
+    try {
+      first.To(1.0, Motion.Tween(0.0))
+      second.To(1.0, Motion.Tween(0.0))
+      pump.Sweep(0.0)
+      if delivered != 0 || !second.Running || !pump.Active { return false }
+      pump.Sweep(1.0)
+      return delivered == 1 && !second.Running && !pump.Active && second.Value == 2.0
+    } finally {
+      firstCell.DisposeMounted()
+      secondCell.DisposeMounted()
+    }
+  }
+
+  func TerminalChangeFailureStillCompletesContract() bool {
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    let anim = cell.Animate(0.0, (value float64) -> {
+      throw InvalidOperationException("terminal change failed")
+    })
+    var completed = 0
+    anim.Completed += (reason MotionCompletionReason) -> { completed++ }
+    try {
+      anim.To(1.0, Motion.Tween(0.0))
+      let failed = throws(() -> pump.Sweep(0.0))
+      pump.Sweep(0.0)
+      return failed && completed == 1 && !anim.Running && !pump.Active
+    } finally {
+      cell.DisposeMounted()
+    }
+  }
+
+  func CompletionTeardownCancelsRemainingBatchContract() bool {
+    let firstCell = MotionFixtureCell{}
+    let secondCell = MotionFixtureCell{}
+    firstCell.BindPump(pump)
+    secondCell.BindPump(pump)
+    let first = firstCell.Animate(0.0)
+    let second = secondCell.Animate(0.0)
+    var delivered = 0
+    first.Completed += (reason MotionCompletionReason) -> { pump.Clear() }
+    second.Completed += (reason MotionCompletionReason) -> { delivered++ }
+    try {
+      first.To(1.0, Motion.Tween(0.0))
+      second.To(1.0, Motion.Tween(0.0))
+      pump.Sweep(0.0)
+      pump.Sweep(0.0)
+      return delivered == 0 && !pump.Active
+    } finally {
+      firstCell.DisposeMounted()
+      secondCell.DisposeMounted()
+    }
+  }
+
+  func CompletionCanCloseOwningWindowContract() bool {
+    let cell = MotionFixtureCell{}
+    let window = Window{ Width: 100, Height: 100, Root: cell }
+    let anim = cell.Animate(0.0)
+    var completed = 0
+    anim.Completed += (reason MotionCompletionReason) -> {
+      completed++
+      window.Close()
+    }
+    try {
+      window.UpdateTree()
+      anim.To(1.0, Motion.Tween(0.0))
+      window.UpdateTree(0.0)
+      return completed == 1 && window.Tree == nil && anim.IsDisposed && !anim.Running
+    } finally {
+      window.Close()
+    }
+  }
+
   func RetargetPreservesVelocityContract() bool {
     let cell = MotionFixtureCell{}
     cell.BindPump(pump)
