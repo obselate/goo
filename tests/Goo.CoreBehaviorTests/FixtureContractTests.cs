@@ -137,6 +137,7 @@ public sealed class FixtureContractTests
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.KeyedReorderRetainsYogaLayouts));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutIsStableAcrossRoots));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutTransitionGlidesComputedPosition));
+        yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutTransitionRetargetsWithVelocity));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LogicalEdgesRespectDirection));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.StaticPositionIgnoresInsets));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.TextEntryUsesIntrinsicLineBoxHeight));

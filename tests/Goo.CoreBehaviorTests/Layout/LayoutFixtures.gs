@@ -210,6 +210,83 @@ internal class LayoutFixtures {
     return target.Rect.X == 100.0F
   }
 
+  func LayoutTransitionRetargetsWithVelocity() bool {
+    let simulations = List[LayoutFixtureSimulation]()
+    let factory(float64, float64, float64) -> Simulation = (from float64, to float64, velocity float64) -> {
+      let simulation = LayoutFixtureSimulation(from, to, velocity)
+      simulations.Add(simulation)
+      return simulation
+    }
+    let transition = LayoutTransition{
+      DurationMs: 100.0,
+      Easing: Easing.Linear,
+      SimulationFactory: factory,
+    }
+    let pump = MotionPump()
+    let reconciler = Reconciler{
+      Res: Resolver{},
+      Pump: pump,
+      RetainedInvalidated: (effects ReconcileEffects) -> { },
+    }
+    var root = reconciler.Mount(layoutSimulationScene(20.0, 30.0, transition))
+    let layout = Layout()
+    layout.Calculate(root, 200.0F, 200.0F)
+    let target = root.Children[0]
+    if target.Rect.X != 20.0F || target.Rect.Y != 30.0F { return false }
+
+    root = reconciler.Diff(root, layoutSimulationScene(100.0, 120.0, transition))
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 200.0F, 200.0F)
+    if simulations.Count != 2 || target.Rect.X != 20.0F || target.Rect.Y != 30.0F {
+      return false
+    }
+    pump.Sweep(0.25)
+    layout.RefreshRects(root)
+    let firstX = target.Rect.X
+    let firstY = target.Rect.Y
+    let velocityX = simulations[0].Velocity(0.25)
+    let velocityY = simulations[1].Velocity(0.25)
+
+    root = reconciler.Diff(root, layoutSimulationScene(150.0, 40.0, transition))
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 200.0F, 200.0F)
+    if simulations.Count != 4 || MathF.Abs(target.Rect.X - firstX) > 0.001F
+      || MathF.Abs(target.Rect.Y - firstY) > 0.001F
+      || Math.Abs(simulations[2].InitialVelocity - velocityX) > 0.000001
+      || Math.Abs(simulations[3].InitialVelocity - velocityY) > 0.000001 {
+        return false
+      }
+
+    pump.Sweep(0.1)
+    layout.RefreshRects(root)
+    let secondX = target.Rect.X
+    let secondY = target.Rect.Y
+    let secondVelocityX = simulations[2].Velocity(0.1)
+    let secondVelocityY = simulations[3].Velocity(0.1)
+    root = reconciler.Diff(root, layoutSimulationScene(70.0, 80.0, transition))
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 200.0F, 200.0F)
+    if simulations.Count != 6 || MathF.Abs(target.Rect.X - secondX) > 0.001F
+      || MathF.Abs(target.Rect.Y - secondY) > 0.001F
+      || Math.Abs(simulations[4].InitialVelocity - secondVelocityX) > 0.000001
+      || Math.Abs(simulations[5].InitialVelocity - secondVelocityY) > 0.000001 {
+        return false
+      }
+
+    pump.ReducedMotion = true
+    pump.Sweep(0.01)
+    layout.RefreshRects(root)
+    if pump.Active || target.Rect.X != 70.0F || target.Rect.Y != 80.0F { return false }
+    pump.ReducedMotion = false
+    root = reconciler.Diff(root, layoutSimulationScene(90.0, 100.0, transition))
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 200.0F, 200.0F)
+    if !pump.Active { return false }
+    LayoutTransitions.Dispose(target)
+    layout.RefreshRects(root)
+    return !pump.Active && target.Rect.X == 90.0F && target.Rect.Y == 100.0F
+  }
+
   func TextEntryUsesIntrinsicLineBoxHeight() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     var root = reconciler.Mount(Container() {.Width: 200,
@@ -279,6 +356,14 @@ internal class LayoutFixtures {
         Width: 20,
         Height: 20,
         LayoutTransition: LayoutTransition(100.0, Easing.Linear),
+      },
+    }
+
+  private func layoutSimulationScene(x float64, y float64,
+    transition LayoutTransition) Container -> Container() {.Width: 200,.Height: 200,
+      Container{
+        Key: "target", Position: PositionType.Absolute, Left: x, Top: y,
+        Width: 10, Height: 10, LayoutTransition: transition,
       },
     }
 
@@ -432,4 +517,37 @@ internal class LayoutFixtures {
     layout.Calculate(node, 200.0F, 100.0F)
     return child.Rect.X == 0.0F && child.Rect.Y == 0.0F && child.Rect.H == 0.0F
   }
+}
+
+internal class LayoutFixtureSimulation : Simulation {
+  private let start float64
+  private let target float64
+  private let initialVelocity float64
+
+  internal prop InitialVelocity float64 { get -> initialVelocity }
+
+  internal init(start float64, target float64, initialVelocity float64) {
+    this.start = start
+    this.target = target
+    this.initialVelocity = initialVelocity
+  }
+
+  public override func Position(elapsed float64) float64 {
+    let t = Math.Clamp(elapsed, 0.0, 1.0)
+    let square = t * t
+    let cube = square * t
+    return (2.0 * cube - 3.0 * square + 1.0) * start
+      + (cube - 2.0 * square + t) * initialVelocity
+      + (-2.0 * cube + 3.0 * square) * target
+  }
+
+  public override func Velocity(elapsed float64) float64 {
+    if elapsed < 0.0 || elapsed >= 1.0 { return 0.0 }
+    let square = elapsed * elapsed
+    return (6.0 * square - 6.0 * elapsed) * start
+      + (3.0 * square - 4.0 * elapsed + 1.0) * initialVelocity
+      + (-6.0 * square + 6.0 * elapsed) * target
+  }
+
+  public override func Done(elapsed float64) bool -> elapsed >= 1.0
 }

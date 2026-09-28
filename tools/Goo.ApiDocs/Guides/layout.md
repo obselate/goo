@@ -98,6 +98,19 @@ class VerticalLayout : LayoutAlgorithm {
 ```
 
 
+## Layout position simulations
+
+`LayoutTransition(durationMs, easing)` continues to use a timed transition.
+Set its optional `SimulationFactory` to supply a `Simulation` for each position
+axis. The factory receives the starting offset, target offset and incoming
+velocity. Interrupted transitions preserve their current visual position and
+pass the sampled velocity into the replacement simulation.
+
+Spring equations belong to Goo.Animations or an application simulation. The core
+owns layout, simulation sampling and invalidation. The simulation must settle at
+the supplied target. Reduced motion snaps to the final layout and disposes active
+transition work. Keep the same factory delegate when its policy has not changed.
+
 ## Text language and user scaling
 
 `Style.Language` accepts an inherited BCP 47 language tag such as `sr` or `ja`.

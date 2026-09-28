@@ -3,8 +3,12 @@ package Goo
 import System
 import System.Runtime.CompilerServices
 
-/// Describes an opt-in transition for computed layout position changes using DurationMs and Easing.
-public data struct LayoutTransition(DurationMs float64, Easing Easing) { }
+/// Describes an opt-in transition for computed layout position changes.
+public data struct LayoutTransition(DurationMs float64, Easing Easing) {
+  /// Creates an optional simulation for each position axis. Omission uses DurationMs and Easing.
+  /// The simulation starts at from with the supplied velocity and settles at to.
+  public prop SimulationFactory ((float64, float64, float64) -> Simulation)? { get; init; }
+}
 
 internal sealed class LayoutTransitionBlobValue {
   internal var Value LayoutTransition
@@ -29,16 +33,14 @@ internal class LayoutTransitionBlobs {
 internal sealed class LayoutTransitionState : MotionParticle {
   private let node Node
   private var invalidated Action[ReconcileEffects]?
-  private var duration float64
-  private var easing Easing
   private var lastLocalX float32
   private var lastLocalY float32
   private var lastBaseX float32
   private var lastBaseY float32
   private var offsetX float32
   private var offsetY float32
-  private var startOffsetX float32
-  private var startOffsetY float32
+  private var simulationX Simulation?
+  private var simulationY Simulation?
   private var startTime float64
   private var hasPosition bool
   private var disposed bool
@@ -55,17 +57,16 @@ internal sealed class LayoutTransitionState : MotionParticle {
     callback Action[ReconcileEffects]?) {
       invalidated = callback
       this.value = value
-      duration = value.DurationMs / 1000.0
-      easing = value.Easing
       if let owner = registrationPump {
         if pump != owner { owner.Deregister(this) }
       }
-      this.pump = pump
-      if pump == nil {
-        if let owner = registrationPump {
-          owner.Deregister(this)
-        }
+      if this.pump != pump {
+        simulationX = nil
+        simulationY = nil
+        offsetX = 0.0F
+        offsetY = 0.0F
       }
+      this.pump = pump
     }
 
   internal func Resolve(baseX float32, baseY float32, localX float32,
@@ -77,6 +78,9 @@ internal sealed class LayoutTransitionState : MotionParticle {
         lastBaseX = baseX
         lastBaseY = baseY
         return Rect{ X: baseX, Y: baseY }
+      }
+      if let owner = pump {
+        sample(owner.Now)
       }
       if localX != lastLocalX || localY != lastLocalY {
         let visualX = lastBaseX + offsetX
@@ -91,23 +95,41 @@ internal sealed class LayoutTransitionState : MotionParticle {
     }
 
   private func bank(x float32, y float32) {
-    offsetX = x
-    offsetY = y
-    startOffsetX = x
-    startOffsetY = y
+    let elapsed = if let owner = pump { Math.Max(0.0, owner.Now - startTime) } else { 0.0 }
+    let velocityX = if let simulation = simulationX { simulation.Velocity(elapsed) } else { 0.0 }
+    let velocityY = if let simulation = simulationY { simulation.Velocity(elapsed) } else { 0.0 }
     guard let pump = pump else {
-      offsetX = 0.0F
-      offsetY = 0.0F
+      snap()
       return
     }
-    if pump.ReducedMotion || duration <= 0.0 || (x == 0.0F && y == 0.0F) {
-      offsetX = 0.0F
-      offsetY = 0.0F
+    if pump.ReducedMotion || (value.SimulationFactory == nil && value.DurationMs <= 0.0)
+      || (x == 0.0F && y == 0.0F && velocityX == 0.0 && velocityY == 0.0) {
+      snap()
       pump.Deregister(this)
       return
     }
+    let factory = value.SimulationFactory
+    let nextX = if let create = factory {
+      create(float64(x), 0.0, velocityX)
+    } else {
+      LinearTimed(value.DurationMs / 1000.0, float64(x), 0.0, value.Easing)
+    }
+    let nextY = if let create = factory {
+      create(float64(y), 0.0, velocityY)
+    } else {
+      LinearTimed(value.DurationMs / 1000.0, float64(y), 0.0, value.Easing)
+    }
+    if nextX == nil || nextY == nil {
+      throw InvalidOperationException("LayoutTransition simulation factory returned null")
+    }
+    simulationX = nextX
+    simulationY = nextY
     startTime = pump.Now
-    pump.Register(this)
+    if sample(startTime) {
+      pump.Register(this)
+    } else {
+      pump.Deregister(this)
+    }
     invalidated?.Invoke(ReconcileEffects.Rect | ReconcileEffects.Paint
       | ReconcileEffects.Input | ReconcileEffects.Accessibility)
   }
@@ -116,13 +138,43 @@ internal sealed class LayoutTransitionState : MotionParticle {
     if disposed || node.Retired {
       return false
     }
-    let t = pump?.ReducedMotion == true ? 1.0 : Math.Min(1.0, (now - startTime) / duration)
-    let remaining = float32(1.0 - ease(easing, t))
-    offsetX = startOffsetX * remaining
-    offsetY = startOffsetY * remaining
+    let running = if pump?.ReducedMotion == true {
+      snap()
+      false
+    } else {
+      sample(now)
+    }
     invalidated?.Invoke(ReconcileEffects.Rect | ReconcileEffects.Paint
       | ReconcileEffects.Input | ReconcileEffects.Accessibility)
-    return t < 1.0
+    return running
+  }
+
+  private func sample(now float64) bool {
+    let elapsed = Math.Max(0.0, now - startTime)
+    if let simulation = simulationX {
+      if simulation.Done(elapsed) {
+        offsetX = 0.0F
+        simulationX = nil
+      } else {
+        offsetX = float32(simulation.Position(elapsed))
+      }
+    }
+    if let simulation = simulationY {
+      if simulation.Done(elapsed) {
+        offsetY = 0.0F
+        simulationY = nil
+      } else {
+        offsetY = float32(simulation.Position(elapsed))
+      }
+    }
+    return simulationX != nil || simulationY != nil
+  }
+
+  private func snap() {
+    simulationX = nil
+    simulationY = nil
+    offsetX = 0.0F
+    offsetY = 0.0F
   }
 
   internal override func Bind(pump MotionPump) {
@@ -132,6 +184,7 @@ internal sealed class LayoutTransitionState : MotionParticle {
     if disposed { return }
     disposed = true
     registrationPump?.Deregister(this)
+    snap()
     pump = nil
     invalidated = nil
   }
@@ -188,4 +241,5 @@ internal func sameLayoutTransition(left LayoutTransition?, right LayoutTransitio
   let l = left
   guard let r = right else { return false }
   return l.DurationMs == r.DurationMs && l.Easing == r.Easing
+    && Object.Equals(l.SimulationFactory, r.SimulationFactory)
 }
