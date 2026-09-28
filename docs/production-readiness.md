@@ -1,8 +1,8 @@
 # Production desktop and mobile readiness
 
 This assessment uses the Goo 0.6.6 source and published platform contracts.
-It identifies work required for broader production use. It is not a claim that
-the proposed capabilities are implemented or qualified on devices.
+It identifies open work required for broader production use and the checks
+needed to qualify each capability.
 
 Goo core owns rendering, input, retained state, lifecycle, platform contracts,
 and extension points. Widgets, animation composition, themes, forms, resource
@@ -47,9 +47,15 @@ shipped changes.
 | --- | --- | --- |
 | Goo motion core | Per-tick value callbacks cannot safely chain another mutation on the same animation. Timeline must currently post through a caller-supplied Window. | Deliver completion once after motion registry compaction. Distinguish natural completion, reduced motion, and disabled motion. Retarget, Set, Snap, and disposal cancel stale completion. A completion may start the next animation for the next pump. |
 | Goo.Animations | Timeline owns sequence policy but depends on Window dispatch. Reduced motion can leave looping timelines generating work indefinitely. | Use core completion for window-independent playback. Retain the old entry point for compatibility. Define finite and looping reduced-motion behavior and verify no perpetual frame demand after settlement or stop. |
+| Goo motion core, next | Per-animation pause and resume are absent. Global `Motion.TimeScale <= 0` settles all running animations rather than pausing them. | Core owns elapsed time and pump registration. Pause must preserve sampled value, velocity, and elapsed state while other animations continue. Resume must remain continuous. Verify two independent animations through the real host loop. Cancel-at-current already composes as `anim.Set(anim.Value)`, which also clears pending completion. |
+| Goo motion core, deferred | Seeking by elapsed simulation time has no public Anim contract. | Add only for a confirmed scrubbing use case. Define forward/backward seek, value/velocity, completion, and reduced-motion behavior with tween and spring checks. Keep imperative `Timeline.Run(Action)` sequences unseekable because actions can have external effects. |
 | Goo.Widgets | Calendar labels, submenu arrows, and TreeView scrollbars have no direct style hooks. Some content factories are followed by child replacement. | Add missing style inputs while preserving defaults and behavior. In a later batch, define content slots that preserve custom children, identity, events, and accessibility. Verify both virtual and regular tree paths. |
 | Goo.Widgets | SearchList has no unified filtered-result keyboard navigation. Theme presets cover only part of the controls. | Add enabled-result navigation, activation, scroll visibility, and semantic active selection. Extend reusable theme inputs across primary controls and states. |
 | Optional libraries | DataGrid has display/custom-cell support but no standard controlled edit lifecycle. Fields expose validation messages but no shared form lifecycle. | Build optional edit/commit/cancel and validation contracts on existing focus, input, and virtualization. Keep data storage, business rules, and submission policy with applications. |
+
+Retargeting and explicit velocity already exist in core. Goo.Animations already
+provides springs, cubic tweens, keyframes, delays, stagger, repeat, and ping-pong.
+Future composition controls should use core animation instances and their clock.
 
 ## Comparison basis
 

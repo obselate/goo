@@ -9,7 +9,7 @@ root = Path(sys.argv[1]).resolve()
 plugin = Path(__file__).resolve().parents[1]
 if not (root / "Goo/Goo.gsproj").is_file():
     raise SystemExit("Expected a standalone Goo checkout containing Goo/Goo.gsproj")
-paths = [root / "README.md", root / "CONTRIBUTING.md", root / "docs/native-authoring.md"]
+paths = [root / "README.md", root / "CONTRIBUTING.md", root / "docs/native-authoring.md", root / "docs/production-readiness.md"]
 paths += sorted((root / "docs/api").glob("*.md"))
 paths += sorted((root / "docs/devtools").glob("*.md"))
 paths += [root / "templates/Goo.Templates/content" / name for name in ("Program.gs", "GooStarter.gsproj")]
