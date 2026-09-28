@@ -98,6 +98,7 @@ internal partial class VulkanSceneCompiler {
       let shaderEffect = if styleMaskHas(node.AppliedMask, StyleField.ShaderEffect) {
         node.ShaderEffect
       } else { nil }
+      let generatorEffect = if let effect = shaderEffect { effect.SourceIndependent } else { false }
       let isolatesOpacity = Portals.SourceChildCount(node) != 0 && localOpacity < 1.0F
       let isolatesBlend = blendModeSupported && BlendModeSupported(node.BlendMode)
         && node.BlendMode != BlendMode.Normal
@@ -237,7 +238,7 @@ internal partial class VulkanSceneCompiler {
       var layerRecord LayerRecord
       var outerLayerRecord LayerRecord
       var innerLayerRecord LayerRecord
-      if isolates {
+      if isolates && !generatorEffect {
         if combinesEffectAndBlend {
           innerLayerRecord = MakeLayerRecord(ownerId, subtreeBounds, 1.0F,
             BlendMode.Normal, shaderEffect)
@@ -297,6 +298,41 @@ internal partial class VulkanSceneCompiler {
         if mixedClip.Emitted {
           overflowPathClipChainId = mixedClip.ChainIndex
           mixedOverflowClip = true
+        }
+      }
+      if let generator = shaderEffect {
+        if generator.SourceIndependent {
+          if isolatesBlend {
+            frame.AddLayerBegin(MakeLayerRecord(ownerId, subtreeBounds,
+              localOpacity, node.BlendMode, nil))
+          }
+          frame.SetActiveClipChain(overflowPathClipChainId)
+          let rectangularClip = bothAxes && overflowPreflight.RectangularEmittable
+          if rectangularClip {
+            frame.AddRectClipBegin(RectClipRecord{
+              Bounds: paddingEdgeBounds,
+              TransformIndex: transform.Index,
+              ParentIndex: context.ParentRectClipIndex,
+            })
+            clipCount = clipCount + 1
+          }
+          frame.AddGeneratorEffect(MakeLayerRecord(ownerId, subtreeBounds,
+            isolatesBlend ? 1.0F : localOpacity, BlendMode.Normal, generator))
+          if rectangularClip {
+            frame.AddRectClipEnd(RectClipRecord{
+              Bounds: paddingEdgeBounds,
+              TransformIndex: transform.Index,
+              ParentIndex: context.ParentRectClipIndex,
+            })
+          }
+          if isolatesBlend {
+            frame.SetActiveClipChain(context.ParentPathClipChainId)
+            frame.AddLayerEnd(MakeLayerRecord(ownerId, subtreeBounds,
+              localOpacity, node.BlendMode, nil))
+          }
+          frame.EndChunk()
+          emittedNodeCount = emittedNodeCount + 1
+          return
         }
       }
     let shapeGeometry = node.Kind == NodeKind.Shape

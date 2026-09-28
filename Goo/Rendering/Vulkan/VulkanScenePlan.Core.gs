@@ -570,6 +570,24 @@ internal partial class SceneFrame {
 
   internal func AddLayerEnd(value LayerRecord) int32 -> AddLayer(value, false)
 
+  internal func AddGeneratorEffect(value LayerRecord) int32 {
+    RequireOpenChunk()
+    ValidateLayer(value)
+    if value.EffectIndex < 0 || value.Flags != 0u
+      || shaderEffects[value.EffectIndex].Program?.SourceIndependent != true {
+        throw ArgumentException("generator effect is invalid")
+      }
+    let index = AppendRecord(&layers, &layerCount, value)
+    AppendResourceIfValid(ResourceId{
+      Kind: SceneResourceKind.Pipeline,
+      LogicalId: value.EffectProgramId,
+      Version: 1uL,
+    })
+    AppendDrawRef(DrawRef{ Kind: SceneDrawKind.GeneratorEffect, Index: index,
+      Flags: 0u, ClipChainId: activeClipChainId })
+    return index
+  }
+
   internal func AddShaderEffect(value ShaderEffectSnapshot) int32 {
     RequireOpenChunk()
     if value.Program == nil || value.ProgramId == 0uL || value.Version == 0uL {

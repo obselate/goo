@@ -12,6 +12,7 @@ public sealed class ShaderEffectProgram {
   private const Magic uint32 = 0x46464547u
   private const Schema uint32 = 1u
   private const VulkanSpirvKind uint32 = 0x56505356u
+  private const VulkanGeneratorSpirvKind uint32 = 0x47505356u
   private const HeaderBytes int32 = 12
   private const RecordBytes int32 = 8
   private const MaximumArtifactCount int32 = 8
@@ -21,6 +22,7 @@ public sealed class ShaderEffectProgram {
   private let vulkanSpirv([]uint8)?
   private let vulkanSpirvDigest([]uint8)?
   private let programId uint64
+  private let sourceIndependent bool
 
   shared {
     private var nextProgramId int64
@@ -67,7 +69,9 @@ public sealed class ShaderEffectProgram {
       }
       let bytes = [int32(byteCountWord)]uint8
       Array.Copy(program, cursor, bytes, 0, bytes.Length)
-      if kind == VulkanSpirvKind { validateVulkanSpirv(bytes) }
+      if kind == VulkanSpirvKind || kind == VulkanGeneratorSpirvKind {
+        validateVulkanSpirv(bytes)
+      }
       values.Add(ShaderEffectProgramArtifact(kind, bytes))
       cursor = cursor + bytes.Length
       index++
@@ -77,13 +81,16 @@ public sealed class ShaderEffectProgram {
     }
     artifacts = values.ToArray()
     var selectedVulkanSpirv([]uint8)?
+    var generator bool
     for artifact in artifacts {
-      if artifact.Kind == VulkanSpirvKind {
+      if artifact.Kind == VulkanSpirvKind || artifact.Kind == VulkanGeneratorSpirvKind {
         selectedVulkanSpirv = artifact.Bytes
+        generator = artifact.Kind == VulkanGeneratorSpirvKind
         break
       }
     }
     vulkanSpirv = selectedVulkanSpirv
+    sourceIndependent = generator
     vulkanSpirvDigest = if let bytes = selectedVulkanSpirv {
       SHA256.HashData(bytes)
     } else {
@@ -93,6 +100,7 @@ public sealed class ShaderEffectProgram {
   }
 
   internal prop ProgramId uint64{ get -> programId }
+  internal prop SourceIndependent bool{ get -> sourceIndependent }
 
   internal prop VulkanSpirv []uint8{
     get {

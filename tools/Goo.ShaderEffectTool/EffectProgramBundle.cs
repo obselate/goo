@@ -5,16 +5,18 @@ internal static class EffectProgramBundle
     private const uint Magic = 0x46464547;
     private const uint Schema = 1;
     private const uint VulkanSpirv = 0x56505356;
+    private const uint VulkanGeneratorSpirv = 0x47505356;
     private const int HeaderBytes = 12;
     private const int RecordBytes = 8;
 
-    public static byte[] Create(byte[] spirv)
+    public static byte[] Create(byte[] spirv, bool sourceIndependent = false)
     {
         byte[] result = new byte[checked(HeaderBytes + RecordBytes + spirv.Length)];
         BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(0, 4), Magic);
         BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(4, 4), Schema);
         BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(8, 4), 1);
-        BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(12, 4), VulkanSpirv);
+        BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(12, 4),
+            sourceIndependent ? VulkanGeneratorSpirv : VulkanSpirv);
         BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(16, 4), checked((uint)spirv.Length));
         spirv.CopyTo(result, HeaderBytes + RecordBytes);
         return result;
@@ -43,7 +45,7 @@ internal static class EffectProgramBundle
             {
                 throw new InvalidDataException("ShaderEffect program artifact is truncated");
             }
-            if (kind == VulkanSpirv)
+            if (kind == VulkanSpirv || kind == VulkanGeneratorSpirv)
             {
                 return bundle.AsSpan(cursor, (int)byteCount).ToArray();
             }

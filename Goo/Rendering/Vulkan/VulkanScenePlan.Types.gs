@@ -184,6 +184,7 @@ internal enum SceneDrawKind {
   Underline;
   LayerBegin = 15;
   LayerEnd;
+  GeneratorEffect;
 }
 
 internal struct DrawRef {

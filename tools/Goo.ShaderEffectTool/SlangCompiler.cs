@@ -124,7 +124,8 @@ internal sealed class SlangCompiler
         string language,
         string input,
         string authoringRoot,
-        string output)
+        string output,
+        bool sourceIndependent = false)
     {
         if (language is not ("slang" or "glsl"))
         {
@@ -155,6 +156,10 @@ internal sealed class SlangCompiler
         else
         {
             arguments.Insert(0, "-allow-glsl");
+        }
+        if (sourceIndependent)
+        {
+            arguments.AddRange(new[] { "-D", "GOO_SOURCE_INDEPENDENT=1" });
         }
         arguments.AddRange(new[] { "-o", output });
 

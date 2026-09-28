@@ -13,8 +13,10 @@ struct GooPrimitiveRecord
     uint4 packedColorsExtra;
 };
 
+#ifndef GOO_SOURCE_INDEPENDENT
 [[vk::binding(0, 0)]] Sampler2D gooSourceTexture;
 [[vk::binding(0, 1)]] Sampler2D gooBackdropTexture;
+#endif
 [[vk::binding(0, 2)]] StructuredBuffer<GooPrimitiveRecord> gooPrimitiveBuffer;
 [[vk::binding(0, 3)]] Sampler2DArray gooClipMaskAtlas;
 [[vk::binding(1, 3)]] StructuredBuffer<uint> gooClipChainBuffer;
@@ -165,9 +167,14 @@ float4 gooEffect(float2 uv, float4 source, float4 backdrop);
 GooEffectOutput main(GooEffectInput input)
 {
     gooActivePrimitive = gooPrimitiveBuffer[input.primitiveRecordOrdinal];
+#ifdef GOO_SOURCE_INDEPENDENT
+    float4 source = float4(0.0, 0.0, 0.0, 0.0);
+    float4 backdrop = source;
+#else
     float2 sourceUv = gooActivePrimitive.params.xy + input.uv * gooActivePrimitive.params.zw;
     float4 source = gooSourceTexture.Sample(sourceUv);
     float4 backdrop = gooBackdropTexture.Sample(sourceUv);
+#endif
     float4 color = gooEffect(input.uv, source, backdrop);
     float coverage = gooClipCoverage(input) * clamp(gooActivePrimitive.radii.x, 0.0, 1.0);
     GooEffectOutput output;

@@ -10,6 +10,10 @@ internal sealed class EffectArtifact
     [JsonPropertyName("abi")]
     public string Abi { get; init; } = EffectAbi.Id;
 
+    [JsonPropertyName("sourceIndependent")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool SourceIndependent { get; init; }
+
     [JsonPropertyName("artifacts")]
     public IReadOnlyList<EffectBackendArtifact> Artifacts { get; init; } = [];
 
@@ -28,10 +32,12 @@ internal sealed class EffectArtifact
         byte[] spirv,
         SpirvModuleReflection reflection,
         EffectCompilerIdentity? compiler = null,
-        EffectSourceIdentity? source = null)
+        EffectSourceIdentity? source = null,
+        bool sourceIndependent = false)
     {
         EffectArtifact manifest = new()
         {
+            SourceIndependent = sourceIndependent,
             Artifacts =
             [
                 new EffectBackendArtifact

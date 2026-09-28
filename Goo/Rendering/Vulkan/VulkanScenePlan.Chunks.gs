@@ -164,6 +164,9 @@ internal partial class SceneFrame {
       case SceneDrawKind.LayerEnd {
         return HashLayerContent(result, reference.Index)
       }
+      case SceneDrawKind.GeneratorEffect {
+        return HashLayerContent(result, reference.Index)
+      }
       default {
         return result
       }

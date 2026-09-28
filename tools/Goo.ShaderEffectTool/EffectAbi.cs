@@ -49,16 +49,20 @@ internal static class EffectAbi
         new(112, "uvec4")
     };
 
-    public static void Validate(SpirvModuleReflection reflection)
+    public static void Validate(SpirvModuleReflection reflection, bool sourceIndependent = false)
     {
         Require(reflection.Stage == "fragment", "stage", "fragment");
         Require(reflection.EntryPoint == "main", "entryPoint", "main");
         RequireCapabilities(reflection.Capabilities);
         RequireExtensions(reflection.Extensions);
-        RequireInterfaces(reflection.Inputs, Inputs, "inputs");
+        RequireInterfaces(reflection.Inputs,
+            sourceIndependent && reflection.Inputs.Count == 2 ? Inputs[1..] : Inputs, "inputs");
         RequireInterfaces(reflection.Outputs, Outputs, "outputs");
-        RequireDescriptors(reflection.Descriptors);
-        RequirePushConstants(reflection.PushConstant);
+        RequireDescriptors(reflection.Descriptors, sourceIndependent);
+        if (!sourceIndependent || reflection.PushConstant is not null)
+        {
+            RequirePushConstants(reflection.PushConstant);
+        }
     }
 
     private static void RequireInterfaces(
@@ -76,20 +80,24 @@ internal static class EffectAbi
         }
     }
 
-    private static void RequireDescriptors(IReadOnlyList<SpirvDescriptor> actual)
+    private static void RequireDescriptors(IReadOnlyList<SpirvDescriptor> actual,
+        bool sourceIndependent)
     {
-        Require(actual.Count == Descriptors.Length || actual.Count == Descriptors.Length + 1,
-            "descriptors.count", $"{Descriptors.Length} or {Descriptors.Length + 1}");
-        for (int index = 0; index < Descriptors.Length; index++)
+        int first = sourceIndependent ? 2 : 0;
+        int expectedCount = Descriptors.Length - first;
+        Require(actual.Count == expectedCount || actual.Count == expectedCount + 1,
+            "descriptors.count", $"{expectedCount} or {expectedCount + 1}");
+        for (int index = 0; index < expectedCount; index++)
         {
-            RequireDescriptor(actual[index], Descriptors[index], index);
+            RequireDescriptor(actual[index], Descriptors[index + first], index);
         }
-        RequireStorageMembers(actual[2].StorageMembers, PrimitiveMembers, "primitiveRecord.members");
-        Require(actual[4].StorageMembers.Count == 0, "clipChain.members.count", "0");
-        if (actual.Count == Descriptors.Length + 1)
+        RequireStorageMembers(actual[2 - first].StorageMembers, PrimitiveMembers,
+            "primitiveRecord.members");
+        Require(actual[4 - first].StorageMembers.Count == 0, "clipChain.members.count", "0");
+        if (actual.Count == expectedCount + 1)
         {
-            RequireDescriptor(actual[Descriptors.Length], DataDescriptor, Descriptors.Length);
-            Require(actual[Descriptors.Length].StorageMembers.Count == 0,
+            RequireDescriptor(actual[expectedCount], DataDescriptor, expectedCount);
+            Require(actual[expectedCount].StorageMembers.Count == 0,
                 "effectData.members.count", "0");
         }
     }

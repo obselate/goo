@@ -13,8 +13,10 @@ struct GooPrimitiveRecord
     uvec4 packedColorsExtra;
 };
 
+#ifndef GOO_SOURCE_INDEPENDENT
 layout(set = 0, binding = 0) uniform sampler2D gooSourceTexture;
 layout(set = 1, binding = 0) uniform sampler2D gooBackdropTexture;
+#endif
 
 layout(set = 2, binding = 0, std430) readonly buffer GooPrimitiveBuffer
 {
@@ -134,9 +136,14 @@ vec4 gooEffect(vec2 uv, vec4 source, vec4 backdrop);
 void main()
 {
     gooActivePrimitive = gooPrimitiveBuffer.records[gooPrimitiveRecordOrdinal];
+#ifdef GOO_SOURCE_INDEPENDENT
+    vec4 source = vec4(0.0);
+    vec4 backdrop = source;
+#else
     vec2 sourceUv = gooActivePrimitive.params.xy + gooUv * gooActivePrimitive.params.zw;
     vec4 source = texture(gooSourceTexture, sourceUv);
     vec4 backdrop = texture(gooBackdropTexture, sourceUv);
+#endif
     vec4 color = gooEffect(gooUv, source, backdrop);
     float coverage = gooClipCoverage() * clamp(gooActivePrimitive.radii.x, 0.0, 1.0);
     gooOutputColor = color * coverage;

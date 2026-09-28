@@ -574,11 +574,15 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     value LayerRecord,
     target VulkanOffscreenLayerTarget?,
     backdrop VulkanOffscreenLayerTarget?,
-    frame SceneFrame) {
+    frame SceneFrame,
+    generator bool = false) {
       RequireRecordIndex(value.EffectIndex, frame.ShaderEffectCount, "shader effect index")
       let effect = frame.ShaderEffects[value.EffectIndex]
       guard let program = effect.Program else {
         throw InvalidOperationException("Vulkan shader effect program is unavailable")
+      }
+      if generator != program.SourceIndependent {
+        throw InvalidOperationException("Vulkan shader effect source mode does not match")
       }
       if effect.ProgramId != value.EffectProgramId || effect.Version != value.EffectVersion {
         throw InvalidOperationException("Vulkan shader effect snapshot does not match its layer")
@@ -586,7 +590,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if value.BlendMode != 0u {
         throw NotSupportedException("ShaderEffect cannot be combined with a non-normal BlendMode")
       }
-      if !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
+      if !generator && !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
         throw InvalidOperationException("Vulkan shader effect source is unavailable")
       }
       if effect.SamplesBackdrop && !primitivePrepass
@@ -610,15 +614,17 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
         EnsureDescriptorLayout(blendPipelineLayout)
-        var descriptorSets = stackalloc[2]VkDescriptorSet
-        descriptorSets[0] = target!!.DescriptorSet
-        descriptorSets[1] = if let backdropTarget = backdrop {
-          backdropTarget.DescriptorSet
-        } else { target!!.DescriptorSet }
-        let bindDescriptors = dispatch.vkCmdBindDescriptorSets
-        bindDescriptors(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
-          blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
-        recordDescriptorChangeCount++
+        if !generator {
+          var descriptorSets = stackalloc[2]VkDescriptorSet
+          descriptorSets[0] = target!!.DescriptorSet
+          descriptorSets[1] = if let backdropTarget = backdrop {
+            backdropTarget.DescriptorSet
+          } else { target!!.DescriptorSet }
+          let bindDescriptors = dispatch.vkCmdBindDescriptorSets
+          bindDescriptors(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
+            blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
+          recordDescriptorChangeCount++
+        }
         var parameters = VulkanShaderEffectPushConstants{
           Parameter0: effect.Parameter0,
           Parameter1: effect.Parameter1,

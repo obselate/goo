@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Runtime.InteropServices
 import System.Threading
 
 /// Owns one retained byte sequence for ShaderEffect data inputs.
@@ -84,6 +85,18 @@ public sealed class ShaderEffectData : IDisposable {
   /// @param bytes The non-empty replacement byte sequence.
   public func Publish(bytes []uint8) {
     replace(bytes, true, nil)
+  }
+
+  /// Copies unmanaged values into a complete replacement publication using their native memory layout.
+  /// The caller must match the shader's element layout and alignment.
+  /// @typeparam T The unmanaged element type copied into the publication.
+  /// @param values The non-empty replacement values.
+  public func Publish[T unmanaged](values ReadOnlySpan[T]) {
+    let bytes = MemoryMarshal.AsBytes[T](values)
+    if bytes.Length <= 0 || bytes.Length > MaximumBytes {
+      throw ArgumentOutOfRangeException("values")
+    }
+    replace(bytes.ToArray(), false, nil)
   }
 
   /// Publishes a complete replacement by taking ownership of its array.

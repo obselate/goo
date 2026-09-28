@@ -43,8 +43,8 @@
 
   <ItemGroup Condition="'@(GooShaderEffect)' != ''">
     <_GooShaderEffect Include="@(GooShaderEffect)">
-      <ProgramPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(Filename).goo-effect</ProgramPath>
-      <ManifestPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(Filename).goo-effect.json</ManifestPath>
+      <ProgramPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(SourceIndependent)/%(Filename).goo-effect</ProgramPath>
+      <ManifestPath>$(GooShaderEffectIntermediateRoot)/$([MSBuild]::StableStringHash('%(FullPath)', 'Sha256'))/%(SourceIndependent)/%(Filename).goo-effect.json</ManifestPath>
       <OutputTargetPath Condition="'%(TargetPath)' != ''">%(TargetPath)</OutputTargetPath>
       <OutputTargetPath Condition="'%(TargetPath)' == ''">%(RelativeDir)%(Filename).goo-effect</OutputTargetPath>
     </_GooShaderEffect>
@@ -84,7 +84,7 @@
            Text="Goo ShaderEffect compiler is missing: $(GooShaderEffectToolPath)" />
     <Error Condition="!Exists('$(GooShaderEffectAuthoringRoot)\goo_effect.slang') or !Exists('$(GooShaderEffectAuthoringRoot)\goo_effect.glsl')"
            Text="Goo ShaderEffect authoring modules are missing: $(GooShaderEffectAuthoringRoot)" />
-    <Exec Command="&quot;$(GooShaderEffectDotNetHost)&quot; exec &quot;$(GooShaderEffectToolPath)&quot; compile &quot;%(_GooShaderEffect.FullPath)&quot; &quot;$(GooShaderEffectAuthoringRoot)&quot; &quot;%(_GooShaderEffect.ProgramPath)&quot; &quot;%(_GooShaderEffect.ManifestPath)&quot;" />
+    <Exec Command="&quot;$(GooShaderEffectDotNetHost)&quot; exec &quot;$(GooShaderEffectToolPath)&quot; compile &quot;%(_GooShaderEffect.FullPath)&quot; &quot;$(GooShaderEffectAuthoringRoot)&quot; &quot;%(_GooShaderEffect.ProgramPath)&quot; &quot;%(_GooShaderEffect.ManifestPath)&quot; &quot;%(_GooShaderEffect.SourceIndependent)&quot;" />
   </Target>
 
   <Target Name="_RegisterGooShaderEffectOutputs"

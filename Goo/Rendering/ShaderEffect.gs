@@ -33,6 +33,9 @@ public sealed class ShaderEffect {
       if !samplesBackdrop && backdropOutset != 0.0F {
         throw ArgumentException("Backdrop outset requires backdrop sampling", "backdropOutset")
       }
+      if program.SourceIndependent && samplesBackdrop {
+        throw ArgumentException("Source-independent effects cannot sample the backdrop", "samplesBackdrop")
+      }
       gate = Object()
       changedObservers = ShaderEffectObservers()
       this.program = program
@@ -144,6 +147,7 @@ public sealed class ShaderEffect {
   }
 
   internal prop ProgramId uint64{ get -> programId }
+  internal prop SourceIndependent bool{ get -> program.SourceIndependent }
   internal prop Program ShaderEffectProgram{ get -> program }
   internal prop SamplesBackdrop bool{ get -> samplesBackdrop }
   internal prop BackdropOutset float32{ get -> backdropOutset }

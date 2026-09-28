@@ -6,14 +6,14 @@ internal static class Program
     {
         try
         {
-            if (args.Length == 3 && args[0] == "validate")
+            if ((args.Length == 3 || args.Length == 4) && args[0] == "validate")
             {
-                Validate(args[1], args[2]);
+                Validate(args[1], args[2], SourceIndependent(args, 3));
                 return 0;
             }
-            if (args.Length == 3 && args[0] == "check")
+            if ((args.Length == 3 || args.Length == 4) && args[0] == "check")
             {
-                Check(args[1], args[2]);
+                Check(args[1], args[2], SourceIndependent(args, 3));
                 return 0;
             }
             if (args.Length == 2 && args[0] == "selfcheck")
@@ -21,18 +21,18 @@ internal static class Program
                 SelfCheck.Run(args[1], SpirvValidator.Find());
                 return 0;
             }
-            if (args.Length == 5 && args[0] == "compile")
+            if ((args.Length == 5 || args.Length == 6) && args[0] == "compile")
             {
-                Compile(args[1], args[2], args[3], args[4]);
+                Compile(args[1], args[2], args[3], args[4], SourceIndependent(args, 5));
                 return 0;
             }
-            if (args.Length == 3 && args[0] == "compilecheck")
+            if ((args.Length == 3 || args.Length == 4) && args[0] == "compilecheck")
             {
-                CompileCheck(args[1], args[2]);
+                CompileCheck(args[1], args[2], SourceIndependent(args, 3));
                 return 0;
             }
             Console.Error.WriteLine(
-                "Usage: Goo.ShaderEffectTool <compile SOURCE AUTHORING_ROOT OUTPUT.goo-effect OUTPUT.json|compilecheck SOURCE AUTHORING_ROOT|validate INPUT.spv OUTPUT.json|check INPUT.spv MANIFEST.json|selfcheck INPUT.spv>");
+                "Usage: Goo.ShaderEffectTool <compile SOURCE AUTHORING_ROOT OUTPUT.goo-effect OUTPUT.json [SOURCE_INDEPENDENT]|compilecheck SOURCE AUTHORING_ROOT [SOURCE_INDEPENDENT]|validate INPUT.spv OUTPUT.json [SOURCE_INDEPENDENT]|check INPUT.spv MANIFEST.json [SOURCE_INDEPENDENT]|selfcheck INPUT.spv>");
             return 2;
         }
         catch (Exception error)
@@ -42,11 +42,15 @@ internal static class Program
         }
     }
 
+    private static bool SourceIndependent(string[] args, int index) =>
+        args.Length > index && bool.Parse(args[index].Length == 0 ? "false" : args[index]);
+
     internal static byte[] ValidateArtifact(
         string input,
         SpirvValidator validator,
         EffectCompilerIdentity? compiler = null,
-        EffectSourceIdentity? source = null)
+        EffectSourceIdentity? source = null,
+        bool sourceIndependent = false)
     {
         string path = Path.GetFullPath(input);
         if (!File.Exists(path))
@@ -56,15 +60,16 @@ internal static class Program
         validator.Validate(path);
         byte[] spirv = File.ReadAllBytes(path);
         SpirvModuleReflection reflection = SpirvReflection.Read(spirv);
-        EffectAbi.Validate(reflection);
-        return EffectArtifact.Create(spirv, reflection, compiler, source);
+        EffectAbi.Validate(reflection, sourceIndependent);
+        return EffectArtifact.Create(spirv, reflection, compiler, source, sourceIndependent);
     }
 
     private static void Compile(
         string input,
         string authoringRoot,
         string outputProgram,
-        string outputManifest)
+        string outputManifest,
+        bool sourceIndependent = false)
     {
         string sourcePath = Path.GetFullPath(input);
         string includePath = Path.GetFullPath(authoringRoot);
@@ -91,7 +96,7 @@ internal static class Program
         try
         {
             IReadOnlyList<string> arguments = compiler.Compile(
-                language, sourcePath, includePath, temporary);
+                language, sourcePath, includePath, temporary, sourceIndependent);
             EffectCompilerIdentity compilerIdentity = new()
             {
                 Platform = compiler.Platform,
@@ -106,8 +111,10 @@ internal static class Program
                 Sha256 = HashFile(sourcePath),
                 AuthoringSha256 = HashFile(authoringModule)
             };
-            byte[] manifest = ValidateArtifact(temporary, validator, compilerIdentity, source);
-            WriteAtomic(outputProgram, EffectProgramBundle.Create(File.ReadAllBytes(temporary)));
+            byte[] manifest = ValidateArtifact(temporary, validator, compilerIdentity, source,
+                sourceIndependent);
+            WriteAtomic(outputProgram, EffectProgramBundle.Create(File.ReadAllBytes(temporary),
+                sourceIndependent));
             WriteAtomic(outputManifest, manifest);
             Console.WriteLine($"Compiled {input} as {EffectAbi.Id}");
         }
@@ -120,7 +127,7 @@ internal static class Program
         }
     }
 
-    private static void CompileCheck(string input, string authoringRoot)
+    private static void CompileCheck(string input, string authoringRoot, bool sourceIndependent)
     {
         string directory = Path.Combine(Path.GetTempPath(),
             $"goo-shader-effect-compilecheck-{Guid.NewGuid():N}");
@@ -132,13 +139,16 @@ internal static class Program
         string firstSpirv = Path.Combine(directory, "first.spv");
         try
         {
-            Compile(input, authoringRoot, firstProgram, firstManifest);
-            Compile(input, authoringRoot, secondProgram, secondManifest);
+            Compile(input, authoringRoot, firstProgram, firstManifest, sourceIndependent);
+            Compile(input, authoringRoot, secondProgram, secondManifest, sourceIndependent);
             RequireEqual(firstProgram, secondProgram);
             RequireEqual(firstManifest, secondManifest);
             File.WriteAllBytes(firstSpirv,
                 EffectProgramBundle.ReadVulkanSpirv(File.ReadAllBytes(firstProgram)));
-            SelfCheck.Run(firstSpirv, SpirvValidator.Find());
+            if (!sourceIndependent)
+            {
+                SelfCheck.Run(firstSpirv, SpirvValidator.Find());
+            }
         }
         finally
         {
@@ -147,16 +157,18 @@ internal static class Program
         Console.WriteLine($"Compile check passed for {input}");
     }
 
-    private static void Validate(string input, string output)
+    private static void Validate(string input, string output, bool sourceIndependent)
     {
-        byte[] manifest = ValidateArtifact(input, SpirvValidator.Find());
+        byte[] manifest = ValidateArtifact(input, SpirvValidator.Find(),
+            sourceIndependent: sourceIndependent);
         WriteAtomic(output, manifest);
         Console.WriteLine($"Validated {input} as {EffectAbi.Id}");
     }
 
-    private static void Check(string input, string manifestPath)
+    private static void Check(string input, string manifestPath, bool sourceIndependent)
     {
-        byte[] expected = ValidateArtifact(input, SpirvValidator.Find());
+        byte[] expected = ValidateArtifact(input, SpirvValidator.Find(),
+            sourceIndependent: sourceIndependent);
         byte[] actual = File.ReadAllBytes(manifestPath);
         if (!actual.AsSpan().SequenceEqual(expected))
         {

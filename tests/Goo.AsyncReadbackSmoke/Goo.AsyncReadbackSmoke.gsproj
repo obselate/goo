@@ -10,6 +10,9 @@
   <ItemGroup>
     <GooShaderEffect Include="Shaders/control_effect.frag.slang"
                      TargetPath="control_effect.frag.goo-effect" />
+    <GooShaderEffect Include="Shaders/generator_effect.frag.slang"
+                     TargetPath="generator_effect.frag.goo-effect"
+                     SourceIndependent="true" />
     <GooShaderEffect Include="../../apps/Goo.Gallery/Shaders/liquid_glass.frag.slang"
                      TargetPath="liquid_glass.frag.goo-effect" />
     <GooShaderEffect Include="../../apps/Goo.Gallery/Shaders/crt.frag.slang"

@@ -688,6 +688,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
         EndLayer(commandBuffer, frame.Layers[reference.Index], frame)
       }
+      case SceneDrawKind.GeneratorEffect {
+        RequireRecordIndex(reference.Index, frame.LayerCount, "generator effect index")
+        EmitShaderEffectLayer(commandBuffer, activeExtent, frame.Layers[reference.Index],
+          nil, nil, frame, true)
+      }
       case SceneDrawKind.Transform {
         RequireRecordIndex(reference.Index, frame.TransformCount, "transform index")
         ResolveTransform(frame, reference.Index)
@@ -765,6 +770,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         case SceneDrawKind.Underline { count = 1uL }
         case SceneDrawKind.LayerEnd { count = 1uL }
+        case SceneDrawKind.GeneratorEffect { count = 1uL }
         case SceneDrawKind.CachedImage { count = 1uL }
         case SceneDrawKind.Shadow { count = 1uL }
         default { count = 0uL }
