@@ -6,7 +6,7 @@ Source: [`Goo/Rendering`](../../Goo/Rendering)
 
 ## Apply fragment shaders to retained elements
 
-Load one backend-neutral `ShaderEffectProgram`, create retained `ShaderEffect` state from it, and assign the effect through the ordinary `Style.ShaderEffect` property on a `Container`, `Button`, `Text`, `Image`, `Shape`, or another Blob. Goo renders that element and its subtree into a bounded offscreen layer, runs the selected backend artifact, then composites the result without changing layout, hit testing, accessibility, transforms, or clipping.
+Load one backend-neutral `ShaderEffectProgram`, create retained `ShaderEffect` state from it, and assign the effect through the ordinary `Style.ShaderEffect` property on a `Container`, `Button`, `Text`, `Image`, `Shape`, or another Blob. Ordinary effects render that element and its subtree into a bounded offscreen layer, run the selected backend artifact, then composite the result without changing layout, hit testing, accessibility, transforms, or clipping.
 
 ```gsharp
 import Goo
@@ -55,7 +55,11 @@ The fixed ABI binds the isolated source at set 0, the optional backdrop at set 1
 
 Each `ShaderEffectData` publication is a complete replacement. The constructor and `Publish` copy bytes. `Transfer` and `PublishTransferred` take array ownership and invoke the supplied callback after Goo no longer reads that publication. Each source is limited to 16 MiB, each compiled scene frame is limited to 64 MiB of effect data, and unchanged retained versions reuse the existing upload. Goo recreates device-local data from the retained publication after device recovery.
 
-The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot currently share the same element with `ShaderEffect`.
+The generic `Publish[T]` overload accepts `ReadOnlySpan[T]` for unmanaged elements and copies native memory layout directly into one owned publication. Match shader field layout, alignment and byte order explicitly. Data published during `Build` is available to the following scene compilation. Publish geometry-dependent data from `MetricsChanged`, which runs after layout and before paint. The renderer snapshots retained data during scene compilation. Concurrent later publications belong to a later frame.
+
+Use `<GooShaderEffect Include="Shaders/field.slang" SourceIndependent="true" />` for a generator that replaces the element's visual subtree without sampling it. Its `source` and `backdrop` arguments are zero, and source/backdrop texture descriptors are unavailable. Goo draws it directly into the current target while retaining layout, input, accessibility, transforms, opacity and clipping. The artifact records this mode, and constructing a generator with backdrop sampling enabled throws. Group opacity and non-normal blending can still require an isolation layer. This removes the otherwise unused source capture pass, not every possible offscreen pass.
+
+The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot share the same element with an ordinary source-sampling `ShaderEffect`.
 
 ## Gradient stops
 
@@ -137,6 +141,13 @@ Publishes a complete replacement by taking ownership of its array.
 
 - `bytes`: The non-empty replacement byte sequence transferred to Goo.
 - `released`: Called once Goo no longer reads the transferred array.
+
+### `Publish``1(System.ReadOnlySpan{T})`
+
+Copies unmanaged values into a complete replacement publication using their native memory layout. The caller must match the shader's element layout and alignment.
+
+- `T`: The unmanaged element type copied into the publication.
+- `values`: The non-empty replacement values.
 
 ### `Transfer(System.Byte[],System.Action)`
 
