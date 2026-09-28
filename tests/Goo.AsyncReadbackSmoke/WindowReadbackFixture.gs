@@ -407,6 +407,8 @@ public partial class Window {
 
   internal func SchedulerWaitMsForTest(nowTicks float64) int32 -> SchedulerWaitMs(nowTicks)
 
+  internal func SchedulerFrameDueForTest(nowTicks float64) bool -> SchedulerFrameDue(nowTicks)
+
   internal func DeferSchedulerFrameForTest(seconds float64) {
     host?.DeferFrame(float64(Stopwatch.GetTimestamp()) + seconds * float64(Stopwatch.Frequency))
   }
@@ -920,6 +922,9 @@ internal class WindowReadbackTestFixture {
 
     internal func SchedulerWaitMs(window Window, nowTicks float64) int32 ->
     window.SchedulerWaitMsForTest(nowTicks)
+
+    internal func SchedulerFrameDue(window Window, nowTicks float64) bool ->
+    window.SchedulerFrameDueForTest(nowTicks)
 
     internal func DeferSchedulerFrame(window Window, seconds float64) {
       window.DeferSchedulerFrameForTest(seconds)

@@ -28,6 +28,14 @@ func RunQueueWakeSmoke() {
       window.Open()
       WindowReadbackTestFixture.ForceRender(window, 0.0)
       WindowReadbackTestFixture.StabilizeNativeMetrics(window)
+      window.Background = Color.Rgb(20, 30, 40)
+      WindowReadbackTestFixture.DeferSchedulerFrame(window, 1.0)
+      Require(!WindowReadbackTestFixture.SchedulerFrameDue(window, 0.0),
+        "Display pacing ignored the deferred display frame")
+      window.FramePacing = WindowFramePacing.Uncapped
+      Require(WindowReadbackTestFixture.SchedulerFrameDue(window, 0.0),
+        "Uncapped pacing still waited for the display frame")
+      window.FramePacing = WindowFramePacing.Display
       if phase == 0 {
         WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
       } else {

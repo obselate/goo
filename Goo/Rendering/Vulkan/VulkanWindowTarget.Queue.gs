@@ -410,6 +410,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func CompleteQueuePresent(presentResult VkResult) bool {
     var completed = false
+    var acceptedTicks int64
     guard let current = generation else {
       queueStage = QueueStageIdle
       ClearActiveFrame()
@@ -438,12 +439,12 @@ internal unsafe partial class VulkanWindowTarget {
           && (markedPresent == VkConstants.VK_SUCCESS
               || markedPresent == VkConstants.VK_SUBOPTIMAL_KHR)
         if completed {
+          acceptedTicks = Stopwatch.GetTimestamp()
           RecordFirstSuccessfulPresent()
         }
         if completed && presentId != 0uL {
-          let handoffTimestamp = Stopwatch.GetTimestamp()
           presentationRetirement.AttachPendingPresentationLatency(
-            presentId, handoffTimestamp, current.PresentFenceEnabled)
+            presentId, acceptedTicks, current.PresentFenceEnabled)
         }
         if presentId != 0uL {
           presentationRetirement.AnchorRetiredGenerations(current.Generation)
@@ -486,6 +487,7 @@ internal unsafe partial class VulkanWindowTarget {
       CloseDiagnosticFrame(completed)
       ClearActiveFrame()
     }
+    if completed { PresentationAccepted?.Invoke(acceptedTicks) }
     return completed
   }
 

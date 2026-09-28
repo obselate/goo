@@ -33,10 +33,28 @@ internal class WindowActivationSmoke {
       let root = WindowActivationCell{}
       let window = Window{
         Title: "Goo activation smoke", Root: root, Width: 320, Height: 100,
-        InitiallyVisible: false,
-      }.Open()
+        InitiallyVisible: false, Topmost: true,
+      }
+      Require(window.TrySetTopmost(false) == WindowOperationResult.Closed,
+        "Closed window accepted a topmost request")
+      Require(window.Topmost, "Topmost preference changed before native open")
+      window.Open()
       try {
         Require(!window.IsVisible && !window.IsFocused, "Initially hidden window was shown or focused")
+        let topmostSupported =
+          (window.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None
+        let topmostResult = window.TrySetTopmost(false)
+        if topmostSupported {
+          Require(topmostResult == WindowOperationResult.Accepted,
+            "Supported topmost request was not accepted")
+        } else {
+          Require(topmostResult == WindowOperationResult.Unsupported,
+            "Unsupported topmost request did not report its capability")
+        }
+        Require(!window.Topmost, "Topmost request was not retained")
+        window.Topmost = true
+        Require(window.Topmost, "Topmost property did not retain its preference")
+        window.Topmost = false
         window.Pump(0.0)
         let mounted = window.Tree
         var visibility = 0
@@ -99,10 +117,6 @@ internal class WindowActivationSmoke {
           window.Focusable = true
         } else {
           Require(window.Show() == WindowOperationResult.Accepted, "Reshow failed")
-        }
-        if (window.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
-          window.Topmost = true
-          window.Topmost = false
         }
         Require(visibility >= 3, "Native lifecycle did not report visibility changes")
         let child = Window{

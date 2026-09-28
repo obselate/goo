@@ -98,6 +98,7 @@ public partial class Window {
         bridge.FramebufferWidth, bridge.FramebufferHeight)
       consumeNativeMetrics()
       requestRender()
+      attachPresentationNotifications(target)
     } catch (error Exception) {
       target.Dispose()
       throw error
@@ -110,6 +111,7 @@ public partial class Window {
       target.PollQueueCompletion()
       Thread.Yield()
     }
+    detachPresentationNotifications(target)
     target.Dispose()
     profiler.Sink = nil
     windowTarget = nil

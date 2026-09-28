@@ -50,7 +50,12 @@ public partial class Window {
         requestReconcile()
       }
       shaderEffectInvalidatedHook = () -> {
-        enqueueRetainedInvalidation(ReconcileEffects.Paint)
+        if flushingMetricsBeforeRender
+          && Environment.CurrentManagedThreadId == metricsFlushThreadId {
+          requestRender()
+        } else {
+          enqueueRetainedInvalidation(ReconcileEffects.Paint)
+        }
       }
       imageCompletionHook = (n Node, token object) -> {
         enqueueImageCompletion(n, token)
@@ -366,7 +371,12 @@ public partial class Window {
       MetricSubscriptions.MarkElementsDirty(this)
     }
     DiagnosticsSession?.OnTreeUpdated(node, effects, layoutChanged, changed)
-    MetricSubscriptions.Flush(this)
+    metricsFlushThreadId = Environment.CurrentManagedThreadId
+    flushingMetricsBeforeRender = true
+    try { MetricSubscriptions.Flush(this) } finally {
+      flushingMetricsBeforeRender = false
+      metricsFlushThreadId = 0
+    }
     return changed
   }
   private func validateDelta(value float64, name string) {

@@ -119,7 +119,9 @@ public partial class Window {
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
       if !focusable { native.SetFocusable(false) }
-      if topmost { native.SetTopmost(true) }
+      if topmost && (native.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
+        native.SetTopmost(true)
+      }
       SyncTitlebarHook()
       configureOwnership(native)
       if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(minWidth, minHeight) }
@@ -142,6 +144,7 @@ public partial class Window {
       y = native.Y
       input.Attach(native)
       IsOpen = true
+      attachPresentationNotifications(target)
       family?.NativeDrop?.Bind(native)
       if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { adapter.Bind(native) }
       registerOwnership()
@@ -187,6 +190,30 @@ public partial class Window {
     }
     native.CloseRequested += () -> {
       Interlocked.CompareExchange(&closeRequested, 1, 0)
+    }
+  }
+
+  private func attachPresentationNotifications(target WindowRenderTarget) {
+    let callback Action[int64] = (ticks int64) -> {
+      if !IsOpen { return }
+      acceptedFrameIndex++
+      if !notifications.HasPresentationAcceptedCallbacks { return }
+      let receipt = WindowPresentationAccepted{
+        FrameIndex: acceptedFrameIndex,
+        AcceptedTicks: ticks,
+      }
+      TryPost(() -> {
+        if IsOpen { notifications.RaisePresentationAccepted(receipt) }
+      })
+    }
+    presentationAcceptedHook = callback
+    target.PresentationAccepted += callback
+  }
+
+  private func detachPresentationNotifications(target WindowRenderTarget) {
+    if let callback = presentationAcceptedHook {
+      target.PresentationAccepted -= callback
+      presentationAcceptedHook = nil
     }
   }
 
@@ -450,8 +477,11 @@ public partial class Window {
     guard let native = host else {
       return false
     }
-    return IsVisible && hasDemand() && native.SchedulerPacingAvailable &&
-    native.IsFrameDue(nowTicks)
+    if !IsVisible || !hasDemand() || windowTarget?.QueueWorkPending == true {
+      return false
+    }
+    if !native.SchedulerPacingAvailable { return false }
+    return FramePacing == WindowFramePacing.Uncapped || native.IsFrameDue(nowTicks)
   }
 
   internal func SchedulerWaitMs(nowTicks float64) int32 {
@@ -476,6 +506,7 @@ public partial class Window {
     if !native.SchedulerPacingAvailable {
       return idle
     }
+    if FramePacing == WindowFramePacing.Uncapped { return 0 }
     let pacingWait = native.FrameWaitMilliseconds(nowTicks, idle)
     return pacingWait < idle ? pacingWait : idle
   }
@@ -577,6 +608,8 @@ public partial class Window {
     embeddedHost = nil
     schedulerLastTicks = 0.0
     schedulerSimulationBank = 0.0
+    acceptedFrameIndex = 0uL
+    captureOwner = WindowCaptureOwner.None
     framebufferWidth = 0
     framebufferHeight = 0
     pendingMetrics = false
@@ -591,6 +624,7 @@ public partial class Window {
     observedVisible = false
 
     if let current = target {
+      detachPresentationNotifications(current)
       firstError = captureCleanupError(firstError, () -> current.Dispose())
     }
     if let current = native {

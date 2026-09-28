@@ -53,15 +53,40 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets requested desktop topmost stacking. Desktop policy controls the final stacking order.
-  /// Unsupported hosts throw before changing the requested value.
+  /// Gets or sets the requested desktop topmost preference.
+  /// Unsupported hosts retain the request without changing native stacking.
+  /// Desktop policy controls the final stacking order.
   public prop Topmost bool {
     get -> topmost
     set(value) {
       requireUiThread("Window.Topmost")
       if topmost == value { return }
-      host?.SetTopmost(value)
+      if let native = host {
+        if (native.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
+          native.SetTopmost(value)
+        }
+      }
       topmost = value
+    }
+  }
+
+  /// Attempts to submit a topmost request to the current native host.
+  /// Accepted means the host accepted the request; desktop policy still controls observed stacking.
+  /// @returns Closed, Unsupported, Accepted, or Failed for the host operation.
+  public func TrySetTopmost(value bool) WindowOperationResult {
+    requireUiThread("Window.TrySetTopmost")
+    guard let native = host else { return WindowOperationResult.Closed }
+    if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
+    if (native.Capabilities & WindowCapabilities.Topmost) == WindowCapabilities.None {
+      topmost = value
+      return WindowOperationResult.Unsupported
+    }
+    try {
+      native.SetTopmost(value)
+      topmost = value
+      return WindowOperationResult.Accepted
+    } catch (e Exception) {
+      return WindowOperationResult.Failed
     }
   }
 

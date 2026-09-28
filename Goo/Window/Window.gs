@@ -7,6 +7,63 @@ import System.Numerics
 /// Identifies the requested state of a window.
 public enum WindowState { Normal; Minimized; Maximized; Fullscreen }
 
+/// Controls how Window.Run schedules frames that have visual demand.
+public enum WindowFramePacing { Display; Uncapped }
+
+/// Reports a successful queue-present handoff, not display scanout.
+public data struct WindowPresentationAccepted {
+  private var frameIndex uint64
+  private var acceptedTicks int64
+
+  /// Gets the one-based accepted presentation number for this window opening.
+  public prop FrameIndex uint64{ get -> frameIndex init -> frameIndex = value }
+  /// Gets the monotonic Stopwatch timestamp when Goo observed that acceptance.
+  public prop AcceptedTicks int64{ get -> acceptedTicks init -> acceptedTicks = value }
+}
+
+/// Reports whether an asynchronous window capture request was accepted.
+public enum WindowCaptureRequestStatus {
+  Accepted;
+  Busy;
+  BudgetExceeded;
+  NotReady;
+  Failed;
+  DeviceLost;
+  Unsupported;
+}
+
+/// Owns RGBA8, sRGB, premultiplied pixels copied from a completed scene capture.
+public sealed class WindowCapture {
+  private let pixels []uint8
+  private let width uint32
+  private let height uint32
+  private let rowBytes uint32
+
+  /// Gets the captured width in pixels.
+  public prop Width uint32{ get -> width }
+  /// Gets the captured height in pixels.
+  public prop Height uint32{ get -> height }
+  /// Gets the row stride in bytes.
+  public prop RowBytes uint32{ get -> rowBytes }
+  /// Gets the caller-owned, top-left-origin RGBA8 pixel array.
+  public prop Pixels []uint8{ get -> pixels }
+  /// Reports that color channels are premultiplied by alpha.
+  public prop Premultiplied bool{ get -> true }
+  /// Reports that color channels use sRGB encoding.
+  public prop SrgbEncoded bool{ get -> true }
+  /// Reports that the first pixel is at the top left.
+  public prop OriginTopLeft bool{ get -> true }
+
+  internal init(result WindowReadbackResult) {
+    pixels = result.Pixels
+    width = result.Width
+    height = result.Height
+    rowBytes = result.RowBytes
+  }
+}
+
+internal enum WindowCaptureOwner { None; Public; Diagnostics }
+
 /// Describes one stable window size and display-scale snapshot.
 public data struct WindowMetrics {
   private var logicalWidth int32
@@ -36,6 +93,7 @@ internal struct WindowNotifications {
   private event focusChanged Action[bool]
   private event visibilityChanged Action[bool]
   private event preferencesChanged Action[PlatformPreferences]
+  private event presentationAccepted Action[WindowPresentationAccepted]
 
   internal func AddStateChanged(callback Action[WindowState]) { stateChanged += callback }
   internal func RemoveStateChanged(callback Action[WindowState]) { stateChanged -= callback }
@@ -54,6 +112,10 @@ internal struct WindowNotifications {
   internal func AddPreferencesChanged(callback Action[PlatformPreferences]) { preferencesChanged += callback }
   internal func RemovePreferencesChanged(callback Action[PlatformPreferences]) { preferencesChanged -= callback }
   internal func RaisePreferencesChanged(value PlatformPreferences) { preferencesChanged?.Invoke(value) }
+  internal prop HasPresentationAcceptedCallbacks bool{ get -> presentationAccepted != nil }
+  internal func AddPresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted += callback }
+  internal func RemovePresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted -= callback }
+  internal func RaisePresentationAccepted(value WindowPresentationAccepted) { presentationAccepted?.Invoke(value) }
 }
 
 /// Hosts a Goo tree on one process-wide UI thread.
@@ -83,7 +145,7 @@ public partial class Window {
   /// Gets or sets per-window GPU presentation synchronization.
   /// True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO.
   /// False prefers Immediate, then Mailbox, then FIFO on every device.
-  /// Window.Run applies internal display-rate pacing for either value.
+  /// Window.Run pacing is controlled separately by FramePacing.
   public prop VSync bool{
     get -> vsync
     set(v) {
@@ -96,6 +158,30 @@ public partial class Window {
         native.SetVSync(v)
       }
       windowTarget?.SetVSync(v)
+    }
+  }
+
+  /// Gets or sets the frame pacing used by Window.Run. Uncapped still honors
+  /// GPU queue readiness and the selected presentation mode.
+  public prop FramePacing WindowFramePacing{
+    get -> framePacing
+    set(v) {
+      requireUiThread("Window.FramePacing")
+      if v != WindowFramePacing.Display && v != WindowFramePacing.Uncapped {
+        throw ArgumentOutOfRangeException("v")
+      }
+      if framePacing == v { return }
+      framePacing = v
+      host?.Wake()
+    }
+  }
+
+  /// Reports whether the native target has pending GPU submit or present work.
+  /// Use Pump(0) to service pending work without advancing the simulation.
+  public prop QueueWorkPending bool{
+    get {
+      requireUiThread("Window.QueueWorkPending")
+      return windowTarget?.QueueWorkPending == true
     }
   }
 
@@ -294,6 +380,20 @@ public partial class Window {
     remove{ MetricSubscriptions.RemoveWindow(this, value) }
   }
 
+  /// Occurs on the UI thread through the posted-action queue after Vulkan
+  /// accepts a present request.
+  /// Acceptance does not establish a display scanout time.
+  public event PresentationAccepted Action[WindowPresentationAccepted]{
+    add{
+      requireUiThread("Window.PresentationAccepted")
+      notifications.AddPresentationAccepted(value)
+    }
+    remove{
+      requireUiThread("Window.PresentationAccepted")
+      notifications.RemovePresentationAccepted(value)
+    }
+  }
+
   /// Gets the current native clipboard text on the window UI thread.
   /// An empty result can mean an empty clipboard or native copy failure.
   /// @exception InvalidOperationException when the window is not open.
@@ -379,6 +479,12 @@ public partial class Window {
 
   private var state WindowState
   private var vsync bool
+  private var framePacing WindowFramePacing
+  private var flushingMetricsBeforeRender bool
+  private var metricsFlushThreadId int32
+  private var acceptedFrameIndex uint64
+  private var presentationAcceptedHook Action[int64]?
+  private var captureOwner WindowCaptureOwner
   private var title string
   private var background Color
   private var root Cell?
@@ -404,6 +510,7 @@ public partial class Window {
     title = ""
     Background = Color.Black
     vsync = true
+    framePacing = WindowFramePacing.Display
     decorated = true
     resizable = true
     resizeBand = 8.0F
@@ -465,6 +572,9 @@ public partial class Window {
       return
     }
     diagnosticsSession = nil
+    if captureOwner == WindowCaptureOwner.Diagnostics {
+      captureOwner = WindowCaptureOwner.None
+    }
     resolver.DebugOverrides = nil
     input.SetDiagnostics(nil, nil)
     requestRender()
@@ -479,18 +589,83 @@ public partial class Window {
     input.Reset(node, resolver)
   }
 
+  /// Starts an asynchronous offscreen replay of the current scene. This may
+  /// submit a native present and does not sample a specific display scanout.
+  /// Call PollCapture on the UI thread until it returns pixels.
+  public func RequestCapture() WindowCaptureRequestStatus {
+    requireUiThread("Window.RequestCapture")
+    if !IsOpen { return WindowCaptureRequestStatus.NotReady }
+    if embeddedHost != nil { return WindowCaptureRequestStatus.Unsupported }
+    guard let target = windowTarget else { return WindowCaptureRequestStatus.NotReady }
+    if captureOwner != WindowCaptureOwner.None { return WindowCaptureRequestStatus.Busy }
+    let prior = target.PollCapture()
+    if prior == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
+    if prior == WindowReadbackPollStatus.NotReady && target.QueueWorkPending {
+      return WindowCaptureRequestStatus.Busy
+    }
+    let status = target.RequestCapture(node, portalRoot, Background, dpi)
+    if status == WindowReadbackRequestStatus.Accepted {
+      captureOwner = WindowCaptureOwner.Public
+    }
+    return captureRequestStatus(status)
+  }
+
+  /// Takes a completed capture, or returns nil while it is pending.
+  /// Failed readback throws and releases this request's ownership.
+  public func PollCapture() WindowCapture? {
+    requireUiThread("Window.PollCapture")
+    if captureOwner != WindowCaptureOwner.Public { return nil }
+    guard let target = windowTarget else {
+      captureOwner = WindowCaptureOwner.None
+      return nil
+    }
+    let status = target.PollCapture()
+    if status == WindowReadbackPollStatus.NotReady { return nil }
+    captureOwner = WindowCaptureOwner.None
+    if status == WindowReadbackPollStatus.Failed {
+      throw InvalidOperationException("Goo capture readback failed")
+    }
+    guard let result = target.TakeCaptureResult() else {
+      throw InvalidOperationException("Goo capture result was unavailable")
+    }
+    return WindowCapture(result)
+  }
+
+  private func captureRequestStatus(value WindowReadbackRequestStatus)
+  WindowCaptureRequestStatus -> switch value {
+    case WindowReadbackRequestStatus.Accepted: WindowCaptureRequestStatus.Accepted
+    case WindowReadbackRequestStatus.Busy: WindowCaptureRequestStatus.Busy
+    case WindowReadbackRequestStatus.BudgetExceeded: WindowCaptureRequestStatus.BudgetExceeded
+    case WindowReadbackRequestStatus.NotReady: WindowCaptureRequestStatus.NotReady
+    case WindowReadbackRequestStatus.Failed: WindowCaptureRequestStatus.Failed
+    case WindowReadbackRequestStatus.DeviceLost: WindowCaptureRequestStatus.DeviceLost
+  }
+
   internal func RequestDiagnosticsCapture() WindowReadbackRequestStatus {
+    if captureOwner != WindowCaptureOwner.None { return WindowReadbackRequestStatus.Busy }
     guard let target = windowTarget else { return WindowReadbackRequestStatus.NotReady }
-    return target.RequestCapture(node, portalRoot, Background, dpi)
+    let prior = target.PollCapture()
+    if prior == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
+    let status = target.RequestCapture(node, portalRoot, Background, dpi)
+    if status == WindowReadbackRequestStatus.Accepted {
+      captureOwner = WindowCaptureOwner.Diagnostics
+    }
+    return status
   }
 
   internal func PollDiagnosticsCapture() WindowReadbackResult? {
+    if captureOwner != WindowCaptureOwner.Diagnostics { return nil }
     guard let target = windowTarget else { return nil }
     let result = target.PollCapture()
+    if result == WindowReadbackPollStatus.NotReady { return nil }
+    captureOwner = WindowCaptureOwner.None
     if result == WindowReadbackPollStatus.Failed {
       throw InvalidOperationException("Goo capture readback failed")
     }
-    return target.TakeCaptureResult()
+    guard let capture = target.TakeCaptureResult() else {
+      throw InvalidOperationException("Goo capture result was unavailable")
+    }
+    return capture
   }
 
   internal func RequestDiagnosticsRebuild() {

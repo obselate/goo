@@ -223,6 +223,7 @@ public sealed class FixtureContractTests
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.OutlineStateResetTransitionAndStorageContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ResolvePrecedenceAndResetContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ShaderEffectOnlyReplacementContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.ShaderEffectMetricsPublishCoalescesPaintContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ShapeSideTransitionSelectorsSnapUniformStrokeContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ShapeStrokeShorthandResolutionContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ShapeStrokeTransitionContract));

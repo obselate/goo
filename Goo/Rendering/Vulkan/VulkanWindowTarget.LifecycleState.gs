@@ -7,6 +7,7 @@ import System.Numerics
 import System.Threading
 
 internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink, WindowRenderTarget {
+  public event PresentationAccepted Action[int64]
   shared {
     private var terminalTargets List[VulkanWindowTarget]? = nil
     internal func RetainTerminalTarget(target VulkanWindowTarget) {

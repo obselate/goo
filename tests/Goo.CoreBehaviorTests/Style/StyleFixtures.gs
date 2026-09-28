@@ -4,6 +4,31 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func ShaderEffectMetricsPublishCoalescesPaintContract() bool {
+    let program = ShaderEffectProgram([]uint8{
+      71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
+      86, 83, 80, 86, 20, 0, 0, 0,
+      3, 2, 35, 7, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    })
+    let data = ShaderEffectData([]uint8{ 1, 2, 3, 4 })
+    let effect = ShaderEffect(program)
+    effect.SetData(0, data)
+    let cell = MetricShaderEffectCell(effect)
+    let window = Window{ Width: 100, Height: 60, Root: cell }
+    var publications = 0
+    cell.Target.MetricsChanged += (metrics ElementMetrics) -> {
+      publications++
+      data.Publish([]uint8{ 5, 6, 7, 8 })
+    }
+    try {
+      window.UpdateTree(0.0)
+      return publications == 1 && !window.UpdateTree(0.0)
+    } finally {
+      window.Close()
+      data.Dispose()
+    }
+  }
+
   func ShaderEffectOnlyReplacementContract() bool {
     let program = ShaderEffectProgram([]uint8{
       71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
@@ -2086,6 +2111,23 @@ internal class StyleFixtures {
   }
 
   private func sameColor(left Color, right Color) bool -> left.R == right.R && left.G == right.G && left.B == right.B && left.A == right.A
+}
+
+internal class MetricShaderEffectCell : Cell {
+  internal let Target ElementHandle
+  private let effect ShaderEffect
+
+  init(value ShaderEffect) {
+    Target = ElementHandle{}
+    effect = value
+  }
+
+  override func Build() Blob -> Container{
+    Handle: Target,
+    Width: 100,
+    Height: 60,
+    ShaderEffect: effect,
+  }
 }
 
 internal data struct CompositionTokens {

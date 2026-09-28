@@ -115,6 +115,7 @@ internal interface WindowReadbackResult {
 }
 
 internal interface WindowRenderTarget {
+  event PresentationAccepted Action[int64]
   prop ProfileSink FrameProfileSink { get; }
   prop NeedsRender bool { get; }
   prop LastFrameSubmitted bool { get; }
