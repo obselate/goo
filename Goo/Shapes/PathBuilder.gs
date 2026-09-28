@@ -174,6 +174,16 @@ public class PathBuilder {
     return VectorPath.Create(commands.ToArray(), viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight)
   }
 
+  /// Clears the commands and reopens this builder while retaining its view box and storage.
+  /// Previously built paths remain immutable. Each Build still copies the commands.
+  /// @returns This builder.
+  public func Reset() PathBuilder {
+    commands.Clear()
+    hasContour = false
+    isSealed = false
+    return this
+  }
+
   private func ensureUnsealed() {
     if isSealed {
       throw InvalidOperationException("PathBuilder is sealed")
