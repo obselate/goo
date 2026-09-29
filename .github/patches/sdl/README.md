@@ -4,6 +4,13 @@
 checksum-pinned SDL source before building the Linux runtime. It also compiles
 and runs `tests/NativeWindow/test_sdl_wayland.py` against the patched handlers.
 
+`wayland-no-pointer-cursor.patch` backports the SDL Wayland seat guard from
+[upstream commit 79b40ad](https://github.com/libsdl-org/SDL/commit/79b40ad3975431cbab09f29ad90b5aef469131d8).
+SDL 3.4.0 otherwise dereferences a null `wl_pointer` while initializing its
+cursor on a touch-only or virtual seat. The actual `Wayland_ShowCursor` function
+is exercised by `tests/NativeWindow/test_sdl_no_pointer.py` with pointerless,
+pointer, and tablet seats.
+
 - SDL consumes custom hit-test titlebar clicks before its normal mouse click
   tracker. Track primary presses per seat/window with SDL's configured
   double-click time and radius, then maximize/restore resizable windows. Before

@@ -1,0 +1,17 @@
+--- a/src/video/wayland/SDL_waylandmouse.c
++++ b/src/video/wayland/SDL_waylandmouse.c
+@@ -1168,6 +1168,8 @@
+-        obj.wl_pointer = seat->pointer.wl_pointer;
+-        obj.is_pointer = true;
+-        if (mouse->focus && mouse->focus->internal == seat->pointer.focus) {
+-            Wayland_CursorStateSetCursor(&seat->pointer.cursor_state, &obj, seat->pointer.focus, seat->pointer.enter_serial, cursor);
+-        } else if (!seat->pointer.focus) {
+-            Wayland_CursorStateSetCursor(&seat->pointer.cursor_state, &obj, seat->pointer.focus, seat->pointer.enter_serial, NULL);
++        if (seat->pointer.wl_pointer) {
++            obj.wl_pointer = seat->pointer.wl_pointer;
++            obj.is_pointer = true;
++            if (mouse->focus && mouse->focus->internal == seat->pointer.focus) {
++                Wayland_CursorStateSetCursor(&seat->pointer.cursor_state, &obj, seat->pointer.focus, seat->pointer.enter_serial, cursor);
++            } else if (!seat->pointer.focus) {
++                Wayland_CursorStateSetCursor(&seat->pointer.cursor_state, &obj, seat->pointer.focus, seat->pointer.enter_serial, NULL);
++            }
