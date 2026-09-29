@@ -6,6 +6,18 @@ import System
 public partial class Window {
   private var platformInput PlatformInput?
   private var wheelScrollScale float32 = 1.0F
+  private var smoothScrolling bool = true
+
+  /// Enables animated scrolling and touch momentum. The default is true.
+  public prop SmoothScrolling bool {
+    get -> smoothScrolling
+    set(value) {
+      requireUiThread("Window.SmoothScrolling")
+      if smoothScrolling == value { return }
+      smoothScrolling = value
+      requestRender()
+    }
+  }
 
   /// Scales the platform wheel distance for this window. The default is 1.
   public prop WheelScrollScale float32 {

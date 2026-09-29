@@ -185,6 +185,33 @@ internal class ScrollbarFixtures {
     return root.ScrollBarAlpha == 0.0F && !ScrollState.HasDemand(root)
   }
 
+  func SmoothScrollingWindowPolicyContract() bool {
+    let window = Window{ Root: ScrollbarFadeCell(fadingScrollbar()), Width: 100, Height: 100 }
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    window.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    window.DrainQueuedInputForTest()
+    if root.ScrollTargetY <= 0.0F || root.ScrollY != 0.0F { return false }
+    window.UpdateTree(0.016)
+    if root.ScrollY <= 0.0F || root.ScrollY >= root.ScrollTargetY { return false }
+
+    window.SmoothScrolling = false
+    window.UpdateTree(0.016)
+    if root.ScrollY != root.ScrollTargetY { return false }
+    ScrollState.To(root, 0.0F, 0.0F, true)
+    window.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    window.DrainQueuedInputForTest()
+    window.UpdateTree(0.016)
+    if root.ScrollY <= 0.0F || root.ScrollY != root.ScrollTargetY { return false }
+
+    ScrollState.To(root, 0.0F, 0.0F, true)
+    window.SmoothScrolling = true
+    window.InputForTest.QueuePointerWheel(50.0F, 50.0F, 0.0F, -1.0F)
+    window.DrainQueuedInputForTest()
+    window.UpdateTree(0.016)
+    return root.ScrollY > 0.0F && root.ScrollY < root.ScrollTargetY
+  }
+
   func IdleCaretDeadlineAndTouchMomentumContract() bool {
     let caretWindow = Window{ Root: ScrollIdleCaretCell{}, Width: 100, Height: 30 }
     caretWindow.UpdateTree()

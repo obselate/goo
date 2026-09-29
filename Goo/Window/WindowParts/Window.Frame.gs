@@ -296,9 +296,9 @@ public partial class Window {
           if fadeScrollBars(scrollers, dtf) {
             changed = true
           }
-          let reducedMotion = Preferences.ReducedMotion == true
-          let k = reducedMotion ? 1.0F : 1.0F - MathF.Exp(-dtf * 20.0F)
-          if stepScroll(scrollers, k, dtf, reducedMotion) {
+          let instantScroll = Preferences.ReducedMotion == true || !smoothScrolling
+          let k = instantScroll ? 1.0F : 1.0F - MathF.Exp(-dtf * 20.0F)
+          if stepScroll(scrollers, k, dtf, instantScroll) {
             changed = true
             accessibilityScroll = true
             metricsChanged = true
