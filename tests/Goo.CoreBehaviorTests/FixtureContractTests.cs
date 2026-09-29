@@ -101,6 +101,7 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardCallbackFailuresCleanUpAndKeepQueuedSuffix));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardCallbacksBubbleStopAndRepeat));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardDefaultPreventionPreservesTextAndButtonRelease));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardShortcutTextAndCompositionArbitration));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardDrainConsumesThrowingEventOnceAndRetainsRest));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardQueueAndRepeatLifecycle));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardRepeatCancelsWhenFocusedEntryBecomesUnavailable));

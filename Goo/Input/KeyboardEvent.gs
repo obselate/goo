@@ -11,6 +11,8 @@ public struct KeyEvent {
   public prop Modifiers KeyModifiers{ get; init; }
   /// Reports whether this key down came from Goo key repeat.
   public prop Repeat bool{ get; init; }
+  /// Reports whether platform text composition is active.
+  public prop IsComposing bool{ get; init; }
   internal prop Control InputDispatchControl? { get; init; }
   internal prop Generation int64{ get; init; }
 
@@ -19,7 +21,7 @@ public struct KeyEvent {
     if let control = Control { control.Stop(Generation) }
   }
 
-  /// Prevents assigned key bindings without stopping ancestor callbacks.
+  /// Prevents assigned key bindings and direct committed text without stopping ancestor callbacks.
   public func PreventDefault() {
     if let control = Control { control.Prevent(Generation) }
   }

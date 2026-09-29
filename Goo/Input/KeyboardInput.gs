@@ -22,6 +22,10 @@ internal class KeyboardInput {
   private var control InputDispatchControl
   private var diagnosticsHook((Key, KeyModifiers) -> bool)?
   private var dispatchGeneration int64
+  private var suppressedTextKey Key
+  private var compositionActive bool
+  private var compositionCommitPending bool
+  private var compositionFocusGeneration int64
 
   internal init(focus FocusManager, queue InputEventQueue) {
     this.focus = focus
@@ -88,6 +92,11 @@ internal class KeyboardInput {
   internal func Dispatch(e KeyboardEvent, root Node?, resolver Resolver, text TextInput,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64, pointer PointerInput) bool {
     if e.Kind == KeyboardEventKind.Press {
+      if compositionActive && compositionFocusGeneration != focus.Generation {
+        compositionActive = false
+      }
+      suppressedTextKey = Key.Unknown
+      compositionCommitPending = false
       if let hook = diagnosticsHook {
         if hook(e.Key, e.Modifiers) { return true }
       }
@@ -97,6 +106,7 @@ internal class KeyboardInput {
       pointer.UpdateDragModifiers(root, e.Modifiers)
       let target = focus.FocusedNode() ?? root
       let dispatch = DispatchKeyDown(target, e.Key, e.Modifiers, false)
+      if !compositionActive && dispatch.SuppressTextInput { suppressedTextKey = e.Key }
       if dispatch.Repeat && focus.FocusedNode() == target {
         StartKeyRepeat(e.Key, e.Modifiers, repeatStartTicks)
       }
@@ -107,6 +117,7 @@ internal class KeyboardInput {
         pointer.UpdateDragModifiers(root, e.Modifiers)
         return DispatchKeyUp(focus.FocusedNode() ?? root, e.Key, e.Modifiers).Handled
       } finally {
+        if e.Key == suppressedTextKey { suppressedTextKey = Key.Unknown }
         if e.Key == pressedKey { EndPress(root, resolver, pressedButton, false) }
         releases.Remove(e.Key)
         StopKeyRepeat(e.Key)
@@ -114,15 +125,30 @@ internal class KeyboardInput {
     }
     if e.TextFocusGeneration != focus.Generation { return false }
     if let value = e.Text {
-      if e.Kind == KeyboardEventKind.Text { return text.HandleChar(root, value) }
+      if e.Kind == KeyboardEventKind.Text {
+        let fromComposition = compositionActive || compositionCommitPending
+        compositionActive = false
+        compositionCommitPending = false
+        if !fromComposition && suppressedTextKey != Key.Unknown { return false }
+        return text.HandleChar(root, value)
+      }
       if e.Kind == KeyboardEventKind.Composition {
+        compositionActive = true
+        compositionFocusGeneration = focus.Generation
+        compositionCommitPending = false
+        suppressedTextKey = Key.Unknown
         return text.HandleComposition(root, value, e.SelectionStart, e.SelectionLength)
       }
     }
     if e.Kind == KeyboardEventKind.CompositionCandidates {
       text.HandleCompositionCandidates(e.Candidates, e.SelectedCandidate, e.CandidatesHorizontal)
     }
-    return e.Kind == KeyboardEventKind.CompositionCancel && text.HandleCompositionCancel(root)
+    if e.Kind == KeyboardEventKind.CompositionCancel {
+      compositionCommitPending = compositionActive
+      compositionActive = false
+      return text.HandleCompositionCancel(root)
+    }
+    return false
   }
 
   internal func Step(dt float64, nowTicks int64) bool {
@@ -181,6 +207,9 @@ internal class KeyboardInput {
   internal func Reset(resolver Resolver) {
     releases.Clear()
     resetRepeat()
+    suppressedTextKey = Key.Unknown
+    compositionActive = false
+    compositionCommitPending = false
     clearButtonPress(resolver)
   }
 
@@ -288,16 +317,21 @@ internal class KeyboardInput {
             let owner = CellOwnership.Nearest(node)
             try {
               handler(KeyEvent{ Key: key, Modifiers: modifiers, Repeat: repeat,
-                Control: control, Generation: generation })
+                IsComposing: compositionActive, Control: control, Generation: generation })
             } finally { owner?.Rebuild() }
           }
           last = node
           if control.PropagationStopped || node.FocusScopeBoundary { break }
           current = node.Parent
         }
-        if control.DefaultPrevented || focusGeneration != focus.Generation || !canReceiveInput(start) {
+        if control.DefaultPrevented {
+          result.SuppressTextInput = down
           return result
         }
+        if focusGeneration != focus.Generation || !canReceiveInput(start) {
+          return result
+        }
+        if down && compositionActive { return result }
         current = start
         while current != nil {
           let node = current
@@ -315,6 +349,7 @@ internal class KeyboardInput {
                 if binding.Key != key || binding.Modifiers != modifiers { continue }
                 if binding.Action == nil && binding.Command == nil && binding.OnRelease == nil { continue }
                 result.Handled = true
+                result.SuppressTextInput = true
                 result.Repeat = binding.Repeat
                 if !repeat || binding.Repeat {
                   let owner = CellOwnership.Nearest(node)
@@ -396,6 +431,7 @@ internal data struct KeyboardEvent {
 internal data struct KeyboardDispatchResult {
   internal var Handled bool
   internal var Repeat bool
+  internal var SuppressTextInput bool
 }
 
 internal data struct PendingKeyRelease {

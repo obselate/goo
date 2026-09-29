@@ -1952,6 +1952,54 @@ internal class InputFixtures {
     return buttonClicks == 0 && !button.Pressed
   }
 
+  func KeyboardShortcutTextAndCompositionArbitration() bool {
+    var shortcuts int32
+    var bindings int32
+    var composingKeys int32
+    let received = List[string]()
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Focusable: true,
+      KeyBindings: []KeyBinding{ KeyBinding{ Key: Key.B, Action: () -> { bindings++ } } },
+      OnKeyDown: (e KeyEvent) -> {
+        if e.IsComposing { composingKeys++ }
+        else if e.Key == Key.P {
+          shortcuts++
+          e.PreventDefault()
+        }
+      },
+      OnTextInput: (value string) -> { received.Add(value) },
+      OnTextComposition: (e TextCompositionEvent) -> {},
+    })
+    let resolver = Resolver{}
+    let input = InputCoordinator()
+    input.FocusElement(resolver, root)
+    input.QueueKeyPress(Key.P, KeyModifiers{})
+    input.QueueText("p")
+    input.QueueKeyRelease(Key.P)
+    input.QueueKeyPress(Key.B, KeyModifiers{})
+    input.QueueText("b")
+    input.QueueKeyRelease(Key.B)
+    input.QueueKeyPress(Key.Q, KeyModifiers{})
+    input.QueueText("q")
+    input.QueueComposition("に", 0, 1)
+    input.QueueKeyPress(Key.P, KeyModifiers{})
+    input.QueueCompositionCancel()
+    input.QueueText("日本語")
+    input.Drain(root, resolver, 0.0, nil)
+    if shortcuts != 1 || bindings != 1 || composingKeys != 1
+      || received.Count != 2 || received[0] != "q" || received[1] != "日本語" {
+      return false
+    }
+
+    let entry = Reconciler{ Res: Resolver{} }.Mount(TextEntry{ Value: "" })
+    let entryInput = InputCoordinator()
+    entryInput.FocusElement(resolver, entry)
+    entryInput.QueueComposition("に", 0, 1)
+    entryInput.QueueText("日本語")
+    entryInput.Drain(entry, resolver, 0.0, nil)
+    return entry.Buffer == "日本語"
+  }
+
   func KeyboardCallbackFailuresCleanUpAndKeepQueuedSuffix() bool {
     let input = InputCoordinator()
     var releaseThrows = true
