@@ -8,6 +8,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Input/DragDropFixtures.gs" Link="DragDropFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/TextInputPrimitivesFixtures.gs" Link="TextInputPrimitivesFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/TextEditorInputFixtures.gs" Link="TextEditorInputFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input/TextPresentationLayerFixtures.gs" Link="TextPresentationLayerFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/ClipPathInputFixtures.gs" Link="ClipPathInputFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/ScrollbarFixtures.gs" Link="ScrollbarFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Layout/LayoutFixtures.gs" Link="LayoutFixtures.gs" />

@@ -15,6 +15,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   private let paragraphLayoutScratch TextEditorVisualLayout
   private let projectionScratch List[TextEditorProjection]
   private let styleScratch List[TextEditorPresentationStyle]
+  private var stylesRevision int64
   private let paragraphProjectionScratch List[TextEditorProjection]
   private let paragraphStyleScratch List[TextEditorPresentationStyle]
   private let usedParagraphScratch List[TextEditorParagraphLayout]
@@ -42,6 +43,7 @@ internal sealed class TextEditorRenderState : IDisposable {
       paragraphLayoutScratch = TextEditorVisualLayout()
       projectionScratch = List[TextEditorProjection]()
       styleScratch = List[TextEditorPresentationStyle]()
+      stylesRevision = Int64.MinValue
       paragraphProjectionScratch = List[TextEditorProjection]()
       paragraphStyleScratch = List[TextEditorPresentationStyle]()
       usedParagraphScratch = List[TextEditorParagraphLayout]()
@@ -74,7 +76,14 @@ internal sealed class TextEditorRenderState : IDisposable {
 
   internal func BeginProjections() List[TextEditorProjection] -> beginScratch(projectionScratch)
 
-  internal func BeginStyles() List[TextEditorPresentationStyle] -> beginScratch(styleScratch)
+  internal func CachedStyles(revision int64) List[TextEditorPresentationStyle]? -> if stylesRevision == revision { styleScratch } else { nil }
+
+  internal func BeginStyles() List[TextEditorPresentationStyle] {
+    stylesRevision = Int64.MinValue
+    return beginScratch(styleScratch)
+  }
+
+  internal func CommitStyles(revision int64) { stylesRevision = revision }
 
   internal func BeginParagraphProjections() List[TextEditorProjection] -> beginScratch(paragraphProjectionScratch)
 
@@ -224,6 +233,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal func Apply(nextLayers []TextPresentationLayer, readOnly bool) {
     if !sameArray(layers, nextLayers) {
       layers = copyEditorLayers(nextLayers)
+      stylesRevision = Int64.MinValue
       ClearParagraphs()
       Invalidate(true)
     }

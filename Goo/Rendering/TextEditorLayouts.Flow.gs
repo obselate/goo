@@ -25,7 +25,7 @@ internal partial class TextEditorLayouts {
         result.Ascent = metrics.Ascent
         result.Descent = metrics.Descent
         let projections = editorProjections(state, width, height)
-        let styles = editorStyles(state)
+        let styles = editorStyles(state, revision)
         let used = state.BeginUsedParagraphs()
         let bounded = height >= 0.0F
         var firstLine int32 = 0

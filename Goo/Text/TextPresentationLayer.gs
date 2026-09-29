@@ -6,7 +6,8 @@ import System.Threading
 
 internal enum TextProjectionKind { Replacement; Hidden; InlineSlot; BlockSlot }
 
-internal data struct TextStyleSpan(Key string, Range TextRange, Style Style) { }
+/// Specifies one keyed inline style over a document source range.
+public data struct TextStyleSpan(Key string, Range TextRange, Style Style) { }
 
 internal data struct TextPresentationLayerChange(Range TextRange, All bool,
   SlotChildrenChanged bool) { }
@@ -154,6 +155,28 @@ public class TextPresentationLayer : IDisposable {
     }
     rebuildStyleRangeIndex()
     mutate(rangeUnion(previous, textRange), false)
+  }
+
+  /// Replaces every style span in this layer without changing its projections.
+  /// @param spans Ordered keyed inline styles. Later overlapping spans override earlier fields.
+  public func ReplaceStyles(spans IReadOnlyList[TextStyleSpan]) {
+    if spans == nil { throw ArgumentNullException("spans") }
+    let next = List[TextStyleSpan](spans.Count)
+    let keys = HashSet[string](StringComparer.Ordinal)
+    for span in spans {
+      validateKey(span.Key)
+      if !keys.Add(span.Key) { throw ArgumentException("Style keys must be unique", "spans") }
+      validateRange(span.Range)
+      validatePresentationStyle(span.Style)
+      next.Add(span)
+    }
+    if styleSpans.Count == 0 && next.Count == 0 { return }
+    styleHistory.Clear()
+    styleHistoryTransactions.Clear()
+    styleSpans.Clear()
+    styleSpans.AddRange(next)
+    rebuildStyleRangeIndex()
+    mutateAll(false)
   }
 
   /// Removes a keyed style span.

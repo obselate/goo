@@ -176,7 +176,8 @@ internal partial class TextEditorLayouts {
         return values
       }
 
-    private func editorStyles(state TextEditorRenderState) List[TextEditorPresentationStyle] {
+    private func editorStyles(state TextEditorRenderState, revision int64) List[TextEditorPresentationStyle] {
+      if let cached = state.CachedStyles(revision) { return cached }
       let values = state.BeginStyles()
       var order int32 = 0
       for layerIndex in 0 ... state.LayerCount {
@@ -194,6 +195,7 @@ internal partial class TextEditorLayouts {
         if end > maximum { maximum = end }
         value.PrefixMaxEnd = maximum
       }
+      state.CommitStyles(revision)
       return values
     }
 
