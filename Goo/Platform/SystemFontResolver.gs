@@ -15,6 +15,7 @@ internal sealed class FileSystemFontResolver {
     let monoAliases = requested == "monospace" || requested == "mono"
     var best string?
     var bestScore int32 = Int32.MinValue
+    var bestWeight int32
     for file in FontFiles() {
       let fileName = Path.GetFileNameWithoutExtension(file)
       let stem = normalize(fileName)
@@ -47,15 +48,22 @@ internal sealed class FileSystemFontResolver {
         || stem == "ariali" || stem == "arialbi" || stem == "segoeuii"
         || stem == "segoeuili" || stem == "segoeuisli" || stem == "segoeuiz"
       let stylePenalty = if italic == slanted { 0 } else { 1000 }
-      let score = familyScore * 1000 - Math.Abs(Math.Clamp(weight, 100, 900) - faceWeight)
+      let targetWeight = Math.Clamp(weight, 100, 900)
+      let score = familyScore * 1000 - Math.Abs(targetWeight - faceWeight)
         - stylePenalty
       var shouldReplace = best == nil || score > bestScore
       if !shouldReplace && score == bestScore {
-        if let current = best { shouldReplace = String.CompareOrdinal(file, current) < 0 }
+        if faceWeight != bestWeight {
+          shouldReplace = if targetWeight <= 500 { faceWeight < bestWeight }
+            else { faceWeight > bestWeight }
+        } else if let current = best {
+          shouldReplace = String.CompareOrdinal(file, current) < 0
+        }
       }
       if shouldReplace {
         best = file
         bestScore = score
+        bestWeight = faceWeight
       }
     }
     return best
@@ -101,6 +109,7 @@ internal sealed class FileSystemFontResolver {
   private func FontWeight(stem string) int32 {
     if stem.Contains("thin") || stem.Contains("hairline") { return 100 }
     if stem.Contains("extralight") || stem.Contains("ultralight") { return 200 }
+    if stem.Contains("demilight") { return 350 }
     if stem.Contains("light") { return 300 }
     if stem.Contains("black") || stem.Contains("heavy") { return 900 }
     if stem.Contains("extrabold") || stem.Contains("ultrabold") { return 800 }
