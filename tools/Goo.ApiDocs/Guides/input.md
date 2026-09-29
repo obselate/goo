@@ -64,7 +64,7 @@ accessibility state update. Invocation checks availability even before that
 rebuild. No shortcut is installed by assigning a command. Text operations still
 use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
 
-`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings without stopping callbacks. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
+`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings and suppresses direct committed text from that key without stopping callbacks. A handled binding also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME; bindings are skipped while preedit is active. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
 Pointer, keyboard, text, and native focus changes share an ordered ingress queue.
 Input injected from an input callback runs after the current event finishes.
@@ -134,6 +134,8 @@ the window. Disposing the window closes all scopes without restoring focus.
 ## Receive generic text and IME input
 
 A focusable `Blob` can opt into `OnTextInput`, `OnTextComposition`, `OnTextCompositionCancel`, and `OnTextCandidates`. Committed text and composition offsets use UTF-16. Invalid or surrogate-splitting composition selections are delivered as the empty range. Candidate snapshots are read-only and use `SelectedCandidate = -1` when native selection is invalid.
+
+`PlatformInput.CommitText` reports success when it delivers nonempty text to a focused generic `OnTextInput` callback, even if that callback changes focus. A focused generic element without `OnTextInput` does not accept committed text.
 
 Callbacks run only for the currently focused, enabled, visible client. Queued text is bound to the focus generation that received it, so it is discarded after a focus transfer, including a transfer back to the original element. `TextEntry` and `TextEditor` retain their existing default behavior before these observers run. Goo provides no candidate UI; applications own candidate presentation.
 
