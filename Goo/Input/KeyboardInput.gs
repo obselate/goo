@@ -192,7 +192,7 @@ internal class KeyboardInput {
     return changed
   }
 
-  internal func RepeatDeadlineSeconds() float64 {
+  internal func RepeatDeadlineSeconds(elapsed float64 = 0.0) float64 {
     if heldKey == Key.Unknown {
       return Double.PositiveInfinity
     }
@@ -200,7 +200,7 @@ internal class KeyboardInput {
       let remaining = nextRepeatTicks - Stopwatch.GetTimestamp()
       return remaining <= 0 ? 0.0 : float64(remaining) / float64(Stopwatch.Frequency)
     }
-    let remaining = 0.4 - heldT
+    let remaining = 0.4 - heldT - elapsed
     return remaining <= 0.0 ? 0.0 : remaining
   }
 

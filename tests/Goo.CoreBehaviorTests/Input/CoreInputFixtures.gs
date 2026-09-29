@@ -274,6 +274,49 @@ internal class InputFixtures {
     return driver.Input.NextTickDeadlineSeconds() >= 0.99
   }
 
+  func SyntheticHeldBindingRequestsSchedulerTick() bool {
+    var presses int32
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Focusable: true,
+      KeyBindings: []KeyBinding{
+        KeyBinding{Key: Key.Down, Repeat: true, Action: () -> { presses++ }},
+      },
+    })
+    let resolver = Resolver{}
+    let input = InputCoordinator()
+    if !input.FocusElement(resolver, root) { throw InvalidOperationException("synthetic repeat focus") }
+    input.QueueKeyPress(Key.Down, KeyModifiers{})
+    input.Drain(root, resolver, 0.0, nil)
+    if presses != 1 { throw InvalidOperationException("synthetic initial press: " + presses.ToString()) }
+    if input.NextTickDeadlineSeconds(0.39) <= 0.0 { throw InvalidOperationException("synthetic early deadline") }
+    if input.NextTickDeadlineSeconds(0.41) > 0.0 {
+      throw InvalidOperationException("synthetic due deadline: " + input.NextTickDeadlineSeconds(0.41).ToString())
+    }
+    input.Step(root, resolver, 0.41)
+    if presses != 2 { throw InvalidOperationException("synthetic repeated press: " + presses.ToString()) }
+    input.QueueKeyRelease(Key.Down)
+    input.Drain(root, resolver, 0.0, nil)
+    return input.NextTickDeadlineSeconds(0.0) >= 0.99
+  }
+
+  func SyntheticHeldBindingSurvivesAutoFocusRebuild() bool {
+    let cell = InputSyntheticRepeatCell{}
+    let driver = InputFixtureDriver(cell, 100, 30)
+    guard let root = driver.Window.Tree else { return false }
+    if driver.Input.FocusedNode() != root || cell.FocusCalls != 1 { return false }
+    driver.Input.QueueKeyPress(Key.Down, KeyModifiers{})
+    driver.Drain()
+    if cell.Presses != 1 || driver.Window.Tree != root || driver.Input.FocusedNode() != root
+      || cell.FocusCalls != 1 || cell.BlurCalls != 0 { return false }
+    driver.Input.Step(driver.Window.Tree, driver.Resolver, 0.41)
+    driver.Update()
+    if cell.Presses != 2 || driver.Window.Tree != root || driver.Input.FocusedNode() != root
+      || cell.FocusCalls != 1 || cell.BlurCalls != 0 { return false }
+    driver.Input.QueueKeyRelease(Key.Down)
+    driver.Drain()
+    return cell.Presses == 2 && driver.Input.NextTickDeadlineSeconds() >= 0.99
+  }
+
   func PointerLifecycleBubblesStopsAndReportsAllMouseButtons() bool {
     let events = List[string]()
     let cell = InputPointerLifecycleCell{ Events: events }
@@ -3026,6 +3069,24 @@ internal class InputRoutedCallbackCell : Cell {
   override func Build() Blob -> Container {
     Width: 100, Height: 30, Focusable: true,
     OnKeyDown: (e KeyEvent) -> { Calls++ },
+  }
+}
+
+internal class InputSyntheticRepeatCell : Cell {
+  internal var Presses int32
+  internal var FocusCalls int32
+  internal var BlurCalls int32
+
+  override func Build() Blob -> Container {
+    Width: 100, Height: 30, Focusable: true, AutoFocus: true,
+    KeyBindings: []KeyBinding{
+      KeyBinding{Key: Key.Down, Repeat: true, Action: () -> {
+        Presses++
+        Rebuild()
+      }},
+    },
+    OnFocus: (e FocusEvent) -> { FocusCalls++ },
+    OnBlur: (e FocusEvent) -> { BlurCalls++ },
   }
 }
 

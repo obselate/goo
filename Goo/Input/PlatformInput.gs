@@ -243,8 +243,9 @@ public class PlatformInput {
 
   private func drain() {
     try {
-      input.Drain(owner.Tree, resolver, float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency),
-        owner.PlatformKeyPressedCallbacks)
+      let nowTicks = Stopwatch.GetTimestamp()
+      input.Drain(owner.Tree, resolver, float64(nowTicks) / float64(Stopwatch.Frequency),
+        owner.PlatformKeyPressedCallbacks, nowTicks)
     } finally { finish() }
   }
 

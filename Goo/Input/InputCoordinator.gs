@@ -78,7 +78,7 @@ internal partial class InputCoordinator {
 
   // Shortens idle waits to the next caret blink or key-repeat edge.
   internal func NextTickDeadlineSeconds(elapsed float64 = 0.0) float64 ->
-  Math.Min(text.BlinkDeadlineSeconds() - elapsed, keyboard.RepeatDeadlineSeconds())
+  Math.Min(text.BlinkDeadlineSeconds() - elapsed, keyboard.RepeatDeadlineSeconds(elapsed))
 
   internal func RefreshHover(root Node?, resolver Resolver) bool {
     try {
