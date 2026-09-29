@@ -245,7 +245,7 @@ public class PlatformInput {
     try {
       let nowTicks = Stopwatch.GetTimestamp()
       input.Drain(owner.Tree, resolver, float64(nowTicks) / float64(Stopwatch.Frequency),
-        owner.PlatformKeyPressedCallbacks, nowTicks)
+        owner.PlatformKeyPressedCallbacks, owner.IsOpen ? nowTicks : 0)
     } finally { finish() }
   }
 
