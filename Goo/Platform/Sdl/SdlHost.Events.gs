@@ -231,6 +231,11 @@ internal unsafe partial class SdlHost {
   }
 
   private func DispatchWindow(eventType SDLEventType, nativeEvent SDLWindowEvent) {
+    if eventType == SDLEventType.WindowMoved || eventType == SDLEventType.WindowResized ||
+      eventType == SDLEventType.WindowPixelSizeChanged || eventType == SDLEventType.WindowMaximized ||
+      eventType == SDLEventType.WindowRestored || eventType == SDLEventType.WindowMouseLeave {
+      PointerHoverInvalidated?.Invoke()
+    }
     if eventType == SDLEventType.WindowMoved {
       X = nativeEvent.Data1
       Y = nativeEvent.Data2
@@ -273,6 +278,12 @@ internal unsafe partial class SdlHost {
       StateChanged?.Invoke(WindowState.Normal)
     } else if eventType == SDLEventType.WindowFocusGained {
       FocusChanged?.Invoke(true)
+    } else if eventType == SDLEventType.WindowMouseEnter {
+      var x float32
+      var y float32
+      pointerButtons = MapPointerButtons(SDL.GetMouseState(&x, &y))
+      PointerMoved?.Invoke(MousePointerId, PointerDevice.Mouse, x, y,
+        pointerButtons, MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
     } else if eventType == SDLEventType.WindowFocusLost {
       pointerButtons = PointerButtons.None
       SDL.CaptureMouse(false)

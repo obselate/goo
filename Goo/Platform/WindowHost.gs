@@ -33,6 +33,7 @@ internal interface WindowHost {
   event PointerReleased Action[int64, PointerDevice, float32, float32,
     PointerButton, PointerButtons, float32, KeyModifiers]
   event PointerCanceled Action[int64, PointerDevice]
+  event PointerHoverInvalidated Action
   event Wheel Action[float32, float32, float32, float32, KeyModifiers]
   event KeyPressed Action[Key, KeyModifiers]
   event KeyReleased Action[Key, KeyModifiers]

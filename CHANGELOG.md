@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.5 - 2026-09-29
+
+- Measure the destination editor layout before clamping a far caret jump so
+  Ctrl+End reveals the final line after viewport changes.
+- Clear stale pointer hover when window geometry changes and refresh it when
+  the pointer enters the window.
+
 ## 0.7.4 - 2026-09-29
 
 - Size text editor scroll extents from the rendered content and caret, preventing
