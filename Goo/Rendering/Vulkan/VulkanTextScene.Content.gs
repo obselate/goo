@@ -261,6 +261,10 @@ internal unsafe sealed partial class VulkanTextScene {
     }
     guard let state = node.EditorState else { return false }
     let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+    let cache = GetNodeSegmentCache(node, true)
+    cache.BeginBuild()
+    activeNodeSegments = cache
+    activeSegmentReuse = true
     let bounds = ConservativeBounds{
       X: BoxGeometry.ContentLeft(node), Y: BoxGeometry.ContentTop(node),
       Width: MathF.Min(layout.GutterWidth, layout.ViewportWidth), Height: BoxGeometry.ViewportHeight(node),

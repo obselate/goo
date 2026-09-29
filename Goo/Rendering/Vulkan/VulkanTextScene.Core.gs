@@ -21,6 +21,7 @@ internal unsafe sealed partial class VulkanTextScene {
   private let srgbToLinear []float32
   private let activeAtlasUse []bool
   private let nodeSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
+  private let gutterSegments ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]
   private var activeNodeSegments VulkanTextNodeSegmentCache?
   private var activeSegmentReuse bool
   private var nextSegmentId uint64
@@ -66,6 +67,7 @@ internal unsafe sealed partial class VulkanTextScene {
     glyphs = Dictionary[VulkanTextAtlasGlyphKey, VulkanTextAtlasGlyph]()
     activeAtlasUse = [nativeAtlases.AtlasSlotCapacity]bool
     nodeSegments = ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]()
+    gutterSegments = ConditionalWeakTable[Node, VulkanTextNodeSegmentCache]()
     nextSegmentId = 1uL
     let atlasBytes = nativeAtlases.AtlasAt(0).ByteSize
     if atlasBytes > uint64(Int32.MaxValue) {
