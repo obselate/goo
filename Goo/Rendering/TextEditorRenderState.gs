@@ -24,6 +24,9 @@ internal sealed class TextEditorRenderState : IDisposable {
   private var placeholderFingerprint int32
   private var baseStyle TextResolvedStyle?
   private var baseStyleFingerprint int32
+  private var gutterDigits int32
+  private var gutterFingerprint int32
+  private var gutterWidth float32
   private var disposed bool
 
   internal prop ReadOnly bool{ get; set; }
@@ -69,6 +72,21 @@ internal sealed class TextEditorRenderState : IDisposable {
     baseStyle = next
     baseStyleFingerprint = fingerprint
     return next
+  }
+
+  internal func LineNumberWidth(n Node, lineCount int32, fingerprint int32) float32 {
+    if !n.EditorShowLineNumbers { return 0.0F }
+    let digits = TextEditorLayouts.LineNumberDigits(lineCount)
+    if gutterDigits == digits && gutterFingerprint == fingerprint { return gutterWidth }
+    var widest = 0.0F
+    for digit in "0123456789" {
+      using let shape = TextAnalyses.ShapeEntry(n, String(digit, digits))
+      if shape.Width > widest { widest = shape.Width }
+    }
+    gutterDigits = digits
+    gutterFingerprint = fingerprint
+    gutterWidth = widest + TextLayouts.fontSize(n)
+    return gutterWidth
   }
 
   internal func BeginLayout() TextEditorVisualLayout -> beginLayout(layoutScratch)
@@ -273,6 +291,8 @@ internal sealed class TextEditorRenderState : IDisposable {
       if item.Range.Start <= sourceEnd { return false }
     }
     let lineCount = document.LineCount
+    if node.EditorShowLineNumbers && TextEditorLayouts.LineNumberDigits(lineCount)
+      != TextEditorLayouts.LineNumberDigits(layout.DocumentLineCount) { return false }
     layout.ContentHeight = layout.ContentHeight
     +float32(lineCount - layout.DocumentLineCount) * layout.LineHeight
     layout.DocumentLineCount = lineCount

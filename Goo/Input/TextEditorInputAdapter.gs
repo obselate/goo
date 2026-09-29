@@ -7,6 +7,7 @@ internal class TextEditorInputAdapter {
     internal func SelectAt(n Node, localX float32, localY float32, extend bool,
       clickCount int32) bool{
         guard let controller = n.EditorController else { return false }
+        if TextEditorLayouts.InGutter(n, localX) { return false }
         let position = TextEditorLayouts.HitTest(n, localX, localY, clickCount >= 2)
         if clickCount >= 2 {
           if !controller.Execute(TextCommand{
@@ -24,7 +25,8 @@ internal class TextEditorInputAdapter {
 
     internal func DragTo(n Node, localX float32, localY float32, clicks int32, origin TextRange) bool {
       guard let controller = n.EditorController else { return false }
-      let position = TextEditorLayouts.HitTest(n, localX, localY, clicks >= 2)
+      let x = TextEditorLayouts.InGutter(n, localX) ? TextEditorLayouts.TextLeft(n) - n.Rect.X : localX
+      let position = TextEditorLayouts.HitTest(n, x, localY, clicks >= 2)
       if clicks >= 2 {
         let target = clicks >= 3 ? TextSelectionRanges.Line(controller.Document, position.Offset)
           : TextSelectionRanges.Word(controller.Document.GetText(), position.Offset)

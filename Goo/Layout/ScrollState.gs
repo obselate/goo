@@ -143,9 +143,15 @@ internal partial class ScrollState {
       guard let controller = n.EditorController else {
         return
       }
-      let extent = TextEditorLayouts.ScrollExtent(n)
+      let gutter = verticalScrollbarGutter(n)
+      var extent = TextEditorLayouts.ScrollExtent(n)
       n.ContentW = float32(extent.X)
       n.ContentH = float32(extent.Y)
+      if n.TextWrap == TextWrap.Wrap && verticalScrollbarGutter(n) != gutter {
+        extent = TextEditorLayouts.ScrollExtent(n)
+        n.ContentW = float32(extent.X)
+        n.ContentH = float32(extent.Y)
+      }
       setTarget(n, float32(controller.ScrollTargetX), float32(controller.ScrollTargetY), true, false)
     }
 

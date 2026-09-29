@@ -3,6 +3,7 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
+import System.Globalization
 
 internal partial class TextEditorLayouts {
   shared {
@@ -16,6 +17,12 @@ internal partial class TextEditorLayouts {
         let result = state.BeginLayout()
         result.Version = snapshot.Version
         result.DocumentLineCount = snapshot.LineCount
+        result.GutterWidth = state.LineNumberWidth(n, snapshot.LineCount, fingerprint)
+        result.ViewportWidth = editorViewportWidth(n, width)
+        result.TextWidth = width < 0.0F ? width : MathF.Max(0.0F, result.ViewportWidth - result.GutterWidth)
+        let paragraphWidth = width < 0.0F || n.TextWrap == TextWrap.NoWrap
+        ? result.TextWidth : MathF.Max(0.0F, result.TextWidth - 1.5F)
+        result.ParagraphWidth = paragraphWidth
         result.LayerRevision = revision
         result.Width = width
         result.ConstraintWidth = width
@@ -24,7 +31,7 @@ internal partial class TextEditorLayouts {
         result.LineHeight = lineHeight
         result.Ascent = metrics.Ascent
         result.Descent = metrics.Descent
-        let projections = editorProjections(state, width, height)
+        let projections = editorProjections(state, paragraphWidth, height)
         let styles = editorStyles(state, revision)
         let used = state.BeginUsedParagraphs()
         let bounded = height >= 0.0F
@@ -32,7 +39,7 @@ internal partial class TextEditorLayouts {
         var lastLine = snapshot.LineCount
         if bounded {
           let scrollLine = lineForVerticalOffset(state, snapshot,
-            float32(state.Controller.ScrollTargetY), width, fingerprint, lineHeight,
+            float32(state.Controller.ScrollTargetY), paragraphWidth, fingerprint, lineHeight,
             metrics.Ascent, metrics.Descent)
           let overscan = n.EditorOverscanLines
           firstLine = scrollLine - overscan
@@ -41,21 +48,30 @@ internal partial class TextEditorLayouts {
           lastLine = firstLine + visible
           if lastLine > snapshot.LineCount { lastLine = snapshot.LineCount }
         }
-        var top = verticalOffsetForLine(state, snapshot, firstLine, width, fingerprint,
+        var top = verticalOffsetForLine(state, snapshot, firstLine, paragraphWidth, fingerprint,
           lineHeight, metrics.Ascent, metrics.Descent)
         var widest = 0.0F
         for lineIndex in firstLine ... lastLine {
           let source = snapshot.GetLineRange(lineIndex)
-          var cached = state.Paragraph(source, width, fingerprint, lineHeight, metrics.Ascent,
+          var cached = state.Paragraph(source, paragraphWidth, fingerprint, lineHeight, metrics.Ascent,
             metrics.Descent)
           if cached == nil {
-            let value = paragraphLayout(n, state, snapshot, lineIndex, projections, styles, width,
+            let value = paragraphLayout(n, state, snapshot, lineIndex, projections, styles, paragraphWidth,
               fingerprint, lineHeight, metrics.Ascent, metrics.Descent)
             state.AddParagraph(value)
             cached = value
           }
           let paragraphCache = cached
           used.Add(paragraphCache)
+          if n.EditorShowLineNumbers && paragraphCache.Lines.Count > 0 {
+            let first = paragraphCache.Lines[0]
+            let number = lineIndex + 1
+            if first.LineNumber != number || first.LineNumberShape == nil {
+              first.LineNumberShape?.Dispose()
+              first.LineNumber = number
+              first.LineNumberShape = TextAnalyses.ShapeEntry(n, number.ToString(CultureInfo.InvariantCulture))
+            }
+          }
           for visual in paragraphCache.Lines {
             visual.Top = top + visual.RelativeTop
             result.Lines.Add(visual)
@@ -69,14 +85,14 @@ internal partial class TextEditorLayouts {
           appendVisualLine(result, n, empty, 0, 0, 0.0F)
           top = lineHeight
         }
-        result.Width = widest
+        result.Width = widest + result.GutterWidth
         if bounded {
           result.Height = height > lineHeight ? height : lineHeight
-          result.ContentWidth = widest
+          result.ContentWidth = widest + result.GutterWidth
           result.ContentHeight = top + float32(snapshot.LineCount - lastLine) * lineHeight
         } else {
           result.Height = top
-          result.ContentWidth = widest
+          result.ContentWidth = widest + result.GutterWidth
           result.ContentHeight = top
         }
         if bounded { state.TrimParagraphs(used) }

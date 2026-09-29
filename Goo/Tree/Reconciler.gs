@@ -462,6 +462,16 @@ internal partial class Reconciler {
         n.EditorCurrentLineColor = t.CurrentLineColor
         paintChanged = true
       }
+      if n.EditorShowLineNumbers != t.ShowLineNumbers {
+        n.EditorShowLineNumbers = t.ShowLineNumbers
+        contentChanged = true
+        paintChanged = true
+        inputChanged = true
+      }
+      if !n.EditorLineNumberColor.Equals(t.LineNumberColor) {
+        n.EditorLineNumberColor = t.LineNumberColor
+        paintChanged = true
+      }
       if n.EditorOverscanLines != t.OverscanLines {
         n.EditorOverscanLines = t.OverscanLines
         TextEditorLayouts.Invalidate(n)

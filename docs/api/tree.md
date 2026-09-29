@@ -944,6 +944,10 @@ Gets the current-line highlight color.
 
 Gets the ordered presentation layers.
 
+### `LineNumberColor`
+
+Gets the line-number gutter color.
+
 ### `OnChange`
 
 Gets the callback that receives committed document changes.
@@ -967,6 +971,10 @@ Gets whether editing commands are disabled.
 ### `SelectionColor`
 
 Gets the selection highlight color.
+
+### `ShowLineNumbers`
+
+Gets whether logical line numbers are shown outside the document.
 
 ## `TextEntry`
 

@@ -8,7 +8,10 @@ internal partial class TextEditorLayouts {
   shared {
     internal func editorLineOffset(n Node, line TextEditorVisualLine, width float32) float32 {
       let rtl = if let shape = line.Shape { shape.RightToLeft } else { false }
-      return TextLayouts.lineOffset(n, line.Width, rtl, width)
+      let gutter = GutterWidth(n)
+      let allowance = n.TextWrap == TextWrap.Wrap ? 1.5F : 0.0F
+      let textWidth = width < 0.0F ? width : MathF.Max(0.0F, editorViewportWidth(n, width) - gutter - allowance)
+      return gutter + TextLayouts.lineOffset(n, line.Width, rtl, textWidth)
     }
 
     internal func CaretX(line TextEditorVisualLine, index int32, affinity TextAffinity) float32 {

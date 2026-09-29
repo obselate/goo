@@ -359,9 +359,10 @@ internal partial class VulkanSceneCompiler {
       frame.SetActiveClipChain(shapePaintParentChainId)
     }
 
-  private func PaintEditorContent(node Node, opacity float32, transformIndex int32) {
+  private func PaintEditorContent(node Node, opacity float32, transformIndex int32, lineNumbers bool = false) {
     guard let renderer = textScene else { return }
-    let emitted = renderer.Emit(frame, node, opacity, transformIndex)
+    let emitted = lineNumbers ? renderer.EmitEditorLineNumbers(frame, node, opacity, transformIndex)
+      : renderer.Emit(frame, node, opacity, transformIndex)
     if renderer.ConsumeColorEffectSkipped() {
       RecordColorEffectsSkipped(node)
     }

@@ -187,10 +187,10 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func TextEditorContentBounds(node Node) ConservativeBounds -> ConservativeBounds {
-    X: BoxGeometry.ContentLeft(node),
+    X: TextEditorLayouts.TextLeft(node),
     Y: BoxGeometry.ContentTop(node),
-    Width: BoxGeometry.ContentWidth(node),
-    Height: BoxGeometry.ContentHeight(node),
+    Width: MathF.Max(0.0F, BoxGeometry.ViewportWidth(node) - TextEditorLayouts.GutterWidth(node)),
+    Height: BoxGeometry.ViewportHeight(node),
   }
 
   private func ExactTextClipCullEligible(

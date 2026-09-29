@@ -444,10 +444,12 @@ internal partial class VulkanSceneCompiler {
       var editorContentClipIndex int32 = -1
       var editorContentBounds ConservativeBounds
       if node.Kind == NodeKind.Editor {
+        let _ = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
         editorContentBounds = TextEditorContentBounds(node)
-        if !editorContentBounds.IsEmpty && TextEditorSupported(node)
-          && TextClipSupported(node, axisAligned, childClipDepth) {
-            frame.SetActiveClipChain(overflowPathClipChainId)
+        if TextEditorSupported(node) && TextClipSupported(node, axisAligned, childClipDepth) {
+          frame.SetActiveClipChain(overflowPathClipChainId)
+          PaintEditorContent(node, contentOpacity, transform.Index, true)
+          if !editorContentBounds.IsEmpty {
             editorContentClipIndex = frame.AddRectClipBegin(RectClipRecord{
               Bounds: editorContentBounds,
               TransformIndex: transform.Index,
@@ -457,6 +459,7 @@ internal partial class VulkanSceneCompiler {
             childClipDepth = childClipDepth + 1
             PaintEditorContent(node, contentOpacity, transform.Index)
           }
+        }
       }
       frame.SetActiveClipChain(overflowPathClipChainId)
       frame.EndChunk()
