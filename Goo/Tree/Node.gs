@@ -199,6 +199,8 @@ internal class Node {
   internal prop EditorReadOnly bool{ get; set; }
   internal prop EditorCaretColor Color{ get; set; }
   internal prop EditorCurrentLineColor Color{ get; set; }
+  internal prop EditorShowLineNumbers bool{ get; set; }
+  internal prop EditorLineNumberColor Color{ get; set; }
   internal prop EditorOverscanLines int32{ get; set; }
   internal prop EditorOnChange Action[TextDocumentChange]? { get; set; }
   internal prop EditorOnSubmit Action? { get; set; }

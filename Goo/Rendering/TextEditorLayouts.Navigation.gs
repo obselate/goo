@@ -63,7 +63,8 @@ internal partial class TextEditorLayouts {
       let revision = editorLayerRevision(state)
       if let cached = state.Layout {
         if !state.Dirty && cached.Version == state.Document.Version && cached.LayerRevision == revision
-          && cached.ConstraintWidth == width && cached.HeightConstraint == height{
+          && cached.ConstraintWidth == width && cached.HeightConstraint == height
+          && cached.ViewportWidth == editorViewportWidth(n, width){
             return cached
           }
       }
@@ -81,6 +82,7 @@ internal partial class TextEditorLayouts {
     private func warmGeometry(layout TextEditorVisualLayout) {
       for line in layout.Lines {
         line.Shape?.PrepareGeometry()
+        line.LineNumberShape?.PrepareGeometry()
         for run in line.Runs {
           run.Shape?.PrepareGeometry()
         }
@@ -114,6 +116,7 @@ internal partial class TextEditorLayouts {
     private func disposeLines(lines List[TextEditorVisualLine]) {
       for line in lines {
         line.Shape?.Dispose()
+        line.LineNumberShape?.Dispose()
         for run in line.Runs { run.Shape?.Dispose() }
       }
     }
@@ -155,7 +158,8 @@ internal partial class TextEditorLayouts {
         let scroll = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
         let line = LineForPosition(layout, position)
         guard let visual = line else {
-          return Rect{ X: contentLeft, Y: contentTop, W: 1.5F, H: layout.LineHeight }
+          return Rect{ X: contentLeft + layout.GutterWidth, Y: contentTop,
+            W: 1.5F, H: layout.LineHeight }
         }
         let index = DisplayOffsetForSource(visual.Paragraph, position.Offset, position.Affinity)
         -visual.DisplayStart
@@ -255,7 +259,9 @@ internal partial class TextEditorLayouts {
         let height = BoxGeometry.ContentHeight(n)
         let layout = For(n, width, height)
       return Point{
-            X: float64(layout.ContentWidth + 1.5F),
+            X: float64(n.TextWrap == TextWrap.Wrap
+              ? MathF.Min(layout.ContentWidth + 1.5F, layout.ViewportWidth)
+              : layout.ContentWidth + 1.5F),
             Y: float64(layout.ContentHeight),
         }
     }
@@ -274,7 +280,7 @@ internal partial class TextEditorLayouts {
         if !visible {
           let snapshot = state.Document.Snapshot()
           let line = snapshot.GetLineIndex(position.Offset)
-          let y = verticalOffsetForLine(state, snapshot, line, initial.ConstraintWidth,
+          let y = verticalOffsetForLine(state, snapshot, line, initial.ParagraphWidth,
             initial.FontFingerprint, initial.LineHeight, initial.Ascent, initial.Descent)
           state.Controller.ScrollTo(current.ScrollTargetX, float64(y))
           ScrollState.To(n, float32(current.ScrollTargetX), y, true, false)
@@ -285,10 +291,10 @@ internal partial class TextEditorLayouts {
           current = state.Controller.State()
         }
         let rect = CaretRect(n, position)
-        let left = BoxGeometry.ContentLeft(n) - n.Rect.X
+        let left = TextLeft(n) - n.Rect.X
         let top = BoxGeometry.ContentTop(n) - n.Rect.Y
-        let right = left + BoxGeometry.ContentWidth(n)
-        let bottom = top + BoxGeometry.ContentHeight(n)
+        let right = BoxGeometry.ContentLeft(n) - n.Rect.X + BoxGeometry.ViewportWidth(n)
+        let bottom = top + BoxGeometry.ViewportHeight(n)
         let logicalLeft = rect.X + float32(current.ScrollTargetX)
         let logicalTop = rect.Y + float32(current.ScrollTargetY)
         var x = float32(current.ScrollTargetX)
@@ -304,17 +310,17 @@ internal partial class TextEditorLayouts {
     internal func SlotOrigin(n Node, key string) Rect? {
       let width = BoxGeometry.ContentWidth(n)
       let layout = For(n, width, BoxGeometry.ContentHeight(n))
-      let left = BoxGeometry.ContentLeft(n) - n.Rect.X
+      let left = TextLeft(n) - n.Rect.X
       let top = BoxGeometry.ContentTop(n) - n.Rect.Y
       let scrollX = if let state = n.EditorState { float32(state.Controller.ScrollTargetX) } else { 0.0F }
       let scrollY = if let state = n.EditorState { float32(state.Controller.ScrollTargetY) } else { 0.0F }
       for line in layout.Lines {
         for slot in line.Slots {
           if slot.Key != key { continue }
-          let x = slot.Block ? left : left + editorLineOffset(n, line, width) + slot.X - scrollX
+          let x = slot.Block ? left : left + editorLineOffset(n, line, width) - layout.GutterWidth + slot.X - scrollX
           let y = top + line.Top - scrollY
           let contentHeight = BoxGeometry.ContentHeight(n)
-          if x + slot.Width <= left || x >= left + width
+          if x + slot.Width <= left || x >= left + layout.TextWidth
             || y + slot.Height <= top || y >= top + contentHeight{ return nil }
           return Rect{ X: x, Y: y, W: slot.Width, H: slot.Height }
         }
@@ -333,6 +339,7 @@ internal partial class TextEditorLayouts {
       out position TextPosition) bool{
         position = TextPosition{}
         guard let layout = CurrentForGeometry(n) else { return false }
+        if InGutter(n, localX) { return false }
         position = HitTest(n, layout, localX, localY)
         return true
       }
@@ -341,7 +348,8 @@ internal partial class TextEditorLayouts {
       guard let state = n.EditorState, let layout = state.Layout else { return nil }
       if state.Dirty || layout.Version != state.Document.Version
         || layout.ConstraintWidth != BoxGeometry.ContentWidth(n)
-        || layout.HeightConstraint != BoxGeometry.ContentHeight(n) {
+        || layout.HeightConstraint != BoxGeometry.ContentHeight(n)
+        || layout.ViewportWidth != editorViewportWidth(n, BoxGeometry.ContentWidth(n)) {
           return nil
         }
       return layout
@@ -393,7 +401,8 @@ internal partial class TextEditorLayouts {
         if target < 0 { target = 0 }
         if target >= layout.Lines.Count { target = layout.Lines.Count - 1 }
         let line = layout.Lines[target]
-        let hit = HitTest(line, desiredX)
+        let aligned = editorLineOffset(n, line, BoxGeometry.ContentWidth(n)) - layout.GutterWidth
+        let hit = HitTest(line, desiredX - aligned)
         return TextPosition{ Offset: SourceOffsetForDisplay(line.Paragraph,
           line.DisplayStart + hit.Index, TextAffinity(hit.Affinity)),
           Affinity: TextAffinity(hit.Affinity) }

@@ -556,7 +556,8 @@ internal class Layout {
     }
 
   private func readEditorSlotRects(n Node) {
-    let contentWidth = BoxGeometry.ViewportWidth(n)
+    let layout = TextEditorLayouts.For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
+    let contentWidth = layout.ParagraphWidth
     for i in 0 ... n.Children.Count {
       let child = n.Children[i]
       if child.IsPortal { continue }

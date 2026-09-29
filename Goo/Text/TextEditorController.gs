@@ -490,7 +490,7 @@ public class TextEditorController : IDisposable {
 
   private func moveVertical(lines int32, extend bool) bool {
     if let mounted = mountedEditor as Node? {
-      let contentLeft = BoxGeometry.ContentLeft(mounted) - mounted.Rect.X
+      let contentLeft = TextEditorLayouts.TextLeft(mounted) - mounted.Rect.X
       if !hasDesiredHorizontalPosition {
         let rect = TextEditorLayouts.CaretRect(mounted, selection.Active)
         desiredHorizontalPosition = float64(rect.X - contentLeft + float32(scrollTargetX))

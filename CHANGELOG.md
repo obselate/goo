@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.8 - 2026-09-29
+
+- Add optional fixed line numbers to text editors, including wrapped text and
+  independent line-number color.
+
 ## 0.7.7 - 2026-09-29
 
 - Accept embedded PNG bytes for a native window icon before the first show.

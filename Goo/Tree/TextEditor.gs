@@ -30,6 +30,10 @@ public class TextEditor : Blob {
   public prop SelectionColor Color{ get; init; }
   /// Gets the caret color.
   public prop CaretColor Color{ get; init; }
+  /// Gets whether logical line numbers are shown outside the document.
+  public prop ShowLineNumbers bool{ get; init; }
+  /// Gets the line-number gutter color.
+  public prop LineNumberColor Color{ get; init; }
   /// Gets the current-line highlight color.
   public prop CurrentLineColor Color{ get; init; }
   /// Gets the logical-line overscan used by viewport layout.
@@ -62,6 +66,7 @@ public class TextEditor : Blob {
     Placeholder = ""
     SelectionColor = defaultSelectionColor()
     CaretColor = Color.White
+    LineNumberColor = Color.Rgb(128, 128, 128)
     CurrentLineColor = Color.Transparent
     overscanLines = 3
     Focusable = true

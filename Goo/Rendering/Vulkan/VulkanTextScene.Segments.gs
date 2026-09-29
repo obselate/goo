@@ -41,12 +41,13 @@ internal unsafe sealed partial class VulkanTextScene {
         && SameTextFloat(segment.ParentTransform.TY, parentTransform.TY)
     }
 
-  private func GetNodeSegmentCache(node Node) VulkanTextNodeSegmentCache {
-    if nodeSegments.TryGetValue(node, out var existing) {
+  private func GetNodeSegmentCache(node Node, gutter bool = false) VulkanTextNodeSegmentCache {
+    let table = gutter ? gutterSegments : nodeSegments
+    if table.TryGetValue(node, out var existing) {
       return existing
     }
     let created = VulkanTextNodeSegmentCache()
-    nodeSegments.Add(node, created)
+    table.Add(node, created)
     return created
   }
 

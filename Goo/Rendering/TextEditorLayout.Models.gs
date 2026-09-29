@@ -94,6 +94,8 @@ internal class TextEditorVisualLine {
   internal prop Shape ShapedText? { get; init; }
   internal prop Runs List[TextPaintRun]{ get; init; }
   internal prop Slots List[TextEditorSlotGeometry]{ get; init; }
+  internal prop LineNumber int32{ get; set; }
+  internal prop LineNumberShape ShapedText? { get; set; }
   internal prop StyleWidthCorrection float32{ get; set; }
 
   internal init(paragraph TextEditorResolvedParagraph, displayStart int32,
@@ -195,6 +197,10 @@ internal data struct TextEditorSelectionCursor {
 internal class TextEditorVisualLayout {
   internal prop Version int64{ get; set; }
   internal prop DocumentLineCount int32{ get; set; }
+  internal prop GutterWidth float32{ get; set; }
+  internal prop ViewportWidth float32{ get; set; }
+  internal prop TextWidth float32{ get; set; }
+  internal prop ParagraphWidth float32{ get; set; }
   internal prop LayerRevision int64{ get; set; }
   internal prop Width float32{ get; set; }
   internal prop ConstraintWidth float32{ get; set; }
