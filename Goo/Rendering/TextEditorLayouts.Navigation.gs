@@ -255,8 +255,8 @@ internal partial class TextEditorLayouts {
         let height = BoxGeometry.ContentHeight(n)
         let layout = For(n, width, height)
       return Point{
-            X: float64(n.Rect.W + MathF.Max(0.0F, layout.ContentWidth - width)),
-            Y: float64(n.Rect.H + MathF.Max(0.0F, layout.ContentHeight - height)),
+            X: float64(layout.ContentWidth + 1.5F),
+            Y: float64(layout.ContentHeight),
         }
     }
 

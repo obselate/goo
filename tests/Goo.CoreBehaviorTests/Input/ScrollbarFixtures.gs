@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Diagnostics
+import System.Text
 
 internal class ScrollbarFixtures {
   func DescriptorGeometryAndVisibilityContract() bool {
@@ -318,6 +319,57 @@ internal class ScrollbarFixtures {
     return true
   }
 
+  func EditorScrollExtentDoesNotInventOppositeAxisOverflow() bool {
+    var horizontal ScrollThumbGeometry
+    var vertical ScrollThumbGeometry
+    using let shortController = TextEditorController(TextDocument("abc"))
+    let shortNode = InputFixtureDriver(ScrollbarEditorCell(shortController), 100, 100).Window.Tree!!
+    if maxScrollX(shortNode) != 0.0F || maxScrollY(shortNode) != 0.0F
+      || horizontalScrollThumb(shortNode, out horizontal)
+      || verticalScrollThumb(shortNode, out vertical) { return false }
+
+    using let paddedController = TextEditorController(TextDocument("WWWW"))
+    let paddedNode = InputFixtureDriver(ScrollbarEditorCell(paddedController, true), 100, 100).Window.Tree!!
+    let paddedWidth = paddedNode.EditorState!!.Layout!!.ContentWidth
+    let paddedViewport = BoxGeometry.ContentWidth(paddedNode)
+    if paddedWidth >= paddedViewport || paddedWidth + paddedNode.Rect.W - paddedViewport <= paddedViewport
+      || maxScrollX(paddedNode) != 0.0F || maxScrollY(paddedNode) != 0.0F
+      || horizontalScrollThumb(paddedNode, out horizontal)
+      || verticalScrollThumb(paddedNode, out vertical) { return false }
+
+    using let wideController = TextEditorController(TextDocument("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"))
+    let wideNode = InputFixtureDriver(ScrollbarEditorCell(wideController), 100, 100).Window.Tree!!
+    if maxScrollX(wideNode) <= 0.0F || maxScrollY(wideNode) != 0.0F
+      || !horizontalScrollThumb(wideNode, out horizontal)
+      || verticalScrollThumb(wideNode, out vertical) { return false }
+
+    let tallText = StringBuilder()
+    for i in 0 ... 100 { tallText.Append("x\n") }
+    using let tallController = TextEditorController(TextDocument(tallText.ToString()))
+    let tallNode = InputFixtureDriver(ScrollbarEditorCell(tallController), 100, 100).Window.Tree!!
+    return maxScrollX(tallNode) == 0.0F && maxScrollY(tallNode) > 0.0F
+      && !horizontalScrollThumb(tallNode, out horizontal)
+      && verticalScrollThumb(tallNode, out vertical)
+  }
+
+  func PaddedEditorCanRevealTheEndCaret() bool {
+    let document = TextDocument("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
+    using let controller = TextEditorController(document)
+    let node = InputFixtureDriver(ScrollbarEditorCell(controller, true, false), 100, 100).Window.Tree!!
+    let end = TextPosition{ Offset: document.Length, Affinity: TextAffinity.Downstream }
+    TextEditorLayouts.FollowCaret(node, end)
+    let caret = TextEditorLayouts.CaretRect(node, end)
+    let right = BoxGeometry.ContentLeft(node) - node.Rect.X + scrollViewportWidth(node)
+    if caret.X + caret.W > right + 0.01F { return false }
+
+    using let plainController = TextEditorController(TextDocument("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"))
+    let plainNode = InputFixtureDriver(ScrollbarEditorCell(plainController, false, false), 100, 100).Window.Tree!!
+    TextEditorLayouts.FollowCaret(plainNode, end)
+    let plainCaret = TextEditorLayouts.CaretRect(plainNode, end)
+    let plainRight = BoxGeometry.ContentLeft(plainNode) - plainNode.Rect.X + scrollViewportWidth(plainNode)
+    return plainCaret.X + plainCaret.W <= plainRight + 0.01F
+  }
+
   func MountedPartHandleAndCallbackContract() bool {
     let trackHandle = ElementHandle{}
     let thumbHandle = ElementHandle{}
@@ -511,6 +563,26 @@ internal class ScrollbarFixtures {
       Track: Container{ BackgroundColor: Color.Rgb(20, 30, 40) },
       Thumb: Container{ BackgroundColor: Color.Rgb(40, 50, 60) },
     }
+}
+
+internal class ScrollbarEditorCell(controller TextEditorController, padded bool = false,
+  readOnly bool = true) : Cell {
+  override func Build() Blob -> TextEditor(controller) {
+    Width = 100,
+    Height = 100,
+    Padding = if padded { Edges{Left: 10, Right: 10, Top: 10, Bottom: 10} } else { Edges{} },
+    BorderWidth = if padded { Edges{Left: 2, Right: 2, Top: 2, Bottom: 2} } else { Edges{} },
+    ReadOnly = readOnly,
+    TextWrap = TextWrap.NoWrap,
+    OverflowX = Overflow.Scroll,
+    OverflowY = Overflow.Scroll,
+    ScrollbarX = Scrollbar{Thickness: 6, Inset: 2, ReserveSpace: true,
+      Track: Container{}, Thumb: Container{}},
+    ScrollbarY = Scrollbar{Thickness: 6, Inset: 2, ReserveSpace: true,
+      Track: Container{}, Thumb: Container{}},
+    ScrollbarVisibilityX = ScrollbarVisibility.Always,
+    ScrollbarVisibilityY = ScrollbarVisibility.Always,
+  }
 }
 
 public partial class Window {
