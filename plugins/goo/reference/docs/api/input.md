@@ -84,7 +84,7 @@ accessibility state update. Invocation checks availability even before that
 rebuild. No shortcut is installed by assigning a command. Text operations still
 use `TextCommand` through `PlatformInput.Execute` or a text editor controller.
 
-`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings without stopping callbacks. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
+`OnKeyDown` and `OnKeyUp` first bubble from the focused element through its parents. With no focused element they start at the root, so a root Tab binding can acquire initial focus. The matching binding runs after these callbacks. `KeyEvent.StopPropagation()` limits both callbacks and binding lookup to the visited elements. `KeyEvent.PreventDefault()` skips assigned bindings and suppresses direct committed text from that key without stopping callbacks. A handled binding also suppresses its direct committed text. Preedit and IME commits remain text input. `KeyEvent.IsComposing` reports active preedit so callbacks can leave its keys to the IME; bindings are skipped while preedit is active. Both controls expire after dispatch. Repeated callbacks report `Repeat: true`.
 
 Pointer, keyboard, text, and native focus changes share an ordered ingress queue.
 Input injected from an input callback runs after the current event finishes.
@@ -682,7 +682,7 @@ Describes a keyboard callback.
 
 ### `PreventDefault`
 
-Prevents assigned key bindings without stopping ancestor callbacks.
+Prevents assigned key bindings and direct committed text without stopping ancestor callbacks.
 
 ### `StopPropagation`
 
@@ -691,6 +691,10 @@ Stops this event before the next ancestor callback and binding without preventin
 ### `Key`
 
 Gets the physical key.
+
+### `IsComposing`
+
+Reports whether platform text composition is active.
 
 ### `Modifiers`
 
