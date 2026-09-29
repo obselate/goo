@@ -305,6 +305,15 @@ public sealed class ImageSourceCacheTests : IDisposable
         Assert.Equal(new byte[] { 128, 0, 0, 128 }, lease.Result()!.Pixels());
     }
 
+    [Fact]
+    public void ThumbnailCancellationStopsReadingBeforeDecode()
+    {
+        using var cancelled = new CancellationTokenSource();
+        using var stream = new CancelAfterReadStream(Png(2, 1, 8, 6, [0, 255, 0, 0, 255, 0, 0, 255, 0]), cancelled);
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            RasterImageDecoder.LoadThumbnail(stream, 1, 1, cancelled.Token));
+    }
+
     [Theory]
     [InlineData("local-rgb.jpg")]
     [InlineData("local-transparent.gif")]
@@ -323,6 +332,16 @@ public sealed class ImageSourceCacheTests : IDisposable
         var path = Path.Combine(directory, name);
         File.WriteAllBytes(path, bytes);
         return path;
+    }
+
+    private sealed class CancelAfterReadStream(byte[] bytes, CancellationTokenSource cancellation) : MemoryStream(bytes)
+    {
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = base.Read(buffer, offset, count);
+            cancellation.Cancel();
+            return read;
+        }
     }
 
     private static byte[] Png(int width, int height, int depth, int color, byte[] raw,

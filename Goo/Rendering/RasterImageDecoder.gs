@@ -22,8 +22,12 @@ internal partial class RasterImageDecoder {
       token CancellationToken) ImageSource {
         token.ThrowIfCancellationRequested()
         using let file = File.OpenRead(path)
-        return DecodeThumbnail(Read(file, token), maxWidth, maxHeight, token)
+        return LoadThumbnail(file, maxWidth, maxHeight, token)
       }
+
+    internal func LoadThumbnail(stream Stream, maxWidth int32, maxHeight int32,
+      token CancellationToken) ImageSource ->
+    DecodeThumbnail(Read(stream, token), maxWidth, maxHeight, token)
 
     internal func Load(stream Stream, token CancellationToken) ImageSource ->
     Decode(Read(stream, token), token)
