@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <GsharpCompilerFullPath Condition="'$(GsharpCompilerFullPath)' == ''">$(MSBuildThisFileDirectory)artifacts/gsharp/compiler/gsc.dll</GsharpCompilerFullPath>
-    <GooReleaseVersion>0.7.7</GooReleaseVersion>
+    <GooReleaseVersion>0.7.8</GooReleaseVersion>
     <GooLinuxSdlPath Condition="'$(GooLinuxSdlPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so')">$(MSBuildThisFileDirectory)artifacts/gallery-native/runtimes/linux-x64/native/libSDL3.so</GooLinuxSdlPath>
     <GooLinuxSdlStaticPath Condition="'$(GooLinuxSdlStaticPath)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/native/libSDL3.a')">$(MSBuildThisFileDirectory)artifacts/native/libSDL3.a</GooLinuxSdlStaticPath>
     <GooLinuxTextStaticRoot Condition="'$(GooLinuxTextStaticRoot)' == '' and Exists('$(MSBuildThisFileDirectory)artifacts/native/text/libgoo-harfbuzz.a')">$(MSBuildThisFileDirectory)artifacts/native/text</GooLinuxTextStaticRoot>
