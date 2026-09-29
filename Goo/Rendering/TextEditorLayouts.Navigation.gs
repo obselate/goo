@@ -276,6 +276,7 @@ internal partial class TextEditorLayouts {
           let line = snapshot.GetLineIndex(position.Offset)
           let y = verticalOffsetForLine(state, snapshot, line, initial.ConstraintWidth,
             initial.FontFingerprint, initial.LineHeight, initial.Ascent, initial.Descent)
+          state.Controller.ScrollTo(current.ScrollTargetX, float64(y))
           ScrollState.To(n, float32(current.ScrollTargetX), y, true, false)
           current = state.Controller.State()
         }

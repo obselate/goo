@@ -169,6 +169,7 @@ internal partial class PointerInput {
     host.PointerPressed += QueuePressFromHost
     host.PointerReleased += QueueReleaseFromHost
     host.PointerCanceled += QueueCancel
+    host.PointerHoverInvalidated += QueueHoverInvalidation
     host.Wheel += QueueWheel
   }
 
@@ -188,6 +189,12 @@ internal partial class PointerInput {
         if e.HasButtons { current.HeldButtons = maskCanceledButtons(e.Buttons) }
         updatePressure(e.Pressure, e.HasPressure)
         return HandlePointerMove(root, resolver, e.X, e.Y, e.Modifiers)
+      }
+      if e.Kind == PointerEventKind.HoverInvalidation {
+        clearHover(resolver)
+        clearScrollHover(false, resolver)
+        cursorValid = false
+        return true
       }
       if e.Kind == PointerEventKind.Wheel {
         return HandleWheel(root, e.X, e.Y, e.DX, e.DY, e.Modifiers)
@@ -336,6 +343,10 @@ internal partial class PointerInput {
 
   internal func QueueCancel(pointerId int64, device PointerDevice) {
     queue.Add(QueuedPointerEvent{ Kind: PointerEventKind.Cancel, PointerId: pointerId, Device: device })
+  }
+
+  private func QueueHoverInvalidation() {
+    queue.Add(QueuedPointerEvent{ Kind: PointerEventKind.HoverInvalidation })
   }
 
   internal func Reset(root Node?, resolver Resolver) {
@@ -1066,7 +1077,7 @@ internal partial class PointerInput {
 
 }
 
-internal enum PointerEventKind { Move; Press; Release; Cancel; Wheel }
+internal enum PointerEventKind { Move; Press; Release; Cancel; Wheel; HoverInvalidation }
 
 internal data struct QueuedPointerEvent {
   internal var Kind PointerEventKind

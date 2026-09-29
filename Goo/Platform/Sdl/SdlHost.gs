@@ -91,6 +91,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public event PointerReleased Action[int64, PointerDevice, float32, float32,
     PointerButton, PointerButtons, float32, KeyModifiers]
   public event PointerCanceled Action[int64, PointerDevice]
+  public event PointerHoverInvalidated Action
   public event Wheel Action[float32, float32, float32, float32, KeyModifiers]
   public event KeyPressed Action[Key, KeyModifiers]
   public event KeyReleased Action[Key, KeyModifiers]
