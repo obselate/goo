@@ -399,6 +399,7 @@ public sealed class PublicDocumentationTests
         typeof(TextRange),
         typeof(TextSelection),
         typeof(TextStyleRange),
+        typeof(TextStyleSpan),
     ];
 
     private static readonly IReadOnlyDictionary<string, DocumentationShape> Shapes =

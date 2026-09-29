@@ -531,6 +531,12 @@ Removes a keyed style span.
 
 Returns: True when a span was removed.
 
+### `ReplaceStyles(System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
+
+Replaces every style span in this layer without changing its projections.
+
+- `spans`: Ordered keyed inline styles. Later overlapping spans override earlier fields.
+
 ### `SetBlockSlot(string,TextRange,Blob)`
 
 Adds or updates an atomic block Goo slot.
@@ -659,3 +665,11 @@ Source:
 - [`TextDocument.Models.gs`](../../Goo/Text/TextDocument.Models.gs)
 
 Specifies one ordered passive Text Style over a Range in source UTF-16 offsets. Later overlapping ranges override earlier fields. Use Text.TextTransform for transformations.
+
+## `TextStyleSpan`
+
+Source:
+
+- [`TextPresentationLayer.gs`](../../Goo/Text/TextPresentationLayer.gs)
+
+Specifies a Key, source Range, and inline Style for one document span.

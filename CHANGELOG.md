@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3 - 2026-09-29
+
+- Replace a text presentation layer's keyed style spans in one validated batch,
+  preserving projections and avoiding repeated index rebuilds for syntax highlighting.
+- Reuse resolved editor style spans across viewport scrolling until the layer changes.
+
 ## 0.7.2 - 2026-09-29
 
 - Let each window disable smooth scrolling while retaining its configured wheel

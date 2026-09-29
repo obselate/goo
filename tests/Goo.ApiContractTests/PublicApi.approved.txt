@@ -70,6 +70,7 @@ ctor|Goo.TextPresentationLayer|public|(document:Goo.TextDocument)
 ctor|Goo.TextRange|public|(arg0:System.Int32,arg1:System.Int32)
 ctor|Goo.TextSelection|public|(arg0:Goo.TextPosition,arg1:Goo.TextPosition)
 ctor|Goo.TextStyleRange|public|(arg0:Goo.TextRange,arg1:Goo.Style)
+ctor|Goo.TextStyleSpan|public|(arg0:System.String,arg1:Goo.TextRange,arg2:Goo.Style)
 ctor|Goo.Text|public|()
 ctor|Goo.Text|public|(content:System.String)
 ctor|Goo.VectorAsset|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double,roots:Goo.VectorNode[])
@@ -964,6 +965,7 @@ method|Goo.TextPresentationLayer|Dispose|instance|public|generic:|()->System.Voi
 method|Goo.TextPresentationLayer|RemoveProjection|instance|public|generic:|(key:System.String)->System.Boolean
 method|Goo.TextPresentationLayer|RemoveStyle|instance|public|generic:|(key:System.String)->System.Boolean
 method|Goo.TextPresentationLayer|Remove|instance|public|generic:|(key:System.String)->System.Boolean
+method|Goo.TextPresentationLayer|ReplaceStyles|instance|public|generic:|(spans:System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>)->System.Void
 method|Goo.TextPresentationLayer|SetBlockSlot|instance|public|generic:|(key:System.String,textRange:Goo.TextRange,content:Goo.Blob)->System.Void
 method|Goo.TextPresentationLayer|SetHiddenRange|instance|public|generic:|(key:System.String,textRange:Goo.TextRange)->System.Void
 method|Goo.TextPresentationLayer|SetInlineSlot|instance|public|generic:|(key:System.String,textRange:Goo.TextRange,content:Goo.Blob)->System.Void
@@ -1002,6 +1004,13 @@ method|Goo.TextStyleRange|GetHashCode|instance|public|generic:|()->System.Int32
 method|Goo.TextStyleRange|ToString|instance|public|generic:|()->System.String
 method|Goo.TextStyleRange|op_Equality|static|public|generic:|(arg0:Goo.TextStyleRange,arg1:Goo.TextStyleRange)->System.Boolean
 method|Goo.TextStyleRange|op_Inequality|static|public|generic:|(arg0:Goo.TextStyleRange,arg1:Goo.TextStyleRange)->System.Boolean
+method|Goo.TextStyleSpan|Deconstruct|instance|public|generic:|(out Key:System.String&,out Range:Goo.TextRange&,out Style:Goo.Style&)->System.Void
+method|Goo.TextStyleSpan|Equals|instance|public|generic:|(arg0:Goo.TextStyleSpan)->System.Boolean
+method|Goo.TextStyleSpan|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.TextStyleSpan|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.TextStyleSpan|ToString|instance|public|generic:|()->System.String
+method|Goo.TextStyleSpan|op_Equality|static|public|generic:|(arg0:Goo.TextStyleSpan,arg1:Goo.TextStyleSpan)->System.Boolean
+method|Goo.TextStyleSpan|op_Inequality|static|public|generic:|(arg0:Goo.TextStyleSpan,arg1:Goo.TextStyleSpan)->System.Boolean
 method|Goo.Tokens|Get|static|public|generic:T[attrs:0,constraints:]|()->!!0
 method|Goo.Tokens|Scope|static|public|generic:T[attrs:0,constraints:];R[attrs:0,constraints:]|(tokens:!!0,body:System.Func`1<!!1>)->!!1
 method|Goo.VectorAsset|NodeAt|instance|public|generic:|(index:System.Int32)->Goo.VectorNode
@@ -1586,6 +1595,9 @@ property|Goo.TextSnapshot|LineCount|System.Int32|instance|get:public|index:()
 property|Goo.TextSnapshot|Version|System.Int64|instance|get:public|index:()
 property|Goo.TextStyleRange|Range|Goo.TextRange|instance|get:public,init:public|index:()
 property|Goo.TextStyleRange|Style|Goo.Style|instance|get:public,init:public|index:()
+property|Goo.TextStyleSpan|Key|System.String|instance|get:public,init:public|index:()
+property|Goo.TextStyleSpan|Range|Goo.TextRange|instance|get:public,init:public|index:()
+property|Goo.TextStyleSpan|Style|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Text|Content|System.String|instance|get:public,init:public|index:()
 property|Goo.Text|StyleRanges|Goo.TextStyleRange[]|instance|get:public,init:public|index:()
 property|Goo.VectorAsset|ClipCount|System.Int32|instance|get:public|index:()
@@ -1844,6 +1856,7 @@ type|Goo.TextSelection|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.TextShadow|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.TextSnapshot|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TextStyleRange|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.TextStyleSpan|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.TextTransform|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextTrimming|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextWrap|enum|public|base:System.Enum|interfaces:|generic:
