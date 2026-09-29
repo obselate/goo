@@ -59,6 +59,7 @@ internal sealed class TextEditorRenderState : IDisposable {
   internal func Layer(index int32) TextPresentationLayer -> layers[index]
   internal func MatchesLayers(values []TextPresentationLayer) bool -> sameArray(layers, values)
   internal prop ParagraphCacheCount int32{ get -> paragraphs.Count }
+  internal prop ParagraphBuildCount int32{ get; private set; }
 
   internal func BaseStyle(n Node, fingerprint int32) TextResolvedStyle {
     if let current = baseStyle {
@@ -140,7 +141,10 @@ internal sealed class TextEditorRenderState : IDisposable {
     fingerprint int32, lineHeight float32, ascent float32, descent float32) bool -> value.ConstraintWidth == width && value.FontFingerprint == fingerprint
     && value.LineHeight == lineHeight && value.Ascent == ascent && value.Descent == descent
 
-  internal func AddParagraph(value TextEditorParagraphLayout) { paragraphs.Add(value) }
+  internal func AddParagraph(value TextEditorParagraphLayout) {
+    paragraphs.Add(value)
+    ParagraphBuildCount++
+  }
 
   internal func ParagraphResolution(n Node, content string, fingerprint int32) BidiResolution? {
     for i in 0 ... analyses.Count {

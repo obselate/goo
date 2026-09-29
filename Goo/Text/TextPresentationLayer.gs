@@ -6,7 +6,7 @@ import System.Threading
 
 internal enum TextProjectionKind { Replacement; Hidden; InlineSlot; BlockSlot }
 
-/// Specifies one keyed inline style over a document source range.
+/// Specifies a Key, source Range, and inline Style for one document span.
 public data struct TextStyleSpan(Key string, Range TextRange, Style Style) { }
 
 internal data struct TextPresentationLayerChange(Range TextRange, All bool,
