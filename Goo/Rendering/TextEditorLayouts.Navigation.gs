@@ -280,6 +280,10 @@ internal partial class TextEditorLayouts {
           ScrollState.To(n, float32(current.ScrollTargetX), y, true, false)
           current = state.Controller.State()
         }
+        if position.Offset == state.Document.Length {
+          ScrollState.To(n, float32(current.ScrollTargetX), Single.MaxValue, true, false)
+          current = state.Controller.State()
+        }
         let rect = CaretRect(n, position)
         let left = BoxGeometry.ContentLeft(n) - n.Rect.X
         let top = BoxGeometry.ContentTop(n) - n.Rect.Y
