@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "f63cbada88fe04ba905e091c6a7f83150f3e4947",
+  "commit": "c54b9cb6f6e27f590738f259cfbf2d85d24b02af",
   "files": {
     "README.md": "2edc379c9b08be81c7e9bc8f3d5658487bb6336c667aef943b68494ce71bfcb3",
     "CONTRIBUTING.md": "89363852214f93518a33ff05d5e22929b1fbba5db30579c4806adb636bcc2a11",
@@ -11,7 +11,7 @@
     "docs/api/audio.md": "c561073504c539572e2774b85e27f06c4112ace9f7a60b5412ac6a5045964d71",
     "docs/api/cell.md": "290fd329463e75b0fe316f82f1e3aa11cfd8cc1900ab3d8e76981aa2009a067a",
     "docs/api/diagnostics.md": "4cfe078e236e6a9252e69674b4c41533e2ac6fe6ecfb20d78729008844c9d351",
-    "docs/api/input.md": "1ef9d9ffbbda04a81db7853b90e75c6f1c8aba30d5474ae8949cc0f686f2144c",
+    "docs/api/input.md": "d44276fd32ab10709b49f1b036203c1f094cf6c36d9e92407f9dab50c9ecc69f",
     "docs/api/layout.md": "4e468f4b202e45734a9f04298777ac8bc7f4de6f75116a25218caac74bb11c87",
     "docs/api/motion.md": "9314abebf1b0e1626cd3fcad2eb402a5dd0f7d462e7a69e9cd1964fa6d5cfbe2",
     "docs/api/platform.md": "2ae94790d3b8ada6ee96b250d32fd243d6924ab57557ec936ff4897caa02c298",

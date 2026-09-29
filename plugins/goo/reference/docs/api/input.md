@@ -155,6 +155,8 @@ the window. Disposing the window closes all scopes without restoring focus.
 
 A focusable `Blob` can opt into `OnTextInput`, `OnTextComposition`, `OnTextCompositionCancel`, and `OnTextCandidates`. Committed text and composition offsets use UTF-16. Invalid or surrogate-splitting composition selections are delivered as the empty range. Candidate snapshots are read-only and use `SelectedCandidate = -1` when native selection is invalid.
 
+`PlatformInput.CommitText` reports success when it delivers nonempty text to a focused generic `OnTextInput` callback, even if that callback changes focus. A focused generic element without `OnTextInput` does not accept committed text.
+
 Callbacks run only for the currently focused, enabled, visible client. Queued text is bound to the focus generation that received it, so it is discarded after a focus transfer, including a transfer back to the original element. `TextEntry` and `TextEditor` retain their existing default behavior before these observers run. Goo provides no candidate UI; applications own candidate presentation.
 
 ## Receive pointer lifecycle and pressure input
@@ -812,7 +814,7 @@ Removes editor focus and cancels transient composition.
 
 ### `CommitText(string)`
 
-Replaces the current selection or preedit with committed text.
+Replaces editor selection or preedit, or delivers text to a focused generic text client.
 
 ### `DeleteSurroundingText(int32,int32)`
 
