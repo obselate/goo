@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.4 - 2026-09-29
+
+- Size text editor scroll extents from the rendered content and caret, preventing
+  false cross-axis scrollbars while retaining end-caret visibility.
+
 ## 0.7.3 - 2026-09-29
 
 - Replace a text presentation layer's keyed style spans in one validated batch,
