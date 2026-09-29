@@ -690,13 +690,13 @@ Prevents assigned key bindings and direct committed text without stopping ancest
 
 Stops this event before the next ancestor callback and binding without preventing local bindings.
 
-### `Key`
-
-Gets the physical key.
-
 ### `IsComposing`
 
 Reports whether platform text composition is active.
+
+### `Key`
+
+Gets the physical key.
 
 ### `Modifiers`
 

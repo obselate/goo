@@ -802,6 +802,10 @@ Gets or sets the undecorated edge resize band in logical pixels.
 
 Gets the root cell.
 
+### `SmoothScrolling`
+
+Enables animated scrolling and touch momentum. The default is true.
+
 ### `State`
 
 Gets or sets the window state.
