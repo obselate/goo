@@ -158,6 +158,8 @@ public sealed class PublicDocumentationTests
         "M:Goo.ImageSource.Decode(System.ReadOnlyMemory{System.Byte},System.Threading.CancellationToken)",
         "M:Goo.ImageSource.Decode(System.IO.Stream)",
         "M:Goo.ImageSource.Decode(System.IO.Stream,System.Threading.CancellationToken)",
+        "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32)",
+        "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,System.Threading.CancellationToken)",
         "M:Goo.ImageSourceLease.#ctor",
         "M:Goo.ImageSourceLease.Complete(Goo.ImageSource)",
         "M:Goo.ImageSourceLease.Dispose",

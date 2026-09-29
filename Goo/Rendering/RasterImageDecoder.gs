@@ -18,7 +18,22 @@ internal partial class RasterImageDecoder {
       return Load(file, token)
     }
 
-    internal func Load(stream Stream, token CancellationToken) ImageSource {
+    internal func LoadThumbnail(path string, maxWidth int32, maxHeight int32,
+      token CancellationToken) ImageSource {
+        token.ThrowIfCancellationRequested()
+        using let file = File.OpenRead(path)
+        return LoadThumbnail(file, maxWidth, maxHeight, token)
+      }
+
+    internal func LoadThumbnail(stream Stream, maxWidth int32, maxHeight int32,
+      token CancellationToken) ImageSource ->
+    DecodeThumbnail(Read(stream, token), maxWidth, maxHeight, token)
+
+    internal func Load(stream Stream, token CancellationToken) ImageSource ->
+    Decode(Read(stream, token), token)
+
+    private func Read(stream Stream, token CancellationToken) []uint8 {
+      token.ThrowIfCancellationRequested()
       if stream.CanSeek && stream.Length - stream.Position > MaxEncodedBytes {
         throw InvalidDataException("Encoded image exceeds 16 MiB")
       }
@@ -31,10 +46,17 @@ internal partial class RasterImageDecoder {
         if encoded.Length + count > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
         encoded.Write(buffer, 0, count)
       }
-      return Decode(encoded.ToArray(), token)
+      return encoded.ToArray()
     }
 
-    internal func Decode(bytes []uint8, token CancellationToken) ImageSource {
+    internal func Decode(bytes []uint8, token CancellationToken) ImageSource ->
+    DecodeCore(bytes, 0, 0, token)
+
+    private func DecodeThumbnail(bytes []uint8, maxWidth int32, maxHeight int32,
+      token CancellationToken) ImageSource -> DecodeCore(bytes, maxWidth, maxHeight, token)
+
+    private func DecodeCore(bytes []uint8, maxWidth int32, maxHeight int32,
+      token CancellationToken) ImageSource {
       token.ThrowIfCancellationRequested()
       if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
       ValidateFormat(bytes, token)
@@ -48,14 +70,65 @@ internal partial class RasterImageDecoder {
       if pixels.Length != image.Width * image.Height * 4 { throw InvalidDataException("Image decoder returned an invalid raster") }
       var offset = 0
       while offset < pixels.Length {
+        if (offset & 65535) == 0 { token.ThrowIfCancellationRequested() }
         let alpha = int32(pixels[offset + 3])
         for channel in 0 ... 3 {
           pixels[offset + channel] = uint8((int32(pixels[offset + channel]) * alpha + 127) / 255)
         }
         offset += 4
       }
+      if maxWidth > 0 && (image.Width > maxWidth || image.Height > maxHeight) {
+        let widthLimited = int64(image.Width) * maxHeight > int64(image.Height) * maxWidth
+        let width = if widthLimited { maxWidth } else {
+          int32(Math.Max(1L, (int64(image.Width) * maxHeight + image.Height / 2) / image.Height))
+        }
+        let height = if widthLimited {
+          int32(Math.Max(1L, (int64(image.Height) * maxWidth + image.Width / 2) / image.Width))
+        } else { maxHeight }
+        let resized = Resample(pixels, image.Width, image.Height, width, height, token)
+        token.ThrowIfCancellationRequested()
+        return ImageSource.Transfer(width, height, resized, () -> { })
+      }
+      token.ThrowIfCancellationRequested()
       return ImageSource.Transfer(image.Width, image.Height, pixels, () -> { })
     }
+
+    private func Resample(pixels []uint8, sourceWidth int32, sourceHeight int32,
+      width int32, height int32, token CancellationToken) []uint8 {
+        let resized = [width * height * 4]uint8
+        for y in 0 ... height {
+          token.ThrowIfCancellationRequested()
+          let top = float64(y) * float64(sourceHeight) / float64(height)
+          let bottom = float64(y + 1) * float64(sourceHeight) / float64(height)
+          for x in 0 ... width {
+            let left = float64(x) * float64(sourceWidth) / float64(width)
+            let right = float64(x + 1) * float64(sourceWidth) / float64(width)
+            var red float64
+            var green float64
+            var blue float64
+            var alpha float64
+            for sy in int32(Math.Floor(top)) ... int32(Math.Ceiling(bottom)) {
+              if (sy & 63) == 0 { token.ThrowIfCancellationRequested() }
+              let rowWeight = Math.Min(bottom, float64(sy + 1)) - Math.Max(top, float64(sy))
+              for sx in int32(Math.Floor(left)) ... int32(Math.Ceiling(right)) {
+                let weight = rowWeight * (Math.Min(right, float64(sx + 1)) - Math.Max(left, float64(sx)))
+                let source = (sy * sourceWidth + sx) * 4
+                red += float64(pixels[source]) * weight
+                green += float64(pixels[source + 1]) * weight
+                blue += float64(pixels[source + 2]) * weight
+                alpha += float64(pixels[source + 3]) * weight
+              }
+            }
+            let area = (right - left) * (bottom - top)
+            let target = (y * width + x) * 4
+            resized[target] = uint8(Math.Round(red / area))
+            resized[target + 1] = uint8(Math.Round(green / area))
+            resized[target + 2] = uint8(Math.Round(blue / area))
+            resized[target + 3] = uint8(Math.Round(alpha / area))
+          }
+        }
+        return resized
+      }
 
     internal func Decode(bytes ReadOnlyMemory[uint8], token CancellationToken) ImageSource {
       token.ThrowIfCancellationRequested()

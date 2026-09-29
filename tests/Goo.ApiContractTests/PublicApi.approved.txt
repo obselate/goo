@@ -777,6 +777,8 @@ method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMem
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Dispose|instance|public|generic:|()->System.Void
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Transfer|static|public|generic:|(width:System.Int32,height:System.Int32,pixels:System.Byte[],released:System.Action)->Goo.ImageSource
 method|Goo.KeyEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.KeyEvent|StopPropagation|instance|public|generic:|()->System.Void

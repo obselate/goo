@@ -136,3 +136,9 @@ of decoded premultiplied RGBA pixels. Assign the returned source to `Image.Sourc
 The caller owns and disposes the source. Mounted leases keep their pixels alive
 until the image unmounts, even after source disposal. `ImageSourceCache.LoadAsync`
 continues to provide bounded path-based sharing for local assets.
+
+Use `ImageSource.LoadThumbnail(path, maxWidth, maxHeight, cancellationToken)`
+to load a local image on a worker while retaining only bounded pixels. Both
+bounds must be positive. Goo keeps the original aspect ratio, never enlarges
+the image, and area-filters premultiplied RGBA when reducing it. The temporary
+full decode obeys the same limits above. The caller owns the returned source.

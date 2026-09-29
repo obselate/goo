@@ -26,5 +26,21 @@ public partial class ImageSource {
       if Object.ReferenceEquals(stream, nil) { throw ArgumentNullException("stream") }
       return RasterImageDecoder.Load(stream, cancellationToken)
     }
+
+    /// Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail.
+    /// The image keeps its aspect ratio, never grows, and retains only the reduced pixels.
+    /// This synchronous operation belongs on a worker outside the UI thread.
+    public func LoadThumbnail(path string, maxWidth int32, maxHeight int32) ImageSource ->
+    LoadThumbnail(path, maxWidth, maxHeight, CancellationToken.None)
+
+    /// Loads a bounded thumbnail with cancellation during reading, validation, and resampling.
+    /// Encoded input is limited to 16 MiB, source dimensions to 8192, and source RGBA to 64 MiB.
+    public func LoadThumbnail(path string, maxWidth int32, maxHeight int32,
+      cancellationToken CancellationToken) ImageSource {
+        if String.IsNullOrWhiteSpace(path) { throw ArgumentException("A local image path is required", "path") }
+        if maxWidth <= 0 { throw ArgumentOutOfRangeException("maxWidth") }
+        if maxHeight <= 0 { throw ArgumentOutOfRangeException("maxHeight") }
+        return RasterImageDecoder.LoadThumbnail(path, maxWidth, maxHeight, cancellationToken)
+      }
   }
 }

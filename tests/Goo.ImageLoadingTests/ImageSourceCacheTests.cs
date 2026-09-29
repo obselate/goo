@@ -269,11 +269,79 @@ public sealed class ImageSourceCacheTests : IDisposable
         Assert.True(malformed.CanRead);
     }
 
+    [Fact]
+    public void ThumbnailBoundsRetainedPixelsAndPreservesPremultipliedAlpha()
+    {
+        using var raw = new MemoryStream();
+        for (var y = 0; y < 160; y++)
+        {
+            raw.WriteByte(0);
+            for (var x = 0; x < 320; x++) raw.Write([200, 100, 50, 128]);
+        }
+        var path = Write("large-rgba.png", Png(320, 160, 8, 6, raw.ToArray()));
+        using var source = ImageSource.LoadThumbnail(path, 160, 160);
+        Assert.Equal(160, source.Width);
+        Assert.Equal(80, source.Height);
+        using var lease = source.Acquire();
+        var pixels = lease.Result()!.Pixels()!;
+        Assert.Equal(160 * 80 * 4, pixels.Length);
+        Assert.Equal(new byte[] { 100, 50, 25, 128 }, pixels[..4]);
+        Assert.Equal(new byte[] { 100, 50, 25, 128 }, pixels[^4..]);
+
+        using var full = ImageSource.LoadThumbnail(path, 640, 640);
+        Assert.Equal(320, full.Width);
+        Assert.Equal(160, full.Height);
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => ImageSource.LoadThumbnail(path, 160, 160, cancelled.Token));
+    }
+
+    [Fact]
+    public void ThumbnailFilteringDoesNotBleedHiddenRgbIntoVisiblePixels()
+    {
+        var path = Write("alpha-edge.png", Png(2, 1, 8, 6, [0, 255, 0, 0, 255, 0, 0, 255, 0]));
+        using var source = ImageSource.LoadThumbnail(path, 1, 1);
+        using var lease = source.Acquire();
+        Assert.Equal(new byte[] { 128, 0, 0, 128 }, lease.Result()!.Pixels());
+    }
+
+    [Fact]
+    public void ThumbnailCancellationStopsReadingBeforeDecode()
+    {
+        using var cancelled = new CancellationTokenSource();
+        using var stream = new CancelAfterReadStream(Png(2, 1, 8, 6, [0, 255, 0, 0, 255, 0, 0, 255, 0]), cancelled);
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            RasterImageDecoder.LoadThumbnail(stream, 1, 1, cancelled.Token));
+    }
+
+    [Theory]
+    [InlineData("local-rgb.jpg")]
+    [InlineData("local-transparent.gif")]
+    public void ThumbnailLoadsExistingJpegAndGifFormats(string name)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", name);
+        using var source = ImageSource.LoadThumbnail(path, 2, 1);
+        Assert.Equal(2, source.Width);
+        Assert.Equal(1, source.Height);
+        using var lease = source.Acquire();
+        Assert.Equal(8, lease.Result()!.Pixels()!.Length);
+    }
+
     private string Write(string name, byte[] bytes)
     {
         var path = Path.Combine(directory, name);
         File.WriteAllBytes(path, bytes);
         return path;
+    }
+
+    private sealed class CancelAfterReadStream(byte[] bytes, CancellationTokenSource cancellation) : MemoryStream(bytes)
+    {
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = base.Read(buffer, offset, count);
+            cancellation.Cancel();
+            return read;
+        }
     }
 
     private static byte[] Png(int width, int height, int depth, int color, byte[] raw,
