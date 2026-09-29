@@ -143,6 +143,12 @@ The caller owns and disposes the source. Mounted leases keep their pixels alive
 until the image unmounts, even after source disposal. `ImageSourceCache.LoadAsync`
 continues to provide bounded path-based sharing for local assets.
 
+Use `ImageSource.LoadThumbnail(path, maxWidth, maxHeight, cancellationToken)`
+to load a local image on a worker while retaining only bounded pixels. Both
+bounds must be positive. Goo keeps the original aspect ratio, never enlarges
+the image, and area-filters premultiplied RGBA when reducing it. The temporary
+full decode obeys the same limits above. The caller owns the returned source.
+
 ## `Blob`
 
 Source:
@@ -638,6 +644,14 @@ Decodes encoded bytes with cancellation during validation and before publication
 ### `Dispose`
 
 Releases this source's owner reference. Existing mounted leases stay valid.
+
+### `LoadThumbnail(string,int32,int32)`
+
+Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail. The image keeps its aspect ratio, never grows, and retains only the reduced pixels. This synchronous operation belongs on a worker outside the UI thread.
+
+### `LoadThumbnail(string,int32,int32,System.Threading.CancellationToken)`
+
+Loads a bounded thumbnail with cancellation during reading, validation, and resampling. Encoded input is limited to 16 MiB, source dimensions to 8192, and source RGBA to 64 MiB.
 
 ### `Transfer(int32,int32,System.Byte[],System.Action)`
 

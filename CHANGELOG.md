@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.6 - 2026-09-29
+
+- Load aspect-preserved local image thumbnails with bounded retained pixels
+  and alpha-safe area filtering.
+
 ## 0.7.5 - 2026-09-29
 
 - Measure the destination editor layout before clamping a far caret jump so
