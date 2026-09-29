@@ -10,19 +10,20 @@ internal sealed class FileSystemFontResolver {
 
   public func Find(family string, weight int32, italic bool) string? {
     let requested = normalize(family)
-    let aliases = requested == "" || requested == "sansserif" || requested == "sans"
+    let sansAliases = requested == "" || requested == "sansserif" || requested == "sans"
       || requested == "systemui"
+    let monoAliases = requested == "monospace" || requested == "mono"
     var best string?
     var bestScore int32 = Int32.MinValue
     for file in FontFiles() {
       let fileName = Path.GetFileNameWithoutExtension(file)
       let stem = normalize(fileName)
       var familyScore int32
-      if aliases {
-        if stem.Contains("dejavusans") || stem.Contains("adwaitasans")
+      if sansAliases {
+        if !stem.Contains("mono") && (stem.Contains("dejavusans") || stem.Contains("adwaitasans")
           || stem.Contains("liberationsans") || stem.StartsWith("segoeui")
           || stem.StartsWith("sfpro") || stem.StartsWith("sfns")
-          || stem.StartsWith("arial") { familyScore = 50 }
+          || stem.StartsWith("arial")) { familyScore = 50 }
         if OperatingSystem.IsAndroid() {
           if stem == "roboto" || stem == "robotoregular" || stem == "robotobold"
             || stem == "robotoitalic" || stem == "robotobolditalic"
@@ -30,21 +31,24 @@ internal sealed class FileSystemFontResolver {
           if stem == "notosans" || stem == "notosansregular" || stem == "notosansbold"
             || stem == "notosansitalic" || stem == "notosansbolditalic" { familyScore = 60 }
         }
+      } else if monoAliases {
+        if (stem.Contains("mono") && !stem.Contains("propo") && !stem.StartsWith("monotype"))
+          || stem.StartsWith("consolas") || stem.StartsWith("couriernew")
+          || stem.StartsWith("menlo") || stem.StartsWith("monaco")
+          || stem.StartsWith("lucidaconsole") || stem.StartsWith("sourcecodepro") {
+            familyScore = 50
+          }
       } else if stem.Contains(requested) {
         familyScore = 100
       }
       if familyScore == 0 { continue }
-      var score = familyScore
-      let bold = stem.Contains("bold") || stem.Contains("semibold")
-        || stem == "arialbd" || stem == "arialbi" || stem == "segoeuib"
-        || stem == "segoeuibl" || stem == "segoeuisb" || stem == "segoeuiz"
+      let faceWeight = FontWeight(stem)
       let slanted = stem.Contains("italic") || stem.Contains("oblique")
         || stem == "ariali" || stem == "arialbi" || stem == "segoeuii"
         || stem == "segoeuili" || stem == "segoeuisli" || stem == "segoeuiz"
-      if weight >= 600 { score = score + (if bold { 20 } else { -15 }) }
-      else { score = score + (if bold { -10 } else { 10 }) }
-      if italic { score = score + (if slanted { 20 } else { -15 }) }
-      else { score = score + (if slanted { -10 } else { 10 }) }
+      let stylePenalty = if italic == slanted { 0 } else { 1000 }
+      let score = familyScore * 1000 - Math.Abs(Math.Clamp(weight, 100, 900) - faceWeight)
+        - stylePenalty
       var shouldReplace = best == nil || score > bestScore
       if !shouldReplace && score == bestScore {
         if let current = best { shouldReplace = String.CompareOrdinal(file, current) < 0 }
@@ -93,6 +97,23 @@ internal sealed class FileSystemFontResolver {
 
   private func normalize(value string) string ->
   value.ToLowerInvariant().Replace(" ", "").Replace("-", "").Replace("_", "")
+
+  private func FontWeight(stem string) int32 {
+    if stem.Contains("thin") || stem.Contains("hairline") { return 100 }
+    if stem.Contains("extralight") || stem.Contains("ultralight") { return 200 }
+    if stem.Contains("light") { return 300 }
+    if stem.Contains("black") || stem.Contains("heavy") { return 900 }
+    if stem.Contains("extrabold") || stem.Contains("ultrabold") { return 800 }
+    if stem.Contains("semibold") || stem.Contains("demibold") || stem == "segoeuisb" {
+      return 600
+    }
+    if stem.Contains("bold") || stem == "arialbd" || stem == "arialbi"
+      || stem == "segoeuib" || stem == "segoeuibl" || stem == "segoeuiz" {
+        return 700
+      }
+    if stem.Contains("medium") { return 500 }
+    return 400
+  }
 }
 
 internal class SystemFontResolvers {
