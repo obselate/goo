@@ -1,10 +1,17 @@
 # Changelog
 
-## 0.7.1 - 2026-09-28
+## 0.7.1 - 2026-09-29
 
 - Pack pinned Linux x64 static SDL3 and HarfBuzz archives and link them directly
   into NativeAOT consumers, allowing one-executable delivery without Goo native
   shared libraries.
+- Use the bundled SDL3 library for audio-only NativeAOT source consumers that
+  have no static SDL3 symbols in their executable.
+- Wait briefly for a Vulkan swapchain image so live windows continue repainting
+  when an image is not immediately available.
+- Resolve generic monospace families and select the closest requested font
+  weight, including light and black faces.
+- Preserve percentage maximum width and height constraints in Yoga layout.
 
 ## 0.7.0 - 2026-09-28
 
