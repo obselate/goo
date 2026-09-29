@@ -117,7 +117,7 @@ internal unsafe partial class VulkanWindowTarget {
       let acquire = acquireNextImage(
         device,
         current.Handle,
-        0uL,
+        1000000uL,
         selectedSlot.AcquireSemaphore,
         0uL,
         &imageIndex)

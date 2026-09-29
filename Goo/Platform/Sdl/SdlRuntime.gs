@@ -59,7 +59,9 @@ internal partial class SdlRuntime {
         if handle == nint(0) {
           throw InvalidOperationException("Goo could not access the static SDL3 symbols.")
         }
-        LibraryLoader.LoadFrom("libSDL3", handle)
+        if NativeLibrary.TryGetExport(handle, "SDL_IsMainThread", out var symbol) && symbol != nint(0) {
+          LibraryLoader.LoadFrom("libSDL3", handle)
+        }
       }
       return true
     }
@@ -281,6 +283,9 @@ internal partial class SdlRuntime {
     }
 
     private func RequireMainThreadLocked(operation string, prefix string = "") {
+      if !staticLinkConfigured {
+        throw InvalidOperationException("Goo could not configure SDL3 symbols.")
+      }
       let currentThreadId = Environment.CurrentManagedThreadId
       let expectedThreadId = Volatile.Read(ref mainThreadId)
       if expectedThreadId != 0 && currentThreadId != expectedThreadId {
