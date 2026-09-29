@@ -107,6 +107,12 @@
     <None Include="$(MSBuildProjectDirectory)/../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/Goo.targets"
           Pack="true" PackagePath="buildTransitive/Goo.targets" />
+    <None Include="$(GooLinuxSdlStaticPath)"
+          Pack="true" PackagePath="buildTransitive/native/linux-x64/libSDL3.a"
+          Condition="'$(GooLinuxSdlStaticPath)' != ''" />
+    <None Include="$(GooLinuxTextStaticRoot)/libgoo-harfbuzz.a;$(GooLinuxTextStaticRoot)/libgoo-harfbuzz-gpu.a"
+          Pack="true" PackagePath="buildTransitive/native/linux-x64/"
+          Condition="'$(GooLinuxTextStaticRoot)' != ''" />
     <None Include="$(GooGsharpToolsRoot)/compiler/**/*.dll;$(GooGsharpToolsRoot)/compiler/*.deps.json;$(GooGsharpToolsRoot)/compiler/*.runtimeconfig.json"
           Pack="true" PackagePath="tools/gsharp/compiler/%(RecursiveDir)%(Filename)%(Extension)" />
     <None Include="$(GooGsharpToolsRoot)/formatter/**/*.dll;$(GooGsharpToolsRoot)/formatter/*.deps.json;$(GooGsharpToolsRoot)/formatter/*.runtimeconfig.json"
@@ -242,6 +248,12 @@
   <Target Name="ValidateGooLinuxSdlPackageAsset" BeforeTargets="Pack">
     <Error Condition="'$(GooLinuxSdlPath)' == '' or !Exists('$(GooLinuxSdlPath)')"
            Text="Packing Goo requires -p:GooLinuxSdlPath=/absolute/path/to/a glibc-2.27-compatible libSDL3.so." />
+  </Target>
+  <Target Name="ValidateGooLinuxStaticPackageAssets" BeforeTargets="Pack">
+    <Error Condition="'$(GooLinuxSdlStaticPath)' == '' or !Exists('$(GooLinuxSdlStaticPath)')"
+           Text="Packing Goo requires -p:GooLinuxSdlStaticPath=/absolute/path/to/libSDL3.a." />
+    <Error Condition="'$(GooLinuxTextStaticRoot)' == '' or !Exists('$(GooLinuxTextStaticRoot)/libgoo-harfbuzz.a') or !Exists('$(GooLinuxTextStaticRoot)/libgoo-harfbuzz-gpu.a')"
+           Text="Packing Goo requires the pinned Linux static HarfBuzz archives." />
   </Target>
   <Target Name="ValidateGooWindowsSdlPackageAsset" BeforeTargets="Pack">
     <Error Condition="'$(GooWindowsSdlPath)' == '' or !Exists('$(GooWindowsSdlPath)')"

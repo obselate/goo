@@ -1,4 +1,29 @@
 <Project>
+  <PropertyGroup Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'linux-x64'">
+    <GooNativeAotStaticRoot Condition="'$(GooNativeAotStaticRoot)' == ''">$(MSBuildThisFileDirectory)native/linux-x64</GooNativeAotStaticRoot>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'linux-x64'">
+    <DirectPInvoke Include="SDL3;goo-harfbuzz;goo-harfbuzz-gpu" />
+    <IlcArg Include="--export-dynamic-symbol:SDL_%2A" />
+    <IlcArg Include="--export-dynamic-symbol:Goo_%2A" />
+    <NativeLibrary Include="$(GooNativeAotStaticRoot)/libgoo-harfbuzz-gpu.a" />
+    <NativeLibrary Include="$(GooNativeAotStaticRoot)/libgoo-harfbuzz.a" />
+    <LinkerArg Include="-Wl,--whole-archive,$(GooNativeAotStaticRoot)/libSDL3.a,--no-whole-archive" />
+  </ItemGroup>
+  <Target Name="ValidateGooNativeAotStaticPayload"
+          BeforeTargets="ComputeFilesToPublish"
+          Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'linux-x64'">
+    <Error Condition="!Exists('$(GooNativeAotStaticRoot)/libSDL3.a') or !Exists('$(GooNativeAotStaticRoot)/libgoo-harfbuzz.a') or !Exists('$(GooNativeAotStaticRoot)/libgoo-harfbuzz-gpu.a')"
+           Text="Goo Linux NativeAOT requires its three packaged static native archives." />
+  </Target>
+  <Target Name="RemoveGooDynamicNativePayloadFromAotPublish"
+          AfterTargets="ComputeFilesToPublish"
+          Condition="'$(PublishAot)' == 'true' and '$(RuntimeIdentifier)' == 'linux-x64'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'libSDL3.so' or '%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'libgoo-harfbuzz.so' or '%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'libgoo-harfbuzz-gpu.so'" />
+    </ItemGroup>
+  </Target>
   <!-- SDK 0.4.591 predates ADR-0180. Remove this bridge after adopting a newer SDK release. -->
   <PropertyGroup Condition="'$(Language)' == 'Gsharp' and '$(GooUseBundledGsharp)' != 'false'">
     <GsharpCompilerFullPath

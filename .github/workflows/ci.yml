@@ -318,8 +318,8 @@ jobs:
               update-ca-certificates
               pip3 install --no-cache-dir meson==0.61.5
               export CC=gcc-8 CXX=g++-8
-              /src/.github/scripts/build-sdl-linux-x64.sh /out/libSDL3.so
-              /src/.github/scripts/build-text-native-linux-x64.sh /out/text
+              /src/.github/scripts/build-sdl-linux-x64.sh /out/libSDL3.so /out/libSDL3.a
+              /src/.github/scripts/build-text-native-linux-x64.sh /out/text --static
               cmp /out/text/libgoo-harfbuzz.so \
                 /src/Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
               cmp /out/text/libgoo-harfbuzz-gpu.so \
@@ -648,7 +648,17 @@ jobs:
             -p:PublishAot=true \
             --configfile tests/Goo.PackageSmoke/NuGet.config \
             -o artifacts/publish-nativeaot
-          artifacts/publish-nativeaot/Goo.PackageSmoke
+          mkdir -p artifacts/nativeaot-onefile
+          install -m0755 artifacts/publish-nativeaot/Goo.PackageSmoke \
+            artifacts/nativeaot-onefile/Goo.PackageSmoke
+          if readelf -d artifacts/nativeaot-onefile/Goo.PackageSmoke \
+            | grep -Eq 'libSDL3|libgoo-harfbuzz'; then
+            echo 'NativeAOT consumer retains a Goo native shared dependency' >&2
+            exit 1
+          fi
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Stage minimal Linux bundle and separate symbols
         run: |

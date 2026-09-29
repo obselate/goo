@@ -41,6 +41,12 @@ publish a framework-dependent application without a RID. NativeAOT is the
 preferred desktop release mode. Do not treat trimmed JIT as a validated
 release profile.
 
+For Linux x64 NativeAOT, Goo links its packaged SDL3 and HarfBuzz static
+archives into the executable. A release may stage only the executable after
+checking its runtime library dependencies and exercising a window on the
+target Linux baseline. This still requires the system Wayland, Vulkan, and C
+runtime facilities described above.
+
 Applications that do not read dependency XML documentation at runtime may add
 `-p:PublishReferencesDocumentationFiles=false` to their publish command. The
 verified NativeAOT consumer removed only `Gsharp.Extensions.xml` (51,781 bytes);
@@ -93,7 +99,7 @@ fixture with an explicit RID, package version, package feed, and new output path
 python3 tools/Goo.ConsumerPerformance/run.py \
   --output /absolute/new/goo-consumer-report \
   --rid linux-x64 \
-  --package-version 0.7.0 \
+  --package-version 0.7.1 \
   --package-source /absolute/path/to/package-feed
 ```
 

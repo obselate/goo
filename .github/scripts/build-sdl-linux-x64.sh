@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-output="${1:?usage: build-sdl-linux-x64.sh OUTPUT_PATH}"
+output="${1:?usage: build-sdl-linux-x64.sh OUTPUT_PATH [STATIC_OUTPUT_PATH]}"
+static_output="${2:-}"
+static_enabled=OFF
+[[ -z "$static_output" ]] || static_enabled=ON
 version="3.4.0"
 sha256="082cbf5f429e0d80820f68dc2b507a94d4cc1b4e70817b119bbb8ec6a69584b8"
 cmake_version="3.31.8"
@@ -60,6 +63,7 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
 "$cmake" -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_FLAGS_RELEASE=-Os \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   -DCMAKE_INSTALL_PREFIX="$work/install" \
   -DSDL_AUDIO=ON \
   -DSDL_ALSA=ON \
@@ -79,7 +83,7 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
   -DSDL_RENDER=OFF \
   -DSDL_SENSOR=OFF \
   -DSDL_SHARED=ON \
-  -DSDL_STATIC=OFF \
+  -DSDL_STATIC="$static_enabled" \
   -DSDL_TEST_LIBRARY=OFF \
   -DSDL_TRAY=OFF \
   -DSDL_VULKAN=ON \
@@ -89,6 +93,9 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
 "$cmake" --install "$work/build" --strip
 
 install -D -m 0644 "$(readlink -f "$work/install/lib/libSDL3.so")" "$output"
+if [[ -n "$static_output" ]]; then
+  install -D -m 0644 "$work/install/lib/libSDL3.a" "$static_output"
+fi
 for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog; do
   if ! readelf --dyn-syms --wide "$output" | grep " $symbol@@" >/dev/null; then
     printf 'libSDL3.so is missing the chooser bridge export: %s\n' "$symbol" >&2

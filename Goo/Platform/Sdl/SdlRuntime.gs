@@ -3,8 +3,11 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Linq
+import System.Runtime.InteropServices
 import System.Threading
+import System.Runtime.CompilerServices
 import Hexa.NET.SDL3
+import HexaGen.Runtime
 
 internal class SdlEventRouter {
   private let handlers Dictionary[uint32, Action[SDLEvent]] =
@@ -34,6 +37,9 @@ internal class SdlEventRouter {
 
 internal partial class SdlRuntime {
   shared {
+    @DllImport("libdl.so.2", EntryPoint: "dlopen", CallingConvention: CallingConvention.Cdecl)
+    private func OpenMainModule(path nint, flags int32) nint;
+    private let staticLinkConfigured bool = ConfigureStaticLink()
     private let requiredSubsystems uint32 = uint32(SDLInitFlags.Video | SDLInitFlags.Events)
     private let sync object = Object()
     private let events SdlEventRouter = SdlEventRouter()
@@ -46,6 +52,17 @@ internal partial class SdlRuntime {
     private var applicationName string?
     private var applicationVersion string?
     private var applicationIdentifier string?
+
+    private func ConfigureStaticLink() bool {
+      if OperatingSystem.IsLinux() && !RuntimeFeature.IsDynamicCodeSupported {
+        let handle = OpenMainModule(nint(0), 2)
+        if handle == nint(0) {
+          throw InvalidOperationException("Goo could not access the static SDL3 symbols.")
+        }
+        LibraryLoader.LoadFrom("libSDL3", handle)
+      }
+      return true
+    }
 
     internal func ConfigureApplication(name string, version string, identifier string) {
       if String.IsNullOrWhiteSpace(name) {

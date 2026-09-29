@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-output="${1:?usage: build-text-native-linux-x64.sh OUTPUT_DIRECTORY}"
+output="${1:?usage: build-text-native-linux-x64.sh OUTPUT_DIRECTORY [--static]}"
+static_enabled=false
+if [[ "${2:-}" == "--static" ]]; then static_enabled=true; fi
 script_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(CDPATH= cd -- "$script_dir/../.." && pwd)"
 manifest="$repo_root/tools/Goo.TextNative/manifest.json"
@@ -92,7 +94,9 @@ export SOURCE_DATE_EPOCH=0
 export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS='-Wl,--build-id=none'
-common_options=(--prefix=/usr --libdir=lib --buildtype=release --default-library=shared --wrap-mode=nodownload)
+library_mode=shared
+if "$static_enabled"; then library_mode=both; fi
+common_options=(--prefix=/usr --libdir=lib --buildtype=release --default-library="$library_mode" --wrap-mode=nodownload)
 harfbuzz_options=(-Dglib=disabled -Dgobject=disabled -Dcairo=disabled -Dchafa=disabled -Dpng=disabled -Dzlib=disabled -Dicu=disabled -Dgraphite=disabled -Dgraphite2=disabled -Dfreetype=disabled -Dfontations=disabled -Dgdi=disabled -Ddirectwrite=disabled -Dcoretext=disabled -Dharfrust=disabled -Dkbts=disabled -Dwasm=disabled -Draster=disabled -Dvector=disabled -Dgpu=enabled -Dsubset=disabled -Dtests=disabled -Dintrospection=disabled -Ddocs=disabled -Ddoc_tests=false -Dutilities=disabled -Dbenchmark=disabled -Dgpu_demo=disabled -Dwith_libstdcxx=false)
 meson setup "$work/harfbuzz-build" "$work/harfbuzz-14.3.1" "${common_options[@]}" "${harfbuzz_options[@]}"
 ninja -C "$work/harfbuzz-build" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf 2)"
@@ -136,6 +140,10 @@ python3 "$repo_root/tools/Goo.TextNative/record-build.py" \
   --artifact "gpu=$gpu_output"
 install -m 0755 "$harfbuzz_output" "$output/libgoo-harfbuzz.so"
 install -m 0755 "$gpu_output" "$output/libgoo-harfbuzz-gpu.so"
+if "$static_enabled"; then
+  install -m 0644 "$work/harfbuzz-build/src/libharfbuzz.a" "$output/libgoo-harfbuzz.a"
+  install -m 0644 "$work/harfbuzz-build/src/libharfbuzz-gpu.a" "$output/libgoo-harfbuzz-gpu.a"
+fi
 install -m 0644 "$staging/text-native-build.json" "$output/text-native-build.json"
 printf 'Built %s (%s bytes)\n' "$output/libgoo-harfbuzz.so" "$(stat -c %s "$output/libgoo-harfbuzz.so")"
 printf 'Built %s (%s bytes)\n' "$output/libgoo-harfbuzz-gpu.so" "$(stat -c %s "$output/libgoo-harfbuzz-gpu.so")"

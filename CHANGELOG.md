@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 - 2026-09-28
+
+- Pack pinned Linux x64 static SDL3 and HarfBuzz archives and link them directly
+  into NativeAOT consumers, allowing one-executable delivery without Goo native
+  shared libraries.
+
 ## 0.7.0 - 2026-09-28
 
 ### Added

@@ -33,6 +33,9 @@ PACKAGE_FILES = {
     "LICENSE",
     "THIRD-PARTY-NOTICES.md",
     "buildTransitive/Goo.targets",
+    "buildTransitive/native/linux-x64/libSDL3.a",
+    "buildTransitive/native/linux-x64/libgoo-harfbuzz.a",
+    "buildTransitive/native/linux-x64/libgoo-harfbuzz-gpu.a",
     "tools/gsharp/compiler/gsc.dll",
     "tools/gsharp/compiler/gsc.deps.json",
     "tools/gsharp/compiler/gsc.runtimeconfig.json",
@@ -435,6 +438,9 @@ def validate_package(path: Path) -> str:
             raise SystemExit("packaged Goo.dll does not contain embedded debug symbols")
         if archive.read("buildTransitive/Goo.targets") != (ROOT / "Goo/Goo.targets").read_bytes():
             raise SystemExit("packaged Goo.targets differs from the release tree")
+        for name in ("libSDL3.a", "libgoo-harfbuzz.a", "libgoo-harfbuzz-gpu.a"):
+            if not archive.read(f"buildTransitive/native/linux-x64/{name}").startswith(b"!<arch>\n"):
+                raise SystemExit(f"packaged {name} is not a static archive")
         if archive.read("contentFiles/any/any/Vulkan/Runtime/MoltenVK-LICENSE.txt") != (ROOT / "Goo/Runtime/Vulkan/MoltenVK-LICENSE.txt").read_bytes():
             raise SystemExit("packaged MoltenVK license differs from the release tree")
         nuspec = archive.read("Goo.nuspec").decode("utf-8-sig")
