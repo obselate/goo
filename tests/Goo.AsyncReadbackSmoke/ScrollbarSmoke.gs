@@ -16,6 +16,7 @@ class ScrollbarSmokeCell : Cell {
     override func Build() Blob -> Container(){
         .Width: Percent(100),
         .Height: Percent(100),
+        .Focusable: true,
         .BackgroundColor: Color.Rgb(12, 20, 32),
         .OverflowY: Overflow.Scroll,
         .ScrollbarVisibilityY: ScrollbarVisibility.Always,
@@ -66,6 +67,18 @@ func RunScrollbarSmoke() {
         Require(
             ScrollbarSmokeCell.Track.IsMounted && ScrollbarSmokeCell.Thumb.IsMounted,
             "Scrollbar visual parts did not mount"
+        )
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.Width - 2, opened.Height / 2)
+            == SDLHitTestResult.ResizeRight,
+            "Focusable content masked the undecorated right resize edge"
+        )
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.Width / 2, opened.Height - 2)
+            == SDLHitTestResult.ResizeBottom
+            && WindowReadbackTestFixture.NativeHitTest(opened, opened.Width - 2, opened.Height - 2)
+            == SDLHitTestResult.ResizeBottomright,
+            "Focusable content masked the bottom resize edge or corner"
         )
         let track = ScrollbarSmokeCell.Track.BorderBox
         let initialThumb = ScrollbarSmokeCell.Thumb.BorderBox
@@ -145,10 +158,7 @@ func RunScrollbarSmoke() {
         WindowReadbackTestFixture.NativeMouseRelease(opened, outsideX, outsideY, PointerButton.Secondary)
         WindowReadbackTestFixture.NativeMouseMove(opened, outsideX, outsideY - 24.0, PointerButtons.Primary)
         WindowReadbackTestFixture.ForceRender(opened, 0.0)
-        Require(
-            ScrollbarSmokeCell.Thumb.BorderBox.Y < heldY - 4.0,
-            "Secondary release stopped primary drag"
-        )
+        Require(ScrollbarSmokeCell.Thumb.BorderBox.Y < heldY - 4.0, "Secondary release stopped primary drag")
         let releasedY = ScrollbarSmokeCell.Thumb.BorderBox.Y
         WindowReadbackTestFixture.NativeMouseRelease(opened, outsideX, outsideY - 24.0)
         Require(
@@ -165,10 +175,28 @@ func RunScrollbarSmoke() {
         WindowReadbackTestFixture.NativeMouseMove(opened, freshX, dragY, PointerButtons.Primary)
         WindowReadbackTestFixture.NativeMouseRelease(opened, freshX, dragY)
         WindowReadbackTestFixture.ForceRender(opened, 0.0)
+        Require(ScrollbarSmokeCell.Thumb.BorderBox.Y > releasedY + 8.0, "Fresh native press did not drag")
+
+        opened.Resizable = false
         Require(
-            ScrollbarSmokeCell.Thumb.BorderBox.Y > releasedY + 8.0,
-            "Fresh native press did not drag"
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.Width - 2, opened.Height / 2)
+            == SDLHitTestResult.Normal,
+            "Fixed-size window exposed a resize edge"
         )
+        opened.Resizable = true
+        opened.State = WindowState.Maximized
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.Width - 2, opened.Height / 2)
+            == SDLHitTestResult.Normal,
+            "Maximized window exposed a resize edge over content"
+        )
+        opened.State = WindowState.Fullscreen
+        Require(
+            WindowReadbackTestFixture.NativeHitTest(opened, opened.Width - 2, opened.Height / 2)
+            == SDLHitTestResult.Normal,
+            "Fullscreen window exposed a resize edge over content"
+        )
+        opened.State = WindowState.Normal
 
         opened.RequestClose()
         WindowReadbackTestFixture.Pump(opened, 0.0)

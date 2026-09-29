@@ -28,12 +28,7 @@ public partial class Window {
     }
     let px = float32(x)
     let py = float32(y)
-    let info = input.HitInfo(n, px, py)
-    if info.HasContent {
-      return WindowHitResult.Normal
-    }
-
-    if resizable {
+    if resizable && state == WindowState.Normal {
       let band = resizeBand
       let logicalWidth = float32(Width)
       let logicalHeight = float32(Height)
@@ -66,6 +61,10 @@ public partial class Window {
       if right {
         return WindowHitResult.Right
       }
+    }
+    let info = input.HitInfo(n, px, py)
+    if info.HasContent {
+      return WindowHitResult.Normal
     }
     return info.DragsWindow
     ? WindowHitResult.Draggable : WindowHitResult.Normal
