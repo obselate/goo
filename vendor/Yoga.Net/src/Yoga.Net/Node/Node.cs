@@ -393,7 +393,7 @@ namespace Facebook.Yoga
         private void ProcessSingleDimension(Dimension dim)
         {
             if (_style.MaxDimension(dim).IsDefined() &&
-                Comparison.InexactEquals(_style.MaxDimension(dim).Resolve(float.NaN).Unwrap(), _style.MinDimension(dim).Resolve(float.NaN).Unwrap()))
+                _style.MaxDimension(dim).InexactEquals(_style.MinDimension(dim)))
             {
                 _processedDimensions[(int)dim] = _style.MaxDimension(dim);
             }
