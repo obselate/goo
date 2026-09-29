@@ -88,6 +88,13 @@ public sealed class ImageSourceCacheTests : IDisposable
     }
 
     [Fact]
+    public void IconRejectsWidePngBeforeSdlSquaresItsBuffer()
+    {
+        var png = Png(1025, 1, 8, 6, new byte[1 + 1025 * 4]);
+        Assert.Throws<InvalidDataException>(() => RasterImageDecoder.DecodeIconPng(png));
+    }
+
+    [Fact]
     public async Task ConcurrentLoadsSharePixelsWithIndependentOwnersAndLeases()
     {
         var path = Write("rgba.png", Png(2, 1, 8, 6, [0, 240, 120, 60, 128, 10, 20, 30, 255]));

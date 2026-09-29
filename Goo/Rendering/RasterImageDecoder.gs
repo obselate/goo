@@ -10,6 +10,7 @@ internal partial class RasterImageDecoder {
   shared {
     private const MaxEncodedBytes int32 = 16777216
     private const MaxDecodedBytes int32 = 67108864
+    private const MaxIconEdge uint32 = 1024u
     private let signature []uint8 = []uint8{137, 80, 78, 71, 13, 10, 26, 10}
     private let crcTable []uint32 = CreateCrcTable()
 
@@ -55,19 +56,13 @@ internal partial class RasterImageDecoder {
     private func DecodeThumbnail(bytes []uint8, maxWidth int32, maxHeight int32,
       token CancellationToken) ImageSource -> DecodeCore(bytes, maxWidth, maxHeight, token)
 
+    internal func DecodeIconPng(bytes []uint8) ImageResult ->
+    DecodeRaw(bytes, CancellationToken.None, true)
+
     private func DecodeCore(bytes []uint8, maxWidth int32, maxHeight int32,
       token CancellationToken) ImageSource {
-      token.ThrowIfCancellationRequested()
-      if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
-      ValidateFormat(bytes, token)
-      token.ThrowIfCancellationRequested()
-      guard let image = StbImageSharp.ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha) else {
-        throw InvalidDataException("Image decoder returned no image")
-      }
-      token.ThrowIfCancellationRequested()
+      let image = DecodeRaw(bytes, token, false)
       guard let pixels = image.Data else { throw InvalidDataException("Image decoder returned no pixels") }
-      ValidateDimensions(image.Width, image.Height)
-      if pixels.Length != image.Width * image.Height * 4 { throw InvalidDataException("Image decoder returned an invalid raster") }
       var offset = 0
       while offset < pixels.Length {
         if (offset & 65535) == 0 { token.ThrowIfCancellationRequested() }
@@ -91,6 +86,25 @@ internal partial class RasterImageDecoder {
       }
       token.ThrowIfCancellationRequested()
       return ImageSource.Transfer(image.Width, image.Height, pixels, () -> { })
+    }
+
+    private func DecodeRaw(bytes []uint8, token CancellationToken, pngOnly bool) ImageResult {
+      token.ThrowIfCancellationRequested()
+      if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
+      if pngOnly { ValidatePng(bytes, token) } else { ValidateFormat(bytes, token) }
+      if pngOnly && (U32(bytes, 16) > MaxIconEdge || U32(bytes, 20) > MaxIconEdge) {
+        throw InvalidDataException("Window icon exceeds 1024 pixels per side")
+      }
+      token.ThrowIfCancellationRequested()
+      guard let image = StbImageSharp.ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha) else {
+        throw InvalidDataException("Image decoder returned no image")
+      }
+      token.ThrowIfCancellationRequested()
+      guard let pixels = image.Data else { throw InvalidDataException("Image decoder returned no pixels") }
+      ValidateDimensions(image.Width, image.Height)
+      if pixels.Length != image.Width * image.Height * 4 { throw InvalidDataException("Image decoder returned an invalid raster") }
+      token.ThrowIfCancellationRequested()
+      return image
     }
 
     private func Resample(pixels []uint8, sourceWidth int32, sourceHeight int32,
