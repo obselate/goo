@@ -750,6 +750,7 @@ jobs:
           install_runtime: true
           install_lavapipe: true
           cache: true
+          github_token: ${{ github.token }}
       - name: Enable cached Vulkan runtime
         shell: pwsh
         run: |
