@@ -113,7 +113,13 @@ internal partial class TextInput {
   }
 
   internal func CommitPlatformText(root Node?, value string) bool {
-    if value != "" { return HandleChar(root, value) }
+    if value != "" {
+      let genericClient = if let n = focus.FocusedNode() {
+        n.Kind != NodeKind.Entry && n.Kind != NodeKind.Editor && canReceiveInput(n)
+          && TextInputCallbacks.TextInput(n) != nil
+      } else { false }
+      return HandleChar(root, value) || genericClient
+    }
     guard let n = focus.FocusedNode() else { return false }
     if !canReceiveInput(n) { return false }
     if n.Kind == NodeKind.Editor && !n.EditorReadOnly {

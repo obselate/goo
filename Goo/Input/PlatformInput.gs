@@ -162,7 +162,7 @@ public class PlatformInput {
     finally { finish() }
   }
 
-  /// Replaces the current selection or preedit with committed text.
+  /// Replaces editor selection or preedit, or delivers text to a focused generic text client.
   public func CommitText(value string) bool {
     requireInput()
     if value == nil { throw ArgumentNullException("value") }

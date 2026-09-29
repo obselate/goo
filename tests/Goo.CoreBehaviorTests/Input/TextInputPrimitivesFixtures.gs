@@ -41,6 +41,28 @@ internal class TextInputPrimitivesFixtures {
       && selectedCandidate == -1 && horizontal && cancellations == 1
   }
 
+  func GenericPlatformCommitReportsAcceptanceAfterFocusChange() bool {
+    let resolver = Resolver{}
+    let input = InputCoordinator()
+    var other Node?
+    var received = ""
+    let root = Reconciler{ Res: resolver }.Mount(Container() {
+      Container{
+        Focusable: true,
+        OnTextInput: (value string) -> {
+          received = value
+          if let target = other { input.FocusElement(resolver, target) }
+        },
+      },
+      Container{ Focusable: true },
+    })
+    other = root.Children[1]
+    if !input.FocusElement(resolver, root.Children[0]) { return false }
+    if !input.CommitEditorText(root, "proj") || received != "proj"
+      || input.FocusedNode() != other { return false }
+    return !input.CommitEditorText(root, "ignored") && received == "proj"
+  }
+
   func StaleTextEventsDropAcrossTransfersAndFocusCycles() bool {
     let events = List[string]()
     let root = Reconciler{ Res: Resolver{} }.Mount(Container() {
