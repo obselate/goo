@@ -29,14 +29,17 @@ Goo.Animations 0.2.4 adds deterministic stagger offsets and sampling guidance.
 These changes provide framework primitives. Applications still own scene clocks,
 video encoding, design-resolution scaling and domain-specific shader fields.
 
-Native verification on 2026-09-28 found a test-host limitation: bundled SDL 3.4.0
-crashes in `wl_proxy_marshal` under an isolated KWin 6.7.5 virtual compositor.
-A minimal C program reproduces it without Goo. That harness and Goo's capture,
-generator, pacing and window fixtures pass with system SDL 3.4.16. The complete
-core behavior suite, including native window creation, passes on the ordinary
-desktop with the exact bundled SDL 3.4.0 binary. The failure is not established
-for ordinary KWin sessions. Shipped-payload verification uses Weston CI, while
-the virtual-compositor failure remains a separate native test-host investigation.
+Native verification on 2026-09-29 isolated a bundled SDL 3.4.0 Wayland cursor
+crash on KWin 6.7.5 virtual seats without a pointer. `Wayland_ShowCursor`
+called `wl_pointer_set_cursor` with a null `wl_pointer` during video startup;
+a minimal C program reproduced the crash without Goo. Goo backports the
+[upstream SDL guard](https://github.com/libsdl-org/SDL/commit/79b40ad3975431cbab09f29ad90b5aef469131d8)
+while retaining the pinned SDL release. A focused regression fails on the
+original SDL source and passes with the backport. A rebuilt single-file
+NativeAOT Gloop executable then started in an equivalent private KWin session
+and passed compositor-delivered titlebar drag, edge resize, maximize, restore,
+and minimize checks. The unpatched executable had crashed before showing a
+window. Weston CI continues to verify the shipped native payload.
 
 ## Core priorities
 
