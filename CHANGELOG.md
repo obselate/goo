@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2 - 2026-09-29
+
+- Let each window disable smooth scrolling while retaining its configured wheel
+  scroll scale.
+- Mark composing key events and prevent consumed shortcut keys from also
+  dispatching committed text input.
+
 ## 0.7.1 - 2026-09-29
 
 - Pack pinned Linux x64 static SDL3 and HarfBuzz archives and link them directly
