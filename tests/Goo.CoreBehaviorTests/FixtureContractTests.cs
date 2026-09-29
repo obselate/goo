@@ -59,6 +59,7 @@ public sealed class FixtureContractTests
         yield return Contract<DevToolsInputFixtures>(nameof(DevToolsInputFixtures.OpaqueTargetsRejectOtherWindowsAndRemounts));
         yield return Contract<DevToolsInputFixtures>(nameof(DevToolsInputFixtures.OptInRoutingSettlementAndStaleTargets));
         yield return Contract<DevToolsInputFixtures>(nameof(DevToolsInputFixtures.QueuedTimeoutCannotExecuteLater));
+        yield return Contract<DevToolsInputFixtures>(nameof(DevToolsInputFixtures.ResetAfterInvalidKeyKeepsInputAvailable));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.AutomaticAttachOnOpenIsIdempotentAndCloses));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.CaptureRequestRetriesAfterNotReady));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.InspectClickAndEscapeContract));

@@ -156,6 +156,38 @@ internal class DevToolsInputFixtures {
       window.Close() }
   }
 
+  func ResetAfterInvalidKeyKeepsInputAvailable() bool {
+    let root = DevToolsInputCell{}
+    var keyPresses int32
+    root.Backspace = () -> { keyPresses++ }
+    let window = Window{Root: root, Width: 320, Height: 220}
+    window.Open()
+    let session = window.AttachDiagnostics(true)
+    try {
+      window.UpdateTree()
+      let action = find(session, "action")
+      let entry = find(session, "entry")
+      if action == 0 || entry == 0 { return false }
+      send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}")
+      if root.Clicks != 1 { return false }
+      var invalid = false
+      try { send(session, "{\"event\":\"key.down\",\"gestureId\":\"bad-key\",\"key\":\",\"}") }
+      catch (_ ArgumentException) { invalid = true }
+      var expired = false
+      try { send(session, "{\"event\":\"key.up\",\"gestureId\":\"bad-key\",\"key\":\"Comma\"}") }
+      catch (error DiagnosticGestureException) { expired = error.Code == "gesture-expired" }
+      if !invalid || !expired { return false }
+      send(session, "{\"event\":\"reset\",\"gestureId\":\"bad-key\"}")
+      send(session, "{\"event\":\"click\",\"nodeId\":" + action.ToString() + "}")
+      if root.Clicks != 2 { return false }
+      send(session, "{\"event\":\"click\",\"nodeId\":" + entry.ToString() + "}")
+      send(session, "{\"event\":\"key.down\",\"gestureId\":\"next-key\",\"key\":\"Backspace\"}")
+      send(session, "{\"event\":\"key.up\",\"gestureId\":\"next-key\",\"key\":\"Backspace\"}")
+      return keyPresses == 1
+    } finally { session.Dispose()
+      window.Close() }
+  }
+
   func QueuedTimeoutCannotExecuteLater() bool {
     let cancelled = DiagnosticPipeCompletion()
     cancelled.CancelQueued()

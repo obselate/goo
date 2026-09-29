@@ -59,7 +59,7 @@ internal partial class DevToolsSession {
       let modifiers = inputModifiers(payload)
       let input = owner.PlatformInput
       if eventName == "reset" {
-        input.FocusLost()
+        owner.ResetInputForDiagnostics()
         inputUsed = false
         inputButtons.Clear()
         inputKeys.Clear()
