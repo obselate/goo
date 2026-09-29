@@ -118,6 +118,7 @@ public partial class Window {
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
+      if let icon = iconPng { native.SetIconPng(icon) }
       if !focusable { native.SetFocusable(false) }
       if topmost && (native.Capabilities & WindowCapabilities.Topmost) != WindowCapabilities.None {
         native.SetTopmost(true)

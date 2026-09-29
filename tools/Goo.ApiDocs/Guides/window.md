@@ -1,5 +1,14 @@
 ## Visibility, activation and stacking
 
+Set `Window.IconPng` in the `Window` initializer to embedded PNG bytes before
+`Open` to request a native window icon. Goo validates the PNG with the same
+16 MiB encoded and 64 MiB decoded limits as image loading, plus a 1024 pixel
+icon edge limit. It gives SDL straight RGBA pixels before the window is shown.
+No external icon file is needed for this property. On Wayland, the compositor
+normally uses the matching `.desktop` entry's icon. `SDL_SetWindowIcon` works
+only when the compositor supports `xdg-toplevel-icon-v1`.
+
+
 `Open` shows the desktop window by default. Set `InitiallyVisible: false` before
 `Open` to create and mount it while hidden, then call `Show()` or `Show(false)`.
 `Show(false)` reveals the window without requesting activation. `Hide()` retains

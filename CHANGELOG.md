@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.7 - 2026-09-29
+
+- Accept embedded PNG bytes for a native window icon before the first show.
+
 ## 0.7.6 - 2026-09-29
 
 - Load aspect-preserved local image thumbnails with bounded retained pixels

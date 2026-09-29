@@ -1680,6 +1680,7 @@ property|Goo.Window|Decorated|System.Boolean|instance|get:public,set:public|inde
 property|Goo.Window|Focusable|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|FramePacing|Goo.WindowFramePacing|instance|get:public,set:public|index:()
 property|Goo.Window|Height|System.Int32|instance|get:public,set:public|index:()
+property|Goo.Window|IconPng|System.Byte[]|instance|get:public,init:public|index:()
 property|Goo.Window|InitiallyVisible|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|IsFocused|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.Window|IsInputBlocked|System.Boolean|instance|get:public|index:()

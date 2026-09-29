@@ -415,6 +415,26 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
   }
 
+  internal func SetIconPng(bytes []uint8) {
+    ThrowIfDisposed()
+    let image = RasterImageDecoder.DecodeIconPng(bytes)
+    guard let pixels = image.Data else { throw InvalidOperationException("Icon decoder returned no pixels") }
+    let data []uint8 = pixels
+    fixed source * uint8 = data{
+      let format = if BitConverter.IsLittleEndian { SDLPixelFormat.Abgr8888 } else { SDLPixelFormat.Rgba8888 }
+      let surface = SDL.CreateSurfaceFrom(image.Width, image.Height, format, source, image.Width * 4)
+      if surface.IsNull { ThrowSdl("SDL_CreateSurfaceFrom") }
+      try {
+        if !SDL.SetWindowIcon(window, surface) {
+          let error = SDL.GetErrorS()
+          if !IsWayland() || !error.Contains("xdg_toplevel_icon_v1 protocol not supported", StringComparison.Ordinal) {
+            throw InvalidOperationException("SDL_SetWindowIcon failed: " + error)
+          }
+        }
+      } finally { SDL.DestroySurface(surface) }
+    }
+  }
+
   private func EnableHitTest() {
     if hitTestEnabled {
       return

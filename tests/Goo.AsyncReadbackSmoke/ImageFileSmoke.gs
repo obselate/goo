@@ -46,8 +46,10 @@ class ImageFileCell : Cell {
 func RunImageFileSmoke() {
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1", "Vulkan diagnostics are required")
   using let cache = ImageSourceCache()
-  using let source = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
-  let window = Window{ Title: "Goo local PNG gate", Width: 96, Height: 96, VSync: false, Root: ImageFileCell(source) }
+  let imagePath = Path.Combine(AppContext.BaseDirectory, "local-rgba.png")
+  using let source = cache.LoadAsync(imagePath).GetAwaiter().GetResult()
+  let window = Window{ Title: "Goo local PNG gate", Width: 96, Height: 96, VSync: false,
+    IconPng: File.ReadAllBytes(imagePath), Root: ImageFileCell(source) }
   let capturedError = StringWriter()
   let originalError = Console.Error
   try {

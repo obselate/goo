@@ -138,6 +138,12 @@ public partial class Window {
     get -> root
     init -> root = value
   }
+  /// Configures PNG bytes for the native window icon in the Window initializer before Open.
+  /// The icon is decoded when opening, has a 1024 pixel edge limit, and requires no external file.
+  public prop IconPng [] ? uint8 {
+    get -> iconPng
+    init -> iconPng = value
+  }
   /// Reports whether the window is open.
   public prop IsOpen bool{ get; private set; }
   internal prop Tree Node? { get -> node }
@@ -488,6 +494,7 @@ public partial class Window {
   private var title string
   private var background Color
   private var root Cell?
+  private var iconPng [] ? uint8
   private var width int32
   private var height int32
   private var x int32
