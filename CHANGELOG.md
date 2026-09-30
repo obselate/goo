@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.10 - 2026-09-30
+
+- Import portal Wayland parent handles before showing a window, with optional
+  compositor modal hints and clean fallback for unavailable or expired parents.
+- Keep the foreign-parent bridge in both shared and static Linux SDL payloads.
+
 ## 0.7.9 - 2026-09-29
 
 - Reclaim detached Vulkan image records when the logical source budget fills,

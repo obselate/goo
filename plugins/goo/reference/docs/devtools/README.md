@@ -10,8 +10,8 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet Goo's [platform requirements](../../README.md#platforms), then install:
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.7.9
-dotnet tool install --global Goo.DevTools.App --version 0.7.9
+dotnet tool install --global Goo.DevTools --version 0.7.10
+dotnet tool install --global Goo.DevTools.App --version 0.7.10
 ```
 
 `Goo.DevTools` provides the `goo` CLI. `Goo.DevTools.App` provides the
