@@ -5,6 +5,7 @@ import System.Collections.Generic
 
 internal class WindowFamily {
   internal var Owner Window?
+  internal var ForeignParentHandle string = ""
   internal var Modal bool
   internal var Children List[Window]?
   internal var BlockingChild Window?
@@ -38,7 +39,20 @@ public partial class Window {
     }
   }
 
-  /// Gets or sets whether this window is modal to Owner. Configure before Open; a modal window requires an owner.
+  /// Gets or sets a portal parent identifier before Open, such as wayland: followed by an exported surface handle.
+  /// Unsupported or expired handles leave the window unparented. This cannot be combined with Owner.
+  public prop ForeignParentHandle string {
+    get -> family?.ForeignParentHandle ?? ""
+    set(value) {
+      requireUiThread("Window.ForeignParentHandle")
+      if IsOpen || host != nil { throw InvalidOperationException("Window ownership must be configured before Open") }
+      if family == nil && String.IsNullOrEmpty(value) { return }
+      family ??= WindowFamily()
+      family!!.ForeignParentHandle = value ?? ""
+    }
+  }
+
+  /// Gets or sets whether this window is modal to Owner or ForeignParentHandle. Configure before Open.
   /// One direct modal child may be open per owner. Nested dialogs use the active modal child as their owner.
   public prop Modal bool{
     get -> family?.Modal == true
@@ -55,7 +69,8 @@ public partial class Window {
   public prop IsInputBlocked bool{ get -> family?.BlockingChild?.IsOpen == true || family?.Dialog != nil }
 
   private func validateOwnership() {
-    if Modal && Owner == nil { throw InvalidOperationException("A modal window requires an Owner") }
+    if Owner != nil && ForeignParentHandle != "" { throw InvalidOperationException("Owner and ForeignParentHandle cannot be combined") }
+    if Modal && Owner == nil && ForeignParentHandle == "" { throw InvalidOperationException("A modal window requires an Owner or ForeignParentHandle") }
     if Modal && (!initiallyVisible || !focusable) {
       throw InvalidOperationException("Modal windows must open visible and focusable")
     }
@@ -72,9 +87,12 @@ public partial class Window {
   }
 
   private func configureOwnership(native SdlHost) {
-    guard let parent = Owner else { return }
-    guard let parentHost = parent.host as SdlHost ? else { throw NotSupportedException("The owner does not have a native desktop host") }
-    native.SetOwner(parentHost, Modal)
+    if let parent = Owner {
+      guard let parentHost = parent.host as SdlHost ? else { throw NotSupportedException("The owner does not have a native desktop host") }
+      native.SetOwner(parentHost, Modal)
+    } else if ForeignParentHandle != "" {
+      native.SetForeignParent(ForeignParentHandle, Modal)
+    }
   }
 
   private func registerOwnership() {

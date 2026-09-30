@@ -75,6 +75,17 @@ resume and configuration changes. Other unsupported preferences remain unknown.
 
 ## Native owned and modal windows
 
+Portal backends can set `ForeignParentHandle` to the request's full
+`wayland:<HANDLE>` parent identifier before `Open`. Do not combine it with `Owner`.
+Set `Modal` to request a native modal hint for that foreign parent. Goo imports the
+surface through xdg-foreign-v2 before mapping its window and releases the import on
+hide or close. Showing again imports the handle again. An expired handle, unsupported
+identifier, unavailable importer, or incompatible native payload leaves a usable
+unparented window. Modal hints require compositor xdg-dialog-v1 support. Goo cannot
+block input in another process. Parent destruction removes the foreign relationship
+without closing the Goo window. The bundled Linux SDL shared and static archives
+provide the same bridge, including NativeAOT consumers.
+
 Set `Owner` and optional `Modal: true` before `Open`. The owner must already be
 open on the same UI thread. Both windows must use desktop hosts; embedded
 viewports explicitly reject these relationships. Self-ownership and cycles are
@@ -715,6 +726,10 @@ Gets or sets whether the system draws window decorations.
 
 Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
 
+### `ForeignParentHandle`
+
+Gets or sets a portal parent identifier before Open, such as wayland: followed by an exported surface handle. Unsupported or expired handles leave the window unparented. This cannot be combined with Owner.
+
 ### `FramePacing`
 
 Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
@@ -773,7 +788,7 @@ Gets or sets the native client minimum width in logical pixels; zero removes the
 
 ### `Modal`
 
-Gets or sets whether this window is modal to Owner. Configure before Open; a modal window requires an owner. One direct modal child may be open per owner. Nested dialogs use the active modal child as their owner.
+Gets or sets whether this window is modal to Owner or ForeignParentHandle. Configure before Open. One direct modal child may be open per owner. Nested dialogs use the active modal child as their owner.
 
 ### `NativeFileDropEnabled`
 

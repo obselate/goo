@@ -44,7 +44,7 @@ public partial class Window {
     if externalHost == nil { throw ArgumentNullException("externalHost") }
     requireUiThread("Window.Attach")
     if IsOpen { throw InvalidOperationException("Window is already open") }
-    if Owner != nil || Modal { throw NotSupportedException("Embedded hosts own their native window relationships") }
+    if Owner != nil || ForeignParentHandle != "" || Modal { throw NotSupportedException("Embedded hosts own their native window relationships") }
     if !InitiallyVisible || !Focusable || Topmost { throw NotSupportedException("Embedded hosts own visibility, focusability and stacking") }
     if accessibility?.Adapter is NativeAccessibilityAdapter { throw NotSupportedException("Embedded hosts provide their own native accessibility adapter") }
     if NativeFileDropEnabled { throw NotSupportedException("Embedded hosts own their native file-drop ingress") }
