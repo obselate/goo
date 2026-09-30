@@ -60,6 +60,8 @@ python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_drop.py" "$work/src"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_no_pointer.py" "$work/src"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/portal-dialog-lifetime.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-foreign-parent.patch"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
 find "$work/src/wayland-protocols" -type f -name '*.xml' \
@@ -101,7 +103,7 @@ install -D -m 0644 "$(readlink -f "$work/install/lib/libSDL3.so")" "$output"
 if [[ -n "$static_output" ]]; then
   install -D -m 0644 "$work/install/lib/libSDL3.a" "$static_output"
 fi
-for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_StartFileDrag Goo_CancelFileDrag; do
+for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_StartFileDrag Goo_CancelFileDrag Goo_SetForeignParent; do
   if ! readelf --dyn-syms --wide "$output" | grep " $symbol@@" >/dev/null; then
     printf 'libSDL3.so is missing the chooser bridge export: %s\n' "$symbol" >&2
     exit 1

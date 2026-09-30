@@ -1,0 +1,204 @@
+--- a/src/video/wayland/SDL_waylandvideo.h
++++ b/src/video/wayland/SDL_waylandvideo.h
+@@ -77,6 +77,7 @@
+     struct wp_fractional_scale_manager_v1 *fractional_scale_manager;
+     struct zwp_input_timestamps_manager_v1 *input_timestamps_manager;
+     struct zxdg_exporter_v2 *zxdg_exporter_v2;
++    struct zxdg_importer_v2 *zxdg_importer_v2;
+     struct xdg_wm_dialog_v1 *xdg_wm_dialog_v1;
+     struct wp_alpha_modifier_v1 *wp_alpha_modifier_v1;
+     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
+--- a/src/video/wayland/SDL_waylandvideo.c
++++ b/src/video/wayland/SDL_waylandvideo.c
+@@ -1327,6 +1327,8 @@
+         Wayland_DisplayInitCursorShapeManager(d);
+     } else if (SDL_strcmp(interface, "zxdg_exporter_v2") == 0) {
+         d->zxdg_exporter_v2 = wl_registry_bind(d->registry, id, &zxdg_exporter_v2_interface, 1);
++    } else if (SDL_strcmp(interface, "zxdg_importer_v2") == 0) {
++        d->zxdg_importer_v2 = wl_registry_bind(d->registry, id, &zxdg_importer_v2_interface, 1);
+     } else if (SDL_strcmp(interface, "xdg_wm_dialog_v1") == 0) {
+         d->xdg_wm_dialog_v1 = wl_registry_bind(d->registry, id, &xdg_wm_dialog_v1_interface, 1);
+     } else if (SDL_strcmp(interface, "wp_alpha_modifier_v1") == 0) {
+@@ -1656,6 +1658,11 @@
+         data->zxdg_exporter_v2 = NULL;
+     }
+ 
++    if (data->zxdg_importer_v2) {
++        zxdg_importer_v2_destroy(data->zxdg_importer_v2);
++        data->zxdg_importer_v2 = NULL;
++    }
++
+     if (data->xdg_wm_dialog_v1) {
+         xdg_wm_dialog_v1_destroy(data->xdg_wm_dialog_v1);
+         data->xdg_wm_dialog_v1 = NULL;
+--- a/src/video/wayland/SDL_waylandwindow.h
++++ b/src/video/wayland/SDL_waylandwindow.h
+@@ -113,6 +113,7 @@
+     struct wp_viewport *viewport;
+     struct wp_fractional_scale_v1 *fractional_scale;
+     struct zxdg_exported_v2 *exported;
++    struct zxdg_imported_v2 *goo_foreign_parent;
+     struct xdg_dialog_v1 *xdg_dialog_v1;
+     struct wp_alpha_modifier_surface_v1 *wp_alpha_modifier_surface_v1;
+     struct xdg_toplevel_icon_v1 *xdg_toplevel_icon_v1;
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -1831,6 +1831,103 @@
+     return true;
+ }
+ 
++static void Goo_SetForeignModal(SDL_WindowData *wind, bool modal)
++{
++    struct xdg_toplevel *toplevel = GetToplevelForWindow(wind);
++    SDL_VideoData *display = wind->waylandData;
++    if (toplevel && display->xdg_wm_dialog_v1) {
++        if (modal) {
++            if (!wind->xdg_dialog_v1) {
++                wind->xdg_dialog_v1 = xdg_wm_dialog_v1_get_xdg_dialog(display->xdg_wm_dialog_v1, toplevel);
++            }
++            if (wind->xdg_dialog_v1) {
++                xdg_dialog_v1_set_modal(wind->xdg_dialog_v1);
++            }
++        } else if (wind->xdg_dialog_v1) {
++            xdg_dialog_v1_unset_modal(wind->xdg_dialog_v1);
++        }
++    }
++}
++
++static void Goo_DestroyForeignParent(SDL_WindowData *wind)
++{
++    if (wind->goo_foreign_parent) {
++        zxdg_imported_v2_destroy(wind->goo_foreign_parent);
++        wind->goo_foreign_parent = NULL;
++    }
++}
++
++static void Goo_ForeignParentDestroyed(void *userdata, struct zxdg_imported_v2 *imported)
++{
++    SDL_WindowData *wind = userdata;
++    SDL_PropertiesID props = SDL_GetWindowProperties(wind->sdlwindow);
++    if (wind->goo_foreign_parent == imported) {
++        Goo_SetForeignModal(wind, false);
++        Goo_DestroyForeignParent(wind);
++        SDL_ClearProperty(props, "Goo.ForeignParent.Handle.1");
++        SDL_ClearProperty(props, "Goo.ForeignParent.Modal.1");
++    }
++}
++
++static const struct zxdg_imported_v2_listener goo_foreign_parent_listener = {
++    Goo_ForeignParentDestroyed
++};
++
++static bool Goo_ApplyForeignParent(SDL_WindowData *wind)
++{
++    SDL_PropertiesID props = SDL_GetWindowProperties(wind->sdlwindow);
++    const char *handle = SDL_GetStringProperty(props, "Goo.ForeignParent.Handle.1", NULL);
++    if (!handle || wind->goo_foreign_parent || !GetToplevelForWindow(wind)) {
++        return true;
++    }
++    wind->goo_foreign_parent = zxdg_importer_v2_import_toplevel(wind->waylandData->zxdg_importer_v2, handle);
++    if (!wind->goo_foreign_parent) {
++        return false;
++    }
++    zxdg_imported_v2_add_listener(wind->goo_foreign_parent, &goo_foreign_parent_listener, wind);
++    zxdg_imported_v2_set_parent_of(wind->goo_foreign_parent, wind->surface);
++    Goo_SetForeignModal(wind, SDL_GetBooleanProperty(props, "Goo.ForeignParent.Modal.1", false));
++    return true;
++}
++
++__attribute__((visibility("default"))) bool SDLCALL Goo_SetForeignParent(SDL_Window *window, const char *handle, Uint8 modal)
++{
++    SDL_VideoDevice *device = SDL_GetVideoDevice();
++    if (!device || !window || !window->internal || SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") != 0) {
++        return false;
++    }
++    SDL_WindowData *wind = window->internal;
++    SDL_PropertiesID props = SDL_GetWindowProperties(window);
++    if (!handle || !*handle) {
++        Goo_SetForeignModal(wind, false);
++        Goo_DestroyForeignParent(wind);
++        SDL_ClearProperty(props, "Goo.ForeignParent.Handle.1");
++        SDL_ClearProperty(props, "Goo.ForeignParent.Modal.1");
++        Wayland_SetWindowParent(device, window, window->parent);
++        if (window->parent && (window->flags & SDL_WINDOW_MODAL)) {
++            Wayland_SetWindowModal(device, window, true);
++        }
++        return true;
++    }
++    if (!wind->waylandData->zxdg_importer_v2 || window->parent ||
++        (wind->shell_surface_type != WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL &&
++         wind->shell_surface_type != WAYLAND_SHELL_SURFACE_TYPE_LIBDECOR) || SDL_strlen(handle) > 4096) {
++        return false;
++    }
++    for (const unsigned char *c = (const unsigned char *)handle; *c; ++c) {
++        if (*c < 32 || *c == 127) {
++            return false;
++        }
++    }
++    if (!SDL_SetStringProperty(props, "Goo.ForeignParent.Handle.1", handle) ||
++        !SDL_SetBooleanProperty(props, "Goo.ForeignParent.Modal.1", modal != 0)) {
++        return false;
++    }
++    Goo_SetForeignModal(wind, false);
++    Goo_DestroyForeignParent(wind);
++    return Goo_ApplyForeignParent(wind);
++}
++
+ static void show_hide_sync_handler(void *data, struct wl_callback *callback, uint32_t callback_data)
+ {
+     // Get the window from the ID as it may have been destroyed
+@@ -1922,6 +2019,16 @@
+             SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Failed to create libdecor frame!");
+         } else {
+             libdecor_frame_set_app_id(data->shell_surface.libdecor.frame, data->app_id);
++            if (SDL_GetStringProperty(props, "Goo.ForeignParent.Handle.1", NULL)) {
++                while (!GetToplevelForWindow(data)) {
++                    if (libdecor_dispatch(c->shell.libdecor, 10) < 0 ||
++                        WAYLAND_wl_display_dispatch_pending(c->display) < 0) {
++                        return;
++                    }
++                }
++            }
++            Wayland_SetWindowParent(_this, window, window->parent);
++            Goo_ApplyForeignParent(data);
+             libdecor_frame_map(data->shell_surface.libdecor.frame);
+             if (window->flags & SDL_WINDOW_BORDERLESS) {
+                 // Note: Calling this with 'true' immediately after mapping will cause the libdecor Cairo plugin to crash.
+@@ -2037,7 +2144,10 @@
+     }
+ 
+     // Restore state that was set prior to this call
+-    Wayland_SetWindowParent(_this, window, window->parent);
++    if (!data->goo_foreign_parent) {
++        Wayland_SetWindowParent(_this, window, window->parent);
++        Goo_ApplyForeignParent(data);
++    }
+ 
+     if (window->flags & SDL_WINDOW_MODAL) {
+         Wayland_SetWindowModal(_this, window, true);
+@@ -2196,6 +2306,7 @@
+     }
+ 
+     wind->shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_HIDDEN;
++    Goo_DestroyForeignParent(wind);
+ 
+     if (wind->server_decoration) {
+         zxdg_toplevel_decoration_v1_destroy(wind->server_decoration);
+@@ -3278,6 +3389,7 @@
+          * to the window held by seats are released before destroying the underlying surface and struct.
+          */
+         Wayland_DisplayRemoveWindowReferencesFromSeats(data, wind);
++        Goo_DestroyForeignParent(wind);
+ 
+ #ifdef SDL_VIDEO_OPENGL_EGL
+         if (wind->egl_surface) {
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1269,6 +1269,7 @@
+     SDL_CreateAnimatedCursor;
+     Goo_StartFileDrag;
+     Goo_CancelFileDrag;
++    Goo_SetForeignParent;
+     SDL_RotateSurface;
+     SDL_LoadSurface_IO;
+     SDL_LoadSurface;

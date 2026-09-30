@@ -58,3 +58,33 @@ window. Source completion reports acceptance after the Wayland target finishes.
 The bridge uses SDL's existing Wayland seat, data device, and event loop and
 adds no runtime dependency. A same-process return to an SDL window reads its
 owned URI list directly to avoid waiting on its own event loop.
+
+`wayland-foreign-parent.patch` exports
+`bool Goo_SetForeignParent(SDL_Window *, const char *bare_handle, Uint8 modal)`.
+It imports an xdg-foreign-v2 parent through SDL's Wayland registry. Hidden
+windows retain the request in owned SDL properties and apply it before the
+initial shell surface commit. Hide destroys the import, show restores it, and
+window destruction releases it. A revoked or invalid handle clears the parent
+request and modal state. Null or empty handles clear the request. Unsupported
+backends, protocols, malformed handles, and non-toplevel windows return false.
+True means the request was queued or applied, not that the compositor validated
+the handle. Modal state uses xdg-dialog-v1 when available.
+
+`tests/NativeWindow/foreign_parent_e2e.c` maps parent and child windows on two
+separate Wayland connections. It checks hidden setup, first show, hide/re-show,
+modal changes, malformed and invalid handles, explicit clearing, and parent
+revocation. Its Python runner compiles against the patched SDL library and
+`wayland-client`, runs xdg-shell and libdecor, and checks protocol traces for
+parenting and modal requests before the initial shell commit. Run it on a
+compositor with xdg-foreign-v2 and installed libdecor:
+
+```sh
+sdl_source=/absolute/path/to/patched/SDL3-3.4.0
+sdl_library=/absolute/path/to/patched/libSDL3.so
+python3 tests/NativeWindow/test_sdl_foreign_parent.py "$sdl_source" "$sdl_library"
+```
+
+The fixture checks the actual xdg-surface listener owner to prevent silent
+libdecor fallback. The runner preloads the exact supplied SDL library even when
+its directory has no SONAME symlink. Use `--xdg-only` for payloads built without
+libdecor support.
