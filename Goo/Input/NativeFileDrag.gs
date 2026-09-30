@@ -36,4 +36,25 @@ public sealed class NativeFileDrag {
     paths = Array.AsReadOnly[string](validated.ToArray())
     uriList = encoded.ToString()
   }
+
+  shared {
+    /// Tries to create a native file offer without discarding an oversized selection.
+    /// @param values absolute local paths to offer in order
+    /// @param result receives the offer, or null when native transfer limits are exceeded
+    /// @returns true when the whole selection can be offered
+    public func TryCreate(values IReadOnlyList[string], out result NativeFileDrag?) bool {
+      if values == nil { throw ArgumentNullException("values") }
+      if values.Count > NativeFilePaths.MaxCount {
+        result = nil
+        return false
+      }
+      try {
+        result = NativeFileDrag(values)
+        return true
+      } catch (_ NativePathLimitException) {
+        result = nil
+        return false
+      }
+    }
+  }
 }

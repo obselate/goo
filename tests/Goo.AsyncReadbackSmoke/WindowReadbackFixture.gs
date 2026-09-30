@@ -655,6 +655,46 @@ internal unsafe partial class SdlHost {
     PushNativeEventForTest(&nativeEvent)
   }
 
+  internal func VerifyOrderedPointerModifiersForTest() {
+    var releases int32
+    var firstCtrl bool
+    var secondCtrl bool
+    var nativeCtrlOnFirstRelease bool
+    PointerReleased += (pointerId int64, device PointerDevice, x float32, y float32,
+      button PointerButton, buttons PointerButtons, pressure float32,
+      modifiers KeyModifiers) -> {
+        if releases == 0 {
+          firstCtrl = modifiers.Ctrl
+          nativeCtrlOnFirstRelease =
+            (SDL.GetModState() & uint16(SDL.SDL_KMOD_LCTRL)) != uint16(0)
+        }
+        if releases == 1 { secondCtrl = modifiers.Ctrl }
+        releases++
+      }
+    var ctrlDown = SDLEvent{
+      Type: uint32(SDLEventType.KeyDown),
+      Key: SDLKeyboardEvent{
+        Type: SDLEventType.KeyDown, WindowID: windowId,
+        Scancode: SDLScancode.Lctrl, Mod: uint16(SDL.SDL_KMOD_LCTRL),
+      },
+    }
+    var ctrlUp = SDLEvent{
+      Type: uint32(SDLEventType.KeyUp),
+      Key: SDLKeyboardEvent{
+        Type: SDLEventType.KeyUp, WindowID: windowId,
+        Scancode: SDLScancode.Lctrl, Mod: uint16(0),
+      },
+    }
+    PushNativeEventForTest(&ctrlDown)
+    PushNativeMouseButtonForTest(1.0F, 1.0F, PointerButton.Primary, false)
+    PushNativeEventForTest(&ctrlUp)
+    PushNativeMouseButtonForTest(1.0F, 1.0F, PointerButton.Primary, false)
+    SdlRuntime.PumpEvents(Int32.MaxValue)
+    if releases != 2 || !firstCtrl || secondCtrl || nativeCtrlOnFirstRelease {
+      throw InvalidOperationException("SDL pointer release lost ordered Ctrl modifiers")
+    }
+  }
+
   internal func PushNativeMouseButtonForTest(x float32, y float32, button PointerButton,
     down bool) {
     let eventType = down ? SDLEventType.MouseButtonDown : SDLEventType.MouseButtonUp
@@ -803,6 +843,13 @@ internal class WindowReadbackTestFixture {
 
     internal func PumpNativeEvents() {
       SdlRuntime.PumpEvents(Int32.MaxValue)
+    }
+    internal func VerifyOrderedPointerModifiers() {
+      using let host = SdlHost("Goo ordered input", 64, 64, 0, 0, false,
+        WindowState.Normal, true, false, false, false,
+        (x int32, y int32) -> WindowHitResult.Normal)
+      PumpNativeEvents()
+      host.VerifyOrderedPointerModifiersForTest()
     }
     internal func SetForceFullRedraw(window Window, value bool) {
       window.SetForceFullRedrawForTest(value)

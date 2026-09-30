@@ -129,9 +129,11 @@ internal class NativeDropRouter {
                 try { accepted = acceptedDragEffect(descriptor.Query(event), DragEffect.Copy) }
                 finally { Rebuild(owner) }
                 if current != session || !canReceive() { return }
-                if accepted == DragEffect.Copy && DragTargetRouting.Available(root, target) { selected = target
-                  break }
-                if descriptor.StopAncestorRouting { break }
+                if DragTargetRouting.Available(root, target) {
+                  if accepted == DragEffect.Copy { selected = target
+                    break }
+                  if descriptor.StopAncestorRouting { break }
+                }
               }
             }
           }

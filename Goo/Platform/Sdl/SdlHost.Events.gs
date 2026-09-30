@@ -33,7 +33,7 @@ internal unsafe partial class SdlHost {
       if nativeEvent.Drop.WindowID == windowId && !IsClosing {
         var data nint
         if let pointer = nativeEvent.Drop.Data { data = nint(pointer) }
-        NativeDropState.Dispatch(this, eventType, data, nativeEvent.Drop.X, nativeEvent.Drop.Y, MapModifiers(SDL.GetModState()))
+        NativeDropState.Dispatch(this, eventType, data, nativeEvent.Drop.X, nativeEvent.Drop.Y, MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -42,7 +42,7 @@ internal unsafe partial class SdlHost {
         pointerButtons = MapPointerButtons(nativeEvent.Motion.State)
         PointerMoved?.Invoke(MousePointerId, PointerDevice.Mouse,
           nativeEvent.Motion.X, nativeEvent.Motion.Y, pointerButtons,
-          MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
+          MousePressure(pointerButtons), MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -55,7 +55,7 @@ internal unsafe partial class SdlHost {
           SDL.CaptureMouse(true)
           PointerPressed?.Invoke(MousePointerId, PointerDevice.Mouse,
             nativeEvent.Button.X, nativeEvent.Button.Y, button, pointerButtons,
-            MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
+            MousePressure(pointerButtons), MapModifiers(SdlRuntime.EventModifierMask))
         }
       }
       return
@@ -71,7 +71,7 @@ internal unsafe partial class SdlHost {
           }
           PointerReleased?.Invoke(MousePointerId, PointerDevice.Mouse,
             nativeEvent.Button.X, nativeEvent.Button.Y, button, pointerButtons,
-            MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
+            MousePressure(pointerButtons), MapModifiers(SdlRuntime.EventModifierMask))
         }
       }
       return
@@ -81,7 +81,7 @@ internal unsafe partial class SdlHost {
         let direction = nativeEvent.Wheel.Direction == SDLMouseWheelDirection.Flipped ? -1.0F : 1.0F
         Wheel?.Invoke(nativeEvent.Wheel.MouseX, nativeEvent.Wheel.MouseY,
           nativeEvent.Wheel.X * direction, nativeEvent.Wheel.Y * direction,
-          MapModifiers(SDL.GetModState()))
+          MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -91,7 +91,7 @@ internal unsafe partial class SdlHost {
         PointerPressed?.Invoke(pointerId, PointerDevice.Touch,
           TouchX(nativeEvent.Tfinger.X), TouchY(nativeEvent.Tfinger.Y),
           PointerButton.Primary, PointerButtons.Primary,
-          NormalizePressure(nativeEvent.Tfinger.Pressure), MapModifiers(SDL.GetModState()))
+          NormalizePressure(nativeEvent.Tfinger.Pressure), MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -103,7 +103,7 @@ internal unsafe partial class SdlHost {
             PointerMoved?.Invoke(pointerId, PointerDevice.Touch,
               TouchX(nativeEvent.Tfinger.X), TouchY(nativeEvent.Tfinger.Y),
               PointerButtons.Primary, NormalizePressure(nativeEvent.Tfinger.Pressure),
-              MapModifiers(SDL.GetModState()))
+              MapModifiers(SdlRuntime.EventModifierMask))
           }
       }
       return
@@ -127,7 +127,7 @@ internal unsafe partial class SdlHost {
           int32(PointerButtons.Primary))
         PointerPressed?.Invoke(int64(nativeEvent.Ptouch.Which), PointerDevice.Pen,
           nativeEvent.Ptouch.X, nativeEvent.Ptouch.Y, PointerButton.Primary,
-          buttons, PenPressure(int64(nativeEvent.Ptouch.Which)), MapModifiers(SDL.GetModState()))
+          buttons, PenPressure(int64(nativeEvent.Ptouch.Which)), MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -136,7 +136,7 @@ internal unsafe partial class SdlHost {
         PointerMoved?.Invoke(int64(nativeEvent.Pmotion.Which), PointerDevice.Pen,
           nativeEvent.Pmotion.X, nativeEvent.Pmotion.Y,
           PenButtons(nativeEvent.Pmotion.PenState),
-          PenPressure(int64(nativeEvent.Pmotion.Which)), MapModifiers(SDL.GetModState()))
+          PenPressure(int64(nativeEvent.Pmotion.Which)), MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -146,7 +146,7 @@ internal unsafe partial class SdlHost {
           int32(PenButtons(nativeEvent.Ptouch.PenState)) & ^int32(PointerButtons.Primary))
         PointerReleased?.Invoke(int64(nativeEvent.Ptouch.Which), PointerDevice.Pen,
           nativeEvent.Ptouch.X, nativeEvent.Ptouch.Y, PointerButton.Primary,
-          buttons, PenPressure(int64(nativeEvent.Ptouch.Which)), MapModifiers(SDL.GetModState()))
+          buttons, PenPressure(int64(nativeEvent.Ptouch.Which)), MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
@@ -283,7 +283,7 @@ internal unsafe partial class SdlHost {
       var y float32
       pointerButtons = MapPointerButtons(SDL.GetMouseState(&x, &y))
       PointerMoved?.Invoke(MousePointerId, PointerDevice.Mouse, x, y,
-        pointerButtons, MousePressure(pointerButtons), MapModifiers(SDL.GetModState()))
+        pointerButtons, MousePressure(pointerButtons), MapModifiers(SdlRuntime.EventModifierMask))
     } else if eventType == SDLEventType.WindowFocusLost {
       pointerButtons = PointerButtons.None
       SDL.CaptureMouse(false)
@@ -413,7 +413,7 @@ internal unsafe partial class SdlHost {
     PointerReleased?.Invoke(pointerId, PointerDevice.Touch,
       TouchX(touch.X), TouchY(touch.Y), PointerButton.Primary,
       PointerButtons.None, NormalizePressure(touch.Pressure),
-      MapModifiers(SDL.GetModState()))
+      MapModifiers(SdlRuntime.EventModifierMask))
   }
 
   private func DispatchPenButton(pen SDLPenButtonEvent, down bool) {
@@ -427,10 +427,10 @@ internal unsafe partial class SdlHost {
     }
     if down {
       PointerPressed?.Invoke(int64(pen.Which), PointerDevice.Pen, pen.X, pen.Y,
-        button, buttons, PenPressure(int64(pen.Which)), MapModifiers(SDL.GetModState()))
+        button, buttons, PenPressure(int64(pen.Which)), MapModifiers(SdlRuntime.EventModifierMask))
     } else {
       PointerReleased?.Invoke(int64(pen.Which), PointerDevice.Pen, pen.X, pen.Y,
-        button, buttons, PenPressure(int64(pen.Which)), MapModifiers(SDL.GetModState()))
+        button, buttons, PenPressure(int64(pen.Which)), MapModifiers(SdlRuntime.EventModifierMask))
     }
   }
 

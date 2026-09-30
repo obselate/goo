@@ -224,8 +224,8 @@ internal partial class PointerInput {
                   effect = accepted
                   break
                 }
+                if descriptor.StopAncestorRouting { break }
               }
-              if descriptor.StopAncestorRouting { break }
             }
         }
       }
