@@ -18,7 +18,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if bytes > VkDeviceSize(Int32.MaxValue) {
         throw ArgumentOutOfRangeException("width")
       }
-      if source.Bytes != bytes || source.Version != id.Version {
+      if !source.IsValid || source.Bytes != bytes || source.Version != id.Version {
         throw ArgumentException("Vulkan image source does not match image extent", "source")
       }
       if HasNewerSourceVersion(source) {
@@ -48,13 +48,13 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       if source.Bytes > logicalStats.LogicalSourceBudget {
         throw InvalidOperationException("Vulkan image logical source hard limit exceeded")
       }
-      if logicalStats.LogicalSourceBytes > logicalStats.LogicalSourceBudget - source.Bytes {
-        return VulkanImageResourceLookup{ Found: false }
-      }
       if bytes > residentByteBudget {
         throw InvalidOperationException("Vulkan image resident hard limit exceeded")
       }
       if !TryEnsureResidentCapacity(bytes) {
+        return VulkanImageResourceLookup{ Found: false }
+      }
+      if !TryEnsureLogicalSourceCapacity(id, source.Bytes) {
         return VulkanImageResourceLookup{ Found: false }
       }
       let index = if existingIndex >= 0 { existingIndex } else { FindEmptyIndex() }
