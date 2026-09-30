@@ -65,7 +65,8 @@ internal partial class InputCoordinator {
     return changed
   }
 
-  internal func Reset(root Node?, resolver Resolver, preserveQueue bool = false) {
+  internal func Reset(root Node?, resolver Resolver, preserveQueue bool = false,
+    preserveNative bool = false) {
     let entered = queue.Begin()
     try {
       ScrollState.StopMomentumTree(root)
@@ -76,7 +77,7 @@ internal partial class InputCoordinator {
         failure = error
       }
       try {
-        pointer.Reset(root, resolver)
+        pointer.Reset(root, resolver, preserveNative)
       } catch (error Exception) {
         if failure == nil { failure = error }
       }

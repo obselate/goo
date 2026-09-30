@@ -104,7 +104,7 @@ internal partial class InputCoordinator {
     try { focus.SetNativeFocus(false) }
     catch (error Exception) { failure = error }
     try {
-      Reset(root, resolver, true)
+      Reset(root, resolver, true, true)
     } catch (error Exception) {
       failure ??= error
     } finally {

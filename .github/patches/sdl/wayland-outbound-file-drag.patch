@@ -1,0 +1,210 @@
+--- a/src/video/wayland/SDL_waylandevents_c.h
++++ b/src/video/wayland/SDL_waylandevents_c.h
+@@ -127,6 +127,7 @@
+     struct wl_list link;
+ 
+     Uint32 last_implicit_grab_serial; // The serial of the last implicit grab event for window activation and selection data.
++    Uint32 goo_file_drag_serial;
+     Uint32 registry_id;               // The ID of the Wayland seat object,
+ 
+     struct
+--- a/src/video/wayland/SDL_waylanddatamanager.h
++++ b/src/video/wayland/SDL_waylanddatamanager.h
+@@ -56,6 +56,9 @@
+     SDL_WaylandDataDevice *data_device;
+     SDL_ClipboardDataCallback callback;
+     SDL_WaylandUserdata userdata;
++    SDL_Window *goo_drag_window;
++    void (SDLCALL *goo_drag_finished)(void *userdata, bool accepted);
++    void *goo_drag_userdata;
+ } SDL_WaylandDataSource;
+ 
+ typedef struct
+@@ -98,6 +101,7 @@
+     const char *mime_type;
+     bool has_mime_file, has_mime_text;
+     SDL_Window *dnd_window;
++    SDL_WaylandDataSource *goo_drag_source;
+ 
+     // Clipboard and Primary Selection
+     uint32_t selection_serial;
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -1037,8 +1037,14 @@
+         if (state) {
+             Wayland_UpdateImplicitGrabSerial(seat, serial);
+             seat->pointer.buttons_pressed |= SDL_BUTTON_MASK(sdl_button);
++            if (sdl_button == SDL_BUTTON_LEFT) {
++                seat->goo_file_drag_serial = serial;
++            }
+         } else {
+             seat->pointer.buttons_pressed &= ~(SDL_BUTTON_MASK(sdl_button));
++            if (sdl_button == SDL_BUTTON_LEFT) {
++                seat->goo_file_drag_serial = 0;
++            }
+         }
+ 
+         if (down && sdl_button != SDL_BUTTON_LEFT) {
+@@ -2602,11 +2608,31 @@
+     Wayland_data_source_send((SDL_WaylandDataSource *)data, mime_type, fd);
+ }
+ 
++static void Goo_FinishFileDrag(SDL_WaylandDataSource *source, bool accepted)
++{
++    void (SDLCALL *callback)(void *, bool) = source->goo_drag_finished;
++    void *userdata = source->goo_drag_userdata;
++    SDL_Window *window = source->goo_drag_window;
++    if (window) {
++        SDL_PropertiesID props = SDL_GetWindowProperties(window);
++        if (SDL_GetPointerProperty(props, "Goo.FileDrag.1", NULL) == source) {
++            SDL_ClearProperty(props, "Goo.FileDrag.1");
++        }
++    }
++    if (source->data_device && source->data_device->goo_drag_source == source) {
++        source->data_device->goo_drag_source = NULL;
++    }
++    Wayland_data_source_destroy(source);
++    if (callback) {
++        callback(userdata, accepted);
++    }
++}
++
+ static void data_source_handle_cancelled(void *data, struct wl_data_source *wl_data_source)
+ {
+     SDL_WaylandDataSource *source = data;
+     if (source) {
+-        Wayland_data_source_destroy(source);
++        Goo_FinishFileDrag(source, false);
+     }
+ }
+ 
+@@ -2616,6 +2642,7 @@
+ 
+ static void data_source_handle_dnd_finished(void *data, struct wl_data_source *wl_data_source)
+ {
++    Goo_FinishFileDrag((SDL_WaylandDataSource *)data, true);
+ }
+ 
+ static void data_source_handle_action(void *data, struct wl_data_source *wl_data_source,
+@@ -2631,6 +2658,84 @@
+     data_source_handle_dnd_finished,       // Version 3
+     data_source_handle_action,             // Version 3
+ };
++
++static const void *Goo_FileDragData(void *userdata, const char *mime_type, size_t *length)
++{
++    if (SDL_strcmp(mime_type, FILE_MIME) != 0) {
++        *length = 0;
++        return NULL;
++    }
++    *length = SDL_strlen((const char *)userdata);
++    return userdata;
++}
++
++__attribute__((visibility("default"))) bool SDLCALL Goo_StartFileDrag(SDL_Window *window,
++    const char *uri_list, void (SDLCALL *completed)(void *, bool), void *userdata)
++{
++    SDL_VideoDevice *_this = SDL_GetVideoDevice();
++    if (!_this || !window || !window->internal || !uri_list || !*uri_list || !completed ||
++        SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") != 0) {
++        return SDL_SetError("Native file drag requires an open Wayland window and nonempty URI list");
++    }
++    if (SDL_strlen(uri_list) > 1048576) {
++        return SDL_SetError("Native URI list exceeds 1 MiB");
++    }
++    SDL_VideoData *display = _this->internal;
++    SDL_WindowData *wind = window->internal;
++    if (!display->data_device_manager ||
++        wl_data_device_manager_get_version(display->data_device_manager) < 3 ||
++        SDL_GetPointerProperty(SDL_GetWindowProperties(window), "Goo.FileDrag.1", NULL)) {
++        return SDL_SetError("Native file drag is unavailable or already active");
++    }
++    SDL_WaylandSeat *seat;
++    wl_list_for_each (seat, &display->seat_list, link) {
++        if (seat->pointer.focus == wind &&
++            (seat->pointer.buttons_pressed & SDL_BUTTON_MASK(SDL_BUTTON_LEFT)) &&
++            seat->goo_file_drag_serial && seat->data_device && seat->data_device->data_device) {
++            break;
++        }
++    }
++    if (&seat->link == &display->seat_list) {
++        return SDL_SetError("Native file drag requires a held primary press on this window");
++    }
++    SDL_WaylandDataSource *source = Wayland_data_source_create(_this);
++    if (!source) {
++        return false;
++    }
++    char *owned = SDL_strdup(uri_list);
++    if (!owned) {
++        Wayland_data_source_destroy(source);
++        return false;
++    }
++    Wayland_data_source_set_callback(source, Goo_FileDragData, owned, 0);
++    source->data_device = seat->data_device;
++    source->goo_drag_window = window;
++    source->goo_drag_finished = completed;
++    source->goo_drag_userdata = userdata;
++    if (!SDL_SetPointerProperty(SDL_GetWindowProperties(window), "Goo.FileDrag.1", source)) {
++        Wayland_data_source_destroy(source);
++        return false;
++    }
++    seat->data_device->goo_drag_source = source;
++    wl_data_source_offer(source->source, FILE_MIME);
++    wl_data_source_set_actions(source->source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
++    wl_data_device_start_drag(seat->data_device->data_device, source->source,
++                              wind->surface, NULL, seat->goo_file_drag_serial);
++    WAYLAND_wl_display_flush(display->display);
++    return true;
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_CancelFileDrag(SDL_Window *window)
++{
++    if (!window || SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") != 0) {
++        return;
++    }
++    SDL_WaylandDataSource *source = SDL_GetPointerProperty(
++        SDL_GetWindowProperties(window), "Goo.FileDrag.1", NULL);
++    if (source) {
++        Goo_FinishFileDrag(source, false);
++    }
++}
+ 
+ static void primary_selection_source_send(void *data, struct zwp_primary_selection_source_v1 *zwp_primary_selection_source_v1,
+                                           const char *mime_type, int32_t fd)
+@@ -2962,7 +3067,14 @@
+          * non paths that are not visible to the application
+          */
+         if (!drop_handled) {
+-            void *buffer = Wayland_data_offer_receive(data_device->drag_offer, data_device->mime_type, &length);
++            void *buffer;
++            if (data_device->goo_drag_source && data_device->has_mime_file &&
++                SDL_strcmp(data_device->mime_type, FILE_MIME) == 0) {
++                buffer = SDL_strdup((const char *)data_device->goo_drag_source->userdata.data);
++                length = buffer ? SDL_strlen((const char *)buffer) : 0;
++            } else {
++                buffer = Wayland_data_offer_receive(data_device->drag_offer, data_device->mime_type, &length);
++            }
+             if (data_device->has_mime_file) {
+                 if (buffer) {
+                     char *saveptr = NULL;
+@@ -3657,6 +3769,9 @@
+     SDL_free(seat->name);
+ 
+     if (seat->data_device) {
++        if (seat->data_device->goo_drag_source) {
++            Goo_FinishFileDrag(seat->data_device->goo_drag_source, false);
++        }
+         Wayland_data_device_clear_selection(seat->data_device);
+         if (seat->data_device->selection_offer) {
+             Wayland_data_offer_destroy(seat->data_device->selection_offer);
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1267,6 +1267,8 @@
+     SDL_GetSystemPageSize;
+     SDL_GetPenDeviceType;
+     SDL_CreateAnimatedCursor;
++    Goo_StartFileDrag;
++    Goo_CancelFileDrag;
+     SDL_RotateSurface;
+     SDL_LoadSurface_IO;
+     SDL_LoadSurface;

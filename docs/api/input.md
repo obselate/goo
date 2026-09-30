@@ -173,6 +173,8 @@ Attach an optional `DragSource` or `DropTarget` descriptor to a `Blob`. Goo reco
 
 `DragData.AllowedEffects` must contain `Copy`, `Move`, or both. A target query accepts by returning exactly one allowed effect. Any other value is treated as `None`. Goo hit-tests independently of source capture, honors clipping and transforms, and walks from the deepest target to its ancestors. It queries again when pointer modifiers change, after input-affecting tree updates, and immediately before release. A target with no `Changed` callback can accept a no-op drop through `Query`.
 
+Pass `true` as the third `DropTarget` constructor argument when a target must own the hovered area even if it rejects the drag. `StopAncestorRouting` then prevents a parent target from accepting that rejected drop. The default is `false`; both in-window and native file-drop routing use the same rule.
+
 The selected target receives `Enter`, `Move`, `Leave`, and `Drop` snapshots through `Changed`. Positions are current target-local and logical-window coordinates. A successful `Drop` remains successful when its callback removes or reparents the target or source. Goo makes no further callback to a detached owner.
 
 Call `window.PlatformInput.CancelDrag()` to cancel the session, and bind Escape explicitly when desired. Pointer cancellation, focus loss, window close, source removal or disablement, and callback failure also cancel it. Internal termination and capture cleanup run once. `DragSource.End` runs at most once only while its source remains mounted. Goo strongly retains the payload through an eligible `End`, then releases it. Goo never calls `Dispose` on consumer payloads. Callback cleanup preserves the original exception.
@@ -195,7 +197,9 @@ scrolling.
 
 ### Native file drops
 
-Set `Window.NativeFileDropEnabled = true` before `Open` or on its owning UI thread to receive external file lists through `DropTarget`. `Window.NativeTransferCapabilities` reports support for `FileDrop`, `DropPreview`, `OutboundData`, and `EffectNegotiation`. The supported Windows, Cocoa, and native Wayland hosts support the first two; outbound offers and native effect feedback are unsupported. Closed/embedded windows report `None`; enabling on an unsupported host throws. Native file ingress is off by default. Linux requires Goo's patched SDL payload to preserve file-URI priority when a file manager also offers plain text.
+Set `Window.NativeFileDropEnabled = true` before `Open` or on its owning UI thread to receive external file lists through `DropTarget`. `Window.NativeTransferCapabilities` reports support for `FileDrop`, `DropPreview`, `OutboundData`, and `EffectNegotiation`. The supported Windows and Cocoa hosts support the first two; native Wayland also supports `OutboundData`. Native effect feedback is unsupported. Closed/embedded windows report `None`; enabling on an unsupported host throws. Native file ingress is off by default. Linux requires Goo's patched SDL payload to preserve file-URI priority when a file manager also offers plain text.
+
+To drag files to another Wayland application, pass `NativeFileDrag(paths)` as the third argument to `DragData` from a pointer `DragSource`. `paths` must be nonempty absolute local paths. `DragData.Value` remains available to Goo targets for in-window Move or Copy. If the held primary mouse pointer leaves the window, Goo starts a Copy-only `text/uri-list` offer. `DragSource.End` reports `Dropped` with `Copy` after the native target finishes, or `Canceled` with `None` if the offer is rejected. A drag started through `PlatformInput.BeginDrag` cannot become a native offer. Other hosts do not report `OutboundData`.
 
 Accept `DragData.Value is NativeFileDrop` with `DragEffect.Copy`. Preview callbacks carry `IsPreview = true` and an empty `Paths` list because SDL does not expose file names until drop. A preview may ultimately be a text offer or an empty/cancelled offer, so it never promises deliverable files. The final query and `Drop` use an immutable owned `Paths` list with `IsPreview = false`. Paths follow the same absolute-path validation and order as clipboard file lists (`text/uri-list` on Linux); Goo does not open or read them. Retaining the payload after drop or window close is safe.
 
@@ -253,9 +257,21 @@ Creates drag data for a non-null payload and one or more allowed effects.
 - `value`: consumer-owned payload retained for the drag lifetime
 - `allowedEffects`: effects that a target may select
 
+### `new(System.Object,DragEffect,NativeFileDrag)`
+
+Creates drag data with an optional native file representation.
+
+- `value`: consumer-owned payload retained for the drag lifetime
+- `allowedEffects`: effects that a target may select
+- `nativeFiles`: optional local file paths for a Wayland Copy offer when the pointer leaves the window
+
 ### `AllowedEffects`
 
 Gets the effects that a target may select.
+
+### `NativeFiles`
+
+Gets the optional native file representation offered after a pointer leaves the window.
 
 ### `Value`
 
@@ -437,6 +453,14 @@ Creates a target descriptor.
 - `query`: callback that selects one allowed effect or None
 - `changed`: optional lifecycle callback
 
+### `new(System.Func{DragEvent,DragEffect},System.Action{DragEvent},bool)`
+
+Creates a target descriptor that can block rejected drops from ancestor targets.
+
+- `query`: callback that selects one allowed effect or None
+- `changed`: optional lifecycle callback
+- `stopAncestorRouting`: prevents ancestor fallback after this target rejects a drag
+
 ### `Changed`
 
 Gets the optional enter, move, leave, and drop callback.
@@ -444,6 +468,10 @@ Gets the optional enter, move, leave, and drop callback.
 ### `Query`
 
 Gets the callback that selects one allowed effect or rejects the drag.
+
+### `StopAncestorRouting`
+
+Gets whether this target blocks ancestor fallback when its query rejects a drag.
 
 ## `FocusEvent`
 
@@ -729,6 +757,24 @@ Reports whether Shift is pressed.
 ### `Super`
 
 Reports whether Super is pressed.
+
+## `NativeFileDrag`
+
+Source:
+
+- [`NativeFileDrag.gs`](../../Goo/Input/NativeFileDrag.gs)
+
+Owns local file paths for a native Copy offer while DragData.Value stays available to in-window targets.
+
+### `new(System.Collections.Generic.IReadOnlyList{string})`
+
+Creates a native file offer from absolute local paths.
+
+- `values`: absolute local paths to offer in order
+
+### `Paths`
+
+Gets the validated, immutable local paths in their original order.
 
 ## `NativeFileDrop`
 

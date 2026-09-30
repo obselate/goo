@@ -21,10 +21,13 @@ public enum DragEndKind { Dropped; Canceled }
 public sealed class DragData {
   private let value object
   private let allowedEffects DragEffect
+  private let nativeFiles NativeFileDrag?
   /// Gets the consumer-owned payload.
   public prop Value object{ get -> value }
   /// Gets the effects that a target may select.
   public prop AllowedEffects DragEffect{ get -> allowedEffects }
+  /// Gets the optional native file representation offered after a pointer leaves the window.
+  public prop NativeFiles NativeFileDrag?{ get -> nativeFiles }
 
   /// Creates drag data for a non-null payload and one or more allowed effects.
   /// @param value consumer-owned payload retained for the drag lifetime
@@ -33,6 +36,21 @@ public sealed class DragData {
     if Object.ReferenceEquals(value, nil) { throw ArgumentNullException("value") }
     this.value = value
     this.allowedEffects = requireAllowedDragEffects(allowedEffects)
+    nativeFiles = nil
+  }
+
+  /// Creates drag data with an optional native file representation.
+  /// @param value consumer-owned payload retained for the drag lifetime
+  /// @param allowedEffects effects that a target may select
+  /// @param nativeFiles optional local file paths for a Wayland Copy offer when the pointer leaves the window
+  public init(value object, allowedEffects DragEffect, nativeFiles NativeFileDrag?) {
+    if Object.ReferenceEquals(value, nil) { throw ArgumentNullException("value") }
+    this.value = value
+    this.allowedEffects = requireAllowedDragEffects(allowedEffects)
+    if nativeFiles != nil && (this.allowedEffects & DragEffect.Copy) == DragEffect.None {
+      throw ArgumentException("Native file offers require Copy", "allowedEffects")
+    }
+    this.nativeFiles = nativeFiles
   }
 }
 
@@ -107,10 +125,13 @@ public sealed class DragSource {
 public sealed class DropTarget {
   private let query((DragEvent) -> DragEffect)
   private let changed Action[DragEvent]?
+  private let stopAncestorRouting bool
   /// Gets the callback that selects one allowed effect or rejects the drag.
   public prop Query((DragEvent) -> DragEffect) { get -> query }
   /// Gets the optional enter, move, leave, and drop callback.
   public prop Changed Action[DragEvent]? { get -> changed }
+  /// Gets whether this target blocks ancestor fallback when its query rejects a drag.
+  public prop StopAncestorRouting bool { get -> stopAncestorRouting }
 
   /// Creates a target descriptor.
   /// @param query callback that selects one allowed effect or None
@@ -119,6 +140,19 @@ public sealed class DropTarget {
     if query == nil { throw ArgumentNullException("query") }
     this.query = query
     this.changed = changed
+    stopAncestorRouting = false
+  }
+
+  /// Creates a target descriptor that can block rejected drops from ancestor targets.
+  /// @param query callback that selects one allowed effect or None
+  /// @param changed optional lifecycle callback
+  /// @param stopAncestorRouting prevents ancestor fallback after this target rejects a drag
+  public init(query((DragEvent) -> DragEffect), changed Action[DragEvent]?,
+    stopAncestorRouting bool) {
+    if query == nil { throw ArgumentNullException("query") }
+    this.query = query
+    this.changed = changed
+    this.stopAncestorRouting = stopAncestorRouting
   }
 }
 

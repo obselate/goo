@@ -19,6 +19,7 @@ internal class PointerDragSession {
   internal var Terminating bool
   internal var Negotiating bool
   internal var EndDelivered bool
+  internal var NativeActive bool
 
   internal init(source Node, data DragData, pointerId int64, device PointerDevice, isPointer bool) {
     Source = source
@@ -132,12 +133,35 @@ internal partial class PointerInput {
     }
 
   private func activeDragMatches() bool -> if let session = dragSession {
-    !session.Terminating && session.IsPointer && session.PointerId == current.Id
+    !session.Terminating && !session.NativeActive && session.IsPointer && session.PointerId == current.Id
       && session.Device == current.Device
   } else { false }
 
   private func currentOwnsDragState() bool -> activeDragMatches()
     || (dragCandidate != nil && dragPointerMatches())
+
+  private func promoteNativeDrag(root Node, x float32, y float32) bool {
+    guard let session = dragSession, let files = session.Data.NativeFiles,
+      let host = nativeDragHost else { return false }
+    if session.NativeActive || !session.IsPointer || session.Device != PointerDevice.Mouse
+      || (x >= 0.0F && y >= 0.0F && x < float32(host.LogicalWidth)
+        && y < float32(host.LogicalHeight)) { return false }
+    session.NativeActive = true
+    let started = host.BeginNativeFileDrag(files, (accepted bool) -> {
+      if dragSession != session || !session.NativeActive { return }
+      let previous = current
+      current = mouse
+      try {
+        terminateDrag(root, accepted ? DragEndKind.Dropped : DragEndKind.Canceled,
+          accepted ? DragEffect.Copy : DragEffect.None, false, nil)
+      } finally { current = previous }
+    })
+    if !started { session.NativeActive = false
+      return false }
+    clearCapture()
+    current.ClickTarget = nil
+    return true
+  }
 
   private func dragSessionCurrent(session PointerDragSession) bool ->
   dragSession == session && !session.Terminating
@@ -201,6 +225,7 @@ internal partial class PointerInput {
                   break
                 }
               }
+              if descriptor.StopAncestorRouting { break }
             }
         }
       }
@@ -388,6 +413,11 @@ internal partial class PointerInput {
     if !active { dragGeneration++ }
     guard let session = dragSession else { return false }
     if session.Terminating { return false }
+    if session.NativeActive {
+      nativeDragHost?.CancelNativeFileDrag()
+      if dragSession == session { terminateDrag(root, DragEndKind.Canceled, DragEffect.None, false, nil) }
+      return true
+    }
     let previous = current
     if session.IsPointer && !activeDragMatches() {
       if session.Device == PointerDevice.Mouse {
@@ -496,6 +526,13 @@ internal partial class PointerInput {
     && left.Super == right.Super
 
   private func afterDragTreeUpdated(root Node) {
+    if let session = dragSession {
+      if session.NativeActive {
+        if !containsPath(root, session.Source) || !canReceiveInput(session.Source)
+          || DragDropMetadata.Source(session.Source) == nil { cancelDrag(root) }
+        return
+      }
+    }
     if dragSession?.IsPointer == false && current != mouse { return }
     if !currentOwnsDragState() && dragSession?.IsPointer != false { return }
     if let candidate = dragCandidate {

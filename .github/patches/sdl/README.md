@@ -50,3 +50,11 @@ producing an empty drop. The build runs `test_sdl_drop.py` against the actual C
 handler; the unpatched handler fails the mixed URI/text case. The real transfer
 is exercised by `tests/Goo.AsyncReadbackSmoke/verify-native-file-drop.py` in an
 isolated KWin session with Nemo and compositor input supplied by libei.
+
+`wayland-outbound-file-drag.patch` adds Goo's file-only drag source bridge to the
+pinned SDL Wayland backend. The held pointer's primary-press serial starts a
+Copy `text/uri-list` offer after Goo moves an in-window drag outside its source
+window. Source completion reports acceptance after the Wayland target finishes.
+The bridge uses SDL's existing Wayland seat, data device, and event loop and
+adds no runtime dependency. A same-process return to an SDL window reads its
+owned URI list directly to avoid waiting on its own event loop.

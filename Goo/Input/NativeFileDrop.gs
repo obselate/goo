@@ -131,6 +131,7 @@ internal class NativeDropRouter {
                 if current != session || !canReceive() { return }
                 if accepted == DragEffect.Copy && DragTargetRouting.Available(root, target) { selected = target
                   break }
+                if descriptor.StopAncestorRouting { break }
               }
             }
           }
