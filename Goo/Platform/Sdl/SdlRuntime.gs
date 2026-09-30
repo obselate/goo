@@ -46,6 +46,7 @@ internal partial class SdlRuntime {
     private var mainThreadId int32
     private var references int32
     private var wakeEventType uint32
+    private var eventModifierMask uint16
     private let cursors []SDLCursorPtr = [int32(Cursor.ResizeWest) + 1]SDLCursorPtr
     private var currentCursor Cursor = Cursor.Default
     private var applicationConfigured bool
@@ -112,6 +113,8 @@ internal partial class SdlRuntime {
     internal func PollEvents() {
       PumpEvents(Int32.MaxValue)
     }
+
+    internal prop EventModifierMask uint16{ get -> eventModifierMask }
 
     internal func PumpEvents(maxEvents int32) int32 {
       RequireMainThread("SDL event polling")
@@ -252,6 +255,7 @@ internal partial class SdlRuntime {
             SDL.QuitSubSystem(requiredSubsystems)
             throw InvalidOperationException("SDL_RegisterEvents failed to allocate a wake event type.")
           }
+          eventModifierMask = SDL.GetModState()
         }
         references++
       }
@@ -265,6 +269,7 @@ internal partial class SdlRuntime {
         }
         references--
         if references == 0 {
+          eventModifierMask = uint16(0)
           SDL.SetCursor(SDL.GetDefaultCursor())
           for cursor in cursors {
             if !cursor.IsNull {
@@ -304,6 +309,13 @@ internal partial class SdlRuntime {
 
     private func DispatchOne(nativeEvent SDLEvent) {
       let eventType = SDLEventType(nativeEvent.Type)
+      if eventType == SDLEventType.KeyDown || eventType == SDLEventType.KeyUp {
+        eventModifierMask = nativeEvent.Key.Mod
+      } else if eventType == SDLEventType.WindowFocusGained {
+        eventModifierMask = SDL.GetModState()
+      } else if eventType == SDLEventType.WindowFocusLost {
+        eventModifierMask = uint16(0)
+      }
       if eventType == SDLEventType.Quit || eventType == SDLEventType.Terminating
         || eventType == SDLEventType.SystemThemeChanged {
         events.RouteAll(nativeEvent)

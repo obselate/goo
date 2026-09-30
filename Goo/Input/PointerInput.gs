@@ -36,6 +36,7 @@ internal partial class PointerInput {
   private var dragHitPath List[Node]?
   private var dragGeneration int64
   private var creatingDrag bool
+  private var nativeDragHost NativeFileDragHost?
   private var resetting bool
 
   internal init(focus FocusManager, queue InputEventQueue) {
@@ -165,6 +166,7 @@ internal partial class PointerInput {
   }
 
   internal func Bind(host WindowHost) {
+    nativeDragHost = host as NativeFileDragHost?
     host.PointerMoved += QueueMoveFromHost
     host.PointerPressed += QueuePressFromHost
     host.PointerReleased += QueueReleaseFromHost
@@ -349,17 +351,17 @@ internal partial class PointerInput {
     queue.Add(QueuedPointerEvent{ Kind: PointerEventKind.HoverInvalidation })
   }
 
-  internal func Reset(root Node?, resolver Resolver) {
+  internal func Reset(root Node?, resolver Resolver, preserveNative bool = false) {
     if resetting { return }
     resetting = true
-    try { reset(root, resolver) }
+    try { reset(root, resolver, preserveNative) }
     finally { resetting = false }
   }
 
-  private func reset(root Node?, resolver Resolver) {
+  private func reset(root Node?, resolver Resolver, preserveNative bool) {
     var failure Exception?
     try {
-      cancelDrag(root)
+      if !preserveNative || dragSession?.NativeActive != true { cancelDrag(root) }
     } catch (error Exception) {
       failure = error
     }
@@ -630,6 +632,7 @@ internal partial class PointerInput {
         if let tree = root {
           try {
             updateDragTarget(tree, x, y, modifiers, true)
+            promoteNativeDrag(tree, x, y)
           } catch (error Exception) {
             terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
           }

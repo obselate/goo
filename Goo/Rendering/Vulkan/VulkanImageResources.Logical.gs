@@ -228,6 +228,33 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return empty
   }
 
+  private func TryEnsureLogicalSourceCapacity(id ResourceId, bytes VkDeviceSize) bool {
+    let existingIndex = FindLogicalIndex(id)
+    let oldBytes = if existingIndex >= 0 { logicalRecords[existingIndex].Bytes } else { 0uL }
+    let available = logicalStats.LogicalSourceBudget - bytes
+    if logicalStats.LogicalSourceBytes - oldBytes <= available {
+      return true
+    }
+    for index in 0 ... logicalRecords.Length {
+      if index == existingIndex {
+        continue
+      }
+      let logical = logicalRecords[index]
+      if !logical.Id.IsValid || logical.PhysicalSlot >= 0 {
+        continue
+      }
+      logicalStats.EntryCount--
+      logicalStats.LogicalCount--
+      logicalStats.LogicalBytes -= logical.Bytes
+      logicalStats.LogicalSourceBytes -= logical.Bytes
+      logicalRecords[index] = VulkanImageLogicalRecord{}
+      if logicalStats.LogicalSourceBytes - oldBytes <= available {
+        return true
+      }
+    }
+    return false
+  }
+
   private func ValidateLogicalSourceCharge(oldBytes VkDeviceSize, newBytes VkDeviceSize) {
     let withoutOld = logicalStats.LogicalSourceBytes - oldBytes
     if newBytes > logicalStats.LogicalSourceBudget

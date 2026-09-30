@@ -119,7 +119,11 @@ internal unsafe partial class SdlHost {
   internal func TransferCapabilities() NativeTransferCapabilities {
     ThrowIfDisposed()
     let driver = SDL.GetCurrentVideoDriverS()
-    return if driver == "wayland" || driver == "x11" || driver == "windows" || driver == "cocoa" {
+    if driver == "wayland" {
+      return NativeTransferCapabilities.FileDrop | NativeTransferCapabilities.DropPreview |
+        NativeTransferCapabilities.OutboundData
+    }
+    return if driver == "x11" || driver == "windows" || driver == "cocoa" {
       NativeTransferCapabilities.FileDrop | NativeTransferCapabilities.DropPreview
     } else { NativeTransferCapabilities.None }
   }

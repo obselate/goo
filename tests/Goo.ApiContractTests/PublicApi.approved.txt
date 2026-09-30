@@ -11,7 +11,9 @@ ctor|Goo.Command|public|(execute:System.Action,canExecute:System.Func`1<System.B
 ctor|Goo.Container|public|()
 ctor|Goo.DashPattern|public|(intervals:System.Double[],offset:System.Double)
 ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect)
+ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect,nativeFiles:Goo.NativeFileDrag)
 ctor|Goo.DragSource|public|(create:System.Func`2<Goo.DragStartEvent,Goo.DragData>,end:System.Action`1<Goo.DragEndEvent>=null)
+ctor|Goo.DropTarget|public|(query:System.Func`2<Goo.DragEvent,Goo.DragEffect>,changed:System.Action`1<Goo.DragEvent>,stopAncestorRouting:System.Boolean)
 ctor|Goo.DropTarget|public|(query:System.Func`2<Goo.DragEvent,Goo.DragEffect>,changed:System.Action`1<Goo.DragEvent>=null)
 ctor|Goo.Edges`1|public|(all:!0)
 ctor|Goo.Edges`1|public|(top:!0,horizontal:!0,bottom:!0)
@@ -40,6 +42,7 @@ ctor|Goo.LinearGradient|public|(angle:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.LinearGradient|public|(params colors:Goo.Color[])
 ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<!0,System.Double[]>,write:System.Func`2<System.Double[],!0>)
 ctor|Goo.NativeAccessibilityAdapter|public|()
+ctor|Goo.NativeFileDrag|public|(values:System.Collections.Generic.IReadOnlyList`1<System.String>)
 ctor|Goo.PathBuilder|public|()
 ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double)
 ctor|Goo.Portal|public|()
@@ -816,6 +819,7 @@ method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->
 method|Goo.Motion|Tween|static|public|generic:|(duration:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
 method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
 method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
+method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag&)->System.Boolean
 method|Goo.PanelTransform|Equals|instance|public|generic:|(other:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Equality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Inequality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
@@ -1238,6 +1242,7 @@ property|Goo.Container|PinToBottom|System.Boolean|instance|get:public,init:publi
 property|Goo.DashPattern|Intervals|System.Collections.Generic.IReadOnlyList`1<System.Double>|instance|get:public|index:()
 property|Goo.DashPattern|Offset|System.Double|instance|get:public|index:()
 property|Goo.DragData|AllowedEffects|Goo.DragEffect|instance|get:public|index:()
+property|Goo.DragData|NativeFiles|Goo.NativeFileDrag|instance|get:public|index:()
 property|Goo.DragData|Value|System.Object|instance|get:public|index:()
 property|Goo.DragEndEvent|Effect|Goo.DragEffect|instance|get:public,init:public|index:()
 property|Goo.DragEndEvent|Kind|Goo.DragEndKind|instance|get:public,init:public|index:()
@@ -1261,6 +1266,7 @@ property|Goo.DragStartEvent|Position|Goo.Point|instance|get:public,init:public|i
 property|Goo.DragStartEvent|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.DropTarget|Changed|System.Action`1<Goo.DragEvent>|instance|get:public|index:()
 property|Goo.DropTarget|Query|System.Func`2<Goo.DragEvent,Goo.DragEffect>|instance|get:public|index:()
+property|Goo.DropTarget|StopAncestorRouting|System.Boolean|instance|get:public|index:()
 property|Goo.Edges`1|Bottom|!0|instance|get:public,init:public|index:()
 property|Goo.Edges`1|Left|!0|instance|get:public,init:public|index:()
 property|Goo.Edges`1|Right|!0|instance|get:public,init:public|index:()
@@ -1365,6 +1371,7 @@ property|Goo.LinearGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo
 property|Goo.Motion|Default|System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>|static|get:public,set:public|index:()
 property|Goo.Motion|TimeScale|System.Double|static|get:public,set:public|index:()
 property|Goo.NativeAccessibilityAdapter|IsAvailable|System.Boolean|static|get:public|index:()
+property|Goo.NativeFileDrag|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
 property|Goo.NativeFileDrop|IsPreview|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.NativeFileDrop|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
 property|Goo.PanelTransform|Rotate|System.Double|instance|get:public,init:public|index:()
@@ -1807,6 +1814,7 @@ type|Goo.MotionConverter`1|sealed-class|public|base:System.Object|interfaces:|ge
 type|Goo.MotionVelocity|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Motion|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeAccessibilityAdapter|class|public|base:System.Object|interfaces:Goo.AccessibilityAdapter,System.IDisposable|generic:
+type|Goo.NativeFileDrag|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeFileDrop|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Overflow|enum|public|base:System.Enum|interfaces:|generic:

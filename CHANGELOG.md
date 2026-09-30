@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.9 - 2026-09-29
+
+- Reclaim detached Vulkan image records when the logical source budget fills,
+  allowing repeated large images and evicted sources to render again.
+- Offer local files to external Wayland targets as Copy drags while preserving
+  in-window Move and Copy behavior. Native file offers can be skipped when path
+  limits are exceeded without canceling an in-window drag.
+- Let a rejecting drop target stop fallback to its ancestors when requested.
+- Preserve each pointer event's keyboard modifiers so a fast Ctrl-drop keeps
+  its Copy effect when Ctrl is released in the same event batch.
+
 ## 0.7.8 - 2026-09-29
 
 - Add optional fixed line numbers to text editors, including wrapped text and
