@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.12 - 2026-10-01
+
+- Stream thumbnail area filtering through exact integer coverage weights and
+  bounded row buffers, preserving premultiplied alpha and fractional coverage.
+- Skip unchanged premultiplication for opaque raster pixels.
+- Disable SDL dynamic API dispatch in the Linux static archive while retaining
+  runtime dispatch in the shared payload.
+
 ## 0.7.11 - 2026-09-30
 
 - Measure ordinary scroll content from the padded and bordered content origin,
