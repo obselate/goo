@@ -62,6 +62,8 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/portal-dialog-lifetime.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-foreign-parent.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/static-no-dynapi.patch"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
 find "$work/src/wayland-protocols" -type f -name '*.xml' \
