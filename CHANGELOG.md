@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.11 - 2026-09-30
+
+- Measure ordinary scroll content from the padded and bordered content origin,
+  removing false scroll overflow when a child fits the content area.
+
 ## 0.7.10 - 2026-09-30
 
 - Import portal Wayland parent handles before showing a window, with optional
