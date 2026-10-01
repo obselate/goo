@@ -303,6 +303,53 @@ public sealed class ImageSourceCacheTests : IDisposable
         Assert.ThrowsAny<OperationCanceledException>(() => ImageSource.LoadThumbnail(path, 160, 160, cancelled.Token));
     }
 
+    [Theory]
+    [InlineData(17, 11, 7, 5, 7, 5, "CgsKTj0XKKE4ECNbSSBKfhoobJgsIUxXf0A2qQwmFHYnKyRkYUNLkkYvQWIfTXKFOkNQeE9FEWgTTiZ4MU42elFUSXRXaGyKG1lWckJuD31gXR98EVwudT07T4RibmOJKRdHZCYeFpI9KBd1dh05jSAgWKUlDjdSaiZ5ijciZnwfJBNlX0I4p0YjKFQ=")]
+    [InlineData(11, 17, 5, 7, 5, 7, "CQ4KUjEWIpNAFCl3XB47axkraqAJJBJlJzEnbF5NTpxTLz1iF0ZedRNkL44pSzFrSVlHb3FnYoMUSFVoE0I1djYiTYFOP1Z3RCJuexcRIIYYHUZ9LiNKZWIzeY5QLVF5FjYWciBRY403SWZ8T0swalNoFJYSRxlgG1xXalCRXKBDNQ9bQzUgdyQ+PZw=")]
+    [InlineData(31, 3, 7, 4, 7, 1, "HBYXdlYfOHgcJVh3Yjk2iiRALHpaTFF+KFRafw==")]
+    [InlineData(3, 31, 4, 7, 1, 7, "DxoRZxROK3MgKE+DJVZsgzA4LJE1UiaCODQ9eg==")]
+    [InlineData(1, 17, 7, 5, 1, 5, "AhYJWAZBG3MNWTqSDiY7ZhZiX4I=")]
+    [InlineData(17, 1, 5, 7, 5, 1, "DQIHNUMLKIkkDzJYGRhSclgkSHs=")]
+    public void ThumbnailFractionalCoverageMatchesPublishedPixels(int width, int height,
+        int maxWidth, int maxHeight, int expectedWidth, int expectedHeight, string published)
+    {
+        using var raw = new MemoryStream();
+        for (var y = 0; y < height; y++)
+        {
+            raw.WriteByte(0);
+            for (var x = 0; x < width; x++)
+                raw.Write([(byte)(x * 29 + y * 3), (byte)(x * 5 + y * 31),
+                    (byte)(x * 17 + y * 13), (byte)(x * 43 + y * 71)]);
+        }
+        var path = Write("fractional.png", Png(width, height, 8, 6, raw.ToArray()));
+        using var source = ImageSource.LoadThumbnail(path, maxWidth, maxHeight);
+        Assert.Equal(expectedWidth, source.Width);
+        Assert.Equal(expectedHeight, source.Height);
+        using var lease = source.Acquire();
+        var pixels = lease.Result()!.Pixels()!;
+        var expected = Convert.FromBase64String(published);
+        Assert.Equal(expected.Length, pixels.Length);
+        for (var i = 0; i < pixels.Length; i++) Assert.InRange(Math.Abs(pixels[i] - expected[i]), 0, 1);
+        for (var i = 0; i < pixels.Length; i += 4)
+            for (var channel = 0; channel < 3; channel++) Assert.True(pixels[i + channel] <= pixels[i + 3]);
+    }
+
+    [Fact]
+    public void ThumbnailMaximumRasterCoverageDoesNotOverflow()
+    {
+        const int width = 8192, height = 2048;
+        var stride = width * 4 + 1;
+        var raw = new byte[stride * height];
+        Array.Fill(raw, (byte)255);
+        for (var y = 0; y < height; y++) raw[y * stride] = 0;
+        var path = Write("maximum.png", Png(width, height, 8, 6, raw));
+        using var source = ImageSource.LoadThumbnail(path, 1, 1);
+        Assert.Equal(1, source.Width);
+        Assert.Equal(1, source.Height);
+        using var lease = source.Acquire();
+        Assert.Equal(new byte[] { 255, 255, 255, 255 }, lease.Result()!.Pixels());
+    }
+
     [Fact]
     public void ThumbnailFilteringDoesNotBleedHiddenRgbIntoVisiblePixels()
     {

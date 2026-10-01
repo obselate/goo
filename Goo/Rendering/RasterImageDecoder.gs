@@ -67,8 +67,10 @@ internal partial class RasterImageDecoder {
       while offset < pixels.Length {
         if (offset & 65535) == 0 { token.ThrowIfCancellationRequested() }
         let alpha = int32(pixels[offset + 3])
-        for channel in 0 ... 3 {
-          pixels[offset + channel] = uint8((int32(pixels[offset + channel]) * alpha + 127) / 255)
+        if alpha != 255 {
+          for channel in 0 ... 3 {
+            pixels[offset + channel] = uint8((int32(pixels[offset + channel]) * alpha + 127) / 255)
+          }
         }
         offset += 4
       }
@@ -110,39 +112,67 @@ internal partial class RasterImageDecoder {
     private func Resample(pixels []uint8, sourceWidth int32, sourceHeight int32,
       width int32, height int32, token CancellationToken) []uint8 {
         let resized = [width * height * 4]uint8
+        let spans = [width * 4]int32
+        let row = [width * 4]int32
+        let sums = [width * 4]int64
+        for x in 0 ... width {
+          let left = x * sourceWidth
+          let right = left + sourceWidth
+          let first = left / width
+          let last = (right - 1) / width
+          let target = x * 4
+          spans[target] = first * 4
+          spans[target + 1] = last * 4
+          spans[target + 2] = Math.Min(right, (first + 1) * width) - left
+          spans[target + 3] = if last > first { right - last * width } else { 0 }
+        }
+        let area = float64(sourceWidth) * float64(sourceHeight)
+        var cachedRow = -1
         for y in 0 ... height {
           token.ThrowIfCancellationRequested()
-          let top = float64(y) * float64(sourceHeight) / float64(height)
-          let bottom = float64(y + 1) * float64(sourceHeight) / float64(height)
-          for x in 0 ... width {
-            let left = float64(x) * float64(sourceWidth) / float64(width)
-            let right = float64(x + 1) * float64(sourceWidth) / float64(width)
-            var red float64
-            var green float64
-            var blue float64
-            var alpha float64
-            for sy in int32(Math.Floor(top)) ... int32(Math.Ceiling(bottom)) {
-              if (sy & 63) == 0 { token.ThrowIfCancellationRequested() }
-              let rowWeight = Math.Min(bottom, float64(sy + 1)) - Math.Max(top, float64(sy))
-              for sx in int32(Math.Floor(left)) ... int32(Math.Ceiling(right)) {
-                let weight = rowWeight * (Math.Min(right, float64(sx + 1)) - Math.Max(left, float64(sx)))
-                let source = (sy * sourceWidth + sx) * 4
-                red += float64(pixels[source]) * weight
-                green += float64(pixels[source + 1]) * weight
-                blue += float64(pixels[source + 2]) * weight
-                alpha += float64(pixels[source + 3]) * weight
-              }
+          Array.Clear(sums)
+          let top = y * sourceHeight
+          let bottom = top + sourceHeight
+          for sy in top / height ... (bottom - 1) / height + 1 {
+            token.ThrowIfCancellationRequested()
+            if cachedRow != sy {
+              FilterRow(pixels, sy * sourceWidth * 4, width, spans, row)
+              cachedRow = sy
             }
-            let area = (right - left) * (bottom - top)
-            let target = (y * width + x) * 4
-            resized[target] = uint8(Math.Round(red / area))
-            resized[target + 1] = uint8(Math.Round(green / area))
-            resized[target + 2] = uint8(Math.Round(blue / area))
-            resized[target + 3] = uint8(Math.Round(alpha / area))
+            let weight = Math.Min(bottom, (sy + 1) * height) - Math.Max(top, sy * height)
+            for channel in 0 ... row.Length { sums[channel] += int64(row[channel]) * weight }
           }
+          let target = y * row.Length
+          for channel in 0 ... row.Length { resized[target + channel] = uint8(Math.Round(float64(sums[channel]) / area)) }
         }
         return resized
       }
+
+    private func FilterRow(pixels []uint8, offset int32, width int32, spans []int32, row []int32) {
+      for x in 0 ... width {
+        let target = x * 4
+        let first = offset + spans[target]
+        let last = offset + spans[target + 1]
+        let firstWeight = spans[target + 2]
+        let lastWeight = spans[target + 3]
+        var red int32
+        var green int32
+        var blue int32
+        var alpha int32
+        var source = first + 4
+        while source < last {
+          red += pixels[source]
+          green += pixels[source + 1]
+          blue += pixels[source + 2]
+          alpha += pixels[source + 3]
+          source += 4
+        }
+        row[target] = red * width + int32(pixels[first]) * firstWeight + int32(pixels[last]) * lastWeight
+        row[target + 1] = green * width + int32(pixels[first + 1]) * firstWeight + int32(pixels[last + 1]) * lastWeight
+        row[target + 2] = blue * width + int32(pixels[first + 2]) * firstWeight + int32(pixels[last + 2]) * lastWeight
+        row[target + 3] = alpha * width + int32(pixels[first + 3]) * firstWeight + int32(pixels[last + 3]) * lastWeight
+      }
+    }
 
     internal func Decode(bytes ReadOnlyMemory[uint8], token CancellationToken) ImageSource {
       token.ThrowIfCancellationRequested()
