@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.13 - 2026-10-01
+
+- Pin descriptor layout and output arrays across Vulkan allocation calls,
+  preventing collected or moved arrays from reaching the driver at startup.
+- Keep validation messenger output, buffer copy ranges, and cached text records
+  stable across native calls.
+- Include Vulkan result codes in failed surface format and present mode queries.
+
 ## 0.7.12 - 2026-10-01
 
 - Stream thumbnail area filtering through exact integer coverage weights and

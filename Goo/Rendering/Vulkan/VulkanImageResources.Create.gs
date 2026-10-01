@@ -27,9 +27,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
     let setCount = imageCount * 2
     let setOffset = imageOffset * 2
-    poolSizes[0] = VkDescriptorPoolSize{}
-    poolSizes[0]._type = VkConstants.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-    poolSizes[0].descriptorCount = uint32(setCount)
+    var poolSize = VkDescriptorPoolSize{}
+    poolSize._type = VkConstants.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    poolSize.descriptorCount = uint32(setCount)
     let layouts = [setCount]VkDescriptorSetLayout
     let createdSets = [setCount]VkDescriptorSet
     var descriptorIndex int32 = 0
@@ -37,15 +37,20 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       layouts[descriptorIndex] = descriptorSetLayout
       descriptorIndex++
     }
-    let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
-      device,
-      dispatch,
-      objectAccounting,
-      &poolSizes[0],
-      1u,
-      &layouts[0],
-      uint32(setCount),
-      &createdSets[0])
+    var creation VulkanDescriptorAllocation
+    fixed layoutPointer * VkDescriptorSetLayout = layouts {
+      fixed setPointer * VkDescriptorSet = createdSets {
+        creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
+          device,
+          dispatch,
+          objectAccounting,
+          &poolSize,
+          1u,
+          layoutPointer,
+          uint32(setCount),
+          setPointer)
+      }
+    }
     descriptorPools.Add(creation.Pool)
     trackedDescriptorPoolCount++
     Array.Copy(createdSets, 0, descriptorSets, setOffset, setCount)

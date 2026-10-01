@@ -705,15 +705,18 @@ internal unsafe sealed class VulkanClipMaskFrameData : IDisposable {
       layouts[index] = descriptorSetLayout
       index++
     }
-    let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
-      device,
-      dispatch,
-      objectAccounting,
-      poolSizes,
-      2u,
-      layouts,
-      uint32(SlotCount),
-      &descriptors.Sets[0])
+    var creation VulkanDescriptorAllocation
+    fixed setPointer * VkDescriptorSet = descriptors.Sets {
+      creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
+        device,
+        dispatch,
+        objectAccounting,
+        poolSizes,
+        2u,
+        layouts,
+        uint32(SlotCount),
+        setPointer)
+    }
     descriptors.Adopt(creation)
     index = 0
     while index < SlotCount {

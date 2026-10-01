@@ -6,6 +6,12 @@ internal static class Program
 {
     private static int Main()
     {
+        if (Environment.GetEnvironmentVariable("GOO_VK_DESCRIPTOR_GC") == "1")
+        {
+            DescriptorLifetimeRegression.Run();
+            return 0;
+        }
+
         if (Environment.GetEnvironmentVariable("GOO_VK_DAMAGE_JOURNAL") == "1")
             return RunDamageJournalGate();
 
@@ -18,6 +24,7 @@ internal static class Program
         }
 
 
+        DescriptorLifetimeRegression.Run();
         RunOverflowBorderGate();
         RunPortalRetentionGate();
         if (Environment.GetEnvironmentVariable("GOO_VK_OVERFLOW_BORDER") == "1")

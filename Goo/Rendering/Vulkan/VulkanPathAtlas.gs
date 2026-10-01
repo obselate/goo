@@ -413,16 +413,19 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     var poolSize = VkDescriptorPoolSize{}
     poolSize._type = VkConstants.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
     poolSize.descriptorCount = 1u
+    var layout = descriptorSetLayout
+    var createdSet VkDescriptorSet = 0uL
     let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
       device,
       dispatch,
       objectAccounting,
       &poolSize,
       1u,
-      &descriptorSetLayout,
+      &layout,
       1u,
-      &descriptorSet)
+      &createdSet)
     descriptorPool = creation.Pool
+    descriptorSet = createdSet
     VulkanDescriptorFactory.WriteStorageBuffer(
       device,
       dispatch,

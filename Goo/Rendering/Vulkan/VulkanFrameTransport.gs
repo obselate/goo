@@ -118,8 +118,10 @@ internal unsafe data struct VulkanFrameBuffers {
         return
       }
       let copyBuffer = dispatch.vkCmdCopyBuffer
-      copyBuffer(commandBuffer, StagingBuffer, Buffer,
-        uint32(rangeCount), &ranges[0])
+      fixed rangePointer * VkBufferCopy = ranges {
+        copyBuffer(commandBuffer, StagingBuffer, Buffer,
+          uint32(rangeCount), rangePointer)
+      }
       VulkanTransitions.RecordBuffer(
         commandBuffer,
         dispatch.vkCmdPipelineBarrier2,

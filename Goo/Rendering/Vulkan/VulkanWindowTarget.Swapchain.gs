@@ -338,7 +338,7 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     if formatCountResult != VkConstants.VK_SUCCESS || formatCount == 0u {
-      throw InvalidOperationException("Vulkan surface formats are unavailable")
+      throw InvalidOperationException("Vulkan surface formats are unavailable: " + formatCountResult.ToString())
     }
     let formats * VkSurfaceFormatKHR = stackalloc[int32(formatCount)]VkSurfaceFormatKHR
     let formatResult = getFormats(physicalDevice, surface, &formatCount, formats)
@@ -347,7 +347,7 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     if formatResult != VkConstants.VK_SUCCESS {
-      throw InvalidOperationException("Vulkan surface format query failed")
+      throw InvalidOperationException("Vulkan surface format query failed: " + formatResult.ToString())
     }
     var selectedFormat VkSurfaceFormatKHR = VkSurfaceFormatKHR{}
     if !SelectSrgbFormat(formats, formatCount, out selectedFormat) {
@@ -372,7 +372,7 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     if modeCountResult != VkConstants.VK_SUCCESS || modeCount == 0u {
-      throw InvalidOperationException("Vulkan surface present modes are unavailable")
+      throw InvalidOperationException("Vulkan surface present modes are unavailable: " + modeCountResult.ToString())
     }
     let modes * VkPresentModeKHR = stackalloc[int32(modeCount)]VkPresentModeKHR
     let modeResult = getModes(physicalDevice, surface, &modeCount, modes)
@@ -381,7 +381,7 @@ internal unsafe partial class VulkanWindowTarget {
       return false
     }
     if modeResult != VkConstants.VK_SUCCESS {
-      throw InvalidOperationException("Vulkan surface present mode query failed")
+      throw InvalidOperationException("Vulkan surface present mode query failed: " + modeResult.ToString())
     }
     var hasImmediate = false
     var hasMailbox = false
