@@ -791,15 +791,20 @@ internal unsafe sealed class VulkanPrimitiveFrameData : IDisposable {
       layouts[slotCount + index] = effectDataDescriptorSetLayout
       index++
     }
-    let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
-      device,
-      dispatch,
-      objectAccounting,
-      &poolSize,
-      1u,
-      &layouts[0],
-      uint32(descriptorCount),
-      &descriptors.Sets[0])
+    var creation VulkanDescriptorAllocation
+    fixed layoutPointer * VkDescriptorSetLayout = layouts {
+      fixed setPointer * VkDescriptorSet = descriptors.Sets {
+        creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
+          device,
+          dispatch,
+          objectAccounting,
+          &poolSize,
+          1u,
+          layoutPointer,
+          uint32(descriptorCount),
+          setPointer)
+      }
+    }
     descriptors.Adopt(creation)
   }
 

@@ -782,11 +782,13 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       let destinationBase = nint(slot.Buffers.Mapped)
       +nint(uint64(destinationFirst) * RecordBytes)
       let copyBytes = uint64(recordCount) * RecordBytes
-      System.Buffer.MemoryCopy(
-        *void(nint(&segment.Records[0])),
-        *void(destinationBase),
-        copyBytes,
-        copyBytes)
+      fixed records * HbGpuTextInstanceRecord = segment.Records {
+        System.Buffer.MemoryCopy(
+          records,
+          *void(destinationBase),
+          copyBytes,
+          copyBytes)
+      }
     }
 
   private func AppendRange(slot VulkanTextFrameSlot, firstRecord int32,
@@ -835,15 +837,18 @@ internal unsafe sealed class VulkanTextFrameData : IDisposable {
       layouts[index] = descriptorSetLayout
       index = index + 1
     }
-    let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
-      device,
-      dispatch,
-      objectAccounting,
-      &poolSize,
-      1u,
-      layouts,
-      uint32(slotCount),
-      &descriptors.Sets[0])
+    var creation VulkanDescriptorAllocation
+    fixed setPointer * VkDescriptorSet = descriptors.Sets {
+      creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
+        device,
+        dispatch,
+        objectAccounting,
+        &poolSize,
+        1u,
+        layouts,
+        uint32(slotCount),
+        setPointer)
+    }
     descriptors.Adopt(creation)
   }
 

@@ -483,12 +483,13 @@ internal unsafe partial class VulkanWindowTarget {
     let currentValidation = validation!!
     var createInfo = currentValidation.CreateInfo()
     let createMessenger = instanceDispatch.vkCreateDebugUtilsMessengerEXT
-    let result = createMessenger(instance, &createInfo, nil, &validationMessenger)
+    var createdMessenger VkDebugUtilsMessengerEXT = 0uL
+    let result = createMessenger(instance, &createInfo, nil, &createdMessenger)
     RecordDiagnosticResult(VulkanDiagnosticEventIds.ValidationMessage, result)
-    if result != VkConstants.VK_SUCCESS || validationMessenger == 0uL {
-      validationMessenger = 0uL
+    if result != VkConstants.VK_SUCCESS || createdMessenger == 0uL {
       throw InvalidOperationException("vkCreateDebugUtilsMessengerEXT failed: " + result.ToString())
     }
+    validationMessenger = createdMessenger
     try {
       if let accounting = sharedObjectAccounting {
         accounting.Allocate()

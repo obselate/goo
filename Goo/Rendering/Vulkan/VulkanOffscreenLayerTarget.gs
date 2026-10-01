@@ -798,15 +798,20 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       layouts[index] = descriptorLayout
       index++
     }
-    let creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
-      device,
-      dispatch,
-      objectAccounting,
-      &poolSize,
-      1u,
-      &layouts[0],
-      uint32(count),
-      &createdSets[0])
+    var creation VulkanDescriptorAllocation
+    fixed layoutPointer * VkDescriptorSetLayout = layouts {
+      fixed setPointer * VkDescriptorSet = createdSets {
+        creation = VulkanDescriptorFactory.CreatePoolAndAllocate(
+          device,
+          dispatch,
+          objectAccounting,
+          &poolSize,
+          1u,
+          layoutPointer,
+          uint32(count),
+          setPointer)
+      }
+    }
     descriptorPools.Add(creation.Pool)
     descriptorPoolCount++
     Array.Copy(createdSets, 0, descriptorSets, destinationOffset, count)
