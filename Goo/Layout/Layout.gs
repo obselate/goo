@@ -534,7 +534,7 @@ internal class Layout {
       if editor {
         ScrollState.SyncEditor(n)
       } else if n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll {
-        measureScrollExtent(n)
+        measureScrollExtent(n, yg)
       }
       if editor {
         readEditorSlotRects(n)
@@ -576,7 +576,7 @@ internal class Layout {
 
   // Content extent from Yoga's relative child geometry; every pass re-clamps
   // so content shrink can never leave an out-of-range offset behind.
-  private func measureScrollExtent(n Node) {
+  private func measureScrollExtent(n Node, yoga Facebook.Yoga.Node) {
     var cw = 0.0F
     var ch = 0.0F
     if let custom = CustomLayouts.State(n) {
@@ -586,13 +586,15 @@ internal class Layout {
       cw = extent.Width
       ch = extent.Height
     } else {
+      let insetX = CustomLayouts.Inset(yoga, YGEdge.Left)
+      let insetY = CustomLayouts.Inset(yoga, YGEdge.Top)
       for i in 0 ... n.Children.Count {
         if n.Children[i].IsPortal { continue }
         guard let cy = n.Children[i].Yoga else {
           continue
         }
-        let right = YGNodeLayoutAPI.YGNodeLayoutGetLeft(cy) + YGNodeLayoutAPI.YGNodeLayoutGetWidth(cy)
-        let bottom = YGNodeLayoutAPI.YGNodeLayoutGetTop(cy) + YGNodeLayoutAPI.YGNodeLayoutGetHeight(cy)
+        let right = YGNodeLayoutAPI.YGNodeLayoutGetLeft(cy) + YGNodeLayoutAPI.YGNodeLayoutGetWidth(cy) - insetX
+        let bottom = YGNodeLayoutAPI.YGNodeLayoutGetTop(cy) + YGNodeLayoutAPI.YGNodeLayoutGetHeight(cy) - insetY
         if right > cw { cw = right }
         if bottom > ch { ch = bottom }
       }

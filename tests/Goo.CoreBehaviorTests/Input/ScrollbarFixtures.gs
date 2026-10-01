@@ -352,6 +352,36 @@ internal class ScrollbarFixtures {
       && verticalScrollThumb(tallNode, out vertical)
   }
 
+  func PaddedChildExtentUsesContentOrigin() bool {
+    let fitting = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Width: 240.0,
+      Height: 38.0,
+      BorderWidth: 1.0,
+      Padding: 4.0,
+      Overflow: Overflow.Scroll,
+      ScrollbarY: scrollbar(6.0, 10.0, 2.0, 20.0, true),
+      Container{ Width: 230.0, Height: 28.0, FlexShrink: 0.0 },
+    })
+    Layout().Calculate(fitting, 240.0F, 38.0F)
+    if fitting.ContentW != 230.0F || fitting.ContentH != 28.0F
+      || maxScrollX(fitting) != 0.0F || maxScrollY(fitting) != 0.0F
+      || verticalScrollbarGutter(fitting) != 0.0F || scrollViewportWidth(fitting) != 230.0F {
+        return false
+      }
+
+    let overflowing = Reconciler{ Res: Resolver{} }.Mount(Container{
+      Width: 240.0,
+      Height: 38.0,
+      BorderWidth: 1.0,
+      Padding: 4.0,
+      Overflow: Overflow.Scroll,
+      Container{ Width: 250.0, Height: 40.0, FlexShrink: 0.0 },
+    })
+    Layout().Calculate(overflowing, 240.0F, 38.0F)
+    return overflowing.ContentW == 250.0F && overflowing.ContentH == 40.0F
+      && maxScrollX(overflowing) == 20.0F && maxScrollY(overflowing) == 12.0F
+  }
+
   func PaddedEditorCanRevealTheEndCaret() bool {
     let document = TextDocument("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
     using let controller = TextEditorController(document)

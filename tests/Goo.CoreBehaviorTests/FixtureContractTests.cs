@@ -206,6 +206,7 @@ public sealed class FixtureContractTests
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.IdleCaretDeadlineAndTouchMomentumContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ReservedGutterAndCoupledAxesContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.EditorScrollExtentDoesNotInventOppositeAxisOverflow));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PaddedChildExtentUsesContentOrigin));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PaddedEditorCanRevealTheEndCaret));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.MountedPartHandleAndCallbackContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.HoverPartsRemainOwnedByTheirWindow));
