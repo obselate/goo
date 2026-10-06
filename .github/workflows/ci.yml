@@ -141,6 +141,8 @@ jobs:
             tests/Goo.PackageSmoke/Info.plist
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_BACKDROP_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify NativeAOT UI audio on macOS
         run: |
@@ -663,6 +665,9 @@ jobs:
           fi
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             env -u LD_LIBRARY_PATH GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            artifacts/nativeaot-onefile/Goo.PackageSmoke
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Stage minimal Linux bundle and separate symbols

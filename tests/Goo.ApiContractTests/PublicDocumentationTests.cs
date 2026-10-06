@@ -363,6 +363,8 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedEnumFieldIds =
     {
+        "F:Goo.WindowBackdrop.None",
+        "F:Goo.WindowBackdrop.Blur",
         "F:Goo.TextCommandKind.CancelEdit",
         "F:Goo.TextCommandKind.SelectWord",
         "F:Goo.TextCommandKind.SelectLine",

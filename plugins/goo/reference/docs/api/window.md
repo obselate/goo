@@ -499,6 +499,7 @@ Sources:
 - [`Window.gs`](../../Goo/Window/Window.gs)
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
 - [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
 - [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
@@ -706,6 +707,18 @@ Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
 
 Gets or sets the adapter that receives this window's retained semantic tree.
 
+### `Backdrop`
+
+Gets or sets the native desktop material. Blur requests per-pixel transparency at Open. Enable transparency before opening a window that will toggle blur at runtime. Native policy controls the appearance. Unsupported hosts use BackdropFallbackColor.
+
+### `BackdropAvailable`
+
+Reports whether the open native host accepts blur and currently advertises support. The compositor can still vary or suppress its material according to system policy.
+
+### `BackdropFallbackColor`
+
+Gets or sets the opaque window background used when requested blur is unavailable. Defaults to black. Foreground content is rendered over this color normally.
+
 ### `Background`
 
 Gets or sets the window clear color.
@@ -869,6 +882,27 @@ Gets or sets the requested horizontal position.
 ### `Y`
 
 Gets or sets the requested vertical position.
+
+## `WindowBackdrop`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Selects a native material behind the window's rendered content.
+
+### Values
+
+- `None`
+- `Blur`
+
+### `Blur`
+
+Requests compositor blur of the desktop behind this window.
+
+### `None`
+
+No native background effect.
 
 ## `WindowCapabilities`
 

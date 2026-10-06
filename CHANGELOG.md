@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.14 - 2026-10-06
+
+- Add `Window.Backdrop = WindowBackdrop.Blur` for native desktop blur through
+  Wayland's background-effect protocol, Windows 11 Desktop Acrylic, and macOS
+  behind-window materials. Compositors control the final appearance.
+- Expose `BackdropAvailable` and an opaque `BackdropFallbackColor`. Unsupported
+  hosts use the fallback without changing foreground content or widget shaders.
+- Add the Gallery's `--native-glass` sample and native lifecycle/fallback smoke
+  checks for Linux, Windows, and macOS.
+
 ## 0.7.13 - 2026-10-01
 
 - Pin descriptor layout and output arrays across Vulkan allocation calls,

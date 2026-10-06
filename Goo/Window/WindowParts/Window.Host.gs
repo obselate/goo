@@ -113,7 +113,7 @@ public partial class Window {
         State,
         decorated,
         resizable,
-        transparent,
+        transparent || backdrop == WindowBackdrop.Blur,
         VSync,
         func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
@@ -129,6 +129,7 @@ public partial class Window {
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }
       let target = VulkanWindowTarget(native)
       windowTarget = target
+      native.SetBackdrop(backdrop == WindowBackdrop.Blur)
       if captureStartup {
         target.RecordSdlWindowCreate(sdlStart, sdlEnd)
       }
@@ -696,7 +697,7 @@ public partial class Window {
   private func renderFrame() {
     if let target = windowTarget {
       let paintProfile = profiler.Active ? profiler.Start() : FrameProfilePoint{}
-      target.Render(node, portalRoot, Background, dpi, DiagnosticsSession?.Overlay)
+      target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
       if profiler.Active {
         profiler.Record(FrameProfileStage.Paint, paintProfile)
       }

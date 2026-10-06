@@ -26,11 +26,12 @@ $lanes = @(
     [ordered]@{ name = "benchmark"; variable = "GOO_WINDOWS_QUALIFICATION" },
     [ordered]@{ name = "primitive"; variable = "GOO_PRIMITIVE_SMOKE" },
     [ordered]@{ name = "window"; variable = "GOO_WINDOW_SMOKE" },
-    [ordered]@{ name = "multi-window"; variable = "GOO_MULTI_WINDOW_SMOKE" }
+    [ordered]@{ name = "multi-window"; variable = "GOO_MULTI_WINDOW_SMOKE" },
+    [ordered]@{ name = "native-backdrop"; variable = "GOO_NATIVE_BACKDROP_SMOKE" }
 )
 $summary = @()
 foreach ($lane in $lanes) {
-    Remove-Item Env:GOO_WINDOWS_QUALIFICATION, Env:GOO_PRIMITIVE_SMOKE, Env:GOO_WINDOW_SMOKE, Env:GOO_MULTI_WINDOW_SMOKE -ErrorAction SilentlyContinue
+    Remove-Item Env:GOO_WINDOWS_QUALIFICATION, Env:GOO_PRIMITIVE_SMOKE, Env:GOO_WINDOW_SMOKE, Env:GOO_MULTI_WINDOW_SMOKE, Env:GOO_NATIVE_BACKDROP_SMOKE -ErrorAction SilentlyContinue
     Set-Item ("Env:" + $lane.variable) "1"
     $env:GOO_VK_DIAGNOSTICS = "1"
     $stdout = Join-Path $results ($lane.name + ".stdout.txt")
@@ -50,7 +51,7 @@ foreach ($lane in $lanes) {
         break
     }
 }
-Remove-Item Env:GOO_WINDOWS_QUALIFICATION, Env:GOO_PRIMITIVE_SMOKE, Env:GOO_WINDOW_SMOKE, Env:GOO_MULTI_WINDOW_SMOKE, Env:GOO_VK_DIAGNOSTICS -ErrorAction SilentlyContinue
+Remove-Item Env:GOO_WINDOWS_QUALIFICATION, Env:GOO_PRIMITIVE_SMOKE, Env:GOO_WINDOW_SMOKE, Env:GOO_MULTI_WINDOW_SMOKE, Env:GOO_NATIVE_BACKDROP_SMOKE, Env:GOO_VK_DIAGNOSTICS -ErrorAction SilentlyContinue
 $summary | ConvertTo-Json -Depth 4 | Set-Content -Encoding UTF8 (Join-Path $results "summary.json")
 $failed = @($summary | Where-Object { $_.exitCode -ne 0 })
 Write-Host ("Results: " + $results)

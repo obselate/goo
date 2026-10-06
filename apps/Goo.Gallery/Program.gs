@@ -7,7 +7,7 @@ import System.IO
 import System.Threading
 
 func Main() {
-    Window.ConfigureApplication("Goo Gallery", "0.7.13", "io.github.obselate.goo.gallery")
+    Window.ConfigureApplication("Goo Gallery", "0.7.14", "io.github.obselate.goo.gallery")
     let iconPath = Path.Combine(AppContext.BaseDirectory, "MaterialSymbolsRounded.ttf")
     using let iconFont = FontSource(GalleryTheme.IconFamily, 400, false, File.ReadAllBytes(iconPath))
     iconFont.Register()
@@ -50,6 +50,10 @@ func Main() {
     elementFontRegular.Register()
     elementFontBold.Register()
     let smoke = Environment.GetEnvironmentVariable("GOO_GALLERY_SMOKE") == "1"
+    if Environment.GetCommandLineArgs().Length > 1 && Environment.GetCommandLineArgs()[1] == "--native-glass" {
+        NativeGlassWindow.Run()
+        return
+    }
     let bench = Environment.GetEnvironmentVariable("GOO_GALLERY_BENCH") == "1"
     if smoke {
         RunSmoke()

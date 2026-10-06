@@ -374,6 +374,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     SdlRuntime.RequireMainThread("SdlHost.Dispose")
     CancelNativeFileDrag()
+    nativeBackdrop?.Dispose()
+    nativeBackdrop = nil
+    BackdropAvailable = false
     disposed = true
     SdlTitlebarHooks.Unbind(this)
     if windowId != 0u {
@@ -463,6 +466,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func RefreshMetricsIfChanged() {
     RefreshPreferences(false)
+    RefreshBackdrop()
     let logicalWidth = LogicalWidth
     let logicalHeight = LogicalHeight
     let framebufferWidth = FramebufferWidth

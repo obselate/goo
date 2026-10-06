@@ -610,7 +610,7 @@ public partial class Window {
     if prior == WindowReadbackPollStatus.NotReady && target.QueueWorkPending {
       return WindowCaptureRequestStatus.Busy
     }
-    let status = target.RequestCapture(node, portalRoot, Background, dpi)
+    let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
     if status == WindowReadbackRequestStatus.Accepted {
       captureOwner = WindowCaptureOwner.Public
     }
@@ -653,7 +653,7 @@ public partial class Window {
     guard let target = windowTarget else { return WindowReadbackRequestStatus.NotReady }
     let prior = target.PollCapture()
     if prior == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
-    let status = target.RequestCapture(node, portalRoot, Background, dpi)
+    let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
     if status == WindowReadbackRequestStatus.Accepted {
       captureOwner = WindowCaptureOwner.Diagnostics
     }
