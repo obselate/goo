@@ -4,6 +4,42 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Window`](../../Goo/Window)
 
+## Native desktop backdrops
+
+Set `Backdrop: WindowBackdrop.Blur` with a translucent `Background`. Configure
+each platform before `Open` or replace its options on the window's UI thread:
+
+```gs
+let window = Window{
+    Backdrop: WindowBackdrop.Blur,
+    Background: Color.Parse("#090b10").WithAlpha(0.78),
+    BackdropFallbackColor: "#090b10",
+    WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Acrylic},
+    MacOSBackdrop: MacOSBackdropOptions{
+        Material: MacOSBackdropMaterial.UnderWindowBackground,
+        State: MacOSBackdropState.FollowWindow,
+    },
+    WaylandBackdrop: WaylandBackdropOptions{
+        Region: ElementRect{X: 0, Y: 0, Width: 320, Height: 240},
+    },
+}
+```
+
+Other platforms ignore these options. Default options preserve full-window blur.
+Wayland `Region: nil` covers the whole surface, including after resize. An empty
+rectangle removes blur without disabling support. Coordinates use surface-local
+logical pixels and round outward. macOS `Mask` accepts an immutable
+`WindowBackdropMask(width, height, alpha)` with top-left row-major alpha bytes.
+It masks only the native material. `State` and `Emphasized` control AppKit's
+appearance and do not override accessibility preferences.
+
+Windows Mica materials use wallpaper, not live desktop blur. `Automatic` lets
+DWM choose the material and coverage, including no material. `BackdropAvailable`
+reports native acceptance, not a guarantee of visible blur. Unsupported hosts use
+the opaque fallback. Native appearance remains subject to system policy.
+Desktop-wide settings and numeric blur strength are not exposed. For blur of Goo
+content within the window, use `Style.ShaderEffect`.
+
 ## Visibility, activation and stacking
 
 Set `Window.IconPng` in the `Window` initializer to embedded PNG bytes before
@@ -488,6 +524,149 @@ Distinguishes selected paths, cancellation, unavailable backends, excessive resu
 - `TooLarge`
 - `Failed`
 
+## `MacOSBackdropMaterial`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Selects a semantic AppKit backdrop material. Appearance follows macOS policy.
+
+### Values
+
+- `UnderWindowBackground`
+- `Titlebar`
+- `Selection`
+- `Menu`
+- `Popover`
+- `Sidebar`
+- `HeaderView`
+- `Sheet`
+- `WindowBackground`
+- `HudWindow`
+- `FullScreenUI`
+- `ToolTip`
+- `ContentBackground`
+- `UnderPageBackground`
+
+### `ContentBackground`
+
+Uses the content background material.
+
+### `FullScreenUI`
+
+Uses the fullscreen interface material.
+
+### `HeaderView`
+
+Uses the header material.
+
+### `HudWindow`
+
+Uses the heads-up display material.
+
+### `Menu`
+
+Uses the menu material.
+
+### `Popover`
+
+Uses the popover material.
+
+### `Selection`
+
+Uses the selection material.
+
+### `Sheet`
+
+Uses the sheet material.
+
+### `Sidebar`
+
+Uses the sidebar material.
+
+### `Titlebar`
+
+Uses the titlebar material.
+
+### `ToolTip`
+
+Uses the tooltip material.
+
+### `UnderPageBackground`
+
+Uses the material beneath page backgrounds.
+
+### `UnderWindowBackground`
+
+Uses the material behind window backgrounds. This is the default.
+
+### `WindowBackground`
+
+Uses the window background material.
+
+## `MacOSBackdropOptions`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Configures this window's behind-window AppKit effect. Other platforms ignore it.
+
+### `Emphasized`
+
+Gets whether the native material uses its emphasized appearance.
+
+### `Mask`
+
+Gets the alpha mask, or nil for the full view. This masks the material, not Goo content or input.
+
+### `Material`
+
+Gets the semantic material. Some materials are opaque. Defaults to UnderWindowBackground.
+
+### `State`
+
+Gets the activation policy. Defaults to FollowWindow and still respects accessibility settings.
+
+## `MacOSBackdropState`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Controls whether an AppKit backdrop uses its active or inactive appearance.
+
+### Values
+
+- `FollowWindow`
+- `Active`
+- `Inactive`
+
+### `Active`
+
+Uses the active material appearance.
+
+### `FollowWindow`
+
+Follows native window activation. This is the default.
+
+### `Inactive`
+
+Uses the inactive material appearance.
+
+## `WaylandBackdropOptions`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Configures this window's Wayland background effect. Other platforms ignore it.
+
+### `Region`
+
+Gets a surface-local rectangle in logical pixels, or nil for the whole window. Coordinates and sizes must be nonnegative and fit in signed 32-bit surface coordinates. Fractional bounds round outward. A zero width or height removes blur. The compositor clips to the surface.
+
 ## `Window`
 
 Sources:
@@ -783,6 +962,10 @@ Gets the most recent adapter exception. Failed delivery retries on the next UI-t
 
 Gets the most recent rejected native file-list explanation, cleared when the next offer begins.
 
+### `MacOSBackdrop`
+
+Gets or sets macOS-only material, activation, emphasis and mask options. Changes apply immediately. The native view samples behind the window. Use Style.ShaderEffect to sample Goo content within it.
+
 ### `MaxHeight`
 
 Gets or sets the native client maximum height in logical pixels; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
@@ -867,6 +1050,10 @@ Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparenc
 
 Gets or sets per-window GPU presentation synchronization. True requests FIFO. Software Vulkan devices prefer Immediate, then Mailbox, then FIFO. False prefers Immediate, then Mailbox, then FIFO on every device. Window.Run pacing is controlled separately by FramePacing.
 
+### `WaylandBackdrop`
+
+Gets or sets Wayland-only blur region options. Changes apply on the next surface commit.
+
 ### `WheelScrollScale`
 
 Scales the platform wheel distance for this window. The default is 1.
@@ -874,6 +1061,10 @@ Scales the platform wheel distance for this window. The default is 1.
 ### `Width`
 
 Gets or sets the window width.
+
+### `WindowsBackdrop`
+
+Gets or sets Windows-only material options. Changes apply to an open window immediately.
 
 ### `X`
 
@@ -903,6 +1094,30 @@ Requests compositor blur of the desktop behind this window.
 ### `None`
 
 No native background effect.
+
+## `WindowBackdropMask`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Owns an immutable alpha mask for a native macOS backdrop, stretched to its bounds.
+
+### `new(int32,int32,System.Byte[])`
+
+Copies a row-major alpha mask. Zero hides the material and 255 fully shows it.
+
+- `width`: The positive pixel width.
+- `height`: The positive pixel height.
+- `alpha`: Exactly width times height alpha bytes, starting at the top-left.
+
+### `Height`
+
+Gets the mask height in pixels.
+
+### `Width`
+
+Gets the mask width in pixels.
 
 ## `WindowCapabilities`
 
@@ -1132,3 +1347,46 @@ Set true after handling the command to suppress the platform's default action.
 ### `Position`
 
 Gets the pointer position in logical client coordinates.
+
+## `WindowsBackdropMaterial`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Selects a Windows 11 system backdrop material.
+
+### Values
+
+- `Acrylic`
+- `Automatic`
+- `Mica`
+- `MicaAlt`
+
+### `Acrylic`
+
+Blurs the desktop using Acrylic.
+
+### `Automatic`
+
+Lets DWM choose a material, which may cover only the titlebar or be absent.
+
+### `Mica`
+
+Uses the wallpaper-based Mica material.
+
+### `MicaAlt`
+
+Uses the alternate Mica material for tabbed windows.
+
+## `WindowsBackdropOptions`
+
+Source:
+
+- [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+
+Configures the native material for this window on Windows. Other platforms ignore it.
+
+### `Material`
+
+Gets the material. The default is Acrylic.

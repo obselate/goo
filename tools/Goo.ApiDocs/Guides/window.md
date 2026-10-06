@@ -1,3 +1,39 @@
+## Native desktop backdrops
+
+Set `Backdrop: WindowBackdrop.Blur` with a translucent `Background`. Configure
+each platform before `Open` or replace its options on the window's UI thread:
+
+```gs
+let window = Window{
+    Backdrop: WindowBackdrop.Blur,
+    Background: Color.Parse("#090b10").WithAlpha(0.78),
+    BackdropFallbackColor: "#090b10",
+    WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Acrylic},
+    MacOSBackdrop: MacOSBackdropOptions{
+        Material: MacOSBackdropMaterial.UnderWindowBackground,
+        State: MacOSBackdropState.FollowWindow,
+    },
+    WaylandBackdrop: WaylandBackdropOptions{
+        Region: ElementRect{X: 0, Y: 0, Width: 320, Height: 240},
+    },
+}
+```
+
+Other platforms ignore these options. Default options preserve full-window blur.
+Wayland `Region: nil` covers the whole surface, including after resize. An empty
+rectangle removes blur without disabling support. Coordinates use surface-local
+logical pixels and round outward. macOS `Mask` accepts an immutable
+`WindowBackdropMask(width, height, alpha)` with top-left row-major alpha bytes.
+It masks only the native material. `State` and `Emphasized` control AppKit's
+appearance and do not override accessibility preferences.
+
+Windows Mica materials use wallpaper, not live desktop blur. `Automatic` lets
+DWM choose the material and coverage, including no material. `BackdropAvailable`
+reports native acceptance, not a guarantee of visible blur. Unsupported hosts use
+the opaque fallback. Native appearance remains subject to system policy.
+Desktop-wide settings and numeric blur strength are not exposed. For blur of Goo
+content within the window, use `Style.ShaderEffect`.
+
 ## Visibility, activation and stacking
 
 Set `Window.IconPng` in the `Window` initializer to embedded PNG bytes before

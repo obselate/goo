@@ -26,12 +26,20 @@ internal class WindowsBackdrop : NativeBackdrop {
   private var available bool
   private var disposed bool
   private var nextRefresh int64
+  private var options WindowsBackdropOptions
+  private var appliedMaterial int32 = -1
 
   internal init(window nint) {
     this.window = window
     if window == nint(0) { return }
     var margins = BackdropWindowsMargins{Left: -1, Right: -1, Top: -1, Bottom: -1}
     frameExtended = DwmExtendFrameIntoClientArea(window, ref margins) >= 0
+  }
+
+  internal func Configure(value WindowsBackdropOptions) {
+    if options == value { return }
+    options = value
+    nextRefresh = 0
   }
 
   public func Refresh() bool {
@@ -49,9 +57,17 @@ internal class WindowsBackdrop : NativeBackdrop {
     } catch (error System.Security.SecurityException) { transparency = false }
     catch (error UnauthorizedAccessException) { transparency = false }
     let enabled = transparency && !highContrast
-    if enabled != available {
-      var material = enabled ? 3 : 1
-      available = DwmSetWindowAttribute(window, 38u, ref material, 4u) >= 0 && enabled
+    var material = switch options.Material {
+      case WindowsBackdropMaterial.Automatic: 0
+      case WindowsBackdropMaterial.Mica: 2
+      case WindowsBackdropMaterial.MicaAlt: 4
+      default: 3
+    }
+    if !enabled { material = 1 }
+    if material != appliedMaterial {
+      let accepted = DwmSetWindowAttribute(window, 38u, ref material, 4u) >= 0
+      appliedMaterial = accepted ? material : -1
+      available = accepted && enabled
     }
     return available
   }

@@ -38,6 +38,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.ShowFileDialogAsync(Goo.FileDialogKind,Goo.FileDialogOptions)",
         "M:Goo.Window.Show(System.Boolean)",
         "M:Goo.Window.Hide",
+        "M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])",
         "M:Goo.Window.GetDisplays",
         "M:Goo.Window.TrySetFullscreenDisplay(Goo.WindowDisplayId)",
         "M:Goo.Window.TrySetTopmost(System.Boolean)",
@@ -363,6 +364,27 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedEnumFieldIds =
     {
+        "F:Goo.MacOSBackdropMaterial.ContentBackground",
+        "F:Goo.MacOSBackdropMaterial.FullScreenUI",
+        "F:Goo.MacOSBackdropMaterial.HeaderView",
+        "F:Goo.MacOSBackdropMaterial.HudWindow",
+        "F:Goo.MacOSBackdropMaterial.Menu",
+        "F:Goo.MacOSBackdropMaterial.Popover",
+        "F:Goo.MacOSBackdropMaterial.Selection",
+        "F:Goo.MacOSBackdropMaterial.Sheet",
+        "F:Goo.MacOSBackdropMaterial.Sidebar",
+        "F:Goo.MacOSBackdropMaterial.Titlebar",
+        "F:Goo.MacOSBackdropMaterial.ToolTip",
+        "F:Goo.MacOSBackdropMaterial.UnderPageBackground",
+        "F:Goo.MacOSBackdropMaterial.UnderWindowBackground",
+        "F:Goo.MacOSBackdropMaterial.WindowBackground",
+        "F:Goo.MacOSBackdropState.Active",
+        "F:Goo.MacOSBackdropState.FollowWindow",
+        "F:Goo.MacOSBackdropState.Inactive",
+        "F:Goo.WindowsBackdropMaterial.Acrylic",
+        "F:Goo.WindowsBackdropMaterial.Automatic",
+        "F:Goo.WindowsBackdropMaterial.Mica",
+        "F:Goo.WindowsBackdropMaterial.MicaAlt",
         "F:Goo.WindowBackdrop.None",
         "F:Goo.WindowBackdrop.Blur",
         "F:Goo.TextCommandKind.CancelEdit",
@@ -413,6 +435,7 @@ public sealed class PublicDocumentationTests
     private static readonly IReadOnlyDictionary<string, DocumentationShape> Shapes =
         new Dictionary<string, DocumentationShape>(StringComparer.Ordinal)
         {
+            ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32,System.Int32)"] = new(["start", "length", "caret"], [], false),

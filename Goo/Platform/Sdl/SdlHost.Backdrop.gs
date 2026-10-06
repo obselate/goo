@@ -11,7 +11,8 @@ internal unsafe partial class SdlHost {
   private var nativeBackdrop NativeBackdrop?
   internal prop BackdropAvailable bool { get; private set }
 
-  internal func SetBackdrop(enabled bool) {
+  internal func SetBackdrop(enabled bool, windows WindowsBackdropOptions,
+    macOS MacOSBackdropOptions, wayland WaylandBackdropOptions) {
     ThrowIfDisposed()
     if !enabled {
       nativeBackdrop?.Dispose()
@@ -34,6 +35,9 @@ internal unsafe partial class SdlHost {
       } catch (error DllNotFoundException) { }
       catch (error EntryPointNotFoundException) { }
     }
+    if let windowsNative = nativeBackdrop as WindowsBackdrop? { windowsNative.Configure(windows) }
+    if let macNative = nativeBackdrop as MacBackdrop? { macNative.Configure(macOS) }
+    if let waylandNative = nativeBackdrop as WaylandBackdrop? { waylandNative.Configure(wayland) }
     RefreshBackdrop()
   }
 

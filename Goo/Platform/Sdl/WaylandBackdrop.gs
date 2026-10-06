@@ -51,6 +51,8 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
   private var managerName uint32
   private var canBlur bool
   private var disposed bool
+  private var options WaylandBackdropOptions
+  private var configured bool
 
   internal init(display nint, surface nint) {
     this.display = display
@@ -89,7 +91,10 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
     arguments[0].Value = nint(0)
     arguments[1].Value = surface
     effect = wl_proxy_marshal_array_constructor_versioned(manager, 1u, arguments, effectInterface, 1u)
-    if effect == nint(0) { return }
+  }
+
+  internal func Configure(value WaylandBackdropOptions) {
+    if effect == nint(0) || disposed || (configured && options == value) { return }
     var newId = BackdropWaylandArgument{}
     let region = wl_proxy_marshal_array_constructor_versioned(compositor, 1u, &newId,
       NativeLibrary.GetExport(library, "wl_region_interface"), 1u)
@@ -99,17 +104,29 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
     rectangle[1].Value = nint(0)
     rectangle[2].Value = nint(int32.MaxValue)
     rectangle[3].Value = nint(int32.MaxValue)
-    wl_proxy_marshal_array(region, 1u, rectangle)
+    if let bounds = value.Region {
+      let x = int32(Math.Floor(bounds.X))
+      let y = int32(Math.Floor(bounds.Y))
+      rectangle[0].Value = nint(x)
+      rectangle[1].Value = nint(y)
+      rectangle[2].Value = bounds.Width == 0 ? nint(0) : nint(int32(Math.Ceiling(bounds.X + bounds.Width)) - x)
+      rectangle[3].Value = bounds.Height == 0 ? nint(0) : nint(int32(Math.Ceiling(bounds.Y + bounds.Height)) - y)
+    }
+    if rectangle[2].Value != nint(0) && rectangle[3].Value != nint(0) {
+      wl_proxy_marshal_array(region, 1u, rectangle)
+    }
     var regionArgument = BackdropWaylandArgument{Value: region}
     wl_proxy_marshal_array(effect, 1u, &regionArgument)
     DestroyRequest(region)
     wl_display_flush(display)
+    options = value
+    configured = true
   }
 
   public func Refresh() bool {
     if disposed || queue == nint(0) { return false }
     if wl_display_dispatch_queue_pending(display, queue) < 0 { return false }
-    return effect != nint(0) && managerName != 0u && canBlur
+    return configured && effect != nint(0) && managerName != 0u && canBlur
   }
 
   public func Dispose() {

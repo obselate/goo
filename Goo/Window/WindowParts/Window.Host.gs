@@ -129,7 +129,7 @@ public partial class Window {
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }
       let target = VulkanWindowTarget(native)
       windowTarget = target
-      native.SetBackdrop(backdrop == WindowBackdrop.Blur)
+      native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
       if captureStartup {
         target.RecordSdlWindowCreate(sdlStart, sdlEnd)
       }

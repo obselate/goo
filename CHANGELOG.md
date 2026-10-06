@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.15 - 2026-10-06
+
+- Add per-window `WindowsBackdrop`, `MacOSBackdrop`, and `WaylandBackdrop`
+  options with live updates for native materials, AppKit state/emphasis/alpha
+  masks, and Wayland blur regions. Defaults retain the existing appearance.
+- Keep desktop-wide compositor settings outside the window API. Unsupported
+  hosts retain the opaque fallback and ignore other platforms' options.
+
 ## 0.7.14 - 2026-10-06
 
 - Add `Window.Backdrop = WindowBackdrop.Blur` for native desktop blur through

@@ -59,12 +59,23 @@ func BackdropClose(window Window) {
 }
 
 func RunNativeBackdropSmoke() {
+    let maskAlpha = []uint8{0, 255, 128, 255}
+    let mask = WindowBackdropMask(2, 2, maskAlpha)
+    Array.Clear(maskAlpha)
     for opening in 0 ... 3 {
         let window = Window{
             Title: "Goo native backdrop smoke",
             Width: 320,
             Height: 200,
             Backdrop: WindowBackdrop.Blur,
+            WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Mica},
+            MacOSBackdrop: MacOSBackdropOptions{
+                Material: MacOSBackdropMaterial.Sidebar,
+                State: MacOSBackdropState.Active,
+                Emphasized: true,
+                Mask: mask,
+            },
+            WaylandBackdrop: WaylandBackdropOptions{Region: ElementRect{X: 8.5, Y: 12.5, Width: 143, Height: 95}},
             BackdropFallbackColor: Color.Rgb(18, 52, 86),
             Background: Color.Rgb(9, 11, 16).WithAlpha(0.35),
             Root: Cell{},
@@ -82,15 +93,33 @@ func RunNativeBackdropSmoke() {
                 BackdropRequire(!available, "Expected a compositor without blur")
             }
             BackdropCapture(window, !available)
+            NativeBackdropProbe.Verify(window, 2, 7, 1, true, true)
+            window.WindowsBackdrop = WindowsBackdropOptions{Material: WindowsBackdropMaterial.MicaAlt}
+            window.MacOSBackdrop = MacOSBackdropOptions{
+                Material: MacOSBackdropMaterial.HudWindow,
+                State: MacOSBackdropState.Inactive,
+            }
+            window.WaylandBackdrop = WaylandBackdropOptions{Region: ElementRect{X: 20, Y: 24, Width: 80, Height: 64}}
+            BackdropPump(window)
+            NativeBackdropProbe.Verify(window, 4, 13, 2, false, false)
+            BackdropRequire(window.BackdropAvailable == available, "Live native options changed support")
+            window.WindowsBackdrop = WindowsBackdropOptions{Material: WindowsBackdropMaterial.Automatic}
+            window.WaylandBackdrop = WaylandBackdropOptions{Region: ElementRect{X: 0.5, Width: 0, Height: 50}}
+            BackdropPump(window)
+            NativeBackdropProbe.Verify(window, 0, 13, 2, false, false)
             window.Backdrop = WindowBackdrop.None
             BackdropPump(window)
             BackdropRequire(!window.BackdropAvailable, "Disabled backdrop retained native blur")
             BackdropCapture(window, false)
+            window.WindowsBackdrop = WindowsBackdropOptions{}
+            window.MacOSBackdrop = MacOSBackdropOptions{}
+            window.WaylandBackdrop = WaylandBackdropOptions{}
             window.Backdrop = WindowBackdrop.Blur
             window.Width = 360 + opening * 8
             window.Height = 220 + opening * 8
             BackdropPump(window)
             BackdropRequire(window.BackdropAvailable == available, "Backdrop support changed after resize")
+            NativeBackdropProbe.Verify(window, 3, 21, 0, false, false)
             BackdropRequire(window.Hide() == WindowOperationResult.Accepted, "Backdrop window did not hide")
             BackdropPump(window)
             BackdropRequire(window.Show() == WindowOperationResult.Accepted, "Backdrop window did not show")
@@ -100,6 +129,14 @@ func RunNativeBackdropSmoke() {
             BackdropPump(window)
             BackdropRequire(window.BackdropAvailable == available, "Backdrop support changed after show")
             BackdropCapture(window, !available)
+            var invalidRegionRejected bool
+            try {
+                window.WaylandBackdrop = WaylandBackdropOptions{Region: ElementRect{Width: Double.NaN}}
+            } catch (error ArgumentOutOfRangeException) {
+                invalidRegionRejected = true
+            }
+            BackdropRequire(invalidRegionRejected && window.WaylandBackdrop.Region == nil,
+                "Invalid region changed the active backdrop")
             Console.WriteLine("Native backdrop opening=" + opening.ToString() + " available=" + available.ToString())
         } finally {
             BackdropClose(window)
@@ -121,5 +158,5 @@ func RunNativeBackdropSmoke() {
     } finally {
         BackdropClose(opaque)
     }
-    Console.WriteLine("Native backdrop lifecycle and fallback smoke passed")
+    Console.WriteLine("Native backdrop options, lifecycle and fallback smoke passed")
 }

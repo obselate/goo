@@ -87,6 +87,7 @@ ctor|Goo.VectorPaint|public|(gradient:Goo.Gradient)
 ctor|Goo.VectorStroke|public|(width:System.Double,color:Goo.Color)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint)
 ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint,cap:Goo.StrokeCap,join:Goo.StrokeJoin,miterLimit:System.Double,dashes:Goo.DashPattern)
+ctor|Goo.WindowBackdropMask|public|(width:System.Int32,height:System.Int32,alpha:System.Byte[])
 ctor|Goo.Window|public|()
 enum-underlying|Goo.AccessibilityAction|System.Int32
 enum-underlying|Goo.AccessibilityChecked|System.Int32
@@ -115,6 +116,8 @@ enum-underlying|Goo.FontStyle|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
+enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
+enum-underlying|Goo.MacOSBackdropState|System.Int32
 enum-underlying|Goo.MotionCompletionReason|System.Int32
 enum-underlying|Goo.NativeTransferCapabilities|System.Int32
 enum-underlying|Goo.Overflow|System.Int32
@@ -144,6 +147,7 @@ enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
 enum-underlying|Goo.WindowFramePacing|System.Int32
 enum-underlying|Goo.WindowOperationResult|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
+enum-underlying|Goo.WindowsBackdropMaterial|System.Int32
 enum|Goo.AccessibilityAction|Activate|1
 enum|Goo.AccessibilityAction|Collapse|9
 enum|Goo.AccessibilityAction|Decrement|5
@@ -432,6 +436,23 @@ enum|Goo.Key|W|41
 enum|Goo.Key|X|42
 enum|Goo.Key|Y|43
 enum|Goo.Key|Z|44
+enum|Goo.MacOSBackdropMaterial|ContentBackground|18
+enum|Goo.MacOSBackdropMaterial|FullScreenUI|15
+enum|Goo.MacOSBackdropMaterial|HeaderView|10
+enum|Goo.MacOSBackdropMaterial|HudWindow|13
+enum|Goo.MacOSBackdropMaterial|Menu|5
+enum|Goo.MacOSBackdropMaterial|Popover|6
+enum|Goo.MacOSBackdropMaterial|Selection|4
+enum|Goo.MacOSBackdropMaterial|Sheet|11
+enum|Goo.MacOSBackdropMaterial|Sidebar|7
+enum|Goo.MacOSBackdropMaterial|Titlebar|3
+enum|Goo.MacOSBackdropMaterial|ToolTip|17
+enum|Goo.MacOSBackdropMaterial|UnderPageBackground|22
+enum|Goo.MacOSBackdropMaterial|UnderWindowBackground|0
+enum|Goo.MacOSBackdropMaterial|WindowBackground|12
+enum|Goo.MacOSBackdropState|Active|1
+enum|Goo.MacOSBackdropState|FollowWindow|0
+enum|Goo.MacOSBackdropState|Inactive|2
 enum|Goo.MotionCompletionReason|Disabled|2
 enum|Goo.MotionCompletionReason|Finished|0
 enum|Goo.MotionCompletionReason|ReducedMotion|1
@@ -622,6 +643,10 @@ enum|Goo.WindowState|Fullscreen|3
 enum|Goo.WindowState|Maximized|2
 enum|Goo.WindowState|Minimized|1
 enum|Goo.WindowState|Normal|0
+enum|Goo.WindowsBackdropMaterial|Acrylic|0
+enum|Goo.WindowsBackdropMaterial|Automatic|1
+enum|Goo.WindowsBackdropMaterial|MicaAlt|3
+enum|Goo.WindowsBackdropMaterial|Mica|2
 event|Goo.Anim`1|Completed|System.Action`1<Goo.MotionCompletionReason>|instance|add:public,remove:public
 event|Goo.ElementHandle|MetricsChanged|System.Action`1<Goo.ElementMetrics>|instance|add:public,remove:public
 event|Goo.ImageSourceLease|Released|System.Action|instance|add:public,remove:public
@@ -816,6 +841,13 @@ method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(arg0:Goo.Layou
 method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.Edges
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.Length
+method|Goo.MacOSBackdropOptions|Deconstruct|instance|public|generic:|(out material:Goo.MacOSBackdropMaterial&,out state:Goo.MacOSBackdropState&,out emphasized:System.Boolean&,out mask:Goo.WindowBackdropMask&)->System.Void
+method|Goo.MacOSBackdropOptions|Equals|instance|public|generic:|(arg0:Goo.MacOSBackdropOptions)->System.Boolean
+method|Goo.MacOSBackdropOptions|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.MacOSBackdropOptions|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.MacOSBackdropOptions|ToString|instance|public|generic:|()->System.String
+method|Goo.MacOSBackdropOptions|op_Equality|static|public|generic:|(arg0:Goo.MacOSBackdropOptions,arg1:Goo.MacOSBackdropOptions)->System.Boolean
+method|Goo.MacOSBackdropOptions|op_Inequality|static|public|generic:|(arg0:Goo.MacOSBackdropOptions,arg1:Goo.MacOSBackdropOptions)->System.Boolean
 method|Goo.MotionVelocity|Add|instance|public|generic:|(other:Goo.MotionVelocity)->Goo.MotionVelocity
 method|Goo.MotionVelocity|Components|static|public|generic:|(params values:System.Double[])->Goo.MotionVelocity
 method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->Goo.MotionVelocity
@@ -1026,6 +1058,13 @@ method|Goo.VectorAsset|NodeAt|instance|public|generic:|(index:System.Int32)->Goo
 method|Goo.VectorAsset|PathForNode|instance|public|generic:|(index:System.Int32)->Goo.VectorPath
 method|Goo.VectorAsset|Render|instance|public|generic:|()->Goo.Blob
 method|Goo.VectorAsset|Render|instance|public|generic:|(key:System.String)->Goo.Blob
+method|Goo.WaylandBackdropOptions|Deconstruct|instance|public|generic:|(out region:System.Nullable`1<Goo.ElementRect>&)->System.Void
+method|Goo.WaylandBackdropOptions|Equals|instance|public|generic:|(arg0:Goo.WaylandBackdropOptions)->System.Boolean
+method|Goo.WaylandBackdropOptions|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.WaylandBackdropOptions|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.WaylandBackdropOptions|ToString|instance|public|generic:|()->System.String
+method|Goo.WaylandBackdropOptions|op_Equality|static|public|generic:|(arg0:Goo.WaylandBackdropOptions,arg1:Goo.WaylandBackdropOptions)->System.Boolean
+method|Goo.WaylandBackdropOptions|op_Inequality|static|public|generic:|(arg0:Goo.WaylandBackdropOptions,arg1:Goo.WaylandBackdropOptions)->System.Boolean
 method|Goo.WheelEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.WheelEvent|StopPropagation|instance|public|generic:|()->System.Void
 method|Goo.WindowDisplayId|Deconstruct|instance|public|generic:|(out nativeValue:System.UInt32&)->System.Void
@@ -1050,6 +1089,13 @@ method|Goo.WindowPresentationAccepted|ToString|instance|public|generic:|()->Syst
 method|Goo.WindowPresentationAccepted|op_Equality|static|public|generic:|(arg0:Goo.WindowPresentationAccepted,arg1:Goo.WindowPresentationAccepted)->System.Boolean
 method|Goo.WindowPresentationAccepted|op_Inequality|static|public|generic:|(arg0:Goo.WindowPresentationAccepted,arg1:Goo.WindowPresentationAccepted)->System.Boolean
 method|Goo.WindowTimer|Dispose|instance|public|generic:|()->System.Void
+method|Goo.WindowsBackdropOptions|Deconstruct|instance|public|generic:|(out material:Goo.WindowsBackdropMaterial&)->System.Void
+method|Goo.WindowsBackdropOptions|Equals|instance|public|generic:|(arg0:Goo.WindowsBackdropOptions)->System.Boolean
+method|Goo.WindowsBackdropOptions|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
+method|Goo.WindowsBackdropOptions|GetHashCode|instance|public|generic:|()->System.Int32
+method|Goo.WindowsBackdropOptions|ToString|instance|public|generic:|()->System.String
+method|Goo.WindowsBackdropOptions|op_Equality|static|public|generic:|(arg0:Goo.WindowsBackdropOptions,arg1:Goo.WindowsBackdropOptions)->System.Boolean
+method|Goo.WindowsBackdropOptions|op_Inequality|static|public|generic:|(arg0:Goo.WindowsBackdropOptions,arg1:Goo.WindowsBackdropOptions)->System.Boolean
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
 method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
@@ -1371,6 +1417,10 @@ property|Goo.Length|IsPercent|System.Boolean|instance|get:public|index:()
 property|Goo.Length|Magnitude|System.Double|instance|get:public|index:()
 property|Goo.LinearGradient|Angle|System.Double|instance|get:public|index:()
 property|Goo.LinearGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|instance|get:public|index:()
+property|Goo.MacOSBackdropOptions|Emphasized|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.MacOSBackdropOptions|Mask|Goo.WindowBackdropMask|instance|get:public,init:public|index:()
+property|Goo.MacOSBackdropOptions|Material|Goo.MacOSBackdropMaterial|instance|get:public,init:public|index:()
+property|Goo.MacOSBackdropOptions|State|Goo.MacOSBackdropState|instance|get:public,init:public|index:()
 property|Goo.Motion|Default|System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>|static|get:public,set:public|index:()
 property|Goo.Motion|TimeScale|System.Double|static|get:public,set:public|index:()
 property|Goo.NativeAccessibilityAdapter|IsAvailable|System.Boolean|static|get:public|index:()
@@ -1657,10 +1707,13 @@ property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public|index:()
 property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public|index:()
 property|Goo.VectorStroke|Paint|Goo.VectorPaint|instance|get:public|index:()
 property|Goo.VectorStroke|Width|System.Double|instance|get:public|index:()
+property|Goo.WaylandBackdropOptions|Region|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Delta|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Position|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
+property|Goo.WindowBackdropMask|Height|System.Int32|instance|get:public,set:private|index:()
+property|Goo.WindowBackdropMask|Width|System.Int32|instance|get:public,set:private|index:()
 property|Goo.WindowCapture|Height|System.UInt32|instance|get:public|index:()
 property|Goo.WindowCapture|OriginTopLeft|System.Boolean|instance|get:public|index:()
 property|Goo.WindowCapture|Pixels|System.Byte[]|instance|get:public|index:()
@@ -1684,6 +1737,7 @@ property|Goo.WindowPresentationAccepted|FrameIndex|System.UInt64|instance|get:pu
 property|Goo.WindowTimer|IsActive|System.Boolean|instance|get:public|index:()
 property|Goo.WindowTitlebarEvent|Handled|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.WindowTitlebarEvent|Position|Goo.Point|instance|get:public,init:public|index:()
+property|Goo.WindowsBackdropOptions|Material|Goo.WindowsBackdropMaterial|instance|get:public,init:public|index:()
 property|Goo.Window|AccessibilityAdapter|Goo.AccessibilityAdapter|instance|get:public,set:public|index:()
 property|Goo.Window|BackdropAvailable|System.Boolean|instance|get:public|index:()
 property|Goo.Window|BackdropFallbackColor|Goo.Color|instance|get:public,set:public|index:()
@@ -1704,6 +1758,7 @@ property|Goo.Window|IsOpen|System.Boolean|instance|get:public,set:private|index:
 property|Goo.Window|IsVisible|System.Boolean|instance|get:public|index:()
 property|Goo.Window|LastAccessibilityError|System.Exception|instance|get:public|index:()
 property|Goo.Window|LastNativeFileDropError|System.String|instance|get:public|index:()
+property|Goo.Window|MacOSBackdrop|Goo.MacOSBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|MaxHeight|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|MaxWidth|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|MinHeight|System.Int32|instance|get:public,set:public|index:()
@@ -1725,8 +1780,10 @@ property|Goo.Window|Title|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|Topmost|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|Transparent|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|VSync|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|WaylandBackdrop|Goo.WaylandBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|WheelScrollScale|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Width|System.Int32|instance|get:public,set:public|index:()
+property|Goo.Window|WindowsBackdrop|Goo.WindowsBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|X|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|Y|System.Int32|instance|get:public,set:public|index:()
 type|Goo.AccessibilityActionRequest|sealed-class|public|base:System.Object|interfaces:|generic:
@@ -1816,6 +1873,9 @@ type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.LayoutTransition|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Length|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.LinearGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:
+type|Goo.MacOSBackdropMaterial|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.MacOSBackdropOptions|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.MacOSBackdropState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.MotionCompletionReason|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.MotionConverter`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.MotionVelocity|struct|public|base:System.ValueType|interfaces:|generic:
@@ -1890,7 +1950,9 @@ type|Goo.VectorPaint|class|public|base:System.Object|interfaces:|generic:
 type|Goo.VectorPath|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.VectorStroke|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WaylandBackdropOptions|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
+type|Goo.WindowBackdropMask|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowBackdrop|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowCaptureRequestStatus|enum|public|base:System.Enum|interfaces:|generic:
@@ -1904,4 +1966,6 @@ type|Goo.WindowPresentationAccepted|struct|public|base:System.ValueType|interfac
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowTimer|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.WindowTitlebarEvent|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowsBackdropMaterial|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowsBackdropOptions|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Window|sealed-class|public|base:System.Object|interfaces:|generic:
