@@ -178,18 +178,18 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
     let regionTypes = Allocate(IntPtr.Size)
     Marshal.WriteIntPtr(regionTypes, regionType)
     WriteMessage(methods + nint(messageSize), "set_blur_region", "?o", regionTypes)
-    Marshal.StructureToPtr(BackdropWaylandInterface{
+    Marshal.StructureToPtr[BackdropWaylandInterface](BackdropWaylandInterface{
       Name: Text("ext_background_effect_manager_v1"), Version: 1,
       MethodCount: 2, Methods: managerMethods, EventCount: 1, Events: events,
     }, managerInterface, false)
-    Marshal.StructureToPtr(BackdropWaylandInterface{
+    Marshal.StructureToPtr[BackdropWaylandInterface](BackdropWaylandInterface{
       Name: Text("ext_background_effect_surface_v1"), Version: 1,
       MethodCount: 2, Methods: methods,
     }, effectInterface, false)
   }
 
   private func WriteMessage(address nint, name string, signature string, types nint) {
-    Marshal.StructureToPtr(BackdropWaylandMessage{
+    Marshal.StructureToPtr[BackdropWaylandMessage](BackdropWaylandMessage{
       Name: Text(name), Signature: Text(signature), Types: types,
     }, address, false)
   }
