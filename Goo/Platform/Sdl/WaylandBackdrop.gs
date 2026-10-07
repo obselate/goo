@@ -53,6 +53,8 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
   private var disposed bool
   private var options WaylandBackdropOptions
   private var configured bool
+  private var surfaceWidth int32
+  private var surfaceHeight int32
 
   internal init(display nint, surface nint) {
     this.display = display
@@ -93,34 +95,54 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
     effect = wl_proxy_marshal_array_constructor_versioned(manager, 1u, arguments, effectInterface, 1u)
   }
 
-  internal func Configure(value WaylandBackdropOptions) {
-    if effect == nint(0) || disposed || (configured && options == value) { return }
+  internal func Resize(width int32, height int32) {
+    if configured { Configure(options, width, height) }
+  }
+
+  internal func Configure(value WaylandBackdropOptions, width int32, height int32) {
+    if effect == nint(0) || disposed || (configured && options == value
+      && surfaceWidth == width && surfaceHeight == height) { return }
     var newId = BackdropWaylandArgument{}
     let region = wl_proxy_marshal_array_constructor_versioned(compositor, 1u, &newId,
       NativeLibrary.GetExport(library, "wl_region_interface"), 1u)
     if region == nint(0) { return }
-    let rectangle * BackdropWaylandArgument = stackalloc[4]BackdropWaylandArgument
-    rectangle[0].Value = nint(0)
-    rectangle[1].Value = nint(0)
-    rectangle[2].Value = nint(int32.MaxValue)
-    rectangle[3].Value = nint(int32.MaxValue)
+    var x int32
+    var y int32
+    var right = Math.Max(0, width)
+    var bottom = Math.Max(0, height)
     if let bounds = value.Region {
-      let x = int32(Math.Floor(bounds.X))
-      let y = int32(Math.Floor(bounds.Y))
-      rectangle[0].Value = nint(x)
-      rectangle[1].Value = nint(y)
-      rectangle[2].Value = bounds.Width == 0 ? nint(0) : nint(int32(Math.Ceiling(bounds.X + bounds.Width)) - x)
-      rectangle[3].Value = bounds.Height == 0 ? nint(0) : nint(int32(Math.Ceiling(bounds.Y + bounds.Height)) - y)
+      x = Math.Min(right, int32(Math.Floor(bounds.X)))
+      y = Math.Min(bottom, int32(Math.Floor(bounds.Y)))
+      right = bounds.Width == 0 ? x : Math.Min(right, int32(Math.Ceiling(bounds.X + bounds.Width)))
+      bottom = bounds.Height == 0 ? y : Math.Min(bottom, int32(Math.Ceiling(bounds.Y + bounds.Height)))
     }
-    if rectangle[2].Value != nint(0) && rectangle[3].Value != nint(0) {
-      wl_proxy_marshal_array(region, 1u, rectangle)
+    let radius = Math.Min(value.CornerRadius, float64(Math.Min(right - x, bottom - y)) * 0.5)
+    let rows = int32(Math.Ceiling(radius))
+    AddRectangle(region, x, y + rows, right - x, bottom - y - rows * 2)
+    for row in 0 ... rows {
+      let distance = Math.Max(0.0, radius - float64(row))
+      let inset = int32(Math.Ceiling(radius - Math.Sqrt(radius * radius - distance * distance)))
+      AddRectangle(region, x + inset, y + row, right - x - inset * 2, 1)
+      AddRectangle(region, x + inset, bottom - row - 1, right - x - inset * 2, 1)
     }
     var regionArgument = BackdropWaylandArgument{Value: region}
     wl_proxy_marshal_array(effect, 1u, &regionArgument)
     DestroyRequest(region)
     wl_display_flush(display)
     options = value
+    surfaceWidth = width
+    surfaceHeight = height
     configured = true
+  }
+
+  private func AddRectangle(region nint, x int32, y int32, width int32, height int32) {
+    if width <= 0 || height <= 0 { return }
+    let rectangle * BackdropWaylandArgument = stackalloc[4]BackdropWaylandArgument
+    rectangle[0].Value = nint(x)
+    rectangle[1].Value = nint(y)
+    rectangle[2].Value = nint(width)
+    rectangle[3].Value = nint(height)
+    wl_proxy_marshal_array(region, 1u, rectangle)
   }
 
   public func Refresh() bool {

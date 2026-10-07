@@ -1058,7 +1058,7 @@ method|Goo.VectorAsset|NodeAt|instance|public|generic:|(index:System.Int32)->Goo
 method|Goo.VectorAsset|PathForNode|instance|public|generic:|(index:System.Int32)->Goo.VectorPath
 method|Goo.VectorAsset|Render|instance|public|generic:|()->Goo.Blob
 method|Goo.VectorAsset|Render|instance|public|generic:|(key:System.String)->Goo.Blob
-method|Goo.WaylandBackdropOptions|Deconstruct|instance|public|generic:|(out region:System.Nullable`1<Goo.ElementRect>&)->System.Void
+method|Goo.WaylandBackdropOptions|Deconstruct|instance|public|generic:|(out region:System.Nullable`1<Goo.ElementRect>&,out cornerRadius:System.Double&)->System.Void
 method|Goo.WaylandBackdropOptions|Equals|instance|public|generic:|(arg0:Goo.WaylandBackdropOptions)->System.Boolean
 method|Goo.WaylandBackdropOptions|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
 method|Goo.WaylandBackdropOptions|GetHashCode|instance|public|generic:|()->System.Int32
@@ -1707,6 +1707,7 @@ property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public|index:()
 property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public|index:()
 property|Goo.VectorStroke|Paint|Goo.VectorPaint|instance|get:public|index:()
 property|Goo.VectorStroke|Width|System.Double|instance|get:public|index:()
+property|Goo.WaylandBackdropOptions|CornerRadius|System.Double|instance|get:public,init:public|index:()
 property|Goo.WaylandBackdropOptions|Region|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Delta|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()

@@ -4,6 +4,8 @@ import Facebook.Yoga
 import System
 import System.Collections.Generic
 
+internal data struct TextEditorSlotMetrics(Width float32, Height float32, Baseline float32?) { }
+
 internal class TextEditorResolvedSegment {
   internal prop Source TextRange{ get; init; }
   internal prop DisplayStart int32{ get; init; }
@@ -17,6 +19,7 @@ internal class TextEditorResolvedSegment {
   internal prop SlotKey string{ get; init; }
   internal prop SlotWidth float32{ get; init; }
   internal prop SlotHeight float32{ get; init; }
+  internal prop SlotBaseline float32? { get; init; }
   internal prop Style TextResolvedStyle{ get; init; }
 
   internal init(source TextRange, displayStart int32, displayLength int32,
@@ -31,7 +34,7 @@ internal class TextEditorResolvedSegment {
   internal init(source TextRange, displayStart int32, displayLength int32,
     compositionSelectionStart int32, compositionSelectionEnd int32,
     atomic bool, composition bool, slot bool, blockSlot bool, slotKey string,
-    slotWidth float32, slotHeight float32, style TextResolvedStyle) {
+    slotWidth float32, slotHeight float32, slotBaseline float32?, style TextResolvedStyle) {
       Source = source
       DisplayStart = displayStart
       DisplayLength = displayLength
@@ -44,6 +47,7 @@ internal class TextEditorResolvedSegment {
       SlotKey = slotKey
       SlotWidth = slotWidth
       SlotHeight = slotHeight
+      SlotBaseline = slotBaseline
       Style = style
     }
 }
@@ -73,6 +77,7 @@ internal class TextEditorProjection {
   internal prop SlotKey string{ get; init; }
   internal prop SlotWidth float32{ get; init; }
   internal prop SlotHeight float32{ get; init; }
+  internal prop SlotBaseline float32? { get; init; }
 
   internal init() {
     Text = ""
@@ -167,6 +172,7 @@ internal class TextEditorPresentationStyle {
 }
 
 internal class TextEditorSlotGeometry {
+  internal prop Y float32{ get; init; }
   internal prop Range TextRange{ get; init; }
   internal prop Key string{ get; init; }
   internal prop DisplayStart int32{ get; init; }

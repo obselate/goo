@@ -239,17 +239,37 @@ internal sealed class TextEditorRenderState : IDisposable {
     return PlaceholderShape
   }
 
-  internal func SlotSize(key string, width float32) Rect {
+  internal func SlotSize(key string, width float32) TextEditorSlotMetrics {
     for child in node.Children {
       if child.EditorSlotKey != key { continue }
       guard let yoga = child.Yoga else { break }
       let availableWidth = child.EditorSlotBlock ? width : Single.NaN
       YGNodeAPI.YGNodeCalculateLayout(yoga, availableWidth, Single.NaN,
         yogaDirection(node.Direction))
-      return Rect{ W: YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga),
-        H: YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga) }
+      return TextEditorSlotMetrics(YGNodeLayoutAPI.YGNodeLayoutGetWidth(yoga),
+        YGNodeLayoutAPI.YGNodeLayoutGetHeight(yoga), SlotBaseline(child))
     }
-    return Rect{}
+    return TextEditorSlotMetrics(0.0F, 0.0F, nil)
+  }
+
+  private func SlotBaseline(child Node) float32? {
+    guard let yoga = child.Yoga else { return nil }
+    let top = YGNodeLayoutAPI.YGNodeLayoutGetTop(yoga)
+    if let layout = child.TextLayout {
+      let inset = top + CustomLayouts.Inset(yoga, YGEdge.Top)
+      if let rich = layout.Rich {
+        if rich.Lines.Count > 0 {
+          let line = rich.Lines[0]
+          return inset + (line.Height - (line.Descent - line.Ascent)) * 0.5F - line.Ascent
+        }
+      }
+      return inset + (TextLayouts.resolvedLineHeight(child) - (layout.Descent - layout.Ascent)) * 0.5F - layout.Ascent
+    }
+    for content in child.Children {
+      if content.IsPortal || content.Display == Display.None || content.Position == PositionType.Absolute { continue }
+      if let baseline = SlotBaseline(content) { return top + baseline }
+    }
+    return nil
   }
 
   internal func Apply(nextLayers []TextPresentationLayer, readOnly bool) {

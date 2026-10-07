@@ -52,7 +52,7 @@ internal partial class TextEditorLayouts {
             displayStart, projectionText.Length, compositionSelectionStart,
             compositionSelectionEnd, projection.Atomic, projection.Composition,
             projection.Slot, projection.BlockSlot, projection.SlotKey,
-            projection.SlotWidth, projection.SlotHeight, style))
+            projection.SlotWidth, projection.SlotHeight, projection.SlotBaseline, style))
         }
         if end > cursor { cursor = end }
         if cursor > sourceEnd { cursor = sourceEnd }
@@ -153,7 +153,7 @@ internal partial class TextEditorLayouts {
             let slot = projection.Kind == TextProjectionKind.InlineSlot
               || projection.Kind == TextProjectionKind.BlockSlot
             let key = textEditorSlotKey(layer, projection)
-            let size = slot ? state.SlotSize(key, width) : Rect{}
+            let size = slot ? state.SlotSize(key, width) : TextEditorSlotMetrics(0.0F, 0.0F, nil)
             values.Add(TextEditorProjection{
               Range: projection.Range,
               Text: projection.Kind == TextProjectionKind.Replacement ? projection.Text : (slot ? "\uFFFC" : ""),
@@ -161,8 +161,9 @@ internal partial class TextEditorLayouts {
               Slot: slot,
               BlockSlot: projection.Kind == TextProjectionKind.BlockSlot,
               SlotKey: key,
-              SlotWidth: size.W,
-              SlotHeight: size.H,
+              SlotWidth: size.Width,
+              SlotHeight: size.Height,
+              SlotBaseline: size.Baseline,
             })
           }
         }

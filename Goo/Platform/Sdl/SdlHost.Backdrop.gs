@@ -37,11 +37,12 @@ internal unsafe partial class SdlHost {
     }
     if let windowsNative = nativeBackdrop as WindowsBackdrop? { windowsNative.Configure(windows) }
     if let macNative = nativeBackdrop as MacBackdrop? { macNative.Configure(macOS) }
-    if let waylandNative = nativeBackdrop as WaylandBackdrop? { waylandNative.Configure(wayland) }
+    if let waylandNative = nativeBackdrop as WaylandBackdrop? { waylandNative.Configure(wayland, LogicalWidth, LogicalHeight) }
     RefreshBackdrop()
   }
 
   private func RefreshBackdrop() {
+    if let waylandNative = nativeBackdrop as WaylandBackdrop? { waylandNative.Resize(LogicalWidth, LogicalHeight) }
     let available = nativeBackdrop?.Refresh() ?? false
     if BackdropAvailable == available { return }
     BackdropAvailable = available

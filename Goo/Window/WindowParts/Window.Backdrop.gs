@@ -144,6 +144,16 @@ public data struct MacOSBackdropOptions {
 /// Configures this window's Wayland background effect. Other platforms ignore it.
 public data struct WaylandBackdropOptions {
   private var region ElementRect?
+  private var cornerRadius float64
+
+  /// Gets the blur region corner radius in logical pixels. Defaults to zero and clamps to half the region size.
+  public prop CornerRadius float64 {
+    get -> cornerRadius
+    init {
+      if !Double.IsFinite(value) || value < 0 { throw ArgumentOutOfRangeException("value") }
+      cornerRadius = value
+    }
+  }
 
   /// Gets a surface-local rectangle in logical pixels, or nil for the whole window.
   /// Coordinates and sizes must be nonnegative and fit in signed 32-bit surface coordinates.

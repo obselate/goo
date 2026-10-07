@@ -318,7 +318,7 @@ internal partial class TextEditorLayouts {
         for slot in line.Slots {
           if slot.Key != key { continue }
           let x = slot.Block ? left : left + editorLineOffset(n, line, width) - layout.GutterWidth + slot.X - scrollX
-          let y = top + line.Top - scrollY
+          let y = top + line.Top + slot.Y - scrollY
           let contentHeight = BoxGeometry.ContentHeight(n)
           if x + slot.Width <= left || x >= left + layout.TextWidth
             || y + slot.Height <= top || y >= top + contentHeight{ return nil }

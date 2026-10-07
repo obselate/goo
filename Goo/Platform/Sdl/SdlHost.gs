@@ -504,6 +504,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   private func RaiseMetrics() {
+    RefreshBackdrop()
     if LogicalWidth > 100 && LogicalHeight > 100 &&
     FramebufferWidth > 0 && FramebufferHeight > 0 {
       let densityX = float32(FramebufferWidth) / float32(LogicalWidth)

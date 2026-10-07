@@ -269,10 +269,17 @@ internal partial class TextEditorLayouts {
           if metrics.Descent > visualDescent { visualDescent = metrics.Descent }
           let styledHeight = (metrics.Descent - metrics.Ascent) * segment.Style.LineHeight
           if styledHeight > visualHeight { visualHeight = styledHeight }
+          if segment.Slot && !segment.BlockSlot {
+            if let baseline = segment.SlotBaseline {
+              visualAscent = Math.Min(visualAscent, -baseline)
+              visualDescent = Math.Max(visualDescent, segment.SlotHeight - baseline)
+            }
+          }
           if segment.Slot && segment.SlotHeight > visualHeight {
             visualHeight = segment.SlotHeight
           }
         }
+        visualHeight = Math.Max(visualHeight, visualDescent - visualAscent)
         let firstSource = SourceOffsetForDisplay(paragraph, displayStart, TextAffinity.Downstream)
         let lastSource = SourceOffsetForDisplay(paragraph, displayEnd, TextAffinity.Upstream)
         let line = TextEditorVisualLine(paragraph, displayStart,
@@ -306,7 +313,10 @@ internal partial class TextEditorLayouts {
           let naturalRight = naturalStart > naturalEnd ? naturalStart : naturalEnd
           let width = segment.BlockSlot && layout.ConstraintWidth > 0.0F
           ? layout.ConstraintWidth : (segment.SlotWidth > 0.0F ? segment.SlotWidth : natural)
+          let baseline = (line.Height - (line.Descent - line.Ascent)) * 0.5F - line.Ascent
+          let offset = !segment.BlockSlot && segment.SlotBaseline != nil ? baseline - segment.SlotBaseline!! : 0.0F
           line.Slots.Add(TextEditorSlotGeometry{
+            Y: offset,
             Range: segment.Source,
             Key: segment.SlotKey,
             DisplayStart: segment.DisplayStart,

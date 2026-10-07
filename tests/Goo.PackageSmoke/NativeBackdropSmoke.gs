@@ -75,7 +75,7 @@ func RunNativeBackdropSmoke() {
                 Emphasized: true,
                 Mask: mask,
             },
-            WaylandBackdrop: WaylandBackdropOptions{Region: ElementRect{X: 8.5, Y: 12.5, Width: 143, Height: 95}},
+            WaylandBackdrop: WaylandBackdropOptions{CornerRadius: 12, Region: ElementRect{X: 8.5, Y: 12.5, Width: 143, Height: 95}},
             BackdropFallbackColor: Color.Rgb(18, 52, 86),
             Background: Color.Rgb(9, 11, 16).WithAlpha(0.35),
             Root: Cell{},
@@ -113,7 +113,7 @@ func RunNativeBackdropSmoke() {
             BackdropCapture(window, false)
             window.WindowsBackdrop = WindowsBackdropOptions{}
             window.MacOSBackdrop = MacOSBackdropOptions{}
-            window.WaylandBackdrop = WaylandBackdropOptions{}
+            window.WaylandBackdrop = WaylandBackdropOptions{CornerRadius: 12}
             window.Backdrop = WindowBackdrop.Blur
             window.Width = 360 + opening * 8
             window.Height = 220 + opening * 8
@@ -137,6 +137,18 @@ func RunNativeBackdropSmoke() {
             }
             BackdropRequire(invalidRegionRejected && window.WaylandBackdrop.Region == nil,
                 "Invalid region changed the active backdrop")
+            for radius in []float64{-1.0, Double.NaN, Double.PositiveInfinity} {
+                var rejected bool
+                try {
+                    window.WaylandBackdrop = WaylandBackdropOptions{CornerRadius: radius}
+                } catch (error ArgumentOutOfRangeException) {
+                    rejected = true
+                }
+                BackdropRequire(rejected && window.WaylandBackdrop.CornerRadius == 12,
+                    "Invalid radius changed the active backdrop")
+            }
+            window.WaylandBackdrop = WaylandBackdropOptions{}
+            BackdropPump(window)
             Console.WriteLine("Native backdrop opening=" + opening.ToString() + " available=" + available.ToString())
         } finally {
             BackdropClose(window)
