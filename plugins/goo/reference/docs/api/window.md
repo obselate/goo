@@ -663,6 +663,10 @@ Source:
 
 Configures this window's Wayland background effect. Other platforms ignore it.
 
+### `CornerRadius`
+
+Gets the blur region corner radius in logical pixels. Defaults to zero and clamps to half the region size.
+
 ### `Region`
 
 Gets a surface-local rectangle in logical pixels, or nil for the whole window. Coordinates and sizes must be nonnegative and fit in signed 32-bit surface coordinates. Fractional bounds round outward. A zero width or height removes blur. The compositor clips to the surface.
