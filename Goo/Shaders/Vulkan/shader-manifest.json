@@ -17,7 +17,7 @@
     "validator": {
       "project": "KhronosGroup/SPIRV-Tools",
       "version": "2026.3",
-      "commit": "b707790a898e44038547df54580022fc1cf89c3d",
+      "commit": "9a49b0883b9b635689a85b5647dbfcb223268151",
       "executable": "spirv-val"
     },
     "dependencies": [
@@ -402,8 +402,8 @@
       "source": "path_band.frag.slang",
       "output": "path_band.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "e81464ef51614ae22aa8d42a7e8a4abd2052a76c69f08d43d4341bc95fdfda57",
-      "outputSha256": "97202055b0352b870bdb10d0e379da51b313d9da61940aa7d10e58f08f3a5de5",
+      "sourceSha256": "6c370d048e66ea8a13a091405cc69f54005d402378ba31428e10bac4dd4b1891",
+      "outputSha256": "120089f8c0ff372f17b80120f3f0231db5057804fac1e61d0affa28ba8ca5a74",
       "outputBytes": 105380,
       "capabilities": [
         1
@@ -473,7 +473,7 @@
       "output": "clip_mask.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "21ef8bfa25dce6aa42fc885699535b2d5a55ed6339e72e62741ac99a64170cea",
-      "outputSha256": "667625163ad592529aca4c4ebae73d25b2581bfbd8c02079847bd1e85bfe22a5",
+      "outputSha256": "200f41772633b0279f281f0ef165155da25528ab00e091affd8767e1cdb7f473",
       "outputBytes": 99336,
       "capabilities": [
         1

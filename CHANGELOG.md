@@ -4,6 +4,7 @@
 
 - Add a per-window Wayland blur corner radius and keep blur regions bounded during resize.
 - Align text inside inline editor slots with the surrounding prose baseline.
+- Preserve path coverage at contour joins so small SVG icons do not lose edge pixels.
 
 ## 0.7.15 - 2026-10-06
 

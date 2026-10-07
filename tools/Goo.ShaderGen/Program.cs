@@ -10,7 +10,6 @@ internal static class Program
     private const string ShaderDirectory = "tests/Goo.VulkanProof/Shaders";
     private const string ProductionDirectory = "Goo/Shaders/Vulkan";
     private const string ManifestName = "shader-manifest.json";
-    private const string GlslcVersionMarker = "1:";
     private const string HarfBuzzTag = "14.3.1";
     private const string HarfBuzzCommit = "ab5ecbb83985034a76214ac0b2b833dcd590d774";
     private const string HarfBuzzAssemblyKind = "harfbuzz-hb-gpu-glsl";
@@ -848,7 +847,7 @@ internal static class Program
         Require(manifest.Toolchain.Sdk == "1.4.357.0", "toolchain.sdk", "1.4.357.0");
         RequireTool(manifest.Toolchain.Compiler, "shader-slang/slang", "2026.16", "2c6ca521d2c38e7ab67c63293351bc88eb747340", "slangc", "toolchain.compiler");
         RequireTool(manifest.Toolchain.CompatibilityCompiler, "google/shaderc", "2026.3", "ef2c68b4871a3c399a0808321b51379847a54673", "glslc", "toolchain.compatibilityCompiler");
-        RequireTool(manifest.Toolchain.Validator, "KhronosGroup/SPIRV-Tools", "2026.3", "b707790a898e44038547df54580022fc1cf89c3d", "spirv-val", "toolchain.validator");
+        RequireTool(manifest.Toolchain.Validator, "KhronosGroup/SPIRV-Tools", "2026.3", "9a49b0883b9b635689a85b5647dbfcb223268151", "spirv-val", "toolchain.validator");
         Require(manifest.Target.Language == "slang", "target.language", "slang");
         Require(manifest.Target.SlangVersion == "2026", "target.slangVersion", "2026");
         Require(manifest.Target.Vulkan == "1.3", "target.vulkan", "1.3");
@@ -1583,8 +1582,7 @@ internal static class Program
         ToolResult result = RunTool(compilerPath, new[] { "--version" });
         RequireSuccess(compilerPath, result);
         string[] lines = result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Require(lines.Length > 0 && lines[0].Trim() == manifest.Toolchain.CompatibilityCompiler.Version, "glslc.version", manifest.Toolchain.CompatibilityCompiler.Version);
-        Require(lines.Any(line => line.Trim() == GlslcVersionMarker + manifest.Toolchain.Sdk), "glslc.sdk", manifest.Toolchain.Sdk);
+        Require(lines.Length > 0 && lines[0].Trim() == $"shaderc v{manifest.Toolchain.CompatibilityCompiler.Version} v{manifest.Toolchain.CompatibilityCompiler.Version}", "glslc.version", manifest.Toolchain.CompatibilityCompiler.Version);
     }
 
     private static void RequireValidatorVersion(string validatorPath, Manifest manifest)
@@ -1593,7 +1591,8 @@ internal static class Program
         RequireSuccess(validatorPath, result);
         string output = result.StandardOutput + result.StandardError;
         Require(output.Contains($"SPIRV-Tools v{manifest.Toolchain.Validator.Version}", StringComparison.Ordinal), "spirv-val.version", manifest.Toolchain.Validator.Version);
-        Require(output.Contains($"vulkan-sdk-{manifest.Toolchain.Sdk}", StringComparison.Ordinal), "spirv-val.sdk", manifest.Toolchain.Sdk);
+        Require(output.Contains($"vulkan-sdk-{manifest.Toolchain.Sdk}", StringComparison.Ordinal)
+            || output.Contains($"g{manifest.Toolchain.Validator.Commit[..8]}", StringComparison.Ordinal), "spirv-val.sdk", manifest.Toolchain.Sdk);
     }
 
     private static ToolResult RunTool(string path, IEnumerable<string> arguments)

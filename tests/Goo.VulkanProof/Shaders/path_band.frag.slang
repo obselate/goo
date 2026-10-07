@@ -275,7 +275,7 @@ AxisRoots solveVerticalRoots(QuadraticCurve curve, float2 point)
 
 bool rootInRange(float root)
 {
-    return root > 0.0 && root <= 1.0;
+    return root >= 0.0 && root <= 1.0;
 }
 
 float endpointDirection(QuadraticCurve curve, float root, bool vertical)
