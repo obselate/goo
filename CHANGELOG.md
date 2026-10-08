@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.17 - 2026-10-08
+
+- Fix text and border jitter when resizing windows at fractional display scale.
+
 ## 0.7.16 - 2026-10-07
 
 - Add a per-window Wayland blur corner radius and keep blur regions bounded during resize.
