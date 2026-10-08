@@ -28,16 +28,8 @@ public partial class Window {
       nativeWidth = native.FramebufferWidth
       nativeHeight = native.FramebufferHeight
     }
-    let scale = DpiScale(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+    return ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
       host?.DisplayScale ?? 0.0F)
-    return WindowMetrics{
-      LogicalWidth: logicalWidth,
-      LogicalHeight: logicalHeight,
-      FramebufferWidth: nativeWidth,
-      FramebufferHeight: nativeHeight,
-      DisplayScaleX: logicalWidth > 0 && nativeWidth > 0 ? float64(scale.X) : 0.0,
-      DisplayScaleY: logicalHeight > 0 && nativeHeight > 0 ? float64(scale.Y) : 0.0,
-    }
   }
 
   internal func FocusElement(n Node) bool {

@@ -660,6 +660,12 @@ func Main() {
       && latestMetrics.FramebufferHeight == beforeMetrics.FramebufferHeight{
         throw InvalidOperationException("Native smoke resize metrics or layout did not settle")
       }
+    Console.WriteLine("native-resize: logical=" + latestMetrics.LogicalWidth.ToString()
+      + "x" + latestMetrics.LogicalHeight.ToString()
+      + " framebuffer=" + latestMetrics.FramebufferWidth.ToString()
+      + "x" + latestMetrics.FramebufferHeight.ToString()
+      + " scale=" + latestMetrics.DisplayScaleX.ToString()
+      + "x" + latestMetrics.DisplayScaleY.ToString())
     window.Pump(0.0)
     if !window.IsOpen {
       throw InvalidOperationException("Native smoke resize closed the window")

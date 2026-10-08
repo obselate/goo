@@ -13,7 +13,9 @@ public partial class Window {
       pendingFramebufferWidth = nativeWidth
       pendingFramebufferHeight = nativeHeight
       pendingMetrics = true
-      MetricSubscriptions.ReportWindowMetrics(this, logicalWidth, logicalHeight, nativeWidth, nativeHeight)
+      MetricSubscriptions.ReportWindowMetrics(this,
+        ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+          host?.DisplayScale ?? 0.0F))
     }
 
   // Custom chrome hit routing: only undecorated windows own their edges and

@@ -742,10 +742,26 @@ internal func DpiScale(width int32, height int32, fbWidth int32, fbHeight int32,
   if width <= 0 || height <= 0 || fbWidth <= 0 || fbHeight <= 0 {
     return Vector2(1.0F, 1.0F)
   }
-  if displayScale > 0.0F && Single.IsFinite(displayScale)
+  let metrics = ResolveWindowMetrics(width, height, fbWidth, fbHeight, displayScale)
+  return Vector2(float32(metrics.DisplayScaleX), float32(metrics.DisplayScaleY))
+}
+
+internal func ResolveWindowMetrics(width int32, height int32, fbWidth int32, fbHeight int32,
+  displayScale float32) WindowMetrics {
+  var scaleX = width > 0 && fbWidth > 0 ? float64(fbWidth) / float64(width) : 0.0
+  var scaleY = height > 0 && fbHeight > 0 ? float64(fbHeight) / float64(height) : 0.0
+  if scaleX > 0.0 && scaleY > 0.0 && displayScale > 0.0F && Single.IsFinite(displayScale)
     && Math.Abs(float64(fbWidth) - float64(width) * float64(displayScale)) < 1.0
     && Math.Abs(float64(fbHeight) - float64(height) * float64(displayScale)) < 1.0 {
-      return Vector2(displayScale, displayScale)
+      scaleX = float64(displayScale)
+      scaleY = float64(displayScale)
     }
-  return Vector2(float32(fbWidth) / float32(width), float32(fbHeight) / float32(height))
+  return WindowMetrics{
+    LogicalWidth: width,
+    LogicalHeight: height,
+    FramebufferWidth: fbWidth,
+    FramebufferHeight: fbHeight,
+    DisplayScaleX: scaleX,
+    DisplayScaleY: scaleY,
+  }
 }

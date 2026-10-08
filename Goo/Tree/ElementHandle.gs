@@ -571,23 +571,11 @@ internal class MetricSubscriptions {
       request(owner)
     }
 
-    internal func ReportWindowMetrics(owner Window, logicalWidth int32, logicalHeight int32,
-      framebufferWidth int32, framebufferHeight int32) {
+    internal func ReportWindowMetrics(owner Window, metrics WindowMetrics) {
         guard let state = windowState(owner, false) else {
           return
         }
-        let scaleX = logicalWidth > 0 && framebufferWidth > 0
-        ? float64(framebufferWidth) / float64(logicalWidth) : 0.0
-        let scaleY = logicalHeight > 0 && framebufferHeight > 0
-        ? float64(framebufferHeight) / float64(logicalHeight) : 0.0
-        state.Reported = WindowMetrics{
-          LogicalWidth: logicalWidth,
-          LogicalHeight: logicalHeight,
-          FramebufferWidth: framebufferWidth,
-          FramebufferHeight: framebufferHeight,
-          DisplayScaleX: scaleX,
-          DisplayScaleY: scaleY,
-        }
+        state.Reported = metrics
         state.HasReported = true
         MarkWindowDirty(owner)
       }
