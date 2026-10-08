@@ -196,10 +196,8 @@ internal unsafe partial class VulkanWindowTarget {
     try {
       let scaleX = ResolveScale(dpi.X)
       let scaleY = ResolveScale(dpi.Y)
-      let logicalWidth = host.LogicalWidth > 0
-      ? float32(host.LogicalWidth) : float32(framebufferWidth) / scaleX
-      let logicalHeight = host.LogicalHeight > 0
-      ? float32(host.LogicalHeight) : float32(framebufferHeight) / scaleY
+      let logicalWidth = float32(framebufferWidth) / scaleX
+      let logicalHeight = float32(framebufferHeight) / scaleY
       let blendModesSupported = if let activeGeneration = generation {
         activeGeneration.SupportsTransferSource
       } else { false }

@@ -173,22 +173,28 @@ func RunRoundedResizeFirstFrameSmoke() {
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
 
-    let widths = []int32{ 244, 332, 276, 360 }
-    let heights = []int32{ 142, 188, 154, 202 }
+    let widths = []int32{ 244, 332, 276, 360, 245 }
+    let heights = []int32{ 142, 188, 154, 202, 143 }
     var iteration int32 = 0
     while iteration < widths.Length {
       let width = widths[iteration]
       let height = heights[iteration]
+      let scale = iteration == 4 ? 1.5 : 1.0
+      let pixelWidth = int32(Math.Ceiling(float64(width) * scale))
+      let pixelHeight = int32(Math.Ceiling(float64(height) * scale))
       Require(WindowReadbackTestFixture.Resize(
-        opened, width, height, width, height),
+        opened, width, height, pixelWidth, pixelHeight),
         "Rounded resize synthetic resize failed at " + iteration.ToString())
       WindowReadbackTestFixture.UpdateTreeOnly(opened, 0.0)
       let metrics = WindowReadbackTestFixture.Metrics(opened)
       Require(metrics.LogicalWidth == width && metrics.LogicalHeight == height
-          && metrics.FramebufferWidth == width && metrics.FramebufferHeight == height,
+          && metrics.FramebufferWidth == pixelWidth && metrics.FramebufferHeight == pixelHeight,
         "Rounded resize metrics were incorrect at " + iteration.ToString())
       let result = RoundedResizeCaptureFirstFrame(opened, metrics)
       RoundedResizeRequireFirstFrame(result, metrics, iteration)
+      let corner = int32(result.Height - 1u) * int32(result.RowBytes) + int32(result.Width - 1u) * 4
+      Require(result.Pixels[corner + 3] == uint8(255),
+        "Rounded resize left an uncovered framebuffer edge at " + iteration.ToString())
       iteration++
     }
 
@@ -210,5 +216,5 @@ func RunRoundedResizeFirstFrameSmoke() {
     }
   }
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
-  Console.WriteLine("rounded-resize-first-frame-gate: covered_submitted=1 uncovered_deferred=1 resizes=4 first_frames=4 children=visible corners=rounded close=1")
+  Console.WriteLine("rounded-resize-first-frame-gate: covered_submitted=1 uncovered_deferred=1 resizes=5 first_frames=5 children=visible corners=rounded edges=covered close=1")
 }
