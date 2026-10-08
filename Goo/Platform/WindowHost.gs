@@ -46,6 +46,7 @@ internal interface WindowHost {
   prop LogicalHeight int32 { get; }
   prop FramebufferWidth int32 { get; }
   prop FramebufferHeight int32 { get; }
+  prop DisplayScale float32 { get; }
   prop X int32 { get; }
   prop Y int32 { get; }
   prop IsClosing bool { get; }

@@ -28,17 +28,15 @@ public partial class Window {
       nativeWidth = native.FramebufferWidth
       nativeHeight = native.FramebufferHeight
     }
-    let scaleX = logicalWidth > 0 && nativeWidth > 0
-    ? float64(nativeWidth) / float64(logicalWidth) : 0.0
-    let scaleY = logicalHeight > 0 && nativeHeight > 0
-    ? float64(nativeHeight) / float64(logicalHeight) : 0.0
+    let scale = DpiScale(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+      host?.DisplayScale ?? 0.0F)
     return WindowMetrics{
       LogicalWidth: logicalWidth,
       LogicalHeight: logicalHeight,
       FramebufferWidth: nativeWidth,
       FramebufferHeight: nativeHeight,
-      DisplayScaleX: scaleX,
-      DisplayScaleY: scaleY,
+      DisplayScaleX: logicalWidth > 0 && nativeWidth > 0 ? float64(scale.X) : 0.0,
+      DisplayScaleY: logicalHeight > 0 && nativeHeight > 0 ? float64(scale.Y) : 0.0,
     }
   }
 

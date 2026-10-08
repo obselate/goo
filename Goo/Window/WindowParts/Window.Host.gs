@@ -730,15 +730,22 @@ public partial class Window {
       framebufferWidth = newFramebufferWidth
       framebufferHeight = newFramebufferHeight
       if framebufferValid {
-        dpi = DpiScale(logicalWidth, logicalHeight, newFramebufferWidth, newFramebufferHeight)
+        dpi = DpiScale(logicalWidth, logicalHeight, newFramebufferWidth, newFramebufferHeight,
+          host?.DisplayScale ?? 0.0F)
       }
       return true
     }
 }
 
-internal func DpiScale(width int32, height int32, fbWidth int32, fbHeight int32) Vector2 {
+internal func DpiScale(width int32, height int32, fbWidth int32, fbHeight int32,
+  displayScale float32 = 0.0F) Vector2 {
   if width <= 0 || height <= 0 || fbWidth <= 0 || fbHeight <= 0 {
     return Vector2(1.0F, 1.0F)
   }
+  if displayScale > 0.0F && Single.IsFinite(displayScale)
+    && Math.Abs(float64(fbWidth) - float64(width) * float64(displayScale)) < 1.0
+    && Math.Abs(float64(fbHeight) - float64(height) * float64(displayScale)) < 1.0 {
+      return Vector2(displayScale, displayScale)
+    }
   return Vector2(float32(fbWidth) / float32(width), float32(fbHeight) / float32(height))
 }

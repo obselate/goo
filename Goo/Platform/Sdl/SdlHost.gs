@@ -104,6 +104,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public prop LogicalHeight int32{ get; private set }
   public prop FramebufferWidth int32{ get; private set }
   public prop FramebufferHeight int32{ get; private set }
+  public prop DisplayScale float32{ get -> SDL.GetWindowDisplayScale(window) }
   public prop X int32{ get; private set }
   public prop Y int32{ get; private set }
   public prop IsClosing bool{ get; private set }

@@ -628,8 +628,8 @@ func Main() {
     }
     let beforeMetrics = latestMetrics
     let beforeRoot = SmokeCell.Root.BorderBox
-    let targetWidth int32 = 480
-    let targetHeight int32 = 260
+    let targetWidth int32 = 481
+    let targetHeight int32 = 261
     window.Width = targetWidth
     window.Height = targetHeight
     var attempts int32
@@ -645,9 +645,11 @@ func Main() {
     let scaleConsistent = latestMetrics.DisplayScaleX > 0.0
       && latestMetrics.DisplayScaleY > 0.0
       && Math.Abs(float64(latestMetrics.FramebufferWidth)
-        -float64(latestMetrics.LogicalWidth) * latestMetrics.DisplayScaleX) < 0.01
+        -float64(latestMetrics.LogicalWidth) * latestMetrics.DisplayScaleX) < 1.0
       && Math.Abs(float64(latestMetrics.FramebufferHeight)
-        -float64(latestMetrics.LogicalHeight) * latestMetrics.DisplayScaleY) < 0.01
+        -float64(latestMetrics.LogicalHeight) * latestMetrics.DisplayScaleY) < 1.0
+      && latestMetrics.DisplayScaleX == beforeMetrics.DisplayScaleX
+      && latestMetrics.DisplayScaleY == beforeMetrics.DisplayScaleY
     let finalRoot = SmokeCell.Root.BorderBox
     if !resized || !scaleConsistent || !latestRootMetrics.IsMounted
       || finalRoot.Width != float64(targetWidth) || finalRoot.Height != float64(targetHeight)
@@ -698,9 +700,9 @@ func Main() {
       let scaleY = latestMetrics.DisplayScaleY
       let scaleConsistent = scaleX > 0.0 && scaleY > 0.0
         && Math.Abs(float64(latestMetrics.FramebufferWidth)
-          -float64(latestMetrics.LogicalWidth) * scaleX) < 0.01
+          -float64(latestMetrics.LogicalWidth) * scaleX) < 1.0
         && Math.Abs(float64(latestMetrics.FramebufferHeight)
-          -float64(latestMetrics.LogicalHeight) * scaleY) < 0.01
+          -float64(latestMetrics.LogicalHeight) * scaleY) < 1.0
       restored = window.State == WindowState.Normal
         && latestMetrics.FramebufferWidth > 0
         && latestMetrics.FramebufferHeight > 0
