@@ -768,7 +768,7 @@ jobs:
           $runtime | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           & (Join-Path $runtime "vulkaninfo.exe") --summary
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Build NativeAOT consumer using the packaged G# compiler
+      - name: Build NativeAOT consumer using the released G# SDK
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
