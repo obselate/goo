@@ -754,7 +754,7 @@ jobs:
           name: release-candidates
           path: artifacts
       - name: Install software Vulkan for native Windows checks
-        uses: jakoch/install-vulkan-sdk-action@ae57d335f36a1cd380da18748c28ea65feea4a17
+        uses: jakoch/install-vulkan-sdk-action@9d5d96c5b0b5cffce92e7bb79a6085f3a394c3ee
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
