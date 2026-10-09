@@ -9,7 +9,7 @@ internal class TextSelectionRanges {
       if text.Length == 0 { return TextRange{} }
       let starts = UnicodeGraphemes.Starts(text)
       var index = Array.BinarySearch(starts, Math.Clamp(offset, 0, text.Length - 1))
-      if index < 0 { index = ^index - 1 }
+      if index < 0 { index = ~index - 1 }
       let kind = wordClass(text, starts[index])
       var first = index
       var last = index + 1

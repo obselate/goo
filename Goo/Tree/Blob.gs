@@ -27,7 +27,7 @@ public open class Blob : Style {
     }
     init{
       ElementHandles.SetBlobHandle(this, value)
-      blobState = value != nil ? blobState | int32(64) : blobState & ^int32(64)
+      blobState = value != nil ? blobState | int32(64) : blobState & ~int32(64)
       updateSparseInputState()
     }
   }
@@ -35,7 +35,7 @@ public open class Blob : Style {
 
   internal func AttachRetainedHandle(handle ElementHandle?) {
     ElementHandles.SetBlobHandle(this, handle)
-    blobState = handle != nil ? blobState | int32(64) : blobState & ^int32(64)
+    blobState = handle != nil ? blobState | int32(64) : blobState & ~int32(64)
     updateSparseInputState()
   }
   /// Gets the platform-neutral accessibility declaration for this element.
@@ -43,17 +43,17 @@ public open class Blob : Style {
     get -> AccessibilityMetadata.BlobValue(this)
     init{
       AccessibilityMetadata.SetBlobValue(this, value)
-      blobState = value != nil ? blobState | int32(128) : blobState & ^int32(128)
+      blobState = value != nil ? blobState | int32(128) : blobState & ~int32(128)
     }
   }
   internal prop HasAccessibility bool{ get -> (blobState & int32(128)) != 0 }
   internal prop HasPassiveTextRanges bool{
     get -> (blobState & int32(256)) != 0
-    set -> blobState = value ? blobState | int32(256) : blobState & ^int32(256)
+    set -> blobState = value ? blobState | int32(256) : blobState & ~int32(256)
   }
   internal prop ControlledEntryValue bool{
     get -> (blobState & int32(2048)) != 0
-    set -> blobState = value ? blobState | int32(2048) : blobState & ^int32(2048)
+    set -> blobState = value ? blobState | int32(2048) : blobState & ~int32(2048)
   }
   /// Gets the action that runs when the element is clicked.
   public prop OnClick Action? { get; init; }
@@ -199,7 +199,7 @@ public open class Blob : Style {
       if ordinal < 0 || ordinal > 3 {
         throw ArgumentOutOfRangeException("TransitionEasing")
       }
-      blobState = (blobState & ^int32(3)) | ordinal
+      blobState = (blobState & ~int32(3)) | ordinal
     }
   }
   /// Gets the delay before a transition starts, in milliseconds.
@@ -236,31 +236,31 @@ public open class Blob : Style {
   public prop Focusable bool{
     get -> (blobState & int32(4)) != 0
     init{
-      blobState = value ? blobState | int32(4) : blobState & ^int32(4)
+      blobState = value ? blobState | int32(4) : blobState & ~int32(4)
     }
   }
   /// Controls whether a focusable element participates in sequential Tab navigation. Defaults to true.
   /// False preserves pointer, programmatic, and accessibility focus for composite widgets.
   public prop TabStop bool{
     get -> (blobState & int32(512)) == 0
-    init -> blobState = value ? blobState & ^int32(512) : blobState | int32(512)
+    init -> blobState = value ? blobState & ~int32(512) : blobState | int32(512)
   }
   /// Reports whether this element and its descendants reject input.
   public prop Disabled bool{
     get -> (blobState & int32(8)) != 0
     init{
-      blobState = value ? blobState | int32(8) : blobState & ^int32(8)
+      blobState = value ? blobState | int32(8) : blobState & ~int32(8)
     }
   }
   /// Requests keyboard focus after mounting while nothing else holds focus.
   public prop AutoFocus bool{
     get -> (blobState & int32(16)) != 0
     init{
-      blobState = value ? blobState | int32(16) : blobState & ^int32(16)
+      blobState = value ? blobState | int32(16) : blobState & ~int32(16)
     }
   }
 
   internal func updateSparseInputState() {
-    blobState = InputMetadata.HasState(this) ? blobState | int32(32) : blobState & ^int32(32)
+    blobState = InputMetadata.HasState(this) ? blobState | int32(32) : blobState & ~int32(32)
   }
 }

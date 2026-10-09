@@ -33,26 +33,25 @@ image-decoder library is required. The package declares `Unlicense OR MIT`.
 ## G# runtime support
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from
-Gsharp.NET.Sdk 0.4.591.
+Gsharp.NET.Sdk 0.4.1150.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.
-- Release commit: `d670ac98c03e0b0f7c9ac965f5fa3914712f09de`.
-- [G# license](https://github.com/DavidObando/gsharp/blob/d670ac98c03e0b0f7c9ac965f5fa3914712f09de/LICENSE)
+- Release commit: `e170b28640e294924e30adfbbcab0e9da53f7db1`.
+- [G# license](https://github.com/DavidObando/gsharp/blob/e170b28640e294924e30adfbbcab0e9da53f7db1/LICENSE)
 
 ## G# authoring tools
 
 The compiler and canonical formatter are built without source changes from
-[DavidObando/gsharp commit 947be9cb](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
+[DavidObando/gsharp commit e170b286](https://github.com/DavidObando/gsharp/tree/e170b28640e294924e30adfbbcab0e9da53f7db1).
 `bootstrap.sh` and `bootstrap.bat` build `src/Compiler/Compiler.csproj` and
 `src/Formatting/Gsfmt.Cli/Gsfmt.Cli.csproj` into ignored
 `artifacts/gsharp/` output. `Goo.Gslint` uses the upstream parser and ADR-0179
 formatter assemblies. Goo redistributes the compiler and formatter under
-`tools/gsharp/`, with the upstream license and commit ID, as a temporary build-only
-bridge for SDK 0.4.591. These tools are not copied into application runtime output.
+`tools/gsharp/`, with the upstream license and commit ID, for build-time use. These tools are not copied into application runtime output.
 Copyright (C) GSharp Authors. All rights reserved.
 
-- [G# license](https://github.com/DavidObando/gsharp/blob/947be9cb5f4467947ecb95dba06b461f9984d659/LICENSE)
+- [G# license](https://github.com/DavidObando/gsharp/blob/e170b28640e294924e30adfbbcab0e9da53f7db1/LICENSE)
 
 ## HarfBuzz and hb-gpu text runtime
 

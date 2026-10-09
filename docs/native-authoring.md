@@ -1,12 +1,7 @@
 # Native G# authoring
 
-Goo includes the upstream compiler and formatter at
-[`947be9cb`](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
-The package automatically selects these build tools for SDK 0.4.591, which
-predates mixed initializers. No separate installation is needed for apps.
+Goo builds with G# SDK 0.4.1150 from NuGet. Apps use the SDK compiler directly.
 Source contributors run the [source setup](../CONTRIBUTING.md#source-setup).
-The package respects explicit compiler paths. Set
-`GooUseBundledGsharp=false` when testing another SDK compiler.
 
 ## Direct children
 

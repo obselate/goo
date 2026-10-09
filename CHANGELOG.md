@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.19 - 2026-10-09
+
+- Build with G# SDK 0.4.1150 and update bitwise complement and native pointer syntax.
+
 ## 0.7.18 - 2026-10-09
 
 - Exit on unrecoverable Wayland connection loss while retaining normal close and quit vetoes.

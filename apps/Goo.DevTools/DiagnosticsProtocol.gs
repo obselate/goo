@@ -1101,21 +1101,8 @@ class DiagnosticSession {
         if root == nil && snapshot.Nodes.Count != 0 {
             root = nodes[snapshot.Nodes[0].Id]
         }
-        let actualRoot = root ?? DiagnosticTreeNode(
-            "root",
-            "ScreenPanel",
-            "Remote root",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
-        )
+        let actualRoot = root ??
+            DiagnosticTreeNode("root", "ScreenPanel", "Remote root", "", "", "", "", "", "", "", "", "", "")
         return DiagnosticWindow(
             if snapshot.WindowId == "" {
                 "remote-window"

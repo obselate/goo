@@ -332,7 +332,7 @@ public open class Style {
   public prop TextDecoration TextDecoration{
     init{
       let bits = int32(value)
-      if (bits & ^int32(3)) != 0 {
+      if (bits & ~int32(3)) != 0 {
         throw ArgumentOutOfRangeException("TextDecoration")
       }
       pushEnumOrdinal(StyleField.TextDecoration, bits)

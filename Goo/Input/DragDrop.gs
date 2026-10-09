@@ -158,7 +158,7 @@ public sealed class DropTarget {
 
 private func requireAllowedDragEffects(value DragEffect) DragEffect {
   let bits = int32(value)
-  if bits <= 0 || (bits & ^int32(3)) != 0 {
+  if bits <= 0 || (bits & ~int32(3)) != 0 {
     throw ArgumentOutOfRangeException("allowedEffects")
   }
   return value
