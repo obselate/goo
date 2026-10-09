@@ -15,7 +15,7 @@ internal unsafe partial class SdlHost {
       return
     }
     if eventType == SDLEventType.Quit || eventType == SDLEventType.Terminating {
-      RequestClose()
+      RequestClose(eventType == SDLEventType.Terminating ? WindowCloseReason.Terminating : WindowCloseReason.WindowRequest)
       return
     }
     if eventType >= SDLEventType.DisplayFirst && eventType <= SDLEventType.DisplayLast {

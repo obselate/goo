@@ -15,7 +15,7 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public event FocusChanged Action[bool]
   public event VisibilityChanged Action
   public event PreferencesChanged Action[PlatformPreferences]
-  public event CloseRequested Action
+  public event CloseRequested Action[WindowCloseReason]
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]

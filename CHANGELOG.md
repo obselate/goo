@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.18 - 2026-10-09
+
+- Exit on unrecoverable Wayland connection loss while retaining normal close and quit vetoes.
+
 ## 0.7.17 - 2026-10-08
 
 - Fix text and border jitter when resizing windows at fractional display scale.

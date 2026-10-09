@@ -55,9 +55,12 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-no-pointer-cursor.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-outbound-file-drag.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-disconnect.patch"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_drop.py" "$work/src"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_no_pointer.py" "$work/src"
+python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_disconnect.py" "$work/src"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/portal-dialog-lifetime.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \

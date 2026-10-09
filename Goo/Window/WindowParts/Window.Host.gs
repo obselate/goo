@@ -190,8 +190,12 @@ public partial class Window {
     native.Exposed += () -> {
       requestRender()
     }
-    native.CloseRequested += () -> {
-      Interlocked.CompareExchange(&closeRequested, 1, 0)
+    native.CloseRequested += reason -> {
+      if reason == WindowCloseReason.Terminating {
+        Interlocked.Exchange(&closeRequested, 2)
+      } else {
+        Interlocked.CompareExchange(&closeRequested, 1, 0)
+      }
     }
   }
 

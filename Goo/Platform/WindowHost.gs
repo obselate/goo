@@ -17,6 +17,11 @@ internal enum WindowHitResult {
   Left;
 }
 
+internal enum WindowCloseReason {
+  WindowRequest;
+  Terminating;
+}
+
 internal interface WindowHost {
   event MetricsChanged Action[int32, int32, int32, int32]
   event Moved Action[int32, int32]
@@ -24,7 +29,7 @@ internal interface WindowHost {
   event FocusChanged Action[bool]
   event VisibilityChanged Action
   event PreferencesChanged Action[PlatformPreferences]
-  event CloseRequested Action
+  event CloseRequested Action[WindowCloseReason]
   event Exposed Action
   event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]

@@ -82,7 +82,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public event FocusChanged Action[bool]
   public event VisibilityChanged Action
   public event PreferencesChanged Action[PlatformPreferences]
-  public event CloseRequested Action
+  public event CloseRequested Action[WindowCloseReason]
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]
@@ -520,11 +520,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     MetricsChanged?.Invoke(LogicalWidth, LogicalHeight, FramebufferWidth, FramebufferHeight)
   }
 
-  private func RequestClose() {
+  private func RequestClose(reason WindowCloseReason = WindowCloseReason.WindowRequest) {
     if IsClosing {
       return
     }
-    CloseRequested?.Invoke()
+    CloseRequested?.Invoke(reason)
   }
 
   private func HitTest(nativeWindow nint, pointAddress nint, userData nint) SDLHitTestResult {

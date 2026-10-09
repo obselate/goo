@@ -393,6 +393,10 @@ func CloseWindow(window Window) bool {
 
 func Main() {
   Window.ConfigureApplication("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
+  if Environment.GetEnvironmentVariable("GOO_APPLICATION_QUIT_SMOKE") == "1" {
+    RunApplicationQuitSmoke()
+    return
+  }
   if Environment.GetEnvironmentVariable("GOO_NATIVE_BACKDROP_SMOKE") == "1" {
     RunNativeBackdropSmoke()
     return
@@ -746,4 +750,5 @@ func Main() {
   imageV2?.Dispose()
   backgroundV1?.Dispose()
   backgroundV2?.Dispose()
+  if nativeSmoke { RunApplicationQuitSmoke() }
 }

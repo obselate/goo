@@ -359,6 +359,7 @@ public partial class Window {
     }
   }
   /// Gets or sets the close-request handler. Return false to veto closure.
+  /// OS termination bypasses this handler.
   /// Accepted requests do not invoke the handler again while teardown finishes.
   public prop OnClosing(() -> bool)? {
     get -> onClosing

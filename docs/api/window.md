@@ -1000,7 +1000,7 @@ Gets the current native transfer capabilities; closed and embedded windows retur
 
 ### `OnClosing`
 
-Gets or sets the close-request handler. Return false to veto closure. Accepted requests do not invoke the handler again while teardown finishes.
+Gets or sets the close-request handler. Return false to veto closure. OS termination bypasses this handler. Accepted requests do not invoke the handler again while teardown finishes.
 
 ### `Owner`
 
