@@ -41,7 +41,7 @@ internal class Node {
   internal var PortalPlacementHidden bool
   internal prop HasCustomLayout bool{
     get -> (nodeState & (int32(1) << 12)) != 0
-    set -> nodeState = value ? nodeState | (int32(1) << 12) : nodeState & ^(int32(1) << 12)
+    set -> nodeState = value ? nodeState | (int32(1) << 12) : nodeState & ~(int32(1) << 12)
   }
   internal prop Key string? { get; set; }
   internal prop Parent Node? { get; set; }
@@ -88,13 +88,13 @@ internal class Node {
     get -> (nodeState & int32(1)) != 0 ? Display.None : Display.Flex
     set {
       nodeState = value == Display.None
-      ? nodeState | int32(1) : nodeState & ^int32(1)
+      ? nodeState | int32(1) : nodeState & ~int32(1)
     }
   }
   internal prop Direction Direction{
     get -> Direction((nodeState >> 10) & int32(3))
     set {
-      nodeState = (nodeState & ^int32(3072)) | ((int32(value) & int32(3)) << 10)
+      nodeState = (nodeState & ~int32(3072)) | ((int32(value) & int32(3)) << 10)
     }
   }
   internal prop OverflowX Overflow{ get; set; }
@@ -142,37 +142,37 @@ internal class Node {
   internal prop TextDecoration TextDecoration{
     get -> TextDecoration((nodeState >> 2) & int32(3))
     set {
-      nodeState = (nodeState & ^int32(12)) | ((int32(value) & int32(3)) << 2)
+      nodeState = (nodeState & ~int32(12)) | ((int32(value) & int32(3)) << 2)
     }
   }
   internal prop TextTransform TextTransform{
     get -> TextTransform((nodeState >> 6) & int32(3))
     set {
-      nodeState = (nodeState & ^int32(192)) | ((int32(value) & int32(3)) << 6)
+      nodeState = (nodeState & ~int32(192)) | ((int32(value) & int32(3)) << 6)
     }
   }
   internal prop HasTransformState bool{
     get -> (nodeState & int32(16)) != 0
     set {
-      nodeState = value ? nodeState | int32(16) : nodeState & ^int32(16)
+      nodeState = value ? nodeState | int32(16) : nodeState & ~int32(16)
     }
   }
   internal prop HasVisualTransform bool{
     get -> (nodeState & int32(32)) != 0
     set {
-      nodeState = value ? nodeState | int32(32) : nodeState & ^int32(32)
+      nodeState = value ? nodeState | int32(32) : nodeState & ~int32(32)
     }
   }
   internal prop HasTextShadowState bool{
     get -> (nodeState & int32(256)) != 0
     set {
-      nodeState = value ? nodeState | int32(256) : nodeState & ^int32(256)
+      nodeState = value ? nodeState | int32(256) : nodeState & ~int32(256)
     }
   }
   internal prop HasTextStrokeState bool{
     get -> (nodeState & int32(512)) != 0
     set {
-      nodeState = value ? nodeState | int32(512) : nodeState & ^int32(512)
+      nodeState = value ? nodeState | int32(512) : nodeState & ~int32(512)
     }
   }
   internal prop TextStrokeWidth Length{
@@ -224,7 +224,7 @@ internal class Node {
       if ordinal < 0 || ordinal > 3 {
         throw ArgumentOutOfRangeException("TransitionEasing")
       }
-      nodeState = (nodeState & ^(int32(3) << 26)) | (ordinal << 26)
+      nodeState = (nodeState & ~(int32(3) << 26)) | (ordinal << 26)
     }
   }
   internal prop TransitionDelayMs float64{
@@ -238,63 +238,63 @@ internal class Node {
   internal prop Focusable bool{
     get -> (nodeState & (int32(1) << 14)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 14) : nodeState & ^(int32(1) << 14)
+      nodeState = value ? nodeState | (int32(1) << 14) : nodeState & ~(int32(1) << 14)
     }
   }
   internal prop AutoFocus bool{
     get -> (lifecycleState & uint16(2)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(2) : lifecycleState & ^uint16(2)
+      lifecycleState = value ? lifecycleState | uint16(2) : lifecycleState & ~uint16(2)
     }
   }
   internal prop HasFocusScopes bool{
     get -> (lifecycleState & uint16(512)) != uint16(0)
-    set -> lifecycleState = value ? lifecycleState | uint16(512) : lifecycleState & ^uint16(512)
+    set -> lifecycleState = value ? lifecycleState | uint16(512) : lifecycleState & ~uint16(512)
   }
   internal prop FocusScopeBoundary bool{
     get -> (lifecycleState & uint16(1024)) != uint16(0)
-    set -> lifecycleState = value ? lifecycleState | uint16(1024) : lifecycleState & ^uint16(1024)
+    set -> lifecycleState = value ? lifecycleState | uint16(1024) : lifecycleState & ~uint16(1024)
   }
   internal prop TabStop bool{
     get -> (lifecycleState & uint16(256)) == uint16(0)
-    set -> lifecycleState = value ? lifecycleState & ^uint16(256) : lifecycleState | uint16(256)
+    set -> lifecycleState = value ? lifecycleState & ~uint16(256) : lifecycleState | uint16(256)
   }
   internal prop Disabled bool{
     get -> (nodeState & (int32(1) << 15)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 15) : nodeState & ^(int32(1) << 15)
+      nodeState = value ? nodeState | (int32(1) << 15) : nodeState & ~(int32(1) << 15)
     }
   }
   internal prop Cursor Cursor{
     get -> Cursor((nodeState >> 16) & int32(31))
     set {
-      nodeState = (nodeState & ^(int32(31) << 16))
+      nodeState = (nodeState & ~(int32(31) << 16))
       | ((int32(value) & int32(31)) << 16)
     }
   }
   internal prop TextWrap TextWrap{
     get -> (nodeState & (int32(1) << 21)) != 0 ? TextWrap.NoWrap : TextWrap.Wrap
     set {
-      nodeState = value == TextWrap.NoWrap ? nodeState | (int32(1) << 21) : nodeState & ^(int32(1) << 21)
+      nodeState = value == TextWrap.NoWrap ? nodeState | (int32(1) << 21) : nodeState & ~(int32(1) << 21)
     }
   }
   internal prop TextTrimming TextTrimming{
     get -> (nodeState & (int32(1) << 22)) != 0 ? TextTrimming.Ellipsis : TextTrimming.None
     set {
-      nodeState = value == TextTrimming.Ellipsis ? nodeState | (int32(1) << 22) : nodeState & ^(int32(1) << 22)
+      nodeState = value == TextTrimming.Ellipsis ? nodeState | (int32(1) << 22) : nodeState & ~(int32(1) << 22)
     }
   }
   internal prop HasOutlineState bool{
     get -> (nodeState & (int32(1) << 23)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 23) : nodeState & ^(int32(1) << 23)
+      nodeState = value ? nodeState | (int32(1) << 23) : nodeState & ~(int32(1) << 23)
     }
   }
   internal prop Visibility Visibility{
     get -> (nodeState & int32(2)) != 0 ? Visibility.Hidden : Visibility.Visible
     set {
       nodeState = value == Visibility.Hidden
-      ? nodeState | int32(2) : nodeState & ^int32(2)
+      ? nodeState | int32(2) : nodeState & ~int32(2)
     }
   }
   internal prop PaintInputState int32{ get -> nodeState & int32(3) }
@@ -302,31 +302,31 @@ internal class Node {
   internal prop StackingChildren bool{
     get -> (nodeState & (int32(1) << 24)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 24) : nodeState & ^(int32(1) << 24)
+      nodeState = value ? nodeState | (int32(1) << 24) : nodeState & ~(int32(1) << 24)
     }
   }
   internal prop HasZIndex bool{
     get -> (nodeState & (int32(1) << 25)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 25) : nodeState & ^(int32(1) << 25)
+      nodeState = value ? nodeState | (int32(1) << 25) : nodeState & ~(int32(1) << 25)
     }
   }
   internal prop HasBackgroundImageState bool{
     get -> (nodeState & (int32(1) << 28)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 28) : nodeState & ^(int32(1) << 28)
+      nodeState = value ? nodeState | (int32(1) << 28) : nodeState & ~(int32(1) << 28)
     }
   }
   internal prop BackgroundImageFit ImageFit{
     get -> ImageFit((nodeState >> 29) & int32(3))
     set {
-      nodeState = (nodeState & ^(int32(3) << 29)) | ((int32(value) & int32(3)) << 29)
+      nodeState = (nodeState & ~(int32(3) << 29)) | ((int32(value) & int32(3)) << 29)
     }
   }
   internal prop HasClipPath bool{
     get -> (nodeState & (int32(1) << 31)) != 0
     set {
-      nodeState = value ? nodeState | (int32(1) << 31) : nodeState & ^(int32(1) << 31)
+      nodeState = value ? nodeState | (int32(1) << 31) : nodeState & ~(int32(1) << 31)
     }
   }
   internal prop ClipPathFillRule FillRule{ get; set; }
@@ -353,43 +353,43 @@ internal class Node {
   internal prop Retired bool{
     get -> (lifecycleState & uint16(4)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(4) : lifecycleState & ^uint16(4)
+      lifecycleState = value ? lifecycleState | uint16(4) : lifecycleState & ~uint16(4)
     }
   }
   internal prop HasElementHandle bool{
     get -> (lifecycleState & uint16(8)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(8) : lifecycleState & ^uint16(8)
+      lifecycleState = value ? lifecycleState | uint16(8) : lifecycleState & ~uint16(8)
     }
   }
   internal prop HasAccessibilityDeclaration bool{
     get -> (lifecycleState & uint16(16)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(16) : lifecycleState & ^uint16(16)
+      lifecycleState = value ? lifecycleState | uint16(16) : lifecycleState & ~uint16(16)
     }
   }
   internal prop HasAccessibilityNodeState bool{
     get -> (lifecycleState & uint16(32)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(32) : lifecycleState & ^uint16(32)
+      lifecycleState = value ? lifecycleState | uint16(32) : lifecycleState & ~uint16(32)
     }
   }
   internal prop HasSparseInputState bool{
     get -> (lifecycleState & uint16(1)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(1) : lifecycleState & ^uint16(1)
+      lifecycleState = value ? lifecycleState | uint16(1) : lifecycleState & ~uint16(1)
     }
   }
   internal prop HasDirectImageSourceState bool{
     get -> (lifecycleState & uint16(64)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(64) : lifecycleState & ^uint16(64)
+      lifecycleState = value ? lifecycleState | uint16(64) : lifecycleState & ~uint16(64)
     }
   }
   internal prop Password bool{
     get -> (lifecycleState & uint16(128)) != uint16(0)
     set {
-      lifecycleState = value ? lifecycleState | uint16(128) : lifecycleState & ^uint16(128)
+      lifecycleState = value ? lifecycleState | uint16(128) : lifecycleState & ~uint16(128)
     }
   }
 
@@ -462,13 +462,13 @@ internal class Node {
   internal prop CaretAffinity TextAffinity{
     get -> TextAffinity((nodeState >> 12) & int32(1))
     set {
-      nodeState = (nodeState & ^int32(4096)) | ((int32(value) & int32(1)) << 12)
+      nodeState = (nodeState & ~int32(4096)) | ((int32(value) & int32(1)) << 12)
     }
   }
   internal prop AnchorAffinity TextAffinity{
     get -> TextAffinity((nodeState >> 13) & int32(1))
     set {
-      nodeState = (nodeState & ^int32(8192)) | ((int32(value) & int32(1)) << 13)
+      nodeState = (nodeState & ~int32(8192)) | ((int32(value) & int32(1)) << 13)
     }
   }
   internal prop EditScrollX float32{ get; set; }

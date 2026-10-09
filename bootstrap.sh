@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-commit="947be9cb5f4467947ecb95dba06b461f9984d659"
+commit="e170b28640e294924e30adfbbcab0e9da53f7db1"
 gsharp="$root/artifacts/gsharp"
 
 if [ ! -f "$gsharp/commit" ] \

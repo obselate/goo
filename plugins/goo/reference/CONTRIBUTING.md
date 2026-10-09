@@ -19,7 +19,7 @@ On Windows, use `bootstrap.bat --gsharp-only`.
 The G# SDK restores from NuGet through `Gsharp.NET.Sdk`. It is not a separate
 system installation. The bootstrap builds the compiler and formatter required
 by this checkout from upstream commit
-[`947be9cb`](https://github.com/DavidObando/gsharp/tree/947be9cb5f4467947ecb95dba06b461f9984d659).
+[`e170b286`](https://github.com/DavidObando/gsharp/tree/e170b28640e294924e30adfbbcab0e9da53f7db1).
 
 When building the Gallery or a project with `<GooShaderEffect>` items, install
 the platform downloads listed under [custom shaders](README.md#custom-shaders).
@@ -99,7 +99,7 @@ fixture with an explicit RID, package version, package feed, and new output path
 python3 tools/Goo.ConsumerPerformance/run.py \
   --output /absolute/new/goo-consumer-report \
   --rid linux-x64 \
-  --package-version 0.7.18 \
+  --package-version 0.7.19 \
   --package-source /absolute/path/to/package-feed
 ```
 

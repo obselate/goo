@@ -31,8 +31,7 @@ internal unsafe partial class SdlHost {
 
     if eventType >= SDLEventType.DropFile && eventType <= SDLEventType.DropPosition {
       if nativeEvent.Drop.WindowID == windowId && !IsClosing {
-        var data nint
-        if let pointer = nativeEvent.Drop.Data { data = nint(pointer) }
+        let data = nint(nativeEvent.Drop.Data)
         NativeDropState.Dispatch(this, eventType, data, nativeEvent.Drop.X, nativeEvent.Drop.Y, MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
@@ -65,7 +64,7 @@ internal unsafe partial class SdlHost {
         let button = MapPointerButton(nativeEvent.Button.Button)
         if button != PointerButton.None {
           pointerButtons = PointerButtons(
-            int32(pointerButtons) & ^int32(ToPointerButtons(button)))
+            int32(pointerButtons) & ~int32(ToPointerButtons(button)))
           if pointerButtons == PointerButtons.None {
             SDL.CaptureMouse(false)
           }
@@ -143,7 +142,7 @@ internal unsafe partial class SdlHost {
     if eventType == SDLEventType.PenUp {
       if nativeEvent.Ptouch.WindowID == windowId {
         let buttons = PointerButtons(
-          int32(PenButtons(nativeEvent.Ptouch.PenState)) & ^int32(PointerButtons.Primary))
+          int32(PenButtons(nativeEvent.Ptouch.PenState)) & ~int32(PointerButtons.Primary))
         PointerReleased?.Invoke(int64(nativeEvent.Ptouch.Which), PointerDevice.Pen,
           nativeEvent.Ptouch.X, nativeEvent.Ptouch.Y, PointerButton.Primary,
           buttons, PenPressure(int64(nativeEvent.Ptouch.Which)), MapModifiers(SdlRuntime.EventModifierMask))
@@ -192,7 +191,8 @@ internal unsafe partial class SdlHost {
     }
     if eventType == SDLEventType.TextInput {
       if nativeEvent.Text.WindowID == windowId {
-        guard let pointer = nativeEvent.Text.Text else { return }
+        let pointer = nativeEvent.Text.Text
+        if pointer == nil { return }
         let text = Marshal.PtrToStringUTF8(nint(pointer)) ?? ""
         if text.Length != 0 {
           TextEntered?.Invoke(text)
@@ -203,7 +203,8 @@ internal unsafe partial class SdlHost {
     if eventType == SDLEventType.TextEditing {
       if nativeEvent.Edit.WindowID == windowId {
         var editing = ""
-        if let pointer = nativeEvent.Edit.Text {
+        let pointer = nativeEvent.Edit.Text
+        if pointer != nil {
           editing = Marshal.PtrToStringUTF8(nint(pointer)) ?? ""
         }
         if editing.Length == 0 {
@@ -423,7 +424,7 @@ internal unsafe partial class SdlHost {
     if down {
       buttons = PointerButtons(int32(buttons) | int32(ToPointerButtons(button)))
     } else {
-      buttons = PointerButtons(int32(buttons) & ^int32(ToPointerButtons(button)))
+      buttons = PointerButtons(int32(buttons) & ~int32(ToPointerButtons(button)))
     }
     if down {
       PointerPressed?.Invoke(int64(pen.Which), PointerDevice.Pen, pen.X, pen.Y,
@@ -442,7 +443,8 @@ internal unsafe partial class SdlHost {
   }
 
   private func CopyCandidates(nativeEvent SDLTextEditingCandidatesEvent) []string {
-    guard let values = nativeEvent.Candidates else { return []string{} }
+    let values = nativeEvent.Candidates
+    if values == nil { return []string{} }
     if nativeEvent.NumCandidates <= 0 { return []string{} }
     let pointers = *SdlVulkanExtensionPointer(values)
     let candidates = [nativeEvent.NumCandidates]string
