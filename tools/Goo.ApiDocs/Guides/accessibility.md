@@ -74,5 +74,5 @@ window-relative geometry.
 
 `Accessibility.PositionInSet` is the zero-based logical item index.
 `SizeOfSet` belongs on the collection container and counts all logical items,
-including those outside the realized viewport. `Virtual` and `VirtualRows` supply
-list/list-item semantics and this metadata from their existing collection state.
+including those outside the realized viewport. `Virtual` supplies list and list-item
+semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.ItemCount`.

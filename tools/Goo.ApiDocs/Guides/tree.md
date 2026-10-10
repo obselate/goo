@@ -65,25 +65,112 @@ semantics. Goo does not infer an anchor from the declaration parent and does not
 provide automatic dismissal or a named layer system; compose those policies with
 handles, input callbacks, and focus scopes.
 
-## Virtualize complete data sources
+## Virtualize large collections
 
-`Virtual(items, itemWidth, itemHeight, itemKey, itemBuilder)` accepts the complete `IReadOnlyList<T>` source and one positive, finite logical width and height shared by every item. Goo derives list or wrapped-grid placement from `FlexDirection` and `FlexWrap`, then mounts only the viewport window plus one overscan line. The caller does not calculate a range, supply an item count, or choose a list or grid primitive.
+`Virtual(source)` is a scrolling element that mounts only the items that its source places. Goo has no list or grid policy of its own. Goo.Widgets supplies `VirtualItems` for items of one size and `VirtualRows` for rows of measured height. Write a policy when neither fits.
 
-The shared item extent is the sole source for placement and scroll range. Builder content is mounted inside that fixed extent and cannot resize the virtual layout.
+A policy has two parts:
 
-Source order controls logical order, and `itemKey` supplies stable identity. Goo uses the item type's equality semantics to retain unchanged visible nodes without calling `itemBuilder`. Newly visible and changed items invoke the builder. Items leaving the viewport unmount through the ordinary Goo lifecycle, including focus, pointer capture, handles, and accessibility state. Keys must be unique and non-empty. Rebuild the owning Cell after same-count content changes. A live source count change is detected directly.
+- `VirtualSource` carries the inputs of one build. `State(current)` returns the retained state with these inputs pending, or a new state.
+- `VirtualState` is retained for each mounted element. It places the items.
 
-`VirtualRows(items, estimatedItemHeight, itemKey, itemBuilder)` opts into measured heights for a vertical list. Rows occupy the available content width and derive their height from actual child layout. It supports `Column` without wrapping; use `RowGap` or `Gap` for spacing. The finite positive estimate supplies the extent of rows that have not been measured. The default overflows are horizontal `Hidden` and vertical `Scroll`; give the list a bounded viewport height.
+| `VirtualState` member | Purpose |
+|---|---|
+| `Realize(viewport, output)` | Add each item to mount, and set `ContentSize` and `ItemCount`. |
+| `NeedsRealize(viewport)` | Return true when the committed items no longer agree with the viewport. |
+| `OffsetOf(viewport, key)` | Return the scroll offset of an item for `ElementHandle.ScrollToItem`. |
+| `Commit()` | Make the last `Realize` result current. |
+| `Cancel()` | Discard the last `Realize` result and the pending inputs. |
+| `Dispose()` | Release the state. |
 
-Keep item values immutable and include all render dependencies in item equality, or change builder identity when external render inputs change. Rebuild the owning Cell after source edits. Goo retains measured heights by key when the item, builder, and available width are unchanged. A width change resets measurements to the estimate and remeasures realized content. Changes within a retained child also update its measured height.
+`Realize` must keep all changes pending until `Commit`. Goo calls `Cancel` when an item fails to mount.
 
-A change that only removes rows from the start and adds rows at the end, such as streaming output, is applied in place. Goo compares the retained rows, and reads keys and builds rows only for the added rows. If the first visible key leaves with such a change, the oldest remaining row takes its place. Pass `pinToBottom: true` to keep the end in view until the reader scrolls away from it.
+This policy places rows of height 20. Mount it with `Virtual(Rows(lines)) { Height = 200 }`.
 
-The first visible key and its pixel offset anchor scrolling when measurements change, rows are inserted, or the width changes. If that key disappears, the closest surviving source index is used. `ElementHandle.ScrollToItem(key)` immediately jumps either virtual mode to a stable key, returns false when the key is absent, and uses estimates for unmeasured rows. Subsequent measurement preserves that key's position, subject to the scroll range at the collection ends.
+```gsharp
+class Rows : VirtualSource {
+  let Items IReadOnlyList[string]
+  init(items IReadOnlyList[string]) { Items = items }
 
-Measured lists retain two overscan rows on each side, plus the row containing keyboard focus even when it leaves the viewport. Blur releases an offscreen row through the normal lifecycle. Each refresh measures at most 128 rows; the normal frame processes at most three refresh passes and schedules further frames until measurements settle. Realization is limited to 4,096 viewport/overscan rows plus one focused row, and metadata to one million items; exceeding either limit throws explicitly. Zero measured heights are allowed. Fixed-extent virtualization keeps its existing behavior.
+  func State(current VirtualState?) VirtualState {
+    let state = (current as RowsState) ?? RowsState()
+    state.Pending = this
+    return state
+  }
+}
 
-Metadata uses a prefix-sum tree: committed offset lookup, index lookup, and one measured-height update take O(log n). Explicit source reconciliation validates all keys and values in O(n); changed snapshots and width invalidation use O(n) metadata memory. Refresh work is bounded by realized rows and the 128 staged measurements. Stable metadata and row descriptions are reused between refreshes; no metadata is allocated for ordinary elements or fixed-extent lists.
+class RowsState : VirtualState {
+  var Pending Rows?
+  private var rows Rows?
+  private var mounted HashSet[string] = HashSet[string]()
+  private var next HashSet[string] = HashSet[string]()
+  private var first int32
+  private var last int32
+  private var pendingFirst int32
+  private var pendingLast int32
+
+  override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    next.Clear()
+    guard let input = Pending ?? rows else { return }
+    let count = input.Items.Count
+    pendingFirst = First(viewport, count)
+    pendingLast = Last(viewport, count)
+    for index in pendingFirst ... pendingLast {
+      let key = input.Items[index]
+      let content Blob? = if mounted.Contains(key) { nil } else { Text{ Content: key } }
+      output.Add(VirtualItem{
+        Key: key, Index: index, Y: float64(index) * 20.0,
+        Width: viewport.Size.Width, Height: 20.0, Content: content,
+      })
+      next.Add(key)
+    }
+    output.ContentSize = LayoutSize{ Width: viewport.Size.Width, Height: float64(count) * 20.0 }
+    output.ItemCount = count
+  }
+
+  override func NeedsRealize(viewport VirtualViewport) bool {
+    guard let input = rows else { return false }
+    let count = input.Items.Count
+    return First(viewport, count) != first || Last(viewport, count) != last
+  }
+
+  override func Commit() {
+    let old = mounted
+    mounted = next
+    next = old
+    rows = Pending ?? rows
+    Pending = nil
+    first = pendingFirst
+    last = pendingLast
+  }
+
+  override func Cancel() { Pending = nil }
+
+  private func First(viewport VirtualViewport, count int32) int32 ->
+  Math.Clamp(int32(viewport.ScrollOffset.Y / 20.0) - 1, 0, count)
+
+  private func Last(viewport VirtualViewport, count int32) int32 ->
+  Math.Clamp(int32((viewport.ScrollOffset.Y + viewport.Size.Height) / 20.0) + 2, 0, count)
+}
+```
+
+Items use content coordinates. The origin is the start of the content box at scroll offset zero, so a scroll offset is also the content coordinate at the start of the viewport. Padding is not part of the content size.
+
+| `VirtualItem` member | Meaning |
+|---|---|
+| `Key` | Stable, nonempty, and unique in one result. |
+| `Index` | Position in the whole collection. Goo reports it as `PositionInSet`. |
+| `X`, `Y` | Content coordinates. |
+| `Width`, `Height` | Nil takes the size from the content. |
+| `Content` | Nil keeps the content that is mounted for this key. |
+
+Goo wraps each item in a keyed, absolutely positioned element with the list item role. An item that leaves the result unmounts through the ordinary lifecycle, including focus, pointer capture, handles, and accessibility state.
+
+`VirtualViewport` gives the visible content size, the scroll offset, the resolved gaps, the flex direction and wrap, and the mounted items. `Child(index)` returns the key and the last layout size of a mounted item, and `Measured` is false until its current content has a layout. `FocusedChild` is the mounted item that contains keyboard focus. A policy that measures items reads these sizes and returns true from `NeedsRealize` until they settle.
+
+Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
+
+Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. `Virtual.PinToBottom` keeps the end in view until the reader scrolls away, and `viewport.Pinned` reports that state.
 
 ## Animate computed position changes
 

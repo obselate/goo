@@ -49,6 +49,16 @@ public sealed class PublicDocumentationTests
         "M:Goo.LayoutAlgorithm.Arrange(Goo.LayoutContext,Goo.LayoutSize)",
         "M:Goo.LayoutContext.MeasureChild(System.Int32,Goo.LayoutSize)",
         "M:Goo.LayoutContext.ArrangeChild(System.Int32,Goo.ElementRect)",
+        "M:Goo.Virtual.#ctor(Goo.VirtualSource)",
+        "M:Goo.VirtualSource.State(Goo.VirtualState)",
+        "M:Goo.VirtualState.Realize(Goo.VirtualViewport,Goo.VirtualOutput)",
+        "M:Goo.VirtualState.NeedsRealize(Goo.VirtualViewport)",
+        "M:Goo.VirtualState.OffsetOf(Goo.VirtualViewport,System.String)",
+        "M:Goo.VirtualState.Commit",
+        "M:Goo.VirtualState.Cancel",
+        "M:Goo.VirtualState.Dispose",
+        "M:Goo.VirtualViewport.Child(System.Int32)",
+        "M:Goo.VirtualOutput.Add(Goo.VirtualItem)",
         "M:Goo.Button.#ctor",
         "M:Goo.Button.Add(Goo.Blob)",
         "M:Goo.Cell.#ctor",
@@ -501,7 +511,13 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ElementHandle.JumpTo(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.ElementHandle.ScrollIntoView"] = new([], [], true),
             ["M:Goo.ElementHandle.ScrollToItem(System.String)"] = new(["key"], [], true),
-            ["M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob},System.Boolean)"] = new(["items", "estimatedItemHeight", "itemKey", "itemBuilder", "pinToBottom"], ["T"], true),
+            ["M:Goo.Virtual.#ctor(Goo.VirtualSource)"] = new(["source"], [], false),
+            ["M:Goo.VirtualSource.State(Goo.VirtualState)"] = new(["current"], [], true),
+            ["M:Goo.VirtualState.Realize(Goo.VirtualViewport,Goo.VirtualOutput)"] = new(["viewport", "output"], [], false),
+            ["M:Goo.VirtualState.NeedsRealize(Goo.VirtualViewport)"] = new(["viewport"], [], true),
+            ["M:Goo.VirtualState.OffsetOf(Goo.VirtualViewport,System.String)"] = new(["viewport", "key"], [], true),
+            ["M:Goo.VirtualViewport.Child(System.Int32)"] = new(["index"], [], true),
+            ["M:Goo.VirtualOutput.Add(Goo.VirtualItem)"] = new(["item"], [], false),
             ["M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)"] = new([], [], true),
             ["M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)"] = new(["required"], [], true),
@@ -806,7 +822,6 @@ public sealed class PublicDocumentationTests
         return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Append("P:Goo.TextCommand.Position").Concat(eventIds)
             .Append("P:Goo.LayoutTransition.SimulationFactory")
             .Append("P:Goo.Cell`1.Input")
-            .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob},System.Boolean)")
             .Append("M:Goo.Percent(System.Double)");
     }
 

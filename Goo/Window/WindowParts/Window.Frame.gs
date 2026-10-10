@@ -347,7 +347,7 @@ public partial class Window {
       family?.NativeDrop?.Validate()
       for i in 0 ... continuationNodes.Count {
         let candidate = continuationNodes[i]
-        if Virtualization.State(candidate)?.NeedsContinuation(candidate) == true {
+        if Virtualization.State(candidate)?.NeedsRefresh(candidate) == true {
           enqueueRetainedInvalidation(ReconcileEffects.Layout)
           break
         }

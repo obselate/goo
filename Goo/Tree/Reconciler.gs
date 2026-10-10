@@ -123,7 +123,7 @@ internal partial class Reconciler {
 
   private func mountCore(b Blob) Node {
     let result = switch b {
-      case v is VirtualBlobBase: mountVirtual(v)
+      case v is Virtual: mountVirtual(v)
       case retained is VirtualRetainedBlob: throw InvalidOperationException("Retained virtual item cannot be mounted")
       case p is Portal: mountPortal(p)
       case bt is Button: mountButton(bt)
@@ -178,11 +178,11 @@ internal partial class Reconciler {
     return n
   }
 
-  internal func mountVirtual(b VirtualBlobBase) Node {
+  internal func mountVirtual(b Virtual) Node {
     let n = Node{ Kind: NodeKind.Container, Key: b.Key }
     let state = applyVirtual(n, b, true)
     try {
-      let children = b.Prepare(state, n)
+      let children = state.Prepare(n, b.Source)
       mountChildren(n, children)
       state.Commit()
       return n
@@ -192,17 +192,16 @@ internal partial class Reconciler {
     }
   }
 
-  internal func applyVirtual(n Node, b Blob, initial bool) VirtualNodeState {
+  internal func applyVirtual(n Node, b Virtual, initial bool) VirtualNodeState {
     applyStyle(n, b, b.Focusable, initial)
-    let pin = (b as VirtualBlobBase)?.PinToBottom ?? false
-    if n.PinToBottom != pin {
-      n.PinToBottom = pin
+    if n.PinToBottom != b.PinToBottom {
+      n.PinToBottom = b.PinToBottom
       MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
     }
     return Virtualization.Configure(n)
   }
 
-  internal func diffVirtual(n Node, b VirtualBlobBase) Node {
+  internal func diffVirtual(n Node, b Virtual) Node {
     if !canReuseNode(n, b) {
       return replace(n, b)
     }
@@ -210,7 +209,7 @@ internal partial class Reconciler {
     let extent = state.Extent()
     let count = state.ItemCount()
     try {
-      let children = b.Prepare(state, n)
+      let children = state.Prepare(n, b.Source)
       diffChildren(n, children)
       state.Commit()
       // Items added or removed out of view leave the children unchanged, but the scroll extent and the
@@ -644,7 +643,7 @@ internal partial class Reconciler {
       return replacement
     }
     let result = switch b {
-      case v is VirtualBlobBase: diffVirtual(n, v)
+      case v is Virtual: diffVirtual(n, v)
       case p is Portal: diffPortal(n, p)
       case bt is Button: diffButton(n, bt)
       case c is Container: diffContainer(n, c)
@@ -1106,7 +1105,7 @@ internal partial class Reconciler {
       case retained is VirtualRetainedBlob {
         return !n.Retired && n.Key == b.Key
       }
-      case virtual is VirtualBlobBase {
+      case virtual is Virtual {
         return n.Fiber == nil && n.Kind == NodeKind.Container && n.Key == b.Key
           && Virtualization.State(n) != nil
       }
