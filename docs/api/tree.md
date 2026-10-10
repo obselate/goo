@@ -188,7 +188,7 @@ Items use content coordinates. The origin is the start of the content box at scr
 | `Width`, `Height` | Nil takes the size from the content. |
 | `Content` | Nil keeps the content that is mounted for this key. |
 
-Goo wraps each item in a keyed, absolutely positioned element with the list item role. An item that leaves the result unmounts through the ordinary lifecycle, including focus, pointer capture, handles, and accessibility state.
+Goo wraps each item in a keyed, absolutely positioned element. The wrapper has the list item role while the `Virtual` element has the list role. An item that leaves the result unmounts through the ordinary lifecycle, including focus, pointer capture, handles, and accessibility state.
 
 `VirtualViewport` gives the visible content size, the scroll offset, the resolved gaps, the flex direction and wrap, and the mounted items. `Child(index)` returns the key and the last layout size of a mounted item, and `Measured` is false until its current content has a layout. `FocusedChild` is the mounted item that contains keyboard focus. A policy that measures items reads these sizes and returns true from `NeedsRealize` until they settle.
 
@@ -1129,7 +1129,7 @@ Source:
 
 - [`Virtual.gs`](../../Goo/Tree/Virtual.gs)
 
-Defines a scrolling element that takes its children from a VirtualSource and mounts only the items that the source places. Items use content coordinates: the origin is the start of the content box at scroll offset zero, so a scroll offset is also the content coordinate at the start of the viewport.
+Defines a scrolling element that takes its children from a VirtualSource and mounts only the items that the source places. Items use content coordinates: the origin is the start of the content box at scroll offset zero, so a scroll offset is also the content coordinate at the start of the viewport. The element has the list role and each item has the list item role. With another role, or with Accessibility set to nil, items have no role and the content of each item gets the item position.
 
 ### `new(VirtualSource)`
 
@@ -1207,7 +1207,7 @@ Receives the result of a VirtualState.Realize call. Access outside that call thr
 
 ### `Add(VirtualItem)`
 
-Adds an item to mount. Goo places it, keys it, and gives it the list item role.
+Adds an item to mount. Goo places it and keys it.
 
 - `item`: The key, the position in the collection, the content box, and the content.
 

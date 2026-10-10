@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.23 - 2026-10-10
+
+- Give virtual items the list item role only while the `Virtual` element has the list role. With another role, or with `Accessibility` set to nil, items have no role and the content of each item gets `PositionInSet`.
+
 ## 0.7.22 - 2026-10-10
 
 - Add the `Virtual` element and its policy protocol: `VirtualSource`, `VirtualState`, `VirtualViewport`, `VirtualOutput`, `VirtualItem`, and `VirtualChild`.

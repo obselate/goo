@@ -17,8 +17,8 @@
     "goo-version": {
       "type": "parameter",
       "datatype": "text",
-      "defaultValue": "0.7.22",
-      "replaces": "0.7.22",
+      "defaultValue": "0.7.23",
+      "replaces": "0.7.23",
       "description": "Goo package version."
     }
   },
