@@ -1022,6 +1022,27 @@ Source:
 
 - [`Virtualization.gs`](../../Goo/Tree/Virtualization.gs)
 
+## `VirtualLog<T>`
+
+Source:
+
+- [`VirtualRows.gs`](../../Goo/Tree/VirtualRows.gs)
+
+Creates VirtualRows over a window of an append-only log, such as the latest lines of streaming output. Entries never change once added, and between builds the window only drops entries from its start and adds entries at its end, so an update costs time proportional to the entries dropped and added rather than to the whole window. Any other change to the window rebuilds the list as VirtualRows does. @param items The entries in the window, oldest first. The list may be the same instance on every build. @param start The log position of `items[0]`. Positions count every entry ever added, so they only increase. @param estimatedItemHeight A finite positive estimate used until a row is measured. @param itemKey Stable, nonempty keys, unique across the whole log. @param itemBuilder Builds one row; keep the same builder between builds so unchanged rows are reused. @typeparam T The immutable entry type. @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
+
+### `VirtualLog<T>(System.Collections.Generic.IReadOnlyList{T},System.Int64,float64,System.Func{T,string},System.Func{T,Blob})`
+
+Creates VirtualRows over a window of an append-only log, such as the latest lines of streaming output. Entries never change once added, and between builds the window only drops entries from its start and adds entries at its end, so an update costs time proportional to the entries dropped and added rather than to the whole window. Any other change to the window rebuilds the list as VirtualRows does.
+
+- `T`: The immutable entry type.
+- `items`: The entries in the window, oldest first. The list may be the same instance on every build.
+- `start`: The log position of items[0]. Positions count every entry ever added, so they only increase.
+- `estimatedItemHeight`: A finite positive estimate used until a row is measured.
+- `itemKey`: Stable, nonempty keys, unique across the whole log.
+- `itemBuilder`: Builds one row; keep the same builder between builds so unchanged rows are reused.
+
+Returns: A vertical virtual collection with two overscan rows on either side and bounded measurement work.
+
 ## `VirtualRows<T>`
 
 Source:

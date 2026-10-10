@@ -326,6 +326,94 @@ internal class ElementHandleFixtures {
     return gridBounded && Virtualization.State(gridRoot) == nil
   }
 
+  func VirtualRowsContract() bool {
+    let cell = VirtualRowsFixtureCell(1000, false)
+    let semantics = AccessibilityTestAdapter{}
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.AccessibilityAdapter = semantics
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    if root.Children.Count <= 0 || root.Children.Count > 8 || cell.Builds.Count > 8
+      || cell.Handle.ScrollRange.Y != 19940.0 || !cell.Handles[0].IsMounted { return false }
+    if !cell.Handle.JumpTo(0.0, 10000.0) { return false }
+    window.UpdateTree()
+    if !cell.Handles[500].IsMounted || cell.Handles[0].IsMounted { return false }
+    cell.Builds.Clear()
+    cell.Items[501] = VirtualFixtureItem{ Id: 501, Revision: 1 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.Builds.Count != 1 || cell.Builds[0] != 501 { return false }
+    cell.Items.Add(VirtualFixtureItem{ Id: 1000 })
+    cell.Rebuild()
+    window.UpdateTree()
+    let grown = cell.Handle.ScrollRange.Y == 19960.0 && cell.Handles[500].IsMounted
+      && semantics.Tree?.Root?.SizeOfSet == 1001
+    window.Close()
+    return grown && Virtualization.State(root) == nil
+  }
+
+  func VirtualLogContract() bool {
+    let cell = VirtualRowsFixtureCell(1000, true)
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    if cell.Handle.ScrollRange.Y != 19940.0 || !cell.Handles[0].IsMounted { return false }
+    if !cell.Handle.JumpTo(0.0, 10000.0) { return false }
+    window.UpdateTree()
+    if !cell.Handles[500].IsMounted { return false }
+
+    // Dropping ten entries and adding ten keeps the same rows in view without rebuilding them, and reads
+    // keys only for the added entries.
+    cell.Builds.Clear()
+    cell.KeyCalls = 0
+    cell.Items.RemoveRange(0, 10)
+    cell.Start = 10L
+    for id in 1000 ... 1010 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.KeyCalls != 10 || cell.Builds.Count != 0 || !cell.Handles[500].IsMounted
+      || cell.Handle.ScrollRange.Y != 19940.0 || cell.Handle.ScrollOffset.Y != 9800.0 { return false }
+
+    // A window that moves past every retained entry replaces them all.
+    cell.Items.Clear()
+    cell.Start = 1500L
+    for id in 1500 ... 1503 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.Handle.ScrollRange.Y != 0.0 || !cell.Handles[1500].IsMounted || cell.Handles[500].IsMounted { return false }
+
+    // Appending past the slot capacity compacts the rows, and the newest entry is still reachable by key.
+    for id in 1503 ... 1600 {
+      cell.Items.Add(VirtualFixtureItem{ Id: id })
+      cell.Rebuild()
+      window.UpdateTree()
+    }
+    if cell.Handle.ScrollRange.Y != 1940.0 || !cell.Handle.ScrollToItem("row-1599") { return false }
+    window.UpdateTree()
+    if !cell.Handles[1599].IsMounted || cell.Handle.ScrollOffset.Y != 1940.0 { return false }
+
+    // A repeated key fails the build and leaves the rows usable.
+    cell.Items.Add(VirtualFixtureItem{ Id: 1599 })
+    cell.Rebuild()
+    var rejected = false
+    try { window.UpdateTree() } catch (error InvalidOperationException) { rejected = true }
+    cell.Items.RemoveAt(cell.Items.Count - 1)
+    cell.Items.Add(VirtualFixtureItem{ Id: 1600 })
+    cell.Rebuild()
+    window.UpdateTree()
+    if !rejected || cell.Handle.ScrollRange.Y != 1960.0 { return false }
+
+    // A window that moves backwards rebuilds the rows instead.
+    cell.Items.Clear()
+    cell.Start = 0L
+    for id in 0 ... 5 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    let rebuilt = cell.Handle.ScrollRange.Y == 40.0 && cell.Handles[0].IsMounted
+    window.Close()
+    return rebuilt && Virtualization.State(root) == nil
+  }
+
   func VirtualExtentValidationContract() bool {
     let items = List[int32]()
     var zeroRejected = false
@@ -584,4 +672,43 @@ internal class VirtualFixtureCell : Cell {
 internal data struct VirtualFixtureItem {
   internal var Id int32
   internal var Revision int32
+}
+
+internal class VirtualRowsFixtureCell : Cell {
+  internal let Items List[VirtualFixtureItem]
+  internal let Builds List[int32]
+  internal let Handles List[ElementHandle]
+  internal let Handle ElementHandle
+  internal var Start int64
+  internal var KeyCalls int32
+  private let log bool
+  private let key((VirtualFixtureItem) -> string)
+  private let build((VirtualFixtureItem) -> Blob)
+
+  init(count int32, isLog bool) {
+    Items = List[VirtualFixtureItem]()
+    Builds = List[int32]()
+    Handles = List[ElementHandle]()
+    Handle = ElementHandle{}
+    log = isLog
+    for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
+    for i in 0 ... 2000 { Handles.Add(ElementHandle{}) }
+    key = (item VirtualFixtureItem) -> {
+      KeyCalls++
+      return "row-${item.Id}"
+    }
+    build = (item VirtualFixtureItem) -> {
+      Builds.Add(item.Id)
+      return Container() {.Handle: Handles[item.Id],.Width: 75,.Height: 20,
+        Text{ Content: "row ${item.Id}:${item.Revision}"},
+      }
+    }
+  }
+
+  override func Build() Blob {
+    if log {
+      return VirtualLog(Items, Start, 20.0, key, build) { Handle = Handle, Width = 100, Height = 60 }
+    }
+    return VirtualRows(Items, 20.0, key, build) { Handle = Handle, Width = 100, Height = 60 }
+  }
 }

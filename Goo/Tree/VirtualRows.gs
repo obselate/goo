@@ -17,26 +17,52 @@ public func VirtualRows[T](items IReadOnlyList[T], estimatedItemHeight float64,
     let estimate = virtualItemExtent(estimatedItemHeight, "estimatedItemHeight")
     if itemKey == nil { throw ArgumentNullException("itemKey") }
     if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
-    return VirtualRowsBlob[T](items, estimate, itemKey, itemBuilder) {
-      Accessibility = Accessibility{ Role: AccessibilityRole.List },
-      Position = PositionType.Relative,
-      OverflowX = Overflow.Hidden,
-      OverflowY = Overflow.Scroll,
-    }
+    return virtualRowsBlob(items, nil, estimate, itemKey, itemBuilder)
+  }
+
+/// Creates VirtualRows over a window of an append-only log, such as the latest lines of streaming output.
+/// Entries never change once added, and between builds the window only drops entries from its start and
+/// adds entries at its end, so an update costs time proportional to the entries dropped and added rather
+/// than to the whole window. Any other change to the window rebuilds the list as VirtualRows does.
+/// @param items The entries in the window, oldest first. The list may be the same instance on every build.
+/// @param start The log position of `items[0]`. Positions count every entry ever added, so they only increase.
+/// @param estimatedItemHeight A finite positive estimate used until a row is measured.
+/// @param itemKey Stable, nonempty keys, unique across the whole log.
+/// @param itemBuilder Builds one row; keep the same builder between builds so unchanged rows are reused.
+/// @typeparam T The immutable entry type.
+/// @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
+public func VirtualLog[T](items IReadOnlyList[T], start int64, estimatedItemHeight float64,
+  itemKey((T) -> string), itemBuilder((T) -> Blob)) Blob{
+    if items == nil { throw ArgumentNullException("items") }
+    if start < 0L { throw ArgumentOutOfRangeException("start", "Log positions must not be negative") }
+    let estimate = virtualItemExtent(estimatedItemHeight, "estimatedItemHeight")
+    if itemKey == nil { throw ArgumentNullException("itemKey") }
+    if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
+    return virtualRowsBlob(items, start, estimate, itemKey, itemBuilder)
+  }
+
+internal func virtualRowsBlob[T](items IReadOnlyList[T], start int64?, estimate float32,
+  itemKey((T) -> string), itemBuilder((T) -> Blob)) Blob -> VirtualRowsBlob[T](items, start, estimate, itemKey, itemBuilder) {
+    Accessibility = Accessibility{ Role: AccessibilityRole.List },
+    Position = PositionType.Relative,
+    OverflowX = Overflow.Hidden,
+    OverflowY = Overflow.Scroll,
   }
 
 internal class VirtualRowsBlob[T] : VirtualBlobBase {
   private let items IReadOnlyList[T]
+  private let start int64?
   private let estimate float32
   private let key((T) -> string)
   private let builder((T) -> Blob)
-  internal init(items IReadOnlyList[T], estimate float32, key((T) -> string), builder((T) -> Blob)) {
+  internal init(items IReadOnlyList[T], start int64?, estimate float32, key((T) -> string), builder((T) -> Blob)) {
     this.items = items
+    this.start = start
     this.estimate = estimate
     this.key = key
     this.builder = builder
   }
-  internal override func Prepare(state VirtualNodeState, n Node) IList[Blob] -> state.PrepareRows(n, items, estimate, key, builder)
+  internal override func Prepare(state VirtualNodeState, n Node) IList[Blob] -> state.PrepareRows(n, items, start, estimate, key, builder)
 }
 
 internal class VirtualRowsStorage[T] : VirtualStorage {
@@ -59,13 +85,17 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
   private var pendingScroll float32
   private var pendingTarget float32
   private var hasPending bool
+  // The log window the metadata holds, when the rows came from VirtualLog: positions [logStart, logEnd).
+  private var logged bool
+  private var logStart int64
+  private var logEnd int64
 
-  internal func Prepare(n Node, items IReadOnlyList[T], estimate float32,
-    itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob] -> prepare(n, items, estimate, itemKey, itemBuilder, false)
+  internal func Prepare(n Node, items IReadOnlyList[T], start int64?, estimate float32,
+    itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob] -> prepare(n, items, start, estimate, itemKey, itemBuilder, false)
 
   internal override func PrepareRefresh(n Node) IList[Blob] {
     guard let items = source, let key = selector, let build = builder, let data = metadata else { throw InvalidOperationException("Measured virtual source is unavailable") }
-    return prepare(n, items, data.Estimate, key, build, true)
+    return prepare(n, items, nil, data.Estimate, key, build, true)
   }
 
   internal override func NeedsRefresh(n Node) bool {
@@ -83,16 +113,16 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
     return false
   }
 
-  internal override func ItemCount() int32 -> metadata?.Rows.Length ?? 0
+  internal override func ItemCount() int32 -> metadata?.Count ?? 0
   internal override func NeedsContinuation(n Node) bool -> NeedsRefresh(n)
   internal override func Extent() VirtualExtent ? -> if metadata == nil { nil } else { VirtualExtent{Width: window.ContentW, Height: window.ContentH} }
   internal override func OffsetForKey(n Node, key string) Point? {
     guard let data = metadata else { return nil }
-    if !data.Indices.TryGetValue(key, out var index) { return nil }
-    return Point{X: 0.0, Y: Math.Max(0.0, float64(window.OriginY) + data.Index.Prefix(index))}
+    if !data.TryIndex(key, out var index) { return nil }
+    return Point{X: 0.0, Y: Math.Max(0.0, float64(window.OriginY) + data.Prefix(index))}
   }
 
-  private func prepare(n Node, items IReadOnlyList[T], estimate float32,
+  private func prepare(n Node, items IReadOnlyList[T], start int64?, estimate float32,
     key((T) -> string), build((T) -> Blob), refresh bool) IList[Blob]{
       Cancel()
       if n.FlexDirection != FlexDirection.Column || n.FlexWrap != FlexWrap.NoWrap {
@@ -103,8 +133,33 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       let gap = Gap(n)
       let sameBuilder = Object.Equals(builder, build)
       let old = metadata
-      let data = if refresh && old != nil && old.Width == width && old.Gap == gap { old }
-      else { Snapshot(items, estimate, key, width, gap, sameBuilder) }
+      // Find the row at the top of the viewport before the log path changes the rows in place.
+      var anchor = ""
+      var oldIndex = 0
+      var before = 0.0
+      if let previous = old {
+        if previous.Count > 0 {
+          oldIndex = AnchorIndex(previous, n.ScrollY)
+          anchor = previous.Row(oldIndex).Key
+          before = float64(window.OriginY) + previous.Prefix(oldIndex)
+        }
+      }
+      var data VirtualRowMetadata[T]
+      if refresh && old != nil && old.Width == width && old.Gap == gap {
+        data = old
+      } else if let position = start {
+        data = if let appended = AppendLog(old, items, position, estimate, key, width, gap, sameBuilder) { appended }
+        else { Snapshot(items, estimate, key, width, gap, sameBuilder) }
+        logged = true
+        logStart = position
+        logEnd = position + int64(items.Count)
+      } else if refresh && logged && old != nil {
+        // The retained list may have changed since the log window was recorded, so keep the recorded rows.
+        data = Snapshot(old.Items(), estimate, key, width, gap, sameBuilder)
+      } else {
+        data = Snapshot(items, estimate, key, width, gap, sameBuilder)
+        logged = false
+      }
       pendingMetadata = data
       if Object.ReferenceEquals(old, data) && width > 0.0F {
         for i in 0 ... n.Children.Count {
@@ -116,15 +171,10 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         }
       }
       var scroll = float64(n.ScrollY)
-      if let previous = old {
-        if previous.Rows.Length > 0 && data.Rows.Length > 0 {
-          let oldIndex = AnchorIndex(previous, n.ScrollY)
-          let anchor = previous.Rows[oldIndex].Key
-          let nextIndex = if data.Indices.TryGetValue(anchor, out var found) { found } else { Math.Min(oldIndex, data.Rows.Length - 1) }
-          let before = float64(window.OriginY) + previous.Index.Prefix(oldIndex)
-          let after = float64(BoxGeometry.ContentTop(n) - n.Rect.Y) + Prefix(data, nextIndex, true)
-          scroll = Math.Max(0.0, scroll + after - before)
-        }
+      if anchor != "" && data.Count > 0 {
+        let nextIndex = if data.TryIndex(anchor, out var found) { found } else { Math.Min(oldIndex, data.Count - 1) }
+        let after = float64(BoxGeometry.ContentTop(n) - n.Rect.Y) + Prefix(data, nextIndex, true)
+        scroll = Math.Max(0.0, scroll + after - before)
       }
       let target = Window(n, data, scroll, true)
       if target.Count > 4096 { throw InvalidOperationException("VirtualRows viewport exceeds the 4096-row realization budget") }
@@ -150,7 +200,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
 
   private func AddRow(index int32, data VirtualRowMetadata[T], target VirtualWindow,
     build((T) -> Blob), sameBuilder bool) {
-      let row = data.Rows[index]
+      let row = data.Row(index)
       var height = row.Height
       for i in 0 ... measurements.Count { let value = measurements[i]
         if value.Index == index { height = value.Height
@@ -180,25 +230,24 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
   private func Snapshot(items IReadOnlyList[T], estimate float32, key((T) -> string),
     width float32, gap float32, sameBuilder bool) VirtualRowMetadata[T]{
       let old = metadata
-      var unchanged = old != nil && old.Rows.Length == items.Count && old.Width == width && old.Gap == gap && old.Estimate == estimate && sameBuilder
+      var unchanged = old != nil && old.Count == items.Count && old.Width == width && old.Gap == gap && old.Estimate == estimate && sameBuilder
       if unchanged {
         let previous = old!!
         for i in 0 ... items.Count {
-          if !equality.Equals(previous.Rows[i].Item, items[i]) || previous.Rows[i].Key != key(items[i]) { unchanged = false
+          let row = previous.Row(i)
+          if !equality.Equals(row.Item, items[i]) || row.Key != key(items[i]) { unchanged = false
             break }
         }
         if unchanged { return previous }
       }
       let rows = [items.Count]VirtualRow[T]
-      let indices = Dictionary[string, int32](items.Count, StringComparer.Ordinal)
       for i in 0 ... items.Count {
         let item = items[i]
         let id = key(item)
-        if String.IsNullOrEmpty(id) || !indices.TryAdd(id, i) { throw InvalidOperationException("VirtualRows keys must be nonempty and unique across the collection") }
         var row = VirtualRow[T]{Item: item, Key: id, Height: estimate}
         if let previous = old {
-          if previous.Width == width && previous.Indices.TryGetValue(id, out var index) {
-            let retained = previous.Rows[index]
+          if previous.Width == width && previous.TryIndex(id, out var index) {
+            let retained = previous.Row(index)
             // Keep the last height as an estimate while changed content is remeasured.
             row.Height = retained.Height
             row.Measured = retained.Measured && sameBuilder && equality.Equals(retained.Item, item)
@@ -206,15 +255,44 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         }
         rows[i] = row
       }
-      return VirtualRowMetadata[T](rows, indices, width, gap, estimate)
+      return VirtualRowMetadata[T](rows, width, gap, estimate)
+    }
+
+  // Applies a log window's change to the current rows in place: drops the entries that left its start and
+  // appends the entries added at its end. Returns nil when the rows cannot be updated that way.
+  private func AppendLog(old VirtualRowMetadata[T]?, items IReadOnlyList[T], start int64, estimate float32,
+    key((T) -> string), width float32, gap float32, sameBuilder bool) VirtualRowMetadata[T]?{
+      guard let data = old else { return nil }
+      let end = start + int64(items.Count)
+      if !logged || !sameBuilder || data.Width != width || data.Gap != gap || data.Estimate != estimate
+        || start < logStart || end < logEnd || int64(data.Count) != logEnd - logStart {
+          return nil
+        }
+      let dropped = int32(Math.Min(start - logStart, int64(data.Count)))
+      let first = int32(Math.Max(logEnd, start) - start)
+      // Check every new key before changing anything, so a failed build leaves the rows intact.
+      let added = [items.Count - first]VirtualRow[T]
+      let seen = HashSet[string](added.Length, StringComparer.Ordinal)
+      for i in 0 ... added.Length {
+        let item = items[first + i]
+        let id = key(item)
+        if String.IsNullOrEmpty(id) || !seen.Add(id) { throw InvalidOperationException("VirtualRows keys must be nonempty and unique across the collection") }
+        if data.Contains(id) {
+          if !data.TryIndex(id, out var position) || position >= dropped { throw InvalidOperationException("VirtualRows keys must be nonempty and unique across the collection") }
+        }
+        added[i] = VirtualRow[T]{Item: item, Key: id, Height: estimate}
+      }
+      data.DropFirst(dropped)
+      for row in added { data.Append(row) }
+      return data
     }
 
   private func Prefix(data VirtualRowMetadata[T], count int32, pending bool) float64 {
-    var result = data.Index.Prefix(count)
+    var result = data.Prefix(count)
     if pending {
       for i in 0 ... measurements.Count {
         let value = measurements[i]
-        if value.Index < count { result += float64(value.Height) - float64(data.Rows[value.Index].Height) }
+        if value.Index < count { result += float64(value.Height) - float64(data.Row(value.Index).Height) }
       }
     }
     return result
@@ -223,10 +301,10 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
   private func AnchorIndex(data VirtualRowMetadata[T], scroll float32) int32 {
     // Match the float32 coordinates used by layout and ScrollToItem at exact row boundaries.
     var low = 0
-    var high = data.Rows.Length - 1
+    var high = data.Count - 1
     while low < high {
       let middle = low + (high - low + 1) / 2
-      let top = float32(float64(window.OriginY) + data.Index.Prefix(middle))
+      let top = float32(float64(window.OriginY) + data.Prefix(middle))
       if top <= scroll { low = middle }
       else { high = middle - 1 }
     }
@@ -234,22 +312,22 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
   }
 
   private func Find(data VirtualRowMetadata[T], offset float64, pending bool) int32 {
-    if !pending || measurements.Count == 0 { return data.Index.Find(offset) }
+    if !pending || measurements.Count == 0 { return data.Find(offset) }
     var low = 0
-    var high = data.Rows.Length
+    var high = data.Count
     while low < high {
       let middle = low + (high - low + 1) / 2
       if Prefix(data, middle, true) <= offset { low = middle }
       else { high = middle - 1 }
     }
-    return Math.Min(low, Math.Max(0, data.Rows.Length - 1))
+    return Math.Min(low, Math.Max(0, data.Count - 1))
   }
 
   private func Window(n Node, data VirtualRowMetadata[T], scroll float64, pending bool) VirtualWindow {
     let height = BoxGeometry.ViewportHeight(n)
     let x = BoxGeometry.ContentLeft(n) - n.Rect.X
     let y = BoxGeometry.ContentTop(n) - n.Rect.Y
-    let count = data.Rows.Length
+    let count = data.Count
     let start = if count == 0 { 0 } else { Math.Max(0, Find(data, Math.Max(0.0, scroll - float64(y)), pending) - 2) }
     let end = if count == 0 { 0 } else { Math.Min(count, Find(data, Math.Max(0.0, scroll + float64(height) - float64(y)), pending) + 3) }
     let total = Math.Max(0.0, Prefix(data, count, pending) - (if count > 0 { float64(data.Gap) } else { 0.0 }))
@@ -266,10 +344,10 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
     index = -1
     height = 0.0F
     guard let key = child.Key, let yoga = child.Yoga else { return false }
-    if YGNodeAPI.YGNodeIsDirty(yoga) || !data.Indices.TryGetValue(key, out index) { return false }
+    if YGNodeAPI.YGNodeIsDirty(yoga) || !data.TryIndex(key, out index) { return false }
     height = child.Rect.H
     if !Single.IsFinite(height) || height < 0.0F { throw InvalidOperationException("Virtual row measured an invalid height") }
-    let row = data.Rows[index]
+    let row = data.Row(index)
     return !row.Measured || Math.Abs(row.Height - height) > 0.01F
   }
 
@@ -278,7 +356,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       let child = n.Children[i]
       if HasFocus(child) {
         guard let key = child.Key else { continue }
-        if data.Indices.TryGetValue(key, out var index) { return index }
+        if data.TryIndex(key, out var index) { return index }
       }
     }
     return -1
@@ -294,11 +372,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
     if !hasPending { throw InvalidOperationException("VirtualRows state was not prepared") }
     for i in 0 ... measurements.Count {
       let value = measurements[i]
-      var row = data.Rows[value.Index]
-      data.Index.Add(value.Index, float64(value.Height) - float64(row.Height))
-      row.Height = value.Height
-      row.Measured = true
-      data.Rows[value.Index] = row
+      data.Measure(value.Index, value.Height)
     }
     metadata = data
     source = pendingSource

@@ -202,10 +202,21 @@ internal partial class Reconciler {
       return replace(n, b)
     }
     let state = applyVirtual(n, b, false)
+    let extent = state.Extent()
+    let count = state.ItemCount()
     try {
       let children = b.Prepare(state, n)
       diffChildren(n, children)
       state.Commit()
+      // Items added or removed out of view leave the children unchanged, but the scroll extent and the
+      // announced item count still change, so re-read the rects and refresh accessibility.
+      let next = state.Extent()
+      if next?.Width != extent?.Width || next?.Height != extent?.Height {
+        MarkEffects(ReconcileEffects.Rect | ReconcileEffects.Paint)
+      }
+      if state.ItemCount() != count {
+        MarkEffects(ReconcileEffects.Accessibility)
+      }
       return n
     } catch (error Exception) {
       state.Cancel()
