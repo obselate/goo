@@ -57,6 +57,12 @@ internal partial class TextShaping {
     private var shapingWorkspace VulkanTextShapingWorkspace?
     @ThreadStatic
     private var textAnalysisScratch UnicodeTextAnalysisScratch?
+    @ThreadStatic
+    private var scriptText string?
+    @ThreadStatic
+    private var scriptRuns List[UnicodeScriptRun]?
+    @ThreadStatic
+    private var scriptResolutions int64
 
     internal func Metrics(families string, size float32, weight int32, italic bool)
     TextFontMetrics{
@@ -145,7 +151,7 @@ internal partial class TextShaping {
         let primary = ResolveCachedPrimary(families, weight, italic)
         let metrics = MetricsFor(primary.Provider.Metrics, size)
         let scratchOwner = AnalysisScratch()
-        let scratch = scratchOwner.Rent(paragraph.Length)
+        let scratch = scratchOwner.Rent(lineLength)
         var ascent = metrics.Ascent
         var descent = metrics.Descent
         let runs = List[ShapedRun]()
@@ -160,7 +166,7 @@ internal partial class TextShaping {
             return ShapedText(text, runs, 0.0F, ascent, descent, rightToLeft)
           }
 
-          let scriptRuns = UnicodeScripts.Resolve(paragraph, scratch)
+          let scriptRuns = ScriptRunsFor(paragraph, scratchOwner)
           let resolution = if let value = paragraphResolution { value } else {
             ResolveBidi(paragraph, direction)
           }
@@ -220,9 +226,11 @@ internal partial class TextShaping {
       ref descent float32, ref hasCluster bool, ref priorCluster uint32,
       scratch UnicodeTextAnalysisScratchScope, scriptRuns List[UnicodeScriptRun], language string) {
         let rangeEnd = rangeStart + rangeLength
+        let first = firstScriptRun(scriptRuns, rangeStart)
         if rtl {
-          var scriptIndex = scriptRuns.Count
-          while scriptIndex > 0 {
+          var scriptIndex = first
+          while scriptIndex < scriptRuns.Count && scriptRuns[scriptIndex].Start < rangeEnd { scriptIndex++ }
+          while scriptIndex > first {
             scriptIndex--
             let scriptRun = scriptRuns[scriptIndex]
             let scriptEnd = scriptRun.Start + scriptRun.Length
@@ -236,8 +244,8 @@ internal partial class TextShaping {
             }
           }
         } else {
-          var scriptIndex int32 = 0
-          while scriptIndex < scriptRuns.Count {
+          var scriptIndex = first
+          while scriptIndex < scriptRuns.Count && scriptRuns[scriptIndex].Start < rangeEnd {
             let scriptRun = scriptRuns[scriptIndex]
             let scriptEnd = scriptRun.Start + scriptRun.Length
             let start = if scriptRun.Start < rangeStart { rangeStart } else { scriptRun.Start }
@@ -539,6 +547,39 @@ internal partial class TextShaping {
       shapingWorkspace = created
       return created
     }
+    // The number of paragraphs whose scripts this thread has resolved.
+    internal func ScriptResolutionsForTest() int64 -> scriptResolutions
+
+    // The script runs of the whole paragraph. Wrapping shapes many ranges of one paragraph, so each thread keeps
+    // the runs of the paragraph it shaped last. Strings are immutable, so the same instance has the same runs.
+    private func ScriptRunsFor(paragraph string, owner UnicodeTextAnalysisScratch) List[UnicodeScriptRun] {
+      if let runs = scriptRuns {
+        if Object.ReferenceEquals(scriptText, paragraph) { return runs }
+      }
+      let scratch = owner.Rent(paragraph.Length)
+      try {
+        let runs = List[UnicodeScriptRun](UnicodeScripts.Resolve(paragraph, scratch))
+        scriptResolutions++
+        scriptText = paragraph
+        scriptRuns = runs
+        return runs
+      } finally {
+        owner.Return(scratch)
+      }
+    }
+
+    // The index of the first run that ends after `offset`.
+    private func firstScriptRun(runs List[UnicodeScriptRun], offset int32) int32 {
+      var low int32 = 0
+      var high = runs.Count
+      while low < high {
+        let middle = low + (high - low) / 2
+        if runs[middle].Start + runs[middle].Length <= offset { low = middle + 1 }
+        else { high = middle }
+      }
+      return low
+    }
+
     private func AnalysisScratch() UnicodeTextAnalysisScratch {
       if let current = textAnalysisScratch {
         return current

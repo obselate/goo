@@ -29,20 +29,24 @@ public func VirtualRows[T](items IReadOnlyList[T], estimatedItemHeight float64,
 /// @param estimatedItemHeight A finite positive estimate used until a row is measured.
 /// @param itemKey Stable, nonempty keys, unique across the whole log.
 /// @param itemBuilder Builds one row; keep the same builder between builds so unchanged rows are reused.
+/// @param pinToBottom Keeps the end of the log in view as entries change until the reader scrolls away from it.
+/// Scrolling back to the end pins it again.
 /// @typeparam T The immutable entry type.
 /// @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
 public func VirtualLog[T](items IReadOnlyList[T], start int64, estimatedItemHeight float64,
-  itemKey((T) -> string), itemBuilder((T) -> Blob)) Blob{
+  itemKey((T) -> string), itemBuilder((T) -> Blob), pinToBottom bool = false) Blob{
     if items == nil { throw ArgumentNullException("items") }
     if start < 0L { throw ArgumentOutOfRangeException("start", "Log positions must not be negative") }
     let estimate = virtualItemExtent(estimatedItemHeight, "estimatedItemHeight")
     if itemKey == nil { throw ArgumentNullException("itemKey") }
     if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
-    return virtualRowsBlob(items, start, estimate, itemKey, itemBuilder)
+    let result = virtualRowsBlob(items, start, estimate, itemKey, itemBuilder)
+    result.PinToBottom = pinToBottom
+    return result
   }
 
 internal func virtualRowsBlob[T](items IReadOnlyList[T], start int64?, estimate float32,
-  itemKey((T) -> string), itemBuilder((T) -> Blob)) Blob -> VirtualRowsBlob[T](items, start, estimate, itemKey, itemBuilder) {
+  itemKey((T) -> string), itemBuilder((T) -> Blob)) VirtualRowsBlob[T] -> VirtualRowsBlob[T](items, start, estimate, itemKey, itemBuilder) {
     Accessibility = Accessibility{ Role: AccessibilityRole.List },
     Position = PositionType.Relative,
     OverflowX = Overflow.Hidden,
@@ -145,11 +149,14 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         }
       }
       var data VirtualRowMetadata[T]
+      var appended = false
       if refresh && old != nil && old.Width == width && old.Gap == gap {
         data = old
       } else if let position = start {
-        data = if let appended = AppendLog(old, items, position, estimate, key, width, gap, sameBuilder) { appended }
-        else { Snapshot(items, estimate, key, width, gap, sameBuilder) }
+        if let rows = AppendLog(old, items, position, estimate, key, width, gap, sameBuilder) {
+          data = rows
+          appended = true
+        } else { data = Snapshot(items, estimate, key, width, gap, sameBuilder) }
         logged = true
         logStart = position
         logEnd = position + int64(items.Count)
@@ -171,8 +178,16 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         }
       }
       var scroll = float64(n.ScrollY)
-      if anchor != "" && data.Count > 0 {
-        let nextIndex = if data.TryIndex(anchor, out var found) { found } else { Math.Min(oldIndex, data.Count - 1) }
+      // A pinned list the reader has not scrolled stays at its end instead of keeping its top row in place.
+      let pinned = n.PinToBottom && !n.UserScrolled
+      if pinned {
+        let whole = Window(n, data, 0.0, true)
+        scroll = Math.Max(0.0, float64(whole.ContentH) - float64(BoxGeometry.ViewportHeight(n)))
+      } else if anchor != "" && data.Count > 0 {
+        // A log drops entries only from its start, so a missing anchor left with every entry before it and the
+        // oldest remaining entry takes its place.
+        let nextIndex = if data.TryIndex(anchor, out var found) { found }
+        else { if appended { 0 } else { Math.Min(oldIndex, data.Count - 1) } }
         let after = float64(BoxGeometry.ContentTop(n) - n.Rect.Y) + Prefix(data, nextIndex, true)
         scroll = Math.Max(0.0, scroll + after - before)
       }
@@ -189,7 +204,8 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         pendingWindow = target
         pendingOwner = n
         pendingScroll = float32(scroll)
-        pendingTarget = float32(Math.Max(0.0, float64(n.ScrollTargetY) + scroll - float64(n.ScrollY)))
+        pendingTarget = if pinned { float32(scroll) }
+        else { float32(Math.Max(0.0, float64(n.ScrollTargetY) + scroll - float64(n.ScrollY))) }
         hasPending = true
         return output
       } catch (error Exception) {

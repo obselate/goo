@@ -352,6 +352,77 @@ internal class ElementHandleFixtures {
     return grown && Virtualization.State(root) == nil
   }
 
+  func VirtualLogDroppedAnchorShowsOldestContract() bool {
+    let cell = VirtualRowsFixtureCell(1000, true)
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.UpdateTree()
+    if !cell.Handle.JumpTo(0.0, 10010.0) { return false }
+    window.UpdateTree()
+    if !cell.Handles[500].IsMounted { return false }
+
+    // The reader's line and every line before it leave the log, so the oldest remaining line takes its place.
+    cell.Items.RemoveRange(0, 600)
+    cell.Start = 600L
+    for id in 1000 ... 1600 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    let oldest = cell.Handles[600].IsMounted && cell.Handle.ScrollOffset.Y == 10.0
+    window.Close()
+    return oldest
+  }
+
+  func VirtualLogPinsToBottomContract() bool {
+    let cell = VirtualRowsFixtureCell(1000, true)
+    cell.Pin = true
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.SmoothScrolling = false
+    window.UpdateTree()
+    if cell.Handle.ScrollOffset.Y != 19940.0 || !cell.Handles[999].IsMounted { return false }
+
+    // Dropping and appending entries keeps a pinned log at its end.
+    cell.Items.RemoveRange(0, 10)
+    cell.Start = 10L
+    for id in 1000 ... 1010 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.Handle.ScrollOffset.Y != 19940.0 || !cell.Handles[1009].IsMounted { return false }
+
+    // A reader who scrolls back stays on their rows while the log changes.
+    if !cell.Handle.ScrollTo(0.0, 5000.0) { return false }
+    window.UpdateTree(0.016)
+    if cell.Handle.ScrollOffset.Y != 5000.0 { return false }
+    cell.Items.RemoveRange(0, 10)
+    cell.Start = 20L
+    for id in 1010 ... 1020 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.Handle.ScrollOffset.Y != 4800.0 { return false }
+
+    // Returning to the end pins the log again.
+    if !cell.Handle.JumpTo(0.0, 19940.0) { return false }
+    window.UpdateTree()
+    cell.Items.RemoveRange(0, 10)
+    cell.Start = 30L
+    for id in 1020 ... 1030 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    if cell.Handle.ScrollOffset.Y != 19940.0 || !cell.Handles[1029].IsMounted { return false }
+
+    // A log that empties after the reader scrolled back follows its new entries.
+    if !cell.Handle.JumpTo(0.0, 0.0) { return false }
+    window.UpdateTree()
+    cell.Items.Clear()
+    cell.Start = 2000L
+    cell.Rebuild()
+    window.UpdateTree()
+    for id in 1030 ... 1100 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
+    cell.Rebuild()
+    window.UpdateTree()
+    let pinned = cell.Handle.ScrollOffset.Y == 1340.0 && cell.Handles[1099].IsMounted
+    window.Close()
+    return pinned
+  }
+
   func VirtualLogContract() bool {
     let cell = VirtualRowsFixtureCell(1000, true)
     let window = Window{ Root: cell, Width: 100, Height: 60 }
@@ -681,6 +752,7 @@ internal class VirtualRowsFixtureCell : Cell {
   internal let Handle ElementHandle
   internal var Start int64
   internal var KeyCalls int32
+  internal var Pin bool
   private let log bool
   private let key((VirtualFixtureItem) -> string)
   private let build((VirtualFixtureItem) -> Blob)
@@ -707,7 +779,7 @@ internal class VirtualRowsFixtureCell : Cell {
 
   override func Build() Blob {
     if log {
-      return VirtualLog(Items, Start, 20.0, key, build) { Handle = Handle, Width = 100, Height = 60 }
+      return VirtualLog(Items, Start, 20.0, key, build, Pin) { Handle = Handle, Width = 100, Height = 60 }
     }
     return VirtualRows(Items, 20.0, key, build) { Handle = Handle, Width = 100, Height = 60 }
   }

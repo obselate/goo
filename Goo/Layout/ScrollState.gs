@@ -176,6 +176,8 @@ internal partial class ScrollState {
       let grewY = height > n.ContentH
       n.ContentW = width
       n.ContentH = height
+      // Content that fits leaves nothing to scroll away from, so pinned content follows again when it grows.
+      if maxScrollY(n) <= 0.0F { n.UserScrolled = false }
       if n.OverflowY == Overflow.Scroll && n.PinToBottom && !n.UserScrolled {
         n.ScrollTargetY = maxScrollY(n)
         if grewY {

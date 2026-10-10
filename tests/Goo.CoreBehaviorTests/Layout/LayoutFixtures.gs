@@ -3,6 +3,7 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
+import System.Text
 
 internal class LayoutFixtures {
   func ComposedTreeMapsDeclarationsAndRelayouts() bool {
@@ -285,6 +286,22 @@ internal class LayoutFixtures {
     LayoutTransitions.Dispose(target)
     layout.RefreshRects(root)
     return !pump.Active && target.Rect.X == 90.0F && target.Rect.Y == 100.0F
+  }
+
+  func LongParagraphWrapResolvesScriptsOnce() bool {
+    let words = StringBuilder("Wrapped:")
+    for i in 0 ... 1500 { words.Append(" word").Append(i) }
+    let resolver = Resolver{}
+    let n = Reconciler{ Res: resolver }.Mount(Text{
+      Content: "Unbroken:" + String('x', 6000) + " " + words.ToString() + " \u65E5\u672C\u8A9E \u05E2\u05D1\u05E8\u05D9\u05EA",
+    })
+    resolver.FlushEffects()
+    let before = TextShaping.ScriptResolutionsForTest()
+    let layout = TextLayouts.For(n, 300.0F)
+    let resolutions = TextShaping.ScriptResolutionsForTest() - before
+    var covered = 0
+    for line in layout.Lines { covered += line.Content.Length }
+    return layout.Lines.Count > 100 && covered == n.Content.Length && resolutions <= 1L
   }
 
   func TextEntryUsesIntrinsicLineBoxHeight() bool {

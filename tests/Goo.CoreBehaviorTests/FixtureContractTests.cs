@@ -88,6 +88,8 @@ public sealed class FixtureContractTests
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ScrollContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualExtentValidationContract));
+        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualLogDroppedAnchorShowsOldestContract));
+        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualLogPinsToBottomContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualLogContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualRowsContract));
         yield return Contract<GradientFixtures>(nameof(GradientFixtures.LongGradientsCompileWithoutUnsupportedFallback));
@@ -144,6 +146,7 @@ public sealed class FixtureContractTests
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutIsStableAcrossRoots));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutTransitionGlidesComputedPosition));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutTransitionRetargetsWithVelocity));
+        yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LongParagraphWrapResolvesScriptsOnce));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LogicalEdgesRespectDirection));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.StaticPositionIgnoresInsets));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.TextEntryUsesIntrinsicLineBoxHeight));

@@ -194,6 +194,11 @@ internal partial class Reconciler {
 
   internal func applyVirtual(n Node, b Blob, initial bool) VirtualNodeState {
     applyStyle(n, b, b.Focusable, initial)
+    let pin = (b as VirtualBlobBase)?.PinToBottom ?? false
+    if n.PinToBottom != pin {
+      n.PinToBottom = pin
+      MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
+    }
     return Virtualization.Configure(n)
   }
 
