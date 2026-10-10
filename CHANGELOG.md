@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.20 - 2026-10-09
+
+- Add `VirtualLog` for streaming rows: updates take time proportional to the rows added and dropped.
+- Update the scroll range and item count when virtual rows change out of view.
+- Stop rounded borders from painting their color along sides without a border.
+
 ## 0.7.19 - 2026-10-09
 
 - Build with G# SDK 0.4.1150 and update bitwise complement and native pointer syntax.
