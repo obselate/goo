@@ -5,68 +5,45 @@ import System
 import System.Collections.Generic
 
 /// Creates a vertically scrolling virtual list whose retained rows are measured at the available content width.
+/// A change that only removes rows from the start and adds rows at the end, such as streaming output, updates
+/// the list in place: unchanged rows are compared, and keys are read and rows are built only for the added rows.
 /// @param items Immutable row values; replace changed values and rebuild the owning Cell after collection changes.
+/// The list may be the same instance on every build.
 /// @param estimatedItemHeight A finite positive estimate used until a row is measured.
-/// @param itemKey Stable, nonempty keys, unique across the whole collection.
+/// @param itemKey Stable, nonempty keys, unique across the whole collection. Equal items have equal keys.
 /// @param itemBuilder Builds one row; all render dependencies should participate in item equality or builder identity.
+/// Keep the same builder between builds so unchanged rows are reused.
+/// @param pinToBottom Keeps the end of the list in view as rows change until the reader scrolls away from it.
+/// Scrolling back to the end pins it again.
 /// @typeparam T The immutable row value type.
 /// @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
 public func VirtualRows[T](items IReadOnlyList[T], estimatedItemHeight float64,
-  itemKey((T) -> string), itemBuilder((T) -> Blob)) Blob{
-    if items == nil { throw ArgumentNullException("items") }
-    let estimate = virtualItemExtent(estimatedItemHeight, "estimatedItemHeight")
-    if itemKey == nil { throw ArgumentNullException("itemKey") }
-    if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
-    return virtualRowsBlob(items, nil, estimate, itemKey, itemBuilder)
-  }
-
-/// Creates VirtualRows over a window of an append-only log, such as the latest lines of streaming output.
-/// Entries never change once added, and between builds the window only drops entries from its start and
-/// adds entries at its end, so an update costs time proportional to the entries dropped and added rather
-/// than to the whole window. Any other change to the window rebuilds the list as VirtualRows does.
-/// @param items The entries in the window, oldest first. The list may be the same instance on every build.
-/// @param start The log position of `items[0]`. Positions count every entry ever added, so they only increase.
-/// @param estimatedItemHeight A finite positive estimate used until a row is measured.
-/// @param itemKey Stable, nonempty keys, unique across the whole log.
-/// @param itemBuilder Builds one row; keep the same builder between builds so unchanged rows are reused.
-/// @param pinToBottom Keeps the end of the log in view as entries change until the reader scrolls away from it.
-/// Scrolling back to the end pins it again.
-/// @typeparam T The immutable entry type.
-/// @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
-public func VirtualLog[T](items IReadOnlyList[T], start int64, estimatedItemHeight float64,
   itemKey((T) -> string), itemBuilder((T) -> Blob), pinToBottom bool = false) Blob{
     if items == nil { throw ArgumentNullException("items") }
-    if start < 0L { throw ArgumentOutOfRangeException("start", "Log positions must not be negative") }
     let estimate = virtualItemExtent(estimatedItemHeight, "estimatedItemHeight")
     if itemKey == nil { throw ArgumentNullException("itemKey") }
     if itemBuilder == nil { throw ArgumentNullException("itemBuilder") }
-    let result = virtualRowsBlob(items, start, estimate, itemKey, itemBuilder)
-    result.PinToBottom = pinToBottom
-    return result
-  }
-
-internal func virtualRowsBlob[T](items IReadOnlyList[T], start int64?, estimate float32,
-  itemKey((T) -> string), itemBuilder((T) -> Blob)) VirtualRowsBlob[T] -> VirtualRowsBlob[T](items, start, estimate, itemKey, itemBuilder) {
-    Accessibility = Accessibility{ Role: AccessibilityRole.List },
-    Position = PositionType.Relative,
-    OverflowX = Overflow.Hidden,
-    OverflowY = Overflow.Scroll,
+    return VirtualRowsBlob[T](items, estimate, itemKey, itemBuilder) {
+      Accessibility = Accessibility{ Role: AccessibilityRole.List },
+      Position = PositionType.Relative,
+      OverflowX = Overflow.Hidden,
+      OverflowY = Overflow.Scroll,
+      PinToBottom = pinToBottom,
+    }
   }
 
 internal class VirtualRowsBlob[T] : VirtualBlobBase {
   private let items IReadOnlyList[T]
-  private let start int64?
   private let estimate float32
   private let key((T) -> string)
   private let builder((T) -> Blob)
-  internal init(items IReadOnlyList[T], start int64?, estimate float32, key((T) -> string), builder((T) -> Blob)) {
+  internal init(items IReadOnlyList[T], estimate float32, key((T) -> string), builder((T) -> Blob)) {
     this.items = items
-    this.start = start
     this.estimate = estimate
     this.key = key
     this.builder = builder
   }
-  internal override func Prepare(state VirtualNodeState, n Node) IList[Blob] -> state.PrepareRows(n, items, start, estimate, key, builder)
+  internal override func Prepare(state VirtualNodeState, n Node) IList[Blob] -> state.PrepareRows(n, items, estimate, key, builder)
 }
 
 internal class VirtualRowsStorage[T] : VirtualStorage {
@@ -89,17 +66,13 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
   private var pendingScroll float32
   private var pendingTarget float32
   private var hasPending bool
-  // The log window the metadata holds, when the rows came from VirtualLog: positions [logStart, logEnd).
-  private var logged bool
-  private var logStart int64
-  private var logEnd int64
 
-  internal func Prepare(n Node, items IReadOnlyList[T], start int64?, estimate float32,
-    itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob] -> prepare(n, items, start, estimate, itemKey, itemBuilder, false)
+  internal func Prepare(n Node, items IReadOnlyList[T], estimate float32,
+    itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob] -> prepare(n, items, estimate, itemKey, itemBuilder, false)
 
   internal override func PrepareRefresh(n Node) IList[Blob] {
     guard let items = source, let key = selector, let build = builder, let data = metadata else { throw InvalidOperationException("Measured virtual source is unavailable") }
-    return prepare(n, items, nil, data.Estimate, key, build, true)
+    return prepare(n, items, data.Estimate, key, build, true)
   }
 
   internal override func NeedsRefresh(n Node) bool {
@@ -126,7 +99,7 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
     return Point{X: 0.0, Y: Math.Max(0.0, float64(window.OriginY) + data.Prefix(index))}
   }
 
-  private func prepare(n Node, items IReadOnlyList[T], start int64?, estimate float32,
+  private func prepare(n Node, items IReadOnlyList[T], estimate float32,
     key((T) -> string), build((T) -> Blob), refresh bool) IList[Blob]{
       Cancel()
       if n.FlexDirection != FlexDirection.Column || n.FlexWrap != FlexWrap.NoWrap {
@@ -137,7 +110,6 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       let gap = Gap(n)
       let sameBuilder = Object.Equals(builder, build)
       let old = metadata
-      // Find the row at the top of the viewport before the log path changes the rows in place.
       var anchor = ""
       var oldIndex = 0
       var before = 0.0
@@ -149,24 +121,13 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         }
       }
       var data VirtualRowMetadata[T]
-      var appended = false
-      if refresh && old != nil && old.Width == width && old.Gap == gap {
-        data = old
-      } else if let position = start {
-        if let rows = AppendLog(old, items, position, estimate, key, width, gap, sameBuilder) {
-          data = rows
-          appended = true
-        } else { data = Snapshot(items, estimate, key, width, gap, sameBuilder) }
-        logged = true
-        logStart = position
-        logEnd = position + int64(items.Count)
-      } else if refresh && logged && old != nil {
-        // The retained list may have changed since the log window was recorded, so keep the recorded rows.
-        data = Snapshot(old.Items(), estimate, key, width, gap, sameBuilder)
-      } else {
-        data = Snapshot(items, estimate, key, width, gap, sameBuilder)
-        logged = false
-      }
+      var shifted = false
+      if refresh && old != nil {
+        data = if old.Width == width && old.Gap == gap { old } else { Snapshot(old.Items(), estimate, key, width, gap, sameBuilder) }
+      } else if let rows = Shift(old, items, estimate, key, width, gap, sameBuilder) {
+        data = rows
+        shifted = true
+      } else { data = Snapshot(items, estimate, key, width, gap, sameBuilder) }
       pendingMetadata = data
       if Object.ReferenceEquals(old, data) && width > 0.0F {
         for i in 0 ... n.Children.Count {
@@ -178,16 +139,13 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
         }
       }
       var scroll = float64(n.ScrollY)
-      // A pinned list the reader has not scrolled stays at its end instead of keeping its top row in place.
       let pinned = n.PinToBottom && !n.UserScrolled
       if pinned {
         let whole = Window(n, data, 0.0, true)
         scroll = Math.Max(0.0, float64(whole.ContentH) - float64(BoxGeometry.ViewportHeight(n)))
       } else if anchor != "" && data.Count > 0 {
-        // A log drops entries only from its start, so a missing anchor left with every entry before it and the
-        // oldest remaining entry takes its place.
         let nextIndex = if data.TryIndex(anchor, out var found) { found }
-        else { if appended { 0 } else { Math.Min(oldIndex, data.Count - 1) } }
+        else { if shifted { 0 } else { Math.Min(oldIndex, data.Count - 1) } }
         let after = float64(BoxGeometry.ContentTop(n) - n.Rect.Y) + Prefix(data, nextIndex, true)
         scroll = Math.Max(0.0, scroll + after - before)
       }
@@ -274,19 +232,15 @@ internal class VirtualRowsStorage[T] : VirtualStorage {
       return VirtualRowMetadata[T](rows, width, gap, estimate)
     }
 
-  // Applies a log window's change to the current rows in place: drops the entries that left its start and
-  // appends the entries added at its end. Returns nil when the rows cannot be updated that way.
-  private func AppendLog(old VirtualRowMetadata[T]?, items IReadOnlyList[T], start int64, estimate float32,
+  private func Shift(old VirtualRowMetadata[T]?, items IReadOnlyList[T], estimate float32,
     key((T) -> string), width float32, gap float32, sameBuilder bool) VirtualRowMetadata[T]?{
       guard let data = old else { return nil }
-      let end = start + int64(items.Count)
-      if !logged || !sameBuilder || data.Width != width || data.Gap != gap || data.Estimate != estimate
-        || start < logStart || end < logEnd || int64(data.Count) != logEnd - logStart {
-          return nil
-        }
-      let dropped = int32(Math.Min(start - logStart, int64(data.Count)))
-      let first = int32(Math.Max(logEnd, start) - start)
-      // Check every new key before changing anything, so a failed build leaves the rows intact.
+      if !sameBuilder || data.Width != width || data.Gap != gap || data.Estimate != estimate || items.Count == 0 { return nil }
+      var dropped = 0
+      while dropped < data.Count && !equality.Equals(data.Row(dropped).Item, items[0]) { dropped++ }
+      let first = data.Count - dropped
+      if first == 0 || first > items.Count { return nil }
+      for i in 1 ... first { if !equality.Equals(data.Row(dropped + i).Item, items[i]) { return nil } }
       let added = [items.Count - first]VirtualRow[T]
       let seen = HashSet[string](added.Length, StringComparer.Ordinal)
       for i in 0 ... added.Length {

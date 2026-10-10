@@ -20,7 +20,6 @@ public func Virtual[T](items IReadOnlyList[T], itemWidth float64, itemHeight flo
   }
 
 internal open class VirtualBlobBase : Blob {
-  // Keeps the end in view until the reader scrolls away from it.
   internal var PinToBottom bool
   internal open func Prepare(state VirtualNodeState, n Node) IList[Blob];
 
@@ -341,11 +340,11 @@ internal sealed class VirtualNodeState {
   private var current VirtualStorage?
   private var pending VirtualStorage?
 
-  internal func PrepareRows[T](n Node, items IReadOnlyList[T], start int64?, estimate float32,
+  internal func PrepareRows[T](n Node, items IReadOnlyList[T], estimate float32,
     itemKey((T) -> string), itemBuilder((T) -> Blob)) IList[Blob]{
       let storage = (current as VirtualRowsStorage[T]) ?? VirtualRowsStorage[T]()
       try {
-        let result = storage.Prepare(n, items, start, estimate, itemKey, itemBuilder)
+        let result = storage.Prepare(n, items, estimate, itemKey, itemBuilder)
         pending = storage
         return result
       } catch (error Exception) {

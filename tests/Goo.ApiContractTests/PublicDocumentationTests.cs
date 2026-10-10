@@ -501,8 +501,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ElementHandle.JumpTo(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.ElementHandle.ScrollIntoView"] = new([], [], true),
             ["M:Goo.ElementHandle.ScrollToItem(System.String)"] = new(["key"], [], true),
-            ["M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})"] = new(["items", "estimatedItemHeight", "itemKey", "itemBuilder"], ["T"], true),
-            ["M:Goo.VirtualLog``1(System.Collections.Generic.IReadOnlyList{``0},System.Int64,System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob},System.Boolean)"] = new(["items", "start", "estimatedItemHeight", "itemKey", "itemBuilder", "pinToBottom"], ["T"], true),
+            ["M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob},System.Boolean)"] = new(["items", "estimatedItemHeight", "itemKey", "itemBuilder", "pinToBottom"], ["T"], true),
             ["M:Goo.ElementHandle.ScrollTo(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.ElementHandle.SetTextInputArea(Goo.ElementRect)"] = new([], [], true),
             ["M:Goo.ElementHandle.TryCopyTextRangeRects(Goo.TextRange,Goo.TextCoordinateSpace,System.Span{Goo.ElementRect},System.Int32@)"] = new(["required"], [], true),
@@ -807,8 +806,7 @@ public sealed class PublicDocumentationTests
         return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Append("P:Goo.TextCommand.Position").Concat(eventIds)
             .Append("P:Goo.LayoutTransition.SimulationFactory")
             .Append("P:Goo.Cell`1.Input")
-            .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob})")
-            .Append("M:Goo.VirtualLog``1(System.Collections.Generic.IReadOnlyList{``0},System.Int64,System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob},System.Boolean)")
+            .Append("M:Goo.VirtualRows``1(System.Collections.Generic.IReadOnlyList{``0},System.Double,System.Func{``0,System.String},System.Func{``0,Goo.Blob},System.Boolean)")
             .Append("M:Goo.Percent(System.Double)");
     }
 

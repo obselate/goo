@@ -83,6 +83,8 @@ Source order controls logical order, and `itemKey` supplies stable identity. Goo
 
 Keep item values immutable and include all render dependencies in item equality, or change builder identity when external render inputs change. Rebuild the owning Cell after source edits. Goo retains measured heights by key when the item, builder, and available width are unchanged. A width change resets measurements to the estimate and remeasures realized content. Changes within a retained child also update its measured height.
 
+A change that only removes rows from the start and adds rows at the end, such as streaming output, is applied in place. Goo compares the retained rows, and reads keys and builds rows only for the added rows. If the first visible key leaves with such a change, the oldest remaining row takes its place. Pass `pinToBottom: true` to keep the end in view until the reader scrolls away from it.
+
 The first visible key and its pixel offset anchor scrolling when measurements change, rows are inserted, or the width changes. If that key disappears, the closest surviving source index is used. `ElementHandle.ScrollToItem(key)` immediately jumps either virtual mode to a stable key, returns false when the key is absent, and uses estimates for unmeasured rows. Subsequent measurement preserves that key's position, subject to the scroll range at the collection ends.
 
 Measured lists retain two overscan rows on each side, plus the row containing keyboard focus even when it leaves the viewport. Blur releases an offscreen row through the normal lifecycle. Each refresh measures at most 128 rows; the normal frame processes at most three refresh passes and schedules further frames until measurements settle. Realization is limited to 4,096 viewport/overscan rows plus one focused row, and metadata to one million items; exceeding either limit throws explicitly. Zero measured heights are allowed. Fixed-extent virtualization keeps its existing behavior.
@@ -1022,44 +1024,23 @@ Source:
 
 - [`Virtualization.gs`](../../Goo/Tree/Virtualization.gs)
 
-## `VirtualLog<T>`
-
-Source:
-
-- [`VirtualRows.gs`](../../Goo/Tree/VirtualRows.gs)
-
-Creates VirtualRows over a window of an append-only log, such as the latest lines of streaming output. Entries never change once added, and between builds the window only drops entries from its start and adds entries at its end, so an update costs time proportional to the entries dropped and added rather than to the whole window. Any other change to the window rebuilds the list as VirtualRows does. @param items The entries in the window, oldest first. The list may be the same instance on every build. @param start The log position of `items[0]`. Positions count every entry ever added, so they only increase. @param estimatedItemHeight A finite positive estimate used until a row is measured. @param itemKey Stable, nonempty keys, unique across the whole log. @param itemBuilder Builds one row; keep the same builder between builds so unchanged rows are reused. @param pinToBottom Keeps the end of the log in view as entries change until the reader scrolls away from it. Scrolling back to the end pins it again. @typeparam T The immutable entry type. @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
-
-### `VirtualLog<T>(System.Collections.Generic.IReadOnlyList{T},System.Int64,float64,System.Func{T,string},System.Func{T,Blob},bool)`
-
-Creates VirtualRows over a window of an append-only log, such as the latest lines of streaming output. Entries never change once added, and between builds the window only drops entries from its start and adds entries at its end, so an update costs time proportional to the entries dropped and added rather than to the whole window. Any other change to the window rebuilds the list as VirtualRows does.
-
-- `T`: The immutable entry type.
-- `items`: The entries in the window, oldest first. The list may be the same instance on every build.
-- `start`: The log position of items[0]. Positions count every entry ever added, so they only increase.
-- `estimatedItemHeight`: A finite positive estimate used until a row is measured.
-- `itemKey`: Stable, nonempty keys, unique across the whole log.
-- `itemBuilder`: Builds one row; keep the same builder between builds so unchanged rows are reused.
-- `pinToBottom`: Keeps the end of the log in view as entries change until the reader scrolls away from it. Scrolling back to the end pins it again.
-
-Returns: A vertical virtual collection with two overscan rows on either side and bounded measurement work.
-
 ## `VirtualRows<T>`
 
 Source:
 
 - [`VirtualRows.gs`](../../Goo/Tree/VirtualRows.gs)
 
-Creates a vertically scrolling virtual list whose retained rows are measured at the available content width. @param items Immutable row values; replace changed values and rebuild the owning Cell after collection changes. @param estimatedItemHeight A finite positive estimate used until a row is measured. @param itemKey Stable, nonempty keys, unique across the whole collection. @param itemBuilder Builds one row; all render dependencies should participate in item equality or builder identity. @typeparam T The immutable row value type. @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
+Creates a vertically scrolling virtual list whose retained rows are measured at the available content width. A change that only removes rows from the start and adds rows at the end, such as streaming output, updates the list in place: unchanged rows are compared, and keys are read and rows are built only for the added rows. @param items Immutable row values; replace changed values and rebuild the owning Cell after collection changes. The list may be the same instance on every build. @param estimatedItemHeight A finite positive estimate used until a row is measured. @param itemKey Stable, nonempty keys, unique across the whole collection. Equal items have equal keys. @param itemBuilder Builds one row; all render dependencies should participate in item equality or builder identity. Keep the same builder between builds so unchanged rows are reused. @param pinToBottom Keeps the end of the list in view as rows change until the reader scrolls away from it. Scrolling back to the end pins it again. @typeparam T The immutable row value type. @returns A vertical virtual collection with two overscan rows on either side and bounded measurement work.
 
-### `VirtualRows<T>(System.Collections.Generic.IReadOnlyList{T},float64,System.Func{T,string},System.Func{T,Blob})`
+### `VirtualRows<T>(System.Collections.Generic.IReadOnlyList{T},float64,System.Func{T,string},System.Func{T,Blob},bool)`
 
-Creates a vertically scrolling virtual list whose retained rows are measured at the available content width.
+Creates a vertically scrolling virtual list whose retained rows are measured at the available content width. A change that only removes rows from the start and adds rows at the end, such as streaming output, updates the list in place: unchanged rows are compared, and keys are read and rows are built only for the added rows.
 
 - `T`: The immutable row value type.
-- `items`: Immutable row values; replace changed values and rebuild the owning Cell after collection changes.
+- `items`: Immutable row values; replace changed values and rebuild the owning Cell after collection changes. The list may be the same instance on every build.
 - `estimatedItemHeight`: A finite positive estimate used until a row is measured.
-- `itemKey`: Stable, nonempty keys, unique across the whole collection.
-- `itemBuilder`: Builds one row; all render dependencies should participate in item equality or builder identity.
+- `itemKey`: Stable, nonempty keys, unique across the whole collection. Equal items have equal keys.
+- `itemBuilder`: Builds one row; all render dependencies should participate in item equality or builder identity. Keep the same builder between builds so unchanged rows are reused.
+- `pinToBottom`: Keeps the end of the list in view as rows change until the reader scrolls away from it. Scrolling back to the end pins it again.
 
 Returns: A vertical virtual collection with two overscan rows on either side and bounded measurement work.

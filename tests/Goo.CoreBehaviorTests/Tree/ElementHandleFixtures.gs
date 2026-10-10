@@ -327,7 +327,7 @@ internal class ElementHandleFixtures {
   }
 
   func VirtualRowsContract() bool {
-    let cell = VirtualRowsFixtureCell(1000, false)
+    let cell = VirtualRowsFixtureCell(1000)
     let semantics = AccessibilityTestAdapter{}
     let window = Window{ Root: cell, Width: 100, Height: 60 }
     window.AccessibilityAdapter = semantics
@@ -352,17 +352,16 @@ internal class ElementHandleFixtures {
     return grown && Virtualization.State(root) == nil
   }
 
-  func VirtualLogDroppedAnchorShowsOldestContract() bool {
-    let cell = VirtualRowsFixtureCell(1000, true)
+  func VirtualRowsDroppedAnchorShowsOldestContract() bool {
+    let cell = VirtualRowsFixtureCell(1000)
     let window = Window{ Root: cell, Width: 100, Height: 60 }
     window.UpdateTree()
     if !cell.Handle.JumpTo(0.0, 10010.0) { return false }
     window.UpdateTree()
     if !cell.Handles[500].IsMounted { return false }
 
-    // The reader's line and every line before it leave the log, so the oldest remaining line takes its place.
+    // The reader's row and every row before it leave the list, so the oldest remaining row takes its place.
     cell.Items.RemoveRange(0, 600)
-    cell.Start = 600L
     for id in 1000 ... 1600 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
@@ -371,48 +370,44 @@ internal class ElementHandleFixtures {
     return oldest
   }
 
-  func VirtualLogPinsToBottomContract() bool {
-    let cell = VirtualRowsFixtureCell(1000, true)
+  func VirtualRowsPinsToBottomContract() bool {
+    let cell = VirtualRowsFixtureCell(1000)
     cell.Pin = true
     let window = Window{ Root: cell, Width: 100, Height: 60 }
     window.SmoothScrolling = false
     window.UpdateTree()
     if cell.Handle.ScrollOffset.Y != 19940.0 || !cell.Handles[999].IsMounted { return false }
 
-    // Dropping and appending entries keeps a pinned log at its end.
+    // Dropping and appending rows keeps a pinned list at its end.
     cell.Items.RemoveRange(0, 10)
-    cell.Start = 10L
     for id in 1000 ... 1010 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
     if cell.Handle.ScrollOffset.Y != 19940.0 || !cell.Handles[1009].IsMounted { return false }
 
-    // A reader who scrolls back stays on their rows while the log changes.
+    // A reader who scrolls back stays on their rows while the list changes.
     if !cell.Handle.ScrollTo(0.0, 5000.0) { return false }
     window.UpdateTree(0.016)
     if cell.Handle.ScrollOffset.Y != 5000.0 { return false }
     cell.Items.RemoveRange(0, 10)
-    cell.Start = 20L
     for id in 1010 ... 1020 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
     if cell.Handle.ScrollOffset.Y != 4800.0 { return false }
 
-    // Returning to the end pins the log again.
+    // Returning to the end pins the list again.
     if !cell.Handle.JumpTo(0.0, 19940.0) { return false }
     window.UpdateTree()
     cell.Items.RemoveRange(0, 10)
-    cell.Start = 30L
     for id in 1020 ... 1030 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
     if cell.Handle.ScrollOffset.Y != 19940.0 || !cell.Handles[1029].IsMounted { return false }
 
-    // A log that empties after the reader scrolled back follows its new entries.
+    // A list that empties after the reader scrolled back follows its new rows.
     if !cell.Handle.JumpTo(0.0, 0.0) { return false }
     window.UpdateTree()
     cell.Items.Clear()
-    cell.Start = 2000L
     cell.Rebuild()
     window.UpdateTree()
     for id in 1030 ... 1100 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
@@ -423,8 +418,8 @@ internal class ElementHandleFixtures {
     return pinned
   }
 
-  func VirtualLogContract() bool {
-    let cell = VirtualRowsFixtureCell(1000, true)
+  func VirtualRowsShiftContract() bool {
+    let cell = VirtualRowsFixtureCell(1000)
     let window = Window{ Root: cell, Width: 100, Height: 60 }
     window.UpdateTree()
     guard let root = window.Tree else { return false }
@@ -438,16 +433,14 @@ internal class ElementHandleFixtures {
     cell.Builds.Clear()
     cell.KeyCalls = 0
     cell.Items.RemoveRange(0, 10)
-    cell.Start = 10L
     for id in 1000 ... 1010 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
     if cell.KeyCalls != 10 || cell.Builds.Count != 0 || !cell.Handles[500].IsMounted
       || cell.Handle.ScrollRange.Y != 19940.0 || cell.Handle.ScrollOffset.Y != 9800.0 { return false }
 
-    // A window that moves past every retained entry replaces them all.
+    // A list that keeps no retained row replaces them all.
     cell.Items.Clear()
-    cell.Start = 1500L
     for id in 1500 ... 1503 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
@@ -474,9 +467,8 @@ internal class ElementHandleFixtures {
     window.UpdateTree()
     if !rejected || cell.Handle.ScrollRange.Y != 1960.0 { return false }
 
-    // A window that moves backwards rebuilds the rows instead.
+    // A list that restores earlier rows rebuilds the rows instead.
     cell.Items.Clear()
-    cell.Start = 0L
     for id in 0 ... 5 { cell.Items.Add(VirtualFixtureItem{ Id: id }) }
     cell.Rebuild()
     window.UpdateTree()
@@ -750,19 +742,16 @@ internal class VirtualRowsFixtureCell : Cell {
   internal let Builds List[int32]
   internal let Handles List[ElementHandle]
   internal let Handle ElementHandle
-  internal var Start int64
   internal var KeyCalls int32
   internal var Pin bool
-  private let log bool
   private let key((VirtualFixtureItem) -> string)
   private let build((VirtualFixtureItem) -> Blob)
 
-  init(count int32, isLog bool) {
+  init(count int32) {
     Items = List[VirtualFixtureItem]()
     Builds = List[int32]()
     Handles = List[ElementHandle]()
     Handle = ElementHandle{}
-    log = isLog
     for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
     for i in 0 ... 2000 { Handles.Add(ElementHandle{}) }
     key = (item VirtualFixtureItem) -> {
@@ -777,10 +766,5 @@ internal class VirtualRowsFixtureCell : Cell {
     }
   }
 
-  override func Build() Blob {
-    if log {
-      return VirtualLog(Items, Start, 20.0, key, build, Pin) { Handle = Handle, Width = 100, Height = 60 }
-    }
-    return VirtualRows(Items, 20.0, key, build) { Handle = Handle, Width = 100, Height = 60 }
-  }
+  override func Build() Blob -> VirtualRows(Items, 20.0, key, build, Pin) { Handle = Handle, Width = 100, Height = 60 }
 }

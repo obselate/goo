@@ -2,8 +2,9 @@
 
 ## 0.7.21 - 2026-10-10
 
-- Add `pinToBottom` to `VirtualLog`: the end stays in view until the reader scrolls away.
-- Show the oldest remaining entry when a log drops the entry at the top of the view.
+- Remove `VirtualLog`. `VirtualRows` now applies a change that only removes rows from the start and adds rows at the end in place.
+- Add `pinToBottom` to `VirtualRows`: the end stays in view until the reader scrolls away.
+- Show the oldest remaining row when such a change removes the row at the top of the view.
 - Wrap long lines in time proportional to their length.
 - Accept the Vulkan SDK `spirv-val` binary when compiling shader effects.
 
