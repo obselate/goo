@@ -182,7 +182,7 @@ internal partial class Reconciler {
     let n = Node{ Kind: NodeKind.Container, Key: b.Key }
     let state = applyVirtual(n, b, true)
     try {
-      let children = state.Prepare(n, b.Source)
+      let children = state.Prepare(n, b.Source, b.Accessibility?.Role == AccessibilityRole.List)
       mountChildren(n, children)
       state.Commit()
       return n
@@ -209,7 +209,7 @@ internal partial class Reconciler {
     let extent = state.Extent()
     let count = state.ItemCount()
     try {
-      let children = state.Prepare(n, b.Source)
+      let children = state.Prepare(n, b.Source, b.Accessibility?.Role == AccessibilityRole.List)
       diffChildren(n, children)
       state.Commit()
       // Items added or removed out of view leave the children unchanged, but the scroll extent and the

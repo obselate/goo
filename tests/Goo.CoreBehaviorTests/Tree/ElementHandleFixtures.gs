@@ -281,6 +281,7 @@ internal class ElementHandleFixtures {
     // Only the items that the state places are mounted, and the content size sets the scroll range.
     if root.Children.Count != 4 || cell.Builds.Count != 4 || cell.Handle.ScrollRange.Y != 19940.0
       || !cell.Handles[0].IsMounted || semantics.Tree?.Root?.SizeOfSet != 1000
+      || semantics.Tree?.Root?.Children[0].Role != AccessibilityRole.ListItem
       || semantics.Tree?.Root?.Children[0].PositionInSet != 0 { return false }
 
     // A frame without a change builds nothing.
@@ -309,6 +310,14 @@ internal class ElementHandleFixtures {
     if !cell.Handle.ScrollToItem("row-900") || cell.Handle.ScrollToItem("row-missing") { return false }
     window.UpdateTree()
     if cell.Handle.ScrollOffset.Y != 18000.0 || !cell.Handles[900].IsMounted { return false }
+
+    // With another role, items have no role and the content gets the item position.
+    cell.Role = AccessibilityRole.Tree
+    cell.Rebuild()
+    window.UpdateTree()
+    if semantics.Tree?.Root?.Role != AccessibilityRole.Tree
+      || semantics.Tree?.Root?.Children[0].Role != AccessibilityRole.Generic
+      || semantics.Tree?.Root?.Children[0].PositionInSet != 899 { return false }
     window.Close()
     return Virtualization.State(root) == nil && !cell.Handles[900].IsMounted && cell.Disposes == 1
   }
@@ -561,6 +570,7 @@ internal class VirtualFixtureCell : Cell {
   internal let Handles List[ElementHandle] = List[ElementHandle]()
   internal let Handle ElementHandle = ElementHandle{}
   internal var Inset int32
+  internal var Role AccessibilityRole = AccessibilityRole.List
   internal var Pin bool
   internal var Measure bool
   internal var Fresh bool
@@ -579,6 +589,7 @@ internal class VirtualFixtureCell : Cell {
 
   override func Build() Blob -> Virtual(VirtualFixtureSource(this)) {
     Handle = Handle, Width = 100, Height = 60, Padding = Inset, PinToBottom = Pin,
+    Accessibility = Accessibility{ Role: Role },
   }
 
   internal func BuildItem(item VirtualFixtureItem) Blob {

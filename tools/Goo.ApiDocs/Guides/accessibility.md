@@ -76,3 +76,5 @@ window-relative geometry.
 `SizeOfSet` belongs on the collection container and counts all logical items,
 including those outside the realized viewport. `Virtual` supplies list and list-item
 semantics, and takes this metadata from `VirtualItem.Index` and `VirtualOutput.ItemCount`.
+Give `Virtual` another role, or set its `Accessibility` to nil, when the content supplies
+the item semantics. Its items then have no role, and the content of each item gets the position.

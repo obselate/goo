@@ -260,7 +260,8 @@ internal class AccessibilityManager {
           resolvedMultiline(n, declaration), declaration?.MultiSelectable, declaration?.HasPopup,
           declaration?.Live ?? AccessibilityLive.Off, declaration?.Atomic, n.Focused,
           ElementHandles.BorderBox(n), resolvedActionMask(n, role, disabled, declaration),
-          declaration?.PositionInSet, declaration?.SizeOfSet ?? Virtualization.State(n)?.ItemCount()) {
+          declaration?.PositionInSet ?? Virtualization.Position(n),
+          declaration?.SizeOfSet ?? Virtualization.State(n)?.ItemCount()) {
             rebuildingChanged = true
           }
         if view.SetChildren(childValues) { rebuildingChanged = true }

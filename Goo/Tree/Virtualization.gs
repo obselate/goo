@@ -21,6 +21,7 @@ internal data struct VirtualPlacement {
   internal var H float32
   internal var HasW bool
   internal var HasH bool
+  internal var Item bool
 }
 
 internal data struct VirtualExtent {
@@ -43,6 +44,7 @@ internal sealed class VirtualNodeState {
   private let output VirtualOutput = VirtualOutput()
   private var originX float32
   private var originY float32
+  private var listItems bool
   private var extent VirtualExtent
   private var count int32
   private var pendingExtent VirtualExtent
@@ -54,7 +56,7 @@ internal sealed class VirtualNodeState {
   private var pendingTargetX float32
   private var pendingTargetY float32
 
-  internal func Prepare(n Node, source VirtualSource) IList[Blob] {
+  internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
     var state VirtualState?
     try {
@@ -64,7 +66,7 @@ internal sealed class VirtualNodeState {
       throw error
     }
     guard let selected = state else { throw InvalidOperationException("VirtualSource.State returned nil") }
-    return realize(n, selected)
+    return realize(n, selected, items)
   }
 
   internal func NeedsRefresh(n Node) bool {
@@ -80,7 +82,7 @@ internal sealed class VirtualNodeState {
   internal func PrepareRefresh(n Node) IList[Blob] {
     guard let state = current else { throw InvalidOperationException("Virtual state is unavailable") }
     Cancel()
-    return realize(n, state)
+    return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
   }
 
   internal func OffsetForKey(n Node, key string) Point? {
@@ -98,10 +100,16 @@ internal sealed class VirtualNodeState {
   internal func Extent() VirtualExtent ? -> if current == nil { nil } else { extent }
   internal func ItemCount() int32 ? -> if current == nil { nil } else { count }
 
-  private func realize(n Node, state VirtualState) IList[Blob] {
+  internal func Position(key string) int32? {
+    if mounted.TryGetValue(key, out var entry) && !entry.Placement.Item { return entry.Placement.Index }
+    return nil
+  }
+
+  private func realize(n Node, state VirtualState, items bool) IList[Blob] {
     pending = state
     originX = BoxGeometry.ContentLeft(n) - n.Rect.X
     originY = BoxGeometry.ContentTop(n) - n.Rect.Y
+    listItems = items
     let previous = viewport.Bind(n)
     output.Bind(this)
     try {
@@ -144,6 +152,7 @@ internal sealed class VirtualNodeState {
       Index: item.Index,
       X: float32(float64(originX) + item.X),
       Y: float32(float64(originY) + item.Y),
+      Item: listItems,
     }
     if let width = item.Width {
       if !validExtent(width) { throw InvalidOperationException("Virtual item size must be finite and nonnegative") }
@@ -225,7 +234,8 @@ internal func validExtent(value float64) bool -> Double.IsFinite(value) && value
 internal func virtualWrapper(key string, child Blob, placement VirtualPlacement) Blob {
   let width Length = if placement.HasW { float64(placement.W) } else { Length.Auto }
   let height Length = if placement.HasH { float64(placement.H) } else { Length.Auto }
-  return Container() {.Accessibility: Accessibility{Role: AccessibilityRole.ListItem, PositionInSet: placement.Index},.Key: key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: width,.Height: height,.FlexShrink: 0.0,
+  let accessibility Accessibility? = if placement.Item { Accessibility{ Role: AccessibilityRole.ListItem, PositionInSet: placement.Index } } else { nil }
+  return Container() {.Accessibility: accessibility,.Key: key,.Position: PositionType.Absolute,.Left: float64(placement.X),.Top: float64(placement.Y),.Width: width,.Height: height,.FlexShrink: 0.0,
     child,
   }
 }
@@ -241,6 +251,7 @@ value.IsPercent ? basis * float32(value.Magnitude) / 100.0F : float32(value.Magn
 internal func sameVirtualPlacement(left VirtualPlacement, right VirtualPlacement) bool ->
 left.Index == right.Index && left.X == right.X && left.Y == right.Y
   && left.W == right.W && left.H == right.H && left.HasW == right.HasW && left.HasH == right.HasH
+  && left.Item == right.Item
 
 internal func virtualItem(item Blob, key string) Blob {
   if let authored = item.Key {
@@ -283,6 +294,11 @@ internal class Virtualization {
     }
 
     internal func ContentExtent(n Node) VirtualExtent ? -> State(n)?.Extent()
+
+    internal func Position(n Node) int32? {
+      guard let wrapper = n.Parent, let key = wrapper.Key, let owner = wrapper.Parent else { return nil }
+      return State(owner)?.Position(key)
+    }
 
     internal func Dispose(n Node) {
       if let state = State(n) {

@@ -164,7 +164,7 @@ Items use content coordinates. The origin is the start of the content box at scr
 | `Width`, `Height` | Nil takes the size from the content. |
 | `Content` | Nil keeps the content that is mounted for this key. |
 
-Goo wraps each item in a keyed, absolutely positioned element with the list item role. An item that leaves the result unmounts through the ordinary lifecycle, including focus, pointer capture, handles, and accessibility state.
+Goo wraps each item in a keyed, absolutely positioned element. The wrapper has the list item role while the `Virtual` element has the list role. An item that leaves the result unmounts through the ordinary lifecycle, including focus, pointer capture, handles, and accessibility state.
 
 `VirtualViewport` gives the visible content size, the scroll offset, the resolved gaps, the flex direction and wrap, and the mounted items. `Child(index)` returns the key and the last layout size of a mounted item, and `Measured` is false until its current content has a layout. `FocusedChild` is the mounted item that contains keyboard focus. A policy that measures items reads these sizes and returns true from `NeedsRealize` until they settle.
 
