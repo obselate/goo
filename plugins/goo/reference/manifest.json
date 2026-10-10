@@ -1,9 +1,9 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "247dd9aadfa9aadc5299918ab75debd848ae6758",
+  "commit": "ca909b18c6d158dbc3defe1b81aa4e597b0d29d8",
   "files": {
-    "README.md": "b93d996a076fd2699b8612fe6d3fb9135815586ef0a25509bb0a1a3909cc6743",
-    "CONTRIBUTING.md": "3a651ef3823677c65b24522a345a0f3ddca648a2cd9971241c5f0558d63bed64",
+    "README.md": "88b844a8492304e01fe5b0c058c4a6627f7497925a934bb7652e61b18a776dea",
+    "CONTRIBUTING.md": "056fd4bbf452637c64f92c44ab65f1595ea444432cb49b68aff98175b5fe4c37",
     "docs/native-authoring.md": "6f7d53983a47bf06880f8d3cbba5185dd7798b9acd2b7de9630c9d8a3c13c391",
     "docs/production-readiness.md": "c9b98824d85e1bd3215ab04c39491068a4e043d9b8f861c3f086f1489e154c81",
     "docs/api/README.md": "8ae1406a1c6e033b9b4e495fb19c849e936e400c1c7aade28c8cb2ea02f7a58a",
@@ -19,12 +19,12 @@
     "docs/api/shapes.md": "cdcab69870fc7bc8af2bca563a97c0c9907292d4497259497ab5d473ba7df109",
     "docs/api/style.md": "f81c2f17029ee393f5c2ca71c25f3563d352ceb23dad5c9ad9ecefaa426de744",
     "docs/api/text.md": "c79fc0c90ced009efc746ffc480aeebc523c12cc4fb8521f1cd8ce61cf7e152b",
-    "docs/api/tree.md": "9b8640275964b8b36ae523083f0b1f09a8ae0d889464d4881d98132ba26e339d",
+    "docs/api/tree.md": "34bb2fea8c23a403260d92664a537a0279f8306de857ba9ab8415516e774b4bd",
     "docs/api/window.md": "cc5065fb4a729e4d738a6221906052df4661e3191ff48e76c3d0c5d722fa07eb",
-    "docs/devtools/README.md": "b5b30475683484b25e392dc8eb67ede6ba7aa24f6000bd8d3485ccba403adb44",
+    "docs/devtools/README.md": "8bcfb668d60b5b9d0d5bf1b47d6fd2f3a7c7492b670628b3ba0138881b5c0812",
     "docs/devtools/development.md": "2401bc33efd58ca7565e732d8c87425ab5428d22c5728e47f4f1c2c4ab1e20a9",
-    "docs/devtools/protocol.md": "52049eeb62a516dab434076948a50348a22ab0411cd09fb71442918636213a1c",
+    "docs/devtools/protocol.md": "59bbbf19cc2c0025c8e36d623ce541fa7f79e020abe8cb20b0cfc397912bd009",
     "templates/Goo.Templates/content/Program.gs": "6654df447b6b2e79d709b304e9c5bc79ec19bf567f30ac93f1024f45806ca1b1",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "3a758c3ae22cd1eba26f994242ac448bcb8a477809da2cc31c4e756c0b1d1f2d"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "2bc8d5e828dfa477adb0a02516afc525af1cb4424e26d8425d8b6c132e33e062"
   }
 }

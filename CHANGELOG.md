@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.21 - 2026-10-10
+
+- Add `pinToBottom` to `VirtualLog`: the end stays in view until the reader scrolls away.
+- Show the oldest remaining entry when a log drops the entry at the top of the view.
+- Wrap long lines in time proportional to their length.
+- Accept the Vulkan SDK `spirv-val` binary when compiling shader effects.
+
 ## 0.7.20 - 2026-10-09
 
 - Add `VirtualLog` for streaming rows: updates take time proportional to the rows added and dropped.
