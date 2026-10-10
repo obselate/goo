@@ -5,7 +5,7 @@ internal sealed class SpirvValidator
     public const string Project = "KhronosGroup/SPIRV-Tools";
     public const string Version = "2026.3";
     public const string Sdk = "1.4.357.0";
-    public const string Commit = "b707790a898e44038547df54580022fc1cf89c3d";
+    public const string Commit = "9a49b0883b9b635689a85b5647dbfcb223268151";
 
     private readonly string path;
 
@@ -21,7 +21,8 @@ internal sealed class SpirvValidator
         RequireSuccess(path, result);
         string output = result.StandardOutput + result.StandardError;
         if (!output.Contains($"SPIRV-Tools v{Version}", StringComparison.Ordinal)
-            || !output.Contains($"vulkan-sdk-{Sdk}", StringComparison.Ordinal))
+            || (!output.Contains($"vulkan-sdk-{Sdk}", StringComparison.Ordinal)
+                && !output.Contains($"g{Commit[..8]}", StringComparison.Ordinal)))
         {
             throw new InvalidOperationException(
                 $"spirv-val must be SPIRV-Tools {Version} from Vulkan SDK {Sdk}");
