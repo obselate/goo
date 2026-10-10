@@ -53,10 +53,13 @@ void shade()
             float innerAa = max(length(float2(ddx(innerDistance), ddy(innerDistance))), 0.0001);
             innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
         }
-        float borderCoverage = coverage * innerCoverage;
+        // Match the border shader: the border covers the outer shape minus the inner one, and the
+        // background drawn beneath it is scaled so the border composites to exactly that coverage.
+        float innerFill = min(1.0 - innerCoverage, coverage);
+        float borderCoverage = max(coverage - innerFill, 0.0);
         float remaining = 1.0 - borderCoverage;
         backgroundCoverage = remaining > 0.00001
-            ? coverage * (1.0 - innerCoverage) / remaining
+            ? innerFill / remaining
             : 1.0;
     }
     outColor = unpackColor(pc.packedColors.x, pc.packedColors.w, 0u)

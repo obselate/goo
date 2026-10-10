@@ -243,7 +243,9 @@ void shade()
         float innerAa = max(length(float2(ddx(innerDistance), ddy(innerDistance))), 0.0001);
         innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
     }
-    float coverage = outerCoverage * innerCoverage;
+    // The border is the outer shape minus the nested inner shape. Subtracting coverage keeps sides
+    // without a border empty where the two edges coincide; multiplying would paint about a quarter there.
+    float coverage = max(outerCoverage - (1.0 - innerCoverage), 0.0);
     uint edge = roundedEdge(point, size);
     if (edge == 4u)
     {

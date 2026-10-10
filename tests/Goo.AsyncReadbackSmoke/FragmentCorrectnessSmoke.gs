@@ -22,6 +22,17 @@ class FragmentCorrectnessCell : Cell {
       Path: outline, BackgroundColor: Color.White,
       Transform: PanelTransform{TranslateX: PixelOffset, TranslateY: IconSize + PixelOffset},
     },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 60.0 + PixelOffset,
+      Top: 40.0 + PixelOffset,
+      Width: 80,
+      Height: 40,
+      BorderRadius: 4,
+      BorderWidth: Edges{Bottom: 2},
+      BorderColor: Color.Rgb(255, 0, 0),
+      BackgroundColor: Color.Rgb(0, 0, 255),
+    },
     Container() {.Position: PositionType.Absolute,.Left: 160,.Top: 16,.Width: 640,.Height: 96,.BackgroundColor: Color.Transparent,.ShaderEffect: crtEffect,
       Container{
             Position: PositionType.Absolute,
@@ -87,6 +98,22 @@ func RunFragmentCorrectnessSmoke() {
       Require(join[3] >= uint8(96), "Path contour join has missing coverage at "
         + point.X.ToString() + "/" + point.Y.ToString() + ": " + PrimitivePixelText(join))
     }
+    // A rounded box with only a bottom border must not paint the border color along its other sides.
+    var sideRed = 0
+    for step in -2 ... 3 {
+      let offset = float64(step) / scale
+      for sample in []Point{
+        Point{X: 100.0, Y: 40.0 + cell.PixelOffset + offset},
+        Point{X: 60.0 + cell.PixelOffset + offset, Y: 60.0},
+        Point{X: 140.0 + cell.PixelOffset + offset, Y: 60.0},
+      } {
+        let pixel = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, sample.X, sample.Y)
+        sideRed = Math.Max(sideRed, int32(pixel[0]))
+      }
+    }
+    Require(sideRed <= 4, "Rounded border painted its color on sides without a border: red=" + sideRed.ToString())
+    let underline = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 100.0, 40.0 + cell.PixelOffset + 39.0)
+    Require(underline[0] >= uint8(200), "Rounded bottom border is missing: " + PrimitivePixelText(underline))
     let crtOpaque = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 476.0, 64.0)
     Require(crtOpaque[2] >= uint8(240) && crtOpaque[3] == uint8(255),
       "CRT opaque source output is invalid: " + PrimitivePixelText(crtOpaque))
