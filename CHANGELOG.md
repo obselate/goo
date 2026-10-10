@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.22 - 2026-10-10
+
+- Add the `Virtual` element and its policy protocol: `VirtualSource`, `VirtualState`, `VirtualViewport`, `VirtualOutput`, `VirtualItem`, and `VirtualChild`.
+- Remove the `Virtual(items, ...)` and `VirtualRows` functions. Goo.Widgets now supplies them as `VirtualItems` and `VirtualRows`.
+- Place virtual items in content coordinates. Padding is no longer part of the scroll range of a virtual element.
+
 ## 0.7.21 - 2026-10-10
 
 - Remove `VirtualLog`. `VirtualRows` now applies a change that only removes rows from the start and adds rows at the end in place.
