@@ -8,9 +8,13 @@ static const uint GooClipMaskRecordWords = 12u;
 
 float gooClipCoverage()
 {
+    uint maskRecordCount = gooClipChainBuffer[2u];
+    if (maskRecordCount == 0u)
+    {
+        return 1.0;
+    }
     uint drawCount = gooClipChainBuffer[0u];
     uint maskRecordBase = gooClipChainBuffer[1u];
-    uint maskRecordCount = gooClipChainBuffer[2u];
     if (gooClipDrawOrdinal >= drawCount)
     {
         return 0.0;

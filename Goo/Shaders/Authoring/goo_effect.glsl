@@ -76,9 +76,13 @@ uint gooDataWord(uint slot, uint wordIndex)
 
 float gooClipCoverage()
 {
+    uint maskRecordCount = gooClipChainBuffer.words[2u];
+    if (maskRecordCount == 0u)
+    {
+        return 1.0;
+    }
     uint drawCount = gooClipChainBuffer.words[0u];
     uint maskRecordBase = gooClipChainBuffer.words[1u];
-    uint maskRecordCount = gooClipChainBuffer.words[2u];
     if (gooClipDrawOrdinal >= drawCount)
     {
         return 0.0;

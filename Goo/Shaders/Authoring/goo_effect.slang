@@ -105,9 +105,13 @@ uint gooDataWord(uint slot, uint wordIndex)
 
 float gooClipCoverage(GooEffectInput input)
 {
+    uint maskRecordCount = gooClipChainBuffer[2];
+    if (maskRecordCount == 0)
+    {
+        return 1.0;
+    }
     uint drawCount = gooClipChainBuffer[0];
     uint maskRecordBase = gooClipChainBuffer[1];
-    uint maskRecordCount = gooClipChainBuffer[2];
     if (input.clipDrawOrdinal >= drawCount)
     {
         return 0.0;
