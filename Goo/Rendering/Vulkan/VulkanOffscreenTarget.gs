@@ -436,6 +436,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     return VkConstants.VK_SUCCESS
   }
 
+  internal func SetPresentEncode(value bool) {
+    primitiveRenderer?.SetPresentEncode(value)
+  }
+
   internal func RecordScene(frame SceneFrame, clearColor VkClearColorValue,
     textScaleX float32, textScaleY float32) {
       EnsureOpen()

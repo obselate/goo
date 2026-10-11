@@ -546,6 +546,32 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
       push.params_z = value.Bounds.Width / targetWidth
       push.params_w = value.Bounds.Height / targetHeight
+      DrawSampledTarget(commandBuffer, &push, target)
+    }
+
+  private func EmitPresentEncode(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    target VulkanOffscreenLayerTarget?) {
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, ConservativeBounds{
+          X: 0.0F,
+          Y: 0.0F,
+          Width: float32(extent.width),
+          Height: float32(extent.height),
+        }, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      push.radii_x = 1.0F
+      push.radii_y = 1.0F
+      push.radii_z = 1.0F
+      push.params_z = 1.0F
+      push.params_w = 1.0F
+      DrawSampledTarget(commandBuffer, &push, target)
+    }
+
+  private func DrawSampledTarget(
+    commandBuffer VkCommandBuffer,
+    push * VulkanPrimitiveGpuRecord,
+    target VulkanOffscreenLayerTarget?) {
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
         EnsureDescriptorLayout(pipelineLayout)
@@ -565,7 +591,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         textAtlasId = ResourceId{}
       }
       BindPrimitiveAndDraw(commandBuffer, primitivePipelines.SampledPipeline,
-        pipelineLayout, *void(&push), 1u)
+        pipelineLayout, *void(push), 1u)
     }
 
   private func EmitShaderEffectLayer(

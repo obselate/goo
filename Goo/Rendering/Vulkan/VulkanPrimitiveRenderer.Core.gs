@@ -83,6 +83,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var primitiveRecordCount int32
   private var primitiveRecordPlan []uint32
   private var primitivePrepass bool
+  private var presentEncode bool
+  private var presentEncodeRecord uint32
   private var primitivePrepared bool
   private var primitiveDescriptorBound bool
   private var primitiveDescriptorLayout VkPipelineLayout
@@ -114,6 +116,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
   internal prop TextFrameStats VulkanTextFrameStats{
     get -> textFrameData.LastStats
+  }
+
+  internal func SetPresentEncode(value bool) {
+    presentEncode = value
   }
 
   internal func SetPathAtlas(value VulkanPathAtlas) {
@@ -377,6 +383,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       EnsurePrimitivePlanCapacity(frame.DrawRefCount)
       let maximumRecordCount = ComputeMaximumAnalyticRecordCount(frame)
+      +if presentEncode { 1uL } else { 0uL }
       primitivePrepass = true
       primitivePrepared = false
       primitiveRecordCount = 0
@@ -405,6 +412,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         if clipDepth != 0 || layerDepth != 0 || currentTarget != nil {
           throw InvalidOperationException("Vulkan primitive prepass stack is not balanced")
+        }
+        if presentEncode {
+          presentEncodeRecord = uint32(primitiveRecordCount)
+          EmitPresentEncode(nint(0), extent, nil)
         }
         primitiveFrameData.FinishPrepare()
         textFrameScaleX = scaleX
@@ -629,6 +640,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw InvalidOperationException("Vulkan layer stack is not balanced")
       }
       FlushPendingPrimitiveDraw(commandBuffer)
+      if presentEncode {
+        RecordPresentEncode(commandBuffer, extent, baseClip)
+      }
       return VulkanPrimitiveRecordResult{
         drawCallCount: recordDrawCallCount,
         pipelineChangeCount: recordPipelineChangeCount,
@@ -1041,9 +1055,65 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
     }
 
+  private func RecordPresentEncode(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    damage PrimitiveClip) {
+      guard let pool = layerPool else {
+        throw InvalidOperationException("Vulkan present encode requires a layer pool")
+      }
+      let copy = pool.Acquire(extent.width, extent.height, completedLayerSerial)
+      let endRendering = dispatch.vkCmdEndRendering
+      endRendering(commandBuffer)
+      copy.TransitionToTransferDestination(commandBuffer)
+      TransitionRootToTransferSource(commandBuffer)
+      var region = VkImageCopy{}
+      region.srcSubresource = VkImageSubresourceLayers{
+        aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
+        mipLevel: 0u,
+        baseArrayLayer: 0u,
+        layerCount: 1u,
+      }
+      region.srcOffset = VkOffset3D{ x: damage.Left, y: damage.Top, z: 0 }
+      region.dstSubresource = region.srcSubresource
+      region.dstOffset = region.srcOffset
+      region.extent = VkExtent3D{
+        width: uint32(damage.Right - damage.Left),
+        height: uint32(damage.Bottom - damage.Top),
+        depth: 1u,
+      }
+      let copyImage = dispatch.vkCmdCopyImage
+      copyImage(commandBuffer, rootImage,
+        VkConstants.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        copy.Image, VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1u, &region)
+      copy.TransitionToShaderRead(commandBuffer)
+      TransitionRootToColorAttachment(commandBuffer)
+      BeginRendering(commandBuffer, VkRect2D{
+          offset: VkOffset2D{ x: damage.Left, y: damage.Top },
+          extent: VkExtent2D{ width: region.extent.width, height: region.extent.height },
+        }, rootImageView, false)
+      SetScissor(commandBuffer, damage)
+      primitiveRecordOrdinal = presentEncodeRecord
+      EmitPresentEncode(commandBuffer, extent, copy)
+      FlushPendingPrimitiveDraw(commandBuffer)
+      pool.ReleaseForReuse(copy)
+    }
+
   private func BeginLayerRendering(
     commandBuffer VkCommandBuffer,
     extent VkExtent2D,
+    imageView VkImageView,
+    loadExisting bool) {
+      BeginRendering(commandBuffer, VkRect2D{
+          offset: VkOffset2D{ x: 0, y: 0 },
+          extent: extent,
+        }, imageView, loadExisting)
+    }
+
+  private func BeginRendering(
+    commandBuffer VkCommandBuffer,
+    area VkRect2D,
     imageView VkImageView,
     loadExisting bool) {
       var clear = VkClearValue{}
@@ -1065,8 +1135,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       attachment.clearValue = clear
       var rendering = VkRenderingInfo{}
       rendering.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_INFO
-      rendering.renderArea.offset = VkOffset2D{ x: 0, y: 0 }
-      rendering.renderArea.extent = extent
+      rendering.renderArea = area
       rendering.layerCount = 1u
       rendering.colorAttachmentCount = 1u
       rendering.pColorAttachments = &attachment

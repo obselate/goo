@@ -344,6 +344,7 @@ internal unsafe partial class VulkanWindowTarget {
           clipMaskFramePrepared = true
           clipMaskRedrawPending = clipFrameStats.DirtyRegionCount > 0
           renderer.SetPrimitiveFrameSlot(int32(activeFrameSlotIndex))
+          renderer.SetPresentEncode(host.Transparent && current.SupportsTransferSource)
           renderer.PreparePrimitiveFrame(
             sceneCompiler.Frame,
             current.Extent,
