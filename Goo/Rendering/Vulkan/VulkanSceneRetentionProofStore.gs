@@ -256,6 +256,7 @@ internal class VulkanSceneRetentionProofStore {
         Bounds: current.Bounds,
         ContentKey: current.ContentKey,
         TopologyKey: current.TopologyKey,
+        TransformKey: current.TransformKey,
         RetentionState: current.RetentionState,
         ExactLeafKind: exactLeafKind,
         ProofDrawStart: proofDrawStart,

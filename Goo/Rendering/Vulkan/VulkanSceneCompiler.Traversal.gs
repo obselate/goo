@@ -66,6 +66,7 @@ internal partial class VulkanSceneCompiler {
         CompileNode(part, childContext)
       }
       frame.SetActiveClipChain(context.ParentPathClipChainId)
+      frame.SetActiveTransform(transform.Index)
       frame.BeginChunk(ownerId, frameVersion, bounds, false)
       frame.AddRectClipEnd(RectClipRecord{
         Bounds: bounds,
@@ -81,6 +82,7 @@ internal partial class VulkanSceneCompiler {
       let owner = Owner(node)
       let ownerId = owner.Value
       frame.SetActiveClipChain(context.ParentPathClipChainId)
+      frame.SetActiveTransform(context.ParentTransformIndex)
       if node.Retired || node.Display == Display.None || node.Visibility == Visibility.Hidden {
         InvalidateRetainedBox(owner)
         InvalidateRetainedText(owner)
@@ -231,6 +233,7 @@ internal partial class VulkanSceneCompiler {
 
       let chunk = frame.BeginChunk(ownerId, frameVersion, chunkBounds, true)
       let transform = AddNodeTransform(node, context.ParentTransformIndex)
+      frame.SetActiveTransform(transform.Index)
       transformCount = frame.TransformCount
       let axisAligned = context.ParentAxisAligned && transform.AxisAligned
       let subtreeBounds = isolates
@@ -537,6 +540,7 @@ internal partial class VulkanSceneCompiler {
           index = index + 1
         }
 
+      frame.SetActiveTransform(transform.Index)
       if editorContentClipIndex >= 0 || scrollbarContentClipIndex >= 0 || clipIndex >= 0 {
         frame.SetActiveClipChain(context.ParentPathClipChainId)
         frame.BeginChunk(ownerId, frameVersion, bounds, false)
@@ -582,6 +586,7 @@ internal partial class VulkanSceneCompiler {
       }
       if isolates {
         frame.SetActiveClipChain(context.ParentPathClipChainId)
+        frame.SetActiveTransform(-1)
         frame.BeginChunk(ownerId, frameVersion, subtreeBounds, false)
         if combinesEffectAndBlend {
           frame.AddLayerEnd(innerLayerRecord)

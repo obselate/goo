@@ -212,6 +212,8 @@ internal struct SceneChunk {
   internal var TopologyKey uint64
   internal var Dirty bool
   internal var RetentionState SceneChunkRetentionState
+  internal var TransformIndex int32
+  internal var TransformKey uint64
 }
 
 internal struct VulkanDamageRegion {
@@ -239,6 +241,7 @@ internal struct VulkanSceneChunkIdentity {
   internal var Bounds ConservativeBounds
   internal var ContentKey uint64
   internal var TopologyKey uint64
+  internal var TransformKey uint64
   internal var RetentionState SceneChunkRetentionState
   internal var ExactLeafKind SceneDrawKind
   internal var ProofDrawStart int32

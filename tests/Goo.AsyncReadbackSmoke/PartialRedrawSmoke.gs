@@ -198,6 +198,65 @@ class PartialClipMaskCell : Cell {
   }
 }
 
+class PartialTransformCell : Cell {
+  internal var Step int32
+
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container() {.Position: PositionType.Absolute,.Left: 12,.Top: 14,.Width: 150,.Height: 70,.Transform: PanelTransform{ TranslateX: Step >= 2 ? 34 : 10, TranslateY: 6 },.BackgroundColor: Color.Rgb(18, 32, 52),
+      Container{
+        Position: PositionType.Absolute,
+        Left: 10,
+        Top: 10,
+        Width: 50,
+        Height: 30,
+        BackgroundColor: Step >= 1 ? Color.Rgb(196, 88, 200) : Color.Rgb(52, 196, 112),
+      },
+      Text{
+        Position: PositionType.Absolute,
+        Left: 12,
+        Top: 42,
+        Content: Step >= 4 ? "Moved" : "Under",
+        FontFamily: "ReadbackGateFont",
+        FontSize: 18,
+        Color: Color.White,
+      },
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 230,
+      Top: 30,
+      Width: 80,
+      Height: 50,
+      Transform: PanelTransform{ Rotate: Step >= 3 ? -18 : 18 },
+      BackgroundColor: Color.Rgb(236, 196, 72),
+    },
+    Container() {.Position: PositionType.Absolute,.Left: 20,.Top: 104,.Width: 150,.Height: 70,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(36, 52, 76),
+      Container() {.Position: PositionType.Absolute,.Left: 30,.Top: 10,.Width: 160,.Height: 40,.Transform: PanelTransform{ Rotate: 12, ScaleX: Step >= 5 ? 1.2 : 0.9, ScaleY: 1.1 },.BackgroundColor: Color.Rgb(228, 64, 72),
+        Container{
+          Position: PositionType.Absolute,
+          Left: 20,
+          Top: 8,
+          Width: 60,
+          Height: 20,
+          Transform: PanelTransform{ TranslateX: 12, Rotate: -30 },
+          BackgroundColor: Step >= 6 ? Color.Rgb(72, 224, 128) : Color.Rgb(72, 128, 224),
+        },
+      },
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 250,
+      Top: 110,
+      Width: 120,
+      Height: 60,
+      BorderWidth: 3,
+      BorderColor: Color.Rgb(72, 224, 128),
+      Transform: PanelTransform{ TranslateY: Step >= 7 ? -14 : 0, ScaleX: 0.8 },
+      BackgroundColor: Color.Rgb(26, 50, 76),
+    },
+  }
+}
+
 func PartialRedrawRegions(width int32, height int32) []VulkanDamageRegion {
   let regions = List[VulkanDamageRegion]()
   let columns = 6
@@ -358,9 +417,14 @@ func RunPartialRedrawSmoke() {
       if clipMask.Step == 8 { clipMask.Scroll.JumpTo(0.0, 30.0) }
       clipMask.Rebuild()
     })
+    let transform = PartialTransformCell{}
+    failures = failures + PartialRedrawScene("transform", transform, 7, () -> {
+      transform.Step++
+      transform.Rebuild()
+    })
   } finally {
     font.Dispose()
   }
   Require(failures == 0, "Partial redraw proof failed in " + failures.ToString() + " cases")
-  Console.WriteLine("partial-redraw: scenes=3 pixels=identical")
+  Console.WriteLine("partial-redraw: scenes=4 pixels=identical")
 }

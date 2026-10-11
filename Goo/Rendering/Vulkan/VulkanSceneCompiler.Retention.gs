@@ -459,6 +459,7 @@ internal partial class VulkanSceneCompiler {
       throw InvalidOperationException("Vulkan retained scene proof storage is unavailable")
     }
     journal.BeginVersion(frameVersion)
+    ResolveChunkScreenBounds()
     let currentCount = frame.ChunkCount
     let retainedChunks = proofs.Chunks
     var topologySame = proofs.Ready && proofs.ChunkCount == currentCount
@@ -511,6 +512,9 @@ internal partial class VulkanSceneCompiler {
       while index < currentCount {
         let current = frame.Chunks[index]
         let prior = retainedChunks[index]
+        if current.TransformKey != prior.TransformKey {
+          journal.AddChange(prior.Bounds, true, current.Bounds, true)
+        }
         if IsPlaceholderChunkTransition(current, prior) {
           journal.AddChange(prior.Bounds, true, current.Bounds, true)
           frame.Chunks[index].Dirty = true
@@ -538,6 +542,33 @@ internal partial class VulkanSceneCompiler {
     proofs.Capture(frame)
   }
 
+  private func ResolveChunkScreenBounds() {
+    if frame.TransformCount == 0 {
+      return
+    }
+    var index int32 = 0
+    while index < frame.ChunkCount {
+      let transformIndex = frame.Chunks[index].TransformIndex
+      if transformIndex != -1 && !frame.Chunks[index].Bounds.IsEmpty {
+        let transform = ResolveCompilerFrameTransform(transformIndex)
+        frame.Chunks[index].Bounds = TransformCompilerBounds(
+          frame.Chunks[index].Bounds, transform).Inflate(1.0F)
+        frame.Chunks[index].TransformKey = TransformKey(transform)
+      }
+      index = index + 1
+    }
+  }
+
+  private func TransformKey(value PrimitiveTransform) uint64 {
+    var key = 1469598103934665603uL
+    key = (key ^ uint64(uint32(BitConverter.SingleToInt32Bits(value.A)))) * 1099511628211uL
+    key = (key ^ uint64(uint32(BitConverter.SingleToInt32Bits(value.B)))) * 1099511628211uL
+    key = (key ^ uint64(uint32(BitConverter.SingleToInt32Bits(value.C)))) * 1099511628211uL
+    key = (key ^ uint64(uint32(BitConverter.SingleToInt32Bits(value.D)))) * 1099511628211uL
+    key = (key ^ uint64(uint32(BitConverter.SingleToInt32Bits(value.TX)))) * 1099511628211uL
+    return (key ^ uint64(uint32(BitConverter.SingleToInt32Bits(value.TY)))) * 1099511628211uL
+  }
+
   private func IsPlaceholderChunkTransition(
     current SceneChunk,
     prior VulkanSceneChunkIdentity) bool{
@@ -563,25 +594,18 @@ internal partial class VulkanSceneCompiler {
     while index < frame.DrawRefCount {
       let reference = frame.DrawRefs[index]
       let kind = reference.Kind
-      if kind == SceneDrawKind.RectClipBegin || kind == SceneDrawKind.RectClipEnd {
-        if frame.RectClips[reference.Index].TransformIndex != -1 {
-          return true
-        }
-      } else if kind == SceneDrawKind.PerEdgeBorder {
+      if kind == SceneDrawKind.PerEdgeBorder {
         let value = frame.PerEdgeBorders[reference.Index]
         if value.Style != uint32(int32(BorderStyle.Solid))
           || value.RadiusTopLeft != 0.0F || value.RadiusTopRight != 0.0F
           || value.RadiusBottomRight != 0.0F
-          || value.RadiusBottomLeft != 0.0F
-          || value.TransformIndex != -1 {
+          || value.RadiusBottomLeft != 0.0F {
             return true
           }
-      } else if kind == SceneDrawKind.CachedImage {
-        if frame.CachedImages[reference.Index].TransformIndex != -1 {
-          return true
-        }
       } else if kind != SceneDrawKind.SolidBox && kind != SceneDrawKind.RoundedBox
-        && kind != SceneDrawKind.CachedTextSegment{
+        && kind != SceneDrawKind.CachedTextSegment && kind != SceneDrawKind.CachedImage
+        && kind != SceneDrawKind.Transform && kind != SceneDrawKind.RectClipBegin
+        && kind != SceneDrawKind.RectClipEnd{
           return true
         }
       index = index + 1

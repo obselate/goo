@@ -27,6 +27,7 @@ internal partial class SceneFrame {
         TopologyKey: topologyKey,
         Dirty: true,
         RetentionState: SceneChunkRetentionState.Generic,
+        TransformIndex: activeTransformIndex,
       }
       chunkCount = NextCount(chunkCount)
       chunkOperations = chunkOperations + 1uL

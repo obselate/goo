@@ -50,6 +50,7 @@ internal partial class SceneFrame {
 
   private var activeChunk int32
   private var activeClipChainId int32
+  private var activeTransformIndex int32 = -1
   private var growthOperations uint64
   private var recordOperations uint64
   private var drawReferenceOperations uint64
@@ -199,6 +200,7 @@ internal partial class SceneFrame {
     shaderEffectCount = 0
     activeChunk = -1
     activeClipChainId = 0
+    activeTransformIndex = -1
     resetOperations = resetOperations + 1uL
   }
 
@@ -246,6 +248,7 @@ internal partial class SceneFrame {
         TopologyKey: 0uL,
         Dirty: true,
         RetentionState: SceneChunkRetentionState.ExactLeafHit,
+        TransformIndex: activeTransformIndex,
       }
       chunkCount = NextCount(chunkCount)
       drawRefCount = NextCount(drawRefCount)
@@ -275,6 +278,7 @@ internal partial class SceneFrame {
       ResourceCount: 0,
       Dirty: dirty,
       RetentionState: SceneChunkRetentionState.Generic,
+      TransformIndex: activeTransformIndex,
     }
     chunkCount = NextCount(chunkCount)
     activeChunk = index
@@ -538,6 +542,14 @@ internal partial class SceneFrame {
     clipChainCount = NextCount(clipChainCount)
     recordOperations = recordOperations + 1uL
     return index
+  }
+
+  internal func SetActiveTransform(index int32) {
+    ValidateTransformParentIndex(index)
+    activeTransformIndex = index
+    if activeChunk >= 0 {
+      chunks[activeChunk].TransformIndex = index
+    }
   }
 
   internal func SetActiveClipChain(value int32) {
