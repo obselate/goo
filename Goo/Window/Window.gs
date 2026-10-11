@@ -492,6 +492,8 @@ public partial class Window {
   private var acceptedFrameIndex uint64
   private var presentationAcceptedHook Action[int64]?
   private var captureOwner WindowCaptureOwner
+  private var capturePending bool
+  private var captureFailed bool
   private var title string
   private var background Color
   private var root Cell?
@@ -582,6 +584,8 @@ public partial class Window {
     diagnosticsSession = nil
     if captureOwner == WindowCaptureOwner.Diagnostics {
       captureOwner = WindowCaptureOwner.None
+      capturePending = false
+      captureFailed = false
     }
     resolver.DebugOverrides = nil
     input.SetDiagnostics(nil, nil)
@@ -606,16 +610,31 @@ public partial class Window {
     if embeddedHost != nil { return WindowCaptureRequestStatus.Unsupported }
     guard let target = windowTarget else { return WindowCaptureRequestStatus.NotReady }
     if captureOwner != WindowCaptureOwner.None { return WindowCaptureRequestStatus.Busy }
-    let prior = target.PollCapture()
-    if prior == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
-    if prior == WindowReadbackPollStatus.NotReady && target.QueueWorkPending {
-      return WindowCaptureRequestStatus.Busy
-    }
+    return captureRequestStatus(startCapture(target, WindowCaptureOwner.Public))
+  }
+
+  private func startCapture(target WindowRenderTarget, owner WindowCaptureOwner) WindowReadbackRequestStatus {
+    if target.PollCapture() == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
     let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
-    if status == WindowReadbackRequestStatus.Accepted {
-      captureOwner = WindowCaptureOwner.Public
+    capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
+    if status == WindowReadbackRequestStatus.Accepted || capturePending {
+      captureOwner = owner
+      return WindowReadbackRequestStatus.Accepted
     }
-    return captureRequestStatus(status)
+    return status
+  }
+
+  internal func advanceCapture() {
+    guard let target = windowTarget else { return }
+    if !capturePending || target.QueueWorkPending { return }
+    if startCapture(target, captureOwner) != WindowReadbackRequestStatus.Accepted { captureFailed = true }
+  }
+
+  private func takeCaptureFailure() {
+    if !captureFailed { return }
+    captureFailed = false
+    captureOwner = WindowCaptureOwner.None
+    throw InvalidOperationException("Goo capture readback failed")
   }
 
   /// Takes a completed capture, or returns nil while it is pending.
@@ -623,6 +642,7 @@ public partial class Window {
   public func PollCapture() WindowCapture? {
     requireUiThread("Window.PollCapture")
     if captureOwner != WindowCaptureOwner.Public { return nil }
+    takeCaptureFailure()
     guard let target = windowTarget else {
       captureOwner = WindowCaptureOwner.None
       return nil
@@ -652,17 +672,12 @@ public partial class Window {
   internal func RequestDiagnosticsCapture() WindowReadbackRequestStatus {
     if captureOwner != WindowCaptureOwner.None { return WindowReadbackRequestStatus.Busy }
     guard let target = windowTarget else { return WindowReadbackRequestStatus.NotReady }
-    let prior = target.PollCapture()
-    if prior == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
-    let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
-    if status == WindowReadbackRequestStatus.Accepted {
-      captureOwner = WindowCaptureOwner.Diagnostics
-    }
-    return status
+    return startCapture(target, WindowCaptureOwner.Diagnostics)
   }
 
   internal func PollDiagnosticsCapture() WindowReadbackResult? {
     if captureOwner != WindowCaptureOwner.Diagnostics { return nil }
+    takeCaptureFailure()
     guard let target = windowTarget else { return nil }
     let result = target.PollCapture()
     if result == WindowReadbackPollStatus.NotReady { return nil }

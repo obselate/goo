@@ -35,8 +35,9 @@ internal class DiagnosticCaptureFixture {
         window.ForceRenderForTest(0.016)
         Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 2000),
           "Capture regression did not hold a real queue submission")
-        Require(window.RequestDiagnosticsCapture() == WindowReadbackRequestStatus.Busy,
-          "Capture regression did not encounter renderer Busy")
+        Require(window.QueueWorkPending
+            && window.RequestDiagnosticsCapture() == WindowReadbackRequestStatus.Accepted,
+          "Capture regression did not start a capture behind a held queue submission")
         for i in 0 ... 3 {
           using let response = JsonDocument.Parse(session.CapturePayload())
           Require(response.RootElement.GetProperty("pending").GetBoolean(),
@@ -93,25 +94,32 @@ internal class DiagnosticCaptureFixture {
         while (request == WindowCaptureRequestStatus.NotReady
           || request == WindowCaptureRequestStatus.Busy)
           && Stopwatch.GetTimestamp() < captureDeadline {
-            window.Pump(0.0)
+            root.Frame++
+            root.Rebuild()
+            window.Pump(1.0 / 60.0)
             request = window.RequestCapture()
           }
         Require(request == WindowCaptureRequestStatus.Accepted,
           "Manual capture request was not accepted: " + request.ToString())
+        let requestedFrame = root.Frame
         Require(window.RequestDiagnosticsCapture() == WindowReadbackRequestStatus.Busy
           && window.PollDiagnosticsCapture() == nil,
           "DevTools took ownership of the public capture")
         var manual WindowCapture?
         while manual == nil && Stopwatch.GetTimestamp() < captureDeadline {
           manual = window.PollCapture()
-          if manual == nil { window.Pump(0.0) }
+          if manual == nil {
+            root.Frame++
+            root.Rebuild()
+            window.Pump(1.0 / 60.0)
+          }
         }
         guard let frame = manual else { throw InvalidOperationException("Manual capture timed out") }
         let data = frame.Pixels
         let at = 12 * int32(frame.RowBytes) + 12 * 4
         Require(frame.Width == 64u && frame.Height == 64u && data.Length == int32(frame.RowBytes * frame.Height)
           && frame.Premultiplied && frame.SrgbEncoded && frame.OriginTopLeft
-          && Math.Abs(int32(data[at]) - 57) <= 2 && data[at + 1] == 120
+          && int32(data[at]) >= requestedFrame - 2 && int32(data[at]) <= root.Frame + 2 && data[at + 1] == 120
           && data[at + 2] == 200 && data[at + 3] == 255,
           "Manual capture returned the wrong frame pixels")
         window.Pump(0.0)

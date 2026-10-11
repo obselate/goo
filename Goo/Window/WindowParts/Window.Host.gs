@@ -425,6 +425,7 @@ public partial class Window {
         rendered = true
         native.MarkFrame(float64(Stopwatch.GetTimestamp()))
       }
+      advanceCapture()
       let frameNeeded = needsRenderFrame(resolver.VisualDirty)
       if allowFrame && IsVisible && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
         let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
@@ -616,6 +617,8 @@ public partial class Window {
     schedulerSimulationBank = 0.0
     acceptedFrameIndex = 0uL
     captureOwner = WindowCaptureOwner.None
+    capturePending = false
+    captureFailed = false
     framebufferWidth = 0
     framebufferHeight = 0
     pendingMetrics = false
