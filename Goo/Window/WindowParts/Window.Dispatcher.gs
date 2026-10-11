@@ -70,7 +70,8 @@ public partial class Window {
       for i in 0 ... count {
         var action Action
         lock cellQueueGate {
-          action = postedActions!!.Dequeue()
+          guard let queue = postedActions else { return }
+          action = queue.Dequeue()
         }
         action()
       }
