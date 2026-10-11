@@ -48,7 +48,6 @@
 !/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
 !/.github/scripts/qualify-linux-runtime.sh
-!/.github/scripts/with-kwin-scale-one.sh
 
 !/Goo/
 !/Goo/**

@@ -47,9 +47,7 @@ required. Windows and macOS payloads are unchanged.
 transfer) ahead of text fallbacks during drag negotiation. SDL 3.4.0 otherwise
 accepts Nemo's plain-text names and tries to decode those names as file URIs,
 producing an empty drop. The build runs `test_sdl_drop.py` against the actual C
-handler; the unpatched handler fails the mixed URI/text case. The real transfer
-is exercised by `tests/Goo.AsyncReadbackSmoke/verify-native-file-drop.py` in an
-isolated KWin session with Nemo and compositor input supplied by libei.
+handler; the unpatched handler fails the mixed URI/text case.
 
 `wayland-outbound-file-drag.patch` adds Goo's file-only drag source bridge to the
 pinned SDL Wayland backend. The held pointer's primary-press serial starts a
