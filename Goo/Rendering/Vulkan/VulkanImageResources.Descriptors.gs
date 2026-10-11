@@ -186,7 +186,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
 
   private func FindExactIndex(id ResourceId) int32 {
     var index int32 = 0
-    while index < entries.Length {
+    while index < entryLimit {
       let entry = entries[index]
       if entry.State != VulkanImageResourceState.Empty
         && entry.Id.Kind == id.Kind && entry.Id.LogicalId == id.LogicalId

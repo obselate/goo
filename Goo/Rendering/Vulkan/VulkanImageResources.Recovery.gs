@@ -16,6 +16,7 @@ internal unsafe partial class VulkanImageResources {
       entries[index] = VulkanImageResourceEntry{}
       index++
     }
+    entryLimit = 0
     liveCount = 0
     residentBytes = 0uL
     ClearDiagnosticImageState()

@@ -679,7 +679,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   internal func PromoteSourceVersion(source VulkanResourceSource) {
     var superseded bool = false
     var index int32 = 0
-    while index < entries.Length {
+    while index < entryLimit {
       let entry = entries[index]
       if entry.State != VulkanImageResourceState.Empty
         && entry.ProviderId == source.ProviderId
@@ -716,7 +716,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private func DiscardUnpublishedOlderSourceVersions(source VulkanResourceSource) {
     var discarded bool
     var index int32 = 0
-    while index < entries.Length {
+    while index < entryLimit {
       let entry = entries[index]
       if entry.State != VulkanImageResourceState.Empty
         && !entry.GpuPublished
@@ -740,7 +740,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
 
   private func HasNewerSourceVersion(source VulkanResourceSource) bool {
     var index int32 = 0
-    while index < entries.Length {
+    while index < entryLimit {
       let entry = entries[index]
       if entry.State != VulkanImageResourceState.Empty
         && entry.ProviderId == source.ProviderId

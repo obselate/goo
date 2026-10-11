@@ -206,6 +206,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       CommitLogicalRegistration(logicalIndex, index, id, bytes, source, cacheable)
       entries[index] = entry
+      if index >= entryLimit { entryLimit = index + 1 }
       liveCount++
       residentBytes += bytes
     }

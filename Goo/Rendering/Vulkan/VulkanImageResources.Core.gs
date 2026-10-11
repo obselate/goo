@@ -34,6 +34,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
   private let residentByteBudget VkDeviceSize
   private var logicalStats VulkanResourceRegistryStats
   private var entries []VulkanImageResourceEntry
+  private var entryLimit int32
   private var logicalRecords []VulkanImageLogicalRecord
   private var descriptorSets []VkDescriptorSet
   private var currentReferenceCounts []int32
