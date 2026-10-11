@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Goo;
 using Xunit;
@@ -294,6 +295,19 @@ public sealed class FixtureContractTests
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.OutputAndKindReplacementContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.PositionalReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.TextEntryControlledValueContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.TweenFactoryContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.TokenCompositionContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.StyleConstructionContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.ClipPathResolutionStorageAndSnapContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.DirtyAncestorContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.RemovedDirtyContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.DisplayNonePointerContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.DisplayNoneFocusContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.DisplayNoneLifecycleContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.VisibilityPointerContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.VisibilityFocusContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.VisibilityLifecycleContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.ButtonSemanticPrimitiveContract));
         yield return Contract<VulkanQueueWorkerFixtures>(nameof(VulkanQueueWorkerFixtures.WakeFailureDrainsFollowingMailboxAndQuiesces));
     }
 
@@ -318,6 +332,21 @@ public sealed class FixtureContractTests
     [InlineData("diff-duplicate")]
     public void InvalidChildListsAreRejected(string scenario) =>
         Assert.True(new TreeFixtures().RejectsInvalidChildList(scenario));
+
+    [Fact]
+    public void EveryContractIsRegistered()
+    {
+        var registered = new HashSet<(Type, string)>();
+        foreach (var contract in Cases())
+            registered.Add(((Type)contract[0], (string)contract[1]));
+        var missing = new List<string>();
+        foreach (var (type, _) in registered)
+            foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                if (method.Name.EndsWith("Contract", StringComparison.Ordinal) && method.ReturnType == typeof(bool)
+                    && method.GetParameters().Length == 0 && !registered.Contains((type, method.Name)))
+                    missing.Add($"{type.Name}.{method.Name}");
+        Assert.Empty(missing.Distinct());
+    }
 
     private static object[] Contract<TFixture>(string methodName) => [typeof(TFixture), methodName];
 }
