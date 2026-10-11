@@ -599,6 +599,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       var drawIndex int32 = 0
       var chunkIndex int32 = 0
       var validatedChunkIndex int32 = -1
+      var skippedLayerDepth int32 = 0
       while drawIndex < frame.DrawRefCount {
         while chunkIndex < frame.ChunkCount
           && drawIndex >= frame.Chunks[chunkIndex].FirstDraw
@@ -617,11 +618,23 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           ValidateChunk(frame, frame.Chunks[chunkIndex])
           validatedChunkIndex = chunkIndex
         }
-        let drawChunk = frame.Chunks[chunkIndex]
         let reference = frame.DrawRefs[drawIndex]
-        if !partial || ChunkIntersectsDamage(drawChunk, damage)
-          || reference.Kind == SceneDrawKind.RectClipBegin
-          || reference.Kind == SceneDrawKind.RectClipEnd {
+        let kind = reference.Kind
+        if skippedLayerDepth > 0 {
+          if kind == SceneDrawKind.LayerBegin {
+            skippedLayerDepth = skippedLayerDepth + 1
+          } else if kind == SceneDrawKind.LayerEnd {
+            skippedLayerDepth = skippedLayerDepth - 1
+          }
+        } else if partial && layerDepth == 0 && kind == SceneDrawKind.LayerBegin
+          && !LayerIntersectsDamage(frame, reference.Index, damage) {
+            skippedLayerDepth = 1
+          } else if !partial || layerDepth > 0
+          || kind == SceneDrawKind.RectClipBegin || kind == SceneDrawKind.RectClipEnd
+          || kind == SceneDrawKind.LayerBegin || kind == SceneDrawKind.LayerEnd
+          || (kind == SceneDrawKind.GeneratorEffect
+            ? LayerIntersectsDamage(frame, reference.Index, damage)
+            : ChunkIntersectsDamage(frame.Chunks[chunkIndex], damage)) {
             currentDrawOrdinal = uint32(drawIndex)
             primitiveRecordOrdinal = primitiveRecordPlan[drawIndex]
             ProcessDraw(commandBuffer, reference, frame)
@@ -736,6 +749,16 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
     }
   }
+
+  private func LayerIntersectsDamage(frame SceneFrame, index int32,
+    damage VulkanDamageRegion) bool{
+      RequireRecordIndex(index, frame.LayerCount, "layer index")
+      let layer = frame.Layers[index]
+      return layer.OriginX + float32(layer.ExtentWidth) > float32(damage.X)
+        && layer.OriginX < float32(damage.Right)
+        && layer.OriginY + float32(layer.ExtentHeight) > float32(damage.Y)
+        && layer.OriginY < float32(damage.Bottom)
+    }
 
   private func ChunkIntersectsDamage(chunk SceneChunk, damage VulkanDamageRegion) bool {
     if chunk.Bounds.IsEmpty {

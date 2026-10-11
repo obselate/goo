@@ -361,7 +361,7 @@ internal partial class VulkanSceneCompiler {
         OffscreenTargetId: ResourceId{
           Kind: SceneResourceKind.OffscreenTarget,
           LogicalId: ownerId,
-          Version: frameVersion,
+          Version: 1uL,
         },
         EffectProgramId: effectProgramId,
         EffectVersion: effectVersion,

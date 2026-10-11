@@ -448,7 +448,43 @@ internal partial class VulkanSceneCompiler {
         fullRedraw = true
         return true
       }
+      if tracked && !fullRedraw {
+        region = GrowDamageToEffectLayers(region, int32(extentWidth), int32(extentHeight))
+      }
       return tracked
+    }
+
+  private func GrowDamageToEffectLayers(region VulkanDamageRegion,
+    extentWidth int32, extentHeight int32) VulkanDamageRegion{
+      var left = region.X
+      var top = region.Y
+      var right = region.Right
+      var bottom = region.Bottom
+      var grown = true
+      while grown {
+        grown = false
+        var index int32 = 0
+        while index < frame.LayerCount {
+          let layer = frame.Layers[index]
+          if layer.EffectIndex >= 0
+            && frame.ShaderEffects[layer.EffectIndex].Program?.SourceIndependent != true {
+              let layerLeft = Math.Max(0, int32(layer.OriginX))
+              let layerTop = Math.Max(0, int32(layer.OriginY))
+              let layerRight = Math.Min(extentWidth, int32(layer.OriginX) + int32(layer.ExtentWidth))
+              let layerBottom = Math.Min(extentHeight, int32(layer.OriginY) + int32(layer.ExtentHeight))
+              if layerRight > left && layerLeft < right && layerBottom > top && layerTop < bottom
+                && (layerLeft < left || layerTop < top || layerRight > right || layerBottom > bottom) {
+                  left = Math.Min(left, layerLeft)
+                  top = Math.Min(top, layerTop)
+                  right = Math.Max(right, layerRight)
+                  bottom = Math.Max(bottom, layerBottom)
+                  grown = true
+                }
+            }
+          index = index + 1
+        }
+      }
+      return VulkanDamageRegion{ X: left, Y: top, Width: right - left, Height: bottom - top }
     }
 
   private func ClassifyRetainedChunks() {
@@ -528,13 +564,17 @@ internal partial class VulkanSceneCompiler {
                   || ExactGenericChunkContent(index, prior))) {
                     frame.Chunks[index].Version = prior.Version
                     frame.Chunks[index].Dirty = false
-                  } else {
-                    journal.AddChange(prior.Bounds, true, current.Bounds, true)
-                  }
+                  } else if prior.ProofValid || current.ContentKey != prior.ContentKey
+                    || current.RetentionState != SceneChunkRetentionState.Generic
+                    || prior.RetentionState != SceneChunkRetentionState.Generic
+                    || !ExactBounds(current.Bounds, prior.Bounds) {
+                      journal.AddChange(prior.Bounds, true, current.Bounds, true)
+                    }
         index = index + 1
       }
     }
-    partialRedrawSafe = proofs.Ready && topologySame && !IsPartialUnsafe()
+    partialRedrawSafe = proofs.Ready && topologySame
+      && unsupportedNodeCount == 0 && unsupportedPrimitiveCount == 0
     if !partialRedrawSafe {
       journal.MarkFullRedraw()
     }
@@ -586,22 +626,6 @@ internal partial class VulkanSceneCompiler {
       }
       return priorPlaceholder && current.DrawCount > 0
     }
-
-  private func IsPartialUnsafe() bool {
-    if unsupportedNodeCount != 0 || unsupportedPrimitiveCount != 0 {
-      return true
-    }
-    var index int32 = 0
-    while index < frame.DrawRefCount {
-      let kind = frame.DrawRefs[index].Kind
-      if kind == SceneDrawKind.LayerBegin || kind == SceneDrawKind.LayerEnd
-        || kind == SceneDrawKind.GeneratorEffect {
-          return true
-        }
-      index = index + 1
-    }
-    return false
-  }
 
   private func ExactChunkTopology(index int32, prior VulkanSceneChunkIdentity) bool {
     let current = frame.Chunks[index]

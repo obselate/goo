@@ -292,6 +292,12 @@ internal partial class VulkanWindowTarget {
 
   internal prop SceneVersionForTest uint64{ get -> sceneCompiler.LatestSceneVersionForTest }
 
+  internal func GrowDamageForTest(region VulkanDamageRegion) VulkanDamageRegion {
+    guard let current = generation else { return region }
+    return sceneCompiler.GrowDamageForTest(region,
+      int32(current.Extent.width), int32(current.Extent.height))
+  }
+
   internal func ScenePartialDamageSinceForTest(applied uint64, dpi Vector2,
     out region VulkanDamageRegion) bool{
       region = VulkanDamageRegion{}
@@ -621,6 +627,11 @@ public partial class Window {
     return target.SceneVersionForTest
   }
 
+  internal func GrowDamageForTest(region VulkanDamageRegion) VulkanDamageRegion {
+    guard let target = VulkanTargetForTest() else { return region }
+    return target.GrowDamageForTest(region)
+  }
+
   internal func ScenePartialDamageSinceForTest(applied uint64,
     out region VulkanDamageRegion) bool{
       region = VulkanDamageRegion{}
@@ -781,6 +792,9 @@ internal partial class VulkanSceneCompiler {
       return journal.LatestVersion
     }
   }
+
+  internal func GrowDamageForTest(region VulkanDamageRegion, extentWidth int32,
+    extentHeight int32) VulkanDamageRegion -> GrowDamageToEffectLayers(region, extentWidth, extentHeight)
 }
 
 internal class WindowReadbackTestFixture {
@@ -903,6 +917,9 @@ internal class WindowReadbackTestFixture {
     }
 
     internal func SceneVersion(window Window) uint64 -> window.SceneVersionForTest()
+
+    internal func GrowDamage(window Window,
+      region VulkanDamageRegion) VulkanDamageRegion -> window.GrowDamageForTest(region)
 
     internal func ScenePartialDamageSince(window Window, applied uint64,
       out region VulkanDamageRegion) bool -> window.ScenePartialDamageSinceForTest(applied, out region)

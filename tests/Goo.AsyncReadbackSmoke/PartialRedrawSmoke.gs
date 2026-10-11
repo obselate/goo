@@ -5,6 +5,7 @@ import GooReadbackFixture
 import System
 import System.Collections.Generic
 import System.IO
+import System.Numerics
 
 class PartialPlainCell : Cell {
   internal var Step int32
@@ -364,6 +365,116 @@ class PartialPaintCell : Cell {
   }
 }
 
+class PartialLayerCell : Cell {
+  private let control ShaderEffect
+  private let glass ShaderEffect
+  private let generator ShaderEffect
+  internal var Step int32
+
+  init(control ShaderEffect, glass ShaderEffect, generator ShaderEffect) {
+    this.control = control
+    this.glass = glass
+    this.generator = generator
+  }
+
+  internal func Advance() {
+    Step++
+    if Step == 6 { generator.SetParameter(0, Vector4(0.0F, 1.0F, 0.0F, 0.0F)) }
+    Rebuild()
+  }
+
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 90,.Height: 60,.Opacity: Step >= 2 ? 0.8 : 0.5,.BackgroundColor: Color.Rgb(52, 196, 112),
+      Container{
+        Position: PositionType.Absolute,
+        Left: 50,
+        Top: 30,
+        Width: 70,
+        Height: 50,
+        BackgroundColor: Step >= 1 ? Color.Rgb(196, 88, 200) : Color.Rgb(236, 196, 72),
+      },
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 10,
+      Top: 120,
+      Width: 130,
+      Height: 30,
+      BackgroundColor: Color.Rgb(228, 160, 64),
+    },
+    Container() {.Position: PositionType.Absolute,.Left: 40,.Top: 104,.Width: 60,.Height: 60,.BlendMode: BlendMode.Multiply,.BackgroundColor: Color.Rgb(72, 128, 224),
+      Container{
+        Position: PositionType.Absolute,
+        Left: 10,
+        Top: 10,
+        Width: 30,
+        Height: 30,
+        BackgroundColor: Step >= 3 ? Color.Rgb(228, 64, 72) : Color.Rgb(72, 224, 128),
+      },
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 150,
+      Top: 8,
+      Width: 80,
+      Height: 60,
+      BorderRadius: 12,
+      BackgroundColor: Step >= 4 ? Color.Rgb(52, 196, 112) : Color.Rgb(232, 72, 48),
+      ShaderEffect: control,
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 250,
+      Top: 8,
+      Width: 40,
+      Height: 90,
+      BackgroundColor: Step >= 5 ? Color.Rgb(72, 128, 224) : Color.Rgb(255, 24, 8),
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 270,
+      Top: 20,
+      Width: 110,
+      Height: 70,
+      BackgroundColor: Color.Transparent,
+      ShaderEffect: glass,
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 160,
+      Top: 100,
+      Width: 64,
+      Height: 64,
+      ShaderEffect: generator,
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 340,
+      Top: 150,
+      Width: 40,
+      Height: 30,
+      BackgroundColor: Step >= 7 ? Color.Rgb(236, 196, 72) : Color.Rgb(196, 88, 200),
+    },
+  }
+}
+
+func PartialRedrawLayerCell() PartialLayerCell {
+  let control = ShaderEffect(ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 20.0F)
+  control.SetData(0, ShaderEffectData(BitConverter.GetBytes(1.0F)))
+  control.SetParameter(0, Vector4(1.0F, 0.25F, 0.25F, 0.0F))
+  let glass = ShaderEffect(ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "liquid_glass.frag.goo-effect")), true, 24.0F)
+  glass.SetParameter(2, Vector4(0.0F, 0.0F, 0.0F, -1.0F))
+  glass.SetParameter(3, Vector4(0.0F, 0.0F, 0.0F, 0.78F))
+  glass.SetParameter(4, Vector4(0.0F, 0.0F, 0.0F, 1.0F))
+  let generator = ShaderEffect(ShaderEffectProgram.Load(
+      Path.Combine(AppContext.BaseDirectory, "generator_effect.frag.goo-effect")), false)
+  generator.SetData(0, ShaderEffectData(BitConverter.GetBytes(0.0F)))
+  generator.SetParameter(0, Vector4(1.0F, 0.0F, 0.0F, 0.0F))
+  return PartialLayerCell(control, glass, generator)
+}
+
 func PartialRedrawRegions(width int32, height int32) []VulkanDamageRegion {
   let regions = List[VulkanDamageRegion]()
   let columns = 6
@@ -463,7 +574,8 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action) int
     let metrics = WindowReadbackTestFixture.Metrics(window)
     var full = PartialRedrawSettledCapture(window, metrics)
     for region in PartialRedrawRegions(metrics.FramebufferWidth, metrics.FramebufferHeight) {
-      failures = failures + PartialRedrawRepeat(window, metrics, name, 0, full, region)
+      failures = failures + PartialRedrawRepeat(window, metrics, name, 0, full,
+        WindowReadbackTestFixture.GrowDamage(window, region))
     }
     var step int32 = 1
     while step <= steps {
@@ -534,9 +646,11 @@ func RunPartialRedrawSmoke() {
       paint.Step++
       paint.Rebuild()
     })
+    let layer = PartialRedrawLayerCell()
+    failures = failures + PartialRedrawScene("layer", layer, 7, () -> layer.Advance())
   } finally {
     font.Dispose()
   }
   Require(failures == 0, "Partial redraw proof failed in " + failures.ToString() + " cases")
-  Console.WriteLine("partial-redraw: scenes=5 pixels=identical")
+  Console.WriteLine("partial-redraw: scenes=6 pixels=identical")
 }
