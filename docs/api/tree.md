@@ -618,6 +618,10 @@ Gets the transformed content box in window logical coordinates.
 
 Reports whether the element is mounted.
 
+### `Pinned`
+
+Gets whether PinToBottom is set and the reader has not scrolled away from the end.
+
 ### `ScrollOffset`
 
 Gets the current logical scroll offset.

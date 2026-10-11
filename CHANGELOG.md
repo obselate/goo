@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.26 - 2026-10-11
+
+- Add `ElementMetrics.Pinned`. It reports whether `PinToBottom` is set and the reader has not scrolled away from the end, for `Container` and `Virtual`. `MetricsChanged` also fires when only this value changes.
+- `ElementMetrics.Deconstruct` has a sixth `out` value for `Pinned`. Code that deconstructs `ElementMetrics` must add it.
+
 ## 0.7.24 - 2026-10-11
 
 - Present straight sRGB color multiplied by alpha in transparent windows. Partly transparent pixels no longer show a bright fringe.
