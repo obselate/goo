@@ -39,10 +39,7 @@ internal class Node {
   internal var PortalAnchorBounds Rect
   internal var PortalAnchorResolved bool
   internal var PortalPlacementHidden bool
-  internal prop HasCustomLayout bool{
-    get -> (nodeState & (int32(1) << 12)) != 0
-    set -> nodeState = value ? nodeState | (int32(1) << 12) : nodeState & ~(int32(1) << 12)
-  }
+  internal prop HasCustomLayout bool{ get; set; }
   internal prop Key string? { get; set; }
   internal prop Parent Node? { get; set; }
   internal prop Children IList[Node]{ get; init; }
