@@ -397,7 +397,6 @@ internal partial class TextShaping {
         let runSpacing = float32(spacingCount) * letterSpacing
         let runWidth = rawWidth + runSpacing
         let base = cursor + extra
-        let origin = if rtl { base + runWidth } else { base }
         var consumed = 0.0F
         localPrior = 0u
         hasLocalPrior = false
@@ -410,9 +409,7 @@ internal partial class TextShaping {
           }
           let xOffset = float32(glyph.XOffset) * factor
           let yOffset = float32(glyph.YOffset) * factor
-          let x = if rtl { origin - consumed + xOffset }
-          else { origin + consumed + xOffset }
-          points[i] = TextPoint(x, yOffset)
+          points[i] = TextPoint(base + consumed + xOffset, yOffset)
           consumed = consumed + MathF.Abs(float32(glyph.XAdvance) * factor)
           localPrior = glyph.Cluster
           hasLocalPrior = true

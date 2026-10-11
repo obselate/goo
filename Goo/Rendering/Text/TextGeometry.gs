@@ -452,10 +452,8 @@ internal func directCaretCandidates(runs IReadOnlyList[ShapedRun], position int3
   }
 
 internal func directClusterX(run ShapedRun, glyph int32, next int32, ratio float32) float32 {
-  let first = if glyph == 0 { run.VisualStart } else { run.Points[glyph].X }
-  let last = if next < run.Clusters.Length { run.Points[next].X } else { run.VisualEnd }
-  let x0 = MathF.Min(first, last)
-  let x1 = MathF.Max(first, last)
+  let x0 = run.GlyphEdge(glyph)
+  let x1 = run.GlyphEdge(next)
   return if run.RightToLeft { x1 - (x1 - x0) * ratio }
   else { x0 + (x1 - x0) * ratio }
 }
@@ -470,9 +468,7 @@ internal func AddRun(run ShapedRun, upstream []float32, downstream []float32,
       let cluster = int32(run.Clusters[glyph])
       var next = glyph + 1
       while next < run.Clusters.Length && run.Clusters[next] == run.Clusters[glyph] { next++ }
-      let x0 = if glyph == 0 { run.VisualStart } else { run.Points[glyph].X }
-      let x1 = if next < run.Clusters.Length { run.Points[next].X } else { run.VisualEnd }
-      visualClusters.Add(TextVisualCluster(cluster, MathF.Min(x0, x1), MathF.Max(x0, x1)))
+      visualClusters.Add(TextVisualCluster(cluster, run.GlyphEdge(glyph), run.GlyphEdge(next)))
       glyph = next
     }
 

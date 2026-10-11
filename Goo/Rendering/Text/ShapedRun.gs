@@ -68,11 +68,17 @@ internal sealed class ShapedRun : IDisposable {
     }
     if glyphs.Count == 0 { return nil }
     let lease = if let current = typefaceLease { current.Duplicate() } else { nil }
-    let visualStart = if firstGlyph == 0 { VisualStart } else { Points[firstGlyph].X }
-    let visualEnd = if lastGlyph == Points.Length { VisualEnd } else { Points[lastGlyph].X }
+    let left = GlyphEdge(firstGlyph)
+    let right = GlyphEdge(lastGlyph)
     return ShapedRun(Text, Family, glyphs.ToArray(), points.ToArray(), clusters.ToArray(),
-      LogicalStart, RightToLeft, visualStart, visualEnd, lease == nil, lease)
+      LogicalStart, RightToLeft, RightToLeft ? right : left, RightToLeft ? left : right,
+      lease == nil, lease)
   }
+
+  internal func GlyphEdge(glyph int32) float32 ->
+    if glyph == 0 { MathF.Min(VisualStart, VisualEnd) }
+    else if glyph < Points.Length { Points[glyph].X }
+    else { MathF.Max(VisualStart, VisualEnd) }
 
   public func Dispose() {
     if disposed { return }
