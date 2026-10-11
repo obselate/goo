@@ -33,6 +33,12 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore pinned G# authoring tools
+        uses: actions/cache@v6
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
+
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
 
@@ -67,6 +73,7 @@ jobs:
         run: |
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
           git diff --exit-code -- docs/api
+          test -z "$(git status --porcelain -- docs/api)"
 
       - name: Run focused API contract tests
         run: |
@@ -83,8 +90,51 @@ jobs:
           dotnet test tests/Goo.Svg.Tests/Goo.Svg.Tests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Build Goo DevTools CLI
+        run: |
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
+            -c Release -p:TreatWarningsAsErrors=true
+
+      - name: Run Goo DevTools CLI tests
+        run: |
+          dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.csproj \
+            -c Release -p:TreatWarningsAsErrors=true
+
+      - name: Validate Goo DevTools integrations
+        run: |
+          node --check integrations/vscode/extension.js
+          python3 - <<'PY'
+          import xml.etree.ElementTree as element_tree
+          element_tree.parse("integrations/rider/GooDevTools.xml")
+          PY
+
+  macos-native:
+    runs-on: macos-15
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install native build tools
+        run: brew install cmake meson ninja
+
+      - name: Build pinned macOS arm64 native payloads
+        run: |
+          native="$PWD/artifacts/macos-native"
+          mkdir -p "$native"
+          .github/scripts/build-sdl-macos-arm64.sh "$native/libSDL3.dylib"
+          .github/scripts/fetch-moltenvk-macos-arm64.sh "$native/libMoltenVK.dylib"
+          .github/scripts/build-text-native-macos-arm64.sh "$native"
+
+      - name: Upload macOS native payloads
+        uses: actions/upload-artifact@v7
+        with:
+          name: goo-macos-arm64-native
+          if-no-files-found: error
+          path: artifacts/macos-native/
+
   macos-arm64:
-    needs: quality
+    needs: macos-native
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -98,19 +148,20 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore pinned G# authoring tools
+        uses: actions/cache@v6
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
+
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
 
-      - name: Install native build tools
-        run: brew install cmake meson ninja
-
-      - name: Build pinned macOS arm64 native payloads
-        run: |
-          native="$PWD/artifacts/macos-candidate/native"
-          mkdir -p "$native"
-          .github/scripts/build-sdl-macos-arm64.sh "$native/libSDL3.dylib"
-          .github/scripts/fetch-moltenvk-macos-arm64.sh "$native/libMoltenVK.dylib"
-          .github/scripts/build-text-native-macos-arm64.sh "$native"
+      - name: Download macOS native payloads
+        uses: actions/download-artifact@v8
+        with:
+          name: goo-macos-arm64-native
+          path: artifacts/macos-candidate/native
 
       - name: Publish NativeAOT macOS smoke app
         run: |
@@ -169,8 +220,17 @@ jobs:
           "$sdk/bin/slangc" -version 2>&1 | grep -Fx "2026.16"
           echo "SLANG_SDK=$sdk" >> "$GITHUB_ENV"
 
+      - name: Restore pinned SPIR-V validator
+        id: spirv-val
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/vulkan-sdk-1.4.357.0
+          key: spirv-val-macos-arm64-1.4.357.0-9a49b0883b9b635689a85b5647dbfcb223268151
+
       - name: Build pinned SPIR-V validator
+        if: steps.spirv-val.outputs.cache-hit != 'true'
         run: |
+          brew install cmake ninja
           source="$RUNNER_TEMP/SPIRV-Tools-1.4.357.0"
           headers="$source/external/spirv-headers"
           build="$RUNNER_TEMP/SPIRV-Tools-1.4.357.0-build"
@@ -196,6 +256,10 @@ jobs:
           cmake --build "$build" --target spirv-val --parallel 2
           mkdir -p "$sdk/bin"
           install -m0755 "$build/tools/spirv-val" "$sdk/bin/spirv-val"
+
+      - name: Select pinned SPIR-V validator
+        run: |
+          sdk="$RUNNER_TEMP/vulkan-sdk-1.4.357.0"
           "$sdk/bin/spirv-val" --version 2>&1 \
             | grep -F "SPIRV-Tools v2026.3 vulkan-sdk-1.4.357.0"
           echo "VULKAN_SDK=$sdk" >> "$GITHUB_ENV"
@@ -233,9 +297,7 @@ jobs:
             artifacts/macos-candidate/
 
   linux-x64:
-    needs:
-      - quality
-      - macos-arm64
+    needs: macos-native
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -245,15 +307,22 @@ jobs:
       - name: Load release version
         run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
 
-      - name: Download macOS release candidate
+      - name: Download macOS native payloads
         uses: actions/download-artifact@v8
         with:
-          name: goo-macos-arm64-candidate
-          path: artifacts/macos-candidate
+          name: goo-macos-arm64-native
+          path: artifacts/macos-candidate/native
 
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      - name: Restore pinned G# authoring tools
+        if: github.ref_type != 'tag'
+        uses: actions/cache@v6
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
@@ -276,31 +345,42 @@ jobs:
           echo "VK_LAYER_PATH=$root/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" \
             >> "$GITHUB_ENV"
 
+      - name: Restore pinned shader toolchain
+        id: shader-toolchain
+        if: github.ref_type != 'tag'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ runner.temp }}/goo-shader-toolchain/slang-2026.16
+            ${{ runner.temp }}/goo-shader-toolchain/vulkan-sdk-1.4.357.0
+          key: shader-toolchain-linux-x64-${{ hashFiles('.github/scripts/install-shader-toolchain-linux-x64.sh') }}
+
       - name: Install pinned shader toolchain
-        run: |
-          .github/scripts/install-shader-toolchain-linux-x64.sh "$RUNNER_TEMP/goo-shader-toolchain"
-          echo "SLANG_SDK=$RUNNER_TEMP/goo-shader-toolchain/slang-2026.16" >> "$GITHUB_ENV"
-          echo "VULKAN_SDK=$RUNNER_TEMP/goo-shader-toolchain/vulkan-sdk-1.4.357.0" >> "$GITHUB_ENV"
+        if: steps.shader-toolchain.outputs.cache-hit != 'true'
+        run: .github/scripts/install-shader-toolchain-linux-x64.sh "$RUNNER_TEMP/goo-shader-toolchain"
 
-      - name: Build Goo DevTools CLI
+      - name: Select pinned shader toolchain
         run: |
-          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
+          root="$RUNNER_TEMP/goo-shader-toolchain"
+          test "$("$root/slang-2026.16/bin/slangc" -version 2>&1)" = "2026.16"
+          "$root/vulkan-sdk-1.4.357.0/bin/spirv-val" --version 2>&1 \
+            | grep -F "SPIRV-Tools v2026.3 vulkan-sdk-1.4.357.0"
+          echo "SLANG_SDK=$root/slang-2026.16" >> "$GITHUB_ENV"
+          echo "VULKAN_SDK=$root/vulkan-sdk-1.4.357.0" >> "$GITHUB_ENV"
 
-      - name: Run Goo DevTools CLI tests
-        run: |
-          dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
-
-      - name: Validate Goo DevTools integrations
-        run: |
-          node --check integrations/vscode/extension.js
-          python3 - <<'PY'
-          import xml.etree.ElementTree as element_tree
-          element_tree.parse("integrations/rider/GooDevTools.xml")
-          PY
+      - name: Restore glibc 2.27 native payloads
+        id: glibc-native
+        if: github.ref_type != 'tag'
+        uses: actions/cache@v6
+        with:
+          path: |
+            artifacts/native/libSDL3.so
+            artifacts/native/libSDL3.a
+            artifacts/native/text
+          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/**', 'tools/Goo.TextNative/**') }}
 
       - name: Build glibc 2.27 native payloads
+        if: steps.glibc-native.outputs.cache-hit != 'true'
         run: |
           mkdir -p artifacts/native/text
           docker run --rm \
@@ -322,14 +402,17 @@ jobs:
               export CC=gcc-8 CXX=g++-8
               /src/.github/scripts/build-sdl-linux-x64.sh /out/libSDL3.so /out/libSDL3.a
               /src/.github/scripts/build-text-native-linux-x64.sh /out/text --static
-              cmp /out/text/libgoo-harfbuzz.so \
-                /src/Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
-              cmp /out/text/libgoo-harfbuzz-gpu.so \
-                /src/Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz-gpu.so
-              python3 /src/.github/scripts/validate-text-native-rebuild.py \
-                /src/Goo/Runtime/Vulkan/linux-x64/text-native-build.json \
-                /out/text/text-native-build.json
             '
+
+      - name: Compare rebuilt text payloads with the committed files
+        run: |
+          cmp artifacts/native/text/libgoo-harfbuzz.so \
+            Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
+          cmp artifacts/native/text/libgoo-harfbuzz-gpu.so \
+            Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz-gpu.so
+          python3 .github/scripts/validate-text-native-rebuild.py \
+            Goo/Runtime/Vulkan/linux-x64/text-native-build.json \
+            artifacts/native/text/text-native-build.json
 
       - name: Verify Vulkan software driver and validation layer
         run: |
@@ -396,6 +479,10 @@ jobs:
           export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
           export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
+          GOO_VK_DAMAGE_JOURNAL=1 \
+            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
+          GOO_VK_SCENE_ALLOC=1 \
+            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
 
           run_vulkan_proof_lane() {
             .github/scripts/with-headless-wayland.sh env "$1=1" \
@@ -493,6 +580,11 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \
             GOO_IMAGE_STAGING_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_ORDERED_MODIFIER_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
       - name: Record dependencies and reject known vulnerabilities
@@ -692,8 +784,11 @@ jobs:
       - name: Archive release candidates
         run: |
           tar -C artifacts -czf "artifacts/Goo.$GOO_VERSION-linux-x64.tar.gz" linux-x64
-          sha256sum "artifacts/Goo.$GOO_VERSION-linux-x64.tar.gz" \
-            >"artifacts/Goo.$GOO_VERSION-linux-x64.tar.gz.sha256"
+          (
+            cd artifacts
+            sha256sum "Goo.$GOO_VERSION-linux-x64.tar.gz" \
+              >"Goo.$GOO_VERSION-linux-x64.tar.gz.sha256"
+          )
 
 
       - name: Upload release validation artifacts
@@ -736,9 +831,6 @@ jobs:
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
             artifacts/Goo.${{ env.GOO_VERSION }}-linux-x64.tar.gz
             artifacts/Goo.${{ env.GOO_VERSION }}-linux-x64.tar.gz.sha256
-            artifacts/macos-candidate/Goo.Gallery-macos-arm64.tar.gz
-            artifacts/macos-candidate/Goo.Gallery-macos-arm64.tar.gz.sha256
-            artifacts/macos-candidate/install-goo-gallery-macos.sh
 
   windows-x64:
     needs: linux-x64
@@ -789,7 +881,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [linux-x64, android, windows-x64]
+    needs: [quality, macos-arm64, linux-x64, android, android-consumer, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -817,12 +909,19 @@ jobs:
           python3 .github/scripts/release_version.py --check
           git fetch origin main --no-tags
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          python3 .github/scripts/release_version.py --notes > "$RUNNER_TEMP/goo-release-notes.md"
 
       - name: Download release candidates
         uses: actions/download-artifact@v8
         with:
           name: release-candidates
           path: artifacts
+
+      - name: Download macOS release candidate
+        uses: actions/download-artifact@v8
+        with:
+          name: goo-macos-arm64-candidate
+          path: artifacts/macos-candidate
 
       - name: Download Android adapter package
         uses: actions/download-artifact@v8
@@ -881,7 +980,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           notes_file="$RUNNER_TEMP/goo-release-notes.md"
-          python3 .github/scripts/release_version.py --notes > "$notes_file"
           release_flags=()
           if [[ "$GOO_VERSION" == *-* ]]; then
             release_flags+=(--prerelease)
@@ -913,7 +1011,6 @@ jobs:
           fi
 
   android:
-    needs: linux-x64
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -921,6 +1018,12 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
+
+      - name: Restore pinned G# authoring tools
+        uses: actions/cache@v6
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
@@ -934,24 +1037,20 @@ jobs:
           sudo apt-get install -y meson ninja-build
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
-      - name: Download main package for Android consumer validation
-        uses: actions/download-artifact@v8
-        with:
-          name: release-candidates
-          path: artifacts/main-release
-      - name: Rebuild and verify Android native payloads
+      - name: Rebuild Android native payloads and compare with the committed files
         run: |
           for rid in android-arm64 android-x64; do
-            bash .github/scripts/build-text-native-android.sh "$rid" "Goo/Runtime/Vulkan/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
             bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
-            diff -qr "Goo/Runtime/Vulkan/$rid" "artifacts/android-rebuild/$rid"
+            cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz.so"
+            cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz-gpu.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz-gpu.so"
+            python3 .github/scripts/validate-text-native-rebuild.py "Goo/Runtime/Vulkan/$rid/text-native-build.json" "artifacts/android-rebuild/$rid/text-native-build.json"
           done
       - name: Build shared desktop scene and Android adapter
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
-        run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME"
+        run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - uses: actions/upload-artifact@v7
         with:
           name: android-package
@@ -961,6 +1060,50 @@ jobs:
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-smoke
+          path: |
+            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
+            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
+            Goo/Runtime/Vulkan/android-*/text-native-build.json
+
+  android-consumer:
+    needs: [linux-x64, android]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore pinned G# authoring tools
+        uses: actions/cache@v6
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
+
+      - name: Build pinned upstream G# authoring tools
+        run: ./bootstrap.sh --gsharp-only
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android toolchain
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
+          dotnet workload install android
+      - name: Download main package for Android consumer validation
+        uses: actions/download-artifact@v8
+        with:
+          name: release-candidates
+          path: artifacts/main-release
+      - name: Download Android adapter package
+        uses: actions/download-artifact@v8
+        with:
+          name: android-package
+          path: artifacts/android-packages
       - name: Build clean Android package consumer
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
@@ -982,10 +1125,3 @@ jobs:
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
-      - uses: actions/upload-artifact@v7
-        with:
-          name: android-smoke
-          path: |
-            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
-            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
-            Goo/Runtime/Vulkan/android-*/text-native-build.json
