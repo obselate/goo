@@ -8,6 +8,7 @@ internal open class ImageSourceBinding {
   internal var Source ImageSourceProvider?
   internal var Lease ImageSourceLease?
   internal var SourceCompletion ImageSourceCompletion?
+  internal var Fallback ImageSourceBindingToken?
   private var sourceChangedRegistration Action?
   private var sourceChangedHandler Action?
   private var contentVersionSnapshot uint64
@@ -160,6 +161,7 @@ internal open class ImageSourceBinding {
     SourceCompletion = nil
     contentVersionSnapshot = 0uL
     currentToken = nil
+    Fallback = nil
   }
 }
 
@@ -186,7 +188,7 @@ internal class ImageLayouts {
     internal func Lease(n Node) ImageSourceLease ? -> sourceState(n)?.Lease
     internal func SourceCompletion(n Node) ImageSourceCompletion ? ->
     sourceState(n)?.SourceCompletion
-    internal func CurrentToken(n Node) ImageSourceBindingToken ? -> sourceState(n)?.CurrentToken()
+    internal func Binding(n Node) ImageSourceBinding ? -> sourceState(n)
     internal func IsCurrent(n Node, token object) bool {
       if let value = token as ImageSourceBindingToken? {
         return sourceState(n)?.IsCurrentToken(value) ?? false
@@ -214,6 +216,7 @@ internal class ImageLayouts {
         }
         let intrinsicWidth = n.ImageIntrinsicWidth
         let intrinsicHeight = n.ImageIntrinsicHeight
+        let fallback = prior?.CurrentToken() ?? prior?.Fallback
         removeSource(n, prior)
         n.DecodedImage = nil
         n.ImageIntrinsicWidth = intrinsicWidth
@@ -223,6 +226,7 @@ internal class ImageLayouts {
           ImageLayouts.refreshSource(n, value, completed)
         })
         value.BindSource(source, owner)
+        value.Fallback = fallback
         if sourceValues == nil { sourceValues = ConditionalWeakTable[Node, ImageSourceBinding]() }
         sourceValues?.Add(n, value)
         n.HasDirectImageSourceState = true

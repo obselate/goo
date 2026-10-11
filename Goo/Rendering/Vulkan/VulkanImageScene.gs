@@ -69,50 +69,76 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
   internal func Emit(
     frame SceneFrame,
     bounds ConservativeBounds,
+    source ImageSourceBinding?,
+    fit ImageFit,
+    opacity float32,
+    transformIndex int32) {
+      if disposed || opacity <= 0.0F || bounds.IsEmpty {
+        return
+      }
+      guard let binding = source else {
+        return
+      }
+      let token = binding.CurrentToken()
+      if EmitCurrent(frame, bounds, token, fit, opacity, transformIndex)
+        || (token?.Lease.IsFailed ?? true) {
+          binding.Fallback = nil
+          return
+        }
+      guard let prior = binding.Fallback else {
+        return
+      }
+      let lookup = imageResources.Lookup(
+        identities.FindImage(prior.Source, prior.Version, ImageFormat),
+        identities.LinearSamplerId,
+        VulkanImageSamplerMode.Linear,
+        generation)
+      if lookup.Renderable {
+        EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex)
+      }
+    }
+
+  private func EmitCurrent(
+    frame SceneFrame,
+    bounds ConservativeBounds,
     token ImageSourceBindingToken?,
     fit ImageFit,
     opacity float32,
     transformIndex int32) bool{
-      if disposed {
+      guard let binding = token else {
         return false
       }
-      if opacity <= 0.0F || bounds.IsEmpty {
-        return true
-      }
-      guard let binding = token else {
-        return true
-      }
       if binding.Version == 0uL {
-        return true
+        return false
       }
       let lease = binding.Lease
       if !lease.IsComplete {
-        return true
+        return false
       }
       if lease.IsFailed {
-        return true
+        return false
       }
       guard let decoded = lease.Result() else {
-        return true
+        return false
       }
       if !decoded.IsValid || decoded.Width <= 0 || decoded.Height <= 0 {
-        return true
+        return false
       }
       guard let pixels = decoded.Pixels() else {
-        return true
+        return false
       }
       if pixels.Length == 0 {
-        return true
+        return false
       }
       let width = uint32(decoded.Width)
       let height = uint32(decoded.Height)
       let byteCount = uint64(width) * uint64(height) * 4uL
       if byteCount == 0uL || byteCount != uint64(pixels.Length) {
-        return true
+        return false
       }
       if cachedLookupState != 0 && cachedVersion == binding.Version
         && Object.ReferenceEquals(cachedProvider, binding.Source) {
-          return if cachedLookupState == 1 { true } else { EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex) }
+          return if cachedLookupState == 1 { false } else { EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex) }
         }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
         generation, ImageFormat)
@@ -148,7 +174,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
           return EmitLookup(frame, bounds, prior, fit, opacity, transformIndex)
         }
         Cache(binding.Source, binding.Version, VulkanImageResourceLookup{}, 1)
-        return true
+        return false
       }
       Cache(binding.Source, binding.Version, lookup, 2)
       let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex)

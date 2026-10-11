@@ -266,7 +266,7 @@ internal partial class VulkanSceneCompiler {
         scene.Emit(
           frame,
           bounds,
-          BackgroundImageLayouts.CurrentToken(node),
+          BackgroundImageLayouts.Binding(node),
           node.BackgroundImageFit,
           opacity,
           transformIndex)
@@ -305,7 +305,7 @@ internal partial class VulkanSceneCompiler {
           scene.Emit(
             frame,
             bounds,
-            ImageLayouts.CurrentToken(node),
+            ImageLayouts.Binding(node),
             node.ImageFit,
             opacity,
             transformIndex)
@@ -415,7 +415,7 @@ internal partial class VulkanSceneCompiler {
           scene.Emit(
             frame,
             bounds,
-            BackgroundImageLayouts.CurrentToken(node),
+            BackgroundImageLayouts.Binding(node),
             node.BackgroundImageFit,
             opacity,
             transformIndex)

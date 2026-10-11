@@ -11,7 +11,7 @@ internal class BackgroundImageLayouts {
 
     internal func Source(n Node) ImageSourceProvider ? -> if let value = state(n) { value.Source } else { nil }
 
-    internal func CurrentToken(n Node) ImageSourceBindingToken ? -> state(n)?.CurrentToken()
+    internal func Binding(n Node) ImageSourceBinding ? -> state(n)
 
     internal func Image(n Node) DecodedImage? {
       guard let value = state(n) else { return nil }
@@ -66,8 +66,10 @@ internal class BackgroundImageLayouts {
       current.SetSourceChanged(() -> {
         BackgroundImageLayouts.refreshSource(n, current)
       })
+      let fallback = current.CurrentToken() ?? current.Fallback
       current.ReleaseSource()
       current.BindSource(source, owner)
+      current.Fallback = fallback
       if Refresh(n) { return true }
       current.WatchSource((token ImageSourceBindingToken) -> {
         BackgroundImageLayouts.invalidateSource(n, current, token)

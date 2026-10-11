@@ -49,10 +49,15 @@ class ImageStagingProvider : ImageSourceProvider {
 }
 
 class ImageStagingCell : Cell {
-  private let provider ImageStagingProvider
+  private var provider ImageStagingProvider
 
   init(sourceProvider ImageStagingProvider) {
     provider = sourceProvider
+  }
+
+  func Swap(next ImageStagingProvider) {
+    provider = next
+    Rebuild()
   }
 
   override func Build() Blob -> Container() {.Width: 96,.Height: 96,.BackgroundColor: Color.Rgb(12, 20, 32),
@@ -140,6 +145,7 @@ func RunImageStagingSmoke() {
   let capturedError = StringWriter()
   let originalError = Console.Error
   var window Window? = nil
+  var swapped ImageStagingProvider? = nil
   try {
     let opened = Window{
       Title: "Goo image staging growth gate",
@@ -198,6 +204,38 @@ func RunImageStagingSmoke() {
       48.0, 92.0, uint8(240), uint8(192), uint8(48), 3,
       "image_staging_final_chunk")
 
+    let next = ImageStagingProvider(ImageStagingSource(2048, 2304,
+      uint8(200), uint8(40), uint8(160)))
+    swapped = next
+    root.Swap(next)
+    WindowReadbackTestFixture.ForceRenderNonblocking(opened, 0.0166666666666667)
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    Require(WindowReadbackTestFixture.ImageResourceStats(opened).Upload.ActiveRanges > 0,
+      "Swapped image did not retain an incomplete first upload chunk")
+    let swapStaged = WindowReadbackTestFixture.Request(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(swapStaged == WindowReadbackRequestStatus.NotReady,
+      "Image swap unpublished frame was not staged: " + swapStaged.ToString())
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    let swapAccepted = WindowReadbackTestFixture.Request(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(swapAccepted == WindowReadbackRequestStatus.Accepted,
+      "Image swap unpublished readback was not accepted: " + swapAccepted.ToString())
+    ReadbackAwaitReadbackReady(opened, 10000)
+    let during = ReadbackTakeReadback(opened)
+    PrimitiveValidateResult(during, metrics)
+    PrimitiveRequirePixelNear(during.Pixels, during.Width, metrics,
+      48.0, 48.0, uint8(48), uint8(96), uint8(224), 2,
+      "image_swap_unpublished")
+    ImageStagingSettle(opened)
+    let settled = PrimitiveReadback(opened, metrics)
+    PrimitiveRequirePixelNear(settled.Pixels, settled.Width, metrics,
+      48.0, 48.0, uint8(200), uint8(40), uint8(160), 2,
+      "image_swap_final")
+    let swapStats = WindowReadbackTestFixture.ImageResourceStats(opened)
+    Require(swapStats.Upload.ActiveRanges == 0 && swapStats.Upload.SubmittedRanges == 0,
+      "Image swap upload lifecycle did not settle")
+
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(!opened.IsOpen, "Image staging gate window did not close")
@@ -212,11 +250,12 @@ func RunImageStagingSmoke() {
       }
     }
     provider.DisposeSource()
+    swapped?.DisposeSource()
   }
   let diagnostics = capturedError.ToString()
   ReadbackValidateCommonDiagnostics(diagnostics)
   Require(!diagnostics.Contains("\"event\":325")
       && !diagnostics.Contains("\"event\":326"),
     "Image staging gate emitted unsupported-scene diagnostics")
-  Console.WriteLine("image-staging-smoke: tiny=65536 medium=grown large=16777216 chunks=2 unpublished=1 pixels=5 close=1")
+  Console.WriteLine("image-staging-smoke: tiny=65536 medium=grown large=16777216 chunks=2 unpublished=1 swap=1 pixels=7 close=1")
 }
