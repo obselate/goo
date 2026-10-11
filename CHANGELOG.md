@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.27 - 2026-10-11
+
+- Advance the frame deadline when a due frame draws nothing. An animation that does not change the window no longer runs the event loop without a wait.
+- Complete a window capture before the next frame changes the scene. `Window.RequestCapture` and `goo capture` now finish while an animation runs.
+- Return `Accepted` from `Window.RequestCapture` when the renderer is busy. The window starts the capture when the renderer is free.
+- Limit image table scans to the entries in use. A drawn image no longer scans the full image table on each frame.
+
 ## 0.7.26 - 2026-10-11
 
 - Add `ElementMetrics.Pinned`. It reports whether `PinToBottom` is set and the reader has not scrolled away from the end, for `Container` and `Virtual`. `MetricsChanged` also fires when only this value changes.
