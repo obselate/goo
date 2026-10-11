@@ -123,9 +123,10 @@ internal class Portals {
     }
 
     internal func SourceChildCount(node Node) int32 {
+      let children = node.Children
       var count int32
-      for child in node.Children {
-        if !child.IsPortal { count++ }
+      for index in 0 ... children.Count {
+        if !children[index].IsPortal { count++ }
       }
       return count
     }

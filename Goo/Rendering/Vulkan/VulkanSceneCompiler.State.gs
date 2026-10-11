@@ -161,9 +161,9 @@ internal partial class VulkanSceneCompiler {
       }
       if let overlays = overlayRoot {
         let portals = Stacking.Children(overlays)
-        for portal in portals {
-          if Portals.Presented(portal) {
-            CompileNode(portal, RootTraversalContext(viewport))
+        for index in 0 ... portals.Count {
+          if Portals.Presented(portals[index]) {
+            CompileNode(portals[index], RootTraversalContext(viewport))
           }
         }
       }

@@ -58,7 +58,8 @@ internal partial class VulkanSceneCompiler {
         ExactCullContextSafe: context.ExactCullContextSafe,
         ActiveClipBounds: activeBounds,
       }
-      for part in parts {
+      for index in 0 ... parts.Count {
+        let part = parts[index]
         let alpha = scrollbarAlpha(node, ScrollbarParts.IsVertical(node, part))
         var childContext = partContext
         childContext.ParentOpacity = ownerOpacity * alpha
