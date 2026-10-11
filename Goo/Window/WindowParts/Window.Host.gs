@@ -451,6 +451,8 @@ public partial class Window {
         } else {
           native.DeferFrame(float64(Stopwatch.GetTimestamp()))
         }
+      } else if allowFrame && !frameNeeded {
+        native.MarkFrame(float64(Stopwatch.GetTimestamp()))
       }
       if profiling {
         profiler.EndFrame(frameProfile, rendered)
