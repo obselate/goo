@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.Buffers
 import System.Collections.Generic
 import System.Text
 
@@ -36,11 +35,8 @@ internal class UnicodeGraphemes {
     private func DecodeScalars(text string, scalars List[UnicodeGraphemeScalar]) {
       var cursor int32 = 0
       while cursor < text.Length {
-        let status = Rune.DecodeFromUtf16(text.AsSpan(cursor, text.Length - cursor), out var rune,
+        let _ = Rune.DecodeFromUtf16(text.AsSpan(cursor, text.Length - cursor), out var rune,
           out var consumed)
-        if status != OperationStatus.Done {
-          throw ArgumentException("Text must contain valid UTF-16.", "text")
-        }
         let info = UnicodeGraphemeData.Classify(rune.Value)
         scalars.Add(UnicodeGraphemeScalar(cursor, cursor + consumed, info.Class, info.InCB,
           info.ExtendedPictographic))

@@ -1,7 +1,6 @@
 package Goo
 
 import System
-import System.Buffers
 import System.Collections.Generic
 import System.Text
 
@@ -102,11 +101,8 @@ internal class LineBreakOpportunities {
       let scalars = List[TextLineBreakScalar]()
       var cursor int32 = 0
       while cursor < text.Length {
-        let status = Rune.DecodeFromUtf16(text.AsSpan(cursor, text.Length - cursor), out var rune,
+        let _ = Rune.DecodeFromUtf16(text.AsSpan(cursor, text.Length - cursor), out var rune,
           out var consumed)
-        if status != OperationStatus.Done {
-          throw ArgumentException("Text must contain valid UTF-16.", "text")
-        }
         let original = UnicodeLineBreakData.Classify(rune.Value)
         let resolved = ResolveClass(original, rune.Value)
         var effective = resolved
