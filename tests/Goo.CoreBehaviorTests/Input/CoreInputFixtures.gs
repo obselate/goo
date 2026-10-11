@@ -1644,7 +1644,7 @@ internal class InputFixtures {
   func AxisOverflowInteractionContract() bool {
     let cell = InputAxisScrollCell{}
     let driver = InputFixtureDriver(cell, 100, 100)
-    driver.Wheel(50.0F, 50.0F, -1.0F, -1.0F)
+    driver.Wheel(50.0F, 50.0F, 1.0F, -1.0F)
     guard let scroll = driver.Window.Tree else { return false }
     if scroll.ScrollTargetX != InputPolicy.WheelUnit(false, scrollViewportWidth(scroll)) || scroll.ScrollTargetY != 0.0F { return false }
     scroll.ScrollX = scroll.ScrollTargetX
@@ -1795,14 +1795,14 @@ internal class InputFixtures {
     InputPolicy.Mac = true
     try {
       let driver = InputFixtureDriver(InputAxisScrollCell{}, 100, 100)
-      driver.Wheel(50.0F, 50.0F, -1.0F, 0.0F)
+      driver.Wheel(50.0F, 50.0F, 1.0F, 0.0F)
       guard let scroll = driver.Window.Tree else { return false }
       if scroll.ScrollTargetX != 10.0F { return false }
-      driver.Wheel(50.0F, 50.0F, -0.5F, 0.0F)
+      driver.Wheel(50.0F, 50.0F, 0.5F, 0.0F)
       if scroll.ScrollTargetX != 15.0F { return false }
       InputPolicy.Mac = false
       driver.Input.SetWheelScrollScale(2.0F)
-      driver.Wheel(50.0F, 50.0F, -1.0F, 0.0F)
+      driver.Wheel(50.0F, 50.0F, 1.0F, 0.0F)
       return scroll.ScrollTargetX == 15.0F + InputPolicy.WheelUnit(false, scrollViewportWidth(scroll)) * 2.0F
     } finally {
       InputPolicy.Mac = saved

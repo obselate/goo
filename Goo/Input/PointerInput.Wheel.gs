@@ -72,7 +72,7 @@ internal partial class PointerInput {
 
   private func applyWheelScroll(chain List[Node], dx float32, dy float32) bool {
     var consumed = false
-    var remainingX = -dx
+    var remainingX = dx
     var remainingY = -dy
     for var i = chain.Count; i > 0; i-- {
       let n = chain[i - 1]
