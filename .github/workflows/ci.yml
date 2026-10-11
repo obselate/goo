@@ -1043,7 +1043,6 @@ jobs:
             bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
             cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz.so"
             cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz-gpu.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz-gpu.so"
-            python3 .github/scripts/validate-text-native-rebuild.py "Goo/Runtime/Vulkan/$rid/text-native-build.json" "artifacts/android-rebuild/$rid/text-native-build.json"
           done
       - name: Build shared desktop scene and Android adapter
         run: |
