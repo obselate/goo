@@ -437,14 +437,35 @@ internal partial class SceneFrame {
     if !VulkanRetainedTextValidation.SameBounds(value.Bounds, segment.Bounds) {
       throw ArgumentException("cached text segment bounds do not match")
     }
+    if segment.SceneValidationVersion != segment.Version {
+      ValidateCachedTextSegmentContent(segment)
+      segment.SceneValidationVersion = segment.Version
+    }
+    var glyphIndex int32 = 0
+    while glyphIndex < segment.GlyphCount {
+      AppendResourceReference(segment.GlyphResources[glyphIndex])
+      glyphIndex = glyphIndex + 1
+    }
+    var runIndex int32 = 0
+    while runIndex < segment.RunCount {
+      AppendResourceReference(segment.Runs[runIndex].AtlasId)
+      runIndex = runIndex + 1
+    }
+    ExtendChunkTextBounds(value.Bounds)
+    let index = AppendRecord(&cachedTextSegments, &cachedTextSegmentCount, value)
+    AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedTextSegment, Index: index,
+      Flags: 0u, ClipChainId: value.ClipChainId })
+    return index
+  }
+
+  private func ValidateCachedTextSegmentContent(segment VulkanRetainedTextSegment) {
     var glyphIndex int32 = 0
     while glyphIndex < segment.GlyphCount {
       let glyphResource = segment.GlyphResources[glyphIndex]
       if !glyphResource.IsValid || glyphResource.Kind != SceneResourceKind.GlyphRun {
         throw ArgumentException("cached text segment glyph resource is invalid")
       }
-      ValidateTextInstance(segment.Records[glyphIndex], value.ClipChainId)
-      AppendResourceReference(glyphResource)
+      ValidateTextInstance(segment.Records[glyphIndex], segment.ClipChainId)
       glyphIndex = glyphIndex + 1
     }
     var runIndex int32 = 0
@@ -459,17 +480,11 @@ internal partial class SceneFrame {
           throw ArgumentException("cached text segment run is invalid")
         }
       expectedFirst = expectedFirst + run.InstanceCount
-      AppendResourceReference(run.AtlasId)
       runIndex = runIndex + 1
     }
     if expectedFirst != segment.GlyphCount {
       throw ArgumentException("cached text segment run count is invalid")
     }
-    ExtendChunkTextBounds(value.Bounds)
-    let index = AppendRecord(&cachedTextSegments, &cachedTextSegmentCount, value)
-    AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedTextSegment, Index: index,
-      Flags: 0u, ClipChainId: value.ClipChainId })
-    return index
   }
 
   private func ExtendChunkTextBounds(bounds ConservativeBounds) {

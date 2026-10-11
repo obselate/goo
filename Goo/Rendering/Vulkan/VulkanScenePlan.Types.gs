@@ -83,6 +83,7 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
   internal var EffectOffsetX float32
   internal var EffectOffsetY float32
   internal var ParentTransform TransformRecord
+  internal var SceneValidationVersion uint64
   internal var RendererValidationVersion uint64
   internal var RendererValidationAtlasGeneration uint64
   internal var RendererValidationValid bool
