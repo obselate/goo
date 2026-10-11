@@ -78,6 +78,8 @@ internal partial class SceneFrame {
     return hash
   }
 
+  internal func DrawContentDigest(reference DrawRef) uint64 -> HashDrawContent(HashOffset, reference)
+
   private func HashDrawContent(hash uint64, reference DrawRef) uint64 {
     var result = hash
     switch reference.Kind {

@@ -259,6 +259,7 @@ internal struct VulkanSceneDrawIdentity {
   internal var Solid SolidBoxRecord
   internal var Rounded RoundedBoxRecord
   internal var Border PerEdgeBorderRecord
+  internal var ContentHash uint64
 }
 
 internal struct VulkanSceneDamageEntry {

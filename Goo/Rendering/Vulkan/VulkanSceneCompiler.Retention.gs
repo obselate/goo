@@ -564,12 +564,9 @@ internal partial class VulkanSceneCompiler {
                   || ExactGenericChunkContent(index, prior))) {
                     frame.Chunks[index].Version = prior.Version
                     frame.Chunks[index].Dirty = false
-                  } else if prior.ProofValid || current.ContentKey != prior.ContentKey
-                    || current.RetentionState != SceneChunkRetentionState.Generic
-                    || prior.RetentionState != SceneChunkRetentionState.Generic
-                    || !ExactBounds(current.Bounds, prior.Bounds) {
-                      journal.AddChange(prior.Bounds, true, current.Bounds, true)
-                    }
+                  } else {
+                    journal.AddChange(prior.Bounds, true, current.Bounds, true)
+                  }
         index = index + 1
       }
     }
@@ -717,7 +714,7 @@ internal partial class VulkanSceneCompiler {
                   return false
                 }
           segmentProofIndex = segmentProofIndex + 1
-        } else {
+        } else if frame.DrawContentDigest(reference) != retained.ContentHash {
           return false
         }
         drawIndex = drawIndex + 1

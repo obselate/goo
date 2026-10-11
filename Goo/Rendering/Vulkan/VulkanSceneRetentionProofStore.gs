@@ -229,7 +229,7 @@ internal class VulkanSceneRetentionProofStore {
             textProof.CachedTextSegmentCount =
             textProof.CachedTextSegmentCount + 1
           } else {
-            proofValid = false
+            retained.ContentHash = frame.DrawContentDigest(reference)
           }
           nextDraws[drawCursor] = retained
           drawCursor = drawCursor + 1

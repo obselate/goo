@@ -595,6 +595,11 @@ func PartialRedrawScene(name string, root Cell, steps int32, advance Action) int
             + " step=" + step.ToString() + " damage=" + PartialRedrawRegionText(damage)
             + " " + outside)
         }
+        if damage.Width * damage.Height * 2 > metrics.FramebufferWidth * metrics.FramebufferHeight {
+          failures++
+          Console.WriteLine("partial-redraw-wide: scene=" + name + " step=" + step.ToString()
+            + " damage=" + PartialRedrawRegionText(damage))
+        }
         failures = failures + PartialRedrawRepeat(window, metrics, name, step, changed, damage)
       }
       full = changed
