@@ -389,6 +389,9 @@ internal partial class Reconciler {
   internal func applyText(n Node, t Text, initial bool) {
     applyStyle(n, t, t.Focusable, initial)
     let rangeChange = PassiveTextPresentations.Apply(n, t.Content, t.StyleRangeValues)
+    if rangeChange.Changed {
+      n.BumpScenePaintVersion()
+    }
     if n.Content != t.Content {
       n.Content = t.Content
       TextLayouts.Invalidate(n)
@@ -580,6 +583,7 @@ internal partial class Reconciler {
       }
     }
     if paintChanged {
+      n.BumpScenePaintVersion()
       MarkEffects(ReconcileEffects.Paint)
     }
   }
