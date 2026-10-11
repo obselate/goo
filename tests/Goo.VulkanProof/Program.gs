@@ -13,6 +13,7 @@ internal unsafe func RunVulkanProof() int32 {
   }
   if Environment.GetEnvironmentVariable("GOO_VK_IMAGE_READBACK") == "1" {
     RunProductionImageReadback()
+    RunLongGradientReadback()
     return 0
   }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1" {

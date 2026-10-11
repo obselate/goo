@@ -74,3 +74,18 @@ internal unsafe func VerifyLongGradientReadbacks(capture VulkanProductionReadbac
   }
   Console.WriteLine("Gradient readback: linear/radial 2–4097 stops, hard edges, alpha, opacity, buffer reuse, and following draws passed")
 }
+
+internal func RunLongGradientReadback() {
+  let window = OpenVulkanProductionProofWindow()
+  var capture VulkanProductionReadbackCapture? = nil
+  try {
+    let opened = VulkanProductionReadbackFixture.Open(window, 64u, 64u)
+    capture = opened
+    VerifyLongGradientReadbacks(opened)
+  } finally {
+    if let active = capture {
+      active.Dispose()
+    }
+    CloseVulkanProductionProofWindow(window)
+  }
+}
