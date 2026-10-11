@@ -22,6 +22,9 @@ internal unsafe partial class VulkanWindowTarget {
         return false
       }
     }
+    if !recreatePending && !surfaceLost && width == requestedWidth && height == requestedHeight {
+      return true
+    }
     requestedWidth = width
     requestedHeight = height
     framebufferWidth = width
