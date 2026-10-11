@@ -304,6 +304,27 @@ internal class LayoutFixtures {
     return layout.Lines.Count > 100 && covered == n.Content.Length && resolutions <= 1L
   }
 
+  func LoneSurrogateTextLaysOut() bool {
+    let resolver = Resolver{}
+    let n = Reconciler{ Res: resolver }.Mount(Text{ Content: "ab\uD83D cd \uDE00" })
+    resolver.FlushEffects()
+    let layout = TextLayouts.For(n, 300.0F)
+    var covered = 0
+    for line in layout.Lines { covered += line.Content.Length }
+    return covered == n.Content.Length
+  }
+
+  func RtlRunPlacesFirstCharacterAtTheRight() bool {
+    let shaped = TextShaping.Shape("\u05D0\u05D1\u05D2", "", 16.0F, 400, false, 0.0F, 0)
+    if shaped.Runs.Count != 1 { return false }
+    let run = shaped.Runs[0]
+    if !run.RightToLeft || run.Points.Length != 3 || run.Clusters[0] != 2u { return false }
+    return run.Points[0].X >= 0.0F && run.Points[0].X < run.Points[1].X
+      && run.Points[1].X < run.Points[2].X && run.Points[2].X < shaped.Width
+      && MathF.Abs(shaped.CaretX(0, 1) - shaped.Width) < 0.01F
+      && MathF.Abs(shaped.CaretX(3, 0)) < 0.01F
+  }
+
   func TextEntryUsesIntrinsicLineBoxHeight() bool {
     let reconciler = Reconciler{ Res: Resolver{} }
     var root = reconciler.Mount(Container() {.Width: 200,
