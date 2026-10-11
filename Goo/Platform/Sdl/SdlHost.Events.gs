@@ -77,10 +77,8 @@ internal unsafe partial class SdlHost {
     }
     if eventType == SDLEventType.MouseWheel {
       if nativeEvent.Wheel.WindowID == windowId {
-        let direction = nativeEvent.Wheel.Direction == SDLMouseWheelDirection.Flipped ? -1.0F : 1.0F
         Wheel?.Invoke(nativeEvent.Wheel.MouseX, nativeEvent.Wheel.MouseY,
-          nativeEvent.Wheel.X * direction, nativeEvent.Wheel.Y * direction,
-          MapModifiers(SdlRuntime.EventModifierMask))
+          nativeEvent.Wheel.X, nativeEvent.Wheel.Y, MapModifiers(SdlRuntime.EventModifierMask))
       }
       return
     }
