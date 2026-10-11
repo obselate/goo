@@ -467,6 +467,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_PRIMITIVE_METRICS_SMOKE", "1", () -> RunPrimitiveUploadMetricsSmoke()),
   SmokeMode("GOO_IMAGE_FILE_SMOKE", "1", () -> RunImageFileSmoke()),
   SmokeMode("GOO_IMAGE_STAGING_SMOKE", "1", () -> RunImageStagingSmoke()),
+  SmokeMode("GOO_TRANSPARENT_WINDOW_SMOKE", "1", () -> RunTransparentWindowSmoke()),
   SmokeMode("GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE", "1", () -> RunRoundedResizeFirstFrameSmoke()),
   SmokeMode("GOO_CLIP_CAPTURE_SMOKE", "1", () -> RunClipCaptureSmoke()),
   SmokeMode("GOO_EDITOR_GUTTER_SMOKE", "1", () -> RunEditorGutterSmoke()),
