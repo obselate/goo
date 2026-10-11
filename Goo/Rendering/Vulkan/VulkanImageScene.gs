@@ -288,8 +288,10 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
           let scale = widthScale > heightScale ? widthScale : heightScale
           let scaledWidth = imageWidth * scale
           let scaledHeight = imageHeight * scale
-          result.SourceWidth = destination.Width / scaledWidth
-          result.SourceHeight = destination.Height / scaledHeight
+          let sourceWidth = destination.Width / scaledWidth
+          let sourceHeight = destination.Height / scaledHeight
+          result.SourceWidth = sourceWidth < 1.0F ? sourceWidth : 1.0F
+          result.SourceHeight = sourceHeight < 1.0F ? sourceHeight : 1.0F
           result.SourceX = (1.0F - result.SourceWidth) * 0.5F
           result.SourceY = (1.0F - result.SourceHeight) * 0.5F
           return result
