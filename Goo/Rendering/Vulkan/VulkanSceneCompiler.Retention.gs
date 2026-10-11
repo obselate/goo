@@ -556,10 +556,9 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func IsPartialUnsafe() bool {
-    if unsupportedNodeCount != 0 || unsupportedPrimitiveCount != 0
-      || pathClipCount != 0 || clipMaskCount != 0 || clipChainCount != 0 {
-        return true
-      }
+    if unsupportedNodeCount != 0 || unsupportedPrimitiveCount != 0 {
+      return true
+    }
     var index int32 = 0
     while index < frame.DrawRefCount {
       let reference = frame.DrawRefs[index]

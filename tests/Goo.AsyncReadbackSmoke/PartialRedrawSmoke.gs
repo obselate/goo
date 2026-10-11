@@ -120,6 +120,84 @@ class PartialRectClipCell : Cell {
   }
 }
 
+class PartialClipMaskCell : Cell {
+  shared {
+    let Pattern ImageSource = ImageSource(2, 2, []uint8{
+      248, 72, 72, 255,
+      72, 224, 128, 255,
+      72, 128, 232, 255,
+      236, 196, 72, 255,
+    })
+    let Diamond VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 0.5).LineTo(0.5, 1.0).LineTo(0.0, 0.5).Close().Build()
+    let Triangle VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(1.0, 1.0).LineTo(0.0, 1.0).Close().Build()
+  }
+
+  internal let Scroll ElementHandle = ElementHandle{}
+  internal var Step int32
+
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: Step >= 6 ? 104 : 124,.Height: 96,.BorderRadius: Step >= 7 ? 36 : 20,.Overflow: Overflow.Hidden,.BackgroundColor: Color.Rgb(228, 64, 72),
+      Text{
+        Position: PositionType.Absolute,
+        Left: 16,
+        Top: 14,
+        Content: Step >= 3 ? "Mask" : "Clip",
+        FontFamily: "ReadbackGateFont",
+        FontSize: 18,
+        Color: Color.White,
+      },
+      Image{
+        Position: PositionType.Absolute,
+        Left: 78,
+        Top: 48,
+        Width: 42,
+        Height: 42,
+        Source: PartialClipMaskCell.Pattern,
+        Fit: ImageFit.Fill,
+      },
+      Container{
+        Position: PositionType.Absolute,
+        Left: Step >= 2 ? 96 : 116,
+        Top: 70,
+        Width: 84,
+        Height: 46,
+        BackgroundColor: Step >= 1 ? Color.Rgb(72, 128, 224) : Color.Rgb(72, 224, 128),
+      },
+    },
+    Container() {.Position: PositionType.Absolute,.Left: 144,.Top: 8,.Width: 120,.Height: 72,.OverflowX: Overflow.Visible,.OverflowY: Overflow.Scroll,.Handle: Scroll,.BackgroundColor: Color.Rgb(36, 52, 76),
+      Container() {.Position: PositionType.Absolute,.Width: 150,.Height: 200,.BackgroundColor: Color.Rgb(228, 160, 64),
+        Container{
+          Position: PositionType.Absolute,
+          Top: 40,
+          Width: 120,
+          Height: 64,
+          BackgroundColor: Step >= 4 ? Color.Rgb(52, 196, 112) : Color.Rgb(196, 88, 200),
+        },
+      },
+    },
+    Container() {.Position: PositionType.Absolute,.Left: 288,.Top: 84,.Width: 104,.Height: 96,.ClipPath: PartialClipMaskCell.Diamond,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(32, 96, 144),
+      Container() {.Position: PositionType.Absolute,.Left: 8,.Top: 8,.Width: 88,.Height: 80,.ClipPath: PartialClipMaskCell.Triangle,.ClipPathFit: ShapeFit.Fill,.BackgroundColor: Color.Rgb(160, 64, 192),
+        Container{
+          Position: PositionType.Absolute,
+          Left: 20,
+          Top: 18,
+          Width: 44,
+          Height: 34,
+          BackgroundColor: Step >= 5 ? Color.Rgb(72, 224, 128) : Color.Rgb(236, 196, 72),
+        },
+      },
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 150,
+      Top: 120,
+      Width: 110,
+      Height: 60,
+      BackgroundColor: Color.Rgb(72, 128, 224),
+    },
+  }
+}
+
 func PartialRedrawRegions(width int32, height int32) []VulkanDamageRegion {
   let regions = List[VulkanDamageRegion]()
   let columns = 6
@@ -274,9 +352,15 @@ func RunPartialRedrawSmoke() {
       rectClip.Step++
       rectClip.Rebuild()
     })
+    let clipMask = PartialClipMaskCell{}
+    failures = failures + PartialRedrawScene("clip-mask", clipMask, 8, () -> {
+      clipMask.Step++
+      if clipMask.Step == 8 { clipMask.Scroll.JumpTo(0.0, 30.0) }
+      clipMask.Rebuild()
+    })
   } finally {
     font.Dispose()
   }
   Require(failures == 0, "Partial redraw proof failed in " + failures.ToString() + " cases")
-  Console.WriteLine("partial-redraw: scenes=2 pixels=identical")
+  Console.WriteLine("partial-redraw: scenes=3 pixels=identical")
 }
