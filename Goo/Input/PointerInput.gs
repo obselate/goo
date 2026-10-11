@@ -29,6 +29,7 @@ internal partial class PointerInput {
   private var wheelControl InputDispatchControl
   private var wheelDispatchGeneration int64
   internal var WheelScrollScale float32 = 1.0F
+  internal var DragStartDistance float32 = 8.0F
   private var dragCandidate Node?
   private var dragSession PointerDragSession?
   private var dragPointerId int64
@@ -689,7 +690,7 @@ internal partial class PointerInput {
             current.DragEntry = nil
             return changed
           }
-          if !current.DragSelectionStarted && dragThresholdCrossed(x, y) {
+          if !current.DragSelectionStarted && dragThresholdCrossed(x, y, 4.0F) {
             current.DragSelectionStarted = true
           }
           if !current.DragSelectionStarted { return changed }

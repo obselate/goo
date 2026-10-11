@@ -59,13 +59,14 @@ internal partial class PointerInput {
   private func dragPointerMatches() bool -> current.Id == dragPointerId
     && current.Device == dragPointerDevice
 
-  private func dragThresholdCrossed(x float32, y float32) bool ->
-  MathF.Abs(x - current.LastPressX) >= 4.0F || MathF.Abs(y - current.LastPressY) >= 4.0F
+  private func dragThresholdCrossed(x float32, y float32, distance float32) bool ->
+  MathF.Abs(x - current.LastPressX) >= distance || MathF.Abs(y - current.LastPressY) >= distance
 
   private func startDragIfReady(root Node?, x float32, y float32,
     modifiers KeyModifiers) bool{
       guard let source = dragCandidate else { return false }
-      if !dragPointerMatches() || !dragThresholdCrossed(x, y) { return false }
+      let distance = current.Device == PointerDevice.Touch ? 4.0F : DragStartDistance
+      if !dragPointerMatches() || !dragThresholdCrossed(x, y, distance) { return false }
       clearDragCandidate()
       return beginDrag(root, source, x, y, modifiers, true)
     }

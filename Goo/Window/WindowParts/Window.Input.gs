@@ -6,6 +6,7 @@ import System
 public partial class Window {
   private var platformInput PlatformInput?
   private var wheelScrollScale float32 = 1.0F
+  private var dragStartDistance float32 = 8.0F
   private var smoothScrolling bool = true
 
   /// Enables animated scrolling and touch momentum. The default is true.
@@ -27,6 +28,17 @@ public partial class Window {
       if !Single.IsFinite(value) || value <= 0.0F || value > 10.0F { throw ArgumentOutOfRangeException("value") }
       wheelScrollScale = value
       input.SetWheelScrollScale(value)
+    }
+  }
+
+  /// Sets the logical pixels a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
+  public prop DragStartDistance float32 {
+    get -> dragStartDistance
+    set(value) {
+      requireUiThread("Window.DragStartDistance")
+      if !Single.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("value") }
+      dragStartDistance = value
+      input.SetDragStartDistance(value)
     }
   }
 

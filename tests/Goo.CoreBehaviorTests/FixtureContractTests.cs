@@ -71,8 +71,10 @@ public sealed class FixtureContractTests
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.CallbackFailureTerminatesAndDoesNotRetry));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.CancellationContactAndCleanupContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.DescriptorReplacementRequeriesStationarySession));
+        yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.DragStartDistanceSettingAndTouchContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.DropMutationAndPayloadOwnershipContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.RemovalDisableAndResetContract));
+        yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.SlippedDoubleClickStillClicksContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.ThresholdNegotiationTargetingAndClickContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.DuplicateAndCellContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.FocusContract));

@@ -32,6 +32,8 @@ internal partial class InputCoordinator {
 
   internal func SetWheelScrollScale(value float32) { pointer.WheelScrollScale = value }
 
+  internal func SetDragStartDistance(value float32) { pointer.DragStartDistance = value }
+
   internal func SyncControlledEntry(n Node, value string) bool -> text.SyncControlledEntry(n, value)
 
   internal func Attach(host WindowHost) {

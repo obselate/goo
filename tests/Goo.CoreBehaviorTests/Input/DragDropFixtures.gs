@@ -44,13 +44,13 @@ internal class DragDropFixtures {
     input.AfterTreeUpdated(root, resolver, true)
 
     input.QueuePointerPress(10.0F, 10.0F)
-    input.QueuePointerMove(13.0F, 10.0F)
-    input.QueuePointerRelease(13.0F, 10.0F)
+    input.QueuePointerMove(17.0F, 10.0F)
+    input.QueuePointerRelease(17.0F, 10.0F)
     input.Drain(root, resolver, 0.0, nil)
     if clicks != 1 || events.Count != 0 { return false }
 
     input.QueuePointerPress(10.0F, 10.0F)
-    input.QueuePointerMove(14.0F, 10.0F)
+    input.QueuePointerMove(18.0F, 10.0F)
     input.QueuePointerMove(120.0F, 10.0F)
     input.Drain(root, resolver, 1.0, nil)
     input.QueueKeyPress(Key.ControlLeft, KeyModifiers{ Ctrl: true })
@@ -60,7 +60,7 @@ internal class DragDropFixtures {
     input.Drain(root, resolver, 1.0, nil)
 
     let expected = []string{
-      "create:14",
+      "create:18",
       "query:10", "Enter:Move",
       "query:10", "Move:Copy",
       "query:10", "Drop:Copy",
@@ -85,6 +85,84 @@ internal class DragDropFixtures {
     input.QueuePointerRelease(120.0F, 10.0F)
     input.Drain(root, resolver, 3.0, nil)
     return events.Count == 2 && events[1] == "end:Canceled:None" && clicks == 1
+  }
+
+  func DragStartDistanceSettingAndTouchContract() bool {
+    var started int32
+    let reconciler = Reconciler{ Res: Resolver{} }
+    let root = reconciler.Mount(Container() {.Width: 240,.Height: 80,
+        Container{
+          Width: 100,
+          Height: 40,
+          DragSource: DragSource((e DragStartEvent) -> {
+            started++
+            return DragData("payload", DragEffect.Copy)
+          }),
+        },
+    })
+    Layout().Calculate(root, 240.0F, 80.0F)
+    let input = InputCoordinator()
+    let resolver = Resolver{}
+    input.AfterTreeUpdated(root, resolver, true)
+
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(17.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if started != 0 { return false }
+    input.QueuePointerMove(18.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if started != 1 { return false }
+    input.QueuePointerRelease(18.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+
+    input.SetDragStartDistance(20.0F)
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(29.0F, 10.0F)
+    input.Drain(root, resolver, 1.0, nil)
+    if started != 1 { return false }
+    input.QueuePointerMove(30.0F, 10.0F)
+    input.Drain(root, resolver, 1.0, nil)
+    if started != 2 { return false }
+    input.QueuePointerRelease(30.0F, 10.0F)
+    input.Drain(root, resolver, 1.0, nil)
+
+    input.QueuePointerPress(7, PointerDevice.Touch, 10.0F, 10.0F,
+      PointerButton.Primary, KeyModifiers{})
+    input.QueuePointerMove(7, PointerDevice.Touch, 14.0F, 10.0F, KeyModifiers{})
+    input.Drain(root, resolver, 2.0, nil)
+    return started == 3
+  }
+
+  func SlippedDoubleClickStillClicksContract() bool {
+    var clicks int32
+    var started int32
+    var count int32
+    let reconciler = Reconciler{ Res: Resolver{} }
+    let root = reconciler.Mount(Container() {.Width: 240,.Height: 80,
+        Container{
+          Width: 100,
+          Height: 40,
+          OnClick: () -> clicks++,
+          OnPointerDown: (e PointerEvent) -> { count = e.ClickCount },
+          DragSource: DragSource((e DragStartEvent) -> {
+            started++
+            return DragData("payload", DragEffect.Copy)
+          }),
+        },
+    })
+    Layout().Calculate(root, 240.0F, 80.0F)
+    let input = InputCoordinator()
+    let resolver = Resolver{}
+    input.AfterTreeUpdated(root, resolver, true)
+
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerRelease(10.0F, 10.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    input.QueuePointerPress(10.0F, 10.0F)
+    input.QueuePointerMove(16.0F, 12.0F)
+    input.QueuePointerRelease(16.0F, 12.0F)
+    input.Drain(root, resolver, 0.1, nil)
+    return clicks == 2 && started == 0 && count == 2
   }
 
   func CancellationContactAndCleanupContract() bool {
@@ -419,7 +497,7 @@ internal class DragDropFixtures {
     let cleanupInput = InputCoordinator()
     cleanupInput.AfterTreeUpdated(cleanupRoot, resolver, true)
     cleanupInput.QueuePointerPress(10.0F, 10.0F)
-    cleanupInput.QueuePointerMove(14.0F, 10.0F)
+    cleanupInput.QueuePointerMove(18.0F, 10.0F)
     cleanupInput.Drain(cleanupRoot, resolver, 0.0, nil)
     cleanupInput.QueuePointerMove(80.0F, 10.0F)
     cleanupInput.Drain(cleanupRoot, resolver, 1.0, nil)
@@ -519,7 +597,7 @@ internal class DragDropFixtures {
   private func beginDrag(input InputCoordinator, root Node, resolver Resolver,
     sourceX float32, targetX float32) {
       input.QueuePointerPress(sourceX, 10.0F)
-      input.QueuePointerMove(sourceX + 4.0F, 10.0F)
+      input.QueuePointerMove(sourceX + 8.0F, 10.0F)
       input.QueuePointerMove(targetX, 10.0F)
       input.Drain(root, resolver, 0.0, nil)
     }
