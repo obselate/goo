@@ -9,6 +9,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   private let surfaceFormat VkSurfaceFormatKHR
   private let presentMode VkPresentModeKHR
   private let preTransform VkSurfaceTransformFlagBitsKHR
+  private let suboptimalExpected bool
   private let extent VkExtent2D
   private let generation uint64
   private let swapchainMaintenanceEnabled bool
@@ -32,6 +33,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       return generation
     }
   }
+
+  internal prop SuboptimalExpected bool{ get -> suboptimalExpected }
 
   internal prop Extent VkExtent2D{
     get {
@@ -148,6 +151,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       this.surfaceFormat = chosenSurfaceFormat
       this.presentMode = chosenPresentMode
       this.preTransform = VkConstants.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
+      this.suboptimalExpected = capabilities.currentTransform != VkConstants.VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
       this.extent = resolvedExtent
       this.generation = generationId
       this.swapchainMaintenanceEnabled = enablePresentFence

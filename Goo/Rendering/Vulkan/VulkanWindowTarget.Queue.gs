@@ -456,9 +456,11 @@ internal unsafe partial class VulkanWindowTarget {
             PublishLastPresentedImageState(activeImageIndex, activeAppliedSceneVersion,
               activeSceneVersion, activeImagePromoted)
           }
-        if presentResult == VkConstants.VK_ERROR_OUT_OF_DATE_KHR || presentResult == VkConstants.VK_SUBOPTIMAL_KHR {
+        let suboptimal = presentResult == VkConstants.VK_SUBOPTIMAL_KHR
+        if presentResult == VkConstants.VK_ERROR_OUT_OF_DATE_KHR
+          || (suboptimal && !current.SuboptimalExpected) {
           recreatePending = true
-        } else if presentResult != VkConstants.VK_SUCCESS {
+        } else if presentResult != VkConstants.VK_SUCCESS && !suboptimal {
           HandleFrameFailure(presentResult, VulkanDiagnosticEventIds.SwapchainPresent)
         } else {
           current.CommitLayout(activeImageIndex, VkConstants.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)

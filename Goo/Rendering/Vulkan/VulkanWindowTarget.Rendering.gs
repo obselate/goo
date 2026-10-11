@@ -156,7 +156,7 @@ internal unsafe partial class VulkanWindowTarget {
       activeDamageRegion = VulkanDamageRegion{}
       activePartialRedraw = false
       CaptureDiagnosticWsi()
-      if markedAcquire == VkConstants.VK_SUBOPTIMAL_KHR {
+      if markedAcquire == VkConstants.VK_SUBOPTIMAL_KHR && !current.SuboptimalExpected {
         recreatePending = true
       }
       if !BeginCommandBuffer(selectedSlot) {
