@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.24 - 2026-10-11
+
+- Present straight sRGB color multiplied by alpha in transparent windows. Partly transparent pixels no longer show a bright fringe.
+- Keep the previous image on screen until a new `Image.Source` or background image source can draw.
+- Redraw `Text` when its style ranges change, and `TextEntry` when `Password` or `Placeholder` changes.
+- Shape a lone surrogate as U+FFFD. Text layout no longer throws on invalid UTF-16.
+- Place right-to-left glyphs in visual order.
+- Scroll right for a positive horizontal wheel value, and pass wheel values through as the operating system delivers them. The `Flipped` direction no longer inverts the values.
+- Keep the swapchain when a resize request has the same size, such as a window move.
+- Accept suboptimal presents when the surface is rotated. A rotated Android surface no longer recreates the swapchain on each frame.
+- Stop the posted action drain when an action closes the window.
+- Clamp the `ImageFit.Cover` source rectangle to the image. Some size pairs no longer throw.
+- Skip the clip chain read in blend and effect shaders when a frame has no clip masks. Compile shader effects again to get this change.
+- Keep caret affinity when the custom layout state of a node changes.
+- Compile a scene with portals without managed allocation.
+
 ## 0.7.23 - 2026-10-10
 
 - Give virtual items the list item role only while the `Virtual` element has the list role. With another role, or with `Accessibility` set to nil, items have no role and the content of each item gets `PositionInSet`.
