@@ -3,6 +3,7 @@ package Goo
 import Hexa.NET.SDL3
 import System
 import System.Diagnostics
+import System.Numerics
 import System.Threading
 
 internal data struct VulkanPrimitiveFrameRetentionTestSnapshot {
@@ -284,6 +285,23 @@ internal partial class VulkanWindowTarget {
   internal func SetForceFullRedrawForTest(value bool) {
     forceFullRedraw = value
   }
+
+  internal func SetReadbackPartialRepeatForTest(damage VulkanDamageRegion) {
+    readbackRequest?.SetPartialRepeat(damage)
+  }
+
+  internal prop SceneVersionForTest uint64{ get -> sceneCompiler.LatestSceneVersionForTest }
+
+  internal func ScenePartialDamageSinceForTest(applied uint64, dpi Vector2,
+    out region VulkanDamageRegion) bool{
+      region = VulkanDamageRegion{}
+      guard let current = generation else { return false }
+      var fullRedraw bool
+      let hasDamage = sceneCompiler.BuildDamage(applied, SceneVersionForTest,
+        ResolveScale(dpi.X), ResolveScale(dpi.Y), current.Extent.width, current.Extent.height,
+        out region, out fullRedraw)
+      return hasDamage && !fullRedraw
+    }
 
   internal func VerifyClipMaskAtlasGrowthForTest()
   VulkanClipMaskAtlasGrowthTestSnapshot{
@@ -594,6 +612,22 @@ public partial class Window {
     VulkanTargetForTest()?.SetForceFullRedrawForTest(value)
   }
 
+  internal func SetReadbackPartialRepeatForTest(damage VulkanDamageRegion) {
+    VulkanTargetForTest()?.SetReadbackPartialRepeatForTest(damage)
+  }
+
+  internal func SceneVersionForTest() uint64 {
+    guard let target = VulkanTargetForTest() else { return 0uL }
+    return target.SceneVersionForTest
+  }
+
+  internal func ScenePartialDamageSinceForTest(applied uint64,
+    out region VulkanDamageRegion) bool{
+      region = VulkanDamageRegion{}
+      guard let target = VulkanTargetForTest() else { return false }
+      return target.ScenePartialDamageSinceForTest(applied, dpi, out region)
+    }
+
   internal func InputQueuePointerMoveForTest(x float64, y float64) {
     input.QueuePointerMove(float32(x), float32(y))
   }
@@ -740,6 +774,15 @@ internal unsafe partial class SdlHost {
     }
   }
 }
+internal partial class VulkanSceneCompiler {
+  internal prop LatestSceneVersionForTest uint64{
+    get {
+      guard let journal = damageJournal else { return 0uL }
+      return journal.LatestVersion
+    }
+  }
+}
+
 internal class WindowReadbackTestFixture {
   shared {
     internal func AbortPrimitiveMetrics(window Window, finish bool) VulkanPrimitiveFrameStats ->
@@ -854,6 +897,15 @@ internal class WindowReadbackTestFixture {
     internal func SetForceFullRedraw(window Window, value bool) {
       window.SetForceFullRedrawForTest(value)
     }
+
+    internal func SetPartialRepeat(window Window, damage VulkanDamageRegion) {
+      window.SetReadbackPartialRepeatForTest(damage)
+    }
+
+    internal func SceneVersion(window Window) uint64 -> window.SceneVersionForTest()
+
+    internal func ScenePartialDamageSince(window Window, applied uint64,
+      out region VulkanDamageRegion) bool -> window.ScenePartialDamageSinceForTest(applied, out region)
 
     internal func Request(window Window) WindowReadbackRequestStatus -> window.RequestReadbackForTest()
 

@@ -557,15 +557,18 @@ internal partial class VulkanSceneCompiler {
 
   private func IsPartialUnsafe() bool {
     if unsupportedNodeCount != 0 || unsupportedPrimitiveCount != 0
-      || clipCount != 0 || pathClipCount != 0 || clipMaskCount != 0
-      || clipChainCount != 0 {
+      || pathClipCount != 0 || clipMaskCount != 0 || clipChainCount != 0 {
         return true
       }
     var index int32 = 0
     while index < frame.DrawRefCount {
       let reference = frame.DrawRefs[index]
       let kind = reference.Kind
-      if kind == SceneDrawKind.PerEdgeBorder {
+      if kind == SceneDrawKind.RectClipBegin || kind == SceneDrawKind.RectClipEnd {
+        if frame.RectClips[reference.Index].TransformIndex != -1 {
+          return true
+        }
+      } else if kind == SceneDrawKind.PerEdgeBorder {
         let value = frame.PerEdgeBorders[reference.Index]
         if value.Style != uint32(int32(BorderStyle.Solid))
           || value.RadiusTopLeft != 0.0F || value.RadiusTopRight != 0.0F

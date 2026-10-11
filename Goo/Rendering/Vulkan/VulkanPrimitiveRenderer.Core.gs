@@ -230,9 +230,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       } else {
         clipMaskFrameData = nil
       }
-      this.clipStack = [maxClipDepth]PrimitiveClip
+      this.clipStack = [maxClipDepth + 1]PrimitiveClip
       this.layerStates = [MaxLayerDepth]VulkanLayerRenderState
-      this.layerClipSnapshots = [MaxLayerDepth * maxClipDepth]PrimitiveClip
+      this.layerClipSnapshots = [MaxLayerDepth * (maxClipDepth + 1)]PrimitiveClip
       this.linearChannels = [256]float32
       this.primitiveRecordPlan = [1]uint32
       this.clipRegions = [64]VulkanClipMaskRegion
@@ -389,12 +389,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       primitiveRecordCount = 0
       primitiveRecordOrdinal = 0u
       currentDrawOrdinal = 0u
-      clipDepth = 0
       layerDepth = 0
       currentTarget = nil
       currentOriginX = 0.0F
       currentOriginY = 0.0F
       activeExtent = extent
+      clipStack[0] = FullClip()
+      clipDepth = 1
       try {
         textFrameData.Prepare(frame, primitiveFrameSlot, completedSubmissionSerial)
         primitiveFrameData.BeginPrepare(primitiveFrameSlot, maximumRecordCount,
@@ -410,7 +411,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           ProcessDraw(nint(0), reference, frame)
           drawIndex = drawIndex + 1
         }
-        if clipDepth != 0 || layerDepth != 0 || currentTarget != nil {
+        if clipDepth != 1 || layerDepth != 0 || currentTarget != nil {
           throw InvalidOperationException("Vulkan primitive prepass stack is not balanced")
         }
         if presentEncode {
@@ -540,7 +541,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           throw ArgumentOutOfRangeException("damage")
         }
 
-      clipDepth = 0
       layerDepth = 0
       currentTarget = nil
       currentOriginX = 0.0F
@@ -592,6 +592,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         Bottom: damage.Bottom,
       }
       activeExtent = extent
+      clipStack[0] = baseClip
+      clipDepth = 1
       SetScissor(commandBuffer, baseClip)
 
       var drawIndex int32 = 0
@@ -616,15 +618,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           validatedChunkIndex = chunkIndex
         }
         let drawChunk = frame.Chunks[chunkIndex]
-        let emitDraw = !partial || ChunkIntersectsDamage(drawChunk, damage)
         let reference = frame.DrawRefs[drawIndex]
-        if emitDraw {
-          currentDrawOrdinal = uint32(drawIndex)
-          primitiveRecordOrdinal = primitiveRecordPlan[drawIndex]
-        }
-        if emitDraw {
-          ProcessDraw(commandBuffer, reference, frame)
-        }
+        if !partial || ChunkIntersectsDamage(drawChunk, damage)
+          || reference.Kind == SceneDrawKind.RectClipBegin
+          || reference.Kind == SceneDrawKind.RectClipEnd {
+            currentDrawOrdinal = uint32(drawIndex)
+            primitiveRecordOrdinal = primitiveRecordPlan[drawIndex]
+            ProcessDraw(commandBuffer, reference, frame)
+          }
         drawIndex = drawIndex + 1
       }
 
@@ -633,7 +634,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         chunkIndex = chunkIndex + 1
       }
 
-      if clipDepth != 0 {
+      if clipDepth != 1 {
         throw InvalidOperationException("Vulkan primitive clip stack is not balanced")
       }
       if layerDepth != 0 || currentTarget != nil {
@@ -954,14 +955,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           activeExtent)
         clipIndex = clipIndex + 1
       }
+      clipStack[0] = FullClip()
       layerStates[layerDepth] = state
       layerDepth = layerDepth + 1
       SetLayerViewport(commandBuffer)
-      if clipDepth > 0 {
-        SetScissor(commandBuffer, clipStack[clipDepth - 1])
-      } else {
-        SetScissor(commandBuffer, FullClip())
-      }
+      SetScissor(commandBuffer, clipStack[clipDepth - 1])
     }
 
   private func EndLayer(
@@ -1029,11 +1027,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       BeginLayerRendering(commandBuffer, activeExtent, parentImageView, true)
       SetLayerViewport(commandBuffer)
-      if clipDepth > 0 {
-        SetScissor(commandBuffer, clipStack[clipDepth - 1])
-      } else {
-        SetScissor(commandBuffer, FullClip())
-      }
+      SetScissor(commandBuffer, clipStack[clipDepth - 1])
       if let pool = layerPool {
         pool.RecordLayerComposite(uint64(record.ExtentWidth), uint64(record.ExtentHeight))
       }

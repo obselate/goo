@@ -17,6 +17,10 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
   private var disposed bool
 
   internal prop State VulkanReadbackState{ get -> state }
+
+  internal func SetPartialRepeat(damage VulkanDamageRegion) {
+    target.SetPartialRepeat(damage)
+  }
   internal prop Generation uint64{ get -> generation }
   internal prop SubmissionSerial uint64{ get -> submissionSerial }
   internal prop StagingByteSize VkDeviceSize{ get -> target.StagingByteSize }

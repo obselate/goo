@@ -1063,11 +1063,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if clipDepth >= clipStack.Length {
       throw InvalidOperationException("Vulkan primitive clip stack capacity exceeded")
     }
-    var combined = clip
-    if clipDepth > 0 {
-      let parent = clipStack[clipDepth - 1]
-      combined = Intersect(parent, clip)
-    }
+    let combined = Intersect(clipStack[clipDepth - 1], clip)
     clipStack[clipDepth] = combined
     clipDepth = clipDepth + 1
     if !primitivePrepass {
@@ -1076,23 +1072,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
 
   private func PopClip(commandBuffer VkCommandBuffer) {
-    if clipDepth <= 0 {
+    if clipDepth <= 1 {
       throw InvalidOperationException("Vulkan primitive clip stack underflow")
     }
     clipDepth = clipDepth - 1
-    if primitivePrepass {
-      return
-    }
-    if clipDepth > 0 {
+    if !primitivePrepass {
       SetScissor(commandBuffer, clipStack[clipDepth - 1])
-    } else {
-      let full = PrimitiveClip{
-        Left: 0,
-        Top: 0,
-        Right: int32(activeExtent.width),
-        Bottom: int32(activeExtent.height),
-      }
-      SetScissor(commandBuffer, full)
     }
   }
 

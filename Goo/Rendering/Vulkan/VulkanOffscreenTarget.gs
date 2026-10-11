@@ -38,6 +38,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private let resourcePolicy VulkanResourcePolicy
   private let objectAccounting VulkanObjectAccounting?
   private let diagnostics VulkanDiagnostics?
+  private var partialRepeat VulkanDamageRegion
   private var timestampEnabled bool
   private let timestampMask uint64
   private let timestampPeriod float32
@@ -440,6 +441,10 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     primitiveRenderer?.SetPresentEncode(value)
   }
 
+  internal func SetPartialRepeat(damage VulkanDamageRegion) {
+    partialRepeat = damage
+  }
+
   internal func RecordScene(frame SceneFrame, clearColor VkClearColorValue,
     textScaleX float32, textScaleY float32) {
       EnsureOpen()
@@ -467,11 +472,19 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         BeginRecord()
         renderer.RecordPrimitiveFrameUpload(commandBuffer)
         renderer.RecordClipMasks(commandBuffer, extent)
-        BeginRendering(clearColor)
+        BeginRendering(clearColor, VkRect2D{ extent: extent })
         renderingActive = true
         renderer.ConfigureLayerFrame(commandBuffer, image, imageView, extent, clipMaskSubmissionSerial)
         renderer.ClearTimestampRecording()
         renderer.RecordInsideRendering(commandBuffer, frame, extent)
+        if !partialRepeat.IsEmpty {
+          EndRendering()
+          BeginRendering(clearColor, VkRect2D{
+            offset: VkOffset2D{ x: partialRepeat.X, y: partialRepeat.Y },
+            extent: VkExtent2D{ width: uint32(partialRepeat.Width), height: uint32(partialRepeat.Height) },
+          })
+          renderer.RecordInsideRendering(commandBuffer, frame, extent, partialRepeat, true)
+        }
         renderer.ClearTimestampRecording()
         EndRendering()
         renderingActive = false
@@ -1098,7 +1111,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     writeTimestamp(commandBuffer, stage, timestampQueryPool, query)
   }
 
-  private func BeginRendering(clearColor VkClearColorValue) {
+  private func BeginRendering(clearColor VkClearColorValue, area VkRect2D) {
     var clearValue = VkClearValue{}
     clearValue.color = clearColor
     var attachment = VkRenderingAttachmentInfo{}
@@ -1113,9 +1126,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     attachment.clearValue = clearValue
     var rendering = VkRenderingInfo{}
     rendering.sType = VkConstants.VK_STRUCTURE_TYPE_RENDERING_INFO
-    rendering.renderArea = VkRect2D{}
-    rendering.renderArea.offset = VkOffset2D{}
-    rendering.renderArea.extent = extent
+    rendering.renderArea = area
     rendering.layerCount = 1u
     rendering.viewMask = 0u
     rendering.colorAttachmentCount = 1u
