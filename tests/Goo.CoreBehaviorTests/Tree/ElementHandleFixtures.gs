@@ -234,6 +234,42 @@ internal class ElementHandleFixtures {
     return snapshots.Count == 4 && !snapshots[3].IsMounted
   }
 
+  func MetricsPinContract() bool {
+    let cell = ElementMetricsFixtureCell{}
+    cell.Pin = true
+    let window = Window{ Root: cell, Width: 100, Height: 60 }
+    window.SmoothScrolling = false
+    let snapshots = List[ElementMetrics]()
+    cell.Handle.MetricsChanged += func(value ElementMetrics) {
+      snapshots.Add(value)
+    }
+    window.UpdateTree()
+    if snapshots.Count != 1 || !snapshots[0].Pinned || snapshots[0].ScrollOffset.Y != 140.0 {
+      return false
+    }
+    if !cell.Handle.JumpTo(0.0, 139.0) {
+      return false
+    }
+    window.UpdateTree(1.0)
+    if snapshots.Count != 2 || snapshots[1].Pinned || snapshots[1].ScrollOffset.Y != 139.0 {
+      return false
+    }
+    if !cell.Handle.JumpTo(0.0, 140.0) {
+      return false
+    }
+    window.UpdateTree(1.0)
+    if snapshots.Count != 3 || !snapshots[2].Pinned {
+      return false
+    }
+    cell.Pin = false
+    cell.Rebuild()
+    window.UpdateTree()
+    let released = snapshots.Count == 4 && !snapshots[3].Pinned && snapshots[3].ScrollOffset.Y == 140.0
+      && snapshots[3].ScrollRange.Y == 140.0
+    window.Close()
+    return released
+  }
+
   func MetricsCallbackRebuildAndBatchContract() bool {
     let cell = ElementMetricsPairCell{}
     let window = Window{ Root: cell, Width: 100, Height: 60 }
@@ -525,6 +561,7 @@ internal class ElementMetricsFixtureCell : Cell {
   internal let Handle ElementHandle
   internal var Width int32
   internal var Attached bool
+  internal var Pin bool
 
   init() {
     Handle = ElementHandle{}
@@ -537,6 +574,7 @@ internal class ElementMetricsFixtureCell : Cell {
       return Container{ Width: Width, Height: 60 }
     }
     return Container() {.Handle: Handle,.Width: Width,.Height: 60,.OverflowY: Overflow.Scroll,
+      .PinToBottom: Pin,
       Container{ Height: 200 },
     }
   }
