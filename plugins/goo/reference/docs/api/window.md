@@ -316,8 +316,7 @@ an SDL payload without that bridge reports `Unsupported`. Embedded hosts report
 `Unsupported`. Normal native waiting creates no polling timer in Goo; the regular SDL event
 pump delivers completion. Windows cancellation briefly retries dismissal until SDL
 creates and closes its worker-owned chooser. Windows and macOS require runtime verification on their
-respective platforms; the Linux transport has a repeatable two-window fixture in
-`tests/Goo.AsyncReadbackSmoke/verify-file-dialogs.py`.
+respective platforms.
 
 ## File and image clipboard data
 
