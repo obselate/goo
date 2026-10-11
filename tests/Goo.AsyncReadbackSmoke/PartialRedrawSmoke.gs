@@ -55,6 +55,18 @@ class PartialPlainCell : Cell {
       FontSize: 16,
       Color: Color.Rgb(72, 224, 128),
     },
+    Text{
+      Position: PositionType.Absolute,
+      Left: 150,
+      Top: 90,
+      Width: 40,
+      Height: 12,
+      Content: Step >= 4 ? "Wide words past the box" : "Long text past its box",
+      TextWrap: TextWrap.NoWrap,
+      FontFamily: "ReadbackGateFont",
+      FontSize: 22,
+      Color: Color.Rgb(236, 196, 72),
+    },
   }
 }
 
@@ -257,6 +269,101 @@ class PartialTransformCell : Cell {
   }
 }
 
+class PartialPaintCell : Cell {
+  shared {
+    let Star VectorPath = PathBuilder().MoveTo(0.5, 0.0).LineTo(0.65, 0.35).LineTo(1.0, 0.4).LineTo(0.72, 0.62).LineTo(0.8, 1.0).LineTo(0.5, 0.78).LineTo(0.2, 1.0).LineTo(0.28, 0.62).LineTo(0.0, 0.4).LineTo(0.35, 0.35).Close().Build()
+  }
+
+  internal var Step int32
+
+  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
+      Position: PositionType.Absolute,
+      Left: 10,
+      Top: 10,
+      Width: 110,
+      Height: 50,
+      BorderRadius: 12,
+      BackgroundGradient: LinearGradient(90.0, []GradientStop{
+        GradientStop{ Offset: 0.0, Color: Color.Rgb(24, 68, 132) },
+        GradientStop{ Offset: 1.0, Color: Step >= 1 ? Color.Rgb(196, 88, 200) : Color.Rgb(88, 172, 210) },
+      }),
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: Step >= 2 ? 150 : 132,
+      Top: 10,
+      Width: 70,
+      Height: 50,
+      BackgroundGradient: RadialGradient(0.5, 0.5, 0.5, []GradientStop{
+        GradientStop{ Offset: 0.0, Color: Color.Rgb(232, 178, 78) },
+        GradientStop{ Offset: 1.0, Color: Color.Rgb(128, 54, 92) },
+      }),
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 240,
+      Top: 10,
+      Width: 70,
+      Height: 50,
+      BorderRadius: 14,
+      BorderWidth: 4,
+      BorderColor: Step >= 3 ? Color.Rgb(72, 224, 128) : Color.Rgb(236, 196, 72),
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 322,
+      Top: 10,
+      Width: 66,
+      Height: 50,
+      BorderWidth: 3,
+      BorderStyle: BorderStyle.Dashed,
+      BorderColor: Step >= 3 ? Color.Rgb(236, 196, 72) : Color.Rgb(72, 224, 128),
+    },
+    Text{
+      Position: PositionType.Absolute,
+      Left: 12,
+      Top: 72,
+      Content: Step >= 4 ? "Underlined words" : "Underlined text",
+      TextDecoration: TextDecoration.Underline,
+      FontFamily: "ReadbackGateFont",
+      FontSize: 20,
+      Color: Color.White,
+    },
+    Shape{
+      Position: PositionType.Absolute,
+      Left: 200,
+      Top: 70,
+      Width: 56,
+      Height: 56,
+      Path: PartialPaintCell.Star,
+      BackgroundColor: Step >= 5 ? Color.Rgb(72, 128, 224) : Color.Rgb(236, 196, 72),
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 30,
+      Top: 120,
+      Width: 90,
+      Height: 40,
+      BorderRadius: 8,
+      BackgroundColor: Color.Rgb(26, 50, 76),
+      BoxShadow: BoxShadow{ OffsetX: Step >= 6 ? 14 : 4, OffsetY: 6, Blur: 10, Color: Color.Rgb(228, 64, 72) },
+    },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 290,
+      Top: 90,
+      Width: 80,
+      Height: 60,
+      BackgroundColor: Color.Rgb(36, 52, 76),
+      OutlineWidth: Step >= 7 ? 6 : 2,
+      OutlineColor: Color.Rgb(52, 196, 112),
+      OutlineOffset: 3,
+      BoxShadow: BoxShadow{ Inset: true, Blur: 8, Spread: 2, Color: Color.Rgb(196, 88, 200) },
+    },
+  }
+}
+
 func PartialRedrawRegions(width int32, height int32) []VulkanDamageRegion {
   let regions = List[VulkanDamageRegion]()
   let columns = 6
@@ -402,7 +509,7 @@ func RunPartialRedrawSmoke() {
   var failures int32 = 0
   try {
     let plain = PartialPlainCell{}
-    failures = failures + PartialRedrawScene("plain", plain, 3, () -> {
+    failures = failures + PartialRedrawScene("plain", plain, 4, () -> {
       plain.Step++
       plain.Rebuild()
     })
@@ -422,9 +529,14 @@ func RunPartialRedrawSmoke() {
       transform.Step++
       transform.Rebuild()
     })
+    let paint = PartialPaintCell{}
+    failures = failures + PartialRedrawScene("paint", paint, 7, () -> {
+      paint.Step++
+      paint.Rebuild()
+    })
   } finally {
     font.Dispose()
   }
   Require(failures == 0, "Partial redraw proof failed in " + failures.ToString() + " cases")
-  Console.WriteLine("partial-redraw: scenes=4 pixels=identical")
+  Console.WriteLine("partial-redraw: scenes=5 pixels=identical")
 }

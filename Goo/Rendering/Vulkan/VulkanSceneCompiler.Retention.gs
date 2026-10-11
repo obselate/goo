@@ -459,7 +459,7 @@ internal partial class VulkanSceneCompiler {
       throw InvalidOperationException("Vulkan retained scene proof storage is unavailable")
     }
     journal.BeginVersion(frameVersion)
-    ResolveChunkScreenBounds()
+    ResolveChunkPaintBounds()
     let currentCount = frame.ChunkCount
     let retainedChunks = proofs.Chunks
     var topologySame = proofs.Ready && proofs.ChunkCount == currentCount
@@ -542,19 +542,20 @@ internal partial class VulkanSceneCompiler {
     proofs.Capture(frame)
   }
 
-  private func ResolveChunkScreenBounds() {
-    if frame.TransformCount == 0 {
-      return
-    }
+  private func ResolveChunkPaintBounds() {
     var index int32 = 0
     while index < frame.ChunkCount {
-      let transformIndex = frame.Chunks[index].TransformIndex
-      if transformIndex != -1 && !frame.Chunks[index].Bounds.IsEmpty {
-        let transform = ResolveCompilerFrameTransform(transformIndex)
-        frame.Chunks[index].Bounds = TransformCompilerBounds(
-          frame.Chunks[index].Bounds, transform).Inflate(1.0F)
+      let chunk = frame.Chunks[index]
+      var bounds = chunk.Bounds
+      if chunk.TransformIndex != -1 && !bounds.IsEmpty {
+        let transform = ResolveCompilerFrameTransform(chunk.TransformIndex)
+        bounds = TransformCompilerBounds(bounds, transform).Inflate(1.0F)
         frame.Chunks[index].TransformKey = TransformKey(transform)
       }
+      if !chunk.TextBounds.IsEmpty {
+        bounds = bounds.IsEmpty ? chunk.TextBounds : unionVulkanSceneBounds(bounds, chunk.TextBounds)
+      }
+      frame.Chunks[index].Bounds = bounds
       index = index + 1
     }
   }
@@ -592,20 +593,9 @@ internal partial class VulkanSceneCompiler {
     }
     var index int32 = 0
     while index < frame.DrawRefCount {
-      let reference = frame.DrawRefs[index]
-      let kind = reference.Kind
-      if kind == SceneDrawKind.PerEdgeBorder {
-        let value = frame.PerEdgeBorders[reference.Index]
-        if value.Style != uint32(int32(BorderStyle.Solid))
-          || value.RadiusTopLeft != 0.0F || value.RadiusTopRight != 0.0F
-          || value.RadiusBottomRight != 0.0F
-          || value.RadiusBottomLeft != 0.0F {
-            return true
-          }
-      } else if kind != SceneDrawKind.SolidBox && kind != SceneDrawKind.RoundedBox
-        && kind != SceneDrawKind.CachedTextSegment && kind != SceneDrawKind.CachedImage
-        && kind != SceneDrawKind.Transform && kind != SceneDrawKind.RectClipBegin
-        && kind != SceneDrawKind.RectClipEnd{
+      let kind = frame.DrawRefs[index].Kind
+      if kind == SceneDrawKind.LayerBegin || kind == SceneDrawKind.LayerEnd
+        || kind == SceneDrawKind.GeneratorEffect {
           return true
         }
       index = index + 1

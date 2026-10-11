@@ -124,6 +124,7 @@ internal partial class SceneFrame {
     value CachedTextSegmentRefRecord,
     segment VulkanRetainedTextSegment) {
       RequireOpenChunk()
+      ExtendChunkTextBounds(value.Bounds)
       Grow[CachedTextSegmentRefRecord](&cachedTextSegments, cachedTextSegmentCount, NextCount(cachedTextSegmentCount))
       Grow[ResourceId](&resourceRefs, resourceRefCount, resourceRefCount + segment.GlyphCount + segment.RunCount)
       var glyphIndex int32 = 0

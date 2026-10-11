@@ -214,6 +214,7 @@ internal struct SceneChunk {
   internal var RetentionState SceneChunkRetentionState
   internal var TransformIndex int32
   internal var TransformKey uint64
+  internal var TextBounds ConservativeBounds
 }
 
 internal struct VulkanDamageRegion {

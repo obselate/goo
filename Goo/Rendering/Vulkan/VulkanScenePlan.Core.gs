@@ -465,10 +465,16 @@ internal partial class SceneFrame {
     if expectedFirst != segment.GlyphCount {
       throw ArgumentException("cached text segment run count is invalid")
     }
+    ExtendChunkTextBounds(value.Bounds)
     let index = AppendRecord(&cachedTextSegments, &cachedTextSegmentCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.CachedTextSegment, Index: index,
       Flags: 0u, ClipChainId: value.ClipChainId })
     return index
+  }
+
+  private func ExtendChunkTextBounds(bounds ConservativeBounds) {
+    let current = chunks[activeChunk].TextBounds
+    chunks[activeChunk].TextBounds = current.IsEmpty ? bounds : unionVulkanSceneBounds(current, bounds)
   }
 
   internal func AddAnalyticPathBand(value AnalyticPathBandRecord) int32 {
