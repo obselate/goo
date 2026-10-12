@@ -460,6 +460,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_SHADER_EFFECT_SMOKE", "1", () -> RunShaderEffectSmoke()),
   SmokeMode("GOO_SHADER_GENERATOR_SMOKE", "1", () -> RunShaderGeneratorSmoke()),
   SmokeMode("GOO_LIQUID_GLASS_ALPHA_SMOKE", "1", () -> RunLiquidGlassAlphaSmoke()),
+  SmokeMode("GOO_BACKDROP_BLUR_SMOKE", "1", () -> RunBackdropBlurSmoke()),
   SmokeMode("GOO_FRAGMENT_CORRECTNESS_SMOKE", "1", () -> RunFragmentCorrectnessSmoke()),
   SmokeMode("GOO_PIPELINE_IDENTITY_SMOKE", "1", () -> RunPipelineIdentitySmoke()),
   SmokeMode("GOO_QUEUE_WAKE_SMOKE", "1", () -> RunQueueWakeSmoke()),

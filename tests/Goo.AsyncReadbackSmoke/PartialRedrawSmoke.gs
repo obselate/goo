@@ -455,6 +455,15 @@ class PartialLayerCell : Cell {
       Height: 30,
       BackgroundColor: Step >= 7 ? Color.Rgb(236, 196, 72) : Color.Rgb(196, 88, 200),
     },
+    Container{
+      Position: PositionType.Absolute,
+      Left: 320,
+      Top: 140,
+      Width: 70,
+      Height: 44,
+      BorderRadius: 10,
+      BackdropBlur: 4,
+    },
   }
 }
 

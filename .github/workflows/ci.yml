@@ -440,6 +440,10 @@ jobs:
           dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
             -c Release -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+          dotnet exec tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll compile \
+            Goo/Shaders/Effects/backdrop_blur.slang Goo/Shaders/Authoring \
+            "$RUNNER_TEMP/backdrop_blur.goo-effect" "$RUNNER_TEMP/backdrop_blur.goo-effect.json"
+          cmp "$RUNNER_TEMP/backdrop_blur.goo-effect" Goo/Shaders/Effects/backdrop_blur.goo-effect
 
       - name: Verify NativeAOT local PNG loading
         run: |
@@ -497,6 +501,11 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \
             GOO_LIQUID_GLASS_ALPHA_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_BACKDROP_BLUR_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
