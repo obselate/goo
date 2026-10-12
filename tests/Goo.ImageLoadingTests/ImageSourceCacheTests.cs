@@ -95,6 +95,22 @@ public sealed class ImageSourceCacheTests : IDisposable
     }
 
     [Fact]
+    public void DecodeAllocatesOnlyTheReturnedPixelsInManagedMemory()
+    {
+        var png = Png(1024, 1024, 8, 6, new byte[1024 * (1 + 1024 * 4)]);
+        var path = Write("large.png", png);
+        ImageSource.Decode(png).Dispose();
+        ImageSource.LoadThumbnail(path, 64, 64).Dispose();
+        var start = GC.GetAllocatedBytesForCurrentThread();
+        using var full = ImageSource.Decode(png);
+        var afterFull = GC.GetAllocatedBytesForCurrentThread();
+        using var thumbnail = ImageSource.LoadThumbnail(path, 64, 64);
+        var afterThumbnail = GC.GetAllocatedBytesForCurrentThread();
+        Assert.InRange(afterFull - start, 4 << 20, (4 << 20) + (256 << 10));
+        Assert.InRange(afterThumbnail - afterFull, 0, 256 << 10);
+    }
+
+    [Fact]
     public void ClipboardBitmapBecomesPngWithTheSamePixels()
     {
         var bmp = new byte[62];
