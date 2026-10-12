@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.28 - 2026-10-11
+
+- Add `Style.BackdropBlur`. It applies a Gaussian blur, from 0 through 64 pixels, to the window content behind the border box of an element. `BorderRadius`, clips and `Opacity` apply to the blur.
+- Keep partial redraw active under rectangular clips, clip masks, path clips, transforms, layers and effects, and for all draw kinds. A small change in such a scene no longer redraws the full window.
+- Stop damage for unchanged chunks of every draw kind. Text that draws outside its box is now included in the damage area.
+- Validate cached text segment content once per segment version. A frame with unchanged text no longer validates each glyph again.
+
 ## 0.7.27 - 2026-10-11
 
 - Advance the frame deadline when a due frame draws nothing. An animation that does not change the window no longer runs the event loop without a wait.
