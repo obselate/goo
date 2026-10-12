@@ -7,6 +7,7 @@
 - Add `ImageLimitException` with `Width` and `Height`. An image that exceeds a limit now throws it. It threw `InvalidDataException`. `ImageLimitException` does not derive from `InvalidDataException`, so code that catches `InvalidDataException` for an oversize image must change.
 - Decode images with `stb_image` in the `goo-harfbuzz-gpu` native library. Encoded bytes and source pixels are native memory that the decode frees before it returns. Only the returned pixels are managed memory.
 - Remove the `StbImageSharp` package dependency.
+- Accept `Window.TrySetFullscreenDisplay` on Wayland when the fullscreen window is already on the requested display. The call returned `Failed`.
 
 ## 0.7.29 - 2026-10-11
 
