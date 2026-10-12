@@ -1,10 +1,11 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 289264,
+      "bytes": 293376,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
+        "goo_image_realloc",
         "hb_gpu_draw_clear",
         "hb_gpu_draw_create_or_fail",
         "hb_gpu_draw_destroy",
@@ -58,7 +59,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "72c1bdf89506488ac54c75becafe143f6d6a58fc53787c59a4cf03dcc1409ca4"
+      "sha256": "c1edf817d8058e9bcde51d5a608cab3d6dd90e2c59f583c7940e7542b483bedc"
     },
     "harfbuzz": {
       "bytes": 1693504,
@@ -735,6 +736,7 @@
     "gpu": [
       "goo_image_decode_rgba",
       "goo_image_free",
+      "goo_image_realloc",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",

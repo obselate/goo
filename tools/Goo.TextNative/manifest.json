@@ -288,6 +288,7 @@
     "gpu": [
       "goo_image_decode_rgba",
       "goo_image_free",
+      "goo_image_realloc",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",

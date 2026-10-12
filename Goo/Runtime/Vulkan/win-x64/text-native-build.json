@@ -5,6 +5,7 @@
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
+        "goo_image_realloc",
         "hb_gpu_draw_clear",
         "hb_gpu_draw_create_or_fail",
         "hb_gpu_draw_destroy",
@@ -49,7 +50,7 @@
         "goo-harfbuzz.dll",
         "msvcrt.dll"
       ],
-      "sha256": "e322246dd4348bbfba85a1f34e259b16782104f0c81ed26f39ef70758d1ccaaf"
+      "sha256": "12a40c0b832ff29f03257afca4097cc4185068b03be20e57179c368e4d1eeb04"
     },
     "harfbuzz": {
       "bytes": 1679634,
@@ -780,6 +781,7 @@
     "gpu": [
       "goo_image_decode_rgba",
       "goo_image_free",
+      "goo_image_realloc",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",

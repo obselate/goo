@@ -1,10 +1,11 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 233480,
+      "bytes": 233544,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
+        "goo_image_realloc",
         "hb_gpu_draw_clear",
         "hb_gpu_draw_create_or_fail",
         "hb_gpu_draw_destroy",
@@ -59,7 +60,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "359672a40d4f82e4cfbd8e6e40131dacaf25cb0036be5f5beec694d16aa300a4",
+      "sha256": "291fcd76efec7462ea7a964383d836ec15dfe04ce9b8776d1afdf9c8fa7aed5a",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
@@ -743,6 +744,7 @@
     "gpu": [
       "goo_image_decode_rgba",
       "goo_image_free",
+      "goo_image_realloc",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",
