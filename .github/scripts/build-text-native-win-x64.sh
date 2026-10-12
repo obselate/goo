@@ -167,6 +167,7 @@ Path(path).write_text(
 )
 PY
 
+python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-14.3.1"
 export SOURCE_DATE_EPOCH=0
 export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"

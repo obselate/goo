@@ -1,8 +1,10 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 175112,
+      "bytes": 233480,
       "exports": [
+        "goo_image_decode_rgba",
+        "goo_image_free",
         "hb_gpu_draw_clear",
         "hb_gpu_draw_create_or_fail",
         "hb_gpu_draw_destroy",
@@ -57,7 +59,7 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "dc249b7a85702e1eadab0f4ecbeb23d3be3e6d63554b04e47a4c62f91c44d3d9",
+      "sha256": "359672a40d4f82e4cfbd8e6e40131dacaf25cb0036be5f5beec694d16aa300a4",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
@@ -739,6 +741,8 @@
   },
   "requiredExports": {
     "gpu": [
+      "goo_image_decode_rgba",
+      "goo_image_free",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",
@@ -802,6 +806,15 @@
       "signedTagCommit": "ab5ecbb83985034a76214ac0b2b833dcd590d774",
       "tag": "14.3.1",
       "version": "14.3.1"
+    },
+    "stbImage": {
+      "commit": "013ac3beddff3dbffafd5177e7972067cd2b5083",
+      "license": "MIT or Public Domain (Unlicense)",
+      "licenseUrl": "https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/LICENSE",
+      "sha256": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3",
+      "url": "https://raw.githubusercontent.com/nothings/stb/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h",
+      "version": "2.30",
+      "wrapper": "tools/Goo.TextNative/goo-image.c"
     }
   }
 }

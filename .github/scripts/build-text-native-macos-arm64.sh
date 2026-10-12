@@ -126,6 +126,7 @@ text = patch_target(
 path.write_text(text, encoding="utf-8")
 PY
 
+python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-14.3.1"
 export SOURCE_DATE_EPOCH=0
 export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
 export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."

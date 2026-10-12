@@ -1,8 +1,10 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 200036,
+      "bytes": 293251,
       "exports": [
+        "goo_image_decode_rgba",
+        "goo_image_free",
         "hb_gpu_draw_clear",
         "hb_gpu_draw_create_or_fail",
         "hb_gpu_draw_destroy",
@@ -47,7 +49,7 @@
         "goo-harfbuzz.dll",
         "msvcrt.dll"
       ],
-      "sha256": "6bc7b65c965724eb83f03ffd3d5e9620ec1adf1f8b814f16a2b3d439bfe7f60f"
+      "sha256": "e322246dd4348bbfba85a1f34e259b16782104f0c81ed26f39ef70758d1ccaaf"
     },
     "harfbuzz": {
       "bytes": 1679634,
@@ -645,12 +647,6 @@
       "--wrap-mode=nodownload"
     ],
     "environments": {
-      "linux-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--build-id=none",
-        "SOURCE_DATE_EPOCH": "0"
-      },
       "win-x64": {
         "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
         "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
@@ -689,36 +685,11 @@
       "-Dgpu_demo=disabled",
       "-Dwith_libstdcxx=false"
     ],
-    "linux": {
-      "maxGlibc": "2.35",
-      "requiredFormat": "ELF 64-bit LSB shared object, x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "libc.so.6",
-          "libgoo-harfbuzz.so",
-          "libm.so.6"
-        ],
-        "harfbuzz": [
-          "libc.so.6",
-          "libm.so.6"
-        ]
-      },
-      "requiredRpath": {
-        "gpu": [],
-        "harfbuzz": []
-      },
-      "requiredRunpath": {
-        "gpu": [
-          "$ORIGIN/"
-        ],
-        "harfbuzz": []
-      }
-    },
     "soname": {
       "gpu": "libgoo-harfbuzz-gpu.so",
       "harfbuzz": "libgoo-harfbuzz.so"
     },
-    "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs and Windows uses unversioned DLL names.",
+    "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs, macOS keeps private @rpath install names, and Windows uses unversioned DLL names.",
     "sourcePatches": [
       {
         "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding.",
@@ -770,13 +741,6 @@
     }
   },
   "buildEvidence": {
-    "commonOptions": [
-      "--prefix=/usr",
-      "--libdir=lib",
-      "--buildtype=release",
-      "--default-library=shared",
-      "--wrap-mode=nodownload"
-    ],
     "crossFile": {
       "ar": "x86_64-w64-mingw32-ar",
       "c": "x86_64-w64-mingw32-gcc",
@@ -794,80 +758,7 @@
       "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++",
       "SOURCE_DATE_EPOCH": "0"
     },
-    "harfbuzzOptions": [
-      "-Dglib=disabled",
-      "-Dgobject=disabled",
-      "-Dcairo=disabled",
-      "-Dchafa=disabled",
-      "-Dpng=disabled",
-      "-Dzlib=disabled",
-      "-Dicu=disabled",
-      "-Dgraphite=disabled",
-      "-Dgraphite2=disabled",
-      "-Dfreetype=disabled",
-      "-Dfontations=disabled",
-      "-Dgdi=disabled",
-      "-Ddirectwrite=disabled",
-      "-Dcoretext=disabled",
-      "-Dharfrust=disabled",
-      "-Dkbts=disabled",
-      "-Dwasm=disabled",
-      "-Draster=disabled",
-      "-Dvector=disabled",
-      "-Dgpu=enabled",
-      "-Dsubset=disabled",
-      "-Dtests=disabled",
-      "-Dintrospection=disabled",
-      "-Ddocs=disabled",
-      "-Ddoc_tests=false",
-      "-Dutilities=disabled",
-      "-Dbenchmark=disabled",
-      "-Dgpu_demo=disabled",
-      "-Dwith_libstdcxx=false"
-    ],
-    "linux": {
-      "maxGlibc": "2.35",
-      "requiredFormat": "ELF 64-bit LSB shared object, x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "libc.so.6",
-          "libgoo-harfbuzz.so",
-          "libm.so.6"
-        ],
-        "harfbuzz": [
-          "libc.so.6",
-          "libm.so.6"
-        ]
-      },
-      "requiredRpath": {
-        "gpu": [],
-        "harfbuzz": []
-      },
-      "requiredRunpath": {
-        "gpu": [
-          "$ORIGIN/"
-        ],
-        "harfbuzz": []
-      }
-    },
-    "soname": {
-      "gpu": "libgoo-harfbuzz-gpu.so",
-      "harfbuzz": "libgoo-harfbuzz.so"
-    },
     "sourceDirectory": "temporary",
-    "sourcePatch": "Set the core and GPU shared-library identities to Goo-owned private names before the pinned Meson build; Linux keeps private SONAMEs and Windows uses unversioned DLL names.",
-    "sourcePatches": [
-      {
-        "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding.",
-        "name": "cpal-linear-light",
-        "patchedSha256": "b2cc4e10551ff8e49c0e801c5aea1a7886e7468c5e61770df0804ac322de191c",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-14.3.1-cpal-linear-light.patch",
-        "sha256": "225d5b7e5a656e96ee850f41c662e625d9c29ac518c1b834b3c53b7949358b67",
-        "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463"
-      }
-    ],
-    "system": "Meson and Ninja",
     "target": "win-x64",
     "toolchain": {
       "cc": "x86_64-w64-mingw32-gcc (GCC) 10-win32 20220113",
@@ -876,51 +767,10 @@
       "ninja": "1.10.1",
       "objdump": "GNU objdump (GNU Binutils) 2.38",
       "strip": "GNU strip (GNU Binutils) 2.38"
-    },
-    "windows": {
-      "forbiddenImports": [
-        "libstdc++",
-        "libgcc",
-        "winpthread",
-        "libstdc++-6.dll",
-        "libgcc_s_seh-1.dll",
-        "libwinpthread-1.dll",
-        "winpthread-1.dll",
-        "freetype",
-        "glib",
-        "icu",
-        "graphite",
-        "zlib",
-        "png"
-      ],
-      "gpuImport": "goo-harfbuzz.dll",
-      "linkerFlags": [
-        "-static-libgcc",
-        "-static-libstdc++",
-        "-Wl,--no-insert-timestamp"
-      ],
-      "requiredFormat": "PE32+ x86-64",
-      "requiredNeeded": {
-        "gpu": [
-          "KERNEL32.dll",
-          "goo-harfbuzz.dll",
-          "msvcrt.dll"
-        ],
-        "harfbuzz": [
-          "KERNEL32.dll",
-          "msvcrt.dll"
-        ]
-      },
-      "sourcePatch": "Rename the core and GPU targets to goo-harfbuzz.dll and goo-harfbuzz-gpu.dll, remove Meson version suffixes, and keep hb-gpu's core import as goo-harfbuzz.dll.",
-      "target": "x86_64-w64-mingw32"
     }
   },
   "name": "Goo.TextNative",
   "outputs": {
-    "linux-x64": {
-      "gpu": "libgoo-harfbuzz-gpu.so",
-      "harfbuzz": "libgoo-harfbuzz.so"
-    },
     "win-x64": {
       "gpu": "goo-harfbuzz-gpu.dll",
       "harfbuzz": "goo-harfbuzz.dll"
@@ -928,6 +778,8 @@
   },
   "requiredExports": {
     "gpu": [
+      "goo_image_decode_rgba",
+      "goo_image_free",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",
@@ -975,12 +827,13 @@
       "hb_language_from_string",
       "hb_ot_color_has_layers",
       "hb_ot_color_has_paint",
+      "hb_ot_color_glyph_get_layers",
       "hb_ot_color_glyph_has_paint",
       "hb_ot_font_set_funcs",
       "hb_shape_full"
     ]
   },
-  "schema": 3,
+  "schema": 4,
   "source": {
     "harfbuzz": {
       "archiveSha256": "9dae9538aae2ffdf70cec31f2c27bf68e2aaeeae3112688467697d5faf6194f7",
@@ -990,6 +843,15 @@
       "signedTagCommit": "ab5ecbb83985034a76214ac0b2b833dcd590d774",
       "tag": "14.3.1",
       "version": "14.3.1"
+    },
+    "stbImage": {
+      "commit": "013ac3beddff3dbffafd5177e7972067cd2b5083",
+      "license": "MIT or Public Domain (Unlicense)",
+      "licenseUrl": "https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/LICENSE",
+      "sha256": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3",
+      "url": "https://raw.githubusercontent.com/nothings/stb/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h",
+      "version": "2.30",
+      "wrapper": "tools/Goo.TextNative/goo-image.c"
     }
   }
 }
