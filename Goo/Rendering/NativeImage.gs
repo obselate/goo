@@ -7,6 +7,9 @@ import System.Runtime.InteropServices
 @DllImport("goo-harfbuzz-gpu", EntryPoint: "goo_image_decode_rgba", CallingConvention: CallingConvention.Cdecl)
 internal unsafe func goo_image_decode_rgba(data * uint8, length int32, out width int32, out height int32) * uint8;
 
+@DllImport("goo-harfbuzz-gpu", EntryPoint: "goo_image_realloc", CallingConvention: CallingConvention.Cdecl)
+internal unsafe func goo_image_realloc(memory * uint8, size nuint) * uint8;
+
 @DllImport("goo-harfbuzz-gpu", EntryPoint: "goo_image_free", CallingConvention: CallingConvention.Cdecl)
 internal unsafe func goo_image_free(pixels * uint8) void;
 
@@ -22,7 +25,9 @@ internal unsafe sealed class NativeBytes : IDisposable {
   }
 
   private func Reserve(size int32) {
-    pointer = *uint8(Marshal.ReAllocHGlobal(nint(pointer), nint(size)))
+    let moved = goo_image_realloc(pointer, nuint(size))
+    if moved == nil { throw OutOfMemoryException() }
+    pointer = moved
     capacity = size
   }
 
@@ -39,7 +44,7 @@ internal unsafe sealed class NativeBytes : IDisposable {
   internal func Stream() UnmanagedMemoryStream -> UnmanagedMemoryStream(pointer, int64(Length))
 
   public func Dispose() {
-    Marshal.FreeHGlobal(nint(pointer))
+    goo_image_free(pointer)
     pointer = nil
     capacity = 0
     Length = 0

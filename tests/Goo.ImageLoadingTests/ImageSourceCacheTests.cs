@@ -111,6 +111,21 @@ public sealed class ImageSourceCacheTests : IDisposable
     }
 
     [Fact]
+    public void GrowingStreamBufferKeepsTheEncodedBytes()
+    {
+        var raw = new byte[512 * (1 + 512 * 4)];
+        new Random(7).NextBytes(raw);
+        for (var y = 0; y < 512; y++) raw[y * (1 + 512 * 4)] = 0;
+        var png = Png(512, 512, 8, 6, raw);
+        Assert.True(png.Length > 512 * 1024);
+        using var expected = ImageSource.Decode(png);
+        using var actual = ImageSource.Decode(new ForwardOnlyStream(png));
+        using var expectedLease = expected.Acquire();
+        using var actualLease = actual.Acquire();
+        Assert.Equal(expectedLease.Result()!.Pixels(), actualLease.Result()!.Pixels());
+    }
+
+    [Fact]
     public void ClipboardBitmapBecomesPngWithTheSamePixels()
     {
         var bmp = new byte[62];
@@ -422,6 +437,11 @@ public sealed class ImageSourceCacheTests : IDisposable
         var path = Path.Combine(directory, name);
         File.WriteAllBytes(path, bytes);
         return path;
+    }
+
+    private sealed class ForwardOnlyStream(byte[] bytes) : MemoryStream(bytes)
+    {
+        public override bool CanSeek => false;
     }
 
     private sealed class CancelAfterReadStream(byte[] bytes, CancellationTokenSource cancellation) : MemoryStream(bytes)
