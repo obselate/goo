@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.31 - 2026-10-12
+
+- Return native image decode memory to the system when the decode frees it on Linux with glibc. This applies to encoded bytes, source pixels and decoder buffers of 128 KiB or more. Freed blocks stayed resident in the allocator arenas of the decode threads.
+
 ## 0.7.30 - 2026-10-12
 
 - Release the GPU texture and the renderer identity of a disposed `ImageSource` when no element draws it. The release also occurs while the window is idle.
