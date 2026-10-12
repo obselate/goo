@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.30 - 2026-10-12
+
+- Release the GPU texture and the renderer identity of a disposed `ImageSource` when no element draws it. The release also occurs while the window is idle.
+- Add `ImageDecodeLimits`. `ImageSource.Decode`, `ImageSource.LoadThumbnail` and `ImageSourceCache` accept it. `MaxDecodedBytes` applies to the pixels that the decode keeps. A thumbnail of a large image is limited by its reduced size and by `MaxPixelsPerSide`.
+- Add `ImageLimitException` with `Width` and `Height`. An image that exceeds a limit now throws it. It threw `InvalidDataException`. `ImageLimitException` does not derive from `InvalidDataException`, so code that catches `InvalidDataException` for an oversize image must change.
+- Decode images with `stb_image` in the `goo-harfbuzz-gpu` native library. Encoded bytes and source pixels are native memory that the decode frees before it returns. Only the returned pixels are managed memory.
+- Remove the `StbImageSharp` package dependency.
+
 ## 0.7.29 - 2026-10-11
 
 - Start drag and drop when a pressed mouse or pen pointer moves 8 logical pixels on either axis. The distance was 4. A double click with a small pointer slip no longer starts a drag. Touch contacts still start at 4.
