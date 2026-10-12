@@ -10,6 +10,15 @@
       "archiveSha256": "9dae9538aae2ffdf70cec31f2c27bf68e2aaeeae3112688467697d5faf6194f7",
       "license": "HarfBuzz Old MIT",
       "licenseUrl": "https://github.com/harfbuzz/harfbuzz/blob/14.3.1/COPYING"
+    },
+    "stbImage": {
+      "version": "2.30",
+      "commit": "013ac3beddff3dbffafd5177e7972067cd2b5083",
+      "url": "https://raw.githubusercontent.com/nothings/stb/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h",
+      "sha256": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3",
+      "license": "MIT or Public Domain (Unlicense)",
+      "licenseUrl": "https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/LICENSE",
+      "wrapper": "tools/Goo.TextNative/goo-image.c"
     }
   },
   "build": {
@@ -277,6 +286,8 @@
       "hb_shape_full"
     ],
     "gpu": [
+      "goo_image_decode_rgba",
+      "goo_image_free",
       "hb_gpu_draw_create_or_fail",
       "hb_gpu_draw_destroy",
       "hb_gpu_draw_encode",

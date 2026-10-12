@@ -177,7 +177,7 @@ def main():
     artifacts = {}
     prefixes = {
         "harfbuzz": ("hb_",),
-        "gpu": ("hb_gpu_",),
+        "gpu": ("hb_gpu_", "goo_image_"),
     }
     for spec in args.artifact:
         name, separator, value = spec.partition("=")

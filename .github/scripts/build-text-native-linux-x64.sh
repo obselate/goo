@@ -90,6 +90,7 @@ text = text.replace(core, core + "  link_args: ['-Wl,-soname,libgoo-harfbuzz.so'
 text = text.replace(gpu, gpu + "    link_args: ['-Wl,-soname,libgoo-harfbuzz-gpu.so'],\n", 1)
 path.write_text(text, encoding="utf-8")
 PY
+python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-14.3.1"
 export SOURCE_DATE_EPOCH=0
 export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
