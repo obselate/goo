@@ -244,8 +244,10 @@ synchronous, so perform expensive decoding in a worker. The stream stays open.
 The optional cancellation token is checked between reads, during validation,
 and before publication.
 
-Inputs are limited to 16 MiB encoded data, 8192 pixels per dimension, and 64 MiB
-of decoded premultiplied RGBA pixels. Assign the returned source to `Image.Source`.
+By default, inputs are limited to 16 MiB encoded data, 8192 pixels per dimension, and 64 MiB
+of decoded premultiplied RGBA pixels. Pass an `ImageDecodeLimits` to change the limits.
+An input that exceeds a limit throws `ImageLimitException`, which gives the source width
+and height when the header had them. Assign the returned source to `Image.Source`.
 The caller owns and disposes the source. Mounted leases keep their pixels alive
 until the image unmounts, even after source disposal. `ImageSourceCache.LoadAsync`
 continues to provide bounded path-based sharing for local assets.
@@ -253,8 +255,9 @@ continues to provide bounded path-based sharing for local assets.
 Use `ImageSource.LoadThumbnail(path, maxWidth, maxHeight, cancellationToken)`
 to load a local image on a worker while retaining only bounded pixels. Both
 bounds must be positive. Goo keeps the original aspect ratio, never enlarges
-the image, and area-filters premultiplied RGBA when reducing it. The temporary
-full decode obeys the same limits above. The caller owns the returned source.
+the image, and area-filters premultiplied RGBA when reducing it. The decoded-byte
+limit applies to the reduced pixels. The source must obey the encoded-byte and
+pixels-per-dimension limits. The caller owns the returned source.
 
 ## `Blob`
 
@@ -678,6 +681,34 @@ Legacy path metadata. A nonempty path without Source throws when mounted. Load l
 
 Gets the owned or provider-backed image source. It wins over Path when set.
 
+## `ImageDecodeLimits`
+
+Source:
+
+- [`ImageDecodeLimits.gs`](../../Goo/Tree/ImageDecodeLimits.gs)
+
+Sets the size limits for one image decode.
+
+### `new`
+
+Initializes the default limits.
+
+### `Default`
+
+Gets the default limits.
+
+### `MaxDecodedBytes`
+
+Gets the maximum size in bytes of the RGBA pixels that the decode keeps. The default is 64 MiB. For a thumbnail, this limit applies to the reduced pixels and not to the source.
+
+### `MaxEncodedBytes`
+
+Gets the maximum encoded input size in bytes. The default is 16 MiB.
+
+### `MaxPixelsPerSide`
+
+Gets the maximum source width and height in pixels. The default is 8192.
+
 ## `ImageFit`
 
 Source:
@@ -708,6 +739,22 @@ Stretches the image to fill the destination box.
 ### `None`
 
 Paints the image at its intrinsic size without scaling.
+
+## `ImageLimitException`
+
+Source:
+
+- [`ImageDecodeLimits.gs`](../../Goo/Tree/ImageDecodeLimits.gs)
+
+Reports an image that exceeds an ImageDecodeLimits value.
+
+### `Height`
+
+Gets the source pixel height, or 0 when the limit was exceeded before the header gave it.
+
+### `Width`
+
+Gets the source pixel width, or 0 when the limit was exceeded before the header gave it.
 
 ## `ImageSource`
 
@@ -740,13 +787,21 @@ Returns: The completed binding for this source.
 
 Decodes from the stream's current position and leaves the stream open. Uses the same limits and synchronous decoding as the encoded-byte overload.
 
+### `Decode(System.IO.Stream,ImageDecodeLimits,System.Threading.CancellationToken)`
+
+Decodes a stream with the given limits and leaves the stream open.
+
 ### `Decode(System.IO.Stream,System.Threading.CancellationToken)`
 
 Decodes a stream with cancellation between reads and during validation. Leaves the stream open, including on cancellation or decoding failure.
 
 ### `Decode(System.ReadOnlyMemory{System.Byte})`
 
-Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source. Encoded input is limited to 16 MiB, dimensions to 8192 pixels, and decoded pixels to 64 MiB. Decoding is synchronous. Call from a worker when loading outside the UI thread.
+Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source. The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException. Decoding is synchronous. Call from a worker when loading outside the UI thread.
+
+### `Decode(System.ReadOnlyMemory{System.Byte},ImageDecodeLimits,System.Threading.CancellationToken)`
+
+Decodes encoded bytes with the given limits.
 
 ### `Decode(System.ReadOnlyMemory{System.Byte},System.Threading.CancellationToken)`
 
@@ -760,9 +815,13 @@ Releases this source's owner reference. Existing mounted leases stay valid.
 
 Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail. The image keeps its aspect ratio, never grows, and retains only the reduced pixels. This synchronous operation belongs on a worker outside the UI thread.
 
+### `LoadThumbnail(string,int32,int32,ImageDecodeLimits,System.Threading.CancellationToken)`
+
+Loads a bounded thumbnail with the given limits.
+
 ### `LoadThumbnail(string,int32,int32,System.Threading.CancellationToken)`
 
-Loads a bounded thumbnail with cancellation during reading, validation, and resampling. Encoded input is limited to 16 MiB, source dimensions to 8192, and source RGBA to 64 MiB.
+Loads a bounded thumbnail with cancellation during reading, validation, and resampling. The default ImageDecodeLimits apply. The decoded-byte limit applies to the reduced pixels.
 
 ### `Transfer(int32,int32,System.Byte[],System.Action)`
 
@@ -799,9 +858,9 @@ Source:
 
 Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Paths are snapshots; create a new cache to reload.
 
-### `new(int32,int32)`
+### `new(int32,int32,ImageDecodeLimits)`
 
-Creates a cache bounded by decoded RGBA bytes and unique paths. Limits must be positive; the default budget is 64 MiB and 128 paths.
+Creates a cache bounded by decoded RGBA bytes and unique paths. Limits must be positive; the default budget is 64 MiB and 128 paths. Each load uses the given decode limits, or the default limits when none are given.
 
 ### `Dispose`
 

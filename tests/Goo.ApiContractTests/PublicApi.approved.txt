@@ -32,7 +32,8 @@ ctor|Goo.FocusedEditorSnapshot|public|(arg0:System.Int64,arg1:System.String,arg2
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[])
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[],faceIndex:System.UInt32,variations:Goo.FontVariation[])
 ctor|Goo.FontVariation|public|(arg0:System.String,arg1:System.Single)
-ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntries:System.Int32=128)
+ctor|Goo.ImageDecodeLimits|public|()
+ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntries:System.Int32=128,limits:Goo.ImageDecodeLimits=null)
 ctor|Goo.ImageSourceLease|public|()
 ctor|Goo.ImageSource|public|(width:System.Int32,height:System.Int32,pixels:System.Byte[])
 ctor|Goo.Image|public|()
@@ -805,11 +806,14 @@ method|Goo.ImageSourceProvider|Acquire|abstract|public|generic:|()->Goo.ImageSou
 method|Goo.ImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
+method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Transfer|static|public|generic:|(width:System.Int32,height:System.Int32,pixels:System.Byte[],released:System.Action)->Goo.ImageSource
 method|Goo.KeyEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.KeyEvent|StopPropagation|instance|public|generic:|()->System.Void
@@ -1404,6 +1408,12 @@ property|Goo.FontVariation|Value|System.Single|instance|get:public,init:public|i
 property|Goo.GradientStop|Color|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.GradientStop|Offset|System.Double|instance|get:public,init:public|index:()
 property|Goo.Gradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|abstract|get:public|index:()
+property|Goo.ImageDecodeLimits|Default|Goo.ImageDecodeLimits|static|get:public|index:()
+property|Goo.ImageDecodeLimits|MaxDecodedBytes|System.Int32|instance|get:public,init:public|index:()
+property|Goo.ImageDecodeLimits|MaxEncodedBytes|System.Int32|instance|get:public,init:public|index:()
+property|Goo.ImageDecodeLimits|MaxPixelsPerSide|System.Int32|instance|get:public,init:public|index:()
+property|Goo.ImageLimitException|Height|System.Int32|instance|get:public|index:()
+property|Goo.ImageLimitException|Width|System.Int32|instance|get:public|index:()
 property|Goo.ImageSourceLease|IsComplete|System.Boolean|instance|get:public|index:()
 property|Goo.ImageSourceLease|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.ImageSourceLease|IsFailed|System.Boolean|instance|get:public|index:()
@@ -1906,7 +1916,9 @@ type|Goo.FontStyle|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FontVariation|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
+type|Goo.ImageDecodeLimits|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ImageFit|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.ImageLimitException|sealed-class|public|base:System.Exception|interfaces:|generic:
 type|Goo.ImageSourceCache|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ImageSourceLease|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ImageSourceProvider|interface|public|base:-|interfaces:|generic:

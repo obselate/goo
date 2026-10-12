@@ -72,7 +72,7 @@ public sealed class ImageSourceCacheTests : IDisposable
             bytes[frame + 7] = 0x7f;
             bytes[frame + 8] = 0xff;
         }
-        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("oversized-" + name, bytes)));
+        await Assert.ThrowsAsync<ImageLimitException>(() => cache.LoadAsync(Write("oversized-" + name, bytes)));
     }
 
     [Fact]
@@ -184,11 +184,11 @@ public sealed class ImageSourceCacheTests : IDisposable
         await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("crc.png", corrupt)));
         await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("bomb.png", Png(1, 1, 8, 6, new byte[1000000]))));
         await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("truncated.png", Png(1, 1, 8, 6, [0, 1]))));
-        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("huge.png", Png(8193, 1, 8, 6, []))));
-        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(Write("pixels.png", Png(8192, 8192, 8, 6, []))));
+        await Assert.ThrowsAsync<ImageLimitException>(() => cache.LoadAsync(Write("huge.png", Png(8193, 1, 8, 6, []))));
+        await Assert.ThrowsAsync<ImageLimitException>(() => cache.LoadAsync(Write("pixels.png", Png(8192, 8192, 8, 6, []))));
         var large = Path.Combine(directory, "encoded.png");
         using (var file = File.Create(large)) file.SetLength(16777217);
-        await Assert.ThrowsAsync<InvalidDataException>(() => cache.LoadAsync(large));
+        await Assert.ThrowsAsync<ImageLimitException>(() => cache.LoadAsync(large));
     }
 
     [Fact]
@@ -365,7 +365,7 @@ public sealed class ImageSourceCacheTests : IDisposable
         using var cancelled = new CancellationTokenSource();
         using var stream = new CancelAfterReadStream(Png(2, 1, 8, 6, [0, 255, 0, 0, 255, 0, 0, 255, 0]), cancelled);
         Assert.ThrowsAny<OperationCanceledException>(() =>
-            RasterImageDecoder.LoadThumbnail(stream, 1, 1, cancelled.Token));
+            RasterImageDecoder.LoadThumbnail(stream, 1, 1, ImageDecodeLimits.Default, cancelled.Token));
     }
 
     [Theory]
@@ -396,6 +396,31 @@ public sealed class ImageSourceCacheTests : IDisposable
             cancellation.Cancel();
             return read;
         }
+    }
+
+    [Fact]
+    public void LimitsApplyToKeptPixelsAndReportTheSourceSize()
+    {
+        using var raw = new MemoryStream();
+        for (var y = 0; y < 64; y++)
+        {
+            raw.WriteByte(0);
+            for (var x = 0; x < 64; x++) raw.Write([10, 20, 30, 255]);
+        }
+        var png = Png(64, 64, 8, 6, raw.ToArray());
+        var limits = new ImageDecodeLimits { MaxDecodedBytes = 1024 };
+        using var thumbnail = ImageSource.LoadThumbnail(Write("limits.png", png), 8, 8, limits, CancellationToken.None);
+        Assert.Equal(8, thumbnail.Width);
+        Assert.Equal(8, thumbnail.Height);
+
+        var decoded = Assert.Throws<ImageLimitException>(() => ImageSource.Decode(png, limits, CancellationToken.None));
+        Assert.Equal((64, 64), (decoded.Width, decoded.Height));
+        var side = Assert.Throws<ImageLimitException>(() => ImageSource.Decode(png,
+            new ImageDecodeLimits { MaxPixelsPerSide = 32 }, CancellationToken.None));
+        Assert.Equal((64, 64), (side.Width, side.Height));
+        var encoded = Assert.Throws<ImageLimitException>(() => ImageSource.Decode(png,
+            new ImageDecodeLimits { MaxEncodedBytes = 16 }, CancellationToken.None));
+        Assert.Equal((0, 0), (encoded.Width, encoded.Height));
     }
 
     private static byte[] Png(int width, int height, int depth, int color, byte[] raw,

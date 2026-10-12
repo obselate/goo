@@ -17,16 +17,20 @@ public class ImageSourceCache : IDisposable {
   private let sources Dictionary[string, ImageSource]
   private let maxBytes int32
   private let maxEntries int32
+  private let limits ImageDecodeLimits
   private var usedBytes int32
   private var disposed bool
 
   /// Creates a cache bounded by decoded RGBA bytes and unique paths.
   /// Limits must be positive; the default budget is 64 MiB and 128 paths.
-  public init(maxDecodedBytes int32 = 67108864, maxEntries int32 = 128) {
+  /// Each load uses the given decode limits, or the default limits when none are given.
+  public init(maxDecodedBytes int32 = 67108864, maxEntries int32 = 128,
+    limits ImageDecodeLimits? = nil) {
     if maxDecodedBytes <= 0 { throw ArgumentOutOfRangeException("maxDecodedBytes") }
     if maxEntries <= 0 { throw ArgumentOutOfRangeException("maxEntries") }
     maxBytes = maxDecodedBytes
     this.maxEntries = maxEntries
+    this.limits = limits ?? ImageDecodeLimits.Default
     stopping = shutdown.Token
     sources = Dictionary[string, ImageSource](OperatingSystem.IsWindows()
       ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
@@ -56,7 +60,7 @@ public class ImageSourceCache : IDisposable {
       if sources.TryGetValue(path, out var existing) { return existing.RetainSource() }
       if sources.Count >= maxEntries { throw InvalidOperationException("Image cache path budget is full") }
     }
-    let decoded = RasterImageDecoder.Load(path, token)
+    let decoded = RasterImageDecoder.Load(path, limits, token)
     var accepted = false
     try {
       token.ThrowIfCancellationRequested()

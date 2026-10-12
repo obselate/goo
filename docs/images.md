@@ -31,8 +31,9 @@ Other formats throw
 directly. `Image.Path` is legacy metadata: mounting a nonempty path without
 `Source` throws a message directing the caller to `LoadAsync`.
 
-Each file is limited to 16 MiB encoded, 8192 pixels per dimension, and 64 MiB
-decoded RGBA. The loader validates PNG chunk bounds/checksums and the exact
+By default each file is limited to 16 MiB encoded, 8192 pixels per dimension, and 64 MiB
+decoded RGBA. An `ImageDecodeLimits` argument changes the limits, and a file that exceeds
+one throws `ImageLimitException`. The loader validates PNG chunk bounds/checksums and the exact
 decompressed scanline size before invoking the managed decoder, including for
 compressed data that expands beyond the header's dimensions. JPEG frame dimensions,
 segment bounds, scan count, and an end marker are checked before decoding. GIF

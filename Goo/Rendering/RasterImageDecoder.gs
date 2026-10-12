@@ -6,37 +6,45 @@ import System.IO.Compression
 import System.Threading
 import StbImageSharp
 
+internal data struct RasterDecodeBounds {
+  var Limits ImageDecodeLimits
+  var MaxWidth int32
+  var MaxHeight int32
+}
+
 internal partial class RasterImageDecoder {
   shared {
-    private const MaxEncodedBytes int32 = 16777216
-    private const MaxDecodedBytes int32 = 67108864
     private const MaxIconEdge uint32 = 1024u
     private let signature []uint8 = []uint8{137, 80, 78, 71, 13, 10, 26, 10}
     private let crcTable []uint32 = CreateCrcTable()
 
-    internal func Load(path string, token CancellationToken) ImageSource {
+    internal func Load(path string, limits ImageDecodeLimits, token CancellationToken) ImageSource {
       using let file = File.OpenRead(path)
-      return Load(file, token)
+      return Load(file, limits, token)
     }
 
     internal func LoadThumbnail(path string, maxWidth int32, maxHeight int32,
-      token CancellationToken) ImageSource {
+      limits ImageDecodeLimits, token CancellationToken) ImageSource {
         token.ThrowIfCancellationRequested()
         using let file = File.OpenRead(path)
-        return LoadThumbnail(file, maxWidth, maxHeight, token)
+        return LoadThumbnail(file, maxWidth, maxHeight, limits, token)
       }
 
     internal func LoadThumbnail(stream Stream, maxWidth int32, maxHeight int32,
-      token CancellationToken) ImageSource ->
-    DecodeThumbnail(Read(stream, token), maxWidth, maxHeight, token)
+      limits ImageDecodeLimits, token CancellationToken) ImageSource ->
+    DecodeCore(Read(stream, limits, token),
+      RasterDecodeBounds{ Limits: limits, MaxWidth: maxWidth, MaxHeight: maxHeight }, token)
 
-    internal func Load(stream Stream, token CancellationToken) ImageSource ->
-    Decode(Read(stream, token), token)
+    internal func Load(stream Stream, limits ImageDecodeLimits, token CancellationToken) ImageSource ->
+    Decode(Read(stream, limits, token), limits, token)
 
-    private func Read(stream Stream, token CancellationToken) []uint8 {
+    private func EncodedLimit(limits ImageDecodeLimits) ImageLimitException ->
+    ImageLimitException("Encoded image exceeds " + limits.MaxEncodedBytes.ToString() + " bytes", 0, 0)
+
+    private func Read(stream Stream, limits ImageDecodeLimits, token CancellationToken) []uint8 {
       token.ThrowIfCancellationRequested()
-      if stream.CanSeek && stream.Length - stream.Position > MaxEncodedBytes {
-        throw InvalidDataException("Encoded image exceeds 16 MiB")
+      if stream.CanSeek && stream.Length - stream.Position > limits.MaxEncodedBytes {
+        throw EncodedLimit(limits)
       }
       using let encoded = MemoryStream()
       let buffer = [65536]uint8
@@ -44,24 +52,35 @@ internal partial class RasterImageDecoder {
         token.ThrowIfCancellationRequested()
         let count = stream.Read(buffer, 0, buffer.Length)
         if count == 0 { break }
-        if encoded.Length + count > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
+        if encoded.Length + count > limits.MaxEncodedBytes { throw EncodedLimit(limits) }
         encoded.Write(buffer, 0, count)
       }
       return encoded.ToArray()
     }
 
-    internal func Decode(bytes []uint8, token CancellationToken) ImageSource ->
-    DecodeCore(bytes, 0, 0, token)
-
-    private func DecodeThumbnail(bytes []uint8, maxWidth int32, maxHeight int32,
-      token CancellationToken) ImageSource -> DecodeCore(bytes, maxWidth, maxHeight, token)
+    private func Decode(bytes []uint8, limits ImageDecodeLimits, token CancellationToken) ImageSource ->
+    DecodeCore(bytes, RasterDecodeBounds{ Limits: limits }, token)
 
     internal func DecodeIconPng(bytes []uint8) ImageResult ->
-    DecodeRaw(bytes, CancellationToken.None, true)
+    DecodeRaw(bytes, RasterDecodeBounds{ Limits: ImageDecodeLimits.Default }, CancellationToken.None, true)
 
-    private func DecodeCore(bytes []uint8, maxWidth int32, maxHeight int32,
+    private func ThumbnailSize(sourceWidth int32, sourceHeight int32, bounds RasterDecodeBounds,
+      out width int32, out height int32) {
+        width = sourceWidth
+        height = sourceHeight
+        if bounds.MaxWidth <= 0 || (sourceWidth <= bounds.MaxWidth && sourceHeight <= bounds.MaxHeight) { return }
+        if int64(sourceWidth) * bounds.MaxHeight > int64(sourceHeight) * bounds.MaxWidth {
+          width = bounds.MaxWidth
+          height = int32(Math.Max(1L, (int64(sourceHeight) * bounds.MaxWidth + sourceWidth / 2) / sourceWidth))
+        } else {
+          width = int32(Math.Max(1L, (int64(sourceWidth) * bounds.MaxHeight + sourceHeight / 2) / sourceHeight))
+          height = bounds.MaxHeight
+        }
+      }
+
+    private func DecodeCore(bytes []uint8, bounds RasterDecodeBounds,
       token CancellationToken) ImageSource {
-      let image = DecodeRaw(bytes, token, false)
+      let image = DecodeRaw(bytes, bounds, token, false)
       guard let pixels = image.Data else { throw InvalidDataException("Image decoder returned no pixels") }
       var offset = 0
       while offset < pixels.Length {
@@ -74,14 +93,8 @@ internal partial class RasterImageDecoder {
         }
         offset += 4
       }
-      if maxWidth > 0 && (image.Width > maxWidth || image.Height > maxHeight) {
-        let widthLimited = int64(image.Width) * maxHeight > int64(image.Height) * maxWidth
-        let width = if widthLimited { maxWidth } else {
-          int32(Math.Max(1L, (int64(image.Width) * maxHeight + image.Height / 2) / image.Height))
-        }
-        let height = if widthLimited {
-          int32(Math.Max(1L, (int64(image.Height) * maxWidth + image.Width / 2) / image.Width))
-        } else { maxHeight }
+      ThumbnailSize(image.Width, image.Height, bounds, out var width, out var height)
+      if width != image.Width || height != image.Height {
         let resized = Resample(pixels, image.Width, image.Height, width, height, token)
         token.ThrowIfCancellationRequested()
         return ImageSource.Transfer(width, height, resized, () -> { })
@@ -90,10 +103,11 @@ internal partial class RasterImageDecoder {
       return ImageSource.Transfer(image.Width, image.Height, pixels, () -> { })
     }
 
-    private func DecodeRaw(bytes []uint8, token CancellationToken, pngOnly bool) ImageResult {
+    private func DecodeRaw(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken,
+      pngOnly bool) ImageResult {
       token.ThrowIfCancellationRequested()
-      if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
-      if pngOnly { ValidatePng(bytes, token) } else { ValidateFormat(bytes, token) }
+      if bytes.Length > bounds.Limits.MaxEncodedBytes { throw EncodedLimit(bounds.Limits) }
+      if pngOnly { ValidatePng(bytes, bounds, token) } else { ValidateFormat(bytes, bounds, token) }
       if pngOnly && (U32(bytes, 16) > MaxIconEdge || U32(bytes, 20) > MaxIconEdge) {
         throw InvalidDataException("Window icon exceeds 1024 pixels per side")
       }
@@ -103,7 +117,7 @@ internal partial class RasterImageDecoder {
       }
       token.ThrowIfCancellationRequested()
       guard let pixels = image.Data else { throw InvalidDataException("Image decoder returned no pixels") }
-      ValidateDimensions(image.Width, image.Height)
+      ValidateDimensions(image.Width, image.Height, bounds)
       if pixels.Length != image.Width * image.Height * 4 { throw InvalidDataException("Image decoder returned an invalid raster") }
       token.ThrowIfCancellationRequested()
       return image
@@ -174,15 +188,16 @@ internal partial class RasterImageDecoder {
       }
     }
 
-    internal func Decode(bytes ReadOnlyMemory[uint8], token CancellationToken) ImageSource {
-      token.ThrowIfCancellationRequested()
-      if bytes.Length > MaxEncodedBytes { throw InvalidDataException("Encoded image exceeds 16 MiB") }
-      return Decode(bytes.ToArray(), token)
-    }
+    internal func Decode(bytes ReadOnlyMemory[uint8], limits ImageDecodeLimits,
+      token CancellationToken) ImageSource {
+        token.ThrowIfCancellationRequested()
+        if bytes.Length > limits.MaxEncodedBytes { throw EncodedLimit(limits) }
+        return Decode(bytes.ToArray(), limits, token)
+      }
 
     // Preflight the complete bounded zlib stream before stb can expand it. Header
     // dimensions alone do not bound a decoder's intermediate decompression buffer.
-    private func ValidatePng(bytes []uint8, token CancellationToken) {
+    private func ValidatePng(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
       if bytes.Length < 8 { throw InvalidDataException("Truncated image header") }
       for i in 0 ... 8 {
         if bytes[i] != signature[i] { throw NotSupportedException("Only PNG images are supported; use ImageSource for other formats") }
@@ -211,10 +226,8 @@ internal partial class RasterImageDecoder {
           seenHeader = true
           let width = U32(bytes, start)
           let height = U32(bytes, start + 4)
-          if width == 0u || height == 0u || width > 8192u || height > 8192u
-            || int64(width) * int64(height) * 4 > MaxDecodedBytes{
-              throw InvalidDataException("PNG exceeds 8192 pixels per dimension or 64 MiB decoded RGBA")
-            }
+          if width > 2147483647u || height > 2147483647u { throw InvalidDataException("Invalid PNG dimensions") }
+          ValidateDimensions(int32(width), int32(height), bounds)
           let depth = int32(bytes[start + 8])
           let color = int32(bytes[start + 9])
           let channels = color == 0 || color == 3 ? 1 : color == 2 ? 3 : color == 4 ? 2 : color == 6 ? 4 : 0

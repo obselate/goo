@@ -6,30 +6,40 @@ import System.Threading
 
 internal partial class RasterImageDecoder {
   shared {
-    private func ValidateFormat(bytes []uint8, token CancellationToken) {
+    private func ValidateFormat(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
       if bytes.Length < 8 { throw InvalidDataException("Truncated image header") }
-      if bytes[0] == 137 && bytes[1] == 80 { ValidatePng(bytes, token)
+      if bytes[0] == 137 && bytes[1] == 80 { ValidatePng(bytes, bounds, token)
         return }
-      if bytes[0] == 255 && bytes[1] == 216 { ValidateJpeg(bytes, token)
+      if bytes[0] == 255 && bytes[1] == 216 { ValidateJpeg(bytes, bounds, token)
         return }
       if bytes[0] == 71 && bytes[1] == 73 && bytes[2] == 70
         && bytes[3] == 56 && (bytes[4] == 55 || bytes[4] == 57) && bytes[5] == 97 {
-          ValidateGif(bytes, token)
+          ValidateGif(bytes, bounds, token)
           return
         }
       throw NotSupportedException("Only PNG, JPEG, and GIF images are supported; use ImageSource for other formats")
     }
 
-    private func ValidateDimensions(width int32, height int32) {
-      if width <= 0 || height <= 0 || width > 8192 || height > 8192
-        || int64(width) * height * 4 > MaxDecodedBytes{
-          throw InvalidDataException("Image exceeds 8192 pixels per dimension or 64 MiB decoded RGBA")
-        }
+    private func ValidateDimensions(width int32, height int32, bounds RasterDecodeBounds) {
+      if width <= 0 || height <= 0 { throw InvalidDataException("Image has no pixels") }
+      let limits = bounds.Limits
+      if width > limits.MaxPixelsPerSide || height > limits.MaxPixelsPerSide {
+        throw ImageLimitException("Image exceeds " + limits.MaxPixelsPerSide.ToString() + " pixels per side",
+          width, height)
+      }
+      if int64(width) * height * 4 > Int32.MaxValue {
+        throw ImageLimitException("Image source exceeds 2 GiB of RGBA pixels", width, height)
+      }
+      ThumbnailSize(width, height, bounds, out var keptWidth, out var keptHeight)
+      if int64(keptWidth) * keptHeight * 4 > limits.MaxDecodedBytes {
+        throw ImageLimitException("Decoded image exceeds " + limits.MaxDecodedBytes.ToString() + " bytes",
+          width, height)
+      }
     }
 
     // Validate every marker and entropy block before the decoder allocates the
     // raster. A JPEG has one frame; successive progressive scans refine it.
-    private func ValidateJpeg(bytes []uint8, token CancellationToken) {
+    private func ValidateJpeg(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
       var offset = 2
       var frame = false
       var scans int32
@@ -55,7 +65,7 @@ internal partial class RasterImageDecoder {
           if marker != 192 && marker != 193 && marker != 194 { throw NotSupportedException("Unsupported JPEG frame encoding") }
           if frame || size < 8 { throw InvalidDataException("Invalid or duplicate JPEG frame") }
           if bytes[offset + 2] != 8 { throw NotSupportedException("Only 8-bit JPEG samples are supported") }
-          ValidateDimensions(Big16(bytes, offset + 5), Big16(bytes, offset + 3))
+          ValidateDimensions(Big16(bytes, offset + 5), Big16(bytes, offset + 3), bounds)
           let components = int32(bytes[offset + 7])
           if (components != 1 && components != 3 && components != 4) || size != 8 + components * 3 {
             throw InvalidDataException("Invalid JPEG component table")
@@ -87,11 +97,11 @@ internal partial class RasterImageDecoder {
 
     // Decode only the first frame. All remaining blocks are checked for bounded
     // structure, without allocating or decompressing the rest of an animation.
-    private func ValidateGif(bytes []uint8, token CancellationToken) {
+    private func ValidateGif(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
       if bytes.Length < 13 { throw InvalidDataException("Truncated GIF screen descriptor") }
       let width = Little16(bytes, 6)
       let height = Little16(bytes, 8)
-      ValidateDimensions(width, height)
+      ValidateDimensions(width, height, bounds)
       var offset = 13
       if (bytes[10] & uint8(128)) != 0 { offset += 3 * (1 << (int32(bytes[10] & uint8(7)) + 1)) }
       var frames int32
