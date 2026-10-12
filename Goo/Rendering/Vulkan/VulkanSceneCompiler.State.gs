@@ -7,6 +7,7 @@ import System.Runtime.CompilerServices
 internal partial class VulkanSceneCompiler {
   private const BackgroundOwnerId uint64 = 1uL
   private const FirstNodeOwnerId uint64 = 2uL
+  private const BackdropBlurMaskBit uint64 = 1uL << 61
   private const OverflowClipMaskBit uint64 = 1uL << 62
   private const ShapePaintMaskBit uint64 = 1uL << 63
   private const MaxRectClipDepth int32 = 64
@@ -19,6 +20,8 @@ internal partial class VulkanSceneCompiler {
   private let owners ConditionalWeakTable[Node, VulkanSceneOwnerId]
   private let ownerToken object
   private let roundedOverflowPaths ConditionalWeakTable[Node,
+    VulkanRoundedOverflowPathCacheEntry]
+  private let backdropBlurPaths ConditionalWeakTable[Node,
     VulkanRoundedOverflowPathCacheEntry]
   private let unsupportedDetails []VulkanSceneUnsupportedDetail
   private var textScene VulkanTextScene?
@@ -63,6 +66,7 @@ internal partial class VulkanSceneCompiler {
     owners = ConditionalWeakTable[Node, VulkanSceneOwnerId]()
     ownerToken = Object()
     roundedOverflowPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
+    backdropBlurPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
     unsupportedDetails = [capacity]VulkanSceneUnsupportedDetail
     nextOwnerId = FirstNodeOwnerId
     blendModeSupported = true

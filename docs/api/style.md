@@ -834,6 +834,10 @@ Sets this item's cross-axis alignment.
 
 Sets the preferred width-to-height ratio.
 
+### `BackdropBlur`
+
+Sets the Gaussian blur radius, from 0 through 64 pixels, applied to the window content behind the border box. BorderRadius, clips and Opacity apply to the blur.
+
 ### `BackgroundColor`
 
 Sets the background color.

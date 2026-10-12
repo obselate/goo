@@ -121,7 +121,10 @@ internal partial class VulkanSceneCompiler {
     bounds ConservativeBounds,
     clipBounds ConservativeBounds,
     transformIndex int32,
-    parentChainId int32) VulkanScenePathClipResult{
+    parentChainId int32,
+    borderBox bool = false) VulkanScenePathClipResult{
+      let maskBit = borderBox ? BackdropBlurMaskBit : OverflowClipMaskBit
+      let paths = borderBox ? backdropBlurPaths : roundedOverflowPaths
       if bounds.IsEmpty {
         return VulkanScenePathClipResult{}
       }
@@ -129,37 +132,41 @@ internal partial class VulkanSceneCompiler {
         return VulkanScenePathClipResult{}
       }
       if clipBounds.IsEmpty {
-        let stableId = OwnerId(node) | OverflowClipMaskBit
+        let stableId = OwnerId(node) | maskBit
         var contentKey = HashPathBounds(stableId, clipBounds)
-        contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
+        contentKey = MixPathHash(contentKey, maskBit)
         return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }
-      let entry = if roundedOverflowPaths.TryGetValue(node, out var existing) {
+      let entry = if paths.TryGetValue(node, out var existing) {
         existing
       } else {
         let created = VulkanRoundedOverflowPathCacheEntry()
-        roundedOverflowPaths.Add(node, created)
+        paths.Add(node, created)
         created
       }
-      let topLeft = PaddingEdgeRadius(node, node.BorderTopLeftRadius,
-        node.BorderRadius, bounds, clipBounds, true, true)
-      let topRight = PaddingEdgeRadius(node, node.BorderTopRightRadius,
-        node.BorderRadius, bounds, clipBounds, false, true)
-      let bottomRight = PaddingEdgeRadius(node, node.BorderBottomRightRadius,
-        node.BorderRadius, bounds, clipBounds, false, false)
-      let bottomLeft = PaddingEdgeRadius(node, node.BorderBottomLeftRadius,
-        node.BorderRadius, bounds, clipBounds, true, false)
+      let topLeft = borderBox ? Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds)
+        : PaddingEdgeRadius(node, node.BorderTopLeftRadius,
+          node.BorderRadius, bounds, clipBounds, true, true)
+      let topRight = borderBox ? Radius(node.BorderTopRightRadius, node.BorderRadius, bounds)
+        : PaddingEdgeRadius(node, node.BorderTopRightRadius,
+          node.BorderRadius, bounds, clipBounds, false, true)
+      let bottomRight = borderBox ? Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds)
+        : PaddingEdgeRadius(node, node.BorderBottomRightRadius,
+          node.BorderRadius, bounds, clipBounds, false, false)
+      let bottomLeft = borderBox ? Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds)
+        : PaddingEdgeRadius(node, node.BorderBottomLeftRadius,
+          node.BorderRadius, bounds, clipBounds, true, false)
       let clipPath = entry.Resolve(
         topLeft / clipBounds.Width, topLeft / clipBounds.Height,
         topRight / clipBounds.Width, topRight / clipBounds.Height,
         bottomRight / clipBounds.Width, bottomRight / clipBounds.Height,
         bottomLeft / clipBounds.Width, bottomLeft / clipBounds.Height)
-      let stableId = OwnerId(node) | OverflowClipMaskBit
+      let stableId = OwnerId(node) | maskBit
       let mapping = PathGeometry.Map(clipPath, ShapeFit.Fill,
         clipBounds.X, clipBounds.Y, clipBounds.Width, clipBounds.Height)
       var contentKey = ClipContentKey(node, clipPath, ShapeFit.Fill,
         uint32(FillRule.NonZero), clipBounds, transformIndex)
-      contentKey = MixPathHash(contentKey, OverflowClipMaskBit)
+      contentKey = MixPathHash(contentKey, maskBit)
       if !mapping.Valid || mapping.ScaleX == 0.0F || mapping.ScaleY == 0.0F {
         return AppendZeroPathClip(parentChainId, stableId, contentKey)
       }

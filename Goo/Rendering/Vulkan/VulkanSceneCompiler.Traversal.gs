@@ -239,6 +239,7 @@ internal partial class VulkanSceneCompiler {
       let subtreeBounds = isolates
       ? LayerSubtreeBounds(node, ResolveCompilerFrameTransform(context.ParentTransformIndex),
         context.ActiveClipBounds) : ConservativeBounds{}
+      EmitBackdropBlur(node, ownerId, bounds, opacity, transform.Index, axisAligned, context)
       var layerRecord LayerRecord
       var outerLayerRecord LayerRecord
       var innerLayerRecord LayerRecord

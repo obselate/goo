@@ -14,7 +14,7 @@ internal partial class VulkanSceneCompiler {
       node.VulkanOwner = existing
       return existing
     }
-    if nextOwnerId >= OverflowClipMaskBit {
+    if nextOwnerId >= BackdropBlurMaskBit {
       throw OverflowException("Vulkan scene owner id overflow")
     }
     let value = VulkanSceneOwnerId(nextOwnerId)

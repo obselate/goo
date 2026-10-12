@@ -124,6 +124,7 @@ internal class Node {
     set -> Outlining.SetOffset(this, value)
   }
   internal prop Opacity float64{ get; set; }
+  internal prop BackdropBlur float32{ get; set; }
   internal prop BoxShadows BoxShadowStack? { get; set; }
   internal prop TextShadows BoxShadowStack? {
     get -> TextShadowing.Get(this)

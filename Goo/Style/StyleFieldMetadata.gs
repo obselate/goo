@@ -244,8 +244,9 @@ private func createStyleFieldInfo() []StyleFieldInfo {
     styleFieldInfo(StyleField.ScrollbarY, FieldKind.KScrollbar, layoutPaintInput, init),
     styleFieldInfo(StyleField.Language, FieldKind.KString, layoutPaint, init | inherit,
       StyleEntry{ Field: StyleField.Language, Payload: "" }),
+    styleFieldInfo(StyleField.BackdropBlur, FieldKind.KScalar, ReconcileEffects.Paint, lerp | init),
   }
-  let expected = int32(StyleField.Language) + 1
+  let expected = int32(StyleField.BackdropBlur) + 1
   if result.Length != expected {
     throw InvalidOperationException("StyleField metadata count mismatch")
   }

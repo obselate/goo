@@ -765,6 +765,7 @@ internal func writeDirectWithInvalidation(n Node, e StyleEntry, invalidated Acti
     case StyleField.OutlineColor { n.OutlineColor = Color.FromNormalized(e.A, e.B, e.C, e.D) }
     case StyleField.OutlineOffset { n.OutlineOffset = Length{ Unit: LengthUnit(int32(e.B)), Value: e.A } }
     case StyleField.Opacity { n.Opacity = float64(e.A) }
+    case StyleField.BackdropBlur { n.BackdropBlur = e.A }
     case StyleField.BoxShadows { n.BoxShadows = entryShadows(e) }
     case StyleField.TextShadows { n.TextShadows = entryShadows(e) }
     case StyleField.TextStrokeWidth {
@@ -903,6 +904,7 @@ internal func readField(n Node, f StyleField) StyleEntry {
     case StyleField.OutlineColor { return StyleEntry{ Field: f, A: n.OutlineColor.R, B: n.OutlineColor.G, C: n.OutlineColor.B, D: n.OutlineColor.A } }
     case StyleField.OutlineOffset { return StyleEntry{ Field: f, A: n.OutlineOffset.Value, B: float32(int32(n.OutlineOffset.Unit)) } }
     case StyleField.Opacity { return StyleEntry{ Field: f, A: float32(n.Opacity) } }
+    case StyleField.BackdropBlur { return StyleEntry{ Field: f, A: n.BackdropBlur } }
     case StyleField.BoxShadows { return StyleEntry{ Field: f, Payload: n.BoxShadows } }
     case StyleField.TextShadows { return StyleEntry{ Field: f, Payload: n.TextShadows } }
     case StyleField.TextStrokeWidth {

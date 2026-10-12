@@ -104,6 +104,7 @@ internal partial class VulkanSceneCompiler {
         || node.ScrollX != 0.0F || node.ScrollY != 0.0F
         || node.BlendMode != BlendMode.Normal
         || styleMaskHas(node.AppliedMask, StyleField.ShaderEffect)
+        || node.BackdropBlur > 0.0F
         || node.Hovered || node.Pressed || node.KeyboardPressed
         || node.Focused || node.Disabled
         || node.PointerPressCount != 0

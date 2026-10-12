@@ -264,6 +264,9 @@ public open class Style {
   public prop OutlineOffset Length{ init -> pushCheckedLength(StyleField.OutlineOffset, value, "OutlineOffset", true, false, false) }
   /// Sets opacity from 0 through 1.
   public prop Opacity float64{ init -> pushScalar(StyleField.Opacity, normalizeOpacity(value)) }
+  /// Sets the Gaussian blur radius, from 0 through 64 pixels, applied to the window
+  /// content behind the border box. BorderRadius, clips and Opacity apply to the blur.
+  public prop BackdropBlur float64{ init -> pushScalar(StyleField.BackdropBlur, normalizeBackdropBlur(value)) }
   /// Sets how this element and its descendants composite with the backdrop.
   public prop BlendMode BlendMode{ init -> pushEnumOrdinal(StyleField.BlendMode, int32(value)) }
   public prop ShaderEffect ShaderEffect? {
@@ -438,6 +441,14 @@ public open class Style {
       throw ArgumentOutOfRangeException(name)
     }
     return value
+  }
+
+  internal func normalizeBackdropBlur(value float64) float64 {
+    if !motionFinite(value) {
+      throw ArgumentOutOfRangeException("BackdropBlur")
+    }
+    if value < 0.0 { return 0.0 }
+    return if value > 64.0 { 64.0 } else { value }
   }
 
   internal func normalizeOpacity(value float64) float64 {

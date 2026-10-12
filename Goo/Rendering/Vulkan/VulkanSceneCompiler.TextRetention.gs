@@ -202,6 +202,7 @@ internal partial class VulkanSceneCompiler {
     && finiteVulkanSceneValue(node.Color.B)
     && finiteVulkanSceneValue(node.Color.A)
     && !styleMaskHas(node.AppliedMask, StyleField.ShaderEffect)
+    && node.BackdropBlur <= 0.0F
     && RetainedTextContentEligible(node, owner, bounds)
     && RetainedTextOwnRectClipSupported(
       node, bounds, context.ParentAxisAligned, context.ParentRectClipDepth)
