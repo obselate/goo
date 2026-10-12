@@ -391,8 +391,17 @@ func CloseWindow(window Window) bool {
   return !window.IsOpen
 }
 
+func VerifyImageDecode() {
+  let png = []uint8{137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 2, 0, 0, 0, 1, 8, 6, 0, 0, 0,
+    244, 34, 127, 138, 0, 0, 0, 14, 73, 68, 65, 84, 120, 218, 99, 248, 207, 192, 0, 66, 255, 1, 15, 249, 3, 253, 152,
+    121, 215, 0, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130}
+  using let image = ImageSource.Decode(png)
+  if image.Width != 2 || image.Height != 1 { throw InvalidOperationException("Packaged image decoder returned a wrong size") }
+}
+
 func Main() {
   Window.ConfigureApplication("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
+  VerifyImageDecode()
   if Environment.GetEnvironmentVariable("GOO_APPLICATION_QUIT_SMOKE") == "1" {
     RunApplicationQuitSmoke()
     return

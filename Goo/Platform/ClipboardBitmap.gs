@@ -3,7 +3,6 @@ package Goo
 import System
 import System.IO
 import System.IO.Compression
-import StbImageSharp
 
 internal class ClipboardBitmap {
   shared {
@@ -29,12 +28,9 @@ internal class ClipboardBitmap {
       if int64(offset) < 14 + int64(header) + masks + colors * 4 || int64(offset) + stride * height > bytes.Length {
         throw InvalidDataException("Native BMP palette or pixels are truncated")
       }
-      guard let image = StbImageSharp.ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha) else {
-        throw InvalidDataException("Native BMP decoder returned no image")
-      }
-      guard let pixels = image.Data else { throw InvalidDataException("Native BMP decoder returned no pixels") }
-      if image.Width != width || image.Height != height || pixels.Length != width * height * 4 { throw InvalidDataException("Native BMP raster differs from its header") }
-      return EncodePng(width, height, pixels)
+      using let image = NativeImage.Decode(bytes)
+      if image.Width != width || image.Height != height { throw InvalidDataException("Native BMP raster differs from its header") }
+      return EncodePng(width, height, image.Pixels)
     }
 
     internal func ValidateDimensions(width int32, height int32) {
@@ -43,13 +39,13 @@ internal class ClipboardBitmap {
       }
     }
 
-    private func EncodePng(width int32, height int32, pixels []uint8) []uint8 {
+    private func EncodePng(width int32, height int32, pixels ReadOnlySpan[uint8]) []uint8 {
       using let compressed = MemoryStream()
       let zlib = ZLibStream(compressed, CompressionLevel.Fastest, true)
       try {
         for row in 0 ... height {
           zlib.WriteByte(uint8(0))
-          zlib.Write(pixels, row * width * 4, width * 4)
+          zlib.Write(pixels.Slice(row * width * 4, width * 4))
           if compressed.Length > ClipboardTransfer.MaxImageBytes - 57 { throw ClipboardLimitException("Normalized PNG exceeds 64 MiB") }
         }
       } finally { zlib.Dispose() }

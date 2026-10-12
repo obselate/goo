@@ -6,7 +6,6 @@ Gsharp.Extensions.dll
 Gsharp.Runtime.Channels.dll
 Hexa.NET.SDL3.dll
 HexaGen.Runtime.dll
-StbImageSharp.dll
 Unicode.Bidi.dll
 Yoga.Net.dll
 libSDL3.so

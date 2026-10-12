@@ -22,13 +22,14 @@ notifications carry one struct argument instead of flattening it into separate
 D-Bus arguments. This keeps native client caches consistent on node insertion
 and removal. The native inspector test validates both wire signatures.
 
-## StbImageSharp PNG decoder
+## stb_image decoder
 
-Goo depends on the managed `StbImageSharp` 2.30.16 package. No additional native
-image-decoder library is required. The package declares `Unlicense OR MIT`.
+The `goo-harfbuzz-gpu` native library includes `stb_image` 2.30, built for PNG, JPEG,
+GIF and BMP. No additional native library ships. The source declares
+`MIT OR Unlicense`.
 
-- Package repository commit: `125af70cb557033f2c46aec8e82eaaf72ac49817`.
-- [StbImageSharp source and license](https://github.com/StbSharp/StbImageSharp/blob/125af70cb557033f2c46aec8e82eaaf72ac49817/README.md)
+- Source commit: `013ac3beddff3dbffafd5177e7972067cd2b5083`.
+- [stb_image source and license](https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h)
 
 ## G# runtime support
 

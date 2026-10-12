@@ -4,9 +4,9 @@ import System
 import System.IO
 import System.Threading
 
-internal partial class RasterImageDecoder {
+internal unsafe partial class RasterImageDecoder {
   shared {
-    private func ValidateFormat(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
+    private func ValidateFormat(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken) {
       if bytes.Length < 8 { throw InvalidDataException("Truncated image header") }
       if bytes[0] == 137 && bytes[1] == 80 { ValidatePng(bytes, bounds, token)
         return }
@@ -39,7 +39,7 @@ internal partial class RasterImageDecoder {
 
     // Validate every marker and entropy block before the decoder allocates the
     // raster. A JPEG has one frame; successive progressive scans refine it.
-    private func ValidateJpeg(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
+    private func ValidateJpeg(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken) {
       var offset = 2
       var frame = false
       var scans int32
@@ -97,7 +97,7 @@ internal partial class RasterImageDecoder {
 
     // Decode only the first frame. All remaining blocks are checked for bounded
     // structure, without allocating or decompressing the rest of an animation.
-    private func ValidateGif(bytes []uint8, bounds RasterDecodeBounds, token CancellationToken) {
+    private func ValidateGif(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken) {
       if bytes.Length < 13 { throw InvalidDataException("Truncated GIF screen descriptor") }
       let width = Little16(bytes, 6)
       let height = Little16(bytes, 8)
@@ -135,9 +135,9 @@ internal partial class RasterImageDecoder {
         if codeSize < 2 || codeSize > 8 { throw InvalidDataException("Invalid GIF LZW code size") }
         offset++
         if frames == 0 {
-          using let compressed = MemoryStream()
+          using let compressed = NativeBytes(bytes.Length - offset)
           offset = SkipGifBlocks(bytes, offset, compressed, token)
-          ValidateGifCodes(compressed.ToArray(), codeSize, frameWidth * frameHeight, token)
+          ValidateGifCodes(compressed.Bytes, codeSize, frameWidth * frameHeight, token)
         } else { offset = SkipGifBlocks(bytes, offset, nil, token) }
         frames++
         if frames > 1024 { throw InvalidDataException("GIF exceeds 1024 frames") }
@@ -145,7 +145,7 @@ internal partial class RasterImageDecoder {
       throw InvalidDataException("GIF has no trailer")
     }
 
-    private func SkipGifBlocks(bytes []uint8, start int32, copy MemoryStream?, token CancellationToken) int32 {
+    private func SkipGifBlocks(bytes ReadOnlySpan[uint8], start int32, copy NativeBytes?, token CancellationToken) int32 {
       var offset = start
       while offset < bytes.Length {
         token.ThrowIfCancellationRequested()
@@ -153,7 +153,7 @@ internal partial class RasterImageDecoder {
         offset++
         if count == 0 { return offset }
         if count > bytes.Length - offset { throw InvalidDataException("Truncated GIF data block") }
-        copy?.Write(bytes, offset, count)
+        copy?.Append(bytes.Slice(offset, count))
         offset += count
       }
       throw InvalidDataException("Unterminated GIF data blocks")
@@ -161,7 +161,7 @@ internal partial class RasterImageDecoder {
 
     // Track expansion lengths in the fixed 4096-code dictionary. This rejects
     // early termination and over-expansion without materializing pixel indices.
-    private func ValidateGifCodes(bytes []uint8, minimum int32, pixels int32, token CancellationToken) {
+    private func ValidateGifCodes(bytes ReadOnlySpan[uint8], minimum int32, pixels int32, token CancellationToken) {
       let lengths = [4096]int32
       let clear = 1 << minimum
       let end = clear + 1
@@ -205,7 +205,7 @@ internal partial class RasterImageDecoder {
       throw InvalidDataException("GIF LZW stream has no end code")
     }
 
-    private func Big16(bytes []uint8, offset int32) int32 -> (int32(bytes[offset]) << 8) | int32(bytes[offset + 1])
-    private func Little16(bytes []uint8, offset int32) int32 -> int32(bytes[offset]) | (int32(bytes[offset + 1]) << 8)
+    private func Big16(bytes ReadOnlySpan[uint8], offset int32) int32 -> (int32(bytes[offset]) << 8) | int32(bytes[offset + 1])
+    private func Little16(bytes ReadOnlySpan[uint8], offset int32) int32 -> int32(bytes[offset]) | (int32(bytes[offset + 1]) << 8)
   }
 }

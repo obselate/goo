@@ -95,6 +95,26 @@ public sealed class ImageSourceCacheTests : IDisposable
     }
 
     [Fact]
+    public void ClipboardBitmapBecomesPngWithTheSamePixels()
+    {
+        var bmp = new byte[62];
+        bmp[0] = 66;
+        bmp[1] = 77;
+        bmp[2] = 62;
+        bmp[10] = 54;
+        bmp[14] = 40;
+        bmp[18] = 2;
+        bmp[22] = 1;
+        bmp[26] = 1;
+        bmp[28] = 24;
+        bmp[54] = 255;
+        bmp[59] = 255;
+        using var source = ImageSource.Decode(ClipboardBitmap.ToPng(bmp));
+        using var lease = source.Acquire();
+        Assert.Equal(new byte[] { 0, 0, 255, 255, 255, 0, 0, 255 }, lease.Result()!.Pixels());
+    }
+
+    [Fact]
     public async Task ConcurrentLoadsSharePixelsWithIndependentOwnersAndLeases()
     {
         var path = Write("rgba.png", Png(2, 1, 8, 6, [0, 240, 120, 60, 128, 10, 20, 30, 255]));

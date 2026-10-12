@@ -34,13 +34,14 @@ directly. `Image.Path` is legacy metadata: mounting a nonempty path without
 By default each file is limited to 16 MiB encoded, 8192 pixels per dimension, and 64 MiB
 decoded RGBA. An `ImageDecodeLimits` argument changes the limits, and a file that exceeds
 one throws `ImageLimitException`. The loader validates PNG chunk bounds/checksums and the exact
-decompressed scanline size before invoking the managed decoder, including for
+decompressed scanline size before invoking the decoder, including for
 compressed data that expands beyond the header's dimensions. JPEG frame dimensions,
 segment bounds, scan count, and an end marker are checked before decoding. GIF
 screen/frame bounds, complete data blocks, and the first frame's exact LZW
 expansion are checked before decoding. It serializes
 decoding within each cache to bound simultaneous working buffers. Temporary
-decoder buffers are additional to the decoded cache budget.
+decoder buffers are native memory that is additional to the decoded cache budget.
+The decode frees them before it returns. Only the returned pixels stay in managed memory.
 
 The cache defaults to 64 MiB decoded and 128 unique canonical paths. Constructor
 arguments can change those cache limits. A full cache faults new loads with
@@ -57,14 +58,13 @@ needed. The final owner/lease releases the pixels.
 
 `LoadAsync(path, cancellationToken)` cancels only that caller. Cancellation is
 checked while waiting, reading, validating, and before publication. A native
-window is never needed for decoding. The managed decoder itself is synchronous;
+window is never needed for decoding. The decoder itself is synchronous;
 cancellation during that bounded step is observed when it returns. Missing
 files, access errors, malformed input, unsupported formats, capacity exhaustion,
 and cancellation are observable through the returned task. Failed or cancelled
 loads are not cached and may be retried.
 
-The pinned StbImageSharp dependency is managed code with no extra native decoder
-payload. NuGet restores it transitively, and NativeAOT includes the used decoder
-code. The packaged loading smoke covers PNG, baseline/progressive/CMYK JPEG,
+The decoder is the pinned `stb_image` source in the `goo-harfbuzz-gpu` native library.
+No extra native library ships. The packaged loading smoke covers PNG, baseline/progressive/CMYK JPEG,
 transparent GIF, and the first frame of an animated GIF under NativeAOT;
 the Linux Vulkan smoke also checks rendered pixels and teardown.
