@@ -917,6 +917,10 @@ Gets supported native lifecycle operations, or None before Open or Attach.
 
 Gets or sets whether the system draws window decorations.
 
+### `DragStartDistance`
+
+Sets the logical pixels a pressed mouse or pen pointer must move on either axis before a drag source starts a drag. Touch contacts start at 4. The default is 8.
+
 ### `Focusable`
 
 Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
