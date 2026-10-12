@@ -362,7 +362,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
           blendPipelineLayout,
           format,
           VkConstants.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-          true,
+          !program.ReplacesBackdrop,
           FullColorWriteMask())
       } finally {
         let destroyShaderModule = dispatch.vkDestroyShaderModule

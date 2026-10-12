@@ -182,7 +182,11 @@ GooEffectOutput main(GooEffectInput input)
     float4 color = gooEffect(input.uv, source, backdrop);
     float coverage = gooClipCoverage(input) * clamp(gooActivePrimitive.radii.x, 0.0, 1.0);
     GooEffectOutput output;
+#ifdef GOO_REPLACES_BACKDROP
+    output.color = lerp(backdrop, color, coverage);
+#else
     output.color = color * coverage;
+#endif
     return output;
 }
 

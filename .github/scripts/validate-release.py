@@ -414,6 +414,7 @@ def validate_package(path: Path) -> str:
         shader_manifest = json.loads(
             (ROOT / "Goo/Shaders/Vulkan/shader-manifest.json").read_text())
         required_shader_resources = {
+            "Goo.Effects.backdrop_blur.goo-effect",
             "Goo.Vulkan.Shaders.shader-manifest.json",
             *(f"Goo.Vulkan.Shaders.{shader['output']}"
               for shader in shader_manifest["shaders"]),

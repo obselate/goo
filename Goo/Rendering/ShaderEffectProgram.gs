@@ -23,6 +23,7 @@ public sealed class ShaderEffectProgram {
   private let vulkanSpirvDigest([]uint8)?
   private let programId uint64
   private let sourceIndependent bool
+  internal var ReplacesBackdrop bool
 
   shared {
     private var nextProgramId int64
