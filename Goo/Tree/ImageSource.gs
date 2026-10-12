@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Threading
 
 /// Supplies one image binding when a Goo element mounts.
 public interface ImageSourceProvider {
@@ -28,6 +29,9 @@ public partial class ImageSource : ImageSourceProvider, IDisposable {
         return ImageSource(width, height, created)
       }
 
+    private var disposeEpoch int64
+    internal prop DisposeEpoch int64{ get -> Interlocked.Read(&disposeEpoch) }
+
     private func validate(width int32, height int32, pixels []uint8) {
       if width <= 0 { throw ArgumentOutOfRangeException("width") }
       if height <= 0 { throw ArgumentOutOfRangeException("height") }
@@ -47,6 +51,7 @@ public partial class ImageSource : ImageSourceProvider, IDisposable {
   private let width int32
   private let height int32
   private var disposed bool
+  private var rendererBound bool
 
   /// Copies exactly Width times Height premultiplied RGBA pixels into an owned image.
   /// @param width The positive pixel width.
@@ -103,7 +108,15 @@ public partial class ImageSource : ImageSourceProvider, IDisposable {
         release = true
       }
     }
-    if release { current?.Release() }
+    if release {
+      current?.Release()
+      if Volatile.Read(&rendererBound) { Interlocked.Increment(&disposeEpoch) }
+    }
+  }
+
+  internal func BindRenderer() bool {
+    Volatile.Write(&rendererBound, true)
+    return !IsDisposed
   }
 
   internal func retainImage() DecodedImage? {

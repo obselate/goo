@@ -9,6 +9,7 @@ import System.Threading
 /// Hosts a Goo tree in a native window.
 public partial class Window {
   private var schedulerLastTicks float64
+  private var imageDisposeEpoch int64
   private var schedulerSimulationBank float64
 
   internal func RebuildAfterHotReload() {
@@ -326,6 +327,11 @@ public partial class Window {
       }
       if !IsOpen {
         return
+      }
+      let imageEpoch = ImageSource.DisposeEpoch
+      if imageEpoch != imageDisposeEpoch {
+        imageDisposeEpoch = imageEpoch
+        requestRender()
       }
       let profiling = profiler.Active
       let frameProfile = profiling ? profiler.Start() : FrameProfilePoint{}

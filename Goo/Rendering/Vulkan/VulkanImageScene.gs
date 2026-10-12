@@ -261,6 +261,9 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     }
     currentReferences.Commit()
     referencesCommitted = true
+    if identities.ReleaseDisposedProviders(imageResources) {
+      redrawRequired = true
+    }
   }
 
   private func Fit(

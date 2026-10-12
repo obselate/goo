@@ -151,6 +151,34 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     return true
   }
 
+  internal func ReleaseSource(providerId uint64, sourceId uint64) VulkanImageSourceRelease {
+    EnsureOpen()
+    var result VulkanImageSourceRelease
+    var index int32 = 0
+    while index < entries.Length {
+      let entry = entries[index]
+      if entry.State != VulkanImageResourceState.Empty
+        && entry.ProviderId == providerId && entry.SourceId == sourceId {
+          if entry.State == VulkanImageResourceState.Resident && !entry.PendingRetire
+            && entry.RecordingUseCount == 0 && currentReferenceCounts[index] == 0
+            && entry.LastUseFence <= highestCompletedFence
+            && Retire(entry.Id, generation, highestCompletedFence) {
+              result.Retired = true
+            } else {
+            result.Remaining = true
+            result.AwaitsFence = result.AwaitsFence
+              || (currentReferenceCounts[index] == 0 && entry.RecordingUseCount == 0
+                && entry.LastUseFence > highestCompletedFence)
+          }
+        }
+      index++
+    }
+    if result.Retired {
+      Collect(highestCompletedFence)
+    }
+    return result
+  }
+
   internal func AddCurrentReference(id ResourceId, expectedGeneration uint64) bool {
     if disposed || expectedGeneration == 0uL || expectedGeneration != generation
       || !id.IsValid || id.Kind != SceneResourceKind.Image{

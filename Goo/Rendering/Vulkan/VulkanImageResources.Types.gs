@@ -66,6 +66,12 @@ internal data struct VulkanImageResourceEntry {
   var LastTouch uint64
 }
 
+internal data struct VulkanImageSourceRelease {
+  var Retired bool
+  var Remaining bool
+  var AwaitsFence bool
+}
+
 internal data struct VulkanImageResourceStats {
   var Generation uint64
   var Capacity int32

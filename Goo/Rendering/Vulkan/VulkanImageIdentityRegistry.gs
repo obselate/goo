@@ -58,6 +58,8 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
   private var nextLogicalId uint64
   private var liveCount int32
   private var providerRecordCount int32
+  private var releasedEpoch int64
+  private var releaseDeferred bool
   private var disposed bool
 
   internal prop LinearSamplerId ResourceId{ get -> linearSamplerId }
@@ -177,6 +179,40 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
       return ResourceId{}
     }
 
+  internal func ReleaseDisposedProviders(resources VulkanImageResources) bool {
+    let epoch = ImageSource.DisposeEpoch
+    if disposed || (epoch == releasedEpoch && !releaseDeferred) {
+      return false
+    }
+    releasedEpoch = epoch
+    releaseDeferred = false
+    var awaitsFence = false
+    var index int32 = 0
+    while index < providerRecords.Length {
+      let record = providerRecords[index]
+      if let reference = record.Reference, let identity = record.Identity {
+        let target = reference.Target
+        let source = target as ImageSource?
+        if target == nil || (source?.IsDisposed ?? false) {
+          let release = resources.ReleaseSource(identity.ProviderId, identity.SourceId)
+          if release.Remaining {
+            releaseDeferred = true
+            awaitsFence = awaitsFence || release.AwaitsFence
+          } else {
+            ReclaimProvider(identity.ProviderId, identity.SourceId)
+            if let provider = source {
+              providerIdentities.Remove(provider)
+            }
+            providerRecords[index] = VulkanImageProviderRecord{}
+            providerRecordCount--
+          }
+        }
+      }
+      index++
+    }
+    return awaitsFence
+  }
+
   private func ReclaimOlder(providerId uint64, sourceId uint64, contentVersion uint64) {
     var index int32 = 0
     while index < imageIdentities.Length {
@@ -228,6 +264,9 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
       throw InvalidOperationException("Vulkan image provider identity capacity reached")
     }
     providerIdentities.Add(provider, created)
+    if let source = provider as ImageSource? {
+      if !source.BindRenderer() { releaseDeferred = true }
+    }
     providerRecords[freeIndex] = VulkanImageProviderRecord{
       Reference: WeakReference(provider),
       Identity: created,
