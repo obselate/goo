@@ -77,8 +77,8 @@ func RunBackdropBlurSmoke() {
     window = opened
     Console.SetError(capturedError)
     opened.Open()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
-    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667, 10.0)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     let frame = PrimitiveReadback(opened, metrics)
     let pixel = (x float64, y float64) -> PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, x, y)
