@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.29 - 2026-10-11
+
+- Start drag and drop when a pressed mouse or pen pointer moves 8 logical pixels on either axis. The distance was 4. A double click with a small pointer slip no longer starts a drag. Touch contacts still start at 4.
+- Add `Window.DragStartDistance`. It sets the drag start distance for mouse and pen pointers.
+
 ## 0.7.28 - 2026-10-11
 
 - Add `Style.BackdropBlur`. It applies a Gaussian blur, from 0 through 64 pixels, to the window content behind the border box of an element. `BorderRadius`, clips and `Opacity` apply to the blur.
