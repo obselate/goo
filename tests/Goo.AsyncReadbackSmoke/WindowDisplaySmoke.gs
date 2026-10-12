@@ -74,14 +74,13 @@ internal class WindowDisplaySmoke {
           "Native fullscreen did not reach the selected display")
         let observedDisplayId = nativeState.DisplayId
         let retarget = if displays.Count > 1 { display } else { target }
-        Require(window.TrySetFullscreenDisplay(retarget.Id) == WindowOperationResult.Accepted,
-          "Retargeting an already-fullscreen window failed")
         let retargetId = retarget.Id.NativeValue
-        let retargetDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+        let retargetDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency
         while Stopwatch.GetTimestamp() < retargetDeadline {
+          Require(window.TrySetFullscreenDisplay(retarget.Id) == WindowOperationResult.Accepted,
+            "Retargeting an already-fullscreen window failed")
           window.Pump(0.0)
           nativeState = window.NativeDisplayStateForTest()
-          if nativeState.Fullscreen && nativeState.DisplayId == retargetId { break }
           Thread.Sleep(1)
         }
         Require(nativeState.Fullscreen,

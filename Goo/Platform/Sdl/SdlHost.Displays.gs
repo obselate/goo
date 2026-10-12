@@ -79,10 +79,7 @@ internal unsafe partial class SdlHost {
     let id = display.NativeValue
     if id == 0u || !HasDisplay(id) { return WindowOperationResult.Failed }
     let position = int32(CenteredDisplayMask | id)
-    let flags = SDL.GetWindowFlags(window)
-    let windowedWayland = IsWayland() &&
-      (flags & uint64(SDLWindowFlags.Fullscreen)) == 0uL
-    if !SDL.SetWindowPosition(window, position, position) && !windowedWayland {
+    if !SDL.SetWindowPosition(window, position, position) && !IsWayland() {
       return WindowOperationResult.Failed
     }
     return if SDL.SetWindowFullscreen(window, true) {
