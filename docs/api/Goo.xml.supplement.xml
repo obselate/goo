@@ -135,18 +135,20 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="T:Goo.ShaderEffect">
       <summary>Owns retained parameter state for one backend-neutral shader effect program.</summary>
     </member>
-    <member name="M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single)">
+    <member name="M:Goo.ShaderEffect.#ctor(Goo.ShaderEffectProgram,System.Boolean,System.Single,System.Single)">
       <summary>Creates a retained fragment effect with optional bounded backdrop sampling.</summary>
       <param name="program">The compiled shader effect program.</param>
       <param name="samplesBackdrop">Whether Goo copies the existing target behind the element for shader sampling.</param>
       <param name="backdropOutset">The finite nonnegative logical-pixel distance captured around the element, up to 256.</param>
+      <param name="backdropBlur">The Gaussian standard deviation in logical pixels. Positive values prefilter the backdrop at quarter resolution and capture at least three standard deviations around the element.</param>
     </member>
     <member name="T:Goo.ShaderEffectProgram">
       <summary>Owns one immutable compiled shader effect program with backend-specific artifacts.</summary>
     </member>
-    <member name="M:Goo.ShaderEffectProgram.#ctor(System.Byte[])">
+    <member name="M:Goo.ShaderEffectProgram.#ctor(System.Byte[],System.Boolean)">
       <summary>Loads and validates a compiled shader effect program from memory.</summary>
       <param name="program">The complete Goo shader effect program bytes.</param>
+      <param name="replacesBackdrop">Whether the shader replaces the target instead of source-over compositing. Use GOO_REPLACES_BACKDROP in the shader to retain clip coverage when replacing a transparent backdrop.</param>
     </member>
     <member name="M:Goo.ShaderEffectProgram.Load(System.String)">
       <summary>Loads and validates a compiled shader effect program from a file.</summary>
