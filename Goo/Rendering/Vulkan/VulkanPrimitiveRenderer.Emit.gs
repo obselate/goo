@@ -604,14 +604,25 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     generator bool = false) {
       RequireRecordIndex(value.EffectIndex, frame.ShaderEffectCount, "shader effect index")
       let effect = frame.ShaderEffects[value.EffectIndex]
+      if effect.ProgramId != value.EffectProgramId || effect.Version != value.EffectVersion {
+        throw InvalidOperationException("Vulkan shader effect snapshot does not match its layer")
+      }
+      EmitShaderEffect(commandBuffer, extent, value, target, backdrop, effect, generator)
+    }
+
+  private func EmitShaderEffect(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    value LayerRecord,
+    target VulkanOffscreenLayerTarget?,
+    backdrop VulkanOffscreenLayerTarget?,
+    effect ShaderEffectRecord,
+    generator bool = false) {
       guard let program = effect.Program else {
         throw InvalidOperationException("Vulkan shader effect program is unavailable")
       }
       if generator != program.SourceIndependent {
         throw InvalidOperationException("Vulkan shader effect source mode does not match")
-      }
-      if effect.ProgramId != value.EffectProgramId || effect.Version != value.EffectVersion {
-        throw InvalidOperationException("Vulkan shader effect snapshot does not match its layer")
       }
       if value.BlendMode != 0u {
         throw NotSupportedException("ShaderEffect cannot be combined with a non-normal BlendMode")

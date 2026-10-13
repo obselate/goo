@@ -55,8 +55,11 @@ internal static class EffectAbi
         Require(reflection.EntryPoint == "main", "entryPoint", "main");
         RequireCapabilities(reflection.Capabilities);
         RequireExtensions(reflection.Extensions);
-        RequireInterfaces(reflection.Inputs,
-            sourceIndependent && reflection.Inputs.Count == 2 ? Inputs[1..] : Inputs, "inputs");
+        RequireInterfaces(reflection.Inputs, Inputs.Where(input =>
+            reflection.Inputs.Any(value => value.Location == input.Location)).ToArray(), "inputs");
+        Require(reflection.Inputs.Any(input => input.Location == 3), "inputs.primitive", "present");
+        Require(sourceIndependent || reflection.Inputs.Any(input => input.Location == 0),
+            "inputs.uv", "present");
         RequireInterfaces(reflection.Outputs, Outputs, "outputs");
         RequireDescriptors(reflection.Descriptors, sourceIndependent);
         if (!sourceIndependent || reflection.PushConstant is not null)
@@ -83,23 +86,32 @@ internal static class EffectAbi
     private static void RequireDescriptors(IReadOnlyList<SpirvDescriptor> actual,
         bool sourceIndependent)
     {
-        int first = sourceIndependent ? 2 : 0;
-        int expectedCount = Descriptors.Length - first;
-        Require(actual.Count == expectedCount || actual.Count == expectedCount + 1,
-            "descriptors.count", $"{expectedCount} or {expectedCount + 1}");
-        for (int index = 0; index < expectedCount; index++)
+        bool primitiveFound = false;
+        int previousSet = -1;
+        int previousBinding = -1;
+        for (int index = 0; index < actual.Count; index++)
         {
-            RequireDescriptor(actual[index], Descriptors[index + first], index);
+            SpirvDescriptor value = actual[index];
+            Require(value.Set > previousSet || value.Set == previousSet && value.Binding > previousBinding,
+                $"descriptors[{index}].order", "strictly increasing");
+            Descriptor expected = value.Set == 4 ? DataDescriptor :
+                Descriptors.SingleOrDefault(item => item.Set == value.Set && item.Binding == value.Binding);
+            Require(expected.Count != 0 && (!sourceIndependent || value.Set >= 2),
+                $"descriptors[{index}]", "supported binding");
+            RequireDescriptor(value, expected, index);
+            if (value.Set == 2)
+            {
+                RequireStorageMembers(value.StorageMembers, PrimitiveMembers, "primitiveRecord.members");
+                primitiveFound = true;
+            }
+            else if (value.Type == "storage-buffer")
+            {
+                Require(value.StorageMembers.Count == 0, $"descriptors[{index}].members.count", "0");
+            }
+            previousSet = value.Set;
+            previousBinding = value.Binding;
         }
-        RequireStorageMembers(actual[2 - first].StorageMembers, PrimitiveMembers,
-            "primitiveRecord.members");
-        Require(actual[4 - first].StorageMembers.Count == 0, "clipChain.members.count", "0");
-        if (actual.Count == expectedCount + 1)
-        {
-            RequireDescriptor(actual[expectedCount], DataDescriptor, expectedCount);
-            Require(actual[expectedCount].StorageMembers.Count == 0,
-                "effectData.members.count", "0");
-        }
+        Require(primitiveFound, "descriptors.primitiveRecord", "present");
     }
 
     private static void RequireDescriptor(SpirvDescriptor value, Descriptor expected, int index)

@@ -18,13 +18,14 @@ public sealed class ShaderEffect {
   private let programId uint64
   private let samplesBackdrop bool
   private let backdropOutset float32
+  private let backdropBlur float32
   private var version uint64
   private var playing bool
   private var elapsedSeconds float64
   private var playbackTimestamp int64
 
   public init(program ShaderEffectProgram, samplesBackdrop bool = false,
-    backdropOutset float32 = 0.0F) {
+    backdropOutset float32 = 0.0F, backdropBlur float32 = 0.0F) {
       if Object.ReferenceEquals(program, nil) { throw ArgumentNullException("program") }
       if !finite(backdropOutset) || backdropOutset < 0.0F
         || backdropOutset > MaximumBackdropOutset{
@@ -32,6 +33,12 @@ public sealed class ShaderEffect {
         }
       if !samplesBackdrop && backdropOutset != 0.0F {
         throw ArgumentException("Backdrop outset requires backdrop sampling", "backdropOutset")
+      }
+      if !finite(backdropBlur) || backdropBlur < 0.0F || backdropBlur > MaximumBackdropOutset / 3.0F {
+        throw ArgumentOutOfRangeException("backdropBlur")
+      }
+      if !samplesBackdrop && backdropBlur != 0.0F {
+        throw ArgumentException("Backdrop blur requires backdrop sampling", "backdropBlur")
       }
       if program.SourceIndependent && samplesBackdrop {
         throw ArgumentException("Source-independent effects cannot sample the backdrop", "samplesBackdrop")
@@ -44,7 +51,8 @@ public sealed class ShaderEffect {
       dataChanged = () -> { OnDataChanged() }
       programId = program.ProgramId
       this.samplesBackdrop = samplesBackdrop
-      this.backdropOutset = backdropOutset
+      this.backdropOutset = MathF.Max(backdropOutset, backdropBlur * 3.0F)
+      this.backdropBlur = backdropBlur
       version = 1uL
     }
 
@@ -164,6 +172,7 @@ public sealed class ShaderEffect {
         Version: version,
         SamplesBackdrop: SamplesBackdrop,
         BackdropOutset: BackdropOutset,
+        BackdropBlur: backdropBlur,
         ElapsedSeconds: float32(elapsedAt(Stopwatch.GetTimestamp())),
         Parameter0: parameters[0],
         Parameter1: parameters[1],
@@ -227,6 +236,7 @@ internal data struct ShaderEffectSnapshot {
   internal var Version uint64
   internal var SamplesBackdrop bool
   internal var BackdropOutset float32
+  internal var BackdropBlur float32
   internal var ElapsedSeconds float32
   internal var Parameter0 Vector4
   internal var Parameter1 Vector4

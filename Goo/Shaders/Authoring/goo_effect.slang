@@ -180,7 +180,11 @@ GooEffectOutput main(GooEffectInput input)
     float4 backdrop = gooBackdropTexture.Sample(sourceUv);
 #endif
     float4 color = gooEffect(input.uv, source, backdrop);
+#ifdef GOO_UNCLIPPED
+    float coverage = clamp(gooActivePrimitive.radii.x, 0.0, 1.0);
+#else
     float coverage = gooClipCoverage(input) * clamp(gooActivePrimitive.radii.x, 0.0, 1.0);
+#endif
     GooEffectOutput output;
 #ifdef GOO_REPLACES_BACKDROP
     output.color = lerp(backdrop, color, coverage);
