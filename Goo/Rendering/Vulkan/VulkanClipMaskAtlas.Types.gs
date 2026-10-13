@@ -8,6 +8,7 @@ internal enum VulkanClipMaskFormat {
 }
 
 internal data struct VulkanClipMaskFormatSupport {
+  var MaxImageArrayLayers uint32
   var R8UnormSampledImage bool
   var R8UnormColorAttachment bool
   var R8UnormLinearFilter bool
@@ -86,7 +87,6 @@ internal data struct VulkanClipMaskAtlasStats {
 
 internal class VulkanClipMaskAtlasContract {
   shared {
-    const MaxDepth uint32 = 8u
     const RegionPadding uint32 = 1u
   }
 }

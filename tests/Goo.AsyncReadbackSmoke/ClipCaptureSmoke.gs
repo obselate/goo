@@ -61,15 +61,16 @@ func RunClipCaptureSmoke() {
 
     let first = ClipCaptureReadback(opened, metrics)
     let growth = WindowReadbackTestFixture.VerifyClipMaskAtlasGrowth(opened)
-    Require(growth.ActiveLayerCount == 8u
-        && growth.MaximumLayerCount == 8u
-        && growth.UniqueLayerMask == 255u
+    Require(growth.ActiveLayerCount == 32u
+        && growth.MaximumLayerCount == 32u
+        && growth.UniqueLayerMask == uint32.MaxValue
         && growth.IncrementalGrowth
         && growth.GenerationPreserved
         && growth.ImagePreserved
         && growth.Reacquired
         && growth.FailureObserved
-        && growth.PressureFailureCount == 1uL,
+        && growth.PressureFailureCount == 1uL
+        && growth.CompletedRegionsReclaimed,
       "Clip mask atlas growth and failure recovery did not qualify")
     let staged = WindowReadbackTestFixture.Request(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
@@ -132,5 +133,5 @@ func RunClipCaptureSmoke() {
     "Clip capture emitted unsupported-scene diagnostics")
   Require(DiagnosticCounter(diagnostics, "readbackCount") == 2uL,
     "Clip capture diagnostics did not record two readbacks")
-  Console.WriteLine("clip-capture-submission-gate: captures=2 atlas_layers=8 atlas_failure_recovered=1 submission_ready=1 live_frames=4 pixels=validated close=1")
+  Console.WriteLine("clip-capture-submission-gate: captures=2 atlas_layers=32 atlas_failure_recovered=1 atlas_completed_reclaimed=1 submission_ready=1 live_frames=4 pixels=validated close=1")
 }

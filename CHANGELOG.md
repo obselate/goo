@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.32 - 2026-10-12
+
+- Size the Vulkan clip mask atlas from its byte budget and device array-layer limit, not the eight-mask clip-chain depth. Split panes and dialog changes could exhaust the false layer limit and close the application. The byte budget is unchanged.
+- Reclaim completed clip mask cache regions under pressure without waiting for the cache age limit.
+
 ## 0.7.31 - 2026-10-12
 
 - Return native image decode memory to the system when the decode frees it on Linux with glibc. This applies to encoded bytes, source pixels and decoder buffers of 128 KiB or more. Freed blocks stayed resident in the allocator arenas of the decode threads.

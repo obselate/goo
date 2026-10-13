@@ -806,7 +806,8 @@ internal unsafe partial class VulkanWindowTarget {
     var physicalProperties = VkPhysicalDeviceProperties{}
     let getPhysicalDeviceProperties = instanceDispatch.vkGetPhysicalDeviceProperties
     getPhysicalDeviceProperties(physicalDevice, &physicalProperties)
-    clipMaskFormatSupport = QueryClipMaskFormatSupport()
+    clipMaskFormatSupport = QueryClipMaskFormatSupport(
+      physicalProperties.limits.maxImageArrayLayers)
     let maxAtlasBytes = uint64(physicalProperties.limits.maxTexelBufferElements) * 8uL
     let atlasByteSize = ResolveTextAtlasByteSize(maxAtlasBytes)
     if atlasByteSize < 8192uL {
@@ -827,7 +828,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
-  private func QueryClipMaskFormatSupport() VulkanClipMaskFormatSupport {
+  private func QueryClipMaskFormatSupport(maximumArrayLayers uint32) VulkanClipMaskFormatSupport {
     let getFormatProperties = instanceDispatch.vkGetPhysicalDeviceFormatProperties
     var r8Properties = VkFormatProperties{}
     var rgba8Properties = VkFormatProperties{}
@@ -837,6 +838,7 @@ internal unsafe partial class VulkanWindowTarget {
     let colorAttachment = uint32(VkConstants.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
     let linearFilter = uint32(VkConstants.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
     return VulkanClipMaskFormatSupport{
+      MaxImageArrayLayers: maximumArrayLayers,
       R8UnormSampledImage: (r8Properties.optimalTilingFeatures & sampledImage) != 0u,
       R8UnormColorAttachment: (r8Properties.optimalTilingFeatures & colorAttachment) != 0u,
       R8UnormLinearFilter: (r8Properties.optimalTilingFeatures & linearFilter) != 0u,

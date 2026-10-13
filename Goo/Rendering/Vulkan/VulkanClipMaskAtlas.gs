@@ -90,7 +90,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
       }
       if nativeWidth == 0u || nativeHeight == 0u
-        || nativeLayerCount == 0u || nativeLayerCount > VulkanClipMaskAtlasContract.MaxDepth{
+        || nativeLayerCount == 0u {
           throw ArgumentOutOfRangeException("nativeLayerCount")
         }
       Device = nativeDevice
@@ -401,6 +401,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   private var height uint32
   private var format VulkanClipMaskFormat
   private var bytesPerPixel uint32
+  private var maximumArrayLayerCount uint32
   private var maximumLayerCount uint32
   private var activeLayerCount uint32
   private var generation uint64
@@ -511,6 +512,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       height = nativeHeight
       format = selectedFormat
       bytesPerPixel = selectedBytesPerPixel
+      maximumArrayLayerCount = nativeFormatSupport.MaxImageArrayLayers
       generation = nativeGeneration
       retired = List[VulkanClipMaskAtlasGeneration]()
       regionMap = Dictionary[uint64, VulkanClipMaskRegionRecord]()
@@ -519,7 +521,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       freePlacements = List[VulkanClipMaskFreePlacement](InitialRegionCapacity)
       maximumLayerCount = MaximumLayers(nativeWidth, nativeHeight, selectedBytesPerPixel, byteBudget)
       activeLayerCount = 1u
-      layerCursors = [int32(VulkanClipMaskAtlasContract.MaxDepth)]VulkanClipMaskLayerCursor
+      layerCursors = [int32(maximumLayerCount)]VulkanClipMaskLayerCursor
       try {
         current = VulkanClipMaskAtlasGeneration(device, dispatch, allocator, objectAccounting,
           width, height, activeLayerCount, format)
@@ -555,7 +557,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
             AvailableSerial: existing.LastUseSerial,
           }
           var placement = VulkanClipMaskRegionPlacement{}
-          EvictStaleRegions()
+          EvictRegions(false)
           if !TryPlace(screenWidth, screenHeight, ref placement) {
             IncrementPressureEventCount()
             let priorContentWidth = existing.ContentWidth
@@ -612,7 +614,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       var placement = VulkanClipMaskRegionPlacement{}
       if !TryPlace(screenWidth, screenHeight, ref placement) {
         IncrementPressureEventCount()
-        EvictStaleRegions()
+        EvictRegions(false)
         if TryPlace(screenWidth, screenHeight, ref placement) {
           let record = VulkanClipMaskRegionRecord(key)
           record.Generation = generation
@@ -742,6 +744,9 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     }
     Collect(completedSubmissionSerial)
     maximumLayerCount = MaximumLayers(nativeWidth, nativeHeight, bytesPerPixel, byteBudget)
+    if layerCursors.Length < int32(maximumLayerCount) {
+      layerCursors = [int32(maximumLayerCount)]VulkanClipMaskLayerCursor
+    }
     regionMap.Clear()
     regionOrder.Clear()
     dirtyRegions.Clear()
@@ -828,7 +833,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       completedSerial = completedSubmissionSerial
     }
     var collected = CollectRetired()
-    if EvictStaleRegions() {
+    if EvictRegions() {
       collected = true
     }
     return collected
@@ -925,6 +930,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       }
       let rebuiltFormat = SelectFormat(nativeFormatSupport)
       let rebuiltBytesPerPixel = if rebuiltFormat == VulkanClipMaskFormat.R8Unorm { 1u } else { 4u }
+      maximumArrayLayerCount = nativeFormatSupport.MaxImageArrayLayers
       let rebuiltMaximumLayers = MaximumLayers(width, height, rebuiltBytesPerPixel, byteBudget)
       let rebuiltLayers = RequiredLayerCount(width, height, rebuiltMaximumLayers)
       device = nativeDevice
@@ -934,6 +940,9 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       format = rebuiltFormat
       bytesPerPixel = rebuiltBytesPerPixel
       maximumLayerCount = rebuiltMaximumLayers
+      if layerCursors.Length < int32(maximumLayerCount) {
+        layerCursors = [int32(maximumLayerCount)]VulkanClipMaskLayerCursor
+      }
       activeLayerCount = rebuiltLayers
       generation = nativeGeneration
       current = VulkanClipMaskAtlasGeneration(device, dispatch, allocator, objectAccounting,
@@ -1136,7 +1145,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     }
 
   private func ReplaceGeneration(newLayerCount uint32, newWidth uint32, newHeight uint32) {
-    if newLayerCount == 0u || newLayerCount > VulkanClipMaskAtlasContract.MaxDepth {
+    if newLayerCount == 0u || newLayerCount > maximumLayerCount {
       throw ArgumentOutOfRangeException("newLayerCount")
     }
     if protectedUsageBatchToken != 0uL {
@@ -1171,12 +1180,12 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     CollectRetired()
   }
 
-  private func EvictStaleRegions() bool {
+  private func EvictRegions(staleOnly bool = true) bool {
     var evicted = false
     var index = regionOrder.Count - 1
     while index >= 0 {
       let record = regionOrder[index]
-      if IsStale(record) && !IsProtected(record) {
+      if (!staleOnly || IsStale(record)) && !IsProtected(record) {
         regionMap.Remove(record.Key)
         RemoveDirtyEntries(record.Key)
         AddFreePlacement(record)
@@ -1272,7 +1281,9 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   private func PackedLayerCount(targetWidth uint32, targetHeight uint32,
     targetMaximumLayers uint32, pendingWidth uint32, pendingHeight uint32,
     includePending bool) uint32{
-      let cursors = [int32(VulkanClipMaskAtlasContract.MaxDepth)]VulkanClipMaskLayerCursor
+      let cursors * VulkanClipMaskLayerCursor =
+        stackalloc[int32(targetMaximumLayers)]VulkanClipMaskLayerCursor
+      cursors[0] = VulkanClipMaskLayerCursor{}
       var required uint32 = 1u
       let recordCount = regionOrder.Count
       let totalCount = recordCount + if includePending { 1 } else { 0 }
@@ -1400,10 +1411,10 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       if count == 0uL {
         throw InvalidOperationException("Vulkan clip mask atlas byte budget cannot hold one layer")
       }
-      return if count < uint64(VulkanClipMaskAtlasContract.MaxDepth) {
+      return if count < uint64(maximumArrayLayerCount) {
         uint32(count)
       } else {
-        VulkanClipMaskAtlasContract.MaxDepth
+        maximumArrayLayerCount
       }
     }
 
