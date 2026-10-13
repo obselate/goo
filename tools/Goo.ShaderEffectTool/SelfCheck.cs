@@ -22,6 +22,7 @@ internal static class SelfCheck
     {
         Program.ValidateArtifact(input, validator);
         byte[] valid = File.ReadAllBytes(input);
+        uint firstSet = (uint)SpirvReflection.Read(valid).Descriptors[0].Set;
         string directory = Path.Combine(Path.GetTempPath(),
             $"goo-shader-effect-selfcheck-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
@@ -33,7 +34,7 @@ internal static class SelfCheck
             ExpectRejected(directory, "wrong-location", MutateDecoration(valid,
                 DecorationLocation, 0, 1), validator);
             ExpectRejected(directory, "wrong-set", MutateDecoration(valid,
-                DecorationDescriptorSet, 0, 4), validator);
+                DecorationDescriptorSet, firstSet, 9), validator);
             ExpectRejected(directory, "wrong-binding", MutateDecoration(valid,
                 DecorationBinding, 0, 9), validator);
             ExpectRejected(directory, "wrong-push-layout", MutatePushOffset(valid), validator);

@@ -13,13 +13,6 @@ internal static class EffectAbi
         string? ImageDimension,
         bool? ImageArrayed);
 
-    private static readonly Interface[] Inputs =
-    {
-        new(0, "vec2"),
-        new(2, "uint"),
-        new(3, "uint")
-    };
-
     private static readonly Interface[] Outputs =
     {
         new(0, "vec4")
@@ -55,11 +48,19 @@ internal static class EffectAbi
         Require(reflection.EntryPoint == "main", "entryPoint", "main");
         RequireCapabilities(reflection.Capabilities);
         RequireExtensions(reflection.Extensions);
-        RequireInterfaces(reflection.Inputs, Inputs.Where(input =>
-            reflection.Inputs.Any(value => value.Location == input.Location)).ToArray(), "inputs");
-        Require(reflection.Inputs.Any(input => input.Location == 3), "inputs.primitive", "present");
-        Require(sourceIndependent || reflection.Inputs.Any(input => input.Location == 0),
-            "inputs.uv", "present");
+        int previousLocation = -1;
+        int inputMask = 0;
+        foreach (SpirvInterface input in reflection.Inputs)
+        {
+            string type = input.Location == 0 ? "vec2" : "uint";
+            Require((input.Location is 0 or 2 or 3) && input.Location > previousLocation,
+                "inputs.location", "supported, strictly increasing location");
+            Require(input.Type == type, "inputs.type", type);
+            inputMask |= 1 << input.Location;
+            previousLocation = input.Location;
+        }
+        Require((inputMask & 8) != 0, "inputs.primitive", "present");
+        Require(sourceIndependent || (inputMask & 1) != 0, "inputs.uv", "present");
         RequireInterfaces(reflection.Outputs, Outputs, "outputs");
         RequireDescriptors(reflection.Descriptors, sourceIndependent);
         if (!sourceIndependent || reflection.PushConstant is not null)
@@ -94,8 +95,15 @@ internal static class EffectAbi
             SpirvDescriptor value = actual[index];
             Require(value.Set > previousSet || value.Set == previousSet && value.Binding > previousBinding,
                 $"descriptors[{index}].order", "strictly increasing");
-            Descriptor expected = value.Set == 4 ? DataDescriptor :
-                Descriptors.SingleOrDefault(item => item.Set == value.Set && item.Binding == value.Binding);
+            Descriptor expected = value.Set == 4 ? DataDescriptor : default;
+            foreach (Descriptor candidate in Descriptors)
+            {
+                if (candidate.Set == value.Set && candidate.Binding == value.Binding)
+                {
+                    expected = candidate;
+                    break;
+                }
+            }
             Require(expected.Count != 0 && (!sourceIndependent || value.Set >= 2),
                 $"descriptors[{index}]", "supported binding");
             RequireDescriptor(value, expected, index);
