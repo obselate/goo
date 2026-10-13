@@ -22,7 +22,7 @@ internal static class SelfCheck
     {
         Program.ValidateArtifact(input, validator);
         byte[] valid = File.ReadAllBytes(input);
-        uint firstSet = (uint)SpirvReflection.Read(valid).Descriptors[0].Set;
+        uint firstSet = (uint)SpirvReflection.Read(valid, true).Descriptors[0].Set;
         string directory = Path.Combine(Path.GetTempPath(),
             $"goo-shader-effect-selfcheck-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
