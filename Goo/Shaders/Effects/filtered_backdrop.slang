@@ -26,11 +26,18 @@ float4 gooEffect(float2 uv, float4 source, float4 backdrop)
     float2 axis = vertical ? float2(0.0, texel.y) : float2(texel.x, 0.0);
     float4 total = source;
     float weight = 1.0;
+    float ratio = exp(-0.5 / (sigma * sigma));
+    float ratioStep = ratio * ratio;
+    float sampleWeight = 1.0;
     for (int near = 1; float(near) <= sigma * 3.0; near += 2)
     {
         float far = float(near + 1);
-        float nearWeight = exp(-0.5 * float(near * near) / (sigma * sigma));
-        float farWeight = exp(-0.5 * far * far / (sigma * sigma));
+        sampleWeight *= ratio;
+        ratio *= ratioStep;
+        float nearWeight = sampleWeight;
+        sampleWeight *= ratio;
+        ratio *= ratioStep;
+        float farWeight = sampleWeight;
         float pairWeight = nearWeight + farWeight;
         float2 offset = axis * ((float(near) * nearWeight + far * farWeight) / pairWeight);
         total += (gooSourceTexture.Sample(clamp(uv + offset, edge, 1.0 - edge))
