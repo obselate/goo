@@ -555,7 +555,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
             AvailableSerial: existing.LastUseSerial,
           }
           var placement = VulkanClipMaskRegionPlacement{}
-          EvictStaleRegions()
+          EvictRegions(false)
           if !TryPlace(screenWidth, screenHeight, ref placement) {
             IncrementPressureEventCount()
             let priorContentWidth = existing.ContentWidth
@@ -612,7 +612,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       var placement = VulkanClipMaskRegionPlacement{}
       if !TryPlace(screenWidth, screenHeight, ref placement) {
         IncrementPressureEventCount()
-        EvictStaleRegions()
+        EvictRegions(false)
         if TryPlace(screenWidth, screenHeight, ref placement) {
           let record = VulkanClipMaskRegionRecord(key)
           record.Generation = generation
@@ -828,7 +828,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
       completedSerial = completedSubmissionSerial
     }
     var collected = CollectRetired()
-    if EvictStaleRegions() {
+    if EvictRegions() {
       collected = true
     }
     return collected
@@ -1171,12 +1171,12 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     CollectRetired()
   }
 
-  private func EvictStaleRegions() bool {
+  private func EvictRegions(staleOnly bool = true) bool {
     var evicted = false
     var index = regionOrder.Count - 1
     while index >= 0 {
       let record = regionOrder[index]
-      if IsStale(record) && !IsProtected(record) {
+      if (!staleOnly || IsStale(record)) && !IsProtected(record) {
         regionMap.Remove(record.Key)
         RemoveDirtyEntries(record.Key)
         AddFreePlacement(record)

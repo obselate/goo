@@ -97,6 +97,7 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
   internal var Reacquired bool
   internal var FailureObserved bool
   internal var PressureFailureCount uint64
+  internal var CompletedRegionsReclaimed bool
 }
 
 internal partial class VulkanWindowTarget {
@@ -356,6 +357,16 @@ internal partial class VulkanWindowTarget {
       }
       let afterFailure = atlas.Stats
       let recovered = atlas.Acquire(1uL, 0, 0, 32u, 32u)
+      let regions = [8]VulkanClipMaskRegion
+      for index in 0 ... 8 {
+        regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 32u, 32u)
+      }
+      atlas.EndUsageBatch()
+      atlas.MarkUsed(regions, regions.Length, 1uL)
+      atlas.Collect(1uL)
+      atlas.BeginUsageBatch()
+      let replacement = atlas.Acquire(9uL, 0, 0, 32u, 32u)
+      let reclaimed = atlas.Stats
       return VulkanClipMaskAtlasGrowthTestSnapshot{
         ActiveLayerCount: grown.ActiveLayerCount,
         MaximumLayerCount: grown.MaximumLayerCount,
@@ -366,6 +377,12 @@ internal partial class VulkanWindowTarget {
         Reacquired: recovered.Generation == grown.Generation && recovered.Layer == 0u,
         FailureObserved: failureObserved,
         PressureFailureCount: afterFailure.PressureFailureCount,
+        CompletedRegionsReclaimed: replacement.Dirty
+          && reclaimed.RegionCount == 1
+          && reclaimed.EvictionCount == 8uL
+          && reclaimed.Generation == grown.Generation
+          && reclaimed.Image == grown.Image
+          && reclaimed.PressureFailureCount == afterFailure.PressureFailureCount,
       }
     } finally {
       atlas.AbortUsageBatch()

@@ -69,7 +69,8 @@ func RunClipCaptureSmoke() {
         && growth.ImagePreserved
         && growth.Reacquired
         && growth.FailureObserved
-        && growth.PressureFailureCount == 1uL,
+        && growth.PressureFailureCount == 1uL
+        && growth.CompletedRegionsReclaimed,
       "Clip mask atlas growth and failure recovery did not qualify")
     let staged = WindowReadbackTestFixture.Request(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
