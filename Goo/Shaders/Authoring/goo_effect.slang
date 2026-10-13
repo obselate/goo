@@ -187,6 +187,10 @@ GooEffectOutput main(GooEffectInput input)
 #endif
     GooEffectOutput output;
 #ifdef GOO_REPLACES_BACKDROP
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
     output.color = lerp(backdrop, color, coverage);
 #else
     output.color = color * coverage;
