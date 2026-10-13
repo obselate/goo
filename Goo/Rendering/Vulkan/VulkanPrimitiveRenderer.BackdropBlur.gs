@@ -71,7 +71,7 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         var source = captured
         try {
             activeExtent = extent
-            for pass in 0 ... 2 {
+            for pass in 0 ... 3 {
                 let destination = pass == 1 ? second: first
                 effect.Parameter0 = Vector4(sigmaX, sigmaY, pass == 0 ? 2.0F: float32(pass - 1), 0.0F)
                 if primitivePrepass {
