@@ -325,14 +325,16 @@ internal partial class VulkanWindowTarget {
       32u,
       32u,
       clipMaskFormatSupport,
-      32768uL,
+      32768uL * if clipMaskFormatSupport.R8UnormSampledImage
+        && clipMaskFormatSupport.R8UnormColorAttachment
+        && clipMaskFormatSupport.R8UnormLinearFilter { 1uL } else { 4uL },
       activeRuntime.Generation,
       nil)
     try {
       atlas.BeginUsageBatch()
       var key uint64 = 1uL
       var incrementalGrowth = true
-      while key <= 8uL {
+      while key <= 32uL {
         atlas.Acquire(key, 0, 0, 32u, 32u)
         if atlas.Stats.ActiveLayerCount != uint32(key) {
           incrementalGrowth = false
@@ -342,7 +344,7 @@ internal partial class VulkanWindowTarget {
       let grown = atlas.Stats
       var uniqueLayerMask uint32 = 0u
       key = 1uL
-      while key <= 8uL {
+      while key <= 32uL {
         let region = atlas.Acquire(key, 0, 0, 32u, 32u)
         if region.Generation == grown.Generation && region.Layer < 32u {
           uniqueLayerMask = uniqueLayerMask | (1u << int32(region.Layer))
@@ -351,21 +353,21 @@ internal partial class VulkanWindowTarget {
       }
       var failureObserved = false
       try {
-        atlas.Acquire(9uL, 0, 0, 32u, 32u)
+        atlas.Acquire(33uL, 0, 0, 32u, 32u)
       } catch (error InvalidOperationException) {
         failureObserved = true
       }
       let afterFailure = atlas.Stats
       let recovered = atlas.Acquire(1uL, 0, 0, 32u, 32u)
-      let regions = [8]VulkanClipMaskRegion
-      for index in 0 ... 8 {
+      let regions = [32]VulkanClipMaskRegion
+      for index in 0 ... 32 {
         regions[index] = atlas.Acquire(uint64(index) + 1uL, 0, 0, 32u, 32u)
       }
       atlas.EndUsageBatch()
       atlas.MarkUsed(regions, regions.Length, 1uL)
       atlas.Collect(1uL)
       atlas.BeginUsageBatch()
-      let replacement = atlas.Acquire(9uL, 0, 0, 32u, 32u)
+      let replacement = atlas.Acquire(33uL, 0, 0, 32u, 32u)
       let reclaimed = atlas.Stats
       return VulkanClipMaskAtlasGrowthTestSnapshot{
         ActiveLayerCount: grown.ActiveLayerCount,
@@ -379,7 +381,7 @@ internal partial class VulkanWindowTarget {
         PressureFailureCount: afterFailure.PressureFailureCount,
         CompletedRegionsReclaimed: replacement.Dirty
           && reclaimed.RegionCount == 1
-          && reclaimed.EvictionCount == 8uL
+          && reclaimed.EvictionCount == 32uL
           && reclaimed.Generation == grown.Generation
           && reclaimed.Image == grown.Image
           && reclaimed.PressureFailureCount == afterFailure.PressureFailureCount,
