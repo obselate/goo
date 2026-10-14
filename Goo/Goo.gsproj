@@ -25,8 +25,6 @@
                       LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Shaders/Effects/*.goo-effect"
                       LogicalName="Goo.Effects.%(Filename)%(Extension)" />
-    <EmbeddedResource Include="$(IntermediateOutputPath)filtered_backdrop.goo-effect"
-                      LogicalName="Goo.Effects.filtered_backdrop.goo-effect" />
     <EmbeddedResource Include="Rendering/Text/Data/*.bin"
                       LogicalName="Goo.Text.Data.%(Filename)%(Extension)" />
     <ProjectReference Include="$(MSBuildProjectDirectory)/../vendor/Yoga.Net/src/Yoga.Net/Yoga.Net.csproj"
@@ -37,10 +35,4 @@
   <Import Project="$(GooTestFixturesProps)"
           Condition="'$(IncludeTestFixtures)' == 'true' and '$(GooTestFixturesProps)' != ''" />
   <Import Project="Goo.Packaging.targets" />
-  <Target Name="CompileFilteredBackdrop" BeforeTargets="AssignTargetPaths"
-          DependsOnTargets="BuildGooShaderEffectToolForPackage"
-          Inputs="Shaders/Effects/filtered_backdrop.slang;Shaders/Authoring/goo_effect.slang;../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll"
-          Outputs="$(IntermediateOutputPath)filtered_backdrop.goo-effect">
-    <Exec Command="dotnet &quot;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll&quot; compile &quot;$(MSBuildProjectDirectory)/Shaders/Effects/filtered_backdrop.slang&quot; &quot;$(MSBuildProjectDirectory)/Shaders/Authoring&quot; &quot;$(IntermediateOutputPath)filtered_backdrop.goo-effect&quot; &quot;$(IntermediateOutputPath)filtered_backdrop.json&quot;" />
-  </Target>
 </Project>
