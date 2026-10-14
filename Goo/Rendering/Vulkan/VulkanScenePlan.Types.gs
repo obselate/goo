@@ -484,6 +484,7 @@ internal struct ShaderEffectRecord {
   internal var ProgramId uint64
   internal var Version uint64
   internal var SamplesBackdrop bool
+  internal var BackdropBlur float32
   internal var ElapsedSeconds float32
   internal var Parameter0 System.Numerics.Vector4
   internal var Parameter1 System.Numerics.Vector4

@@ -160,12 +160,13 @@
           PackagePath="contentFiles/any/any/Vulkan/Shaders/Authoring/goo_effect.slang"
           PackageBuildAction="None"
           PackageCopyToOutput="false" />
-    <None Update="$(GooNativeRuntimeRoot)/HarfBuzz-COPYING.txt"
+    <None Remove="$(GooNativeRuntimeRoot)/HarfBuzz-COPYING.txt;$(GooNativeRuntimeRoot)/MoltenVK-LICENSE.txt" />
+    <None Include="$(GooNativeRuntimeRoot)/HarfBuzz-COPYING.txt"
           Pack="true"
           PackagePath="contentFiles/any/any/Vulkan/Runtime/HarfBuzz-COPYING.txt"
           PackageBuildAction="None"
           PackageCopyToOutput="true" />
-    <None Update="$(GooNativeRuntimeRoot)/MoltenVK-LICENSE.txt"
+    <None Include="$(GooNativeRuntimeRoot)/MoltenVK-LICENSE.txt"
           Pack="true"
           PackagePath="contentFiles/any/any/Vulkan/Runtime/MoltenVK-LICENSE.txt"
           PackageBuildAction="None"

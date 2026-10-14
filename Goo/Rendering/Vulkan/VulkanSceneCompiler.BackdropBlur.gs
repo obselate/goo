@@ -14,8 +14,7 @@ internal class BackdropBlurEffect {
       if stream == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
       using let output = MemoryStream()
       stream.CopyTo(output)
-      let program = ShaderEffectProgram(output.ToArray())
-      program.ReplacesBackdrop = true
+      let program = ShaderEffectProgram(output.ToArray(), true)
       return ShaderEffect(program, true)
     }
   }

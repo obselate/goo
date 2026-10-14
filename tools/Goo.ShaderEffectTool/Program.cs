@@ -59,7 +59,7 @@ internal static class Program
         }
         validator.Validate(path);
         byte[] spirv = File.ReadAllBytes(path);
-        SpirvModuleReflection reflection = SpirvReflection.Read(spirv);
+        SpirvModuleReflection reflection = SpirvReflection.Read(spirv, true);
         EffectAbi.Validate(reflection, sourceIndependent);
         return EffectArtifact.Create(spirv, reflection, compiler, source, sourceIndependent);
     }

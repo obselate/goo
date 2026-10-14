@@ -173,7 +173,7 @@ internal static class SpirvReflection
     private const uint StorageStorageBuffer = 12;
     private const uint DimBuffer = 5;
 
-    public static SpirvModuleReflection Read(byte[] bytes)
+    public static SpirvModuleReflection Read(byte[] bytes, bool allowVersion15 = false)
     {
         if (bytes.Length < 20 || (bytes.Length & 3) != 0)
         {
@@ -189,9 +189,9 @@ internal static class SpirvReflection
         {
             throw new InvalidOperationException("SPIR-V magic is invalid");
         }
-        if (words[1] != Version16)
+        if (words[1] != Version16 && !(allowVersion15 && words[1] == 0x00010500))
         {
-            throw new InvalidOperationException($"SPIR-V version must be 1.6, found 0x{words[1]:x8}");
+            throw new InvalidOperationException($"SPIR-V version must be {(allowVersion15 ? "1.5 or 1.6" : "1.6")}, found 0x{words[1]:x8}");
         }
 
         Dictionary<uint, TypeInfo> types = new();

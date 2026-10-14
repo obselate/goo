@@ -23,7 +23,7 @@ public sealed class ShaderEffectProgram {
   private let vulkanSpirvDigest([]uint8)?
   private let programId uint64
   private let sourceIndependent bool
-  internal var ReplacesBackdrop bool
+  internal let ReplacesBackdrop bool
 
   shared {
     private var nextProgramId int64
@@ -38,7 +38,7 @@ public sealed class ShaderEffectProgram {
     ShaderEffectProgram(File.ReadAllBytes(path))
   }
 
-  public init(program []uint8) {
+  public init(program []uint8, replacesBackdrop bool = false) {
     if Object.ReferenceEquals(program, nil) { throw ArgumentNullException("program") }
     if program.Length < HeaderBytes || program.Length > MaximumProgramByteCount
       || readWord(program, 0) != Magic || readWord(program, 4) != Schema{
@@ -92,6 +92,7 @@ public sealed class ShaderEffectProgram {
     }
     vulkanSpirv = selectedVulkanSpirv
     sourceIndependent = generator
+    ReplacesBackdrop = replacesBackdrop
     vulkanSpirvDigest = if let bytes = selectedVulkanSpirv {
       SHA256.HashData(bytes)
     } else {

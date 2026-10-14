@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add an optional `ShaderEffect.backdropBlur` that prefilters the backdrop with a quarter-resolution separable Gaussian blur. Support backdrop-only effects and preserve the exterior of replacement effects' clips.
+- Include native library licenses when packaging with an external `GooNativeRuntimeRoot`.
+
 ## 0.7.32 - 2026-10-12
 
 - Size the Vulkan clip mask atlas from its byte budget and device array-layer limit, not the eight-mask clip-chain depth. Split panes and dialog changes could exhaust the false layer limit and close the application. The byte budget is unchanged.

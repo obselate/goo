@@ -77,13 +77,14 @@ Source:
 
 Owns retained parameter state for one backend-neutral shader effect program.
 
-### `new(ShaderEffectProgram,bool,float32)`
+### `new(ShaderEffectProgram,bool,float32,float32)`
 
 Creates a retained fragment effect with optional bounded backdrop sampling.
 
 - `program`: The compiled shader effect program.
 - `samplesBackdrop`: Whether Goo copies the existing target behind the element for shader sampling.
 - `backdropOutset`: The finite nonnegative logical-pixel distance captured around the element, up to 256.
+- `backdropBlur`: The Gaussian standard deviation in logical pixels. Positive values prefilter the backdrop at quarter resolution and capture at least three standard deviations around the element.
 
 ### `SetData(int32,ShaderEffectData)`
 
@@ -178,11 +179,12 @@ Source:
 
 Owns one immutable compiled shader effect program with backend-specific artifacts.
 
-### `new(System.Byte[])`
+### `new(System.Byte[],bool)`
 
 Loads and validates a compiled shader effect program from memory.
 
 - `program`: The complete Goo shader effect program bytes.
+- `replacesBackdrop`: Whether the shader replaces the target instead of source-over compositing. Use GOO_REPLACES_BACKDROP in the shader to retain clip coverage when replacing a transparent backdrop.
 
 ### `Load(string)`
 

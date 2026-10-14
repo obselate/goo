@@ -13,13 +13,6 @@ internal static class EffectAbi
         string? ImageDimension,
         bool? ImageArrayed);
 
-    private static readonly Interface[] Inputs =
-    {
-        new(0, "vec2"),
-        new(2, "uint"),
-        new(3, "uint")
-    };
-
     private static readonly Interface[] Outputs =
     {
         new(0, "vec4")
@@ -55,8 +48,19 @@ internal static class EffectAbi
         Require(reflection.EntryPoint == "main", "entryPoint", "main");
         RequireCapabilities(reflection.Capabilities);
         RequireExtensions(reflection.Extensions);
-        RequireInterfaces(reflection.Inputs,
-            sourceIndependent && reflection.Inputs.Count == 2 ? Inputs[1..] : Inputs, "inputs");
+        int previousLocation = -1;
+        int inputMask = 0;
+        foreach (SpirvInterface input in reflection.Inputs)
+        {
+            string type = input.Location == 0 ? "vec2" : "uint";
+            Require((input.Location is 0 or 2 or 3) && input.Location > previousLocation,
+                "inputs.location", "supported, strictly increasing location");
+            Require(input.Type == type, "inputs.type", type);
+            inputMask |= 1 << input.Location;
+            previousLocation = input.Location;
+        }
+        Require((inputMask & 8) != 0, "inputs.primitive", "present");
+        Require(sourceIndependent || (inputMask & 1) != 0, "inputs.uv", "present");
         RequireInterfaces(reflection.Outputs, Outputs, "outputs");
         RequireDescriptors(reflection.Descriptors, sourceIndependent);
         if (!sourceIndependent || reflection.PushConstant is not null)
@@ -83,23 +87,39 @@ internal static class EffectAbi
     private static void RequireDescriptors(IReadOnlyList<SpirvDescriptor> actual,
         bool sourceIndependent)
     {
-        int first = sourceIndependent ? 2 : 0;
-        int expectedCount = Descriptors.Length - first;
-        Require(actual.Count == expectedCount || actual.Count == expectedCount + 1,
-            "descriptors.count", $"{expectedCount} or {expectedCount + 1}");
-        for (int index = 0; index < expectedCount; index++)
+        bool primitiveFound = false;
+        int previousSet = -1;
+        int previousBinding = -1;
+        for (int index = 0; index < actual.Count; index++)
         {
-            RequireDescriptor(actual[index], Descriptors[index + first], index);
+            SpirvDescriptor value = actual[index];
+            Require(value.Set > previousSet || value.Set == previousSet && value.Binding > previousBinding,
+                $"descriptors[{index}].order", "strictly increasing");
+            Descriptor expected = value.Set == 4 ? DataDescriptor : default;
+            foreach (Descriptor candidate in Descriptors)
+            {
+                if (candidate.Set == value.Set && candidate.Binding == value.Binding)
+                {
+                    expected = candidate;
+                    break;
+                }
+            }
+            Require(expected.Count != 0 && (!sourceIndependent || value.Set >= 2),
+                $"descriptors[{index}]", "supported binding");
+            RequireDescriptor(value, expected, index);
+            if (value.Set == 2)
+            {
+                RequireStorageMembers(value.StorageMembers, PrimitiveMembers, "primitiveRecord.members");
+                primitiveFound = true;
+            }
+            else if (value.Type == "storage-buffer")
+            {
+                Require(value.StorageMembers.Count == 0, $"descriptors[{index}].members.count", "0");
+            }
+            previousSet = value.Set;
+            previousBinding = value.Binding;
         }
-        RequireStorageMembers(actual[2 - first].StorageMembers, PrimitiveMembers,
-            "primitiveRecord.members");
-        Require(actual[4 - first].StorageMembers.Count == 0, "clipChain.members.count", "0");
-        if (actual.Count == expectedCount + 1)
-        {
-            RequireDescriptor(actual[expectedCount], DataDescriptor, expectedCount);
-            Require(actual[expectedCount].StorageMembers.Count == 0,
-                "effectData.members.count", "0");
-        }
+        Require(primitiveFound, "descriptors.primitiveRecord", "present");
     }
 
     private static void RequireDescriptor(SpirvDescriptor value, Descriptor expected, int index)

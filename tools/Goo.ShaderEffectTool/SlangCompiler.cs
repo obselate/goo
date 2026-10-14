@@ -139,7 +139,7 @@ internal sealed class SlangCompiler
             "-entry", "main",
             "-stage", "fragment",
             "-target", "spirv",
-            "-capability", "SPIRV_1_6",
+            "-capability", "SPIRV_1_5",
             "-matrix-layout-row-major",
             "-fp-mode", "precise",
             "-O2",

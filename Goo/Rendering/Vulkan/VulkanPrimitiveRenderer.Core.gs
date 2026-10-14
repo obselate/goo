@@ -396,6 +396,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       activeExtent = extent
       clipStack[0] = FullClip()
       clipDepth = 1
+      textFrameScaleX = scaleX
+      textFrameScaleY = scaleY
       try {
         textFrameData.Prepare(frame, primitiveFrameSlot, completedSubmissionSerial)
         primitiveFrameData.BeginPrepare(primitiveFrameSlot, maximumRecordCount,
@@ -419,8 +421,6 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           EmitPresentEncode(nint(0), extent, nil)
         }
         primitiveFrameData.FinishPrepare()
-        textFrameScaleX = scaleX
-        textFrameScaleY = scaleY
         primitivePrepared = true
         return primitiveFrameData.LastStats
       } catch (error Exception) {
@@ -710,7 +710,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       case SceneDrawKind.LayerBegin {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
-        BeginLayer(commandBuffer, frame.Layers[reference.Index])
+        BeginLayer(commandBuffer, frame.Layers[reference.Index], frame)
       }
       case SceneDrawKind.LayerEnd {
         RequireRecordIndex(reference.Index, frame.LayerCount, "layer index")
@@ -807,6 +807,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           count = GradientRecordCount(value.StopCount)
         }
         case SceneDrawKind.Underline { count = 1uL }
+        case SceneDrawKind.LayerBegin {
+          if BackdropBlurRadius(frame.Layers[frame.DrawRefs[index].Index], frame) > 0.0F { count = 3uL }
+        }
         case SceneDrawKind.LayerEnd { count = 1uL }
         case SceneDrawKind.GeneratorEffect { count = 1uL }
         case SceneDrawKind.CachedImage { count = 1uL }
@@ -864,7 +867,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   private func BeginLayer(
     commandBuffer VkCommandBuffer,
-    record LayerRecord) {
+    record LayerRecord,
+    frame SceneFrame) {
       let borrowedBackdrop = ValidateBorrowedBackdrop(record)
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
@@ -876,6 +880,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         if record.ExtentWidth == 0u || record.ExtentHeight == 0u {
           throw ArgumentOutOfRangeException("layer extent")
         }
+        BlurBackdrop(commandBuffer, record, frame, nil)
         let state = VulkanLayerRenderState{
           Record: record,
           Target: nil,
@@ -959,6 +964,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
         CopyBackdrop(commandBuffer, record, capturedBackdrop)
         EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
+      }
+      if needsBackdrop && BackdropBlurRadius(record, frame) > 0.0F {
+        state.BackdropTarget = BlurBackdrop(commandBuffer, record, frame, backdropTarget)
+        state.Record.Flags &= ~uint32(LayerRecordFlags.BorrowsParentBackdrop)
       }
       target.TransitionToColorAttachment(commandBuffer)
       BeginLayerRendering(commandBuffer, target.Extent, target.ImageView, false)
