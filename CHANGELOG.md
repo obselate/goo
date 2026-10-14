@@ -2,7 +2,12 @@
 
 ## Unreleased
 
+## 0.7.33 - 2026-10-14
+
 - Add an optional `ShaderEffect.backdropBlur` that prefilters the backdrop with a quarter-resolution separable Gaussian blur. Support backdrop-only effects and preserve the exterior of replacement effects' clips.
+- Add `ShaderEffectProgram.replacesBackdrop` for transparent backdrop replacement with clip coverage preserved.
+- Compile ShaderEffect shaders when the compiler optimizes out the source or backdrop resource.
+- Embed the precompiled filtered backdrop shader so source builds do not require Slang.
 - Include native library licenses when packaging with an external `GooNativeRuntimeRoot`.
 
 ## 0.7.32 - 2026-10-12
