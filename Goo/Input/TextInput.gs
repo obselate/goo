@@ -39,6 +39,7 @@ internal partial class TextInput {
   }
 
   private func beforeBlur(n Node) {
+    if let history = n.EntryHistory { history.Typing = false }
     cancelEntryComposition(n)
     blurEditor(n)
   }
@@ -116,6 +117,7 @@ internal partial class TextInput {
       let semanticLength = target.Password
       ? UnicodeGraphemes.Starts(target.Buffer).Length : target.Buffer.Length
       if end > semanticLength { return false }
+      if let history = target.EntryHistory { history.Typing = false }
       target.Anchor = target.Password ? protectedTextSourceOffset(target.Buffer, anchor) : anchor
       target.Caret = target.Password ? protectedTextSourceOffset(target.Buffer, caret) : caret
       target.AnchorAffinity = TextAffinity.Upstream
@@ -170,7 +172,7 @@ internal partial class TextInput {
       }
       if clean.Length != 0 {
         let s = editState(n)
-        commitEdit(root, n, s, Edit().Insert(s, clean))
+        commitEdit(root, n, s, Edit().Insert(s, clean), typing: true)
       }
       dispatchTextInput(n, value)
       return clean.Length != 0
@@ -315,7 +317,14 @@ internal partial class TextInput {
     }
   }
 
-  private func commitEdit(root Node?, n Node, before EditState, after EditState) {
+  private func commitEdit(root Node?, n Node, before EditState, after EditState,
+    record bool = true, typing bool = false) {
+    if record && after.Text != before.Text {
+      n.EntryHistory ??= EntryUndoHistory()
+      n.EntryHistory!!.Record(before, after, typing)
+    } else if let history = n.EntryHistory {
+      history.Typing = false
+    }
     let priorAnchorAffinity = n.AnchorAffinity
     n.Buffer = after.Text
     n.Caret = after.Caret
@@ -347,6 +356,7 @@ internal partial class TextInput {
   }
 
   private func commitVisualMove(n Node, delta int32, extend bool) {
+    if let history = n.EntryHistory { history.Typing = false }
     let metrics = TextMetrics()
     let hit = n.Caret != n.Anchor && !extend
     ? metrics.Collapse(n, delta) : metrics.MoveCaret(n, delta)
@@ -362,6 +372,7 @@ internal partial class TextInput {
   }
 
   private func commitVisualEdge(n Node, end bool, extend bool) {
+    if let history = n.EntryHistory { history.Typing = false }
     let hit = TextMetrics().LineEdge(n, end)
     n.Caret = hit.Index
     n.CaretAffinity = TextAffinity(hit.Affinity)
@@ -425,4 +436,28 @@ internal partial class TextInput {
     }
   }
 
+}
+
+internal class EntryUndoHistory {
+  internal let Undo Stack[EntryUndoStep] = Stack[EntryUndoStep]()
+  internal let Redo Stack[EntryUndoStep] = Stack[EntryUndoStep]()
+  internal var Typing bool
+
+  internal func Record(before EditState, after EditState, typing bool) {
+    var start = before
+    if typing && Typing && Undo.Count != 0 {
+      let last = Undo.Peek().After
+      if before.Text == last.Text && before.Caret == last.Caret && before.Anchor == last.Anchor {
+        start = Undo.Pop().Before
+      }
+    }
+    Undo.Push(EntryUndoStep{ Before: start, After: after })
+    Redo.Clear()
+    Typing = typing
+  }
+}
+
+internal data struct EntryUndoStep {
+  internal var Before EditState
+  internal var After EditState
 }

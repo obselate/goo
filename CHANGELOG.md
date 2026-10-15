@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add undo and redo for single-line `TextEntry` edits, including selection restoration, grouped typing, and controlled-value history reset.
+
 ## 0.7.33 - 2026-10-14
 
 - Add an optional `ShaderEffect.backdropBlur` that prefilters the backdrop with a quarter-resolution separable Gaussian blur. Support backdrop-only effects and preserve the exterior of replacement effects' clips.

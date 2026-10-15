@@ -188,6 +188,7 @@ internal class Node {
   internal prop TextLayout TextLayout? { get; set; }
   internal prop TextLayoutCache List[TextLayout]? { get; set; }
   internal prop EntryShape EntryShapeState? { get; set; }
+  internal prop EntryHistory EntryUndoHistory? { get; set; }
   internal prop EditorBinding TextEditorBinding? { get; set; }
   internal prop EditorController TextEditorController? {
     get -> EditorBinding?.Controller

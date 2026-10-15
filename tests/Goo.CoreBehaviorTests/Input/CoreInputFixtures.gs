@@ -1115,6 +1115,80 @@ internal class InputFixtures {
     return selected.Caret == 3 && selected.Anchor == 0 && edit.Selected(selected) == "éx"
   }
 
+  func TextEntryUndoRestoresSelectionAndGroupsTyping() bool {
+    let cell = InputEntryCell{ value: "abc", writeBack: true }
+    let driver = entryDriver(cell)
+    let input = driver.Window.PlatformInput
+    if !input.SetSelection(3, 1) { return false }
+    driver.Char("x")
+    driver.Update()
+    driver.Char("y")
+    driver.Update()
+    driver.Key(Key.Left, false, false)
+    driver.Key(Key.Z, false, true)
+    if cell.value != "abc" || cell.changed != "abc"
+      || entry(driver).Anchor != 3 || entry(driver).Caret != 1 { return false }
+    driver.Key(Key.Z, true, true)
+    if cell.value != "axy" || entry(driver).Anchor != 3
+      || entry(driver).Caret != 3 { return false }
+    driver.Key(Key.Z, false, true)
+    driver.Char("q")
+    if cell.value != "aq" || input.Execute(TextCommand{ Kind: TextCommandKind.Redo }) {
+      return false
+    }
+    driver.Key(Key.Left, false, false)
+    driver.Key(Key.Right, false, false)
+    driver.Char("r")
+    driver.Key(Key.Z, false, true)
+    return cell.value == "aq" && entry(driver).Caret == 2
+  }
+
+  func TextEntryUndoSeparatesClipboardAndWordDeletion() bool {
+    let cell = InputEntryCell{ writeBack: true }
+    let driver = entryDriver(cell)
+    for value in []string{ "a", "b", " ", "c", "d" } { driver.Char(value) }
+    driver.Key(Key.Backspace, false, true)
+    driver.Key(Key.Backspace, false, true)
+    driver.Key(Key.Z, false, true)
+    if cell.value != "ab " || entry(driver).Caret != 3 { return false }
+    driver.Key(Key.Z, false, true)
+    if cell.value != "ab cd" || entry(driver).Caret != 5 { return false }
+    driver.Key(Key.A, false, true)
+    driver.Key(Key.X, false, true)
+    driver.Key(Key.V, false, true)
+    driver.Key(Key.Z, false, true)
+    if cell.value != "" || entry(driver).Caret != 0 { return false }
+    driver.Key(Key.Z, false, true)
+    if cell.value != "ab cd" || entry(driver).Anchor != 0
+      || entry(driver).Caret != 5 { return false }
+    driver.Key(Key.Y, false, true)
+    return cell.value == "" && entry(driver).Caret == 0
+  }
+
+  func TextEntryUndoResetsExternalControlledValues() bool {
+    let cell = InputEntryCell{ writeBack: true, controlled: true }
+    let driver = entryDriver(cell)
+    driver.Char("a")
+    driver.Update()
+    driver.Char("b")
+    driver.Update()
+    driver.Key(Key.Z, false, true)
+    if cell.value != "" { return false }
+    driver.Key(Key.Y, false, true)
+    if cell.value != "ab" { return false }
+    cell.value = "external"
+    cell.Rebuild()
+    driver.Update()
+    let input = driver.Window.PlatformInput
+    if input.Execute(TextCommand{ Kind: TextCommandKind.Undo })
+      || input.Execute(TextCommand{ Kind: TextCommandKind.Redo })
+      || entry(driver).Buffer != "external" || cell.changed != "ab" { return false }
+    driver.Char("c")
+    driver.Update()
+    driver.Key(Key.Z, false, true)
+    return cell.value == "external" && entry(driver).Caret == 2
+  }
+
   func TextEntryCommandsAndSanitization() bool {
     let typed = InputEntryCell{}
     let typing = entryDriver(typed)
@@ -2625,6 +2699,7 @@ internal class InputEntryReplacementCell : Cell {
 internal class InputEntryCell : Cell {
   internal var value string
   internal var writeBack bool
+  internal var controlled bool
   internal var changed string
   internal var submitted string
 
@@ -2638,6 +2713,7 @@ internal class InputEntryCell : Cell {
     TextEntry{
         Key: "entry",
         Value: value,
+        Controlled: controlled,
         Placeholder: "hint",
         Width: 200.0,
         Height: 30.0,
