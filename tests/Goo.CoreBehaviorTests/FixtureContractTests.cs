@@ -103,6 +103,7 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.FocusCallbacksCoverUnavailableRemovalAndReentry));
         yield return Contract<InputFixtures>(nameof(InputFixtures.FocusReplacementDropsStaleFocus));
         yield return Contract<InputFixtures>(nameof(InputFixtures.FocusTransferAndTraversal));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.FocusStyleFollowsKeyboardModalityAndKeepsTextInputVisible));
         yield return Contract<InputFixtures>(nameof(InputFixtures.GenericTextCallbackRebuildStaysPresentationIdle));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardCallbackFailuresCleanUpAndKeepQueuedSuffix));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardCallbacksBubbleStopAndRepeat));

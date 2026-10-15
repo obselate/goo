@@ -341,6 +341,7 @@ internal class Node {
   internal prop PointerPressCount int32{ get; set; }
   internal prop KeyboardPressed bool{ get; set; }
   internal prop Focused bool{ get; set; }
+  internal prop FocusVisible bool{ get; set; }
   internal prop LocalMask StyleMask{ get; set; }
   internal prop AppliedMask StyleMask{ get; set; }
   internal prop Transitions List[Transition]? { get; set; }

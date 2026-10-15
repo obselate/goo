@@ -203,7 +203,7 @@ internal partial class Resolver {
     var localMask = StyleMask{}
     // Higher active layers shadow lower entries before transition retargeting.
     let hoverMask = !n.Disabled && n.Hovered ? fieldsMask(n, n.HoverStyle) : StyleMask{}
-    let focusMask = !n.Disabled && n.Focused ? fieldsMask(n, n.FocusStyle) : StyleMask{}
+    let focusMask = !n.Disabled && n.FocusVisible ? fieldsMask(n, n.FocusStyle) : StyleMask{}
     let pressMask = !n.Disabled && n.Pressed ? fieldsMask(n, n.ActiveStyle) : StyleMask{}
     let disabledMask = n.Disabled ? fieldsMask(n, n.DisabledStyle) : StyleMask{}
     let allStateMasks = styleMaskUnion(styleMaskUnion(hoverMask, focusMask),
@@ -212,7 +212,7 @@ internal partial class Resolver {
     if !n.Disabled && n.Hovered {
       localMask = applyList(n, n.HoverStyle, localMask, initial, styleMaskUnion(focusMask, pressMask))
     }
-    if !n.Disabled && n.Focused {
+    if !n.Disabled && n.FocusVisible {
       localMask = applyList(n, n.FocusStyle, localMask, initial, pressMask)
     }
     if !n.Disabled && n.Pressed {
@@ -357,7 +357,7 @@ internal partial class Resolver {
     var result = if let parent = n.Parent { parent.Direction } else { Direction.Auto }
     result = declaredDirection(n.BaseStyle, result)
     if !n.Disabled && n.Hovered { result = declaredDirection(n.HoverStyle, result) }
-    if !n.Disabled && n.Focused { result = declaredDirection(n.FocusStyle, result) }
+    if !n.Disabled && n.FocusVisible { result = declaredDirection(n.FocusStyle, result) }
     if !n.Disabled && n.Pressed { result = declaredDirection(n.ActiveStyle, result) }
     if n.Disabled { result = declaredDirection(n.DisabledStyle, result) }
     return result

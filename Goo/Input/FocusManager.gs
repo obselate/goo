@@ -10,6 +10,7 @@ internal class FocusManager {
   private var dispatchGeneration int64
   private var changeGeneration int64
   private var nativeFocusAllowed bool = true
+  private var keyboardModality bool
 
   internal var BeforeBlur Action[Node]?
   internal var AfterFocus Action[Node]?
@@ -66,10 +67,12 @@ internal class FocusManager {
     var failure Exception?
     if let old = previous {
       old.Focused = false
+      old.FocusVisible = false
       resolver.Invalidate(old, false)
     }
     if let next = nextTarget {
       next.Focused = true
+      next.FocusVisible = keyboardModality || next.Kind == NodeKind.Entry || next.Kind == NodeKind.Editor
       resolver.Invalidate(next, false)
     }
     if let old = previous {
@@ -97,6 +100,18 @@ internal class FocusManager {
       }
     }
     if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
+  }
+
+  internal func SetKeyboardModality(resolver Resolver, value bool) {
+    if keyboardModality == value { return }
+    keyboardModality = value
+    if let node = focused {
+      let visible = value || node.Kind == NodeKind.Entry || node.Kind == NodeKind.Editor
+      if node.FocusVisible != visible {
+        node.FocusVisible = visible
+        resolver.Invalidate(node, false)
+      }
+    }
   }
 
   internal func MoveFocus(root Node?, resolver Resolver, forward bool) bool {
@@ -131,6 +146,7 @@ internal class FocusManager {
     if let current = focused {
       BeforeBlur?.Invoke(current)
       current.Focused = false
+      current.FocusVisible = false
     }
     focused = nil
     nativeFocusAllowed = false

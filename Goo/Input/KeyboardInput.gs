@@ -92,6 +92,11 @@ internal class KeyboardInput {
   internal func Dispatch(e KeyboardEvent, root Node?, resolver Resolver, text TextInput,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64, pointer PointerInput) bool {
     if e.Kind == KeyboardEventKind.Press {
+      if e.Key == Key.Tab || e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up
+        || e.Key == Key.Down || e.Key == Key.Home || e.Key == Key.End
+        || e.Key == Key.PageUp || e.Key == Key.PageDown {
+          focus.SetKeyboardModality(resolver, true)
+        }
       if compositionActive && compositionFocusGeneration != focus.Generation {
         compositionActive = false
       }

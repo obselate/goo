@@ -847,6 +847,7 @@ internal partial class PointerInput {
   internal func HandlePointerPress(root Node?, resolver Resolver, text TextInput, timeS float64,
     x float32, y float32, button PointerButton, buttons PointerButtons, hasButtons bool,
     eventPressure float32, hasPressure bool, modifiers KeyModifiers) bool{
+      focus.SetKeyboardModality(resolver, false)
       if let hook = diagnosticsHook {
         if hook(root, PointerEventKind.Press, x, y, button) { return true }
       }

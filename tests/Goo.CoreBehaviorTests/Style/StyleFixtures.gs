@@ -781,6 +781,7 @@ internal class StyleFixtures {
     resolver.Flush()
     if !near(n.Opacity, 0.4) || n.BorderLeftWidth.Value != 2.0F { return false }
     n.Focused = true
+    n.FocusVisible = true
     resolver.Invalidate(n, false)
     resolver.Flush()
     if !near(n.Opacity, 0.7) { return false }
@@ -790,6 +791,7 @@ internal class StyleFixtures {
     if !near(n.Opacity, 0.9) { return false }
     n.Pressed = false
     n.Focused = false
+    n.FocusVisible = false
     n.Hovered = false
     resolver.Invalidate(n, false)
     resolver.Flush()
@@ -1152,6 +1154,7 @@ internal class StyleFixtures {
       }
 
     root.Focused = true
+    root.FocusVisible = true
     resolver.Invalidate(root, false)
     resolver.Flush()
     if root.OutlineWidth.Value != 4.0F || root.OutlineOffset.Value != -2.0F
@@ -1161,6 +1164,7 @@ internal class StyleFixtures {
       }
 
     root.Focused = false
+    root.FocusVisible = false
     resolver.Invalidate(root, false)
     resolver.Flush()
     if root.OutlineWidth.Value != 2.0F || root.OutlineOffset.Value != 1.0F
