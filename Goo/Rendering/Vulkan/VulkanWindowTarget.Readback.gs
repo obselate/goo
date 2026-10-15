@@ -166,6 +166,9 @@ internal unsafe partial class VulkanWindowTarget {
           if frameFailed {
             return WindowReadbackRequestStatus.Failed
           }
+          if textRedrawPending {
+            return WindowReadbackRequestStatus.NotReady
+          }
           let prerequisite = sceneCompiler.Frame
           guard let currentGeneration = generation else {
             return WindowReadbackRequestStatus.NotReady
