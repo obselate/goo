@@ -931,12 +931,66 @@ internal class InputFixtures {
     return cell.Clicks == 0
   }
 
+  func FocusStyleFollowsKeyboardModalityAndKeepsTextInputVisible() bool {
+    let resolver = Resolver{}
+    let input = InputCoordinator()
+    using let controller = TextEditorController(TextDocument(""))
+    let root = Reconciler{ Res: resolver }.Mount(Container() {
+      .Width: 200, .Height: 40, .FlexDirection: FlexDirection.Row,
+      Button{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
+      Button{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
+      TextEntry{ Width: 50, Height: 40, Focus: Style{ Opacity: 0.5 } },
+      TextEditor(controller){ Width = 50, Height = 40, Focus = Style{ Opacity: 0.5 } },
+    })
+    Layout().Calculate(root, 200.0F, 40.0F)
+    FixtureKeyBindings.Install(root, input, resolver)
+    input.QueuePointerPress(25.0F, 20.0F)
+    input.QueuePointerRelease(25.0F, 20.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    let first = root.Children[0]
+    let second = root.Children[1]
+    if !first.Focused || first.FocusVisible || first.Opacity != 1.0 { return false }
+    input.QueueKeyPress(Key.Tab, KeyModifiers{})
+    input.QueueKeyRelease(Key.Tab)
+    input.Drain(root, resolver, 0.0, nil)
+    if first.FocusVisible || !second.Focused || !second.FocusVisible || second.Opacity != 0.5 {
+      return false
+    }
+    input.QueuePointerPress(75.0F, 20.0F)
+    input.QueuePointerRelease(75.0F, 20.0F)
+    input.Drain(root, resolver, 0.0, nil)
+    if !second.Focused || second.FocusVisible || second.Opacity != 1.0 { return false }
+    for key in []Key{ Key.Tab, Key.Left, Key.Right, Key.Up, Key.Down, Key.Home, Key.End,
+      Key.PageUp, Key.PageDown } {
+      input.QueueKeyPress(key, KeyModifiers{ Shift: true })
+      input.QueueKeyRelease(key)
+      input.Drain(root, resolver, 0.0, nil)
+      input.FocusElement(resolver, second)
+      resolver.Flush()
+      if !second.FocusVisible || second.Opacity != 0.5 { return false }
+      input.QueuePointerPress(75.0F, 20.0F, PointerButton.Secondary, KeyModifiers{})
+      input.QueuePointerRelease(75.0F, 20.0F, PointerButton.Secondary, KeyModifiers{})
+      input.Drain(root, resolver, 0.0, nil)
+      if !second.Focused || second.FocusVisible || second.Opacity != 1.0 { return false }
+    }
+    for i in 2 ... 4 {
+      let x = float32(i * 50 + 25)
+      input.QueuePointerPress(x, 20.0F)
+      input.QueuePointerRelease(x, 20.0F)
+      input.Drain(root, resolver, 0.0, nil)
+      if !root.Children[i].Focused || !root.Children[i].FocusVisible
+        || root.Children[i].Opacity != 0.5 { return false }
+    }
+    input.Dispose()
+    return !root.Children[3].Focused && !root.Children[3].FocusVisible
+  }
+
   func FocusTransferAndTraversal() bool {
     let clear = InputFixtureDriver(InputFocusCell{}, 200, 200)
     clear.UseBindings()
     clear.Press(25.0F, 25.0F)
     guard let clearRoot = clear.Window.Tree else { return false }
-    if !clearRoot.Children[0].Focused || clearRoot.Children[0].Opacity != 0.5 {
+    if !clearRoot.Children[0].Focused || clearRoot.Children[0].Opacity != 1.0 {
       return false
     }
     clear.Press(150.0F, 150.0F)
