@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.34 - 2026-10-15
 
 - Add undo and redo for single-line `TextEntry` edits, including selection restoration, grouped typing, and controlled-value history reset.
 - Focus style follows focus-visible semantics. Keyboard navigation shows focus styles. Pointer presses hide them except on text entries and editors.
