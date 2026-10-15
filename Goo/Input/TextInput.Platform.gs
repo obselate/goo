@@ -33,6 +33,7 @@ internal partial class TextInput {
       if n.Buffer == value {
         return false
       }
+      n.EntryHistory = nil
       let caret = Math.Min(n.Caret, value.Length)
       let anchor = Math.Min(n.Anchor, value.Length)
       var low = Math.Min(caret, anchor)
@@ -296,6 +297,10 @@ internal partial class TextInput {
         n.BlinkT = 0.0
         FollowCaret(n)
         let changed = before.Text != committed
+        if changed {
+          n.EntryHistory ??= EntryUndoHistory()
+          n.EntryHistory!!.Record(before, entryCompositionBefore, false)
+        }
         let owner = changed ? CellOwnership.Within(root, n) : nil
         try {
           if changed { n.OnChange?.Invoke(committed) }
@@ -355,10 +360,13 @@ internal partial class TextInput {
       return result
     }
     if n.Kind != NodeKind.Entry { return false }
+    if let history = n.EntryHistory { history.Typing = false }
     let before = editState(n)
     let edit = Edit()
     var after = before
     switch command.Kind {
+      case TextCommandKind.Undo { return restoreEntry(root, n, false) }
+      case TextCommandKind.Redo { return restoreEntry(root, n, true) }
       case TextCommandKind.DeleteBackward { after = edit.Backspace(before) }
       case TextCommandKind.DeleteForward { after = edit.Delete(before) }
       case TextCommandKind.DeleteWordBackward { after = edit.KillWordLeft(before) }
@@ -407,6 +415,18 @@ internal partial class TextInput {
       case _ { return false }
     }
     commitEdit(root, n, before, after)
+    return true
+  }
+
+  private func restoreEntry(root Node?, n Node, redo bool) bool {
+    guard let history = n.EntryHistory else { return false }
+    let source = redo ? history.Redo : history.Undo
+    if source.Count == 0 { return false }
+    let target = redo ? history.Undo : history.Redo
+    let before = editState(n)
+    let step = source.Pop()
+    target.Push(step)
+    commitEdit(root, n, before, redo ? step.After : step.Before, record: false)
     return true
   }
 

@@ -137,6 +137,9 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.ScrollStateSurvivesRebuild));
         yield return Contract<InputFixtures>(nameof(InputFixtures.ShapeStrokeHitChangesInvalidateInputContract));
         yield return Contract<InputFixtures>(nameof(InputFixtures.TextEntryCommandsAndSanitization));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.TextEntryUndoRestoresSelectionAndGroupsTyping));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.TextEntryUndoSeparatesClipboardAndWordDeletion));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.TextEntryUndoResetsExternalControlledValues));
         yield return Contract<InputFixtures>(nameof(InputFixtures.TextEntryPointerSelectionLifecycle));
         yield return Contract<InputFixtures>(nameof(InputFixtures.TouchCancelRetainsPreexistingFocus));
         yield return Contract<InputFixtures>(nameof(InputFixtures.TouchPrimaryWaitsForAllContactsToEnd));

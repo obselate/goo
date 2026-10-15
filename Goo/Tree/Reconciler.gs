@@ -575,6 +575,7 @@ internal partial class Reconciler {
       }
     } else if !n.Focused {
       if n.Buffer != t.Value {
+        n.EntryHistory = nil
         n.Buffer = t.Value
         if n.Caret > n.Buffer.Length { n.Caret = n.Buffer.Length }
         if n.Anchor > n.Buffer.Length { n.Anchor = n.Buffer.Length }
