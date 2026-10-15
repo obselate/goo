@@ -375,6 +375,12 @@ internal class ElementHandleFixtures {
     if !cell.First.Measured || cell.First.Key != "row-997" || cell.First.Size.Width != 80.0
       || cell.First.Size.Height != 13.0 { return false }
 
+    cell.RowHeight = 37.0
+    cell.Items[997] = VirtualFixtureItem{ Id: 997, Revision: 1 }
+    cell.Rebuild()
+    window.UpdateTree()
+    if !cell.First.Measured || cell.First.Size.Height != 37.0 { return false }
+
     if cell.Focused != -1 || !cell.Handles[998].Focus() { return false }
     window.UpdateTree()
     if cell.Focused != 1 { return false }
@@ -619,6 +625,7 @@ internal class VirtualFixtureCell : Cell {
   internal var Pinned bool
   internal var Focused int32
   internal var First VirtualChild
+  internal var RowHeight float64 = 13.0
 
   init(count int32) {
     for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
@@ -632,7 +639,7 @@ internal class VirtualFixtureCell : Cell {
 
   internal func BuildItem(item VirtualFixtureItem) Blob {
     Builds.Add(item.Id)
-    return Container() {.Handle: Handles[item.Id],.Focusable: true,.Width: 75,.Height: 13,
+    return Container() {.Handle: Handles[item.Id],.Focusable: true,.Width: 75,.Height: RowHeight,
       Text{ Content: "row ${item.Id}:${item.Revision}"},
     }
   }
