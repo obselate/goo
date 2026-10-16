@@ -573,6 +573,7 @@ class StateSurfacesChapter : Cell {
             return
         }
         event.PreventDefault()
+        event.StopPropagation()
         moveMagnet(letter, letter.Magnet.X + dx, letter.Magnet.Y + dy)
     }
 
