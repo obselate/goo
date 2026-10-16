@@ -302,7 +302,6 @@ internal partial class Resolver {
         continue
       }
       if e.Field == StyleField.Direction {
-        layerWinners[int32(StyleField.Direction)] = 0
         m = styleMaskWith(m, StyleField.Direction)
         continue
       }
@@ -316,7 +315,6 @@ internal partial class Resolver {
       }
       e.Field = styleFieldForNode(n, e.Field)
       if layerWinners[int32(e.Field)] != i { continue }
-      layerWinners[int32(e.Field)] = 0
       m = styleMaskWith(m, e.Field)
       if !styleMaskHas(shadow, e.Field) {
         writeField(n, e, initial || logical)
@@ -330,7 +328,6 @@ internal partial class Resolver {
       var m = mask
       for f in edges {
         if layerWinners[int32(f)] != index { continue }
-        layerWinners[int32(f)] = 0
         m = applyCanonicalBoxEdge(n, source, m, initial, shadow, f)
       }
       return m

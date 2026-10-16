@@ -24,9 +24,7 @@ internal class StyleFixtures {
         resolver.Flush()
       }
       let target = index == 0 ? node.Width.Value : node.MarginLeft.Value
-      if resolver.Animating.Count != 0 || target != 200.0F {
-          return false
-        }
+      if resolver.Animating.Count != 0 || target != 200.0F { return false }
     }
     return true
   }
