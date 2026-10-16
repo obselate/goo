@@ -110,12 +110,11 @@ public sealed class VectorAsset {
   internal func PlayerMorphCurveAt(index int32) VectorAnimationCurve -> motion().MorphCurves[index]
 
   internal func PlayerMutablePathForNode(index int32) VectorPath {
-    let path = document.Nodes[index].Path
-    guard let owner = path.NormalizedOwner else { return path }
-    let mutableOwner = VectorPathNormalizedOwner(owner.QuadraticCount,
-      owner.ContourCount, 0.0, 0.0, document.ViewBoxWidth, document.ViewBoxHeight)
-    mutableOwner.Update(owner.Quadratics, owner.QuadraticCount,
-      owner.Contours, owner.ContourCount)
+    let geometry = PathGeometry.For(document.Nodes[index].Path)
+    let mutableOwner = VectorPathNormalizedOwner(geometry.QuadraticCount,
+      geometry.ContourCount, 0.0, 0.0, document.ViewBoxWidth, document.ViewBoxHeight)
+    mutableOwner.Update(geometry.Quadratics, geometry.QuadraticCount,
+      geometry.Contours, geometry.ContourCount)
     return VectorPath.CreateMutableNormalized(mutableOwner, 0.0, 0.0,
       document.ViewBoxWidth, document.ViewBoxHeight)
   }
