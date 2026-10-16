@@ -283,6 +283,7 @@ public sealed class FixtureContractTests
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ZIndexRangeStateAndResetContract));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.KeyboardCompositionClipboardAndSubmit));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.NewVerticalRepeatDoesNotUsePreInputTime));
+        yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.PageNavigationUsesViewportAndVisualLineGeometry));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.PointerSelectsWordLineShiftAndFocusesController));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.ReadOnlyTabEscapesAndCommandsCanCancel));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.WheelScrollAndCaretBlinkUseEditorState));

@@ -4,6 +4,47 @@ import System.Diagnostics
 import System.Text
 
 internal class TextEditorInputFixtures {
+  func PageNavigationUsesViewportAndVisualLineGeometry() bool {
+    let text = StringBuilder()
+    for i in 0 ... 80 { text.Append("alpha beta gamma delta epsilon\n") }
+    for wrap in []TextWrap{ TextWrap.NoWrap, TextWrap.Wrap } {
+      for height in []int32{ 60, 400 } {
+        let document = TextDocument(text.ToString())
+        using let controller = TextEditorController(document)
+        using let layer = TextPresentationLayer(document)
+        layer.SetStyle("large", TextRange(0, 30), Style{ FontSize: 30 })
+        let node = Reconciler{ Res: Resolver{} }.Mount(TextEditor(controller, []TextPresentationLayer{layer}) {
+          Width = 160, Height = float64(height), FontSize = 14, LineHeight = 1.5,
+          TextWrap = wrap, OverscanLines = 40,
+        })
+        Layout{}.Calculate(node, 160.0F, float32(height))
+        let layout = TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+        let first = layout.Lines[0]
+        let y = first.Top + first.Height * 0.5F + BoxGeometry.ViewportHeight(node)
+        var expected = first
+        for line in layout.Lines {
+          if line.Top <= y { expected = line }
+        }
+        controller.Execute(TextCommand{ Kind: TextCommandKind.PageDown, ExtendSelection: true })
+        let offset = controller.Selection.Active.Offset
+        if offset < expected.SourceStart || offset > expected.SourceEnd
+          || controller.Selection.Anchor.Offset != 0 { return false }
+        node.EditorOverscanLines = 0
+        controller.ScrollTo(0, float64(expected.Top))
+        TextEditorLayouts.Invalidate(node)
+        TextEditorLayouts.For(node, BoxGeometry.ContentWidth(node), BoxGeometry.ContentHeight(node))
+        controller.Execute(TextCommand{ Kind: TextCommandKind.PageUp })
+        if controller.Selection.Active.Offset != 0 { return false }
+      }
+    }
+    let document = TextDocument(text.ToString())
+    using let controller = TextEditorController(document)
+    controller.Execute(TextCommand{ Kind: TextCommandKind.PageDown })
+    if document.GetLineIndex(controller.Selection.Active.Offset) != 10 { return false }
+    controller.Execute(TextCommand{ Kind: TextCommandKind.PageUp })
+    return controller.Selection.Active.Offset == 0
+  }
+
   func KeyboardCompositionClipboardAndSubmit() bool {
     let savedMac = InputPolicy.Mac
     InputPolicy.Mac = false

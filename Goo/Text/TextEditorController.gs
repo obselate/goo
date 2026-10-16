@@ -86,6 +86,10 @@ internal data struct TextEditorControllerState {
 
 /// Owns editing state and semantic commands for one text document view.
 public class TextEditorController : IDisposable {
+  shared {
+    private const HeadlessPageLines int32 = 10
+  }
+
   private let document TextDocument
   private var selection TextSelection
   private var composition TextComposition?
@@ -220,8 +224,8 @@ public class TextEditorController : IDisposable {
       case TextCommandKind.MoveLineEnd { return moveLineEdge(true, command.ExtendSelection) }
       case TextCommandKind.MoveDocumentStart { return placeSelection(0, TextAffinity.Upstream, command.ExtendSelection, false) }
       case TextCommandKind.MoveDocumentEnd { return placeSelection(document.Length, TextAffinity.Downstream, command.ExtendSelection, false) }
-      case TextCommandKind.PageUp { return moveVertical(-10, command.ExtendSelection) }
-      case TextCommandKind.PageDown { return moveVertical(10, command.ExtendSelection) }
+      case TextCommandKind.PageUp { return moveVertical(-1, command.ExtendSelection, true) }
+      case TextCommandKind.PageDown { return moveVertical(1, command.ExtendSelection, true) }
       case TextCommandKind.SelectAll { return selectAllDefault() }
       case TextCommandKind.SelectWord { return selectUnit(command, false) }
       case TextCommandKind.SelectLine { return selectUnit(command, true) }
@@ -488,7 +492,7 @@ public class TextEditorController : IDisposable {
     return nil
   }
 
-  private func moveVertical(lines int32, extend bool) bool {
+  private func moveVertical(lines int32, extend bool, page bool = false) bool {
     if let mounted = mountedEditor as Node? {
       let contentLeft = TextEditorLayouts.TextLeft(mounted) - mounted.Rect.X
       if !hasDesiredHorizontalPosition {
@@ -497,12 +501,13 @@ public class TextEditorController : IDisposable {
         hasDesiredHorizontalPosition = true
       }
       if let target = TextEditorLayouts.MoveVertical(mounted, selection.Active,
-        float32(desiredHorizontalPosition), lines) {
+        float32(desiredHorizontalPosition), lines, page) {
           return placeSelection(target.Offset, target.Affinity, extend, true)
         }
     }
+    let delta = page ? lines * HeadlessPageLines : lines
     let current = document.GetLineIndex(selection.Active.Offset)
-    let target = Math.Clamp(current + lines, 0, document.LineCount - 1)
+    let target = Math.Clamp(current + delta, 0, document.LineCount - 1)
     if !hasDesiredHorizontalPosition {
       desiredHorizontalPosition = lineColumn(current, selection.Active.Offset)
       hasDesiredHorizontalPosition = true

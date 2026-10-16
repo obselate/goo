@@ -393,14 +393,49 @@ internal partial class TextEditorLayouts {
       }
 
     internal func MoveVertical(n Node, position TextPosition, desiredX float32,
-      delta int32) TextPosition? {
+      delta int32, page bool) TextPosition? {
         let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
         let current = lineIndexForPosition(layout, position)
         if current < 0 || layout.Lines.Count == 0 { return nil }
-        var target = current + delta
-        if target < 0 { target = 0 }
-        if target >= layout.Lines.Count { target = layout.Lines.Count - 1 }
-        let line = layout.Lines[target]
+        var line = layout.Lines[Math.Clamp(current + delta, 0, layout.Lines.Count - 1)]
+        if page {
+          let source = layout.Lines[current]
+          var y = source.RelativeTop + source.Height * 0.5F + float32(delta) * BoxGeometry.ViewportHeight(n)
+          let state = n.EditorState!!
+          let snapshot = state.Document.Snapshot()
+          var index = snapshot.GetLineIndex(source.Paragraph.Source.Start)
+          var movingUp = false
+          let projections = editorProjections(state, layout.ParagraphWidth, layout.HeightConstraint)
+          let styles = editorStyles(state, layout.LayerRevision)
+          while true {
+            let sourceRange = snapshot.GetLineRange(index)
+            var paragraph = state.Paragraph(sourceRange, layout.ParagraphWidth,
+              layout.FontFingerprint, layout.LineHeight, layout.Ascent, layout.Descent)
+            if paragraph == nil {
+              paragraph = paragraphLayout(n, state, snapshot, index,
+                projections, styles,
+                layout.ParagraphWidth, layout.FontFingerprint, layout.LineHeight, layout.Ascent, layout.Descent)
+              state.AddParagraph(paragraph)
+            }
+            if movingUp { y = y + paragraph.Height }
+            if y < 0.0F && index > 0 {
+              index--
+              movingUp = true
+              continue
+            }
+            if y >= paragraph.Height && index + 1 < snapshot.LineCount {
+              y = y - paragraph.Height
+              index++
+              movingUp = false
+              continue
+            }
+            line = paragraph.Lines[0]
+            for candidate in paragraph.Lines {
+              if candidate.RelativeTop <= y { line = candidate }
+            }
+            break
+          }
+        }
         let aligned = editorLineOffset(n, line, BoxGeometry.ContentWidth(n)) - layout.GutterWidth
         let hit = HitTest(line, desiredX - aligned)
         return TextPosition{ Offset: SourceOffsetForDisplay(line.Paragraph,
