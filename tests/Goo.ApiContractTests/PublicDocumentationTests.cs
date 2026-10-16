@@ -232,6 +232,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.KeyEvent.StopPropagation",
         "M:Goo.FocusEvent.StopPropagation",
         "M:Goo.FocusScope.Dispose",
+        "M:Goo.FocusScope.Dispose(System.Boolean)",
         "M:Goo.FocusScopeOptions.#ctor",
         "M:Goo.WheelEvent.PreventDefault",
         "M:Goo.WheelEvent.StopPropagation",

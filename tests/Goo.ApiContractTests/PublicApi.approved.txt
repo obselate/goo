@@ -773,6 +773,7 @@ method|Goo.EmbeddedWindowHost|Suspend|instance|public|generic:|()->System.Void
 method|Goo.EmbeddedWindowHost|UpdatePreferences|instance|public|generic:|(value:Goo.PlatformPreferences)->System.Void
 method|Goo.FocusEvent|StopPropagation|instance|public|generic:|()->System.Void
 method|Goo.FocusScope|Dispose|instance|public|generic:|()->System.Void
+method|Goo.FocusScope|Dispose|instance|public|generic:|(restoreFocus:System.Boolean)->System.Void
 method|Goo.FocusedEditorSnapshot|Deconstruct|instance|public|generic:|(out FocusId:System.Int64&,out Text:System.String&,out SelectionStart:System.Int32&,out SelectionEnd:System.Int32&,out CompositionStart:System.Int32&,out CompositionEnd:System.Int32&,out IsPassword:System.Boolean&,out IsMultiline:System.Boolean&,out IsReadOnly:System.Boolean&,out CaretArea:Goo.ElementRect&)->System.Void
 method|Goo.FocusedEditorSnapshot|Equals|instance|public|generic:|(arg0:Goo.FocusedEditorSnapshot)->System.Boolean
 method|Goo.FocusedEditorSnapshot|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
