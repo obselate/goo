@@ -4,6 +4,40 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func WindowColorPairInheritanceContract() bool {
+    let cell = WindowColorPairCell{}
+    let window = Window{Root: cell, Width: 100, Height: 100}
+    try {
+      if window.Background != Color.White || window.Foreground != Color.Black { return false }
+      window.UpdateTree()
+      guard let root = window.Tree else { return false }
+      if root.Color != Color.Black || root.Children[0].Color != Color.Black
+        || root.Children[1].Children[0].Color != Color.Black { return false }
+      let builds = cell.Builds
+      let updatePair Action[ElementMetrics] = (metrics ElementMetrics) -> window.SetColors(Color.Black, Color.White)
+      cell.Target.MetricsChanged += updatePair
+      window.HandleResize(101, 100)
+      window.UpdateTree()
+      cell.Target.MetricsChanged -= updatePair
+      if window.Background != Color.Black || cell.Builds != builds
+        || root.Children[0].Color != Color.White
+        || root.Children[1].Children[0].Color != Color.White
+        || root.Children[2].Color != Color.Rgb(255, 0, 0) { return false }
+      cell.Explicit = true
+      cell.Rebuild()
+      window.UpdateTree()
+      guard let explicitRoot = window.Tree else { return false }
+      if explicitRoot.Children[0].Color != Color.Rgb(0, 255, 0)
+        || explicitRoot.Children[1].Children[0].Color != Color.Rgb(0, 255, 0) { return false }
+      cell.Replace = true
+      cell.Explicit = false
+      cell.Rebuild()
+      window.UpdateTree()
+      guard let replacement = window.Tree else { return false }
+      return replacement.Color == Color.White && replacement.Kind == NodeKind.Text
+    } finally { window.Close() }
+  }
+
   func RepeatedLayerDeclarationsKeepTransitionProgressContract() bool {
     let styles = []Style{
       Style{ BasedOn: Style{ Width: 100 }, Width: 200 },
@@ -2170,6 +2204,25 @@ internal class StyleFixtures {
   }
 
   private func sameColor(left Color, right Color) bool -> left.R == right.R && left.G == right.G && left.B == right.B && left.A == right.A
+}
+
+internal class WindowColorPairCell : Cell {
+  internal let Target ElementHandle = ElementHandle{}
+  internal var Builds int32
+  internal var Explicit bool
+  internal var Replace bool
+
+  override func Build() Blob {
+    Builds++
+    if Replace { return Text{Content: "replacement"} }
+    return Container() {
+      .Handle: Target, .Width: Percent(100),
+      .BasedOn: Explicit ? Style{Color: Color.Rgb(0, 255, 0)} : nil,
+      Text{Content: "plain"},
+      Portal(){Text{Content: "portal"}},
+      Text{Content: "authored", Color: Color.Rgb(255, 0, 0)},
+    }
+  }
 }
 
 internal class MetricShaderEffectCell : Cell {

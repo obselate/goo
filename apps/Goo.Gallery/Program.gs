@@ -87,6 +87,7 @@ func Main() {
         ResizeBand: 8.0F,
         VSync: true,
         Background: Color.Transparent,
+        Foreground: GalleryTheme.Ink,
         Root: root,
     }
     root.AttachWindow(window)
@@ -138,6 +139,7 @@ func RunSmoke() {
         ResizeBand: 8.0F,
         VSync: false,
         Background: Color.Transparent,
+        Foreground: GalleryTheme.Ink,
         Root: root,
     }
     root.AttachWindow(window)
@@ -283,6 +285,7 @@ func RunBench() {
         Resizable: true,
         VSync: false,
         Background: GalleryTheme.Background,
+        Foreground: GalleryTheme.Ink,
         Root: root,
     }
     window.Open()

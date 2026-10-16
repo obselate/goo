@@ -34,6 +34,7 @@ func Main() {
         Resizable: true,
         VSync: true,
         Background: Color.Transparent,
+        Foreground: DevToolsTheme.Ink,
         Root: root,
     }
     root.AttachWindow(window)

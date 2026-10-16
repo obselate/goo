@@ -377,6 +377,13 @@ public partial class Window {
       flushingMetricsBeforeRender = false
       metricsFlushThreadId = 0
     }
+    if foregroundPending {
+      resolver.Flush()
+      pendingReconcileEffects = combineEffects(pendingReconcileEffects, resolver.FlushEffects())
+      foregroundPending = false
+      changed = true
+      resolver.VisualDirty = true
+    }
     return changed
   }
   private func validateDelta(value float64, name string) {

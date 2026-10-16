@@ -285,6 +285,7 @@ public sealed class FixtureContractTests
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TransitionTimingSnapshotContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TypographyInheritanceContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.VisibilityStateResetTransitionAndStorageContract));
+        yield return Contract<StyleFixtures>(nameof(StyleFixtures.WindowColorPairInheritanceContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.ZIndexRangeStateAndResetContract));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.KeyboardCompositionClipboardAndSubmit));
         yield return Contract<TextEditorInputFixtures>(nameof(TextEditorInputFixtures.NewVerticalRepeatDoesNotUsePreInputTime));

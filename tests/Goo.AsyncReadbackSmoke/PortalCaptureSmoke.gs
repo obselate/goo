@@ -121,6 +121,7 @@ class PortalCaptureCell : Cell {
 }
 
 func RunPortalCaptureSmoke() {
+  RunWindowColorCaptureSmoke()
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
   let capturedError = StringWriter()
@@ -208,4 +209,72 @@ func RunPortalCaptureSmoke() {
       && !diagnostics.Contains("\"event\":326"),
     "Portal capture emitted unsupported-scene diagnostics")
   Console.WriteLine("portal-capture-gate: overlay=validated anchored_placement=validated rounded_asymmetric_border=validated visible_overflow=validated close=1")
+}
+
+class WindowColorCaptureCell : Cell {
+  internal var Replace bool
+
+  override func Build() Blob {
+    if Replace { return Text{Content: "MMMM", FontSize: 32} }
+    return Container() {
+      .Width: Percent(100), .Height: Percent(100),
+      Text{Content: "MMMM", FontSize: 32},
+      Portal{
+        Position: PositionType.Absolute, Left: 0, Top: 48,
+        Text{Content: "MMMM", FontSize: 32},
+      },
+      Text{Content: "MMMM", FontSize: 32, Color: Color.Rgb(255, 0, 0),
+        Position: PositionType.Absolute, Left: 0, Top: 88},
+    }
+  }
+}
+
+func RequireWindowColorInk(frame VulkanReadbackResult, metrics WindowMetrics,
+  top int32, red uint8, green uint8, blue uint8) {
+  var ink int32
+  for y in top ... top + 36 {
+    for x in 0 ... 110 {
+      if PrimitiveNear(PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
+        float64(x), float64(y)), red, green, blue, 8) { ink++ }
+    }
+  }
+  Require(ink > 30, "Window foreground glyph pixels were not captured")
+}
+
+func RunWindowColorCaptureSmoke() {
+  let cell = WindowColorCaptureCell{}
+  let window = Window{Title: "Goo window color pair", Width: 180, Height: 140,
+    VSync: false, Root: cell}
+  try {
+    window.Open()
+    WindowReadbackTestFixture.Pump(window, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    let initial = ClipCaptureReadback(window, metrics)
+    PrimitiveRequirePixelNear(initial.Pixels, initial.Width, metrics,
+      170.0, 130.0, 255, 255, 255, 0, "default_white_clear")
+    RequireWindowColorInk(initial, metrics, 0, 0, 0, 0)
+    RequireWindowColorInk(initial, metrics, 48, 0, 0, 0)
+    for i in 0 ... 4 {
+      let dark = i % 2 == 0
+      window.SetColors(dark ? Color.Black : Color.White, dark ? Color.White : Color.Black)
+      WindowReadbackTestFixture.Pump(window, 0.0)
+      let frame = ClipCaptureReadback(window, metrics)
+      let clear = dark ? uint8(0) : uint8(255)
+      let ink = dark ? uint8(255) : uint8(0)
+      PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics,
+        170.0, 130.0, clear, clear, clear, 0, "atomic_pair_clear")
+      RequireWindowColorInk(frame, metrics, 0, ink, ink, ink)
+      RequireWindowColorInk(frame, metrics, 48, ink, ink, ink)
+      RequireWindowColorInk(frame, metrics, 88, 255, 0, 0)
+    }
+    window.SetColors(Color.Black, Color.White)
+    cell.Replace = true
+    cell.Rebuild()
+    WindowReadbackTestFixture.Pump(window, 0.0)
+    RequireWindowColorInk(ClipCaptureReadback(window, metrics), metrics, 0, 255, 255, 255)
+  } finally {
+    window.RequestClose()
+    WindowReadbackTestFixture.Pump(window, 0.0)
+  }
+  Console.WriteLine("window-color-pair: default=validated atomic_update=validated portal=validated replacement=validated")
 }
