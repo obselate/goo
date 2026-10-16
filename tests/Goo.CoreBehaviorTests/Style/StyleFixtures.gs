@@ -165,7 +165,7 @@ internal class StyleFixtures {
   func LogicalEdgeTransitionContract() bool {
     let resolver = Resolver{}
     let n = Node{ Kind: NodeKind.Container }
-    n.BaseStyle = Style{ Direction: Direction.LeftToRight, PaddingStart: 10, PaddingEnd: 20 }.Entries()
+    n.BaseStyle = Style{ Direction: Direction.LeftToRight, PaddingStart: 10, PaddingEnd: 40 }.Entries()
     n.HoverStyle = Style{ PaddingStart: 30 }.Entries()
     n.TransitionMs = 1000
     n.TransitionEasing = Easing.Linear
@@ -178,15 +178,15 @@ internal class StyleFixtures {
     if n.PaddingLeft.Value != 10.0F || resolver.Animating.Count != 1 { return false }
     resolver.Advance(0.5)
     if n.PaddingLeft.Value != 20.0F { return false }
-    n.BaseStyle = Style{ Direction: Direction.RightToLeft, PaddingStart: 10, PaddingEnd: 20 }.Entries()
+    n.BaseStyle = Style{ Direction: Direction.RightToLeft, PaddingStart: 10, PaddingEnd: 40 }.Entries()
     resolver.Invalidate(n, false)
     resolver.Flush()
-    if n.PaddingLeft.Value != 20.0F || n.PaddingRight.Value != 30.0F
+    if n.PaddingLeft.Value != 40.0F || n.PaddingRight.Value != 30.0F
       || n.Transitions!!.Count != 0 { return false }
     n.Hovered = false
     resolver.Invalidate(n, false)
     resolver.Flush()
-    return n.PaddingLeft.Value == 20.0F && n.PaddingRight.Value == 10.0F
+    return n.PaddingLeft.Value == 40.0F && n.PaddingRight.Value == 10.0F
       && n.Transitions!!.Count == 0
   }
 
