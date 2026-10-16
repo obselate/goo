@@ -27,6 +27,29 @@ These rules apply to maintained source, tests, examples, templates and repositor
 - Split long functions at real steps. Use private functions named for those steps.
 - Preserve behavior and effect order. Formatting does not resolve long functions.
 
+## Ownership and permitted references
+
+Folders are not assembly boundaries. Classify shared values and contracts separately from operations. Partial declarations keep the ownership of their type.
+
+| Layer, lower first | Owns | May reference |
+| --- | --- | --- |
+| Values/contracts in Style, Shapes, Text, Input, Audio, Platform | Geometry, styles, document positions, events, sound data, host contracts | Other shared values/contracts. No concrete renderer, SDL or diagnostics implementation. |
+| Tree/Cell | Retained nodes, declarations, identity, reconciliation | Values and explicit lifecycle contracts. No concrete Vulkan or SDL state. |
+| Layout, Style resolution, Motion | Measure, arrange, style application, animation scheduling | Retained model, shared geometry, neutral shaping. |
+| Rendering/Text | Unicode, CPU shaping, fonts/typefaces, visual text geometry | Text contracts and neutral font lookup. No Vulkan device/surface or GPU encoding ownership. |
+| Input and semantic Accessibility | Hit tests, focus, editing, semantic snapshots | Retained model, Layout, shared visual geometry. No concrete Vulkan or SDL hosts. |
+| Rendering and Vulkan | Paint planning, GPU resources, submission, readback, draw/paint encoding | Retained/resolved state, shared geometry, neutral shaping/render contracts. |
+| Platform/Sdl and native accessibility adapters | OS/SDL lifecycle, devices, input delivery, AccessKit | Host contracts and required native dependencies. Native adapters may reference native hosts. |
+| Window/WindowParts | Composition, concrete creation/bootstrap, lifecycle | All systems through contracts. Keep concrete creation in bootstrap/host parts. |
+| Diagnostics/DevTools | Inspection, request parsing/transport, overlays | Owner-provided inspection/override hooks. Inspected systems must not call diagnostics parsing/transport. |
+
+- `Rendering/TransformGeometry.gs` is shared geometry. Input may use it without a GPU dependency.
+- `DiagnosticOverlay` is a rendering feature contract. WindowHost and Vulkan may use it without a diagnostics transport dependency.
+- Native AccessKit adapters may use SdlHost. SDL audio adapters may use audio contracts.
+- Keep SDL host operations in Platform/Sdl, Window lifecycle in WindowParts and native accessibility translation in its adapter.
+- Shared neutral contract cycles are permitted. Do not infer forbidden calls from folder names or identifier counts.
+- Review ownership manually. This table does not claim that existing code has no violations. Do not add assemblies or forwarding interfaces to enforce it.
+
 ## Data and formats
 
 - Give each stored or exchanged format one typed record and one parser.
