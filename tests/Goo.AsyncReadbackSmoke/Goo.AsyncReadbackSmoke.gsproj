@@ -29,7 +29,7 @@
     <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
              Link="VendSans-VariableFont_wght.ttf"
              CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.Svg.Tests/Assets/s13-morph.svg" Link="SvgCorpus/s13-morph.svg"
+    <Content Include="../Goo.Svg.Tests/Assets/*.svg" Link="SvgCorpus/%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>

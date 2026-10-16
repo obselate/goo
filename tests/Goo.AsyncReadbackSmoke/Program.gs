@@ -464,6 +464,7 @@ let modes = []SmokeMode{
   SmokeMode("GOO_FRAGMENT_CORRECTNESS_SMOKE", "1", () -> RunFragmentCorrectnessSmoke()),
   SmokeMode("GOO_PIPELINE_IDENTITY_SMOKE", "1", () -> RunPipelineIdentitySmoke()),
   SmokeMode("GOO_QUEUE_WAKE_SMOKE", "1", () -> RunQueueWakeSmoke()),
+  SmokeMode("GOO_SVG_CORPUS_OUTPUT", "", () -> RunSvgCorpusSmoke()),
   SmokeMode("GOO_SVG_MORPH_SMOKE", "1", () -> RunSvgMorphSmoke()),
   SmokeMode("GOO_TIMELINE_COMPLETION_SMOKE", "1", () -> RunTimelineCompletionSmoke()),
   SmokeMode("GOO_PRIMITIVE_METRICS_SMOKE", "1", () -> RunPrimitiveUploadMetricsSmoke()),
