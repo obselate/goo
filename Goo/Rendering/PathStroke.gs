@@ -704,7 +704,11 @@ internal sealed class PathStrokeCache {
       let cross = controlX * dy - controlY * dx
       let tolerance = float64(FlattenTolerance)
       let flat = if lengthSquared > float64(PointTolerance) * float64(PointTolerance) {
+        let projection = controlX * dx + controlY * dy
+        let projectedTolerance = tolerance * Math.Sqrt(lengthSquared)
         cross * cross <= tolerance * tolerance * lengthSquared
+          && projection >= -projectedTolerance
+          && projection <= lengthSquared + projectedTolerance
       } else {
         controlX * controlX + controlY * controlY <= tolerance * tolerance
       }
