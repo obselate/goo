@@ -1124,8 +1124,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             let created = NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
             current = created
             lock gate {
-                if stopRequested {
-                    created.Dispose()
+                if stopRequested || !Object.ReferenceEquals(worker, Thread.CurrentThread) {
                     return
                 }
                 stream = created
@@ -1136,7 +1135,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             localWriter.AutoFlush = true
             localWriter.NewLine = "\n"
             lock gate {
-                if stopRequested {
+                if stopRequested || !Object.ReferenceEquals(stream, created) {
                     return
                 }
                 reader = localReader
@@ -1148,7 +1147,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             Signal()
             while true {
                 lock gate {
-                    if stopRequested {
+                    if stopRequested || !Object.ReferenceEquals(stream, created) {
                         return
                     }
                 }
@@ -1168,7 +1167,8 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 if pollSnapshot {
                     Thread.Sleep(100)
                     lock gate {
-                        if stopRequested || state != DiagnosticConnectionState.Connected {
+                        if stopRequested || state != DiagnosticConnectionState.Connected
+                        || !Object.ReferenceEquals(stream, created) {
                             return
                         }
                         localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
@@ -1177,22 +1177,26 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             }
         } catch (error Exception) {
             lock gate {
-                if !stopRequested {
+                if !stopRequested && Object.ReferenceEquals(worker, Thread.CurrentThread) {
                     state = DiagnosticConnectionState.Faulted
+                    pending.Enqueue(
+                        DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message)
+                    )
                 }
-            }
-            if !stopRequested {
-                Enqueue(DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message))
             }
         } finally {
+            if let pipe = current {
+                pipe.Dispose()
+            }
             lock gate {
-                if let attached = stream {
-                    if current == nil || Object.ReferenceEquals(attached, current) {
-                        stream = nil
+                if current != nil && Object.ReferenceEquals(stream, current) {
+                    stream = nil
+                    reader = nil
+                    writer = nil
+                    if state == DiagnosticConnectionState.Connected || state == DiagnosticConnectionState.Connecting {
+                        state = DiagnosticConnectionState.Disconnected
                     }
                 }
-                reader = nil
-                writer = nil
             }
             Signal()
         }
