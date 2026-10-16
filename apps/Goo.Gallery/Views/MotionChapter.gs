@@ -386,36 +386,6 @@ class MotionChapter : Cell {
             let rawVy = (e.Position.Y - lastMovePoint.Y) / dt
             flingVx = rawVx * 0.7 + flingVx * 0.3
             flingVy = rawVy * 0.7 + flingVy * 0.3
-            System
-                .IO
-                .File
-                .AppendAllText(
-                "/tmp/goo_fling.log",
-                "MOVE: pos=" +
-                    e
-                    .Position
-                    .X
-                    .ToString("F1") +
-                    "," +
-                    e
-                    .Position
-                    .Y
-                    .ToString("F1") +
-                    " win=" +
-                    e
-                    .WindowPosition
-                    .X
-                    .ToString("F1") +
-                    "," +
-                    e
-                    .WindowPosition
-                    .Y
-                    .ToString("F1") +
-                    " raw=" +
-                    rawVx.ToString("F1") + "," + rawVy.ToString("F1") + " fling=" + flingVx.ToString("F1") +
-                    "," +
-                    flingVy.ToString("F1") + "\n"
-            )
             lastMovePoint = e.Position
             lastMoveTick = now
             physicsPuckPos.Set(clampArenaPoint(e.Position))
@@ -434,26 +404,6 @@ class MotionChapter : Cell {
             // Single click --> smoothly goes to the exact clicked spot!
             targetAnchorIndex = -1
             let target = clampArenaPoint(e.Position)
-            System
-                .IO
-                .File
-                .AppendAllText(
-                "/tmp/goo_fling.log",
-                "CLICK: pos=" +
-                    e
-                    .Position
-                    .X
-                    .ToString("F1") +
-                    "," +
-                    e
-                    .Position
-                    .Y
-                    .ToString("F1") +
-                    " target=" +
-                    target
-                    .X
-                    .ToString("F1") + "," + target.Y.ToString("F1") + "\n"
-            )
             physicsPuckPos.To(target, currentSpringSpec)
             physicsPuckScale.To(1.0, GalleryBouncySpringSpec)
             Rebuild()
@@ -476,32 +426,8 @@ class MotionChapter : Cell {
         if speed > 140.0 {
             let current = physicsPuckPos.Value
             let projected = clampArenaPoint(Point{X: current.X + flingVx * 0.22, Y: current.Y + flingVy * 0.22,})
-            System
-                .IO
-                .File
-                .AppendAllText(
-                "/tmp/goo_fling.log",
-                "FLING: speed=" + speed.ToString("F1") + " fling=" + flingVx.ToString("F1") + "," + flingVy.ToString(
-                    "F1"
-                ) +
-                    " curr=" +
-                    current
-                    .X
-                    .ToString("F1") + "," + current.Y.ToString("F1") + " proj=" + projected.X.ToString("F1") +
-                    "," +
-                    projected
-                    .Y
-                    .ToString("F1") + " dt=" + elapsedSinceMove.ToString() + "\n"
-            )
             physicsPuckPos.To(projected, MotionVelocity.Components(flingVx, flingVy), currentSpringSpec)
         } else {
-            System
-                .IO
-                .File
-                .AppendAllText(
-                "/tmp/goo_fling.log",
-                "SLOW_DROP: speed=" + speed.ToString("F1") + " dt=" + elapsedSinceMove.ToString() + "\n"
-            )
             var snapped = false
             var i = 0
             while i < 5 {
