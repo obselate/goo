@@ -1,6 +1,7 @@
 package GooDevTools
 
 import System
+import System.Buffers.Text
 import System.Collections.Generic
 import System.Diagnostics
 import System.Globalization
@@ -201,13 +202,28 @@ class DiagnosticWire {
                 } else {
                     ""
                 }
-                let bytes = if data == "" {
+                var bytes = if data == "" {
                     "capture received"
                 } else {
                     if Text(root, []string{"path"}) == data {
                         "file: " + data
                     } else {
                         data.Length.ToString() + " base64 chars"
+                    }
+                }
+                if let rgba = Element(root, []string{"rgbaBase64"}) {
+                    bytes = "invalid RGBA base64"
+                    if rgba.ValueKind == JsonValueKind.String {
+                        let encoded = rgba.GetString() ?? ""
+                        if Base64.IsValid(encoded.AsSpan(), out var length) {
+                            bytes = length.ToString() + " RGBA bytes"
+                        }
+                    }
+                    for name in []string{"format", "origin", "stride"} {
+                        let value = Text(root, []string{name})
+                        if value != "" {
+                            bytes += ", " + name + ": " + value
+                        }
                     }
                 }
                 return DiagnosticWireCapture{
