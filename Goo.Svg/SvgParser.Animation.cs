@@ -459,8 +459,8 @@ internal sealed partial class SvgParser
         return new SvgAnimationKeyframe
         {
             A = matrix.A,
-            B = matrix.B,
-            C = matrix.C,
+            B = matrix.C,
+            C = matrix.B,
             D = matrix.D,
             E = matrix.E,
             F = matrix.F

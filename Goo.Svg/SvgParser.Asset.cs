@@ -174,7 +174,7 @@ internal sealed partial class SvgParser
             Fill = BuildPaint(shape?.Fill),
             Stroke = BuildStroke(shape?.Stroke),
             Transform = VectorAssetAnimation.MatrixTransform(F32(node.Transform.A),
-                F32(node.Transform.B), F32(node.Transform.C), F32(node.Transform.D),
+                F32(node.Transform.C), F32(node.Transform.B), F32(node.Transform.D),
                 F32(node.Transform.E), F32(node.Transform.F)),
             Opacity = node.Opacity,
             ClipPath = BuildPath(shape?.Clip?.Contours),
