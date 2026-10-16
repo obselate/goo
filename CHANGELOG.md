@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Keep locally handled Gallery keys from paging the showcase.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
