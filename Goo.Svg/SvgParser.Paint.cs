@@ -136,7 +136,8 @@ internal sealed partial class SvgParser
         return new SvgPaint
         {
             Kind = SvgPaintKind.Solid,
-            Color = ApplyOpacity(ParseColor(value, owner), opacity)
+            Color = ApplyOpacity(ParseColor(value, owner), opacity),
+            Opacity = opacity
         };
     }
 

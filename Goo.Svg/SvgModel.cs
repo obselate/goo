@@ -44,6 +44,7 @@ internal sealed class SvgPaint
 {
     internal SvgPaintKind Kind { get; init; }
     internal SvgColor Color { get; init; }
+    internal double Opacity { get; init; } = 1;
     internal double X0 { get; init; }
     internal double Y0 { get; init; }
     internal double X1 { get; init; }
@@ -122,7 +123,7 @@ internal sealed class SvgAnimationKeyframe
     internal double A { get; init; }
     internal double B { get; init; }
     internal double C { get; init; }
-    internal double D { get; init; }
+    internal double D { get; set; }
     internal double E { get; init; }
     internal double F { get; init; }
     internal uint Easing { get; init; }
