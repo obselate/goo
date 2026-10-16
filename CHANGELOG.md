@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Preserve SVG matrix coefficient order when publishing static and animated transforms.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
