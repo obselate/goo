@@ -499,16 +499,8 @@ internal partial class TextShaping {
         }
       }
 
-    private func boundaryContains(boundaries List[int32], value int32) bool {
-      var index int32 = 0
-      while index < boundaries.Count {
-        let boundary = boundaries[index]
-        if boundary == value { return true }
-        if boundary > value { return false }
-        index++
-      }
-      return false
-    }
+    private func boundaryContains(boundaries List[int32], value int32) bool ->
+    boundaries.BinarySearch(value) >= 0
 
     private func MetricsFor(metrics VulkanHarfBuzzMetrics, size float32) TextFontMetrics {
       if metrics.UnitsPerEm == 0u { throw InvalidOperationException("HarfBuzz font UPEM is zero") }
