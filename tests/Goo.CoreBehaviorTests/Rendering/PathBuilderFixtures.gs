@@ -7,6 +7,13 @@ internal class PathBuilderFixtures {
     let builder = PathBuilder(2.0, 3.0, 10.0, 20.0)
     let first = builder.MoveTo(2.0, 3.0).LineTo(12.0, 3.0).Build()
     let firstHash = first.Hash
+    let repeated = builder.Build()
+    let extended = builder.LineTo(12.0, 13.0).Build()
+    let extendedGeometry = PathGeometry.For(extended)
+    if repeated.Hash != firstHash || PathGeometry.For(repeated).QuadraticCount != 1
+      || extendedGeometry.QuadraticCount != 2
+      || extendedGeometry.Quadratics[1].X1 != 12.0F
+      || extendedGeometry.Quadratics[1].Y1 != 13.0F { return false }
     if !Object.ReferenceEquals(builder, builder.Reset()) { return false }
     builder.MoveTo(5.0, 6.0).Reset()
     var rejected = false

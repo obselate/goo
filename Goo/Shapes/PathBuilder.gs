@@ -11,7 +11,6 @@ public class PathBuilder {
   private let viewBoxWidth float64
   private let viewBoxHeight float64
   private var hasContour bool
-  private var isSealed bool
 
   /// Creates a builder with a unit view box.
   public convenience init() {
@@ -37,7 +36,6 @@ public class PathBuilder {
   /// @param y The point y coordinate.
   /// @returns This builder.
   public func MoveTo(x float64, y float64) PathBuilder {
-    ensureUnsealed()
     validateFinite(x, "x")
     validateFinite(y, "y")
     commands.Add(VectorPathCommand{ Kind: VectorPathCommandKind.MoveTo, X1: x, Y1: y })
@@ -143,7 +141,6 @@ public class PathBuilder {
   /// @param close Whether to close the contour.
   /// @returns This builder.
   public func Polyline(points []Point, close bool) PathBuilder {
-    ensureUnsealed()
     if points.Length < 2 {
       throw ArgumentException("points must contain at least two points", "points")
     }
@@ -166,32 +163,21 @@ public class PathBuilder {
     return this
   }
 
-  /// Builds the immutable path and seals this builder.
+  /// Builds an immutable snapshot while allowing further commands and builds.
   /// @returns The completed vector path.
-  public func Build() VectorPath {
-    ensureUnsealed()
-    isSealed = true
-    return VectorPath.Create(commands.ToArray(), viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight)
-  }
+  public func Build() VectorPath ->
+    VectorPath.Create(commands.ToArray(), viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight)
 
-  /// Clears the commands and reopens this builder while retaining its view box and storage.
-  /// Previously built paths remain immutable. Each Build still copies the commands.
+  /// Clears the commands and contour while retaining the view box and storage for continued use.
+  /// Previously built paths remain immutable. Each Build copies the commands.
   /// @returns This builder.
   public func Reset() PathBuilder {
     commands.Clear()
     hasContour = false
-    isSealed = false
     return this
   }
 
-  private func ensureUnsealed() {
-    if isSealed {
-      throw InvalidOperationException("PathBuilder is sealed")
-    }
-  }
-
   private func ensureContour() {
-    ensureUnsealed()
     if !hasContour {
       throw InvalidOperationException("A contour must begin with MoveTo")
     }
