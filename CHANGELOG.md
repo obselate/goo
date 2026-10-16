@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Let inline SVG opacity override presentation opacity before composing ancestor opacity.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
