@@ -431,7 +431,7 @@ internal sealed partial class SvgParser
             }
             ApplyStyleValues(style, declarations, element);
         }
-        style.Opacity *= 1;
+        style.Opacity = parent.Opacity * style.LocalOpacity;
         if (style.Opacity < 0 || style.Opacity > 1 || !double.IsFinite(style.Opacity))
         {
             throw Fail(element, "opacity must be between zero and one");
@@ -516,9 +516,7 @@ internal sealed partial class SvgParser
                     };
                     break;
                 case "opacity":
-                    var opacity = ParseOpacity(pair.Value, owner, pair.Key);
-                    style.Opacity *= opacity;
-                    style.LocalOpacity *= opacity;
+                    style.LocalOpacity = ParseOpacity(pair.Value, owner, pair.Key);
                     break;
                 case "clip-path":
                     style.ClipPath = pair.Value;

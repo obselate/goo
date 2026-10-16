@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Let inline SVG opacity override presentation opacity before composing ancestor opacity.
+
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
