@@ -196,7 +196,10 @@ static void AppendCellMountGuide(StringBuilder text)
     text.AppendLine("Cell.Mount[Counter]()");
     text.AppendLine("```");
     text.AppendLine();
-    text.AppendLine("Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, or reordering. A sibling list must be entirely keyed or entirely unkeyed.");
+    text.AppendLine("Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, "
+        + "or reordering.");
+    text.AppendLine("Siblings can mix keyed and unkeyed entries. Unkeyed identity uses the absolute sibling index "
+        + "and never matches a keyed entry.");
     text.AppendLine();
     text.AppendLine("```gsharp");
     text.AppendLine("Cell.Mount[Counter](\"counter\")");

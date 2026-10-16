@@ -308,6 +308,8 @@ public sealed class FixtureContractTests
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ExplicitControlledEntryValue));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.KeyedReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.LeafDirtyUpdateContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.MixedHandleRollbackContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.MixedReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.OutputAndKindReplacementContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.PositionalReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.TextEntryControlledValueContract));
@@ -342,8 +344,6 @@ public sealed class FixtureContractTests
     }
 
     [Theory]
-    [InlineData("mount-mixed")]
-    [InlineData("diff-mixed")]
     [InlineData("mount-duplicate")]
     [InlineData("diff-duplicate")]
     public void InvalidChildListsAreRejected(string scenario) =>

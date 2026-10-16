@@ -16,7 +16,9 @@ let content = Container{Gap: 12.0, Text("First"), ...rows, Button{OnClick: () ->
 `Member: value` sets a receiver member. Bare values call `Add`, and `...rows`
 evaluates and enumerates the source once. Keep trailing commas in multiline
 initializers. All member values, children, and spreads execute in source order.
-`BasedOn` must precede its overrides. Siblings must be all keyed or all unkeyed.
+`BasedOn` must precede its overrides. Siblings can mix keyed and unkeyed entries.
+Keys retain identity across moves. Unkeyed entries retain identity only at the
+same absolute sibling index, and never match a keyed entry.
 
 Start with a member when combining properties and children. For styled text,
 use `Text{Content: "Hello", FontSize: 24}`; plain text can use `Text("Hello")`.
