@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Goo.Svg;
 using Xunit;
@@ -63,6 +64,34 @@ public sealed class SvgRuntimeTests
         Assert.Equal(rotation, transform.Rotate, 4);
         Assert.Equal(translateX, transform.TranslateX.Magnitude, 4);
         Assert.Equal(translateY, transform.TranslateY.Magnitude, 4);
+    }
+
+    [Theory]
+    [InlineData("<rect width='10' height='10' transform='translate(30 0)'/>", 40)]
+    [InlineData("<g transform='translate(20 0)'><rect width='10' height='10' transform='translate(30 0)'/></g>", 60)]
+    [InlineData("<g transform='scale(2)'><rect width='10' height='10' transform='translate(30 0)'/></g>", 70)]
+    public void ClipsComposeTransformsAndInheritRules(string content, double minX)
+    {
+        var asset = Svg.Parse($"<svg viewBox='0 0 100 100'><defs><clipPath id='c' transform='translate(10 0)' clip-rule='evenodd'>{content}</clipPath></defs><rect width='100' height='100' clip-path='url(#c)'/></svg>");
+        var node = asset.NodeAt(1);
+        var geometryType = typeof(VectorAsset).Assembly.GetType("Goo.PathGeometry")!;
+        var geometry = geometryType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, [node.ClipPath])!;
+        var actualMinX = (float)geometryType.GetField("MinX", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(geometry)!;
+
+        Assert.Equal(minX, actualMinX, 4);
+        Assert.Equal(FillRule.EvenOdd, node.ClipPathFillRule);
+    }
+
+    [Fact]
+    public void ClipRuleOverridesStillRejectMixedRules()
+    {
+        const string source = "<svg viewBox='0 0 100 100'><defs><clipPath id='c' clip-rule='evenodd'><g><rect width='10' height='10'/><rect width='10' height='10' clip-rule='nonzero'/></g></clipPath></defs><rect width='100' height='100' clip-path='url(#c)'/></svg>";
+
+        var error = Assert.Throws<SvgParseException>(() => Svg.Parse(source));
+
+        Assert.Contains("cannot mix fill rules", error.Message);
     }
 
     [Fact]

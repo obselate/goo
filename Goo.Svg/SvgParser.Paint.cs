@@ -59,6 +59,8 @@ internal sealed partial class SvgParser
         {
             throw Fail(element, "clipPathUnits='objectBoundingBox' is not supported");
         }
+        var clipStyle = ResolveStyle(element, new SvgStyle());
+        var clipTransform = ParseTransform((string?)element.Attribute("transform"), element);
         var clip = new SvgClip { FillRule = 0 };
         var foundRule = false;
         foreach (var child in element.Elements())
@@ -66,14 +68,16 @@ internal sealed partial class SvgParser
             var name = LocalName(child);
             if (name == "g")
             {
-                var nestedTransform = ParseTransform((string?)child.Attribute("transform"), child);
+                var groupStyle = ResolveStyle(child, clipStyle);
+                var nestedTransform = clipTransform * ParseTransform((string?)child.Attribute("transform"), child);
                 foreach (var nested in child.Elements())
                 {
                     var nestedPath = ParseGeometry(nested);
-                    var mapped = TransformPath(nestedPath, nestedTransform);
+                    var childTransform = nestedTransform * ParseTransform((string?)nested.Attribute("transform"), nested);
+                    var mapped = TransformPath(nestedPath, childTransform);
                     ReserveCurves(mapped);
                     clip.Contours.AddRange(mapped.Contours);
-                    var rule = ResolveStyle(nested, new SvgStyle()).ClipRule;
+                    var rule = ResolveStyle(nested, groupStyle).ClipRule;
                     if (!foundRule)
                     {
                         clip.FillRule = rule;
@@ -91,11 +95,11 @@ internal sealed partial class SvgParser
                 throw Fail(child, $"clipPath child '{name}' is not representable");
             }
             var path = ParseGeometry(child);
-            var transform = ParseTransform((string?)child.Attribute("transform"), child);
+            var transform = clipTransform * ParseTransform((string?)child.Attribute("transform"), child);
             var mappedPath = TransformPath(path, transform);
             ReserveCurves(mappedPath);
             clip.Contours.AddRange(mappedPath.Contours);
-            var clipRule = ResolveStyle(child, new SvgStyle()).ClipRule;
+            var clipRule = ResolveStyle(child, clipStyle).ClipRule;
             if (!foundRule)
             {
                 clip.FillRule = clipRule;
