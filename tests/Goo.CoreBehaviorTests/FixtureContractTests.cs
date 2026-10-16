@@ -226,6 +226,7 @@ public sealed class FixtureContractTests
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PartDisposalContinuesAfterCallbackFailure));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.PublicMetricsAndJumpContract));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.LargeStrokeConstructionHasBoundedAllocation));
+        yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.ReturningQuadraticStrokePreservesExcursionAndTrim));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.StrokeTrimUsesGlobalContourLengthAndHitGeometry));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.StrokeTrimPreservesFillAndOpensPartialClosedContour));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.StrokeTrimKeepsFullyIncludedMiddleContourClosed));

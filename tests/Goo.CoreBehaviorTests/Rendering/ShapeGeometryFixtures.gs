@@ -1,6 +1,19 @@
 package Goo
 
 internal class ShapeGeometryFixtures {
+  func ReturningQuadraticStrokePreservesExcursionAndTrim() bool {
+    let path = PathBuilder(0.0, 0.0, 100.0, 100.0)
+      .MoveTo(0.0, 10.0).QuadraticTo(100.0, 10.0, 1.0, 10.0).Build()
+    let mapping = PathGeometry.Map(path, ShapeFit.Fill, 0.0F, 0.0F, 100.0F, 100.0F)
+    let cache = PathStrokeCache()
+    let outline = PathGeometry.For(cache.Resolve(path, mapping, 2.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, nil, 0.0, 1.0))
+    let trimmed = PathGeometry.For(cache.Resolve(path, mapping, 2.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, nil, 0.0, 0.5))
+    return outline.MaxX > 50.0F && outline.MaxX < 50.5F
+      && trimmed.MaxX > 49.5F && trimmed.MaxX < 50.5F
+  }
+
   func StrokeTrimUsesGlobalContourLengthAndHitGeometry() bool {
     let path = PathBuilder(0.0, 0.0, 100.0, 20.0)
       .MoveTo(10.0, 5.0).LineTo(50.0, 5.0)
