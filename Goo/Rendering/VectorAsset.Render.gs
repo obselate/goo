@@ -263,7 +263,25 @@ public sealed class VectorAsset {
   private func AddStroke(result Container, index int32, node VectorNode,
     fit ShapeFit) {
       guard let stroke = node.Stroke else { return }
-      if node.Path.CommandCount == 0 || stroke.Width <= 0.0 {
+      var visible = stroke.Width > 0.0
+      if !visible {
+        if let current = animation {
+          let source = current.Nodes[index]
+          if source.HasStroke {
+            let animatedStroke = current.Strokes[int32(source.StrokeIndex)]
+            if animatedStroke.HasTrack {
+              let track = current.Tracks[int32(animatedStroke.TrackIndex)]
+              for frame in int32(track.KeyframeStart) ... int32(track.KeyframeStart + track.KeyframeCount) {
+                if current.Keyframes[frame].A > 0.0F {
+                  visible = true
+                  break
+                }
+              }
+            }
+          }
+        }
+      }
+      if node.Path.CommandCount == 0 || !visible {
         return
       }
       guard let gradient = stroke.Paint.Gradient else {
