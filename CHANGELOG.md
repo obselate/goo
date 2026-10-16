@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Resolve long SVG gradient inheritance chains without overflowing the stack.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
