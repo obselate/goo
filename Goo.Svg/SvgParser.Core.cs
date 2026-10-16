@@ -15,6 +15,7 @@ internal sealed partial class SvgParser
     private const int MaxAnimationKeyframes = 262144;
     private const int MaxMorphCurves = 262144;
     private const double QuadraticTolerance = 0.0001;
+    private const double EllipseControlRatio = 0.5522847498307936;
 
     private readonly Dictionary<string, SvgGradientDefinition> gradients = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SvgClipDefinition> clips = new(StringComparer.Ordinal);

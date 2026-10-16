@@ -169,8 +169,8 @@ public sealed class SvgRuntimeTests
     }
 
     [Theory]
-    [InlineData("s13-representative.svg", 5, 3, 77, 4, 2, 1)]
-    [InlineData("s13-animated.svg", 4, 2, 11, 4, 2, 0)]
+    [InlineData("s13-representative.svg", 5, 3, 137, 4, 2, 1)]
+    [InlineData("s13-animated.svg", 4, 2, 71, 4, 2, 0)]
     [InlineData("s13-morph.svg", 2, 1, 3, 2, 1, 0)]
     public void RuntimeLoadsSamples(string fileName, int nodes, int contours,
         int curves, int paints, int strokes, int clips)

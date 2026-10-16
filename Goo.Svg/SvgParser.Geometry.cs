@@ -87,13 +87,13 @@ internal sealed partial class SvgParser
         var p6 = new SvgPoint(x, y + height - ry);
         var p7 = new SvgPoint(x, y + ry);
         AddLine(contour, p0, p1);
-        AddQuadratic(contour, p1, new SvgPoint(x + width, y), p2);
+        AddCubic(contour, p1, new SvgPoint(p1.X + EllipseControlRatio * rx, p1.Y), new SvgPoint(p2.X, p2.Y - EllipseControlRatio * ry), p2);
         AddLine(contour, p2, p3);
-        AddQuadratic(contour, p3, new SvgPoint(x + width, y + height), p4);
+        AddCubic(contour, p3, new SvgPoint(p3.X, p3.Y + EllipseControlRatio * ry), new SvgPoint(p4.X + EllipseControlRatio * rx, p4.Y), p4);
         AddLine(contour, p4, p5);
-        AddQuadratic(contour, p5, new SvgPoint(x, y + height), p6);
+        AddCubic(contour, p5, new SvgPoint(p5.X - EllipseControlRatio * rx, p5.Y), new SvgPoint(p6.X, p6.Y + EllipseControlRatio * ry), p6);
         AddLine(contour, p6, p7);
-        AddQuadratic(contour, p7, new SvgPoint(x, y), p0);
+        AddCubic(contour, p7, new SvgPoint(p7.X, p7.Y - EllipseControlRatio * ry), new SvgPoint(p0.X - EllipseControlRatio * rx, p0.Y), p0);
         contour.Closed = true;
         path.Contours.Add(contour);
         return path;
@@ -115,15 +115,14 @@ internal sealed partial class SvgParser
         }
         var path = new SvgPath();
         var contour = new SvgContour();
-        var k = 0.5522847498307936;
         var p0 = new SvgPoint(cx + rx, cy);
         var p1 = new SvgPoint(cx, cy + ry);
         var p2 = new SvgPoint(cx - rx, cy);
         var p3 = new SvgPoint(cx, cy - ry);
-        AddCubic(contour, p0, new SvgPoint(cx + rx, cy + k * ry), new SvgPoint(cx + k * rx, cy + ry), p1);
-        AddCubic(contour, p1, new SvgPoint(cx - k * rx, cy + ry), new SvgPoint(cx - rx, cy + k * ry), p2);
-        AddCubic(contour, p2, new SvgPoint(cx - rx, cy - k * ry), new SvgPoint(cx - k * rx, cy - ry), p3);
-        AddCubic(contour, p3, new SvgPoint(cx + k * rx, cy - ry), new SvgPoint(cx + rx, cy - k * ry), p0);
+        AddCubic(contour, p0, new SvgPoint(cx + rx, cy + EllipseControlRatio * ry), new SvgPoint(cx + EllipseControlRatio * rx, cy + ry), p1);
+        AddCubic(contour, p1, new SvgPoint(cx - EllipseControlRatio * rx, cy + ry), new SvgPoint(cx - rx, cy + EllipseControlRatio * ry), p2);
+        AddCubic(contour, p2, new SvgPoint(cx - rx, cy - EllipseControlRatio * ry), new SvgPoint(cx - EllipseControlRatio * rx, cy - ry), p3);
+        AddCubic(contour, p3, new SvgPoint(cx + EllipseControlRatio * rx, cy - ry), new SvgPoint(cx + rx, cy - EllipseControlRatio * ry), p0);
         contour.Closed = true;
         path.Contours.Add(contour);
         return path;
