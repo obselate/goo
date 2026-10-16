@@ -117,6 +117,25 @@ internal sealed partial class SvgParser
         {
             throw Fail(element, "animation requires at least two values");
         }
+        var repeat = ReadRepeatCount(element);
+        var expandedCount = checked((long)rawValues.Count * repeat.Count);
+        if (reservedAnimationTracks >= MaxAnimationTracks
+            || expandedCount > MaxAnimationKeyframes - reservedAnimationKeyframes)
+        {
+            throw Fail(element, "animation track limit exceeded");
+        }
+        reservedAnimationTracks++;
+        reservedAnimationKeyframes += checked((int)expandedCount);
+        if (kind == SvgAnimationKind.Morph && basePath is not null)
+        {
+            var curveCount = basePath.Contours.Sum(contour => (long)contour.Curves.Count);
+            var expandedCurves = checked(curveCount * expandedCount);
+            if (expandedCurves > MaxMorphCurves - reservedMorphCurves)
+            {
+                throw Fail(element, "morph curve limit exceeded");
+            }
+            reservedMorphCurves += expandedCurves;
+        }
         var values = new List<SvgAnimationKeyframe>();
         foreach (var raw in rawValues)
         {
@@ -156,7 +175,6 @@ internal sealed partial class SvgParser
                 MorphCurves = source.MorphCurves
             });
         }
-        var repeat = ReadRepeatCount(element);
         if (repeat.Indefinite)
         {
             return WithKeyframes(new SvgAnimation

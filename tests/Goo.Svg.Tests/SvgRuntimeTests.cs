@@ -129,6 +129,30 @@ public sealed class SvgRuntimeTests
         Assert.Equal(clips, asset.ClipCount);
     }
 
+    [Theory]
+    [InlineData(4097, 1, false)]
+    [InlineData(2049, 2, false)]
+    [InlineData(4096, 1, true)]
+    public void ExpandedAnimationBudgetIsReservedAcrossTracks(int values, int tracks, bool accepted)
+    {
+        var animation = $"<animate attributeName=\"opacity\" values=\"{string.Join(';', new string[values]).Replace(";", "0;")}0\" dur=\"1s\" repeatCount=\"64\" fill=\"freeze\"/>";
+        var source = new StringBuilder("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\">");
+        for (var index = 0; index < tracks; index++)
+        {
+            source.Append($"<rect width=\"1\" height=\"1\">{animation}</rect>");
+        }
+        source.Append("</svg>");
+
+        if (accepted)
+        {
+            Assert.NotNull(Svg.Parse(source.ToString()));
+        }
+        else
+        {
+            Assert.Contains("animation track limit", Assert.Throws<SvgParseException>(() => Svg.Parse(source.ToString())).Message);
+        }
+    }
+
     private static string SamplePath(string fileName)
     {
         return Path.Combine(AppContext.BaseDirectory, "Assets", fileName);

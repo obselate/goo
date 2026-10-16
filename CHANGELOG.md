@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Reserve aggregate SVG animation keyframe and morph budgets before parsing or expanding animation values.
+
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
