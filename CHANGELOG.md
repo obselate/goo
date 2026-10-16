@@ -27,6 +27,20 @@
 - Show runtime RGBA capture size, format, origin and stride in DevTools.
 - Remove temporary fling log writes from Gallery pointer handlers.
 - Keep locally handled Gallery keys from paging the showcase.
+- Reconcile mixed keyed and positional siblings while retaining keyed moves and absolute-index positional identity.
+- Allow PathBuilder to publish immutable snapshots and continue building without Reset.
+- Animate logical edge state changes when direction mapping stays fixed and preserve snapping when direction reverses.
+- Align word navigation and deletion with word selection for underscores and combining marks.
+- Keep SVG clip paths on their owning root, group or shape node instead of inheriting them into child shapes.
+- Preserve fill and stroke opacity when publishing SVG color animation keyframes.
+- Reject stroke cache matches when normalized dash interval counts differ.
+- Keep reused dash scratch capacity out of stroke interval traversal.
+- Preserve allocated layer bytes in eviction and over-budget failure diagnostics.
+- Clear stale DevTools rows when a full snapshot has no root and show an empty inspector.
+- Keep four inline style entries and use indexable geometric-capacity storage for larger styles.
+- Sort and deduplicate logical clusters once and use binary searches for geometry endpoints.
+- Use binary search for grapheme boundary membership without changing letter spacing behavior.
+- Validate presentation ranges against the document tree without materializing range text.
 
 ## 0.7.35 - 2026-10-16
 
