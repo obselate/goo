@@ -5,6 +5,27 @@ import System.Diagnostics
 import System.Text
 
 internal class TextPresentationLayerFixtures {
+  func FullProjectionDeletionIgnoresInsertionsAndRestoresHistory() bool {
+    let document = TextDocument("abcd")
+    using let layer = TextPresentationLayer(document)
+    layer.SetReplacement("projection", TextRange(1, 2), "B")
+    document.Apply(TextChange(TextRange(0, 0), "x"))
+    if layer.ReadProjections().Length != 1 { return false }
+    document.Undo()
+    document.ApplyTransaction([]TextChange{
+      TextChange(TextRange(0, 0), "x"),
+      TextChange(TextRange(1, 1), ""),
+      TextChange(TextRange(2, 1), ""),
+    })
+    if document.GetText() != "xad" || layer.ReadProjections().Length != 0 { return false }
+    document.Undo()
+    if layer.ReadProjections().Length != 1 || layer.ReadProjections()[0].Range != TextRange(1, 2) {
+      return false
+    }
+    document.Redo()
+    return document.GetText() == "xad" && layer.ReadProjections().Length == 0
+  }
+
   func InlineTextSlotsShareProseBaselineAfterWrapping() bool {
     let document = TextDocument("before code after")
     using let controller = TextEditorController(document)
