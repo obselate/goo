@@ -1227,6 +1227,17 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         TransitionRootToTransferSource(commandBuffer)
       }
       if copyWidth > 0 && copyHeight > 0 {
+        VulkanTransitions.RecordImage(
+          commandBuffer,
+          dispatch.vkCmdPipelineBarrier2,
+          destination.Image,
+          VulkanTransitions.ColorSubresourceRange(),
+          VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+          VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+          VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+          VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
+          VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+          VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT)
         var region = VkImageCopy{}
         region.srcSubresource = VkImageSubresourceLayers{
           aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
