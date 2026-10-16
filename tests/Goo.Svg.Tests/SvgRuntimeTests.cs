@@ -47,6 +47,23 @@ public sealed class SvgRuntimeTests
         Assert.Equal(1, asset.PaintCount);
     }
 
+    [Theory]
+    [InlineData("rotate(90)", 90, 0, 0)]
+    [InlineData("rotate(90 10 20)", 90, 30, 10)]
+    [InlineData("skewX(30)", 0, 0, 0)]
+    [InlineData("skewY(30)", 30, 0, 0)]
+    [InlineData("matrix(1 2 3 4 5 6)", 63.4349488, 5, 6)]
+    public void SvgTransformsUseSvgCoefficientOrder(string source, double rotation,
+        double translateX, double translateY)
+    {
+        var asset = Svg.Parse($"<svg viewBox=\"0 0 100 100\"><path transform=\"{source}\" d=\"M0 0 L1 1\"/></svg>");
+        var transform = asset.Nodes[0].Children[0].Transform;
+
+        Assert.Equal(rotation, transform.Rotate, 4);
+        Assert.Equal(translateX, transform.TranslateX.Magnitude, 4);
+        Assert.Equal(translateY, transform.TranslateY.Magnitude, 4);
+    }
+
     [Fact]
     public void StreamLoadMatchesTextAndLeavesCallerStreamOpen()
     {
