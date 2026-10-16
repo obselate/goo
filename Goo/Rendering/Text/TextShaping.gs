@@ -626,17 +626,12 @@ internal partial class TextShaping {
       lock (PrimaryFacesLock) {
         if PrimaryFaces.TryGetValue(key, out var cached) { return cached.Lease() }
       }
-      let registration = ResolveRegisteredPrimary(families, weight, italic)
+      let selection = ResolvePrimary(families, weight, italic)
       var evicted List[TypefaceResource]?
       var uncached TypefaceResource?
       var lease TypefaceLease
       lock (PrimaryFacesLock) {
         if PrimaryFaces.TryGetValue(key, out var cached) { return cached.Lease() }
-        let selection = if let value = registration {
-          TextFontSelection(value.Family, nil, value)
-        } else {
-          ResolveSystemPrimary(families, weight, italic)
-        }
         let resource = CreateTypefaceResource(selection)
         if resource.ByteSize > PrimaryFaceCacheByteBudget {
           lease = resource.Lease()
@@ -738,19 +733,13 @@ internal partial class TextShaping {
         }
       }
 
-    private func ResolveRegisteredPrimary(families string, weight int32, italic bool)
-    FontRegistration? {
-      let names = SplitFamilies(families)
-      for name in names {
-        if let found = FontRegistry.Resolve(name, weight, italic) { return found }
-      }
-      return nil
-    }
-
-    private func ResolveSystemPrimary(families string, weight int32, italic bool)
+    private func ResolvePrimary(families string, weight int32, italic bool)
     TextFontSelection{
       let names = SplitFamilies(families)
       for name in names {
+        if let found = FontRegistry.Resolve(name, weight, italic) {
+          return TextFontSelection(found.Family, nil, found)
+        }
         if File.Exists(name) { return TextFontSelection(name, name, nil) }
         if let found = SystemFontResolvers.Current().Find(name, weight, italic) {
           return TextFontSelection(name, found, nil)
