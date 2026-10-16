@@ -1167,7 +1167,8 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 if pollSnapshot {
                     Thread.Sleep(100)
                     lock gate {
-                        if stopRequested || state != DiagnosticConnectionState.Connected || !Object.ReferenceEquals(stream, created) {
+                        if stopRequested || state != DiagnosticConnectionState.Connected
+                        || !Object.ReferenceEquals(stream, created) {
                             return
                         }
                         localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
@@ -1178,7 +1179,9 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             lock gate {
                 if !stopRequested && Object.ReferenceEquals(worker, Thread.CurrentThread) {
                     state = DiagnosticConnectionState.Faulted
-                    pending.Enqueue(DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message))
+                    pending.Enqueue(
+                        DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message)
+                    )
                 }
             }
         } finally {
