@@ -112,6 +112,7 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardDrainConsumesThrowingEventOnceAndRetainsRest));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardQueueAndRepeatLifecycle));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardRepeatCancelsWhenFocusedEntryBecomesUnavailable));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.KeyRepeatUsesCurrentModifiersWithoutRestartingDelay));
         yield return Contract<InputFixtures>(nameof(InputFixtures.SyntheticHeldBindingRequestsSchedulerTick));
         yield return Contract<InputFixtures>(nameof(InputFixtures.SyntheticHeldBindingSurvivesAutoFocusRebuild));
         yield return Contract<InputFixtures>(nameof(InputFixtures.MacShortcutPolicyRoutesCommandAndOptionWord));
