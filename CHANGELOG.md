@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Refresh held key modifiers so key repeat uses the current shortcut without restarting its delay.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
