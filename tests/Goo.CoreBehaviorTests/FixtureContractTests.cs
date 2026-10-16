@@ -10,7 +10,6 @@ public sealed class FixtureContractTests
     public static IEnumerable<object[]> Cases()
     {
         yield return Contract<PathBuilderFixtures>(nameof(PathBuilderFixtures.ResetPreservesPublishedPathAndClearsContour));
-        yield return Contract<MotionFixtures>(nameof(MotionFixtures.LayoutTransitionTimeScaleContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.AdapterDeliveryThreadContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.DeclaredActionFailureContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.DeliveryDemandAndReplacementContract));
@@ -175,6 +174,7 @@ public sealed class FixtureContractTests
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.InvalidConverterFailsBeforeRegistrationContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.InvalidVelocityAndSpecLeaveStateUntouchedContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.LandsAtSimResultNotTargetContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.LayoutTransitionTimeScaleContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.LengthValidationContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.MotionVelocityAdditionPreservesShapeContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.MotionVelocityRoutingContract));
