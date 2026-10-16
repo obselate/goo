@@ -4,6 +4,29 @@
 
 - Add root code conventions for Goo contributors.
 - Define subsystem ownership and permitted references for Goo contributors.
+- Keep style transitions progressing when a layer repeats or overrides a declaration.
+- Layout transitions respect the motion time scale and settle when motion is disabled.
+- Refresh held key modifiers so key repeat uses the current shortcut without restarting its delay.
+- Stop IME selection and composition follow-up when commit callbacks change focus.
+- Remove fully deleted text projections when the same transaction inserts text before them.
+- Resolve font families in list order across registered and system fonts.
+- Move PageUp and PageDown by the mounted text editor viewport height.
+- Virtual state disposal failures preserve committed replacements and do not interrupt descendant cleanup.
+- Synchronize backdrop clears before overlapping image copies.
+- Preserve returning quadratic excursions when flattening stroke outlines and trim geometry.
+- Retain SVG strokes with zero initial width when their animation produces a visible width.
+- Preserve SVG matrix coefficient order when publishing static and animated transforms.
+- Resolve long SVG gradient inheritance chains without overflowing the stack.
+- Enforce the SVG file size limit while reading instead of loading the entire file first.
+- Reserve aggregate SVG animation keyframe and morph budgets before parsing or expanding animation values.
+- Let inline SVG opacity override presentation opacity before composing ancestor opacity.
+- Approximate rounded SVG rectangle corners with the same ellipse conversion and tolerance as circles.
+- Preserve clipPath, group and child transforms and inherited clip rules in runtime SVG clips.
+- Disconnect DevTools and dispose its pipe when the target closes the connection.
+- Clear DevTools target selection and hover when the runtime reports cleared IDs.
+- Show runtime RGBA capture size, format, origin and stride in DevTools.
+- Remove temporary fling log writes from Gallery pointer handlers.
+- Keep locally handled Gallery keys from paging the showcase.
 
 ## 0.7.35 - 2026-10-16
 
