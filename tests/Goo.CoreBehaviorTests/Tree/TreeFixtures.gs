@@ -104,6 +104,7 @@ internal class TreeFixtures {
     let a = root.Children[0]
     let positional = root.Children[1]
     let b = root.Children[2]
+    guard let bCell = b.Fiber else { return false }
     guard let cell = positional.Fiber as TreePositionalCell else { return false }
     cell.Value = "kept"
     cell.Rebuild()
@@ -138,7 +139,7 @@ internal class TreeFixtures {
       Cell.Mount[TreePositionalCell](),
       Cell.Mount[TreePositionalCell](),
     })
-    if !b.Retired || root.Children[0] == b || root.Children[1] != positional
+    if !bCell.disposed || root.Children[0].Fiber == bCell || root.Children[1] != positional
       || root.Children[0].Content != "slot:initial" || positional.Content != "slot:kept" { return false }
 
     rec.Diff(root, Container() {
