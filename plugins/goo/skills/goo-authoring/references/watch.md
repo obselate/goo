@@ -1,5 +1,10 @@
 # G# watch modes and limits
 
+For the measured SDK 0.4.1150 / Goo 0.7.35 app-author workflow, see
+[Edit and inspect](../../../../../docs/edit-and-inspect.md). That run applied a
+method delta without refreshing the rendered tree. The local patches and older
+released-package results below are separate evidence, not current-release guarantees.
+
 ## Choose run or watch
 
 Default to `dotnet watch` only when comparable measurements for the actual project show no application performance or resource-use difference versus `dotnet run`. If overhead is measured or parity is unknown, explicitly offer watch and state that tradeoff before selecting it. Keep using `dotnet run` until the user chooses watch. An existing explicit choice remains valid; do not ask again.
