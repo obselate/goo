@@ -1,9 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Add root code conventions for Goo contributors.
-
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
