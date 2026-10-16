@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Resolve long SVG gradient inheritance chains without overflowing the stack.
+
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
