@@ -349,9 +349,8 @@ public class TextPresentationLayer : IDisposable {
     }
   }
 
-  private func validateRange(textRange TextRange) {
-    document.GetText(textRange)
-  }
+  private func validateRange(textRange TextRange) ->
+  validateTextRange(document.SnapshotRoot(), textRange)
 
   private func ensureProjectionDoesNotOverlap(skipIndex int32, textRange TextRange) {
     for i in 0 ... projections.Count {
