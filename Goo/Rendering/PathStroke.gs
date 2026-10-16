@@ -808,7 +808,7 @@ internal sealed class PathStrokeCache {
     }
     var phase = pattern.Offset % total
     if phase < 0.0 { phase = phase + total }
-    var state = StartDash(intervals, phase)
+    var state = StartDash(intervals, intervalCount, phase)
     let edgeCount = polyline.Closed ? polyline.Points.Count : polyline.Points.Count - 1
     var active List[PathStrokePoint]? = nil
     var hadOffDistance bool = false
@@ -824,7 +824,7 @@ internal sealed class PathStrokeCache {
         var distance float64 = 0.0
         while distance < length {
           if state.Remaining <= 0.0 {
-            state = AdvanceDash(state, intervals)
+            state = AdvanceDash(state, intervals, intervalCount)
           }
           let available = length - distance
           let step = available < state.Remaining ? available : state.Remaining
@@ -854,7 +854,7 @@ internal sealed class PathStrokeCache {
           distance = nextDistance
           if state.Remaining <= 0.0 {
             let wasOn = state.On
-            state = AdvanceDash(state, intervals)
+            state = AdvanceDash(state, intervals, intervalCount)
             if wasOn && !state.On && active != nil {
               result.Add(scratch.AcquireSubpath(active, false))
               active = nil
@@ -901,11 +901,11 @@ internal sealed class PathStrokeCache {
     return result
   }
 
-  private func StartDash(intervals []float64, phase float64) PathDashState {
+  private func StartDash(intervals []float64, intervalCount int32, phase float64) PathDashState {
     var index int32 = 0
     var remainingPhase = phase
     var guardCount int32 = 0
-    while guardCount < intervals.Length * 2 {
+    while guardCount < intervalCount * 2 {
       let value = intervals[index]
       if value > 0.0 && remainingPhase < value {
         return PathDashState{
@@ -915,16 +915,16 @@ internal sealed class PathStrokeCache {
         }
       }
       if value > 0.0 { remainingPhase = remainingPhase - value }
-      index = index + 1 == intervals.Length ? 0 : index + 1
+      index = index + 1 == intervalCount ? 0 : index + 1
       guardCount++
     }
     return PathDashState{ Index: 0, Remaining: intervals[0], On: true }
   }
 
-  private func AdvanceDash(state PathDashState, intervals []float64) PathDashState {
-    var index = state.Index + 1 == intervals.Length ? 0 : state.Index + 1
+  private func AdvanceDash(state PathDashState, intervals []float64, intervalCount int32) PathDashState {
+    var index = state.Index + 1 == intervalCount ? 0 : state.Index + 1
     var guardCount int32 = 0
-    while guardCount < intervals.Length * 2 {
+    while guardCount < intervalCount * 2 {
       if intervals[index] > 0.0 {
         return PathDashState{
           Index: index,
@@ -932,7 +932,7 @@ internal sealed class PathStrokeCache {
           On: index % 2 == 0,
         }
       }
-      index = index + 1 == intervals.Length ? 0 : index + 1
+      index = index + 1 == intervalCount ? 0 : index + 1
       guardCount++
     }
     return PathDashState{ Index: index, Remaining: intervals[index], On: index % 2 == 0 }
