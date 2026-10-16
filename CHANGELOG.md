@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Enforce the SVG file size limit while reading instead of loading the entire file first.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
