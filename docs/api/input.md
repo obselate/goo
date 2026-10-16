@@ -497,6 +497,10 @@ Contains sequential keyboard focus until disposed or its root becomes unavailabl
 
 Closes this scope. Focus restoration occurs at the next stable input/tree update.
 
+### `Dispose(bool)`
+
+Closes this scope, optionally suppressing its configured focus restoration. Restoration occurs at the next stable input/tree update.
+
 ### `IsActive`
 
 Reports whether the scope remains registered, including an inactive underlying layer.
