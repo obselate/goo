@@ -4,6 +4,41 @@ import System
 import System.Collections.Generic
 
 internal class TextInputPrimitivesFixtures {
+  func PlatformCommitsStopAfterFocusGenerationChanges() bool {
+    for mode in 0 ... 3 {
+      for bounce in []bool{ false, true } {
+        let resolver = Resolver{}
+        let focus = FocusManager()
+        let text = TextInput(focus)
+        var first Node?
+        var second Node?
+        var expectedCaret int32
+        let root = Reconciler{ Res: resolver }.Mount(Container() {
+          TextEntry{ Value: "abcd", OnChange: (value string) -> {
+            focus.SetFocus(resolver, second)
+            if bounce { focus.SetFocus(resolver, first) }
+            expectedCaret = focus.FocusedNode()!!.Caret
+          } },
+          TextEntry{ Value: "123456789" },
+        })
+        first = root.Children[0]
+        second = root.Children[1]
+        focus.SetFocus(resolver, first)
+        text.SetEditorSelection(root, 1, 1)
+        if mode != 2 { text.HandleComposition(root, "X", 1, 0) }
+        if mode == 0 { text.FinishComposition(root) }
+        else if mode == 1 { text.SetEditorCompositionRange(root, 0, 1) }
+        else { text.DeleteSurroundingText(root, 1, 0) }
+        let target = bounce ? first : second
+        if focus.FocusedNode() != target || target.Caret != expectedCaret
+          || target.Anchor != expectedCaret { return false }
+        if text.EditorSnapshot()!!.CompositionStart != -1 { return false }
+        if second.Buffer != "123456789" { return false }
+      }
+    }
+    return true
+  }
+
   func GenericCallbacksReceiveNormalizedUtf16Payloads() bool {
     var committed = ""
     var compositionText = ""
