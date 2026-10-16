@@ -33,16 +33,16 @@ internal sealed partial class SvgParser
         {
             throw new SvgParseException("input path is empty");
         }
-        byte[] bytes;
         try
         {
-            bytes = File.ReadAllBytes(path);
+            using var stream = File.OpenRead(path);
+            return LoadStream(stream, path);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException or System.Security.SecurityException)
         {
             throw new SvgParseException($"cannot read '{path}': {exception.Message}");
         }
-        return ParseBytes(bytes, path);
     }
 
     internal static VectorAsset ParseText(string text)
@@ -106,7 +106,8 @@ internal sealed partial class SvgParser
         {
             throw;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+            or ObjectDisposedException or NotSupportedException)
         {
             throw new SvgParseException($"cannot read '{sourceName}': {exception.Message}");
         }
