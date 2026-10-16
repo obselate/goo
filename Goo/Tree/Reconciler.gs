@@ -1048,13 +1048,7 @@ internal partial class Reconciler {
     let scratchScope = scratch.Rent()
     try {
       validateChildren(blobs, scratchScope)
-      var hasKeyed = scratchScope.IncomingKeys.Count > 0
-      var i int32
-      while !hasKeyed && i < n.Children.Count {
-        hasKeyed = n.Children[i].Key != nil
-        i++
-      }
-      if !hasKeyed {
+      if scratchScope.IncomingKeys.Count == 0 {
         diffUnkeyedChildren(n, blobs, scratchScope.Retire)
       } else {
         diffKeyedChildren(n, blobs, scratchScope)
