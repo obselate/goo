@@ -31,6 +31,9 @@ public class FocusScope : IDisposable {
   public prop IsActive bool{ get -> stack != nil }
   /// Closes this scope. Focus restoration occurs at the next stable input/tree update.
   public func Dispose() { stack?.Remove(this) }
+  /// Closes this scope, optionally suppressing its configured focus restoration.
+  /// Restoration occurs at the next stable input/tree update.
+  public func Dispose(restoreFocus bool) { stack?.Remove(this, restoreFocus) }
   internal func Closed() { stack = nil }
 }
 
@@ -124,10 +127,11 @@ internal class FocusScopeStack {
     return registration
   }
 
-  internal func Remove(registration FocusScope) {
+  internal func Remove(registration FocusScope, restoreFocus bool = true) {
     owner.RequireElementHandleThread("FocusScope.Dispose")
     for i in 0 ... entries.Count {
       if entries[i].Scope == registration {
+        entries[i].Restore = entries[i].Restore && restoreFocus
         removeAt(i)
         owner.FocusScopeChanged()
         return
@@ -140,7 +144,7 @@ internal class FocusScopeStack {
     let wasTop = index == entries.Count - 1
     for i in index + 1 ... entries.Count {
       if let previous = entries[i].Previous {
-        if FocusScopes.Contains(entry.Root, previous) { entries[i].Previous = entry.Previous }
+        if FocusScopes.Contains(entry.Root, previous) { entries[i].Previous = entry.Restore ? entry.Previous : nil }
       }
     }
     entries.RemoveAt(index)

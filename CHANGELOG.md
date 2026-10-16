@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.35 - 2026-10-15
+
+- Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
+
 ## 0.7.34 - 2026-10-15
 
 - Add undo and redo for single-line `TextEntry` edits, including selection restoration, grouped typing, and controlled-value history reset.

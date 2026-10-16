@@ -220,6 +220,56 @@ internal class PortalFixtures {
       && !restored.Children[3].PaintInputHidden
       && !window.PortalLayoutNeedsForTest()
   }
+
+  func FocusScopeCloseRestoreContract() bool {
+    let cell = FocusScopeCloseCell{}
+    let window = Window{ Root: cell, Width: 200, Height: 100 }
+    window.UpdateTree()
+    for nested in []bool{ false, true } {
+      for restore in []bool{ false, true } {
+        cell.Open = true
+        cell.Rebuild()
+        window.UpdateTree()
+        if !cell.Trigger.Focus() { return false }
+        let registration = cell.Outer.BeginFocusScope()
+        window.UpdateTree()
+        var child FocusScope?
+        if nested {
+          child = cell.Inner.BeginFocusScope()
+          window.UpdateTree()
+        }
+        if cell.Trigger.AttachedNode()?.Focused != false { return false }
+        registration.Dispose(restore)
+        child?.Dispose()
+        cell.Open = false
+        cell.Rebuild()
+        window.UpdateTree()
+        if cell.Trigger.AttachedNode()?.Focused != restore { return false }
+      }
+    }
+    return true
+  }
+}
+
+internal class FocusScopeCloseCell : Cell {
+  internal let Trigger ElementHandle = ElementHandle{}
+  internal let Outer ElementHandle = ElementHandle{}
+  internal let Inner ElementHandle = ElementHandle{}
+  internal var Open bool
+
+  override func Build() Blob {
+    let root = Container{ Width: 200, Height: 100,
+      Button{ Key: "trigger", Handle: Trigger, Height: 20 },
+    }
+    if Open {
+      root.Children.Add(Container{ Key: "scope", Handle: Outer, Focusable: true, Height: 40,
+        Container{ Handle: Inner, Focusable: true, TabStop: false, Height: 40,
+          Button{ Height: 20 },
+        },
+      })
+    }
+    return root
+  }
 }
 
 public partial class Window {
