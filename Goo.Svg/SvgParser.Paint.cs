@@ -30,18 +30,12 @@ internal sealed partial class SvgParser
                 stroke.Dashes.AddRange(style.Dashes);
             }
         }
-        SvgClip? clip = null;
-        if (style.ClipPath is not null)
-        {
-            clip = ParseClip(style.ClipPath, element);
-        }
         return new SvgShape
         {
             Path = path,
             IsPath = LocalName(element) == "path",
             Fill = fill,
             Stroke = stroke,
-            Clip = clip,
             Flags = style.FillRule == 1u ? 1u : 0u
         };
     }
@@ -421,6 +415,7 @@ internal sealed partial class SvgParser
     {
         var style = parent.Clone();
         style.LocalOpacity = 1;
+        style.ClipPath = null;
         var direct = element.Attributes()
             .Where(attribute => attribute.Name.Namespace == XNamespace.None
                 && IsStyleProperty(attribute.Name.LocalName))

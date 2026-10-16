@@ -156,6 +156,37 @@ public sealed class SvgRuntimeTests
     }
 
     [Fact]
+    public void RootAndNestedGroupClipsStayInTheirOwnCoordinateSpaces()
+    {
+        var asset = Svg.Parse("<svg viewBox='0 0 100 100' clip-path='url(#outer)'>"
+            + "<defs><clipPath id='outer'><rect width='30' height='30'/></clipPath>"
+            + "<clipPath id='inner'><rect width='10' height='10'/></clipPath></defs>"
+            + "<g clip-path='url(#outer)'><g transform='translate(20 0)' clip-path='url(#inner)'>"
+            + "<rect width='20' height='20' transform='translate(5 0)'/></g></g></svg>");
+        var geometryType = typeof(VectorAsset).Assembly.GetType("Goo.PathGeometry")!;
+        var geometryFor = geometryType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var contains = geometryType.GetMethod("Contains", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var points = new[] { (X: 25f, Expected: true), (X: 35f, Expected: false) };
+
+        var childClip = geometryFor.Invoke(null, [asset.NodeAt(3).ClipPath])!;
+        Assert.Equal(0, geometryType.GetField("QuadraticCount",
+            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(childClip));
+        foreach (var point in points)
+        {
+            var inside = true;
+            var x = point.X;
+            for (var index = 0; index < 3; index++)
+            {
+                var node = asset.NodeAt(index);
+                x -= (float)node.Transform.TranslateX.Magnitude;
+                var geometry = geometryFor.Invoke(null, [node.ClipPath])!;
+                inside &= (bool)contains.Invoke(geometry, [x, 5f, node.ClipPathFillRule])!;
+            }
+            Assert.Equal(point.Expected, inside);
+        }
+    }
+
+    [Fact]
     public void ClipRuleOverridesStillRejectMixedRules()
     {
         const string source = "<svg viewBox='0 0 100 100'><defs><clipPath id='c' clip-rule='evenodd'><g><rect width='10' height='10'/><rect width='10' height='10' clip-rule='nonzero'/></g></clipPath></defs><rect width='100' height='100' clip-path='url(#c)'/></svg>";
