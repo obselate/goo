@@ -9,7 +9,6 @@ CI workflow is the source of truth for complete cross-platform verification.
 dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
 dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release
 dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj -c Release
-dotnet test tests/Goo.Svg.Tests/Goo.Svg.Tests.csproj -c Release
 dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.csproj -c Release
 ```
 
@@ -27,6 +26,18 @@ dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Relea
 `Goo.AsyncReadbackSmoke` contains the current window, readback, shader, queue,
 timeline, upload, image, and clipping lanes. Their exact environment variables
 and launch commands are defined in [CI](../.github/workflows/ci.yml).
+
+SVG parser tests are part of `Goo.CoreBehaviorTests`. To compare corpus pixels
+before and after a parser change, build `Goo.AsyncReadbackSmoke` at each revision
+and run it on the same display and driver:
+
+```sh
+GOO_SVG_CORPUS_OUTPUT=/tmp/svg-before dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+GOO_SVG_CORPUS_OUTPUT=/tmp/svg-after GOO_SVG_CORPUS_BASELINE=/tmp/svg-before dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+```
+
+The check renders all three SVG fixtures at four animation samples and compares
+every RGBA byte. It also prints each framebuffer size and SHA-256 hash.
 
 ## Other platform checks
 

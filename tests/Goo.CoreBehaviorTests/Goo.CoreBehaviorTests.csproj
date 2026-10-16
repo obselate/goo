@@ -16,6 +16,7 @@
                       AdditionalProperties="Configuration=CoreTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.CoreBehaviorTestFixtures.props" />
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"
                       AdditionalProperties="Configuration=CoreTestRelease" />
+    <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForTests"
           AfterTargets="CopyFilesToOutputDirectory"

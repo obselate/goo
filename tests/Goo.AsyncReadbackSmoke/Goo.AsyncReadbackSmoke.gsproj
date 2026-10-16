@@ -29,14 +29,12 @@
     <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
              Link="VendSans-VariableFont_wght.ttf"
              CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../Goo.Svg.Tests/Assets/*.svg" Link="SvgCorpus/%(Filename)%(Extension)"
+    <Content Include="../Goo.CoreBehaviorTests/Assets/*.svg" Link="SvgCorpus/%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo.Accessibility/Goo.Accessibility.csproj" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
-                      AdditionalProperties="Configuration=AsyncReadbackTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.AsyncReadbackFixtures.props" />
-    <ProjectReference Include="../../Goo.Svg/Goo.Svg.csproj"
                       AdditionalProperties="Configuration=AsyncReadbackTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.AsyncReadbackFixtures.props" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForAsyncReadbackSmoke"

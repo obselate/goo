@@ -361,6 +361,7 @@ static IEnumerable<ApiType> ReadTypes(string directoryPath, string sourceRoot)
         .Order(StringComparer.Ordinal))
     {
         var source = File.ReadAllText(file);
+        var package = Regex.Match(source, @"(?m)^package\s+([A-Za-z_][A-Za-z0-9_.]*)").Groups[1].Value;
         foreach (Match match in typePattern.Matches(source))
         {
             var name = match.Groups["name"].Value;
@@ -369,7 +370,7 @@ static IEnumerable<ApiType> ReadTypes(string directoryPath, string sourceRoot)
                 continue;
             var generic = match.Groups["generic"].Value;
             var arity = generic.Length == 0 ? 0 : generic.Count(character => character == ',') + 1;
-            var xmlName = "Goo." + name + (arity == 0 ? "" : (isFunction ? "``" : "`") + arity);
+            var xmlName = package + "." + name + (arity == 0 ? "" : (isFunction ? "``" : "`") + arity);
             var values = match.Groups["kind"].Value == "enum"
                 ? ReadEnumValues(source, match.Index + match.Length)
                 : [];

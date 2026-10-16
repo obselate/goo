@@ -57,6 +57,7 @@ ctor|Goo.Shape|public|()
 ctor|Goo.Simulation|public|()
 ctor|Goo.SoundSource|public|(sampleRate:System.Int32,channels:System.Int32,samples:System.Single[])
 ctor|Goo.Style|public|()
+ctor|Goo.Svg.SvgParseException|public|(message:System.String,innerException:System.Exception=null)
 ctor|Goo.TextCandidateEvent|public|(arg0:System.Collections.Generic.IReadOnlyList`1<System.String>,arg1:System.Int32,arg2:System.Boolean)
 ctor|Goo.TextChange|public|(arg0:Goo.TextRange,arg1:System.String)
 ctor|Goo.TextCommand|public|(arg0:Goo.TextCommandKind,arg1:System.String,arg2:System.Boolean)
@@ -933,6 +934,9 @@ method|Goo.SoundPlayer|TryOpen|static|public|generic:|()->Goo.SoundPlayer
 method|Goo.SoundPlayer|TryPlay|instance|public|generic:|(source:Goo.SoundSource,volume:System.Single=1)->Goo.SoundPlayback
 method|Goo.SoundSource|FromWav|static|public|generic:|(encoded:System.Byte[])->Goo.SoundSource
 method|Goo.SoundSource|LoadWav|static|public|generic:|(stream:System.IO.Stream)->Goo.SoundSource
+method|Goo.Svg.Svg|Load|static|public|generic:|(path:System.String)->Goo.VectorAsset
+method|Goo.Svg.Svg|Load|static|public|generic:|(stream:System.IO.Stream)->Goo.VectorAsset
+method|Goo.Svg.Svg|Parse|static|public|generic:|(source:System.String)->Goo.VectorAsset
 method|Goo.TextCandidateEvent|Deconstruct|instance|public|generic:|(out Candidates:System.Collections.Generic.IReadOnlyList`1<System.String>&,out SelectedCandidate:System.Int32&,out Horizontal:System.Boolean&)->System.Void
 method|Goo.TextCandidateEvent|Equals|instance|public|generic:|(arg0:Goo.TextCandidateEvent)->System.Boolean
 method|Goo.TextCandidateEvent|Equals|instance|public|generic:|(arg0:System.Object)->System.Boolean
@@ -1975,6 +1979,8 @@ type|Goo.SoundSource|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.StrokeCap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:
+type|Goo.Svg.SvgParseException|class|public|base:System.FormatException|interfaces:|generic:
+type|Goo.Svg.Svg|class|public|base:System.Object|interfaces:|generic:
 type|Goo.SystemTheme|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAffinity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAlign|enum|public|base:System.Enum|interfaces:|generic:

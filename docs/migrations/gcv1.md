@@ -1,4 +1,4 @@
-# Migrate GCV1 assets to Goo.Svg
+# Migrate GCV1 assets to runtime SVG
 
 Goo 0.6.0 removes the GCV1 binary vector format and the
 `Goo.SvgCompiler` tool. Existing `.gcv1` files cannot be loaded by the new runtime.
@@ -7,7 +7,7 @@ API. These methods now build `VectorAsset` directly, without a binary round trip
 
 ## Replace compiled files with SVG sources
 
-1. Add a reference to `Goo.Svg` from the same release as `Goo`.
+1. Reference `Goo`. SVG loading is included in the core package. Remove any separate `Goo.Svg` PackageReference after upgrading.
 2. Package the original `.svg` files as content or embedded resources instead of
    generated `.gcv1` files.
 3. Remove `Goo.SvgCompiler` from tool manifests and remove `goo-svgc` build steps,
@@ -73,7 +73,7 @@ as typed in-memory data and plays through `VectorAsset.Render`. Removing the bin
 track metadata does not remove animation playback.
 
 Runtime parsing still accepts a bounded SVG subset. It is not a general browser
-SVG renderer. See [Goo.Svg's supported features and exclusions](../../Goo.Svg/README.md).
+SVG renderer. See [supported features and exclusions](../svg.md).
 Invalid or unsupported SVG content raises `SvgParseException`. XML DTDs and external
 entity resolution remain disabled.
 

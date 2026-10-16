@@ -15,7 +15,6 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.Android",
     "Goo.DevTools",
     "Goo.DevTools.App",
-    "Goo.Svg",
     "Goo.Templates",
 }
 
