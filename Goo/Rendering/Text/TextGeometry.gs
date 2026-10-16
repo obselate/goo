@@ -473,40 +473,27 @@ internal func AddRun(run ShapedRun, upstream []float32, downstream []float32,
     }
 
     let logicalClusters = List[int32](visualClusters.Count)
-    for cluster in visualClusters {
-      var exists = false
-      for value in logicalClusters {
-        if value == cluster.LogicalStart {
-          exists = true
-          break
-        }
+    for cluster in visualClusters { logicalClusters.Add(cluster.LogicalStart) }
+    logicalClusters.Sort()
+    var uniqueCount int32 = 0
+    for index in 0 ... logicalClusters.Count {
+      let value = logicalClusters[index]
+      if uniqueCount == 0 || logicalClusters[uniqueCount - 1] != value {
+        logicalClusters[uniqueCount] = value
+        uniqueCount++
       }
-      if !exists { logicalClusters.Add(cluster.LogicalStart) }
     }
-    var order int32 = 1
-    while order < logicalClusters.Count {
-      let value = logicalClusters[order]
-      var index = order
-      while index > 0 && logicalClusters[index - 1] > value {
-        logicalClusters[index] = logicalClusters[index - 1]
-        index--
-      }
-      logicalClusters[index] = value
-      order++
-    }
+    logicalClusters.RemoveRange(uniqueCount, logicalClusters.Count - uniqueCount)
 
     UnicodeGraphemes.Starts(run.Text, scalars, graphemeStarts)
     for cluster in visualClusters {
-      var logical int32 = 0
-      while logical < logicalClusters.Count && logicalClusters[logical] != cluster.LogicalStart { logical++ }
+      let logical = logicalClusters.BinarySearch(cluster.LogicalStart)
       let localEnd = if logical + 1 < logicalClusters.Count
       { logicalClusters[logical + 1] } else { run.Text.Length }
-      var firstInterior int32 = 0
-      while firstInterior < graphemeStarts.Count
-        && graphemeStarts[firstInterior] <= cluster.LogicalStart{ firstInterior++ }
-      var afterInterior = firstInterior
-      while afterInterior < graphemeStarts.Count
-        && graphemeStarts[afterInterior] < localEnd{ afterInterior++ }
+      let start = graphemeStarts.BinarySearch(cluster.LogicalStart)
+      let firstInterior = if start >= 0 { start + 1 } else { ~start }
+      let end = graphemeStarts.BinarySearch(localEnd)
+      let afterInterior = if end >= 0 { end } else { ~end }
       let segmentCount = afterInterior - firstInterior + 1
       var i int32 = 0
       while i <= segmentCount {
