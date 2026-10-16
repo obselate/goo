@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add root code conventions for Goo contributors.
+- Define subsystem ownership and permitted references for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
