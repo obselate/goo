@@ -177,9 +177,9 @@ internal sealed partial class SvgParser
                 F32(node.Transform.C), F32(node.Transform.B), F32(node.Transform.D),
                 F32(node.Transform.E), F32(node.Transform.F)),
             Opacity = node.Opacity,
-            ClipPath = BuildPath(shape?.Clip?.Contours),
+            ClipPath = BuildPath(node.Clip?.Contours),
             FillRule = shape?.Flags == 1 ? FillRule.EvenOdd : FillRule.NonZero,
-            ClipPathFillRule = shape?.Clip?.FillRule == 1 ? FillRule.EvenOdd : FillRule.NonZero
+            ClipPathFillRule = node.Clip?.FillRule == 1 ? FillRule.EvenOdd : FillRule.NonZero
         };
         return new VectorNode(BuildPath(shape?.Path.Contours), style, children);
     }

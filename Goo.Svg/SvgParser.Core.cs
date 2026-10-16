@@ -192,6 +192,7 @@ internal sealed partial class SvgParser
             Parent = null,
             Transform = SvgMatrix.Identity,
             Opacity = rootStyle.LocalOpacity,
+            Clip = rootStyle.ClipPath is { } clip ? ParseClip(clip, root) : null,
             Index = 0
         };
         nodes.Add(rootNode);
@@ -319,7 +320,7 @@ internal sealed partial class SvgParser
                 return;
             }
             var group = AddNode(parent, ParseTransform((string?)element.Attribute("transform"), element),
-                style.LocalOpacity, null);
+                style.LocalOpacity, null, style, element);
             foreach (var child in element.Elements())
             {
                 if (IsAnimationElement(child))
@@ -347,7 +348,7 @@ internal sealed partial class SvgParser
             var path = ParseGeometry(element);
             var shape = BuildShape(element, path, style);
             var transform = ParseTransform((string?)element.Attribute("transform"), element);
-            var node = AddNode(parent, transform, style.LocalOpacity, shape);
+            var node = AddNode(parent, transform, style.LocalOpacity, shape, style, element);
             foreach (var child in element.Elements())
             {
                 if (IsAnimationElement(child))
@@ -364,7 +365,8 @@ internal sealed partial class SvgParser
         throw Fail(element, $"SVG element '{name}' is outside the supported subset");
     }
 
-    private SvgNode AddNode(SvgNode parent, SvgMatrix transform, double opacity, SvgShape? shape)
+    private SvgNode AddNode(SvgNode parent, SvgMatrix transform, double opacity, SvgShape? shape,
+        SvgStyle style, XElement element)
     {
         if (nodes.Count >= MaxNodes)
         {
@@ -376,6 +378,7 @@ internal sealed partial class SvgParser
             Transform = transform,
             Opacity = opacity,
             Shape = shape,
+            Clip = style.ClipPath is { } clip ? ParseClip(clip, element) : null,
             Index = nodes.Count
         };
         nodes.Add(node);

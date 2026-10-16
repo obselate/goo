@@ -83,7 +83,6 @@ internal sealed class SvgShape
     internal bool IsPath { get; init; }
     internal SvgPaint? Fill { get; init; }
     internal SvgStroke? Stroke { get; init; }
-    internal SvgClip? Clip { get; init; }
     internal uint Flags { get; init; }
 }
 
@@ -94,6 +93,7 @@ internal sealed class SvgNode
     internal SvgMatrix Transform { get; init; }
     internal double Opacity { get; init; }
     internal SvgShape? Shape { get; init; }
+    internal SvgClip? Clip { get; init; }
     internal SvgAnimation? TransformAnimation { get; set; }
     internal SvgAnimation? OpacityAnimation { get; set; }
     internal SvgAnimation? MorphAnimation { get; set; }
