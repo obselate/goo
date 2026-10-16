@@ -93,6 +93,10 @@ internal sealed partial class SvgParser
             {
                 throw Fail(element, $"a paint cannot have multiple color animations");
             }
+            foreach (var keyframe in animation.Keyframes)
+            {
+                keyframe.D *= paint.Opacity;
+            }
             paint.Animation = animation;
             return;
         }

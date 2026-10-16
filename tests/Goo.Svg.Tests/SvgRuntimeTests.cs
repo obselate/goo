@@ -101,6 +101,28 @@ public sealed class SvgRuntimeTests
         }
     }
 
+    [Fact]
+    public void AnimatedColorsRetainPaintOpacityFromTransparentStaticColors()
+    {
+        var asset = Svg.Parse("<svg viewBox='0 0 10 10'>"
+            + "<rect width='10' height='10' fill='transparent' fill-opacity='0.2'"
+            + " stroke='transparent' stroke-opacity='0.3'>"
+            + "<animate attributeName='fill' values='red;blue' dur='1s' fill='freeze'/>"
+            + "<animate attributeName='stroke' values='red;blue' dur='1s' fill='freeze'/>"
+            + "</rect></svg>");
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var animation = typeof(VectorAsset).GetField("animation", flags)!.GetValue(asset)!;
+        var frames = (Array)animation.GetType().GetField("Keyframes", flags)!.GetValue(animation)!;
+
+        Assert.Equal(4, frames.Length);
+        for (var index = 0; index < frames.Length; index++)
+        {
+            var frame = frames.GetValue(index)!;
+            var alpha = (float)frame.GetType().GetField("D", flags)!.GetValue(frame)!;
+            Assert.Equal(index < 2 ? 0.2f : 0.3f, alpha, 6);
+        }
+    }
+
     [Theory]
     [InlineData(4097, 1, false)]
     [InlineData(2049, 2, false)]
