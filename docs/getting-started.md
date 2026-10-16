@@ -1,7 +1,7 @@
 # After the counter
 
-For Gsharp.NET.Sdk 0.4.1150 and Goo/Goo.Svg 0.7.35.
-Start with the [template counter](../README.md#quick-start).
+Use the [version baseline](README.md#version-baseline) and start with the
+[template counter](../README.md#quick-start).
 
 ## 1. Separate a second Cell
 
@@ -72,10 +72,9 @@ func Main() {
 }
 ```
 
-Build, then run:
+Run the app:
 
 ```sh
-dotnet build -c Release -p:TreatWarningsAsErrors=true
 dotnet run
 ```
 
@@ -96,15 +95,13 @@ print another `CounterActions created` or reset the child's click count.
 ## 3. Follow the lifetime
 
 `Cell.Mount` retains the child at its sibling position. `nil` selects an unkeyed
-mount. Do not insert or reorder siblings if their state must stay in place.
-For movable children, use stable keys consistently across the sibling list with
-these published packages. See [Cell identity and mounting](api/cell.md#mount-parameterless-cells).
+mount. Give a key to a child that can be inserted, removed or reordered.
+See [Cell identity and mounting](api/cell.md#mount-parameterless-cells).
 
 `Build()` returns a fresh description, not a new lifetime for retained fields.
 Goo calls `IDisposable.Dispose` when the mounted child is removed or its window
 closes. Close the window normally and check for `CounterActions disposed`.
-This example logs the lifetime. A real component uses disposal to release its
-own subscriptions or resources. Do not call a child's `Build()` to mount it.
+Do not call a child's `Build()` to mount it.
 
 ## 4. Continue by task
 

@@ -1,7 +1,9 @@
 # G# watch modes and limits
 
-For SDK 0.4.1150 / Goo 0.7.35, see [Edit and inspect](../../../../../docs/edit-and-inspect.md).
-The local patches and older package results below are not current-release guarantees.
+Method edits apply in the same process. The window shows them on the next event,
+such as a click. A fix is in progress.
+See [Edit and inspect](https://github.com/obselate/goo/blob/main/docs/edit-and-inspect.md)
+for the app-author workflow.
 
 ## Choose run or watch
 
@@ -20,21 +22,9 @@ The existing reload tests establish correctness, not performance parity. Do not 
 
 The guarantee is supported method edits without window reopening, not arbitrary code edits or preservation of every child when the application changes component identity. Verify the actual consumer, edit and state before extending results to other SDK versions, configurations, platforms or project-reference graphs.
 
-## Verified local patches
+## Watched inputs
 
-On Linux x64 with .NET SDK 10.0.302, the locally rebuilt G# hot-reload runtime dispatches assembly `MetadataUpdateHandler` callbacks after applying deltas. Patched Goo queues mounted Cell rebuilds on each window's UI thread, including typed Cells with unchanged inputs and direct Cell wrappers. No new public API is required.
-
-The local consumer selects the runtime through `GsharpHotReloadRuntimeAssemblyFullPath` and uses `Goo.0.5.0-hotreload-local.20260906`. These are local patches, not a claim about published SDK 0.4.1 or Goo 0.5.0. Check the consumer's resolved dependencies before promising this behavior.
-
-Two successive method edits across two native windows passed with diagnostics enabled and disabled. PID, native handles, Cell instances, counter, editor text and selection remained unchanged, and captures showed the new label. A structural edit reported `GSHR1001` without an automatic restart. The G# hot-reload tests (13), Goo API-contract tests (12), and reconciliation/text-entry tests (7) passed. No run-versus-watch performance comparison was performed.
-
-Reproduction: `tests/Goo.HotReloadSmoke/README.md` in the Goo checkout. Local evidence: `/home/xaz/Projects/goo-gsharp/artifacts/hot-reload/evidence/{no-devtools,devtools}`. These paths identify development evidence and need not exist on another machine.
-
-## Released-package fallback
-
-With published Gsharp.NET.Sdk 0.4.1 and Goo 0.5.0, a method edit applied but the retained UI stayed unchanged. The G# runtime did not dispatch metadata-update callbacks. An applied-method message alone therefore does not prove visible UI refresh.
-
-If the user chooses restart-on-edit for this combination, add the following item if absent:
+Add this project item if source files are not already watched:
 
 ```xml
 <ItemGroup>
@@ -42,8 +32,9 @@ If the user chooses restart-on-edit for this combination, add the following item
 </ItemGroup>
 ```
 
-Run `dotnet clean App.gsproj`, then `GOO_DEVTOOLS=1 dotnet watch --no-hot-reload --project App.gsproj`. Clean before switching watch modes: the tested output directory otherwise retained a bootstrap reference without its runtime dependency. This fallback reopens windows and loses application state on each restart. It follows the same explicit watch-selection rule above.
-
-The historical published-package integration run is `/tmp/goo-agent-e2e-k9flf08g/result.json`. Its six MCP tools passed, a method delta applied without visible refresh, an added function produced `GSHR1001`, and restart-on-edit changed the PID and visible label. The current `scripts/verify.py` checks the eight-tool agent workflow without watch. Use `tests/Goo.HotReloadSmoke/verify.py` in the checkout for reload verification.
+For restart-on-edit, run `dotnet clean App.gsproj`, then
+`GOO_DEVTOOLS=1 dotnet watch --no-hot-reload --project App.gsproj`.
+Clean before switching modes to remove mode-specific bootstrap output.
+Each restart reopens windows and resets application state.
 
 Goo endpoint descriptors can contain a UTF-8 BOM. Decode JSON accordingly. Raw runtime snapshots can contain `full: false` and only a delta. Request `payload: {"full":true}` for a complete tree. The MCP `goo_snapshot` tool does this on every call.

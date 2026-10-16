@@ -1,7 +1,9 @@
 # App-author documentation
 
-Baseline: Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Svg/Goo.Templates/Goo.DevTools 0.7.35
-and Goo.Widgets 0.2.19. Linked `main` branches can differ from these releases.
+## Version baseline
+
+Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Svg/Goo.Templates/Goo.DevTools/Goo.DevTools.App 0.7.35
+and Goo.Widgets 0.2.19.
 
 ## Learn in order
 
@@ -16,17 +18,17 @@ and Goo.Widgets 0.2.19. Linked `main` branches can differ from these releases.
 
 ## Find a task or contract
 
-| Task | Guide | Version marker |
-| --- | --- | --- |
-| Compose primitives and Cells | [Native authoring](native-authoring.md), [Cell state and identity](api/cell.md), [tree reconciliation](api/tree.md) | SDK 0.4.1150, Goo 0.7.35 |
-| Layout, styling and input | [Layout](api/layout.md), [style](api/style.md), [text](api/text.md), [input](api/input.md), [accessibility](api/accessibility.md) | Goo 0.7.35 |
-| Load raster images, SVG and sound | [Images](images.md), [SVG](../Goo.Svg/README.md), [audio](audio.md) | Goo/Goo.Svg 0.7.35 |
-| Use controls, themes and icons | [Widgets](https://github.com/obselate/goo-widgets/blob/main/README.md), [usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md), [complete quick start](https://github.com/obselate/goo-widgets/tree/main/samples/Goo.Widgets.QuickStart) | Install README: 0.2.19 / SDK 0.4.1150. Usage header still labels 0.2.7 / SDK 0.4.591. Use the install README's package pins |
-| Animate content | [Core motion](api/motion.md), [optional animation library](https://github.com/obselate/goo-animations) | Core: Goo 0.7.35. Animation README labels 0.2.5 / SDK 0.4.591. Check that package's own requirements |
-| Inspect a running app | [DevTools](devtools/README.md), [diagnostics API](api/diagnostics.md) | Goo.DevTools/Goo.DevTools.App 0.7.35 |
-| Use the authoring plugin | [Plugin installation and tools](../plugins/goo/README.md), [authoring skill](../plugins/goo/skills/goo-authoring/SKILL.md), [watch limits and historical evidence](../plugins/goo/skills/goo-authoring/references/watch.md) | Checkout plugin, CLI 0.7.35. Historical watch results are labeled separately |
-| Host Android | [Android integration](android.md) | Goo 0.7.35. Manual host integration, not the desktop template |
-| Find the complete core surface | [API index](api/README.md), [window](api/window.md), [platform](api/platform.md), [rendering and custom effects](api/rendering.md) | Generated from this checkout. Released package behavior can differ |
+| Task | Guide |
+| --- | --- |
+| Compose primitives and Cells | [Native authoring](native-authoring.md), [Cell state and identity](api/cell.md), [tree reconciliation](api/tree.md) |
+| Layout, styling and input | [Layout](api/layout.md), [style](api/style.md), [text](api/text.md), [input](api/input.md), [accessibility](api/accessibility.md) |
+| Load raster images, SVG and sound | [Images](images.md), [SVG](../Goo.Svg/README.md), [audio](audio.md) |
+| Use controls, themes and icons | [Widgets](https://github.com/obselate/goo-widgets/blob/main/README.md), [usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md), [complete quick start](https://github.com/obselate/goo-widgets/tree/main/samples/Goo.Widgets.QuickStart) |
+| Animate content | [Core motion](api/motion.md), [optional animation library](https://github.com/obselate/goo-animations) |
+| Inspect a running app | [DevTools](devtools/README.md), [diagnostics API](api/diagnostics.md) |
+| Use the authoring plugin | [Plugin installation and tools](../plugins/goo/README.md), [authoring skill](../plugins/goo/skills/goo-authoring/SKILL.md) |
+| Host Android | [Android integration](android.md) |
+| Find the complete core surface | [API index](api/README.md), [window](api/window.md), [platform](api/platform.md), [rendering and custom effects](api/rendering.md) |
 
 ## Other audiences and older material
 
