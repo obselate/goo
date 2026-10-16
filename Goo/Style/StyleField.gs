@@ -1,5 +1,7 @@
 package Goo
 
+import System.Collections.Generic
+
 // Members stay in field-table order. Each ordinal is a StyleMask bit.
 internal enum StyleField {
   Width; Height; MinWidth; MinHeight; MaxWidth; MaxHeight; AspectRatio;
@@ -97,38 +99,12 @@ internal data struct StyleEntry {
   internal var Payload object?
 }
 
-internal class StyleEntryBlock {
-  private var first StyleEntry
-  private var second StyleEntry
-  private var third StyleEntry
-  private var fourth StyleEntry
-  internal var Next StyleEntryBlock?
-
-  internal func Add(index int32, value StyleEntry) {
-    switch index {
-      case 0 { first = value }
-      case 1 { second = value }
-      case 2 { third = value }
-      case 3 { fourth = value }
-      default { throw ArgumentOutOfRangeException("index") }
-    }
-  }
-
-  internal func At(index int32) StyleEntry -> switch index {
-    case 0: first
-    case 1: second
-    case 2: third
-    case 3: fourth
-    default: throw ArgumentOutOfRangeException("index")
-  }
-}
-
 internal class StyleEntries {
   private var first StyleEntry
   private var second StyleEntry
   private var third StyleEntry
   private var fourth StyleEntry
-  private var spillLast StyleEntryBlock?
+  private var spill List[StyleEntry]?
   private var count int32
 
   internal prop Count int32{ get -> count }
@@ -140,20 +116,8 @@ internal class StyleEntries {
       case 2 { third = value }
       case 3 { fourth = value }
       default {
-        let spillIndex = count - 4
-        let slot = spillIndex % 4
-        if slot == 0 {
-          let block = StyleEntryBlock{}
-          if spillLast == nil {
-            block.Next = block
-          } else {
-            block.Next = spillLast!!.Next
-            spillLast!!.Next = block
-          }
-          spillLast = block
-        }
-        guard let block = spillLast else { throw InvalidOperationException("missing style spill") }
-        block.Add(slot, value)
+        spill ??= List[StyleEntry]()
+        spill!!.Add(value)
       }
     }
     count++
@@ -174,16 +138,8 @@ internal class StyleEntries {
       case 2 { return third }
       case 3 { return fourth }
       default {
-        var blockIndex = (index - 4) / 4
-        guard let tail = spillLast else { throw InvalidOperationException("missing style spill") }
-        var block = tail.Next
-        while blockIndex > 0 {
-          guard let current = block else { throw InvalidOperationException("missing style spill") }
-          block = current.Next
-          blockIndex--
-        }
-        guard let current = block else { throw InvalidOperationException("missing style spill") }
-        return current.At((index - 4) % 4)
+        guard let entries = spill else { throw InvalidOperationException("missing style spill") }
+        return entries[index - 4]
       }
     }
   }
