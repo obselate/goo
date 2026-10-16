@@ -47,9 +47,6 @@ internal func textRangeFullyDeleted(textRange TextRange, changes IReadOnlyList[T
     if change.Range.Start >= targetEnd {
       break
     }
-    if change.Range.Length == 0 {
-      continue
-    }
     let changeEnd = change.Range.Start + change.Range.Length
     if changeEnd <= covered {
       continue
