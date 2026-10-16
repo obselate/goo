@@ -4,6 +4,32 @@ import System
 import System.Collections.Generic
 
 internal class StyleFixtures {
+  func RepeatedLayerDeclarationsKeepTransitionProgressContract() bool {
+    for style in []Style{
+      Style{ BasedOn: Style{ Width: 100 }, Width: 200 },
+      Style{ BasedOn: Style{ Margin: 100 }, Margin: 200 },
+      Style{ BasedOn: Style{ MarginStart: 100 }, Margin: 200 },
+    } {
+      let resolver = Resolver{}
+      let node = Reconciler{ Res: resolver }.Mount(Container{ Width: 50, Margin: 50 })
+      node.TransitionMs = 1000
+      node.TransitionEasing = Easing.Linear
+      node.BaseStyle = style.Entries()
+      resolver.Invalidate(node, false)
+      resolver.Flush()
+      for i in 0 ... 5 {
+        resolver.Advance(0.2)
+        resolver.Invalidate(node, false)
+        resolver.Flush()
+      }
+      if resolver.Animating.Count != 0
+        || (node.Width.Value != 200.0F && node.MarginLeft.Value != 200.0F) {
+          return false
+        }
+    }
+    return true
+  }
+
   func ShaderEffectMetricsPublishCoalescesPaintContract() bool {
     let program = ShaderEffectProgram([]uint8{
       71, 69, 70, 70, 1, 0, 0, 0, 1, 0, 0, 0,
