@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Enforce the SVG file size limit while reading instead of loading the entire file first.
+
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
