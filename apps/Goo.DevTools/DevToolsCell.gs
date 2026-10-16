@@ -581,6 +581,8 @@ class DevToolsCell : Cell {
                         Key: "tree-empty-text",
                         Content: if session.State != DiagnosticConnectionState.Connected {
                             "Connect to an app to see its elements."
+                        } else if session.SelectedWindow().Root.Id == "" {
+                            "The target has no root."
                         } else {
                             "No elements match your search."
                         },
@@ -975,6 +977,25 @@ class DevToolsCell : Cell {
         tabButtons.Add(BuildTabButton(DiagnosticDetailsTab.Configuration, "Properties"))
         tabButtons.Add(BuildTabButton(DiagnosticDetailsTab.Layout, "Layout"))
         let node = session.SelectedNode()
+        if node.Id == "" {
+            return Container{
+                Key: "inspector",
+                Width: if compact {
+                    Percent(100)
+                } else {
+                    Length(InspectorWidth())
+                },
+                Height: Percent(100),
+                Padding: 14,
+                BackgroundColor: DevToolsTheme.Surface,
+                Text{
+                    Key: "inspector-empty",
+                    Content: "The target has no root.",
+                    FontSize: 12,
+                    Color: DevToolsTheme.InkMuted,
+                },
+            }
+        }
         let details = List[Blob]()
         details.Add(BuildDetails(node))
         if session.ActiveTab == DiagnosticDetailsTab.Configuration {
