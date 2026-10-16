@@ -12,6 +12,7 @@ internal sealed partial class SvgParser
     private const int MaxStrokes = 65536;
     private const int MaxRenderDepth = 1024;
     private const double QuadraticTolerance = 0.0001;
+    private const double EllipseControlRatio = 0.5522847498307936;
 
     private readonly Dictionary<string, SvgGradientDefinition> gradients = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SvgClipDefinition> clips = new(StringComparer.Ordinal);
