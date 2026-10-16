@@ -199,8 +199,10 @@ internal partial class Resolver {
 
   private func resolveNode(n Node, initial bool) {
     ApplyTextScale(n)
+    let direction = effectiveDirection(n)
+    let remap = (n.Direction == Direction.RightToLeft) != (direction == Direction.RightToLeft)
     writeField(n, StyleEntry{ Field: StyleField.Direction,
-      A: float32(int32(effectiveDirection(n))) }, initial)
+      A: float32(int32(direction)) }, initial)
     var localMask = StyleMask{}
     // Higher active layers shadow lower entries before transition retargeting.
     let hoverMask = !n.Disabled && n.Hovered ? fieldsMask(n, n.HoverStyle) : StyleMask{}
@@ -209,18 +211,18 @@ internal partial class Resolver {
     let disabledMask = n.Disabled ? fieldsMask(n, n.DisabledStyle) : StyleMask{}
     let allStateMasks = styleMaskUnion(styleMaskUnion(hoverMask, focusMask),
       styleMaskUnion(pressMask, disabledMask))
-    localMask = applyList(n, n.BaseStyle, localMask, initial, allStateMasks)
+    localMask = applyList(n, n.BaseStyle, localMask, initial, allStateMasks, remap)
     if !n.Disabled && n.Hovered {
-      localMask = applyList(n, n.HoverStyle, localMask, initial, styleMaskUnion(focusMask, pressMask))
+      localMask = applyList(n, n.HoverStyle, localMask, initial, styleMaskUnion(focusMask, pressMask), remap)
     }
     if !n.Disabled && n.FocusVisible {
-      localMask = applyList(n, n.FocusStyle, localMask, initial, pressMask)
+      localMask = applyList(n, n.FocusStyle, localMask, initial, pressMask, remap)
     }
     if !n.Disabled && n.Pressed {
-      localMask = applyList(n, n.ActiveStyle, localMask, initial, StyleMask{})
+      localMask = applyList(n, n.ActiveStyle, localMask, initial, StyleMask{}, remap)
     }
     if n.Disabled {
-      localMask = applyList(n, n.DisabledStyle, localMask, initial, StyleMask{})
+      localMask = applyList(n, n.DisabledStyle, localMask, initial, StyleMask{}, remap)
     }
     n.LocalMask = localMask
     let inheritedMask = applyInherited(n, localMask, initial)
@@ -280,7 +282,8 @@ internal partial class Resolver {
     return m
   }
 
-  internal func applyList(n Node, entries StyleEntries?, mask StyleMask, initial bool, shadow StyleMask) StyleMask {
+  internal func applyList(n Node, entries StyleEntries?, mask StyleMask, initial bool,
+    shadow StyleMask, remap bool) StyleMask {
     guard let list = entries else { return mask }
     for i in 0 ... list.Count {
       let field = list.At(i).Field
@@ -317,7 +320,7 @@ internal partial class Resolver {
       if layerWinners[int32(e.Field)] != i { continue }
       m = styleMaskWith(m, e.Field)
       if !styleMaskHas(shadow, e.Field) {
-        writeField(n, e, initial || logical)
+        writeField(n, e, initial || (logical && remap))
       }
     }
     return m

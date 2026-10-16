@@ -162,6 +162,34 @@ internal class StyleFixtures {
       && resolver.Animating.Count == 0
   }
 
+  func LogicalEdgeTransitionContract() bool {
+    let resolver = Resolver{}
+    let n = Node{ Kind: NodeKind.Container }
+    n.BaseStyle = Style{ Direction: Direction.LeftToRight, PaddingStart: 10, PaddingEnd: 40 }.Entries()
+    n.HoverStyle = Style{ PaddingStart: 30 }.Entries()
+    n.TransitionMs = 1000
+    n.TransitionEasing = Easing.Linear
+    n.TransitionSelection = makeTransitionSelection([]TransitionProperty{ TransitionProperty.PaddingLeft })
+    resolver.Invalidate(n, true)
+    resolver.Flush()
+    n.Hovered = true
+    resolver.Invalidate(n, false)
+    resolver.Flush()
+    if n.PaddingLeft.Value != 10.0F || resolver.Animating.Count != 1 { return false }
+    resolver.Advance(0.5)
+    if n.PaddingLeft.Value != 20.0F { return false }
+    n.BaseStyle = Style{ Direction: Direction.RightToLeft, PaddingStart: 10, PaddingEnd: 40 }.Entries()
+    resolver.Invalidate(n, false)
+    resolver.Flush()
+    if n.PaddingLeft.Value != 40.0F || n.PaddingRight.Value != 30.0F
+      || n.Transitions!!.Count != 0 { return false }
+    n.Hovered = false
+    resolver.Invalidate(n, false)
+    resolver.Flush()
+    return n.PaddingLeft.Value == 40.0F && n.PaddingRight.Value == 10.0F
+      && n.Transitions!!.Count == 0
+  }
+
   func DirectionAndLogicalEdgeContract() bool {
     let defaults = Node{ Kind: NodeKind.Container }
     if defaults.Direction != Direction.Auto || defaults.TextAlign != TextAlign.Start {
@@ -335,6 +363,8 @@ internal class StyleFixtures {
     snap.Hovered = true
     snapResolver.Invalidate(snap, false)
     snapResolver.Flush()
+    if snap.MarginLeft.Value != 1.0F || snapResolver.Animating.Count != 1 { return false }
+    snapResolver.Advance(0.1)
     if snap.MarginLeft.Value != 9.0F || snapResolver.Animating.Count != 0 { return false }
 
     let shape = Reconciler{ Res: Resolver{} }.Mount(Shape{
