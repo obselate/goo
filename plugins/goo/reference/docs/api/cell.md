@@ -18,7 +18,8 @@ Use `Cell.Mount<TCell>()` for a fixed, unkeyed child with a parameterless constr
 Cell.Mount[Counter]()
 ```
 
-Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, or reordering. A sibling list must be entirely keyed or entirely unkeyed.
+Use `Cell.Mount<TCell>(key)` when the child needs stable identity across insertion, removal, or reordering.
+Siblings can mix keyed and unkeyed entries. Unkeyed identity uses the absolute sibling index and never matches a keyed entry.
 
 ```gsharp
 Cell.Mount[Counter]("counter")

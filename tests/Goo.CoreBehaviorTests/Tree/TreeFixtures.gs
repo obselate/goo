@@ -94,6 +94,115 @@ internal class TreeFixtures {
       && after.Children[1].Content == "slot:kept" && after.Children[2].Content == "tail"
   }
 
+  func MixedReconciliationContract() bool {
+    let rec = Reconciler{ Res: Resolver{} }
+    let root = rec.Mount(Container() {
+      Cell.Mount[string, TreeKeyedCell]("a", "a"),
+      Cell.Mount[TreePositionalCell](),
+      Cell.Mount[string, TreeKeyedCell]("b", "b"),
+    })
+    let a = root.Children[0]
+    let positional = root.Children[1]
+    let b = root.Children[2]
+    guard let bCell = b.Fiber else { return false }
+    guard let cell = positional.Fiber as TreePositionalCell else { return false }
+    cell.Value = "kept"
+    cell.Rebuild()
+
+    rec.Diff(root, Container() {
+      Cell.Mount[string, TreeKeyedCell]("b", "b"),
+      Cell.Mount[TreePositionalCell](),
+      Cell.Mount[string, TreeKeyedCell]("a", "a"),
+    })
+    if root.Children[0] != b || root.Children[1] != positional || root.Children[2] != a
+      || positional.Content != "slot:kept" { return false }
+
+    rec.Diff(root, Container() {
+      Cell.Mount[string, TreeKeyedCell]("b", "b"),
+      Cell.Mount[TreePositionalCell](),
+      Text{ Key: "inserted", Content: "inserted" },
+      Cell.Mount[string, TreeKeyedCell]("a", "a"),
+    })
+    let inserted = root.Children[2]
+    if root.Children[3] != a || root.Children[1] != positional { return false }
+
+    rec.Diff(root, Container() {
+      Cell.Mount[string, TreeKeyedCell]("b", "b"),
+      Cell.Mount[TreePositionalCell](),
+      Cell.Mount[string, TreeKeyedCell]("changed", "a"),
+    })
+    if !inserted.Retired || !a.Retired || root.Children[0] != b
+      || root.Children[1] != positional || root.Children[2].Fiber == a.Fiber { return false }
+
+    rec.Diff(root, Container() {
+      Cell.Mount[TreePositionalCell](),
+      Cell.Mount[TreePositionalCell](),
+      Cell.Mount[TreePositionalCell](),
+    })
+    if !bCell.disposed || root.Children[0].Fiber == bCell || root.Children[1] != positional
+      || root.Children[0].Content != "slot:initial" || positional.Content != "slot:kept" { return false }
+
+    rec.Diff(root, Container() {
+      Text{ Key: "inserted", Content: "inserted" },
+      Cell.Mount[string, TreeKeyedCell]("a", "a"),
+      Cell.Mount[TreePositionalCell](),
+    })
+    let shifted = root.Children[2]
+    if !positional.Retired || shifted == positional || shifted.Content != "slot:initial" { return false }
+    rec.Diff(root, Container() { Cell.Mount[string, TreeKeyedCell]("a", "a"), })
+    let retained = root.Children[0]
+    rec.Diff(root, Container() { Text("plain"), Cell.Mount[string, TreeKeyedCell]("a", "a"), })
+    let passed = root.Children[1] == retained && shifted.Retired
+    NodeLifecycle.DisposeTree(root)
+    return passed
+  }
+
+  func MixedHandleRollbackContract() bool {
+    let handle = ElementHandle{}
+    let provisional = ElementHandle{}
+    ElementHandleRollbackCell.Target = handle
+    let rec = Reconciler{ Res: Resolver{}, Owner: Window{} }
+    let root = rec.Mount(Container() {
+      Cell.Mount[ElementHandleRollbackCell]("a", nil),
+      Text("plain"),
+    })
+    let original = root.Children[0]
+    let positional = root.Children[1]
+    var rejected = false
+    try {
+      rec.Diff(root, Container() {
+        Text{ Key: "a", Handle: handle, Content: "replacement" },
+        Text("plain"),
+        Text{ Key: "provisional", Handle: provisional },
+        Container() {.Key: "fail", Text{ Handle: provisional }, },
+      })
+    } catch (error InvalidOperationException) {
+      rejected = true
+    }
+    if !rejected || root.Children.Count != 2 || root.Children[0] != original
+      || root.Children[1] != positional || original.Retired
+      || !ElementHandles.Owns(original, handle) || provisional.IsMounted { return false }
+
+    rejected = false
+    try {
+      rec.Diff(root, Container() {
+        Text{ Key: "a", Handle: handle }, Text{ Handle: handle },
+      })
+    } catch (error InvalidOperationException) {
+      rejected = true
+    }
+    if !rejected || !ElementHandles.Owns(original, handle) { return false }
+
+    rec.Diff(root, Container() { Text{ Key: "a" }, Text{ Handle: handle }, })
+    if !original.Retired || !ElementHandles.Owns(root.Children[1], handle) { return false }
+    rec.Diff(root, Container() { Text{ Handle: handle }, Text{ Key: "a" }, })
+    let passed = ElementHandles.Owns(root.Children[0], handle)
+      && !ElementHandles.Owns(root.Children[1], handle)
+    NodeLifecycle.DisposeTree(root)
+    ElementHandleRollbackCell.Target = nil
+    return passed && !handle.IsMounted
+  }
+
   func OutputAndKindReplacementContract() bool {
     let rec = Reconciler{ Res: Resolver{} }
     let node = rec.Mount(Container() { Text("original"),})
@@ -113,19 +222,16 @@ internal class TreeFixtures {
     try {
       let rec = Reconciler{ Res: Resolver{} }
       switch scenario {
-        case "mount-mixed" {
-          rec.Mount(Container() { Text{ Key: "keyed", Content: "x" }, Text{ Content: "plain" },})
-        }
-        case "diff-mixed" {
-          let node = rec.Mount(Container() { Text{ Key: "keyed", Content: "x" },})
-          rec.Diff(node, Container() { Text{ Key: "keyed", Content: "x" }, Text{ Content: "plain" },})
-        }
         case "mount-duplicate" {
-          rec.Mount(Container() { Text{ Key: "same", Content: "a" }, Text{ Key: "same", Content: "b" },})
+          rec.Mount(Container() {
+            Text{ Key: "same", Content: "a" }, Text("plain"), Text{ Key: "same", Content: "b" },
+          })
         }
         case "diff-duplicate" {
           let node = rec.Mount(Container() { Text{ Key: "a", Content: "a" },})
-          rec.Diff(node, Container() { Text{ Key: "same", Content: "a" }, Text{ Key: "same", Content: "b" },})
+          rec.Diff(node, Container() {
+            Text{ Key: "same", Content: "a" }, Text("plain"), Text{ Key: "same", Content: "b" },
+          })
         }
         case _ {
           return false

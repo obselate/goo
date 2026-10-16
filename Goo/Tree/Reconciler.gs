@@ -1048,7 +1048,7 @@ internal partial class Reconciler {
     let scratchScope = scratch.Rent()
     try {
       validateChildren(blobs, scratchScope)
-      if blobs.Count == 0 || blobs[0].Key == nil {
+      if scratchScope.IncomingKeys.Count == 0 {
         diffUnkeyedChildren(n, blobs, scratchScope.Retire)
       } else {
         diffKeyedChildren(n, blobs, scratchScope)
@@ -1180,7 +1180,7 @@ internal partial class Reconciler {
       i = 0
       while i < blobs.Count {
         let blob = blobs[i]
-        if let hit = takeMatch(scratchScope, blob) {
+        if let hit = takeMatch(scratchScope, blob, n, i) {
           if canReuseNode(hit, blob) {
             var child Node
             if let cell = hit.Fiber {
@@ -1247,7 +1247,7 @@ internal partial class Reconciler {
             markStructure()
             childrenChanged = true
           }
-        } else {
+        } else if i >= blobs.Count || blobs[i].Key != nil {
           retire.Add(child)
           markStructure()
           childrenChanged = true
@@ -1294,6 +1294,8 @@ internal partial class Reconciler {
           if scratchScope.Keyed.TryGetValue(key, out var hit) {
             destination = hit
           }
+        } else if i < n.Children.Count && n.Children[i].Key == nil {
+          destination = n.Children[i]
         }
         if let source = handle.AttachedNode() {
           if source.Parent == n && source != destination {
@@ -1325,51 +1327,37 @@ internal partial class Reconciler {
 
 internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchScope) {
   scratchScope.IncomingKeys.Clear()
+  scratchScope.IncomingHandles.Clear()
   scratchScope.HasIncomingHandle = false
-  var sawKeyed = false
-  var sawUnkeyed = false
   var i int32
   while i < blobs.Count {
-    if blobs[i].Key == nil {
-      sawUnkeyed = true
-    } else {
-      sawKeyed = true
+    let blob = blobs[i]
+    if let key = blob.Key {
+      if !scratchScope.IncomingKeys.Add(key) {
+        throw NotSupportedException("Goo child lists must not contain duplicate keys")
+      }
+    }
+    if blob.HasElementHandle {
+      scratchScope.HasIncomingHandle = true
+      guard let handle = blob.Handle else {
+        throw InvalidOperationException("Blob has no ElementHandle")
+      }
+      if !scratchScope.IncomingHandles.Add(handle) {
+        throw InvalidOperationException("A child list cannot assign one ElementHandle twice")
+      }
     }
     i++
   }
-  if sawKeyed && sawUnkeyed {
-    throw NotSupportedException("Goo child lists must contain either only keyed or only unkeyed siblings")
-  }
-
-  if sawKeyed {
-    scratchScope.IncomingHandles.Clear()
-    i = 0
-    while i < blobs.Count {
-      if let key = blobs[i].Key {
-        if !scratchScope.IncomingKeys.Add(key) {
-          throw NotSupportedException("Goo child lists must not contain duplicate keys")
-        }
-      }
-      if blobs[i].HasElementHandle {
-        scratchScope.HasIncomingHandle = true
-        guard let handle = blobs[i].Handle else {
-          throw InvalidOperationException("Blob has no ElementHandle")
-        }
-        if !scratchScope.IncomingHandles.Add(handle) {
-          throw InvalidOperationException("A child list cannot assign one ElementHandle twice")
-        }
-      }
-      i++
-    }
-  }
 }
 
-internal func takeMatch(scratchScope ChildDiffScratchScope, b Blob) Node? {
+internal func takeMatch(scratchScope ChildDiffScratchScope, b Blob, parent Node, index int32) Node? {
   if let key = b.Key {
     if scratchScope.Keyed.TryGetValue(key, out var hit) {
       scratchScope.Keyed.Remove(key)
       return hit
     }
+  } else if index < parent.Children.Count && parent.Children[index].Key == nil {
+    return parent.Children[index]
   }
   return nil
 }
