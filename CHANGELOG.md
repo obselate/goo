@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Virtual state disposal failures preserve committed replacements and do not interrupt descendant cleanup.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
