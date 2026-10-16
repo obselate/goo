@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Runtime.CompilerServices
 
 internal class DragDropFixtures {
   func ThresholdNegotiationTargetingAndClickContract() bool {
@@ -602,6 +603,7 @@ internal class DragDropFixtures {
       input.Drain(root, resolver, 0.0, nil)
     }
 
+  @MethodImpl(MethodImplOptions.NoInlining)
   private func throwAfterDragReset() {
     throw InvalidOperationException("drag move")
   }
