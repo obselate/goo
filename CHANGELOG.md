@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Approximate rounded SVG rectangle corners with the same ellipse conversion and tolerance as circles.
+
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.
