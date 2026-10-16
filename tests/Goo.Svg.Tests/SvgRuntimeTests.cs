@@ -129,6 +129,27 @@ public sealed class SvgRuntimeTests
         Assert.Equal(clips, asset.ClipCount);
     }
 
+    [Fact]
+    public void LongGradientInheritanceResolvesWithoutRecursion()
+    {
+        var source = new StringBuilder("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><defs>");
+        for (var index = 0; index < 50000; index++)
+        {
+            source.Append($"<linearGradient id=\"g{index}\" href=\"#g{index + 1}\"/>");
+        }
+        source.Append("<linearGradient id=\"g50000\"><stop offset=\"0\" stop-color=\"red\"/><stop offset=\"1\" stop-color=\"blue\"/></linearGradient></defs><path d=\"M0 0 L10 0 L10 10 Z\" fill=\"url(#g0)\"/></svg>");
+
+        Assert.Equal(1, Svg.Parse(source.ToString()).PaintCount);
+    }
+
+    [Fact]
+    public void GradientInheritanceCycleIsRejected()
+    {
+        const string source = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><defs><linearGradient id=\"a\" href=\"#b\"/><linearGradient id=\"b\" href=\"#a\"/></defs><path d=\"M0 0 L10 0 L10 10 Z\" fill=\"url(#a)\"/></svg>";
+
+        Assert.Contains("cycle", Assert.Throws<SvgParseException>(() => Svg.Parse(source)).Message);
+    }
+
     private static string SamplePath(string fileName)
     {
         return Path.Combine(AppContext.BaseDirectory, "Assets", fileName);

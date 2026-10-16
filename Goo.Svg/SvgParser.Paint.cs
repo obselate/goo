@@ -138,19 +138,30 @@ internal sealed partial class SvgParser
 
     private SvgGradientDefinition ResolveGradient(string id, XElement owner, HashSet<string> stack)
     {
-        if (!gradients.TryGetValue(id, out var definition))
+        var chain = new List<SvgGradientDefinition>();
+        while (true)
         {
-            throw Fail(owner, $"gradient '#{id}' was not found");
+            if (!gradients.TryGetValue(id, out var current))
+            {
+                throw Fail(owner, $"gradient '#{id}' was not found");
+            }
+            if (!stack.Add(id))
+            {
+                throw Fail(current.Element, "gradient references form a cycle");
+            }
+            chain.Add(current);
+            var href = GetHref(current.Element);
+            if (href is null)
+            {
+                break;
+            }
+            id = href;
         }
-        if (!stack.Add(id))
+        var definition = chain[^1];
+        for (var index = chain.Count - 2; index >= 0; index--)
         {
-            throw Fail(definition.Element, "gradient references form a cycle");
-        }
-        var href = GetHref(definition.Element);
-        if (href is not null)
-        {
-            var baseDefinition = ResolveGradient(href, owner, stack);
-            var merged = new XElement(definition.Element);
+            var baseDefinition = definition;
+            var merged = new XElement(chain[index].Element);
             foreach (var attribute in baseDefinition.Element.Attributes())
             {
                 if (merged.Attribute(attribute.Name) is null)
@@ -167,7 +178,6 @@ internal sealed partial class SvgParser
             }
             definition = new SvgGradientDefinition(merged);
         }
-        stack.Remove(id);
         return definition;
     }
 
