@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Layout transitions respect the motion time scale and settle when motion is disabled.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
