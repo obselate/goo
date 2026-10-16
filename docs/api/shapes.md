@@ -77,7 +77,7 @@ Returns: This builder.
 
 ### `Build`
 
-Builds the immutable path and seals this builder.
+Builds an immutable snapshot while allowing further commands and builds.
 
 Returns: The completed vector path.
 
@@ -140,7 +140,7 @@ Returns: This builder.
 
 ### `Reset`
 
-Clears the commands and reopens this builder while retaining its view box and storage. Previously built paths remain immutable. Each Build still copies the commands.
+Clears the commands and contour while retaining the view box and storage for continued use. Previously built paths remain immutable. Each Build copies the commands.
 
 Returns: This builder.
 
