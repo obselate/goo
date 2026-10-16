@@ -734,21 +734,19 @@ class DiagnosticSession {
         }
         if message.Kind == DiagnosticMessageKind.Selection {
             let selection = DiagnosticWire.ParseSelection(message.Payload)
-            if selection.SelectedId != "" {
-                let selected = selection.SelectedId
-                selectedNodeId = selected
+            if selection.HasSelectedId {
+                selectedNodeId = selection.SelectedId
             }
-            if selection.HoveredId != "" {
-                let hovered = selection.HoveredId
-                hoveredNodeId = hovered
+            if selection.HasHoveredId {
+                hoveredNodeId = selection.HoveredId
             }
+            EnsureSelection()
             return
         }
         if message.Kind == DiagnosticMessageKind.Hover {
             let selection = DiagnosticWire.ParseSelection(message.Payload)
-            if selection.HoveredId != "" {
-                let hovered = selection.HoveredId
-                hoveredNodeId = hovered
+            if selection.HasHoveredId {
+                hoveredNodeId = selection.HoveredId
             }
             return
         }
@@ -827,12 +825,13 @@ class DiagnosticSession {
         }
         if message.Command == "select" || message.Command == "inspect.select" {
             let selection = DiagnosticWire.ParseSelection(message.Payload)
-            if selection.SelectedId != "" {
+            if selection.HasSelectedId {
                 selectedNodeId = selection.SelectedId
             }
-            if selection.HoveredId != "" {
+            if selection.HasHoveredId {
                 hoveredNodeId = selection.HoveredId
             }
+            EnsureSelection()
             return
         }
         if message.Command == "clear" || message.Command == "inspect.clear" {
@@ -895,13 +894,11 @@ class DiagnosticSession {
         if snapshot.WindowId != "" {
             selectedWindowId = snapshot.WindowId
         }
-        if snapshot.SelectedId != "" {
-            let selected = snapshot.SelectedId
-            selectedNodeId = selected
+        if snapshot.Full || snapshot.HasSelectedId {
+            selectedNodeId = snapshot.SelectedId
         }
-        if snapshot.HoveredId != "" {
-            let hovered = snapshot.HoveredId
-            hoveredNodeId = hovered
+        if snapshot.Full || snapshot.HasHoveredId {
+            hoveredNodeId = snapshot.HoveredId
         }
         EnsureSelection()
         AppendLog(
@@ -1035,13 +1032,11 @@ class DiagnosticSession {
                 }
             }
         }
-        if snapshot.SelectedId != "" {
-            let selected = snapshot.SelectedId
-            selectedNodeId = selected
+        if snapshot.HasSelectedId {
+            selectedNodeId = snapshot.SelectedId
         }
-        if snapshot.HoveredId != "" {
-            let hovered = snapshot.HoveredId
-            hoveredNodeId = hovered
+        if snapshot.HasHoveredId {
+            hoveredNodeId = snapshot.HoveredId
         }
         EnsureSelection()
         AppendLog(DiagnosticWire.Clock(), "debug", "reconcile", "Applied remote tree delta")
@@ -1321,7 +1316,7 @@ class DiagnosticSession {
             selectedWindowId = windows[0].Id
         }
         if FindNode(selectedNodeId) == nil {
-            selectedNodeId = SelectedWindow().Root.Id
+            selectedNodeId = ""
         }
     }
 
