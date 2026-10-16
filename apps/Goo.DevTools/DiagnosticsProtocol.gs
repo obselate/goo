@@ -740,7 +740,6 @@ class DiagnosticSession {
             if selection.HasHoveredId {
                 hoveredNodeId = selection.HoveredId
             }
-            EnsureSelection()
             return
         }
         if message.Kind == DiagnosticMessageKind.Hover {
@@ -831,7 +830,6 @@ class DiagnosticSession {
             if selection.HasHoveredId {
                 hoveredNodeId = selection.HoveredId
             }
-            EnsureSelection()
             return
         }
         if message.Command == "clear" || message.Command == "inspect.clear" {
@@ -1315,8 +1313,8 @@ class DiagnosticSession {
         if !hasWindow {
             selectedWindowId = windows[0].Id
         }
-        if FindNode(selectedNodeId) == nil {
-            selectedNodeId = ""
+        if selectedNodeId != "" && FindNode(selectedNodeId) == nil {
+            selectedNodeId = SelectedWindow().Root.Id
         }
     }
 
