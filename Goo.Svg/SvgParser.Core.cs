@@ -11,6 +11,9 @@ internal sealed partial class SvgParser
     private const int MaxPaints = 65536;
     private const int MaxStrokes = 65536;
     private const int MaxRenderDepth = 1024;
+    private const int MaxAnimationTracks = 65536;
+    private const int MaxAnimationKeyframes = 262144;
+    private const int MaxMorphCurves = 262144;
     private const double QuadraticTolerance = 0.0001;
 
     private readonly Dictionary<string, SvgGradientDefinition> gradients = new(StringComparer.Ordinal);
@@ -18,6 +21,9 @@ internal sealed partial class SvgParser
     private readonly HashSet<string> ids = new(StringComparer.Ordinal);
     private readonly List<SvgNode> nodes = [];
     private int reservedCurveCount;
+    private int reservedAnimationTracks;
+    private int reservedAnimationKeyframes;
+    private long reservedMorphCurves;
     private double viewBoxX;
     private double viewBoxY;
     private double viewBoxWidth;

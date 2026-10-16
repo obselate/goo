@@ -101,8 +101,8 @@ internal sealed partial class SvgParser
             {
                 return (uint)existing;
             }
-            if (animationTracks.Count >= 65536 || animation.Keyframes.Count == 0
-                || animation.Keyframes.Count > 262144 - keyframes.Count)
+            if (animationTracks.Count >= MaxAnimationTracks || animation.Keyframes.Count == 0
+                || animation.Keyframes.Count > MaxAnimationKeyframes - keyframes.Count)
             {
                 throw new SvgParseException("animation track limit exceeded");
             }
@@ -115,7 +115,7 @@ internal sealed partial class SvgParser
                 {
                     var source = keyframe.MorphCurves
                         ?? throw new SvgParseException("morph keyframe has no target curves");
-                    if (source.Count == 0 || source.Count > 262144 - morphCurves.Count)
+                    if (source.Count == 0 || source.Count > MaxMorphCurves - morphCurves.Count)
                     {
                         throw new SvgParseException("morph curve limit exceeded");
                     }
