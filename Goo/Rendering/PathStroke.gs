@@ -373,6 +373,7 @@ internal sealed class PathStrokeCache {
     if leftCount == 0 || rightCount == 0 {
       return leftCount == rightCount
     }
+    if leftCount != rightCount { return false }
     guard let leftValue = left else { return false }
     guard let rightValue = right else { return false }
     if leftValue.Offset != rightValue.Offset {

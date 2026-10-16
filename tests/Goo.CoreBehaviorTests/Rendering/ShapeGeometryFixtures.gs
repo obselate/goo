@@ -85,6 +85,29 @@ internal class ShapeGeometryFixtures {
       && trimmed.CommandCount == complete.CommandCount
   }
 
+  func DashCountChangesDoNotReuseStrokeOutlines() bool {
+    let path = PathBuilder(0.0, 0.0, 100.0, 20.0)
+      .MoveTo(0.0, 10.0).LineTo(100.0, 10.0).Build()
+    let mapping = PathGeometry.Map(path, ShapeFit.Fill, 0.0F, 0.0F, 100.0F, 20.0F)
+    let shortDash = DashPattern([]float64{ 5.0, 5.0 }, 0.0)
+    let longDash = DashPattern([]float64{ 5.0, 5.0, 2.0, 2.0 }, 0.0)
+    let growing = PathStrokeCache()
+    let shortOutline = growing.Resolve(path, mapping, 2.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, shortDash, 0.0, 1.0)
+    let longOutline = growing.Resolve(path, mapping, 2.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, longDash, 0.0, 1.0)
+    let shrinking = PathStrokeCache()
+    let initial = shrinking.Resolve(path, mapping, 2.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, longDash, 0.0, 1.0)
+    let replacement = shrinking.Resolve(path, mapping, 2.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, shortDash, 0.0, 1.0)
+
+    return !Object.ReferenceEquals(shortOutline.payload, longOutline.payload)
+      && !Object.ReferenceEquals(initial.payload, replacement.payload)
+      && PathGeometry.For(shortOutline).ContourCount == 10
+      && PathGeometry.For(longOutline).ContourCount == 15
+  }
+
   func DashPhaseAndTrimReuseFlattenedContours() bool {
     let path = PathBuilder(0.0, 0.0, 100.0, 20.0)
       .MoveTo(10.0, 10.0).QuadraticTo(50.0, 0.0, 90.0, 10.0).Build()
