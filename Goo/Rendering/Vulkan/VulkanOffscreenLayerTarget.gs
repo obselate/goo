@@ -535,10 +535,11 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       EvictIdle(created.Bytes, completedSerial)
     }
     if created.Bytes > byteBudget || NeedsBudgetPressure(created.Bytes) {
+      let bytes = created.Bytes
       created.Dispose()
       let available = residentBytes <= byteBudget ? byteBudget - residentBytes : 0uL
-      RecordPressureFailure(uint64(created.Bytes), uint64(available))
-      RecordFailure(uint64(created.Bytes), residentBytes)
+      RecordPressureFailure(uint64(bytes), uint64(available))
+      RecordFailure(uint64(bytes), residentBytes)
       throw InvalidOperationException("Vulkan layer target exceeds byte budget")
     }
     targets[index] = created
@@ -945,6 +946,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
   }
 
   private func RetireTarget(index int32, target VulkanOffscreenLayerTarget) {
+    let bytes = target.Bytes
     if residentBytes >= target.Bytes {
       residentBytes = residentBytes - target.Bytes
     } else {
@@ -957,7 +959,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     if let current = diagnostics {
       current.AddLayerPoolEviction(1uL)
       RecordLayerEvent(current, VulkanDiagnosticEventIds.LayerEvict,
-        VulkanDiagnosticCategories.Resource, uint64(index), uint64(target.Bytes))
+        VulkanDiagnosticCategories.Resource, uint64(index), uint64(bytes))
     }
   }
 
