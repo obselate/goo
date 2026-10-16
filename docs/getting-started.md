@@ -1,8 +1,7 @@
 # After the counter
 
-Verified 2026-10-16 with .NET SDK 10.0.401, Gsharp.NET.Sdk 0.4.1150 and
-Goo/Goo.Svg 0.7.35 on Linux x64. Start with the [template counter](../README.md#quick-start).
-No source checkout or shader tools are needed.
+For Gsharp.NET.Sdk 0.4.1150 and Goo/Goo.Svg 0.7.35.
+Start with the [template counter](../README.md#quick-start).
 
 ## 1. Separate a second Cell
 
@@ -113,7 +112,7 @@ own subscriptions or resources. Do not call a child's `Build()` to mount it.
    [native composition](native-authoring.md).
 2. Try [edit and inspect](edit-and-inspect.md).
 3. Use the [SVG loader](../Goo.Svg/README.md) for file/stream loading and
-   [asset and build recipes](build-recipes.md) for deployed files and fonts.
+   [images guide](images.md) for asset handling.
 4. Add [widgets and controlled inputs](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md).
 5. Follow [shipping](shipping.md). Use the [app-author index](README.md) for the
    remaining task and API guides.

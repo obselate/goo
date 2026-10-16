@@ -1,9 +1,7 @@
 # G# watch modes and limits
 
-For the measured SDK 0.4.1150 / Goo 0.7.35 app-author workflow, see
-[Edit and inspect](../../../../../docs/edit-and-inspect.md). That run applied a
-method delta without refreshing the rendered tree. The local patches and older
-released-package results below are separate evidence, not current-release guarantees.
+For SDK 0.4.1150 / Goo 0.7.35, see [Edit and inspect](../../../../../docs/edit-and-inspect.md).
+The local patches and older package results below are not current-release guarantees.
 
 ## Choose run or watch
 

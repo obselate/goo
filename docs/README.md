@@ -1,9 +1,7 @@
 # App-author documentation
 
-Reviewed 2026-10-16. The tested desktop baseline is .NET SDK 10.0.401,
-Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Svg/Goo.Templates/Goo.DevTools 0.7.35 and
-Goo.Widgets 0.2.19. Package versions below identify the documented baseline,
-not a promise that every repository's `main` branch matches that release.
+Baseline: Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Svg/Goo.Templates/Goo.DevTools 0.7.35
+and Goo.Widgets 0.2.19. Linked `main` branches can differ from these releases.
 
 ## Learn in order
 
@@ -14,9 +12,7 @@ not a promise that every repository's `main` branch matches that release.
 4. [Edit and inspect](edit-and-inspect.md) exercises watch, restart and DevTools.
 5. [Widgets usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md)
    covers packaged controls, controlled state and overlays.
-6. [Asset and build recipes](build-recipes.md) covers copied assets, fonts,
-   watch items and optional shaders.
-7. [Shipping](shipping.md) publishes and checks a self-contained desktop app.
+6. [Shipping](shipping.md) publishes and checks a self-contained desktop app.
 
 ## Find a task or contract
 
