@@ -295,6 +295,7 @@ public sealed class FixtureContractTests
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.GenericPlatformCommitReportsAcceptanceAfterFocusChange));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.MountedCustomContainerContract));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.NativeTextInputLifecycleContract));
+        yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.PlatformCommitsStopAfterFocusGenerationChanges));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.SameDiffKeyboardAndTextCallbacksStaySynchronized));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.StaleTextEventsDropAcrossTransfersAndFocusCycles));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.TextCallbackStateStaysAbsentUntilConfigured));

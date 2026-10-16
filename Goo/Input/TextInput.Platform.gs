@@ -125,8 +125,9 @@ internal partial class TextInput {
     if !canReceiveInput(n) { return false }
     if n.Kind == NodeKind.Editor && !n.EditorReadOnly {
       guard let controller = n.EditorController else { return false }
+      let generation = focus.Generation
       let result = controller.CommitComposition(value)
-      if result { updateTextInputArea(n) }
+      if result && generation == focus.Generation { updateTextInputArea(n) }
       return result
     }
     if n.Kind != NodeKind.Entry { return false }
@@ -150,7 +151,7 @@ internal partial class TextInput {
       updateTextInputArea(n)
       return true
     }
-    if !FinishComposition(root) { return false }
+    if !FinishComposition(root) || snapshot.FocusId != focus.Generation { return false }
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       controller.Selection = TextSelection{
@@ -161,6 +162,7 @@ internal partial class TextInput {
       let before = editState(n)
       commitEdit(root, n, before, EditState{ Text: n.Buffer, Anchor: anchor, Caret: active })
     }
+    if snapshot.FocusId != focus.Generation { return true }
     updateTextInputArea(n)
     return true
   }
@@ -168,7 +170,7 @@ internal partial class TextInput {
   internal func SetEditorCompositionRange(root Node?, start int32, end int32) bool {
     guard let snapshot = EditorSnapshot() else { return false }
     if snapshot.IsReadOnly || start < 0 || end < start || end > snapshot.Text.Length { return false }
-    if !FinishComposition(root) { return false }
+    if !FinishComposition(root) || snapshot.FocusId != focus.Generation { return false }
     if start == end { return true }
     let low = textBoundary(snapshot.Text, start, false)
     let high = textBoundary(snapshot.Text, end, true)
@@ -176,28 +178,35 @@ internal partial class TextInput {
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       let result = controller.SetPlatformCompositionRange(TextRange{ Start: low, Length: high - low })
-      if result { updateTextInputArea(n) }
+      if result && snapshot.FocusId == focus.Generation { updateTextInputArea(n) }
       return result
     }
     let before = editState(n)
     if !SetEditorSelection(root, low, high) { return false }
+    if snapshot.FocusId != focus.Generation { return false }
     if !HandleComposition(root, snapshot.Text.Substring(low, high - low), 0, high - low) {
-      SetEditorSelection(root, snapshot.SelectionStart, snapshot.SelectionEnd)
+      if snapshot.FocusId == focus.Generation {
+        SetEditorSelection(root, snapshot.SelectionStart, snapshot.SelectionEnd)
+      }
       return false
     }
+    if snapshot.FocusId != focus.Generation { return false }
     entryCompositionBefore = before
     return SetEditorSelection(root, snapshot.SelectionStart, snapshot.SelectionEnd)
   }
 
   internal func FinishComposition(root Node?) bool {
     guard let n = focus.FocusedNode() else { return false }
+    let generation = focus.Generation
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       if controller.Composition == nil { return true }
       if n.EditorReadOnly { return false }
       guard let snapshot = EditorSnapshot() else { return false }
       let result = controller.CommitComposition()
-      if result { SetEditorSelection(root, snapshot.SelectionStart, snapshot.SelectionEnd) }
+      if result && generation == focus.Generation {
+        SetEditorSelection(root, snapshot.SelectionStart, snapshot.SelectionEnd)
+      }
       return result
     }
     if n.Kind != NodeKind.Entry { return false }
@@ -207,7 +216,7 @@ internal partial class TextInput {
     let active = n.Caret
     cancelEntryComposition(n)
     commitEdit(root, n, before, replaceEntryComposition(before, current, current.Text))
-    SetEditorSelection(root, anchor, active)
+    if generation == focus.Generation { SetEditorSelection(root, anchor, active) }
     return true
   }
 
@@ -226,18 +235,22 @@ internal partial class TextInput {
       return deleteAroundComposition(root, n, current, start, low, high, end)
     }
     if !SetEditorSelection(root, start, end) { return false }
+    if current.FocusId != focus.Generation { return false }
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       if !controller.Execute(TextCommand {
         Kind: selected.Length == 0 ? TextCommandKind.DeleteBackward : TextCommandKind.Insert,
         Text: selected }) {
-          SetEditorSelection(root, current.SelectionStart, current.SelectionEnd)
+          if current.FocusId == focus.Generation {
+            SetEditorSelection(root, current.SelectionStart, current.SelectionEnd)
+          }
           return false
         }
     } else {
       let before = editState(n)
       commitEdit(root, n, before, Edit().Insert(before, selected))
     }
+    if current.FocusId != focus.Generation { return true }
     let anchor = current.SelectionStart <= current.SelectionEnd ? start : start + selected.Length
     let active = current.SelectionStart <= current.SelectionEnd ? start + selected.Length : start
     return SetEditorSelection(root, anchor, active)
@@ -306,11 +319,11 @@ internal partial class TextInput {
           if changed { n.OnChange?.Invoke(committed) }
         } finally {
           owner?.Rebuild()
-          updateTextInputArea(n)
+          if snapshot.FocusId == focus.Generation { updateTextInputArea(n) }
         }
         return true
       }
-      updateTextInputArea(n)
+      if snapshot.FocusId == focus.Generation { updateTextInputArea(n) }
       return true
     }
 

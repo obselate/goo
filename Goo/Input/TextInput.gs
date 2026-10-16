@@ -345,13 +345,16 @@ internal partial class TextInput {
       ? TextAffinity.Downstream : TextAffinity.Upstream
     }
     n.BlinkT = 0.0
+    let generation = focus.Generation
     let callback = after.Text != before.Text ? n.OnChange : nil
     let owner = callback != nil ? CellOwnership.Within(root, n) : nil
     try { callback?.Invoke(after.Text) }
     finally {
       owner?.Rebuild()
-      FollowCaret(n)
-      updateTextInputArea(n)
+      if generation == focus.Generation {
+        FollowCaret(n)
+        updateTextInputArea(n)
+      }
     }
   }
 
