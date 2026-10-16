@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Retain SVG strokes with zero initial width when their animation produces a visible width.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
