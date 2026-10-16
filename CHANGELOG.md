@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Remove temporary fling log writes from Gallery pointer handlers.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
