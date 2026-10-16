@@ -74,6 +74,7 @@ internal partial class Resolver {
   private let pending List[Node]
   internal let Scrollbars ScrollbarParts = ScrollbarParts()
   private let inheritedScratch []StyleEntry
+  private let layerWinners []int32 = [StyleFields.Count]int32
   private var pendingCursor int32
   private var stylePass int64
   internal var VisualDirty bool
@@ -281,6 +282,18 @@ internal partial class Resolver {
 
   internal func applyList(n Node, entries StyleEntries?, mask StyleMask, initial bool, shadow StyleMask) StyleMask {
     guard let list = entries else { return mask }
+    for i in 0 ... list.Count {
+      let field = list.At(i).Field
+      if !styleFieldApplies(n, field) { continue }
+      if field == StyleField.Margin || field == StyleField.Padding {
+        let edges = field == StyleField.Margin ? marginEdges : paddingEdges
+        for edge in edges {
+          layerWinners[int32(edge)] = i
+        }
+      } else {
+        layerWinners[int32(styleFieldForNode(n, field))] = i
+      }
+    }
     var m = mask
     for i in 0 ... list.Count {
       var e = list.At(i)
@@ -293,14 +306,15 @@ internal partial class Resolver {
         continue
       }
       if e.Field == StyleField.Margin {
-        m = applyCanonicalBoxEdges(n, e, m, initial, shadow, marginEdges)
+        m = applyCanonicalBoxEdges(n, e, m, initial, shadow, marginEdges, i)
         continue
       }
       if e.Field == StyleField.Padding {
-        m = applyCanonicalBoxEdges(n, e, m, initial, shadow, paddingEdges)
+        m = applyCanonicalBoxEdges(n, e, m, initial, shadow, paddingEdges, i)
         continue
       }
       e.Field = styleFieldForNode(n, e.Field)
+      if layerWinners[int32(e.Field)] != i { continue }
       m = styleMaskWith(m, e.Field)
       if !styleMaskHas(shadow, e.Field) {
         writeField(n, e, initial || logical)
@@ -310,9 +324,10 @@ internal partial class Resolver {
   }
 
   private func applyCanonicalBoxEdges(n Node, source StyleEntry, mask StyleMask,
-    initial bool, shadow StyleMask, edges []StyleField) StyleMask{
+    initial bool, shadow StyleMask, edges []StyleField, index int32) StyleMask{
       var m = mask
       for f in edges {
+        if layerWinners[int32(f)] != index { continue }
         m = applyCanonicalBoxEdge(n, source, m, initial, shadow, f)
       }
       return m
