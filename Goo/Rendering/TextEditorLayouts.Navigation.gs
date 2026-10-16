@@ -393,7 +393,7 @@ internal partial class TextEditorLayouts {
       }
 
     internal func MoveVertical(n Node, position TextPosition, desiredX float32,
-      delta int32, page bool = false) TextPosition? {
+      delta int32, page bool) TextPosition? {
         let layout = For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
         let current = lineIndexForPosition(layout, position)
         if current < 0 || layout.Lines.Count == 0 { return nil }
@@ -405,13 +405,15 @@ internal partial class TextEditorLayouts {
           let snapshot = state.Document.Snapshot()
           var index = snapshot.GetLineIndex(source.Paragraph.Source.Start)
           var movingUp = false
+          let projections = editorProjections(state, layout.ParagraphWidth, layout.HeightConstraint)
+          let styles = editorStyles(state, layout.LayerRevision)
           while true {
             let sourceRange = snapshot.GetLineRange(index)
             var paragraph = state.Paragraph(sourceRange, layout.ParagraphWidth,
               layout.FontFingerprint, layout.LineHeight, layout.Ascent, layout.Descent)
             if paragraph == nil {
               paragraph = paragraphLayout(n, state, snapshot, index,
-                editorProjections(state, layout.ParagraphWidth, layout.HeightConstraint), editorStyles(state, layout.LayerRevision),
+                projections, styles,
                 layout.ParagraphWidth, layout.FontFingerprint, layout.LineHeight, layout.Ascent, layout.Descent)
               state.AddParagraph(paragraph)
             }

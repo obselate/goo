@@ -89,6 +89,7 @@ public class TextEditorController : IDisposable {
   shared {
     private const HeadlessPageLines int32 = 10
   }
+
   private let document TextDocument
   private var selection TextSelection
   private var composition TextComposition?
