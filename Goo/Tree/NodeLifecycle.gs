@@ -47,7 +47,13 @@ internal class NodeLifecycle {
       BackgroundImageLayouts.Dispose(n)
       ShaderEffectStyles.Dispose(n)
       LayoutTransitions.Dispose(n)
-      Virtualization.Dispose(n)
+      try {
+        Virtualization.Dispose(n)
+      } catch (error Exception) {
+        if firstError == nil {
+          firstError = error
+        }
+      }
       for i in 0 ... n.Children.Count {
         if let error = disposeTree(n.Children[i]) {
           if firstError == nil {

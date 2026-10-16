@@ -201,12 +201,13 @@ internal sealed class VirtualNodeState {
       owner.ScrollTargetX = pendingTargetX
       owner.ScrollTargetY = pendingTargetY
     }
-    if let previous = current {
-      if previous != state { previous.Dispose() }
-    }
+    let previous = current
     current = state
     pending = nil
     pendingOwner = nil
+    if let previous = previous {
+      if previous != state { previous.Dispose() }
+    }
   }
 
   internal func Cancel() {
@@ -302,8 +303,8 @@ internal class Virtualization {
 
     internal func Dispose(n Node) {
       if let state = State(n) {
-        state.Dispose()
         values.Remove(n)
+        state.Dispose()
       }
     }
   }

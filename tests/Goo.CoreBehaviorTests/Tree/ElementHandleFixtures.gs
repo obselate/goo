@@ -4,6 +4,36 @@ import System
 import System.Collections.Generic
 
 internal class ElementHandleFixtures {
+  func ThrowingVirtualDisposalContract() bool {
+    let node = Node{}
+    let owner = VirtualNodeState()
+    let first = ThrowingVirtualFixtureState{ Fail: true }
+    let second = ThrowingVirtualFixtureState{}
+    owner.Prepare(node, ThrowingVirtualFixtureSource{ Value: first }, false)
+    owner.Commit()
+    owner.Prepare(node, ThrowingVirtualFixtureSource{ Value: second }, false)
+    try { owner.Commit() } catch (error InvalidOperationException) {
+      if error != first.Failure { return false }
+    }
+    owner.Cancel()
+    if second.Commits != 1 || second.Disposals != 0 { return false }
+    owner.Dispose()
+    if second.Disposals != 1 { return false }
+    let parent = Node{}
+    let child = Node{ Parent: parent }
+    let sibling = Node{ Parent: parent }
+    parent.Children.Add(child)
+    parent.Children.Add(sibling)
+    let attached = Virtualization.Configure(parent)
+    attached.Prepare(parent, ThrowingVirtualFixtureSource{ Value: first }, false)
+    attached.Commit()
+    var failed = false
+    try { NodeLifecycle.DisposeTree(parent) } catch (error InvalidOperationException) {
+      failed = error == first.Failure
+    }
+    return failed && child.Retired && sibling.Retired && Virtualization.State(parent) == nil
+  }
+
   func LifecycleContract() bool {
     let owner = Window{}
     let handle = ElementHandle{}
@@ -743,4 +773,23 @@ internal class VirtualFixtureState : VirtualState {
 
   private func last(bottom float64, count int32, from int32) int32 ->
   Math.Clamp(int32(Math.Ceiling(bottom / 20.0)) + 1, from, count)
+}
+
+internal class ThrowingVirtualFixtureSource : VirtualSource {
+  internal var Value VirtualState
+  public func State(current VirtualState?) VirtualState -> Value
+}
+
+internal class ThrowingVirtualFixtureState : VirtualState {
+  internal var Fail bool
+  internal var Commits int32
+  internal var Disposals int32
+  internal let Failure InvalidOperationException = InvalidOperationException("retire failed")
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) { }
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+  public override func Commit() { Commits++ }
+  public override func Dispose() {
+    Disposals++
+    if Fail { throw Failure }
+  }
 }
