@@ -1330,15 +1330,10 @@ class DiagnosticSession {
     }
 
     private func CountNodesIn(node DiagnosticTreeNode, visited HashSet[string]) int32 {
-        if node.Id == "" {
+        if node.Id == "" || visited.Contains(node.Id) {
             return 0
         }
-        if node.Id != "" {
-            if visited.Contains(node.Id) {
-                return 0
-            }
-            visited.Add(node.Id)
-        }
+        visited.Add(node.Id)
         var count int32 = 1
         for child in node.Children {
             count = count + CountNodesIn(child, visited)
