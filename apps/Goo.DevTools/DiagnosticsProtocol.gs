@@ -865,8 +865,8 @@ class DiagnosticSession {
         } else {
             "Remote target"
         }
+        windows.Clear()
         if snapshot.Windows.Count != 0 {
-            windows.Clear()
             for wireWindow in snapshot.Windows {
                 if let root = wireWindow.Root {
                     windows.Add(
@@ -884,10 +884,9 @@ class DiagnosticSession {
                     )
                 }
             }
-        } else if snapshot.Nodes.Count != 0 {
-            let window = BuildWindow(snapshot, fallbackTitle)
-            windows.Clear()
-            windows.Add(window)
+        }
+        if windows.Count == 0 {
+            windows.Add(BuildWindow(snapshot, fallbackTitle))
         }
         if snapshot.WindowId != "" {
             selectedWindowId = snapshot.WindowId
@@ -1041,7 +1040,7 @@ class DiagnosticSession {
     }
 
     private func IsPlaceholderWindow(window DiagnosticWindow) bool -> window.Id == "disconnected"
-    || window.Root.Id == "disconnected-root"
+    || window.Root.Id == "disconnected-root" || window.Root.Id == ""
 
     private func EnsureDetachedNode(
         wireNode DiagnosticWireNode,
@@ -1094,8 +1093,7 @@ class DiagnosticSession {
         if root == nil && snapshot.Nodes.Count != 0 {
             root = nodes[snapshot.Nodes[0].Id]
         }
-        let actualRoot = root ??
-            DiagnosticTreeNode("root", "ScreenPanel", "Remote root", "", "", "", "", "", "", "", "", "", "")
+        let actualRoot = root ?? DiagnosticTreeNode("", "", "No root", "", "", "", "", "", "", "", "", "", "")
         return DiagnosticWindow(
             if snapshot.WindowId == "" {
                 "remote-window"
@@ -1332,12 +1330,10 @@ class DiagnosticSession {
     }
 
     private func CountNodesIn(node DiagnosticTreeNode, visited HashSet[string]) int32 {
-        if node.Id != "" {
-            if visited.Contains(node.Id) {
-                return 0
-            }
-            visited.Add(node.Id)
+        if node.Id == "" || visited.Contains(node.Id) {
+            return 0
         }
+        visited.Add(node.Id)
         var count int32 = 1
         for child in node.Children {
             count = count + CountNodesIn(child, visited)
@@ -1364,6 +1360,9 @@ class DiagnosticSession {
 
     func VisibleRows() List[DiagnosticTreeRow] {
         let result = List[DiagnosticTreeRow]()
+        if SelectedWindow().Root.Id == "" {
+            return result
+        }
         appendRows(SelectedWindow().Root, 0, result)
         return result
     }

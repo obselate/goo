@@ -7,6 +7,8 @@ import System.Collections.Generic
 import System.Threading
 
 class DevToolsCell : Cell {
+    private const NoRootMessage string = "The target has no root."
+
     private let session DiagnosticSession
     private var window Window?
     private var wakePending int32
@@ -581,6 +583,8 @@ class DevToolsCell : Cell {
                         Key: "tree-empty-text",
                         Content: if session.State != DiagnosticConnectionState.Connected {
                             "Connect to an app to see its elements."
+                        } else if session.SelectedWindow().Root.Id == "" {
+                            NoRootMessage
                         } else {
                             "No elements match your search."
                         },
@@ -976,65 +980,71 @@ class DevToolsCell : Cell {
         tabButtons.Add(BuildTabButton(DiagnosticDetailsTab.Layout, "Layout"))
         let node = session.SelectedNode()
         let details = List[Blob]()
-        details.Add(BuildDetails(node))
-        if session.ActiveTab == DiagnosticDetailsTab.Configuration {
+        if node.Id == "" {
+            details.Add(
+                Text{Key: "inspector-empty", Content: NoRootMessage, FontSize: 12, Color: DevToolsTheme.InkMuted,}
+            )
+        } else {
+            details.Add(BuildDetails(node))
+            if session.ActiveTab == DiagnosticDetailsTab.Configuration {
+                details.Add(
+                    Container{
+                        Key: "style-editor-toggle",
+                        FlexDirection: FlexDirection.Row,
+                        Padding: Edges{Top: 6},
+                        ActionButton(
+                            "overrides-toggle",
+                            if showOverrides {
+                                "Hide style editor"
+                            } else {
+                                "Edit style..."
+                            },
+                            DevToolsTheme.SurfaceRaised,
+                            DevToolsTheme.Ink,
+                            () -> {
+                                showOverrides = !showOverrides
+                                Rebuild()
+                            }
+                        ),
+                    }
+                )
+                if showOverrides {
+                    details.Add(BuildOverridePanel())
+                }
+            }
             details.Add(
                 Container{
-                    Key: "style-editor-toggle",
-                    FlexDirection: FlexDirection.Row,
-                    Padding: Edges{Top: 6},
+                    Key: "advanced-section",
+                    Width: Percent(100),
+                    Margin: Edges{Top: 16},
+                    Gap: 8,
+                    BorderWidth: Edges{Top: 1},
+                    BorderColor: Edges[Color]{Top: DevToolsTheme.Border},
+                    Padding: Edges{Top: 8},
+                    FlexDirection: FlexDirection.Column,
                     ActionButton(
-                        "overrides-toggle",
-                        if showOverrides {
-                            "Hide style editor"
+                        "advanced-toggle",
+                        if showAdvanced {
+                            "Hide advanced details"
                         } else {
-                            "Edit style..."
+                            "Advanced details..."
                         },
-                        DevToolsTheme.SurfaceRaised,
-                        DevToolsTheme.Ink,
+                        DevToolsTheme.Surface,
+                        DevToolsTheme.InkMuted,
                         () -> {
-                            showOverrides = !showOverrides
+                            showAdvanced = !showAdvanced
                             Rebuild()
                         }
                     ),
                 }
             )
-            if showOverrides {
-                details.Add(BuildOverridePanel())
+            if showAdvanced {
+                details.Add(DetailRow("computed", "Computed style", ReadableReport(node.Computed)))
+                details.Add(DetailRow("state", "State", Reported(node.State)))
+                details.Add(DetailRow("events", "Events", Reported(node.Events)))
+                details.Add(DetailRow("accessibility", "Accessibility", Reported(node.Accessibility)))
+                details.Add(DetailRow("changes", "Changes", Reported(node.Changes)))
             }
-        }
-        details.Add(
-            Container{
-                Key: "advanced-section",
-                Width: Percent(100),
-                Margin: Edges{Top: 16},
-                Gap: 8,
-                BorderWidth: Edges{Top: 1},
-                BorderColor: Edges[Color]{Top: DevToolsTheme.Border},
-                Padding: Edges{Top: 8},
-                FlexDirection: FlexDirection.Column,
-                ActionButton(
-                    "advanced-toggle",
-                    if showAdvanced {
-                        "Hide advanced details"
-                    } else {
-                        "Advanced details..."
-                    },
-                    DevToolsTheme.Surface,
-                    DevToolsTheme.InkMuted,
-                    () -> {
-                        showAdvanced = !showAdvanced
-                        Rebuild()
-                    }
-                ),
-            }
-        )
-        if showAdvanced {
-            details.Add(DetailRow("computed", "Computed style", ReadableReport(node.Computed)))
-            details.Add(DetailRow("state", "State", Reported(node.State)))
-            details.Add(DetailRow("events", "Events", Reported(node.Events)))
-            details.Add(DetailRow("accessibility", "Accessibility", Reported(node.Accessibility)))
-            details.Add(DetailRow("changes", "Changes", Reported(node.Changes)))
         }
         return Container{
             Key: "inspector",
