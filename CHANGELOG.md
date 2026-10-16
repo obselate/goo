@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Keep locally handled Gallery keys from paging the showcase.
+
 ## 0.7.35 - 2026-10-16
 
 - Allow `FocusScope.Dispose(false)` to close a scope without restoring prior focus, including when nested scopes close later.

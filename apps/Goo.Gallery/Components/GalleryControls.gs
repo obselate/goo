@@ -103,18 +103,22 @@ class GalleryRange : Cell {
     private func applyKeys(e KeyEvent) {
         if e.Key == Key.Left {
             e.PreventDefault()
+            e.StopPropagation()
             SetValue(Value - stride())
         } else {
             if e.Key == Key.Right {
                 e.PreventDefault()
+                e.StopPropagation()
                 SetValue(Value + stride())
             } else {
                 if e.Key == Key.Home {
                     e.PreventDefault()
+                    e.StopPropagation()
                     SetValue(MinValue)
                 } else {
                     if e.Key == Key.End {
                         e.PreventDefault()
+                        e.StopPropagation()
                         SetValue(MaxValue)
                     }
                 }

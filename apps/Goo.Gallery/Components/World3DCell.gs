@@ -338,6 +338,7 @@ class World3DCell : Cell {
             OnKeyDown: func (e KeyEvent) {
                 if keyHandled(e.Key) {
                     e.PreventDefault()
+                    e.StopPropagation()
                     if e.Key == Key.R {
                         if state.IsTerminal() {
                             simulation.Reset()
