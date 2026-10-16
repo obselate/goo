@@ -4,6 +4,40 @@ import System
 import System.Collections.Generic
 
 internal class InputFixtures {
+  func KeyRepeatUsesCurrentModifiersWithoutRestartingDelay() bool {
+    let resolver = Resolver{}
+    let focus = FocusManager()
+    let queue = InputEventQueue()
+    let keyboard = KeyboardInput(focus, queue)
+    let pointer = PointerInput(focus, queue)
+    let text = TextInput(focus)
+    var words int32
+    var characters int32
+    let root = Reconciler{ Res: resolver }.Mount(Container{
+      Focusable: true,
+      KeyBindings: []KeyBinding{
+        KeyBinding{ Key: Key.Backspace, Modifiers: KeyModifiers{ Ctrl: true },
+          Repeat: true, Action: () -> { words++ } },
+        KeyBinding{ Key: Key.Backspace, Repeat: true, Action: () -> { characters++ } },
+      },
+    })
+    focus.SetFocus(resolver, root)
+    keyboard.Dispatch(KeyboardEvent{ Kind: KeyboardEventKind.Press, Key: Key.Backspace,
+      Modifiers: KeyModifiers{ Ctrl: true } }, root, resolver, text, nil, 0, pointer)
+    keyboard.Step(0.3, 0)
+    keyboard.Dispatch(KeyboardEvent{ Kind: KeyboardEventKind.Release, Key: Key.ControlLeft },
+      root, resolver, text, nil, 0, pointer)
+    keyboard.Step(0.11, 0)
+    if words != 1 || characters != 1 { return false }
+    keyboard.Dispatch(KeyboardEvent{ Kind: KeyboardEventKind.Press, Key: Key.ControlLeft,
+      Modifiers: KeyModifiers{ Ctrl: true } }, root, resolver, text, nil, 0, pointer)
+    keyboard.Step(0.04, 0)
+    if words != 2 || characters != 1 { return false }
+    focus.SetFocus(resolver, nil)
+    keyboard.Step(0.5, 0)
+    return words == 2 && characters == 1
+  }
+
   func TransformRoutesHitsAndLocalPositions() bool {
     let events = List[string]()
     let tree = Reconciler{ Res: Resolver{} }.Mount(Container{
