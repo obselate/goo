@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Keep style transitions progressing when a layer repeats or overrides a declaration.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
