@@ -9,6 +9,44 @@ internal class MotionFixtures {
     pump = MotionPump()
   }
 
+  func LayoutTransitionTimeScaleContract() bool {
+    let original = Motion.TimeScale
+    let state = LayoutTransitionState(Node{})
+    try {
+      state.Configure(LayoutTransition{ DurationMs: 1000.0, Easing: Easing.Linear }, pump, nil)
+      state.Resolve(0.0F, 0.0F, 0.0F, 0.0F)
+      Motion.TimeScale = 0.5
+      state.Resolve(100.0F, 0.0F, 100.0F, 0.0F)
+      pump.Sweep(0.25)
+      if state.Resolve(100.0F, 0.0F, 100.0F, 0.0F).X != 12.5F { return false }
+      Motion.TimeScale = 2.0
+      if state.Resolve(100.0F, 0.0F, 100.0F, 0.0F).X != 50.0F { return false }
+      Motion.TimeScale = 0.0
+      pump.Sweep(0.0)
+      if pump.Active || state.Resolve(100.0F, 0.0F, 100.0F, 0.0F).X != 100.0F { return false }
+      Motion.TimeScale = -1.0
+      if state.Resolve(200.0F, 0.0F, 200.0F, 0.0F).X != 200.0F || pump.Active { return false }
+      var velocity = -1.0
+      state.Configure(LayoutTransition{
+        SimulationFactory: (from float64, to float64, speed float64) -> {
+          velocity = speed
+          return ClockEchoSimulation()
+        },
+      }, pump, nil)
+      Motion.TimeScale = 0.5
+      state.Resolve(300.0F, 0.0F, 300.0F, 0.0F)
+      pump.Sweep(0.25)
+      state.Resolve(400.0F, 0.0F, 400.0F, 0.0F)
+      if velocity != 0.125 { return false }
+      Motion.TimeScale = -1.0
+      pump.Sweep(0.0)
+      return !pump.Active && state.Resolve(400.0F, 0.0F, 400.0F, 0.0F).X == 400.0F
+    } finally {
+      state.Dispose()
+      Motion.TimeScale = original
+    }
+  }
+
   func TweenFactoryContract() bool {
     let tween = Motion.Tween(2.0, Easing.EaseInOut)
     let simulation = tween(2.0, 10.0, 99.0)

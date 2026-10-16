@@ -95,14 +95,14 @@ internal sealed class LayoutTransitionState : MotionParticle {
     }
 
   private func bank(x float32, y float32) {
-    let elapsed = if let owner = pump { Math.Max(0.0, owner.Now - startTime) } else { 0.0 }
+    let elapsed = if let owner = pump { Math.Max(0.0, owner.Now - startTime) * Motion.TimeScale } else { 0.0 }
     let velocityX = if let simulation = simulationX { simulation.Velocity(elapsed) } else { 0.0 }
     let velocityY = if let simulation = simulationY { simulation.Velocity(elapsed) } else { 0.0 }
     guard let pump = pump else {
       snap()
       return
     }
-    if pump.ReducedMotion || (value.SimulationFactory == nil && value.DurationMs <= 0.0)
+    if pump.ReducedMotion || Motion.TimeScale <= 0.0 || (value.SimulationFactory == nil && value.DurationMs <= 0.0)
       || (x == 0.0F && y == 0.0F && velocityX == 0.0 && velocityY == 0.0) {
       snap()
       pump.Deregister(this)
@@ -138,7 +138,7 @@ internal sealed class LayoutTransitionState : MotionParticle {
     if disposed || node.Retired {
       return false
     }
-    let running = if pump?.ReducedMotion == true {
+    let running = if pump?.ReducedMotion == true || Motion.TimeScale <= 0.0 {
       snap()
       false
     } else {
@@ -150,7 +150,7 @@ internal sealed class LayoutTransitionState : MotionParticle {
   }
 
   private func sample(now float64) bool {
-    let elapsed = Math.Max(0.0, now - startTime)
+    let elapsed = Math.Max(0.0, now - startTime) * Motion.TimeScale
     if let simulation = simulationX {
       if simulation.Done(elapsed) {
         offsetX = 0.0F
