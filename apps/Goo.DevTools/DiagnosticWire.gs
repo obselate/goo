@@ -219,7 +219,7 @@ class DiagnosticWire {
                             bytes = length.ToString() + " RGBA bytes"
                         }
                     }
-                    for name in []string{"format", "origin", "stride"} {
+                    for name in[]string{"format", "origin", "stride"} {
                         let value = Text(root, []string{name})
                         if value != "" {
                             bytes += ", " + name + ": " + value
