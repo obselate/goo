@@ -12,7 +12,10 @@ internal class ElementHandleFixtures {
     owner.Prepare(node, ThrowingVirtualFixtureSource{ Value: first }, false)
     owner.Commit()
     owner.Prepare(node, ThrowingVirtualFixtureSource{ Value: second }, false)
-    try { owner.Commit() } catch (error InvalidOperationException) {
+    try {
+      owner.Commit()
+      return false
+    } catch (error InvalidOperationException) {
       if error != first.Failure { return false }
     }
     owner.Cancel()

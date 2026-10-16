@@ -77,7 +77,6 @@ public sealed class FixtureContractTests
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.SlippedDoubleClickStillClicksContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.ThresholdNegotiationTargetingAndClickContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.DuplicateAndCellContract));
-        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ThrowingVirtualDisposalContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.FocusContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.GeometryContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.KeyedRollbackRestoresHandle));
@@ -91,6 +90,7 @@ public sealed class FixtureContractTests
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.PrimitiveMatrixContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.RetiredTreeDoesNotRetainThroughHandle));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ScrollContract));
+        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ThrowingVirtualDisposalContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualTransactionContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualViewportContract));

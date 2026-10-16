@@ -50,9 +50,7 @@ internal class NodeLifecycle {
       try {
         Virtualization.Dispose(n)
       } catch (error Exception) {
-        if firstError == nil {
-          firstError = error
-        }
+        firstError ??= error
       }
       for i in 0 ... n.Children.Count {
         if let error = disposeTree(n.Children[i]) {
