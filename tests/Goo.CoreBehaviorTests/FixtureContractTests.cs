@@ -105,7 +105,6 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.FocusTransferAndTraversal));
         yield return Contract<InputFixtures>(nameof(InputFixtures.FocusStyleFollowsKeyboardModalityAndKeepsTextInputVisible));
         yield return Contract<InputFixtures>(nameof(InputFixtures.GenericTextCallbackRebuildStaysPresentationIdle));
-        yield return Contract<InputFixtures>(nameof(InputFixtures.KeyRepeatUsesCurrentModifiersWithoutRestartingDelay));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardCallbackFailuresCleanUpAndKeepQueuedSuffix));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardCallbacksBubbleStopAndRepeat));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardDefaultPreventionPreservesTextAndButtonRelease));
@@ -113,6 +112,7 @@ public sealed class FixtureContractTests
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardDrainConsumesThrowingEventOnceAndRetainsRest));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardQueueAndRepeatLifecycle));
         yield return Contract<InputFixtures>(nameof(InputFixtures.KeyboardRepeatCancelsWhenFocusedEntryBecomesUnavailable));
+        yield return Contract<InputFixtures>(nameof(InputFixtures.KeyRepeatUsesCurrentModifiersWithoutRestartingDelay));
         yield return Contract<InputFixtures>(nameof(InputFixtures.SyntheticHeldBindingRequestsSchedulerTick));
         yield return Contract<InputFixtures>(nameof(InputFixtures.SyntheticHeldBindingSurvivesAutoFocusRebuild));
         yield return Contract<InputFixtures>(nameof(InputFixtures.MacShortcutPolicyRoutesCommandAndOptionWord));
