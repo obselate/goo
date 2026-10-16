@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Synchronize backdrop clears before overlapping image copies.
+- Add root code conventions for Goo contributors.
 
 ## 0.7.35 - 2026-10-16
 
