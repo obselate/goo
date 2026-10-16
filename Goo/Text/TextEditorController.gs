@@ -1040,8 +1040,8 @@ public class TextEditorController : IDisposable {
     let starts = UnicodeGraphemes.Starts(text)
     var i = starts.Length
     while i > 0 && starts[i - 1] >= offset { i-- }
-    while i > 0 && !wordAt(text, starts[i - 1]) { i-- }
-    while i > 0 && wordAt(text, starts[i - 1]) { i-- }
+    while i > 0 && !TextSelectionRanges.IsWord(text, starts[i - 1]) { i-- }
+    while i > 0 && TextSelectionRanges.IsWord(text, starts[i - 1]) { i-- }
     return i < starts.Length ? starts[i] : 0
   }
 
@@ -1049,12 +1049,10 @@ public class TextEditorController : IDisposable {
     let starts = UnicodeGraphemes.Starts(text)
     var i int32 = 0
     while i < starts.Length && starts[i] < offset { i++ }
-    while i < starts.Length && !wordAt(text, starts[i]) { i++ }
-    while i < starts.Length && wordAt(text, starts[i]) { i++ }
+    while i < starts.Length && !TextSelectionRanges.IsWord(text, starts[i]) { i++ }
+    while i < starts.Length && TextSelectionRanges.IsWord(text, starts[i]) { i++ }
     return i < starts.Length ? starts[i] : text.Length
   }
-
-  private func wordAt(text string, offset int32) bool -> Char.IsLetterOrDigit(text, offset)
 
   private func sameSelection(left TextSelection, right TextSelection) bool -> left.Anchor.Offset == right.Anchor.Offset
     && left.Anchor.Affinity == right.Anchor.Affinity
