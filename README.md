@@ -159,6 +159,9 @@ See the [native authoring guide](docs/native-authoring.md) for composition, type
 
 ## Platforms
 
+Check [platform preflight and troubleshooting](docs/platform-preflight.md)
+before creating or distributing an app.
+
 Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
 and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
 
