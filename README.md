@@ -195,6 +195,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 
 ## Further reading
 
+- [Ship a desktop app](docs/shipping.md)
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
 - [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
