@@ -117,6 +117,8 @@ class DiagnosticWire {
                 return DiagnosticWireSelection{
                     SelectedId: Text(root, []string{"selectedId", "selectedNodeId", "nodeId", "id"}),
                     HoveredId: Text(root, []string{"hoveredId", "hoveredNodeId", "hoverId"}),
+                    HasSelectedId: Element(root, []string{"selectedId", "selectedNodeId", "nodeId", "id"}) != nil,
+                    HasHoveredId: Element(root, []string{"hoveredId", "hoveredNodeId", "hoverId"}) != nil,
                 }
             } catch (_ Exception) {
                 return DiagnosticWireSelection{SelectedId: "", HoveredId: ""}
@@ -347,6 +349,8 @@ class DiagnosticWire {
                 Text(root, []string{"dimensions", "size"}),
                 Text(root, []string{"scale", "displayScale"})
             )
+            result.HasSelectedId = Element(root, []string{"selectedId", "selectedNodeId"}) != nil
+            result.HasHoveredId = Element(root, []string{"hoveredId", "hoveredNodeId"}) != nil
             if result.WindowId == "" {
                 result.WindowId = fallbackWindowId
             }
@@ -929,6 +933,8 @@ class DiagnosticWireSnapshot {
     var RootId string
     var HoveredId string
     var SelectedId string
+    var HasSelectedId bool
+    var HasHoveredId bool
     var Title string
     var Dimensions string
     var Scale string
@@ -967,6 +973,8 @@ class DiagnosticWireSnapshot {
 data struct DiagnosticWireSelection {
     var SelectedId string
     var HoveredId string
+    var HasSelectedId bool
+    var HasHoveredId bool
 }
 
 data struct DiagnosticWireLog {
