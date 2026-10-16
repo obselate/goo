@@ -112,6 +112,29 @@ internal class ShapeGeometryFixtures {
     return cache.FlattenCount == flattened + 1
   }
 
+  func DashScratchCapacityDoesNotChangeStrokeGeometry() bool {
+    let path = PathBuilder(0.0, 0.0, 100.0, 20.0)
+      .MoveTo(0.0, 10.0).LineTo(100.0, 10.0).Build()
+    let mapping = PathGeometry.Map(path, ShapeFit.Fill, 0.0F, 0.0F, 100.0F, 20.0F)
+    let cache = PathStrokeCache()
+    cache.Resolve(path, mapping, 2.0F, StrokeCap.Butt, StrokeJoin.Miter, 4.0F,
+      DashPattern([]float64{ 5.0, 5.0, 2.0, 2.0 }, 0.0), 0.0, 1.0)
+    let pattern = DashPattern([]float64{ 5.0, 5.0 }, 0.0)
+    let warmed = PathGeometry.For(cache.Resolve(path, mapping, 3.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, pattern, 0.0, 1.0))
+    let fresh = PathGeometry.For(PathStrokeCache().Resolve(path, mapping, 3.0F,
+      StrokeCap.Butt, StrokeJoin.Miter, 4.0F, pattern, 0.0, 1.0))
+    if warmed.ContourCount != 10 || warmed.ContourCount != fresh.ContourCount { return false }
+
+    for index in 0 ... 100 {
+      let x = float32(index) + 0.5F
+      if warmed.Contains(x, 10.0F, FillRule.NonZero) != fresh.Contains(x, 10.0F, FillRule.NonZero) {
+        return false
+      }
+    }
+    return true
+  }
+
   func InvalidStrokeTrimRejectsBeforeReconciliation() bool {
     var invalidRange = false
     try { Shape{ StrokeStart: -0.1 } }

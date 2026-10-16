@@ -234,6 +234,8 @@ public sealed class FixtureContractTests
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.StrokeTrimPreservesFillAndOpensPartialClosedContour));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.StrokeTrimKeepsFullyIncludedMiddleContourClosed));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.DashPhaseAndTrimReuseFlattenedContours));
+        yield return Contract<ShapeGeometryFixtures>(
+            nameof(ShapeGeometryFixtures.DashScratchCapacityDoesNotChangeStrokeGeometry));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.InvalidStrokeTrimRejectsBeforeReconciliation));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.AnimatedDashPhaseHasBoundedAllocation));
         yield return Contract<ShapeGeometryFixtures>(nameof(ShapeGeometryFixtures.MutableStrokeGeometryReflattensOnRevision));
