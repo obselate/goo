@@ -682,6 +682,7 @@ Sources:
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
 - [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
 - [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Context.gs`](../../Goo/Window/WindowParts/Window.Context.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
 - [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)

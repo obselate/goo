@@ -52,28 +52,32 @@ internal partial class ScrollbarParts {
 
     shared {
         private func reconcile(owner Node, state ScrollbarPartState, reconciler Reconciler) {
-            state.HorizontalTrack = reconcilePart(owner, state.HorizontalTrack, owner.ScrollbarX?.Track, reconciler)
-            state.HorizontalThumb = reconcilePart(owner, state.HorizontalThumb, owner.ScrollbarX?.Thumb, reconciler)
-            state.VerticalTrack = reconcilePart(owner, state.VerticalTrack, owner.ScrollbarY?.Track, reconciler)
-            state.VerticalThumb = reconcilePart(owner, state.VerticalThumb, owner.ScrollbarY?.Thumb, reconciler)
-            state.Parts.Clear()
-            if let root = state.HorizontalTrack {
-                state.Parts.Add(root)
-            }
-            if let root = state.HorizontalThumb {
-                state.Parts.Add(root)
-            }
-            if let root = state.VerticalTrack {
-                state.Parts.Add(root)
-            }
-            if let root = state.VerticalThumb {
-                state.Parts.Add(root)
-            }
-            partLayout.MarkStructureDirty()
-            reconciler.MarkEffects(
-                ReconcileEffects.Structure | ReconcileEffects.Layout
-                | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility
-            )
+            let previousContext = reconciler.Context
+            reconciler.Context = owner.Context
+            try {
+                state.HorizontalTrack = reconcilePart(owner, state.HorizontalTrack, owner.ScrollbarX?.Track, reconciler)
+                state.HorizontalThumb = reconcilePart(owner, state.HorizontalThumb, owner.ScrollbarX?.Thumb, reconciler)
+                state.VerticalTrack = reconcilePart(owner, state.VerticalTrack, owner.ScrollbarY?.Track, reconciler)
+                state.VerticalThumb = reconcilePart(owner, state.VerticalThumb, owner.ScrollbarY?.Thumb, reconciler)
+                state.Parts.Clear()
+                if let root = state.HorizontalTrack {
+                    state.Parts.Add(root)
+                }
+                if let root = state.HorizontalThumb {
+                    state.Parts.Add(root)
+                }
+                if let root = state.VerticalTrack {
+                    state.Parts.Add(root)
+                }
+                if let root = state.VerticalThumb {
+                    state.Parts.Add(root)
+                }
+                partLayout.MarkStructureDirty()
+                reconciler.MarkEffects(
+                    ReconcileEffects.Structure | ReconcileEffects.Layout
+                    | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility
+                )
+            } finally { reconciler.Context = previousContext }
         }
 
         private func reconcilePart(owner Node, current Node?, next Container?, reconciler Reconciler) Node? {
