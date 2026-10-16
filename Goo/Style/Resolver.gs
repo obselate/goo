@@ -282,7 +282,6 @@ internal partial class Resolver {
 
   internal func applyList(n Node, entries StyleEntries?, mask StyleMask, initial bool, shadow StyleMask) StyleMask {
     guard let list = entries else { return mask }
-    Array.Fill(layerWinners, -1)
     for i in 0 ... list.Count {
       let field = list.At(i).Field
       if !styleFieldApplies(n, field) { continue }
@@ -303,6 +302,7 @@ internal partial class Resolver {
         continue
       }
       if e.Field == StyleField.Direction {
+        layerWinners[int32(StyleField.Direction)] = 0
         m = styleMaskWith(m, StyleField.Direction)
         continue
       }
@@ -316,6 +316,7 @@ internal partial class Resolver {
       }
       e.Field = styleFieldForNode(n, e.Field)
       if layerWinners[int32(e.Field)] != i { continue }
+      layerWinners[int32(e.Field)] = 0
       m = styleMaskWith(m, e.Field)
       if !styleMaskHas(shadow, e.Field) {
         writeField(n, e, initial || logical)
@@ -329,6 +330,7 @@ internal partial class Resolver {
       var m = mask
       for f in edges {
         if layerWinners[int32(f)] != index { continue }
+        layerWinners[int32(f)] = 0
         m = applyCanonicalBoxEdge(n, source, m, initial, shadow, f)
       }
       return m
