@@ -47,18 +47,6 @@ public sealed class SvgRuntimeTests
         Assert.Equal(1, asset.PaintCount);
     }
 
-    [Theory]
-    [InlineData("opacity:0.8", 0.8)]
-    [InlineData("opacity:0.2;opacity:0.8", 0.8)]
-    public void InlineOpacityOverridesPresentationOpacity(string style, double expected)
-    {
-        var asset = Svg.Parse($"<svg viewBox=\"0 0 100 100\"><g opacity=\"0.5\"><g opacity=\"0.25\"><path opacity=\"0.5\" style=\"{style}\" d=\"M0 0 L1 1\"/></g></g></svg>");
-
-        Assert.Equal(0.5, asset.NodeAt(1).Opacity, 6);
-        Assert.Equal(0.25, asset.NodeAt(2).Opacity, 6);
-        Assert.Equal(expected, asset.NodeAt(3).Opacity, 6);
-    }
-
     [Fact]
     public void StreamLoadMatchesTextAndLeavesCallerStreamOpen()
     {
@@ -112,6 +100,18 @@ public sealed class SvgRuntimeTests
         var exception = Assert.Throws<SvgParseException>(() => Svg.Parse(source));
 
         Assert.Contains("DTD", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("opacity:0.8", 0.8)]
+    [InlineData("opacity:0.2;opacity:0.8", 0.8)]
+    public void InlineOpacityOverridesPresentationOpacity(string style, double expected)
+    {
+        var asset = Svg.Parse($"<svg viewBox=\"0 0 100 100\"><g opacity=\"0.5\"><g opacity=\"0.25\"><path opacity=\"0.5\" style=\"{style}\" d=\"M0 0 L1 1\"/></g></g></svg>");
+
+        Assert.Equal(0.5, asset.NodeAt(1).Opacity, 6);
+        Assert.Equal(0.25, asset.NodeAt(2).Opacity, 6);
+        Assert.Equal(expected, asset.NodeAt(3).Opacity, 6);
     }
 
     [Fact]
