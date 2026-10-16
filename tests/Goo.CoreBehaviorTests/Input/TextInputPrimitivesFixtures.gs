@@ -4,6 +4,30 @@ import System
 import System.Collections.Generic
 
 internal class TextInputPrimitivesFixtures {
+  func WordCommandsUseSelectionWordBoundaries() bool {
+    for value in []string{ "foo_bar", "a\u0301_b", "\u0301_ab" } {
+      let document = TextDocument(value + ", next")
+      using let controller = TextEditorController(document)
+      controller.Execute(TextCommand{ Kind: TextCommandKind.SelectWord })
+      if controller.Selection.Active.Offset != value.Length { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveDocumentStart })
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveWordRight })
+      if controller.Selection.Active.Offset != value.Length { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveWordRight })
+      if controller.Selection.Active.Offset != document.Length { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveWordLeft })
+      if controller.Selection.Active.Offset != value.Length + 2 { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveWordLeft })
+      if controller.Selection.Active.Offset != 0 { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.DeleteWordForward })
+      if document.GetText() != ", next" { return false }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.Undo })
+      controller.Execute(TextCommand{ Kind: TextCommandKind.DeleteWordBackward })
+      if document.GetText() != ", next" { return false }
+    }
+    return true
+  }
+
   func PlatformCommitsStopAfterFocusGenerationChanges() bool {
     for mode in 0 ... 3 {
       for bounce in []bool{ false, true } {

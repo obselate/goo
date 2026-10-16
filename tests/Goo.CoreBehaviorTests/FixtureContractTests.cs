@@ -303,6 +303,8 @@ public sealed class FixtureContractTests
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.StaleTextEventsDropAcrossTransfersAndFocusCycles));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.TextCallbackStateStaysAbsentUntilConfigured));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.UnavailableOrRemovedFocusedClientsDropQueuedText));
+        yield return Contract<TextInputPrimitivesFixtures>(
+            nameof(TextInputPrimitivesFixtures.WordCommandsUseSelectionWordBoundaries));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ButtonStyleSpillContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ControlledEntryComposition));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ExplicitControlledEntryValue));
