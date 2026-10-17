@@ -73,6 +73,7 @@ internal partial class ScrollbarParts {
                     state.Parts.Add(root)
                 }
                 partLayout.MarkStructureDirty()
+                owner.Yoga?.MarkDirtyAndPropagate()
                 reconciler.MarkEffects(
                     ReconcileEffects.Structure | ReconcileEffects.Layout
                     | ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Accessibility

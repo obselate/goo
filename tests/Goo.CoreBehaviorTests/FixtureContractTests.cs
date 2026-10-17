@@ -221,6 +221,9 @@ public sealed class FixtureContractTests
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.AnchoredPlacementTracksViewportAndGeometryContract));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.FocusScopeCloseRestoreContract));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.OverlayOrderingInputAndGeometryContract));
+
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.DescriptorChangesArrangeMountedVirtualPartsContract));
+
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.DescriptorGeometryAndVisibilityContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ThumbDragHitThicknessAndCancellationContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.TrackPagingAndPreventDefaultContract));
