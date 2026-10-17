@@ -373,9 +373,9 @@ internal sealed class ContextDependency[T any] : ContextDependency {
             if frame == source && frame.ValueVersion == sourceVersion {
                 return
             }
-            source = frame
-            sourceVersion = frame.ValueVersion
             if EqualityComparer[T].Default.Equals(value, frame.Value) {
+                source = frame
+                sourceVersion = frame.ValueVersion
                 return
             }
         }

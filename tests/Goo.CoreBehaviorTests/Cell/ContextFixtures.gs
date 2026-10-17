@@ -4,6 +4,85 @@ import System
 import System.Threading.Tasks
 
 internal class ContextFixtures {
+    func VirtualStagedValueRollbackContract() bool {
+        let key = Context[int32]()
+        let other = Context[int32]()
+        let root = ContextVirtualRollbackRoot(key, other)
+        let host = root.Host
+        host.Show = false
+        let window = Window{Root: root, Width: 100, Height: 100}
+        key.Set(window, 10)
+        other.Set(window, 50)
+        try {
+            window.UpdateTree()
+            let later = windowReader(window, 1)
+            host.Show = true
+            host.Value = 21
+            host.Rebuild()
+            later.FailNext = true
+            later.Rebuild()
+            var threw = false
+            try {
+                window.UpdateTree()
+            } catch (error InvalidOperationException) {
+                threw = true
+            }
+            let node = host.Handle.AttachedNode()!!
+            let state = Virtualization.State(node)!!
+            let frame = (host.directChild!!.contextReader!!.Provider as ContextValue[int32])!!
+            if frame.Value != 20 { return false }
+            let staged = host.State.Version
+            if !threw || state.ContextVersion <= staged {
+                throw InvalidOperationException(
+                    "Rollback invalidation: threw=$threw, current=${state.ContextVersion}, staged=$staged"
+                )
+            }
+            host.directChild!!.Rebuild()
+            window.UpdateTree()
+            let row = (node.Children[0].Children[0].Fiber as ContextReadCell)!!
+            return frame.Value == 21 && row.Value == 21 && row.Snapshot == 21 && host.State.Version > staged
+        } finally {
+            window.Close()
+        }
+    }
+
+    func FailedPassRefreshTracksCommittedValueContract() bool {
+        let key = Context[int32]()
+        let other = Context[int32]()
+        let cell = ContextRefreshRoot(key, other)
+        let window = Window{Root: cell, Width: 100, Height: 100}
+        key.Set(window, 10)
+        other.Set(window, 50)
+        try {
+            window.UpdateTree()
+            let reader = windowReader(window)
+            let later = windowReader(window, 1)
+            key.Set(window, 20)
+            later.FailNext = true
+            later.Rebuild()
+            var threw = false
+            try {
+                window.UpdateTree()
+            } catch (error InvalidOperationException) {
+                threw = true
+            }
+            if !threw || reader.Value != 20 {
+                throw InvalidOperationException("Failed pass: threw=$threw, value=${reader.Value}")
+            }
+            cell.Value++
+            cell.Rebuild()
+            window.UpdateTree()
+            key.Set(window, 10)
+            window.UpdateTree()
+            if reader.Value != 10 {
+                throw InvalidOperationException("Context value after failed pass and refresh: ${reader.Value}")
+            }
+            return true
+        } finally {
+            window.Close()
+        }
+    }
+
     func QueuedStructReadAllocationContract() bool {
         let baseline = QueuedStructReadBytes(false)
         let context = QueuedStructReadBytes(true)
@@ -606,6 +685,7 @@ internal class ContextVirtualRoot : Cell {
     internal let Handle ElementHandle = ElementHandle{}
     internal let State ContextVirtualState
     internal var Value int32 = 20
+    internal var Show bool = true
     private let portal bool
     private let build Func[Blob]
 
@@ -621,6 +701,7 @@ internal class ContextVirtualRoot : Cell {
     override func Build() Blob -> ProviderKey.Scope(Value, build)
 
     private func content() Blob {
+        if !Show { return Container{Width: 100, Height: 60} }
         let viewport = Virtual(ContextVirtualSource(this)){Handle = Handle, Width = 100, Height = 60}
         return portal ? Portal(){viewport}: viewport
     }
@@ -774,5 +855,24 @@ internal class ContextAllocationCell : Cell {
             Foreground = key.Read().Foreground
         }
         return content
+    }
+}
+
+internal class ContextRefreshRoot(key Context[int32], other Context[int32]) : Cell {
+    internal var Value int32 = 20
+    private let content Func[Blob] = () -> Container(){
+        Cell.Mount[ContextReadInput, ContextReadCell]("first", ContextReadInput{Key: key, Other: other}),
+        Cell.Mount[ContextReadInput, ContextReadCell]("later", ContextReadInput{Key: other, Other: key}),
+    }
+
+    override func Build() Blob -> other.Scope(Value, content)
+}
+
+internal class ContextVirtualRollbackRoot(key Context[int32], other Context[int32]) : Cell {
+    internal let Host ContextVirtualRoot = ContextVirtualRoot(key, other, false)
+
+    override func Build() Blob -> Container(){
+        Cell.Mount[ContextVirtualRoot](() -> Host, "host"),
+        Cell.Mount[ContextReadInput, ContextReadCell]("later", ContextReadInput{Key: other, Other: key}),
     }
 }
