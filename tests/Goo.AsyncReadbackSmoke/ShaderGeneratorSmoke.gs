@@ -127,6 +127,7 @@ func RunShaderGeneratorSmoke() {
     Require(recorded > 0uL
         && ShaderEffectDelta(after.layerPoolPassCount, before.layerPoolPassCount) == 2uL * recorded,
       "Generator effect added a source layer beyond opacity and blend groups")
+    WindowReadbackTestFixture.StabilizeNativeMetrics(opened)
     let metrics = WindowReadbackTestFixture.Metrics(opened)
     let first = PrimitiveReadback(opened, metrics)
     let direct = PrimitiveLogicalPixel(first.Pixels, first.Width, metrics, 52.0, 52.0)
