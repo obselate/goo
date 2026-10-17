@@ -690,6 +690,23 @@ public partial class Window {
     return target.PrimitiveFrameRetentionSnapshotForTest()
   }
 }
+internal unsafe partial class SdlRuntime {
+  shared {
+    internal func WaitForWakeForTest(deadline int64) bool {
+      RequireMainThread("queue completion wake test")
+      var nativeEvent SDLEvent
+      while true {
+        let remaining = deadline - Environment.TickCount64
+        if remaining <= 0L || !SDL.WaitEventTimeout(&nativeEvent, int32(remaining)) {
+          return false
+        }
+        DispatchOne(nativeEvent)
+        if nativeEvent.Type == wakeEventType { return true }
+      }
+    }
+  }
+}
+
 internal unsafe partial class SdlHost {
   internal func SetMetricsForTest(logicalWidth int32, logicalHeight int32,
     framebufferWidth int32, framebufferHeight int32) {
@@ -1067,6 +1084,17 @@ internal class WindowReadbackTestFixture {
 
     internal func DeferSchedulerFrame(window Window, seconds float64) {
       window.DeferSchedulerFrameForTest(seconds)
+    }
+
+    internal func AwaitQueueCompletionWake(window Window, timeoutMs int32) bool {
+      let deadline = Environment.TickCount64 + int64(timeoutMs)
+      var woke = false
+      while window.RuntimeQueueWorkPendingForTest() {
+        if !SdlRuntime.WaitForWakeForTest(deadline) { return false }
+        woke = true
+        window.SchedulerPump(float64(Stopwatch.GetTimestamp()), false)
+      }
+      return woke
     }
 
     internal func DrainWindowQueue(window Window, timeoutMs int32) {

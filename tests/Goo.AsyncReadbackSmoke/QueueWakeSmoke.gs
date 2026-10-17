@@ -21,8 +21,6 @@ func RunQueueWakeSmoke() {
       VSync: true,
       Root: QueueWakeCell{},
     }
-    var captured = false
-    var pending = true
     var worker Thread? = nil
     try {
       window.Open()
@@ -51,23 +49,16 @@ func RunQueueWakeSmoke() {
         }
       }
       Require(held, "Queue completion wake did not reach the held worker")
-      WindowReadbackTestFixture.DeferSchedulerFrame(window, 1.0)
+      WindowReadbackTestFixture.Pump(window, 0.0)
+      WindowReadbackTestFixture.DeferSchedulerFrame(window, 30.0)
       Require(WindowReadbackTestFixture.SchedulerWaitMs(window, 0.0) > 0,
         "A held queue must leave the scheduler able to sleep")
-      let release = Thread(() -> {
-        Thread.Sleep(20)
-        WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
-        Thread.Sleep(80)
-        window.Post(() -> {
-          pending = WindowReadbackTestFixture.RuntimeQueueWorkPending(window)
-          captured = true
-          window.RequestClose()
-        })
-      })
+      let release = Thread(() -> WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall())
       worker = release
       release.IsBackground = true
       release.Start()
-      window.Run()
+      let captured = WindowReadbackTestFixture.AwaitQueueCompletionWake(window, 5000)
+      let pending = WindowReadbackTestFixture.RuntimeQueueWorkPending(window)
       release.Join()
       Require(captured && !pending,
         "Queue completion waited for the next frame or idle timeout: phase " + phase.ToString())
