@@ -58,6 +58,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       updated.LinearDescriptor = RetireDescriptor(
         entry.LinearDescriptor, entry.Id, entry.SamplerId,
         VulkanImageSamplerMode.Linear, entry.ImageView, fence)
+      if let allocation = entry.Allocation { allocator.Retire(allocation) }
       return updated
     }
 

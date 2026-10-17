@@ -41,6 +41,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             ResetUploadAttempt(ref entry)
             entry.PendingRetire = false
             entry.State = VulkanImageResourceState.Retiring
+            if let allocation = entry.Allocation { allocator.Retire(allocation) }
             entry.LastTouch = TouchValue()
             entries[index] = entry
           } else if !finalChunk {
