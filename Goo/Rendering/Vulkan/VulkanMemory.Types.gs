@@ -25,6 +25,8 @@ internal unsafe class VulkanMemoryBlock {
   var dedicated bool
   var mapped * void
   var allocationCount uint32
+  var profileTraceId string?
+  var profileId uint64
 }
 
 internal unsafe class VulkanMemoryAllocation {
@@ -44,6 +46,14 @@ internal unsafe class VulkanMemoryAllocation {
   var blockFresh bool
   var pendingBind bool
   var state VulkanMemoryAllocationState
+  var ownerKind VulkanMemoryOwnerKind
+  var payloadBytes uint64?
+  var width int32?
+  var height int32?
+  var format VkFormat
+  var layers uint32
+  var profileTraceId string?
+  var profileId uint64
 }
 
 internal data struct VulkanMemoryPlacement {

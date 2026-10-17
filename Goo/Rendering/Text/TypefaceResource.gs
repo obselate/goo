@@ -22,8 +22,10 @@ internal sealed class TypefaceResource : IDisposable {
       this.family = family
       this.sourceId = sourceId
       this.sourceGeneration = sourceGeneration
-      font = VulkanTextFont(bytes, 1u, faceIndex, variations)
+      font = VulkanTextFont(bytes, 1u, faceIndex, variations, family)
     }
+
+  internal func Profile(recorder FrameRecorder) { font.Profile(recorder, true) }
 
   internal func Lease() TypefaceLease {
     lock (this) {

@@ -36,6 +36,7 @@ internal class VulkanRetiredSwapchainSet {
       retirement.QueueRetiredGeneration(generation.Generation)
       generations[count] = generation
       count = count + 1
+      generation.ProfileRetire()
     }
 
   internal func CollectReady(retirement VulkanPresentationRetirement) {

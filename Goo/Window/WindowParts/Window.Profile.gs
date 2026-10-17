@@ -8,6 +8,9 @@ import System.Text
 /// Window frame profiling and trace identity.
 public partial class Window {
   internal prop ProfileWindowId string { get -> profiler.WindowId }
+  shared {
+    internal func ProfileWindows(recorder FrameRecorder, exceptWindowId string) { scheduler.ProfileWindows(recorder, exceptWindowId) }
+  }
 
   internal func ProfileMetadata() FrameTraceRecord {
     var value = profiler.Sink?.Describe() ?? FrameTraceRecord{

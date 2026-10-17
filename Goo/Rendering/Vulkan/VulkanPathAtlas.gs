@@ -404,7 +404,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
       byteCapacity,
       uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT)
       | uint32(VkConstants.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT),
-      VulkanMemoryPolicy.DeviceLocalRequired)
+      VulkanMemoryPolicy.DeviceLocalRequired, VulkanMemoryOwnerKind.PathAtlas)
     atlasBuffer = creation.Buffer
     atlasAllocation = creation.Allocation
   }

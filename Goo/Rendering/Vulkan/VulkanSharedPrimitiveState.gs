@@ -13,6 +13,11 @@ internal unsafe class VulkanNativeHandleDestroyer {
       ref pipeline VkPipeline) {
         if pipeline != 0uL {
           destroyPipeline(device, pipeline, nil)
+          if let recorder = FrameRecorder.Current {
+            recorder.Resource(FrameResourceKind.Pipeline,
+              recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline, remove: true),
+              VulkanDiagnosticEventIds.PipelineDestroy, "pipeline.destroy", device: uint64(device))
+          }
           if let accounting = objectAccounting { accounting.Release() }
           pipeline = 0uL
         }
@@ -49,6 +54,11 @@ internal unsafe class VulkanNativeHandleDestroyer {
       ref module VkShaderModule) {
         if module != 0uL {
           destroyShaderModule(device, module, nil)
+          if let recorder = FrameRecorder.Current {
+            recorder.Resource(FrameResourceKind.Shader,
+              recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module, remove: true),
+              VulkanDiagnosticEventIds.PipelineDestroy, "shader.destroy", device: uint64(device))
+          }
           if let accounting = objectAccounting { accounting.Release() }
           module = 0uL
         }
@@ -116,6 +126,23 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   internal prop SolidPipeline VkPipeline{
     get -> ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
       pipelineLayout, true, true)
+  }
+  internal func ProfileResources(recorder FrameRecorder) {
+    lock pipelineGate {
+      for pipeline in []uint64{solidPipeline, shadowPipeline, borderPipeline, linearPipeline,
+        radialPipeline, sampledPipeline, blendPipeline, pathPipeline, textPipeline, textPaintPipeline} {
+        recorder.Resource(FrameResourceKind.Pipeline,
+          recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
+          VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
+      }
+      for i in 0 ... shaderEffectPipelineCount {
+        if let entry = shaderEffectPipelines[i] {
+          recorder.Resource(FrameResourceKind.Pipeline,
+            recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), entry.Pipeline),
+            VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
+        }
+      }
+    }
   }
   internal prop ShadowPipeline VkPipeline{
     get -> ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
@@ -367,6 +394,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       } finally {
         let destroyShaderModule = dispatch.vkDestroyShaderModule
         destroyShaderModule(device, fragmentModule, nil)
+        if let recorder = FrameRecorder.Current {
+          recorder.Resource(FrameResourceKind.Shader,
+            recorder.NativeResource(FrameResourceKind.Shader, uint64(device), fragmentModule, remove: true),
+            VulkanDiagnosticEventIds.PipelineDestroy, "shader.destroy", device: uint64(device))
+        }
         if let accounting = objectAccounting { accounting.Release() }
       }
       entry.Pipeline = pipeline
@@ -397,6 +429,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       if let entry = shaderEffectPipelines[shaderIndex] {
         if entry.Pipeline != 0uL {
           destroyPipeline(device, entry.Pipeline, nil)
+          if let recorder = FrameRecorder.Current {
+            recorder.Resource(FrameResourceKind.Pipeline,
+              recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), entry.Pipeline, remove: true),
+              VulkanDiagnosticEventIds.PipelineDestroy, "pipeline.destroy", device: uint64(device))
+          }
           if let accounting = objectAccounting { accounting.Release() }
         }
       }
@@ -471,6 +508,27 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
   private var clipMaskR8Pipeline VkPipeline
   private var clipMaskRgba8Pipeline VkPipeline
   private var disposed bool
+  private var profileTraceId string?
+  private var profileBaseline int64 = -1L
+
+  internal func ProfileResources(recorder FrameRecorder) {
+    if profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
+    profileTraceId = recorder.TraceId
+    profileBaseline = recorder.BaselineVersion
+    for module in []uint64{vertexModule, solidModule, shadowModule, borderModule, linearModule,
+      radialModule, sampledModule, blendModule, pathVertexModule, pathFragmentModule,
+      clipMaskVertexModule, clipMaskFragmentModule, textVertexModule, textFragmentModule, textPaintFragmentModule} {
+      recorder.Resource(FrameResourceKind.Shader,
+        recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module),
+        VulkanDiagnosticEventIds.ResourceCreate, "shader.module", device: uint64(device), baseline: true)
+    }
+    for pipeline in []uint64{clipMaskR8Pipeline, clipMaskRgba8Pipeline} {
+      recorder.Resource(FrameResourceKind.Pipeline,
+        recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
+        VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
+    }
+    for state in formatStates { state?.ProfileResources(recorder) }
+  }
 
   internal prop Generation uint64{ get -> generation }
   internal prop PipelineLayout VkPipelineLayout{ get -> pipelineLayout }

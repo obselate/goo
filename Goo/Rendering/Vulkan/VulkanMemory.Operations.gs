@@ -232,6 +232,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       residentBytes += blockSize
       residentAllocations++
       heapResidentBytes[int32(selection.heapIndex)] += blockSize
+      if let recorder = FrameRecorder.Current {
+        ProfileBlock(recorder, block, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceCreate)
+      }
       return block
     }
 

@@ -19,6 +19,48 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
   private var imageSet VulkanSwapchainImageSet? = nil
   private var disposed bool
   private let imageUsage uint32
+  private var profileTraceId string?
+  private var profileBaseline int64 = -1L
+  private var profileRetired bool
+
+  internal func Profile(recorder FrameRecorder, eventId uint64 = 0uL, retired bool = false) {
+    if swapchain == 0uL { return }
+    let baseline = eventId == 0uL
+    if retired { profileRetired = true }
+    if baseline && profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
+    if !baseline && profileTraceId != recorder.TraceId && eventId != VulkanDiagnosticEventIds.SwapchainCreate {
+      Profile(recorder)
+    }
+    profileTraceId = recorder.TraceId
+    profileBaseline = recorder.BaselineVersion
+    let count = imageSet?.Count ?? 0u
+    let known = surfaceFormat.format == VkConstants.VK_FORMAT_R8G8B8A8_SRGB
+      || surfaceFormat.format == VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+      || surfaceFormat.format == VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+      || surfaceFormat.format == VkConstants.VK_FORMAT_B8G8R8A8_UNORM
+    recorder.Publish(FrameTraceRecord{
+      Kind: if baseline { FrameTraceKind.ResourceBaseline } else { FrameTraceKind.ResourceLifecycle },
+      Ticks: System.Diagnostics.Stopwatch.GetTimestamp() - recorder.Origin,
+      ThreadId: Environment.CurrentManagedThreadId,
+      Context: FrameTraceContext{DeviceId: uint64(device), Generation: generation},
+      ResourceId: recorder.NativeResource(FrameResourceKind.Swapchain, uint64(device), swapchain,
+        remove: eventId == VulkanDiagnosticEventIds.SwapchainDestroy),
+      ResourceKind: int32(FrameResourceKind.Swapchain), ResourceGeneration: generation,
+      EventId: if baseline { VulkanDiagnosticEventIds.SwapchainCreate } else { eventId },
+      Category: VulkanDiagnosticCategories.Resource, Width: int32(extent.width), Height: int32(extent.height),
+      Value0: if count != 0u { uint64(count) } else { nil }, Value1: uint64(surfaceFormat.format),
+      PayloadBytes: if known && count != 0u { uint64(extent.width) * uint64(extent.height) * 4uL * uint64(count) } else { nil },
+      Source: "swapchain.estimated-payload",
+      Validity: if baseline { if profileRetired { "already-retired" } else { "already-live" } } else { "estimated" },
+    })
+  }
+
+  internal func ProfileRetire() {
+    if let recorder = FrameRecorder.Current {
+      Profile(recorder, VulkanDiagnosticEventIds.ResourceRetire)
+      profileRetired = true
+    }
+  }
 
   internal prop Handle VkSwapchainKHR{
     get {
@@ -198,6 +240,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     if disposed {
       return
     }
+    if let recorder = FrameRecorder.Current { Profile(recorder, VulkanDiagnosticEventIds.SwapchainDestroy) }
     if let storage = imageSet {
       storage.Dispose()
     }
@@ -301,6 +344,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
           surfaceFormat.format,
           swapchainMaintenanceEnabled,
           objectAccounting)
+        if let recorder = FrameRecorder.Current { Profile(recorder, VulkanDiagnosticEventIds.SwapchainCreate) }
       } catch (error Exception) {
         Dispose()
         throw error

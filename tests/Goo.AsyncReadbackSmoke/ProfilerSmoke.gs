@@ -12,11 +12,16 @@ import System.Threading
 
 internal class ProfilerSmokeCell : Cell {
     internal var Frame int32
+    internal var Source ImageSource?
+    internal var Effect ShaderEffect?
 
-    override func Build() Blob -> Container{
-        Width: 24 + Frame % 2,
-        Height: 24,
-        BackgroundColor: Color.Rgb(Frame % 255, 80, 120)
+    override func Build() Blob -> Container() {
+        .Width: 24 + Frame % 2,
+        .Height: 24,
+        .BackgroundColor: Color.Rgb(Frame % 255, 80, 120),
+        .ShaderEffect: Effect,
+        Text{Content: "Profiler"},
+        Image{Source: Source, Width: 8, Height: 8},
     }
 }
 
@@ -64,17 +69,34 @@ internal class ProfilerSmokeClient : IDisposable {
     }
 }
 
+internal data struct ProfilerSmokeAllocation(Owner int32, Bytes uint64, Retired bool) { }
+
 internal class ProfilerSmokeTrace {
     internal let WindowId string
     internal let Phases HashSet[int32] = HashSet[int32]()
     internal let FramePhases HashSet[string] = HashSet[string]()
     internal let Sources HashSet[string] = HashSet[string]()
+    internal let Providers HashSet[string] = HashSet[string]()
     internal let Builds Dictionary[string, int64] = Dictionary[string, int64]()
     internal let Paints Dictionary[string, int64] = Dictionary[string, int64]()
     internal let FramePumps Dictionary[string, string] = Dictionary[string, string]()
     internal let Submitted HashSet[string] = HashSet[string]()
     internal var Sequence int64
     internal var LastCompletion uint64
+    internal let Counters HashSet[string] = HashSet[string]()
+    internal let BaselineKinds HashSet[int32] = HashSet[int32]()
+    internal var Uploaded bool
+    internal var Gpu bool
+    internal var GpuSupported bool
+    internal var GpuAvailable bool
+    internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
+    internal let BaselineIds HashSet[string] = HashSet[string]()
+    internal var AccountsValid bool = true
+    internal var Cutoff int64 = -1L
+    internal var LastCpuEnd int64
+    internal let CreatedKinds HashSet[int32] = HashSet[int32]()
+    internal let PreparedImages HashSet[string] = HashSet[string]()
+    internal let UploadSubmissions Dictionary[string, string] = Dictionary[string, string]()
 
     internal init(windowId string) { WindowId = windowId }
 
@@ -163,8 +185,10 @@ internal class ProfilerSmoke {
                 guard let partial = detached else {
                     throw InvalidOperationException("Disconnected trace is missing")
                 }
-                partial.Read(0L, 1, out var next, out var more, out var state, out var dropped)
-                Require(state == "Partial", "Disconnect marked a pending queue trace complete")
+                Require(SpinWait.SpinUntil(() -> {
+                    partial.Read(0L, 1, out var next, out var more, out var state, out var dropped)
+                    return state == "Partial"
+                }, 2000), "Disconnect marked a pending queue trace complete")
                 Console.WriteLine(
                     "profiler-pipe: real_phases=verified queue_links=verified busy=verified stop=verified gaps=verified disconnect=verified startup="
                     + (startup != nil).ToString()
@@ -177,6 +201,7 @@ internal class ProfilerSmoke {
                 while window.IsOpen && Stopwatch.GetTimestamp() < deadline {
                     window.Pump(0.0)
                 }
+                root.Source?.Dispose()
                 if done.IsSet {
                     done.Dispose()
                 }
@@ -207,6 +232,10 @@ internal class ProfilerSmoke {
             window.Post(
                 () -> {
                     WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
+                    using let cache = ImageSourceCache()
+                    root.Source = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
+                    root.Effect = ShaderEffect(ShaderEffectProgram.Load(
+                        Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 2.0F)
                     root.Frame++
                     root.Rebuild()
                 }
@@ -271,6 +300,24 @@ internal class ProfilerSmoke {
                 && trace.Sources.Contains("present.accepted") && trace.Submitted.Contains(queued),
                 "Queue API and acceptance records are missing"
             )
+            let gpuDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+            var gpuFrames int32 = 0
+            var submittedCount = trace.Submitted.Count
+            while trace.GpuSupported && !trace.GpuAvailable && Stopwatch.GetTimestamp() < gpuDeadline {
+                if gpuFrames < 3 && trace.Submitted.Count >= submittedCount {
+                    window.Post(() -> {
+                        root.Frame++
+                        root.Rebuild()
+                    })
+                    gpuFrames++
+                    submittedCount = trace.Submitted.Count + 1
+                }
+                using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
+                let payload = batch.RootElement.GetProperty("payload")
+                ValidateBatch(payload, trace)
+                after = payload.GetProperty("nextSeq").GetString() ?? after
+            }
+            Require(!trace.GpuSupported || trace.GpuAvailable, "Supported GPU timestamps did not resolve")
             using let stopped = client.Request("profiler.stop", "{" + identity + "}")
             var ended = false
             while !ended {
@@ -285,6 +332,33 @@ internal class ProfilerSmoke {
                 after = payload.GetProperty("nextSeq").GetString() ?? after
                 Require(ended || payload.GetProperty("more").GetBoolean(), "Stopped trace has no End")
             }
+            Require(trace.Cutoff >= trace.LastCpuEnd, "CPU recording did not stop at its cutoff")
+            for name in []string{"managed.allocated.total", "managed.heap.estimate", "gc.gen0.collections",
+                "gc.gen1.collections", "gc.gen2.collections", "process.rss", "process.pss",
+                "vulkan.live.requirements", "vulkan.retired.requirements", "vulkan.blocks",
+                "driver.heap.usage.estimate", "driver.heap.budget"} {
+                Require(trace.Counters.Contains(name), "Missing memory counter: " + name)
+            }
+            for resource in []FrameResourceKind{FrameResourceKind.MemoryBlock, FrameResourceKind.Buffer,
+                FrameResourceKind.Shader, FrameResourceKind.Pipeline, FrameResourceKind.Swapchain,
+                FrameResourceKind.Font, FrameResourceKind.FontFace} {
+                Require(trace.BaselineKinds.Contains(int32(resource))
+                    || (startup != nil && trace.CreatedKinds.Contains(int32(resource))),
+                    "Missing resource baseline: " + resource.ToString())
+            }
+            Require(trace.Uploaded, "Image upload has no decoded-source linkage")
+            var linkedUploads = trace.UploadSubmissions.Count != 0
+            for upload in trace.UploadSubmissions {
+                linkedUploads = linkedUploads && trace.PreparedImages.Contains(upload.Key)
+                    && trace.Submitted.Contains(upload.Value)
+            }
+            Require(linkedUploads, "Image upload submission linkage is missing")
+            Require(trace.Providers.Contains("shader.create") && trace.Providers.Contains("shader.destroy")
+                && trace.Providers.Contains("pipeline.create"), "Shader/pipeline lifetimes are missing")
+            Require(trace.Gpu || trace.Providers.Contains("vulkan.timestamp"), "GPU provider has no availability record")
+            Console.WriteLine("profiler-memory: counters=" + trace.Counters.Count.ToString()
+                + " baseline_kinds=" + trace.BaselineKinds.Count.ToString()
+                + " image_upload_link=" + trace.Uploaded.ToString() + " gpu_elapsed=" + trace.Gpu.ToString())
             Console.WriteLine(
                 "profiler-trace: trace_id=" + traceId + " records=" + trace.Sequence.ToString()
                 + " pumps=" + trace.Builds.Count.ToString() + " held_submission=" + queued
@@ -353,9 +427,97 @@ internal class ProfilerSmoke {
                 let ticks = Int64.Parse(record.GetProperty("ticks").GetString() ?? "-1", CultureInfo.InvariantCulture)
                 Require(ticks >= 0L, "Negative trace timestamp")
                 let kind = record.GetProperty("kind").GetString() ?? ""
-                Require(record.GetProperty("resourceKind").ValueKind == JsonValueKind.Null
-                    && record.GetProperty("ownerKind").ValueKind == JsonValueKind.Null,
-                    "Unmeasured resource classification is not null")
+                if kind == "gap" {
+                    trace.BaselineIds.Clear()
+                    trace.Allocations.Clear()
+                    trace.AccountsValid = false
+                }
+                if kind != "resourcebaseline" && kind != "resourcelifecycle"
+                    && record.GetProperty("resourceId").ValueKind == JsonValueKind.Null
+                    && record.GetProperty("category").GetString() != VulkanDiagnosticCategories.Resource.ToString(CultureInfo.InvariantCulture)
+                    && record.GetProperty("category").GetString() != VulkanDiagnosticCategories.Allocator.ToString(CultureInfo.InvariantCulture) {
+                    Require(record.GetProperty("resourceKind").ValueKind == JsonValueKind.Null
+                        && record.GetProperty("ownerKind").ValueKind == JsonValueKind.Null,
+                        "Unmeasured resource classification is not null")
+                }
+                let resourceSource = record.GetProperty("source").GetString() ?? ""
+                if resourceSource == "recording.stop" {
+                    trace.Cutoff = ticks
+                } else if kind != "duration" && kind != "counter" && kind != "gap" && kind != "end" {
+                    trace.LastCpuEnd = Math.Max(trace.LastCpuEnd, ticks)
+                }
+                if kind == "counter" {
+                    trace.Counters.Add(record.GetProperty("name").GetString() ?? "")
+                    if record.GetProperty("validity").GetString() == "unavailable" {
+                        Require(record.GetProperty("value0").ValueKind == JsonValueKind.Null,
+                            "Unavailable counter is not null")
+                    }
+                }
+                if kind == "resourcelifecycle" {
+                    let eventId = record.GetProperty("eventId").GetString() ?? ""
+                    if eventId == VulkanDiagnosticEventIds.ResourceCreate.ToString(CultureInfo.InvariantCulture)
+                        || eventId == VulkanDiagnosticEventIds.PipelineCreate.ToString(CultureInfo.InvariantCulture)
+                        || eventId == VulkanDiagnosticEventIds.SwapchainCreate.ToString(CultureInfo.InvariantCulture) {
+                        trace.CreatedKinds.Add(record.GetProperty("resourceKind").GetInt32())
+                    }
+                }
+                if kind == "resourcebaseline" {
+                    trace.BaselineKinds.Add(record.GetProperty("resourceKind").GetInt32())
+                    let id = record.GetProperty("resourceId").GetString() ?? ""
+                    Require(trace.BaselineIds.Add(id), "A resource baseline was duplicated")
+                    Require(record.GetProperty("resourceId").ValueKind == JsonValueKind.String,
+                        "Baseline resource identity is missing")
+                }
+                if resourceSource == "image.upload.prepare" {
+                    trace.Uploaded = true
+                    trace.PreparedImages.Add(record.GetProperty("resourceId").GetString() ?? "")
+                    Require(record.GetProperty("parentId").ValueKind == JsonValueKind.String,
+                        "Upload has no decoded source")
+                }
+                if resourceSource == "image.upload.submit" {
+                    trace.UploadSubmissions[record.GetProperty("resourceId").GetString() ?? ""] =
+                        record.GetProperty("submissionId").GetString() ?? ""
+                }
+                if resourceSource == "vulkan.timestamp" {
+                    trace.GpuSupported = record.GetProperty("validity").GetString() == "available"
+                }
+                if resourceSource == "vulkan.timestamp.elapsed" {
+                    trace.Gpu = true
+                    trace.GpuAvailable = trace.GpuAvailable || record.GetProperty("validity").GetString() == "available"
+                    Require(record.GetProperty("submissionId").ValueKind == JsonValueKind.String,
+                        "GPU elapsed time has no submission")
+                    Require(record.GetProperty("validity").GetString() == "unavailable"
+                        || record.GetProperty("gpuElapsedNs").ValueKind == JsonValueKind.Number,
+                        "GPU elapsed time is missing")
+                }
+                if record.GetProperty("requirementBytes").ValueKind == JsonValueKind.Number {
+                    let id = record.GetProperty("resourceId").GetString() ?? ""
+                    if record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.ResourceEvict.ToString(CultureInfo.InvariantCulture) {
+                        trace.Allocations.Remove(id)
+                    } else {
+                        trace.Allocations[id] = ProfilerSmokeAllocation(record.GetProperty("ownerKind").GetInt32(),
+                            record.GetProperty("requirementBytes").GetUInt64(), resourceSource == "vulkan.retired")
+                    }
+                }
+                let counterName = record.GetProperty("name").GetString() ?? ""
+                if trace.AccountsValid && (counterName == "vulkan.live.requirements" || counterName == "vulkan.retired.requirements") {
+                    let owner = record.GetProperty("ownerKind").GetInt32()
+                    let retired = counterName == "vulkan.retired.requirements"
+                    var bytes uint64 = 0uL
+                    var count uint64 = 0uL
+                    for allocation in trace.Allocations.Values {
+                        if allocation.Owner == owner && allocation.Retired == retired {
+                            bytes += allocation.Bytes
+                            count++
+                        }
+                    }
+                    Require(record.GetProperty("value0").GetUInt64() == bytes
+                        && record.GetProperty("value1").GetUInt64() == count, "Allocator lifecycle does not reconcile")
+                }
+                if counterName == "vulkan.retired.placement"
+                    && record.GetProperty("ownerKind").GetInt32() == int32(VulkanMemoryOwnerKind.Buffer) {
+                    trace.AccountsValid = true
+                }
                 if kind != "duration" {
                     Require(record.GetProperty("endTicks").ValueKind == JsonValueKind.Null,
                         "Non-duration record has an end timestamp")
@@ -371,6 +533,7 @@ internal class ProfilerSmoke {
                         CultureInfo.InvariantCulture
                     )
                     Require(end >= ticks, "Phase ends before it starts")
+                    trace.LastCpuEnd = Math.Max(trace.LastCpuEnd, end)
                     let pump = record.GetProperty("pumpId").GetString() ?? "0"
                     Require(
                         pump == "0" ? record.GetProperty("frameId").ValueKind == JsonValueKind.Null
@@ -401,6 +564,7 @@ internal class ProfilerSmoke {
                 if record.GetProperty("source").ValueKind == JsonValueKind.String {
                     let source = record.GetProperty("source").GetString() ?? ""
                     trace.Sources.Add(source)
+                    trace.Providers.Add(source)
                     if source == "vulkan.library" {
                         Require(record.GetProperty("imageIndex").ValueKind == JsonValueKind.Null,
                             "Startup library load has an image index")
