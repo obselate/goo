@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Goo.Svg;
 using Xunit;
 
-namespace Goo.Svg.Tests;
+namespace Goo.CoreBehaviorTests;
+using Goo.Svg;
 
 public sealed class SvgRuntimeTests
 {

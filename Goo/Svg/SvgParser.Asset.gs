@@ -8,141 +8,36 @@ import System.Xml
 import System.Xml.Linq
 
 internal partial class SvgParser {
+    private let paintIndices Dictionary[SvgPaint, int32] = Dictionary[SvgPaint, int32](
+        ReferenceEqualityComparer.Instance
+    )
+    private let strokeIndices Dictionary[SvgStroke, int32] = Dictionary[SvgStroke, int32](
+        ReferenceEqualityComparer.Instance
+    )
+    private let trackIndices Dictionary[SvgAnimation, int32] = Dictionary[SvgAnimation, int32](
+        ReferenceEqualityComparer.Instance
+    )
+    private let animationPaints List[VectorAnimationPaint] = List[VectorAnimationPaint]()
+    private let animationStrokes List[VectorAnimationStroke] = List[VectorAnimationStroke]()
+    private let animationTracks List[VectorAnimationTrack] = List[VectorAnimationTrack]()
+    private let keyframes List[VectorAnimationKeyframe] = List[VectorAnimationKeyframe]()
+    private let morphCurves List[VectorAnimationCurve] = List[VectorAnimationCurve]()
+    private let dashes List[float32] = List[float32]()
+
     private func BuildAsset() VectorAsset {
         let orderedNodes = OrderNodes()
-        let paintIndices = Dictionary[SvgPaint, int32](ReferenceEqualityComparer.Instance)
-        let strokeIndices = Dictionary[SvgStroke, int32](ReferenceEqualityComparer.Instance)
-        let trackIndices = Dictionary[SvgAnimation, int32](ReferenceEqualityComparer.Instance)
         let animationNodes = List[VectorAnimationNode](orderedNodes.Count)
-        let animationPaints = List[VectorAnimationPaint]()
-        let animationStrokes = List[VectorAnimationStroke]()
-        let animationTracks = List[VectorAnimationTrack]()
-        let keyframes = List[VectorAnimationKeyframe]()
-        let morphCurves = List[VectorAnimationCurve]()
-        let dashes = List[float32]()
-        let AddTrack = func (animation SvgAnimation?) uint32 {
-            if animation == nil {
-                return MissingIndex
-            }
-            if trackIndices.TryGetValue(animation, out var existing) {
-                return uint32(existing)
-            }
-            if animationTracks.Count >= MaxAnimationTracks ||
-                animation
-                .Keyframes
-                .Count == 0 ||
-                animation
-                .Keyframes
-                .Count > MaxAnimationKeyframes - keyframes.Count {
-                throw SvgParseException("animation track limit exceeded")
-            }
-            let keyframeStart = keyframes.Count
-            for keyframe in animation.Keyframes {
-                var curveStart = MissingIndex
-                var curveCount = 0u
-                if animation.Kind == SvgAnimationKind.Morph {
-                    let source = keyframe.MorphCurves ?? throw SvgParseException("morph keyframe has no target curves")
-                    if source.Count == 0 || source.Count > MaxMorphCurves - morphCurves.Count {
-                        throw SvgParseException("morph curve limit exceeded")
-                    }
-                    curveStart = uint32(morphCurves.Count)
-                    curveCount = uint32(source.Count)
-                    for curve in source {
-                        morphCurves.Add(
-                            VectorAnimationCurve(
-                                F32(curve.X0),
-                                F32(curve.Y0),
-                                F32(curve.CX),
-                                F32(curve.CY),
-                                F32(curve.X1),
-                                F32(curve.Y1)
-                            )
-                        )
-                    }
-                }
-                keyframes.Add(
-                    VectorAnimationKeyframe(
-                        F32(keyframe.Time),
-                        F32(keyframe.A),
-                        F32(keyframe.B),
-                        F32(keyframe.C),
-                        F32(keyframe.D),
-                        F32(keyframe.E),
-                        F32(keyframe.F),
-                        keyframe.Easing,
-                        F32(keyframe.ControlA),
-                        F32(keyframe.ControlB),
-                        F32(keyframe.ControlC),
-                        F32(keyframe.ControlD),
-                        curveStart,
-                        curveCount
-                    )
-                )
-            }
-            let index = animationTracks.Count
-            animationTracks.Add(
-                VectorAnimationTrack(
-                    VectorAnimationKind(animation.Kind),
-                    uint32(keyframeStart),
-                    uint32(animation.Keyframes.Count),
-                    F32(animation.Duration),
-                    animation.Flags
-                )
-            )
-            trackIndices.Add(animation, index)
-            return uint32(index)
-        }
-        let AddPaint = func (paint SvgPaint) uint32 {
-            if paintIndices.TryGetValue(paint, out var existing) {
-                return uint32(existing)
-            }
-            if animationPaints.Count >= MaxPaints {
-                throw SvgParseException("paint count exceeds $MaxPaints")
-            }
-            let index = animationPaints.Count
-            animationPaints.Add(VectorAnimationPaint(VectorPaintKind(paint.Kind), AddTrack(paint.Animation)))
-            paintIndices.Add(paint, index)
-            return uint32(index)
-        }
-        let AddStroke = func (stroke SvgStroke) uint32 {
-            if strokeIndices.TryGetValue(stroke, out var existing) {
-                return uint32(existing)
-            }
-            if animationStrokes.Count >= MaxStrokes {
-                throw SvgParseException("stroke count exceeds $MaxStrokes")
-            }
-            let dashStart = dashes.Count
-            for value in stroke.Dashes {
-                dashes.Add(F32(value))
-            }
-            let index = animationStrokes.Count
-            animationStrokes.Add(
-                VectorAnimationStroke(
-                    F32(stroke.Width),
-                    F32(stroke.MiterLimit),
-                    stroke.Cap,
-                    stroke.Join,
-                    F32(stroke.DashOffset),
-                    AddPaint(stroke.Paint),
-                    AddTrack(stroke.Animation),
-                    uint32(dashStart),
-                    uint32(stroke.Dashes.Count)
-                )
-            )
-            strokeIndices.Add(stroke, index)
-            return uint32(index)
-        }
         for node in orderedNodes {
             var paintIndex = MissingIndex
             var strokeIndex = MissingIndex
             let transformTrackIndex = AddTrack(node.TransformAnimation)
             let opacityTrackIndex = AddTrack(node.OpacityAnimation)
             let morphTrackIndex = AddTrack(node.MorphAnimation)
-            if node.Shape is {} shape {
-                if shape.Fill is {} fill {
+            if let shape = node.Shape {
+                if let fill = shape.Fill {
                     paintIndex = AddPaint(fill)
                 }
-                if shape.Stroke is {} stroke {
+                if let stroke = shape.Stroke {
                     strokeIndex = AddStroke(stroke)
                 }
             }
@@ -164,6 +59,121 @@ internal partial class SvgParser {
             dashes.ToArray()
         )
         return VectorAsset(viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight, roots, animation)
+    }
+
+    private func AddTrack(animation SvgAnimation?) uint32 {
+        if animation == nil {
+            return MissingIndex
+        }
+        if trackIndices.TryGetValue(animation, out var existing) {
+            return uint32(existing)
+        }
+        if animationTracks.Count >= MaxAnimationTracks ||
+            animation
+            .Keyframes
+            .Count == 0 ||
+            animation
+            .Keyframes
+            .Count > MaxAnimationKeyframes - keyframes.Count {
+            throw SvgParseException("animation track limit exceeded")
+        }
+        let keyframeStart = keyframes.Count
+        for keyframe in animation.Keyframes {
+            var curveStart = MissingIndex
+            var curveCount = 0u
+            if animation.Kind == SvgAnimationKind.Morph {
+                let source = keyframe.MorphCurves ?? throw SvgParseException("morph keyframe has no target curves")
+                if source.Count == 0 || source.Count > MaxMorphCurves - morphCurves.Count {
+                    throw SvgParseException("morph curve limit exceeded")
+                }
+                curveStart = uint32(morphCurves.Count)
+                curveCount = uint32(source.Count)
+                for curve in source {
+                    morphCurves.Add(
+                        VectorAnimationCurve(
+                            F32(curve.X0),
+                            F32(curve.Y0),
+                            F32(curve.CX),
+                            F32(curve.CY),
+                            F32(curve.X1),
+                            F32(curve.Y1)
+                        )
+                    )
+                }
+            }
+            keyframes.Add(
+                VectorAnimationKeyframe(
+                    F32(keyframe.Time),
+                    F32(keyframe.A),
+                    F32(keyframe.B),
+                    F32(keyframe.C),
+                    F32(keyframe.D),
+                    F32(keyframe.E),
+                    F32(keyframe.F),
+                    keyframe.Easing,
+                    F32(keyframe.ControlA),
+                    F32(keyframe.ControlB),
+                    F32(keyframe.ControlC),
+                    F32(keyframe.ControlD),
+                    curveStart,
+                    curveCount
+                )
+            )
+        }
+        let index = animationTracks.Count
+        animationTracks.Add(
+            VectorAnimationTrack(
+                VectorAnimationKind(animation.Kind),
+                uint32(keyframeStart),
+                uint32(animation.Keyframes.Count),
+                F32(animation.Duration),
+                animation.Flags
+            )
+        )
+        trackIndices.Add(animation, index)
+        return uint32(index)
+    }
+
+    private func AddPaint(paint SvgPaint) uint32 {
+        if paintIndices.TryGetValue(paint, out var existing) {
+            return uint32(existing)
+        }
+        if animationPaints.Count >= MaxPaints {
+            throw SvgParseException("paint count exceeds $MaxPaints")
+        }
+        let index = animationPaints.Count
+        animationPaints.Add(VectorAnimationPaint(VectorPaintKind(paint.Kind), AddTrack(paint.Animation)))
+        paintIndices.Add(paint, index)
+        return uint32(index)
+    }
+
+    private func AddStroke(stroke SvgStroke) uint32 {
+        if strokeIndices.TryGetValue(stroke, out var existing) {
+            return uint32(existing)
+        }
+        if animationStrokes.Count >= MaxStrokes {
+            throw SvgParseException("stroke count exceeds $MaxStrokes")
+        }
+        let dashStart = dashes.Count
+        for value in stroke.Dashes {
+            dashes.Add(F32(value))
+        }
+        let index = animationStrokes.Count
+        animationStrokes.Add(
+            VectorAnimationStroke(
+                F32(stroke.Width),
+                F32(stroke.MiterLimit),
+                stroke.Cap,
+                stroke.Join,
+                F32(stroke.DashOffset),
+                AddPaint(stroke.Paint),
+                AddTrack(stroke.Animation),
+                uint32(dashStart),
+                uint32(stroke.Dashes.Count)
+            )
+        )
+        strokeIndices.Add(stroke, index)
+        return uint32(index)
     }
 
     private func OrderNodes() List[SvgNode] {
@@ -297,9 +307,7 @@ internal partial class SvgParser {
         }
 
         private func AddLine(contour SvgContour, from SvgPoint, to SvgPoint) {
-            contour.Curves.Add(
-                SvgQuadratic(from.X, from.Y, (from.X + to.X) / float64(2.0), (from.Y + to.Y) / float64(2.0), to.X, to.Y)
-            )
+            contour.Curves.Add(SvgQuadratic(from.X, from.Y, (from.X + to.X) / 2.0, (from.Y + to.Y) / 2.0, to.X, to.Y))
         }
 
         private func AddQuadratic(contour SvgContour, from SvgPoint, control SvgPoint, to SvgPoint) {
@@ -318,13 +326,10 @@ internal partial class SvgParser {
             p3 SvgPoint,
             depth int32
         ) {
-            let control = SvgPoint(
-                (float64(3.0) * (p1.X + p2.X) - p0.X - p3.X) / float64(4.0),
-                (float64(3.0) * (p1.Y + p2.Y) - p0.Y - p3.Y) / float64(4.0)
-            )
-            let deltaX = p3.X - float64(3.0) * p2.X + float64(3.0) * p1.X - p0.X
-            let deltaY = p3.Y - float64(3.0) * p2.Y + float64(3.0) * p1.Y - p0.Y
-            let error = Math.Sqrt(deltaX * deltaX + deltaY * deltaY) * Math.Sqrt(3.0) / float64(36.0)
+            let control = SvgPoint((3.0 * (p1.X + p2.X) - p0.X - p3.X) / 4.0, (3.0 * (p1.Y + p2.Y) - p0.Y - p3.Y) / 4.0)
+            let deltaX = p3.X - 3.0 * p2.X + 3.0 * p1.X - p0.X
+            let deltaY = p3.Y - 3.0 * p2.Y + 3.0 * p1.Y - p0.Y
+            let error = Math.Sqrt(deltaX * deltaX + deltaY * deltaY) * Math.Sqrt(3.0) / 36.0
             if !control.IsFinite || !float64.IsFinite(error) {
                 throw SvgParseException("cubic curve contains non-finite geometry")
             }
@@ -343,8 +348,8 @@ internal partial class SvgParser {
         }
 
         private func Midpoint(left SvgPoint, right SvgPoint) SvgPoint -> SvgPoint(
-            (left.X + right.X) / float64(2.0),
-            (left.Y + right.Y) / float64(2.0)
+            (left.X + right.X) / 2.0,
+            (left.Y + right.Y) / 2.0
         )
 
         private func LocalName(element XElement) string -> element.Name.LocalName

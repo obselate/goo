@@ -40,10 +40,10 @@ internal partial class SvgParser {
             Parent: nil,
             Transform: SvgMatrix.Identity,
             Opacity: rootStyle.LocalOpacity,
-            Clip: if rootStyle.ClipPath is {} clip {
+            Clip: if let clip = rootStyle.ClipPath {
                 ParseClip(clip, root)
             } else {
-                default(SvgClip?)
+                nil
             },
             Index: 0
         }
@@ -127,7 +127,7 @@ internal partial class SvgParser {
         let viewBox string? = string?(root.Attribute("viewBox"))
         if viewBox != nil {
             let values = ParseNumberList(viewBox, root, "viewBox")
-            if values.Count != 4 || values[2] <= float64(0.0) || values[3] <= float64(0.0) {
+            if values.Count != 4 || values[2] <= 0.0 || values[3] <= 0.0 {
                 throw Fail(root, "viewBox must contain four positive finite values")
             }
             viewBoxX = values[0]
@@ -140,7 +140,7 @@ internal partial class SvgParser {
         viewBoxY = 0.0
         viewBoxWidth = ParseLength(string?(root.Attribute("width")) ?? "0", 0.0, root, "width")
         viewBoxHeight = ParseLength(string?(root.Attribute("height")) ?? "0", 0.0, root, "height")
-        if viewBoxWidth <= float64(0.0) || viewBoxHeight <= float64(0.0) {
+        if viewBoxWidth <= 0.0 || viewBoxHeight <= 0.0 {
             throw Fail(root, "root SVG requires a positive viewBox or width and height")
         }
     }
@@ -218,10 +218,10 @@ internal partial class SvgParser {
             Transform: transform,
             Opacity: opacity,
             Shape: shape,
-            Clip: if style.ClipPath is {} clip {
+            Clip: if let clip = style.ClipPath {
                 ParseClip(clip, element)
             } else {
-                default(SvgClip?)
+                nil
             },
             Index: nodes.Count
         }

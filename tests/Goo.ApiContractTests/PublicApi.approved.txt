@@ -1979,8 +1979,8 @@ type|Goo.SoundSource|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.StrokeCap|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:
-type|Goo.Svg.SvgParseException|class|public|base:System.FormatException|interfaces:|generic:
-type|Goo.Svg.Svg|class|public|base:System.Object|interfaces:|generic:
+type|Goo.Svg.SvgParseException|sealed-class|public|base:System.FormatException|interfaces:|generic:
+type|Goo.Svg.Svg|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SystemTheme|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAffinity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAlign|enum|public|base:System.Enum|interfaces:|generic:

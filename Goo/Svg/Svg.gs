@@ -5,7 +5,7 @@ import System
 import System.IO
 
 /// Reports invalid or unsupported SVG content.
-public sealed class SvgParseException : FormatException {
+public class SvgParseException : FormatException {
     /// Creates an SVG parse failure with an optional inner exception.
     /// @param message The parse failure description.
     /// @param innerException The optional underlying failure.
@@ -13,7 +13,7 @@ public sealed class SvgParseException : FormatException {
 }
 
 /// Loads SVG sources as reusable vector assets.
-public sealed class Svg {
+public class Svg {
     private init() { }
 
     shared {

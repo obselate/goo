@@ -58,22 +58,22 @@ internal partial class SvgParser {
             let y = ParseLength(string?(element.Attribute("y")) ?? "0", 0.0, element, "y")
             let width = ParseLength(string?(element.Attribute("width")) ?? "0", 0.0, element, "width")
             let height = ParseLength(string?(element.Attribute("height")) ?? "0", 0.0, element, "height")
-            if width <= float64(0.0) || height <= float64(0.0) {
+            if width <= 0.0 || height <= 0.0 {
                 throw Fail(element, "rect width and height must be positive")
             }
             var rx = ParseLength(string?(element.Attribute("rx")) ?? "0", 0.0, element, "rx")
             var ry = ParseLength(string?(element.Attribute("ry")) ?? "0", 0.0, element, "ry")
-            if rx < float64(0.0) || ry < float64(0.0) {
+            if rx < 0.0 || ry < 0.0 {
                 throw Fail(element, "rect corner radii cannot be negative")
             }
-            if rx == float64(0.0) && ry != float64(0.0) {
+            if rx == 0.0 && ry != 0.0 {
                 rx = ry
             }
-            if ry == float64(0.0) && rx != float64(0.0) {
+            if ry == 0.0 && rx != 0.0 {
                 ry = rx
             }
-            rx = Math.Min(rx, width / float64(2.0))
-            ry = Math.Min(ry, height / float64(2.0))
+            rx = Math.Min(rx, width / 2.0)
+            ry = Math.Min(ry, height / 2.0)
             let path = SvgPath()
             let contour = SvgContour()
             let p0 = SvgPoint(x + rx, y)
@@ -134,7 +134,7 @@ internal partial class SvgParser {
             } else {
                 ParseLength(string?(element.Attribute("ry")) ?? "0", 0.0, element, "ry")
             }
-            if rx <= float64(0.0) || ry <= float64(0.0) {
+            if rx <= 0.0 || ry <= 0.0 {
                 throw Fail(element, "ellipse radii must be positive")
             }
             let path = SvgPath()

@@ -39,7 +39,7 @@ internal enum SvgPaintKind {
     RadialGradient
 }
 
-internal sealed class SvgPaint {
+internal class SvgPaint {
     internal prop Kind SvgPaintKind {
         get;
         init
@@ -76,7 +76,7 @@ internal sealed class SvgPaint {
     }
 }
 
-internal sealed class SvgStop {
+internal class SvgStop {
     internal prop Offset float64 {
         get;
         init
@@ -87,7 +87,7 @@ internal sealed class SvgStop {
     }
 }
 
-internal sealed class SvgStroke {
+internal class SvgStroke {
     internal prop Width float64 {
         get;
         init
@@ -116,12 +116,12 @@ internal sealed class SvgStroke {
     internal let Dashes List[float64] = List[float64]()
 }
 
-internal sealed class SvgClip {
+internal class SvgClip {
     internal let Contours List[SvgContour] = List[SvgContour]()
     internal prop FillRule uint32
 }
 
-internal sealed class SvgShape {
+internal class SvgShape {
     internal prop Path SvgPath {
         get;
         init
@@ -144,7 +144,7 @@ internal sealed class SvgShape {
     }
 }
 
-internal sealed class SvgNode {
+internal class SvgNode {
     internal prop Parent SvgNode? {
         get;
         init
@@ -180,7 +180,7 @@ internal enum SvgAnimationKind {
     Morph
 }
 
-internal sealed class SvgAnimation {
+internal class SvgAnimation {
     internal prop Kind SvgAnimationKind {
         get;
         init
@@ -196,7 +196,7 @@ internal sealed class SvgAnimation {
     internal let Keyframes List[SvgAnimationKeyframe] = List[SvgAnimationKeyframe]()
 }
 
-internal sealed class SvgAnimationKeyframe {
+internal class SvgAnimationKeyframe {
     internal prop Time float64 {
         get;
         init
@@ -248,7 +248,7 @@ internal sealed class SvgAnimationKeyframe {
     }
 }
 
-internal sealed class SvgPath {
+internal class SvgPath {
     internal let Contours List[SvgContour] = List[SvgContour]()
 
     internal func Bounds()(MinX float64, MinY float64, MaxX float64, MaxY float64) {
@@ -298,14 +298,14 @@ internal sealed class SvgPath {
     }
 }
 
-internal sealed class SvgContour {
+internal class SvgContour {
     internal let Curves List[SvgQuadratic] = List[SvgQuadratic]()
     internal prop Closed bool
 }
 
 internal data struct SvgQuadratic(X0 float64, Y0 float64, CX float64, CY float64, X1 float64, Y1 float64) { }
 
-internal sealed class SvgGradientDefinition {
+internal class SvgGradientDefinition {
     internal let Element XElement
 
     internal init(element XElement) {
@@ -313,7 +313,7 @@ internal sealed class SvgGradientDefinition {
     }
 }
 
-internal sealed class SvgClipDefinition {
+internal class SvgClipDefinition {
     internal let Element XElement
 
     internal init(element XElement) {
@@ -321,7 +321,7 @@ internal sealed class SvgClipDefinition {
     }
 }
 
-internal sealed class SvgStyle {
+internal class SvgStyle {
     internal prop Fill string
     internal prop Stroke string?
     internal prop FillOpacity float64

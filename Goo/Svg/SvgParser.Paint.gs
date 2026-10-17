@@ -81,17 +81,7 @@ internal partial class SvgParser {
                 }
                 continue
             }
-            if !(
-                (
-                    name == "path" ||
-                        name == "rect" ||
-                        name == "circle" ||
-                        name == "ellipse" ||
-                        name == "line" ||
-                        name == "polyline" ||
-                        name == "polygon"
-                )
-            ) {
+            if name is not("path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon") {
                 throw Fail(child, "clipPath child '$name' is not representable")
             }
             let path = ParseGeometry(child)
@@ -182,7 +172,7 @@ internal partial class SvgParser {
         let element = definition.Element
         let name = LocalName(element)
         let units = string?(element.Attribute("gradientUnits")) ?? "objectBoundingBox"
-        if !((units == "objectBoundingBox" || units == "userSpaceOnUse")) {
+        if units is not("objectBoundingBox" or "userSpaceOnUse") {
             throw Fail(element, "gradientUnits is not supported")
         }
         let transformText = string?(element.Attribute("gradientTransform"))
@@ -195,7 +185,7 @@ internal partial class SvgParser {
         }
         let transform = ParseTransform(transformText, element)
         let determinant = transform.A * transform.D - transform.B * transform.C
-        if !float64.IsFinite(determinant) || determinant == float64(0.0) {
+        if !float64.IsFinite(determinant) || determinant == 0.0 {
             throw Fail(element, "gradientTransform must be non-singular")
         }
         var paint = SvgPaint{
@@ -271,7 +261,7 @@ internal partial class SvgParser {
             lastOffset = offset
             let stopStyle = ResolveStopStyle(stopElement)
             var color = ParseColor(stopStyle.Color, stopElement)
-            if stopStyle.Opacity < float64(0.0) || stopStyle.Opacity > float64(1.0) {
+            if stopStyle.Opacity < 0.0 || stopStyle.Opacity > 1.0 {
                 throw Fail(stopElement, "stop opacity must be between zero and one")
             }
             color = ApplyOpacity(color, stopStyle.Opacity * opacity)
@@ -298,7 +288,7 @@ internal partial class SvgParser {
                 } else {
                     "gradient y"
                 }
-            ) / float64(100.0)
+            ) / 100.0
         } else {
             ParseLength(
                 text,
@@ -312,27 +302,16 @@ internal partial class SvgParser {
             )
         }
         if units == "objectBoundingBox" {
-            let fraction = if isPercent {
-                number
-            } else {
-                number
-            }
             return if horizontal {
-                bounds.MinX + (bounds.MaxX - bounds.MinX) * fraction
+                bounds.MinX + (bounds.MaxX - bounds.MinX) * number
             } else {
-                bounds.MinY + (bounds.MaxY - bounds.MinY) * fraction
+                bounds.MinY + (bounds.MaxY - bounds.MinY) * number
             }
         }
-        return if isPercent {
-            (
-                if horizontal {
-                    viewBoxX + viewBoxWidth * number
-                } else {
-                    viewBoxY + viewBoxHeight * number
-                }
-            )
-        } else {
-            number
+        return switch isPercent {
+            case true when horizontal: viewBoxX + viewBoxWidth * number
+            case true: viewBoxY + viewBoxHeight * number
+            default: number
         }
     }
 
@@ -340,18 +319,16 @@ internal partial class SvgParser {
         let text = value.Trim()
         var radius float64
         if text.EndsWith('%') {
-            let percentNumber = ParseLooseNumber(text[.. ^1], owner, "gradient radius") / float64(100.0)
+            let percentNumber = ParseLooseNumber(text[.. ^1], owner, "gradient radius") / 100.0
             if units == "objectBoundingBox" {
                 radius = percentNumber
             } else {
-                radius = percentNumber * Math.Sqrt(
-                    (viewBoxWidth * viewBoxWidth + viewBoxHeight * viewBoxHeight) / float64(2.0)
-                )
+                radius = percentNumber * Math.Sqrt((viewBoxWidth * viewBoxWidth + viewBoxHeight * viewBoxHeight) / 2.0)
             }
         } else {
             radius = ParseLength(text, 0.0, owner, "gradient radius")
         }
-        if !float64.IsFinite(radius) || radius <= float64(0.0) {
+        if !float64.IsFinite(radius) || radius <= 0.0 {
             throw Fail(owner, "radial gradient radius must be positive")
         }
         return radius
@@ -396,7 +373,7 @@ internal partial class SvgParser {
             ApplyStyleValues(style, declarations, element)
         }
         style.Opacity = parent.Opacity * style.LocalOpacity
-        if style.Opacity < float64(0.0) || style.Opacity > float64(1.0) || !float64.IsFinite(style.Opacity) {
+        if style.Opacity < 0.0 || style.Opacity > 1.0 || !float64.IsFinite(style.Opacity) {
             throw Fail(element, "opacity must be between zero and one")
         }
         return style
@@ -419,7 +396,7 @@ internal partial class SvgParser {
                 }
                 case "stroke-width" {
                     style.StrokeWidth = ParseLength(pair.Value, 0.0, owner, pair.Key)
-                    if style.StrokeWidth < float64(0.0) {
+                    if style.StrokeWidth < 0.0 {
                         throw Fail(owner, "stroke-width cannot be negative")
                     }
                 }
@@ -441,7 +418,7 @@ internal partial class SvgParser {
                 }
                 case "stroke-miterlimit" {
                     style.MiterLimit = ParseLooseNumber(pair.Value, owner, pair.Key)
-                    if style.MiterLimit < float64(1.0) {
+                    if style.MiterLimit < 1.0 {
                         throw Fail(owner, "stroke-miterlimit must be at least one")
                     }
                 }
@@ -591,10 +568,10 @@ internal partial class SvgParser {
                 return nil
             }
             let values = ParseNumberList(value, owner, "stroke-dasharray")
-            if values.Count == 0 || values.Any((item float64) -> item < float64(0.0)) {
+            if values.Count == 0 || values.Any((item float64) -> item < 0.0) {
                 throw Fail(owner, "stroke-dasharray values must be non-negative")
             }
-            if values.All((item float64) -> item == float64(0.0)) {
+            if values.All((item float64) -> item == 0.0) {
                 throw Fail(owner, "stroke-dasharray cannot contain only zero values")
             }
             if values.Count % 2 != 0 {
@@ -654,11 +631,11 @@ internal partial class SvgParser {
         private func ParseStopOffset(value string, owner XElement) float64 {
             let text = value.Trim()
             let result = if text.EndsWith('%') {
-                ParseLooseNumber(text[.. ^1], owner, "stop offset") / float64(100.0)
+                ParseLooseNumber(text[.. ^1], owner, "stop offset") / 100.0
             } else {
                 ParseLooseNumber(text, owner, "stop offset")
             }
-            if !float64.IsFinite(result) || result < float64(0.0) || result > float64(1.0) {
+            if !float64.IsFinite(result) || result < 0.0 || result > 1.0 {
                 throw Fail(owner, "gradient stop offset must be between zero and one")
             }
             return result
@@ -666,7 +643,7 @@ internal partial class SvgParser {
 
         private func ParseOpacity(value string, owner XElement, field string) float64 {
             let result = ParseLooseNumber(value, owner, field)
-            if result < float64(0.0) || result > float64(1.0) {
+            if result < 0.0 || result > 1.0 {
                 throw Fail(owner, "$field must be between zero and one")
             }
             return result
@@ -675,7 +652,7 @@ internal partial class SvgParser {
         private func ParseLooseNumber(value string, owner XElement, field string) float64 {
             let text = value.Trim()
             if text.EndsWith('%') {
-                return ParseLooseNumber(text[.. ^1], owner, field) / float64(100.0)
+                return ParseLooseNumber(text[.. ^1], owner, field) / 100.0
             }
             if !float64.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ||
                 !float64.IsFinite(result) {
@@ -687,10 +664,10 @@ internal partial class SvgParser {
         private func ParseLength(value string, relative float64, owner XElement, field string) float64 {
             let text = value.Trim()
             if text.EndsWith('%') {
-                if relative == float64(0.0) {
+                if relative == 0.0 {
                     throw Fail(owner, "$field percentages are not supported without a relative basis")
                 }
-                return ParseLooseNumber(text[.. ^1], owner, field) / float64(100.0) * relative
+                return ParseLooseNumber(text[.. ^1], owner, field) / 100.0 * relative
             }
             let suffix = if text.Length > 2 {
                 text[^2 ..].ToLowerInvariant()
@@ -738,7 +715,7 @@ internal partial class SvgParser {
                         if values.Count == 2 {
                             values[1]
                         } else {
-                            float64(0.0)
+                            0.0
                         }
                     )
                     case "scale" when(values.Count is 1 or 2): SvgMatrix(
@@ -757,14 +734,14 @@ internal partial class SvgParser {
                     case "skewx" when values.Count == 1: SvgMatrix(
                         1.0,
                         0.0,
-                        Math.Tan(values[0] * Math.PI / float64(180.0)),
+                        Math.Tan(values[0] * Math.PI / 180.0),
                         1.0,
                         0.0,
                         0.0
                     )
                     case "skewy" when values.Count == 1: SvgMatrix(
                         1.0,
-                        Math.Tan(values[0] * Math.PI / float64(180.0)),
+                        Math.Tan(values[0] * Math.PI / 180.0),
                         0.0,
                         1.0,
                         0.0,
@@ -783,7 +760,7 @@ internal partial class SvgParser {
         }
 
         private func Rotate(values IReadOnlyList[float64]) SvgMatrix {
-            let radians = values[0] * Math.PI / float64(180.0)
+            let radians = values[0] * Math.PI / 180.0
             let rotation = SvgMatrix(
                 Math.Cos(radians),
                 Math.Sin(radians),

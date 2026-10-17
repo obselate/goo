@@ -32,16 +32,7 @@ internal partial class SvgParser {
         }
         if name == "animateTransform" {
             let type = (string?(element.Attribute("type")) ?? "").Trim().ToLowerInvariant()
-            if !(
-                (
-                    type == "matrix" ||
-                        type == "translate" ||
-                        type == "scale" ||
-                        type == "rotate" ||
-                        type == "skewx" ||
-                        type == "skewy"
-                )
-            ) {
+            if type is not("matrix" or "translate" or "scale" or "rotate" or "skewx" or "skewy") {
                 throw Fail(element, "animateTransform type is not supported")
             }
             let transformAnimation = BuildAnimation(element, SvgAnimationKind.Transform, type, nil, nil)
@@ -156,29 +147,17 @@ internal partial class SvgParser {
         }
         let times = ReadKeyTimes(element, values.Count)
         let calcMode = (string?(element.Attribute("calcMode")) ?? "linear").Trim().ToLowerInvariant()
-        if !((calcMode == "linear" || calcMode == "discrete" || calcMode == "spline")) {
+        if calcMode is not("linear" or "discrete" or "spline") {
             throw Fail(element, "calcMode '$calcMode' is not supported")
         }
         let splines = ReadKeySplines(element, calcMode, values.Count)
         let keyframes = List[SvgAnimationKeyframe](values.Count)
         for var index = 0; index < values.Count; index++ {
             let source = values[index]
-            let easing = if index == values.Count - 1 {
-                0u
-            } else {
-                (
-                    if calcMode == "discrete" {
-                        1u
-                    } else {
-                        (
-                            if calcMode == "spline" {
-                                2u
-                            } else {
-                                0u
-                            }
-                        )
-                    }
-                )
+            let easing = switch calcMode {
+                case "discrete" when index < values.Count - 1: 1u
+                case "spline" when index < values.Count - 1: 2u
+                default: 0u
             }
             let spline = if index < splines.Count {
                 splines[index]
@@ -247,7 +226,7 @@ internal partial class SvgParser {
                 throw Fail(element, "event-driven or delayed animation begin values are not supported")
             }
             let attributeType = (string?(element.Attribute("attributeType")) ?? "auto").Trim().ToLowerInvariant()
-            if !((attributeType == "auto" || attributeType == "xml")) {
+            if attributeType is not("auto" or "xml") {
                 throw Fail(element, "CSS animation attributeType is not supported")
             }
             let additive = (string?(element.Attribute("additive")) ?? "replace").Trim().ToLowerInvariant()
@@ -309,11 +288,11 @@ internal partial class SvgParser {
                 .Where((value string) -> value.Length != 0)
                 .Select((value string) -> ParseLooseNumber(value, element, "keyTimes"))
                 .ToList()
-            if values.Count != count || values.Count < 2 || values[0] != float64(0.0) || values[^1] != float64(1.0) {
+            if values.Count != count || values.Count < 2 || values[0] != 0.0 || values[^1] != 1.0 {
                 throw Fail(element, "keyTimes must match values and span zero to one")
             }
             for var index = 1; index < values.Count; index++ {
-                if values[index] < values[index - 1] || values[index] < float64(0.0) || values[index] > float64(1.0) {
+                if values[index] < values[index - 1] || values[index] < 0.0 || values[index] > 1.0 {
                     throw Fail(element, "keyTimes must be ordered values between zero and one")
                 }
             }
@@ -336,7 +315,7 @@ internal partial class SvgParser {
             let result = List[(float64, float64, float64, float64)]()
             for part in raw.Split(';', StringSplitOptions.TrimEntries) {
                 let values = ParseNumberList(part, element, "keySplines")
-                if values.Count != 4 || values.Any((value float64) -> value < float64(0.0) || value > float64(1.0)) {
+                if values.Count != 4 || values.Any((value float64) -> value < 0.0 || value > 1.0) {
                     throw Fail(element, "each keySpline requires four values between zero and one")
                 }
                 result.Add((values[0], values[1], values[2], values[3]))
@@ -353,9 +332,7 @@ internal partial class SvgParser {
                 return (true, 1)
             }
             if !float64.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ||
-                !float64.IsFinite(value) || value < float64(1.0) || value > float64(64.0) || Math.Truncate(
-                value
-            ) != value {
+                !float64.IsFinite(value) || value < 1.0 || value > 64.0 || Math.Truncate(value) != value {
                 throw Fail(element, "repeatCount must be indefinite or an integer from one to 64")
             }
             return (false, int32(value))
@@ -369,27 +346,15 @@ internal partial class SvgParser {
             let multiplier = if text.EndsWith("ms", StringComparison.Ordinal) {
                 0.001
             } else {
-                (
-                    if text.EndsWith('s') {
-                        1.0
-                    } else {
-                        1.0
-                    }
-                )
+                1.0
             }
-            let numberText = if text.EndsWith("ms", StringComparison.Ordinal) {
-                text[.. ^2]
-            } else {
-                (
-                    if text.EndsWith('s') {
-                        text[.. ^1]
-                    } else {
-                        text
-                    }
-                )
+            let numberText = switch text {
+                case _ when text.EndsWith("ms", StringComparison.Ordinal): text[.. ^2]
+                case _ when text.EndsWith('s'): text[.. ^1]
+                default: text
             }
             if !float64.TryParse(numberText, NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ||
-                !float64.IsFinite(result) || result <= float64(0.0) {
+                !float64.IsFinite(result) || result <= 0.0 {
                 throw Fail(owner, "animation dur must be a finite positive time")
             }
             return result * multiplier
@@ -502,13 +467,13 @@ internal partial class SvgParser {
             switch attribute {
                 case "stroke-width" {
                     width = ParseLength(raw, 0.0, owner, attribute)
-                    if width < float64(0.0) {
+                    if width < 0.0 {
                         throw Fail(owner, "stroke-width cannot be negative")
                     }
                 }
                 case "stroke-miterlimit" {
                     miter = ParseLooseNumber(raw, owner, attribute)
-                    if miter < float64(1.0) {
+                    if miter < 1.0 {
                         throw Fail(owner, "stroke-miterlimit must be at least one")
                     }
                 }
@@ -562,7 +527,7 @@ internal partial class SvgParser {
                     if values.Count == 2 {
                         values[1]
                     } else {
-                        float64(0.0)
+                        0.0
                     }
                 )
                 case "scale" when(values.Count is 1 or 2): SvgMatrix(
@@ -581,14 +546,14 @@ internal partial class SvgParser {
                 case "skewx" when values.Count == 1: SvgMatrix(
                     1.0,
                     0.0,
-                    Math.Tan(values[0] * Math.PI / float64(180.0)),
+                    Math.Tan(values[0] * Math.PI / 180.0),
                     1.0,
                     0.0,
                     0.0
                 )
                 case "skewy" when values.Count == 1: SvgMatrix(
                     1.0,
-                    Math.Tan(values[0] * Math.PI / float64(180.0)),
+                    Math.Tan(values[0] * Math.PI / 180.0),
                     0.0,
                     1.0,
                     0.0,
@@ -599,7 +564,7 @@ internal partial class SvgParser {
         }
 
         private func RotateValue(values IReadOnlyList[float64]) SvgMatrix {
-            let radians = values[0] * Math.PI / float64(180.0)
+            let radians = values[0] * Math.PI / 180.0
             let rotation = SvgMatrix(
                 Math.Cos(radians),
                 Math.Sin(radians),
