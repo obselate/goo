@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- SVG is now part of Goo, and the Goo.Svg package is discontinued. Remove its PackageReference. `import Goo.Svg` is unchanged.
+- The default window clear is now white, with a black default foreground that Text inherits. Add `Window.Foreground` and atomic `Window.SetColors`.
+- Add retained typed `Context` values and scopes with dependency invalidation and virtual context generations.
+- Prefer hardware Vulkan devices and fall back to the next compatible device when startup fails.
+- Add opt-in bounded DevTools frame and queue tracing over the existing diagnostics pipe, with `GOO_PROFILE_START=1` to record from startup.
+- Fix path morph animation for runtime-loaded SVG assets.
+- Fix window resize while an offscreen capture has an unreconciled clip-mask submission.
+- Add shipping, platform preflight, learning-path, edit-and-inspect and documentation index guides.
 - Add root code conventions for Goo contributors.
 - Define subsystem ownership and permitted references for Goo contributors.
 - Keep style transitions progressing when a layer repeats or overrides a declaration.
