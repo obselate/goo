@@ -84,14 +84,14 @@ func RunImageReleaseSmoke() {
       "A disposed image source kept its texture after its element was removed")
 
     opened.RequestClose()
-    WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    opened.Run()
     Require(!opened.IsOpen, "Image release gate window did not close")
   } finally {
     Console.SetError(originalError)
     if let active = window {
       if active.IsOpen {
         active.RequestClose()
-        WindowReadbackTestFixture.ForceRender(active, 0.0)
+        active.Run()
       }
     }
     first.Dispose()
