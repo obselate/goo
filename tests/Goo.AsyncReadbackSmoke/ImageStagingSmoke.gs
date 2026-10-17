@@ -172,8 +172,8 @@ func RunImageStagingSmoke() {
       "Medium image did not grow staging capacity to demand")
 
     provider.Replace(ImageStagingChunkedSource())
-    WindowReadbackTestFixture.ForceRenderNonblocking(opened, 0.0166666666666667)
     WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     let pending = WindowReadbackTestFixture.ImageResourceStats(opened)
     Require(pending.Upload.Capacity == maximumCapacity
         && pending.Upload.ActiveRanges > 0,
@@ -208,8 +208,8 @@ func RunImageStagingSmoke() {
       uint8(200), uint8(40), uint8(160)))
     swapped = next
     root.Swap(next)
-    WindowReadbackTestFixture.ForceRenderNonblocking(opened, 0.0166666666666667)
     WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     Require(WindowReadbackTestFixture.ImageResourceStats(opened).Upload.ActiveRanges > 0,
       "Swapped image did not retain an incomplete first upload chunk")
     let swapStaged = WindowReadbackTestFixture.Request(opened,
