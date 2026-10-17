@@ -237,6 +237,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             createdBudget,
             nativeSharedObjectAccounting)
           allocator = createdAllocator
+          createdAllocator.ProfileGeneration = generationSeed
           createdAllocator.RefreshBudget()
           let createdResourcePolicy = CreateVulkanResourcePolicy(
             nativeMemoryProperties,

@@ -18,7 +18,8 @@ internal unsafe class VulkanImageFactory {
       format VkFormat,
       usage VkImageUsageFlags,
       aspectMask VkImageAspectFlags,
-      memoryPolicy VulkanMemoryPolicy) VulkanImageCreation ->
+      memoryPolicy VulkanMemoryPolicy,
+      ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Image) VulkanImageCreation ->
     Create(
       device,
       dispatch,
@@ -30,7 +31,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask,
       1u,
       VkConstants.VK_IMAGE_VIEW_TYPE_2D,
-      memoryPolicy)
+      memoryPolicy, ownerKind)
 
     internal func Create2DArray(
       device VkDevice,
@@ -42,7 +43,8 @@ internal unsafe class VulkanImageFactory {
       usage VkImageUsageFlags,
       aspectMask VkImageAspectFlags,
       layerCount uint32,
-      memoryPolicy VulkanMemoryPolicy) VulkanImageCreation ->
+      memoryPolicy VulkanMemoryPolicy,
+      ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Image) VulkanImageCreation ->
     Create(
       device,
       dispatch,
@@ -54,7 +56,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask,
       layerCount,
       VkConstants.VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-      memoryPolicy)
+      memoryPolicy, ownerKind)
 
     internal func CreateView(
       device VkDevice,
@@ -140,7 +142,7 @@ internal unsafe class VulkanImageFactory {
       aspectMask VkImageAspectFlags,
       layerCount uint32,
       viewType VkImageViewType,
-      memoryPolicy VulkanMemoryPolicy) VulkanImageCreation{
+      memoryPolicy VulkanMemoryPolicy, ownerKind VulkanMemoryOwnerKind) VulkanImageCreation{
 
         if extent.width == 0u || extent.height == 0u {
           throw ArgumentOutOfRangeException("extent")
@@ -200,6 +202,15 @@ internal unsafe class VulkanImageFactory {
             image,
             memoryPolicy)
           allocation = createdAllocation
+          createdAllocation.ownerKind = if ownerKind == VulkanMemoryOwnerKind.Image
+            && (usage & uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) != 0u {
+            VulkanMemoryOwnerKind.LayerTarget
+          } else { ownerKind }
+          if let recorder = FrameRecorder.Current {
+            allocator.ProfileAllocation(recorder, createdAllocation, FrameTraceKind.ResourceLifecycle,
+              VulkanDiagnosticEventIds.ResourceCreate, width: int32(extent.width), height: int32(extent.height),
+              format: format, layers: layerCount)
+          }
 
           imageView = CreateView(
             device,

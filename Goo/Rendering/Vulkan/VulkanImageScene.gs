@@ -163,7 +163,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
               identity.ImageId,
               sourcePixels,
               VkDeviceSize(byteCount),
-              generation)
+              generation, decoded)
           }
           redrawRequired = true
         }

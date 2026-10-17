@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics
 import System.IO
 import System.Threading
 import System.Threading.Tasks
@@ -57,7 +58,17 @@ public class ImageSourceCache : IDisposable {
     token.ThrowIfCancellationRequested()
     lock gate {
       if disposed { throw ObjectDisposedException("ImageSourceCache") }
-      if sources.TryGetValue(path, out var existing) { return existing.RetainSource() }
+      if sources.TryGetValue(path, out var existing) {
+        if let recorder = FrameRecorder.Current {
+          recorder.Publish(FrameTraceRecord{
+            Kind: FrameTraceKind.Instant, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
+            ThreadId: Environment.CurrentManagedThreadId, Category: VulkanDiagnosticCategories.Resource,
+            ResourceId: existing.ProfileIdentity(recorder), ResourceKind: int32(FrameResourceKind.ImageSource),
+            ResourceGeneration: 1uL, Source: "image.cache.reuse", Validity: "available",
+          })
+        }
+        return existing.RetainSource()
+      }
       if sources.Count >= maxEntries { throw InvalidOperationException("Image cache path budget is full") }
     }
     let decoded = RasterImageDecoder.Load(path, limits, token)

@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Diagnostics
 import System.Runtime.InteropServices
 
 internal unsafe class VulkanPipelineFactory {
@@ -29,7 +30,18 @@ internal unsafe class VulkanPipelineFactory {
           }
           try {
             let createShaderModule = dispatch.vkCreateShaderModule
+            let recorder = FrameRecorder.Current
+            let start = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
             let result = createShaderModule(device, &info, nil, &module)
+            if let trace = recorder {
+              let id = trace.NativeResource(FrameResourceKind.Shader, uint64(device), module)
+              trace.ResourceDuration(FrameResourceKind.Shader, id, "shader.create", start,
+                bytes: uint64(code.Length), device: uint64(device), result: int32(result))
+              if result == VkConstants.VK_SUCCESS && module != 0uL {
+                trace.Resource(FrameResourceKind.Shader, id, VulkanDiagnosticEventIds.ResourceCreate,
+                  "shader.module", name: artifactName, bytes: uint64(code.Length), device: uint64(device))
+              }
+            }
             if result != VkConstants.VK_SUCCESS || module == 0uL {
               throw InvalidOperationException(
                 "vkCreateShaderModule failed for " + artifactName + ": " + result.ToString())
@@ -41,8 +53,9 @@ internal unsafe class VulkanPipelineFactory {
             return module
           } catch (error Exception) {
             if module != 0uL {
-              let destroyShaderModule = dispatch.vkDestroyShaderModule
-              try { destroyShaderModule(device, module, nil) } catch (cleanup Exception) { }
+              try {
+                VulkanNativeHandleDestroyer.DestroyShaderModule(device, dispatch.vkDestroyShaderModule, nil, ref module)
+              } catch (cleanup Exception) { }
             }
             if accounted {
               if let accounting = objectAccounting {
@@ -229,8 +242,9 @@ internal unsafe class VulkanPipelineFactory {
             return pipeline
           } catch (error Exception) {
             if pipeline != 0uL {
-              let destroyPipeline = dispatch.vkDestroyPipeline
-              try { destroyPipeline(device, pipeline, nil) } catch (cleanup Exception) { }
+              try {
+                VulkanNativeHandleDestroyer.DestroyPipeline(device, dispatch.vkDestroyPipeline, nil, ref pipeline)
+              } catch (cleanup Exception) { }
             }
             if accounted {
               if let accounting = objectAccounting {

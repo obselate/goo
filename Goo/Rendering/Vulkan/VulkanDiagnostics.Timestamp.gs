@@ -91,10 +91,37 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   private var timestampPeriod float32
   private var timestampLastResult VkResult = VkConstants.VK_SUCCESS
   private var timestampLease VulkanSharedLease? = nil
+  private var traceRecorders ([]FrameRecorder?)?
+  private var traceContexts ([]FrameTraceContext)?
 
-  private let diagnostics VulkanDiagnostics
+  internal prop HasTraceRecorder bool {
+    get {
+      if let recorders = traceRecorders {
+        for i in 0 ... TimestampFrameSlotCount {
+          if let recorder = recorders[i] {
+            if recorder.AcceptsGpu { return true }
+          }
+        }
+      }
+      return false
+    }
+  }
+
+  internal func TraceSlot(slot int32, recorder FrameRecorder?, context FrameTraceContext) {
+    if !ValidTimestampSlot(slot) { return }
+    if recorder != nil && traceRecorders == nil {
+      traceRecorders = [TimestampFrameSlotCount]FrameRecorder?
+      traceContexts = [TimestampFrameSlotCount]FrameTraceContext
+    }
+    if let recorders = traceRecorders, let contexts = traceContexts {
+      recorders[slot] = recorder
+      contexts[slot] = context
+    }
+  }
+
+  private let diagnostics VulkanDiagnostics?
   private let objectAccounting VulkanObjectAccounting?
-  internal init(nativeDiagnostics VulkanDiagnostics,
+  internal init(nativeDiagnostics VulkanDiagnostics?,
     nativeObjectAccounting VulkanObjectAccounting?) {
       diagnostics = nativeDiagnostics
       objectAccounting = nativeObjectAccounting
@@ -154,7 +181,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
           timestampLastResult = VkConstants.VK_ERROR_INITIALIZATION_FAILED
         }
         MarkAllTimestampRangesUnavailable()
-        diagnostics.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(timestampLastResult))
+        diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(timestampLastResult))
         return timestampLastResult
       }
       try {
@@ -169,7 +196,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
         throw error
       }
       timestampPoolCreated = true
-      diagnostics.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(result))
+      diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(result))
       return result
     }
 
@@ -467,6 +494,14 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
           state.fence = context.fence
           state.completionSerial = context.completionSerial
           state.result = VkConstants.VK_SUCCESS
+          if let recorders = traceRecorders, let contexts = traceContexts {
+            if let recorder = recorders[slot] {
+              var traceContext = contexts[slot]
+              traceContext.FrameId = state.frame
+              traceContext.SubmissionId = state.completionSerial
+              recorder.AddGpuStage(traceContext, TimestampEventId(TimestampStageFromIndex(stageIndex)))
+            }
+          }
           var scopeIndex int32 = 0
           while scopeIndex < state.scopeCount {
             var scopeState = timestampRanges[TimestampScopeRangeIndex(
@@ -522,7 +557,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
     if completionResult != VkConstants.VK_SUCCESS {
       if completionResult != VkConstants.VK_NOT_READY {
         timestampLastResult = completionResult
-        diagnostics.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(completionResult),
+        diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(completionResult),
           context.frame, context.queue, context.submission, context.fence)
       }
       return completionResult
@@ -556,7 +591,8 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
           MarkTimestampStageRangesUnavailable(slot, stageIndex, stageState.scopeCount, result)
           timestampStages[stageRangeIndex] = stageState
           overallResult = result
-          diagnostics.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(result),
+          RecordTimestampStage(stageState, TimestampStageFromIndex(stageIndex), slot)
+          diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(result),
             context.frame, context.queue, context.submission, context.fence)
         } else {
           var totalTicks uint64 = 0uL
@@ -591,7 +627,7 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
       }
       stageIndex++
     }
-    diagnostics.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(overallResult),
+    diagnostics?.RecordResult(VulkanDiagnosticEventIds.GpuTimestamp, int32(overallResult),
       context.frame, context.queue, context.submission, context.fence)
     return overallResult
   }
@@ -679,6 +715,14 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   }
 
   private func ClearTimestampSlot(slot int32) {
+    if let recorders = traceRecorders, let contexts = traceContexts {
+      recorders[slot] = nil
+      contexts[slot] = FrameTraceContext{}
+      if FrameRecorder.Current == nil && recorders[0] == nil && recorders[1] == nil {
+        traceRecorders = nil
+        traceContexts = nil
+      }
+    }
     var stageIndex int32 = 0
     while stageIndex < TimestampStageCount {
       let stageRangeIndex = slot * TimestampStageCount + stageIndex
@@ -801,28 +845,44 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
 
   private func RecordTimestampControl(context VulkanDiagnosticTimestampContext,
     result VkResult, value0 uint64, value1 uint64) {
-      diagnostics.Record(context.run, context.workload, context.process, context.window,
+      diagnostics?.Record(context.run, context.workload, context.process, context.window,
         context.frame, context.sample, context.queue, context.submission, context.fence,
         0uL, VulkanDiagnosticEventIds.GpuTimestamp, VulkanDiagnosticCategories.Timing,
         0uL, result, value0, value1)
     }
 
+  private func TimestampEventId(stage VulkanDiagnosticTimestampStage) uint64 -> switch stage {
+    case VulkanDiagnosticTimestampStage.Upload: VulkanDiagnosticEventIds.UploadStage
+    case VulkanDiagnosticTimestampStage.Main: VulkanDiagnosticEventIds.MainPass
+    case VulkanDiagnosticTimestampStage.Effects: VulkanDiagnosticEventIds.EffectsPass
+    default: VulkanDiagnosticEventIds.OffscreenPass
+  }
+
   private func RecordTimestampStage(state VulkanDiagnosticTimestampStageState,
     stage VulkanDiagnosticTimestampStage, slot int32) {
-      let eventId = if stage == VulkanDiagnosticTimestampStage.Upload {
-        VulkanDiagnosticEventIds.UploadStage
-      } else if stage == VulkanDiagnosticTimestampStage.Main {
-        VulkanDiagnosticEventIds.MainPass
-      } else if stage == VulkanDiagnosticTimestampStage.Effects {
-        VulkanDiagnosticEventIds.EffectsPass
-      } else {
-        VulkanDiagnosticEventIds.OffscreenPass
-      }
-      diagnostics.Record(state.run, state.workload, state.process, state.window, state.frame, state.sample,
+      let eventId = TimestampEventId(stage)
+      diagnostics?.Record(state.run, state.workload, state.process, state.window, state.frame, state.sample,
         state.queue, state.submission, state.fence,
         uint64(FirstTimestampQuery(slot, int32(stage), 0)), eventId,
         VulkanDiagnosticCategories.Timing, 0uL, state.result,
         state.elapsedTicks, state.elapsedNanoseconds)
+      guard let recorders = traceRecorders, let contexts = traceContexts else { return }
+      guard let recorder = recorders[slot] else { return }
+      if !recorder.AcceptsGpu { return }
+      let available = state.result == VkConstants.VK_SUCCESS && state.droppedScopeCount == 0
+      var context = contexts[slot]
+      context.FrameId = state.frame
+      context.SubmissionId = state.completionSerial
+      recorder.CompleteGpuStage(FrameTraceRecord{
+        Kind: FrameTraceKind.Counter,
+        Ticks: System.Diagnostics.Stopwatch.GetTimestamp() - recorder.Origin,
+        Context: context,
+        EventId: eventId, Category: VulkanDiagnosticCategories.Timing,
+        GpuElapsedNs: if available { state.elapsedNanoseconds } else { nil },
+        Source: "vulkan.timestamp.elapsed",
+        Validity: if available { "available" } else { "unavailable" },
+        Unit: "ns", Result: int32(state.result),
+      })
     }
 
 }

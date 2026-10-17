@@ -66,7 +66,7 @@ internal data struct FrameTraceRecord {
     internal var Unit string?
 }
 
-internal class FrameRecorder {
+internal partial class FrameRecorder {
     internal const DefaultBufferBytes int32 = 16 * 1024 * 1024
     internal const MaxBatchBytes int32 = 256 * 1024
     internal const RecordBudgetBytes int32 = 512
@@ -129,6 +129,7 @@ internal class FrameRecorder {
                 Value0: uint64(Stopwatch.Frequency)
             }
         )
+        StartSamples()
     }
 
     internal func Owns(client Guid) bool -> owner == client
@@ -197,7 +198,7 @@ internal class FrameRecorder {
 
     internal func Publish(value FrameTraceRecord) {
         lock gate {
-            if complete {
+            if complete || (stopping != 0 && value.Kind != FrameTraceKind.Counter) {
                 return
             }
             flushGap()
@@ -206,6 +207,16 @@ internal class FrameRecorder {
                 return
             }
             put(value)
+            if value.ResourceId != 0uL {
+                if value.Kind == FrameTraceKind.ResourceLifecycle
+                    && (value.EventId == VulkanDiagnosticEventIds.ResourceEvict
+                        || value.EventId == VulkanDiagnosticEventIds.PipelineDestroy
+                        || value.EventId == VulkanDiagnosticEventIds.SwapchainDestroy) {
+                    resourceRecords.Remove(value.ResourceId)
+                } else {
+                    resourceRecords.Add(value.ResourceId)
+                }
+            }
         }
     }
 
@@ -227,6 +238,8 @@ internal class FrameRecorder {
             return
         }
         dropped = dropped + missing
+        baselineVersion++
+        resourceRecords.Clear()
         put(
             FrameTraceRecord{
                 Kind: FrameTraceKind.Gap,
@@ -239,40 +252,43 @@ internal class FrameRecorder {
 
     internal func Stop(isPartial bool) {
         lock typeof(FrameRecorder) {
-            if Object.ReferenceEquals(Current, this) {
-                Volatile.Write(&current, nil)
-            }
             lock gate {
-                if complete {
-                    return
+                if complete || stopping != 0 { return }
+                if Object.ReferenceEquals(Current, this) {
+                    Instant(VulkanDiagnosticEventIds.None, VulkanDiagnosticCategories.Runtime,
+                        FrameTraceContext{}, source: "recording.stop")
+                    Volatile.Write(&current, nil)
                 }
                 partial = isPartial
-                complete = true
-                let missing = lost
-                lost = 0L
-                dropped = dropped + missing
-                if missing > 0L {
-                    put(
-                        FrameTraceRecord{
-                            Kind: FrameTraceKind.Gap,
-                            Ticks: Stopwatch.GetTimestamp() - Origin,
-                            Value0: uint64(missing),
-                            Validity: "unknown-after-gap"
-                        }
-                    )
-                }
-                put(
-                    FrameTraceRecord{
-                        Kind: FrameTraceKind.End,
-                        Ticks: Stopwatch.GetTimestamp() - Origin,
-                        Validity: if isPartial {
-                            "partial"
-                        } else {
-                            "complete"
-                        }
-                    }
-                )
+                Volatile.Write(&stopping, 1)
+                sampleWake.Set()
             }
+        }
+    }
+
+    private func FinishStop() {
+        lock gate {
+            if complete { return }
+            for pending in pendingGpu.Values {
+                var unavailable = pending
+                unavailable.Ticks = Stopwatch.GetTimestamp() - Origin
+                Publish(unavailable)
+            }
+            pendingGpu.Clear()
+            complete = true
+            let missing = lost
+            lost = 0L
+            dropped = dropped + missing
+            if missing > 0L {
+                put(FrameTraceRecord{
+                    Kind: FrameTraceKind.Gap, Ticks: Stopwatch.GetTimestamp() - Origin,
+                    Value0: uint64(missing), Validity: "unknown-after-gap",
+                })
+            }
+            put(FrameTraceRecord{
+                Kind: FrameTraceKind.End, Ticks: Stopwatch.GetTimestamp() - Origin,
+                Validity: if partial { "partial" } else { "complete" },
+            })
         }
     }
 
@@ -316,7 +332,7 @@ internal class FrameRecorder {
                     "Complete"
                 }
             } else {
-                "Recording"
+                if stopping != 0 { "Stopping" } else { "Recording" }
             }
             droppedCount = dropped + if complete {
                 0L

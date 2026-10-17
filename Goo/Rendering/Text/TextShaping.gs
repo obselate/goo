@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics
 import System.IO
 import System.Text
 import System.Threading
@@ -667,7 +668,28 @@ internal partial class TextShaping {
       guard let path = selection.Path else {
         throw InvalidOperationException("System font selection has no path")
       }
-      return TypefaceResource(selection.Family, File.ReadAllBytes(path), 0u, nil, 0uL, 0uL)
+      guard let recorder = FrameRecorder.Current else {
+        return TypefaceResource(selection.Family, File.ReadAllBytes(path), 0u, nil, 0uL, 0uL)
+      }
+      let start = Stopwatch.GetTimestamp()
+      var bytes []uint8
+      try { bytes = File.ReadAllBytes(path) }
+      catch (error Exception) {
+        recorder.ResourceDuration(FrameResourceKind.Font, 0uL, "font.read", start, result: -1)
+        throw error
+      }
+      let end = Stopwatch.GetTimestamp()
+      let id = recorder.ManagedResource(bytes)
+      recorder.Resource(FrameResourceKind.Font, id, VulkanDiagnosticEventIds.ResourceCreate, "font.bytes",
+        name: path, bytes: uint64(bytes.Length))
+      recorder.ResourceDuration(FrameResourceKind.Font, id, "font.read", start, bytes: uint64(bytes.Length), end: end)
+      return TypefaceResource(selection.Family, bytes, 0u, nil, 0uL, 0uL)
+    }
+
+    internal func ProfileResources(recorder FrameRecorder) {
+      lock PrimaryFacesLock {
+        for resource in PrimaryFaces.Values { resource.Profile(recorder) }
+      }
     }
 
     private func ResolveFallbackCandidates(families string, weight int32, italic bool,

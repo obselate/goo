@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Diagnostics
 import System.IO
 import System.IO.Compression
 import System.Threading
@@ -18,8 +19,31 @@ internal unsafe partial class RasterImageDecoder {
     private let crcTable []uint32 = CreateCrcTable()
 
     internal func Load(path string, limits ImageDecodeLimits, token CancellationToken) ImageSource {
-      using let file = File.OpenRead(path)
-      return Load(file, limits, token)
+      guard let recorder = FrameRecorder.Current else {
+        using let file = File.OpenRead(path)
+        return Load(file, limits, token)
+      }
+      let start = Stopwatch.GetTimestamp()
+      var completed = false
+      try {
+        using let file = File.OpenRead(path)
+        let image = Load(file, limits, token)
+        if !Object.ReferenceEquals(FrameRecorder.Current, recorder) {
+          completed = true
+          return image
+        }
+        let end = Stopwatch.GetTimestamp()
+        let id = image.ProfileIdentity(recorder)
+        let name = Path.GetFileName(path)
+        recorder.Publish(FrameTraceRecord{Kind: FrameTraceKind.Metadata,
+          Ticks: end - recorder.Origin, ResourceId: id, ResourceKind: int32(FrameResourceKind.ImageSource),
+          Name: if name.Length > 128 { name.Substring(0, 128) } else { name }, Source: "resource.name"})
+        recorder.ResourceDuration(FrameResourceKind.ImageSource, id, "image.load", start, end: end)
+        completed = true
+        return image
+      } finally {
+        if !completed { recorder.ResourceDuration(FrameResourceKind.ImageSource, 0uL, "image.load", start, result: if token.IsCancellationRequested { -2 } else { -1 }) }
+      }
     }
 
     internal func LoadThumbnail(path string, maxWidth int32, maxHeight int32,
@@ -77,6 +101,28 @@ internal unsafe partial class RasterImageDecoder {
       }
 
     private func DecodeCore(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds,
+      token CancellationToken) ImageSource {
+      guard let recorder = FrameRecorder.Current else { return DecodePixels(bytes, bounds, token) }
+      let start = Stopwatch.GetTimestamp()
+      var completed = false
+      try {
+        let source = DecodePixels(bytes, bounds, token)
+        if !Object.ReferenceEquals(FrameRecorder.Current, recorder) {
+          completed = true
+          return source
+        }
+        let end = Stopwatch.GetTimestamp()
+        recorder.ResourceDuration(FrameResourceKind.ImageSource, source.ProfileIdentity(recorder),
+          "image.decode", start, bytes: uint64(bytes.Length), end: end)
+        completed = true
+        return source
+      } finally {
+        if !completed { recorder.ResourceDuration(FrameResourceKind.ImageSource, 0uL, "image.decode", start,
+          result: if token.IsCancellationRequested { -2 } else { -1 }) }
+      }
+    }
+
+    private func DecodePixels(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds,
       token CancellationToken) ImageSource {
       using let image = DecodeRaw(bytes, bounds, token, false)
       let pixels = image.Pixels

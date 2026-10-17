@@ -8,10 +8,49 @@ internal unsafe partial class VulkanWindowTarget {
   private var activeTraceContext FrameTraceContext
   private var pendingTraceId string?
   private var activeTraceId string?
+  private var profileGpuTraceId string?
 
   public func BeginPump(recorder FrameRecorder, context FrameTraceContext) {
     pendingTraceContext = context
     pendingTraceId = recorder.TraceId
+    Sample(recorder, false, true)
+    if timestampState == nil {
+      if dispatch.vkCreateQueryPool == nil { LoadTimestampDispatch() }
+      guard let activeRuntime = runtime else { return }
+      let state = VulkanDiagnosticTimestampState(diagnostics, windowObjectAccounting)
+      timestampState = state
+      state.CreateTimestampQueryPool(device, dispatch, timestampValidBits,
+        timestampPeriod, timestampComputeAndGraphics, activeRuntime)
+    }
+    if profileGpuTraceId != recorder.TraceId {
+      profileGpuTraceId = recorder.TraceId
+      var gpuContext = context
+      gpuContext.DeviceId = uint64(device)
+      gpuContext.DeviceGeneration = runtime?.Generation ?? 0uL
+      recorder.Publish(FrameTraceRecord{
+        Kind: FrameTraceKind.Metadata, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
+        Context: gpuContext, Name: "gpu.timestamp", Source: "vulkan.timestamp",
+        Validity: if timestampState?.TimestampQueriesSupported ?? false { "available" } else { "unavailable" },
+      })
+    }
+  }
+
+  public func Sample(recorder FrameRecorder, force bool, includeShared bool) {
+    if includeShared {
+      runtime?.MemoryAllocator.ProfileSnapshot(recorder, force)
+      TextShaping.ProfileResources(recorder)
+      runtime?.PrimitiveState.ProfileResources(recorder)
+      runtime?.PipelineCache.ProfileResources(recorder)
+      runtime?.ImageIdentityRegistry.ProfileResources(recorder)
+    }
+    ProfileSwapchains(recorder)
+  }
+
+  private func ProfileSwapchains(recorder FrameRecorder) {
+    generation?.Profile(recorder)
+    for i in 0 ... retiredSwapchains.Count {
+      retiredSwapchains.Generation(i).Profile(recorder, retired: true)
+    }
   }
 
   public func Describe() FrameTraceRecord {
@@ -239,18 +278,23 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func ResetDiagnosticTimestamp(slot VulkanFrameSlot) {
+    if diagnostics == nil && FrameRecorder.Current == nil {
+      RetireDetachedTimestampPool()
+      return
+    }
     try {
       if let current = timestampState {
-        current.ResetTimestampQueries(
-          slot.CommandBuffer,
-          int32(activeFrameSlotIndex),
-          DiagnosticTimestampRecordingContext(slot))
+        if current.ResetTimestampQueries(
+          slot.CommandBuffer, int32(activeFrameSlotIndex), DiagnosticTimestampRecordingContext(slot)) {
+          if let recorder = TraceRecorder { current.TraceSlot(int32(activeFrameSlotIndex), recorder, TraceContext()) }
+        }
       }
     } catch (cleanup Exception) { }
   }
 
   private func BeginDiagnosticTimestamp(slot VulkanFrameSlot,
     stage VulkanDiagnosticTimestampStage) bool{
+      if diagnostics == nil && FrameRecorder.Current == nil { return false }
       try {
         if let current = timestampState {
           return current.BeginTimestampStage(
@@ -265,6 +309,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func EndDiagnosticTimestamp(slot VulkanFrameSlot,
     stage VulkanDiagnosticTimestampStage) bool{
+      if diagnostics == nil && FrameRecorder.Current == nil { return false }
       try {
         if let current = timestampState {
           return current.EndTimestampStage(
@@ -295,6 +340,18 @@ internal unsafe partial class VulkanWindowTarget {
           DiagnosticTimestampSubmittedContext(slot))
       }
     } catch (cleanup Exception) { }
+  }
+
+  private func RetireDetachedTimestampPool() {
+    guard let state = timestampState else { return }
+    if diagnostics != nil && !state.HasTraceRecorder { return }
+    for i in 0 ... 2 {
+      if let slot = frameSlots.Slot(uint32(i)) { ResolveDiagnosticTimestamp(slot, uint32(i)) }
+    }
+    if diagnostics == nil {
+      DestroyDiagnosticTimestampPool()
+      if !state.TimestampQueriesSupported { timestampState = nil }
+    }
   }
 
   private func DestroyDiagnosticTimestampPool() {

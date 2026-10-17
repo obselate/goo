@@ -32,6 +32,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
           if block.memory != 0uL {
             let freeMemory = deviceDispatch.vkFreeMemory
             freeMemory(device, block.memory, nil)
+            if let recorder = FrameRecorder.Current {
+              ProfileBlock(recorder, block, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceEvict)
+            }
             if let accounting = objectAccounting {
               accounting.Release()
             }

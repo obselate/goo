@@ -8,6 +8,12 @@ import System.Text
 /// Window frame profiling and trace identity.
 public partial class Window {
   internal prop ProfileWindowId string { get -> profiler.WindowId }
+  shared {
+    internal func ProfileWindows(recorder FrameRecorder, exceptWindowId string) { scheduler.ProfileWindows(recorder, exceptWindowId) }
+  }
+  internal func SampleProfile(recorder FrameRecorder, force bool = false, includeShared bool = true) {
+    profiler.Sink?.Sample(recorder, force, includeShared)
+  }
 
   internal func ProfileMetadata() FrameTraceRecord {
     var value = profiler.Sink?.Describe() ?? FrameTraceRecord{
@@ -35,6 +41,7 @@ internal interface FrameProfileSink {
   prop Active bool { get }
   func BeginPump(recorder FrameRecorder, context FrameTraceContext);
   func Describe() FrameTraceRecord;
+  func Sample(recorder FrameRecorder, force bool, includeShared bool);
   func Record(stage FrameProfileStage, start FrameProfilePoint, end FrameProfilePoint, result int32);
   func RecordDerived(stage FrameProfileStage, ticks int64, bytes int64);
 }

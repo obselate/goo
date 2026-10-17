@@ -44,6 +44,7 @@ internal unsafe class VulkanMemoryAllocation {
   var blockFresh bool
   var pendingBind bool
   var state VulkanMemoryAllocationState
+  var ownerKind VulkanMemoryOwnerKind
 }
 
 internal data struct VulkanMemoryPlacement {

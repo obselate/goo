@@ -144,23 +144,7 @@ internal unsafe partial class VulkanWindowTarget {
     let queuePresent = ResolveDeviceProc("vkQueuePresentKHR") as (unmanaged[Cdecl](VkQueue, *VkPresentInfoKHR) -> VkResult)?
     if queuePresent == nil { throw InvalidOperationException("vkQueuePresentKHR is unavailable") }
     dispatch.vkQueuePresentKHR = queuePresent
-    if diagnostics != nil {
-      let createQueryPool = ResolveDeviceProc("vkCreateQueryPool") as (unmanaged[Cdecl](VkDevice, *VkQueryPoolCreateInfo, *VkAllocationCallbacks, *VkQueryPool) -> VkResult)?
-      if createQueryPool == nil { throw InvalidOperationException("vkCreateQueryPool is unavailable") }
-      dispatch.vkCreateQueryPool = createQueryPool
-      let destroyQueryPool = ResolveDeviceProc("vkDestroyQueryPool") as (unmanaged[Cdecl](VkDevice, VkQueryPool, *VkAllocationCallbacks) -> void)?
-      if destroyQueryPool == nil { throw InvalidOperationException("vkDestroyQueryPool is unavailable") }
-      dispatch.vkDestroyQueryPool = destroyQueryPool
-      let getQueryPoolResults = ResolveDeviceProc("vkGetQueryPoolResults") as (unmanaged[Cdecl](VkDevice, VkQueryPool, uint32, uint32, nuint, *void, VkDeviceSize, VkQueryResultFlags) -> VkResult)?
-      if getQueryPoolResults == nil { throw InvalidOperationException("vkGetQueryPoolResults is unavailable") }
-      dispatch.vkGetQueryPoolResults = getQueryPoolResults
-      let resetQueryPool = ResolveDeviceProc("vkCmdResetQueryPool") as (unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32, uint32) -> void)?
-      if resetQueryPool == nil { throw InvalidOperationException("vkCmdResetQueryPool is unavailable") }
-      dispatch.vkCmdResetQueryPool = resetQueryPool
-      let writeTimestamp = ResolveDeviceProc("vkCmdWriteTimestamp2") as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineStageFlags2, VkQueryPool, uint32) -> void)?
-      if writeTimestamp == nil { throw InvalidOperationException("vkCmdWriteTimestamp2 is unavailable") }
-      dispatch.vkCmdWriteTimestamp2 = writeTimestamp
-    }
+    if diagnostics != nil { LoadTimestampDispatch() }
     let createImageView = ResolveDeviceProc("vkCreateImageView") as (unmanaged[Cdecl](VkDevice, *VkImageViewCreateInfo, *VkAllocationCallbacks, *VkImageView) -> VkResult)?
     if createImageView == nil { throw InvalidOperationException("vkCreateImageView is unavailable") }
     dispatch.vkCreateImageView = createImageView
@@ -300,5 +284,23 @@ internal unsafe partial class VulkanWindowTarget {
     if deviceWaitIdleAddress == nint(0) {
       throw InvalidOperationException("vkDeviceWaitIdle is unavailable")
     }
+  }
+
+  private func LoadTimestampDispatch() {
+    let createQueryPool = ResolveDeviceProc("vkCreateQueryPool") as (unmanaged[Cdecl](VkDevice, *VkQueryPoolCreateInfo, *VkAllocationCallbacks, *VkQueryPool) -> VkResult)?
+    if createQueryPool == nil { throw InvalidOperationException("vkCreateQueryPool is unavailable") }
+    dispatch.vkCreateQueryPool = createQueryPool
+    let destroyQueryPool = ResolveDeviceProc("vkDestroyQueryPool") as (unmanaged[Cdecl](VkDevice, VkQueryPool, *VkAllocationCallbacks) -> void)?
+    if destroyQueryPool == nil { throw InvalidOperationException("vkDestroyQueryPool is unavailable") }
+    dispatch.vkDestroyQueryPool = destroyQueryPool
+    let getQueryPoolResults = ResolveDeviceProc("vkGetQueryPoolResults") as (unmanaged[Cdecl](VkDevice, VkQueryPool, uint32, uint32, nuint, *void, VkDeviceSize, VkQueryResultFlags) -> VkResult)?
+    if getQueryPoolResults == nil { throw InvalidOperationException("vkGetQueryPoolResults is unavailable") }
+    dispatch.vkGetQueryPoolResults = getQueryPoolResults
+    let resetQueryPool = ResolveDeviceProc("vkCmdResetQueryPool") as (unmanaged[Cdecl](VkCommandBuffer, VkQueryPool, uint32, uint32) -> void)?
+    if resetQueryPool == nil { throw InvalidOperationException("vkCmdResetQueryPool is unavailable") }
+    dispatch.vkCmdResetQueryPool = resetQueryPool
+    let writeTimestamp = ResolveDeviceProc("vkCmdWriteTimestamp2") as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineStageFlags2, VkQueryPool, uint32) -> void)?
+    if writeTimestamp == nil { throw InvalidOperationException("vkCmdWriteTimestamp2 is unavailable") }
+    dispatch.vkCmdWriteTimestamp2 = writeTimestamp
   }
 }

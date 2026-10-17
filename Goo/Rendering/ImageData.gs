@@ -45,6 +45,7 @@ internal sealed class DecodedImage {
     Height = height
     pixels = owned
     references = 1
+    if let recorder = FrameRecorder.Current { Profile(recorder, false) }
   }
 
   private init(width int32, height int32, owned []uint8, release Action) {
@@ -54,11 +55,22 @@ internal sealed class DecodedImage {
     pixels = owned
     references = 1
     released = release
+    if let recorder = FrameRecorder.Current { Profile(recorder, false) }
   }
 
   internal prop Width int32{ get; private set; }
   internal prop Height int32{ get; private set; }
   internal prop IsValid bool{ get -> pixels != nil && !disposed }
+
+  internal func Profile(recorder FrameRecorder, baseline bool) uint64 {
+    let id = recorder.ManagedResource(this, out var first)
+    if first || !baseline {
+      recorder.Resource(FrameResourceKind.ImageSource, id, VulkanDiagnosticEventIds.ResourceCreate,
+        "image.decoded", bytes: uint64(Width) * uint64(Height) * 4uL,
+        width: Width, height: Height, baseline: baseline)
+    }
+    return id
+  }
 
   internal func Retain() {
     lock gate {
@@ -77,6 +89,11 @@ internal sealed class DecodedImage {
       }
       references--
       if references == 0 {
+        if let recorder = FrameRecorder.Current {
+          recorder.Resource(FrameResourceKind.ImageSource, Profile(recorder, true),
+            VulkanDiagnosticEventIds.ResourceEvict, "image.decoded.release")
+          recorder.ReleaseManagedResource(this)
+        }
         disposed = true
         pixels = nil
         completion = released

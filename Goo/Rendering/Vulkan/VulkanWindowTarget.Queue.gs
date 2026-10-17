@@ -213,6 +213,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   public func PollQueueCompletion() bool {
+    if timestampState != nil && FrameRecorder.Current == nil
+      && queueStage == QueueStageIdle && !frameBegun {
+      RetireDetachedTimestampPool()
+    }
     if queueStage == QueueStageSubmitRetry {
       if !RetryQueueSubmit() {
         return false

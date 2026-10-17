@@ -119,6 +119,13 @@ public partial class ImageSource : ImageSourceProvider, IDisposable {
     return !IsDisposed
   }
 
+  internal func ProfileIdentity(recorder FrameRecorder) uint64 {
+    lock gate {
+      if let current = image { return current.Profile(recorder, true) }
+      return 0uL
+    }
+  }
+
   internal func retainImage() DecodedImage? {
     lock gate {
       if disposed { return nil }

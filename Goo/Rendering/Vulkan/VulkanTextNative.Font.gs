@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Diagnostics
 import System.IO
 import System.Runtime.InteropServices
 import System.Text
@@ -27,6 +28,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   private var hasColorPaint bool
   private var hasColorLayers bool
   private var disposed bool
+  private let profileName string?
 
   public prop Metrics VulkanHarfBuzzMetrics{ get -> metrics }
   internal prop ByteSize int64{ get -> int64(fontBytes.Length) }
@@ -64,7 +66,10 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     bytes []uint8,
     pixelHeight uint32,
     selectedFaceIndex uint32,
-    selectedVariations([]VulkanTextVariation)?) {
+    selectedVariations([]VulkanTextVariation)?, family string? = nil) {
+      profileName = family
+      let recorder = FrameRecorder.Current
+      let profileStart = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
       nativeGate = Object()
       if bytes.Length == 0 {
         throw ArgumentException("Font bytes are empty", "bytes")
@@ -113,11 +118,32 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         hb_ot_font_set_funcs(harfBuzzDesignFont)
         ApplyVariations(harfBuzzDesignFont, variations)
         metrics = ReadMetrics(harfBuzzDesignFont)
+        if let current = recorder {
+          Profile(current, false)
+          current.ResourceDuration(FrameResourceKind.FontFace, current.ManagedResource(this), "font.face.create", profileStart)
+        }
       } catch (error Exception) {
+        if let current = recorder {
+          current.ResourceDuration(FrameResourceKind.FontFace, 0uL, "font.face.create", profileStart, result: -1)
+        }
         Dispose()
         throw error
       }
     }
+
+  internal func Profile(recorder FrameRecorder, baseline bool) uint64 {
+    let bytesId = recorder.ManagedResource(fontBytes, out var firstBytes)
+    if firstBytes {
+      recorder.Resource(FrameResourceKind.Font, bytesId, VulkanDiagnosticEventIds.ResourceCreate,
+        "font.bytes", name: profileName, bytes: uint64(fontBytes.Length), baseline: true)
+    }
+    let id = recorder.ManagedResource(this, out var first)
+    if first || !baseline {
+      recorder.Resource(FrameResourceKind.FontFace, id,
+        VulkanDiagnosticEventIds.ResourceCreate, "font.face", name: profileName, parent: bytesId, baseline: baseline)
+    }
+    return id
+  }
 
   public func ShapeInto(text string, options VulkanTextShapingOptions,
     workspace VulkanTextShapingWorkspace) VulkanTextProviderResult{
@@ -403,6 +429,11 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
       }
       if harfBuzzFace != nint(0) {
         hb_face_destroy(harfBuzzFace)
+        if let recorder = FrameRecorder.Current {
+          let id = Profile(recorder, true)
+          recorder.Resource(FrameResourceKind.FontFace, id, VulkanDiagnosticEventIds.ResourceEvict, "font.face.release")
+          recorder.ReleaseManagedResource(this)
+        }
         harfBuzzFace = nint(0)
       }
       if harfBuzzBlob != nint(0) {

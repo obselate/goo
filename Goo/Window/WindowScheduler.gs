@@ -75,6 +75,20 @@ internal class WindowScheduler {
     lock windowsGate { pending.AddRange(windows) }
     for window in pending { window.TryPost(window.RebuildAfterHotReload) }
   }
+  internal func ProfileWindows(recorder FrameRecorder, exceptWindowId string) {
+    let pending = List[Window]()
+    lock windowsGate { pending.AddRange(windows) }
+    for window in pending {
+      if window.ProfileWindowId == exceptWindowId { continue }
+      window.TryPost(() -> {
+        if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
+          window.SampleProfile(recorder, includeShared: false)
+          let metadata = window.ProfileMetadata()
+          recorder.Publish(metadata)
+        }
+      })
+    }
+  }
 
   internal func Run() {
     if running {
