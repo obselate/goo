@@ -159,6 +159,9 @@ See the [native authoring guide](docs/native-authoring.md) for composition, type
 
 ## Platforms
 
+Check [platform preflight and troubleshooting](docs/platform-preflight.md)
+before creating or distributing an app.
+
 Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
 and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
 
@@ -192,6 +195,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 
 ## Further reading
 
+- [Ship a desktop app](docs/shipping.md)
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
 - [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
