@@ -711,6 +711,7 @@ public partial class Window {
 
   private func renderFrame() {
     if let target = windowTarget {
+      flushForeground()
       let paintProfile = profiler.Active ? profiler.Start() : FrameProfilePoint{}
       target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
       if profiler.Active {

@@ -681,7 +681,6 @@ public class GlassTerminalWindow {
                 Resizable: true,
                 ResizeBand: 8.0F,
                 Background: Color.Transparent,
-                Foreground: Color.White,
                 Root: cell,
             }
             cell.AttachWindow(window)

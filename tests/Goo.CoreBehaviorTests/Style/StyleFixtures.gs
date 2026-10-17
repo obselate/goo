@@ -23,6 +23,17 @@ internal class StyleFixtures {
         || root.Children[0].Color != Color.White
         || root.Children[1].Children[0].Color != Color.White
         || root.Children[2].Color != Color.Rgb(255, 0, 0) { return false }
+      window.SetColors(Color.White, Color.Black)
+      cell.FailNext = true
+      cell.Rebuild()
+      var threw = false
+      try { window.UpdateTree() } catch (error InvalidOperationException) { threw = true }
+      if !threw { return false }
+      window.UpdateTree()
+      if window.Background != Color.White || window.Foreground != Color.Black
+        || root.Children[0].Color != Color.Black || root.Children[1].Children[0].Color != Color.Black { return false }
+      window.SetColors(Color.Black, Color.White)
+      window.UpdateTree()
       cell.Explicit = true
       cell.Rebuild()
       window.UpdateTree()
@@ -2211,9 +2222,14 @@ internal class WindowColorPairCell : Cell {
   internal var Builds int32
   internal var Explicit bool
   internal var Replace bool
+  internal var FailNext bool
 
   override func Build() Blob {
     Builds++
+    if FailNext {
+      FailNext = false
+      throw InvalidOperationException("Window color build failure")
+    }
     if Replace { return Text{Content: "replacement"} }
     return Container() {
       .Handle: Target, .Width: Percent(100),

@@ -95,7 +95,6 @@ class NativeGlassWindow {
                 Backdrop: WindowBackdrop.Blur,
                 BackdropFallbackColor: "#090b10",
                 Background: Color.Parse("#090b10").WithAlpha(0.78),
-                Foreground: Color.White,
                 Root: root,
             }
             root.Window = window
