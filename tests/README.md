@@ -25,7 +25,7 @@ dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Relea
 
 `Goo.VulkanProof` contains the retained text and image proof lanes.
 `Goo.AsyncReadbackSmoke` contains the current window, readback, shader, queue,
-timeline, upload, image, SVG morph, and clipping lanes. Their exact environment variables
+timeline, upload, image, and clipping lanes. Their exact environment variables
 and launch commands are defined in [CI](../.github/workflows/ci.yml).
 
 ## Other platform checks
