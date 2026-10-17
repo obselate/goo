@@ -627,6 +627,7 @@ jobs:
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env GOO_VK_DIAGNOSTICS=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
       - name: Record dependencies and reject known vulnerabilities
