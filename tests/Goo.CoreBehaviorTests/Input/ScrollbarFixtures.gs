@@ -1,10 +1,49 @@
 package Goo
 
+import Facebook.Yoga
 import System
 import System.Diagnostics
 import System.Text
 
 internal class ScrollbarFixtures {
+  func DescriptorChangesArrangeMountedVirtualPartsContract() bool {
+    let cell = ScrollbarDescriptorSwitchCell()
+    let window = Window{ Root: cell, Width: 200, Height: 160 }
+    try {
+      window.UpdateTree()
+      let viewport = window.Tree!!
+      cell.Visibility = ScrollbarVisibility.Hidden
+      cell.Rebuild()
+      window.UpdateTree()
+      if ScrollbarParts.ActiveChildren(viewport).Count != 0 { return false }
+      cell.Descriptor = Scrollbar{}
+      cell.Visibility = ScrollbarVisibility.Always
+      cell.Rebuild()
+      window.UpdateTree()
+      if ScrollbarParts.Children(viewport).Count != 0 { return false }
+      let thumb = ElementHandle{}
+      let magenta = Color.Rgb(255, 0, 255)
+      cell.Descriptor = Scrollbar{
+        Thickness: 10, Inset: 0, MinThumbLength: 20,
+        Thumb: Container{ Handle: thumb, BackgroundColor: magenta },
+      }
+      cell.Rebuild()
+      window.UpdateTree()
+      if !thumb.IsMounted || thumb.BorderBox.Width != 10 || thumb.BorderBox.Height <= 0 {
+        throw InvalidOperationException(
+          "Replacement thumb: mounted=${thumb.IsMounted}, width=${thumb.BorderBox.Width}, "
+          + "height=${thumb.BorderBox.Height}")
+      }
+      if window.Tree != viewport || cell.Viewport.ScrollRange.Y != 3040
+        || viewport.Rect.W != 200.0F || viewport.Rect.H != 160.0F
+        || thumb.AttachedNode()!!.BackgroundColor != magenta { return false }
+      for index in 0 ... 3 {
+        if YGNodeAPI.YGNodeIsDirty(viewport.Yoga!!) || window.UpdateTree(0.0) { return false }
+      }
+      return true
+    } finally { window.Close() }
+  }
+
   func DescriptorGeometryAndVisibilityContract() bool {
     var zeroRejected bool
     var nonFiniteRejected bool
@@ -680,5 +719,34 @@ internal class ScrollbarHoverCell(handle ElementHandle) : Cell {
     ScrollbarVisibilityY: ScrollbarVisibility.Always,
     Hover: Style{ ScrollbarY: Scrollbar{ Thumb: Container{ Handle: handle } } },
     Container{ Width: 100, Height: 300, FlexShrink: 0 },
+  }
+}
+
+internal class ScrollbarDescriptorSwitchCell : Cell {
+  internal let Viewport ElementHandle = ElementHandle{}
+  internal var Visibility ScrollbarVisibility = ScrollbarVisibility.Always
+  internal var Descriptor Scrollbar? = Scrollbar{ Thumb: Container{} }
+  private let source ScrollbarDescriptorSwitchSource = ScrollbarDescriptorSwitchSource()
+
+  override func Build() Blob -> Virtual(source){
+    Handle = Viewport, Width = 200, Height = 160,
+    ScrollbarY = Descriptor, ScrollbarVisibilityY = Visibility,
+  }
+}
+
+internal class ScrollbarDescriptorSwitchSource : VirtualState, VirtualSource {
+  public func State(current VirtualState?) VirtualState -> this
+
+  public override func NeedsRealize(viewport VirtualViewport) bool -> false
+
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    for index in 0 ... 5 {
+      output.Add(VirtualItem{
+        Key: "row-$index", Index: index, Y: float64(index) * 32.0, Width: 200, Height: 32,
+        Content: Container{ Key: "row-$index" },
+      })
+    }
+    output.ContentSize = LayoutSize{ Width: 200, Height: 3200 }
+    output.ItemCount = 100
   }
 }
