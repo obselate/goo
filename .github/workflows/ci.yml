@@ -732,7 +732,7 @@ jobs:
                       raise RuntimeError(f"{package}: package type is missing")
           PY
 
-      - name: Generate and build Goo template
+      - name: Generate, build and publish Goo template
         run: |
           template_hive="$RUNNER_TEMP/goo-template-hive"
           template_output="$RUNNER_TEMP/goo-template"
@@ -747,6 +747,13 @@ jobs:
             --configfile tests/Goo.PackageSmoke/NuGet.config
           dotnet build "$template_output/Generated.gsproj" \
             -c Release --no-restore -p:TreatWarningsAsErrors=true
+          for profile in Trimmed NativeAot; do
+            dotnet publish "$template_output/Generated.gsproj" \
+              -c Release -p:PublishProfile="$profile" \
+              -p:TreatWarningsAsErrors=true \
+              -o "$RUNNER_TEMP/goo-template-$profile" \
+              --configfile tests/Goo.PackageSmoke/NuGet.config
+          done
 
       - name: Install packed Goo developer tools
         run: |
