@@ -50,20 +50,19 @@ internal unsafe class VulkanSwapchainImageSet {
       device = nativeDevice
       dispatch = nativeDispatch
       objectAccounting = nativeObjectAccounting
-      images = EnumerateImages(swapchain, imageCount)
-      let capacity = images.Length
-      imageViews = [capacity]VkImageView
-      renderSemaphores = [capacity]VkSemaphore
+      images = [imageCount]VkImage
+      imageViews = [imageCount]VkImageView
+      renderSemaphores = [imageCount]VkSemaphore
       presentState = if enablePresentFence {
-        VulkanSwapchainPresentState(capacity)
+        VulkanSwapchainPresentState(imageCount)
       } else {
         nil
       }
-      imageLayouts = [capacity]VkImageLayout
-      appliedSceneVersions = [capacity]uint64
-      pendingSceneVersions = [capacity]uint64
+      imageLayouts = [imageCount]VkImageLayout
+      appliedSceneVersions = [imageCount]uint64
+      pendingSceneVersions = [imageCount]uint64
       try {
-        Create(format)
+        Create(swapchain, format)
       } catch (error Exception) {
         try { DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
         throw error
@@ -360,32 +359,15 @@ internal unsafe class VulkanSwapchainImageSet {
     DestroyNative(true)
   }
 
-  private func EnumerateImages(swapchain VkSwapchainKHR, capacity int32) []VkImage {
-    var handles = [capacity]VkImage
-    var count uint32 = uint32(capacity)
+  private func Create(swapchain VkSwapchainKHR, format VkFormat) {
+    var enumeratedImageCount = uint32(images.Length)
     let getSwapchainImages = dispatch.vkGetSwapchainImagesKHR
-    while true {
-      var result VkResult
-      fixed imagePointer * VkImage = handles {
-        result = getSwapchainImages(device, swapchain, &count, imagePointer)
-      }
-      if result == VkConstants.VK_SUCCESS { break }
-      if result != VkConstants.VK_INCOMPLETE {
+    fixed imagePointer * VkImage = images{
+      let result = getSwapchainImages(device, swapchain, &enumeratedImageCount, imagePointer)
+      if result != VkConstants.VK_SUCCESS || enumeratedImageCount != uint32(images.Length) {
         throw InvalidOperationException("Swapchain image enumeration failed")
       }
-      count = 0u
-      if getSwapchainImages(device, swapchain, &count, nil) != VkConstants.VK_SUCCESS
-        || count == 0u || count > 2147483647u {
-        throw InvalidOperationException("Swapchain images are unavailable")
-      }
-      if count > uint32(handles.Length) { handles = [int32(count)]VkImage }
     }
-    if count == 0u { throw InvalidOperationException("Swapchain images are unavailable") }
-    if count != uint32(handles.Length) { Array.Resize[VkImage](ref handles, int32(count)) }
-    return handles
-  }
-
-  private func Create(format VkFormat) {
     while trackedImageCount < images.Length {
       if let accounting = objectAccounting {
         accounting.Allocate()
