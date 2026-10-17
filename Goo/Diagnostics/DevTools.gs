@@ -306,6 +306,12 @@ internal partial class DevToolsSession : IDisposable {
           throw InvalidOperationException("Goo capture request was not accepted: " + status.ToString())
       }
       tracker.Observe(status)
+      if status == WindowReadbackRequestStatus.Accepted {
+        if let recorder = FrameRecorder.Current {
+          recorder.Instant(VulkanDiagnosticEventIds.Readback, VulkanDiagnosticCategories.Runtime,
+            FrameTraceContext{WindowId: windowId}, result: int32(status), source: "capture.request.accepted")
+        }
+      }
       if status == WindowReadbackRequestStatus.NotReady {
         return "{\"command\":\"capture\",\"pending\":true}"
       }

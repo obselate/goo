@@ -1,5 +1,7 @@
 package GooDevTools
 
+import Gsharp
+import Gsharp.Extensions.Go
 import System
 import System.Buffers.Text
 import System.Collections.Generic
@@ -78,6 +80,11 @@ class DiagnosticWire {
                 message.CapabilitiesText = CapabilityText(root, payloadRoot)
                 message.IsResponse = messageType.Equals("response", StringComparison.OrdinalIgnoreCase)
                 message.Succeeded = Bool(root, "ok", true)
+                if effectiveCommand.StartsWith("profiler.", StringComparison.Ordinal) {
+                    message.ProfilerState = Text(payloadRoot, []string{"state"})
+                    message.More = Bool(payloadRoot, "more", false)
+                    message.Raw = ""
+                }
                 if !message.Succeeded {
                     message.ErrorText = Text(root, []string{"error", "message"})
                     if message.ErrorText == "" {
@@ -1021,6 +1028,11 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     private var writer StreamWriter?
     private var stopRequested bool
     private var requestSequence int64
+    private var outgoing chan[DiagnosticMessage]?
+    private var snapshotPending bool
+    private var snapshotsEnabled bool = true
+    private var snapshotDue int64
+    private var pendingBytes int64
 
     init(value DiagnosticEndpoint) {
         endpoint = value
@@ -1106,32 +1118,32 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             while pending.Count != 0 {
                 result.Add(pending.Dequeue())
             }
+            pendingBytes = 0L
         }
         return result
     }
 
     func Send(message DiagnosticMessage) bool {
-        let line = if message.Raw == "" {
-            DiagnosticWire.Request(message.Command, message.Payload)
-        } else {
-            message.Raw
+        var queue chan[DiagnosticMessage]?
+        lock gate {
+            if state != DiagnosticConnectionState.Connected {
+                return false
+            }
+            queue = outgoing
         }
-        try {
-            lock gate {
-                if state != DiagnosticConnectionState.Connected || writer == nil {
-                    return false
-                }
-                if let active = writer {
-                    active.WriteLine(line)
-                }
-            }
-            return true
-        } catch (error Exception) {
-            lock gate {
-                state = DiagnosticConnectionState.Faulted
-            }
-            Enqueue(DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message))
+        guard let active = queue else {
             return false
+        }
+        if Encoding.UTF8.GetByteCount(message.Raw == "" ? message.Payload: message.Raw) > 64 * 1024 {
+            return false
+        }
+        select {
+            case active <- message {
+                return true
+            }
+            default {
+                return false
+            }
         }
     }
 
@@ -1158,6 +1170,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             using let localWriter = StreamWriter(created, Encoding.UTF8, 16 * 1024, true)
             localWriter.AutoFlush = true
             localWriter.NewLine = "\n"
+            let queue = chan[DiagnosticMessage](64)
             lock gate {
                 if stopRequested || !Object.ReferenceEquals(stream, created) {
                     return
@@ -1165,9 +1178,13 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 reader = localReader
                 writer = localWriter
                 state = DiagnosticConnectionState.Connected
+                outgoing = queue
+                snapshotsEnabled = true
+                snapshotPending = true
             }
             localWriter.WriteLine(Handshake())
             localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
+            go WriteRequests(created, localWriter, queue)
             Signal()
             while true {
                 lock gate {
@@ -1180,22 +1197,22 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                     return
                 }
                 let message = DiagnosticWire.ParseMessage(line)
-                var pollSnapshot = false
-                if let value = message {
+                if message == nil {
+                    throw InvalidDataException("Invalid diagnostics message")
+                }
+                {
+                    let value = message
                     UpdateCapabilities(value)
                     Enqueue(value)
-                    pollSnapshot = value.IsResponse &&
-                        value.Succeeded &&
-                        (value.Command == "snapshot" || value.Command == "tree.snapshot")
-                }
-                if pollSnapshot {
-                    Thread.Sleep(100)
                     lock gate {
-                        if stopRequested || state != DiagnosticConnectionState.Connected
-                        || !Object.ReferenceEquals(stream, created) {
-                            return
+                        if value.IsResponse && (value.Command == "snapshot" || value.Command == "tree.snapshot") {
+                            snapshotPending = false
+                            snapshotDue = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 10L
                         }
-                        localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
+                        if value.Command == "profiler.start" && (!value.Succeeded || value.ProfilerState != "Recording")
+                        || value.Command == "profiler.read" && value.ProfilerState == "Complete" && !value.More {
+                            snapshotsEnabled = true
+                        }
                     }
                 }
             }
@@ -1217,12 +1234,80 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                     stream = nil
                     reader = nil
                     writer = nil
+                    outgoing = nil
                     if state == DiagnosticConnectionState.Connected || state == DiagnosticConnectionState.Connecting {
                         state = DiagnosticConnectionState.Disconnected
                     }
                 }
             }
             Signal()
+        }
+    }
+
+    private func WriteRequests(pipe NamedPipeClientStream, output StreamWriter, queue chan[DiagnosticMessage]) {
+        try {
+            using let pulse = tick(TimeSpan.FromMilliseconds(100))
+            var delayed DiagnosticMessage? = nil
+            var due int64 = 0L
+            while true {
+                lock gate {
+                    if stopRequested || !Object.ReferenceEquals(stream, pipe) {
+                        return
+                    }
+                }
+                var request DiagnosticMessage? = nil
+                select {
+                    case let message = <- queue {
+                        request = message
+                    }
+                    case <- pulse {
+                        let now = Stopwatch.GetTimestamp()
+                        if delayed != nil && now >= due {
+                            request = delayed
+                            delayed = nil
+                        } else {
+                            lock gate {
+                                if snapshotsEnabled && !snapshotPending && now >= snapshotDue {
+                                    let next = DiagnosticMessage(
+                                        endpoint.Protocol,
+                                        DiagnosticMessageKind.Unknown,
+                                        0,
+                                        "",
+                                        "",
+                                        "{\"full\":true}"
+                                    )
+                                    next.Command = "snapshot"
+                                    request = next
+                                    snapshotPending = true
+                                }
+                            }
+                        }
+                    }
+                }
+                if let message = request {
+                    if message.DelayMs > 0 {
+                        delayed = message
+                        due = Stopwatch.GetTimestamp() + int64(message.DelayMs) * Stopwatch.Frequency / 1000L
+                        message.DelayMs = 0
+                    } else {
+                        if message.Command == "profiler.start" {
+                            lock gate {
+                                snapshotsEnabled = false
+                            }
+                        }
+                        output.WriteLine(message.Raw == "" ? RequestLine(message.Command, message.Payload): message.Raw)
+                    }
+                }
+            }
+        } catch (error Exception) {
+            lock gate {
+                if stopRequested || !Object.ReferenceEquals(stream, pipe) {
+                    return
+                }
+                state = DiagnosticConnectionState.Faulted
+            }
+            Enqueue(DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message))
+            pipe.Dispose()
         }
     }
 
@@ -1290,15 +1375,39 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 if item == "hot-reload" {
                     next.HotReload = true
                 }
+                if item == "profiler.trace.v1" {
+                    next.ProfilerTrace = true
+                }
             }
             capabilities = next
         }
     }
 
     private func Enqueue(message DiagnosticMessage) {
+        var disconnect NamedPipeClientStream?
         lock gate {
-            pending.Enqueue(message)
+            pendingBytes += int64(message.Raw.Length + message.Payload.Length) * 2L
+            if pendingBytes > 16L * 1024L * 1024L {
+                state = DiagnosticConnectionState.Faulted
+                stopRequested = true
+                disconnect = stream
+                pending.Clear()
+                pendingBytes = 0L
+                pending.Enqueue(
+                    DiagnosticMessage(
+                        endpoint.Protocol,
+                        DiagnosticMessageKind.Error,
+                        0,
+                        "",
+                        "",
+                        "Diagnostics pending-message budget exceeded"
+                    )
+                )
+            } else {
+                pending.Enqueue(message)
+            }
         }
+        disconnect?.Dispose()
         Signal()
     }
 

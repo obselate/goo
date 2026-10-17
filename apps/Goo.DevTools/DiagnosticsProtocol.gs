@@ -3,6 +3,7 @@ package GooDevTools
 import Goo
 import System
 import System.Collections.Generic
+import System.Text.Json
 
 enum DiagnosticConnectionState {
     Disconnected;
@@ -57,6 +58,7 @@ data struct DiagnosticCapabilities {
     var Accessibility bool
     var SourceNavigation bool
     var HotReload bool
+    var ProfilerTrace bool
 }
 
 data struct DiagnosticEndpoint {
@@ -86,6 +88,9 @@ class DiagnosticMessage {
     var IsResponse bool
     var Succeeded bool
     var ErrorText string
+    var DelayMs int32
+    var ProfilerState string = ""
+    var More bool
 
     init(
         protocolVersion DiagnosticProtocolVersion,
@@ -380,6 +385,9 @@ class DiagnosticSession {
     private var pendingOverrideAction string
     private var hoveredNodeId string
     private var captureRequestInFlight bool
+    internal var Profiler ProfilerTrace?
+    private var profilerReadPending bool
+    private var profilerStopSent bool
 
     init() {
         transport = SampleDiagnosticTransport{}
@@ -668,6 +676,9 @@ class DiagnosticSession {
             state = currentState
             changed = true
         }
+        if state != DiagnosticConnectionState.Connected && Profiler?.Active == true {
+            FailProfiler("Target disconnected. The trace is partial.")
+        }
         let messages = transport.Poll()
         for message in messages {
             Apply(message)
@@ -684,7 +695,7 @@ class DiagnosticSession {
         get -> transport.IsSample
     }
 
-    private func SendRequest(command string, payload string) bool {
+    private func SendRequest(command string, payload string, delayMs int32 = 0) bool {
         let message = DiagnosticMessage(
             transport.Endpoint.Protocol,
             DiagnosticMessageKind.Unknown,
@@ -695,7 +706,101 @@ class DiagnosticSession {
         )
         message.Command = command
         message.Raw = DiagnosticWire.Request(command, payload)
+        message.DelayMs = delayMs
         return transport.Send(message)
+    }
+
+    internal func StartProfiler() {
+        if !Capabilities.ProfilerTrace || State != DiagnosticConnectionState.Connected || Profiler?.Active == true {
+            return
+        }
+        Profiler = ProfilerTrace()
+        profilerReadPending = false
+        profilerStopSent = false
+        if !SendRequest("profiler.start", "{\"bufferBytes\":16777216}") {
+            FailProfiler("Could not queue profiler.start")
+        }
+    }
+
+    internal func StopProfiler() {
+        guard let trace = Profiler else {
+            return
+        }
+        if !trace.Active || trace.Id == "" || profilerStopSent {
+            return
+        }
+        profilerStopSent = true
+        trace.State = "Stopping"
+        if !SendRequest("profiler.stop", "{\"traceId\":\"" + DiagnosticWire.Escape(trace.Id) + "\"}") {
+            FailProfiler("Could not queue profiler.stop")
+            transport.Disconnect()
+        }
+    }
+
+    internal func ClearProfiler() {
+        if Profiler?.Active != true {
+            Profiler = nil
+        }
+    }
+
+    private func ReadProfiler(delayMs int32) {
+        guard let trace = Profiler else {
+            return
+        }
+        if profilerReadPending {
+            return
+        }
+        profilerReadPending = SendRequest(
+            "profiler.read",
+            "{\"traceId\":\"" + DiagnosticWire.Escape(trace.Id) + "\",\"afterSeq\":\""
+            + trace.Next.ToString() + "\",\"maxBytes\":262144}",
+            delayMs
+        )
+        if !profilerReadPending {
+            FailProfiler("Could not queue profiler.read")
+            transport.Disconnect()
+        }
+    }
+
+    private func FailProfiler(reason string) {
+        if let trace = Profiler {
+            trace.State = "Complete"
+            trace.Partial = true
+            trace.Reason = reason
+            trace.Revision++
+        }
+        profilerReadPending = false
+    }
+
+    private func ApplyProfiler(message DiagnosticMessage) {
+        guard let trace = Profiler else {
+            return
+        }
+        try {
+            if !message.Succeeded {
+                throw InvalidOperationException(message.ErrorText)
+            }
+            using let document = JsonDocument.Parse(message.Payload)
+            let root = document.RootElement
+            if message.Command == "profiler.start" {
+                trace.Start(root)
+                ReadProfiler(0)
+            } else if message.Command == "profiler.read" {
+                profilerReadPending = false
+                trace.Append(root)
+                if trace.BudgetFull {
+                    StopProfiler()
+                }
+                if trace.Active || message.More {
+                    ReadProfiler(message.More ? 0: int32(ProfilerTrace.Number(root, "pollDelayMs") ?? 100uL))
+                }
+            } else if message.Command == "profiler.stop" {
+                trace.State = "Stopping"
+            }
+        } catch (error Exception) {
+            FailProfiler(error.Message)
+            transport.Disconnect()
+        }
     }
 
     private func Apply(message DiagnosticMessage) {
@@ -768,6 +873,10 @@ class DiagnosticSession {
     }
 
     private func ApplyResponse(message DiagnosticMessage) {
+        if message.Command.StartsWith("profiler.", StringComparison.Ordinal) {
+            ApplyProfiler(message)
+            return
+        }
         if !message.Succeeded {
             if message.Command == "override" || message.Command == "property.override"
             || message.Command == "reset" || message.Command == "property.reset" {
