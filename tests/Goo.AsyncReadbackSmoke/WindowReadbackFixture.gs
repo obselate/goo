@@ -552,6 +552,7 @@ public partial class Window {
           || actual.Height != framebufferHeight)
         && Stopwatch.GetTimestamp() < deadline{
           Thread.Yield()
+          target.PollQueueCompletion()
           if !target.Resize(framebufferWidth, framebufferHeight) {
             return false
           }
