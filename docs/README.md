@@ -2,8 +2,10 @@
 
 ## Version baseline
 
-Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Svg/Goo.Templates/Goo.DevTools/Goo.DevTools.App 0.7.35
+Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Templates/Goo.DevTools/Goo.DevTools.App 0.7.35
 and Goo.Widgets 0.2.19.
+
+SVG examples require the next Goo release, which includes the loader in core.
 
 ## Learn in order
 
@@ -22,7 +24,7 @@ and Goo.Widgets 0.2.19.
 | --- | --- |
 | Compose primitives and Cells | [Native authoring](native-authoring.md), [Cell state and identity](api/cell.md), [tree reconciliation](api/tree.md) |
 | Layout, styling and input | [Layout](api/layout.md), [style](api/style.md), [text](api/text.md), [input](api/input.md), [accessibility](api/accessibility.md) |
-| Load raster images, SVG and sound | [Images](images.md), [SVG](../Goo.Svg/README.md), [audio](audio.md) |
+| Load raster images, SVG and sound | [Images](images.md), [SVG](svg.md), [audio](audio.md) |
 | Use controls, themes and icons | [Widgets](https://github.com/obselate/goo-widgets/blob/main/README.md), [usage](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md), [complete quick start](https://github.com/obselate/goo-widgets/tree/main/samples/Goo.Widgets.QuickStart) |
 | Animate content | [Core motion](api/motion.md), [optional animation library](https://github.com/obselate/goo-animations) |
 | Inspect a running app | [DevTools](devtools/README.md), [diagnostics API](api/diagnostics.md) |

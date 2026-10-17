@@ -5,11 +5,7 @@ Use the [version baseline](README.md#version-baseline) and start with the
 
 ## 1. Separate a second Cell
 
-From the generated app directory, add the optional SVG loader:
-
-```sh
-dotnet add package Goo.Svg --version 0.7.35
-```
+SVG loading is included in Goo; no separate SVG package is needed.
 
 Replace `Program.gs` with the complete program below. It separates the parent's
 count from the child's click count and retains one parsed asset:
@@ -108,7 +104,7 @@ Do not call a child's `Build()` to mount it.
 1. Read [Cell inputs and rebuilds](api/cell.md#build-input-cells), then
    [native composition](native-authoring.md).
 2. Try [edit and inspect](edit-and-inspect.md).
-3. Use the [SVG loader](../Goo.Svg/README.md) for file/stream loading and
+3. Use the [SVG loader](svg.md) for file/stream loading and
    [images guide](images.md) for asset handling.
 4. Add [widgets and controlled inputs](https://github.com/obselate/goo-widgets/blob/main/docs/usage.md).
 5. Follow [shipping](shipping.md). Use the [app-author index](README.md) for the
