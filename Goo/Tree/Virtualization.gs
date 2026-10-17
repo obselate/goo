@@ -58,7 +58,8 @@ internal sealed class VirtualNodeState {
   private var pendingTargetX float32
   private var pendingTargetY float32
 
-  internal var Context ContextEnvironment
+  internal var Context ContextFrame?
+  internal var Owner Window?
   private var contextReader ContextReader?
   private var contextDirty bool
   private var contextVersion int64
@@ -66,19 +67,21 @@ internal sealed class VirtualNodeState {
 
   internal prop ContextVersion int64 { get -> contextVersion }
 
-  internal func BindContext(environment ContextEnvironment) {
-    let changed = Context.Frame != environment.Frame || Context.Window != environment.Window
-    Context = environment
+  internal func BindContext(frame ContextFrame?, owner Window?) {
+    let changed = Context != frame || Owner != owner
+    let rebound = Owner != nil
+    Context = frame
+    Owner = owner
     if let reader = contextReader {
-      reader.Frame = Context.Frame
-      reader.Window = Context.Window
+      reader.Frame = frame
+      reader.Window = owner
       if changed { reader.Refresh() }
     }
-    if changed { InvalidateContext() }
+    if changed && rebound { InvalidateContext() }
   }
 
   internal func EnsureContextReader() ContextReader {
-    contextReader ??= ContextReader{Window: Context.Window, Frame: Context.Frame, Virtual: this}
+    contextReader ??= ContextReader{Window: Owner, Frame: Context, Virtual: this}
     contextReader!!.Begin()
     return contextReader!!
   }
@@ -86,27 +89,22 @@ internal sealed class VirtualNodeState {
   internal func InvalidateContext() {
     contextVersion++
     contextDirty = true
-    Context.Window?.ContextVirtualInvalidated()
+    Owner?.ContextVirtualInvalidated()
   }
 
   internal func ContextAffected(source ContextFrame, lineageChanged bool) bool {
-    var current = Context.Frame
+    var current = Context
     while let frame = current {
       if lineageChanged && frame == source { return true }
       if !lineageChanged && frame.Key == source.Key { return frame == source }
       current = frame.Parent
     }
-    return !lineageChanged && Context.Window?.ContextValue(source.Key) == source
+    return !lineageChanged && Owner?.ContextValue(source.Key) == source
   }
 
-  private func enterContext(stateCallback bool = false) ContextEnvironment {
-    var environment = Context
-    environment.Reader = contextReader
-    environment.Cell = nil
-    environment.Virtual = this
-    environment.StateCallback = stateCallback
-    return ContextEnvironment.Enter(environment)
-  }
+  private func enterContext(stateCallback bool = false) ContextEnvironment ->
+    ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: Context,
+      Reader: contextReader, Virtual: this, StateCallback: stateCallback})
   internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
     pendingSource = source
@@ -316,7 +314,8 @@ internal sealed class VirtualNodeState {
     Cancel()
     contextReader?.Dispose()
     contextReader = nil
-    Context = ContextEnvironment{}
+    Context = nil
+    Owner = nil
     source = nil
     mounted.Clear()
     if let state = current {

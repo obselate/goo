@@ -13,7 +13,7 @@ internal class NodeLifecycle {
 
     private func disposeTree(n Node) Exception? {
       n.Retired = true
-      n.Context = ContextEnvironment{}
+      n.Context = nil
       ElementHandles.Detach(n)
       if n.HasAccessibilityDeclaration {
         AccessibilityMetadata.Remove(n)

@@ -26,25 +26,31 @@ internal partial class Reconciler {
   private var fallbackChildScratch ChildDiffScratch?
   private var styleRetryRoot Node?
   private var deferredRetirement Node?
-  internal var Context ContextEnvironment
+  internal var Context ContextFrame?
   private var contextCommits List[ContextReader]?
 
   private func trackContext(cell Cell, preserve bool = false) {
     guard let reader = cell.contextReader else { return }
     reader.Preserve = preserve
+    if reader.Queued { return }
+    reader.Queued = true
     contextCommits ??= List[ContextReader]()
-    if !contextCommits!!.Contains(reader) { contextCommits!!.Add(reader) }
+    contextCommits!!.Add(reader)
   }
 
   private func commitContexts() {
     if let readers = contextCommits {
-      for index in 0 ... readers.Count { readers[index].Commit(readers[index].Preserve) }
+      for index in 0 ... readers.Count {
+        let reader = readers[index]
+        reader.Queued = false
+        reader.Commit(reader.Preserve)
+      }
       readers.Clear()
     }
   }
 
   private func configureCell(cell Cell, declaration CellElement, seed bool) {
-    cell.BindContext(Context.Frame, Owner)
+    cell.BindContext(Context, Owner)
     cell.contextReader?.Begin()
     let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
       Cell: cell, Reader: cell.contextReader})
@@ -61,7 +67,7 @@ internal partial class Reconciler {
 
   private func renderCell(cell Cell) Blob {
     cell.contextReader?.Begin()
-    let previous = ContextEnvironment.Enter(ContextEnvironment{Window: cell.contextWindow,
+    let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner,
       Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
       guard let profiler = Profiler else { return cell.Render() }
@@ -133,7 +139,10 @@ internal partial class Reconciler {
   internal func DiscardStyles() {
     Res.DiscardPending()
     if let readers = contextCommits {
-      for index in 0 ... readers.Count { readers[index].Cancel() }
+      for index in 0 ... readers.Count {
+        readers[index].Queued = false
+        readers[index].Cancel()
+      }
       readers.Clear()
     }
     if let root = styleRetryRoot {
@@ -191,7 +200,7 @@ internal partial class Reconciler {
 
   internal func MountRoot(cell Cell) Node {
     cell.ClaimMount(cell.GetType())
-    cell.BindContext(Context.Frame, Owner)
+    cell.BindContext(Context, Owner)
     try {
       if let pump = Pump {
         cell.BindPump(pump)
@@ -241,9 +250,7 @@ internal partial class Reconciler {
       MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
     }
     let state = Virtualization.Configure(n)
-    var environment = Context
-    environment.Window = Owner
-    state.BindContext(environment)
+    state.BindContext(Context, Owner)
     return state
   }
 
@@ -311,7 +318,6 @@ internal partial class Reconciler {
 
   internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
     n.Context = Context
-    n.Context.Window = Owner
     let hover = b.Hover?.Entries()
     let active = b.Active?.Entries()
     let focus = b.Focus?.Entries()
@@ -682,21 +688,19 @@ internal partial class Reconciler {
     }
   }
 
-  private func rebindRetainedContext(n Node) Node {
-    if n.Context.Frame == Context.Frame && n.Context.Window == Owner { return n }
+  private func rebindRetainedContext(n Node, binding Cell? = nil) Node {
+    if binding == nil && n.Context == Context { return n }
     let previous = Context
     try {
-      if let cell = n.Fiber {
-        cell.BindContext(Context.Frame, Owner)
+      if let cell = binding ?? n.Fiber {
+        if binding == nil { cell.BindContext(Context, Owner) }
         if cell.HasDirty() { return RebuildFiber(n, cell) }
         var producer = cell
         while let child = producer.directChild { producer = child }
-        Context = ContextEnvironment{Window: Owner, Frame: producer.outgoingContext,
-          Cell: producer, Reader: producer.contextReader}
+        Context = producer.outgoingContext
       }
       n.Context = Context
-      n.Context.Window = Owner
-      Virtualization.State(n)?.BindContext(n.Context)
+      Virtualization.State(n)?.BindContext(Context, Owner)
       for index in 0 ... n.Children.Count {
         let old = n.Children[index]
         let child = rebindRetainedContext(old)
@@ -798,6 +802,7 @@ internal partial class Reconciler {
       }
       cell.SetRetainedMotionInvalidation(RetainedInvalidated)
       cell.SetRebuildSubmission(nil)
+      let frameChanged = cell.incomingContext != Context
       configureCell(cell, e, false)
       cell.SetRebuildSubmission(CellInvalidated)
 
@@ -808,12 +813,13 @@ internal partial class Reconciler {
             return rebuildMounted(existing, child, cell)
           }
         }
+        let retained = if frameChanged { rebindRetainedContext(existing, cell) } else { existing }
         if let parent = owner {
           parent.directChild = cell
         } else {
-          existing.Fiber = cell
+          retained.Fiber = cell
         }
-        return existing
+        return retained
       }
       return rebuildMounted(existing, cell, owner)
     }
@@ -851,8 +857,7 @@ internal partial class Reconciler {
     try {
       let inner = renderCell(cell)
       trackContext(cell)
-      Context = ContextEnvironment{Window: cell.contextWindow, Frame: cell.outgoingContext,
-        Cell: cell, Reader: cell.contextReader}
+      Context = cell.outgoingContext
       var result Node
       if inner is CellElement {
         result = expandCellAt(existing, inner, cell.directChild, cell)

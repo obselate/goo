@@ -1893,7 +1893,7 @@ type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Command|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Container|sealed-class|public|base:Goo.Blob|interfaces:|generic:
-type|Goo.Context`1|class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
+type|Goo.Context`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.Cursor|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.DashPattern|class|public|base:System.Object|interfaces:|generic:
 type|Goo.DevTools|sealed-class|public|base:System.Object|interfaces:|generic:

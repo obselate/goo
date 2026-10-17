@@ -135,14 +135,33 @@ internal class ContextFixtures {
                 )
             }
             let frame = direct.incomingContext!!
-            let generation = frame.Generation
             cell.Caption = "changed"
             cell.Rebuild()
             window.UpdateTree()
-            if direct.incomingContext != frame || frame.Generation != generation
+            if direct.incomingContext != frame
             || direct.MountedNode()!!.Children[0].Content != "scopedchanged:21" {
                 throw InvalidOperationException("A stable scope builder did not refresh its captured content")
             }
+            let clean = (scopeNode(window).Children[3].Fiber as ContextCleanContainerCell)!!
+            let nested = (scopeNode(window).Children[3].Children[0].Fiber as ContextReadCell)!!
+            let cleanBuilds = clean.Builds
+            let nestedBuilds = nested.Builds
+            key.Set(window, 21)
+            cell.ProviderKey = other
+            cell.Rebuild()
+            window.UpdateTree()
+            if clean.Builds != cleanBuilds || nested.Builds != nestedBuilds || nested.Value != 21 {
+                throw InvalidOperationException("Equal key swap rebuilt a clean retained subtree")
+            }
+            key.Set(window, 22)
+            window.UpdateTree()
+            if clean.Builds != cleanBuilds || nested.Value != 22 || nested.Builds != nestedBuilds + 1 {
+                throw InvalidOperationException("A key swap left a clean descendant subscribed to the old provider")
+            }
+            key.Set(window, 11)
+            cell.ProviderKey = key
+            cell.Rebuild()
+            window.UpdateTree()
             direct.ReadOther = true
             direct.Rebuild()
             window.UpdateTree()
@@ -435,9 +454,18 @@ internal class ContextDirectCell : Cell[ContextReadInput] {
     Cell.Mount[ContextReadInput, ContextReadCell](nil, input)
 }
 
+internal class ContextCleanContainerCell : Cell[ContextReadInput] {
+    internal var Builds int32
+    override func Build(input ContextReadInput) Blob {
+        Builds++
+        return Container(){Cell.Mount[ContextReadInput, ContextReadCell](nil, input)}
+    }
+}
+
 internal class ContextTestRoot : Cell {
     private let key Context[int32]
     private let other Context[int32]
+    internal var ProviderKey Context[int32]
     private let buildScope Func[Blob]
     private let buildSibling Func[Blob]
     internal var Value int32 = 20
@@ -450,13 +478,14 @@ internal class ContextTestRoot : Cell {
     internal init(key Context[int32], other Context[int32]) {
         this.key = key
         this.other = other
+        ProviderKey = key
         buildScope = scopedContent
         buildSibling = () -> Cell.Mount[ContextReadInput, ContextDirectCell](nil, input("sibling"))
     }
 
     override func Build() Blob {
         Builds++
-        let scoped = Container(){.Key: "scope", Scoped ? key.Scope(Value, buildScope): scopedContent()}
+        let scoped = Container(){.Key: "scope", Scoped ? ProviderKey.Scope(Value, buildScope): scopedContent()}
         let sibling = Container(){.Key: "sibling", key.Scope(90, buildSibling)}
         return Container(){
             .Width: 100,
@@ -494,7 +523,7 @@ internal class ContextTestRoot : Cell {
         )
         task.RunSynchronously(TaskScheduler.Default)
         AsyncIsolated = task.GetAwaiter().GetResult()
-        let expected = Scoped ? Value: key.Read(key.Window)
+        let expected = Scoped && ProviderKey == key ? Value: key.Read(key.Window)
         if key.Read() != expected {
             throw InvalidOperationException("A nested task build changed its parent's context")
         }
@@ -512,6 +541,7 @@ internal class ContextTestRoot : Cell {
                 },
                 Container{Height: 200, FlexShrink: 0},
             },
+            Cell.Mount[ContextReadInput, ContextCleanContainerCell]("clean", input("clean")),
         }
     }
 }

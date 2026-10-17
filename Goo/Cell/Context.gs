@@ -6,7 +6,7 @@ import System.Threading.Tasks
 
 /// Identifies one retained value independently of other keys of the same type.
 /// @typeparam T The value type.
-public sealed class Context[T any] {
+public class Context[T any] {
     /// Creates a key without a default value.
     public init() { }
 
@@ -162,7 +162,6 @@ internal data struct ContextEnvironment {
 internal open class ContextFrame {
     internal let Key object
     internal var Parent ContextFrame?
-    internal var Generation int64
     internal var Owner Window?
     private var dependents List[ContextDependency]?
     private var notifying bool
@@ -217,7 +216,6 @@ internal sealed class ContextValue[T any] : ContextFrame {
     internal var Value T
     private var previous T = default(T)
     private var previousParent ContextFrame?
-    private var previousGeneration int64
     private var pending bool
 
     internal init(key object, value T) : base(key) {
@@ -229,7 +227,6 @@ internal sealed class ContextValue[T any] : ContextFrame {
             return false
         }
         Value = value
-        Generation++
         return true
     }
 
@@ -237,7 +234,6 @@ internal sealed class ContextValue[T any] : ContextFrame {
         if !pending {
             previous = Value
             previousParent = Parent
-            previousGeneration = Generation
             pending = true
         }
         let moved = Parent != parent
@@ -259,7 +255,6 @@ internal sealed class ContextValue[T any] : ContextFrame {
         }
         Value = previous
         Parent = previousParent
-        Generation = previousGeneration
         pending = false
         previous = default(T)
         previousParent = nil
@@ -321,13 +316,15 @@ internal sealed class ContextDependency[T any] : ContextDependency {
         if !Committed {
             return
         }
-        let window = Owner.Window
-        Detach()
         var current = Owner.Frame
         var selected ContextValue[T]?
+        var count = 0
+        var changed = false
         while let frame = current {
-            watched.Add(frame)
-            frame.Subscribe(this)
+            if count >= watched.Count || watched[count] != frame {
+                changed = true
+            }
+            count++
             if frame.Key == key {
                 selected = frame as ContextValue[T]
                 break
@@ -335,8 +332,26 @@ internal sealed class ContextDependency[T any] : ContextDependency {
             current = frame.Parent
         }
         if selected == nil {
-            if let ownerWindow = window {
-                selected = ownerWindow.ContextValue(key) as ContextValue[T]?
+            selected = Owner.Window?.ContextValue(key) as ContextValue[T]?
+            if let frame = selected {
+                if count >= watched.Count || watched[count] != frame {
+                    changed = true
+                }
+                count++
+            }
+        }
+        if changed || count != watched.Count {
+            Detach()
+            current = Owner.Frame
+            while let frame = current {
+                watched.Add(frame)
+                frame.Subscribe(this)
+                if frame.Key == key {
+                    break
+                }
+                current = frame.Parent
+            }
+            if current == nil {
                 if let frame = selected {
                     watched.Add(frame)
                     frame.Subscribe(this)
@@ -359,6 +374,7 @@ internal sealed class ContextReader {
     internal var Cell Cell?
     internal var Virtual VirtualNodeState?
     internal var Preserve bool
+    internal var Queued bool
     internal var StateReading bool
     private var dependencies List[ContextDependency]?
     private var reading bool
