@@ -142,12 +142,8 @@ public partial class Window {
     let foregroundChanged = this.foreground != foreground
     this.background = background
     this.foreground = foreground
-    if foregroundChanged {
-      if let current = node {
-        resolver.InvalidateInherited(current, styleMaskWith(StyleMask{}, StyleField.Color))
-        foregroundPending = true
-        requestReconcile()
-      }
+    if foregroundChanged && node != nil {
+      foregroundPending = true
     }
     requestRender()
     host?.Wake()
@@ -637,6 +633,7 @@ public partial class Window {
 
   private func startCapture(target WindowRenderTarget, owner WindowCaptureOwner) WindowReadbackRequestStatus {
     if target.PollCapture() == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
+    flushForeground()
     let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
     capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
     if status == WindowReadbackRequestStatus.Accepted || capturePending {
