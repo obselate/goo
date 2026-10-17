@@ -1,11 +1,7 @@
 # Ship a desktop app
 
 Create the [starter app](../README.md#quick-start) in a directory named `goo-ship`.
-Check the [platform preflight](platform-preflight.md), then add SVG support:
-
-```sh
-dotnet add package Goo.Svg --version 0.7.35
-```
+Check the [platform preflight](platform-preflight.md). SVG support is included in `Goo`.
 
 Create `Assets/icon.svg`:
 
@@ -31,7 +27,7 @@ private var icon VectorAsset = Svg.Load(Path.Combine(AppContext.BaseDirectory, "
 
 Add `Container{Width: 32, Height: 32, icon.Render(),},` to the built container.
 The base-directory lookup works independently of the caller's working directory.
-See [SVG support and limits](../Goo.Svg/README.md).
+See [SVG support and limits](svg.md).
 
 ## Publish
 

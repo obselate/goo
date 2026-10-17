@@ -12,6 +12,7 @@ if not (root / "Goo/Goo.gsproj").is_file():
 paths = [
     root / "README.md", root / "CONTRIBUTING.md", root / "docs/native-authoring.md",
     root / "docs/production-readiness.md", root / "docs/svg.md", root / "docs/migrations/gcv1.md",
+    root / "docs/shipping.md", root / "docs/platform-preflight.md",
 ]
 paths += sorted((root / "docs/api").glob("*.md"))
 paths += sorted((root / "docs/devtools").glob("*.md"))
