@@ -23,6 +23,11 @@ internal partial class FrameRecorder {
     private let nativeResources Dictionary[FrameNativeResourceKey, uint64] = Dictionary[FrameNativeResourceKey, uint64]()
     private var managedIdentityCount int32
     private let pendingGpu Dictionary[FrameGpuStageKey, FrameTraceRecord] = Dictionary[FrameGpuStageKey, FrameTraceRecord]()
+    private let resourceRecords HashSet[uint64] = HashSet[uint64]()
+
+    internal func NeedsResourceBaseline(id uint64) bool {
+        lock gate { return !resourceRecords.Contains(id) }
+    }
     internal prop AcceptsGpu bool { get -> !System.Threading.Volatile.Read(&complete) }
     private prop PendingGpuCount int32 { get { lock gate { return pendingGpu.Count } } }
 
@@ -100,6 +105,7 @@ internal partial class FrameRecorder {
         device uint64 = 0uL, parent uint64 = 0uL, baseline bool = false, result int32 = 0,
         deviceGeneration uint64 = 0uL, submission uint64 = 0uL) {
         if !Object.ReferenceEquals(Current, this) || id == 0uL { return }
+        if baseline && !NeedsResourceBaseline(id) { return }
         let ticks = Stopwatch.GetTimestamp() - Origin
         if let label = name {
             let basename = Path.GetFileName(label)

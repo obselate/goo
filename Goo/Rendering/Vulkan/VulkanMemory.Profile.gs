@@ -111,6 +111,7 @@ internal unsafe partial class VulkanMemoryAllocator {
     kind FrameTraceKind, eventId uint64) {
     let id = recorder.ManagedResource(block)
     if id == 0uL { return }
+    if kind == FrameTraceKind.ResourceBaseline && !recorder.NeedsResourceBaseline(id) { return }
     recorder.Publish(FrameTraceRecord{
       Kind: kind, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
       ThreadId: Environment.CurrentManagedThreadId, Context: ProfileContext(),
@@ -132,6 +133,7 @@ internal unsafe partial class VulkanMemoryAllocator {
       ProfileBlock(recorder, block, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
     }
     guard let identity = recorder.ManagedIdentity(allocation, out var first) else { return }
+    if kind == FrameTraceKind.ResourceBaseline && !recorder.NeedsResourceBaseline(identity.Value) { return }
     if width != nil && height != nil {
       identity.Width = width
       identity.Height = height

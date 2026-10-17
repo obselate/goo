@@ -207,6 +207,7 @@ internal partial class FrameRecorder {
                 return
             }
             put(value)
+            if value.ResourceId != 0uL { resourceRecords.Add(value.ResourceId) }
         }
     }
 
@@ -229,6 +230,7 @@ internal partial class FrameRecorder {
         }
         dropped = dropped + missing
         baselineVersion++
+        resourceRecords.Clear()
         put(
             FrameTraceRecord{
                 Kind: FrameTraceKind.Gap,

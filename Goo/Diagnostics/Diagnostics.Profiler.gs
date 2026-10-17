@@ -89,11 +89,17 @@ internal partial class DiagnosticPipeHost {
                 }
                 result.Append(quote(FrameProfileStage(i).ToString()))
             }
-            result.Append("],\"ownerKinds\":")
-                .Append(JsonSerializer.Serialize(Enum.GetNames[VulkanMemoryOwnerKind]()))
-                .Append(",\"resourceKinds\":")
-                .Append(JsonSerializer.Serialize(Enum.GetNames[FrameResourceKind]()))
-                .Append("}")
+            result.Append("],\"ownerKinds\":[")
+            for i in 0 ... Enum.GetNames[VulkanMemoryOwnerKind]().Length {
+                if i > 0 { result.Append(",") }
+                result.Append(quote(VulkanMemoryOwnerKind(i).ToString()))
+            }
+            result.Append("],\"resourceKinds\":[")
+            for i in 0 ... Enum.GetNames[FrameResourceKind]().Length {
+                if i > 0 { result.Append(",") }
+                result.Append(quote(FrameResourceKind(i).ToString()))
+            }
+            result.Append("]}")
             return result.ToString()
         }
     }

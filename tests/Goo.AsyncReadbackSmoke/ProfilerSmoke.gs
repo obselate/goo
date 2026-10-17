@@ -91,6 +91,7 @@ internal class ProfilerSmokeTrace {
     internal var GpuAvailable bool
     internal let Allocations Dictionary[string, ProfilerSmokeAllocation] = Dictionary[string, ProfilerSmokeAllocation]()
     internal let BaselineIds HashSet[string] = HashSet[string]()
+    internal let CreatedIds HashSet[string] = HashSet[string]()
     internal var AccountsValid bool = true
     internal var Cutoff int64 = -1L
     internal var LastCpuEnd int64
@@ -213,6 +214,110 @@ internal class ProfilerSmoke {
                 if done.IsSet {
                     done.Dispose()
                 }
+            }
+            VerifyCaptures()
+        }
+
+        private func Capture(window Window) WindowCapture {
+            let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+            var request = window.RequestCapture()
+            while (request == WindowCaptureRequestStatus.NotReady || request == WindowCaptureRequestStatus.Busy)
+                && Stopwatch.GetTimestamp() < deadline {
+                window.Pump(0.0)
+                request = window.RequestCapture()
+            }
+            Require(request == WindowCaptureRequestStatus.Accepted, "Profiler capture was not accepted")
+            var capture = window.PollCapture()
+            while capture == nil && Stopwatch.GetTimestamp() < deadline {
+                window.Pump(0.0)
+                capture = window.PollCapture()
+            }
+            guard let frame = capture else { throw InvalidOperationException("Profiler capture did not complete") }
+            let pixels = frame.Pixels
+            var colored = false
+            for i in 0 ... pixels.Length / 4 {
+                let at = i * 4
+                if Math.Abs(int32(pixels[at]) - 12) <= 2
+                    && Math.Abs(int32(pixels[at + 1]) - 80) <= 2
+                    && Math.Abs(int32(pixels[at + 2]) - 120) <= 2 && pixels[at + 3] == 255 {
+                    colored = true
+                    break
+                }
+            }
+            Require(frame.Width > 0u && frame.Height > 0u
+                && pixels.Length == int32(frame.RowBytes * frame.Height)
+                && frame.Premultiplied && frame.SrgbEncoded && frame.OriginTopLeft && colored,
+                "Profiler capture returned invalid pixels")
+            return frame
+        }
+
+        private func VerifyCaptures() {
+            let diagnostics = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS")
+            Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", nil)
+            let window = Window{Title: "Goo profiler capture smoke", Width: 63, Height: 61,
+                Root: ProfilerSmokeCell{Frame: 12}}
+            var recording FrameRecorder?
+            try {
+                window.Open()
+                WindowReadbackTestFixture.ForceRender(window, 0.0)
+                guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
+                    throw InvalidOperationException("Capture recorder did not start")
+                }
+                recording = recorder
+                WindowReadbackTestFixture.ForceRender(window, 0.0)
+                recorder.Read(0L, 10000, out var after, out var more, out var state, out var dropped)
+                let captured = Capture(window)
+                var imageId uint64
+                var staging = false
+                more = true
+                while more {
+                    let records = recorder.Read(after, 10000, out after, out more, out state, out dropped)
+                    for record in records {
+                        if record.Kind != FrameTraceKind.ResourceLifecycle
+                            || record.EventId != VulkanDiagnosticEventIds.ResourceCreate { continue }
+                        if record.ResourceKind == int32(FrameResourceKind.Image)
+                            && record.OwnerKind == int32(VulkanMemoryOwnerKind.LayerTarget)
+                            && record.Width == int32(captured.Width) && record.Height == int32(captured.Height) { imageId = record.ResourceId }
+                        staging = staging || (record.ResourceKind == int32(FrameResourceKind.Buffer)
+                            && record.OwnerKind == int32(VulkanMemoryOwnerKind.Staging)
+                            && record.PayloadBytes == uint64(captured.RowBytes) * uint64(captured.Height))
+                    }
+                }
+                Require(imageId != 0uL, "Profiler capture has no LayerTarget image Create")
+                Require(staging, "Profiler capture has no Staging buffer Create")
+                for i in 0 ... 40000 { recorder.Instant(0uL, 0uL, FrameTraceContext{}) }
+                var gap = false
+                more = true
+                while more {
+                    let records = recorder.Read(after, 10000, out after, out more, out state, out dropped)
+                    for record in records { gap = gap || record.Kind == FrameTraceKind.Gap }
+                }
+                window.SampleProfile(recorder, force: true)
+                let baseline = recorder.Read(after, 10000, out after, out more, out state, out dropped)
+                var restored = false
+                for record in baseline {
+                    restored = restored || (record.Kind == FrameTraceKind.ResourceBaseline && record.ResourceId == imageId)
+                }
+                Require(gap && restored, "Resource baselines were not restored after a Gap")
+                recorder.Stop(false)
+                let stopDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
+                while state != "Complete" && Stopwatch.GetTimestamp() < stopDeadline {
+                    window.Pump(0.0)
+                    recorder.Read(after, 10000, out after, out more, out state, out dropped)
+                }
+                Require(state == "Complete", "Capture recorder did not complete")
+                let idleDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
+                while Stopwatch.GetTimestamp() < idleDeadline { window.Pump(0.0) }
+                Capture(window)
+                Require(!WindowReadbackTestFixture.CaptureTarget(window)!!.ReadbackTiming.GpuTimingAvailable,
+                    "Profiler capture retained GPU timing after detach")
+                Console.WriteLine("profiler-capture: pixels=verified owners=LayerTarget,Staging detached_gpu_timing=False")
+            } finally {
+                recording?.Stop(true)
+                window.RequestClose()
+                let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
+                while window.IsOpen && Stopwatch.GetTimestamp() < deadline { window.Pump(0.0) }
+                Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", diagnostics)
             }
         }
 
@@ -504,6 +609,7 @@ internal class ProfilerSmoke {
                 let kind = record.GetProperty("kind").GetString() ?? ""
                 if kind == "gap" {
                     trace.BaselineIds.Clear()
+                    trace.CreatedIds.Clear()
                     trace.Allocations.Clear()
                     trace.AccountsValid = false
                 }
@@ -533,6 +639,9 @@ internal class ProfilerSmoke {
                     if eventId == VulkanDiagnosticEventIds.ResourceCreate.ToString(CultureInfo.InvariantCulture)
                         || eventId == VulkanDiagnosticEventIds.PipelineCreate.ToString(CultureInfo.InvariantCulture)
                         || eventId == VulkanDiagnosticEventIds.SwapchainCreate.ToString(CultureInfo.InvariantCulture) {
+                        let id = record.GetProperty("resourceId").GetString() ?? ""
+                        Require(!trace.BaselineIds.Contains(id), "A resource has both a baseline and a Create in one baseline version")
+                        trace.CreatedIds.Add(id)
                         trace.CreatedKinds.Add(record.GetProperty("resourceKind").GetInt32())
                     }
                 }
@@ -540,6 +649,7 @@ internal class ProfilerSmoke {
                     trace.BaselineKinds.Add(record.GetProperty("resourceKind").GetInt32())
                     let id = record.GetProperty("resourceId").GetString() ?? ""
                     Require(trace.BaselineIds.Add(id), "A resource baseline was duplicated")
+                    Require(!trace.CreatedIds.Contains(id), "A resource has both a baseline and a Create in one baseline version")
                     Require(record.GetProperty("resourceId").ValueKind == JsonValueKind.String,
                         "Baseline resource identity is missing")
                 }

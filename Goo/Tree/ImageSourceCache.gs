@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Diagnostics
 import System.IO
 import System.Threading
 import System.Threading.Tasks
@@ -59,8 +60,12 @@ public class ImageSourceCache : IDisposable {
       if disposed { throw ObjectDisposedException("ImageSourceCache") }
       if sources.TryGetValue(path, out var existing) {
         if let recorder = FrameRecorder.Current {
-          recorder.Resource(FrameResourceKind.ImageSource, existing.ProfileIdentity(recorder),
-            VulkanDiagnosticEventIds.ResourceCreate, "image.cache.reuse")
+          recorder.Publish(FrameTraceRecord{
+            Kind: FrameTraceKind.Instant, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
+            ThreadId: Environment.CurrentManagedThreadId, Category: VulkanDiagnosticCategories.Resource,
+            ResourceId: existing.ProfileIdentity(recorder), ResourceKind: int32(FrameResourceKind.ImageSource),
+            ResourceGeneration: 1uL, Source: "image.cache.reuse", Validity: "available",
+          })
         }
         return existing.RetainSource()
       }
