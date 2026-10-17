@@ -57,7 +57,16 @@ public class ImageSourceCache : IDisposable {
     token.ThrowIfCancellationRequested()
     lock gate {
       if disposed { throw ObjectDisposedException("ImageSourceCache") }
-      if sources.TryGetValue(path, out var existing) { return existing.RetainSource() }
+      if sources.TryGetValue(path, out var existing) {
+        if let recorder = FrameRecorder.Current {
+          let id = recorder.ManagedResource(existing, out var first)
+          if first {
+            recorder.Resource(FrameResourceKind.ImageSource, existing.ProfileIdentity(recorder),
+              VulkanDiagnosticEventIds.ResourceCreate, "image.cache.reuse", baseline: true)
+          }
+        }
+        return existing.RetainSource()
+      }
       if sources.Count >= maxEntries { throw InvalidOperationException("Image cache path budget is full") }
     }
     let decoded = RasterImageDecoder.Load(path, limits, token)

@@ -31,6 +31,20 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
   private var graphicsPipelineCreateCount int64
   private var graphicsPipelineCreateNanoseconds int64
   private var disposed bool
+  private var profileTraceId string?
+  private var profileBaseline int64 = -1L
+
+  internal func ProfileResources(recorder FrameRecorder) {
+    lock gate {
+      if profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
+      profileTraceId = recorder.TraceId
+      profileBaseline = recorder.BaselineVersion
+      recorder.Resource(FrameResourceKind.PipelineCache,
+        recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache),
+        VulkanDiagnosticEventIds.ResourceCreate, "pipeline.cache",
+        bytes: uint64(loadedBytes), device: uint64(device), baseline: true)
+    }
+  }
 
   internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch,
     vendorId uint32, deviceId uint32, driverVersion uint32,
@@ -55,7 +69,10 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
           return
         }
         persistenceEnabled = true
+        let recorder = FrameRecorder.Current
+        let loadStart = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
         let initialData = LoadInitialData(vendorId, deviceId, uuid)
+        let loadEnd = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
         cache = Create(initialData)
         var initialDataAccepted bool = cache != 0uL
         if cache == 0uL && initialData.Length != 0 {
@@ -79,6 +96,14 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         }
         if initialDataAccepted {
           loadedBytes = int64(initialData.Length)
+        }
+        if let trace = recorder {
+          let id = trace.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache)
+          trace.Resource(FrameResourceKind.PipelineCache, id, VulkanDiagnosticEventIds.ResourceCreate,
+            "pipeline.cache.create", bytes: uint64(loadedBytes), device: uint64(device))
+          trace.ResourceDuration(FrameResourceKind.PipelineCache, id,
+            if loadedBytes > 0L { "pipeline.cache.load.hit" } else { "pipeline.cache.load.miss" },
+            loadStart, bytes: uint64(initialData.Length), device: uint64(device), end: loadEnd)
         }
       } catch (error Exception) {
         if cache != 0uL {
@@ -116,6 +141,18 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         graphicsPipelineCreateCount = graphicsPipelineCreateCount + int64(count)
         graphicsPipelineCreateNanoseconds = graphicsPipelineCreateNanoseconds
         +TicksToNanoseconds(elapsed)
+        if let recorder = FrameRecorder.Current {
+          let parent = recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache)
+          for i in 0 ... int32(count) {
+            let id = recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipelines[i])
+            recorder.ResourceDuration(FrameResourceKind.Pipeline, id, "pipeline.create", start,
+              device: uint64(device), result: int32(result), end: start + elapsed)
+            if result == VkConstants.VK_SUCCESS && pipelines[i] != 0uL {
+              recorder.Resource(FrameResourceKind.Pipeline, id, VulkanDiagnosticEventIds.ResourceCreate,
+                "pipeline", device: uint64(device), parent: parent)
+            }
+          }
+        }
         return result
       }
     }
@@ -315,6 +352,11 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       if cache != 0uL {
         let destroy = dispatch.vkDestroyPipelineCache
         destroy(device, cache, nil)
+        if let recorder = FrameRecorder.Current {
+          recorder.Resource(FrameResourceKind.PipelineCache,
+            recorder.NativeResource(FrameResourceKind.PipelineCache, uint64(device), cache, remove: true),
+            VulkanDiagnosticEventIds.PipelineDestroy, "pipeline.cache.destroy", device: uint64(device))
+        }
         if let accounting = objectAccounting { accounting.Release() }
         cache = 0uL
       }

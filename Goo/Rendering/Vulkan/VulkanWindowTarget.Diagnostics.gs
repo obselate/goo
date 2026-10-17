@@ -8,13 +8,53 @@ internal unsafe partial class VulkanWindowTarget {
   private var activeTraceContext FrameTraceContext
   private var pendingTraceId string?
   private var activeTraceId string?
+  private var profileGpuTraceId string?
 
   public func BeginPump(recorder FrameRecorder, context FrameTraceContext) {
     pendingTraceContext = context
     pendingTraceId = recorder.TraceId
+    runtime?.MemoryAllocator.ProfileSnapshot(recorder)
+    runtime?.PrimitiveState.ProfileResources(recorder)
+    runtime?.PipelineCache.ProfileResources(recorder)
+    runtime?.ImageIdentityRegistry.ProfileResources(recorder)
+    ProfileSwapchains(recorder)
+    if timestampState == nil {
+      if dispatch.vkCreateQueryPool == nil { LoadTimestampDispatch() }
+      guard let activeRuntime = runtime else { return }
+      let state = VulkanDiagnosticTimestampState(diagnostics, windowObjectAccounting)
+      timestampState = state
+      state.CreateTimestampQueryPool(device, dispatch, timestampValidBits,
+        timestampPeriod, timestampComputeAndGraphics, activeRuntime)
+    }
+    if profileGpuTraceId != recorder.TraceId {
+      profileGpuTraceId = recorder.TraceId
+      var gpuContext = context
+      gpuContext.DeviceId = uint64(device)
+      gpuContext.DeviceGeneration = runtime?.Generation ?? 0uL
+      recorder.Publish(FrameTraceRecord{
+        Kind: FrameTraceKind.Metadata, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
+        Context: gpuContext, Name: "gpu.timestamp", Source: "vulkan.timestamp",
+        Validity: if timestampState?.TimestampQueriesSupported ?? false { "available" } else { "unavailable" },
+      })
+    }
+  }
+
+  private func ProfileSwapchains(recorder FrameRecorder) {
+    generation?.Profile(recorder)
+    for i in 0 ... retiredSwapchains.Count {
+      retiredSwapchains.Generation(i).Profile(recorder, retired: true)
+    }
   }
 
   public func Describe() FrameTraceRecord {
+    if let recorder = FrameRecorder.Current { runtime?.MemoryAllocator.ProfileSnapshot(recorder, force: true) }
+    if let recorder = FrameRecorder.Current { TextShaping.ProfileResources(recorder) }
+    if let recorder = FrameRecorder.Current {
+      runtime?.PrimitiveState.ProfileResources(recorder)
+      runtime?.PipelineCache.ProfileResources(recorder)
+      runtime?.ImageIdentityRegistry.ProfileResources(recorder)
+      ProfileSwapchains(recorder)
+    }
     var properties = VkPhysicalDeviceProperties{}
     let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
     getProperties(physicalDevice, &properties)
@@ -239,18 +279,24 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func ResetDiagnosticTimestamp(slot VulkanFrameSlot) {
+    if diagnostics == nil && FrameRecorder.Current == nil {
+      DestroyDiagnosticTimestampPool()
+      if timestampState != nil && !timestampState!!.TimestampQueriesSupported { timestampState = nil }
+      return
+    }
     try {
       if let current = timestampState {
-        current.ResetTimestampQueries(
-          slot.CommandBuffer,
-          int32(activeFrameSlotIndex),
-          DiagnosticTimestampRecordingContext(slot))
+        if current.ResetTimestampQueries(
+          slot.CommandBuffer, int32(activeFrameSlotIndex), DiagnosticTimestampRecordingContext(slot)) {
+          if let recorder = TraceRecorder { current.TraceSlot(int32(activeFrameSlotIndex), recorder, TraceContext()) }
+        }
       }
     } catch (cleanup Exception) { }
   }
 
   private func BeginDiagnosticTimestamp(slot VulkanFrameSlot,
     stage VulkanDiagnosticTimestampStage) bool{
+      if diagnostics == nil && FrameRecorder.Current == nil { return false }
       try {
         if let current = timestampState {
           return current.BeginTimestampStage(
@@ -265,6 +311,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func EndDiagnosticTimestamp(slot VulkanFrameSlot,
     stage VulkanDiagnosticTimestampStage) bool{
+      if diagnostics == nil && FrameRecorder.Current == nil { return false }
       try {
         if let current = timestampState {
           return current.EndTimestampStage(

@@ -334,7 +334,7 @@ internal unsafe partial class VulkanTextAtlas : IDisposable {
       byteSize,
       uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_DST_BIT)
       | uint32(VkConstants.VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT),
-      VulkanMemoryPolicy.DeviceLocalRequired)
+      VulkanMemoryPolicy.DeviceLocalRequired, VulkanMemoryOwnerKind.GlyphAtlas)
     atlasBuffer = creation.Buffer
     atlasAllocation = creation.Allocation
   }

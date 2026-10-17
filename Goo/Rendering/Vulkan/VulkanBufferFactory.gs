@@ -15,7 +15,8 @@ internal unsafe class VulkanBufferFactory {
       objectAccounting VulkanObjectAccounting?,
       size VkDeviceSize,
       usage VkBufferUsageFlags,
-      memoryPolicy VulkanMemoryPolicy) VulkanBufferCreation{
+      memoryPolicy VulkanMemoryPolicy,
+      ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Buffer) VulkanBufferCreation{
 
         if size == 0uL {
           throw ArgumentOutOfRangeException("size")
@@ -53,6 +54,13 @@ internal unsafe class VulkanBufferFactory {
             buffer,
             memoryPolicy)
           allocation = createdAllocation
+          createdAllocation.ownerKind = if (usage & uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) != 0u {
+            VulkanMemoryOwnerKind.Staging
+          } else { ownerKind }
+          createdAllocation.payloadBytes = size
+          if let recorder = FrameRecorder.Current {
+            allocator.ProfileAllocation(recorder, createdAllocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceCreate)
+          }
 
           return VulkanBufferCreation(buffer, createdAllocation)
         } catch (error Exception) {
@@ -79,7 +87,8 @@ internal unsafe class VulkanBufferFactory {
       objectAccounting VulkanObjectAccounting?,
       size VkDeviceSize,
       usage VkBufferUsageFlags,
-      memoryPolicy VulkanMemoryPolicy) VulkanBufferCreation{
+      memoryPolicy VulkanMemoryPolicy,
+      ownerKind VulkanMemoryOwnerKind = VulkanMemoryOwnerKind.Buffer) VulkanBufferCreation{
 
         let creation = Create(
           device,
@@ -88,7 +97,7 @@ internal unsafe class VulkanBufferFactory {
           objectAccounting,
           size,
           usage,
-          memoryPolicy)
+          memoryPolicy, ownerKind)
 
         try {
           if allocator.Map(creation.Allocation) != VkConstants.VK_SUCCESS {

@@ -339,6 +339,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     retiredBytes += allocation.size
     retiredAllocations++
     allocation.state = VulkanMemoryAllocationState.Retired
+    if let recorder = FrameRecorder.Current {
+      ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceRetire)
+    }
   }
 
   internal func Release(allocation VulkanMemoryAllocation) {
@@ -362,6 +365,11 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
       retiredAllocations--
     }
     RemoveActive(allocation)
+    if !allocation.pendingBind {
+      if let recorder = FrameRecorder.Current {
+        ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceEvict)
+      }
+    }
     allocation.mapped = nil
     ResetAllocation(allocation)
     if removeBlock && block != nil {
@@ -379,6 +387,11 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
     var allocationIndex int32 = 0
     while allocationIndex < activeCount {
       if let allocation = activeAllocations[allocationIndex] {
+        if !allocation.pendingBind {
+          if let recorder = FrameRecorder.Current {
+            ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceEvict)
+          }
+        }
         ResetAllocation(allocation)
         activeAllocations[allocationIndex] = nil
       }
@@ -396,6 +409,9 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
         }
         if block.memory != 0uL {
           freeMemory(device, block.memory, nil)
+          if let recorder = FrameRecorder.Current {
+            ProfileBlock(recorder, block, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceEvict)
+          }
           if let accounting = objectAccounting {
             accounting.Release()
           }

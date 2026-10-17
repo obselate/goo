@@ -12,6 +12,12 @@ internal unsafe sealed class VulkanMemoryBudgetState {
 
   internal prop Available bool{ get -> available }
 
+  internal func HeapBudget(index uint32) uint64? ->
+    if available && index < heapCount { heapBudgets[int32(index)] } else { nil }
+
+  internal func HeapUsage(index uint32) uint64? ->
+    if available && index < heapCount { heapUsages[int32(index)] } else { nil }
+
   internal init(nativePhysicalDevice VkPhysicalDevice, nativeInstanceDispatch VkInstanceDispatch,
     nativeHeapCount uint32, nativeExtensionAvailable bool) {
       if nativePhysicalDevice == nint(0) {
