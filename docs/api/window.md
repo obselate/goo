@@ -846,6 +846,13 @@ Opens the window and processes frames until all open Goo windows close.
 
 Sets the native clipboard text on the window UI thread. Native set failures throw.
 
+### `SetColors(Color,Color)`
+
+Sets the clear and inherited root text colors together on the owner thread. Explicit element colors take precedence over the inherited foreground.
+
+- `background`: The window clear color.
+- `foreground`: The inherited root text color.
+
 ### `SetInterval(System.Action,float64)`
 
 Runs a callback repeatedly on the UI thread at the requested interval.
@@ -903,7 +910,7 @@ Gets or sets the opaque window background used when requested blur is unavailabl
 
 ### `Background`
 
-Gets or sets the window clear color.
+Gets or sets the window clear color. The default is white.
 
 ### `CanMove`
 
@@ -924,6 +931,10 @@ Sets the logical pixels a pressed mouse or pen pointer must move on either axis 
 ### `Focusable`
 
 Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
+
+### `Foreground`
+
+Gets or sets the inherited root text color. The default is black.
 
 ### `ForeignParentHandle`
 

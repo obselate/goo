@@ -241,7 +241,17 @@ internal partial class Resolver {
   }
 
   internal func applyInherited(n Node, localMask StyleMask, initial bool) StyleMask {
-    guard let parent = n.Parent else { return StyleMask{} }
+    guard let parent = n.Parent else {
+      if let owner = Owner {
+        if !styleMaskHas(localMask, StyleField.Color) {
+          let color = owner.Foreground
+          writeField(n, StyleEntry{Field: StyleField.Color,
+            A: color.R, B: color.G, C: color.B, D: color.A}, initial)
+          return styleMaskWith(StyleMask{}, StyleField.Color)
+        }
+      }
+      return StyleMask{}
+    }
     var mask = StyleMask{}
     for f in StyleFields.InheritableFields {
       mask = inherit(n, parent, localMask, mask, f, initial)

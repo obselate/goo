@@ -1148,6 +1148,7 @@ method|Goo.Window|RequestCapture|instance|public|generic:|()->Goo.WindowCaptureR
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
+method|Goo.Window|SetColors|instance|public|generic:|(background:Goo.Color,foreground:Goo.Color)->System.Void
 method|Goo.Window|SetInterval|instance|public|generic:|(callback:System.Action,intervalMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|SetTimeout|instance|public|generic:|(callback:System.Action,delayMs:System.Double)->Goo.WindowTimer
 method|Goo.Window|ShowFileDialogAsync|instance|public|generic:|(kind:Goo.FileDialogKind,options:Goo.FileDialogOptions=null)->System.Threading.Tasks.Task`1<Goo.FileDialogResult>
@@ -1812,6 +1813,7 @@ property|Goo.Window|Capabilities|Goo.WindowCapabilities|instance|get:public|inde
 property|Goo.Window|Decorated|System.Boolean|instance|get:public,set:public|index:()
 property|Goo.Window|DragStartDistance|System.Single|instance|get:public,set:public|index:()
 property|Goo.Window|Focusable|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.Window|Foreground|Goo.Color|instance|get:public,set:public|index:()
 property|Goo.Window|ForeignParentHandle|System.String|instance|get:public,set:public|index:()
 property|Goo.Window|FramePacing|Goo.WindowFramePacing|instance|get:public,set:public|index:()
 property|Goo.Window|Height|System.Int32|instance|get:public,set:public|index:()

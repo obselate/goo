@@ -121,17 +121,32 @@ internal struct WindowNotifications {
 /// Hosts a Goo tree on one process-wide UI thread.
 /// After Open or Attach, only Post and RequestClose are safe from another thread.
 public partial class Window {
-  /// Gets or sets the window clear color.
+  /// Gets or sets the window clear color. The default is white.
   public prop Background Color{
     get -> background
-    set(v) {
-      requireUiThread("Window.Background")
-      if background == v {
-        return
-      }
-      background = v
-      requestRender()
+    set(v) -> SetColors(v, foreground)
+  }
+  /// Gets or sets the inherited root text color. The default is black.
+  public prop Foreground Color{
+    get -> foreground
+    set(v) -> SetColors(background, v)
+  }
+  /// Sets the clear and inherited root text colors together on the owner thread.
+  /// Explicit element colors take precedence over the inherited foreground.
+  /// @param background The window clear color.
+  /// @param foreground The inherited root text color.
+  /// @exception InvalidOperationException when called off the owner thread after Open or Attach.
+  public func SetColors(background Color, foreground Color) {
+    requireUiThread("Window.SetColors")
+    if this.background == background && this.foreground == foreground { return }
+    let foregroundChanged = this.foreground != foreground
+    this.background = background
+    this.foreground = foreground
+    if foregroundChanged && node != nil {
+      foregroundPending = true
     }
+    requestRender()
+    host?.Wake()
   }
   /// Gets the root cell.
   public prop Root Cell? {
@@ -496,6 +511,8 @@ public partial class Window {
   private var captureFailed bool
   private var title string
   private var background Color
+  private var foreground Color
+  private var foregroundPending bool
   private var root Cell?
   private var iconPng [] ? uint8
   private var width int32
@@ -518,7 +535,8 @@ public partial class Window {
   /// Creates a window with default configuration.
   public init() {
     title = ""
-    Background = Color.Black
+    background = Color.White
+    foreground = Color.Black
     vsync = true
     framePacing = WindowFramePacing.Display
     decorated = true
@@ -615,6 +633,7 @@ public partial class Window {
 
   private func startCapture(target WindowRenderTarget, owner WindowCaptureOwner) WindowReadbackRequestStatus {
     if target.PollCapture() == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
+    flushForeground()
     let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
     capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
     if status == WindowReadbackRequestStatus.Accepted || capturePending {

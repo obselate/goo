@@ -377,8 +377,21 @@ public partial class Window {
       flushingMetricsBeforeRender = false
       metricsFlushThreadId = 0
     }
+    if flushForeground() { changed = true }
     return changed
   }
+  private func flushForeground() bool {
+    if !foregroundPending { return false }
+    if let current = node {
+      resolver.InvalidateInherited(current, styleMaskWith(StyleMask{}, StyleField.Color))
+    }
+    resolver.Flush()
+    pendingReconcileEffects = combineEffects(pendingReconcileEffects, resolver.FlushEffects())
+    foregroundPending = false
+    resolver.VisualDirty = true
+    return true
+  }
+
   private func validateDelta(value float64, name string) {
     if !motionFinite(value) || value < 0.0 {
       throw ArgumentOutOfRangeException(name)
