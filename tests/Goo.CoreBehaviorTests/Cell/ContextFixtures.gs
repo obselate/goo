@@ -144,18 +144,24 @@ internal class ContextFixtures {
             }
             let clean = (scopeNode(window).Children[3].Fiber as ContextCleanContainerCell)!!
             let nested = (scopeNode(window).Children[3].Children[0].Fiber as ContextReadCell)!!
+            let keptPart = (
+                ScrollbarParts.Children(scopeNode(window).Children[3])[0].Children[0].Fiber as ContextReadCell
+            )!!
+            let partBuilds = keptPart.Builds
             let cleanBuilds = clean.Builds
             let nestedBuilds = nested.Builds
             key.Set(window, 21)
             cell.ProviderKey = other
             cell.Rebuild()
             window.UpdateTree()
-            if clean.Builds != cleanBuilds || nested.Builds != nestedBuilds || nested.Value != 21 {
+            if clean.Builds != cleanBuilds || nested.Builds != nestedBuilds || nested.Value != 21
+            || keptPart.Value != 21 || keptPart.Builds != partBuilds {
                 throw InvalidOperationException("Equal key swap rebuilt a clean retained subtree")
             }
             key.Set(window, 22)
             window.UpdateTree()
-            if clean.Builds != cleanBuilds || nested.Value != 22 || nested.Builds != nestedBuilds + 1 {
+            if clean.Builds != cleanBuilds || nested.Value != 22 || nested.Builds != nestedBuilds + 1
+            || keptPart.Value != 22 || keptPart.Builds != partBuilds + 1 {
                 throw InvalidOperationException("A key swap left a clean descendant subscribed to the old provider")
             }
             key.Set(window, 11)
@@ -458,7 +464,15 @@ internal class ContextCleanContainerCell : Cell[ContextReadInput] {
     internal var Builds int32
     override func Build(input ContextReadInput) Blob {
         Builds++
-        return Container(){Cell.Mount[ContextReadInput, ContextReadCell](nil, input)}
+        return Container(){
+            .Width: 100,
+            .Height: 20,
+            .OverflowY: Overflow.Scroll,
+            .ScrollbarVisibilityY: ScrollbarVisibility.Always,
+            .ScrollbarY: Scrollbar{Thumb: Container(){Cell.Mount[ContextReadInput, ContextReadCell](nil, input)},},
+            Cell.Mount[ContextReadInput, ContextReadCell](nil, input),
+            Container{Height: 200, FlexShrink: 0},
+        }
     }
 }
 

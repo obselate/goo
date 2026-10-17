@@ -700,6 +700,7 @@ internal partial class Reconciler {
         Context = producer.outgoingContext
       }
       n.Context = Context
+      if ScrollbarParts.Children(n).Count > 0 { Res.Scrollbars.Queue(n) }
       Virtualization.State(n)?.BindContext(Context, Owner)
       for index in 0 ... n.Children.Count {
         let old = n.Children[index]
