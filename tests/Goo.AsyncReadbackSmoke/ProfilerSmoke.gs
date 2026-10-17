@@ -97,15 +97,20 @@ internal class ProfilerSmokeTrace {
     internal let CreatedKinds HashSet[int32] = HashSet[int32]()
     internal let PreparedImages HashSet[string] = HashSet[string]()
     internal let UploadSubmissions Dictionary[string, string] = Dictionary[string, string]()
+    internal let OwnerKinds HashSet[int32] = HashSet[int32]()
+    internal let GpuSubmitted HashSet[string] = HashSet[string]()
+    internal let GpuResolved HashSet[string] = HashSet[string]()
 
     internal init(windowId string) { WindowId = windowId }
 
-    internal func RequireHeld(submission string, pump string, frame string) {
+    internal func RequireHeld(submission string, pump string, frame string, buildPump int64) {
         ProfilerSmoke.Require(submission != "", "Held submit has no enqueue record")
         ProfilerSmoke.Require(!Submitted.Contains(submission), "Held submit completed before release")
         ProfilerSmoke.Require(FramePumps.TryGetValue(frame, out var framePump) && framePump == pump,
             "Held submission has no matching native frame/pump")
         ProfilerSmoke.Require(Paints.TryGetValue(pump, out var paintStart), "Held submission has no matching paint")
+        ProfilerSmoke.Require(Int64.Parse(pump, CultureInfo.InvariantCulture) >= buildPump,
+            "Held submission's paint predates the posted rebuild")
         var builtBeforePaint = false
         for end in Builds.Values {
             if end <= paintStart {
@@ -127,6 +132,8 @@ internal class ProfilerSmoke {
 
         internal func Run() {
             let startup = FrameRecorder.Current
+            using let cache = ImageSourceCache()
+            using let cached = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
             let root = ProfilerSmokeCell{}
             let window = Window{Title: "Goo profiler pipe smoke", Width: 64, Height: 64, Root: root}.Open()
             WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -149,6 +156,7 @@ internal class ProfilerSmoke {
                         detached = RecordThroughPipe(
                             window,
                             root,
+                            cache,
                             session.Endpoint.PipeName,
                             startup,
                             readOnly,
@@ -208,7 +216,7 @@ internal class ProfilerSmoke {
             }
         }
 
-        private func RecordThroughPipe(window Window, root ProfilerSmokeCell, name string, startup FrameRecorder?,
+        private func RecordThroughPipe(window Window, root ProfilerSmokeCell, sourceCache ImageSourceCache, name string, startup FrameRecorder?,
             readOnly ManualResetEventSlim, allowPump ManualResetEventSlim) FrameRecorder {
             let boundary = Stopwatch.GetTimestamp()
             using let client = ProfilerSmokeClient(name)
@@ -229,10 +237,10 @@ internal class ProfilerSmoke {
                 busy.RootElement.GetProperty("payload").GetProperty("state").GetString() == "Busy",
                 "Second client did not receive Busy"
             )
+            let rebuildBoundary = Stopwatch.GetTimestamp() - origin
             window.Post(
                 () -> {
-                    WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
-                    using let cache = ImageSourceCache()
+                    let cache = sourceCache
                     root.Source = cache.LoadAsync(Path.Combine(AppContext.BaseDirectory, "local-rgba.png")).GetAwaiter().GetResult()
                     root.Effect = ShaderEffect(ShaderEffectProgram.Load(
                         Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 2.0F)
@@ -240,22 +248,28 @@ internal class ProfilerSmoke {
                     root.Rebuild()
                 }
             )
-            Require(
-                WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 5000),
-                "No real queue submission was held"
-            )
-            readOnly.Set()
             var after = "0"
             let trace = ProfilerSmokeTrace(metadata.GetProperty("windowId").GetString() ?? "")
+            var buildPump int64 = -1L
+            var holdArmed = false
+            let holdDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
             var remaining = true
             var queued = ""
             var queuedPump = ""
             var queuedFrame = ""
             var sawStartup = false
-            while remaining {
+            while !holdArmed || remaining {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
+                if buildPump < 0L {
+                    for build in trace.Builds {
+                        if build.Value >= rebuildBoundary {
+                            buildPump = Int64.Parse(build.Key, CultureInfo.InvariantCulture)
+                            break
+                        }
+                    }
+                }
                 for record in payload.GetProperty("records").EnumerateArray() {
                     if record.GetProperty("kind").GetString() == "duration" {
                         let end = Int64.Parse(
@@ -274,8 +288,22 @@ internal class ProfilerSmoke {
                 }
                 after = payload.GetProperty("nextSeq").GetString() ?? after
                 remaining = payload.GetProperty("more").GetBoolean()
+                if !holdArmed && buildPump >= 0L {
+                    window.Post(() -> {
+                        WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
+                        root.Frame++
+                        root.Rebuild()
+                    })
+                    Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 5000),
+                        "No real queue submission was held")
+                    readOnly.Set()
+                    holdArmed = true
+                    remaining = true
+                } else if !holdArmed {
+                    Require(Stopwatch.GetTimestamp() < holdDeadline, "Posted rebuild has no Build record")
+                }
             }
-            trace.RequireHeld(queued, queuedPump, queuedFrame)
+            trace.RequireHeld(queued, queuedPump, queuedFrame, buildPump)
             Require(startup == nil || sawStartup, "Startup recording lost its pre-attachment phases")
             trace.Sources.Clear()
             allowPump.Set()
@@ -318,8 +346,44 @@ internal class ProfilerSmoke {
                 after = payload.GetProperty("nextSeq").GetString() ?? after
             }
             Require(!trace.GpuSupported || trace.GpuAvailable, "Supported GPU timestamps did not resolve")
+            for owner in []VulkanMemoryOwnerKind{VulkanMemoryOwnerKind.GlyphAtlas,
+                VulkanMemoryOwnerKind.Image, VulkanMemoryOwnerKind.Staging, VulkanMemoryOwnerKind.LayerTarget} {
+                Require(trace.OwnerKinds.Contains(int32(owner)), "Missing scene allocation owner: " + owner.ToString())
+            }
+            using let presentArmed = ManualResetEventSlim(false)
+            window.Post(() -> {
+                WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
+                root.Frame++
+                root.Rebuild()
+                presentArmed.Set()
+            })
+            Require(presentArmed.Wait(5000), "GPU stop hold was not armed")
+            Require(WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 5000),
+                "GPU stop did not hold an accepted submission")
             using let stopped = client.Request("profiler.stop", "{" + identity + "}")
+            Thread.Sleep(100)
             var ended = false
+            while true {
+                using let draining = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
+                let drainingPayload = draining.RootElement.GetProperty("payload")
+                ValidateBatch(drainingPayload, trace)
+                for record in drainingPayload.GetProperty("records").EnumerateArray() {
+                    if record.GetProperty("kind").GetString() == "end" {
+                        ended = true
+                    }
+                }
+                after = drainingPayload.GetProperty("nextSeq").GetString() ?? after
+                if drainingPayload.GetProperty("records").GetArrayLength() == 0 {
+                    Require(!drainingPayload.GetProperty("more").GetBoolean()
+                        && drainingPayload.GetProperty("pollDelayMs").GetInt32() > 0,
+                        "Empty stopped read did not retain polling backoff")
+                    Require(trace.GpuSubmitted.IsSubsetOf(trace.GpuResolved)
+                        || drainingPayload.GetProperty("state").GetString() == "Stopping",
+                        "GPU stop did not wait for pending stages")
+                    break
+                }
+            }
+            WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
             while !ended {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
@@ -330,9 +394,18 @@ internal class ProfilerSmoke {
                     }
                 }
                 after = payload.GetProperty("nextSeq").GetString() ?? after
-                Require(ended || payload.GetProperty("more").GetBoolean(), "Stopped trace has no End")
+                Require(ended || payload.GetProperty("more").GetBoolean()
+                    || payload.GetProperty("state").GetString() == "Stopping", "Stopped trace has no End")
+                if !ended && !payload.GetProperty("more").GetBoolean() {
+                    Require(payload.GetProperty("pollDelayMs").GetInt32() > 0, "Stopping trace has no poll delay")
+                    Thread.Sleep(payload.GetProperty("pollDelayMs").GetInt32())
+                }
             }
             Require(trace.Cutoff >= trace.LastCpuEnd, "CPU recording did not stop at its cutoff")
+            Require(!trace.GpuSupported || trace.GpuSubmitted.Count > 0, "Submitted GPU stages are missing")
+            for stage in trace.GpuSubmitted {
+                Require(trace.GpuResolved.Contains(stage), "Submitted GPU stage did not resolve after stop")
+            }
             for name in []string{"managed.allocated.total", "managed.heap.estimate", "gc.gen0.collections",
                 "gc.gen1.collections", "gc.gen2.collections", "process.rss", "process.pss",
                 "vulkan.live.requirements", "vulkan.retired.requirements", "vulkan.blocks",
@@ -359,6 +432,8 @@ internal class ProfilerSmoke {
             Console.WriteLine("profiler-memory: counters=" + trace.Counters.Count.ToString()
                 + " baseline_kinds=" + trace.BaselineKinds.Count.ToString()
                 + " image_upload_link=" + trace.Uploaded.ToString() + " gpu_elapsed=" + trace.Gpu.ToString())
+            Console.WriteLine("profiler-gpu: submitted=" + trace.GpuSubmitted.Count.ToString()
+                + " available=" + trace.GpuResolved.Count.ToString())
             Console.WriteLine(
                 "profiler-trace: trace_id=" + traceId + " records=" + trace.Sequence.ToString()
                 + " pumps=" + trace.Builds.Count.ToString() + " held_submission=" + queued
@@ -481,6 +556,14 @@ internal class ProfilerSmoke {
                 if resourceSource == "vulkan.timestamp" {
                     trace.GpuSupported = record.GetProperty("validity").GetString() == "available"
                 }
+                if resourceSource == "vulkan.timestamp.submitted" || resourceSource == "vulkan.timestamp.elapsed" {
+                    let stage = (record.GetProperty("deviceId").GetString() ?? "") + "."
+                        + (record.GetProperty("deviceGeneration").GetString() ?? "") + "."
+                        + (record.GetProperty("submissionId").GetString() ?? "") + "."
+                        + (record.GetProperty("eventId").GetString() ?? "")
+                    if resourceSource == "vulkan.timestamp.submitted" { trace.GpuSubmitted.Add(stage) }
+                    else if record.GetProperty("validity").GetString() == "available" { trace.GpuResolved.Add(stage) }
+                }
                 if resourceSource == "vulkan.timestamp.elapsed" {
                     trace.Gpu = true
                     trace.GpuAvailable = trace.GpuAvailable || record.GetProperty("validity").GetString() == "available"
@@ -491,6 +574,7 @@ internal class ProfilerSmoke {
                         "GPU elapsed time is missing")
                 }
                 if record.GetProperty("requirementBytes").ValueKind == JsonValueKind.Number {
+                    trace.OwnerKinds.Add(record.GetProperty("ownerKind").GetInt32())
                     let id = record.GetProperty("resourceId").GetString() ?? ""
                     if record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.ResourceEvict.ToString(CultureInfo.InvariantCulture) {
                         trace.Allocations.Remove(id)

@@ -82,6 +82,7 @@ internal class WindowScheduler {
       if window.ProfileWindowId == exceptWindowId { continue }
       window.TryPost(() -> {
         if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
+          window.SampleProfile(recorder, includeShared: false)
           let metadata = window.ProfileMetadata()
           recorder.Publish(metadata)
         }

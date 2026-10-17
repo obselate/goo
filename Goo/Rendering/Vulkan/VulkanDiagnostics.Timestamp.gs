@@ -94,6 +94,19 @@ internal unsafe sealed class VulkanDiagnosticTimestampState {
   private var traceRecorders ([]FrameRecorder?)?
   private var traceContexts ([]FrameTraceContext)?
 
+  internal prop HasTraceRecorder bool {
+    get {
+      if let recorders = traceRecorders {
+        for i in 0 ... TimestampFrameSlotCount {
+          if let recorder = recorders[i] {
+            if recorder.AcceptsGpu { return true }
+          }
+        }
+      }
+      return false
+    }
+  }
+
   internal func TraceSlot(slot int32, recorder FrameRecorder?, context FrameTraceContext) {
     if !ValidTimestampSlot(slot) { return }
     if recorder != nil && traceRecorders == nil {

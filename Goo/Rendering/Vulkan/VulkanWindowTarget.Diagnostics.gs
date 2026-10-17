@@ -13,11 +13,7 @@ internal unsafe partial class VulkanWindowTarget {
   public func BeginPump(recorder FrameRecorder, context FrameTraceContext) {
     pendingTraceContext = context
     pendingTraceId = recorder.TraceId
-    runtime?.MemoryAllocator.ProfileSnapshot(recorder)
-    runtime?.PrimitiveState.ProfileResources(recorder)
-    runtime?.PipelineCache.ProfileResources(recorder)
-    runtime?.ImageIdentityRegistry.ProfileResources(recorder)
-    ProfileSwapchains(recorder)
+    Sample(recorder, false, true)
     if timestampState == nil {
       if dispatch.vkCreateQueryPool == nil { LoadTimestampDispatch() }
       guard let activeRuntime = runtime else { return }
@@ -39,6 +35,17 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
+  public func Sample(recorder FrameRecorder, force bool, includeShared bool) {
+    if includeShared {
+      runtime?.MemoryAllocator.ProfileSnapshot(recorder, force)
+      TextShaping.ProfileResources(recorder)
+      runtime?.PrimitiveState.ProfileResources(recorder)
+      runtime?.PipelineCache.ProfileResources(recorder)
+      runtime?.ImageIdentityRegistry.ProfileResources(recorder)
+    }
+    ProfileSwapchains(recorder)
+  }
+
   private func ProfileSwapchains(recorder FrameRecorder) {
     generation?.Profile(recorder)
     for i in 0 ... retiredSwapchains.Count {
@@ -47,14 +54,6 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   public func Describe() FrameTraceRecord {
-    if let recorder = FrameRecorder.Current { runtime?.MemoryAllocator.ProfileSnapshot(recorder, force: true) }
-    if let recorder = FrameRecorder.Current { TextShaping.ProfileResources(recorder) }
-    if let recorder = FrameRecorder.Current {
-      runtime?.PrimitiveState.ProfileResources(recorder)
-      runtime?.PipelineCache.ProfileResources(recorder)
-      runtime?.ImageIdentityRegistry.ProfileResources(recorder)
-      ProfileSwapchains(recorder)
-    }
     var properties = VkPhysicalDeviceProperties{}
     let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
     getProperties(physicalDevice, &properties)
@@ -280,8 +279,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func ResetDiagnosticTimestamp(slot VulkanFrameSlot) {
     if diagnostics == nil && FrameRecorder.Current == nil {
-      DestroyDiagnosticTimestampPool()
-      if timestampState != nil && !timestampState!!.TimestampQueriesSupported { timestampState = nil }
+      RetireDetachedTimestampPool()
       return
     }
     try {
@@ -342,6 +340,18 @@ internal unsafe partial class VulkanWindowTarget {
           DiagnosticTimestampSubmittedContext(slot))
       }
     } catch (cleanup Exception) { }
+  }
+
+  private func RetireDetachedTimestampPool() {
+    guard let state = timestampState else { return }
+    if diagnostics != nil && !state.HasTraceRecorder { return }
+    for i in 0 ... 2 {
+      if let slot = frameSlots.Slot(uint32(i)) { ResolveDiagnosticTimestamp(slot, uint32(i)) }
+    }
+    if diagnostics == nil {
+      DestroyDiagnosticTimestampPool()
+      if !state.TimestampQueriesSupported { timestampState = nil }
+    }
   }
 
   private func DestroyDiagnosticTimestampPool() {

@@ -313,7 +313,7 @@ internal partial class FrameRecorder {
                 afterSeq
             }
             delivered = Math.Max(delivered, nextSeq)
-            more = count > maxRecords || (stopping != 0 && !complete)
+            more = count > maxRecords
             state = if complete {
                 if partial {
                     "Partial"

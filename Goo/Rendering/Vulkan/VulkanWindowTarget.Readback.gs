@@ -223,7 +223,7 @@ internal unsafe partial class VulkanWindowTarget {
             textAtlas,
             objectAccounting,
             diagnostics,
-            timestampState,
+            if diagnostics != nil { timestampState } else { nil },
             activeRuntime.QueueWorker.CreateMailbox(nil),
             readbackLease)
           if let accounting = objectAccounting {

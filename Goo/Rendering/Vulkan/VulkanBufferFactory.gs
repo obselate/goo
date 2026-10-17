@@ -57,9 +57,9 @@ internal unsafe class VulkanBufferFactory {
           createdAllocation.ownerKind = if (usage & uint32(VkConstants.VK_BUFFER_USAGE_TRANSFER_SRC_BIT)) != 0u {
             VulkanMemoryOwnerKind.Staging
           } else { ownerKind }
-          createdAllocation.payloadBytes = size
           if let recorder = FrameRecorder.Current {
-            allocator.ProfileAllocation(recorder, createdAllocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceCreate)
+            allocator.ProfileAllocation(recorder, createdAllocation, FrameTraceKind.ResourceLifecycle,
+              VulkanDiagnosticEventIds.ResourceCreate, payloadBytes: size)
           }
 
           return VulkanBufferCreation(buffer, createdAllocation)

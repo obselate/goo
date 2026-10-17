@@ -40,6 +40,7 @@ internal partial class DiagnosticPipeHost {
                 return "{\"command\":\"profiler.start\",\"state\":\"Busy\"}"
             }
             client.Recorder = current
+            session.SampleProfile(current)
             var device = session.ProfileMetadata()
             device.Ticks = System.Diagnostics.Stopwatch.GetTimestamp() - current.Origin
             current.Publish(device)
@@ -88,7 +89,11 @@ internal partial class DiagnosticPipeHost {
                 }
                 result.Append(quote(FrameProfileStage(i).ToString()))
             }
-            result.Append("]}")
+            result.Append("],\"ownerKinds\":")
+                .Append(JsonSerializer.Serialize(Enum.GetNames[VulkanMemoryOwnerKind]()))
+                .Append(",\"resourceKinds\":")
+                .Append(JsonSerializer.Serialize(Enum.GetNames[FrameResourceKind]()))
+                .Append("}")
             return result.ToString()
         }
     }
@@ -105,7 +110,7 @@ internal partial class DiagnosticPipeHost {
 
     private func stopProfile(client DiagnosticPipeClient, payload JsonElement) string {
         let current = requireProfile(client, payload)
-        session.ProfileMetadata()
+        if Object.ReferenceEquals(FrameRecorder.Current, current) { session.SampleProfile(current, force: true) }
         current.Stop(false)
         return "{\"command\":\"profiler.stop\",\"traceId\":" + quote(current.TraceId)
         + ",\"state\":\"Stopping\",\"partial\":false,\"more\":true}"
@@ -318,4 +323,5 @@ internal partial class DiagnosticPipeHost {
 
 internal partial class DevToolsSession {
     internal func ProfileMetadata() FrameTraceRecord -> owner.ProfileMetadata()
+    internal func SampleProfile(recorder FrameRecorder, force bool = false) { owner.SampleProfile(recorder, force) }
 }

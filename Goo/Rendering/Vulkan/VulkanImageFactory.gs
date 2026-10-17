@@ -206,12 +206,10 @@ internal unsafe class VulkanImageFactory {
             && (usage & uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) != 0u {
             VulkanMemoryOwnerKind.LayerTarget
           } else { ownerKind }
-          createdAllocation.width = int32(extent.width)
-          createdAllocation.height = int32(extent.height)
-          createdAllocation.format = format
-          createdAllocation.layers = layerCount
           if let recorder = FrameRecorder.Current {
-            allocator.ProfileAllocation(recorder, createdAllocation, FrameTraceKind.ResourceLifecycle, VulkanDiagnosticEventIds.ResourceCreate)
+            allocator.ProfileAllocation(recorder, createdAllocation, FrameTraceKind.ResourceLifecycle,
+              VulkanDiagnosticEventIds.ResourceCreate, width: int32(extent.width), height: int32(extent.height),
+              format: format, layers: layerCount)
           }
 
           imageView = CreateView(

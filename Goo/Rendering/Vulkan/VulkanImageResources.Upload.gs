@@ -182,10 +182,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       flushPrepared = false
       if let recorder = FrameRecorder.Current {
         if let allocation = entry.Allocation {
-          if allocation.profileTraceId != recorder.TraceId {
+          let id = recorder.ManagedResource(allocation, out var first)
+          if first {
             allocator.ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
           }
-          recorder.Resource(FrameResourceKind.Image, allocation.profileId, VulkanDiagnosticEventIds.ResourceUpload,
+          recorder.Resource(FrameResourceKind.Image, id, VulkanDiagnosticEventIds.ResourceUpload,
             "image.upload.prepare", bytes: uint64(chunkByteCount), width: int32(entry.Width), height: int32(rowCount),
             device: uint64(device), parent: decoded?.Profile(recorder, true) ?? 0uL)
         }
@@ -480,10 +481,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             entry.UploadFence = fence
             if let recorder = FrameRecorder.Current {
               if let allocation = entry.Allocation {
-                if allocation.profileTraceId != recorder.TraceId {
+                let id = recorder.ManagedResource(allocation, out var first)
+                if first {
                   allocator.ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
                 }
-                recorder.Resource(FrameResourceKind.Image, allocation.profileId, VulkanDiagnosticEventIds.ResourceUpload,
+                recorder.Resource(FrameResourceKind.Image, id, VulkanDiagnosticEventIds.ResourceUpload,
                   "image.upload.submit", bytes: uint64(entry.UploadRowCount) * uint64(entry.Width) * 4uL,
                   device: uint64(device), deviceGeneration: expectedGeneration, submission: fence)
               }

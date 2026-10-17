@@ -8,6 +8,9 @@ import System.Runtime.CompilerServices
 
 internal sealed class FrameResourceIdentity {
     internal let Value uint64
+    internal var PayloadBytes uint64?
+    internal var Width int32?
+    internal var Height int32?
     internal init(value uint64) { Value = value }
 }
 
@@ -19,7 +22,7 @@ internal partial class FrameRecorder {
     private let managedResources ConditionalWeakTable[object, FrameResourceIdentity] = ConditionalWeakTable[object, FrameResourceIdentity]()
     private let nativeResources Dictionary[FrameNativeResourceKey, uint64] = Dictionary[FrameNativeResourceKey, uint64]()
     private var managedIdentityCount int32
-    private let pendingGpu Dictionary[FrameGpuStageKey, FrameTraceRecord] = Dictionary[FrameGpuStageKey, FrameTraceRecord](MaximumResourceIdentities)
+    private let pendingGpu Dictionary[FrameGpuStageKey, FrameTraceRecord] = Dictionary[FrameGpuStageKey, FrameTraceRecord]()
     internal prop AcceptsGpu bool { get -> !System.Threading.Volatile.Read(&complete) }
     private prop PendingGpuCount int32 { get { lock gate { return pendingGpu.Count } } }
 
@@ -35,6 +38,12 @@ internal partial class FrameRecorder {
                 Category: VulkanDiagnosticCategories.Timing, Source: "vulkan.timestamp.elapsed",
                 Validity: "unavailable", Unit: "ns",
             }
+            Publish(FrameTraceRecord{
+                Kind: FrameTraceKind.Instant, Ticks: Stopwatch.GetTimestamp() - Origin,
+                ThreadId: Environment.CurrentManagedThreadId, Context: context,
+                EventId: eventId, Category: VulkanDiagnosticCategories.Timing,
+                Source: "vulkan.timestamp.submitted",
+            })
         }
     }
 
@@ -49,17 +58,19 @@ internal partial class FrameRecorder {
 
     internal func ManagedResource(value object) uint64 -> ManagedResource(value, out var created)
 
-    internal func ManagedResource(value object, out created bool) uint64 {
+    internal func ManagedResource(value object, out created bool) uint64 -> ManagedIdentity(value, out created)?.Value ?? 0uL
+
+    internal func ManagedIdentity(value object, out created bool) FrameResourceIdentity? {
         created = false
-        if !Object.ReferenceEquals(Current, this) { return 0uL }
+        if !Object.ReferenceEquals(Current, this) { return nil }
         lock gate {
-            if managedResources.TryGetValue(value, out var found) { return found.Value }
+            if managedResources.TryGetValue(value, out var found) { return found }
             if managedIdentityCount >= MaximumResourceIdentities {
                 lost++
-                return 0uL
+                return nil
             }
-            let identity = ResourceIdentity()
-            managedResources.Add(value, FrameResourceIdentity(identity))
+            let identity = FrameResourceIdentity(ResourceIdentity())
+            managedResources.Add(value, identity)
             managedIdentityCount++
             created = true
             return identity

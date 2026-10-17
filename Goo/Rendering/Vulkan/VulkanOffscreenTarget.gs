@@ -1300,6 +1300,11 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       imageAllocation = allocator.AllocateImage(
         image,
         VulkanMemoryPolicy.DeviceLocalRequiredPreferred)
+      imageAllocation!!.ownerKind = VulkanMemoryOwnerKind.LayerTarget
+      if let recorder = FrameRecorder.Current {
+        allocator.ProfileAllocation(recorder, imageAllocation!!, FrameTraceKind.ResourceLifecycle,
+          VulkanDiagnosticEventIds.ResourceCreate, width: int32(extent.width), height: int32(extent.height), format: targetFormat)
+      }
 
       var viewCreateInfo = VkImageViewCreateInfo{}
       viewCreateInfo.sType = VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
@@ -1360,6 +1365,11 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       stagingAllocation = allocator.AllocateBuffer(
         stagingBuffer,
         VulkanMemoryPolicy.HostVisibleCoherentCached)
+      stagingAllocation!!.ownerKind = VulkanMemoryOwnerKind.Staging
+      if let recorder = FrameRecorder.Current {
+        allocator.ProfileAllocation(recorder, stagingAllocation!!, FrameTraceKind.ResourceLifecycle,
+          VulkanDiagnosticEventIds.ResourceCreate, payloadBytes: stagingByteSize)
+      }
       let mapResult = allocator.Map(stagingAllocation!!)
       NoteResult(mapResult)
       if mapResult != VkConstants.VK_SUCCESS {

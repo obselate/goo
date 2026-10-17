@@ -59,11 +59,8 @@ public class ImageSourceCache : IDisposable {
       if disposed { throw ObjectDisposedException("ImageSourceCache") }
       if sources.TryGetValue(path, out var existing) {
         if let recorder = FrameRecorder.Current {
-          let id = recorder.ManagedResource(existing, out var first)
-          if first {
-            recorder.Resource(FrameResourceKind.ImageSource, existing.ProfileIdentity(recorder),
-              VulkanDiagnosticEventIds.ResourceCreate, "image.cache.reuse", baseline: true)
-          }
+          recorder.Resource(FrameResourceKind.ImageSource, existing.ProfileIdentity(recorder),
+            VulkanDiagnosticEventIds.ResourceCreate, "image.cache.reuse")
         }
         return existing.RetainSource()
       }

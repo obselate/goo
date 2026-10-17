@@ -109,15 +109,13 @@ internal unsafe partial class VulkanMemoryAllocator {
 
   internal func ProfileBlock(recorder FrameRecorder, block VulkanMemoryBlock,
     kind FrameTraceKind, eventId uint64) {
-    if block.profileTraceId != recorder.TraceId {
-      block.profileTraceId = recorder.TraceId
-      block.profileId = recorder.ResourceIdentity()
-    }
+    let id = recorder.ManagedResource(block)
+    if id == 0uL { return }
     recorder.Publish(FrameTraceRecord{
       Kind: kind, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
       ThreadId: Environment.CurrentManagedThreadId, Context: ProfileContext(),
       EventId: eventId, Category: VulkanDiagnosticCategories.Allocator,
-      ResourceId: block.profileId, ResourceGeneration: 1uL,
+      ResourceId: id, ResourceGeneration: 1uL,
       ResourceKind: int32(FrameResourceKind.MemoryBlock), BlockBytes: block.size,
       MemoryType: int32(block.memoryTypeIndex), HeapIndex: int32(block.heapIndex),
       HeapFlags: uint64(MemoryHeap(memoryProperties, block.heapIndex).flags), Dedicated: block.dedicated,
@@ -126,30 +124,34 @@ internal unsafe partial class VulkanMemoryAllocator {
   }
 
   internal func ProfileAllocation(recorder FrameRecorder, allocation VulkanMemoryAllocation,
-    kind FrameTraceKind, eventId uint64) {
+    kind FrameTraceKind, eventId uint64, payloadBytes uint64? = nil,
+    width int32? = nil, height int32? = nil, format VkFormat = 0, layers uint32 = 1u) {
     guard let block = allocation.block else { return }
-    if block.profileTraceId != recorder.TraceId {
+    guard let parent = recorder.ManagedIdentity(block, out var newBlock) else { return }
+    if newBlock {
       ProfileBlock(recorder, block, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
     }
-    if allocation.profileTraceId != recorder.TraceId {
-      allocation.profileTraceId = recorder.TraceId
-      allocation.profileId = recorder.ResourceIdentity()
-      if eventId != VulkanDiagnosticEventIds.ResourceCreate {
-        ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
-      }
+    guard let identity = recorder.ManagedIdentity(allocation, out var first) else { return }
+    if width != nil && height != nil {
+      identity.Width = width
+      identity.Height = height
+      identity.PayloadBytes = ImagePayload(width, height, format, layers)
+    }
+    if payloadBytes != nil { identity.PayloadBytes = payloadBytes }
+    if first && eventId != VulkanDiagnosticEventIds.ResourceCreate {
+      ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
     }
     let resourceKind = if block.resourceClass == VulkanMemoryResourceClass.Image { FrameResourceKind.Image } else { FrameResourceKind.Buffer }
-    let payload = if resourceKind == FrameResourceKind.Image { ImagePayload(allocation) } else { allocation.payloadBytes }
     recorder.Publish(FrameTraceRecord{
       Kind: kind, Ticks: Stopwatch.GetTimestamp() - recorder.Origin,
       ThreadId: Environment.CurrentManagedThreadId, Context: ProfileContext(),
       EventId: eventId, Category: VulkanDiagnosticCategories.Allocator,
-      ResourceId: allocation.profileId, ParentId: block.profileId, ResourceGeneration: 1uL,
+      ResourceId: identity.Value, ParentId: parent.Value, ResourceGeneration: 1uL,
       ResourceKind: int32(resourceKind), OwnerKind: int32(allocation.ownerKind),
-      PayloadBytes: payload, RequirementBytes: allocation.size, PlacementBytes: allocation.placementSpan,
+      PayloadBytes: identity.PayloadBytes, RequirementBytes: allocation.size, PlacementBytes: allocation.placementSpan,
       MemoryType: int32(allocation.memoryTypeIndex), HeapIndex: int32(allocation.heapIndex),
       HeapFlags: uint64(MemoryHeap(memoryProperties, allocation.heapIndex).flags), Dedicated: allocation.dedicated,
-      Width: allocation.width, Height: allocation.height,
+      Width: identity.Width, Height: identity.Height,
       Source: if allocation.state == VulkanMemoryAllocationState.Retired { "vulkan.retired" } else { "vulkan.allocation" },
       Validity: if kind == FrameTraceKind.ResourceBaseline {
         if allocation.state == VulkanMemoryAllocationState.Retired { "already-retired" } else { "already-live" }
@@ -157,10 +159,8 @@ internal unsafe partial class VulkanMemoryAllocator {
     })
   }
 
-  private func ImagePayload(allocation VulkanMemoryAllocation) uint64? {
-    guard let width = allocation.width else { return nil }
-    guard let height = allocation.height else { return nil }
-    let bytes uint64 = switch allocation.format {
+  private func ImagePayload(width int32, height int32, format VkFormat, layers uint32) uint64? {
+    let bytes uint64 = switch format {
       case VkConstants.VK_FORMAT_R8_UNORM: 1uL
       case VkConstants.VK_FORMAT_R8G8B8A8_UNORM: 4uL
       case VkConstants.VK_FORMAT_R8G8B8A8_SRGB: 4uL
@@ -169,9 +169,9 @@ internal unsafe partial class VulkanMemoryAllocator {
       case VkConstants.VK_FORMAT_R16G16B16A16_SFLOAT: 8uL
       default: 0uL
     }
-    if width <= 0 || height <= 0 || bytes == 0uL || allocation.layers == 0u { return nil }
+    if width <= 0 || height <= 0 || bytes == 0uL || layers == 0u { return nil }
     let pixels = uint64(width) * uint64(height)
-    if pixels > uint64.MaxValue / bytes / uint64(allocation.layers) { return nil }
-    return pixels * bytes * uint64(allocation.layers)
+    if pixels > uint64.MaxValue / bytes / uint64(layers) { return nil }
+    return pixels * bytes * uint64(layers)
   }
 }
