@@ -126,6 +126,10 @@ func Main() {
 }
 ```
 
+Continue with [After the counter](docs/getting-started.md), then
+[edit and inspect](docs/edit-and-inspect.md). The [app-author documentation index](docs/README.md)
+links core, widgets, assets, shipping and plugin guides with their version baselines.
+
 Concepts that may be confusing at first:
 
 `Blob` is a UI primitive. Goo core only contains UI primitives that have unique behavior

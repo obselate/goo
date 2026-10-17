@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/obselate/goo",
-  "commit": "3369d09cf541e1f8c85b4c5bdbe0367c9de4ac89",
+  "commit": "f0090a39c17fd4663cf43a1052109d3621e45c0d",
   "files": {
-    "README.md": "9c8ab800d70bdef4a80fe7b4ea9ff9ecb85671da56b07a9c169f16ac884e6c7f",
+    "README.md": "031dc8aa8d451b9da54ed2ac28cf5b1692831d255b8770c4af17ac240f8e0550",
     "CONTRIBUTING.md": "40e2320921938e747d847a392b4efa035473e530090b8479e50c00a3c4a8be3a",
     "docs/native-authoring.md": "6519acf0597c56ebf5df619bdcd61b0ba15fe28de9b3e8e93bf15dbca31538e2",
     "docs/production-readiness.md": "c9b98824d85e1bd3215ab04c39491068a4e043d9b8f861c3f086f1489e154c81",
