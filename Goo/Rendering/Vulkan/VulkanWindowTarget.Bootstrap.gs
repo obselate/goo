@@ -369,28 +369,43 @@ internal unsafe partial class VulkanWindowTarget {
     if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
       return VulkanSwapchainMaintenanceVariant.None
     }
-    let extensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
-    if enumerate(nil, &count, extensions) != VkConstants.VK_SUCCESS {
-      return VulkanSwapchainMaintenanceVariant.None
+    let initialExtensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
+    var extensionValues = Span[VkExtensionProperties](initialExtensions, int32(count))
+    while true {
+      var result VkResult
+      fixed extensions * VkExtensionProperties = extensionValues {
+        result = enumerate(nil, &count, extensions)
+      }
+      if result == VkConstants.VK_SUCCESS { break }
+      if result != VkConstants.VK_INCOMPLETE { return VulkanSwapchainMaintenanceVariant.None }
+      count = 0u
+      if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
+        return VulkanSwapchainMaintenanceVariant.None
+      }
+      if count > uint32(extensionValues.Length) {
+        extensionValues = Span[VkExtensionProperties]([int32(count)]VkExtensionProperties)
+      }
     }
     var hasSurfaceExt = false
     var hasSurfaceKhr = false
     var hasCapabilities2 = false
     var index uint32 = 0u
-    while index < count {
-      if !hasSurfaceExt {
-        hasSurfaceExt = ExtensionNameEquals(
-          &extensions[index], VulkanWindowTargetExtensionNames.SurfaceMaintenanceExt)
+    fixed extensions * VkExtensionProperties = extensionValues {
+      while index < count {
+        if !hasSurfaceExt {
+          hasSurfaceExt = ExtensionNameEquals(
+            &extensions[index], VulkanWindowTargetExtensionNames.SurfaceMaintenanceExt)
+        }
+        if !hasSurfaceKhr {
+          hasSurfaceKhr = ExtensionNameEquals(
+            &extensions[index], VulkanWindowTargetExtensionNames.SurfaceMaintenanceKhr)
+        }
+        if !hasCapabilities2 {
+          hasCapabilities2 = ExtensionNameEquals(
+            &extensions[index], VkConstants.VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME)
+        }
+        index = index + 1u
       }
-      if !hasSurfaceKhr {
-        hasSurfaceKhr = ExtensionNameEquals(
-          &extensions[index], VulkanWindowTargetExtensionNames.SurfaceMaintenanceKhr)
-      }
-      if !hasCapabilities2 {
-        hasCapabilities2 = ExtensionNameEquals(
-          &extensions[index], VkConstants.VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME)
-      }
-      index = index + 1u
     }
     if !hasCapabilities2 {
       return VulkanSwapchainMaintenanceVariant.None
@@ -412,16 +427,29 @@ internal unsafe partial class VulkanWindowTarget {
     if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
       return false
     }
-    let extensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
-    if enumerate(nil, &count, extensions) != VkConstants.VK_SUCCESS {
-      return false
+    let initialExtensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
+    var extensionValues = Span[VkExtensionProperties](initialExtensions, int32(count))
+    while true {
+      var result VkResult
+      fixed extensions * VkExtensionProperties = extensionValues {
+        result = enumerate(nil, &count, extensions)
+      }
+      if result == VkConstants.VK_SUCCESS { break }
+      if result != VkConstants.VK_INCOMPLETE { return false }
+      count = 0u
+      if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u { return false }
+      if count > uint32(extensionValues.Length) {
+        extensionValues = Span[VkExtensionProperties]([int32(count)]VkExtensionProperties)
+      }
     }
     var index uint32 = 0u
-    while index < count {
-      if ExtensionNameEquals(&extensions[index], expected) {
-        return true
+    fixed extensions * VkExtensionProperties = extensionValues {
+      while index < count {
+        if ExtensionNameEquals(&extensions[index], expected) {
+          return true
+        }
+        index = index + 1u
       }
-      index = index + 1u
     }
     return false
   }
@@ -557,9 +585,24 @@ internal unsafe partial class VulkanWindowTarget {
     if enumerate(instance, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
       throw InvalidOperationException("No Vulkan physical device is available")
     }
-    let devices * VkPhysicalDevice = stackalloc[int32(count)]VkPhysicalDevice
-    if enumerate(instance, &count, devices) != VkConstants.VK_SUCCESS {
-      throw InvalidOperationException("Vulkan physical device enumeration failed")
+    let initialDevices * VkPhysicalDevice = stackalloc[int32(count)]VkPhysicalDevice
+    var deviceValues = Span[VkPhysicalDevice](initialDevices, int32(count))
+    while true {
+      var result VkResult
+      fixed devices * VkPhysicalDevice = deviceValues {
+        result = enumerate(instance, &count, devices)
+      }
+      if result == VkConstants.VK_SUCCESS { break }
+      if result != VkConstants.VK_INCOMPLETE {
+        throw InvalidOperationException("Vulkan physical device enumeration failed")
+      }
+      count = 0u
+      if enumerate(instance, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
+        throw InvalidOperationException("No Vulkan physical device is available")
+      }
+      if count > uint32(deviceValues.Length) {
+        deviceValues = Span[VkPhysicalDevice]([int32(count)]VkPhysicalDevice)
+      }
     }
     let properties * VkPhysicalDeviceProperties = stackalloc[int32(count)]VkPhysicalDeviceProperties
     let order * int32 = stackalloc[int32(count)]int32
@@ -571,7 +614,7 @@ internal unsafe partial class VulkanWindowTarget {
       || Environment.GetEnvironmentVariable("__NV_PRIME_RENDER_OFFLOAD") == "1"
       || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("__VK_LAYER_NV_optimus"))
     for index in 0 ... int32(count) {
-      getProperties(devices[index], &properties[index])
+      getProperties(deviceValues[index], &properties[index])
       order[index] = index
       if preserveOrder { continue }
       var position = index
@@ -594,7 +637,7 @@ internal unsafe partial class VulkanWindowTarget {
       let reason = if selectedName != "" {
         "lower priority, not attempted"
       } else {
-        TryStartPhysicalDevice(devices[candidateIndex], properties[candidateIndex])
+        TryStartPhysicalDevice(deviceValues[candidateIndex], properties[candidateIndex])
       }
       if reason == "" {
         selectedName = name
@@ -703,9 +746,20 @@ internal unsafe partial class VulkanWindowTarget {
     if enumerate(candidate, nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
       return false
     }
-    let extensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
-    if enumerate(candidate, nil, &count, extensions) != VkConstants.VK_SUCCESS {
-      return false
+    let initialExtensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
+    var extensionValues = Span[VkExtensionProperties](initialExtensions, int32(count))
+    while true {
+      var result VkResult
+      fixed extensions * VkExtensionProperties = extensionValues {
+        result = enumerate(candidate, nil, &count, extensions)
+      }
+      if result == VkConstants.VK_SUCCESS { break }
+      if result != VkConstants.VK_INCOMPLETE { return false }
+      count = 0u
+      if enumerate(candidate, nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u { return false }
+      if count > uint32(extensionValues.Length) {
+        extensionValues = Span[VkExtensionProperties]([int32(count)]VkExtensionProperties)
+      }
     }
     var hasSwapchain = false
     var hasMaintenanceExt = false
@@ -713,23 +767,25 @@ internal unsafe partial class VulkanWindowTarget {
     var hasPortabilitySubset = false
     var hasMemoryBudget = false
     var index uint32 = 0u
-    while index < count {
-      if ExtensionNameEquals(&extensions[index], VkConstants.VK_KHR_SWAPCHAIN_EXTENSION_NAME) {
-        hasSwapchain = true
+    fixed extensions * VkExtensionProperties = extensionValues {
+      while index < count {
+        if ExtensionNameEquals(&extensions[index], VkConstants.VK_KHR_SWAPCHAIN_EXTENSION_NAME) {
+          hasSwapchain = true
+        }
+        if ExtensionNameEquals(&extensions[index], VulkanWindowTargetExtensionNames.SwapchainMaintenanceExt) {
+          hasMaintenanceExt = true
+        }
+        if ExtensionNameEquals(&extensions[index], VulkanWindowTargetExtensionNames.SwapchainMaintenanceKhr) {
+          hasMaintenanceKhr = true
+        }
+        if ExtensionNameEquals(&extensions[index], VkConstants.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) {
+          hasPortabilitySubset = true
+        }
+        if ExtensionNameEquals(&extensions[index], VkConstants.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) {
+          hasMemoryBudget = true
+        }
+        index = index + 1u
       }
-      if ExtensionNameEquals(&extensions[index], VulkanWindowTargetExtensionNames.SwapchainMaintenanceExt) {
-        hasMaintenanceExt = true
-      }
-      if ExtensionNameEquals(&extensions[index], VulkanWindowTargetExtensionNames.SwapchainMaintenanceKhr) {
-        hasMaintenanceKhr = true
-      }
-      if ExtensionNameEquals(&extensions[index], VkConstants.VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) {
-        hasPortabilitySubset = true
-      }
-      if ExtensionNameEquals(&extensions[index], VkConstants.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) {
-        hasMemoryBudget = true
-      }
-      index = index + 1u
     }
     if instanceMaintenanceVariant == VulkanSwapchainMaintenanceVariant.Khr && hasMaintenanceKhr {
       swapchainMaintenanceVariant = VulkanSwapchainMaintenanceVariant.Khr
