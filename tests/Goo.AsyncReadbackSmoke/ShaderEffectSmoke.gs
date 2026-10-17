@@ -364,6 +364,10 @@ func RunShaderEffectSmoke() {
         && int32(resizedCenter[2]) > int32(resizedCenter[1]) + 60,
       "Shader effect output did not survive resize and display scaling: "
       +PrimitivePixelText(resizedCenter))
+    WindowReadbackTestFixture.SetForceFullRedraw(opened, true)
+    WindowReadbackTestFixture.ForceRenderNonblocking(opened, 0.0166666666666667)
+    Require(WindowReadbackTestFixture.RuntimeQueueWorkPending(opened),
+      "Shader effect resize did not stage pending window queue work")
     Require(WindowReadbackTestFixture.Resize(opened, 176, 120, 264, 180),
       "Shader effect synthetic 1.5x resize failed")
     let scaledMetrics = WindowReadbackTestFixture.Metrics(opened)
