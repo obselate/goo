@@ -3,7 +3,7 @@ package Goo
 internal unsafe partial class VulkanWindowTarget {
   private var nextGenerationId uint64 = 1uL
 
-  private func RecreateSwapchain(width int32, height int32) bool {
+  private func RecreateSwapchain(width int32, height int32, startup bool = false) bool {
     if width <= 0 || height <= 0 {
       recreatePending = true
       return true
@@ -31,6 +31,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var selection VulkanWindowTargetSelection = VulkanWindowTargetSelection{}
     if !TryQuerySelection(out selection) {
+      if startup { return false }
       if !surfaceLost {
         return false
       }

@@ -232,6 +232,7 @@ func ReadbackValidateCommonDiagnostics(diagnostics string, expectedResultFailure
 func RunReadbackSmoke() {
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
+  WindowReadbackTestFixture.VerifyCandidateStartup(ReadbackSmokeCell{})
   let root = ReadbackSmokeCell{}
   let capturedError = StringWriter()
   let originalError = Console.Error

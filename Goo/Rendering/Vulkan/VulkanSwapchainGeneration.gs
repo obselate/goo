@@ -269,7 +269,8 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
         let createSwapchain = dispatch.vkCreateSwapchainKHR
         let createResult = createSwapchain(device, &createInfo, nil, &swapchain)
         if createResult != VkConstants.VK_SUCCESS || swapchain == 0uL {
-          throw InvalidOperationException("vkCreateSwapchainKHR failed")
+          throw System.Runtime.InteropServices.ExternalException("vkCreateSwapchainKHR failed: " + createResult.ToString(),
+            int32(createResult))
         }
         try {
           if let accounting = objectAccounting {

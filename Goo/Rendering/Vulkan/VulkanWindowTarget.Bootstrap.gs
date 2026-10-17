@@ -34,6 +34,7 @@ internal unsafe partial class VulkanWindowTarget {
       ValidateSharedPresentationSupport()
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
         VulkanDiagnosticCategories.Window, surfaceStart)
+      CreateCommandResources()
     } else {
       if diagnostics == nil {
         diagnostics = VulkanDiagnostics.Create(
@@ -66,56 +67,68 @@ internal unsafe partial class VulkanWindowTarget {
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
         VulkanDiagnosticCategories.Window, surfaceStart)
       SelectPhysicalDevice()
-      let deviceStart = DiagnosticTimestamp()
-      CreateDevice()
-      LoadDeviceDispatch()
-      AcquireQueue()
-      RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeDevice,
-        VulkanDiagnosticCategories.Runtime, deviceStart)
-      var sharedMemoryProperties = VkPhysicalDeviceMemoryProperties{}
-      let getMemoryProperties = instanceDispatch.vkGetPhysicalDeviceMemoryProperties
-      getMemoryProperties(physicalDevice, &sharedMemoryProperties)
-      var sharedPhysicalProperties = VkPhysicalDeviceProperties{}
-      let getPhysicalDeviceProperties = instanceDispatch.vkGetPhysicalDeviceProperties
-      getPhysicalDeviceProperties(physicalDevice, &sharedPhysicalProperties)
-      runtime = VulkanSharedRuntime.Publish(
-        instance,
-        instanceDispatch,
-        physicalDevice,
-        device,
-        dispatch,
-        queue,
-        queue,
-        queueFamilyIndex,
-        queueFamilyIndex,
-        deviceWaitIdleAddress,
-        instanceMaintenanceVariant,
-        swapchainMaintenanceVariant,
-        deviceFacts,
-        &sharedPhysicalProperties.pipelineCacheUUID[0],
-        sharedMemoryProperties,
-        sharedPhysicalProperties.limits.maxMemoryAllocationCount,
-        sharedPhysicalProperties.limits.maxStorageBufferRange,
-        sharedPhysicalProperties.limits.nonCoherentAtomSize,
-        sharedPhysicalProperties.limits.bufferImageGranularity,
-        memoryBudgetSupported,
-        diagnostics,
-        debugUtilsEnabled,
-        validation,
-        validationMessenger,
-        validationMessengerCreated,
-        instanceDestroyAvailable,
-        deviceDestroyAvailable,
-        objectAccounting,
-        sharedObjectAccounting)
-      validation = nil
-      validationMessenger = 0uL
-      validationMessengerCreated = false
     }
     if let activeRuntime = runtime {
       queueMailbox = activeRuntime.QueueWorker.CreateMailbox(host)
     }
+  }
+
+  private func CreateCandidateRuntime() {
+    let deviceStart = DiagnosticTimestamp()
+    CreateDevice()
+    LoadDeviceDispatch()
+    AcquireQueue()
+    RecordDiagnosticTiming(VulkanDiagnosticEventIds.RuntimeDevice,
+      VulkanDiagnosticCategories.Runtime, deviceStart)
+
+    var sharedMemoryProperties = VkPhysicalDeviceMemoryProperties{}
+    let getMemoryProperties = instanceDispatch.vkGetPhysicalDeviceMemoryProperties
+    getMemoryProperties(physicalDevice, &sharedMemoryProperties)
+    var sharedPhysicalProperties = VkPhysicalDeviceProperties{}
+    let getPhysicalDeviceProperties = instanceDispatch.vkGetPhysicalDeviceProperties
+    getPhysicalDeviceProperties(physicalDevice, &sharedPhysicalProperties)
+    runtime = VulkanSharedRuntime.Create(
+      instance,
+      instanceDispatch,
+      physicalDevice,
+      device,
+      dispatch,
+      queue,
+      queue,
+      queueFamilyIndex,
+      queueFamilyIndex,
+      deviceWaitIdleAddress,
+      instanceMaintenanceVariant,
+      swapchainMaintenanceVariant,
+      deviceFacts,
+      &sharedPhysicalProperties.pipelineCacheUUID[0],
+      sharedMemoryProperties,
+      sharedPhysicalProperties.limits.maxMemoryAllocationCount,
+      sharedPhysicalProperties.limits.maxStorageBufferRange,
+      sharedPhysicalProperties.limits.nonCoherentAtomSize,
+      sharedPhysicalProperties.limits.bufferImageGranularity,
+      memoryBudgetSupported,
+      diagnostics,
+      debugUtilsEnabled,
+      validation,
+      validationMessenger,
+      validationMessengerCreated,
+      instanceDestroyAvailable,
+      deviceDestroyAvailable,
+      objectAccounting,
+      sharedObjectAccounting)
+
     CreateCommandResources()
+    let width = if requestedWidth > 0 { requestedWidth } else { Math.Max(1, host.FramebufferWidth) }
+    let height = if requestedHeight > 0 { requestedHeight } else { Math.Max(1, host.FramebufferHeight) }
+    if !RecreateSwapchain(width, height, true) {
+      throw InvalidOperationException("Vulkan initial swapchain creation failed")
+    }
+    if let probe = CandidateStartupForTest { probe(this) }
+    runtime!!.Publish()
+    validation = nil
+    validationMessenger = 0uL
+    validationMessengerCreated = false
   }
 
   private func CreateSurface() {
@@ -520,6 +533,18 @@ internal unsafe partial class VulkanWindowTarget {
     }
   }
 
+  shared {
+    internal var CandidateStartupForTest Action[VulkanWindowTarget]?
+
+    private func DeviceRank(deviceType int32) int32 {
+      if deviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) { return 5 }
+      if deviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) { return 4 }
+      if deviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) { return 3 }
+      if deviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU) { return 1 }
+      return 2
+    }
+  }
+
   private func SelectPhysicalDevice() {
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumeratePhysicalDevices
@@ -530,36 +555,105 @@ internal unsafe partial class VulkanWindowTarget {
     if enumerate(instance, &count, devices) != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan physical device enumeration failed")
     }
-    var deviceIndex uint32 = 0u
-    while deviceIndex < count {
-      let candidate = devices[deviceIndex]
-      var properties = VkPhysicalDeviceProperties{}
-      let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
-      getProperties(candidate, &properties)
-      if properties.apiVersion >= VkConstants.VK_API_VERSION_1_3
-        && HasGraphicsPresentationQueue(candidate)
-        && HasRequiredDeviceExtensions(candidate)
-        && HasRequiredFeatures(candidate) {
-          physicalDevice = candidate
-          CaptureDiagnosticDeviceFacts(properties)
-          timestampPeriod = properties.limits.timestampPeriod
-          timestampComputeAndGraphics = properties.limits.timestampComputeAndGraphics
-          deviceFacts = VulkanSharedDeviceFacts{
-            ApiVersion: properties.apiVersion,
-            DriverVersion: properties.driverVersion,
-            VendorId: properties.vendorID,
-            DeviceId: properties.deviceID,
-            DeviceType: properties.deviceType,
-            TimestampValidBits: timestampValidBits,
-            TimestampPeriod: timestampPeriod,
-            TimestampComputeAndGraphics: timestampComputeAndGraphics,
+    let properties * VkPhysicalDeviceProperties = stackalloc[int32(count)]VkPhysicalDeviceProperties
+    let order * int32 = stackalloc[int32(count)]int32
+    let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
+    let preserveOrder = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DRI_PRIME"))
+      || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VK_LOADER_DEVICE_SELECT"))
+      || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MESA_VK_DEVICE_SELECT"))
+      || Environment.GetEnvironmentVariable("MESA_VK_DEVICE_SELECT_FORCE_DEFAULT_DEVICE") == "1"
+      || Environment.GetEnvironmentVariable("__NV_PRIME_RENDER_OFFLOAD") == "1"
+      || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("__VK_LAYER_NV_optimus"))
+    for index in 0 ... int32(count) {
+      getProperties(devices[index], &properties[index])
+      order[index] = index
+      if preserveOrder { continue }
+      var position = index
+      while position > 0 {
+          let currentIndex = order[position]
+          let previousIndex = order[position - 1]
+          if DeviceRank(properties[currentIndex].deviceType) <= DeviceRank(properties[previousIndex].deviceType) {
+            break
           }
-          CaptureDiagnosticTimestampCapabilities()
-          return
+          order[position - 1] = currentIndex
+          order[position] = previousIndex
+          position = position - 1
         }
-      deviceIndex = deviceIndex + 1u
     }
-    throw InvalidOperationException("No Vulkan physical device satisfies the Goo presentation requirements")
+    var selectedName = ""
+    var rejected = ""
+    for index in 0 ... int32(count) {
+      let candidateIndex = order[index]
+      let name = Marshal.PtrToStringUTF8(nint(&properties[candidateIndex].deviceName[0])) ?? "unknown"
+      let reason = if selectedName != "" {
+        "lower priority, not attempted"
+      } else {
+        TryStartPhysicalDevice(devices[candidateIndex], properties[candidateIndex])
+      }
+      if reason == "" {
+        selectedName = name
+      } else {
+        rejected = rejected + (if rejected == "" { "" } else { ", " }) + name + ": " + reason
+      }
+    }
+    if selectedName == "" {
+      throw InvalidOperationException("No Vulkan physical device satisfies the Goo presentation requirements: " + rejected)
+    }
+    if let current = diagnostics {
+      current.WriteDevice(Console.Error, selectedName,
+        if preserveOrder { "loader" } else { "deviceType" }, rejected)
+    }
+  }
+
+  private func TryStartPhysicalDevice(candidate VkPhysicalDevice, properties VkPhysicalDeviceProperties) string {
+    if properties.apiVersion < VkConstants.VK_API_VERSION_1_3 { return "Vulkan 1.3 unavailable" }
+    if !HasGraphicsPresentationQueue(candidate) { return "graphics presentation queue unavailable" }
+    if !HasRequiredDeviceExtensions(candidate) { return "required device extensions unavailable" }
+    if !HasRequiredFeatures(candidate) { return "required features or text format unavailable" }
+    physicalDevice = candidate
+    timestampPeriod = properties.limits.timestampPeriod
+    timestampComputeAndGraphics = properties.limits.timestampComputeAndGraphics
+    deviceFacts = VulkanSharedDeviceFacts{
+      ApiVersion: properties.apiVersion,
+      DriverVersion: properties.driverVersion,
+      VendorId: properties.vendorID,
+      DeviceId: properties.deviceID,
+      DeviceType: properties.deviceType,
+      TimestampValidBits: timestampValidBits,
+      TimestampPeriod: timestampPeriod,
+      TimestampComputeAndGraphics: timestampComputeAndGraphics,
+    }
+    try {
+      CreateCandidateRuntime()
+    } catch (error Exception) {
+      DestroyWindowResources()
+      if let candidateRuntime = runtime {
+        candidateRuntime.ReleaseAfterIdle()
+        runtime = nil
+      } else if device != nint(0) {
+        let destroyDevice = ResolveGlobalProc(instance, "vkDestroyDevice") as (unmanaged[Cdecl](VkDevice, *VkAllocationCallbacks) -> void)?
+        if destroyDevice == nil {
+          throw InvalidOperationException("vkDestroyDevice is unavailable during candidate rollback", error)
+        }
+        let destroy = destroyDevice
+        destroy(device, nil)
+        sharedObjectAccounting?.Release()
+      }
+      device = nint(0)
+      dispatch = VkDeviceDispatch{}
+      deviceDestroyAvailable = false
+      deviceWaitIdleAddress = nint(0)
+      memoryAllocator = nil
+      startupFirstSwapchainRecorded = false
+      startupFirstRendererRecorded = false
+      if surfaceLost || (error is ExternalException && error.ErrorCode == int32(VkConstants.VK_ERROR_SURFACE_LOST_KHR)) {
+        throw error
+      }
+      return error.Message
+    }
+    CaptureDiagnosticDeviceFacts(properties)
+    CaptureDiagnosticTimestampCapabilities()
+    return ""
   }
 
   private func HasGraphicsPresentationQueue(candidate VkPhysicalDevice) bool {
@@ -580,6 +674,9 @@ internal unsafe partial class VulkanWindowTarget {
           let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
           let supportResult = surfaceSupport(
             candidate, familyIndex, surface, &supported)
+          if supportResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
+            throw ExternalException("Vulkan surface was lost during device selection", int32(supportResult))
+          }
           if supportResult == VkConstants.VK_SUCCESS && supported == VkConstants.VK_TRUE {
             queueFamilyIndex = familyIndex
             timestampValidBits = family.timestampValidBits
@@ -826,6 +923,7 @@ internal unsafe partial class VulkanWindowTarget {
     if let currentDiagnostics = diagnostics {
       textAtlasDiagnosticsToken = currentDiagnostics.RegisterTextAtlasContribution()
     }
+    RebuildClipMaskAtlasAfterDeviceRecovery()
   }
 
   private func QueryClipMaskFormatSupport(maximumArrayLayers uint32) VulkanClipMaskFormatSupport {

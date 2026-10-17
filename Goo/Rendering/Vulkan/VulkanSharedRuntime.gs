@@ -57,6 +57,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   private var terminal bool
   private var terminalIdleResult VkResult = VkConstants.VK_SUCCESS
   private var disposed bool
+  private var published bool
 
   shared {
     private var current VulkanSharedRuntime?
@@ -170,7 +171,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       return nil
     }
 
-    internal func Publish(nativeInstance VkInstance, nativeInstanceDispatch VkInstanceDispatch,
+    internal func Create(nativeInstance VkInstance, nativeInstanceDispatch VkInstanceDispatch,
       nativePhysicalDevice VkPhysicalDevice, nativeDevice VkDevice,
       nativeDispatch VkDeviceDispatch, nativeGraphicsQueue VkQueue,
       nativePresentQueue VkQueue, nativeGraphicsFamilyIndex uint32,
@@ -364,9 +365,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
                 uint64(Stopwatch.GetTimestamp()))
             }
           }
-          let lease = VulkanSharedLease(owner)
-          current = owner
-          return lease
+          return VulkanSharedLease(owner)
         } catch (error Exception) {
           if createdImageIdentityRegistry {
             if let createdIdentityRegistry = imageIdentityRegistry {
@@ -570,6 +569,14 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   internal prop TerminalIdleResult VkResult{ get -> terminalIdleResult }
   internal prop Generation uint64{ get -> generation }
 
+  internal func Publish() {
+    if current != nil || disposed || published {
+      throw InvalidOperationException("Vulkan shared runtime cannot be published")
+    }
+    published = true
+    current = this
+  }
+
   internal prop HasUnsubmittedRecordedSharedUpload bool{
     get {
       return imageResources.HasUnsubmittedRecordedUpload
@@ -715,7 +722,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if references == 0 {
       DisposeWithIdleState(alreadyIdle)
       if disposed {
-        current = nil
+        if Object.ReferenceEquals(current, this) { current = nil }
         return true
       }
       return false
@@ -855,7 +862,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
         accounting.Release()
       }
     }
-    if validationMessengerCreated && instance != nint(0)
+    if published && validationMessengerCreated && instance != nint(0)
       && instanceDispatch.vkDestroyDebugUtilsMessengerEXT != nil {
         let destroyMessenger = instanceDispatch.vkDestroyDebugUtilsMessengerEXT
         destroyMessenger(instance, validationMessenger, nil)
@@ -863,7 +870,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
           accounting.Release()
         }
       }
-    if instance != nint(0) && instanceDestroyAvailable {
+    if published && instance != nint(0) && instanceDestroyAvailable {
       let destroyInstance = instanceDispatch.vkDestroyInstance
       destroyInstance(instance, nil)
       if let accounting = sharedObjectAccounting {
@@ -930,6 +937,10 @@ internal unsafe sealed class VulkanSharedLease : IDisposable {
   internal prop Generation uint64{ get -> owner.Generation }
   internal prop HasUnsubmittedRecordedSharedUpload bool{
     get -> owner.HasUnsubmittedRecordedSharedUpload
+  }
+
+  internal func Publish() {
+    owner.Publish()
   }
 
   internal func EnqueueGraphicsSubmission(mailbox VulkanQueueMailbox,
