@@ -37,6 +37,8 @@ internal data struct VirtualEntry {
 internal sealed class VirtualNodeState {
   private var current VirtualState?
   private var pending VirtualState?
+  private var source VirtualSource?
+  private var pendingSource VirtualSource?
   private var mounted Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private var next Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private let children List[Blob] = List[Blob]()
@@ -97,19 +99,19 @@ internal sealed class VirtualNodeState {
     return !lineageChanged && Context.Window?.ContextValue(source.Key) == source
   }
 
-  private func enterContext() ContextEnvironment {
-    let previous = ContextEnvironment.Current
+  private func enterContext(stateCallback bool = false) ContextEnvironment {
     var environment = Context
     environment.Reader = contextReader
     environment.Cell = nil
     environment.Virtual = this
-    ContextEnvironment.Current = environment
-    return previous
+    environment.StateCallback = stateCallback
+    return ContextEnvironment.Enter(environment)
   }
   internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
-    contextReader?.Begin()
-    let previousContext = enterContext()
+    pendingSource = source
+    contextReader?.BeginState()
+    let previousContext = enterContext(true)
     try {
       var state VirtualState?
       try { state = source.State(current) }
@@ -143,6 +145,11 @@ internal sealed class VirtualNodeState {
 
   internal func PrepareRefresh(n Node) IList[Blob] {
     guard let state = current else { throw InvalidOperationException("Virtual state is unavailable") }
+    if contextDirty {
+      if let retained = source {
+        return Prepare(n, retained, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
+      }
+    }
     Cancel(true)
     return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
   }
@@ -285,6 +292,8 @@ internal sealed class VirtualNodeState {
     let previous = current
     current = state
     pending = nil
+    if let prepared = pendingSource { source = prepared }
+    pendingSource = nil
     pendingOwner = nil
     if let previous = previous {
       if previous != state { previous.Dispose() }
@@ -293,6 +302,7 @@ internal sealed class VirtualNodeState {
 
   internal func Cancel(preserveReads bool = false) {
     if !preserveReads { contextReader?.Cancel() }
+    pendingSource = nil
     next.Clear()
     children.Clear()
     pendingOwner = nil
@@ -307,6 +317,7 @@ internal sealed class VirtualNodeState {
     contextReader?.Dispose()
     contextReader = nil
     Context = ContextEnvironment{}
+    source = nil
     mounted.Clear()
     if let state = current {
       current = nil

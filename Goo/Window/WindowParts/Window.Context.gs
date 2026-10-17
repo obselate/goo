@@ -6,10 +6,6 @@ import System.Collections.Generic
 public partial class Window {
     private var contextValues Dictionary[object, ContextFrame]?
 
-    internal prop ContextEntries Dictionary[object, ContextFrame]? {
-        get -> contextValues
-    }
-
     internal func RequireContextThread() {
         requireUiThread("Context")
     }

@@ -96,6 +96,11 @@ internal class ContextFixtures {
             let portal = portalReader(window)
             let ordinary = windowReader(window)
             let sibling = siblingReader(window)
+            let parts = ScrollbarParts.Children(scopeNode(window).Children[2])
+            let part = (parts[0].Children[0].Fiber as ContextReadCell)!!
+            if part.Value != 20 || part.contextWindow != window {
+                return false
+            }
             let parentBuilds = cell.Builds
             let directBuilds = direct.Builds
             let portalBuilds = portal.Builds
@@ -103,22 +108,40 @@ internal class ContextFixtures {
             direct.Rebuild()
             window.UpdateTree()
             if direct.Value != 20 || direct.Builds != directBuilds + 1 || cell.Builds != parentBuilds {
-                throw InvalidOperationException("Later child build: value=${direct.Value}, child=${direct.Builds}, parent=${cell.Builds}")
+                throw InvalidOperationException(
+                    "Later child build: value=${direct.Value}, child=${direct.Builds}, parent=${cell.Builds}"
+                )
             }
             key.Set(window, 11)
             window.UpdateTree()
             if ordinary.Value != 11 || direct.Value != 20 || portal.Builds != portalBuilds
             || sibling.Value != 90 || cell.Builds != parentBuilds {
-                throw InvalidOperationException("Window shadowing: ordinary=${ordinary.Value}, direct=${direct.Value}, portal=${portal.Builds}, sibling=${sibling.Value}, parent=${cell.Builds}")
+                throw InvalidOperationException(
+                    "Window shadowing: ordinary=${ordinary.Value}, direct=${direct.Value}, portal=${portal.Builds}, sibling=${sibling.Value}, parent=${cell.Builds}"
+                )
             }
             let ordinaryBuilds = ordinary.Builds
             cell.Value = 21
             cell.Rebuild()
             window.UpdateTree()
+            if part.Value != 21 {
+                throw InvalidOperationException("Deferred scrollbar part lost its context")
+            }
             if scopedReader(window) != direct || portalReader(window) != portal
             || direct.LocalState != 42 || direct.Value != 21 || portal.Value != 21
             || ordinary.Builds != ordinaryBuilds || sibling.Value != 90 {
-                throw InvalidOperationException("Scope update: direct=${direct.Value}, portal=${portal.Value}, ordinary=${ordinary.Builds}/$ordinaryBuilds, sibling=${sibling.Value}")
+                throw InvalidOperationException(
+                    "Scope update: direct=${direct.Value}, portal=${portal.Value}, ordinary=${ordinary.Builds}/$ordinaryBuilds, sibling=${sibling.Value}"
+                )
+            }
+            let frame = direct.incomingContext!!
+            let generation = frame.Generation
+            cell.Caption = "changed"
+            cell.Rebuild()
+            window.UpdateTree()
+            if direct.incomingContext != frame || frame.Generation != generation
+            || direct.MountedNode()!!.Children[0].Content != "scopedchanged:21" {
+                throw InvalidOperationException("A stable scope builder did not refresh its captured content")
             }
             direct.ReadOther = true
             direct.Rebuild()
@@ -149,7 +172,9 @@ internal class ContextFixtures {
             window.UpdateTree()
             let unscoped = scopedReader(window)
             if !direct.disposed || unscoped.Value != 11 || portalReader(window).Value != 11 {
-                throw InvalidOperationException("Scope removal: disposed=${direct.disposed}, direct=${unscoped.Value}, portal=${portalReader(window).Value}")
+                throw InvalidOperationException(
+                    "Scope removal: disposed=${direct.disposed}, direct=${unscoped.Value}, portal=${portalReader(window).Value}"
+                )
             }
             cell.Scoped = true
             cell.Value = 22
@@ -225,6 +250,7 @@ internal class ContextFixtures {
             let key = Context[int32]()
             let other = Context[int32]()
             let cell = ContextVirtualRoot(key, other, portal)
+            cell.State.StateOnlyRead = portal
             let window = Window{Root: cell, Width: 100, Height: 60}
             window.SmoothScrolling = false
             key.Set(window, 10)
@@ -287,10 +313,14 @@ internal class ContextFixtures {
                 cell.ProviderKey = other
                 cell.Rebuild()
                 window.UpdateTree()
-                if scrolled.Children[0].Children[0].Fiber != retried || retried.Value != 11 { return false }
+                if scrolled.Children[0].Children[0].Fiber != retried || retried.Value != 11 {
+                    return false
+                }
                 key.Set(window, 12)
                 window.UpdateTree()
-                if retried.Value != 12 { return false }
+                if retried.Value != 12 {
+                    return false
+                }
                 window.Close()
                 if cell.State.Disposals != 1 {
                     return false
@@ -414,6 +444,7 @@ internal class ContextTestRoot : Cell {
     internal var Builds int32
     internal var Scoped bool = true
     internal var Reverse bool
+    internal var Caption string = ""
     internal var AsyncIsolated bool
 
     internal init(key Context[int32], other Context[int32]) {
@@ -440,12 +471,19 @@ internal class ContextTestRoot : Cell {
         }
     }
 
-    private func input(label string) ContextReadInput -> ContextReadInput{Key: key, Other: other, Label: label}
+    private func input(label string) ContextReadInput ->
+    ContextReadInput{Key: key, Other: other, Label: label + Caption}
 
     private func scopedContent() Blob {
-        AsyncIsolated = Task
-            .Run[bool](
+        let task = Task[bool](
             () -> {
+                let nested = Window{Root: ContextWindowPairCell(key), Width: 20, Height: 20}
+                key.Set(nested, 99)
+                try {
+                    nested.UpdateTree()
+                } finally {
+                    nested.Close()
+                }
                 try {
                     key.Read()
                     return false
@@ -454,11 +492,26 @@ internal class ContextTestRoot : Cell {
                 }
             }
         )
-            .GetAwaiter()
-            .GetResult()
+        task.RunSynchronously(TaskScheduler.Default)
+        AsyncIsolated = task.GetAwaiter().GetResult()
+        let expected = Scoped ? Value: key.Read(key.Window)
+        if key.Read() != expected {
+            throw InvalidOperationException("A nested task build changed its parent's context")
+        }
         return Container(){
             Cell.Mount[ContextReadInput, ContextDirectCell]("direct", input("scoped")),
             Portal{Key: "portal", Cell.Mount[ContextReadInput, ContextReadCell](nil, input("portal"))},
+            Container(){
+                .Key: "parts",
+                .Width: 50,
+                .Height: 20,
+                .OverflowY: Overflow.Scroll,
+                .ScrollbarVisibilityY: ScrollbarVisibility.Always,
+                .ScrollbarY: Scrollbar{
+                    Thumb: Container(){Cell.Mount[ContextReadInput, ContextReadCell](nil, input("part")),}
+                },
+                Container{Height: 200, FlexShrink: 0},
+            },
         }
     }
 }
@@ -497,7 +550,7 @@ internal class ContextVirtualSource : VirtualSource {
     }
 
     public func State(current VirtualState?) VirtualState {
-        owner.Key.Read()
+        owner.State.PendingValue = owner.Key.Read()
         owner.State.StateReads++
         return owner.State
     }
@@ -518,13 +571,19 @@ internal class ContextVirtualState : VirtualState {
     internal var Disposals int32
     internal var FailNext bool
     internal var RetainContent bool
+    internal var StateOnlyRead bool
+    internal var PendingValue int32
+    private var committedValue int32
 
     internal init(owner ContextVirtualRoot) {
         this.owner = owner
     }
 
     public override func Realize(viewport VirtualViewport, output VirtualOutput) {
-        let value = owner.Key.Read()
+        let value = PendingValue
+        if !StateOnlyRead && owner.Key.Read() != value {
+            throw InvalidOperationException("The virtual source inputs did not refresh with their context")
+        }
         observeWindow()
         Realizations++
         Version = viewport.ContextVersion
@@ -553,14 +612,18 @@ internal class ContextVirtualState : VirtualState {
     }
 
     public override func NeedsRealize(viewport VirtualViewport) bool {
-        owner.Key.Read()
+        if !StateOnlyRead {
+            owner.Key.Read()
+        }
         observeWindow()
         NeedsReads++
         return int32(viewport.ScrollOffset.Y / 20.0) != first
     }
 
     public override func OffsetOf(viewport VirtualViewport, key string) Point? {
-        owner.Key.Read()
+        if !StateOnlyRead {
+            owner.Key.Read()
+        }
         observeWindow()
         OffsetReads++
         return key == "row-8" ? Point{X: 0, Y: 160}: nil
@@ -569,6 +632,11 @@ internal class ContextVirtualState : VirtualState {
     public override func Commit() {
         first = pendingFirst
         committedVersion = pendingVersion
+        committedValue = PendingValue
+    }
+
+    public override func Cancel() {
+        PendingValue = committedValue
     }
 
     public override func Dispose() {

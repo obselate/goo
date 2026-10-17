@@ -38,7 +38,7 @@ internal partial class Reconciler {
 
   private func commitContexts() {
     if let readers = contextCommits {
-      for reader in readers { reader.Commit(reader.Preserve) }
+      for index in 0 ... readers.Count { readers[index].Commit(readers[index].Preserve) }
       readers.Clear()
     }
   }
@@ -46,9 +46,8 @@ internal partial class Reconciler {
   private func configureCell(cell Cell, declaration CellElement, seed bool) {
     cell.BindContext(Context.Frame, Owner)
     cell.contextReader?.Begin()
-    let previous = ContextEnvironment.Current
-    ContextEnvironment.Current = ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
-      Cell: cell, Reader: cell.contextReader}
+    let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
+      Cell: cell, Reader: cell.contextReader})
     try {
       if seed { if let initialize = declaration.Seed { initialize(cell) } }
       declaration.ApplyInput(cell)
@@ -62,9 +61,8 @@ internal partial class Reconciler {
 
   private func renderCell(cell Cell) Blob {
     cell.contextReader?.Begin()
-    let previous = ContextEnvironment.Current
-    ContextEnvironment.Current = ContextEnvironment{Window: cell.contextWindow,
-      Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader}
+    let previous = ContextEnvironment.Enter(ContextEnvironment{Window: cell.contextWindow,
+      Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
       guard let profiler = Profiler else { return cell.Render() }
       let start = profiler.Start()
@@ -135,7 +133,7 @@ internal partial class Reconciler {
   internal func DiscardStyles() {
     Res.DiscardPending()
     if let readers = contextCommits {
-      for reader in readers { reader.Cancel() }
+      for index in 0 ... readers.Count { readers[index].Cancel() }
       readers.Clear()
     }
     if let root = styleRetryRoot {

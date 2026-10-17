@@ -30,16 +30,17 @@ public sealed class Context[T any] {
             )
         }
         let subscriptions = owner.Subscriptions()
-        for dependency in subscriptions {
+        for index in 0 ... subscriptions.Count {
+            let dependency = subscriptions[index]
             if dependency.Key == this {
                 let typed = (dependency as ContextDependency[T])!!
-                typed.Observe(frame)
+                typed.Observe(frame, environment.StateCallback)
                 return frame.Value
             }
         }
         let dependency = ContextDependency[T](this, owner)
         subscriptions.Add(dependency)
-        dependency.Observe(frame)
+        dependency.Observe(frame, environment.StateCallback)
         return frame.Value
     }
 
@@ -121,6 +122,7 @@ internal data struct ContextEnvironment {
     internal var Reader ContextReader?
     internal var Cell Cell?
     internal var Virtual VirtualNodeState?
+    internal var StateCallback bool
     private var taskId int32
 
     shared {
@@ -131,13 +133,21 @@ internal data struct ContextEnvironment {
             get -> current
             set(v) {
                 current = v
-                current.taskId = Task.CurrentId ?? 0
             }
+        }
+
+        internal func Enter(environment ContextEnvironment) ContextEnvironment {
+            let previous = current
+            current = environment
+            current.taskId = Task.CurrentId ?? 0
+            return previous
         }
 
         internal func OwnedWindow() Window {
             if current.taskId != (Task.CurrentId ?? 0) {
-                throw InvalidOperationException("Async tasks do not inherit Context. Use Read(window) on the owner thread.")
+                throw InvalidOperationException(
+                    "Async tasks do not inherit Context. Use Read(window) on the owner thread."
+                )
             }
             guard let window = Current.Window else {
                 throw InvalidOperationException(
@@ -262,6 +272,8 @@ internal open class ContextDependency {
     internal let Owner ContextReader
     internal var Seen bool
     internal var Committed bool
+    internal var FromState bool
+    internal var StateSeen bool
     protected let watched List[ContextFrame] = List[ContextFrame]()
 
     internal init(key object, owner ContextReader) {
@@ -274,8 +286,8 @@ internal open class ContextDependency {
     internal open func Refresh() { }
 
     internal func Detach() {
-        for frame in watched {
-            frame.Unsubscribe(this)
+        for index in 0 ... watched.Count {
+            watched[index].Unsubscribe(this)
         }
         watched.Clear()
     }
@@ -290,9 +302,13 @@ internal sealed class ContextDependency[T any] : ContextDependency {
         this.key = key
     }
 
-    internal func Observe(frame ContextValue[T]) {
+    internal func Observe(frame ContextValue[T], stateCallback bool) {
         Seen = true
         observed = frame.Value
+        if stateCallback {
+            StateSeen = true
+            Owner.StateReading = true
+        }
     }
 
     internal override func Commit() {
@@ -343,6 +359,7 @@ internal sealed class ContextReader {
     internal var Cell Cell?
     internal var Virtual VirtualNodeState?
     internal var Preserve bool
+    internal var StateReading bool
     private var dependencies List[ContextDependency]?
     private var reading bool
 
@@ -358,16 +375,26 @@ internal sealed class ContextReader {
         reading = true
         Preserve = false
         if let list = dependencies {
-            for dependency in list {
-                dependency.Seen = false
+            for index in 0 ... list.Count {
+                list[index].Seen = false
+            }
+        }
+    }
+
+    internal func BeginState() {
+        Begin()
+        StateReading = true
+        if let list = dependencies {
+            for index in 0 ... list.Count {
+                list[index].StateSeen = false
             }
         }
     }
 
     internal func Refresh() {
         if let list = dependencies {
-            for dependency in list {
-                dependency.Refresh()
+            for index in 0 ... list.Count {
+                list[index].Refresh()
             }
         }
     }
@@ -377,9 +404,12 @@ internal sealed class ContextReader {
             var index = list.Count - 1
             while index >= 0 {
                 let dependency = list[index]
+                if StateReading {
+                    dependency.FromState = dependency.StateSeen
+                }
                 if dependency.Seen {
                     dependency.Commit()
-                } else if !preserve {
+                } else if !preserve && !dependency.FromState {
                     dependency.Detach()
                     list.RemoveAt(index)
                 }
@@ -388,6 +418,7 @@ internal sealed class ContextReader {
         }
         Provider?.Commit()
         reading = false
+        StateReading = false
     }
 
     internal func Cancel() {
@@ -402,6 +433,7 @@ internal sealed class ContextReader {
             }
         }
         reading = false
+        StateReading = false
     }
 
     internal func Invalidate() {
@@ -415,8 +447,8 @@ internal sealed class ContextReader {
 
     internal func Dispose() {
         if let list = dependencies {
-            for dependency in list {
-                dependency.Detach()
+            for index in 0 ... list.Count {
+                list[index].Detach()
             }
             list.Clear()
         }
@@ -435,8 +467,6 @@ internal open class ContextScopeDeclaration : CellElement {
         init;
     }
     internal open func Prepare(provider ContextProvider) ContextFrame;
-
-    internal open func Same(previous ContextScopeDeclaration) bool;
 
     internal override func CreateCell() Cell -> ContextProvider()
 
@@ -457,10 +487,6 @@ internal sealed class ContextScopeDeclaration[T any] : ContextScopeDeclaration {
         init;
     }
 
-    internal override func Same(previous ContextScopeDeclaration) bool ->
-    previous is ContextScopeDeclaration[T] && previous.ContextKey == ContextKey
-    && previous.Builder == Builder && EqualityComparer[T].Default.Equals(previous.Value, Value)
-
     internal override func Prepare(provider ContextProvider) ContextFrame {
         let reader = provider.EnsureContextReader()
         var frame = reader.Provider as ContextValue[T]?
@@ -479,11 +505,8 @@ internal sealed class ContextProvider : Cell {
     private var declaration ContextScopeDeclaration?
 
     internal func SetDeclaration(value ContextScopeDeclaration) {
-        let changed = declaration == nil || !value.Same(declaration!!)
         declaration = value
-        if changed {
-            MarkDirtyFromInput()
-        }
+        MarkDirtyFromInput()
     }
 
     override func Build() Blob {
@@ -492,8 +515,7 @@ internal sealed class ContextProvider : Cell {
         let reader = EnsureContextReader()
         outgoingContext = frame
         reader.Frame = frame
-        let previous = ContextEnvironment.Current
-        ContextEnvironment.Current = ContextEnvironment{Window: contextWindow, Frame: frame, Reader: reader}
+        let previous = ContextEnvironment.Enter(ContextEnvironment{Window: contextWindow, Frame: frame, Reader: reader})
         try {
             return input.Builder()
         } finally {
