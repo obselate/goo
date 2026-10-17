@@ -67,6 +67,7 @@ internal class ProfilerSmokeClient : IDisposable {
 internal class ProfilerSmokeTrace {
     internal let WindowId string
     internal let Phases HashSet[int32] = HashSet[int32]()
+    internal let FramePhases HashSet[string] = HashSet[string]()
     internal let Sources HashSet[string] = HashSet[string]()
     internal let Builds Dictionary[string, int64] = Dictionary[string, int64]()
     internal let Paints Dictionary[string, int64] = Dictionary[string, int64]()
@@ -381,6 +382,7 @@ internal class ProfilerSmoke {
                             "CPU phase has an unmeasured image index")
                         let stage = Int32.Parse(record.GetProperty("eventId").GetString() ?? "-1", CultureInfo.InvariantCulture)
                         trace.Phases.Add(stage)
+                        if stage == int32(FrameProfileStage.Frame) { Require(trace.FramePhases.Add(pump), "Pump ID repeated") }
                         if stage == int32(FrameProfileStage.Build) { trace.Builds[pump] = end }
                         if stage == int32(FrameProfileStage.Paint) { trace.Paints[pump] = ticks }
                     }
