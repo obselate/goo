@@ -77,15 +77,8 @@ func RunFragmentCorrectnessSmoke() {
     cell.IconSize = 24.0 / scale
     cell.Rebuild()
     WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
-    var accepted = WindowReadbackTestFixture.Request(opened,
+    ReadbackRequestReadbackUntilAccepted(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
-    if accepted == WindowReadbackRequestStatus.NotReady {
-      WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
-      accepted = WindowReadbackTestFixture.Request(opened,
-        uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
-    }
-    Require(accepted == WindowReadbackRequestStatus.Accepted,
-      "Fragment correctness readback was not accepted: " + accepted.ToString())
     ReadbackAwaitReadbackReady(opened, 10000)
     let frame = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(frame, metrics)
