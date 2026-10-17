@@ -6,11 +6,13 @@ import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
   private func Bootstrap() {
+    if let recorder = FrameRecorder.Current { activeTraceId = recorder.TraceId }
     var libraryStart uint64 = 0uL
     var libraryEnd uint64 = 0uL
     if !vulkanLoaded {
       let captureLibrary = diagnostics != nil
         || Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1"
+        || FrameRecorder.Current != nil
       if captureLibrary {
         libraryStart = uint64(Stopwatch.GetTimestamp())
       }
@@ -46,6 +48,10 @@ internal unsafe partial class VulkanWindowTarget {
         windowObjectAccounting = VulkanObjectAccounting(objectAccounting)
       }
       if libraryStart != 0uL {
+        if let recorder = TraceRecorder {
+          recorder.Duration(VulkanDiagnosticEventIds.VulkanLibrary, VulkanDiagnosticCategories.Runtime,
+            TraceContext(), int64(libraryStart), int64(libraryEnd), source: "vulkan.library")
+        }
         try {
           if let current = diagnostics {
             current.RecordStage(

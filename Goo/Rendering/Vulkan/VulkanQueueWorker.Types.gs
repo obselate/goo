@@ -1,6 +1,7 @@
 package Goo
 
 import System.Threading
+import System.Diagnostics
 
 internal class VulkanQueueMailboxPhase {
   shared {
@@ -34,6 +35,15 @@ internal unsafe sealed class VulkanQueueMailbox {
   internal var PresentWaitSemaphore VkSemaphore
   internal var PresentFence VkFence
   internal var PresentFenceEnabled bool
+  internal var TraceId string?
+  internal var TraceContext FrameTraceContext
+
+  internal prop TraceRecorder FrameRecorder? {
+    get {
+      let current = FrameRecorder.Current
+      return if current != nil && current.TraceId == TraceId { current } else { nil }
+    }
+  }
 
   internal init(nativeHost VulkanSurfaceHost?) {
     host = nativeHost
@@ -166,7 +176,13 @@ internal unsafe sealed class VulkanQueueMailbox {
     submitInfo.signalSemaphoreInfoCount = if SubmitHasSignal { 2u } else { 1u }
     submitInfo.pSignalSemaphoreInfos = signalInfos
     let queueSubmit = dispatch.vkQueueSubmit2
+    let recorder = TraceRecorder
+    let start = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
     submitResult = queueSubmit(queue, 1u, &submitInfo, 0uL)
+    if let current = TraceRecorder {
+      current.Duration(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
+        TraceContext, start, Stopwatch.GetTimestamp(), result: int32(submitResult), source: "vkQueueSubmit2")
+    }
     Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete)
   }
 
@@ -196,7 +212,13 @@ internal unsafe sealed class VulkanQueueMailbox {
     presentInfo.pSwapchains = &swapchain
     presentInfo.pImageIndices = &imageIndex
     let queuePresent = dispatch.vkQueuePresentKHR
+    let recorder = TraceRecorder
+    let start = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
     presentResult = queuePresent(queue, &presentInfo)
+    if let current = TraceRecorder {
+      current.Duration(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
+        TraceContext, start, Stopwatch.GetTimestamp(), result: int32(presentResult), source: "vkQueuePresentKHR")
+    }
     Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.PresentComplete)
   }
 

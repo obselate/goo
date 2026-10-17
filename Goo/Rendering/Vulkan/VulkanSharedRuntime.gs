@@ -663,6 +663,13 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
       MarkDeviceLost()
     }
+    if let recorder = FrameRecorder.Current {
+      if result == VkConstants.VK_SUCCESS {
+        recorder.Instant(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
+          FrameTraceContext{SubmissionId: value, DeviceId: uint64(device), DeviceGeneration: generation},
+          source: "graphics.completion-observed")
+      }
+    }
     return result
   }
 

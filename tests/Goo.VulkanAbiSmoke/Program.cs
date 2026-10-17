@@ -593,6 +593,24 @@ internal static class Program
 
         Console.WriteLine("VULKAN_SCENE_ALLOC allocated=" + allocated
             + " draws=" + result.DrawCount + " visibleNodes=" + result.VisibleNodeCount);
+        var profiler = new FrameProfiler();
+        for (var warmup = 0; warmup < 100; warmup++)
+        {
+            if (profiler.Active) throw new InvalidOperationException("Inactive allocation probe requires profiling flags off");
+            compiler.Compile(root, Color.Transparent, 320, 180);
+        }
+        var workloadBefore = GC.GetAllocatedBytesForCurrentThread();
+        var workloadStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        for (var iteration = 0; iteration < 10000; iteration++)
+        {
+            var point = profiler.Active ? profiler.Start() : default;
+            compiler.Compile(root, Color.Transparent, 320, 180);
+            if (profiler.Active) profiler.Record(FrameProfileStage.Paint, point);
+        }
+        var workloadTicks = System.Diagnostics.Stopwatch.GetTimestamp() - workloadStart;
+        var workloadAllocated = GC.GetAllocatedBytesForCurrentThread() - workloadBefore;
+        Console.WriteLine("VULKAN_SCENE_INACTIVE iterations=10000 allocated=" + workloadAllocated + " ticks=" + workloadTicks);
+        if (workloadAllocated != 0) return 1;
         return allocated == 0 ? 0 : 1;
     }
 

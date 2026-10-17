@@ -123,6 +123,13 @@ internal unsafe partial class VulkanWindowTarget {
       renderer.ValidateClipFrameSubmission(int32(activeFrameSlotIndex), serial)
     }
     pendingGlobalSubmissionSerial = serial
+    if let recorder = TraceRecorder {
+      activeTraceContext.SubmissionId = serial
+      if let mailbox = queueMailbox {
+        mailbox.TraceId = recorder.TraceId
+        mailbox.TraceContext = TraceContext()
+      }
+    }
   }
 
   private func RetryQueueSubmit() bool {
@@ -177,6 +184,10 @@ internal unsafe partial class VulkanWindowTarget {
     var submitResult VkResult = VkConstants.VK_NOT_READY
     if !mailbox.TakeSubmitCompletion(out submitResult) {
       return false
+    }
+    if let recorder = TraceRecorder {
+      recorder.Instant(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
+        TraceContext(), int32(submitResult), source: "submit.completion-observed")
     }
     if submitResult != VkConstants.VK_SUCCESS {
       mailbox.ResetSubmitCompletion()
@@ -409,6 +420,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func CompleteQueuePresent(presentResult VkResult) bool {
+    if let recorder = TraceRecorder {
+      recorder.Instant(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
+        TraceContext(), int32(presentResult), source: "present.completion-observed")
+    }
     var completed = false
     var acceptedTicks int64
     guard let current = generation else {
@@ -441,6 +456,10 @@ internal unsafe partial class VulkanWindowTarget {
         if completed {
           acceptedTicks = Stopwatch.GetTimestamp()
           RecordFirstSuccessfulPresent()
+          if let recorder = TraceRecorder {
+            recorder.Instant(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
+              TraceContext(), int32(presentResult), source: "present.accepted")
+          }
         }
         if completed && presentId != 0uL {
           presentationRetirement.AttachPendingPresentationLatency(

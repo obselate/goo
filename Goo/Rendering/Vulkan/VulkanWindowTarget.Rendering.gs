@@ -44,6 +44,12 @@ internal unsafe partial class VulkanWindowTarget {
     if framebufferWidth <= 0 || framebufferHeight <= 0 {
       return
     }
+    if let recorder = FrameRecorder.Current {
+      if pendingTraceId == recorder.TraceId {
+        activeTraceContext = pendingTraceContext
+        activeTraceId = pendingTraceId
+      }
+    }
     activeFrameId = nextFrameId + 1uL
     nextFrameId = activeFrameId
     frameFailureRetryable = false
@@ -237,6 +243,7 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
       activeSceneVersion = compileResult.FrameVersion
+      if TraceRecorder != nil { activeTraceContext.SceneVersion = activeSceneVersion }
       var damageRegion VulkanDamageRegion
       var fullRedraw bool
       var hasDamage = sceneCompiler.BuildDamage(

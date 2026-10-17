@@ -696,6 +696,7 @@ Sources:
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
 - [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
+- [`Window.Profile.gs`](../../Goo/Window/WindowParts/Window.Profile.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 - [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
 - [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)

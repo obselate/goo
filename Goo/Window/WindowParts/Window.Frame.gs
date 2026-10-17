@@ -192,6 +192,7 @@ public partial class Window {
       } finally {
         try {
           if !stylesFlushed {
+            if profiling { profiler.Record(FrameProfileStage.Reconcile, reconcileProfile, -1) }
             pendingReconcileEffects = combineEffects(pendingReconcileEffects, rec.Effects)
             rec.DiscardStyles()
           }
@@ -408,8 +409,13 @@ public partial class Window {
       return
     }
     let point = profiler.Start()
-    layout.Calculate(n, portalRoot, width, height)
-    profiler.Record(FrameProfileStage.Layout, point)
+    var completed = false
+    try {
+      layout.Calculate(n, portalRoot, width, height)
+      completed = true
+    } finally {
+      profiler.Record(FrameProfileStage.Layout, point, if completed { 0 } else { -1 })
+    }
   }
 
   private func drain(rec Reconciler) {

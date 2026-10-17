@@ -32,6 +32,9 @@ internal class DiagnosticPipeClient {
   internal let Stream NamedPipeServerStream
   internal let Capture DiagnosticCaptureTracker
   internal var Worker Thread?
+  internal var Recorder FrameRecorder?
+  internal var TraceOwner Guid
+  internal prop IsClosed bool { get -> Volatile.Read(&closed) != 0 }
   private var deadline int64
   private var watchdog Timer?
   private var closed int32
@@ -51,13 +54,17 @@ internal class DiagnosticPipeClient {
 
   internal func Close() {
     if Interlocked.Exchange(&closed, 1) != 0 { return }
+    lock this {
+      Recorder?.Stop(true)
+      Recorder = nil
+    }
     watchdog?.Dispose()
     watchdog = nil
     Stream.Dispose()
   }
 }
 
-internal class DiagnosticPipeHost : IDisposable {
+internal partial class DiagnosticPipeHost : IDisposable {
   private const MaxClients int32 = 8
   private let session DevToolsSession
   private let endpoint DiagnosticEndpoint
@@ -237,6 +244,13 @@ internal class DiagnosticPipeHost : IDisposable {
         return errorResponse(id, "protocol", "Request command is required.")
       }
       let payload = if root.TryGetProperty("payload", out var body) { body } else { root }
+      if command == "profiler.read" {
+        if payload.ValueKind != JsonValueKind.Object {
+          return errorResponse(id, "invalid-input", "Profiler read payload must be an object.")
+        }
+        try { return response(id, readProfile(client, payload)) }
+        catch (error ArgumentException) { return errorResponse(id, "invalid-input", error.Message) }
+      }
       return dispatchOnUi(client, id, command, payload)
     } catch (error JsonException) {
       return errorResponse("", "invalid-json", error.Message)
@@ -297,11 +311,18 @@ internal class DiagnosticPipeHost : IDisposable {
   }
 
   private func execute(client DiagnosticPipeClient, command string, payload JsonElement) string {
+    if client.IsClosed { throw ObjectDisposedException("DiagnosticPipeClient") }
+    if command == "profiler.start" { return startProfile(client, payload) }
+    if command == "profiler.stop" { return stopProfile(client, payload) }
     if command == "input" { return session.InputPayload(payload) }
     if command == "snapshot" || command == "tree.snapshot" {
       return snapshotPayload(session.CaptureSnapshot(true))
     }
     if command == "capture" {
+      if let recorder = FrameRecorder.Current {
+        recorder.Instant(VulkanDiagnosticEventIds.Readback, VulkanDiagnosticCategories.Runtime,
+          FrameTraceContext{WindowId: endpoint.WindowId}, source: "capture.command")
+      }
       return session.CapturePayload(client.Capture)
     }
     session.RequireNoInputGesture()
@@ -352,6 +373,7 @@ internal class DiagnosticPipeHost : IDisposable {
   private func hello() string {
     let builder = StringBuilder()
     builder.Append("{\"type\":\"hello\",\"protocol\":").Append(quote(endpoint.Protocol)).Append(",\"version\":").Append(endpoint.Version).Append(",\"pid\":").Append(endpoint.ProcessId).Append(",\"windowId\":").Append(quote(endpoint.WindowId)).Append(",\"sessionId\":").Append(quote(endpoint.SessionId)).Append(",\"capabilities\":[\"tree.snapshot\",\"tree.resolved-semantics\",\"target.handles\",\"inspect.enter\",\"inspect.exit\",\"inspect.select\",\"inspect.clear\",\"capture.rgba8\",\"runtime-overrides\",\"runtime-overrides.describe\"")
+    builder.Append(",\"profiler.trace.v1\"")
     if session.AllowsInput { builder.Append(",\"input\",\"input.gesture-lease\"") }
     builder.Append("],\"runtimeOverrideProperties\":").Append(diagnosticOverridePropertiesPayload()).Append("}")
     return builder.ToString()

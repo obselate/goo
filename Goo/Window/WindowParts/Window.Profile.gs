@@ -5,6 +5,21 @@ import System.Collections.Generic
 import System.Diagnostics
 import System.Text
 
+/// Window frame profiling and trace identity.
+public partial class Window {
+  internal prop ProfileWindowId string { get -> profiler.WindowId }
+
+  internal func ProfileMetadata() FrameTraceRecord {
+    var value = profiler.Sink?.Describe() ?? FrameTraceRecord{
+      Kind: FrameTraceKind.Metadata, Source: "renderer", Validity: "unavailable",
+    }
+    var context = value.Context
+    context.WindowId = profiler.WindowId
+    value.Context = context
+    return value
+  }
+}
+
 internal enum FrameProfileStage {
   Frame; Events; Input; Tree; Motion; Reconcile; Build; Diff; StyleResolve;
   Transitions; Layout; InputTree;
@@ -14,11 +29,18 @@ internal enum FrameProfileStage {
 internal data struct FrameProfilePoint {
   internal var Ticks int64
   internal var Bytes int64
+  internal var TraceTicks int64
+  internal var TraceBytes int64
+  internal var Recorder FrameRecorder?
+  internal var Context FrameTraceContext
 }
 
 internal interface FrameProfileSink {
   prop Active bool { get }
-  func Record(stage FrameProfileStage, ticks int64, bytes int64);
+  func BeginPump(recorder FrameRecorder, context FrameTraceContext);
+  func Describe() FrameTraceRecord;
+  func Record(stage FrameProfileStage, start FrameProfilePoint, end FrameProfilePoint, result int32);
+  func RecordDerived(stage FrameProfileStage, ticks int64, bytes int64);
 }
 
 internal class FrameProfileTotal {
@@ -41,10 +63,25 @@ internal class FrameProfiler {
   private var frames int32
   private var rendered int32
   private var styleResolveNodes int64
+  private var windowId string?
+  private var context FrameTraceContext
+  private var activeTraceId string?
+
+  internal prop WindowId string {
+    get {
+      if let current = windowId { return current }
+      let created = "window-" + Guid.NewGuid().ToString("N")
+      windowId = created
+      return created
+    }
+  }
 
   internal prop Active bool{
     get {
       if enabled {
+        return true
+      }
+      if FrameRecorder.Current != nil {
         return true
       }
       if let current = sink {
@@ -64,27 +101,51 @@ internal class FrameProfiler {
   internal init() {
     enabled = Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1"
     warmupFrames = 60
+    BeginPump()
   }
 
-  internal func Start() FrameProfilePoint -> FrameProfilePoint {
-    Ticks: Stopwatch.GetTimestamp(),
-    Bytes: GC.GetAllocatedBytesForCurrentThread(),
+  internal func BeginPump() {
+    if let current = FrameRecorder.Current {
+      activeTraceId = current.TraceId
+      context = FrameTraceContext{WindowId: WindowId, PumpId: current.NextPump()}
+      sink?.BeginPump(current, context)
+    }
   }
 
-  internal func Record(stage FrameProfileStage, start FrameProfilePoint) {
+  internal func Start() FrameProfilePoint {
+    let current = FrameRecorder.Current
+    if current == nil && !enabled && sink?.Active != true { return FrameProfilePoint{} }
+    if current != nil && activeTraceId != current.TraceId { BeginPump() }
+    return FrameProfilePoint{
+      Ticks: Stopwatch.GetTimestamp(),
+      Bytes: GC.GetAllocatedBytesForCurrentThread(),
+      Recorder: current,
+      Context: context,
+    }
+  }
+
+  internal func Record(stage FrameProfileStage, start FrameProfilePoint, result int32 = 0) {
     if !Active { return }
-    let elapsed = Elapsed(start)
+    let end = Start()
+    let ticks = end.Ticks - start.Ticks
+    let bytes = end.Bytes - start.Bytes
     if enabled {
-      Add(stage, elapsed.Ticks, elapsed.Bytes, 1)
+      Add(stage, ticks, bytes, 1)
     }
+    RecordTrace(stage, start, end, result)
     if let current = sink {
-      current.Record(stage, elapsed.Ticks, elapsed.Bytes)
+      current.Record(stage, start, end, result)
     }
   }
 
-  internal func Elapsed(start FrameProfilePoint) FrameProfilePoint -> FrameProfilePoint {
-    Ticks: Stopwatch.GetTimestamp() - start.Ticks,
-    Bytes: GC.GetAllocatedBytesForCurrentThread() - start.Bytes,
+  internal func RecordTrace(stage FrameProfileStage, start FrameProfilePoint,
+    end FrameProfilePoint, result int32 = 0) {
+    if let current = start.Recorder {
+      let ticks = if start.TraceTicks > 0L { start.TraceTicks } else { start.Ticks }
+      let bytes = if start.TraceTicks > 0L { start.TraceBytes } else { start.Bytes }
+      current.Duration(uint64(int32(stage)), 0uL, start.Context, ticks, end.Ticks,
+        end.Bytes - bytes, result, source: if stage == FrameProfileStage.Paint { "target.render" } else { "cpu.phase" })
+    }
   }
 
   internal func RecordStyleResolveNodes(nodes int64) {
@@ -101,7 +162,8 @@ internal class FrameProfiler {
     resolveBytes int64,
     resolveCalls int64,) {
       if !Active { return }
-      let elapsed = Elapsed(start)
+      let end = Start()
+      let elapsed = FrameProfilePoint{Ticks: end.Ticks - start.Ticks, Bytes: end.Bytes - start.Bytes}
       let diffTicks = elapsed.Ticks - buildTicks - resolveTicks
       let diffBytes = elapsed.Bytes - buildBytes - resolveBytes
       let safeDiffTicks = diffTicks < 0 ? 0 : diffTicks
@@ -112,11 +174,12 @@ internal class FrameProfiler {
         Add(FrameProfileStage.StyleResolve, resolveTicks, resolveBytes, resolveCalls)
         Add(FrameProfileStage.Diff, safeDiffTicks, safeDiffBytes, 1)
       }
+      RecordTrace(FrameProfileStage.Reconcile, start, end)
       if let current = sink {
-        current.Record(FrameProfileStage.Reconcile, elapsed.Ticks, elapsed.Bytes)
-        current.Record(FrameProfileStage.Build, buildTicks, buildBytes)
-        current.Record(FrameProfileStage.StyleResolve, resolveTicks, resolveBytes)
-        current.Record(FrameProfileStage.Diff, safeDiffTicks, safeDiffBytes)
+        current.Record(FrameProfileStage.Reconcile, start, end, 0)
+        current.RecordDerived(FrameProfileStage.Build, buildTicks, buildBytes)
+        current.RecordDerived(FrameProfileStage.StyleResolve, resolveTicks, resolveBytes)
+        current.RecordDerived(FrameProfileStage.Diff, safeDiffTicks, safeDiffBytes)
       }
     }
 
@@ -128,9 +191,10 @@ internal class FrameProfiler {
     total.Calls = total.Calls + calls
   }
 
-  internal func EndFrame(start FrameProfilePoint, didRender bool) {
+  internal func EndFrame(start FrameProfilePoint, didRender bool, deferred bool = false) {
+    if !enabled && FrameRecorder.Current == nil { return }
+    Record(FrameProfileStage.Frame, start, if didRender { 1 } else if deferred { 2 } else { 0 })
     if !enabled { return }
-    Record(FrameProfileStage.Frame, start)
     if warmupFrames > 0 {
       warmupFrames--
       Reset()

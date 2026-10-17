@@ -156,6 +156,10 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
         mailbox.CancelSubmit()
         throw error
       }
+      if let recorder = mailbox.TraceRecorder {
+        recorder.Instant(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
+          mailbox.TraceContext, source: "submit.enqueue")
+      }
       pending[tail] = mailbox
       tail = (tail + 1) % MailboxCapacity
       count = count + 1
@@ -175,6 +179,10 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
       }
       if mailbox.Phase != VulkanQueueMailboxPhase.PresentQueued {
         throw InvalidOperationException("Vulkan queue mailbox has no queued presentation")
+      }
+      if let recorder = mailbox.TraceRecorder {
+        recorder.Instant(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
+          mailbox.TraceContext, source: "present.enqueue")
       }
       pending[tail] = mailbox
       tail = (tail + 1) % MailboxCapacity

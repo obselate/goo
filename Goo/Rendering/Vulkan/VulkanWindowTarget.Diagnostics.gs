@@ -1,8 +1,46 @@
 package Goo
 
 import System.Diagnostics
+import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
+  private var pendingTraceContext FrameTraceContext
+  private var activeTraceContext FrameTraceContext
+  private var pendingTraceId string?
+  private var activeTraceId string?
+
+  public func BeginPump(recorder FrameRecorder, context FrameTraceContext) {
+    pendingTraceContext = context
+    pendingTraceId = recorder.TraceId
+  }
+
+  public func Describe() FrameTraceRecord {
+    var properties = VkPhysicalDeviceProperties{}
+    let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
+    getProperties(physicalDevice, &properties)
+    return FrameTraceRecord{Kind: FrameTraceKind.Metadata,
+      Context: FrameTraceContext{DeviceId: uint64(device), DeviceGeneration: runtime?.Generation ?? 0uL},
+      Name: Marshal.PtrToStringUTF8(nint(&properties.deviceName[0])),
+      Source: "vulkan.device", Validity: "available",
+      Value0: uint64(properties.vendorID), Value1: uint64(properties.deviceID)}
+  }
+
+  private prop TraceRecorder FrameRecorder? {
+    get {
+      let current = FrameRecorder.Current
+      return if current != nil && current.TraceId == activeTraceId { current } else { nil }
+    }
+  }
+
+  private func TraceContext() FrameTraceContext {
+    var context = activeTraceContext
+    context.FrameId = activeFrameId
+    context.DeviceId = uint64(device)
+    context.DeviceGeneration = runtime?.Generation ?? 0uL
+    if let current = generation { context.Generation = current.Generation }
+    context.ImageIndex = activeImageIndex
+    return context
+  }
   internal prop LastClipMaskFrameStats VulkanClipMaskFrameStats{
     get -> clipMaskFrameStats
   }
@@ -15,7 +53,11 @@ internal unsafe partial class VulkanWindowTarget {
     get -> diagnostics != nil
   }
 
-  public func Record(stage FrameProfileStage, ticks int64, bytes int64) {
+  public func Record(stage FrameProfileStage, start FrameProfilePoint, end FrameProfilePoint, result int32) {
+    RecordDerived(stage, end.Ticks - start.Ticks, end.Bytes - start.Bytes)
+  }
+
+  public func RecordDerived(stage FrameProfileStage, ticks int64, bytes int64) {
     if diagnostics == nil {
       return
     }
@@ -64,7 +106,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func DiagnosticTimestamp() uint64 {
-    if diagnostics == nil {
+    if diagnostics == nil && TraceRecorder == nil {
       return 0uL
     }
     return uint64(Stopwatch.GetTimestamp())
@@ -328,6 +370,9 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RecordDiagnosticEvent(eventId uint64, category uint64, severity uint64,
     result int32, value0 uint64, value1 uint64) {
+      if let recorder = TraceRecorder {
+        recorder.Instant(eventId, category, TraceContext(), result, value0, value1)
+      }
       try {
         if let current = diagnostics {
           current.Record(
@@ -355,6 +400,10 @@ internal unsafe partial class VulkanWindowTarget {
     if result == VkConstants.VK_NOT_READY || result == VkConstants.VK_TIMEOUT {
       return
     }
+    if let recorder = TraceRecorder {
+      recorder.Instant(eventId, VulkanDiagnosticCategories.Timing, TraceContext(), int32(result),
+        source: "result")
+    }
     try {
       if let current = diagnostics {
         current.RecordResult(
@@ -369,12 +418,17 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecordDiagnosticTiming(eventId uint64, category uint64, start uint64) {
+    if diagnostics == nil && TraceRecorder == nil { return }
     if start == 0uL {
       return
     }
+    let end = uint64(Stopwatch.GetTimestamp())
+    if let recorder = TraceRecorder {
+      recorder.Duration(eventId, category, TraceContext(), int64(start), int64(end),
+        source: "cpu.instrumented")
+    }
     try {
       if let current = diagnostics {
-        let end = uint64(Stopwatch.GetTimestamp())
         current.RecordStage(
           0uL,
           0uL,
@@ -460,6 +514,14 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RecordDiagnosticPlan(start uint64, result VulkanSceneCompileResult,
     planCounters ScenePlanCounters, frame SceneFrame) {
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.Timing, start)
+      if let recorder = TraceRecorder {
+        var context = TraceContext()
+        context.SceneVersion = result.FrameVersion
+        recorder.Instant(VulkanDiagnosticEventIds.PlanCompile, VulkanDiagnosticCategories.FramePlan,
+          context, value0: uint64(result.DrawCount), value1: uint64(planCounters.RecordOperations),
+          source: "scene.counters")
+      }
       try {
         if let current = diagnostics {
           var dirtyChunkCount uint64 = 0uL
@@ -534,13 +596,19 @@ internal unsafe partial class VulkanWindowTarget {
               uint64(result.UnsupportedDetailDropped),
               uint64(result.UnsupportedDetailCount))
           }
-          RecordDiagnosticTiming(VulkanDiagnosticEventIds.PlanCompile,
-            VulkanDiagnosticCategories.Timing, start)
         }
       } catch (cleanup Exception) { }
     }
 
   private func RecordDiagnosticDamage(region VulkanDamageRegion, hasDamage bool) {
+    if let recorder = TraceRecorder {
+      recorder.Publish(FrameTraceRecord{Kind: FrameTraceKind.Instant,
+        Ticks: Stopwatch.GetTimestamp() - recorder.Origin, ThreadId: System.Environment.CurrentManagedThreadId,
+        Context: TraceContext(), EventId: VulkanDiagnosticEventIds.DamageBuild,
+        Category: VulkanDiagnosticCategories.FramePlan, X: region.X, Y: region.Y,
+        Width: region.Width, Height: region.Height, Result: if activePartialRedraw { 1 } else { 0 },
+        Value0: if hasDamage { 1uL } else { 0uL }, Source: "frame.damage"})
+    }
     if !hasDamage || region.IsEmpty {
       return
     }
@@ -570,6 +638,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecordDiagnosticUpload(start uint64, bytes uint64) {
+    if let recorder = TraceRecorder {
+      recorder.Duration(VulkanDiagnosticEventIds.UploadStage, VulkanDiagnosticCategories.Timing,
+        TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "upload.prepare")
+    }
     if bytes == 0uL {
       return
     }
@@ -585,6 +657,10 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func RecordDiagnosticRecord(start uint64, frame SceneFrame,
     recordResult VulkanPrimitiveRecordResult) {
+      if let recorder = TraceRecorder {
+        recorder.Duration(VulkanDiagnosticEventIds.CommandRecord, VulkanDiagnosticCategories.Timing,
+          TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "command.record")
+      }
       try {
         if let current = diagnostics {
           current.AddRecord(1uL)
@@ -616,6 +692,10 @@ internal unsafe partial class VulkanWindowTarget {
     }
 
   private func RecordDiagnosticSubmit(start uint64) {
+    if let recorder = TraceRecorder {
+      recorder.Duration(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
+        TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "submit.prepare-to-observed")
+    }
     try {
       if let current = diagnostics {
         if !startupFirstSubmitRecorded {
@@ -636,6 +716,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func RecordDiagnosticPresent(start uint64) {
+    if let recorder = TraceRecorder {
+      recorder.Duration(VulkanDiagnosticEventIds.SwapchainPresent, VulkanDiagnosticCategories.Timing,
+        TraceContext(), int64(start), Stopwatch.GetTimestamp(), source: "present.prepare-to-observed")
+    }
     try {
       if let current = diagnostics {
         current.AddPresent(1uL)
