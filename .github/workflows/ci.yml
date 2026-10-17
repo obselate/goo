@@ -66,9 +66,6 @@ jobs:
       - name: Build Goo with warnings as errors
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
-      - name: Build optional runtime SVG library
-        run: dotnet build Goo.Svg/Goo.Svg.csproj -c Release -p:TreatWarningsAsErrors=true
-
       - name: Regenerate API documentation
         run: |
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
@@ -83,11 +80,6 @@ jobs:
       - name: Run local PNG decoder and cache tests
         run: |
           dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
-
-      - name: Run focused runtime SVG tests
-        run: |
-          dotnet test tests/Goo.Svg.Tests/Goo.Svg.Tests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Build Goo DevTools CLI
@@ -438,8 +430,6 @@ jobs:
       - name: Build library and Vulkan verification projects
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build Goo.Svg/Goo.Svg.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj \
             -c Release -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
@@ -540,6 +530,10 @@ jobs:
 
           .github/scripts/with-headless-wayland.sh env \
             GOO_QUEUE_WAKE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_SVG_CORPUS_OUTPUT="$PWD/artifacts/reports/svg-corpus" \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
@@ -662,14 +656,6 @@ jobs:
         run: |
           mkdir -p artifacts/packages
           dotnet pack Goo/Goo.gsproj -c Release -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true \
-            -p:ContinuousIntegrationBuild=true \
-            -p:RepositoryCommit="$GITHUB_SHA" \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
-            -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
-            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
-          dotnet pack Goo.Svg/Goo.Svg.csproj \
-            -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true \
             -p:ContinuousIntegrationBuild=true \
             -p:RepositoryCommit="$GITHUB_SHA" \
@@ -849,7 +835,6 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -875,7 +860,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.Svg.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1008,10 +992,6 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-          dotnet nuget push "artifacts/packages/Goo.Svg.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1039,7 +1019,6 @@ jobs:
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
-            "artifacts/packages/Goo.Svg.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

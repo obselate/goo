@@ -55,8 +55,7 @@ repository default. Do not replace it with filename-based XML deletion:
 generic staging must preserve arbitrary XML, notices, licenses, globalization
 data, and features.
 
-See [native authoring](docs/native-authoring.md) for G# construction, formatting,
-and spread rules used by this repository.
+See [code conventions](CONVENTIONS.md) for repository rules and native authoring.
 
 ## Verification
 

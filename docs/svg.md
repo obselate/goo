@@ -1,16 +1,18 @@
-# Goo.Svg
+# SVG loading
 
-`Goo.Svg` is an optional runtime loader for Goo's immutable `VectorAsset` documents.
+SVG loading is part of `Goo`. Keep `import Goo.Svg` and the existing loading API.
+After upgrading to the next Goo release, remove the `Goo.Svg` PackageReference.
+`goo-widgets` also drops its `Goo.Svg` dependency.
 
 Upgrading from compiled `.gcv1` assets or `Goo.SvgCompiler`? See the
-[GCV1 migration guide](../docs/migrations/gcv1.md).
+[GCV1 migration guide](migrations/gcv1.md).
 
-```csharp
-using Goo.Svg;
+```gsharp
+import Goo.Svg
 
-var asset = Svg.Parse(svgText);
-var fromStream = Svg.Load(stream);
-var fromFile = Svg.Load("icon.svg");
+let asset = Svg.Parse(svgText)
+let fromStream = Svg.Load(stream)
+let fromFile = Svg.Load("icon.svg")
 ```
 
 Load once and retain the asset instead of parsing inside each `Build` call.
@@ -21,8 +23,7 @@ let icon = Svg.Load("icon.svg")
 Container{Width: 32, Height: 32, icon.Render(),}
 ```
 
-The core `Goo` package also supports authored `VectorNode` trees through
-`VectorAsset(x, y, width, height, roots)` without the SVG package.
+Authored `VectorNode` trees also use `VectorAsset(x, y, width, height, roots)`.
 
 Author paths and transforms in the asset's view-box coordinates. A path's own
 view-box metadata does not independently resize it within a document. Node child

@@ -13,6 +13,7 @@ These pages are generated from the Release `Goo.xml` file.
 - [Rendering](rendering.md)
 - [Shapes](shapes.md)
 - [Style](style.md)
+- [Svg](svg.md)
 - [Text](text.md)
 - [Tree](tree.md)
 - [Window](window.md)
