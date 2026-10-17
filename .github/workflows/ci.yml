@@ -338,6 +338,13 @@ jobs:
             libxkbcommon-dev mesa-vulkan-drivers vulkan-tools \
             wayland-protocols weston
 
+      - name: Pin Vulkan CPU driver
+        run: |
+          icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test "${#icds[@]}" -eq 1
+          test -f "${icds[0]}"
+          echo "VK_DRIVER_FILES=${icds[0]}" >> "$GITHUB_ENV"
+
       - name: Install pinned Vulkan validation layer
         run: |
           root="$RUNNER_TEMP/goo-vulkan-validation-layer"
@@ -423,6 +430,7 @@ jobs:
             artifacts/reports/vulkaninfo-summary.txt
           grep -F "$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/lib/x86_64-linux-gnu/libVkLayer_khronos_validation.so" \
             artifacts/reports/vulkaninfo-summary.txt
+          grep -E 'deviceType *= PHYSICAL_DEVICE_TYPE_CPU$' artifacts/reports/vulkaninfo-summary.txt
 
       - name: Fetch pinned Windows SDL runtime
         run: .github/scripts/fetch-sdl-win-x64.sh artifacts/native/win-x64/SDL3.dll
@@ -463,7 +471,9 @@ jobs:
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
+            2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
+          grep -E '"kind":"deviceSelection".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
 
       - name: Verify shared UI audio without a hardware device
         run: |
@@ -613,6 +623,9 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \
             GOO_ORDERED_MODIFIER_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env GOO_VK_DIAGNOSTICS=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
       - name: Record dependencies and reject known vulnerabilities
@@ -785,7 +798,9 @@ jobs:
           fi
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             env -u LD_LIBRARY_PATH GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
-            artifacts/nativeaot-onefile/Goo.PackageSmoke
+            artifacts/nativeaot-onefile/Goo.PackageSmoke \
+            2>&1 | tee artifacts/reports/vulkan-nativeaot-cpu-startup.txt
+          grep -E '"kind":"deviceSelection".*"deviceType":4,' artifacts/reports/vulkan-nativeaot-cpu-startup.txt
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke

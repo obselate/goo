@@ -3,6 +3,8 @@ package Goo
 internal interface VulkanSurfaceHost {
   prop LogicalWidth int32 { get; }
   prop LogicalHeight int32 { get; }
+  prop FramebufferWidth int32 { get; }
+  prop FramebufferHeight int32 { get; }
   prop Transparent bool { get; }
   prop VSync bool { get; }
   prop WindowHandle nint { get; }

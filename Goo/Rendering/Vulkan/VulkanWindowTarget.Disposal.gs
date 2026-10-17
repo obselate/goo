@@ -94,9 +94,6 @@ internal unsafe partial class VulkanWindowTarget {
         return
       }
     }
-    if let scene = imageScene {
-      try { scene.Dispose() } catch (cleanup Exception) { }
-    }
     CaptureDiagnosticWsi()
     CaptureDiagnosticResources()
     CaptureDiagnosticLiveMemory(VulkanDiagnosticEventIds.LiveMemory)
@@ -159,79 +156,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       return
     }
-    if let renderer = primitiveRenderer {
-      try { renderer.ReleaseImageReferences(sceneCompiler.Frame) } catch (cleanup Exception) { }
-    }
-    try { AbortUnsubmittedImageUploads() } catch (cleanup Exception) { }
-    try { AbortUnsubmittedPathUpload() } catch (cleanup Exception) { }
-    try { AbortUnsubmittedClipMask() } catch (cleanup Exception) { }
-    CloseDiagnosticFrame(false)
-    ClearActiveFrame()
-    DestroyDiagnosticTimestampPool()
-    let timestampPoolDestroyed = ForceDestroyDiagnosticTimestampPool()
-    if let renderer = primitiveRenderer {
-      try { renderer.Collect(CompletedGlobalSubmissionSerial()) } catch (cleanup Exception) { }
-      try { renderer.Dispose() } catch (cleanup Exception) { }
-      primitiveRenderer = nil
-    }
-    if let pool = layerPool {
-      try { pool.Dispose() } catch (cleanup Exception) { }
-      layerPool = nil
-    }
-    if let atlas = clipMaskAtlas {
-      try { atlas.RetireAll(uint64.MaxValue) } catch (cleanup Exception) { }
-      try { atlas.Dispose() } catch (cleanup Exception) { }
-      clipMaskAtlas = nil
-    }
-    clipMaskRedrawPending = false
-    clipMaskFrameStarted = false
-    clipMaskFramePrepared = false
-    clipMaskAtlasAbandoned = false
-    if let atlas = textAtlas {
-      try { atlas.RetireAll(uint64.MaxValue) } catch (cleanup Exception) { }
-      try { atlas.Collect(uint64.MaxValue) } catch (cleanup Exception) { }
-      try { atlas.AbortUploads() } catch (cleanup Exception) { }
-      try { atlas.Dispose() } catch (cleanup Exception) { }
-      textAtlas = nil
-    }
-    textScene = nil
-    RemoveTextAtlasDiagnosticContribution()
-    textRedrawPending = false
-    imageScene = nil
-    imageRedrawPending = false
-    imageResources = nil
-    if let scene = pathScene {
-      try { scene.Dispose() } catch (cleanup Exception) { }
-      pathScene = nil
-    }
-    pathRedrawPending = false
-    pathResources = nil
-    if let current = generation {
-      try {
-        let presentCompletionResult = current.WaitForPresentCompletion(presentationRetirement)
-        RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, presentCompletionResult)
-      } catch (cleanup Exception) { }
-      try { current.Dispose() } catch (cleanup Exception) { }
-      generation = nil
-    }
-    DisposeRetiredSwapchains()
-    frameSlots.Dispose()
-    if commandPool != 0uL && device != nint(0) {
-      let destroyCommandPool = dispatch.vkDestroyCommandPool
-      destroyCommandPool(device, commandPool, nil)
-      var bufferIndex int32 = 0
-      while bufferIndex < commandBufferObjectCount {
-        if let accounting = windowObjectAccounting {
-          accounting.Release()
-        }
-        bufferIndex = bufferIndex + 1
-      }
-      commandBufferObjectCount = 0
-      if let accounting = windowObjectAccounting {
-        accounting.Release()
-      }
-      commandPool = 0uL
-    }
+    let timestampPoolDestroyed = DestroyWindowResources()
     if surfaceCreated && instance != nint(0) {
       try { host.DestroyVulkanSurface(instance, surface) } catch (cleanup Exception) { }
       if let accounting = windowObjectAccounting {
@@ -325,6 +250,86 @@ internal unsafe partial class VulkanWindowTarget {
     activeImageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
     activeFrameId = 0uL
     frameBegun = false
+  }
+
+  private func DestroyWindowResources() bool {
+    if let scene = imageScene {
+      try { scene.Dispose() } catch (cleanup Exception) { }
+    }
+    if let renderer = primitiveRenderer {
+      try { renderer.ReleaseImageReferences(sceneCompiler.Frame) } catch (cleanup Exception) { }
+    }
+    try { AbortUnsubmittedImageUploads() } catch (cleanup Exception) { }
+    try { AbortUnsubmittedPathUpload() } catch (cleanup Exception) { }
+    try { AbortUnsubmittedClipMask() } catch (cleanup Exception) { }
+    CloseDiagnosticFrame(false)
+    ClearActiveFrame()
+    DestroyDiagnosticTimestampPool()
+    let timestampPoolDestroyed = ForceDestroyDiagnosticTimestampPool()
+    if let renderer = primitiveRenderer {
+      try { renderer.Collect(CompletedGlobalSubmissionSerial()) } catch (cleanup Exception) { }
+      try { renderer.Dispose() } catch (cleanup Exception) { }
+      primitiveRenderer = nil
+    }
+    if let pool = layerPool {
+      try { pool.Dispose() } catch (cleanup Exception) { }
+      layerPool = nil
+    }
+    if let atlas = clipMaskAtlas {
+      try { atlas.RetireAll(uint64.MaxValue) } catch (cleanup Exception) { }
+      try { atlas.Dispose() } catch (cleanup Exception) { }
+      clipMaskAtlas = nil
+    }
+    clipMaskRedrawPending = false
+    clipMaskFrameStarted = false
+    clipMaskFramePrepared = false
+    clipMaskAtlasAbandoned = false
+    if let atlas = textAtlas {
+      try { atlas.RetireAll(uint64.MaxValue) } catch (cleanup Exception) { }
+      try { atlas.Collect(uint64.MaxValue) } catch (cleanup Exception) { }
+      try { atlas.AbortUploads() } catch (cleanup Exception) { }
+      try { atlas.Dispose() } catch (cleanup Exception) { }
+      textAtlas = nil
+    }
+    textScene = nil
+    RemoveTextAtlasDiagnosticContribution()
+    textRedrawPending = false
+    imageScene = nil
+    imageRedrawPending = false
+    imageResources = nil
+    if let scene = pathScene {
+      try { scene.Dispose() } catch (cleanup Exception) { }
+      pathScene = nil
+    }
+    pathRedrawPending = false
+    pathResources = nil
+    if let current = generation {
+      try {
+        let presentCompletionResult = current.WaitForPresentCompletion(presentationRetirement)
+        RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, presentCompletionResult)
+      } catch (cleanup Exception) { }
+      try { current.Dispose() } catch (cleanup Exception) { }
+      generation = nil
+    }
+    DisposeRetiredSwapchains()
+    frameSlots.Dispose()
+    if commandPool != 0uL && device != nint(0) {
+      let destroyCommandPool = dispatch.vkDestroyCommandPool
+      destroyCommandPool(device, commandPool, nil)
+      var bufferIndex int32 = 0
+      while bufferIndex < commandBufferObjectCount {
+        if let accounting = windowObjectAccounting {
+          accounting.Release()
+        }
+        bufferIndex = bufferIndex + 1
+      }
+      commandBufferObjectCount = 0
+      if let accounting = windowObjectAccounting {
+        accounting.Release()
+      }
+      commandPool = 0uL
+    }
+    return timestampPoolDestroyed
   }
 
 }

@@ -244,6 +244,9 @@ func RunPrimitiveSmoke() {
       throw InvalidOperationException("Primitive smoke did not record draw, plan, and record work")
     }
     Console.SetError(originalError)
+    for line in diagnostics.Split('\n') {
+      if line.StartsWith("{\"kind\":\"deviceSelection\",") { Console.WriteLine(line) }
+    }
     Console.WriteLine("primitive: mounted=1 scroll=1 drawCount=" + drawCount.ToString()
       +" planCompileCount=" + planCompileCount.ToString()
       +" recordCount=" + recordCount.ToString() + " close=1")

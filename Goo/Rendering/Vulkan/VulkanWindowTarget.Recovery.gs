@@ -286,6 +286,19 @@ internal unsafe partial class VulkanWindowTarget {
     sceneCompiler.SetTextScene(textScene)
     sceneCompiler.SetImageScene(imageScene)
     sceneCompiler.SetPathScene(pathScene)
+    let width = if requestedWidth > 0 { requestedWidth } else { framebufferWidth }
+    let height = if requestedHeight > 0 { requestedHeight } else { framebufferHeight }
+    if generation == nil && width > 0 && height > 0 {
+      if !RecreateSwapchain(width, height) {
+        throw InvalidOperationException("Vulkan swapchain recreation failed during device recovery")
+      }
+    }
+    frameFailed = false
+    recoveryPending = false
+    forceFullRedraw = true
+  }
+
+  private func RebuildClipMaskAtlasAfterDeviceRecovery() {
     if clipMaskAtlasAbandoned {
       guard let atlas = clipMaskAtlas else {
         throw InvalidOperationException("Vulkan clip mask atlas was lost during recovery")
@@ -306,16 +319,6 @@ internal unsafe partial class VulkanWindowTarget {
       clipMaskAtlasAbandoned = false
       clipMaskRedrawPending = true
     }
-    let width = if requestedWidth > 0 { requestedWidth } else { framebufferWidth }
-    let height = if requestedHeight > 0 { requestedHeight } else { framebufferHeight }
-    if width > 0 && height > 0 {
-      if !RecreateSwapchain(width, height) {
-        throw InvalidOperationException("Vulkan swapchain recreation failed during device recovery")
-      }
-    }
-    frameFailed = false
-    recoveryPending = false
-    forceFullRedraw = true
   }
 
   internal func FinishDeviceRecovery() {

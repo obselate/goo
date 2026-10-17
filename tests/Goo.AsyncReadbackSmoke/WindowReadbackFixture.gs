@@ -818,6 +818,33 @@ internal partial class VulkanSceneCompiler {
 
 internal class WindowReadbackTestFixture {
   shared {
+    internal func VerifyCandidateStartup(root Cell) {
+      var attempts int32 = 0
+      VulkanWindowTarget.CandidateStartupForTest = (deviceType int32) -> {
+        if let published = VulkanSharedRuntime.TryAcquire() {
+          published.Dispose()
+          throw InvalidOperationException("candidate was published before startup completed")
+        }
+        attempts = attempts + 1
+        if attempts == 1 { throw InvalidOperationException("injected candidate startup failure") }
+      }
+      let window = Window{Title: "Vulkan startup rollback", Width: 64, Height: 64, VSync: false, Root: root}
+      try {
+        try {
+          window.Open()
+          if attempts < 2 { throw InvalidOperationException("candidate fallback was not exercised") }
+        } catch (error InvalidOperationException) {
+          if attempts != 1 || !error.Message.Contains("injected candidate startup failure") { throw error }
+        }
+      } finally {
+        VulkanWindowTarget.CandidateStartupForTest = nil
+        window.Close()
+      }
+      if attempts == 0 { throw InvalidOperationException("candidate startup probe was not reached") }
+      Console.WriteLine("vulkan-startup-rollback: attempts=" + attempts.ToString()
+        + " unpublished=ok cleanup=ok")
+    }
+
     internal func AbortPrimitiveMetrics(window Window, finish bool) VulkanPrimitiveFrameStats ->
     window.AbortPrimitiveMetricsForTest(finish)
 

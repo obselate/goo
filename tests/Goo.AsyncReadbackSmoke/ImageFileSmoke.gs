@@ -84,7 +84,11 @@ func RunImageFileSmoke() {
       WindowReadbackTestFixture.ForceRender(window, 0.0)
     }
   }
-  ReadbackValidateCommonDiagnostics(capturedError.ToString())
+  let diagnostics = capturedError.ToString()
+  ReadbackValidateCommonDiagnostics(diagnostics)
+  for line in diagnostics.Split('\n') {
+    if line.StartsWith("{\"kind\":\"deviceSelection\",") { Console.WriteLine(line) }
+  }
   Console.WriteLine("image-file-smoke: png_pixels=4 alpha=verified cache_disposed=1 source_disposed=1 close=1")
   for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg", "local-transparent.gif", "local-animated.gif"} {
     RunOtherImageFile(name)
