@@ -69,8 +69,7 @@ are optional and installed separately. The starter template already references
 
 | Package | Purpose | Install |
 | --- | --- | --- |
-| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, and native runtime assets | `dotnet add package Goo` |
-| [Goo.Svg](https://www.nuget.org/packages/Goo.Svg/) | [Load SVG files at runtime](Goo.Svg/README.md) | `dotnet add package Goo.Svg` |
+| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, [SVG loading](docs/svg.md), and native runtime assets | `dotnet add package Goo` |
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
 | [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
 | [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
@@ -159,6 +158,9 @@ See the [native authoring guide](docs/native-authoring.md) for composition, type
 
 ## Platforms
 
+Check [platform preflight and troubleshooting](docs/platform-preflight.md)
+before creating or distributing an app.
+
 Goo ships runtime assets for Windows x64, Linux x64, macOS arm64, Android ARM64,
 and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
 
@@ -192,6 +194,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 
 ## Further reading
 
+- [Ship a desktop app](docs/shipping.md)
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
 - [Goo agent plugin for Codex and OMP](plugins/goo/README.md)
