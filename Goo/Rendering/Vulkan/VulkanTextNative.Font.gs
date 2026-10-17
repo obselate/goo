@@ -432,6 +432,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         if let recorder = FrameRecorder.Current {
           let id = Profile(recorder, true)
           recorder.Resource(FrameResourceKind.FontFace, id, VulkanDiagnosticEventIds.ResourceEvict, "font.face.release")
+          recorder.ReleaseManagedResource(this)
         }
         harfBuzzFace = nint(0)
       }

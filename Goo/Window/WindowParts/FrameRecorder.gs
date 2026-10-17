@@ -207,7 +207,16 @@ internal partial class FrameRecorder {
                 return
             }
             put(value)
-            if value.ResourceId != 0uL { resourceRecords.Add(value.ResourceId) }
+            if value.ResourceId != 0uL {
+                if value.Kind == FrameTraceKind.ResourceLifecycle
+                    && (value.EventId == VulkanDiagnosticEventIds.ResourceEvict
+                        || value.EventId == VulkanDiagnosticEventIds.PipelineDestroy
+                        || value.EventId == VulkanDiagnosticEventIds.SwapchainDestroy) {
+                    resourceRecords.Remove(value.ResourceId)
+                } else {
+                    resourceRecords.Add(value.ResourceId)
+                }
+            }
         }
     }
 

@@ -285,6 +285,7 @@ internal class ProfilerSmoke {
                 }
                 Require(imageId != 0uL, "Profiler capture has no LayerTarget image Create")
                 Require(staging, "Profiler capture has no Staging buffer Create")
+                after = VerifyResourceChurn(window, recorder, after)
                 for i in 0 ... 40000 { recorder.Instant(0uL, 0uL, FrameTraceContext{}) }
                 var gap = false
                 more = true
@@ -319,6 +320,47 @@ internal class ProfilerSmoke {
                 while window.IsOpen && Stopwatch.GetTimestamp() < deadline { window.Pump(0.0) }
                 Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", diagnostics)
             }
+        }
+
+        private func VerifyResourceChurn(window Window, recorder FrameRecorder, afterSeq int64) int64 {
+            let target = WindowReadbackTestFixture.CaptureTarget(window)!!
+            var after = afterSeq
+            var created = 0
+            var more bool
+            var state string
+            var dropped int64
+            for i in 0 ... 12000 {
+                target.CreateReleaseProfilerImageForTest()
+                if i % 128 != 127 && i != 11999 { continue }
+                let records = recorder.Read(after, 10000, out after, out more, out state, out dropped)
+                for record in records {
+                    if record.Kind == FrameTraceKind.ResourceLifecycle
+                        && record.EventId == VulkanDiagnosticEventIds.ResourceCreate
+                        && record.ResourceKind == int32(FrameResourceKind.Image)
+                        && record.Width == 8 && record.Height == 8 { created++ }
+                }
+            }
+            Require(created == 12000 && dropped == 0L, "Profiler churn lost resource identities")
+            let cutoff = Stopwatch.GetTimestamp() - recorder.Origin
+            let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
+            var managed uint64
+            var native uint64
+            var entries uint64?
+            while entries == nil && Stopwatch.GetTimestamp() < deadline {
+                window.Pump(0.0)
+                let records = recorder.Read(after, 10000, out after, out more, out state, out dropped)
+                for record in records {
+                    if record.Kind != FrameTraceKind.Counter || record.Ticks < cutoff { continue }
+                    if record.Name == "profiler.metadata.managed.registered" { managed = record.Value0 ?? 0uL }
+                    if record.Name == "profiler.metadata.native.entries" { native = record.Value0 ?? 0uL }
+                    if record.Name == "profiler.metadata.resource.entries" { entries = record.Value0 }
+                }
+            }
+            Require(entries != nil && entries <= managed + native + 4uL,
+                "Profiler resource ledger retained released identities")
+            Console.WriteLine("profiler-churn: created=" + created.ToString() + " dropped=" + dropped.ToString()
+                + " managed=" + managed.ToString() + " native=" + native.ToString() + " ledger=" + entries.ToString())
+            return after
         }
 
         private func RecordThroughPipe(window Window, root ProfilerSmokeCell, sourceCache ImageSourceCache, name string, startup FrameRecorder?,
@@ -791,5 +833,18 @@ internal class ProfilerSmoke {
                 )
             }
         }
+    }
+}
+
+internal unsafe partial class VulkanWindowTarget {
+    internal func CreateReleaseProfilerImageForTest() {
+        guard let allocator = memoryAllocator else { throw InvalidOperationException("Profiler churn allocator is missing") }
+        let image = VulkanImageFactory.Create2D(device, dispatch, allocator, nil,
+            VkExtent2D{width: 8u, height: 8u}, VkConstants.VK_FORMAT_R8G8B8A8_UNORM,
+            uint32(VkConstants.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT), uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
+            VulkanMemoryPolicy.DeviceLocalRequiredPreferred)
+        dispatch.vkDestroyImageView(device, image.ImageView, nil)
+        dispatch.vkDestroyImage(device, image.Image, nil)
+        allocator.Release(image.Allocation)
     }
 }

@@ -122,6 +122,9 @@ internal unsafe partial class VulkanMemoryAllocator {
       HeapFlags: uint64(MemoryHeap(memoryProperties, block.heapIndex).flags), Dedicated: block.dedicated,
       Source: "vulkan.block", Validity: if kind == FrameTraceKind.ResourceBaseline { "already-live" } else { "available" },
     })
+    if kind == FrameTraceKind.ResourceLifecycle && eventId == VulkanDiagnosticEventIds.ResourceEvict {
+      recorder.ReleaseManagedResource(block)
+    }
   }
 
   internal func ProfileAllocation(recorder FrameRecorder, allocation VulkanMemoryAllocation,
@@ -159,6 +162,9 @@ internal unsafe partial class VulkanMemoryAllocator {
         if allocation.state == VulkanMemoryAllocationState.Retired { "already-retired" } else { "already-live" }
       } else { "available" },
     })
+    if kind == FrameTraceKind.ResourceLifecycle && eventId == VulkanDiagnosticEventIds.ResourceEvict {
+      recorder.ReleaseManagedResource(allocation)
+    }
   }
 
   private func ImagePayload(width int32, height int32, format VkFormat, layers uint32) uint64? {

@@ -104,6 +104,7 @@ internal partial class FrameRecorder {
         lock gate {
             Counter("profiler.metadata.managed.registered", "recorder", uint64(managedIdentityCount), ticks, unit: "count")
             Counter("profiler.metadata.native.entries", "recorder", uint64(nativeResources.Count), ticks, unit: "count")
+            Counter("profiler.metadata.resource.entries", "recorder", uint64(resourceRecords.Count), ticks, unit: "count")
             Counter("profiler.metadata.gpu.entries", "recorder", uint64(pendingGpu.Count), ticks, unit: "count")
             Counter("profiler.metadata.gpu.capacity", "recorder", uint64(pendingGpu.EnsureCapacity(0)), ticks, unit: "count")
         }

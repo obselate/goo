@@ -82,6 +82,12 @@ internal partial class FrameRecorder {
         }
     }
 
+    internal func ReleaseManagedResource(value object) {
+        lock gate {
+            if managedResources.Remove(value) { managedIdentityCount-- }
+        }
+    }
+
     internal func NativeResource(kind FrameResourceKind, device uint64, handle uint64, remove bool = false) uint64 {
         if handle == 0uL || !Object.ReferenceEquals(Current, this) { return 0uL }
         lock gate {

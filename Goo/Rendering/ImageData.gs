@@ -92,6 +92,7 @@ internal sealed class DecodedImage {
         if let recorder = FrameRecorder.Current {
           recorder.Resource(FrameResourceKind.ImageSource, Profile(recorder, true),
             VulkanDiagnosticEventIds.ResourceEvict, "image.decoded.release")
+          recorder.ReleaseManagedResource(this)
         }
         disposed = true
         pixels = nil
