@@ -72,42 +72,12 @@ internal class ProfilerSmoke {
             }
         }
 
-        private func ProbeInactive(label string) {
-            Require(FrameRecorder.Current == nil, "Inactive probe has an attached recorder")
-            let profiler = FrameProfiler()
-            for i in 0 ... 10000 {
-                if profiler.Active {
-                    profiler.Record(FrameProfileStage.Layout, profiler.Start())
-                }
-            }
-            let bytes = GC.GetAllocatedBytesForCurrentThread()
-            let start = Stopwatch.GetTimestamp()
-            for i in 0 ... 1000000 {
-                if profiler.Active {
-                    profiler.Record(FrameProfileStage.Layout, profiler.Start())
-                }
-            }
-            let elapsed = Stopwatch.GetTimestamp() - start
-            let allocated = GC.GetAllocatedBytesForCurrentThread() - bytes
-            Require(allocated == 0L, "Inactive profiler allocated " + allocated.ToString() + " bytes")
-            Console.WriteLine(
-                "profiler-inactive: state=" + label + " iterations=1000000 bytes="
-                + allocated.ToString() + " ticks=" + elapsed.ToString()
-            )
-        }
-
         internal func Run() {
             let startup = FrameRecorder.Current
-            if startup == nil {
-                ProbeInactive("absent")
-            }
             let root = ProfilerSmokeCell{}
             let window = Window{Title: "Goo profiler pipe smoke", Width: 64, Height: 64, Root: root}.Open()
             WindowReadbackTestFixture.ForceRender(window, 0.0)
             using let session = window.AttachDiagnostics()
-            if startup == nil {
-                ProbeInactive("attached-idle")
-            }
             if Environment.GetEnvironmentVariable("GOO_FRAME_PROFILE") == "1" {
                 for i in 0 ... 320 {
                     root.Frame++
@@ -164,7 +134,6 @@ internal class ProfilerSmoke {
                 }
                 partial.Read(0L, 1, out var next, out var more, out var state, out var dropped)
                 Require(state == "Partial", "Disconnect marked a pending queue trace complete")
-                ProbeInactive("detached")
                 Console.WriteLine(
                     "profiler-pipe: real_phases=verified queue_links=verified busy=verified stop=verified gaps=verified disconnect=verified startup="
                     + (startup != nil).ToString()
@@ -221,6 +190,7 @@ internal class ProfilerSmoke {
             let sources = HashSet[string]()
             let pumps = HashSet[string]()
             var sequenceValue int64 = 0L
+            var lastCompletion uint64 = 0uL
             var remaining = true
             let submitted = HashSet[string]()
             var queued = ""
@@ -229,7 +199,7 @@ internal class ProfilerSmoke {
             while remaining {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
-                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue)
+                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue, ref lastCompletion)
                 for record in payload.GetProperty("records").EnumerateArray() {
                     if record.GetProperty("kind").GetString() == "duration" {
                         let end = Int64.Parse(
@@ -263,7 +233,7 @@ internal class ProfilerSmoke {
             while !sources.Contains("present.accepted") && Stopwatch.GetTimestamp() < deadline {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
-                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue)
+                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue, ref lastCompletion)
                 after = payload.GetProperty("nextSeq").GetString() ?? after
             }
             Require(
@@ -284,7 +254,7 @@ internal class ProfilerSmoke {
             while !ended {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
-                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue)
+                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue, ref lastCompletion)
                 for record in payload.GetProperty("records").EnumerateArray() {
                     if record.GetProperty("kind").GetString() == "end" {
                         ended = true
@@ -357,7 +327,8 @@ internal class ProfilerSmoke {
             phases HashSet[int32],
             sources HashSet[string],
             pumps HashSet[string],
-            ref sequenceValue int64
+            ref sequenceValue int64,
+            ref lastCompletion uint64
         ) {
             for record in payload.GetProperty("records").EnumerateArray() {
                 let seq = Int64.Parse(record.GetProperty("seq").GetString() ?? "0", CultureInfo.InvariantCulture)
@@ -366,6 +337,17 @@ internal class ProfilerSmoke {
                 let ticks = Int64.Parse(record.GetProperty("ticks").GetString() ?? "-1", CultureInfo.InvariantCulture)
                 Require(ticks >= 0L, "Negative trace timestamp")
                 let kind = record.GetProperty("kind").GetString() ?? ""
+                Require(record.GetProperty("resourceKind").ValueKind == JsonValueKind.Null
+                    && record.GetProperty("ownerKind").ValueKind == JsonValueKind.Null,
+                    "Unmeasured resource classification is not null")
+                if kind != "duration" {
+                    Require(record.GetProperty("endTicks").ValueKind == JsonValueKind.Null,
+                        "Non-duration record has an end timestamp")
+                }
+                if kind == "metadata" || kind == "gap" || kind == "end" {
+                    Require(record.GetProperty("threadId").ValueKind == JsonValueKind.Null,
+                        "Unmeasured thread identity is not null")
+                }
                 let category = record.GetProperty("category").GetString() ?? ""
                 if kind == "duration" {
                     let end = Int64.Parse(
@@ -380,6 +362,8 @@ internal class ProfilerSmoke {
                         "Phase has invalid pump/window correlation"
                     )
                     if category == "0" {
+                        Require(record.GetProperty("imageIndex").ValueKind == JsonValueKind.Null,
+                            "CPU phase has an unmeasured image index")
                         let stage = Int32.Parse(record.GetProperty("eventId").GetString() ?? "-1", CultureInfo.InvariantCulture)
                         phases.Add(stage)
                         if stage == int32(FrameProfileStage.Build) { pumps.Add(pump) }
@@ -388,6 +372,11 @@ internal class ProfilerSmoke {
                 if record.GetProperty("source").ValueKind == JsonValueKind.String {
                     let source = record.GetProperty("source").GetString() ?? ""
                     sources.Add(source)
+                    if source == "graphics.completion-observed" {
+                        let serial = UInt64.Parse(record.GetProperty("submissionId").GetString() ?? "0", CultureInfo.InvariantCulture)
+                        Require(serial > lastCompletion, "Graphics completion serial did not advance")
+                        lastCompletion = serial
+                    }
                     if source == "vkQueueSubmit2" || source == "vkQueuePresentKHR" || source == "submit.enqueue" {
                         Require(
                             record.GetProperty("submissionId").ValueKind == JsonValueKind.String

@@ -19,8 +19,8 @@
                      TargetPath="crt.frag.goo-effect" />
     <Compile Remove="WindowReadbackFixture.gs" />
     <Compile Remove="DiagnosticCaptureSmoke.gs" />
-    <Compile Remove="ProfilerSmoke.gs" />
     <Compile Remove="EmbeddedHostSmoke.gs" />
+    <Compile Remove="ProfilerSmoke.gs" />
     <Compile Remove="WindowActivationSmoke.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"

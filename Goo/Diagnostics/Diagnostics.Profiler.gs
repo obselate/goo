@@ -199,6 +199,13 @@ internal partial class DiagnosticPipeHost {
         quote(value.ToString(CultureInfo.InvariantCulture))
     }
 
+    private func optional(value uint32?) string {
+        guard let actual = value else {
+            return "null"
+        }
+        return actual.ToString(CultureInfo.InvariantCulture)
+    }
+
     private func optional(value uint64?) string {
         guard let actual = value else {
             return "null"
@@ -216,9 +223,15 @@ internal partial class DiagnosticPipeHost {
             .Append(",\"ticks\":")
             .Append(quote(r.Ticks.ToString(CultureInfo.InvariantCulture)))
             .Append(",\"endTicks\":")
-            .Append(quote(r.EndTicks.ToString(CultureInfo.InvariantCulture)))
+            .Append(
+            if r.Kind == FrameTraceKind.Duration {
+                quote(r.EndTicks.ToString(CultureInfo.InvariantCulture))
+            } else {
+                "null"
+            }
+        )
             .Append(",\"threadId\":")
-            .Append(r.ThreadId)
+            .Append(optional(r.ThreadId))
             .Append(",\"windowId\":")
             .Append(traceText(c.WindowId, 64))
             .Append(",\"pumpId\":")
@@ -232,7 +245,7 @@ internal partial class DiagnosticPipeHost {
             .Append(",\"generation\":")
             .Append(traceId(c.Generation))
             .Append(",\"imageIndex\":")
-            .Append(c.ImageIndex)
+            .Append(optional(c.ImageIndex))
             .Append(",\"eventId\":")
             .Append(quote(r.EventId.ToString(CultureInfo.InvariantCulture)))
             .Append(",\"deviceId\":")
@@ -248,9 +261,9 @@ internal partial class DiagnosticPipeHost {
             .Append(",\"resourceGeneration\":")
             .Append(traceId(r.ResourceGeneration))
             .Append(",\"resourceKind\":")
-            .Append(r.ResourceKind)
+            .Append(optional(r.ResourceKind))
             .Append(",\"ownerKind\":")
-            .Append(r.OwnerKind)
+            .Append(optional(r.OwnerKind))
             .Append(",\"result\":")
             .Append(r.Result)
             .Append(",\"allocatedBytes\":")

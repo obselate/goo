@@ -57,7 +57,6 @@ data struct DiagnosticCapabilities {
     var Accessibility bool
     var SourceNavigation bool
     var HotReload bool
-    var ProfilerTrace bool
 }
 
 data struct DiagnosticEndpoint {

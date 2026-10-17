@@ -29,10 +29,6 @@ internal enum FrameProfileStage {
 internal data struct FrameProfilePoint {
   internal var Ticks int64
   internal var Bytes int64
-  internal var TraceTicks int64
-  internal var TraceBytes int64
-  internal var Recorder FrameRecorder?
-  internal var Context FrameTraceContext
 }
 
 internal interface FrameProfileSink {
@@ -66,6 +62,9 @@ internal class FrameProfiler {
   private var windowId string?
   private var context FrameTraceContext
   private var activeTraceId string?
+  private var frameStart FrameProfilePoint
+
+  internal prop Context FrameTraceContext { get -> context }
 
   internal prop WindowId string {
     get {
@@ -107,6 +106,7 @@ internal class FrameProfiler {
   internal func BeginPump() {
     if let current = FrameRecorder.Current {
       activeTraceId = current.TraceId
+      frameStart = FrameProfilePoint{}
       context = FrameTraceContext{WindowId: WindowId, PumpId: current.NextPump()}
       sink?.BeginPump(current, context)
     }
@@ -119,9 +119,11 @@ internal class FrameProfiler {
     return FrameProfilePoint{
       Ticks: Stopwatch.GetTimestamp(),
       Bytes: GC.GetAllocatedBytesForCurrentThread(),
-      Recorder: current,
-      Context: context,
     }
+  }
+
+  internal func BeginFrameTrace() {
+    if FrameRecorder.Current != nil { frameStart = Start() }
   }
 
   internal func Record(stage FrameProfileStage, start FrameProfilePoint, result int32 = 0) {
@@ -140,11 +142,15 @@ internal class FrameProfiler {
 
   internal func RecordTrace(stage FrameProfileStage, start FrameProfilePoint,
     end FrameProfilePoint, result int32 = 0) {
-    if let current = start.Recorder {
-      let ticks = if start.TraceTicks > 0L { start.TraceTicks } else { start.Ticks }
-      let bytes = if start.TraceTicks > 0L { start.TraceBytes } else { start.Bytes }
-      current.Duration(uint64(int32(stage)), 0uL, start.Context, ticks, end.Ticks,
-        end.Bytes - bytes, result, source: if stage == FrameProfileStage.Paint { "target.render" } else { "cpu.phase" })
+    if let current = FrameRecorder.Current {
+      if activeTraceId != current.TraceId { return }
+      let point = if (stage == FrameProfileStage.Frame || stage == FrameProfileStage.Events) && frameStart.Ticks > 0L {
+        frameStart
+      } else {
+        start
+      }
+      current.Duration(uint64(int32(stage)), 0uL, context, point.Ticks, end.Ticks,
+        end.Bytes - point.Bytes, result, source: if stage == FrameProfileStage.Paint { "target.render" } else { "cpu.phase" })
     }
   }
 

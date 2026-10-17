@@ -24,7 +24,7 @@ internal data struct FrameTraceContext {
     internal var DeviceId uint64
     internal var DeviceGeneration uint64
     internal var Generation uint64
-    internal var ImageIndex uint32
+    internal var ImageIndex uint32?
 }
 
 internal data struct FrameTraceRecord {
@@ -32,15 +32,15 @@ internal data struct FrameTraceRecord {
     internal var Kind FrameTraceKind
     internal var Ticks int64
     internal var EndTicks int64
-    internal var ThreadId int32
+    internal var ThreadId int32?
     internal var Context FrameTraceContext
     internal var EventId uint64
     internal var Category uint64
     internal var ResourceId uint64
     internal var ParentId uint64
     internal var ResourceGeneration uint64
-    internal var ResourceKind int32
-    internal var OwnerKind int32
+    internal var ResourceKind int32?
+    internal var OwnerKind int32?
     internal var Result int32
     internal var AllocatedBytes int64?
     internal var Value0 uint64?
@@ -202,7 +202,7 @@ internal class FrameRecorder {
             }
             flushGap()
             if count >= records.Length - 2 {
-                Interlocked.Increment(&lost)
+                lost++
                 return
             }
             put(value)
@@ -221,7 +221,8 @@ internal class FrameRecorder {
         if count >= records.Length - 2 {
             return
         }
-        let missing = Interlocked.Exchange(&lost, 0L)
+        let missing = lost
+        lost = 0L
         if missing == 0L {
             return
         }
@@ -247,7 +248,8 @@ internal class FrameRecorder {
                 }
                 partial = isPartial
                 complete = true
-                let missing = Interlocked.Exchange(&lost, 0L)
+                let missing = lost
+                lost = 0L
                 dropped = dropped + missing
                 if missing > 0L {
                     put(
@@ -319,7 +321,7 @@ internal class FrameRecorder {
             droppedCount = dropped + if complete {
                 0L
             } else {
-                Interlocked.Read(&lost)
+                lost
             }
             return result
         }

@@ -335,8 +335,8 @@ public partial class Window {
       }
       let profiling = profiler.Active
       if profiling { profiler.BeginPump() }
-      var frameProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-      var eventsProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+      let frameProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+      let eventsProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       try {
         if waitForEvents {
           if hasDemand() {
@@ -346,20 +346,13 @@ public partial class Window {
             native.WaitEvents(idleWaitMs())
             if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
               recorder.Duration(VulkanDiagnosticEventIds.EventWait, VulkanDiagnosticCategories.Timing,
-                eventsProfile.Context, waitStart, Stopwatch.GetTimestamp(), source: "idle.wait")
+                profiler.Context, waitStart, Stopwatch.GetTimestamp(), source: "idle.wait")
             }
           } else {
             native.WaitEvents(idleWaitMs())
           }
         }
-        if let recorder = frameProfile.Recorder {
-          if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
-            frameProfile.TraceTicks = Stopwatch.GetTimestamp()
-            frameProfile.TraceBytes = GC.GetAllocatedBytesForCurrentThread()
-            eventsProfile.TraceTicks = frameProfile.TraceTicks
-            eventsProfile.TraceBytes = frameProfile.TraceBytes
-          }
-        }
+        if profiling { profiler.BeginFrameTrace() }
         let repeatStartTicks = Stopwatch.GetTimestamp()
         if !native.IsClosing && drainCloseRequest() {
           if windowTarget?.PrepareClose() != false {
