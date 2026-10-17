@@ -3,7 +3,6 @@ package Goo
 import System
 import System.Diagnostics
 import System.Runtime.InteropServices
-import System.Text.Json
 
 internal unsafe partial class VulkanWindowTarget {
   private func Bootstrap() {
@@ -125,7 +124,7 @@ internal unsafe partial class VulkanWindowTarget {
     if !RecreateSwapchain(width, height, true) {
       throw InvalidOperationException("Vulkan initial swapchain creation failed")
     }
-    if let probe = CandidateStartupForTest { probe(deviceFacts.DeviceType) }
+    if let probe = CandidateStartupForTest { probe(this) }
     runtime!!.Publish()
     validation = nil
     validationMessenger = 0uL
@@ -535,7 +534,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   shared {
-    internal var CandidateStartupForTest Action[int32]?
+    internal var CandidateStartupForTest Action[VulkanWindowTarget]?
 
     private func DeviceRank(deviceType int32) int32 {
       if deviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) { return 5 }
@@ -560,6 +559,7 @@ internal unsafe partial class VulkanWindowTarget {
     let order * int32 = stackalloc[int32(count)]int32
     let getProperties = instanceDispatch.vkGetPhysicalDeviceProperties
     let preserveOrder = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DRI_PRIME"))
+      || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VK_LOADER_DEVICE_SELECT"))
       || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MESA_VK_DEVICE_SELECT"))
       || Environment.GetEnvironmentVariable("MESA_VK_DEVICE_SELECT_FORCE_DEFAULT_DEVICE") == "1"
       || Environment.GetEnvironmentVariable("__NV_PRIME_RENDER_OFFLOAD") == "1"
@@ -599,11 +599,9 @@ internal unsafe partial class VulkanWindowTarget {
     if selectedName == "" {
       throw InvalidOperationException("No Vulkan physical device satisfies the Goo presentation requirements: " + rejected)
     }
-    if diagnostics != nil {
-      Console.Error.WriteLine("{\"kind\":\"deviceSelection\",\"name\":\"" + JsonEncodedText.Encode(selectedName).ToString()
-        + "\",\"deviceType\":" + deviceFacts.DeviceType.ToString()
-        + ",\"order\":\"" + (if preserveOrder { "loader" } else { "deviceType" })
-        + "\",\"rejected\":\"" + JsonEncodedText.Encode(rejected).ToString() + "\"}")
+    if let current = diagnostics {
+      current.WriteDevice(Console.Error, selectedName,
+        if preserveOrder { "loader" } else { "deviceType" }, rejected)
     }
   }
 

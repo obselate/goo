@@ -245,7 +245,7 @@ func RunPrimitiveSmoke() {
     }
     Console.SetError(originalError)
     for line in diagnostics.Split('\n') {
-      if line.StartsWith("{\"kind\":\"deviceSelection\",") { Console.WriteLine(line) }
+      if line.StartsWith("{\"kind\":\"device\",") && !line.Contains("\"name\":") { Console.WriteLine(line) }
     }
     Console.WriteLine("primitive: mounted=1 scroll=1 drawCount=" + drawCount.ToString()
       +" planCompileCount=" + planCompileCount.ToString()

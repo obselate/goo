@@ -3,8 +3,10 @@ package Goo
 import Hexa.NET.SDL3
 import System
 import System.Diagnostics
+import System.IO
 import System.Numerics
 import System.Threading
+import System.Text.Json
 
 internal data struct VulkanPrimitiveFrameRetentionTestSnapshot {
   internal var SlotIndex int32
@@ -101,6 +103,13 @@ internal data struct VulkanClipMaskAtlasGrowthTestSnapshot {
 }
 
 internal partial class VulkanWindowTarget {
+  internal func LiveStartupObjectsForTest() uint64 {
+    guard let accounting = objectAccounting else {
+      throw InvalidOperationException("startup object accounting is unavailable")
+    }
+    return accounting.LiveCount
+  }
+
   internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
 
   internal func DiagnosticCountersSnapshotForTest() VulkanDiagnosticCounterSnapshot {
@@ -820,7 +829,12 @@ internal class WindowReadbackTestFixture {
   shared {
     internal func VerifyCandidateStartup(root Cell) {
       var attempts int32 = 0
-      VulkanWindowTarget.CandidateStartupForTest = (deviceType int32) -> {
+      var candidateTarget VulkanWindowTarget? = nil
+      let capturedError = StringWriter()
+      let originalError = Console.Error
+      Console.SetError(capturedError)
+      VulkanWindowTarget.CandidateStartupForTest = (target VulkanWindowTarget) -> {
+        candidateTarget = target
         if let published = VulkanSharedRuntime.TryAcquire() {
           published.Dispose()
           throw InvalidOperationException("candidate was published before startup completed")
@@ -838,11 +852,27 @@ internal class WindowReadbackTestFixture {
         }
       } finally {
         VulkanWindowTarget.CandidateStartupForTest = nil
-        window.Close()
+        try { window.Close() } finally { Console.SetError(originalError) }
       }
       if attempts == 0 { throw InvalidOperationException("candidate startup probe was not reached") }
+      guard let target = candidateTarget else {
+        throw InvalidOperationException("startup object accounting probe was not reached")
+      }
+      let liveObjects = target.LiveStartupObjectsForTest()
+      if liveObjects != 0uL {
+        throw InvalidOperationException("candidate rollback leaked Vulkan objects: " + liveObjects.ToString())
+      }
+      for line in capturedError.ToString().Split('\n') {
+        if !line.StartsWith("{\"kind\":\"validation\",") { continue }
+        using let message = JsonDocument.Parse(line)
+        let types = message.RootElement.GetProperty("types").GetInt32()
+        let severity = message.RootElement.GetProperty("severity").GetInt32()
+        if (types & 2) != 0 || severity == 4096 {
+          throw InvalidOperationException("candidate rollback emitted Vulkan validation: " + line)
+        }
+      }
       Console.WriteLine("vulkan-startup-rollback: attempts=" + attempts.ToString()
-        + " unpublished=ok cleanup=ok")
+        + " unpublished=ok validation=0 live_objects=0 cleanup=ok")
     }
 
     internal func AbortPrimitiveMetrics(window Window, finish bool) VulkanPrimitiveFrameStats ->
