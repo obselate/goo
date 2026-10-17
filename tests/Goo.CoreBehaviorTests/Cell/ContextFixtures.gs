@@ -4,6 +4,45 @@ import System
 import System.Threading.Tasks
 
 internal class ContextFixtures {
+    func QueuedStructReadAllocationContract() bool {
+        let baseline = QueuedStructReadBytes(false)
+        let context = QueuedStructReadBytes(true)
+        if baseline != context {
+            throw InvalidOperationException("Queued frame bytes: baseline=$baseline, context=$context")
+        }
+        return true
+    }
+
+    func QueuedStructReadBytes(read bool) int64 {
+        let key = Context[ContextAllocationValue]()
+        let cell = ContextAllocationCell(key, read)
+        let window = Window{Root: cell, Width: 100, Height: 100}
+        key.Set(
+            window,
+            ContextAllocationValue{
+                Background: Color.White,
+                Foreground: Color.Black,
+                Accent: Color.Rgb(0, 0, 255),
+                Size: 14,
+            }
+        )
+        try {
+            window.UpdateTree()
+            for index in 0 ... 2000 {
+                cell.Rebuild()
+                window.UpdateTree()
+            }
+            let before = GC.GetAllocatedBytesForCurrentThread()
+            for index in 0 ... 1000 {
+                cell.Rebuild()
+                window.UpdateTree()
+            }
+            return GC.GetAllocatedBytesForCurrentThread() - before
+        } finally {
+            window.Close()
+        }
+    }
+
     func WindowPairDependencyContract() bool {
         let key = Context[int32]()
         let root = ContextWindowPairCell(key)
@@ -709,5 +748,31 @@ internal class ContextWindowPairCell : Cell {
             return Text{Content: "replacement"}
         }
         return Container(){Text{Content: "plain"}, Portal(){Text{Content: "portal"}},}
+    }
+}
+
+internal data struct ContextAllocationValue {
+    internal var Background Color
+    internal var Foreground Color
+    internal var Accent Color
+    internal var Size int32
+}
+
+internal class ContextAllocationCell : Cell {
+    private let key Context[ContextAllocationValue]
+    private let read bool
+    private let content Blob = Text{Content: "stable"}
+    internal var Foreground Color
+
+    internal init(key Context[ContextAllocationValue], read bool) {
+        this.key = key
+        this.read = read
+    }
+
+    override func Build() Blob {
+        if read {
+            Foreground = key.Read().Foreground
+        }
+        return content
     }
 }

@@ -58,6 +58,7 @@ public sealed class FixtureContractTests
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.TransformedClipPathUsesMappedCoordinates));
 
         yield return Contract<ContextFixtures>(nameof(ContextFixtures.FailedBuildRetryAndDisposalContract));
+        yield return Contract<ContextFixtures>(nameof(ContextFixtures.QueuedStructReadAllocationContract));
         yield return Contract<ContextFixtures>(nameof(ContextFixtures.RetainedDirectCleanPortalAndShadowingContract));
         yield return Contract<ContextFixtures>(nameof(ContextFixtures.VirtualRetentionVersionAndFailureContract));
         yield return Contract<ContextFixtures>(nameof(ContextFixtures.WindowIdentityMissingAndEqualityContract));
