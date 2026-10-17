@@ -42,5 +42,39 @@ Self-contained includes .NET, not GPU drivers, Wayland, system fonts or OS libra
 
 Publish on the target OS with `-r win-x64` for Windows x64 or `-r osx-arm64` for
 Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING.md#source-setup).
-It does not automatically embed app-owned assets. Trimming and single-file are
-not validated release profiles for this sample.
+It does not automatically embed app-owned assets. Single-file publishing is not
+validated for this sample.
+
+## Publish presets
+
+New starter apps include opt-in profiles in `Properties/PublishProfiles`.
+Default `dotnet run` and `dotnet publish` behavior is unchanged.
+
+```sh
+dotnet publish -c Release -p:PublishProfile=NativeAot -o publish/aot
+dotnet publish -c Release -p:PublishProfile=Trimmed -o publish/trimmed
+```
+
+Both profiles target `linux-x64` and include .NET. `NativeAot` compiles native code
+with size optimization. `Trimmed` keeps the runtime and removes unused code.
+Publish on the target OS. Override the RID with `-r win-x64` or `-r osx-arm64`,
+or change `RuntimeIdentifier` in the profile. NativeAOT needs the
+[platform build tools](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
+Check trim and AOT warnings in your app and dependencies, then test the output.
+Neither profile embeds app-owned assets.
+
+Measured on the unmodified Goo 0.7.35 Linux x64 starter with .NET 10.0.12,
+NVIDIA RTX 3080 and isolated virtual KWin:
+
+| Publish mode | Output size | RSS |
+|---|---:|---:|
+| Default, framework-dependent | 25.77 MiB | 195.59 MiB |
+| Trimmed, self-contained | 30.44 MiB | 183.02 MiB |
+| NativeAOT, self-contained | 21.88 MiB | 155.23 MiB |
+
+Output size is the sum of published file lengths, including symbols and native
+payloads. Default output excludes the installed .NET runtime. RSS was read from
+`smaps_rollup` five seconds after the first successful Vulkan present.
+Trimming saved 12.57 MiB RSS and NativeAOT saved 40.37 MiB in this run.
+Both publishes had no trim or AOT warnings. These are idle starter measurements,
+not memory limits. GPU drivers, app content and host state affect the result.

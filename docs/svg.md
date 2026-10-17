@@ -1,7 +1,7 @@
 # SVG loading
 
 SVG loading is part of `Goo`. Keep `import Goo.Svg` and the existing loading API.
-After upgrading to the next Goo release, remove the `Goo.Svg` PackageReference.
+After upgrading to Goo 0.7.36, remove the `Goo.Svg` PackageReference.
 `goo-widgets` also drops its `Goo.Svg` dependency.
 
 Upgrading from compiled `.gcv1` assets or `Goo.SvgCompiler`? See the
