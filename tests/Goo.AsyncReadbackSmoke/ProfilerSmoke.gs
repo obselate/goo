@@ -64,6 +64,36 @@ internal class ProfilerSmokeClient : IDisposable {
     }
 }
 
+internal class ProfilerSmokeTrace {
+    internal let WindowId string
+    internal let Phases HashSet[int32] = HashSet[int32]()
+    internal let Sources HashSet[string] = HashSet[string]()
+    internal let Builds Dictionary[string, int64] = Dictionary[string, int64]()
+    internal let Paints Dictionary[string, int64] = Dictionary[string, int64]()
+    internal let FramePumps Dictionary[string, string] = Dictionary[string, string]()
+    internal let Submitted HashSet[string] = HashSet[string]()
+    internal var Sequence int64
+    internal var LastCompletion uint64
+
+    internal init(windowId string) { WindowId = windowId }
+
+    internal func RequireHeld(submission string, pump string, frame string) {
+        ProfilerSmoke.Require(submission != "", "Held submit has no enqueue record")
+        ProfilerSmoke.Require(!Submitted.Contains(submission), "Held submit completed before release")
+        ProfilerSmoke.Require(FramePumps.TryGetValue(frame, out var framePump) && framePump == pump,
+            "Held submission has no matching native frame/pump")
+        ProfilerSmoke.Require(Paints.TryGetValue(pump, out var paintStart), "Held submission has no matching paint")
+        var builtBeforePaint = false
+        for end in Builds.Values {
+            if end <= paintStart {
+                builtBeforePaint = true
+                break
+            }
+        }
+        ProfilerSmoke.Require(builtBeforePaint, "No recorded build preceded the held submission's paint")
+    }
+}
+
 internal class ProfilerSmoke {
     shared {
         internal func Require(condition bool, message string) {
@@ -186,20 +216,16 @@ internal class ProfilerSmoke {
             )
             readOnly.Set()
             var after = "0"
-            let phases = HashSet[int32]()
-            let sources = HashSet[string]()
-            let pumps = HashSet[string]()
-            var sequenceValue int64 = 0L
-            var lastCompletion uint64 = 0uL
+            let trace = ProfilerSmokeTrace(metadata.GetProperty("windowId").GetString() ?? "")
             var remaining = true
-            let submitted = HashSet[string]()
             var queued = ""
             var queuedPump = ""
+            var queuedFrame = ""
             var sawStartup = false
             while remaining {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
-                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue, ref lastCompletion)
+                ValidateBatch(payload, trace)
                 for record in payload.GetProperty("records").EnumerateArray() {
                     if record.GetProperty("kind").GetString() == "duration" {
                         let end = Int64.Parse(
@@ -213,40 +239,35 @@ internal class ProfilerSmoke {
                     if source == "submit.enqueue" {
                         queued = submission
                         queuedPump = record.GetProperty("pumpId").GetString() ?? ""
-                    }
-                    if source == "vkQueueSubmit2" {
-                        submitted.Add(submission)
+                        queuedFrame = record.GetProperty("frameId").GetString() ?? ""
                     }
                 }
                 after = payload.GetProperty("nextSeq").GetString() ?? after
                 remaining = payload.GetProperty("more").GetBoolean()
             }
-            Require(
-                queued != "" && !submitted.Contains(queued) && pumps.Contains(queuedPump),
-                "Held queue call was confused with enqueue or completion"
-            )
+            trace.RequireHeld(queued, queuedPump, queuedFrame)
             Require(startup == nil || sawStartup, "Startup recording lost its pre-attachment phases")
-            sources.Clear()
+            trace.Sources.Clear()
             allowPump.Set()
             WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
             let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
-            while !sources.Contains("present.accepted") && Stopwatch.GetTimestamp() < deadline {
+            while (!trace.Sources.Contains("present.accepted") || !trace.Submitted.Contains(queued)) && Stopwatch.GetTimestamp() < deadline {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
-                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue, ref lastCompletion)
+                ValidateBatch(payload, trace)
                 after = payload.GetProperty("nextSeq").GetString() ?? after
             }
             Require(
-                phases.Contains(int32(FrameProfileStage.Build)) && phases.Contains(
+                trace.Phases.Contains(int32(FrameProfileStage.Build)) && trace.Phases.Contains(
                     int32(FrameProfileStage.StyleResolve)
                 )
-                && phases.Contains(int32(FrameProfileStage.Layout)) && phases.Contains(int32(FrameProfileStage.Paint))
-                && phases.Contains(int32(FrameProfileStage.Frame)),
+                && trace.Phases.Contains(int32(FrameProfileStage.Layout)) && trace.Phases.Contains(int32(FrameProfileStage.Paint))
+                && trace.Phases.Contains(int32(FrameProfileStage.Frame)),
                 "Real frame phases did not reach the pipe"
             )
             Require(
-                sources.Contains("vkQueueSubmit2") && sources.Contains("vkQueuePresentKHR")
-                && sources.Contains("present.accepted"),
+                trace.Sources.Contains("vkQueueSubmit2") && trace.Sources.Contains("vkQueuePresentKHR")
+                && trace.Sources.Contains("present.accepted") && trace.Submitted.Contains(queued),
                 "Queue API and acceptance records are missing"
             )
             using let stopped = client.Request("profiler.stop", "{" + identity + "}")
@@ -254,7 +275,7 @@ internal class ProfilerSmoke {
             while !ended {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
-                ValidateBatch(payload, phases, sources, pumps, ref sequenceValue, ref lastCompletion)
+                ValidateBatch(payload, trace)
                 for record in payload.GetProperty("records").EnumerateArray() {
                     if record.GetProperty("kind").GetString() == "end" {
                         ended = true
@@ -264,8 +285,9 @@ internal class ProfilerSmoke {
                 Require(ended || payload.GetProperty("more").GetBoolean(), "Stopped trace has no End")
             }
             Console.WriteLine(
-                "profiler-trace: trace_id=" + traceId + " records=" + sequenceValue.ToString()
-                + " pumps=" + pumps.Count.ToString() + " held_submission=" + queued
+                "profiler-trace: trace_id=" + traceId + " records=" + trace.Sequence.ToString()
+                + " pumps=" + trace.Builds.Count.ToString() + " held_submission=" + queued
+                + " held_pump=" + queuedPump + " same_pump_build=" + trace.Builds.ContainsKey(queuedPump).ToString()
                 + " device=" + (metadata.GetProperty("devices")[0].GetProperty("name").GetString() ?? "unavailable")
             )
             return VerifyOverflowAndDisconnect(client, window, root)
@@ -322,18 +344,11 @@ internal class ProfilerSmoke {
             return closing
         }
 
-        private func ValidateBatch(
-            payload JsonElement,
-            phases HashSet[int32],
-            sources HashSet[string],
-            pumps HashSet[string],
-            ref sequenceValue int64,
-            ref lastCompletion uint64
-        ) {
+        private func ValidateBatch(payload JsonElement, trace ProfilerSmokeTrace) {
             for record in payload.GetProperty("records").EnumerateArray() {
                 let seq = Int64.Parse(record.GetProperty("seq").GetString() ?? "0", CultureInfo.InvariantCulture)
-                Require(seq > sequenceValue, "Trace publication order is invalid")
-                sequenceValue = seq
+                Require(seq > trace.Sequence, "Trace publication order is invalid")
+                trace.Sequence = seq
                 let ticks = Int64.Parse(record.GetProperty("ticks").GetString() ?? "-1", CultureInfo.InvariantCulture)
                 Require(ticks >= 0L, "Negative trace timestamp")
                 let kind = record.GetProperty("kind").GetString() ?? ""
@@ -358,30 +373,53 @@ internal class ProfilerSmoke {
                     let pump = record.GetProperty("pumpId").GetString() ?? "0"
                     Require(
                         pump == "0" ? record.GetProperty("frameId").ValueKind == JsonValueKind.Null
-                        : record.GetProperty("windowId").ValueKind == JsonValueKind.String,
+                        : record.GetProperty("windowId").GetString() == trace.WindowId,
                         "Phase has invalid pump/window correlation"
                     )
                     if category == "0" {
                         Require(record.GetProperty("imageIndex").ValueKind == JsonValueKind.Null,
                             "CPU phase has an unmeasured image index")
                         let stage = Int32.Parse(record.GetProperty("eventId").GetString() ?? "-1", CultureInfo.InvariantCulture)
-                        phases.Add(stage)
-                        if stage == int32(FrameProfileStage.Build) { pumps.Add(pump) }
+                        trace.Phases.Add(stage)
+                        if stage == int32(FrameProfileStage.Build) { trace.Builds[pump] = end }
+                        if stage == int32(FrameProfileStage.Paint) { trace.Paints[pump] = ticks }
                     }
+                }
+                if kind == "instant" && category == VulkanDiagnosticCategories.Timing.ToString(CultureInfo.InvariantCulture)
+                    && record.GetProperty("eventId").GetString() == VulkanDiagnosticEventIds.FrameBegin.ToString(CultureInfo.InvariantCulture) {
+                    Require(record.GetProperty("windowId").GetString() == trace.WindowId,
+                        "Native frame has the wrong window")
+                    Require(record.GetProperty("frameId").ValueKind == JsonValueKind.String
+                        && record.GetProperty("pumpId").ValueKind == JsonValueKind.String,
+                        "Native frame has invalid correlation IDs")
+                    trace.FramePumps[record.GetProperty("frameId").GetString() ?? ""] = record.GetProperty("pumpId").GetString() ?? ""
+                    Require(record.GetProperty("imageIndex").ValueKind == JsonValueKind.Null,
+                        "Pre-acquire frame has an image index")
                 }
                 if record.GetProperty("source").ValueKind == JsonValueKind.String {
                     let source = record.GetProperty("source").GetString() ?? ""
-                    sources.Add(source)
+                    trace.Sources.Add(source)
+                    if source == "vulkan.library" {
+                        Require(record.GetProperty("imageIndex").ValueKind == JsonValueKind.Null,
+                            "Startup library load has an image index")
+                    }
                     if source == "graphics.completion-observed" {
                         let serial = UInt64.Parse(record.GetProperty("submissionId").GetString() ?? "0", CultureInfo.InvariantCulture)
-                        Require(serial > lastCompletion, "Graphics completion serial did not advance")
-                        lastCompletion = serial
+                        Require(serial > trace.LastCompletion, "Graphics completion serial did not advance")
+                        trace.LastCompletion = serial
+                    }
+                    if source == "vkQueueSubmit2" {
+                        trace.Submitted.Add(record.GetProperty("submissionId").GetString() ?? "")
                     }
                     if source == "vkQueueSubmit2" || source == "vkQueuePresentKHR" || source == "submit.enqueue" {
                         Require(
                             record.GetProperty("submissionId").ValueKind == JsonValueKind.String
-                            && record.GetProperty("frameId").ValueKind == JsonValueKind.String,
-                            "Queue correlation is missing"
+                            && record.GetProperty("frameId").ValueKind == JsonValueKind.String
+                            && record.GetProperty("windowId").GetString() == trace.WindowId
+                            && trace.FramePumps.TryGetValue(record.GetProperty("frameId").GetString() ?? "", out var framePump)
+                            && framePump == record.GetProperty("pumpId").GetString()
+                            && record.GetProperty("imageIndex").ValueKind == JsonValueKind.Number,
+                            "Queue frame/pump/window/image correlation is missing"
                         )
                     }
                 }

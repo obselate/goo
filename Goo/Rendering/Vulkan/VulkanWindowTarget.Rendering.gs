@@ -149,6 +149,7 @@ internal unsafe partial class VulkanWindowTarget {
       activeFrameSlot = selectedSlot
       activeFrameSlotIndex = slotIndex
       activeImageIndex = imageIndex
+      if TraceRecorder != nil { activeTraceContext.ImageIndex = imageIndex }
       frameBegun = true
       renderingBegun = false
       frameRendered = false

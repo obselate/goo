@@ -38,7 +38,6 @@ internal unsafe partial class VulkanWindowTarget {
     context.DeviceId = uint64(device)
     context.DeviceGeneration = runtime?.Generation ?? 0uL
     if let current = generation { context.Generation = current.Generation }
-    context.ImageIndex = activeImageIndex
     return context
   }
   internal prop LastClipMaskFrameStats VulkanClipMaskFrameStats{
