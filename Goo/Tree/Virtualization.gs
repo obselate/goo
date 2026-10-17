@@ -37,6 +37,8 @@ internal data struct VirtualEntry {
 internal sealed class VirtualNodeState {
   private var current VirtualState?
   private var pending VirtualState?
+  private var source VirtualSource?
+  private var pendingSource VirtualSource?
   private var mounted Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private var next Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private let children List[Blob] = List[Blob]()
@@ -56,44 +58,122 @@ internal sealed class VirtualNodeState {
   private var pendingTargetX float32
   private var pendingTargetY float32
 
+  internal var Context ContextFrame?
+  internal var Owner Window?
+  private var contextReader ContextReader?
+  private var contextDirty bool
+  private var contextVersion int64
+  private var pendingContextVersion int64
+
+  internal prop ContextVersion int64 { get -> contextVersion }
+
+  internal func BindContext(frame ContextFrame?, owner Window?) {
+    let changed = Context != frame || Owner != owner
+    let rebound = Owner != nil
+    Context = frame
+    Owner = owner
+    if let reader = contextReader {
+      reader.Frame = frame
+      reader.Window = owner
+      if changed { reader.Refresh() }
+    }
+    if changed && rebound { InvalidateContext() }
+  }
+
+  internal func EnsureContextReader() ContextReader {
+    contextReader ??= ContextReader{Window: Owner, Frame: Context, Virtual: this}
+    contextReader!!.Begin()
+    return contextReader!!
+  }
+
+  internal func InvalidateContext() {
+    contextVersion++
+    contextDirty = true
+    Owner?.ContextVirtualInvalidated()
+  }
+
+  internal func ContextAffected(source ContextFrame, lineageChanged bool) bool {
+    var current = Context
+    while let frame = current {
+      if lineageChanged && frame == source { return true }
+      if !lineageChanged && frame.Key == source.Key { return frame == source }
+      current = frame.Parent
+    }
+    return !lineageChanged && Owner?.ContextValue(source.Key) == source
+  }
+
+  private func enterContext(stateCallback bool = false) ContextEnvironment ->
+    ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: Context,
+      Reader: contextReader, Virtual: this, StateCallback: stateCallback})
   internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
-    var state VirtualState?
+    pendingSource = source
+    contextReader?.BeginState()
+    let previousContext = enterContext(true)
     try {
-      state = source.State(current)
-    } catch (error Exception) {
-      current?.Cancel()
-      throw error
-    }
-    guard let selected = state else { throw InvalidOperationException("VirtualSource.State returned nil") }
-    return realize(n, selected, items)
+      var state VirtualState?
+      try { state = source.State(current) }
+      catch (error Exception) {
+        current?.Cancel()
+        contextReader?.Cancel()
+        throw error
+      }
+      guard let selected = state else { throw InvalidOperationException("VirtualSource.State returned nil") }
+      return realize(n, selected, items)
+    } finally { ContextEnvironment.Current = previousContext }
   }
 
   internal func NeedsRefresh(n Node) bool {
     guard let state = current else { return false }
     let previous = viewport.Bind(n)
+    let previousContext = enterContext()
+    contextReader?.Begin()
     try {
-      return state.NeedsRealize(viewport)
+      let requested = state.NeedsRealize(viewport)
+      if !contextDirty && !requested { contextReader?.Commit(true) }
+      return contextDirty || requested
+    } catch (error Exception) {
+      contextReader?.Cancel()
+      throw error
     } finally {
       viewport.Bind(previous)
+      ContextEnvironment.Current = previousContext
     }
   }
 
   internal func PrepareRefresh(n Node) IList[Blob] {
     guard let state = current else { throw InvalidOperationException("Virtual state is unavailable") }
-    Cancel()
+    if contextDirty {
+      if let retained = source {
+        return Prepare(n, retained, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
+      }
+    }
+    Cancel(true)
     return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
   }
 
   internal func OffsetForKey(n Node, key string) Point? {
     guard let state = current else { return nil }
     let previous = viewport.Bind(n)
+    let previousContext = enterContext()
+    contextReader?.Begin()
     try {
-      guard let offset = state.OffsetOf(viewport, key) else { return nil }
-      if !Double.IsFinite(offset.X) || !Double.IsFinite(offset.Y) { throw InvalidOperationException("Virtual item offset must be finite") }
-      return Point{ X: Math.Max(0.0, offset.X), Y: Math.Max(0.0, offset.Y) }
+      let offset = state.OffsetOf(viewport, key)
+      if let value = offset {
+        if !Double.IsFinite(value.X) || !Double.IsFinite(value.Y) {
+          throw InvalidOperationException("Virtual item offset must be finite")
+        }
+      }
+      contextReader?.Commit(true)
+      return if let value = offset {
+        Point{X: Math.Max(0.0, value.X), Y: Math.Max(0.0, value.Y)}
+      } else { nil }
+    } catch (error Exception) {
+      contextReader?.Cancel()
+      throw error
     } finally {
       viewport.Bind(previous)
+      ContextEnvironment.Current = previousContext
     }
   }
 
@@ -111,6 +191,9 @@ internal sealed class VirtualNodeState {
     originY = BoxGeometry.ContentTop(n) - n.Rect.Y
     listItems = items
     let previous = viewport.Bind(n)
+    contextReader?.Begin()
+    let previousContext = enterContext()
+    pendingContextVersion = contextVersion
     output.Bind(this)
     try {
       state.Realize(viewport, output)
@@ -140,6 +223,7 @@ internal sealed class VirtualNodeState {
     } finally {
       output.Bind(nil)
       viewport.Bind(previous)
+      ContextEnvironment.Current = previousContext
     }
   }
 
@@ -188,6 +272,8 @@ internal sealed class VirtualNodeState {
       throw InvalidOperationException("Virtual state was not prepared")
     }
     state.Commit()
+    contextDirty = contextVersion != pendingContextVersion
+    contextReader?.Commit()
     let old = mounted
     mounted = next
     next = old
@@ -204,13 +290,17 @@ internal sealed class VirtualNodeState {
     let previous = current
     current = state
     pending = nil
+    if let prepared = pendingSource { source = prepared }
+    pendingSource = nil
     pendingOwner = nil
     if let previous = previous {
       if previous != state { previous.Dispose() }
     }
   }
 
-  internal func Cancel() {
+  internal func Cancel(preserveReads bool = false) {
+    if !preserveReads { contextReader?.Cancel() }
+    pendingSource = nil
     next.Clear()
     children.Clear()
     pendingOwner = nil
@@ -222,6 +312,11 @@ internal sealed class VirtualNodeState {
 
   internal func Dispose() {
     Cancel()
+    contextReader?.Dispose()
+    contextReader = nil
+    Context = nil
+    Owner = nil
+    source = nil
     mounted.Clear()
     if let state = current {
       current = nil
@@ -282,6 +377,8 @@ internal class Virtualization {
     internal func Refresh(n Node, rec Reconciler) bool {
       guard let state = State(n) else { return false }
       if !state.NeedsRefresh(n) { return false }
+      let previousContext = rec.Context
+      rec.Context = state.Context
       try {
         let children = state.PrepareRefresh(n)
         rec.diffChildren(n, children)
@@ -291,7 +388,7 @@ internal class Virtualization {
       } catch (error Exception) {
         state.Cancel()
         throw error
-      }
+      } finally { rec.Context = previousContext }
     }
 
     internal func ContentExtent(n Node) VirtualExtent ? -> State(n)?.Extent()

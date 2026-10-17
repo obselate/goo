@@ -26,18 +26,59 @@ internal partial class Reconciler {
   private var fallbackChildScratch ChildDiffScratch?
   private var styleRetryRoot Node?
   private var deferredRetirement Node?
+  internal var Context ContextFrame?
+  private var contextCommits List[ContextReader]?
+
+  private func trackContext(cell Cell, preserve bool = false) {
+    guard let reader = cell.contextReader else { return }
+    reader.Preserve = preserve
+    if reader.Queued { return }
+    reader.Queued = true
+    contextCommits ??= List[ContextReader]()
+    contextCommits!!.Add(reader)
+  }
+
+  private func commitContexts() {
+    if let readers = contextCommits {
+      for index in 0 ... readers.Count {
+        let reader = readers[index]
+        reader.Queued = false
+        reader.Commit(reader.Preserve)
+      }
+      readers.Clear()
+    }
+  }
+
+  private func configureCell(cell Cell, declaration CellElement, seed bool) {
+    cell.BindContext(Context, Owner)
+    cell.contextReader?.Begin()
+    let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner, Frame: cell.incomingContext,
+      Cell: cell, Reader: cell.contextReader})
+    try {
+      if seed { if let initialize = declaration.Seed { initialize(cell) } }
+      declaration.ApplyInput(cell)
+      if let configure = declaration.Configure { configure(cell) }
+    } catch (error Exception) {
+      cell.contextReader?.Cancel()
+      cell.SetRebuildSubmission(CellInvalidated)
+      throw error
+    } finally { ContextEnvironment.Current = previous }
+  }
 
   private func renderCell(cell Cell) Blob {
-    guard let profiler = Profiler else {
-      return cell.Render()
-    }
-    let start = profiler.Start()
-    let result = cell.Render()
-    let elapsed = profiler.Elapsed(start)
-    ProfileBuildTicks = ProfileBuildTicks + elapsed.Ticks
-    ProfileBuildBytes = ProfileBuildBytes + elapsed.Bytes
-    ProfileBuildCalls++
-    return result
+    cell.contextReader?.Begin()
+    let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner,
+      Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
+    try {
+      guard let profiler = Profiler else { return cell.Render() }
+      let start = profiler.Start()
+      let result = cell.Render()
+      let elapsed = profiler.Elapsed(start)
+      ProfileBuildTicks = ProfileBuildTicks + elapsed.Ticks
+      ProfileBuildBytes = ProfileBuildBytes + elapsed.Bytes
+      ProfileBuildCalls++
+      return result
+    } finally { ContextEnvironment.Current = previous }
   }
 
   private func invalidateStyle(n Node, initial bool) {
@@ -62,11 +103,13 @@ internal partial class Reconciler {
     let profiler = Profiler
     guard let value = profiler else {
       flushStylesCore()
+      commitContexts()
       styleRetryRoot = nil
       return
     }
     let start = value.Start()
     let nodes = flushStylesCore()
+    commitContexts()
     let elapsed = value.Elapsed(start)
     ProfileResolveTicks = ProfileResolveTicks + elapsed.Ticks
     ProfileResolveBytes = ProfileResolveBytes + elapsed.Bytes
@@ -95,6 +138,13 @@ internal partial class Reconciler {
 
   internal func DiscardStyles() {
     Res.DiscardPending()
+    if let readers = contextCommits {
+      for index in 0 ... readers.Count {
+        readers[index].Queued = false
+        readers[index].Cancel()
+      }
+      readers.Clear()
+    }
     if let root = styleRetryRoot {
       retryStyles(root)
     }
@@ -150,6 +200,7 @@ internal partial class Reconciler {
 
   internal func MountRoot(cell Cell) Node {
     cell.ClaimMount(cell.GetType())
+    cell.BindContext(Context, Owner)
     try {
       if let pump = Pump {
         cell.BindPump(pump)
@@ -198,7 +249,9 @@ internal partial class Reconciler {
       n.PinToBottom = b.PinToBottom
       MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
     }
-    return Virtualization.Configure(n)
+    let state = Virtualization.Configure(n)
+    state.BindContext(Context, Owner)
+    return state
   }
 
   internal func diffVirtual(n Node, b Virtual) Node {
@@ -264,6 +317,7 @@ internal partial class Reconciler {
   }
 
   internal func applyStyleEntries(n Node, b Blob, entries StyleEntries?, focusable bool, initial bool) {
+    n.Context = Context
     let hover = b.Hover?.Entries()
     let active = b.Active?.Entries()
     let focus = b.Focus?.Entries()
@@ -634,12 +688,39 @@ internal partial class Reconciler {
     }
   }
 
+  private func rebindRetainedContext(n Node, binding Cell? = nil) Node {
+    if binding == nil && n.Context == Context { return n }
+    let previous = Context
+    try {
+      if let cell = binding ?? n.Fiber {
+        if binding == nil { cell.BindContext(Context, Owner) }
+        if cell.HasDirty() { return RebuildFiber(n, cell) }
+        var producer = cell
+        while let child = producer.directChild { producer = child }
+        Context = producer.outgoingContext
+      }
+      n.Context = Context
+      if ScrollbarParts.Children(n).Count > 0 { Res.Scrollbars.Queue(n) }
+      Virtualization.State(n)?.BindContext(Context, Owner)
+      for index in 0 ... n.Children.Count {
+        let old = n.Children[index]
+        let child = rebindRetainedContext(old)
+        if child != old {
+          child.Parent = n
+          n.Children[index] = child
+          markStructure()
+        }
+      }
+      return n
+    } finally { Context = previous }
+  }
+
   private func diffCore(n Node, b Blob) Node {
     if b is VirtualRetainedBlob {
       if n.Retired || n.Key != b.Key {
         throw InvalidOperationException("Retained virtual item does not match the mounted node")
       }
-      return n
+      return rebindRetainedContext(n)
     }
     if n.Fiber != nil && !(b is CellElement) {
       let replacement = replace(n, b)
@@ -722,22 +803,24 @@ internal partial class Reconciler {
       }
       cell.SetRetainedMotionInvalidation(RetainedInvalidated)
       cell.SetRebuildSubmission(nil)
-      e.ApplyInput(cell)
-      if let cfg = e.Configure { cfg(cell) }
+      let frameChanged = cell.incomingContext != Context
+      configureCell(cell, e, false)
       cell.SetRebuildSubmission(CellInvalidated)
 
       if existing != nil && !cell.IsDirty() {
+        trackContext(cell, true)
         if let child = cell.directChild {
           if child.HasDirty() {
             return rebuildMounted(existing, child, cell)
           }
         }
+        let retained = if frameChanged { rebindRetainedContext(existing, cell) } else { existing }
         if let parent = owner {
           parent.directChild = cell
         } else {
-          existing.Fiber = cell
+          retained.Fiber = cell
         }
-        return existing
+        return retained
       }
       return rebuildMounted(existing, cell, owner)
     }
@@ -749,10 +832,8 @@ internal partial class Reconciler {
     }
     fresh.SetRetainedMotionInvalidation(RetainedInvalidated)
     try {
-      if let seed = e.Seed { seed(fresh) }
       fresh.SetRebuildSubmission(nil)
-      e.ApplyInput(fresh)
-      if let cfg = e.Configure { cfg(fresh) }
+      configureCell(fresh, e, true)
       fresh.SetRebuildSubmission(CellInvalidated)
 
       let result = rebuildMounted(existing, fresh, owner)
@@ -769,12 +850,15 @@ internal partial class Reconciler {
   internal func rebuildMounted(existing Node?, cell Cell, owner Cell?) Node {
     let slotKey = existing?.Key
     let top = existing?.Fiber
+    let previousContext = Context
 
     cell.ClearDirty()
     var completed = false
     var detached Node? = nil
     try {
       let inner = renderCell(cell)
+      trackContext(cell)
+      Context = cell.outgoingContext
       var result Node
       if inner is CellElement {
         result = expandCellAt(existing, inner, cell.directChild, cell)
@@ -809,7 +893,9 @@ internal partial class Reconciler {
       completed = true
       return result
     } finally {
+      Context = previousContext
       if !completed {
+        cell.contextReader?.Cancel()
         if let prior = detached {
           if !prior.Retired {
             if prior.Fiber == nil {

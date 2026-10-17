@@ -133,6 +133,9 @@ public class VirtualViewport {
       return LayoutSize{ Width: float64(BoxGeometry.ViewportWidth(n)), Height: float64(BoxGeometry.ViewportHeight(n)) }
     }
   }
+  /// Gets the generation of the effective retained context during this callback.
+  /// A changed lineage or unshadowed provider value invalidates cached item content.
+  public prop ContextVersion int64 { get -> Virtualization.State(bound())?.ContextVersion ?? 0L }
   /// Gets the current scroll offset.
   public prop ScrollOffset Point{
     get {

@@ -42,6 +42,7 @@ internal class Node {
   internal prop HasCustomLayout bool{ get; set; }
   internal prop Key string? { get; set; }
   internal prop Parent Node? { get; set; }
+  internal var Context ContextFrame?
   internal prop Children IList[Node]{ get; init; }
   internal prop Content string{ get; set; }
   internal prop Rect Rect{ get; set; }

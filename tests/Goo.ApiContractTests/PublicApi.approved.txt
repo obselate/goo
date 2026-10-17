@@ -9,6 +9,7 @@ ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
 ctor|Goo.Command|public|(execute:System.Action,canExecute:System.Func`1<System.Boolean>=null)
 ctor|Goo.Container|public|()
+ctor|Goo.Context`1|public|()
 ctor|Goo.DashPattern|public|(intervals:System.Double[],offset:System.Double)
 ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect)
 ctor|Goo.DragData|public|(value:System.Object,allowedEffects:Goo.DragEffect,nativeFiles:Goo.NativeFileDrag)
@@ -730,6 +731,11 @@ method|Goo.Color|op_Implicit|static|public|generic:|(value:System.String)->Goo.C
 method|Goo.Color|op_Inequality|static|public|generic:|(arg0:Goo.Color,arg1:Goo.Color)->System.Boolean
 method|Goo.Command|Execute|instance|public|generic:|()->System.Boolean
 method|Goo.Container|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
+method|Goo.Context`1|Read|instance|public|generic:|()->!0
+method|Goo.Context`1|Read|instance|public|generic:|(window:Goo.Window)->!0
+method|Goo.Context`1|Scope|instance|public|generic:|(value:!0,build:System.Func`1<Goo.Blob>)->Goo.Blob
+method|Goo.Context`1|Set|instance|public|generic:|(window:Goo.Window,value:!0)->System.Void
+method|Goo.Context`1|TryRead|instance|public|generic:|(window:Goo.Window,out value:!0&)->System.Boolean
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window)->System.IDisposable
 method|Goo.DevTools|Attach|static|public|generic:|(window:Goo.Window,allowInput:System.Boolean)->System.IDisposable
 method|Goo.Edges|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Edges
@@ -1321,6 +1327,7 @@ property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|ins
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Layout|Goo.LayoutAlgorithm|instance|get:public,init:public|index:()
 property|Goo.Container|PinToBottom|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.Context`1|Window|Goo.Window|instance|get:public|index:()
 property|Goo.DashPattern|Intervals|System.Collections.Generic.IReadOnlyList`1<System.Double>|instance|get:public|index:()
 property|Goo.DashPattern|Offset|System.Double|instance|get:public|index:()
 property|Goo.DragData|AllowedEffects|Goo.DragEffect|instance|get:public|index:()
@@ -1763,6 +1770,7 @@ property|Goo.VirtualOutput|ItemCount|System.Int32|instance|get:public,set:public
 property|Goo.VirtualOutput|ScrollOffset|System.Nullable`1<Goo.Point>|instance|get:public,set:public|index:()
 property|Goo.VirtualViewport|ChildCount|System.Int32|instance|get:public|index:()
 property|Goo.VirtualViewport|ColumnGap|System.Double|instance|get:public|index:()
+property|Goo.VirtualViewport|ContextVersion|System.Int64|instance|get:public|index:()
 property|Goo.VirtualViewport|Direction|Goo.FlexDirection|instance|get:public|index:()
 property|Goo.VirtualViewport|FocusedChild|System.Int32|instance|get:public|index:()
 property|Goo.VirtualViewport|Pinned|System.Boolean|instance|get:public|index:()
@@ -1885,6 +1893,7 @@ type|Goo.ClipboardReadStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Color|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Command|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Container|sealed-class|public|base:Goo.Blob|interfaces:|generic:
+type|Goo.Context`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.Cursor|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.DashPattern|class|public|base:System.Object|interfaces:|generic:
 type|Goo.DevTools|sealed-class|public|base:System.Object|interfaces:|generic:

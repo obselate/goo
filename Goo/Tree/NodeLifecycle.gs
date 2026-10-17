@@ -13,6 +13,7 @@ internal class NodeLifecycle {
 
     private func disposeTree(n Node) Exception? {
       n.Retired = true
+      n.Context = nil
       ElementHandles.Detach(n)
       if n.HasAccessibilityDeclaration {
         AccessibilityMetadata.Remove(n)
@@ -25,6 +26,11 @@ internal class NodeLifecycle {
         ScrollbarParts.Dispose(n)
       } catch (error Exception) {
         firstError = error
+      }
+      try {
+        Virtualization.Dispose(n)
+      } catch (error Exception) {
+        firstError ??= error
       }
       if let cell = n.Fiber {
         n.Fiber = nil
@@ -47,11 +53,6 @@ internal class NodeLifecycle {
       BackgroundImageLayouts.Dispose(n)
       ShaderEffectStyles.Dispose(n)
       LayoutTransitions.Dispose(n)
-      try {
-        Virtualization.Dispose(n)
-      } catch (error Exception) {
-        firstError ??= error
-      }
       for i in 0 ... n.Children.Count {
         if let error = disposeTree(n.Children[i]) {
           if firstError == nil {

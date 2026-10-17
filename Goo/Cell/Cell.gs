@@ -21,6 +21,30 @@ public open class Cell {
   internal var mountedOwner Cell?
   internal var mountGeneration int64
   private var queuedBy object?
+  internal var incomingContext ContextFrame?
+  internal var outgoingContext ContextFrame?
+  internal var contextWindow Window?
+  internal var contextReader ContextReader?
+
+  internal func EnsureContextReader() ContextReader {
+    contextReader ??= ContextReader{Window: contextWindow, Frame: incomingContext, Cell: this}
+    contextReader!!.Begin()
+    return contextReader!!
+  }
+
+  internal func BindContext(frame ContextFrame?, window Window?) {
+    if incomingContext == frame && contextWindow == window { return }
+    incomingContext = frame
+    contextWindow = window
+    outgoingContext = contextReader?.Provider ?? frame
+    if let reader = contextReader {
+      reader.Frame = outgoingContext
+      reader.Window = window
+      reader.Refresh()
+      if reader.Provider != nil { MarkDirtyFromInput() }
+    }
+    if let child = directChild { child.BindContext(outgoingContext, window) }
+  }
 
   /// Creates a component.
   public init() {
@@ -217,6 +241,11 @@ public open class Cell {
       mountGeneration++
       queuedBy = nil
     }
+    contextReader?.Dispose()
+    contextReader = nil
+    incomingContext = nil
+    outgoingContext = nil
+    contextWindow = nil
     var firstError Exception?
     if let list = anims {
       for i in 0 ... list.Count {

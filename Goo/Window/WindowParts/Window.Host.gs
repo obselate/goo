@@ -679,6 +679,7 @@ public partial class Window {
     if let current = tree {
       firstError = captureCleanupError(firstError, () -> NodeLifecycle.DisposeTree(current))
     }
+    ClearContextValues()
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.ClearWindow(this))
     firstError = captureCleanupError(firstError, () -> motionPump.Clear())
