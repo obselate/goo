@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.36 - 2026-10-17
+
 - SVG is now part of Goo, and the Goo.Svg package is discontinued. Remove its PackageReference. `import Goo.Svg` is unchanged.
 - The default window clear is now white, with a black default foreground that Text inherits. Add `Window.Foreground` and atomic `Window.SetColors`.
 - Add retained typed `Context` values and scopes with dependency invalidation and virtual context generations.

@@ -682,6 +682,7 @@ Sources:
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
 - [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
 - [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
+- [`Window.Context.gs`](../../Goo/Window/WindowParts/Window.Context.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
 - [`Window.Displays.gs`](../../Goo/Window/WindowParts/Window.Displays.gs)
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
@@ -695,6 +696,7 @@ Sources:
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
 - [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
+- [`Window.Profile.gs`](../../Goo/Window/WindowParts/Window.Profile.gs)
 - [`Window.Retained.gs`](../../Goo/Window/WindowParts/Window.Retained.gs)
 - [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
 - [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
@@ -846,6 +848,13 @@ Opens the window and processes frames until all open Goo windows close.
 
 Sets the native clipboard text on the window UI thread. Native set failures throw.
 
+### `SetColors(Color,Color)`
+
+Sets the clear and inherited root text colors together on the owner thread. Explicit element colors take precedence over the inherited foreground.
+
+- `background`: The window clear color.
+- `foreground`: The inherited root text color.
+
 ### `SetInterval(System.Action,float64)`
 
 Runs a callback repeatedly on the UI thread at the requested interval.
@@ -903,7 +912,7 @@ Gets or sets the opaque window background used when requested blur is unavailabl
 
 ### `Background`
 
-Gets or sets the window clear color.
+Gets or sets the window clear color. The default is white.
 
 ### `CanMove`
 
@@ -924,6 +933,10 @@ Sets the logical pixels a pressed mouse or pen pointer must move on either axis 
 ### `Focusable`
 
 Gets or sets whether the desktop window may receive keyboard focus. Unsupported hosts throw before changing the requested value. Modal windows must remain focusable.
+
+### `Foreground`
+
+Gets or sets the inherited root text color. The default is black.
 
 ### `ForeignParentHandle`
 

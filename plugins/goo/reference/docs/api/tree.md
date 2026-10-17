@@ -1370,6 +1370,10 @@ Gets the number of mounted items.
 
 Gets the resolved gap between columns.
 
+### `ContextVersion`
+
+Gets the generation of the effective retained context during this callback. A changed lineage or unshadowed provider value invalidates cached item content.
+
 ### `Direction`
 
 Gets the authored flex direction.
