@@ -359,61 +359,17 @@ internal unsafe partial class VulkanWindowTarget {
     if Environment.GetEnvironmentVariable("GOO_VK_DISABLE_SWAPCHAIN_MAINTENANCE") == "1" {
       return VulkanSwapchainMaintenanceVariant.None
     }
-    let address = ResolveGlobalProc(nint(0), "vkEnumerateInstanceExtensionProperties")
-    let nullable = address as (unmanaged[Cdecl](*int8, *uint32, *VkExtensionProperties) -> VkResult)?
-    if nullable == nil {
+    if !HasInstanceExtensionName(VkConstants.VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME) {
       return VulkanSwapchainMaintenanceVariant.None
     }
-    let enumerate = nullable
-    var count uint32 = 0u
-    if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
-      return VulkanSwapchainMaintenanceVariant.None
-    }
-    let initialExtensions * VkExtensionProperties = stackalloc[int32(count)]VkExtensionProperties
-    var extensionValues = Span[VkExtensionProperties](initialExtensions, int32(count))
-    while true {
-      var result VkResult
-      fixed extensions * VkExtensionProperties = extensionValues {
-        result = enumerate(nil, &count, extensions)
-      }
-      if result == VkConstants.VK_SUCCESS { break }
-      if result != VkConstants.VK_INCOMPLETE { return VulkanSwapchainMaintenanceVariant.None }
-      count = 0u
-      if enumerate(nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
-        return VulkanSwapchainMaintenanceVariant.None
-      }
-      if count > uint32(extensionValues.Length) {
-        extensionValues = Span[VkExtensionProperties]([int32(count)]VkExtensionProperties)
-      }
-    }
-    var hasSurfaceExt = false
-    var hasSurfaceKhr = false
-    var hasCapabilities2 = false
-    var index uint32 = 0u
-    fixed extensions * VkExtensionProperties = extensionValues {
-      while index < count {
-        if !hasSurfaceExt {
-          hasSurfaceExt = ExtensionNameEquals(
-            &extensions[index], VulkanWindowTargetExtensionNames.SurfaceMaintenanceExt)
-        }
-        if !hasSurfaceKhr {
-          hasSurfaceKhr = ExtensionNameEquals(
-            &extensions[index], VulkanWindowTargetExtensionNames.SurfaceMaintenanceKhr)
-        }
-        if !hasCapabilities2 {
-          hasCapabilities2 = ExtensionNameEquals(
-            &extensions[index], VkConstants.VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME)
-        }
-        index = index + 1u
-      }
-    }
-    if !hasCapabilities2 {
-      return VulkanSwapchainMaintenanceVariant.None
-    }
-    if hasSurfaceKhr {
+    if HasInstanceExtensionName(VulkanWindowTargetExtensionNames.SurfaceMaintenanceKhr) {
       return VulkanSwapchainMaintenanceVariant.Khr
     }
-    return if hasSurfaceExt { VulkanSwapchainMaintenanceVariant.Ext } else { VulkanSwapchainMaintenanceVariant.None }
+    return if HasInstanceExtensionName(VulkanWindowTargetExtensionNames.SurfaceMaintenanceExt) {
+      VulkanSwapchainMaintenanceVariant.Ext
+    } else {
+      VulkanSwapchainMaintenanceVariant.None
+    }
   }
 
   private func HasInstanceExtensionName(expected string) bool {
