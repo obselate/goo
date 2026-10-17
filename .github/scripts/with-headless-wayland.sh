@@ -11,6 +11,9 @@ cleanup() {
   status=$?
   kill -- "$compositor_target" 2>/dev/null || true
   wait "$compositor_pid" 2>/dev/null || true
+  while kill -0 -- "$compositor_target" 2>/dev/null; do
+    sleep 0.1
+  done
   if (( status != 0 )); then
     cat "$compositor_log"
   fi
