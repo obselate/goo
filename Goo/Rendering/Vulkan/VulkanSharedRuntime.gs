@@ -26,6 +26,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   private let graphicsQueue VkQueue
   private let presentQueue VkQueue
   private let graphicsTimeline VkSemaphore
+  private var lastTracedGraphicsSerial uint64
   private let queueWorker VulkanQueueWorker
   private let graphicsFamilyIndex uint32
   private let presentFamilyIndex uint32
@@ -662,6 +663,14 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     let result = getCounter(device, graphicsTimeline, &value)
     if result == VkConstants.VK_ERROR_DEVICE_LOST {
       MarkDeviceLost()
+    }
+    if let recorder = FrameRecorder.Current {
+      if result == VkConstants.VK_SUCCESS && value > lastTracedGraphicsSerial {
+        lastTracedGraphicsSerial = value
+        recorder.Instant(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
+          FrameTraceContext{SubmissionId: value, DeviceId: uint64(device), DeviceGeneration: generation},
+          source: "graphics.completion-observed")
+      }
     }
     return result
   }

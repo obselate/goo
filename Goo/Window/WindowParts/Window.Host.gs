@@ -334,134 +334,148 @@ public partial class Window {
         requestRender()
       }
       let profiling = profiler.Active
+      if profiling { profiler.BeginPump() }
       let frameProfile = profiling ? profiler.Start() : FrameProfilePoint{}
       let eventsProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-      if waitForEvents {
-        if hasDemand() {
-          native.PollEvents()
-        } else {
-          native.WaitEvents(idleWaitMs())
+      try {
+        if waitForEvents {
+          if hasDemand() {
+            native.PollEvents()
+          } else if let recorder = FrameRecorder.Current {
+            let waitStart = Stopwatch.GetTimestamp()
+            native.WaitEvents(idleWaitMs())
+            if Object.ReferenceEquals(FrameRecorder.Current, recorder) {
+              recorder.Duration(VulkanDiagnosticEventIds.EventWait, VulkanDiagnosticCategories.Timing,
+                profiler.Context, waitStart, Stopwatch.GetTimestamp(), source: "idle.wait")
+            }
+          } else {
+            native.WaitEvents(idleWaitMs())
+          }
         }
-      }
-      let repeatStartTicks = Stopwatch.GetTimestamp()
-      if !native.IsClosing && drainCloseRequest() {
-        if windowTarget?.PrepareClose() != false {
-          stopPosts()
-          native.BeginClose()
+        if profiling { profiler.BeginFrameTrace() }
+        let repeatStartTicks = Stopwatch.GetTimestamp()
+        if !native.IsClosing && drainCloseRequest() {
+          if windowTarget?.PrepareClose() != false {
+            stopPosts()
+            native.BeginClose()
+          }
         }
-      }
-      if native.IsClosing || !IsOpen {
-        try {
-          Close()
-        } finally {
+        if native.IsClosing || !IsOpen {
+          try {
+            Close()
+          } finally {
+            if profiling {
+              profiler.Record(FrameProfileStage.Events, eventsProfile)
+              profiler.EndFrame(frameProfile, false)
+            }
+          }
+          return
+        }
+        consumeNativeMetrics()
+        if !IsOpen {
           if profiling {
             profiler.Record(FrameProfileStage.Events, eventsProfile)
             profiler.EndFrame(frameProfile, false)
           }
+          return
         }
-        return
-      }
-      consumeNativeMetrics()
-      if !IsOpen {
+        native.ClearPendingEvents()
         if profiling {
           profiler.Record(FrameProfileStage.Events, eventsProfile)
-          profiler.EndFrame(frameProfile, false)
         }
-        return
-      }
-      native.ClearPendingEvents()
-      if profiling {
-        profiler.Record(FrameProfileStage.Events, eventsProfile)
-      }
 
-      // Pump drains each fixed Post batch here, after close decisions and before input.
-      drainPostedActions()
-      drainTimers(float64(Stopwatch.GetTimestamp()))
-      if !IsOpen {
-        if profiling {
-          profiler.EndFrame(frameProfile, false)
+        // Pump drains each fixed Post batch here, after close decisions and before input.
+        drainPostedActions()
+        drainTimers(float64(Stopwatch.GetTimestamp()))
+        if !IsOpen {
+          if profiling {
+            profiler.EndFrame(frameProfile, false)
+          }
+          return
         }
-        return
-      }
 
-      // Drain returns true only for visually relevant input; bare moves stay quiet.
-      let inputProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-      var inputChanged = false
-      if IsInputBlocked { input.Reset(node, resolver) }
-      else { inputChanged = input.Drain(node, resolver, timeS,
-        notifications.KeyPressedCallbacks, repeatStartTicks) }
-      if profiling {
-        profiler.Record(FrameProfileStage.Input, inputProfile)
-      }
-      if inputChanged {
-        accessibility?.MarkDirty()
-        resolver.VisualDirty = true
-      }
-      if input.ConsumeScrollRectsDirty() {
-        pendingReconcileEffects = combineEffects(pendingReconcileEffects,
-          ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect
-          | ReconcileEffects.Accessibility)
-      }
-      // dt can carry a stale idle wait (up to 250 ms) plus whatever this call's
-      // own poll/wait consumed. Nothing was ticking while asleep (hasDemand()
-      // was false), so nothing loses banked motion; without this clamp, an
-      // anim/transition/scroll retarget started by the very input that just
-      // woke us would take its first (and sometimes only) step across the
-      // whole stale gap instead of animating. timeS (and so input's
-      // double-click clock) must NOT be clamped, or it runs slow while idle
-      // and misreads two far-apart clicks as a double-click -- only the
-      // simulation step is bounded; UpdateTree's wallDt/simDt split keeps them
-      // separate.
-      let allowFrame = frameAllowed && IsVisible
-      let stepDt = allowFrame ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
-      let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-      UpdateTree(dt, stepDt)
-      if !IsOpen {
-        if profiling { profiler.EndFrame(frameProfile, false) }
-        return
-      }
-      RefreshPlatformInput()
-      if profiling {
-        profiler.Record(FrameProfileStage.Tree, treeProfile)
-      }
-      native.SetCursor(input.CurrentCursor())
-      let queueCompleted = queueCompletedAtEntry || windowTarget?.PollQueueCompletion() == true
-      var rendered = false
-      if queueCompleted {
-        rendered = true
-        native.MarkFrame(float64(Stopwatch.GetTimestamp()))
-      }
-      advanceCapture()
-      let frameNeeded = needsRenderFrame(resolver.VisualDirty)
-      if allowFrame && IsVisible && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
-        let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-        let currentProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-        windowTarget?.BeginFrame()
+        // Drain returns true only for visually relevant input; bare moves stay quiet.
+        let inputProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+        var inputChanged = false
+        if IsInputBlocked { input.Reset(node, resolver) }
+        else { inputChanged = input.Drain(node, resolver, timeS,
+          notifications.KeyPressedCallbacks, repeatStartTicks) }
         if profiling {
-          profiler.Record(FrameProfileStage.TargetBegin, currentProfile)
+          profiler.Record(FrameProfileStage.Input, inputProfile)
         }
-        renderFrame()
-        let swapProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-        windowTarget?.Present()
+        if inputChanged {
+          accessibility?.MarkDirty()
+          resolver.VisualDirty = true
+        }
+        if input.ConsumeScrollRectsDirty() {
+          pendingReconcileEffects = combineEffects(pendingReconcileEffects,
+            ReconcileEffects.Paint | ReconcileEffects.Input | ReconcileEffects.Rect
+            | ReconcileEffects.Accessibility)
+        }
+        // dt can carry a stale idle wait (up to 250 ms) plus whatever this call's
+        // own poll/wait consumed. Nothing was ticking while asleep (hasDemand()
+        // was false), so nothing loses banked motion; without this clamp, an
+        // anim/transition/scroll retarget started by the very input that just
+        // woke us would take its first (and sometimes only) step across the
+        // whole stale gap instead of animating. timeS (and so input's
+        // double-click clock) must NOT be clamped, or it runs slow while idle
+        // and misreads two far-apart clicks as a double-click -- only the
+        // simulation step is bounded; UpdateTree's wallDt/simDt split keeps them
+        // separate.
+        let allowFrame = frameAllowed && IsVisible
+        let stepDt = allowFrame ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
+        let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+        UpdateTree(dt, stepDt)
+        if !IsOpen {
+          if profiling { profiler.EndFrame(frameProfile, false) }
+          return
+        }
+        RefreshPlatformInput()
         if profiling {
-          profiler.Record(FrameProfileStage.Present, swapProfile)
-          profiler.Record(FrameProfileStage.Render, renderProfile)
+          profiler.Record(FrameProfileStage.Tree, treeProfile)
         }
-        let submitted = windowTarget?.LastFrameSubmitted == true
-        if submitted || windowTarget?.QueueWorkPending == true {
-          markFrameRendered()
-        }
-        if submitted {
+        native.SetCursor(input.CurrentCursor())
+        let queueCompleted = queueCompletedAtEntry || windowTarget?.PollQueueCompletion() == true
+        var rendered = false
+        if queueCompleted {
           rendered = true
           native.MarkFrame(float64(Stopwatch.GetTimestamp()))
-        } else {
-          native.DeferFrame(float64(Stopwatch.GetTimestamp()))
         }
-      } else if allowFrame && !frameNeeded {
-        native.MarkFrame(float64(Stopwatch.GetTimestamp()))
-      }
-      if profiling {
-        profiler.EndFrame(frameProfile, rendered)
+        advanceCapture()
+        let frameNeeded = needsRenderFrame(resolver.VisualDirty)
+        if allowFrame && IsVisible && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
+          let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+          let currentProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+          windowTarget?.BeginFrame()
+          if profiling {
+            profiler.Record(FrameProfileStage.TargetBegin, currentProfile)
+          }
+          renderFrame()
+          let swapProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+          windowTarget?.Present()
+          if profiling {
+            profiler.Record(FrameProfileStage.Present, swapProfile)
+            profiler.Record(FrameProfileStage.Render, renderProfile)
+          }
+          let submitted = windowTarget?.LastFrameSubmitted == true
+          if submitted || windowTarget?.QueueWorkPending == true {
+            markFrameRendered()
+          }
+          if submitted {
+            rendered = true
+            native.MarkFrame(float64(Stopwatch.GetTimestamp()))
+          } else {
+            native.DeferFrame(float64(Stopwatch.GetTimestamp()))
+          }
+        } else if allowFrame && !frameNeeded {
+          native.MarkFrame(float64(Stopwatch.GetTimestamp()))
+        }
+        if profiling {
+          profiler.EndFrame(frameProfile, rendered, windowTarget?.QueueWorkPending == true || (!allowFrame && frameNeeded))
+        }
+      } catch (error Exception) {
+        if profiling { profiler.Record(FrameProfileStage.Frame, frameProfile, -1) }
+        throw error
       }
     }
 
@@ -713,10 +727,19 @@ public partial class Window {
   private func renderFrame() {
     if let target = windowTarget {
       flushForeground()
-      let paintProfile = profiler.Active ? profiler.Start() : FrameProfilePoint{}
-      target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
-      if profiler.Active {
-        profiler.Record(FrameProfileStage.Paint, paintProfile)
+      if !profiler.Active {
+        target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
+        return
+      }
+      let paintProfile = profiler.Start()
+      var completed = false
+      try {
+        target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
+        completed = true
+      } finally {
+        if profiler.Active {
+          profiler.Record(FrameProfileStage.Paint, paintProfile, if completed { 0 } else { -1 })
+        }
       }
     }
   }

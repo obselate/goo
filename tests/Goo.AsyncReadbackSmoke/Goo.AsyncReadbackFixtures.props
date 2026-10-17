@@ -8,6 +8,8 @@
              Link="DiagnosticCaptureSmoke.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)EmbeddedHostSmoke.gs"
              Link="EmbeddedHostSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ProfilerSmoke.gs"
+             Link="ProfilerSmoke.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)WindowActivationSmoke.gs"
              Link="WindowActivationSmoke.gs" />
   </ItemGroup>

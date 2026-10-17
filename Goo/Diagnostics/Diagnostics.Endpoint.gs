@@ -22,7 +22,7 @@ internal class DiagnosticEndpointDiscovery {
       +ordinal.ToString(CultureInfo.InvariantCulture)
       let descriptorPath = Path.Combine(root, "goo-" + suffix + ".json")
       let pipeName = "goo-" + suffix
-      let windowId = "window-" + suffix
+      let windowId = window.ProfileWindowId
       let sessionId = Guid.NewGuid().ToString("N")
       let endpoint = DiagnosticEndpoint(processId, processName, protocol, 1, "named-pipe",
         pipeName, descriptorPath, created, windowId, sessionId)

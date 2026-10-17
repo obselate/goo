@@ -70,14 +70,24 @@ internal partial class Reconciler {
     let previous = ContextEnvironment.Enter(ContextEnvironment{Window: Owner,
       Frame: cell.incomingContext, Cell: cell, Reader: cell.contextReader})
     try {
-      guard let profiler = Profiler else { return cell.Render() }
+      guard let profiler = Profiler else {
+        return cell.Render()
+      }
       let start = profiler.Start()
-      let result = cell.Render()
-      let elapsed = profiler.Elapsed(start)
-      ProfileBuildTicks = ProfileBuildTicks + elapsed.Ticks
-      ProfileBuildBytes = ProfileBuildBytes + elapsed.Bytes
-      ProfileBuildCalls++
-      return result
+      var completed = false
+      try {
+        let result = cell.Render()
+        completed = true
+        return result
+      } finally {
+        if profiler.Active {
+          let end = profiler.Start()
+          ProfileBuildTicks = ProfileBuildTicks + end.Ticks - start.Ticks
+          ProfileBuildBytes = ProfileBuildBytes + end.Bytes - start.Bytes
+          ProfileBuildCalls++
+          profiler.RecordTrace(FrameProfileStage.Build, start, end, if completed { 0 } else { -1 })
+        }
+      }
     } finally { ContextEnvironment.Current = previous }
   }
 
@@ -108,16 +118,24 @@ internal partial class Reconciler {
       return
     }
     let start = value.Start()
-    let nodes = flushStylesCore()
-    commitContexts()
-    let elapsed = value.Elapsed(start)
-    ProfileResolveTicks = ProfileResolveTicks + elapsed.Ticks
-    ProfileResolveBytes = ProfileResolveBytes + elapsed.Bytes
-    if nodes > 0 {
-      ProfileResolveCalls++
-      value.RecordStyleResolveNodes(nodes)
+    var completed = false
+    try {
+      let nodes = flushStylesCore()
+      commitContexts()
+      if nodes > 0 {
+        ProfileResolveCalls++
+        value.RecordStyleResolveNodes(nodes)
+      }
+      styleRetryRoot = nil
+      completed = true
+    } finally {
+      if value.Active {
+        let end = value.Start()
+        ProfileResolveTicks = ProfileResolveTicks + end.Ticks - start.Ticks
+        ProfileResolveBytes = ProfileResolveBytes + end.Bytes - start.Bytes
+        value.RecordTrace(FrameProfileStage.StyleResolve, start, end, if completed { 0 } else { -1 })
+      }
     }
-    styleRetryRoot = nil
   }
 
   private func flushStylesCore() int64 {
