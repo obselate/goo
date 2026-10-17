@@ -5,6 +5,7 @@ internal unsafe partial class VulkanSwapchainGeneration {
     if disposed {
       return
     }
+    if let recorder = FrameRecorder.Current { Profile(recorder, VulkanDiagnosticEventIds.SwapchainDestroy) }
     disposed = true
     let staleImageSet = imageSet
     imageSet = nil

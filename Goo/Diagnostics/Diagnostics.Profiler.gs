@@ -43,6 +43,7 @@ internal partial class DiagnosticPipeHost {
             var device = session.ProfileMetadata()
             device.Ticks = System.Diagnostics.Stopwatch.GetTimestamp() - current.Origin
             current.Publish(device)
+            Window.ProfileWindows(current, endpoint.WindowId)
             let result = StringBuilder()
             result
                 .Append("{\"command\":\"profiler.start\",\"state\":\"Recording\",\"traceId\":")
@@ -59,7 +60,7 @@ internal partial class DiagnosticPipeHost {
                 .Append(quote(System.Diagnostics.Stopwatch.Frequency.ToString(CultureInfo.InvariantCulture)))
                 .Append(",\"startedUtc\":")
                 .Append(quote(current.StartedUtc))
-                .Append(",\"categories\":[\"frames\",\"cpu\",\"queue\"],\"samplingIntervals\":{},\"bufferBytes\":")
+                .Append(",\"categories\":[\"frames\",\"cpu\",\"queue\",\"gpu\",\"memory\",\"resources\"],\"samplingIntervals\":{\"managedMs\":100,\"processMs\":500,\"driverMs\":500},\"bufferBytes\":")
                 .Append(current.BufferBytes)
                 .Append(",\"maxBatchBytes\":")
                 .Append(FrameRecorder.MaxBatchBytes)
@@ -74,7 +75,7 @@ internal partial class DiagnosticPipeHost {
                 .Append(",\"validity\":")
                 .Append(traceText(device.Validity, 32))
                 .Append("}]")
-                .Append(",\"gpuTiming\":\"unavailable\",\"baseline\":[]")
+                .Append(",\"gpuTiming\":\"per-submission-elapsed\",\"baseline\":[]")
                 .Append(
                 ",\"phaseSemantics\":{\"Paint\":\"entire target.Render\",\"Diff\":\"derived, not a duration\",\"Frame\":\"pump work excluding native wait\",\"allocatedBytes\":\"current-thread traffic, nested totals overlap\"}"
             )
@@ -104,9 +105,10 @@ internal partial class DiagnosticPipeHost {
 
     private func stopProfile(client DiagnosticPipeClient, payload JsonElement) string {
         let current = requireProfile(client, payload)
+        session.ProfileMetadata()
         current.Stop(false)
         return "{\"command\":\"profiler.stop\",\"traceId\":" + quote(current.TraceId)
-        + ",\"state\":\"Complete\",\"partial\":false,\"more\":true}"
+        + ",\"state\":\"Stopping\",\"partial\":false,\"more\":true}"
     }
 
     private func readProfile(client DiagnosticPipeClient, payload JsonElement) string {

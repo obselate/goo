@@ -61,6 +61,17 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
   private var releasedEpoch int64
   private var releaseDeferred bool
   private var disposed bool
+  private var profileTraceId string?
+  private var profileBaseline int64 = -1L
+
+  internal func ProfileResources(recorder FrameRecorder) {
+    if profileTraceId == recorder.TraceId && profileBaseline == recorder.BaselineVersion { return }
+    profileTraceId = recorder.TraceId
+    profileBaseline = recorder.BaselineVersion
+    for record in providerRecords {
+      if let source = record.Reference?.Target as ImageSource? { source.ProfileIdentity(recorder) }
+    }
+  }
 
   internal prop LinearSamplerId ResourceId{ get -> linearSamplerId }
   internal prop Stats VulkanImageIdentityRegistryStats{

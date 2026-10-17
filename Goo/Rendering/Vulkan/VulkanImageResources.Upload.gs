@@ -63,7 +63,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     }
 
   internal func QueueUpload(id ResourceId, premultipliedSourceBytes * uint8,
-    byteCount VkDeviceSize, expectedGeneration uint64) bool{
+    byteCount VkDeviceSize, expectedGeneration uint64, decoded DecodedImage? = nil) bool{
       EnsureOpen()
       ValidateGeneration(expectedGeneration)
       ValidateImageId(id)
@@ -180,6 +180,16 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       entry.UploadFence = 0uL
       entry.PendingRetire = false
       flushPrepared = false
+      if let recorder = FrameRecorder.Current {
+        if let allocation = entry.Allocation {
+          if allocation.profileTraceId != recorder.TraceId {
+            allocator.ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
+          }
+          recorder.Resource(FrameResourceKind.Image, allocation.profileId, VulkanDiagnosticEventIds.ResourceUpload,
+            "image.upload.prepare", bytes: uint64(chunkByteCount), width: int32(entry.Width), height: int32(rowCount),
+            device: uint64(device), parent: decoded?.Profile(recorder, true) ?? 0uL)
+        }
+      }
       entries[index] = entry
       if let currentDiagnostics = diagnostics {
         currentDiagnostics.AddImageUploadChunk(1uL)
@@ -468,6 +478,16 @@ internal unsafe partial class VulkanImageResources : IDisposable {
             }
             entry.UploadSubmitted = true
             entry.UploadFence = fence
+            if let recorder = FrameRecorder.Current {
+              if let allocation = entry.Allocation {
+                if allocation.profileTraceId != recorder.TraceId {
+                  allocator.ProfileAllocation(recorder, allocation, FrameTraceKind.ResourceBaseline, VulkanDiagnosticEventIds.ResourceCreate)
+                }
+                recorder.Resource(FrameResourceKind.Image, allocation.profileId, VulkanDiagnosticEventIds.ResourceUpload,
+                  "image.upload.submit", bytes: uint64(entry.UploadRowCount) * uint64(entry.Width) * 4uL,
+                  device: uint64(device), deviceGeneration: expectedGeneration, submission: fence)
+              }
+            }
             if entry.PendingRetire {
               let safeFence = RetireFence(entry, fence)
               entry.RetireFence = safeFence

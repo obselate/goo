@@ -254,7 +254,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
       | uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT),
       uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),
       LayerCount,
-      VulkanMemoryPolicy.DeviceLocalRequired)
+      VulkanMemoryPolicy.DeviceLocalRequired, VulkanMemoryOwnerKind.ClipAtlas)
     Image = creation.Image
     ImageView = creation.ImageView
     Allocation = creation.Allocation
