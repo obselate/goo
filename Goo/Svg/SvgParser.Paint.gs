@@ -12,22 +12,24 @@ internal partial class SvgParser {
         let bounds = path.Bounds()
         let fill = ParsePaint(style.Fill, style.FillOpacity, bounds, element)
         var stroke SvgStroke? = nil
-        if style.Stroke != nil && !IsNone(style.Stroke!!) {
-            let paint = ParsePaint(style.Stroke!!, style.StrokeOpacity, bounds, element) ??
-                throw Fail(element, "stroke paint is empty")
-            if paint.Kind != SvgPaintKind.Solid {
-                throw Fail(element, "gradient stroke paints are not supported")
-            }
-            stroke = SvgStroke{
-                Width: style.StrokeWidth,
-                MiterLimit: style.MiterLimit,
-                Cap: style.StrokeCap,
-                Join: style.StrokeJoin,
-                DashOffset: style.DashOffset,
-                Paint: paint
-            }
-            if style.Dashes != nil {
-                stroke.Dashes.AddRange(style.Dashes!!)
+        if let rawStroke = style.Stroke {
+            if !IsNone(rawStroke) {
+                let paint = ParsePaint(rawStroke, style.StrokeOpacity, bounds, element) ??
+                    throw Fail(element, "stroke paint is empty")
+                if paint.Kind != SvgPaintKind.Solid {
+                    throw Fail(element, "gradient stroke paints are not supported")
+                }
+                stroke = SvgStroke{
+                    Width: style.StrokeWidth,
+                    MiterLimit: style.MiterLimit,
+                    Cap: style.StrokeCap,
+                    Join: style.StrokeJoin,
+                    DashOffset: style.DashOffset,
+                    Paint: paint
+                }
+                if let dashes = style.Dashes {
+                    stroke.Dashes.AddRange(dashes)
+                }
             }
         }
         return SvgShape{
@@ -138,8 +140,7 @@ internal partial class SvgParser {
                 throw Fail(current.Element, "gradient references form a cycle")
             }
             chain.Add(current)
-            let href string? = GetHref(current.Element)
-            if href == nil {
+            guard let href = GetHref(current.Element) else {
                 break
             }
             id = href
@@ -244,8 +245,7 @@ internal partial class SvgParser {
             if LocalName(child) != "stop" {
                 throw Fail(child, "gradient child '${LocalName(child)}' is not supported")
             }
-            let descendant XElement? = child.Descendants().FirstOrDefault()
-            if descendant != nil {
+            if let descendant = child.Descendants().FirstOrDefault() {
                 throw Fail(descendant, "gradient stop child '${LocalName(descendant)}' is not supported")
             }
         }
@@ -352,8 +352,7 @@ internal partial class SvgParser {
             StringComparer.Ordinal
         )
         ApplyStyleValues(style, direct, element)
-        let inline string? = string?(element.Attribute("style"))
-        if inline != nil {
+        if let inline = string?(element.Attribute("style")) {
             if inline.Contains('{') || inline.Contains('}') || inline.Contains('@') {
                 throw Fail(element, "CSS selectors and at-rules are not supported")
             }
@@ -507,8 +506,7 @@ internal partial class SvgParser {
         private func ResolveStopStyle(element XElement)(Color string, Opacity float64) {
             var color = string?(element.Attribute("stop-color")) ?? "#000000"
             var opacity = ParseLooseNumber(string?(element.Attribute("stop-opacity")) ?? "1", element, "stop-opacity")
-            let style string? = string?(element.Attribute("style"))
-            if style == nil {
+            guard let style = string?(element.Attribute("style")) else {
                 return (color, opacity)
             }
             for declaration in style.Split(

@@ -20,9 +20,9 @@ internal partial class SvgParser {
     private let animationPaints List[VectorAnimationPaint] = List[VectorAnimationPaint]()
     private let animationStrokes List[VectorAnimationStroke] = List[VectorAnimationStroke]()
     private let animationTracks List[VectorAnimationTrack] = List[VectorAnimationTrack]()
-    private let keyframes List[VectorAnimationKeyframe] = List[VectorAnimationKeyframe]()
+    private let animationKeyframes List[VectorAnimationKeyframe] = List[VectorAnimationKeyframe]()
     private let morphCurves List[VectorAnimationCurve] = List[VectorAnimationCurve]()
-    private let dashes List[float32] = List[float32]()
+    private let animationDashes List[float32] = List[float32]()
 
     private func BuildAsset() VectorAsset {
         let orderedNodes = OrderNodes()
@@ -54,9 +54,9 @@ internal partial class SvgParser {
             animationPaints.ToArray(),
             animationStrokes.ToArray(),
             animationTracks.ToArray(),
-            keyframes.ToArray(),
+            animationKeyframes.ToArray(),
             morphCurves.ToArray(),
-            dashes.ToArray()
+            animationDashes.ToArray()
         )
         return VectorAsset(viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight, roots, animation)
     }
@@ -74,10 +74,10 @@ internal partial class SvgParser {
             .Count == 0 ||
             animation
             .Keyframes
-            .Count > MaxAnimationKeyframes - keyframes.Count {
+            .Count > MaxAnimationKeyframes - animationKeyframes.Count {
             throw SvgParseException("animation track limit exceeded")
         }
-        let keyframeStart = keyframes.Count
+        let keyframeStart = animationKeyframes.Count
         for keyframe in animation.Keyframes {
             var curveStart = MissingIndex
             var curveCount = 0u
@@ -101,7 +101,7 @@ internal partial class SvgParser {
                     )
                 }
             }
-            keyframes.Add(
+            animationKeyframes.Add(
                 VectorAnimationKeyframe(
                     F32(keyframe.Time),
                     F32(keyframe.A),
@@ -154,9 +154,9 @@ internal partial class SvgParser {
         if animationStrokes.Count >= MaxStrokes {
             throw SvgParseException("stroke count exceeds $MaxStrokes")
         }
-        let dashStart = dashes.Count
+        let dashStart = animationDashes.Count
         for value in stroke.Dashes {
-            dashes.Add(F32(value))
+            animationDashes.Add(F32(value))
         }
         let index = animationStrokes.Count
         animationStrokes.Add(

@@ -15,7 +15,6 @@ internal class SvgPathParser {
             var contour SvgContour? = nil
             var current = SvgPoint(0.0, 0.0)
             var start = current
-            var previousCommand = '\u0000'
             var previousCubicControl = current
             var previousQuadraticControl = current
             var hasPreviousCubic = false
@@ -25,196 +24,221 @@ internal class SvgPathParser {
                 if tokenIsCommand {
                     command = token
                     if command is 'z' or 'Z' {
-                        if contour != nil {
+                        if let active = contour {
                             if !Same(current, start) {
-                                AddLine(contour, current, start, &curveCount)
+                                AddLine(active, current, start, &curveCount)
                             }
-                            contour.Closed = true
+                            active.Closed = true
                             current = start
                         }
-                        previousCommand = command
                         hasPreviousCubic = false
                         hasPreviousQuadratic = false
                         continue
                     }
-                    if command is not(
-                        'm' or
-                            'M' or
-                            'l' or
-                            'L' or
-                            'h' or
-                            'H' or
-                            'v' or
-                            'V' or
-                            'c' or
-                            'C' or
-                            's' or
-                            'S' or
-                            'q' or
-                            'Q' or
-                            't' or
-                            'T' or
-                            'a' or
-                            'A'
-                    ) {
-                        throw SvgParser.Fail(owner, "path command '$command' is not supported")
-                    }
+                    ValidateCommand(command, owner)
                 } else if command == '\u0000' {
                     throw SvgParser.Fail(owner, "path data must start with a command")
-                } else if !tokenIsCommand && command is 'z' or 'Z' {
+                } else if command is 'z' or 'Z' {
                     throw SvgParser.Fail(owner, "path data cannot continue after close without a command")
                 }
+                if command is 'm' or 'M' {
+                    let point = ReadPoint(scanner, owner, command == 'm', current)
+                    if let active = contour {
+                        if active.Curves.Count != 0 {
+                            path.Contours.Add(active)
+                        }
+                    }
+                    contour = SvgContour()
+                    current = point
+                    start = point
+                    hasPreviousCubic = false
+                    hasPreviousQuadratic = false
+                    command = if command == 'm' {
+                        'l'
+                    } else {
+                        'L'
+                    }
+                    continue
+                }
+                let active = contour ?? SvgContour()
+                contour = active
                 switch command {
-                    case 'm', 'M' {
-                        let point = ReadPoint(scanner, owner, command == 'm', current)
-                        if contour != nil && contour.Curves.Count != 0 {
-                            path.Contours.Add(contour)
-                        }
-                        contour = SvgContour()
+                    case 'l' or 'L' or 'h' or 'H' or 'v' or 'V' {
+                        let point = ReadLinePoint(scanner, owner, command, current)
+                        AddLine(active, current, point, &curveCount)
                         current = point
-                        start = point
-                        previousCommand = command
-                        hasPreviousCubic = false
-                        hasPreviousQuadratic = false
-                        command = if command == 'm' {
-                            'l'
-                        } else {
-                            'L'
-                        }
                     }
-                    case 'l', 'L' {
-                        EnsureContour(&contour, current)
-                        let point = ReadPoint(scanner, owner, command == 'l', current)
-                        AddLine(contour!!, current, point, &curveCount)
-                        current = point
-                        previousCommand = command
-                        hasPreviousCubic = false
-                        hasPreviousQuadratic = false
-                    }
-                    case 'h', 'H' {
-                        EnsureContour(&contour, current)
-                        let x = scanner.ReadNumber()
-                        let point = SvgPoint(
-                            if command == 'h' {
-                                current.X + x
-                            } else {
-                                x
-                            },
-                            current.Y
-                        )
-                        AddLine(contour!!, current, point, &curveCount)
-                        current = point
-                        previousCommand = command
-                        hasPreviousCubic = false
-                        hasPreviousQuadratic = false
-                    }
-                    case 'v', 'V' {
-                        EnsureContour(&contour, current)
-                        let y = scanner.ReadNumber()
-                        let point = SvgPoint(
-                            current.X,
-                            if command == 'v' {
-                                current.Y + y
-                            } else {
-                                y
-                            }
-                        )
-                        AddLine(contour!!, current, point, &curveCount)
-                        current = point
-                        previousCommand = command
-                        hasPreviousCubic = false
-                        hasPreviousQuadratic = false
-                    }
-                    case 'c', 'C' {
-                        EnsureContour(&contour, current)
-                        let first = ReadPoint(scanner, owner, command == 'c', current)
-                        let second = ReadPoint(scanner, owner, command == 'c', current)
-                        let end = ReadPoint(scanner, owner, command == 'c', current)
-                        AddCubic(contour!!, current, first, second, end, &curveCount)
-                        current = end
-                        previousCubicControl = second
-                        hasPreviousCubic = true
-                        hasPreviousQuadratic = false
-                        previousCommand = command
-                    }
-                    case 's', 'S' {
-                        EnsureContour(&contour, current)
-                        let first = if hasPreviousCubic && previousCommand is 'c' or 'C' or 's' or 'S' {
-                            Reflect(previousCubicControl, current)
-                        } else {
-                            current
-                        }
-                        let second = ReadPoint(scanner, owner, command == 's', current)
-                        let end = ReadPoint(scanner, owner, command == 's', current)
-                        AddCubic(contour!!, current, first, second, end, &curveCount)
-                        current = end
-                        previousCubicControl = second
-                        hasPreviousCubic = true
-                        hasPreviousQuadratic = false
-                        previousCommand = command
-                    }
-                    case 'q', 'Q' {
-                        EnsureContour(&contour, current)
-                        let control = ReadPoint(scanner, owner, command == 'q', current)
-                        let end = ReadPoint(scanner, owner, command == 'q', current)
-                        AddQuadratic(contour!!, current, control, end, &curveCount)
-                        current = end
-                        previousQuadraticControl = control
-                        hasPreviousQuadratic = true
-                        hasPreviousCubic = false
-                        previousCommand = command
-                    }
-                    case 't', 'T' {
-                        EnsureContour(&contour, current)
-                        let control = if hasPreviousQuadratic && previousCommand is 'q' or 'Q' or 't' or 'T' {
-                            Reflect(previousQuadraticControl, current)
-                        } else {
-                            current
-                        }
-                        let end = ReadPoint(scanner, owner, command == 't', current)
-                        AddQuadratic(contour!!, current, control, end, &curveCount)
-                        current = end
-                        previousQuadraticControl = control
-                        hasPreviousQuadratic = true
-                        hasPreviousCubic = false
-                        previousCommand = command
-                    }
-                    case 'a', 'A' {
-                        EnsureContour(&contour, current)
-                        let rx = scanner.ReadNumber()
-                        let ry = scanner.ReadNumber()
-                        let rotation = scanner.ReadNumber()
-                        let largeArc = scanner.ReadNumber()
-                        let sweep = scanner.ReadNumber()
-                        let end = ReadPoint(scanner, owner, command == 'a', current)
-                        if largeArc is not(0.0 or 1.0) || sweep is not(0.0 or 1.0) {
-                            throw SvgParser.Fail(owner, "arc flags must be zero or one")
-                        }
-                        AddArc(
-                            contour!!,
+                    case 'c' or 'C' or 's' or 'S' {
+                        current = ReadCubic(
+                            scanner,
+                            owner,
+                            command,
                             current,
-                            Math.Abs(rx),
-                            Math.Abs(ry),
-                            rotation,
-                            largeArc != 0.0,
-                            sweep != 0.0,
-                            end,
+                            active,
+                            hasPreviousCubic,
+                            &previousCubicControl,
                             &curveCount
                         )
-                        current = end
-                        hasPreviousCubic = false
-                        hasPreviousQuadratic = false
-                        previousCommand = command
+                    }
+                    case 'q' or 'Q' or 't' or 'T' {
+                        current = ReadQuadratic(
+                            scanner,
+                            owner,
+                            command,
+                            current,
+                            active,
+                            hasPreviousQuadratic,
+                            &previousQuadraticControl,
+                            &curveCount
+                        )
+                    }
+                    case 'a' or 'A' {
+                        current = ReadArc(scanner, owner, command, current, active, &curveCount)
                     }
                 }
+                hasPreviousCubic = command is 'c' or 'C' or 's' or 'S'
+                hasPreviousQuadratic = command is 'q' or 'Q' or 't' or 'T'
             }
-            if contour != nil && contour.Curves.Count != 0 {
-                path.Contours.Add(contour)
+            if let active = contour {
+                if active.Curves.Count != 0 {
+                    path.Contours.Add(active)
+                }
             }
             if path.Contours.Count == 0 {
                 throw SvgParser.Fail(owner, "path contains no geometry")
             }
             return path
+        }
+
+        private func ValidateCommand(command char, owner XElement) {
+            if command is not(
+                'm' or
+                    'M' or
+                    'l' or
+                    'L' or
+                    'h' or
+                    'H' or
+                    'v' or
+                    'V' or
+                    'c' or
+                    'C' or
+                    's' or
+                    'S' or
+                    'q' or
+                    'Q' or
+                    't' or
+                    'T' or
+                    'a' or
+                    'A'
+            ) {
+                throw SvgParser.Fail(owner, "path command '$command' is not supported")
+            }
+        }
+
+        private func ReadLinePoint(scanner PathScanner, owner XElement, command char, current SvgPoint) SvgPoint {
+            switch command {
+                case 'l' or 'L' {
+                    return ReadPoint(scanner, owner, command == 'l', current)
+                }
+                case 'h' or 'H' {
+                    let x = scanner.ReadNumber()
+                    return SvgPoint(
+                        if command == 'h' {
+                            current.X + x
+                        } else {
+                            x
+                        },
+                        current.Y
+                    )
+                }
+                default {
+                    let y = scanner.ReadNumber()
+                    return SvgPoint(
+                        current.X,
+                        if command == 'v' {
+                            current.Y + y
+                        } else {
+                            y
+                        }
+                    )
+                }
+            }
+        }
+
+        private func ReadCubic(
+            scanner PathScanner,
+            owner XElement,
+            command char,
+            current SvgPoint,
+            contour SvgContour,
+            hasPreviousControl bool,
+            ref previousControl SvgPoint,
+            ref curveCount int32
+        ) SvgPoint {
+            let relative = command is 'c' or 's'
+            let first = switch command {
+                case 'c' or 'C': ReadPoint(scanner, owner, relative, current)
+                case _ when hasPreviousControl: Reflect(previousControl, current)
+                default: current
+            }
+            let second = ReadPoint(scanner, owner, relative, current)
+            let end = ReadPoint(scanner, owner, relative, current)
+            AddCubic(contour, current, first, second, end, &curveCount)
+            previousControl = second
+            return end
+        }
+
+        private func ReadQuadratic(
+            scanner PathScanner,
+            owner XElement,
+            command char,
+            current SvgPoint,
+            contour SvgContour,
+            hasPreviousControl bool,
+            ref previousControl SvgPoint,
+            ref curveCount int32
+        ) SvgPoint {
+            let relative = command is 'q' or 't'
+            let control = switch command {
+                case 'q' or 'Q': ReadPoint(scanner, owner, relative, current)
+                case _ when hasPreviousControl: Reflect(previousControl, current)
+                default: current
+            }
+            let end = ReadPoint(scanner, owner, relative, current)
+            AddQuadratic(contour, current, control, end, &curveCount)
+            previousControl = control
+            return end
+        }
+
+        private func ReadArc(
+            scanner PathScanner,
+            owner XElement,
+            command char,
+            current SvgPoint,
+            contour SvgContour,
+            ref curveCount int32
+        ) SvgPoint {
+            let rx = scanner.ReadNumber()
+            let ry = scanner.ReadNumber()
+            let rotation = scanner.ReadNumber()
+            let largeArc = scanner.ReadNumber()
+            let sweep = scanner.ReadNumber()
+            let end = ReadPoint(scanner, owner, command == 'a', current)
+            if largeArc is not(0.0 or 1.0) || sweep is not(0.0 or 1.0) {
+                throw SvgParser.Fail(owner, "arc flags must be zero or one")
+            }
+            AddArc(
+                contour,
+                current,
+                Math.Abs(rx),
+                Math.Abs(ry),
+                rotation,
+                largeArc != 0.0,
+                sweep != 0.0,
+                end,
+                &curveCount
+            )
+            return end
         }
 
         private func ReadPoint(scanner PathScanner, owner XElement, relative bool, current SvgPoint) SvgPoint {
@@ -230,10 +254,6 @@ internal class SvgPathParser {
                 throw SvgParser.Fail(owner, "path coordinate is not finite")
             }
             return result
-        }
-
-        private func EnsureContour(ref contour SvgContour?, current SvgPoint) {
-            contour ??= SvgContour()
         }
 
         private func Reflect(point SvgPoint, around SvgPoint) SvgPoint -> SvgPoint(
@@ -390,7 +410,7 @@ internal class SvgPathParser {
             let segments = Math.Max(1, int32(Math.Ceiling(Math.Abs(deltaAngle) / (Math.PI / 2.0))))
             let segmentAngle = deltaAngle / float64(segments)
             var currentAngle = startAngle
-            for var index = 0; index < segments; index++ {
+            for index in 0 ... segments {
                 let nextAngle = currentAngle + segmentAngle
                 let tangent = 4.0 / 3.0 * Math.Tan((nextAngle - currentAngle) / 4.0)
                 let p0 = EllipsePoint(centerX, centerY, radiusX, radiusY, cosine, sine, currentAngle)

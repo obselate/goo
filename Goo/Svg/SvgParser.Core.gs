@@ -64,8 +64,7 @@ internal partial class SvgParser {
         for element in root.DescendantsAndSelf() {
             ValidateNamespace(element)
             let name = LocalName(element)
-            let id string? = string?(element.Attribute("id"))
-            if id != nil {
+            if let id = string?(element.Attribute("id")) {
                 if id.Length == 0 || !ids.Add(id) {
                     throw Fail(element, "duplicate or empty id")
                 }
@@ -124,8 +123,7 @@ internal partial class SvgParser {
     }
 
     private func ParseViewBox(root XElement) {
-        let viewBox string? = string?(root.Attribute("viewBox"))
-        if viewBox != nil {
+        if let viewBox = string?(root.Attribute("viewBox")) {
             let values = ParseNumberList(viewBox, root, "viewBox")
             if values.Count != 4 || values[2] <= 0.0 || values[3] <= 0.0 {
                 throw Fail(root, "viewBox must contain four positive finite values")
@@ -330,10 +328,8 @@ internal partial class SvgParser {
         private func ParseDocument(reader XmlReader, sourceName string) VectorAsset {
             try {
                 let document = XDocument.Load(reader, LoadOptions.SetLineInfo)
-                if document.Root == nil {
-                    throw SvgParseException("document has no root element")
-                }
-                return SvgParser().Parse(document.Root!!)
+                let root = document.Root ?? throw SvgParseException("document has no root element")
+                return SvgParser().Parse(root)
             } catch (SvgParseException) {
                 rethrow
             } catch (exception XmlException) {

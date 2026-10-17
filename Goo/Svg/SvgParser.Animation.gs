@@ -43,7 +43,10 @@ internal partial class SvgParser {
             return
         }
         if (attributeName is "d" or "path") {
-            if node.Shape == nil || !node.Shape.IsPath {
+            guard let shape = node.Shape else {
+                throw Fail(element, "path morph animation requires a path shape")
+            }
+            if !shape.IsPath {
                 throw Fail(element, "path morph animation requires a path shape")
             }
             if node.MorphAnimation != nil {
@@ -53,8 +56,8 @@ internal partial class SvgParser {
                 element,
                 SvgAnimationKind.Morph,
                 attributeName,
-                node.Shape!!.Stroke,
-                node.Shape!!.Path
+                shape.Stroke,
+                shape.Path
             )
             return
         }
@@ -79,18 +82,16 @@ internal partial class SvgParser {
             node.OpacityAnimation = animation
             return
         }
-        if node.Shape == nil {
-            throw Fail(element, "attribute '$attributeName' requires a shape node")
-        }
+        let shape = node.Shape ?? throw Fail(element, "attribute '$attributeName' requires a shape node")
         if kind == SvgAnimationKind.Color {
-            let paint SvgPaint? = if attributeName == "fill" {
-                node.Shape!!.Fill
-            } else {
-                node.Shape!!.Stroke?.Paint
-            }
-            if paint == nil {
+            let paint = (
+                if attributeName == "fill" {
+                    shape.Fill
+                } else {
+                    shape.Stroke?.Paint
+                }
+            ) ??
                 throw Fail(element, "attribute '$attributeName' has no static paint to animate")
-            }
             if paint.Kind != SvgPaintKind.Solid {
                 throw Fail(element, "attribute '$attributeName' animation requires a solid paint")
             }
@@ -103,13 +104,11 @@ internal partial class SvgParser {
             paint.Animation = animation
             return
         }
-        if node.Shape!!.Stroke == nil {
-            throw Fail(element, "attribute '$attributeName' requires a stroke")
-        }
-        if node.Shape!!.Stroke!!.Animation != nil {
+        let stroke = shape.Stroke ?? throw Fail(element, "attribute '$attributeName' requires a stroke")
+        if stroke.Animation != nil {
             throw Fail(element, "a stroke cannot have multiple property animations")
         }
-        node.Shape!!.Stroke!!.Animation = animation
+        stroke.Animation = animation
     }
 
     private func BuildAnimation(
@@ -152,7 +151,7 @@ internal partial class SvgParser {
         }
         let splines = ReadKeySplines(element, calcMode, values.Count)
         let keyframes = List[SvgAnimationKeyframe](values.Count)
-        for var index = 0; index < values.Count; index++ {
+        for index in 0 ... values.Count {
             let source = values[index]
             let easing = switch calcMode {
                 case "discrete" when index < values.Count - 1: 1u
@@ -186,7 +185,7 @@ internal partial class SvgParser {
             return WithKeyframes(SvgAnimation{Kind: kind, Duration: duration, Flags: 1u}, keyframes)
         }
         let repeated = List[SvgAnimationKeyframe](checked(keyframes.Count * repeat.Count))
-        for var cycle = 0; cycle < repeat.Count; cycle++ {
+        for cycle in 0 ... repeat.Count {
             for keyframe in keyframes {
                 repeated.Add(
                     SvgAnimationKeyframe{
@@ -254,8 +253,7 @@ internal partial class SvgParser {
         }
 
         private func ReadAnimationValues(element XElement) List[string] {
-            let values string? = string?(element.Attribute("values"))
-            if values != nil {
+            if let values = string?(element.Attribute("values")) {
                 if element.Attribute("from") != nil || element.Attribute("to") != nil || element.Attribute(
                     "by"
                 ) != nil {
@@ -275,10 +273,9 @@ internal partial class SvgParser {
         }
 
         private func ReadKeyTimes(element XElement, count int32) List[float64] {
-            let raw string? = string?(element.Attribute("keyTimes"))
-            if raw == nil {
+            guard let raw = string?(element.Attribute("keyTimes")) else {
                 let result = List[float64](count)
-                for var index = 0; index < count; index++ {
+                for index in 0 ... count {
                     result.Add(float64(index) / float64((count - 1)))
                 }
                 return result
@@ -291,7 +288,7 @@ internal partial class SvgParser {
             if values.Count != count || values.Count < 2 || values[0] != 0.0 || values[^1] != 1.0 {
                 throw Fail(element, "keyTimes must match values and span zero to one")
             }
-            for var index = 1; index < values.Count; index++ {
+            for index in 1 ... values.Count {
                 if values[index] < values[index - 1] || values[index] < 0.0 || values[index] > 1.0 {
                     throw Fail(element, "keyTimes must be ordered values between zero and one")
                 }
@@ -397,7 +394,7 @@ internal partial class SvgParser {
             if basePath.Contours.Count != target.Contours.Count {
                 throw Fail(owner, "path morph target contour count does not match the base path")
             }
-            for var contourIndex = 0; contourIndex < basePath.Contours.Count; contourIndex++ {
+            for contourIndex in 0 ... basePath.Contours.Count {
                 let baseContour = basePath.Contours[contourIndex]
                 let targetContour = target.Contours[contourIndex]
                 if baseContour.Closed != targetContour.Closed {
@@ -421,7 +418,7 @@ internal partial class SvgParser {
             if contour.Curves.Count == 0 {
                 throw Fail(owner, "path morph target contour $contourIndex has no curves")
             }
-            for var curveIndex = 1; curveIndex < contour.Curves.Count; curveIndex++ {
+            for curveIndex in 1 ... contour.Curves.Count {
                 let previous = contour.Curves[curveIndex - 1]
                 let current = contour.Curves[curveIndex]
                 if current.X0 != previous.X1 || current.Y0 != previous.Y1 {
