@@ -89,6 +89,9 @@ func RunClipCaptureSmoke() {
       }
     Require(WindowReadbackTestFixture.SubmissionReadyForReconcile(opened),
       "Clip capture offscreen submit did not complete before reconciliation")
+    Require(WindowReadbackTestFixture.Resize(opened, metrics.LogicalWidth, metrics.LogicalHeight,
+        metrics.FramebufferWidth + 1, metrics.FramebufferHeight + 1),
+      "Clip capture resize did not reconcile the pending submission")
 
     WindowReadbackTestFixture.SetForceFullRedraw(opened, true)
     var frame int32 = 0
