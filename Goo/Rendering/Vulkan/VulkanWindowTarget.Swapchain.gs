@@ -16,6 +16,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func ReleaseHiddenResources() {
+    if runtime?.DeviceLost == true {
+      hideReleasePending = false
+      return
+    }
     if readbackRequest?.State == VulkanReadbackState.Pending {
       let result = PollReadback()
       if result == VkConstants.VK_NOT_READY || result == VkConstants.VK_TIMEOUT { return }
@@ -28,7 +32,10 @@ internal unsafe partial class VulkanWindowTarget {
     PollRetiredSwapchains()
     if retiredSwapchains.Count != 0 { return }
     ClearReadbackPrerequisite()
-    primitiveRenderer?.InvalidateClipFrameRetention()
+    primitiveRenderer?.Dispose()
+    primitiveRenderer = nil
+    layerPool?.Dispose()
+    layerPool = nil
     clipMaskAtlas?.Reset(CompletedGlobalSubmissionSerial())
     hideReleasePending = false
   }
