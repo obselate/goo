@@ -50,6 +50,8 @@ internal data struct ProfilerRecord {
     var Source string
     var Unit string
     var Validity string
+    var FloatingValue float64?
+    var Chrome string
 }
 
 internal class ProfilerLane {
@@ -121,7 +123,7 @@ internal class ProfilerLane {
     }
 }
 
-internal class ProfilerTrace {
+internal partial class ProfilerTrace {
     internal const BudgetBytes int64 = 128L * 1024L * 1024L
     internal let Records List[ProfilerRecord] = List[ProfilerRecord]()
     internal let Lanes List[ProfilerLane] = List[ProfilerLane]()
@@ -137,6 +139,10 @@ internal class ProfilerTrace {
     internal let ResourceInfo Dictionary[uint64, int32] = Dictionary[uint64, int32]()
     internal let ResourceCreated Dictionary[uint64, int64] = Dictionary[uint64, int64]()
     internal let PositiveOwners Dictionary[uint64, uint64] = Dictionary[uint64, uint64]()
+    internal let WindowNames Dictionary[string, string] = Dictionary[string, string]()
+    internal let ThreadNames Dictionary[uint64, string] = Dictionary[uint64, string]()
+    internal var StartMetadata string = "{}"
+    internal var FileName string = ""
     internal var Id string = ""
     internal var State string = "Starting"
     internal var Reason string = ""
@@ -185,6 +191,8 @@ internal class ProfilerTrace {
         Names(root, "ownerKinds", Owners)
         Names(root, "resourceKinds", Resources)
         Revision++
+        StartMetadata = root.GetRawText()
+        RetainedBytes += int64(StartMetadata.Length) * 2L
     }
 
     internal func Append(root JsonElement) {
@@ -209,13 +217,13 @@ internal class ProfilerTrace {
             let ticks = Int64.Parse(Text(item, "ticks"), CultureInfo.InvariantCulture)
             let record = ProfilerRecord{
                 Sequence: seq,
-                Kind: Intern(Text(item, "kind")),
+                Kind: Text(item, "kind"),
                 Ticks: ticks,
                 EndTicks: Text(item, "endTicks") == "" ? ticks: Int64.Parse(
                     Text(item, "endTicks"),
                     CultureInfo.InvariantCulture
                 ),
-                Window: Intern(Text(item, "windowId")),
+                Window: Text(item, "windowId"),
                 Thread: Number(item, "threadId"),
                 Pump: Number(item, "pumpId"),
                 Frame: Number(item, "frameId"),
@@ -254,61 +262,74 @@ internal class ProfilerTrace {
                     .GetBoolean(),
                 SampleTicks: Signed(item, "sampleTicks"),
                 GcIndex: Signed(item, "gcIndex"),
-                Name: Intern(Text(item, "name")),
-                Source: Intern(Text(item, "source")),
-                Unit: Intern(Text(item, "unit")),
-                Validity: Intern(Text(item, "validity")),
+                Name: Text(item, "name"),
+                Source: Text(item, "source"),
+                Unit: Text(item, "unit"),
+                Validity: Text(item, "validity"),
             }
-            if record.Ticks < 0L || record.EndTicks < record.Ticks {
-                throw InvalidOperationException("Invalid profiler interval")
-            }
-            let index = Records.Count
-            Records.Add(record)
-            RetainedBytes += 1536L
-            End = Math.Max(End, record.EndTicks)
-            if let resource = record.Resource {
-                if record.Name != "" {
-                    ResourceNames[resource] = record.Name
-                }
-                if record.Kind == "resourcelifecycle" {
-                    if record.Event == 203 || record.Event == 221 || record.Event == 121 {
-                        ResourceReleased[resource] = record.Ticks
-                    }
-                    if record.Event == 202 {
-                        ResourceRetired[resource] = record.Ticks
-                    }
-                }
-            }
-            if let resource = record.Resource {
-                if record.Kind == "resourcelifecycle" &&
-                    (record.Event == 200 || record.Event == 220 || record.Event == 120) {
-                    ResourceCreated[resource] = record.Ticks
-                }
-                if !ResourceInfo.ContainsKey(resource) || record.Parent != nil || record.Owner != nil {
-                    ResourceInfo[resource] = index
-                }
-            }
-            if record.Kind == "counter" {
-                if let value = record.Value {
-                    if let device = record.Device {
-                        if let owner = record.Owner {
-                            if value > 0.0 && owner < 8uL {
-                                PositiveOwners[device] = (PositiveOwners.TryGetValue(device, out var mask) ? mask: 0uL)
-                                | (1uL << int32(owner))
-                            }
-                        }
-                    }
-                }
-            }
-            AddLane(index, record)
-            if record.Kind == "gap" {
-                Partial = true
-            }
+            Store(record)
         }
         Next = Int64.Parse(Text(root, "nextSeq"), CultureInfo.InvariantCulture)
         State = Text(root, "state")
         Dropped = Number(root, "dropped") ?? 0uL
         Partial = Partial || root.GetProperty("partial").GetBoolean()
+        PrepareLanes()
+    }
+
+    internal func Store(value ProfilerRecord) {
+        if value.Ticks < 0L || value.EndTicks < value.Ticks {
+            throw InvalidOperationException("Invalid profiler interval")
+        }
+        var record = value
+        record.Kind = Intern(value.Kind ?? "")
+        record.Window = Intern(value.Window ?? "")
+        record.Name = Intern(value.Name ?? "")
+        record.Source = Intern(value.Source ?? "")
+        record.Unit = Intern(value.Unit ?? "")
+        record.Validity = Intern(value.Validity ?? "")
+        record.Chrome = value.Chrome ?? ""
+        let index = Records.Count
+        Records.Add(record)
+        RetainedBytes += 1536L + int64(record.Chrome.Length) * 2L
+        End = Math.Max(End, record.EndTicks)
+        if let resource = record.Resource {
+            if record.Name != "" {
+                ResourceNames[resource] = record.Name
+            }
+            if record.Kind == "resourcelifecycle" {
+                if record.Event == 203 || record.Event == 221 || record.Event == 121 {
+                    ResourceReleased[resource] = record.Ticks
+                }
+                if record.Event == 202 {
+                    ResourceRetired[resource] = record.Ticks
+                }
+                if record.Event == 200 || record.Event == 220 || record.Event == 120 {
+                    ResourceCreated[resource] = record.Ticks
+                }
+            }
+            if !ResourceInfo.ContainsKey(resource) || record.Parent != nil || record.Owner != nil {
+                ResourceInfo[resource] = index
+            }
+        }
+        if record.Kind == "counter" {
+            if let number = record.Value {
+                if let device = record.Device {
+                    if let owner = record.Owner {
+                        if number > 0uL && owner < 8uL {
+                            PositiveOwners[device] = (PositiveOwners.TryGetValue(device, out var mask) ? mask: 0uL)
+                            | (1uL << int32(owner))
+                        }
+                    }
+                }
+            }
+        }
+        AddLane(index, record)
+        if record.Kind == "gap" {
+            Partial = true
+        }
+    }
+
+    internal func PrepareLanes() {
         for lane in Lanes {
             lane.Prepare(Records)
         }
@@ -331,14 +352,17 @@ internal class ProfilerTrace {
         ) ? "Queue"
         : record.Source.StartsWith("capture.", StringComparison.Ordinal) ||
             record.Source == "recording.stop" ? "Markers"
-        : record.Category == 0 ? "CPU"
+        : record.Category == 0 || record.Source.StartsWith("chrome.", StringComparison.Ordinal) ? "CPU"
         : record.Kind == "duration" ? "CPU": "Frames"
         let name = group == "Memory" ? record.Name + (record.Owner == nil ? "": " / " + OwnerName(record.Owner))
         + (record.Device == nil ? "": " / device " + record.Device.ToString())
         + (record.Heap == nil ? "": " / heap " + record.Heap.ToString())
         : group == "GPU" ? "GPU stages"
         : group == "Resources" ? ResourceLaneName(record)
-        : group == "CPU" ? "CPU thread " + record.Thread.ToString()
+        : group == "CPU" ? (
+            ThreadNames.TryGetValue(record.Thread ?? 0uL, out var title) ? title
+            : "CPU thread " + record.Thread.ToString()
+        )
         : group == "Queue" ? (
             record.Source.StartsWith("present.", StringComparison.Ordinal)
             || record.Source == "vkQueuePresentKHR" ? "Present": "Submit"

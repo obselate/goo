@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {execFile, spawn} from 'node:child_process';
 import {createWriteStream} from 'node:fs';
-import {mkdir, readFile, writeFile} from 'node:fs/promises';
+import {mkdir, open, readFile, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {connect, createServer} from 'node:net';
 import {tmpdir} from 'node:os';
@@ -186,6 +186,98 @@ async function dragRange(pid) {
             '--offset-x', String(ruler.bounds.width * 0.75), '--offset-y', '10', '--gesture', gesture]);
     }
 }
+async function traceFile(pid, action, filename, error) {
+    await click(pid, action === 'Import' ? 'profiler-import' : 'profiler-export');
+    await click(pid, 'profiler-file-path');
+    const gesture = (await request(['input', 'key.down', '--pid', String(pid), '--key', 'A', '--ctrl']))
+        .find(item => item.payload)?.payload.gestureId;
+    await request(['input', 'key.up', '--pid', String(pid), '--key', 'A', '--ctrl', '--gesture', gesture]);
+    await request(['input', 'text', '--pid', String(pid), '--text', filename]);
+    await click(pid, 'profiler-file-apply');
+    const expected = error ?? (action === 'Import' ? 'Imported ' : 'Exported ') + path.basename(filename);
+    return waitSnapshot(pid, data => text(data, 'profiler-file-status').includes(expected), action + ' trace did not finish: ' + expected);
+}
+function validateChrome(trace) {
+    assert.equal(trace.displayTimeUnit, 'ms', 'Chrome display unit changed');
+    assert.equal(trace.goo.format, 'goo.profiler/1', 'Lossless Goo metadata is missing');
+    const slices = new Map();
+    const flows = new Map();
+    const phases = new Set();
+    const flowEvents = [];
+    const gpuCounters = new Map();
+    let sequence = 0n;
+    for (const event of trace.traceEvents) {
+        phases.add(event.ph);
+        assert(Number.isSafeInteger(event.pid) && Number.isSafeInteger(event.tid), 'Chrome projected track ids are invalid');
+        assert.equal(typeof event.name, 'string');
+        if (event.ph === 'M') {
+            assert(['process_name', 'thread_name'].includes(event.name));
+            assert.equal(typeof event.args.name, 'string');
+            continue;
+        }
+        assert(Number.isFinite(event.ts) && event.ts >= 0, 'Chrome timestamp is invalid');
+        const track = event.pid + ':' + event.tid;
+        if (event.ph === 'X') {
+            assert(Number.isFinite(event.dur) && event.dur >= 0, 'Chrome duration is invalid');
+            if (!slices.has(track)) slices.set(track, []);
+            slices.get(track).push(event);
+        } else if (event.ph === 'C') {
+            assert(Object.values(event.args).length > 0 && Object.values(event.args).every(Number.isFinite),
+                'Chrome counter contains an unavailable or nonnumeric value');
+        } else if (event.ph === 'i') assert(['t', 'p', 'g'].includes(event.s));
+        else {
+            assert(['s', 't', 'f'].includes(event.ph), 'Unexpected exported Chrome phase');
+            assert.equal(typeof event.id, 'string', 'Flow identity lost string precision');
+            flowEvents.push(event);
+            const key = event.cat + ':' + event.id;
+            if (event.ph === 's') flows.set(key, event);
+            else {
+                const start = flows.get(key);
+                assert(start && start.ts <= event.ts, 'Flow endpoints are invalid');
+                if (event.ph === 'f') flows.delete(key);
+            }
+        }
+        if (event.goo) {
+            const record = event.goo;
+            assert.equal(typeof record.Sequence, 'string', 'Record identity lost string precision');
+            assert(BigInt(record.Sequence) > sequence, 'Export reordered or duplicated Goo records');
+            sequence = BigInt(record.Sequence);
+            for (const key of ['Thread', 'Pump', 'Frame', 'Submission', 'Device', 'Resource', 'Parent', 'Allocated']) {
+                assert(record[key] === null || typeof record[key] === 'string', 'Goo integer precision lost: ' + key);
+            }
+            const expected = Number(BigInt(record.Ticks) * 1000000n) / Number(BigInt(trace.goo.frequency));
+            assert(Math.abs(event.ts - expected) <= Math.max(1e-6, Math.abs(expected) * 1e-12), 'Tick-to-microsecond conversion changed');
+            if (record.Source.startsWith('vulkan.timestamp')) {
+                assert.notEqual(event.ph, 'X', 'Unaligned GPU timing became a CPU-clock slice');
+                if (record.GpuNs !== null) {
+                    const key = record.Device + ':' + record.DeviceGeneration + ':' + record.Event;
+                    for (const [other, name] of gpuCounters) {
+                        if (other !== key) assert.notEqual(event.name, name, 'GPU stage or device counters were merged');
+                    }
+                    gpuCounters.set(key, event.name);
+                    assert.equal(event.args.elapsed_ns, Number(record.GpuNs), 'GPU elapsed value changed');
+                }
+            }
+        }
+    }
+    assert.equal(flows.size, 0, 'Export left unmatched flow endpoints');
+    for (const events of slices.values()) {
+        const stack = [];
+        for (const event of events.sort((a, b) => a.ts - b.ts || b.dur - a.dur)) {
+            while (stack.length && stack.at(-1) <= event.ts + 1e-9) stack.pop();
+            assert(!stack.length || event.ts + event.dur <= stack.at(-1) + 1e-6, 'Chrome lane contains crossing duration slices');
+            stack.push(event.ts + event.dur);
+        }
+    }
+    for (const flow of flowEvents) {
+        const candidates = slices.get(flow.pid + ':' + flow.tid) ?? [];
+        assert(candidates.some(slice => flow.ph === 'f' && flow.bp !== 'e'
+            ? slice.ts >= flow.ts : slice.ts <= flow.ts + 1e-9 && slice.ts + slice.dur > flow.ts),
+        'Chrome flow has no slice binding');
+    }
+    for (const phase of ['M', 'X', 'i', 'C']) assert(phases.has(phase), 'Chrome phase mapping lost ' + phase);
+    assert(phases.has('s') && phases.has('f'), 'Submission/resource flow correlations are missing');
+}
 
 try {
     const gallery = launch('apps/Goo.Gallery/bin/Release/net10.0/Goo.Gallery.dll', 'gallery');
@@ -346,6 +438,10 @@ try {
     await click(inspector, 'profiler-lifetimes');
     await capture(inspector, 'selected-resource');
     await writeFile(path.join(output, 'final-snapshot.json'), JSON.stringify(await snapshot(inspector)));
+    const exportedPath = path.join(output, 'Gallery trace ü.json');
+    await traceFile(inspector, 'Export', exportedPath);
+    const exported = JSON.parse(await readFile(exportedPath, 'utf8'));
+    validateChrome(exported);
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Record a real target trace'), 'Clear retained the previous trace');
@@ -370,7 +466,138 @@ try {
         console.log(`profiler-ui: fault=${command} rejected=verified snapshots=${proxy.snapshots} disconnected=${proxy.disconnected}`);
         await stopChild(client);
     }
-    console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=7 clear=verified');
+    await stopChild(inspector);
+    await stopChild(gallery);
+    const offline = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'offline-devtools', ['--pid', String(gallery)]);
+    await snapshot(offline);
+    await click(offline, 'tab-profiler');
+    assert.equal((await snapshot(offline)).find(node => node.key === 'profiler-record')?.disabled, true,
+        'Offline round trip still had a live recording target');
+    await traceFile(offline, 'Import', exportedPath);
+    assert(status(await snapshot(offline)).includes('Imported Gallery trace ü.json'), 'Imported trace identity is not visible');
+    const roundTripPath = path.join(output, 'round-trip.json');
+    await traceFile(offline, 'Export', roundTripPath);
+    const roundTrip = JSON.parse(await readFile(roundTripPath, 'utf8'));
+    validateChrome(roundTrip);
+    assert.deepEqual(roundTrip.goo, exported.goo, 'Round trip lost Goo metadata or completion state');
+    assert.deepEqual(roundTrip.traceEvents.filter(event => event.goo).map(event => event.goo),
+        exported.traceEvents.filter(event => event.goo).map(event => event.goo), 'Round trip lost record details, nulls or correlation ids');
+    await capture(offline, 'imported-trace');
+    console.log(`profiler-files: real_gallery_records=${roundTrip.traceEvents.filter(event => event.goo).length} offline_round_trip=lossless chrome_format=validated`);
+    const precision = structuredClone(exported);
+    precision.goo.originTicks = '9007199254740993';
+    precision.goo.start.originTicks = precision.goo.originTicks;
+    precision.goo.partial = true;
+    precision.goo.dropped = '7';
+    precision.goo.reason = 'Gap and integer-precision format fixture';
+    const preciseRecords = precision.traceEvents.filter(event => event.goo).map(event => event.goo);
+    const oldResource = preciseRecords.find(record => record.Resource !== null)?.Resource;
+    assert(oldResource, 'Real trace contains no resource identity');
+    for (const record of preciseRecords) {
+        if (record.Resource === oldResource) record.Resource = '18446744073709551614';
+        if (record.Parent === oldResource) record.Parent = '18446744073709551614';
+    }
+    const gap = Object.fromEntries(Object.keys(preciseRecords[0]).map(key => [key, null]));
+    Object.assign(gap, {Sequence: (BigInt(precision.goo.lastSequence) + 1n).toString(),
+        Kind: 'gap', Ticks: precision.goo.endTicks, EndTicks: precision.goo.endTicks, Window: '',
+        Event: '0', Category: '0', Result: '0', Name: 'Format gap fixture', Source: 'fixture.gap',
+        Unit: 'count', Validity: 'partial', Chrome: '', Value: '7'});
+    precision.goo.budgetFull = true;
+    precision.goo.lastSequence = precision.goo.nextSeq = (BigInt(gap.Sequence) + 100n).toString();
+    precision.traceEvents.push({ph: 'i', name: gap.Name, cat: gap.Source, pid: 1, tid: 1,
+        ts: Number(BigInt(gap.Ticks) * 1000000n) / Number(BigInt(precision.goo.frequency)), s: 't', goo: gap});
+    const precisionPath = path.join(output, 'gap-precision-fixture.json');
+    await writeFile(precisionPath, JSON.stringify(precision));
+    await traceFile(offline, 'Import', precisionPath);
+    assert(status(await snapshot(offline)).includes('7 dropped') && status(await snapshot(offline)).includes('PARTIAL'),
+        'Imported gap or dropped-data status was lost');
+    const precisePath = path.join(output, 'gap-precision-roundtrip.json');
+    await traceFile(offline, 'Export', precisePath);
+    const precise = JSON.parse(await readFile(precisePath, 'utf8'));
+    assert.deepEqual(precise.goo, precision.goo, 'Gap, completion or exact origin metadata was lost');
+    assert.deepEqual(precise.traceEvents.filter(event => event.goo).map(event => event.goo),
+        precision.traceEvents.filter(event => event.goo).map(event => event.goo), 'Gap record or 64-bit resource identity was lost');
+    const span = Math.max(1, exported.traceEvents.find(event => event.ph === 'X' && event.dur > 0).dur);
+    const external = {traceEvents: [
+        {ph: 'M', name: 'process_name', pid: 71, args: {name: 'External fixture'}},
+        {ph: 'M', name: 'thread_name', pid: 71, tid: 11, args: {name: 'Imported thread'}},
+        {ph: 'B', name: 'Imported work', cat: 'external', pid: 71, tid: 11, ts: 100, args: {label: 'begin'}},
+        {ph: 'i', name: 'Instant', cat: 'external', pid: 71, tid: 11, ts: 100 + span / 4, s: 't'},
+        {ph: 'I', name: 'Legacy instant', cat: 'external', pid: 71, tid: 11, ts: 100 + span / 3},
+        {ph: 'C', name: 'Imported counter', pid: 71, tid: 11, ts: 100 + span / 4, args: {bytes: 17.5, delta: -1.25}},
+        {ph: 's', name: 'Link', cat: 'external', id: '9007199254740993', pid: 71, tid: 11, ts: 100 + span / 2},
+        {ph: 't', name: 'Link', cat: 'external', id: '9007199254740993', pid: 71, tid: 11, ts: 100 + span * 0.6},
+        {ph: 'X', name: 'Imported target', cat: 'external', pid: 71, tid: 12, ts: 100 + span / 2, dur: span / 4},
+        {ph: 'f', name: 'Link', cat: 'external', id: '9007199254740993', pid: 71, tid: 12, ts: 100 + span * 0.6, bp: 'e'},
+        {ph: 'E', pid: 71, tid: 11, ts: 100 + span, args: {label: 'end'}},
+        {ph: 'X', name: 'Crossing A', cat: 'external', pid: 71, tid: 13, ts: 100, dur: span * 0.8},
+        {ph: 'X', name: 'Crossing B', cat: 'external', pid: 71, tid: 13, ts: 100 + span * 0.6, dur: span * 0.8},
+        {ph: '?', name: 'Future event', pid: 71, tid: 11, ts: 100 + span},
+        {ph: 'M', name: 'process_name', pid: 72, args: {name: 'External fixture'}},
+        {ph: 'C', name: 'Imported counter', pid: 72, tid: 11, ts: 100 + span / 4, args: {bytes: 19.5}},
+    ]};
+    const externalObjectPath = path.join(output, 'external-object.json');
+    await writeFile(externalObjectPath, JSON.stringify(external));
+    await traceFile(offline, 'Import', externalObjectPath);
+    const externalPath = path.join(output, 'external-subset.json');
+    await writeFile(externalPath, JSON.stringify(external.traceEvents));
+    await traceFile(offline, 'Import', externalPath);
+    assert(content(await snapshot(offline)).includes('unsupported Chrome'), 'Unknown Chrome events were not reported');
+    assert(content(await snapshot(offline)).includes('Imported thread') && content(await snapshot(offline)).includes('External fixture'),
+        'Chrome process or thread metadata was lost');
+    await click(offline, 'profiler-tab-Memory');
+    assert(content(await snapshot(offline)).includes('-1.25'), 'Fractional or negative Chrome counter was lost');
+    await click(offline, 'profiler-group-more');
+    assert(/-1\.25\s+to/.test(content(await snapshot(offline))), 'Negative counter scale was clamped to zero');
+    await capture(offline, 'imported-counters');
+    const canonicalPath = path.join(output, 'external-canonical.json');
+    await traceFile(offline, 'Export', canonicalPath);
+    const canonical = JSON.parse(await readFile(canonicalPath, 'utf8'));
+    validateChrome(canonical);
+    const externalRecords = canonical.traceEvents.filter(event => event.goo).map(event => event.goo);
+    assert.equal(new Set(canonical.traceEvents.filter(event => event.ph === 'C').map(event => event.name)).size, 3,
+        'Chrome counter series or processes were merged');
+    assert(externalRecords.some(record => record.Kind === 'duration' && record.Chrome.includes('"ph":"B"') && record.Chrome.includes('"ph":"E"')),
+        'Begin/end import lost its duration or end arguments');
+    assert(externalRecords.some(record => record.Chrome.includes('9007199254740993')), 'Imported flow id lost integer precision');
+    assert(externalRecords.some(record => record.Name.startsWith('Unsupported ?')), 'Unknown event became a native phase');
+    const badCases = [
+        ['negative-duration', {traceEvents: [{ph: 'X', name: 'bad', pid: 1, tid: 1, ts: 0, dur: -1}]}, 'Invalid Chrome duration'],
+        ['unmatched-end', {traceEvents: [{ph: 'E', pid: 1, tid: 1, ts: 0}]}, 'Unmatched Chrome end event'],
+        ['unmatched-begin', {traceEvents: [{ph: 'B', name: 'bad', pid: 1, tid: 1, ts: 0}]}, 'Unmatched Chrome begin event'],
+        ['missing-process', {traceEvents: [{ph: 'i', name: 'bad', tid: 1, ts: 0}]}, 'Chrome event requires an integer pid'],
+        ['long-name', {traceEvents: [{ph: 'i', name: 'x'.repeat(4097), pid: 1, tid: 1, ts: 0}]}, 'Trace field exceeds its size limit'],
+        ['large-arguments', {traceEvents: [{ph: 'i', name: 'bad', pid: 1, tid: 1, ts: 0, args: {data: 'x'.repeat(32769)}}]}, 'Chrome event arguments are too large'],
+        ['future-goo-version', {...exported, goo: {...exported.goo, format: 'goo.profiler/2'}}, 'Unsupported Goo trace file version'],
+    ];
+    for (const [name, data, error] of badCases) {
+        const filename = path.join(output, name + '.json');
+        await writeFile(filename, JSON.stringify(data));
+        await traceFile(offline, 'Import', filename, error);
+        assert(status(await snapshot(offline)).includes('Imported external-subset.json'), 'Failed import replaced the retained trace');
+    }
+    const infinitePath = path.join(output, 'nonfinite.json');
+    await writeFile(infinitePath, '{"traceEvents":[{"ph":"X","name":"bad","pid":1,"tid":1,"ts":1e400,"dur":1}]}');
+    await traceFile(offline, 'Import', infinitePath, 'Chrome timestamp or duration is out of range');
+    const eventLimitPath = path.join(output, 'too-many-events.json');
+    await writeFile(eventLimitPath, '{"traceEvents":[' + Array(524289).fill('{}').join(',') + ']}');
+    await traceFile(offline, 'Import', eventLimitPath, 'exceeds 524288 events');
+    await rm(eventLimitPath);
+    const oversizedPath = path.join(tmpdir(), `goo-oversized-trace-${process.pid}.json`);
+    try {
+        const file = await open(oversizedPath, 'w');
+        await file.truncate(256 * 1024 * 1024 + 1);
+        await file.close();
+        await traceFile(offline, 'Import', oversizedPath, 'Trace file exceeds the 256 MiB limit');
+    } finally { await rm(oversizedPath, {force: true}); }
+    await click(offline, 'profiler-file-cancel');
+    const retainedPath = path.join(output, 'retained-after-errors.json');
+    await traceFile(offline, 'Export', retainedPath);
+    const retained = JSON.parse(await readFile(retainedPath, 'utf8'));
+    assert.deepEqual(retained.traceEvents.filter(event => event.goo).map(event => event.goo), externalRecords,
+        'Invalid import corrupted the previous trace');
+    console.log('profiler-files: chrome_subset=verified crossing_slices=partitioned flow_ids=preserved invalid_imports=atomic file_event_name_limits=verified');
+    console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=9 clear=verified');
 } catch (error) {
     const inspector = children[1]?.pid;
     if (inspector) {

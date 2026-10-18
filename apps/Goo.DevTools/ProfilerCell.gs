@@ -32,7 +32,7 @@ internal class ProfilerTrackRow {
     }
 }
 
-internal class ProfilerCell : Cell {
+internal partial class ProfilerCell : Cell {
     internal var session DiagnosticSession
     private var width float64 = 1400.0
     private var start int64
@@ -91,6 +91,14 @@ internal class ProfilerCell : Cell {
     override func Build() Blob {
         let children = List[Blob]()
         children.Add(Toolbar())
+        if fileAction != "" {
+            children.Add(FilePanel())
+        }
+        if fileStatus != "" {
+            children.Add(
+                Text{Key: "profiler-file-status", Content: fileStatus, Color: DevToolsTheme.InkMuted, FontSize: 11}
+            )
+        }
         if windowPicker {
             children.Add(WindowPicker())
         }
@@ -99,8 +107,8 @@ internal class ProfilerCell : Cell {
                 Label(
                     session
                         .Capabilities
-                        .ProfilerTrace ? "Record a real target trace to inspect phases, memory and resource loads."
-                    : "Recording unavailable: target lacks profiler.trace.v1."
+                        .ProfilerTrace ? "Record a real target trace or import Chrome JSON to inspect phases, memory and resource loads."
+                    : "Recording unavailable: target lacks profiler.trace.v1. Import Chrome trace JSON to inspect offline."
                 )
             )
             return Column("profiler-panel", children)
@@ -162,7 +170,7 @@ internal class ProfilerCell : Cell {
                     }
                     Rebuild()
                 },
-                session.State == DiagnosticConnectionState.Connected && session.Capabilities.ProfilerTrace
+                !fileBusy && session.State == DiagnosticConnectionState.Connected && session.Capabilities.ProfilerTrace
             )
         )
         controls.Add(
@@ -179,7 +187,16 @@ internal class ProfilerCell : Cell {
                     paths.Clear()
                     Rebuild()
                 },
-                !active
+                !active && !fileBusy
+            )
+        )
+        controls.Add(Control("profiler-import", "Import", () -> ShowFile("Import"), !active && !fileBusy))
+        controls.Add(
+            Control(
+                "profiler-export",
+                "Export",
+                () -> ShowFile("Export"),
+                !active && !fileBusy && (session.Profiler?.Records.Count ?? 0) > 0
             )
         )
         controls.Add(
@@ -237,9 +254,19 @@ internal class ProfilerCell : Cell {
     private func WindowPicker() Container {
         let controls = List[Blob]()
         controls.Add(Control("profiler-window-all", "All windows", () -> PickWindow("")))
-        for window in session.Windows {
-            let id = window.Id
-            controls.Add(Control("profiler-window-" + id, WindowTitle(id), () -> PickWindow(id)))
+        if let trace = session.Profiler {
+            let seen = HashSet[string]()
+            for lane in trace.Lanes {
+                let id = lane.Window
+                if id != "" && seen.Add(id) {
+                    controls.Add(Control("profiler-window-" + id, WindowTitle(id), () -> PickWindow(id)))
+                }
+            }
+        } else {
+            for window in session.Windows {
+                let id = window.Id
+                controls.Add(Control("profiler-window-" + id, WindowTitle(id), () -> PickWindow(id)))
+            }
         }
         return Container{Key: "profiler-window-picker", FlexDirection: FlexDirection.Row, Gap: 4, Children: controls}
     }
@@ -252,16 +279,22 @@ internal class ProfilerCell : Cell {
     }
 
     private func Status(trace ProfilerTrace) string {
-        let name = session.Endpoint.ApplicationName == "" ? "Target": session.Endpoint.ApplicationName
+        let name = trace.FileName != "" ? "Imported " + trace.FileName
+        : session.Endpoint.ApplicationName == "" ? "Target": session.Endpoint.ApplicationName
         let pid = trace.Process.Split(" / ")[0]
         return trace.State + " · " + trace.Records.Count.ToString() + " records · " + Time(trace, trace.End)
-        + " · " + name + " (pid " + pid + ")"
+        + " · " + name + (pid == "" ? "": " (pid " + pid + ")")
         + (trace.Devices == "" ? "": " · " + trace.Devices)
         + (trace.Dropped > 0uL ? " · " + trace.Dropped.ToString() + " dropped": "")
         + (trace.Partial ? " · PARTIAL": "")
     }
 
     private func WindowTitle(id string) string {
+        if let trace = session.Profiler {
+            if trace.WindowNames.ContainsKey(id) {
+                return trace.WindowName(id)
+            }
+        }
         var title = "Window"
         for window in session.Windows {
             if window.Id == id {
@@ -698,6 +731,7 @@ internal class ProfilerCell : Cell {
                 }
             }
             var maximum = 1.0
+            var minimum = 0.0
             let first = lane.FirstVisible(start)
             if lane.Group == "Memory" {
                 for offset in Math.Max(0, first - 1) ... lane.Records.Count {
@@ -707,6 +741,7 @@ internal class ProfilerCell : Cell {
                     }
                     if let value = SeriesValue(trace, lane, offset) {
                         maximum = Math.Max(maximum, value)
+                        minimum = Math.Min(minimum, value)
                     }
                 }
                 if let budgets = budgetLane {
@@ -722,6 +757,7 @@ internal class ProfilerCell : Cell {
                 }
             }
             scales[key] = maximum
+            scales[key + "minimum"] = minimum
             var lastPixel = -1
             for offset in(
                 lane.Group == "Memory" ? Math.Max(0, first - 1): lifetimes && lane.Group == "Resources" ? 0: first
@@ -737,9 +773,16 @@ internal class ProfilerCell : Cell {
                         let next = offset + 1 < lane.Records.Count ? trace.Records[lane.Records[offset + 1]].Ticks: end
                         let left = Math.Max(0.0, X(r.Ticks))
                         let right = Math.Min(w, X(next))
-                        let bar = Math.Max(0.5, value / maximum * (h - 5.0))
+                        let zero = h - (0.0 - minimum) / (maximum - minimum) * (h - 5.0)
+                        let position = h - (value - minimum) / (maximum - minimum) * (h - 5.0)
                         if right > left {
-                            Rect(geometry, left, h - bar, right - left, bar)
+                            Rect(
+                                geometry,
+                                left,
+                                Math.Min(zero, position),
+                                right - left,
+                                Math.Max(0.5, Math.Abs(zero - position))
+                            )
                         }
                     }
                     continue
@@ -888,7 +931,8 @@ internal class ProfilerCell : Cell {
                 .Unit
             labels.Add(
                 Label(
-                    "max " + Value(scales[key], unit)
+                    (scales[key + "minimum"] < 0.0 ? Value(scales[key + "minimum"], unit) + " to ": "max ")
+                    + Value(scales[key], unit)
                     +
                         (
                         lane.Name.StartsWith("driver.heap.usage", StringComparison.Ordinal) ? " · amber: budget"
@@ -995,6 +1039,9 @@ internal class ProfilerCell : Cell {
 
     private func SeriesValue(trace ProfilerTrace, lane ProfilerLane, offset int32) float64? {
         let r = trace.Records[lane.Records[offset]]
+        if let value = r.FloatingValue {
+            return value
+        }
         guard let value = r.Value else {
             return nil
         }
@@ -1513,8 +1560,10 @@ internal class ProfilerCell : Cell {
                         firstSample = true
                     }
                     final = value
-                    if r.Ticks >= lo && value != nil {
-                        peak = Math.Max(peak ?? 0.0, value)
+                    if r.Ticks >= lo {
+                        if let sample = value {
+                            peak = Math.Max(peak ?? sample, sample)
+                        }
                     }
                 }
                 if peak == nil {
@@ -1702,7 +1751,9 @@ internal class ProfilerCell : Cell {
             }
         }
         if r.Kind == "counter" {
-            if let value = r.Value {
+            if let value = r.FloatingValue {
+                rows.Add(Detail("Value", Value(value, r.Unit)))
+            } else if let value = r.Value {
                 rows.Add(Detail("Value", Value(float64(value), r.Unit)))
             }
             if r.Source != "" {
@@ -1714,6 +1765,9 @@ internal class ProfilerCell : Cell {
             if let sampled = r.SampleTicks {
                 rows.Add(Detail("Sample age", Time(trace, Math.Max(0L, r.Ticks - sampled))))
             }
+        }
+        if r.Chrome != "" {
+            rows.Add(Detail("Chrome event", r.Chrome))
         }
         if r.Allocated != nil {
             rows.Add(Detail("Allocation traffic", Bytes(float64(r.Allocated ?? 0uL))))
