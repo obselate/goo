@@ -356,7 +356,7 @@ try {
             ['--pipe', proxy.pipe]);
         await snapshot(client);
         if (command === 'snapshot') {
-            await waitSnapshot(client, data => proxy.rejected && proxy.snapshots >= 4
+            await waitSnapshot(client, data => proxy.rejected && !proxy.disconnected && proxy.snapshots >= 4
                 && content(data).includes('Goo UI gallery'), 'Errored snapshot did not resume automatic snapshots');
         } else {
             await click(client, 'tab-profiler');
