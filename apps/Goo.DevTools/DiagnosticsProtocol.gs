@@ -723,7 +723,11 @@ class DiagnosticSession {
         if !Capabilities.ProfilerTrace || State != DiagnosticConnectionState.Connected || Profiler?.Active == true {
             return
         }
-        Profiler = ProfilerTrace()
+        let trace = ProfilerTrace()
+        for window in windows {
+            trace.WindowNames[window.Id] = window.Title
+        }
+        Profiler = trace
         profilerReadPending = false
         profilerStopSent = false
         profilerCommands = Dictionary[string, string]()

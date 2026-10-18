@@ -136,6 +136,7 @@ class DevToolsCell : Cell {
             "profiler",
             (panel ProfilerCell) -> {
                 panel.session = session
+                panel.owner = window
                 panel.Refresh(layoutWidth)
             }
         )
