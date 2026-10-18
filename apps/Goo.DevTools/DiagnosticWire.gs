@@ -1033,6 +1033,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     private var snapshotPending bool
     private var snapshotsEnabled bool = true
     private var snapshotDue int64
+    private var snapshotRequestId string = ""
     private var pendingBytes int64
 
     init(value DiagnosticEndpoint) {
@@ -1118,7 +1119,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             while pending.Count != 0 {
                 let value = pending.Dequeue()
                 result.Add(value)
-                if value.IsResponse && (value.Command == "snapshot" || value.Command == "tree.snapshot") {
+                if value.IsResponse && snapshotPending && value.RequestId == snapshotRequestId {
                     snapshotPending = false
                     snapshotDue = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 10L
                 }
@@ -1315,8 +1316,13 @@ class DiagnosticPipeTransport : DiagnosticTransport {
 
     private func RequestLine(command string, payload string) string {
         requestSequence = requestSequence + 1
-        return "{\"type\":\"request\",\"id\":\"goo-devtools-"
-        + requestSequence.ToString(CultureInfo.InvariantCulture) + "\",\"command\":\""
+        let id = "goo-devtools-" + requestSequence.ToString(CultureInfo.InvariantCulture)
+        if command == "snapshot" || command == "tree.snapshot" {
+            lock gate {
+                snapshotRequestId = id
+            }
+        }
+        return "{\"type\":\"request\",\"id\":\"" + id + "\",\"command\":\""
         + DiagnosticWire.Escape(command) + "\",\"payload\":" + payload + "}"
     }
 

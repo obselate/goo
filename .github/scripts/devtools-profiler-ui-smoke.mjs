@@ -3,6 +3,9 @@ import {execFile, spawn} from 'node:child_process';
 import {createWriteStream} from 'node:fs';
 import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import path from 'node:path';
+import {connect, createServer} from 'node:net';
+import {tmpdir} from 'node:os';
+import {createInterface} from 'node:readline';
 import {promisify} from 'node:util';
 import {inflateSync} from 'node:zlib';
 
@@ -12,6 +15,7 @@ const output = path.resolve(process.argv[2] ?? '/tmp/goo-profiler-ui');
 await mkdir(output, {recursive: true});
 const cli = path.join(root, 'tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll');
 const children = [];
+const proxies = [];
 function launch(file, name, args = []) {
     const child = spawn('dotnet', [path.join(root, file), ...args], {
         env: {...process.env, GOO_DEVTOOLS: '1', GOO_DEVTOOLS_INPUT: '1'},
@@ -22,6 +26,45 @@ function launch(file, name, args = []) {
     child.stderr.pipe(log);
     children.push(child);
     return child.pid;
+}
+async function stopChild(pid) {
+    const child = children.find(item => item.pid === pid);
+    const exited = new Promise(resolve => child.once('exit', resolve));
+    child.kill('SIGTERM');
+    await exited;
+}
+async function faultProxy(pipe, command) {
+    const state = {pipe: `goo-profiler-fault-${process.pid}-${command}`, snapshots: 0, rejected: false, disconnected: false};
+    let faultId;
+    const server = createServer(client => {
+        const target = connect(path.join(tmpdir(), 'CoreFxPipe_' + pipe));
+        target.pipe(client);
+        createInterface({input: client}).on('line', line => {
+            const request = JSON.parse(line.trim());
+            if (request.command === 'snapshot') state.snapshots++;
+            if (!faultId && request.command === command) {
+                faultId = request.id;
+                if (command === 'snapshot') request.command = 'profiler-smoke-unknown-command';
+                else request.payload.bufferBytes = 'invalid';
+                line = JSON.stringify(request);
+            }
+            target.write(line + '\n');
+        }).on('error', () => target.destroy());
+        createInterface({input: target}).on('line', line => {
+            const response = JSON.parse(line);
+            if (response.id === faultId && response.ok === false) state.rejected = true;
+        }).on('error', () => client.destroy());
+        client.on('error', () => target.destroy());
+        target.on('error', () => client.destroy());
+        client.on('close', () => { state.disconnected = true; target.destroy(); });
+        target.on('close', () => client.destroy());
+    });
+    proxies.push(server);
+    await new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(path.join(tmpdir(), 'CoreFxPipe_' + state.pipe), resolve);
+    });
+    return state;
 }
 async function command(args) {
     return (await run('dotnet', [cli, ...args], {maxBuffer: 32 * 1024 * 1024, timeout: 35000})).stdout;
@@ -168,10 +211,7 @@ try {
         assert.equal(busy.find(node => node.key === 'profiler-record')?.disabled, false,
             'Busy response disconnected the target');
     }
-    const contenderProcess = children.find(child => child.pid === contender);
-    const contenderExited = new Promise(resolve => contenderProcess.once('exit', resolve));
-    contenderProcess.kill('SIGTERM');
-    await contenderExited;
+    await stopChild(contender);
     await click(inspector, 'profiler-record');
     let nodes = await waitSnapshot(inspector, data => status(data).startsWith('Complete ·'));
     assert(!status(nodes).includes('PARTIAL'), 'Normal recording was marked partial');
@@ -309,6 +349,27 @@ try {
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Record a real target trace'), 'Clear retained the previous trace');
+    const endpoint = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === gallery);
+    for (const command of ['snapshot', 'profiler.start']) {
+        const proxy = await faultProxy(endpoint.pipe, command);
+        const client = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'fault-' + command,
+            ['--pipe', proxy.pipe]);
+        await snapshot(client);
+        if (command === 'snapshot') {
+            await waitSnapshot(client, data => proxy.rejected && proxy.snapshots >= 4
+                && content(data).includes('Goo UI gallery'), 'Errored snapshot did not resume automatic snapshots');
+        } else {
+            await click(client, 'tab-profiler');
+            await waitSnapshot(client, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
+            await click(client, 'profiler-record');
+            await waitSnapshot(client, data => proxy.rejected && proxy.disconnected
+                && status(data).startsWith('Complete ·') && status(data).includes('PARTIAL')
+                && data.find(node => node.key === 'profiler-record')?.disabled === true,
+            'Errored profiler.start did not disconnect');
+        }
+        console.log(`profiler-ui: fault=${command} rejected=verified snapshots=${proxy.snapshots} disconnected=${proxy.disconnected}`);
+        await stopChild(client);
+    }
     console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=7 clear=verified');
 } catch (error) {
     const inspector = children[1]?.pid;
@@ -318,4 +379,5 @@ try {
     throw error;
 } finally {
     for (const child of children.reverse()) child.kill('SIGTERM');
+    for (const proxy of proxies) proxy.close();
 }

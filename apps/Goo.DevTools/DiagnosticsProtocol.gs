@@ -789,9 +789,7 @@ class DiagnosticSession {
         }
         if !message.Succeeded {
             FailProfiler(message.ErrorText)
-            if message.Command != "profiler.start" {
-                transport.Disconnect()
-            }
+            transport.Disconnect()
             return
         }
         try {
