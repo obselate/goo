@@ -572,7 +572,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     throw ArgumentException("target", "target")
   }
 
-  internal func Collect(completedSerial uint64) {
+  internal func Collect(completedSerial uint64, discardCompleted bool = false) {
     EnsureOpen()
     let selectedSerial = completedSerial < lastCollectedSerial
     ? lastCollectedSerial : completedSerial
@@ -584,7 +584,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
           let lastUse = target.LastUseSerial
           let retire = lastUse == 0uL
             || (selectedSerial >= lastUse
-                && selectedSerial - lastUse >= IdleRetirementSerials)
+                && (discardCompleted || selectedSerial - lastUse >= IdleRetirementSerials))
           if retire {
             RetireTarget(index, target)
           }
