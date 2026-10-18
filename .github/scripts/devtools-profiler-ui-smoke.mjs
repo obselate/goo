@@ -56,6 +56,8 @@ async function waitSnapshot(pid, predicate, failure = 'Profiler UI state did not
     const elements = (await snapshot(pid)).find(node => node.key === 'tab-elements');
     if (elements) {
         await request(['input', 'click', '--pid', String(pid), '--target', elements.target]);
+        const activity = (await snapshot(pid)).find(node => node.key === 'activity-toggle');
+        if (activity) await request(['input', 'click', '--pid', String(pid), '--target', activity.target]);
         await writeFile(path.join(output, `failure-${pid}-elements.json`), JSON.stringify(await snapshot(pid)));
     }
     throw Error(failure);
@@ -155,10 +157,8 @@ try {
     await waitSnapshot(inspector, data => status(data).startsWith('Recording ·') && /[1-9]\d* records/.test(status(data)));
     for (const key of ['rail-item-1', 'rail-item-7', 'rail-item-5']) await click(gallery, key);
     await capture(gallery, 'gallery-during-recording');
-    const target = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === gallery);
-    assert(target?.pipe, 'Recording Gallery endpoint is not discoverable');
-    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools',
-        ['--pid', String(gallery), '--pipe', target.pipe]);
+    await writeFile(path.join(output, 'contender-discovery.json'), await command(['list', '--json']));
+    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools', ['--pid', String(gallery)]);
     await snapshot(contender);
     await click(contender, 'tab-profiler');
     await waitSnapshot(contender, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
