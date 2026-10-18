@@ -86,7 +86,7 @@ internal class ProfilerLane {
         for index in Records {
             let record = records[index]
             var depth = 0
-            if Group == "CPU" && record.Kind == "duration" {
+            if (Group == "CPU" || Group == "Queue") && record.Kind == "duration" {
                 let thread = record.Thread ?? 0uL
                 if !threads.TryGetValue(thread, out var stack) {
                     stack = List[int64]()
@@ -135,6 +135,8 @@ internal class ProfilerTrace {
     internal let ResourceReleased Dictionary[uint64, int64] = Dictionary[uint64, int64]()
     internal let ResourceRetired Dictionary[uint64, int64] = Dictionary[uint64, int64]()
     internal let ResourceInfo Dictionary[uint64, int32] = Dictionary[uint64, int32]()
+    internal let ResourceCreated Dictionary[uint64, int64] = Dictionary[uint64, int64]()
+    internal let PositiveOwners Dictionary[uint64, uint64] = Dictionary[uint64, uint64]()
     internal var Id string = ""
     internal var State string = "Starting"
     internal var Reason string = ""
@@ -278,8 +280,24 @@ internal class ProfilerTrace {
                 }
             }
             if let resource = record.Resource {
+                if record.Kind == "resourcelifecycle" &&
+                    (record.Event == 200 || record.Event == 220 || record.Event == 120) {
+                    ResourceCreated[resource] = record.Ticks
+                }
                 if !ResourceInfo.ContainsKey(resource) || record.Parent != nil || record.Owner != nil {
                     ResourceInfo[resource] = index
+                }
+            }
+            if record.Kind == "counter" {
+                if let value = record.Value {
+                    if let device = record.Device {
+                        if let owner = record.Owner {
+                            if value > 0.0 && owner < 8uL {
+                                PositiveOwners[device] = (PositiveOwners.TryGetValue(device, out var mask) ? mask: 0uL)
+                                | (1uL << int32(owner))
+                            }
+                        }
+                    }
                 }
             }
             AddLane(index, record)
@@ -313,7 +331,7 @@ internal class ProfilerTrace {
         ) ? "Queue"
         : record.Source.StartsWith("capture.", StringComparison.Ordinal) ||
             record.Source == "recording.stop" ? "Markers"
-        : record.Category == 0 ? (record.Event == 0 ? "Frames": "CPU")
+        : record.Category == 0 ? "CPU"
         : record.Kind == "duration" ? "CPU": "Frames"
         let name = group == "Memory" ? record.Name + (record.Owner == nil ? "": " / " + OwnerName(record.Owner))
         + (record.Device == nil ? "": " / device " + record.Device.ToString())
@@ -321,7 +339,11 @@ internal class ProfilerTrace {
         : group == "GPU" ? "GPU stages"
         : group == "Resources" ? ResourceLaneName(record)
         : group == "CPU" ? "CPU thread " + record.Thread.ToString()
-        : group == "Queue" ? record.Source: group == "Markers" ? "Markers": "Frame"
+        : group == "Queue" ? (
+            record.Source.StartsWith("present.", StringComparison.Ordinal)
+            || record.Source == "vkQueuePresentKHR" ? "Present": "Submit"
+        )
+        : group == "Markers" ? "Markers": "Frame"
         let window = group == "Frames" || group == "CPU" || group == "Queue" ? record.Window: ""
         let key = group + ":" + name + ":" + window
         if !lanesByKey.TryGetValue(key, out var lane) {
@@ -359,7 +381,10 @@ internal class ProfilerTrace {
             if !seen.Add(parent) {
                 break
             }
-            names.Add(ResourceNames.TryGetValue(parent, out var name) ? name: "Resource " + parent.ToString())
+            if ResourceNames.TryGetValue(parent, out var name) && name != ""
+            && !name.StartsWith("vulkan.", StringComparison.Ordinal) {
+                names.Add(name)
+            }
             if !ResourceInfo.TryGetValue(parent, out var index) {
                 break
             }
@@ -373,9 +398,11 @@ internal class ProfilerTrace {
 
     internal func EventName(record ProfilerRecord) string {
         if let resource = record.Resource {
-            if ResourceNames.TryGetValue(resource, out var name) {
+            if ResourceNames.TryGetValue(resource, out var name) && name != ""
+            && !name.StartsWith("vulkan.", StringComparison.Ordinal) {
                 return name
             }
+            return ResourceName(record.ResourceKind)
         }
         return record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
     }

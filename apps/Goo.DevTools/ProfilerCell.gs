@@ -61,6 +61,11 @@ internal class ProfilerCell : Cell {
     private let collapsed HashSet[string] = HashSet[string]()
     private let paths Dictionary[string, VectorPath] = Dictionary[string, VectorPath]()
     private let scales Dictionary[string, float64] = Dictionary[string, float64]()
+    private var detailsWidth float64 = 380.0
+    private var resizing bool
+    private var resizePointer int64
+    private var resizeStartX float64
+    private var resizeStartWidth float64
 
     internal func Refresh(value float64) {
         var changed = width != value
@@ -251,6 +256,7 @@ internal class ProfilerCell : Cell {
         let pid = trace.Process.Split(" / ")[0]
         return trace.State + " · " + trace.Records.Count.ToString() + " records · " + Time(trace, trace.End)
         + " · " + name + " (pid " + pid + ")"
+        + (trace.Devices == "" ? "": " · " + trace.Devices)
         + (trace.Dropped > 0uL ? " · " + trace.Dropped.ToString() + " dropped": "")
         + (trace.Partial ? " · PARTIAL": "")
     }
@@ -334,8 +340,11 @@ internal class ProfilerCell : Cell {
             rows.Add(
                 ProfilerTrackRow(
                     "lane-" + lane.Group + lane.Name + lane.Window,
-                    LaneTitle(lane),
-                    lane.Group == "CPU" ? Math.Max(34.0, float64(lane.MaxDepth + 1) * 16.0 + 8.0): 40.0,
+                    LaneTitle(lane.Name),
+                    lane.Group == "CPU" || lane.Group == "Queue" ? Math.Max(
+                        34.0,
+                        float64(lane.MaxDepth + 1) * 16.0 + 8.0
+                    ): 40.0,
                     lane
                 )
             )
@@ -434,7 +443,7 @@ internal class ProfilerCell : Cell {
             let maxima = [int32(w) + 1]float64
             let indices = [int32(w) + 1]int32
             Array.Fill(indices, -1)
-            var maximum = 33.4
+            let maximum = 50.1
             for index in 0 ... trace.Records.Count {
                 let r = trace.Records[index]
                 if r.Kind != "duration" || r.Category != 0 || r.Event != 0 || r.Window == "" {
@@ -449,7 +458,6 @@ internal class ProfilerCell : Cell {
                     maxima[pixel] = ms
                     indices[pixel] = index
                 }
-                maximum = Math.Max(maximum, ms)
             }
             let builders = []PathBuilder{
                 PathBuilder(0.0, 0.0, w, 56.0),
@@ -463,8 +471,8 @@ internal class ProfilerCell : Cell {
                 }
                 let r = trace.Records[indices[pixel]]
                 let ms = maxima[pixel]
-                let bucket = r.Result == 0 ? 3: ms <= 16.7 ? 0: ms <= 33.4 ? 1: 2
-                let height = Math.Max(1.0, ms / maximum * 48.0)
+                let bucket = ms > maximum ? 2: r.Result == 0 ? 3: ms <= 16.7 ? 0: ms <= 33.4 ? 1: 2
+                let height = Math.Clamp(ms / maximum * 48.0, 1.0, 48.0)
                 Rect(builders[bucket], float64(pixel), 54.0 - height, 2.0, height)
             }
             for bucket in 0 ... 4 {
@@ -607,12 +615,34 @@ internal class ProfilerCell : Cell {
         let scale = stepMs >= 1000.0 ? 0.001: stepMs >= 1.0 ? 1.0: 1000.0
         let unit = stepMs >= 1000.0 ? "s": stepMs >= 1.0 ? "ms": "µs"
         let decimals = Math.Clamp(int32(Math.Ceiling(-Math.Log10(stepMs * scale))), 0, 6)
-        var tick = (start / step + 1L) * step
+        let basis = start
+        let baseDecimals = Math.Clamp(int32(Math.Ceiling(-Math.Log10(stepMs / 1000.0))) + 2, 0, 9)
+        ticks.Add(
+            Text{
+                Key: "ruler-base",
+                Content: (trace.Milliseconds(basis) / 1000.0).ToString(
+                    "F" + baseDecimals.ToString(),
+                    CultureInfo.InvariantCulture
+                ) +
+                    " s",
+                FontSize: 10,
+                Color: DevToolsTheme.InkMuted,
+                Position: PositionType.Absolute,
+                Left: 0,
+                Top: 2,
+                TextWrap: TextWrap.NoWrap
+            }
+        )
+        var tick = basis + step
         while tick <= end {
+            if X(tick) < 100.0 {
+                tick += step
+                continue
+            }
             ticks.Add(
                 Text{
                     Key: "ruler-" + tick.ToString(),
-                    Content: (trace.Milliseconds(tick) * scale).ToString(
+                    Content: "+" + (trace.Milliseconds(tick - basis) * scale).ToString(
                         "F" + decimals.ToString(),
                         CultureInfo.InvariantCulture
                     ) +
@@ -733,15 +763,16 @@ internal class ProfilerCell : Cell {
                 }
                 let left = Math.Clamp(X(a), 0.0, w - 1.0)
                 let right = Math.Clamp(X(z), left, w)
-                let depth = lane.Group == "CPU" ? lane.Depth[offset]: 0
-                let y = lane.Group == "CPU" ? 3.0 + float64(depth) * 16.0: r.Kind == "duration" ? 5.0: 3.0
+                let nested = lane.Group == "CPU" || lane.Group == "Queue"
+                let depth = nested ? lane.Depth[offset]: 0
+                let y = nested ? 3.0 + float64(depth) * 16.0: r.Kind == "duration" ? 5.0: 3.0
                 if int32(left) != lastPixel || right - left > 2.0 {
                     Rect(
                         geometry,
                         left,
                         y,
                         Math.Max(2.0, right - left),
-                        lane.Group == "CPU" ? 14.0: r.Kind == "duration" ? h - 10.0: 5.0
+                        nested ? 14.0: r.Kind == "duration" ? h - 10.0: 5.0
                     )
                 }
                 lastPixel = int32(left)
@@ -811,10 +842,40 @@ internal class ProfilerCell : Cell {
             Rect(selection, left, 0.0, Math.Max(1.0, Math.Min(w, X(selectionEnd)) - left), h)
         }
         plot.Add(PathShape(selection.Build(), Color.Rgba(137, 171, 249, 35), w, h))
+        if lane.Group == "CPU" || lane.Group == "Queue" {
+            for offset in lane.FirstVisible(start) ... lane.Records.Count {
+                let r = trace.Records[lane.Records[offset]]
+                if r.Ticks > end {
+                    break
+                }
+                if r.Kind != "duration" {
+                    continue
+                }
+                let left = Math.Max(0.0, X(r.Ticks))
+                let right = Math.Min(w, X(r.EndTicks))
+                if right - left > 40.0 {
+                    plot.Add(
+                        Text{
+                            Key: "slice-label-" + lane.Records[offset].ToString(),
+                            Content: LaneTitle(trace.EventName(r)),
+                            FontSize: 10,
+                            Color: DevToolsTheme.Background,
+                            Position: PositionType.Absolute,
+                            Left: left + 3.0,
+                            Top: 3.0 + float64(lane.Depth[offset]) * 16.0,
+                            Width: right - left - 6.0,
+                            Height: 14,
+                            TextWrap: TextWrap.NoWrap,
+                            TextTrimming: TextTrimming.Ellipsis
+                        }
+                    )
+                }
+            }
+        }
         let labels = List[Blob]()
         labels.Add(
             Text{
-                Content: LaneTitle(lane),
+                Content: LaneTitle(lane.Name),
                 FontSize: 11,
                 Color: DevToolsTheme.Ink,
                 TextWrap: TextWrap.NoWrap,
@@ -853,6 +914,8 @@ internal class ProfilerCell : Cell {
                 Width: 220,
                 Height: height,
                 FlexDirection: FlexDirection.Row,
+                JustifyContent: JustifyContent.FlexStart,
+                Padding: Edges{Left: 22},
                 AlignItems: AlignItems.Center,
                 Gap: 4,
                 Focus: FocusStyle(),
@@ -896,7 +959,7 @@ internal class ProfilerCell : Cell {
                 BackgroundColor: DevToolsTheme.Surface,
                 Accessibility: Accessibility{
                     Role: AccessibilityRole.Group,
-                    Name: LaneTitle(lane) + (lane.Window == "" ? "": " · " + WindowTitle(lane.Window))
+                    Name: LaneTitle(lane.Name) + (lane.Window == "" ? "": " · " + WindowTitle(lane.Window))
                 },
                 OnWheel: (e WheelEvent) -> {
                     if e.Modifiers.Ctrl {
@@ -1040,6 +1103,9 @@ internal class ProfilerCell : Cell {
         }
         let legend = List[Blob]()
         for owner in 0 ... 8 {
+            if !trace.PositiveOwners.TryGetValue(device, out var owners) || (owners & (1uL << owner)) == 0uL {
+                continue
+            }
             legend.Add(
                 Container{
                     FlexDirection: FlexDirection.Row,
@@ -1112,7 +1178,12 @@ internal class ProfilerCell : Cell {
             headers.Add(
                 Button{
                     Key: "profiler-sort-" + column.ToString(),
-                    Width: Percent(100.0 / float64(columns.Length)),
+                    Width: ColumnWidth(column),
+                    FlexGrow: FlexibleColumn(column) ? 1.0: 0.0,
+                    FlexShrink: 0.0,
+                    MinWidth: 0,
+                    Padding: 0,
+                    JustifyContent: JustifyContent.FlexStart,
                     Height: 28,
                     BackgroundColor: DevToolsTheme.SurfaceRaised,
                     Focus: FocusStyle(),
@@ -1127,7 +1198,16 @@ internal class ProfilerCell : Cell {
                         tableKey = ""
                         Rebuild()
                     },
-                    Label(columns[column] + (sortColumn == column ? descending ? " ↓": " ↑": "")),
+                    Text{
+                        Content: columns[column] + (sortColumn == column ? descending ? " ↓": " ↑": ""),
+                        Width: Percent(100),
+                        Padding: Edges{Left: 5, Right: 5},
+                        FontSize: 11,
+                        Color: DevToolsTheme.Ink,
+                        TextAlign: NumericColumn(column) ? TextAlign.Right: TextAlign.Left,
+                        TextWrap: TextWrap.NoWrap,
+                        TextTrimming: TextTrimming.Ellipsis
+                    },
                 }
             )
         }
@@ -1148,12 +1228,13 @@ internal class ProfilerCell : Cell {
             )
         )
         left.Add(Container{Height: 28, FlexDirection: FlexDirection.Row, Children: headers})
+        let rows = tableRows
         let heights = List[float64]()
-        for row in tableRows {
+        for row in rows {
             heights.Add(28.0)
         }
         left.Add(
-            Virtual(ProfilerVirtualSource(heights, (index int32) -> TableRow(trace, tableRows[index]))){
+            Virtual(ProfilerVirtualSource(heights, (index int32) -> TableRow(trace, rows[index]))){
                 Key = "profiler-summary-rows",
                 Height = 0,
                 MinHeight = 0,
@@ -1163,6 +1244,33 @@ internal class ProfilerCell : Cell {
                 Accessibility = Accessibility{Role: AccessibilityRole.Grid, Name: tab + " summary"},
             }
         )
+        let panes = List[Blob]()
+        panes.Add(
+            Container{
+                Key: "profiler-summary",
+                Width: 0,
+                FlexGrow: 1.0,
+                MinWidth: 0,
+                Height: Percent(100),
+                FlexDirection: FlexDirection.Column,
+                Children: left
+            }
+        )
+        if selected >= 0 && selected < trace.Records.Count {
+            panes.Add(DetailsDivider())
+            panes.Add(
+                Container{
+                    Key: "profiler-details",
+                    Width: DetailsWidth(),
+                    Height: Percent(100),
+                    FlexShrink: 0.0,
+                    OverflowY: Overflow.Scroll,
+                    FlexDirection: FlexDirection.Column,
+                    ScrollbarVisibility: ScrollbarVisibility.Auto,
+                    Children: Details(trace)
+                }
+            )
+        }
         return Container{
             Key: "profiler-analysis",
             Width: Percent(100),
@@ -1172,32 +1280,93 @@ internal class ProfilerCell : Cell {
             FlexDirection: FlexDirection.Row,
             BorderWidth: Edges{Top: 1},
             BorderColor: DevToolsTheme.Border,
-            Container{
-                Key: "profiler-summary",
-                Width: Percent(66),
-                Height: Percent(100),
-                FlexDirection: FlexDirection.Column,
-                Children: left
-            },
-            Container{
-                Key: "profiler-details",
-                Width: Percent(34),
-                Height: Percent(100),
-                OverflowY: Overflow.Scroll,
-                FlexDirection: FlexDirection.Column,
-                ScrollbarVisibility: ScrollbarVisibility.Auto,
-                Children: Details(trace)
-            },
+            Children: panes
         }
+    }
+
+    private func FlexibleColumn(column int32) bool -> tab == "Resources" ? column == 3 || column == 5: column == 0
+
+    private func NumericColumn(column int32) bool -> tab == "Resources" ? column == 0 ||
+        column == 1 ||
+        column == 4: column != 0
+
+    private func ColumnWidth(column int32) float64 -> FlexibleColumn(column) ? 0.0
+    : tab == "Memory" && column == 1 ? 140.0
+    : tab == "Memory" && column == 4 ? 110.0
+    : NumericColumn(column) ? 84.0: column == 2 ? 100.0: 140.0
+
+    private func DetailsWidth() float64 -> Math.Clamp(detailsWidth, 280.0, Math.Max(280.0, width - 560.0))
+
+    private func DetailsDivider() Container -> Container{
+        Key: "profiler-details-divider",
+        Width: 6,
+        Height: Percent(100),
+        FlexShrink: 0.0,
+        Focusable: true,
+        Focus: FocusStyle(),
+        Cursor: Cursor.ResizeHorizontal,
+        BackgroundColor: resizing ? DevToolsTheme.Accent: DevToolsTheme.Background,
+        Hover: Style{BackgroundColor: DevToolsTheme.BorderStrong},
+        Accessibility: Accessibility{Role: AccessibilityRole.Group, Name: "Resize profiler details"},
+        OnPointerDown: (e PointerEvent) -> {
+            if e.Button != PointerButton.Primary || resizing {
+                return
+            }
+            e.Capture()
+            e.PreventDefault()
+            resizing = true
+            resizePointer = e.PointerId
+            resizeStartX = e.WindowPosition.X
+            resizeStartWidth = DetailsWidth()
+        },
+        OnPointerMove: (e PointerEvent) -> {
+            if resizing && e.PointerId == resizePointer {
+                detailsWidth = Math.Clamp(
+                    resizeStartWidth + resizeStartX - e.WindowPosition.X,
+                    280.0,
+                    Math.Max(280.0, width - 560.0)
+                )
+                Rebuild()
+            }
+        },
+        OnPointerUp: (e PointerEvent) -> {
+            if e.PointerId == resizePointer {
+                e.ReleaseCapture()
+                resizing = false
+                Rebuild()
+            }
+        },
+        OnPointerCancel: (e PointerEvent) -> {
+            if e.PointerId == resizePointer {
+                e.ReleaseCapture()
+                resizing = false
+                Rebuild()
+            }
+        },
+        OnKeyDown: (e KeyEvent) -> {
+            if e.Key == Key.Left || e.Key == Key.Right {
+                detailsWidth = Math.Clamp(
+                    DetailsWidth() + (e.Key == Key.Left ? 16.0: -16.0),
+                    280.0,
+                    Math.Max(280.0, width - 560.0)
+                )
+                e.PreventDefault()
+                Rebuild()
+            }
+        },
     }
 
     private func TableRow(trace ProfilerTrace, row ProfilerTableRow) Blob {
         let cells = List[Blob]()
-        for cell in row.Cells {
+        for column in 0 ... row.Cells.Length {
             cells.Add(
                 Text{
-                    Content: cell,
-                    Width: Percent(100.0 / float64(row.Cells.Length)),
+                    Content: row.Cells[column],
+                    Width: ColumnWidth(column),
+                    FlexGrow: FlexibleColumn(column) ? 1.0: 0.0,
+                    FlexShrink: 0.0,
+                    MinWidth: 0,
+                    TextAlign: NumericColumn(column) ? TextAlign.Right: TextAlign.Left,
                     Padding: Edges{Left: 5, Right: 5},
                     FontSize: 11,
                     Color: DevToolsTheme.InkMuted,
@@ -1246,7 +1415,7 @@ internal class ProfilerCell : Cell {
                 if filterWindow != "" && r.Window != "" && r.Window != filterWindow {
                     continue
                 }
-                let name = trace.EventName(r)
+                let name = LaneTitle(trace.EventName(r))
                 if !groups.TryGetValue(name, out var list) {
                     list = List[int32]()
                     groups.Add(name, list)
@@ -1360,7 +1529,7 @@ internal class ProfilerCell : Cell {
                 rows.Add(
                     ProfilerTableRow(
                         []string{
-                            LaneTitle(lane),
+                            LaneTitle(lane.Name),
                             OptionalValue(initial, unit) + (firstSample ? " (first sample)": ""),
                             OptionalValue(final, unit),
                             delta == nil ? "unmeasured": SignedValue(delta ?? 0.0, unit),
@@ -1380,6 +1549,32 @@ internal class ProfilerCell : Cell {
                 let kind = trace.ResourceName(r.ResourceKind)
                 let baseline = r.Kind == "resourcebaseline"
                 let bytes = r.Payload ?? r.Requirement
+                let id = r.Resource ?? 0uL
+                var duration = r.EndTicks - r.Ticks
+                var durationText = Time(trace, duration)
+                if r.Kind != "duration" {
+                    if trace.ResourceRetired.TryGetValue(id, out var retired) || trace.ResourceReleased.TryGetValue(
+                        id,
+                        out retired
+                    ) {
+                        let created = trace.ResourceCreated.TryGetValue(id, out var ticks) ? ticks: 0L
+                        duration = Math.Max(0L, retired - created)
+                        durationText = (trace.ResourceCreated.ContainsKey(id) ? "": "≥ ") + Time(trace, duration)
+                    } else {
+                        duration = Math.Max(0L, trace.End - r.Ticks)
+                        durationText = "live"
+                    }
+                }
+                var name = trace.EventName(r)
+                if name == kind {
+                    if let w = r.Width {
+                        if let h = r.Height {
+                            name = w.ToString() + "×" + h.ToString() + " " + kind.ToLowerInvariant()
+                        }
+                    } else if let size = bytes {
+                        name = Bytes(float64(size)) + " " + kind.ToLowerInvariant()
+                    }
+                }
                 if !baseline && r.Payload != nil {
                     totals[kind] = (totals.TryGetValue(kind, out var old) ? old: 0uL) + (r.Payload ?? 0uL)
                 }
@@ -1387,9 +1582,9 @@ internal class ProfilerCell : Cell {
                     ProfilerTableRow(
                         []string{
                             Time(trace, r.Ticks),
-                            r.Kind == "duration" ? Time(trace, r.EndTicks - r.Ticks): "—",
+                            durationText,
                             kind,
-                            (baseline ? "live before recording · ": "") + trace.EventName(r),
+                            name,
                             bytes == nil ? "unmeasured": Bytes(float64(bytes ?? 0uL)) +
                                 (r.Payload == nil ? " req.": " payload"),
                             trace.OwnerChain(r),
@@ -1397,7 +1592,7 @@ internal class ProfilerCell : Cell {
                         },
                         []float64{
                             float64(r.Ticks),
-                            float64(r.EndTicks - r.Ticks),
+                            float64(duration),
                             0.0,
                             0.0,
                             bytes == nil ? -1.0: float64(bytes ?? 0uL),
@@ -1435,11 +1630,18 @@ internal class ProfilerCell : Cell {
     private func Details(trace ProfilerTrace) List[Blob] {
         let rows = List[Blob]()
         if selected < 0 || selected >= trace.Records.Count {
-            rows.Add(Label(trace.Devices))
             return rows
         }
         let r = trace.Records[selected]
-        rows.Add(Text{Content: trace.EventName(r), FontSize: 13, FontWeight: 600, Color: DevToolsTheme.Ink, Padding: 8})
+        rows.Add(
+            Text{
+                Content: LaneTitle(trace.EventName(r)),
+                FontSize: 13,
+                FontWeight: 600,
+                Color: DevToolsTheme.Ink,
+                Padding: 8
+            }
+        )
         rows.Add(Detail("Start", Time(trace, r.Ticks)))
         rows.Add(
             Detail(
@@ -1537,7 +1739,8 @@ internal class ProfilerCell : Cell {
             if r.Ticks > end {
                 break
             }
-            if lane.Group == "CPU" && int32(Math.Max(0.0, y - 3.0) / 16.0) != lane.Depth[offset] {
+            if (lane.Group == "CPU" || lane.Group == "Queue") &&
+                int32(Math.Max(0.0, y - 3.0) / 16.0) != lane.Depth[offset] {
                 continue
             }
             let distance = tick >= r.Ticks && tick <= r.EndTicks ? 0L: Math.Min(
@@ -1657,8 +1860,7 @@ internal class ProfilerCell : Cell {
             || lane.Name.StartsWith("driver.heap.", StringComparison.Ordinal)
         )
 
-        private func LaneTitle(lane ProfilerLane) string {
-            let name = lane.Name
+        private func LaneTitle(name string) string {
             let slash = name.IndexOf(" /", StringComparison.Ordinal)
             let counter = slash < 0 ? name: name.Substring(0, slash)
             var suffix = slash < 0 ? "": name.Substring(slash)
@@ -1676,8 +1878,14 @@ internal class ProfilerCell : Cell {
             : counter == "present.enqueue" ? "Present enqueue"
             : counter == "present.completion-observed" ? "Present completion"
             : counter == "present.prepare-to-observed" ? "Present prepare to completion"
+            : counter == "cpu.instrumented" ? "Instrumented CPU"
+            : counter == "command.record" ? "Command recording"
+            : counter == "graphics.completion-observed" ? "Graphics completion"
             : counter == "managed.heap.estimate" ? "Managed heap (estimate)"
             : counter == "managed.allocated.total" ? "Managed allocation rate"
+            : counter == "managed.committed.last_gc" ? "Managed committed (last GC)"
+            : counter == "managed.heap.last_gc" ? "Managed heap (last GC)"
+            : counter == "managed.fragmented.last_gc" ? "Managed fragmented (last GC)"
             : counter == "process.rss" ? "Process RSS": counter == "process.pss" ? "Process PSS"
             : counter == "driver.heap.usage.estimate" ? "Driver heap usage (estimate)": counter == "driver.heap.budget" ? "Driver heap budget"
             : counter.StartsWith("vulkan.live.", StringComparison.Ordinal) ? "GPU live " + counter.Substring(12)
