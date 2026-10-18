@@ -152,7 +152,9 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
 
   public prop LastFrameSubmitted bool{ get -> lastFrameSubmitted }
   public prop QueueWorkPending bool{ get -> queueStage != QueueStageIdle }
-  public prop RetirementWorkPending bool{ get -> !disposed && retiredSwapchains.Count != 0 }
+  public prop RetirementWorkPending bool{
+    get -> !disposed && (hideReleasePending || retiredSwapchains.Count != 0)
+  }
 
   public func PrepareClose() bool {
     PollQueueCompletion()

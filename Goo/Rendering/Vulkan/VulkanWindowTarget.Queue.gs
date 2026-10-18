@@ -214,6 +214,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   public func PollQueueCompletion() bool {
     if RetirementWorkPending && queueStage == QueueStageIdle && !frameBegun {
+      if hideReleasePending { ReleaseHiddenResources() }
       PollRetiredSwapchains()
     }
     if timestampState != nil && FrameRecorder.Current == nil

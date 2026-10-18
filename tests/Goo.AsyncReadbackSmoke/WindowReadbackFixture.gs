@@ -111,6 +111,8 @@ internal partial class VulkanWindowTarget {
   }
 
   internal func DiagnosticFrameIdForTest() uint64 -> nextFrameId
+  internal func ClipAtlasStatsForTest() VulkanClipMaskAtlasStats ->
+    clipMaskAtlas?.Stats ?? VulkanClipMaskAtlasStats{}
 
   internal func DiagnosticCountersSnapshotForTest() VulkanDiagnosticCounterSnapshot {
     if let current = diagnostics {
