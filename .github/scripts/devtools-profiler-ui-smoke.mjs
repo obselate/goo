@@ -227,7 +227,7 @@ function validateChrome(trace) {
         } else if (event.ph === 'i') assert(['t', 'p', 'g'].includes(event.s));
         else {
             assert(['s', 't', 'f'].includes(event.ph), 'Unexpected exported Chrome phase');
-            assert.equal(typeof event.id, 'string', 'Flow identity lost string precision');
+            assert(Number.isSafeInteger(event.id) && event.id > 0, 'Flow id must be a projected numeric identity');
             flowEvents.push(event);
             const key = event.cat + ':' + event.id;
             if (event.ph === 's') flows.set(key, event);
@@ -555,14 +555,18 @@ try {
     const canonical = JSON.parse(await readFile(canonicalPath, 'utf8'));
     validateChrome(canonical);
     const externalRecords = canonical.traceEvents.filter(event => event.goo).map(event => event.goo);
+    assert(!externalRecords.some(record => record.Kind === 'metadata'), 'Chrome names became timeline events');
     assert.equal(new Set(canonical.traceEvents.filter(event => event.ph === 'C').map(event => event.name)).size, 3,
         'Chrome counter series or processes were merged');
     assert(externalRecords.some(record => record.Kind === 'duration' && record.Chrome.includes('"ph":"B"') && record.Chrome.includes('"ph":"E"')),
         'Begin/end import lost its duration or end arguments');
     assert(externalRecords.some(record => record.Chrome.includes('9007199254740993')), 'Imported flow id lost integer precision');
+    const importedFlowIds = new Map();
     for (const event of canonical.traceEvents.filter(event => event.goo?.Source === 'chrome.flow')) {
         const original = JSON.parse(event.goo.Chrome)[0];
-        assert.equal(event.id, String(original.id), 'Exported Chrome flow id lost precision');
+        const key = event.goo.Window + ':' + event.cat + ':' + original.id;
+        if (importedFlowIds.has(key)) assert.equal(event.id, importedFlowIds.get(key), 'Projected Chrome flow endpoints changed identity');
+        else importedFlowIds.set(key, event.id);
         assert.equal(event.ph, original.ph, 'Exported Chrome flow direction changed');
     }
     assert(externalRecords.every(record => record.Category === '-1'), 'Imported events became native Goo frame phases');
@@ -576,6 +580,16 @@ try {
         ['large-arguments', {traceEvents: [{ph: 'i', name: 'bad', pid: 1, tid: 1, ts: 0, args: {data: 'x'.repeat(32769)}}]}, 'Chrome event arguments are too large'],
         ['future-goo-version', {...exported, goo: {...exported.goo, format: 'goo.profiler/2'}}, 'Unsupported Goo trace file version'],
     ];
+    const emptyPath = path.join(output, 'empty.json');
+    await writeFile(emptyPath, '');
+    await traceFile(offline, 'Import', emptyPath, 'Trace input must be a nonempty regular file');
+    if (process.platform === 'linux') {
+        await traceFile(offline, 'Import', '/dev/zero', 'Trace input must be a nonempty regular file');
+        const fifo = path.join(output, 'trace.fifo');
+        await run('mkfifo', [fifo]);
+        try { await traceFile(offline, 'Import', fifo, 'Trace input must be a nonempty regular file'); }
+        finally { await rm(fifo); }
+    }
     for (const [name, data, error] of badCases) {
         const filename = path.join(output, name + '.json');
         await writeFile(filename, JSON.stringify(data));

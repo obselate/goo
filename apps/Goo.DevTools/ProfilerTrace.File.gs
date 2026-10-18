@@ -77,6 +77,8 @@ internal partial class ProfilerTrace {
                 for index in 0 ... names.Count {
                     WriteName(writer, "thread_name", index + 1, names[index])
                 }
+                let flowIds = Dictionary[string, int64]()
+                var flowSerial = 0L
                 for index in 0 ... Records.Count {
                     let record = Records[index]
                     let counter = record.FloatingValue ?? (record.Value == nil ? nil: float64(record.Value ?? 0uL))
@@ -84,14 +86,19 @@ internal partial class ProfilerTrace {
                     let value = gpu ? (record.GpuNs == nil ? nil: float64(record.GpuNs ?? 0uL)): counter
                     var phase = IsSlice(record) ? "X": (record.Kind == "counter" || gpu) && value != nil ? "C": "i"
                     var category = record.Source
-                    var flowId = ""
+                    var flowId = 0L
                     var binding = ""
                     if record.Source == "chrome.flow" {
                         using let original = JsonDocument.Parse(record.Chrome)
                         let flow = original.RootElement[0]
                         phase = Text(flow, "ph")
                         category = Text(flow, "cat")
-                        flowId = Text(flow, "id")
+                        let key = record.Window + ":" + category + ":" + Text(flow, "id")
+                        if !flowIds.TryGetValue(key, out flowId) {
+                            flowSerial++
+                            flowId = flowSerial
+                            flowIds.Add(key, flowId)
+                        }
                         binding = Text(flow, "bp")
                     }
                     var name = EventName(record)
@@ -110,8 +117,8 @@ internal partial class ProfilerTrace {
                         writer.WriteString("s", "t")
                     }
                     writer.WriteString("cat", category)
-                    if flowId != "" {
-                        writer.WriteString("id", flowId)
+                    if flowId > 0L {
+                        writer.WriteNumber("id", flowId)
                     }
                     if binding != "" {
                         writer.WriteString("bp", binding)
@@ -178,29 +185,15 @@ internal partial class ProfilerTrace {
                             ":" +
                             submission.ToString(CultureInfo.InvariantCulture)
                         if submissions.TryGetValue(key, out var previous) {
-                            WriteFlow(
-                                writer,
-                                "submission:" + key + ":" + record.Sequence.ToString(CultureInfo.InvariantCulture),
-                                previous,
-                                index,
-                                tracks
-                            )
+                            flowSerial++
+                            WriteFlow(writer, flowSerial, previous, index, tracks)
                         }
                         submissions[key] = index
                     }
                     if let parent = record.Parent {
                         if resources.TryGetValue(parent, out var previous) {
-                            WriteFlow(
-                                writer,
-                                "resource:" + parent.ToString(CultureInfo.InvariantCulture) +
-                                    ":" +
-                                    record
-                                    .Sequence
-                                    .ToString(CultureInfo.InvariantCulture),
-                                previous,
-                                index,
-                                tracks
-                            )
+                            flowSerial++
+                            WriteFlow(writer, flowSerial, previous, index, tracks)
                         }
                     }
                     if let resource = record.Resource {
@@ -237,8 +230,7 @@ internal partial class ProfilerTrace {
                 writer.WritePropertyName("threadNames")
                 JsonSerializer.Serialize[Dictionary[uint64, string]](writer, ThreadNames)
                 writer.WritePropertyName("start")
-                using let metadata = JsonDocument.Parse(StartMetadata)
-                metadata.RootElement.WriteTo(writer)
+                writer.WriteRawValue(StartMetadata)
                 writer.WriteEndObject()
                 writer.WriteEndObject()
                 writer.Flush()
@@ -265,17 +257,17 @@ internal partial class ProfilerTrace {
 
     private func Microseconds(ticks int64) float64 -> float64(ticks) * 1000000.0 / float64(Frequency)
 
-    private func WriteFlow(writer Utf8JsonWriter, id string, first int32, last int32, tracks[]int32) {
+    private func WriteFlow(writer Utf8JsonWriter, id int64, first int32, last int32, tracks[]int32) {
         if Records[first].Ticks > Records[last].Ticks || tracks[first] == tracks[last] {
             return
         }
         WriteHeader(writer, "s", "Goo correlation", tracks[first], Records[first].Ticks)
         writer.WriteString("cat", "goo.correlation")
-        writer.WriteString("id", id)
+        writer.WriteNumber("id", id)
         writer.WriteEndObject()
         WriteHeader(writer, "f", "Goo correlation", tracks[last], Records[last].Ticks)
         writer.WriteString("cat", "goo.correlation")
-        writer.WriteString("id", id)
+        writer.WriteNumber("id", id)
         writer.WriteString("bp", "e")
         writer.WriteEndObject()
     }
@@ -324,6 +316,10 @@ internal partial class ProfilerTrace {
         }
 
         internal func LoadFile(path string) ProfilerTrace {
+            let file = FileInfo(path)
+            if (file.Attributes & (FileAttributes.Directory | FileAttributes.Device)) != 0 || file.Length <= 0L {
+                throw InvalidDataException("Trace input must be a nonempty regular file")
+            }
             using let stream = FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
             if stream.Length > FileLimit {
                 throw InvalidDataException("Trace file exceeds the 256 MiB limit")
@@ -405,7 +401,7 @@ internal partial class ProfilerTrace {
                 if text.Length > NameLimit {
                     throw InvalidDataException("Trace name is too long")
                 }
-                output.Add(Intern(text))
+                output.Add(text)
             }
         }
         for value in metadata.GetProperty("deviceIds").EnumerateArray() {
@@ -422,7 +418,7 @@ internal partial class ProfilerTrace {
                 (value.Value.GetString() ?? "").Length > NameLimit {
                 throw InvalidDataException("Invalid trace window names")
             }
-            WindowNames.Add(Intern(value.Name), Intern(value.Value.GetString() ?? ""))
+            WindowNames.Add(value.Name, value.Value.GetString() ?? "")
         }
         for value in metadata.GetProperty("threadNames").EnumerateObject() {
             if ThreadNames.Count >= 8192 || (value.Value.GetString() ?? "").Length > NameLimit {
@@ -446,7 +442,7 @@ internal partial class ProfilerTrace {
             if !item.TryGetProperty("goo", out var value) {
                 continue
             }
-            let record = JsonSerializer.Deserialize[ProfilerRecord](value.GetRawText(), options)
+            let record = value.Deserialize[ProfilerRecord](options)
             if record.Sequence <= LastSequence {
                 throw InvalidDataException("Repeated or unordered imported record")
             }
@@ -489,9 +485,6 @@ internal partial class ProfilerTrace {
             throw InvalidDataException("Unsupported Goo record kind")
         }
         Store(record)
-        if RetainedBytes > BudgetBytes {
-            throw InvalidDataException("Imported trace exceeds the 128 MiB retention budget")
-        }
     }
 
     private func LoadChrome(events JsonElement) {
@@ -543,6 +536,9 @@ internal partial class ProfilerTrace {
         var unsupported = 0
         for item in events.EnumerateArray() {
             let phase = Text(item, "ph")
+            if phase == "M" {
+                continue
+            }
             let pid = CheckedText(item, "pid")
             let tid = CheckedText(item, "tid")
             let key = pid + ":" + tid

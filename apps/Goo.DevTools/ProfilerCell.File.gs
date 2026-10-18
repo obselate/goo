@@ -139,6 +139,12 @@ internal partial class ProfilerCell {
                     window.TryPost(
                         () -> {
                             fileBusy = false
+                            if loaded != nil && session.Profiler?.Active == true {
+                                fileStatus = "Import ignored because a recording started."
+                                fileAction = ""
+                                Rebuild()
+                                return
+                            }
                             if failure != "" {
                                 fileStatus = failure
                             } else {

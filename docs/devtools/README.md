@@ -127,9 +127,10 @@ Unknown events remain generic and are reported. Imported events do not become
 native Goo frame phases. Crossing duration slices are separated into named
 tracks on export so they do not imply invalid nesting.
 
-Imports are bounded to 256 MiB, 524,288 events, JSON depth 32, 4,096-character
-labels, and 32,768-character Chrome events. Paired begin/end arguments may total
-65,536 characters. The retained trace uses the existing 128 MiB budget.
+Imports require a nonempty regular file and are bounded to 256 MiB, 524,288 events,
+JSON depth 32, 4,096-character labels, and 32,768-character Chrome events. Paired
+begin/end arguments may total 65,536 characters. The retained trace uses the
+existing 128 MiB budget.
 Timestamps and durations must be finite and fit the bounded integer timeline.
 Unmatched begin/end events and invalid input are rejected without replacing the
 current trace. Traces contain measurement metadata, not image or font contents.

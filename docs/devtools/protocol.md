@@ -155,7 +155,8 @@ Those records, not floating-point Chrome times, are authoritative for a Goo
 round trip. Generic Chrome imports retain their original event arguments.
 
 Export uses `X` durations, `i` instants, numeric `C` counters, `M` names and
-slice-bound flow events. Uncalibrated GPU timings stay elapsed counters or
+slice-bound flow events with per-file numeric IDs. Original correlation IDs stay
+in slice arguments and Goo records. Uncalibrated GPU timings stay elapsed counters or
 unavailable instants, never CPU-aligned duration slices. The mapping follows
 the [Trace Event Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview)
 supported by [Perfetto's Chrome JSON importer](https://perfetto.dev/docs/getting-started/other-formats#chrome-json-format).
