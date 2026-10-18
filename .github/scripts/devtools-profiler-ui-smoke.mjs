@@ -250,8 +250,7 @@ try {
     assert(content(nodes).includes('(first sample)'), 'Memory start did not use the first in-range sample');
     const firstCounter = nodes.find(node => node.key.startsWith('summary-row-'));
     const counterNames = new Set();
-    let previousRows = '';
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 100; i++) {
         const names = nodes.filter(node => node.key.startsWith('summary-row-')).map(node => node.key);
         for (const name of names) counterNames.add(name);
         for (const key of names) {
@@ -259,10 +258,13 @@ try {
             const owner = cells[0].match(/^GPU (?:live|retired) requirements \/ (.+)$/)?.[1];
             if (owner && parseFloat(cells[4]) > 0) positiveOwners.add(owner);
         }
-        if (names.join('\n') === previousRows) break;
-        previousRows = names.join('\n');
+        const table = nodes.find(node => node.key === 'profiler-summary-rows');
+        const end = Math.max(0, table.contentSize.y - table.bounds.height);
+        if (table.scrollOffset.y >= end - 0.5) break;
+        const next = Math.min(end, table.scrollOffset.y + 28);
         await wheel(inspector, 'profiler-summary-rows', -1);
-        nodes = await snapshot(inspector);
+        nodes = await waitSnapshot(inspector, data => data.find(node => node.key === 'profiler-summary-rows')
+            ?.scrollOffset.y >= next - 0.5, 'Memory table did not scroll');
     }
     for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
         assert(counterNames.has('summary-row-GPU live requirements / ' + owner), 'Owner name mapping lost ' + owner);
