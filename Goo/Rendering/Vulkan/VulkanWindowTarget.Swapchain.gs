@@ -34,7 +34,6 @@ internal unsafe partial class VulkanWindowTarget {
     ClearReadbackPrerequisite()
     let completed = CompletedGlobalSubmissionSerial()
     primitiveRenderer?.Collect(completed)
-    layerPool?.Collect(completed)
     primitiveRenderer?.Dispose()
     primitiveRenderer = nil
     layerPool?.Dispose()
