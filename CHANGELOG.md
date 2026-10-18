@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add memory, resource and GPU timing records to DevTools profiler captures.
+- Handle changing Vulkan enumeration counts by re-querying after VK_INCOMPLETE.
+- Remove stable Context read and commit-queue allocations from queued Cell rebuilds.
+- Fix zero-size scrollbar thumbs after changing a mounted scrollbar descriptor.
+- Preserve new Context dependencies when a later sibling causes a transaction to fail.
+
 ## 0.7.36 - 2026-10-17
 
 - SVG is now part of Goo, and the Goo.Svg package is discontinued. Remove its PackageReference. `import Goo.Svg` is unchanged.
