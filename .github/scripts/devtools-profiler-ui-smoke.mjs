@@ -53,6 +53,11 @@ async function waitSnapshot(pid, predicate, failure = 'Profiler UI state did not
         await new Promise(resolve => setTimeout(resolve, 100));
     }
     await writeFile(path.join(output, `failure-${pid}.json`), JSON.stringify(await snapshot(pid)));
+    const elements = (await snapshot(pid)).find(node => node.key === 'tab-elements');
+    if (elements) {
+        await request(['input', 'click', '--pid', String(pid), '--target', elements.target]);
+        await writeFile(path.join(output, `failure-${pid}-elements.json`), JSON.stringify(await snapshot(pid)));
+    }
     throw Error(failure);
 }
 const content = nodes => nodes.filter(node => node.content).map(node => node.content).join('\n');
