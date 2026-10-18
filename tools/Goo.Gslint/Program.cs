@@ -728,6 +728,14 @@ public static class Program
 
                 break;
 
+            case AccessorExpressionSyntax
+            {
+                LeftPart: NameExpressionSyntax receiver,
+                RightPart: CallExpressionSyntax,
+            }:
+                reassigned.Add(receiver.IdentifierToken.Text);
+                break;
+
             case AssignmentExpressionSyntax assignment:
                 reassigned.Add(assignment.IdentifierToken.Text);
                 break;

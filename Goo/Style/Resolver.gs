@@ -270,8 +270,9 @@ internal partial class Resolver {
   internal func fieldsMask(n Node, entries StyleEntries?) StyleMask {
     guard let list = entries else { return StyleMask{} }
     var m = StyleMask{}
-    for i in 0 ... list.Count {
-      let field = list.At(i).Field
+    var cursor = list.Cursor()
+    while cursor.MoveNext() {
+      let field = cursor.Current.Field
       if !styleFieldApplies(n, field) { continue }
       if field == StyleField.Margin {
         m = styleMaskWithBoxEdges(m, marginEdges)
@@ -295,8 +296,10 @@ internal partial class Resolver {
   internal func applyList(n Node, entries StyleEntries?, mask StyleMask, initial bool,
     shadow StyleMask, remap bool) StyleMask {
     guard let list = entries else { return mask }
-    for i in 0 ... list.Count {
-      let field = list.At(i).Field
+    var cursor = list.Cursor()
+    while cursor.MoveNext() {
+      let i = cursor.Index
+      let field = cursor.Current.Field
       if !styleFieldApplies(n, field) { continue }
       if field == StyleField.Margin || field == StyleField.Padding {
         let edges = field == StyleField.Margin ? marginEdges : paddingEdges
@@ -308,8 +311,10 @@ internal partial class Resolver {
       }
     }
     var m = mask
-    for i in 0 ... list.Count {
-      var e = list.At(i)
+    cursor = list.Cursor()
+    while cursor.MoveNext() {
+      let i = cursor.Index
+      var e = cursor.Current
       let logical = isLogicalStyleField(e.Field)
       if !styleFieldApplies(n, e.Field) {
         continue
@@ -394,8 +399,9 @@ internal partial class Resolver {
   private func declaredDirection(entries StyleEntries?, fallback Direction) Direction {
     guard let list = entries else { return fallback }
     var result = fallback
-    for i in 0 ... list.Count {
-      let entry = list.At(i)
+    var cursor = list.Cursor()
+    while cursor.MoveNext() {
+      let entry = cursor.Current
       if entry.Field == StyleField.Direction {
         result = Direction(int32(entry.A))
       }

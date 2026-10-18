@@ -1,7 +1,5 @@
 package Goo
 
-import System.Collections.Generic
-
 // Members stay in field-table order. Each ordinal is a StyleMask bit.
 internal enum StyleField {
   Width; Height; MinWidth; MinHeight; MaxWidth; MaxHeight; AspectRatio;
@@ -99,12 +97,60 @@ internal data struct StyleEntry {
   internal var Payload object?
 }
 
+internal class StyleEntryBlock {
+  private var first StyleEntry
+  private var second StyleEntry
+  private var third StyleEntry
+  private var fourth StyleEntry
+  internal var Next StyleEntryBlock?
+
+  internal func Add(index int32, value StyleEntry) {
+    switch index {
+      case 0 { first = value }
+      case 1 { second = value }
+      case 2 { third = value }
+      case 3 { fourth = value }
+      default { throw ArgumentOutOfRangeException("index") }
+    }
+  }
+
+  internal func At(index int32) StyleEntry -> switch index {
+    case 0: first
+    case 1: second
+    case 2: third
+    case 3: fourth
+    default: throw ArgumentOutOfRangeException("index")
+  }
+}
+
+internal data struct StyleEntryCursor {
+  internal var Entries StyleEntries
+  internal var Block StyleEntryBlock?
+  internal var Count int32
+  private var index int32
+  internal var Current StyleEntry
+
+  internal prop Index int32{ get -> index - 1 }
+  internal func MoveNext() bool {
+    if index >= Count { return false }
+    if index < 4 {
+      Current = Entries.At(index)
+    } else {
+      if index > 4 && index % 4 == 0 { Block = Block?.Next }
+      guard let block = Block else { throw InvalidOperationException("missing style spill") }
+      Current = block.At(index % 4)
+    }
+    index++
+    return true
+  }
+}
+
 internal class StyleEntries {
   private var first StyleEntry
   private var second StyleEntry
   private var third StyleEntry
   private var fourth StyleEntry
-  private var spill List[StyleEntry]?
+  private var spillLast StyleEntryBlock?
   private var count int32
 
   internal prop Count int32{ get -> count }
@@ -116,18 +162,31 @@ internal class StyleEntries {
       case 2 { third = value }
       case 3 { fourth = value }
       default {
-        spill ??= List[StyleEntry]()
-        spill!!.Add(value)
+        let slot = (count - 4) % 4
+        if slot == 0 {
+          let block = StyleEntryBlock{}
+          if spillLast == nil {
+            block.Next = block
+          } else {
+            block.Next = spillLast!!.Next
+            spillLast!!.Next = block
+          }
+          spillLast = block
+        }
+        guard let block = spillLast else { throw InvalidOperationException("missing style spill") }
+        block.Add(slot, value)
       }
     }
     count++
   }
 
   internal func AddRange(values StyleEntries) {
-    let sourceCount = values.Count
-    for i in 0 ... sourceCount {
-      Add(values.At(i))
-    }
+    var cursor = values.Cursor()
+    while cursor.MoveNext() { Add(cursor.Current) }
+  }
+
+  internal func Cursor() StyleEntryCursor -> StyleEntryCursor{
+    Entries: this, Block: spillLast?.Next, Count: count,
   }
 
   internal func At(index int32) StyleEntry {
@@ -138,8 +197,16 @@ internal class StyleEntries {
       case 2 { return third }
       case 3 { return fourth }
       default {
-        guard let entries = spill else { throw InvalidOperationException("missing style spill") }
-        return entries[index - 4]
+        var blockIndex = (index - 4) / 4
+        guard let tail = spillLast else { throw InvalidOperationException("missing style spill") }
+        var block = tail.Next
+        while blockIndex > 0 {
+          guard let current = block else { throw InvalidOperationException("missing style spill") }
+          block = current.Next
+          blockIndex--
+        }
+        guard let current = block else { throw InvalidOperationException("missing style spill") }
+        return current.At((index - 4) % 4)
       }
     }
   }

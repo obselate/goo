@@ -1477,9 +1477,11 @@ internal func sameStyleEntries(a StyleEntries?, b StyleEntries?) bool {
   if left.Count != right.Count {
     return false
   }
-  for i in 0 ... left.Count {
-    let leftEntry = left.At(i)
-    let rightEntry = right.At(i)
+  var leftCursor = left.Cursor()
+  var rightCursor = right.Cursor()
+  while leftCursor.MoveNext() && rightCursor.MoveNext() {
+    let leftEntry = leftCursor.Current
+    let rightEntry = rightCursor.Current
     if leftEntry.Field != rightEntry.Field || !sameStyleEntry(leftEntry, rightEntry) {
       return false
     }
@@ -1507,9 +1509,13 @@ internal func sameButtonStyleEntries(entries StyleEntries?, justify StyleEntry,
     guard let authored = author else {
       return true
     }
-    for i in 0 ... authored.Count {
-      let currentEntry = current.At(i + 2)
-      let authoredEntry = authored.At(i)
+    var currentCursor = current.Cursor()
+    currentCursor.MoveNext()
+    currentCursor.MoveNext()
+    var authoredCursor = authored.Cursor()
+    while authoredCursor.MoveNext() && currentCursor.MoveNext() {
+      let currentEntry = currentCursor.Current
+      let authoredEntry = authoredCursor.Current
       if currentEntry.Field != authoredEntry.Field
         || !sameStyleEntry(currentEntry, authoredEntry) {
           return false
