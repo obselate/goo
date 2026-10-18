@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.37 - 2026-10-17
+
 - Add memory, resource and GPU timing records to DevTools profiler captures.
 - Handle changing Vulkan enumeration counts by re-querying after VK_INCOMPLETE.
 - Remove stable Context read and commit-queue allocations from queued Cell rebuilds.
