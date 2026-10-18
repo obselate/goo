@@ -173,6 +173,7 @@ try {
     assert(!nodes.some(node => node.key === 'profiler-details'), 'Unselected trace retained an empty details pane');
     const header = branch(nodes, 'profiler-sort-2').find(node => node.content);
     const totalCell = branch(nodes, 'summary-row-Frame').filter(node => node.content)[2];
+    assert(totalCell, 'Frame interval is empty or reversed');
     assert(Math.abs(header.bounds.x - totalCell.bounds.x) < 1 && Math.abs(header.bounds.width - 84) < 1,
         'Numeric table header and cells are not aligned');
     assert(!/cpu\.instrumented|submit\.prepare-to-observed/.test(text(nodes, 'profiler-summary')),
@@ -297,7 +298,7 @@ try {
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Record a real target trace'), 'Clear retained the previous trace');
-    console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=6 clear=verified');
+    console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=7 clear=verified');
 } catch (error) {
     const inspector = children[1]?.pid;
     if (inspector) {
