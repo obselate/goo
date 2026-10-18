@@ -848,6 +848,22 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
 
+  private func CaptureDiagnosticSwapchains() {
+    if diagnostics == nil { return }
+    try {
+      var retiredImageCount uint64 = 0uL
+      for index in 0 ... retiredSwapchains.Count {
+        retiredImageCount = retiredImageCount + uint64(retiredSwapchains.Generation(index).ImageCount)
+      }
+      let liveCount = if generation != nil { 1uL } else { 0uL }
+      let liveImageCount = generation?.ImageCount ?? 0u
+      let payload = if let bytes = generation?.EstimatedPayloadBytes { bytes.ToString() } else {
+        if liveCount == 0uL { "0" } else { "null" }
+      }
+      Console.Error.WriteLine("{\"kind\":\"swapchain\",\"window\":${DiagnosticWindowValue()},\"generation\":${DiagnosticGenerationValue()},\"ticks\":${Stopwatch.GetTimestamp()},\"swapchainLiveCount\":${liveCount},\"swapchainLiveImageCount\":${liveImageCount},\"swapchainRetiredCount\":${retiredSwapchains.Count},\"swapchainRetiredImageCount\":${retiredImageCount},\"swapchainEstimatedPayloadBytes\":${payload}}")
+    } catch (cleanup Exception) { }
+  }
+
   private func CaptureDiagnosticResources() {
     try {
       if let current = diagnostics {

@@ -181,12 +181,23 @@ func RunHideResourcesSmoke() {
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
     Require(window.Hide() == WindowOperationResult.Accepted, "Hide was rejected")
     AwaitHiddenResources(window)
+    let hiddenCounts = DiagnosticExcerpt(capturedError.ToString(), "swapchain")
+    Require(DiagnosticField(hiddenCounts, "swapchainLiveCount") == 0uL
+        && DiagnosticField(hiddenCounts, "swapchainLiveImageCount") == 0uL
+        && DiagnosticField(hiddenCounts, "swapchainRetiredCount") == 0uL
+        && DiagnosticField(hiddenCounts, "swapchainRetiredImageCount") == 0uL
+        && DiagnosticField(hiddenCounts, "swapchainEstimatedPayloadBytes") == 0uL,
+      "Hide retained swapchain diagnostics: " + hiddenCounts)
     ReadbackAwaitReadbackReady(window, 10000)
     let pending = ReadbackTakeReadback(window)
     RoundedResizeRequireFirstFrame(pending, metrics, 0)
     Require(window.Show() == WindowOperationResult.Accepted, "Show was rejected")
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     let after = ClipCaptureReadback(window, metrics)
+    let shownCounts = DiagnosticExcerpt(capturedError.ToString(), "swapchain")
+    Require(DiagnosticField(shownCounts, "swapchainLiveCount") == 1uL
+        && DiagnosticField(shownCounts, "swapchainLiveImageCount") > 0uL,
+      "Show did not restore swapchain diagnostics: " + shownCounts)
     RoundedResizeRequireFirstFrame(after, metrics, 1)
     Require(before.Pixels.Length == after.Pixels.Length, "Show changed capture dimensions")
     for index in 0 ... before.Pixels.Length {

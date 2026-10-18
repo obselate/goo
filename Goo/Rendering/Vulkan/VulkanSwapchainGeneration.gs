@@ -34,10 +34,6 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
     profileTraceId = recorder.TraceId
     profileBaseline = recorder.BaselineVersion
     let count = imageSet?.Count ?? 0u
-    let known = surfaceFormat.format == VkConstants.VK_FORMAT_R8G8B8A8_SRGB
-      || surfaceFormat.format == VkConstants.VK_FORMAT_B8G8R8A8_SRGB
-      || surfaceFormat.format == VkConstants.VK_FORMAT_R8G8B8A8_UNORM
-      || surfaceFormat.format == VkConstants.VK_FORMAT_B8G8R8A8_UNORM
     recorder.Publish(FrameTraceRecord{
       Kind: if baseline { FrameTraceKind.ResourceBaseline } else { FrameTraceKind.ResourceLifecycle },
       Ticks: System.Diagnostics.Stopwatch.GetTimestamp() - recorder.Origin,
@@ -49,7 +45,7 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
       EventId: if baseline { VulkanDiagnosticEventIds.SwapchainCreate } else { eventId },
       Category: VulkanDiagnosticCategories.Resource, Width: int32(extent.width), Height: int32(extent.height),
       Value0: if count != 0u { uint64(count) } else { nil }, Value1: uint64(surfaceFormat.format),
-      PayloadBytes: if known && count != 0u { uint64(extent.width) * uint64(extent.height) * 4uL * uint64(count) } else { nil },
+      PayloadBytes: EstimatedPayloadBytes,
       Source: "swapchain.estimated-payload",
       Validity: if baseline { if profileRetired { "already-retired" } else { "already-live" } } else { "estimated" },
     })
@@ -112,6 +108,18 @@ internal unsafe partial class VulkanSwapchainGeneration : IDisposable {
 
   internal prop ImageCount uint32{
     get -> RequireImageSet().Count
+  }
+
+  internal prop EstimatedPayloadBytes uint64? {
+    get {
+      let count = imageSet?.Count ?? 0u
+      if count == 0u { return nil }
+      if surfaceFormat.format != VkConstants.VK_FORMAT_R8G8B8A8_SRGB
+        && surfaceFormat.format != VkConstants.VK_FORMAT_B8G8R8A8_SRGB
+        && surfaceFormat.format != VkConstants.VK_FORMAT_R8G8B8A8_UNORM
+        && surfaceFormat.format != VkConstants.VK_FORMAT_B8G8R8A8_UNORM { return nil }
+      return uint64(extent.width) * uint64(extent.height) * 4uL * uint64(count)
+    }
   }
 
   internal prop PresentFenceEnabled bool{
