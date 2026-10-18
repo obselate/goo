@@ -776,10 +776,11 @@ class DiagnosticSession {
         guard let trace = Profiler else {
             return
         }
+        if !message.Succeeded {
+            FailProfiler(message.ErrorText)
+            return
+        }
         try {
-            if !message.Succeeded {
-                throw InvalidOperationException(message.ErrorText)
-            }
             using let document = JsonDocument.Parse(message.Payload)
             let root = document.RootElement
             if message.Command == "profiler.start" {
@@ -799,7 +800,9 @@ class DiagnosticSession {
             }
         } catch (error Exception) {
             FailProfiler(error.Message)
-            transport.Disconnect()
+            if message.Command == "profiler.read" {
+                transport.Disconnect()
+            }
         }
     }
 

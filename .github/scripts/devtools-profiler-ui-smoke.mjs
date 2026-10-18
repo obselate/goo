@@ -33,10 +33,16 @@ async function snapshot(pid) {
     return responses.find(item => item.payload?.added).payload.added;
 }
 async function click(pid, key) {
-    const nodes = await snapshot(pid);
-    const node = nodes.find(item => item.key === key);
-    assert(node?.actionable, 'Missing actionable control ' + key);
+    const nodes = await waitSnapshot(pid, data => data.some(item => item.key === key && item.actionable),
+        'Missing actionable control ' + key);
+    const node = nodes.find(item => item.key === key && item.actionable);
     return request(['input', 'click', '--pid', String(pid), '--target', node.target]);
+}
+async function wheel(pid, key, delta, modifier) {
+    const node = (await snapshot(pid)).find(item => item.key === key);
+    assert(node, 'Missing wheel surface ' + key);
+    await request(['input', 'wheel', '--pid', String(pid), '--target', node.target,
+        '--delta-y', String(delta), ...(modifier ? ['--' + modifier] : [])]);
 }
 async function waitSnapshot(pid, predicate, failure = 'Profiler UI state did not settle') {
     const deadline = Date.now() + 10000;
@@ -48,13 +54,33 @@ async function waitSnapshot(pid, predicate, failure = 'Profiler UI state did not
     throw Error(failure);
 }
 const content = nodes => nodes.filter(node => node.content).map(node => node.content).join('\n');
-const summary = nodes => nodes.find(node => node.key === 'profiler-summary')?.content ?? '';
-async function capture(pid, name) {
-    await command(['capture', '--pid', String(pid), '--output', path.join(output, name + '.png')]);
+function branch(nodes, key) {
+    const byId = new Map(nodes.map(node => [node.id, node]));
+    const visit = node => node ? [node, ...(node.childIds ?? []).flatMap(id => visit(byId.get(id)))] : [];
+    return visit(nodes.find(node => node.key === key));
+}
+const text = (nodes, key) => content(branch(nodes, key));
+const status = nodes => text(nodes, 'profiler-status');
+function seconds(value) {
+    const match = value.match(/^(-?[\d.]+)\s*(µs|ms|s)$/);
+    assert(match, 'Not a human-readable time: ' + value);
+    return Number(match[1]) * ({'µs': 1e-6, ms: 1e-3, s: 1}[match[2]]);
 }
 function rulerTimes(nodes) {
-    const ruler = nodes.find(node => node.key === 'profiler-ruler');
-    return ruler.childIds.map(id => parseFloat(nodes.find(node => node.id === id).content));
+    return branch(nodes, 'profiler-ruler').filter(node => node.content).map(node => seconds(node.content));
+}
+async function capture(pid, name) {
+    await command(['capture', '--pid', String(pid), '--output', path.join(output, name + '.png')]);
+    await writeFile(path.join(output, name + '.json'), JSON.stringify(await snapshot(pid)));
+}
+async function dragRange(pid) {
+    const ruler = (await snapshot(pid)).find(node => node.key === 'profiler-ruler');
+    const gesture = (await request(['input', 'pointer.down', '--pid', String(pid), '--target', ruler.target,
+        '--offset-x', String(ruler.bounds.width * 0.25), '--offset-y', '10'])).find(item => item.payload)?.payload.gestureId;
+    for (const event of ['pointer.move', 'pointer.up']) {
+        await request(['input', event, '--pid', String(pid), '--target', ruler.target,
+            '--offset-x', String(ruler.bounds.width * 0.75), '--offset-y', '10', '--gesture', gesture]);
+    }
 }
 
 try {
@@ -63,75 +89,137 @@ try {
     const inspector = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'devtools', ['--pid', String(gallery)]);
     await snapshot(inspector);
     await click(inspector, 'tab-profiler');
-    let nodes = await waitSnapshot(inspector, data => content(data).includes('Record a real target trace')
+    await waitSnapshot(inspector, data => content(data).includes('Record a real target trace')
         && data.find(node => node.key === 'profiler-record')?.disabled === false,
     'Connected target did not enable Record');
     await click(inspector, 'profiler-record');
-    nodes = await waitSnapshot(inspector, data => content(data).includes('Recording /') && summary(data).includes('vulkan.live.requirements'));
-    for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
-        assert(summary(nodes).includes('vulkan.live.requirements / ' + owner + ' /'), 'Owner name mapping lost ' + owner);
-    }
+    await waitSnapshot(inspector, data => status(data).startsWith('Recording ·') && /[1-9]\d* records/.test(status(data)));
     for (const key of ['rail-item-1', 'rail-item-7', 'rail-item-5']) await click(gallery, key);
     await capture(gallery, 'gallery-during-recording');
+    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools', ['--pid', String(gallery)]);
+    await snapshot(contender);
+    await click(contender, 'tab-profiler');
+    await waitSnapshot(contender, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
+    for (let attempt = 0; attempt < 2; attempt++) {
+        await click(contender, 'profiler-record');
+        const busy = await waitSnapshot(contender, data => content(data).includes('Another client is recording this target'));
+        assert.equal(busy.find(node => node.key === 'profiler-record')?.disabled, false,
+            'Busy response disconnected the target');
+    }
+    children.find(child => child.pid === contender).kill('SIGTERM');
     await click(inspector, 'profiler-record');
-    nodes = await waitSnapshot(inspector, data => content(data).includes('Complete /'));
-    assert(!content(nodes).includes('PARTIAL'), 'Normal recording was marked partial');
+    let nodes = await waitSnapshot(inspector, data => status(data).startsWith('Complete ·'));
+    assert(!status(nodes).includes('PARTIAL'), 'Normal recording was marked partial');
     await click(inspector, 'profiler-fit');
     nodes = await snapshot(inspector);
-    assert(summary(nodes).includes('GPU elapsed (unaligned):'), 'GPU elapsed counters are missing from the GPU lane');
-    assert(summary(nodes).includes('Image / LayerTarget:'), 'Image resource kind mapping was lost');
+    assert(content(nodes).includes('16.7 ms (60 Hz) budget'), 'Frame overview budget is missing');
+    assert(nodes.some(node => node.key === 'profiler-tab-Phases'), 'Phases table is missing');
     await capture(inspector, 'timeline');
-    const framePlot = nodes.find(node => node.key.startsWith('plot-FramesFramewindow-'));
+    const framePlot = nodes.find(node => node.key.startsWith('plot-FramesFrame'));
     assert(framePlot, 'No correlated frame track');
-    await request(['input', 'click', '--pid', String(inspector), '--target', framePlot.target]);
+    await click(inspector, 'profiler-overview');
     nodes = await snapshot(inspector);
-    const details = nodes.find(node => node.key === 'profiler-details').content;
-    assert.match(details, /pump [1-9][0-9]* \/ frame/, 'Frame details lost pump correlation');
-    assert.match(details, /ticks [0-9]+ to [0-9]+/, 'Frame details lost exact ticks');
-    const exact = details.match(/ticks ([0-9]+) to ([0-9]+)/);
-    assert(BigInt(exact[2]) > BigInt(exact[1]), 'Frame interval is empty or reversed');
+    const details = text(nodes, 'profiler-details').split('\n');
+    assert(details.includes('Pump'), 'Frame details lost pump correlation');
+    assert.match(details[details.indexOf('Pump') + 1], /^[1-9]\d*$/, 'Frame pump correlation is invalid');
+    const duration = seconds(details[details.indexOf('Duration') + 1]);
+    assert(duration > 0, 'Frame interval is empty or reversed');
     await click(inspector, 'profiler-zoom-selection');
     nodes = await snapshot(inspector);
-    const beforeRange = summary(nodes).match(/([0-9.]+) ms to ([0-9.]+) ms/);
     let times = rulerTimes(nodes);
-    assert(Math.abs(times.at(-1) - times[0] - (Number(beforeRange[2]) - Number(beforeRange[1]))) < 0.003,
-        'Zoom selection did not fit the exact selected interval');
-    const ruler = nodes.find(node => node.key === 'profiler-ruler');
-    const gesture = (await request(['input', 'pointer.down', '--pid', String(inspector), '--target', ruler.target,
-        '--offset-x', String(ruler.bounds.width * 0.25), '--offset-y', '10'])).find(item => item.payload)?.payload.gestureId;
-    await request(['input', 'pointer.move', '--pid', String(inspector), '--target', ruler.target,
-        '--offset-x', String(ruler.bounds.width * 0.75), '--offset-y', '10', '--gesture', gesture]);
-    await request(['input', 'pointer.up', '--pid', String(inspector), '--target', ruler.target,
-        '--offset-x', String(ruler.bounds.width * 0.75), '--offset-y', '10', '--gesture', gesture]);
+    assert(times.length >= 2 && times.at(-1) - times[0] <= duration * 1.01,
+        'Zoom selection did not fit the selected interval');
+    await dragRange(inspector);
     nodes = await snapshot(inspector);
-    const clipped = summary(nodes).match(/([0-9.]+) ms to ([0-9.]+) ms/);
-    const frameRow = summary(nodes).split('\n').find(line => line.startsWith('Frame:'));
-    const inclusive = frameRow?.match(/inclusive ([0-9.]+) ms/);
-    assert(inclusive && Math.abs(Number(inclusive[1]) - (Number(clipped[2]) - Number(clipped[1]))) < 0.003,
+    const frameCells = branch(nodes, 'summary-row-Frame').filter(node => node.content).map(node => node.content);
+    assert(frameCells.length === 7, 'Selected range lost the Frame summary');
+    assert(Math.abs(seconds(frameCells[2]) - duration * 0.5) < duration * 0.02,
         'Range summary did not clip the enclosing frame');
-    assert(frameRow.includes('incomplete'), 'Boundary-crossing allocation traffic was reported as complete');
-    times = rulerTimes(nodes);
-    const selectedSummary = summary(nodes);
-    await click(inspector, 'profiler-pan-right');
+    assert(frameCells[6].endsWith('*'), 'Boundary-crossing allocation traffic was reported as complete');
+    for (let i = 0; i < 4; i++) await click(inspector, 'profiler-zoom-in');
     nodes = await snapshot(inspector);
-    assert.equal(summary(nodes), selectedSummary, 'Panning changed the selected range');
-    assert(rulerTimes(nodes)[0] > times[0], 'Pan right did not move the viewport');
+    assert.equal(new Set(rulerTimes(nodes)).size, rulerTimes(nodes).length, 'Narrow ruler labels lost precision');
+    const selectedSummary = text(nodes, 'profiler-summary');
+    times = rulerTimes(nodes);
+    for (let i = 0; i < 5; i++) await wheel(inspector, framePlot.key, -120, 'shift');
+    nodes = await snapshot(inspector);
+    assert.equal(text(nodes, 'profiler-summary'), selectedSummary, 'Panning changed the selected range');
+    assert(rulerTimes(nodes)[0] > times[0], 'Shift+wheel did not pan the viewport');
     await capture(inspector, 'selected-frame');
     await click(inspector, 'profiler-fit');
-    for (const key of ['profiler-category-Frames', 'profiler-category-CPU', 'profiler-category-Queue', 'profiler-category-GPU']) {
-        await click(inspector, key);
-    }
-    await click(inspector, 'profiler-owner-stack');
-    await capture(inspector, 'memory');
-    await click(inspector, 'profiler-category-Memory');
-    await click(inspector, 'profiler-lifetimes');
-    await capture(inspector, 'resources');
     nodes = await snapshot(inspector);
-    await writeFile(path.join(output, 'final-snapshot.json'), JSON.stringify(nodes));
+    await click(inspector, framePlot.key);
+    const escape = (await request(['input', 'key.down', '--pid', String(inspector), '--key', 'Escape']))
+        .find(item => item.payload)?.payload.gestureId;
+    await request(['input', 'key.up', '--pid', String(inspector), '--key', 'Escape', '--gesture', escape]);
+    const windowGroup = nodes.find(node => node.key.startsWith('profiler-group-window-'));
+    assert(windowGroup, 'Window title group is missing');
+    await click(inspector, windowGroup.key);
+    nodes = await snapshot(inspector);
+    assert(!nodes.some(node => node.key === framePlot.key), 'Collapsed window retained its frame track');
+    assert(nodes.some(node => node.key === 'profiler-group-GPU'), 'GPU group is missing');
+    assert(content(nodes).includes('GPU stages'), 'GPU elapsed counters are missing from the GPU lane');
+    await click(inspector, 'profiler-group-GPU');
+    await click(inspector, 'profiler-tab-Memory');
+    nodes = await snapshot(inspector);
+    for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
+        assert(content(nodes).split('\n').includes(owner), 'Owner legend lost ' + owner);
+    }
+    assert(content(nodes).includes('(first sample)'), 'Memory start did not use the first in-range sample');
+    const firstCounter = nodes.find(node => node.key.startsWith('summary-row-'));
+    const counterNames = new Set();
+    let previousRows = '';
+    for (let i = 0; i < 30; i++) {
+        const names = nodes.filter(node => node.key.startsWith('summary-row-')).map(node => node.key);
+        for (const name of names) counterNames.add(name);
+        if (names.join('\n') === previousRows) break;
+        previousRows = names.join('\n');
+        await wheel(inspector, 'profiler-summary-rows', -1);
+        nodes = await snapshot(inspector);
+    }
+    for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
+        assert(counterNames.has('summary-row-GPU live requirements / ' + owner), 'Owner name mapping lost ' + owner);
+    }
+    await wheel(inspector, 'profiler-summary-rows', 5000);
+    await waitSnapshot(inspector, data => data.some(node => node.key === firstCounter.key
+        && Math.abs(node.bounds.y - firstCounter.bounds.y) < 0.5));
+    await capture(inspector, 'memory');
+    const beforeScroll = nodes.find(node => node.key === 'profiler-group-Memory').bounds.y;
+    await wheel(inspector, 'profiler-tracks', -300);
+    nodes = await snapshot(inspector);
+    assert(!nodes.some(node => node.key === 'profiler-group-Memory')
+        || nodes.find(node => node.key === 'profiler-group-Memory').bounds.y < beforeScroll,
+    'Normal wheel did not scroll the track list');
+    await wheel(inspector, 'profiler-tracks', 5000);
+    await click(inspector, 'profiler-group-Memory');
+    await click(inspector, 'profiler-tab-Resources');
+    nodes = await snapshot(inspector);
+    assert(content(nodes).includes('Image'), 'Image resource kind mapping was lost');
+    assert(!content(nodes).includes('Unknown owner'), 'Ownerless resources acquired an Unknown owner label');
+    await capture(inspector, 'resources');
+    const rows = nodes.filter(node => node.key.startsWith('profiler-event-'));
+    assert(rows.length > 0, 'Resource table is empty');
+    const sizes = rows.map(row => branch(nodes, row.key).filter(node => node.content).map(node => node.content)[4]);
+    assert(sizes.some(value => /[\d.] (B|KiB|MiB|GiB)/.test(value)), 'Resource bytes are not human-readable');
+    await click(inspector, rows[0].key);
+    nodes = await snapshot(inspector);
+    assert(text(nodes, 'profiler-details').includes('Kind'), 'Resource row selection lost its details');
+    await click(inspector, 'profiler-sort-4');
+    nodes = await snapshot(inspector);
+    assert(text(nodes, 'profiler-sort-4').includes('↑'), 'Resource Bytes sort did not change direction');
+    await click(inspector, 'profiler-lifetimes');
+    await capture(inspector, 'selected-resource');
+    await writeFile(path.join(output, 'final-snapshot.json'), JSON.stringify(await snapshot(inspector)));
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Record a real target trace'), 'Clear retained the previous trace');
-    console.log('profiler-ui: real_gallery=verified owners=8 gpu_counter_lane=verified resource_kinds=verified selection=stable screenshots=5 clear=verified');
+    console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=6 clear=verified');
+} catch (error) {
+    const inspector = children[1]?.pid;
+    if (inspector) {
+        try { await writeFile(path.join(output, 'failure-snapshot.json'), JSON.stringify(await snapshot(inspector))); } catch {}
+    }
+    throw error;
 } finally {
     for (const child of children.reverse()) child.kill('SIGTERM');
 }

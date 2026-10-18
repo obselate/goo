@@ -481,6 +481,17 @@ jobs:
           dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Verify real Gallery profiler UI
+        run: |
+          dotnet build apps/Goo.Gallery/Goo.Gallery.gsproj \
+            -c Release -p:TreatWarningsAsErrors=true
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
+            -c Release -p:TreatWarningsAsErrors=true
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            node .github/scripts/devtools-profiler-ui-smoke.mjs artifacts/reports/profiler-ui
+
       - name: Run portable Vulkan checks
         run: |
           export SDL_VIDEODRIVER=wayland

@@ -1025,7 +1025,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     private var worker Thread?
     private var stream NamedPipeClientStream?
     private var reader StreamReader?
-    private var writer StreamWriter?
     private var stopRequested bool
     private var requestSequence int64
     private var outgoing chan[DiagnosticMessage]?
@@ -1104,7 +1103,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             current = stream
             stream = nil
             reader = nil
-            writer = nil
         }
         if let pipe = current {
             pipe.Dispose()
@@ -1176,7 +1174,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                     return
                 }
                 reader = localReader
-                writer = localWriter
                 state = DiagnosticConnectionState.Connected
                 outgoing = queue
                 snapshotsEnabled = true
@@ -1209,7 +1206,8 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                             snapshotPending = false
                             snapshotDue = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 10L
                         }
-                        if value.Command == "profiler.start" && (!value.Succeeded || value.ProfilerState != "Recording")
+                        if value.Command.StartsWith("profiler.", StringComparison.Ordinal) && !value.Succeeded
+                        || value.Command == "profiler.start" && value.ProfilerState != "Recording"
                         || value.Command == "profiler.read" && value.ProfilerState == "Complete" && !value.More {
                             snapshotsEnabled = true
                         }
@@ -1233,7 +1231,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 if current != nil && Object.ReferenceEquals(stream, current) {
                     stream = nil
                     reader = nil
-                    writer = nil
                     outgoing = nil
                     if state == DiagnosticConnectionState.Connected || state == DiagnosticConnectionState.Connecting {
                         state = DiagnosticConnectionState.Disconnected

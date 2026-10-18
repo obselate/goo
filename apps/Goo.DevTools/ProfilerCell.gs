@@ -382,6 +382,7 @@ internal class ProfilerCell : Cell {
                 Height: 30,
                 Width: 0,
                 FlexGrow: 1.0,
+                JustifyContent: JustifyContent.FlexStart,
                 FlexDirection: FlexDirection.Row,
                 AlignItems: AlignItems.Center,
                 Gap: 6,
@@ -602,12 +603,21 @@ internal class ProfilerCell : Cell {
         let step = int64(
             Math.Max(1.0, (normalized <= 1.0 ? 1.0: normalized <= 2.0 ? 2.0: normalized <= 5.0 ? 5.0: 10.0) * power)
         )
+        let stepMs = trace.Milliseconds(step)
+        let scale = stepMs >= 1000.0 ? 0.001: stepMs >= 1.0 ? 1.0: 1000.0
+        let unit = stepMs >= 1000.0 ? "s": stepMs >= 1.0 ? "ms": "µs"
+        let decimals = Math.Clamp(int32(Math.Ceiling(-Math.Log10(stepMs * scale))), 0, 6)
         var tick = (start / step + 1L) * step
         while tick <= end {
             ticks.Add(
                 Text{
                     Key: "ruler-" + tick.ToString(),
-                    Content: Time(trace, tick),
+                    Content: (trace.Milliseconds(tick) * scale).ToString(
+                        "F" + decimals.ToString(),
+                        CultureInfo.InvariantCulture
+                    ) +
+                        " " +
+                        unit,
                     FontSize: 10,
                     Color: DevToolsTheme.InkMuted,
                     Position: PositionType.Absolute,
@@ -1203,7 +1213,7 @@ internal class ProfilerCell : Cell {
             Width: Percent(100),
             FlexDirection: FlexDirection.Row,
             AlignItems: AlignItems.Center,
-            BackgroundColor: row.Record == selected ? DevToolsTheme.Selection: DevToolsTheme.Surface,
+            BackgroundColor: selected >= 0 && row.Record == selected ? DevToolsTheme.Selection: DevToolsTheme.Surface,
             Focus: FocusStyle(),
             Accessibility: Accessibility{Role: AccessibilityRole.Row},
             OnClick: () -> {
@@ -1285,7 +1295,7 @@ internal class ProfilerCell : Cell {
                                 "%",
                             Time(trace, total / int64(count)),
                             Time(trace, maximum),
-                            measured == 0 ? "unmeasured": Bytes(float64(allocation)) +
+                            (measured == 0 ? "unmeasured": Bytes(float64(allocation))) +
                                 (incomplete || measured < count ? " *": "")
                         },
                         []float64{
@@ -1406,8 +1416,11 @@ internal class ProfilerCell : Cell {
         }
         rows.Sort(
             (a ProfilerTableRow, b ProfilerTableRow) -> {
-                let numeric = sortColumn != 0 &&
-                    !(tab == "Resources" && (sortColumn == 2 || sortColumn == 3 || sortColumn == 5))
+                let numeric = tab == "Resources" ? sortColumn == 0 ||
+                    sortColumn == 1 ||
+                    sortColumn == 4 ||
+                    sortColumn == 6
+                : sortColumn != 0
                 let order = numeric ? a.Values[sortColumn].CompareTo(b.Values[sortColumn]): String.Compare(
                     a.Cells[sortColumn],
                     b.Cells[sortColumn],
@@ -1439,8 +1452,11 @@ internal class ProfilerCell : Cell {
         if r.Window != "" {
             rows.Add(Detail("Window", WindowTitle(r.Window)))
         }
-        if r.Pump != nil {
-            rows.Add(Detail("Pump / frame", r.Pump.ToString() + " / " + r.Frame.ToString()))
+        if let pump = r.Pump {
+            rows.Add(Detail("Pump", pump.ToString()))
+        }
+        if let frame = r.Frame {
+            rows.Add(Detail("Frame", frame.ToString()))
         }
         if let submission = r.Submission {
             rows.Add(Detail("Submission", submission.ToString()))
@@ -1558,7 +1574,6 @@ internal class ProfilerCell : Cell {
             return
         }
         e.Capture()
-        e.PreventDefault()
         selecting = true
         anchor = Tick(e.Position.X)
         selectionStart = anchor
@@ -1653,7 +1668,15 @@ internal class ProfilerCell : Cell {
                 suffix = suffix.Substring(0, device) + (heap >= 0 ? suffix.Substring(heap): "")
             }
             suffix = suffix.Replace(" / heap ", " · heap ")
-            let title = counter == "managed.heap.estimate" ? "Managed heap (estimate)"
+            let title = counter == "vkQueueSubmit2" ? "Queue submit call"
+            : counter == "vkQueuePresentKHR" ? "Queue present call"
+            : counter == "submit.enqueue" ? "Submit enqueue"
+            : counter == "submit.completion-observed" ? "Submit completion"
+            : counter == "submit.prepare-to-observed" ? "Submit prepare to completion"
+            : counter == "present.enqueue" ? "Present enqueue"
+            : counter == "present.completion-observed" ? "Present completion"
+            : counter == "present.prepare-to-observed" ? "Present prepare to completion"
+            : counter == "managed.heap.estimate" ? "Managed heap (estimate)"
             : counter == "managed.allocated.total" ? "Managed allocation rate"
             : counter == "process.rss" ? "Process RSS": counter == "process.pss" ? "Process PSS"
             : counter == "driver.heap.usage.estimate" ? "Driver heap usage (estimate)": counter == "driver.heap.budget" ? "Driver heap budget"
@@ -1849,15 +1872,16 @@ internal class ProfilerVirtualState : VirtualState {
         output.ContentSize = LayoutSize{Width: viewport.Size.Width, Height: offsets[offsets.Count - 1]}
         output.ItemCount = source.Heights.Count
         for index in pendingFirst ... pendingLast {
+            let content = source.Render(index)
             output.Add(
                 VirtualItem{
-                    Key: index.ToString(),
+                    Key: content.Key ?? index.ToString(),
                     Index: index,
                     X: 0.0,
                     Y: offsets[index],
                     Width: viewport.Size.Width,
                     Height: source.Heights[index],
-                    Content: source.Render(index)
+                    Content: content
                 }
             )
         }
