@@ -388,6 +388,7 @@ class DiagnosticSession {
     internal var Profiler ProfilerTrace?
     private var profilerReadPending bool
     private var profilerStopSent bool
+    private var profilerCommands Dictionary[string, string]?
 
     init() {
         transport = SampleDiagnosticTransport{}
@@ -705,9 +706,17 @@ class DiagnosticSession {
             payload
         )
         message.Command = command
-        message.Raw = DiagnosticWire.Request(command, payload)
+        message.Raw = DiagnosticWire.Request(command, payload, out var requestId)
         message.DelayMs = delayMs
-        return transport.Send(message)
+        let sent = transport.Send(message)
+        if sent {
+            if let commands = profilerCommands {
+                if command.StartsWith("profiler.", StringComparison.Ordinal) {
+                    commands[requestId] = command
+                }
+            }
+        }
+        return sent
     }
 
     internal func StartProfiler() {
@@ -717,6 +726,7 @@ class DiagnosticSession {
         Profiler = ProfilerTrace()
         profilerReadPending = false
         profilerStopSent = false
+        profilerCommands = Dictionary[string, string]()
         if !SendRequest("profiler.start", "{\"bufferBytes\":16777216}") {
             FailProfiler("Could not queue profiler.start")
         }
@@ -770,6 +780,7 @@ class DiagnosticSession {
             trace.Revision++
         }
         profilerReadPending = false
+        profilerCommands = nil
     }
 
     private func ApplyProfiler(message DiagnosticMessage) {
@@ -879,6 +890,11 @@ class DiagnosticSession {
     }
 
     private func ApplyResponse(message DiagnosticMessage) {
+        if let commands = profilerCommands {
+            if commands.Remove(message.RequestId, out var command) {
+                message.Command = command
+            }
+        }
         if message.Command.StartsWith("profiler.", StringComparison.Ordinal) {
             ApplyProfiler(message)
             return

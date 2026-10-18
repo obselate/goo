@@ -175,6 +175,8 @@ try {
     const totalCell = branch(nodes, 'summary-row-Frame').filter(node => node.content)[2];
     assert(Math.abs(header.bounds.x - totalCell.bounds.x) < 1 && Math.abs(header.bounds.width - 84) < 1,
         'Numeric table header and cells are not aligned');
+    assert(!/cpu\.instrumented|submit\.prepare-to-observed/.test(text(nodes, 'profiler-summary')),
+        'Phase table retained raw source titles');
     await capture(inspector, 'timeline');
     const framePlot = nodes.find(node => node.key.startsWith('plot-CPUCPU thread '));
     assert(framePlot, 'No correlated frame track');
@@ -194,6 +196,7 @@ try {
         'Frame is missing from the CPU flame root');
     assert(nodes.some(node => node.key.startsWith('slice-label-') && node.content === 'Render'),
         'Rendered frame has no labelled nested phase');
+    await capture(inspector, 'rendered-frame');
     await dragRange(inspector);
     nodes = await snapshot(inspector);
     const frameCells = branch(nodes, 'summary-row-Frame').filter(node => node.content).map(node => node.content);

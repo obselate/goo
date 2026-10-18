@@ -29,9 +29,11 @@ class DiagnosticWire {
                 .Replace("\t", "\\t")
         }
 
-        func Request(command string, payload string) string -> "{\"type\":\"request\",\"id\":\"goo-devtools-"
-        + Guid.NewGuid().ToString("N") + "\",\"command\":\""
-        + Escape(command) + "\",\"payload\":" + payload + "}"
+        func Request(command string, payload string, out requestId string) string {
+            requestId = Guid.NewGuid().ToString("N")
+            return "{\"type\":\"request\",\"id\":\"" + requestId + "\",\"command\":\""
+            + Escape(command) + "\",\"payload\":" + payload + "}"
+        }
 
         func ParseMessage(line string) DiagnosticMessage? {
             if line == nil || line.Trim().Length == 0 {
