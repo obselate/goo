@@ -1116,7 +1116,12 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         let result = List[DiagnosticMessage]()
         lock gate {
             while pending.Count != 0 {
-                result.Add(pending.Dequeue())
+                let value = pending.Dequeue()
+                result.Add(value)
+                if value.IsResponse && (value.Command == "snapshot" || value.Command == "tree.snapshot") {
+                    snapshotPending = false
+                    snapshotDue = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 10L
+                }
             }
             pendingBytes = 0L
         }
@@ -1204,10 +1209,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                     UpdateCapabilities(value)
                     Enqueue(value)
                     lock gate {
-                        if value.IsResponse && (value.Command == "snapshot" || value.Command == "tree.snapshot") {
-                            snapshotPending = false
-                            snapshotDue = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 10L
-                        }
                         if value.Command.StartsWith("profiler.", StringComparison.Ordinal) && !value.Succeeded
                         || value.Command == "profiler.start" && value.ProfilerState != "Recording"
                         || value.Command == "profiler.read" && value.ProfilerState == "Complete" && !value.More {
