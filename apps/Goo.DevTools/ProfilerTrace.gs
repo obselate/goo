@@ -58,6 +58,8 @@ internal class ProfilerLane {
     internal let Window string
     internal let Records List[int32] = List[int32]()
     internal let PrefixEnd List[int64] = List[int64]()
+    internal let Depth List[int32] = List[int32]()
+    internal var MaxDepth int32
     internal var Dirty bool
 
     internal init(name string, group string, window string) {
@@ -70,10 +72,34 @@ internal class ProfilerLane {
         if !Dirty {
             return
         }
-        Records.Sort((a int32, b int32) -> records[a].Ticks.CompareTo(records[b].Ticks))
+        Records.Sort(
+            (a int32, b int32) -> {
+                let order = records[a].Ticks.CompareTo(records[b].Ticks)
+                return order != 0 ? order: records[b].EndTicks.CompareTo(records[a].EndTicks)
+            }
+        )
         PrefixEnd.Clear()
+        Depth.Clear()
+        MaxDepth = 0
+        let threads = Dictionary[uint64, List[int64]]()
         var end int64 = 0L
         for index in Records {
+            let record = records[index]
+            var depth = 0
+            if Group == "CPU" && record.Kind == "duration" {
+                let thread = record.Thread ?? 0uL
+                if !threads.TryGetValue(thread, out var stack) {
+                    stack = List[int64]()
+                    threads.Add(thread, stack)
+                }
+                while stack.Count > 0 && stack[stack.Count - 1] <= record.Ticks {
+                    stack.RemoveAt(stack.Count - 1)
+                }
+                depth = stack.Count
+                stack.Add(record.EndTicks)
+                MaxDepth = Math.Max(MaxDepth, depth)
+            }
+            Depth.Add(depth)
             end = Math.Max(end, records[index].EndTicks)
             PrefixEnd.Add(end)
         }
@@ -108,6 +134,7 @@ internal class ProfilerTrace {
     internal let ResourceNames Dictionary[uint64, string] = Dictionary[uint64, string]()
     internal let ResourceReleased Dictionary[uint64, int64] = Dictionary[uint64, int64]()
     internal let ResourceRetired Dictionary[uint64, int64] = Dictionary[uint64, int64]()
+    internal let ResourceInfo Dictionary[uint64, int32] = Dictionary[uint64, int32]()
     internal var Id string = ""
     internal var State string = "Starting"
     internal var Reason string = ""
@@ -142,7 +169,11 @@ internal class ProfilerTrace {
             throw InvalidOperationException("Invalid profiler clock frequency")
         }
         Process = Text(root, "pid") + " / " + Text(root, "sessionId")
-        Devices = root.GetProperty("devices").GetRawText()
+        let deviceNames = List[string]()
+        for device in root.GetProperty("devices").EnumerateArray() {
+            deviceNames.Add(Text(device, "name"))
+        }
+        Devices = String.Join(", ", deviceNames)
         for device in root.GetProperty("devices").EnumerateArray() {
             if let id = Number(device, "id") {
                 DeviceIds.Add(id)
@@ -246,6 +277,11 @@ internal class ProfilerTrace {
                     }
                 }
             }
+            if let resource = record.Resource {
+                if !ResourceInfo.ContainsKey(resource) || record.Parent != nil || record.Owner != nil {
+                    ResourceInfo[resource] = index
+                }
+            }
             AddLane(index, record)
             if record.Kind == "gap" {
                 Partial = true
@@ -275,17 +311,18 @@ internal class ProfilerTrace {
             "vkQueue",
             StringComparison.Ordinal
         ) ? "Queue"
+        : record.Source.StartsWith("capture.", StringComparison.Ordinal) ||
+            record.Source == "recording.stop" ? "Markers"
         : record.Category == 0 ? (record.Event == 0 ? "Frames": "CPU")
         : record.Kind == "duration" ? "CPU": "Frames"
         let name = group == "Memory" ? record.Name + (record.Owner == nil ? "": " / " + OwnerName(record.Owner))
         + (record.Device == nil ? "": " / device " + record.Device.ToString())
         + (record.Heap == nil ? "": " / heap " + record.Heap.ToString())
-        : group == "GPU" ? "GPU stages (unaligned, per submission)"
-        : group == "Resources" ? ResourceName(record.ResourceKind) + " / " + OwnerName(record.Owner)
-        : record.Category == 0 ? PhaseName(record.Event)
-        : group == "CPU" ? record.Source + " / event " + record.Event.ToString()
-        : group == "Queue" ? record.Source: record.Source == "" ? record.Kind: record.Source
-        let window = group == "Memory" || group == "Resources" ? "": record.Window
+        : group == "GPU" ? "GPU stages"
+        : group == "Resources" ? ResourceLaneName(record)
+        : group == "CPU" ? "CPU thread " + record.Thread.ToString()
+        : group == "Queue" ? record.Source: group == "Markers" ? "Markers": "Frame"
+        let window = group == "Frames" || group == "CPU" || group == "Queue" ? record.Window: ""
         let key = group + ":" + name + ":" + window
         if !lanesByKey.TryGetValue(key, out var lane) {
             lane = ProfilerLane(name, group, window)
@@ -294,6 +331,53 @@ internal class ProfilerTrace {
         }
         lane.Records.Add(index)
         lane.Dirty = true
+    }
+
+    private func ResourceLaneName(record ProfilerRecord) string {
+        if record.Owner != nil {
+            return ResourceName(record.ResourceKind) + " / " + OwnerName(record.Owner)
+        }
+        let kind = ResourceName(record.ResourceKind)
+        return kind == "MemoryBlock" ? "Allocator blocks": kind == "Font" ? "Font files (CPU)"
+        : kind == "FontFace" ? "Font faces": kind == "ImageSource" ? "Decoded images"
+        : kind == "Image" ? "Image uploads": kind == "Shader" ? "Shaders"
+        : kind == "Pipeline" ? "Pipelines": kind == "PipelineCache" ? "Pipeline caches"
+        : kind == "Swapchain" ? "Swapchain (WSI, estimated payload)": kind
+    }
+
+    internal func OwnerChain(record ProfilerRecord) string {
+        let names = List[string]()
+        var current = record
+        let seen = HashSet[uint64]()
+        if current.Owner != nil {
+            names.Add(OwnerName(current.Owner))
+        }
+        for depth in 0 ... 16 {
+            guard let parent = current.Parent else {
+                break
+            }
+            if !seen.Add(parent) {
+                break
+            }
+            names.Add(ResourceNames.TryGetValue(parent, out var name) ? name: "Resource " + parent.ToString())
+            if !ResourceInfo.TryGetValue(parent, out var index) {
+                break
+            }
+            current = Records[index]
+            if current.Owner != nil {
+                names.Add(OwnerName(current.Owner))
+            }
+        }
+        return String.Join(" ← ", names)
+    }
+
+    internal func EventName(record ProfilerRecord) string {
+        if let resource = record.Resource {
+            if ResourceNames.TryGetValue(resource, out var name) {
+                return name
+            }
+        }
+        return record.Name != "" ? record.Name: record.Category == 0 ? PhaseName(record.Event): record.Source
     }
 
     internal func PhaseName(index int32) string -> index >= 0 &&
