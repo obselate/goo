@@ -179,8 +179,15 @@ func RunImageStagingSmoke() {
         && pending.Upload.ActiveRanges > 0,
       "Large image did not retain an incomplete first upload chunk")
     let metrics = WindowReadbackTestFixture.Metrics(opened)
-    ReadbackRequestReadbackUntilAccepted(opened,
+    let staged = WindowReadbackTestFixture.Request(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(staged == WindowReadbackRequestStatus.NotReady,
+      "Image staging unpublished frame was not staged: " + staged.ToString())
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    let accepted = WindowReadbackTestFixture.Request(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(accepted == WindowReadbackRequestStatus.Accepted,
+      "Image staging unpublished readback was not accepted: " + accepted.ToString())
     ReadbackAwaitReadbackReady(opened, 10000)
     let early = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(early, metrics)
@@ -205,8 +212,15 @@ func RunImageStagingSmoke() {
     WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667)
     Require(WindowReadbackTestFixture.ImageResourceStats(opened).Upload.ActiveRanges > 0,
       "Swapped image did not retain an incomplete first upload chunk")
-    ReadbackRequestReadbackUntilAccepted(opened,
+    let swapStaged = WindowReadbackTestFixture.Request(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(swapStaged == WindowReadbackRequestStatus.NotReady,
+      "Image swap unpublished frame was not staged: " + swapStaged.ToString())
+    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
+    let swapAccepted = WindowReadbackTestFixture.Request(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(swapAccepted == WindowReadbackRequestStatus.Accepted,
+      "Image swap unpublished readback was not accepted: " + swapAccepted.ToString())
     ReadbackAwaitReadbackReady(opened, 10000)
     let during = ReadbackTakeReadback(opened)
     PrimitiveValidateResult(during, metrics)

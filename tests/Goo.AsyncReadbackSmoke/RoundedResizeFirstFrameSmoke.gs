@@ -40,8 +40,15 @@ class RoundedResizeFirstFrameCell : Cell {
 
 func RoundedResizeCaptureFirstFrame(window Window, metrics WindowMetrics)
 VulkanReadbackResult{
-  ReadbackRequestReadbackUntilAccepted(window,
+  let staged = WindowReadbackTestFixture.Request(window,
     uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+  Require(staged == WindowReadbackRequestStatus.NotReady,
+    "Rounded resize first frame was not staged: " + staged.ToString())
+  WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+  let accepted = WindowReadbackTestFixture.Request(window,
+    uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+  Require(accepted == WindowReadbackRequestStatus.Accepted,
+    "Rounded resize first frame readback was not accepted: " + accepted.ToString())
   ReadbackAwaitReadbackReady(window, 10000)
   let result = ReadbackTakeReadback(window)
   PrimitiveValidateResult(result, metrics)
