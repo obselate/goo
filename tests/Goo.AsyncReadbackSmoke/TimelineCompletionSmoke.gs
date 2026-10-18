@@ -218,9 +218,7 @@ func RunTimelineCompletionSmoke() {
         && heldWindow.LastEnqueuedSerial == windowSerial,
       "Timeline held window did not receive the next accepted FIFO serial")
 
-    let accepted = WindowReadbackTestFixture.Request(openedSecond, 64u, 64u)
-    TimelineCompletionRequire(accepted == WindowReadbackRequestStatus.Accepted,
-      "Timeline offscreen readback was not accepted behind the held window")
+    ReadbackRequestReadbackUntilAccepted(openedSecond, 64u, 64u)
     let heldOffscreen = WindowReadbackTestFixture.GraphicsTimeline(openedSecond)
     let offscreenSerial = heldOffscreen.ReadbackSerial
     TimelineCompletionRequire(offscreenSerial == windowSerial + 1uL
