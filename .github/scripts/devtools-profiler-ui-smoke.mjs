@@ -38,19 +38,23 @@ async function click(pid, key) {
     assert(node?.actionable, 'Missing actionable control ' + key);
     return request(['input', 'click', '--pid', String(pid), '--target', node.target]);
 }
-async function waitSnapshot(pid, predicate) {
+async function waitSnapshot(pid, predicate, failure = 'Profiler UI state did not settle') {
     const deadline = Date.now() + 10000;
     while (Date.now() < deadline) {
         const nodes = await snapshot(pid);
         if (predicate(nodes)) return nodes;
         await new Promise(resolve => setTimeout(resolve, 100));
     }
-    throw Error('Profiler UI state did not settle');
+    throw Error(failure);
 }
 const content = nodes => nodes.filter(node => node.content).map(node => node.content).join('\n');
 const summary = nodes => nodes.find(node => node.key === 'profiler-summary')?.content ?? '';
 async function capture(pid, name) {
     await command(['capture', '--pid', String(pid), '--output', path.join(output, name + '.png')]);
+}
+function rulerTimes(nodes) {
+    const ruler = nodes.find(node => node.key === 'profiler-ruler');
+    return ruler.childIds.map(id => parseFloat(nodes.find(node => node.id === id).content));
 }
 
 try {
@@ -59,8 +63,9 @@ try {
     const inspector = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'devtools', ['--pid', String(gallery)]);
     await snapshot(inspector);
     await click(inspector, 'tab-profiler');
-    let nodes = await waitSnapshot(inspector, data => content(data).includes('Record a real target trace'));
-    assert.equal(nodes.find(node => node.key === 'profiler-record').disabled, false);
+    let nodes = await waitSnapshot(inspector, data => content(data).includes('Record a real target trace')
+        && data.find(node => node.key === 'profiler-record')?.disabled === false,
+    'Connected target did not enable Record');
     await click(inspector, 'profiler-record');
     nodes = await waitSnapshot(inspector, data => content(data).includes('Recording /') && summary(data).includes('vulkan.live.requirements'));
     for (const owner of ['Unknown', 'LayerTarget', 'GlyphAtlas', 'PathAtlas', 'ClipAtlas', 'Staging', 'Image', 'Buffer']) {
@@ -83,12 +88,34 @@ try {
     const details = nodes.find(node => node.key === 'profiler-details').content;
     assert.match(details, /pump [1-9][0-9]* \/ frame/, 'Frame details lost pump correlation');
     assert.match(details, /ticks [0-9]+ to [0-9]+/, 'Frame details lost exact ticks');
+    const exact = details.match(/ticks ([0-9]+) to ([0-9]+)/);
+    assert(BigInt(exact[2]) > BigInt(exact[1]), 'Frame interval is empty or reversed');
     await click(inspector, 'profiler-zoom-selection');
     nodes = await snapshot(inspector);
+    const beforeRange = summary(nodes).match(/([0-9.]+) ms to ([0-9.]+) ms/);
+    let times = rulerTimes(nodes);
+    assert(Math.abs(times.at(-1) - times[0] - (Number(beforeRange[2]) - Number(beforeRange[1]))) < 0.003,
+        'Zoom selection did not fit the exact selected interval');
+    const ruler = nodes.find(node => node.key === 'profiler-ruler');
+    const gesture = (await request(['input', 'pointer.down', '--pid', String(inspector), '--target', ruler.target,
+        '--offset-x', String(ruler.bounds.width * 0.25), '--offset-y', '10'])).find(item => item.payload)?.payload.gestureId;
+    await request(['input', 'pointer.move', '--pid', String(inspector), '--target', ruler.target,
+        '--offset-x', String(ruler.bounds.width * 0.75), '--offset-y', '10', '--gesture', gesture]);
+    await request(['input', 'pointer.up', '--pid', String(inspector), '--target', ruler.target,
+        '--offset-x', String(ruler.bounds.width * 0.75), '--offset-y', '10', '--gesture', gesture]);
+    nodes = await snapshot(inspector);
+    const clipped = summary(nodes).match(/([0-9.]+) ms to ([0-9.]+) ms/);
+    const frameRow = summary(nodes).split('\n').find(line => line.startsWith('Frame:'));
+    const inclusive = frameRow?.match(/inclusive ([0-9.]+) ms/);
+    assert(inclusive && Math.abs(Number(inclusive[1]) - (Number(clipped[2]) - Number(clipped[1]))) < 0.003,
+        'Range summary did not clip the enclosing frame');
+    assert(frameRow.includes('incomplete'), 'Boundary-crossing allocation traffic was reported as complete');
+    times = rulerTimes(nodes);
     const selectedSummary = summary(nodes);
     await click(inspector, 'profiler-pan-right');
     nodes = await snapshot(inspector);
     assert.equal(summary(nodes), selectedSummary, 'Panning changed the selected range');
+    assert(rulerTimes(nodes)[0] > times[0], 'Pan right did not move the viewport');
     await capture(inspector, 'selected-frame');
     await click(inspector, 'profiler-fit');
     for (const key of ['profiler-category-Frames', 'profiler-category-CPU', 'profiler-category-Queue', 'profiler-category-GPU']) {
