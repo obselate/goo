@@ -159,6 +159,7 @@ internal partial class Reconciler {
       reader.NextCommit = nil
       reader.Queued = false
       reader.Cancel()
+      reader.Invalidate()
     }
     if let root = styleRetryRoot {
       retryStyles(root)
