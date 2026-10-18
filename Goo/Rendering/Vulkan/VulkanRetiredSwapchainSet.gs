@@ -51,6 +51,14 @@ internal class VulkanRetiredSwapchainSet {
     }
   }
 
+  internal func CollectCompleted(index int32, retirement VulkanPresentationRetirement) {
+    let generation = Generation(index)
+    let generationId = generation.Generation
+    generation.Dispose()
+    retirement.RetireGenerationNow(generationId)
+    RemoveAt(index)
+  }
+
   internal func TryWaitAndDisposeNext(retirement VulkanPresentationRetirement,
     out result VkResult) bool{
       result = VkConstants.VK_SUCCESS

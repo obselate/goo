@@ -129,6 +129,7 @@ internal interface WindowRenderTarget {
   prop NeedsRender bool { get; }
   prop LastFrameSubmitted bool { get; }
   prop QueueWorkPending bool { get; }
+  prop RetirementWorkPending bool { get; }
 
   func PrepareClose() bool;
   func SetVSync(value bool);

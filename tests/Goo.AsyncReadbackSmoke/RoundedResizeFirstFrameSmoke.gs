@@ -195,6 +195,21 @@ func RunRoundedResizeFirstFrameSmoke() {
       let corner = int32(result.Height - 1u) * int32(result.RowBytes) + int32(result.Width - 1u) * 4
       Require(result.Pixels[corner + 3] == uint8(255),
         "Rounded resize left an uncovered framebuffer edge at " + iteration.ToString())
+      guard let target = WindowReadbackTestFixture.CaptureTarget(opened) else {
+        throw InvalidOperationException("Resize target is unavailable")
+      }
+      let idleFrame = target.DiagnosticFrameIdForTest()
+      let retirementDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+      while target.RetirementWorkPending && Stopwatch.GetTimestamp() < retirementDeadline {
+        Require(WindowReadbackTestFixture.SchedulerWaitMs(opened,
+          float64(Stopwatch.GetTimestamp())) <= 1,
+          "Retired swapchain did not schedule idle service")
+        WindowReadbackTestFixture.PollQueueCompletion(opened)
+        Thread.Yield()
+      }
+      Require(!target.RetirementWorkPending, "Swapchain remained retired while idle")
+      Require(target.DiagnosticFrameIdForTest() == idleFrame,
+        "Swapchain retirement rendered an extra frame")
       iteration++
     }
 
