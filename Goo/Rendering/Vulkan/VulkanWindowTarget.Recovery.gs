@@ -288,7 +288,9 @@ internal unsafe partial class VulkanWindowTarget {
     sceneCompiler.SetPathScene(pathScene)
     let width = if requestedWidth > 0 { requestedWidth } else { framebufferWidth }
     let height = if requestedHeight > 0 { requestedHeight } else { framebufferHeight }
-    if generation == nil && width > 0 && height > 0 {
+    if hidden {
+      hideReleasePending = true
+    } else if generation == nil && width > 0 && height > 0 {
       if !RecreateSwapchain(width, height) {
         throw InvalidOperationException("Vulkan swapchain recreation failed during device recovery")
       }

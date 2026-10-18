@@ -29,7 +29,7 @@ internal unsafe partial class VulkanWindowTarget {
     requestedHeight = height
     framebufferWidth = width
     framebufferHeight = height
-    if QueueWorkPending || DeferForPendingReadbackSubmission() {
+    if hidden || hideReleasePending || QueueWorkPending || DeferForPendingReadbackSubmission() {
       recreatePending = true
       return true
     }

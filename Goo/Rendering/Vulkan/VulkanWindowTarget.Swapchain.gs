@@ -2,6 +2,45 @@ package Goo
 
 internal unsafe partial class VulkanWindowTarget {
   private var nextGenerationId uint64 = 1uL
+  private var hidden bool
+  private var hideReleasePending bool
+
+  public func SetHidden(value bool) {
+    if disposed || hidden == value { return }
+    hidden = value
+    if value { hideReleasePending = true }
+    recreatePending = true
+    forceFullRedraw = true
+    PollQueueCompletion()
+    host.Wake()
+  }
+
+  private func ReleaseHiddenResources() {
+    if runtime?.DeviceLost == true {
+      hideReleasePending = false
+      return
+    }
+    if readbackRequest?.State == VulkanReadbackState.Pending {
+      let result = PollReadback()
+      if result == VkConstants.VK_NOT_READY || result == VkConstants.VK_TIMEOUT { return }
+      if result != VkConstants.VK_SUCCESS {
+        HandleFrameFailure(result, VulkanDiagnosticEventIds.PresentWait)
+        return
+      }
+    }
+    if !WaitForGpu() || !RetireCurrentSwapchain(false) { return }
+    PollRetiredSwapchains()
+    if retiredSwapchains.Count != 0 { return }
+    ClearReadbackPrerequisite()
+    let completed = CompletedGlobalSubmissionSerial()
+    primitiveRenderer?.Collect(completed)
+    primitiveRenderer?.Dispose()
+    primitiveRenderer = nil
+    layerPool?.Dispose()
+    layerPool = nil
+    clipMaskAtlas?.Reset(completed)
+    hideReleasePending = false
+  }
 
   private func RecreateSwapchain(width int32, height int32, startup bool = false) bool {
     if width <= 0 || height <= 0 {
@@ -648,7 +687,8 @@ internal unsafe partial class VulkanWindowTarget {
       throw InvalidOperationException("Vulkan memory allocator is unavailable")
     }
     if let atlas = clipMaskAtlas {
-      if atlas.Width != nativeWidth || atlas.Height != nativeHeight {
+      if atlas.Width != nativeWidth || atlas.Height != nativeHeight
+        || atlas.Stats.ActiveLayerCount == 0u {
         atlas.Resize(nativeWidth, nativeHeight, CompletedGlobalSubmissionSerial())
         clipMaskRedrawPending = true
       }

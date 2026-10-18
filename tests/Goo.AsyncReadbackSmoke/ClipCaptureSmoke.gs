@@ -130,3 +130,99 @@ func RunClipCaptureSmoke() {
     "Clip capture diagnostics did not record two readbacks")
   Console.WriteLine("clip-capture-submission-gate: captures=2 atlas_layers=32 atlas_failure_recovered=1 atlas_completed_reclaimed=1 submission_ready=1 live_frames=4 pixels=validated close=1")
 }
+
+func AwaitHiddenResources(window Window) {
+  guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
+    throw InvalidOperationException("Hidden target is unavailable")
+  }
+  let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+  while target.RetirementWorkPending && Stopwatch.GetTimestamp() < deadline {
+    WindowReadbackTestFixture.PollQueueCompletion(window)
+    Thread.Yield()
+  }
+  Require(!target.RetirementWorkPending && target.CurrentPresentGeneration == 0uL,
+    "Hide retained the swapchain")
+  let atlas = target.ClipAtlasStatsForTest()
+  Require(atlas.ActiveLayerCount == 0u && atlas.ResidentBytes == 0uL,
+    "Hide retained clip atlas layers")
+}
+
+func RunHideResourcesSmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  let window = Window{
+    Title: "Goo hidden resource lifetime gate",
+    Width: 300,
+    Height: 170,
+    VSync: false,
+    Background: Color.Rgb(12, 20, 32),
+    Root: RoundedResizeFirstFrameCell{},
+  }
+  try {
+    Console.SetError(capturedError)
+    window.Open()
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    let before = ClipCaptureReadback(window, metrics)
+    guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
+      throw InvalidOperationException("Visible target is unavailable")
+    }
+    let generation = target.CurrentPresentGeneration
+    let layers = target.ClipAtlasStatsForTest().ActiveLayerCount
+    Require(layers > 0u, "Visible clip atlas has no layers")
+    window.State = WindowState.Minimized
+    WindowReadbackTestFixture.PollQueueCompletion(window)
+    Require(target.CurrentPresentGeneration == generation
+        && target.ClipAtlasStatsForTest().ActiveLayerCount == layers,
+      "Minimize released visible resources")
+    window.State = WindowState.Normal
+    ReadbackRequestReadbackUntilAccepted(window,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    Require(window.Hide() == WindowOperationResult.Accepted, "Hide was rejected")
+    AwaitHiddenResources(window)
+    ReadbackAwaitReadbackReady(window, 10000)
+    let pending = ReadbackTakeReadback(window)
+    RoundedResizeRequireFirstFrame(pending, metrics, 0)
+    Require(window.Show() == WindowOperationResult.Accepted, "Show was rejected")
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    let after = ClipCaptureReadback(window, metrics)
+    RoundedResizeRequireFirstFrame(after, metrics, 1)
+    Require(before.Pixels.Length == after.Pixels.Length, "Show changed capture dimensions")
+    for index in 0 ... before.Pixels.Length {
+      Require(before.Pixels[index] == after.Pixels[index], "Show changed captured pixels")
+    }
+
+    WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
+    WindowReadbackTestFixture.ForceRenderNonblocking(window, 0.0)
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+    var held = false
+    while Stopwatch.GetTimestamp() < deadline {
+      WindowReadbackTestFixture.PollQueueCompletion(window)
+      if WindowReadbackTestFixture.RuntimeWaitForHeldQueueCall(window, 10) {
+        held = true
+        break
+      }
+      Thread.Yield()
+    }
+    Require(held, "Present queue work was not held")
+    Require(window.Hide() == WindowOperationResult.Accepted, "Queued Hide was rejected")
+    Require(target.CurrentPresentGeneration != 0uL, "Hide destroyed a queued swapchain")
+    WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+    WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+    AwaitHiddenResources(window)
+    Require(window.Show() == WindowOperationResult.Accepted, "Queued Show was rejected")
+    WindowReadbackTestFixture.ForceRender(window, 0.0)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(window, metrics), metrics, 2)
+  } finally {
+    WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+    if window.IsOpen {
+      window.RequestClose()
+      WindowReadbackTestFixture.DrainWindowQueue(window, 10000)
+      WindowReadbackTestFixture.Pump(window, 0.0)
+    }
+    Console.SetError(originalError)
+  }
+  ReadbackValidateCommonDiagnostics(capturedError.ToString())
+  Console.WriteLine("hide-resources-gate: hidden_swapchains=0 hidden_clip_layers=0 minimize=retained pending_capture=valid queued_present=safe show_capture=identical validation=0")
+}

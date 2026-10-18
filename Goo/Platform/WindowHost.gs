@@ -133,6 +133,7 @@ internal interface WindowRenderTarget {
 
   func PrepareClose() bool;
   func SetVSync(value bool);
+  func SetHidden(value bool);
   func BeginFrame();
   func Render(root Node?, portalRoot Node?, background Color, dpi Vector2,
     overlay DiagnosticOverlay?);

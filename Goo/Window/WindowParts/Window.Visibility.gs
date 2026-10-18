@@ -116,6 +116,7 @@ public partial class Window {
   }
 
   /// Hides an open desktop window and cancels transient input without destroying its tree.
+  /// Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them.
   /// Modal windows and owners blocked by a modal child or chooser cannot be hidden.
   public func Hide() WindowOperationResult {
     requireUiThread("Window.Hide")
@@ -123,6 +124,7 @@ public partial class Window {
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
     if Modal || IsInputBlocked { return WindowOperationResult.Unsupported }
     let result = native.Hide()
+    if result == WindowOperationResult.Accepted { windowTarget?.SetHidden(true) }
     observeVisibility()
     return result
   }
@@ -131,7 +133,10 @@ public partial class Window {
     let visible = IsVisible
     if observedVisible == visible { return }
     observedVisible = visible
-    if visible { requestRender() } else { handleFocusChanged(false) }
+    if visible {
+      windowTarget?.SetHidden(false)
+      requestRender()
+    } else { handleFocusChanged(false) }
     notifications.RaiseVisibilityChanged(visible)
   }
 }

@@ -15,6 +15,8 @@ internal unsafe partial class VulkanWindowTarget {
     if disposed || frameBegun || queueStage != QueueStageIdle {
       return
     }
+    if hideReleasePending { ReleaseHiddenResources() }
+    if hidden || hideReleasePending { return }
     if let activeRuntime = runtime {
       if activeRuntime.DeviceLost {
         if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {

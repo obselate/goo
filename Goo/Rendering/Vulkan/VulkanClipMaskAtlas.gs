@@ -436,7 +436,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   internal prop Sampler VkSampler{ get -> CurrentGeneration().Sampler }
   internal prop ResidentBytes VkDeviceSize{
     get {
-      var total = CurrentGeneration().ResidentBytes
+      var total = current?.ResidentBytes ?? 0uL
       var index int32 = 0
       while index < retired.Count {
         if total > uint64.MaxValue - retired[index].ResidentBytes {
@@ -450,7 +450,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
   }
   internal prop Stats VulkanClipMaskAtlasStats{
     get {
-      let value = CurrentGeneration()
+      let value = current
       return VulkanClipMaskAtlasStats{
         Generation: generation,
         Width: width,
@@ -468,11 +468,11 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         EvictionCount: evictionCount,
         PressureEventCount: pressureEventCount,
         PressureFailureCount: pressureFailureCount,
-        LastUseSerial: value.LastUseSerial,
+        LastUseSerial: value?.LastUseSerial ?? 0uL,
         CompletedSerial: completedSerial,
-        Image: value.Image,
-        ImageView: value.ImageView,
-        Sampler: value.Sampler,
+        Image: value?.Image ?? 0uL,
+        ImageView: value?.ImageView ?? 0uL,
+        Sampler: value?.Sampler ?? 0uL,
       }
     }
   }
@@ -736,7 +736,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     if nativeWidth == 0u || nativeHeight == 0u {
       throw ArgumentOutOfRangeException("nativeWidth")
     }
-    if nativeWidth == width && nativeHeight == height {
+    if nativeWidth == width && nativeHeight == height && current != nil {
       return
     }
     if usageBatchOpen || protectedUsageBatchToken != 0uL {
@@ -756,6 +756,16 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     protectedUsageBatchToken = 0uL
     ResetCursors()
     ReplaceGeneration(1u, nativeWidth, nativeHeight)
+  }
+
+  internal func Reset(completedSubmissionSerial uint64) {
+    if current == nil { return }
+    RetireAll(completedSubmissionSerial)
+    activeLayerCount = 0u
+    regionMap.Clear()
+    regionOrder.Clear()
+    dirtyRegions.Clear()
+    ResetCursors()
   }
 
   internal func RecordLayerForColorAttachment(commandBuffer VkCommandBuffer, layer uint32) {
@@ -1157,7 +1167,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
         throw OverflowException("Vulkan clip mask atlas byte size overflow")
       }
     let newBytes = newTexels * uint64(bytesPerPixel) * uint64(newLayerCount)
-    let old = CurrentGeneration()
+    let old = current
     if newBytes == 0uL || newBytes > byteBudget {
       throw InvalidOperationException("Vulkan clip mask atlas byte budget is exhausted")
     }
@@ -1176,7 +1186,7 @@ internal unsafe sealed partial class VulkanClipMaskAtlas : IDisposable {
     ResetCursors()
     RepackRecords()
     MarkAllDirty()
-    retired.Add(old)
+    if let previous = old { retired.Add(previous) }
     CollectRetired()
   }
 
