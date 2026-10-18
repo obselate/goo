@@ -112,7 +112,7 @@ class DiagnosticMessage {
         Command = ""
         CapabilitiesText = ""
         Succeeded = true
-        ErrorText = ""
+        ErrorText = kind == DiagnosticMessageKind.Error ? payload: ""
     }
 }
 
