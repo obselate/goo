@@ -671,6 +671,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       }
       entry.RetireFence = safeFence
       entry.State = VulkanImageResourceState.Retiring
+      if let allocation = entry.Allocation { allocator.Retire(allocation) }
       entries[index] = entry
       if entry.RetireFence > generationLastUseFence {
         generationLastUseFence = entry.RetireFence

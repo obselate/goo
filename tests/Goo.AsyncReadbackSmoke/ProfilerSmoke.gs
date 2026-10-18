@@ -98,6 +98,8 @@ internal class ProfilerSmokeTrace {
     internal let CreatedKinds HashSet[int32] = HashSet[int32]()
     internal let PreparedImages HashSet[string] = HashSet[string]()
     internal let UploadSubmissions Dictionary[string, string] = Dictionary[string, string]()
+    internal let RetiredImages Dictionary[string, int64] = Dictionary[string, int64]()
+    internal let EvictedUploads HashSet[string] = HashSet[string]()
     internal let OwnerKinds HashSet[int32] = HashSet[int32]()
     internal let GpuSubmitted HashSet[string] = HashSet[string]()
     internal let GpuResolved HashSet[string] = HashSet[string]()
@@ -497,6 +499,20 @@ internal class ProfilerSmoke {
                 VulkanMemoryOwnerKind.Image, VulkanMemoryOwnerKind.Staging, VulkanMemoryOwnerKind.LayerTarget} {
                 Require(trace.OwnerKinds.Contains(int32(owner)), "Missing scene allocation owner: " + owner.ToString())
             }
+            window.Post(() -> {
+                root.Source?.Dispose()
+                root.Source = nil
+                root.Frame++
+                root.Rebuild()
+            })
+            let releaseDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5L
+            while trace.EvictedUploads.Count == 0 && Stopwatch.GetTimestamp() < releaseDeadline {
+                using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
+                let payload = batch.RootElement.GetProperty("payload")
+                ValidateBatch(payload, trace)
+                after = payload.GetProperty("nextSeq").GetString() ?? after
+            }
+            Require(trace.EvictedUploads.Count > 0, "Uploaded Image allocation was not retired and evicted while recording")
             using let presentArmed = ManualResetEventSlim(false)
             window.Post(() -> {
                 WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
@@ -678,6 +694,20 @@ internal class ProfilerSmoke {
                 }
                 if kind == "resourcelifecycle" {
                     let eventId = record.GetProperty("eventId").GetString() ?? ""
+                    if (eventId == VulkanDiagnosticEventIds.ResourceRetire.ToString(CultureInfo.InvariantCulture)
+                        || eventId == VulkanDiagnosticEventIds.ResourceEvict.ToString(CultureInfo.InvariantCulture))
+                        && record.GetProperty("resourceKind").GetInt32() == int32(FrameResourceKind.Image)
+                        && record.GetProperty("ownerKind").GetInt32() == int32(VulkanMemoryOwnerKind.Image) {
+                        let id = record.GetProperty("resourceId").GetString() ?? ""
+                        if eventId == VulkanDiagnosticEventIds.ResourceRetire.ToString(CultureInfo.InvariantCulture) {
+                            trace.RetiredImages[id] = seq
+                        } else if eventId == VulkanDiagnosticEventIds.ResourceEvict.ToString(CultureInfo.InvariantCulture)
+                            && trace.PreparedImages.Contains(id) {
+                            Require(trace.RetiredImages.TryGetValue(id, out var retired) && retired < seq,
+                                "Uploaded Image allocation was evicted before Retire")
+                            trace.EvictedUploads.Add(id)
+                        }
+                    }
                     if eventId == VulkanDiagnosticEventIds.ResourceCreate.ToString(CultureInfo.InvariantCulture)
                         || eventId == VulkanDiagnosticEventIds.PipelineCreate.ToString(CultureInfo.InvariantCulture)
                         || eventId == VulkanDiagnosticEventIds.SwapchainCreate.ToString(CultureInfo.InvariantCulture) {

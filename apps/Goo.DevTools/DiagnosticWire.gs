@@ -1,5 +1,7 @@
 package GooDevTools
 
+import Gsharp
+import Gsharp.Extensions.Go
 import System
 import System.Buffers.Text
 import System.Collections.Generic
@@ -27,9 +29,11 @@ class DiagnosticWire {
                 .Replace("\t", "\\t")
         }
 
-        func Request(command string, payload string) string -> "{\"type\":\"request\",\"id\":\"goo-devtools-"
-        + Guid.NewGuid().ToString("N") + "\",\"command\":\""
-        + Escape(command) + "\",\"payload\":" + payload + "}"
+        func Request(command string, payload string, out requestId string) string {
+            requestId = Guid.NewGuid().ToString("N")
+            return "{\"type\":\"request\",\"id\":\"" + requestId + "\",\"command\":\""
+            + Escape(command) + "\",\"payload\":" + payload + "}"
+        }
 
         func ParseMessage(line string) DiagnosticMessage? {
             if line == nil || line.Trim().Length == 0 {
@@ -78,6 +82,11 @@ class DiagnosticWire {
                 message.CapabilitiesText = CapabilityText(root, payloadRoot)
                 message.IsResponse = messageType.Equals("response", StringComparison.OrdinalIgnoreCase)
                 message.Succeeded = Bool(root, "ok", true)
+                if effectiveCommand.StartsWith("profiler.", StringComparison.Ordinal) {
+                    message.ProfilerState = Text(payloadRoot, []string{"state"})
+                    message.More = Bool(payloadRoot, "more", false)
+                    message.Raw = ""
+                }
                 if !message.Succeeded {
                     message.ErrorText = Text(root, []string{"error", "message"})
                     if message.ErrorText == "" {
@@ -1018,9 +1027,14 @@ class DiagnosticPipeTransport : DiagnosticTransport {
     private var worker Thread?
     private var stream NamedPipeClientStream?
     private var reader StreamReader?
-    private var writer StreamWriter?
     private var stopRequested bool
     private var requestSequence int64
+    private var outgoing chan[DiagnosticMessage]?
+    private var snapshotPending bool
+    private var snapshotsEnabled bool = true
+    private var snapshotDue int64
+    private var snapshotRequestId string = ""
+    private var pendingBytes int64
 
     init(value DiagnosticEndpoint) {
         endpoint = value
@@ -1092,7 +1106,6 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             current = stream
             stream = nil
             reader = nil
-            writer = nil
         }
         if let pipe = current {
             pipe.Dispose()
@@ -1104,34 +1117,39 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         let result = List[DiagnosticMessage]()
         lock gate {
             while pending.Count != 0 {
-                result.Add(pending.Dequeue())
+                let value = pending.Dequeue()
+                result.Add(value)
+                if value.IsResponse && snapshotPending && value.RequestId == snapshotRequestId {
+                    snapshotPending = false
+                    snapshotDue = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 10L
+                }
             }
+            pendingBytes = 0L
         }
         return result
     }
 
     func Send(message DiagnosticMessage) bool {
-        let line = if message.Raw == "" {
-            DiagnosticWire.Request(message.Command, message.Payload)
-        } else {
-            message.Raw
+        var queue chan[DiagnosticMessage]?
+        lock gate {
+            if state != DiagnosticConnectionState.Connected {
+                return false
+            }
+            queue = outgoing
         }
-        try {
-            lock gate {
-                if state != DiagnosticConnectionState.Connected || writer == nil {
-                    return false
-                }
-                if let active = writer {
-                    active.WriteLine(line)
-                }
-            }
-            return true
-        } catch (error Exception) {
-            lock gate {
-                state = DiagnosticConnectionState.Faulted
-            }
-            Enqueue(DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message))
+        guard let active = queue else {
             return false
+        }
+        if Encoding.UTF8.GetByteCount(message.Raw == "" ? message.Payload: message.Raw) > 64 * 1024 {
+            return false
+        }
+        select {
+            case active <- message {
+                return true
+            }
+            default {
+                return false
+            }
         }
     }
 
@@ -1158,16 +1176,20 @@ class DiagnosticPipeTransport : DiagnosticTransport {
             using let localWriter = StreamWriter(created, Encoding.UTF8, 16 * 1024, true)
             localWriter.AutoFlush = true
             localWriter.NewLine = "\n"
+            let queue = chan[DiagnosticMessage](64)
             lock gate {
                 if stopRequested || !Object.ReferenceEquals(stream, created) {
                     return
                 }
                 reader = localReader
-                writer = localWriter
                 state = DiagnosticConnectionState.Connected
+                outgoing = queue
+                snapshotsEnabled = true
+                snapshotPending = true
             }
             localWriter.WriteLine(Handshake())
             localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
+            go WriteRequests(created, localWriter, queue)
             Signal()
             while true {
                 lock gate {
@@ -1180,22 +1202,19 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                     return
                 }
                 let message = DiagnosticWire.ParseMessage(line)
-                var pollSnapshot = false
-                if let value = message {
+                if message == nil {
+                    throw InvalidDataException("Invalid diagnostics message")
+                }
+                {
+                    let value = message
                     UpdateCapabilities(value)
                     Enqueue(value)
-                    pollSnapshot = value.IsResponse &&
-                        value.Succeeded &&
-                        (value.Command == "snapshot" || value.Command == "tree.snapshot")
-                }
-                if pollSnapshot {
-                    Thread.Sleep(100)
                     lock gate {
-                        if stopRequested || state != DiagnosticConnectionState.Connected
-                        || !Object.ReferenceEquals(stream, created) {
-                            return
+                        if value.Command.StartsWith("profiler.", StringComparison.Ordinal) && !value.Succeeded
+                        || value.Command == "profiler.start" && value.ProfilerState != "Recording"
+                        || value.Command == "profiler.read" && value.ProfilerState == "Complete" && !value.More {
+                            snapshotsEnabled = true
                         }
-                        localWriter.WriteLine(RequestLine("snapshot", "{\"full\":true}"))
                     }
                 }
             }
@@ -1216,7 +1235,7 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 if current != nil && Object.ReferenceEquals(stream, current) {
                     stream = nil
                     reader = nil
-                    writer = nil
+                    outgoing = nil
                     if state == DiagnosticConnectionState.Connected || state == DiagnosticConnectionState.Connecting {
                         state = DiagnosticConnectionState.Disconnected
                     }
@@ -1226,12 +1245,84 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         }
     }
 
+    private func WriteRequests(pipe NamedPipeClientStream, output StreamWriter, queue chan[DiagnosticMessage]) {
+        try {
+            using let pulse = tick(TimeSpan.FromMilliseconds(100))
+            var delayed DiagnosticMessage? = nil
+            var due int64 = 0L
+            while true {
+                lock gate {
+                    if stopRequested || !Object.ReferenceEquals(stream, pipe) {
+                        return
+                    }
+                }
+                var request DiagnosticMessage? = nil
+                select {
+                    case let message = <- queue {
+                        request = message
+                    }
+                    case <- pulse {
+                        let now = Stopwatch.GetTimestamp()
+                        if delayed != nil && now >= due {
+                            request = delayed
+                            delayed = nil
+                        } else {
+                            lock gate {
+                                if snapshotsEnabled && !snapshotPending && now >= snapshotDue {
+                                    let next = DiagnosticMessage(
+                                        endpoint.Protocol,
+                                        DiagnosticMessageKind.Unknown,
+                                        0,
+                                        "",
+                                        "",
+                                        "{\"full\":true}"
+                                    )
+                                    next.Command = "snapshot"
+                                    request = next
+                                    snapshotPending = true
+                                }
+                            }
+                        }
+                    }
+                }
+                if let message = request {
+                    if message.DelayMs > 0 {
+                        delayed = message
+                        due = Stopwatch.GetTimestamp() + int64(message.DelayMs) * Stopwatch.Frequency / 1000L
+                        message.DelayMs = 0
+                    } else {
+                        if message.Command == "profiler.start" {
+                            lock gate {
+                                snapshotsEnabled = false
+                            }
+                        }
+                        output.WriteLine(message.Raw == "" ? RequestLine(message.Command, message.Payload): message.Raw)
+                    }
+                }
+            }
+        } catch (error Exception) {
+            lock gate {
+                if stopRequested || !Object.ReferenceEquals(stream, pipe) {
+                    return
+                }
+                state = DiagnosticConnectionState.Faulted
+            }
+            Enqueue(DiagnosticMessage(endpoint.Protocol, DiagnosticMessageKind.Error, 0, "", "", error.Message))
+            pipe.Dispose()
+        }
+    }
+
     private func Handshake() string -> "{\"type\":\"hello\",\"protocol\":\"goo.devtools/1\",\"client\":\"goo-devtools\",\"version\":\"0.7.37\",\"capabilities\":[\"tree\",\"properties\",\"layout\",\"events\",\"logs\",\"accessibility\",\"capture\",\"source-navigation\",\"hot-reload\"]}"
 
     private func RequestLine(command string, payload string) string {
         requestSequence = requestSequence + 1
-        return "{\"type\":\"request\",\"id\":\"goo-devtools-"
-        + requestSequence.ToString(CultureInfo.InvariantCulture) + "\",\"command\":\""
+        let id = "goo-devtools-" + requestSequence.ToString(CultureInfo.InvariantCulture)
+        if command == "snapshot" || command == "tree.snapshot" {
+            lock gate {
+                snapshotRequestId = id
+            }
+        }
+        return "{\"type\":\"request\",\"id\":\"" + id + "\",\"command\":\""
         + DiagnosticWire.Escape(command) + "\",\"payload\":" + payload + "}"
     }
 
@@ -1290,15 +1381,39 @@ class DiagnosticPipeTransport : DiagnosticTransport {
                 if item == "hot-reload" {
                     next.HotReload = true
                 }
+                if item == "profiler.trace.v1" {
+                    next.ProfilerTrace = true
+                }
             }
             capabilities = next
         }
     }
 
     private func Enqueue(message DiagnosticMessage) {
+        var disconnect NamedPipeClientStream?
         lock gate {
-            pending.Enqueue(message)
+            pendingBytes += int64(message.Raw.Length + message.Payload.Length) * 2L
+            if pendingBytes > 16L * 1024L * 1024L {
+                state = DiagnosticConnectionState.Faulted
+                stopRequested = true
+                disconnect = stream
+                pending.Clear()
+                pendingBytes = 0L
+                pending.Enqueue(
+                    DiagnosticMessage(
+                        endpoint.Protocol,
+                        DiagnosticMessageKind.Error,
+                        0,
+                        "",
+                        "",
+                        "Diagnostics pending-message budget exceeded"
+                    )
+                )
+            } else {
+                pending.Enqueue(message)
+            }
         }
+        disconnect?.Dispose()
         Signal()
     }
 

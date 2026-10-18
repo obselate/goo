@@ -12,6 +12,7 @@ class DevToolsCell : Cell {
     private let session DiagnosticSession
     private var window Window?
     private var wakePending int32
+    private var showProfiler bool
     private var showCaptures bool
     private var showActivity bool
     private var showOverrides bool
@@ -57,8 +58,15 @@ class DevToolsCell : Cell {
                     window.Post(
                         () -> {
                             Interlocked.Exchange(&wakePending, 0)
+                            let previousState = session.State
+                            let previousProfiler = session.Profiler?.Revision ?? -1
+                            let previousCapability = session.Capabilities.ProfilerTrace
                             if session.Pump() {
-                                Rebuild()
+                                if !showProfiler || previousState != session.State
+                                || previousProfiler != (session.Profiler?.Revision ?? -1)
+                                || previousCapability != session.Capabilities.ProfilerTrace {
+                                    Rebuild()
+                                }
                             }
                         }
                     )
@@ -86,7 +94,51 @@ class DevToolsCell : Cell {
         BorderColor: DevToolsTheme.Border,
         BackgroundColor: DevToolsTheme.Background,
         BuildTopbar(),
-        BuildBody(),
+        BuildMainTabs(),
+        BuildActiveBody(),
+    }
+
+    private func BuildMainTabs() Container -> Container{
+        Key: "main-tabs",
+        Width: Percent(100),
+        Height: 32,
+        FlexDirection: FlexDirection.Row,
+        BackgroundColor: DevToolsTheme.Surface,
+        Button{
+            Key: "tab-elements",
+            Height: 32,
+            Padding: Edges{Left: 14, Right: 14},
+            BackgroundColor: showProfiler ? DevToolsTheme.Surface: DevToolsTheme.Selection,
+            OnClick: () -> {
+                showProfiler = false
+                Rebuild()
+            },
+            Text{Content: "Elements", Color: DevToolsTheme.Ink, FontSize: 12},
+        },
+        Button{
+            Key: "tab-profiler",
+            Height: 32,
+            Padding: Edges{Left: 14, Right: 14},
+            BackgroundColor: showProfiler ? DevToolsTheme.Selection: DevToolsTheme.Surface,
+            OnClick: () -> {
+                showProfiler = true
+                Rebuild()
+            },
+            Text{Content: "Profiler", Color: DevToolsTheme.Ink, FontSize: 12},
+        },
+    }
+
+    private func BuildActiveBody() Blob {
+        if !showProfiler {
+            return BuildBody()
+        }
+        return Cell.Mount[ProfilerCell](
+            "profiler",
+            (panel ProfilerCell) -> {
+                panel.session = session
+                panel.Refresh(layoutWidth)
+            }
+        )
     }
 
     private func BuildTopbar() Container {
