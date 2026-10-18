@@ -27,25 +27,23 @@ internal partial class Reconciler {
   private var styleRetryRoot Node?
   private var deferredRetirement Node?
   internal var Context ContextFrame?
-  private var contextCommits List[ContextReader]?
+  private var contextCommits ContextReader?
 
   private func trackContext(cell Cell, preserve bool = false) {
     guard let reader = cell.contextReader else { return }
     reader.Preserve = preserve
     if reader.Queued { return }
     reader.Queued = true
-    contextCommits ??= List[ContextReader]()
-    contextCommits!!.Add(reader)
+    reader.NextCommit = contextCommits
+    contextCommits = reader
   }
 
   private func commitContexts() {
-    if let readers = contextCommits {
-      for index in 0 ... readers.Count {
-        let reader = readers[index]
-        reader.Queued = false
-        reader.Commit(reader.Preserve)
-      }
-      readers.Clear()
+    while let reader = contextCommits {
+      reader.Commit(reader.Preserve)
+      contextCommits = reader.NextCommit
+      reader.NextCommit = nil
+      reader.Queued = false
     }
   }
 
@@ -156,12 +154,12 @@ internal partial class Reconciler {
 
   internal func DiscardStyles() {
     Res.DiscardPending()
-    if let readers = contextCommits {
-      for index in 0 ... readers.Count {
-        readers[index].Queued = false
-        readers[index].Cancel()
-      }
-      readers.Clear()
+    while let reader = contextCommits {
+      contextCommits = reader.NextCommit
+      reader.NextCommit = nil
+      reader.Queued = false
+      reader.Cancel()
+      reader.Invalidate()
     }
     if let root = styleRetryRoot {
       retryStyles(root)

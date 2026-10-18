@@ -72,16 +72,8 @@ func RunClipCaptureSmoke() {
         && growth.PressureFailureCount == 1uL
         && growth.CompletedRegionsReclaimed,
       "Clip mask atlas growth and failure recovery did not qualify")
-    let staged = WindowReadbackTestFixture.Request(opened,
+    ReadbackRequestReadbackUntilAccepted(opened,
       uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
-    Require(staged == WindowReadbackRequestStatus.NotReady,
-      "Clip capture second prerequisite frame was not staged: " + staged.ToString())
-    WindowReadbackTestFixture.DrainWindowQueue(opened, 10000)
-
-    let accepted = WindowReadbackTestFixture.Request(opened,
-      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
-    Require(accepted == WindowReadbackRequestStatus.Accepted,
-      "Clip capture second readback was not accepted: " + accepted.ToString())
     let submissionDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 2L
     while !WindowReadbackTestFixture.SubmissionReadyForReconcile(opened)
       && Stopwatch.GetTimestamp() < submissionDeadline{

@@ -163,6 +163,7 @@ internal open class ContextFrame {
     internal let Key object
     internal var Parent ContextFrame?
     internal var Owner Window?
+    internal var ValueVersion uint64
     private var dependents List[ContextDependency]?
     private var notifying bool
 
@@ -227,6 +228,7 @@ internal sealed class ContextValue[T any] : ContextFrame {
             return false
         }
         Value = value
+        ValueVersion++
         return true
     }
 
@@ -255,6 +257,7 @@ internal sealed class ContextValue[T any] : ContextFrame {
         }
         Value = previous
         Parent = previousParent
+        ValueVersion++
         pending = false
         previous = default(T)
         previousParent = nil
@@ -292,6 +295,10 @@ internal sealed class ContextDependency[T any] : ContextDependency {
     private let key Context[T]
     private var value T = default(T)
     private var observed T = default(T)
+    private var source ContextValue[T]?
+    private var sourceVersion uint64
+    private var observedSource ContextValue[T]?
+    private var observedVersion uint64
 
     internal init(key Context[T], owner ContextReader) : base(key, owner) {
         this.key = key
@@ -300,6 +307,8 @@ internal sealed class ContextDependency[T any] : ContextDependency {
     internal func Observe(frame ContextValue[T], stateCallback bool) {
         Seen = true
         observed = frame.Value
+        observedSource = frame
+        observedVersion = frame.ValueVersion
         if stateCallback {
             StateSeen = true
             Owner.StateReading = true
@@ -308,6 +317,8 @@ internal sealed class ContextDependency[T any] : ContextDependency {
 
     internal override func Commit() {
         value = observed
+        source = observedSource
+        sourceVersion = observedVersion
         Committed = true
         Refresh()
     }
@@ -359,7 +370,12 @@ internal sealed class ContextDependency[T any] : ContextDependency {
             }
         }
         if let frame = selected {
+            if frame == source && frame.ValueVersion == sourceVersion {
+                return
+            }
             if EqualityComparer[T].Default.Equals(value, frame.Value) {
+                source = frame
+                sourceVersion = frame.ValueVersion
                 return
             }
         }
@@ -375,6 +391,7 @@ internal sealed class ContextReader {
     internal var Virtual VirtualNodeState?
     internal var Preserve bool
     internal var Queued bool
+    internal var NextCommit ContextReader?
     internal var StateReading bool
     private var dependencies List[ContextDependency]?
     private var reading bool

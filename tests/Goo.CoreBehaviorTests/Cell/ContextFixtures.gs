@@ -4,6 +4,127 @@ import System
 import System.Threading.Tasks
 
 internal class ContextFixtures {
+    func FailedPassRetriesNewDependenciesContract() bool {
+        let key = Context[int32]()
+        let other = Context[int32]()
+        let cell = ContextTestRoot(key, other)
+        let window = Window{Root: cell, Width: 100, Height: 100}
+        key.Set(window, 10)
+        other.Set(window, 50)
+        try {
+            window.UpdateTree()
+            let reader = windowReader(window)
+            let later = windowReader(window, 2)
+            let builds = reader.Builds
+            reader.ReadOther = true
+            reader.Rebuild()
+            later.FailNext = true
+            later.Rebuild()
+            var threw = false
+            try {
+                window.UpdateTree()
+            } catch (error InvalidOperationException) {
+                threw = true
+            }
+            if !threw || reader.Builds != builds + 1 {
+                return false
+            }
+            window.UpdateTree()
+            let recovered = reader.Builds
+            other.Set(window, 51)
+            window.UpdateTree()
+            if reader.Builds != recovered + 1 {
+                throw InvalidOperationException(
+                    "New dependency lost after failed pass: builds=${reader.Builds}, recovered=$recovered"
+                )
+            }
+            return reader.Value == 10
+        } finally {
+            window.Close()
+        }
+    }
+
+    func VirtualStagedValueRollbackContract() bool {
+        let key = Context[int32]()
+        let other = Context[int32]()
+        let root = ContextVirtualRollbackRoot(key, other)
+        let host = root.Host
+        host.Show = false
+        let window = Window{Root: root, Width: 100, Height: 100}
+        key.Set(window, 10)
+        other.Set(window, 50)
+        try {
+            window.UpdateTree()
+            let later = windowReader(window, 1)
+            host.Show = true
+            host.Value = 21
+            host.Rebuild()
+            later.FailNext = true
+            later.Rebuild()
+            var threw = false
+            try {
+                window.UpdateTree()
+            } catch (error InvalidOperationException) {
+                threw = true
+            }
+            let node = host.Handle.AttachedNode()!!
+            let state = Virtualization.State(node)!!
+            let frame = (host.directChild!!.contextReader!!.Provider as ContextValue[int32])!!
+            if frame.Value != 20 { return false }
+            let staged = host.State.Version
+            if !threw || state.ContextVersion <= staged {
+                throw InvalidOperationException(
+                    "Rollback invalidation: threw=$threw, current=${state.ContextVersion}, staged=$staged"
+                )
+            }
+            host.directChild!!.Rebuild()
+            window.UpdateTree()
+            let row = (node.Children[0].Children[0].Fiber as ContextReadCell)!!
+            return frame.Value == 21 && row.Value == 21 && row.Snapshot == 21 && host.State.Version > staged
+        } finally {
+            window.Close()
+        }
+    }
+
+    func QueuedStructReadAllocationContract() bool {
+        let baseline = QueuedStructReadBytes(false)
+        let context = QueuedStructReadBytes(true)
+        if baseline != context {
+            throw InvalidOperationException("Queued frame bytes: baseline=$baseline, context=$context")
+        }
+        return true
+    }
+
+    func QueuedStructReadBytes(read bool) int64 {
+        let key = Context[ContextAllocationValue]()
+        let cell = ContextAllocationCell(key, read)
+        let window = Window{Root: cell, Width: 100, Height: 100}
+        key.Set(
+            window,
+            ContextAllocationValue{
+                Background: Color.White,
+                Foreground: Color.Black,
+                Accent: Color.Rgb(0, 0, 255),
+                Size: 14,
+            }
+        )
+        try {
+            window.UpdateTree()
+            for index in 0 ... 2000 {
+                cell.Rebuild()
+                window.UpdateTree()
+            }
+            let before = GC.GetAllocatedBytesForCurrentThread()
+            for index in 0 ... 1000 {
+                cell.Rebuild()
+                window.UpdateTree()
+            }
+            return GC.GetAllocatedBytesForCurrentThread() - before
+        } finally {
+            window.Close()
+        }
+    }
+
     func WindowPairDependencyContract() bool {
         let key = Context[int32]()
         let root = ContextWindowPairCell(key)
@@ -567,6 +688,7 @@ internal class ContextVirtualRoot : Cell {
     internal let Handle ElementHandle = ElementHandle{}
     internal let State ContextVirtualState
     internal var Value int32 = 20
+    internal var Show bool = true
     private let portal bool
     private let build Func[Blob]
 
@@ -582,6 +704,7 @@ internal class ContextVirtualRoot : Cell {
     override func Build() Blob -> ProviderKey.Scope(Value, build)
 
     private func content() Blob {
+        if !Show { return Container{Width: 100, Height: 60} }
         let viewport = Virtual(ContextVirtualSource(this)){Handle = Handle, Width = 100, Height = 60}
         return portal ? Portal(){viewport}: viewport
     }
@@ -709,5 +832,40 @@ internal class ContextWindowPairCell : Cell {
             return Text{Content: "replacement"}
         }
         return Container(){Text{Content: "plain"}, Portal(){Text{Content: "portal"}},}
+    }
+}
+
+internal data struct ContextAllocationValue {
+    internal var Background Color
+    internal var Foreground Color
+    internal var Accent Color
+    internal var Size int32
+}
+
+internal class ContextAllocationCell : Cell {
+    private let key Context[ContextAllocationValue]
+    private let read bool
+    private let content Blob = Text{Content: "stable"}
+    internal var Foreground Color
+
+    internal init(key Context[ContextAllocationValue], read bool) {
+        this.key = key
+        this.read = read
+    }
+
+    override func Build() Blob {
+        if read {
+            Foreground = key.Read().Foreground
+        }
+        return content
+    }
+}
+
+internal class ContextVirtualRollbackRoot(key Context[int32], other Context[int32]) : Cell {
+    internal let Host ContextVirtualRoot = ContextVirtualRoot(key, other, false)
+
+    override func Build() Blob -> Container(){
+        Cell.Mount[ContextVirtualRoot](() -> Host, "host"),
+        Cell.Mount[ContextReadInput, ContextReadCell]("later", ContextReadInput{Key: other, Other: key}),
     }
 }
