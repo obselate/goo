@@ -15,6 +15,15 @@ internal unsafe partial class VulkanDiagnostics {
     return deviceName
   }
 
+  internal func WriteSwapchains(writer TextWriter, window uint64, generation uint64,
+    liveCount uint64, liveImageCount uint64, retiredCount uint64, retiredImageCount uint64,
+    estimatedPayloadBytes uint64?) {
+      let payload = if let bytes = estimatedPayloadBytes { bytes.ToString() } else {
+        if liveCount == 0uL { "0" } else { "null" }
+      }
+      writer.WriteLine("{\"kind\":\"swapchain\",\"window\":${window},\"generation\":${generation},\"ticks\":${System.Diagnostics.Stopwatch.GetTimestamp()},\"swapchainLiveCount\":${liveCount},\"swapchainLiveImageCount\":${liveImageCount},\"swapchainRetiredCount\":${retiredCount},\"swapchainRetiredImageCount\":${retiredImageCount},\"swapchainEstimatedPayloadBytes\":${payload}}")
+    }
+
   private func OptionalBudgetValue(available uint32, value uint64) string -> if available == 0u { "null" } else { value.ToString() }
 
   private func FlushLiveSnapshot(writer TextWriter, snapshot VulkanDiagnosticLiveSnapshot) {

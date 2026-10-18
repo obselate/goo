@@ -848,6 +848,19 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
 
+  private func CaptureDiagnosticSwapchains() {
+    guard let current = diagnostics else { return }
+    try {
+      var retiredImageCount uint64 = 0uL
+      for index in 0 ... retiredSwapchains.Count {
+        retiredImageCount = retiredImageCount + uint64(retiredSwapchains.Generation(index).ImageCount)
+      }
+      current.WriteSwapchains(Console.Error, DiagnosticWindowValue(), DiagnosticGenerationValue(),
+        if generation != nil { 1uL } else { 0uL }, uint64(generation?.ImageCount ?? 0u),
+        uint64(retiredSwapchains.Count), retiredImageCount, generation?.EstimatedPayloadBytes)
+    } catch (cleanup Exception) { }
+  }
+
   private func CaptureDiagnosticResources() {
     try {
       if let current = diagnostics {

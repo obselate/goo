@@ -210,6 +210,15 @@ func RunRoundedResizeFirstFrameSmoke() {
       Require(!target.RetirementWorkPending, "Swapchain remained retired while idle")
       Require(target.DiagnosticFrameIdForTest() == idleFrame,
         "Swapchain retirement rendered an extra frame")
+      let counts = DiagnosticExcerpt(capturedError.ToString(), "swapchain")
+      let imageCount = DiagnosticField(counts, "swapchainLiveImageCount") ?? 0uL
+      Require(DiagnosticField(counts, "swapchainLiveCount") == 1uL
+          && imageCount > 0uL
+          && DiagnosticField(counts, "swapchainRetiredCount") == 0uL
+          && DiagnosticField(counts, "swapchainRetiredImageCount") == 0uL
+          && DiagnosticField(counts, "swapchainEstimatedPayloadBytes")
+            == uint64(pixelWidth) * uint64(pixelHeight) * 4uL * imageCount,
+        "Idle swapchain diagnostics did not report one live generation and no retired images: " + counts)
       iteration++
     }
 

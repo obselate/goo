@@ -159,3 +159,23 @@ For work on DevTools itself, see [development](development.md) and the
 For AI agents, the [Goo plugin](../../plugins/goo/README.md) exposes documentation,
 starter generation, live target discovery, full snapshots, screenshots, and
 separately opted-in application input as MCP tools.
+
+## Vulkan swapchain diagnostics
+
+Set `GOO_VK_DIAGNOSTICS=1` to write Vulkan diagnostics NDJSON to standard error.
+The `counters` record is emitted at teardown. Per-window `swapchain` records are
+emitted when a generation is created, retired, or destroyed, including idle
+retirement and Hide/Show. Each record contains `window`, `generation`, `ticks`
+(from `Stopwatch.GetTimestamp()`), and:
+
+| Field | Meaning |
+| --- | --- |
+| `swapchainLiveCount` | Current generation count: 1 while present, 0 after Hide releases it. |
+| `swapchainLiveImageCount` | Images in the current generation. |
+| `swapchainRetiredCount` | Retired generations not yet destroyed. |
+| `swapchainRetiredImageCount` | Images in those retired generations. |
+| `swapchainEstimatedPayloadBytes` | Current width × height × image count × 4 for RGBA8/BGRA8 formats, 0 without a current generation, otherwise null. |
+
+Payload bytes exclude driver overhead and are not a VRAM measurement. A driver
+may retain memory after both retired counts reach zero. Disabled diagnostics
+do not enumerate images or format these records.

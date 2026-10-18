@@ -132,6 +132,7 @@ internal unsafe partial class VulkanWindowTarget {
     if let previous = old {
       InvalidateLastPresentedImageState()
       retiredSwapchains.Enqueue(previous, presentationRetirement)
+      CaptureDiagnosticSwapchains()
       if !previous.PresentFenceEnabled {
         let idleResult = WaitDeviceIdleResult()
         if idleResult != VkConstants.VK_SUCCESS {
@@ -142,6 +143,7 @@ internal unsafe partial class VulkanWindowTarget {
         DisposeRetiredSwapchains()
       }
     }
+    if old == nil { CaptureDiagnosticSwapchains() }
     next.ResetSceneVersions()
     EnsureClipMaskAtlas(next.Extent.width, next.Extent.height)
     if primitiveRenderer == nil {
@@ -224,6 +226,7 @@ internal unsafe partial class VulkanWindowTarget {
         }
         retiredSwapchains.Enqueue(old, presentationRetirement)
         generation = nil
+        CaptureDiagnosticSwapchains()
         DisposeRetiredSwapchains()
         if destroySurface {
           DestroyCurrentSurface()
@@ -244,11 +247,13 @@ internal unsafe partial class VulkanWindowTarget {
         }
         old.Dispose()
         generation = nil
+        CaptureDiagnosticSwapchains()
         DestroyCurrentSurface()
         return true
       }
       retiredSwapchains.Enqueue(old, presentationRetirement)
       generation = nil
+      CaptureDiagnosticSwapchains()
       return true
     }
     if destroySurface {
@@ -269,7 +274,10 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func CollectRetiredSwapchains() {
+    if retiredSwapchains.Count == 0 { return }
+    let count = retiredSwapchains.Count
     retiredSwapchains.CollectReady(presentationRetirement)
+    if retiredSwapchains.Count != count { CaptureDiagnosticSwapchains() }
   }
 
   private func PollRetiredSwapchains() {
@@ -279,6 +287,7 @@ internal unsafe partial class VulkanWindowTarget {
       let result = retired.PollForPresentCompletion(presentationRetirement)
       if result == VkConstants.VK_SUCCESS {
         retiredSwapchains.CollectCompleted(index, presentationRetirement)
+        CaptureDiagnosticSwapchains()
       } else if result == VkConstants.VK_NOT_READY || result == VkConstants.VK_TIMEOUT {
         index = index + 1
       } else {
@@ -292,6 +301,7 @@ internal unsafe partial class VulkanWindowTarget {
     var presentCompletionResult VkResult = VkConstants.VK_SUCCESS
     while retiredSwapchains.TryWaitAndDisposeNext(
       presentationRetirement, out presentCompletionResult) {
+        CaptureDiagnosticSwapchains()
         if presentCompletionResult != VkConstants.VK_SUCCESS {
           RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, presentCompletionResult)
         }

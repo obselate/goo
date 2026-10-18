@@ -310,6 +310,7 @@ internal unsafe partial class VulkanWindowTarget {
       } catch (cleanup Exception) { }
       try { current.Dispose() } catch (cleanup Exception) { }
       generation = nil
+      CaptureDiagnosticSwapchains()
     }
     DisposeRetiredSwapchains()
     frameSlots.Dispose()

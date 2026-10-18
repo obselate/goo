@@ -337,6 +337,7 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func DisposeRetiredSwapchainsAfterDeviceLoss() {
     retiredSwapchains.DisposeAfterDeviceLoss()
+    CaptureDiagnosticSwapchains()
   }
 
   internal prop RecoveryInProgress bool{
