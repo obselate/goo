@@ -841,7 +841,7 @@ internal class ProfilerCell : Cell {
             let left = Math.Max(0.0, X(selectionStart))
             Rect(selection, left, 0.0, Math.Max(1.0, Math.Min(w, X(selectionEnd)) - left), h)
         }
-        plot.Add(PathShape(selection.Build(), Color.Rgba(137, 171, 249, 35), w, h))
+        plot.Add(PathShape(selection.Build(), Color.Rgba(137, 171, 249, 12), w, h))
         if lane.Group == "CPU" || lane.Group == "Queue" {
             for offset in lane.FirstVisible(start) ... lane.Records.Count {
                 let r = trace.Records[lane.Records[offset]]
@@ -1585,8 +1585,7 @@ internal class ProfilerCell : Cell {
                             durationText,
                             kind,
                             name,
-                            bytes == nil ? "unmeasured": Bytes(float64(bytes ?? 0uL)) +
-                                (r.Payload == nil ? " req.": " payload"),
+                            bytes == nil ? "unmeasured": Bytes(float64(bytes ?? 0uL)),
                             trace.OwnerChain(r),
                             Result(r)
                         },
