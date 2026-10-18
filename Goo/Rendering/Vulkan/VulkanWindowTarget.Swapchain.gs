@@ -274,7 +274,6 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func CollectRetiredSwapchains() {
-    if retiredSwapchains.Count == 0 { return }
     let count = retiredSwapchains.Count
     retiredSwapchains.CollectReady(presentationRetirement)
     if retiredSwapchains.Count != count { CaptureDiagnosticSwapchains() }
