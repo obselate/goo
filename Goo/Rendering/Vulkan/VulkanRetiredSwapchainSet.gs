@@ -53,8 +53,9 @@ internal class VulkanRetiredSwapchainSet {
 
   internal func CollectCompleted(index int32, retirement VulkanPresentationRetirement) {
     let generation = Generation(index)
+    let generationId = generation.Generation
     generation.Dispose()
-    retirement.RetireGenerationNow(generation.Generation)
+    retirement.RetireGenerationNow(generationId)
     RemoveAt(index)
   }
 
