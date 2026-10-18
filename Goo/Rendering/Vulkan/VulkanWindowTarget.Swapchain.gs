@@ -233,6 +233,22 @@ internal unsafe partial class VulkanWindowTarget {
     retiredSwapchains.CollectReady(presentationRetirement)
   }
 
+  private func PollRetiredSwapchains() {
+    var index int32 = 0
+    while index < retiredSwapchains.Count {
+      let retired = retiredSwapchains.Generation(index)
+      let result = retired.PollForPresentCompletion(presentationRetirement)
+      if result == VkConstants.VK_SUCCESS {
+        retiredSwapchains.CollectCompleted(index, presentationRetirement)
+      } else if result == VkConstants.VK_NOT_READY || result == VkConstants.VK_TIMEOUT {
+        index = index + 1
+      } else {
+        HandleFrameFailure(result, VulkanDiagnosticEventIds.PresentWait)
+        return
+      }
+    }
+  }
+
   private func DisposeRetiredSwapchains() {
     var presentCompletionResult VkResult = VkConstants.VK_SUCCESS
     while retiredSwapchains.TryWaitAndDisposeNext(

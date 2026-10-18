@@ -501,6 +501,7 @@ public partial class Window {
     || host?.IsClosing == true
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
+    || windowTarget?.RetirementWorkPending == true
 
   internal func SchedulerFrameDue(nowTicks float64) bool {
     guard let native = host else {
@@ -516,6 +517,9 @@ public partial class Window {
   internal func SchedulerWaitMs(nowTicks float64) int32 {
     if SchedulerHasImmediateService() {
       return 0
+    }
+    if windowTarget?.RetirementWorkPending == true {
+      return 1
     }
     let idle = idleWaitMs()
     let demand = IsVisible && hasDemand()
