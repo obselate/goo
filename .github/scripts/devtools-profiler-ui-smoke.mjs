@@ -560,6 +560,12 @@ try {
     assert(externalRecords.some(record => record.Kind === 'duration' && record.Chrome.includes('"ph":"B"') && record.Chrome.includes('"ph":"E"')),
         'Begin/end import lost its duration or end arguments');
     assert(externalRecords.some(record => record.Chrome.includes('9007199254740993')), 'Imported flow id lost integer precision');
+    for (const event of canonical.traceEvents.filter(event => event.goo?.Source === 'chrome.flow')) {
+        const original = JSON.parse(event.goo.Chrome)[0];
+        assert.equal(event.id, String(original.id), 'Exported Chrome flow id lost precision');
+        assert.equal(event.ph, original.ph, 'Exported Chrome flow direction changed');
+    }
+    assert(externalRecords.every(record => record.Category === '-1'), 'Imported events became native Goo frame phases');
     assert(externalRecords.some(record => record.Name.startsWith('Unsupported ?')), 'Unknown event became a native phase');
     const badCases = [
         ['negative-duration', {traceEvents: [{ph: 'X', name: 'bad', pid: 1, tid: 1, ts: 0, dur: -1}]}, 'Invalid Chrome duration'],
