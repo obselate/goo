@@ -181,7 +181,7 @@ internal class StyleEntries {
   }
 
   internal func AddRange(values StyleEntries) {
-    let cursor = values.Cursor()
+    var cursor = values.Cursor()
     while cursor.MoveNext() { Add(cursor.Current) }
   }
 

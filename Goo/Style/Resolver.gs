@@ -270,7 +270,7 @@ internal partial class Resolver {
   internal func fieldsMask(n Node, entries StyleEntries?) StyleMask {
     guard let list = entries else { return StyleMask{} }
     var m = StyleMask{}
-    let cursor = list.Cursor()
+    var cursor = list.Cursor()
     while cursor.MoveNext() {
       let field = cursor.Current.Field
       if !styleFieldApplies(n, field) { continue }
@@ -399,7 +399,7 @@ internal partial class Resolver {
   private func declaredDirection(entries StyleEntries?, fallback Direction) Direction {
     guard let list = entries else { return fallback }
     var result = fallback
-    let cursor = list.Cursor()
+    var cursor = list.Cursor()
     while cursor.MoveNext() {
       let entry = cursor.Current
       if entry.Field == StyleField.Direction {

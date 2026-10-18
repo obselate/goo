@@ -34,7 +34,7 @@ private func inputStyleRequiresHitTest(entries StyleEntries?) bool {
   var cursor = Cursor.Default
   var overflowX = Overflow.Visible
   var overflowY = Overflow.Visible
-  let entriesCursor = values.Cursor()
+  var entriesCursor = values.Cursor()
   while entriesCursor.MoveNext() {
     let entry = entriesCursor.Current
     switch entry.Field {

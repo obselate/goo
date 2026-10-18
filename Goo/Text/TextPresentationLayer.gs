@@ -696,7 +696,7 @@ public class TextPresentationLayer : IDisposable {
 private func validatePresentationStyle(style Style) {
   if style == nil { throw ArgumentNullException("style") }
   if let entries = style.Entries() {
-    let cursor = entries.Cursor()
+    var cursor = entries.Cursor()
     while cursor.MoveNext() {
       let entry = cursor.Current
       if !inlinePresentationStyleField(entry.Field) {

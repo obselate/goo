@@ -153,7 +153,7 @@ internal class PassiveTextPresentations {
         let style = value.Style
         if style == nil { throw ArgumentNullException("StyleRanges") }
         if let entries = style.Entries() {
-          let cursor = entries.Cursor()
+          var cursor = entries.Cursor()
           while cursor.MoveNext() {
             let field = cursor.Current.Field
             if field == StyleField.TextTransform {
@@ -198,7 +198,7 @@ internal class PassiveTextPresentations {
     private func rangesAffectFlow(ranges []TextStyleRange) bool {
       for i in 0 ... ranges.Length {
         if let entries = ranges[i].Style.Entries() {
-          let cursor = entries.Cursor()
+          var cursor = entries.Cursor()
           while cursor.MoveNext() {
             let field = cursor.Current.Field
             if field == StyleField.Language || field == StyleField.FontFamily || field == StyleField.FontSize
@@ -351,7 +351,7 @@ internal class TextResolvedStyles {
 
     internal func Apply(result TextResolvedStyle, style Style) {
       if let entries = style.Entries() {
-        let cursor = entries.Cursor()
+        var cursor = entries.Cursor()
         while cursor.MoveNext() {
           let entry = cursor.Current
           switch entry.Field {

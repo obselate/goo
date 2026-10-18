@@ -1477,8 +1477,8 @@ internal func sameStyleEntries(a StyleEntries?, b StyleEntries?) bool {
   if left.Count != right.Count {
     return false
   }
-  let leftCursor = left.Cursor()
-  let rightCursor = right.Cursor()
+  var leftCursor = left.Cursor()
+  var rightCursor = right.Cursor()
   while leftCursor.MoveNext() && rightCursor.MoveNext() {
     let leftEntry = leftCursor.Current
     let rightEntry = rightCursor.Current
@@ -1509,10 +1509,10 @@ internal func sameButtonStyleEntries(entries StyleEntries?, justify StyleEntry,
     guard let authored = author else {
       return true
     }
-    let currentCursor = current.Cursor()
+    var currentCursor = current.Cursor()
     currentCursor.MoveNext()
     currentCursor.MoveNext()
-    let authoredCursor = authored.Cursor()
+    var authoredCursor = authored.Cursor()
     while authoredCursor.MoveNext() && currentCursor.MoveNext() {
       let currentEntry = currentCursor.Current
       let authoredEntry = authoredCursor.Current
