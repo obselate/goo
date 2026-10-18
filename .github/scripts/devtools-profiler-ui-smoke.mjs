@@ -155,8 +155,10 @@ try {
     await waitSnapshot(inspector, data => status(data).startsWith('Recording ·') && /[1-9]\d* records/.test(status(data)));
     for (const key of ['rail-item-1', 'rail-item-7', 'rail-item-5']) await click(gallery, key);
     await capture(gallery, 'gallery-during-recording');
-    await writeFile(path.join(output, 'contender-discovery.json'), await command(['list', '--json']));
-    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools', ['--pid', String(gallery)]);
+    const target = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === gallery);
+    assert(target?.pipe, 'Recording Gallery endpoint is not discoverable');
+    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools',
+        ['--pid', String(gallery), '--pipe', target.pipe]);
     await snapshot(contender);
     await click(contender, 'tab-profiler');
     await waitSnapshot(contender, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
