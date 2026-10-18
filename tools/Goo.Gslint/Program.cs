@@ -1,7 +1,4 @@
 using GSharp.Core.CodeAnalysis;
-using GSharp.Core.CodeAnalysis.Binding;
-using GSharp.Core.CodeAnalysis.Compilation;
-using GSharp.Core.CodeAnalysis.Symbols;
 using GSharp.Core.CodeAnalysis.Syntax;
 using GSharp.Core.CodeAnalysis.Text;
 using GSharp.Formatting;
@@ -46,22 +43,6 @@ public static class Program
         ["float"] = "float32",
         ["double"] = "float64",
     };
-
-    private sealed class SourceTypes(Dictionary<string, SyntaxTree> trees)
-    {
-        private Compilation compilation = new(trees.Values.ToArray());
-
-        internal SemanticModel Model(string file, SyntaxTree tree)
-        {
-            if (!ReferenceEquals(trees[file], tree))
-            {
-                trees[file] = tree;
-                compilation = new Compilation(trees.Values.ToArray());
-            }
-
-            return compilation.GetSemanticModel(tree);
-        }
-    }
 
     public static int Main(string[] args)
     {
@@ -131,13 +112,10 @@ public static class Program
 
         var failed = false;
         var fixedFiles = 0;
-        var files = DiscoverFiles(paths).ToArray();
-        var trees = files.ToDictionary(file => file, SyntaxTree.Load);
-        var types = new SourceTypes(trees);
-        foreach (var file in files)
+        foreach (var file in DiscoverFiles(paths))
         {
             var source = File.ReadAllText(file);
-            var tree = trees[file];
+            var tree = SyntaxTree.Load(file);
             var parseErrors = tree.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToList();
             if (parseErrors.Count > 0)
             {
@@ -152,9 +130,7 @@ public static class Program
 
             if (fix || reduce)
             {
-                var rewritten = reduce
-                    ? ReduceSource(source, file, types)
-                    : FixSource(tree, source, types.Model(file, tree));
+                var rewritten = reduce ? ReduceSource(source, file) : FixSource(tree, source);
                 if (rewritten != source)
                 {
                     File.WriteAllText(file, rewritten, new System.Text.UTF8Encoding(false));
@@ -164,7 +140,7 @@ public static class Program
                 }
             }
 
-            var findings = Analyze(tree, source, strict, types.Model(file, tree))
+            var findings = Analyze(tree, source, strict)
                 .Select(finding => severityOverrides.TryGetValue(finding.Rule, out var severity)
                     ? finding with { Severity = severity }
                     : finding)
@@ -195,13 +171,13 @@ public static class Program
         return KnownRules.Contains(rule) && severity is "error" or "warning" or "info" or "none";
     }
 
-    private static string FixSource(SyntaxTree tree, string source, SemanticModel model)
+    private static string FixSource(SyntaxTree tree, string source)
     {
-        var rewritten = RewriteSource(tree, source, model);
+        var rewritten = RewriteSource(tree, source);
         return GSharpFormatter.Format(SourceText.From(rewritten)).Text?.ToString() ?? source;
     }
 
-    private static string ReduceSource(string source, string file, SourceTypes types)
+    private static string ReduceSource(string source, string file)
     {
         for (var pass = 0; pass < 4; pass++)
         {
@@ -211,7 +187,7 @@ public static class Program
                 return source;
             }
 
-            var rewritten = RewriteSource(tree, source, types.Model(file, tree));
+            var rewritten = RewriteSource(tree, source);
             if (rewritten == source)
             {
                 break;
@@ -223,14 +199,14 @@ public static class Program
         return source;
     }
 
-    private static string RewriteSource(SyntaxTree tree, string source, SemanticModel model)
+    private static string RewriteSource(SyntaxTree tree, string source)
     {
         var edits = new List<SourceEdit>();
         CollectFixEdits(tree.Root, source, edits);
         CollectConditionalReturnEdits(tree.Root, source, edits);
 
         var varFindings = new List<Finding>();
-        AddVarFindings(tree.Root, true, varFindings, model);
+        AddVarFindings(tree.Root, true, varFindings);
         foreach (var finding in varFindings.Where(finding => finding.Rule == VarRule))
         {
             var keywordEnd = finding.Location.Span.Start;
@@ -452,7 +428,7 @@ public static class Program
         }
     }
 
-    private static IReadOnlyList<Finding> Analyze(SyntaxTree tree, string source, bool strict, SemanticModel model)
+    private static IReadOnlyList<Finding> Analyze(SyntaxTree tree, string source, bool strict)
     {
         var findings = new List<Finding>();
         var result = GSharpFormatter.Format(tree.Text);
@@ -474,7 +450,7 @@ public static class Program
 
         var tokens = SyntaxTree.ParseTokens(source);
         var nonWhitespaceTokens = tokens.Where(token => token.Kind != SyntaxKind.WhitespaceToken).ToList();
-        AddVarFindings(tree.Root, strict, findings, model);
+        AddVarFindings(tree.Root, strict, findings);
         Walk(tree.Root, source, strict, nonWhitespaceTokens, findings, true);
         return findings;
     }
@@ -673,7 +649,7 @@ public static class Program
             $"public binding '{declaration.Identifier.Text}' has no explicit type clause; its type is inferred from the initializer"));
     }
 
-    private static void AddVarFindings(SyntaxNode node, bool strict, List<Finding> findings, SemanticModel model)
+    private static void AddVarFindings(SyntaxNode node, bool strict, List<Finding> findings)
     {
         switch (node)
         {
@@ -687,25 +663,25 @@ public static class Program
                     }
                 }
 
-                AnalyzeVarScope(topLevelStatements, strict, findings, model);
+                AnalyzeVarScope(topLevelStatements, strict, findings);
                 break;
 
             case FunctionDeclarationSyntax { Body: not null } function:
-                AnalyzeVarScope(new SyntaxNode[] { function.Body }, strict, findings, model);
+                AnalyzeVarScope(new SyntaxNode[] { function.Body }, strict, findings);
                 break;
 
             case ConstructorDeclarationSyntax { Body: not null } constructor:
-                AnalyzeVarScope(new SyntaxNode[] { constructor.Body }, strict, findings, model);
+                AnalyzeVarScope(new SyntaxNode[] { constructor.Body }, strict, findings);
                 break;
         }
 
         foreach (var child in node.GetChildren())
         {
-            AddVarFindings(child, strict, findings, model);
+            AddVarFindings(child, strict, findings);
         }
     }
 
-    private static void AnalyzeVarScope(IEnumerable<SyntaxNode> roots, bool strict, List<Finding> findings, SemanticModel model)
+    private static void AnalyzeVarScope(IEnumerable<SyntaxNode> roots, bool strict, List<Finding> findings)
     {
         var declarations = new List<VariableDeclarationSyntax>();
         var nameCounts = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -723,52 +699,12 @@ public static class Program
                 continue;
             }
 
-            if (model.GetDeclaredSymbol(declaration.Identifier) is VariableSymbol variable
-                && (variable.Type is StructSymbol { IsClass: false }
-                    || variable.Type.ClrType is { IsValueType: true, IsEnum: false })
-                && roots.Any(root => CallsInstanceMethod(root, variable, model)))
-            {
-                continue;
-            }
-
             findings.Add(new Finding(
                 VarRule,
                 strict ? "warning" : "info",
                 declaration.Identifier.Location,
                 $"'{name}' is declared with 'var' but never reassigned; consider 'let'"));
         }
-    }
-
-    private static bool CallsInstanceMethod(SyntaxNode node, VariableSymbol variable, SemanticModel model)
-    {
-        if (node is FunctionDeclarationSyntax or ConstructorDeclarationSyntax)
-        {
-            return false;
-        }
-
-        if (node is AccessorExpressionSyntax or CallExpressionSyntax)
-        {
-            var receiver = model.GetBoundNode(node) switch
-            {
-                BoundUserInstanceCallExpression call => call.Receiver,
-                BoundImportedInstanceCallExpression call => call.Receiver,
-                _ => null,
-            };
-            if (receiver is BoundVariableExpression value && value.Variable == variable)
-            {
-                return true;
-            }
-        }
-
-        foreach (var child in node.GetChildren())
-        {
-            if (CallsInstanceMethod(child, variable, model))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static void CollectVarState(
@@ -790,6 +726,14 @@ public static class Program
                     declarations.Add(declaration);
                 }
 
+                break;
+
+            case AccessorExpressionSyntax
+            {
+                LeftPart: NameExpressionSyntax receiver,
+                RightPart: CallExpressionSyntax,
+            }:
+                reassigned.Add(receiver.IdentifierToken.Text);
                 break;
 
             case AssignmentExpressionSyntax assignment:
