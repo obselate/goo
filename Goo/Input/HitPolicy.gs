@@ -31,21 +31,18 @@ internal func resolvedHitTestSelf(b Blob, focusable bool, entries StyleEntries?,
 
 private func inputStyleRequiresHitTest(entries StyleEntries?) bool {
   guard let values = entries else { return false }
-  var cursorResolved = false
-  var overflowXResolved = false
-  var overflowYResolved = false
-  for var i = values.Count; i > 0; i-- {
-    let entry = values.At(i - 1)
-    if entry.Field == StyleField.Cursor && !cursorResolved {
-      cursorResolved = true
-      if Cursor(int32(entry.A)) != Cursor.Default { return true }
-    } else if entry.Field == StyleField.OverflowX && !overflowXResolved {
-      overflowXResolved = true
-      if Overflow(int32(entry.A)) == Overflow.Scroll { return true }
-    } else if entry.Field == StyleField.OverflowY && !overflowYResolved {
-      overflowYResolved = true
-      if Overflow(int32(entry.A)) == Overflow.Scroll { return true }
+  var cursor = Cursor.Default
+  var overflowX = Overflow.Visible
+  var overflowY = Overflow.Visible
+  let entriesCursor = values.Cursor()
+  while entriesCursor.MoveNext() {
+    let entry = entriesCursor.Current
+    switch entry.Field {
+      case StyleField.Cursor { cursor = Cursor(int32(entry.A)) }
+      case StyleField.OverflowX { overflowX = Overflow(int32(entry.A)) }
+      case StyleField.OverflowY { overflowY = Overflow(int32(entry.A)) }
+      case _ { }
     }
   }
-  return false
+  return cursor != Cursor.Default || overflowX == Overflow.Scroll || overflowY == Overflow.Scroll
 }

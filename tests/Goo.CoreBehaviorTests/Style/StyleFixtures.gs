@@ -551,7 +551,18 @@ internal class StyleFixtures {
     let resolver = Resolver{}
     resolver.Invalidate(n, true)
     resolver.Flush()
-    return n.Width.Value == 50.0F && n.Height.Value == 20.0F && n.Gap.Value == 4.0F
+    if n.Width.Value != 50.0F || n.Height.Value != 20.0F || n.Gap.Value != 4.0F {
+      return false
+    }
+    for i in 5 ... 8192 {
+      declaration.pushLength(StyleField.Width, Length{ Unit: LengthUnit.Px, Value: float32(i) })
+    }
+    let composed = Container{ BasedOn: declaration, Height: 40 }
+    let reconciler = Reconciler{ Res: Resolver{} }
+    let mounted = reconciler.Mount(composed)
+    reconciler.Diff(mounted, Container{ BasedOn: declaration, Height: 40 })
+    return mounted.Width.Value == 8191.0F && mounted.Height.Value == 40.0F
+      && mounted.Gap.Value == 4.0F
   }
 
   func OrderedCompositionAndGradientClearContract() bool {

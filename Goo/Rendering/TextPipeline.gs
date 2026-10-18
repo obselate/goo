@@ -153,8 +153,9 @@ internal class PassiveTextPresentations {
         let style = value.Style
         if style == nil { throw ArgumentNullException("StyleRanges") }
         if let entries = style.Entries() {
-          for entryIndex in 0 ... entries.Count {
-            let field = entries.At(entryIndex).Field
+          let cursor = entries.Cursor()
+          while cursor.MoveNext() {
+            let field = cursor.Current.Field
             if field == StyleField.TextTransform {
               throw ArgumentException("Text style ranges do not support TextTransform", "StyleRanges")
             }
@@ -197,8 +198,9 @@ internal class PassiveTextPresentations {
     private func rangesAffectFlow(ranges []TextStyleRange) bool {
       for i in 0 ... ranges.Length {
         if let entries = ranges[i].Style.Entries() {
-          for entryIndex in 0 ... entries.Count {
-            let field = entries.At(entryIndex).Field
+          let cursor = entries.Cursor()
+          while cursor.MoveNext() {
+            let field = cursor.Current.Field
             if field == StyleField.Language || field == StyleField.FontFamily || field == StyleField.FontSize
               || field == StyleField.FontWeight || field == StyleField.FontStyle
               || field == StyleField.LetterSpacing || field == StyleField.LineHeight
@@ -349,8 +351,9 @@ internal class TextResolvedStyles {
 
     internal func Apply(result TextResolvedStyle, style Style) {
       if let entries = style.Entries() {
-        for i in 0 ... entries.Count {
-          let entry = entries.At(i)
+        let cursor = entries.Cursor()
+        while cursor.MoveNext() {
+          let entry = cursor.Current
           switch entry.Field {
             case StyleField.Color {
               result.Color = Color.FromNormalized(entry.A, entry.B, entry.C, entry.D)

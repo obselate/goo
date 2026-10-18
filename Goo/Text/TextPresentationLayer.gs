@@ -696,8 +696,9 @@ public class TextPresentationLayer : IDisposable {
 private func validatePresentationStyle(style Style) {
   if style == nil { throw ArgumentNullException("style") }
   if let entries = style.Entries() {
-    for i in 0 ... entries.Count {
-      let entry = entries.At(i)
+    let cursor = entries.Cursor()
+    while cursor.MoveNext() {
+      let entry = cursor.Current
       if !inlinePresentationStyleField(entry.Field) {
         throw ArgumentException("Text presentation styles support inline text fields only", "style")
       }
