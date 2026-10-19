@@ -10,8 +10,8 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet Goo's [platform requirements](../../README.md#platforms), then install:
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.7.37
-dotnet tool install --global Goo.DevTools.App --version 0.7.37
+dotnet tool install --global Goo.DevTools --version 0.7.38
+dotnet tool install --global Goo.DevTools.App --version 0.7.38
 ```
 
 `Goo.DevTools` provides the `goo` CLI. `Goo.DevTools.App` provides the
@@ -102,6 +102,38 @@ goo capture --latest --output frame.png
 
 Use `--pid 12345` to target a particular process instead. Add `--latest` if it has
 several windows.
+
+## Record and exchange profiler traces
+
+Open **Profiler**, press **Record**, exercise the target, then press **Stop**.
+The target must advertise `profiler.trace.v1`. Missing measurements stay
+unavailable. GPU stage values are elapsed times, not CPU-aligned execution slices.
+
+**Export** saves the whole stopped trace, not only the selected range. Enter a
+JSON file path or use **Browse**, then press **Export** in the file row. The file
+is UTF-8 Chrome trace JSON and opens in `chrome://tracing` or
+[Perfetto](https://ui.perfetto.dev). A successful save replaces the destination
+atomically. A failed save leaves the previous file intact.
+
+**Import** uses the same path row and works without a running target. Goo exports
+retain exact integer timestamps, nullable measurements, completion and gap state,
+correlation IDs, resource details, and sampling metadata. Reimport restores these
+details rather than reconstructing them from rounded Chrome timestamps.
+
+Other Chrome files support process/thread names (`M`), complete durations (`X`),
+paired thread-local begin/end events (`B`/`E`), instants (`i`/`I`), numeric counter
+series (`C`), and flows (`s`/`t`/`f`). Fractional and negative counters are kept.
+Unknown events remain generic and are reported. Imported events do not become
+native Goo frame phases. Crossing duration slices are separated into named
+tracks on export so they do not imply invalid nesting.
+
+Imports require a nonempty regular file and are bounded to 256 MiB, 524,288 events,
+JSON depth 32, 4,096-character labels, and 32,768-character Chrome events. Paired
+begin/end arguments may total 65,536 characters. The retained trace uses the
+existing 128 MiB budget.
+Timestamps and durations must be finite and fit the bounded integer timeline.
+Unmatched begin/end events and invalid input are rejected without replacing the
+current trace. Traces contain measurement metadata, not image or font contents.
 
 ## Troubleshooting
 

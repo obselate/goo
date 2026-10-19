@@ -32,7 +32,7 @@ Messages are one JSON object per UTF-8 line. The client sends this first:
   "type": "hello",
   "protocol": "goo.devtools/1",
   "client": "goo-cli",
-  "version": "0.7.37",
+  "version": "0.7.38",
   "capabilities": ["tree", "properties", "layout", "events", "logs", "accessibility", "capture", "source-navigation", "hot-reload"]
 }
 ```
@@ -160,4 +160,3 @@ in slice arguments and Goo records. Uncalibrated GPU timings stay elapsed counte
 unavailable instants, never CPU-aligned duration slices. The mapping follows
 the [Trace Event Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview)
 supported by [Perfetto's Chrome JSON importer](https://perfetto.dev/docs/getting-started/other-formats#chrome-json-format).
-
