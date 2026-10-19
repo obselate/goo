@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add the DevTools Profiler tab with live timelines, memory and resource lanes, and selected-range analysis.
+- Release retired swapchain generations during idle once their present fences complete.
+- Release swapchain, clip atlas and renderer layer-cache resources on explicit Window.Hide, and recreate them before rendering after Show.
+- Release completed cached offscreen layer targets when recreating a window swapchain.
+- Add Chrome trace import and export to the DevTools Profiler tab, with lossless Goo round trips and offline inspection.
+- Expose per-window live and retired Vulkan swapchain/image counts and estimated current payload bytes with GOO_VK_DIAGNOSTICS=1.
+- Restore 0.7.35 style spill allocation costs with linear traversal and recognize possible receiver mutation in GL0004.
+
 ## 0.7.37 - 2026-10-17
 
 - Add memory, resource and GPU timing records to DevTools profiler captures.
