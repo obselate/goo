@@ -32,7 +32,7 @@ Messages are one JSON object per UTF-8 line. The client sends this first:
   "type": "hello",
   "protocol": "goo.devtools/1",
   "client": "goo-cli",
-  "version": "0.7.37",
+  "version": "0.7.38",
   "capabilities": ["tree", "properties", "layout", "events", "logs", "accessibility", "capture", "source-navigation", "hot-reload"]
 }
 ```
@@ -114,3 +114,49 @@ goo attach --pid 1234 --window "Main" --once --json --payload '{"full":true}'
 ```
 
 The CLI exits successfully only after a positive acknowledgement, requires the advertised capability, and uses the same explicit PID/window selection rules as capture. Add `--json` to preserve the complete response.
+
+## Profiler recording and trace files
+
+The optional `profiler.trace.v1` capability adds `profiler.start`,
+`profiler.read`, and `profiler.stop` to the existing request/response connection.
+One pipe client owns the recorder for the target process. Recording includes
+all application windows and shared resources.
+
+- Start accepts `bufferBytes`, clamped to 64 KiB through 16 MiB, and returns
+  schema version 1, trace identity, monotonic origin/frequency, sampling settings,
+  device metadata and event/owner/resource names. A competing recorder returns
+  a successful `state: "Busy"` reply.
+- Read accepts `traceId`, string `afterSeq`, and bounded `maxBytes`. Responses
+  contain ordered records, `nextSeq`, `more`, `state`, `dropped`, `partial`, and
+  an empty-poll delay. Drain immediately only while `more` is true.
+- Stop freezes producers and drains already-submitted GPU timing through normal
+  completion polling. Clients continue reading through `Complete`. No queue-idle
+  wait is added. Disconnect releases recording ownership.
+
+CPU timestamps are integer ticks relative to the recording origin. GPU elapsed
+nanoseconds are a separate clock domain. Identifiers and large integer values
+are strings. Unavailable measurements are `null`, not zero. Counter accounts,
+sources and freshness are separate. Allocator requirements, swapchain estimated
+payload, managed memory, RSS/PSS and driver usage must not be summed as a total.
+
+Error envelopes retain the request `id` but need not repeat `command`. Clients
+must correlate pending requests by ID. A profiler error envelope disconnects the
+recording client, including a start error, because a timed-out handler may still
+finish. Successful Busy replies do not disconnect. Snapshot error responses
+release the matching pending snapshot so automatic polling can continue.
+
+The desktop file format is separate from this wire extension. It uses
+`{"traceEvents":[...],"displayTimeUnit":"ms","goo":{...}}`. Standard event times
+are microseconds. Named projected process/thread IDs separate windows, threads
+and crossing intervals. Original IDs remain exact strings in each primary
+event's `goo` record. The top-level `goo.format` is `goo.profiler/1` and retains
+the original clock, start metadata, names, completion, gaps and dropped counts.
+Those records, not floating-point Chrome times, are authoritative for a Goo
+round trip. Generic Chrome imports retain their original event arguments.
+
+Export uses `X` durations, `i` instants, numeric `C` counters, `M` names and
+slice-bound flow events with per-file numeric IDs. Original correlation IDs stay
+in slice arguments and Goo records. Uncalibrated GPU timings stay elapsed counters or
+unavailable instants, never CPU-aligned duration slices. The mapping follows
+the [Trace Event Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview)
+supported by [Perfetto's Chrome JSON importer](https://perfetto.dev/docs/getting-started/other-formats#chrome-json-format).

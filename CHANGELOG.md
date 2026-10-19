@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.38 - 2026-10-18
+
 - Add the DevTools Profiler tab with live timelines, memory and resource lanes, and selected-range analysis.
 - Release retired swapchain generations during idle once their present fences complete.
 - Release swapchain, clip atlas and renderer layer-cache resources on explicit Window.Hide, and recreate them before rendering after Show.
