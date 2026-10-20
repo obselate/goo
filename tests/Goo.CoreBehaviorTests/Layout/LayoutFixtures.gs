@@ -326,13 +326,29 @@ internal class LayoutFixtures {
     }
     let retained = TextLayouts.For(root.Children[0], 100.0F)
     if !Object.ReferenceEquals(second, retained) { return false }
-    for line in retained.Lines {
-      guard let shape = line.Shape else { return false }
-      for run in shape.Runs {
-        if run.Provider.Metrics.UnitsPerEm == 0u { return false }
-      }
-    }
+    if retained.References != 1 { return false }
     return retained.Width > 0.0F && retained.Lines.Count > 1
+  }
+
+  func HiddenScrollLayoutsClearGeometry() bool {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 100,
+      Container{ Width: 100, Height: 100, OverflowY: Overflow.Scroll,
+        Container{ Width: 100, Height: 300, FlexShrink: 0 },
+      },
+    })
+    let layout = Layout()
+    layout.Calculate(root, 100.0F, 100.0F)
+    let scroll = root.Children[0]
+    ScrollState.To(scroll, 0.0F, 150.0F, true)
+    layout.RefreshRects(root)
+    if scroll.ScrollY != 150.0F { return false }
+    scroll.Display = Display.None
+    syncYogaField(scroll, StyleField.Display)
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 100.0F, 100.0F)
+    return scroll.ScrollY == 0.0F && scroll.ScrollTargetY == 0.0F
+      && scroll.Children[0].Rect.W == 0.0F && scroll.Children[0].Rect.H == 0.0F
+      && !ScrollState.HasDemand(scroll)
   }
 
   func HiddenCustomLayoutsWaitForVisibleGeometry() bool {
