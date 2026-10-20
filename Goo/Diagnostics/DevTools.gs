@@ -70,6 +70,7 @@ internal partial class DevToolsSession : IDisposable {
   private let identity DiagnosticTreeState
   private let endpoint DiagnosticEndpoint
   private let windowId string
+  private let emptyOverlay DiagnosticOverlay = DiagnosticOverlay(0, nil, nil, nil, nil, "")
   private var snapshot DiagnosticSnapshot?
   private var inspecting bool
   private var clickLocked bool
@@ -99,6 +100,7 @@ internal partial class DevToolsSession : IDisposable {
   internal prop Overlay DiagnosticOverlay{
     get {
       owner.RequireElementHandleThread("DevToolsSession.Overlay")
+      if !inspecting && hovered == nil && selected == nil { return emptyOverlay }
       let current = captureIfNeeded()
       return makeOverlay(current)
     }
@@ -269,7 +271,8 @@ internal partial class DevToolsSession : IDisposable {
       if disposed { return }
       if inspecting && pointerValid { updateHover(root, pointerX, pointerY) }
       if !pending && int32(effects) == 0 && !layoutChanged && !changed { return }
-      captureCurrent(true)
+      pending = true
+      if snapshotChanged.Count > 0 || debugNodes.Count > 0 { captureCurrent(true) }
     }
 
   internal func MetadataUpdated() {
