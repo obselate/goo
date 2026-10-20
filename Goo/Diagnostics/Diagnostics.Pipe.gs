@@ -206,6 +206,7 @@ internal partial class DiagnosticPipeHost : IDisposable {
     } catch (_ InvalidDataException) {
     } catch (_ IOException) {
     } catch (_ ObjectDisposedException) {
+    } catch (_ OperationCanceledException) {
     } finally {
       lock gate { clients.Remove(client) }
       client.Close()
