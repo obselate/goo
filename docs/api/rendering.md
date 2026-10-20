@@ -278,3 +278,15 @@ Gets the view-box x origin.
 ### `ViewBoxY`
 
 Gets the view-box y origin.
+
+## `VulkanDrivers`
+
+Source:
+
+- [`VulkanDrivers.gs`](../../Goo/Rendering/Vulkan/VulkanDrivers.gs)
+
+Configures additional Vulkan drivers for the process.
+
+### `Direct`
+
+Gets or sets driver DLL paths added to system drivers in inclusive mode on Windows. Set this before opening the first window. Paths are copied and are never read from the environment. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.

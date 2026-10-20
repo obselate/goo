@@ -28,6 +28,7 @@ internal unsafe partial class SdlRuntime {
     private var vulkanReferenceCount int32
     private var vulkanLoaded bool
     private var vulkanSnapshot SdlVulkanInstanceSnapshot?
+    private var directLoader nint
 
     internal func AcquireVulkan() bool {
       lock (sync) {
@@ -44,6 +45,22 @@ internal unsafe partial class SdlRuntime {
         }
         if vulkanLoaded || vulkanSnapshot != nil {
           throw InvalidOperationException("SDL Vulkan loader state is invalid.")
+        }
+        VulkanDrivers.Freeze()
+        if VulkanDrivers.Enabled {
+          if directLoader == nint(0) {
+            let local = Path.Combine(AppContext.BaseDirectory, "vulkan-1.dll")
+            if !NativeLibrary.TryLoad(local, out directLoader) {
+              directLoader = NativeLibrary.Load(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll"))
+            }
+          }
+          let address = NativeLibrary.GetExport(directLoader, "vkGetInstanceProcAddr")
+          vulkanSnapshot = SdlVulkanInstanceSnapshot(address,
+            []string{"VK_KHR_surface", "VK_KHR_win32_surface"})
+          vulkanLoaded = true
+          vulkanReferenceCount = 1
+          return true
         }
 
         var pathStorage nint = nint(0)
@@ -150,7 +167,7 @@ internal unsafe partial class SdlRuntime {
           return
         }
         try {
-          if vulkanLoaded {
+          if vulkanLoaded && !VulkanDrivers.Enabled {
             SDL.VulkanUnloadLibrary()
           }
         } finally {
