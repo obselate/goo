@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Reuse bounded plain-text layouts and right-size retained glyph storage, defer hidden custom arrangement, and preserve target bounds through nested scroll containers.
+- Include the SDL error text when the SDL Vulkan loader fails to initialize.
+- Add VulkanDrivers.Direct for app-local Windows Vulkan drivers, including elevated no-GPU startup without registry changes.
+- Keep the DevTools pipe host running when a client write is canceled on Windows.
+
 ## 0.7.39 - 2026-10-19
 
 - Build Goo with G# SDK 0.5.26 and refresh generated API metadata and SDK documentation.
