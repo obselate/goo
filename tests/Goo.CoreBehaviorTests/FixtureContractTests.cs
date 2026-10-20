@@ -73,6 +73,7 @@ public sealed class FixtureContractTests
         yield return Contract<DevToolsInputFixtures>(nameof(DevToolsInputFixtures.ResetAfterInvalidKeyKeepsInputAvailable));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.AutomaticAttachOnOpenIsIdempotentAndCloses));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.CaptureRequestRetriesAfterNotReady));
+        yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.IdleFramesDeferSnapshotsUntilRequestedContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.InspectClickAndEscapeContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.ResolvedSemanticsAndEditorPrivacyContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.RuntimeOverrideInheritanceAndResetContract));
