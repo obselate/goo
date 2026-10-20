@@ -3,6 +3,7 @@ package Goo
 import Facebook.Yoga
 import System
 import System.Collections.Generic
+import System.Threading
 
 internal class TextLine {
   internal prop Content string{ get; init; }
@@ -22,6 +23,7 @@ internal class TextLine {
 internal class TextLayout {
   private var rich TextRichLayout?
   private var geometry TextLayoutGeometry?
+  internal var References int32 = 1
 
   internal prop Content string{ get; init; }
   internal prop FontFamily string{ get; init; }
@@ -73,6 +75,10 @@ internal class TextLayoutGeometry {
 
 internal class TextLayouts {
   shared {
+    private let sharedLayouts Dictionary[string, List[TextLayout]] =
+    Dictionary[string, List[TextLayout]](StringComparer.Ordinal)
+    private let sharedOrder Queue[TextLayout] = Queue[TextLayout]()
+
     internal func For(n Node, maxWidth float32, geometry bool = false) TextLayout {
       if let cached = n.TextLayout {
         if matches(cached, n, maxWidth) && (!geometry || cached.Geometry != nil) {
@@ -88,7 +94,7 @@ internal class TextLayouts {
           }
         }
       }
-      let layout = build(n, maxWidth, geometry)
+      let layout = sharedLayout(n, maxWidth, geometry)
       if n.TextLayoutCache == nil {
         n.TextLayoutCache = List[TextLayout]()
       }
@@ -101,6 +107,39 @@ internal class TextLayouts {
       }
       n.TextLayout = layout
       return layout
+    }
+
+    private func sharedLayout(n Node, maxWidth float32, geometry bool) TextLayout {
+      if geometry || n.HasElementHandle || n.Content.Length > 1024
+        || PassiveTextPresentations.Read(n) != nil {
+          return build(n, maxWidth, geometry)
+        }
+      lock (sharedLayouts) {
+        if sharedLayouts.TryGetValue(n.Content, out var cached) {
+          for layout in cached {
+            if matches(layout, n, maxWidth) {
+              Interlocked.Increment(ref layout.References)
+              return layout
+            }
+          }
+        }
+        let layout = build(n, maxWidth)
+        if sharedOrder.Count == 256 {
+          let retired = sharedOrder.Dequeue()
+          let entries = sharedLayouts[retired.Content]
+          entries.Remove(retired)
+          if entries.Count == 0 { sharedLayouts.Remove(retired.Content) }
+          dispose(retired)
+        }
+        if !sharedLayouts.TryGetValue(n.Content, out var entries) {
+          entries = List[TextLayout]()
+          sharedLayouts.Add(n.Content, entries)
+        }
+        entries.Add(layout)
+        sharedOrder.Enqueue(layout)
+        Interlocked.Increment(ref layout.References)
+        return layout
+      }
     }
 
     internal func CurrentForGeometry(n Node) TextLayout? {
@@ -178,6 +217,7 @@ internal class TextLayouts {
       || f == StyleField.Direction
 
     internal func dispose(layout TextLayout) {
+      if Interlocked.Decrement(ref layout.References) != 0 { return }
       layout.Geometry = nil
       for line in layout.Lines {
         line.Shape?.Dispose()

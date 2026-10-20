@@ -304,6 +304,85 @@ internal class LayoutFixtures {
     return layout.Lines.Count > 100 && covered == n.Content.Length && resolutions <= 1L
   }
 
+  func IdenticalTextLayoutsSurviveSiblingRetirement() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{ Res: resolver }
+    var root = reconciler.Mount(Container() {
+      Text{ Key: "a", Content: "Shared wrapped text layout" },
+      Text{ Key: "b", Content: "Shared wrapped text layout" },
+    })
+    resolver.FlushEffects()
+    let first = TextLayouts.For(root.Children[0], 100.0F)
+    let second = TextLayouts.For(root.Children[1], 100.0F)
+    if !Object.ReferenceEquals(first, second) { return false }
+    root = reconciler.Diff(root, Container() {
+      Text{ Key: "b", Content: "Shared wrapped text layout" },
+    })
+    resolver.FlushEffects()
+    for i in 0 ... 257 {
+      let n = reconciler.Mount(Text{ Content: "Evict shared layout " + i.ToString() })
+      TextLayouts.For(n, 100.0F)
+      TextLayouts.Dispose(n)
+    }
+    let retained = TextLayouts.For(root.Children[0], 100.0F)
+    if !Object.ReferenceEquals(second, retained) { return false }
+    if retained.References != 1 { return false }
+    return retained.Width > 0.0F && retained.Lines.Count > 1
+  }
+
+  func HiddenScrollLayoutsClearGeometry() bool {
+    let root = Reconciler{ Res: Resolver{} }.Mount(Container{ Width: 100, Height: 100,
+      Container{ Width: 100, Height: 100, OverflowY: Overflow.Scroll,
+        Container{ Width: 100, Height: 300, FlexShrink: 0 },
+      },
+    })
+    let layout = Layout()
+    layout.Calculate(root, 100.0F, 100.0F)
+    let scroll = root.Children[0]
+    ScrollState.To(scroll, 0.0F, 150.0F, true)
+    layout.RefreshRects(root)
+    if scroll.ScrollY != 150.0F { return false }
+    scroll.Display = Display.None
+    syncYogaField(scroll, StyleField.Display)
+    layout.MarkStructureDirty()
+    layout.Calculate(root, 100.0F, 100.0F)
+    return scroll.ScrollY == 0.0F && scroll.ScrollTargetY == 0.0F
+      && scroll.Children[0].Rect.W == 0.0F && scroll.Children[0].Rect.H == 0.0F
+      && !ScrollState.HasDemand(scroll)
+  }
+
+  func HiddenCustomLayoutsWaitForVisibleGeometry() bool {
+    let policy = LayoutVisibilityFixtureAlgorithm()
+    let reconciler = Reconciler{ Res: Resolver{} }
+    var root = reconciler.Mount(customVisibilityScene(policy, Display.None, "empty"))
+    let layout = Layout()
+    for step in 0 ... 5 {
+      let shown = step == 2 || step == 4
+      if step > 0 {
+        root = reconciler.Diff(root, customVisibilityScene(policy,
+          shown ? Display.Flex : Display.None, "pending host ${step}"))
+      }
+      layout.MarkStructureDirty()
+      layout.Calculate(root, 200.0F, 100.0F)
+      layout.RefreshRects(root)
+      let expected = step < 2 ? 0 : step == 4 ? 2 : 1
+      if policy.Arranges != expected { return false }
+      if shown && (policy.FinalSize.Width != 100.0 || policy.FinalSize.Height != 40.0) {
+        return false
+      }
+    }
+    return true
+  }
+
+  private func customVisibilityScene(policy LayoutAlgorithm, display Display, content string) Blob ->
+  Container{ Width: 200, Height: 100,
+    Container{ Key: "table", Width: 100, Height: 40, Display: display,
+      Container{ Layout: policy, Width: Percent(100), Height: Percent(100),
+        Text{ Content: content },
+      },
+    },
+  }
+
   func LoneSurrogateTextLaysOut() bool {
     let resolver = Resolver{}
     let n = Reconciler{ Res: resolver }.Mount(Text{ Content: "ab\uD83D cd \uDE00" })
@@ -588,4 +667,20 @@ internal class LayoutFixtureSimulation : Simulation {
   }
 
   public override func Done(elapsed float64) bool -> elapsed >= 1.0
+}
+
+internal class LayoutVisibilityFixtureAlgorithm : LayoutAlgorithm {
+  internal var Arranges int32
+  internal var FinalSize LayoutSize
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize ->
+  context.MeasureChild(0, available)
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    Arranges++
+    context.MeasureChild(0, LayoutSize{ Width: Double.PositiveInfinity, Height: Double.PositiveInfinity })
+    context.MeasureChild(0, finalSize)
+    context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
+    FinalSize = finalSize
+  }
 }

@@ -51,7 +51,7 @@ internal unsafe sealed partial class VulkanTextScene {
     return created
   }
 
-  private func BeginSegment(frame SceneFrame) VulkanRetainedTextSegment {
+  private func BeginSegment(frame SceneFrame, glyphCount int32) VulkanRetainedTextSegment {
     guard let cache = activeNodeSegments else {
       throw InvalidOperationException("Vulkan text segment cache is not active")
     }
@@ -65,7 +65,7 @@ internal unsafe sealed partial class VulkanTextScene {
       if nextSegmentId == 0uL {
         throw InvalidOperationException("Vulkan text segment identity overflow")
       }
-      let created = VulkanRetainedTextSegment(4)
+      let created = VulkanRetainedTextSegment(glyphCount)
       created.Id = nextSegmentId
       nextSegmentId = nextSegmentId + 1uL
       cache.Segments[index] = created

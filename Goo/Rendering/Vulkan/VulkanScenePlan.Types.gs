@@ -30,7 +30,7 @@ internal open class VulkanTextSegmentStorage {
     var resolvedCapacity = capacity
     if resolvedCapacity <= 0 { resolvedCapacity = 1 }
     Records = [resolvedCapacity]HbGpuTextInstanceRecord
-    Runs = [resolvedCapacity]VulkanTextSegmentRun
+    Runs = [1]VulkanTextSegmentRun
     GlyphResources = [resolvedCapacity]ResourceId
     GlyphAtlasTexelOffsets = [resolvedCapacity]uint32
     GlyphAtlasTexelCounts = [resolvedCapacity]uint32

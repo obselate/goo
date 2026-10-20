@@ -512,7 +512,7 @@ internal class Layout {
   // Yoga positions are parent-relative; accumulate origin so Rect is absolute.
   // Scroll containers clamp their offsets and shift their children's origin.
   internal func readRect(n Node, originX float32, originY float32,
-    placementX float32 = 0.0F, placementY float32 = 0.0F) {
+    placementX float32 = 0.0F, placementY float32 = 0.0F, hidden bool = false) {
       guard let yg = n.Yoga else {
         return
       }
@@ -527,9 +527,10 @@ internal class Layout {
         W: YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
         H: YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
       }
+      let hiddenSubtree = hidden || n.Display == Display.None
       let editor = n.Kind == NodeKind.Editor
       let custom = CustomLayouts.State(n)
-      custom?.Arrange()
+      if !hiddenSubtree { custom?.Arrange() }
       ScrollState.RefreshAxes(n)
       if editor {
         ScrollState.SyncEditor(n)
@@ -537,25 +538,25 @@ internal class Layout {
         measureScrollExtent(n, yg)
       }
       if editor {
-        readEditorSlotRects(n)
+        readEditorSlotRects(n, hiddenSubtree)
         return
       }
       if let state = custom {
         let x = visual.X + CustomLayouts.Inset(yg, YGEdge.Left) - n.ScrollX
         let y = visual.Y + CustomLayouts.Inset(yg, YGEdge.Top) - n.ScrollY
         for child in state.Children {
-          readRect(child.Node, x, y, float32(child.Bounds.X), float32(child.Bounds.Y))
+          readRect(child.Node, x, y, float32(child.Bounds.X), float32(child.Bounds.Y), hiddenSubtree)
         }
         return
       }
       for i in 0 ... n.Children.Count {
         if !n.Children[i].IsPortal {
-          readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY)
+          readRect(n.Children[i], visual.X - n.ScrollX, visual.Y - n.ScrollY, hidden: hiddenSubtree)
         }
       }
     }
 
-  private func readEditorSlotRects(n Node) {
+  private func readEditorSlotRects(n Node, hidden bool) {
     let layout = TextEditorLayouts.For(n, BoxGeometry.ContentWidth(n), BoxGeometry.ContentHeight(n))
     let contentWidth = layout.ParagraphWidth
     for i in 0 ... n.Children.Count {
@@ -570,7 +571,7 @@ internal class Layout {
         continue
       }
       child.Visibility = Visibility.Visible
-      readRect(child, n.Rect.X + origin.X, n.Rect.Y + origin.Y)
+      readRect(child, n.Rect.X + origin.X, n.Rect.Y + origin.Y, hidden: hidden)
     }
   }
 

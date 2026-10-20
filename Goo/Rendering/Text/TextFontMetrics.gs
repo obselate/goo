@@ -1,6 +1,6 @@
 package Goo
 
-internal sealed class TextFontMetrics {
+internal struct TextFontMetrics {
   internal prop Ascent float32{ get; set; }
   internal prop Descent float32{ get; set; }
 
