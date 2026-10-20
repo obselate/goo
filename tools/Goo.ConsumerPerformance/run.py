@@ -864,7 +864,7 @@ def main():
             raise RuntimeError(f"{mode} staged runtime omitted the Vend Sans license")
     packages = {
         "goo": package_identity(benchmark.cache, "Goo", args.package_version),
-        "gsharpSdk": package_identity(benchmark.cache, "Gsharp.NET.Sdk", "0.4.1150"),
+        "gsharpSdk": package_identity(benchmark.cache, "Gsharp.NET.Sdk", "0.5.26"),
     }
     provenance = {
         "schemaVersion": 1,

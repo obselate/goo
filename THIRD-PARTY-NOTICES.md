@@ -34,7 +34,7 @@ GIF and BMP. No additional native library ships. The source declares
 ## G# runtime support
 
 Goo's Linux bundle redistributes `Gsharp.Extensions.dll` from
-Gsharp.NET.Sdk 0.4.1150.
+Gsharp.NET.Sdk 0.5.26.
 
 - Copyright (c) 2019 David Obando.
 - License: MIT.

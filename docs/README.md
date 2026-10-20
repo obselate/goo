@@ -2,7 +2,7 @@
 
 ## Version baseline
 
-Gsharp.NET.Sdk 0.4.1150, Goo/Goo.Templates/Goo.DevTools/Goo.DevTools.App 0.7.35
+Gsharp.NET.Sdk 0.5.26, Goo/Goo.Templates/Goo.DevTools/Goo.DevTools.App 0.7.35
 and Goo.Widgets 0.2.19.
 
 SVG examples require the next Goo release, which includes the loader in core.

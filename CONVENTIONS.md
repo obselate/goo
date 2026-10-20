@@ -56,7 +56,7 @@ Folders are not assembly boundaries. Classify shared values and contracts separa
 - State required fields and optional defaults. Reject missing or invalid required fields at parse time with a domain-owned typed failure.
 - Read typed properties, not repeated field-name strings.
 - Preserve stored and wire bytes when compatibility requires them. Existing data must still load.
-- Use data types only when SDK 0.4.1150 and the actual serializer and NativeAOT path support them.
+- Use data types only when SDK 0.5.26 and the actual serializer and NativeAOT path support them.
 
 ## Errors and delivery
 
@@ -79,7 +79,7 @@ Folders are not assembly boundaries. Classify shared values and contracts separa
 
 ## G# idioms
 
-Use only forms supported by `Gsharp.NET.Sdk` 0.4.1150. Authority order: pinned compiler and tests, language spec, accepted ADRs, conformance samples, then authoring prose.
+Use only forms supported by `Gsharp.NET.Sdk` 0.5.26. Authority order: pinned compiler and tests, language spec, accepted ADRs, conformance samples, then authoring prose.
 
 | Use | Instead of |
 | --- | --- |
