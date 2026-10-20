@@ -8,6 +8,7 @@
 - Include the SDL error text when the SDL Vulkan loader fails to initialize.
 - Add VulkanDrivers.Direct for app-local Windows Vulkan drivers, including elevated no-GPU startup without registry changes.
 - Keep the DevTools pipe host running when a client write is canceled on Windows.
+- Capture DevTools diagnostic trees only while a client observes them.
 
 ## 0.7.39 - 2026-10-19
 
