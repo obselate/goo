@@ -3,6 +3,7 @@ package GooPackageSmoke
 import Goo
 import GooPrimitiveFixture
 import System
+import System.Diagnostics
 import System.IO
 import System.Text
 import System.Threading
@@ -402,8 +403,65 @@ func VerifyImageDecode() {
   if image.Width != 2 || image.Height != 1 { throw InvalidOperationException("Packaged image decoder returned a wrong size") }
 }
 
+func RunDirectDriverSmoke() {
+  for name in []string{"VK_ADD_DRIVER_FILES", "VK_DRIVER_FILES", "VK_ICD_FILENAMES"} {
+    if !String.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)) {
+      throw InvalidOperationException(name + " must not be set for the direct driver smoke.")
+    }
+  }
+  VulkanDrivers.Direct = []string{Path.Combine(AppContext.BaseDirectory, "vulkan_lvp.dll")}
+  let window = Window{
+    Title: "Goo direct Vulkan driver smoke",
+    Width: 64,
+    Height: 64,
+    VSync: false,
+    Background: Color.Rgb(12, 20, 32),
+    Root: Cell{},
+  }
+  window.Open()
+  try {
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+    var accepted bool
+    while Stopwatch.GetTimestamp() < deadline {
+      window.Pump(0.0)
+      if !accepted {
+        let status = window.RequestCapture()
+        if status != WindowCaptureRequestStatus.Accepted
+          && status != WindowCaptureRequestStatus.Busy
+          && status != WindowCaptureRequestStatus.NotReady {
+          throw InvalidOperationException("Direct driver capture failed: " + status.ToString())
+        }
+        accepted = status == WindowCaptureRequestStatus.Accepted
+      }
+      if accepted {
+        if let capture = window.PollCapture() {
+          for pixel in 0 ... capture.Pixels.Length / 4 {
+            let offset = pixel * 4
+            if Math.Abs(int32(capture.Pixels[offset]) - 12) > 1
+              || Math.Abs(int32(capture.Pixels[offset + 1]) - 20) > 1
+              || Math.Abs(int32(capture.Pixels[offset + 2]) - 32) > 1
+              || capture.Pixels[offset + 3] != 255 {
+              throw InvalidOperationException("Direct driver pixel mismatch at " + pixel.ToString())
+            }
+          }
+          Console.WriteLine("direct-drivers: pixels matched rgba=12,20,32,255 count=" + (capture.Pixels.Length / 4).ToString())
+          return
+        }
+      }
+      Thread.Sleep(1)
+    }
+    throw InvalidOperationException("Direct driver capture timed out.")
+  } finally {
+    if !CloseWindow(window) { throw InvalidOperationException("Direct driver window did not close.") }
+  }
+}
+
 func Main() {
   Window.ConfigureApplication("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
+  if Environment.GetEnvironmentVariable("GOO_DIRECT_DRIVER_SMOKE") == "1" {
+    RunDirectDriverSmoke()
+    return
+  }
   VerifyImageDecode()
   if Environment.GetEnvironmentVariable("GOO_APPLICATION_QUIT_SMOKE") == "1" {
     RunApplicationQuitSmoke()

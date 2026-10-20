@@ -16,6 +16,7 @@ internal unsafe partial class VulkanWindowTarget {
       if captureLibrary {
         libraryStart = uint64(Stopwatch.GetTimestamp())
       }
+      VulkanDrivers.Freeze()
       if !host.LoadVulkanLibrary() {
         throw InvalidOperationException("Vulkan loader initialization failed")
       }
@@ -199,6 +200,11 @@ internal unsafe partial class VulkanWindowTarget {
     if requiredExtensions.Length == 0 {
       throw InvalidOperationException("Vulkan instance extensions are unavailable")
     }
+    let directDrivers = VulkanDrivers.Load()
+    if directDrivers.Length != 0
+      && !HasInstanceExtensionName(VkConstants.VK_LUNARG_DIRECT_DRIVER_LOADING_EXTENSION_NAME) {
+      throw InvalidOperationException("Direct Vulkan drivers require VK_LUNARG_direct_driver_loading from Vulkan loader 1.3.238 or later.")
+    }
     instanceMaintenanceVariant = ResolveInstanceMaintenanceVariant()
     debugUtilsEnabled = diagnostics != nil
       && HasInstanceExtensionName(VkConstants.VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
@@ -234,6 +240,7 @@ internal unsafe partial class VulkanWindowTarget {
     if addPortabilityEnumerationExtension {
       enabledExtensionCount = enabledExtensionCount + 1
     }
+    if directDrivers.Length != 0 { enabledExtensionCount++ }
     var extensionStorage []nint = [enabledExtensionCount]nint
     var appNameStorage nint = nint(0)
     var engineNameStorage nint = nint(0)
@@ -281,6 +288,12 @@ internal unsafe partial class VulkanWindowTarget {
         extensionPointers[extensionIndex].Value = *int8(storage)
         extensionIndex = extensionIndex + 1
       }
+      if directDrivers.Length != 0 {
+        let storage = Marshal.StringToCoTaskMemUTF8(VkConstants.VK_LUNARG_DIRECT_DRIVER_LOADING_EXTENSION_NAME)
+        extensionStorage[extensionIndex] = storage
+        extensionPointers[extensionIndex].Value = *int8(storage)
+        extensionIndex++
+      }
       appNameStorage = Marshal.StringToCoTaskMemUTF8("Goo")
       engineNameStorage = Marshal.StringToCoTaskMemUTF8("Goo")
       var applicationInfo = VkApplicationInfo{}
@@ -303,6 +316,22 @@ internal unsafe partial class VulkanWindowTarget {
       if let currentValidation = validation {
         debugMessengerCreateInfo = currentValidation.CreateInfo()
         createInfo.pNext = *void(&debugMessengerCreateInfo)
+      }
+      let driverInfos * VkDirectDriverLoadingInfoLUNARG =
+        stackalloc[directDrivers.Length]VkDirectDriverLoadingInfoLUNARG
+      var driverList = VkDirectDriverLoadingListLUNARG{}
+      if directDrivers.Length != 0 {
+        for index in 0 ... directDrivers.Length {
+          driverInfos[index] = VkDirectDriverLoadingInfoLUNARG{}
+          driverInfos[index].sType = VkConstants.VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_INFO_LUNARG
+          driverInfos[index].pfnGetInstanceProcAddr = directDrivers[index]
+        }
+        driverList.sType = VkConstants.VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_LIST_LUNARG
+        driverList.pNext = createInfo.pNext
+        driverList.mode = VkConstants.VK_DIRECT_DRIVER_LOADING_MODE_INCLUSIVE_LUNARG
+        driverList.driverCount = uint32(directDrivers.Length)
+        driverList.pDrivers = driverInfos
+        createInfo.pNext = *void(&driverList)
       }
       if let currentDiagnostics = diagnostics {
         currentDiagnostics.CaptureInstanceFacts(
