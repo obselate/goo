@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Build with G# SDK 0.5.26, including idle hot reload redraws and updated generated record metadata and formatting.
+
 ## 0.7.38 - 2026-10-18
 
 - Add the DevTools Profiler tab with live timelines, memory and resource lanes, and selected-range analysis.

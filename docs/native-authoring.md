@@ -1,6 +1,6 @@
 # Native G# authoring
 
-Goo builds with G# SDK 0.4.1150 from NuGet. Apps use the SDK compiler directly.
+Goo builds with G# SDK 0.5.26 from NuGet. Apps use the SDK compiler directly.
 Source contributors run the [source setup](../CONTRIBUTING.md#source-setup).
 
 ## Direct children
