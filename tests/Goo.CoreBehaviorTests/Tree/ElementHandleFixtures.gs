@@ -147,6 +147,7 @@ internal class ElementHandleFixtures {
             TextEntry{ Handle: target, Width: 126, Height: 20, MarginStart: 250, FlexShrink: 0 },
           },
         },
+        Container{ Height: 600, FlexShrink: 0 },
       })
       let layout = Layout()
       layout.Calculate(root, 387.0F, 100.0F)
