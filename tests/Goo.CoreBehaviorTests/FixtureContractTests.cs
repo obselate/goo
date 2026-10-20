@@ -100,6 +100,7 @@ public sealed class FixtureContractTests
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.PrimitiveMatrixContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.RetiredTreeDoesNotRetainThroughHandle));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ScrollContract));
+        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.NestedScrollIntoViewKeepsTargetBounds));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ThrowingVirtualDisposalContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualTransactionContract));

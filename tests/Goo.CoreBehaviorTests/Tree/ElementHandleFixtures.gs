@@ -134,6 +134,48 @@ internal class ElementHandleFixtures {
     return visible
   }
 
+  func NestedScrollIntoViewKeepsTargetBounds() bool {
+    for start in []float32{ 0.0F, 463.0F } {
+      let target = ElementHandle{}
+      let owner = Window{}
+      let root = mount(Reconciler{ Res: Resolver{} }, owner, Container{
+        Width: 387, Height: 100, OverflowY: Overflow.Scroll,
+        Container{ Height: 120, FlexShrink: 0 },
+        Container{ Width: 387, Height: 80, FlexShrink: 0, OverflowX: Overflow.Scroll,
+          Container{ Width: 850, Height: 80, FlexShrink: 0, OverflowY: Overflow.Scroll,
+            Container{ Height: 500, FlexShrink: 0 },
+            TextEntry{ Handle: target, Width: 126, Height: 20, MarginLeft: 250, FlexShrink: 0 },
+          },
+        },
+      })
+      let layout = Layout()
+      layout.Calculate(root, 387.0F, 100.0F)
+      let horizontal = root.Children[1]
+      let body = horizontal.Children[0]
+      let entry = body.Children[1]
+      ScrollState.To(horizontal, start, 0.0F, true)
+      layout.RefreshRects(root)
+      let expectedX = start == 0.0F ? 0.0F : 250.0F
+      for repeat in 0 ... 2 {
+        if !target.ScrollIntoView() || horizontal.ScrollTargetX != expectedX
+          || body.ScrollTargetY != 440.0F || root.ScrollTargetY != 100.0F {
+            return false
+          }
+      }
+      ScrollState.To(body, 0.0F, body.ScrollTargetY, true)
+      ScrollState.To(horizontal, horizontal.ScrollTargetX, 0.0F, true)
+      ScrollState.To(root, 0.0F, root.ScrollTargetY, true)
+      layout.RefreshRects(root)
+      if entry.Rect.X < horizontal.Rect.X || entry.Rect.X + entry.Rect.W > horizontal.Rect.X + 387.0F
+        || entry.Rect.Y < body.Rect.Y || entry.Rect.Y + entry.Rect.H > 100.0F
+        || !target.ScrollIntoView() || horizontal.ScrollTargetX != expectedX {
+          return false
+        }
+      NodeLifecycle.DisposeTree(root)
+    }
+    return true
+  }
+
   func DuplicateAndCellContract() bool {
     let owner = Window{}
     let duplicate = ElementHandle{}
