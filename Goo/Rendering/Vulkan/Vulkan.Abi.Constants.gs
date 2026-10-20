@@ -4,6 +4,10 @@ import System.Runtime.InteropServices
 
 internal class VkConstants {
   shared {
+    const VK_LUNARG_DIRECT_DRIVER_LOADING_EXTENSION_NAME string = "VK_LUNARG_direct_driver_loading"
+    const VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_INFO_LUNARG VkStructureType = 1000459000
+    const VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_LIST_LUNARG VkStructureType = 1000459001
+    const VK_DIRECT_DRIVER_LOADING_MODE_INCLUSIVE_LUNARG VkDirectDriverLoadingModeLUNARG = 1
     const VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT VkAccessFlagBits2 = 128L
     const VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT VkAccessFlagBits2 = 256L
     const VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT VkAccessFlagBits2 = 512L

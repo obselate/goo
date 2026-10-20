@@ -1779,6 +1779,7 @@ property|Goo.VirtualViewport|ScrollOffset|Goo.Point|instance|get:public|index:()
 property|Goo.VirtualViewport|Size|Goo.LayoutSize|instance|get:public|index:()
 property|Goo.VirtualViewport|Wrap|Goo.FlexWrap|instance|get:public|index:()
 property|Goo.Virtual|PinToBottom|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.VulkanDrivers|Direct|System.String[]|static|get:public,set:public|index:()
 property|Goo.WaylandBackdropOptions|CornerRadius|System.Double|instance|get:public,init:public|index:()
 property|Goo.WaylandBackdropOptions|Region|System.Nullable`1<Goo.ElementRect>|instance|get:public,init:public|index:()
 property|Goo.WheelEvent|Delta|Goo.Point|instance|get:public,init:public|index:()
@@ -2037,6 +2038,7 @@ type|Goo.VirtualState|abstract-class|public|base:System.Object|interfaces:|gener
 type|Goo.VirtualViewport|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Virtual|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Visibility|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.VulkanDrivers|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WaylandBackdropOptions|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WaylandBackdropOptions>|generic:
 type|Goo.WheelEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.WindowBackdropMask|sealed-class|public|base:System.Object|interfaces:|generic:

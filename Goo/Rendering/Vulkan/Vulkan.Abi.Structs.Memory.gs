@@ -499,6 +499,32 @@ internal unsafe struct VkInstanceCreateInfo {
 }
 
 @StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkDirectDriverLoadingInfoLUNARG {
+  var sType VkStructureType
+  var pNext * void
+  var flags VkDirectDriverLoadingFlagsLUNARG
+  var pfnGetInstanceProcAddr nint
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkDirectDriverLoadingListLUNARG {
+  var sType VkStructureType
+  var pNext * void
+  var mode VkDirectDriverLoadingModeLUNARG
+  var driverCount uint32
+  var pDrivers * VkDirectDriverLoadingInfoLUNARG
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkWin32SurfaceCreateInfoKHR {
+  var sType VkStructureType
+  var pNext * void
+  var flags VkWin32SurfaceCreateFlagsKHR
+  var hinstance nint
+  var hwnd nint
+}
+
+@StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkMappedMemoryRange {
   var sType VkStructureType
   var pNext * void
