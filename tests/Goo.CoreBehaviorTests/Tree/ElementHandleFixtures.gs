@@ -144,7 +144,7 @@ internal class ElementHandleFixtures {
         Container{ Width: 387, Height: 80, FlexShrink: 0, OverflowX: Overflow.Scroll,
           Container{ Width: 850, Height: 80, FlexShrink: 0, OverflowY: Overflow.Scroll,
             Container{ Height: 500, FlexShrink: 0 },
-            TextEntry{ Handle: target, Width: 126, Height: 20, MarginLeft: 250, FlexShrink: 0 },
+            TextEntry{ Handle: target, Width: 126, Height: 20, MarginStart: 250, FlexShrink: 0 },
           },
         },
       })
