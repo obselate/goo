@@ -335,6 +335,38 @@ internal class LayoutFixtures {
     return retained.Width > 0.0F && retained.Lines.Count > 1
   }
 
+  func HiddenCustomLayoutsWaitForVisibleGeometry() bool {
+    let policy = LayoutVisibilityFixtureAlgorithm()
+    let reconciler = Reconciler{ Res: Resolver{} }
+    var root = reconciler.Mount(customVisibilityScene(policy, Display.None, "empty"))
+    let layout = Layout()
+    for step in 0 ... 5 {
+      let shown = step == 2 || step == 4
+      if step > 0 {
+        root = reconciler.Diff(root, customVisibilityScene(policy,
+          shown ? Display.Flex : Display.None, "pending host ${step}"))
+      }
+      layout.MarkStructureDirty()
+      layout.Calculate(root, 200.0F, 100.0F)
+      layout.RefreshRects(root)
+      let expected = step < 2 ? 0 : step == 4 ? 2 : 1
+      if policy.Arranges != expected { return false }
+      if shown && (policy.FinalSize.Width != 100.0 || policy.FinalSize.Height != 40.0) {
+        return false
+      }
+    }
+    return true
+  }
+
+  private func customVisibilityScene(policy LayoutAlgorithm, display Display, content string) Blob ->
+  Container{ Width: 200, Height: 100,
+    Container{ Key: "table", Width: 100, Height: 40, Display: display,
+      Container{ Layout: policy, Width: Percent(100), Height: Percent(100),
+        Text{ Content: content },
+      },
+    },
+  }
+
   func LoneSurrogateTextLaysOut() bool {
     let resolver = Resolver{}
     let n = Reconciler{ Res: resolver }.Mount(Text{ Content: "ab\uD83D cd \uDE00" })
@@ -619,4 +651,20 @@ internal class LayoutFixtureSimulation : Simulation {
   }
 
   public override func Done(elapsed float64) bool -> elapsed >= 1.0
+}
+
+internal class LayoutVisibilityFixtureAlgorithm : LayoutAlgorithm {
+  internal var Arranges int32
+  internal var FinalSize LayoutSize
+
+  public func Measure(context LayoutContext, available LayoutSize) LayoutSize ->
+  context.MeasureChild(0, available)
+
+  public func Arrange(context LayoutContext, finalSize LayoutSize) {
+    Arranges++
+    context.MeasureChild(0, LayoutSize{ Width: Double.PositiveInfinity, Height: Double.PositiveInfinity })
+    context.MeasureChild(0, finalSize)
+    context.ArrangeChild(0, ElementRect{ Width: finalSize.Width, Height: finalSize.Height })
+    FinalSize = finalSize
+  }
 }

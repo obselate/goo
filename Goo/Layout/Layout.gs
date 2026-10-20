@@ -527,6 +527,7 @@ internal class Layout {
         W: YGNodeLayoutAPI.YGNodeLayoutGetWidth(yg),
         H: YGNodeLayoutAPI.YGNodeLayoutGetHeight(yg),
       }
+      if n.Display == Display.None { return }
       let editor = n.Kind == NodeKind.Editor
       let custom = CustomLayouts.State(n)
       custom?.Arrange()
