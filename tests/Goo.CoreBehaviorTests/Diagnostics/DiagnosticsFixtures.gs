@@ -5,6 +5,39 @@ import System.IO
 import System.Text.Json
 
 internal class DiagnosticsFixtures {
+  func IdleFramesDeferSnapshotsUntilRequestedContract() bool {
+    let root = DevToolsInputCell{}
+    let window = Window{Root: root, Width: 320, Height: 220}
+    window.UpdateTree()
+    let session = window.AttachDiagnostics()
+    try {
+      let first = session.CaptureSnapshot()
+      for value in 1 ... 4 {
+        root.Clicks = value
+        root.Rebuild()
+        window.UpdateTree()
+        if session.Overlay.Sequence != 0 { return false }
+      }
+      let latest = session.CaptureSnapshot()
+      if latest.Sequence != first.Sequence + 1 { return false }
+      var updated = false
+      for node in latest.Updated {
+        if node.Content == "Count 3" { updated = true }
+      }
+      if !updated { return false }
+      var observed int64
+      let changed Action[DiagnosticSnapshot] = snapshot -> observed = snapshot.Sequence
+      session.SnapshotChanged += changed
+      root.Clicks = 4
+      root.Rebuild()
+      window.UpdateTree()
+      session.SnapshotChanged -= changed
+      return observed == latest.Sequence + 1
+    } finally {
+      session.Dispose()
+    }
+  }
+
   func SnapshotIdentityAndDeltaContract() bool {
     let root = Node()
     root.Kind = NodeKind.Container
