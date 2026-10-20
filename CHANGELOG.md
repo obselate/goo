@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.39 - 2026-10-19
+
 - Build Goo with G# SDK 0.5.26 and refresh generated API metadata and SDK documentation.
 
 ## 0.7.38 - 2026-10-18
