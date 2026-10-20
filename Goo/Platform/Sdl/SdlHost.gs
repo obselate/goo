@@ -45,7 +45,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       runtimeOwned = true
       try {
         if !SdlRuntime.AcquireVulkan() {
-          throw InvalidOperationException("SDL Vulkan loader initialization failed")
+          ThrowSdl("SDL_Vulkan_LoadLibrary")
         }
         vulkanOwned = true
         CreateWindow(title, width, height, transparent)
