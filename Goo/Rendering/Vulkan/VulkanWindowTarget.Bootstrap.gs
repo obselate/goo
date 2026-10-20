@@ -16,7 +16,6 @@ internal unsafe partial class VulkanWindowTarget {
       if captureLibrary {
         libraryStart = uint64(Stopwatch.GetTimestamp())
       }
-      VulkanDrivers.Freeze()
       if !host.LoadVulkanLibrary() {
         throw InvalidOperationException("Vulkan loader initialization failed")
       }
