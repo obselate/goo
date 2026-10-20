@@ -83,7 +83,7 @@ internal unsafe sealed partial class VulkanTextScene {
     effectOffsetY float32,
     parentTransformIndex int32,
     ref complete bool) bool{
-      let segment = BeginSegment(frame)
+      let segment = BeginSegment(frame, shape.GlyphCount)
       var parentTransform TransformRecord
       let identity = TransformRecord{
         A: 1.0F,

@@ -304,6 +304,37 @@ internal class LayoutFixtures {
     return layout.Lines.Count > 100 && covered == n.Content.Length && resolutions <= 1L
   }
 
+  func IdenticalTextLayoutsSurviveSiblingRetirement() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{ Res: resolver }
+    var root = reconciler.Mount(Container() {
+      Text{ Key: "a", Content: "Shared wrapped text layout" },
+      Text{ Key: "b", Content: "Shared wrapped text layout" },
+    })
+    resolver.FlushEffects()
+    let first = TextLayouts.For(root.Children[0], 100.0F)
+    let second = TextLayouts.For(root.Children[1], 100.0F)
+    if !Object.ReferenceEquals(first, second) { return false }
+    root = reconciler.Diff(root, Container() {
+      Text{ Key: "b", Content: "Shared wrapped text layout" },
+    })
+    resolver.FlushEffects()
+    for i in 0 ... 257 {
+      let n = reconciler.Mount(Text{ Content: "Evict shared layout " + i.ToString() })
+      TextLayouts.For(n, 100.0F)
+      TextLayouts.Dispose(n)
+    }
+    let retained = TextLayouts.For(root.Children[0], 100.0F)
+    if !Object.ReferenceEquals(second, retained) { return false }
+    for line in retained.Lines {
+      guard let shape = line.Shape else { return false }
+      for run in shape.Runs {
+        if run.Provider.Metrics.UnitsPerEm == 0u { return false }
+      }
+    }
+    return retained.Width > 0.0F && retained.Lines.Count > 1
+  }
+
   func LoneSurrogateTextLaysOut() bool {
     let resolver = Resolver{}
     let n = Reconciler{ Res: resolver }.Mount(Text{ Content: "ab\uD83D cd \uDE00" })
