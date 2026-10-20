@@ -958,7 +958,7 @@ jobs:
           if (!($smoke -match 'direct-drivers: pixels matched')) { throw "Direct driver pixel check missing" }
           Remove-Item Env:GOO_DIRECT_DRIVER_SMOKE, Env:GOO_VK_DIAGNOSTICS
       - name: Install software Vulkan for native Windows checks
-        uses: jakoch/install-vulkan-sdk-action@ae57d335f36a1cd380da18748c28ea65feea4a17
+        uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533
         with:
           vulkan_version: 1.4.357.0
           install_runtime: true
