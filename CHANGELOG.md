@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.40 - 2026-10-20
+
 - Reuse bounded plain-text layouts and right-size retained glyph storage, defer hidden custom arrangement, and preserve target bounds through nested scroll containers.
 - Include the SDL error text when the SDL Vulkan loader fails to initialize.
 - Add VulkanDrivers.Direct for app-local Windows Vulkan drivers, including elevated no-GPU startup without registry changes.
