@@ -176,14 +176,31 @@
  
      if (window->flags & SDL_WINDOW_MODAL) {
          Wayland_SetWindowModal(_this, window, true);
-@@ -2196,6 +2306,7 @@
+@@ -2208,11 +2318,6 @@
+         SDL_SetStringProperty(props, SDL_PROP_WINDOW_WAYLAND_XDG_TOPLEVEL_EXPORT_HANDLE_STRING, NULL);
      }
  
-     wind->shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_HIDDEN;
-+    Goo_DestroyForeignParent(wind);
+-    if (wind->xdg_dialog_v1) {
+-        xdg_dialog_v1_destroy(wind->xdg_dialog_v1);
+-        wind->xdg_dialog_v1 = NULL;
+-    }
+-
+ #ifdef HAVE_LIBDECOR_H
+     if (wind->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_LIBDECOR) {
+         if (wind->shell_surface.libdecor.frame) {
+@@ -2237,6 +2342,12 @@
+         }
+     }
  
-     if (wind->server_decoration) {
-         zxdg_toplevel_decoration_v1_destroy(wind->server_decoration);
++    if (wind->xdg_dialog_v1) {
++        xdg_dialog_v1_destroy(wind->xdg_dialog_v1);
++        wind->xdg_dialog_v1 = NULL;
++    }
++    Goo_DestroyForeignParent(wind);
++
+     // Attach a null buffer to unmap the surface.
+     wl_surface_attach(wind->surface, NULL, 0, 0);
+     wl_surface_commit(wind->surface);
 @@ -3278,6 +3389,7 @@
           * to the window held by seats are released before destroying the underlying surface and struct.
           */
