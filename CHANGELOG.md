@@ -2,11 +2,13 @@
 
 ## Unreleased
 
-## 0.7.41 - 2026-10-21
+## 0.7.44 - 2026-10-21
 
 - Keep DevTools clients alive while a response is being written so slow readers receive complete snapshots.
 - Update the goo plugin's certifi to 2026.10.19 and mcp to 1.30.0 for security fixes.
 - Fix requester windows remaining dimmed after closing a foreign-parent Wayland file chooser.
+- Fix lost SDL idle wakeups on Linux so Window.Post, UI continuations and timers run without waiting for the next event.
+- Add Window.RequestCapture(previousCapture) to reuse the caller-owned pixel buffer for repeated captures.
 
 ## 0.7.40 - 2026-10-20
 
