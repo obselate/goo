@@ -25,6 +25,12 @@ def check_trace(trace):
         assert mapping, "Child surface was not committed"
         if '"xdg_wm_dialog_v1"' in trace:
             assert re.search(r'xdg_dialog_v1#\d+\.set_modal\(\)', trace[parent_position:parent_position + mapping.start()]), "Modal state was not applied before mapping"
+        if entry is valid[0]:
+            unlink = trace.index(f'zxdg_imported_v2#{entry[1]}.destroy()', parent_position)
+            lifetime = trace[parent_position:unlink]
+            assert re.search(r'xdg_toplevel#\d+\.destroy\(\)', lifetime), "Foreign parent was unlinked before destroying the toplevel"
+            if '"xdg_wm_dialog_v1"' in trace:
+                assert re.search(r'xdg_toplevel#\d+\.destroy\(\).*xdg_dialog_v1#\d+\.destroy\(\)', lifetime, re.S), "Foreign modal teardown did not preserve toplevel, dialog, parent ordering"
 
 
 if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--xdg-only"):
