@@ -48,6 +48,7 @@ public sealed class FixtureContractTests
         yield return Contract<CellFixtures>(nameof(CellFixtures.ThrowingInputEquivalenceRetriesSameSnapshot));
         yield return Contract<CellFixtures>(nameof(CellFixtures.TryPostReportsQueueAcceptance));
         yield return Contract<CellFixtures>(nameof(CellFixtures.WindowCloseCompletesAfterCleanupFailures));
+        yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.DragRegionIgnoresFocusableAncestorsButPreservesControls));
         yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.GenericCountsRespectBoundariesTargetsButtonsAndCancellation));
         yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.RoutedInteractiveChildIsRelativeToEachHandler));
         yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.TextSelectionUsesTheRoutedCountAndCaptureDoesNotCreateFalseClicks));

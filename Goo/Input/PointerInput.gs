@@ -989,11 +989,12 @@ internal partial class PointerInput {
     for i in 0 ... hitChain.Count {
       let child = hitChain[i]
       if child.IsPortal { info.DragsWindow = false }
-      if isInteractiveContent(child) {
-        info.HasContent = true
-      }
       if child.DragsWindow {
         info.DragsWindow = true
+        info.HasContent = false
+      }
+      if isInteractiveContent(child) {
+        info.HasContent = true
       }
     }
     hitChain.Clear()

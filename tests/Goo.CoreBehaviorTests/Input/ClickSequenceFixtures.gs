@@ -4,6 +4,15 @@ import System
 import System.Collections.Generic
 
 internal class ClickSequenceFixtures {
+  func DragRegionIgnoresFocusableAncestorsButPreservesControls() bool {
+    let window = Window{Root: DragRegionHitCell{}, Width: 300, Height: 90, Decorated: false, Resizable: false}
+    window.UpdateTree()
+    return window.hitTest(10, 30) == WindowHitResult.Draggable
+      && window.hitTest(110, 30) == WindowHitResult.Normal
+      && window.hitTest(210, 30) == WindowHitResult.Normal
+      && window.hitTest(10, 75) == WindowHitResult.Normal
+  }
+
   func RoutedInteractiveChildIsRelativeToEachHandler() bool {
     let parent = List[bool]()
     let child = List[bool]()
@@ -149,5 +158,20 @@ internal class ClickSequenceFixtures {
       }
     }
     return counts.Count == 4 && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 2
+  }
+}
+
+internal class DragRegionHitCell : Cell {
+  override func Build() Blob -> Container{
+    Width: 300,
+    Height: 90,
+    Focusable: true,
+    Window.DragRegion(Container{
+      Height: 60,
+      FlexDirection: FlexDirection.Row,
+      Container{Width: 100, Height: 60},
+      Button{Width: 100, Height: 60, OnClick: () -> {}},
+      Container{Width: 100, Height: 60, Focusable: true},
+    }),
   }
 }
