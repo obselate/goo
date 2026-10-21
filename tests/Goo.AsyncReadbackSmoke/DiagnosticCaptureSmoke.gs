@@ -22,6 +22,29 @@ internal class DiagnosticCaptureFixture {
       if !condition { throw InvalidOperationException(message) }
     }
 
+    private func Capture(window Window, reusable WindowCapture? = nil) WindowCapture {
+      let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+      window.Pump(0.0)
+      var request = window.RequestCapture(reusable)
+      while request != WindowCaptureRequestStatus.Accepted && Stopwatch.GetTimestamp() < deadline {
+        Require(
+          request == WindowCaptureRequestStatus.NotReady || request == WindowCaptureRequestStatus.Busy,
+          "Capture reuse request failed: " + request.ToString()
+        )
+        window.Pump(0.0)
+        request = window.RequestCapture(reusable)
+      }
+      Require(request == WindowCaptureRequestStatus.Accepted, "Capture reuse request timed out")
+      while Stopwatch.GetTimestamp() < deadline {
+        if let capture = window.PollCapture() {
+          return capture
+        }
+        window.Pump(0.0)
+        Thread.Sleep(1)
+      }
+      throw TimeoutException("Capture reuse completion timed out")
+    }
+
     internal func Run() {
       let root = DiagnosticCaptureCell{}
       let window = Window{
@@ -122,6 +145,55 @@ internal class DiagnosticCaptureFixture {
           && int32(data[at]) >= requestedFrame - 2 && int32(data[at]) <= root.Frame + 2 && data[at + 1] == 120
           && data[at + 2] == 200 && data[at + 3] == 255,
           "Manual capture returned the wrong frame pixels")
+        let originalPixel = data[at]
+        root.Frame = 91
+        root.Rebuild()
+        let independent = Capture(window)
+        Require(
+          !object.ReferenceEquals(data, independent.Pixels) && data[at] == originalPixel,
+          "A default capture overwrote a retained snapshot"
+        )
+        root.Frame = 123
+        root.Rebuild()
+        let reused = Capture(window, independent)
+        Require(
+          object.ReferenceEquals(independent.Pixels, reused.Pixels)
+          && Math.Abs(int32(reused.Pixels[at]) - 123) <= 2,
+          "A reused capture did not update the caller-owned pixels"
+        )
+        window.Width = 1824
+        window.Height = 1026
+        window.Pump(0.0)
+        let resized = Capture(window, reused)
+        Require(
+          resized.Pixels.Length == int32(resized.RowBytes * resized.Height)
+          && !object.ReferenceEquals(resized.Pixels, reused.Pixels),
+          "A resized capture reused an incompatible pixel buffer"
+        )
+        var reusable = resized
+        for sample in 0 ... 5 {
+          let before = GC.GetAllocatedBytesForCurrentThread()
+          let captured = Capture(window)
+          let bytes = GC.GetAllocatedBytesForCurrentThread() - before
+          Console.WriteLine(
+            "capture-allocation: reused=false sample=$sample pixels=${captured.Pixels.Length} bytes=$bytes"
+          )
+        }
+        for sample in 0 ... 5 {
+          let before = GC.GetAllocatedBytesForCurrentThread()
+          let captured = Capture(window, reusable)
+          let bytes = GC.GetAllocatedBytesForCurrentThread() - before
+          Require(
+            object.ReferenceEquals(reusable.Pixels, captured.Pixels),
+            "Warm capture replaced its reusable buffer"
+          )
+          reusable = captured
+          Console.WriteLine(
+            "capture-allocation: reused=true sample=$sample pixels=${captured.Pixels.Length} bytes=$bytes"
+          )
+        }
+        window.Width = 64
+        window.Height = 64
         window.Pump(0.0)
         Require(accepted > 0uL, "No native presentation acceptance was reported")
         let diagnosticDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10

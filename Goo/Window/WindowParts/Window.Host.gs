@@ -645,6 +645,7 @@ public partial class Window {
     captureOwner = WindowCaptureOwner.None
     capturePending = false
     captureFailed = false
+    reusableCapture = nil
     framebufferWidth = 0
     framebufferHeight = 0
     pendingMetrics = false
