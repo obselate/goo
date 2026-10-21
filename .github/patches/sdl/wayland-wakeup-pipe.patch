@@ -1,0 +1,129 @@
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -65,6 +65,8 @@
+ #include "../../events/SDL_keysym_to_scancode_c.h"
+ #include "../../events/imKStoUCS.h"
+ #include <errno.h>
++#include <poll.h>
++#include <time.h>
+ #include <sys/mman.h>
+ #include <unistd.h>
+ #include <xkbcommon/xkbcommon-compose.h>
+@@ -481,26 +483,38 @@
+     return repeat_info->is_initialized && repeat_info->is_key_down && key == repeat_info->key;
+ }
+ 
+-static void sync_done_handler(void *data, struct wl_callback *callback, uint32_t callback_data)
+-{
+-    // Nothing to do, just destroy the callback
+-    wl_callback_destroy(callback);
+-}
+-
+-static struct wl_callback_listener sync_listener = {
+-    sync_done_handler
+-};
+-
+ void Wayland_SendWakeupEvent(SDL_VideoDevice *_this, SDL_Window *window)
+ {
+     SDL_VideoData *d = _this->internal;
+-
+-    /* Queue a sync event to unblock the event queue fd if it's empty and being waited on.
+-     * TODO: Maybe use a pipe to avoid the compositor roundtrip?
+-     */
+-    struct wl_callback *cb = wl_display_sync(d->display);
+-    wl_callback_add_listener(cb, &sync_listener, NULL);
+-    WAYLAND_wl_display_flush(d->display);
++    const char wake = 1;
++    while (write(d->wakeup_pipe[1], &wake, sizeof(wake)) < 0 && errno == EINTR) {
++    }
++}
++
++static int Wayland_WaitForWakeup(SDL_VideoData *d, int display_fd, short events, Sint64 timeoutNS)
++{
++    struct pollfd fds[2] = {{display_fd, events, 0}, {d->wakeup_pipe[0], POLLIN, 0}};
++    int ret;
++#ifdef HAVE_PPOLL
++    struct timespec ts;
++    struct timespec *timeout = NULL;
++    if (timeoutNS >= 0) {
++        ts.tv_sec = SDL_NS_TO_SECONDS(timeoutNS);
++        ts.tv_nsec = timeoutNS - SDL_SECONDS_TO_NS(ts.tv_sec);
++        timeout = &ts;
++    }
++    ret = ppoll(fds, 2, timeout, NULL);
++#else
++    const int timeoutMS = timeoutNS < 0 ? -1 : (int)SDL_NS_TO_MS(timeoutNS + SDL_NS_PER_MS - 1);
++    ret = poll(fds, 2, timeoutMS);
++#endif
++    if (ret > 0 && fds[1].revents) {
++        char wake[64];
++        while (read(d->wakeup_pipe[0], wake, sizeof(wake)) > 0) {
++        }
++        return 2;
++    }
++    return ret > 0 ? 1 : ret;
+ }
+ 
+ int Wayland_WaitEventTimeout(SDL_VideoDevice *_this, Sint64 timeoutNS)
+@@ -547,7 +561,11 @@
+ 
+         if (ret == -1 && errno == EAGAIN) {
+             // Unable to write to the socket; poll until the socket can be written to, it times out, or is interrupted.
+-            ret = SDL_IOReady(display_fd, SDL_IOR_WRITE | SDL_IOR_NO_RETRY, timeoutNS);
++            ret = Wayland_WaitForWakeup(d, display_fd, POLLOUT, timeoutNS);
++            if (ret == 2) {
++                WAYLAND_wl_display_cancel_read(d->display);
++                return 1;
++            }
+ 
+             if (ret <= 0) {
+                 // The poll operation timed out or experienced an error, so see if there are any events to read without waiting.
+@@ -569,7 +587,11 @@
+         }
+ 
+         // Use SDL_IOR_NO_RETRY to catch EINTR.
+-        ret = SDL_IOReady(display_fd, SDL_IOR_READ | SDL_IOR_NO_RETRY, timeoutNS);
++        ret = Wayland_WaitForWakeup(d, display_fd, POLLIN, timeoutNS);
++        if (ret == 2) {
++            WAYLAND_wl_display_cancel_read(d->display);
++            return 1;
++        }
+         if (ret <= 0) {
+             // Timeout or error, cancel the read.
+             WAYLAND_wl_display_cancel_read(d->display);
+--- a/src/video/wayland/SDL_waylandvideo.c
++++ b/src/video/wayland/SDL_waylandvideo.c
+@@ -473,6 +473,10 @@
+ static void Wayland_DeleteDevice(SDL_VideoDevice *device)
+ {
+     SDL_VideoData *data = device->internal;
++    if (data->wakeup_pipe[0] >= 0) {
++        close(data->wakeup_pipe[0]);
++        close(data->wakeup_pipe[1]);
++    }
+     if (data->display && !data->display_externally_owned) {
+         WAYLAND_wl_display_disconnect(data->display);
+         SDL_ClearProperty(SDL_GetGlobalProperties(), SDL_PROP_GLOBAL_VIDEO_WAYLAND_WL_DISPLAY_POINTER);
+@@ -613,6 +617,12 @@
+     }
+ 
+     device->internal = data;
++    data->wakeup_pipe[0] = data->wakeup_pipe[1] = -1;
++    if (pipe2(data->wakeup_pipe, O_CLOEXEC | O_NONBLOCK) < 0) {
++        SDL_SetError("Could not create Wayland wakeup pipe");
++        Wayland_DeleteDevice(device);
++        return NULL;
++    }
+ 
+     // Set the function pointers
+     device->VideoInit = Wayland_VideoInit;
+--- a/src/video/wayland/SDL_waylandvideo.h
++++ b/src/video/wayland/SDL_waylandvideo.h
+@@ -49,6 +49,7 @@
+ struct SDL_VideoData
+ {
+     struct wl_display *display;
++    int wakeup_pipe[2];
+     struct wl_registry *registry;
+     struct wl_compositor *compositor;
+     struct wl_shm *shm;
