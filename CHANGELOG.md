@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep DevTools clients alive while a response is being written so slow readers receive complete snapshots.
+
 ## 0.7.40 - 2026-10-20
 
 - Reuse bounded plain-text layouts and right-size retained glyph storage, defer hidden custom arrangement, and preserve target bounds through nested scroll containers.
