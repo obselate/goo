@@ -53,8 +53,14 @@ internal unsafe partial class VulkanWindowTarget {
   internal prop ReadbackCompletionCount uint64{ get -> readbackCompletionCount }
   internal prop ReadbackTiming VulkanReadbackTimingSnapshot{ get -> readbackTiming }
 
-  internal func RequestReadback(root Node?, portalRoot Node?, background Color, dpi Vector2,
-    requestedRegion VulkanReadbackRegion) WindowReadbackRequestStatus{
+  internal func RequestReadback(
+    root Node?,
+    portalRoot Node?,
+    background Color,
+    dpi Vector2,
+    requestedRegion VulkanReadbackRegion,
+    reusablePixels([]uint8)? = nil
+  ) WindowReadbackRequestStatus {
       PollQueueCompletion()
       let hasPrerequisite = readbackPrerequisiteFrame != nil
       if !hasPrerequisite {
@@ -247,8 +253,14 @@ internal unsafe partial class VulkanWindowTarget {
         }
         let activeRequest = request
         let clearColor = VkClearColorValue{}
-        let submitResult = activeRequest.Request(replayFrame, clearColor,
-          requestedRegion, replayTextScaleX, replayTextScaleY)
+        let submitResult = activeRequest.Request(
+          replayFrame,
+          clearColor,
+          requestedRegion,
+          replayTextScaleX,
+          replayTextScaleY,
+          reusablePixels
+        )
         readbackTiming.SubmitTicks = Stopwatch.GetTimestamp()
         if submitResult == VkConstants.VK_ERROR_DEVICE_LOST {
           try { activeRequest.AbandonAfterDeviceLoss() } catch (cleanup Exception) { }
@@ -317,8 +329,25 @@ internal unsafe partial class VulkanWindowTarget {
     requestedRegion VulkanReadbackRegion) WindowReadbackRequestStatus ->
     RequestReadback(root, nil, background, dpi, requestedRegion)
 
-  public func RequestCapture(root Node?, portalRoot Node?, background Color, dpi Vector2)
-  WindowReadbackRequestStatus -> RequestReadback(root, portalRoot, background, dpi)
+  public func RequestCapture(
+    root Node?,
+    portalRoot Node?,
+    background Color,
+    dpi Vector2,
+    reusablePixels([]uint8)? = nil
+  ) WindowReadbackRequestStatus {
+    guard let currentGeneration = generation else {
+      return WindowReadbackRequestStatus.NotReady
+    }
+    return RequestReadback(
+      root,
+      portalRoot,
+      background,
+      dpi,
+      VulkanReadbackPlan.Full(currentGeneration.Extent).Region,
+      reusablePixels
+    )
+  }
 
   public func PollCapture() WindowReadbackPollStatus {
     let result = PollReadback()

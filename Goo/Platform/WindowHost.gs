@@ -141,8 +141,13 @@ internal interface WindowRenderTarget {
   func ServicePendingSubmission() bool;
   func PollQueueCompletion() bool;
   func Resize(width int32, height int32) bool;
-  func RequestCapture(root Node?, portalRoot Node?, background Color,
-    dpi Vector2) WindowReadbackRequestStatus;
+  func RequestCapture(
+    root Node?,
+    portalRoot Node?,
+    background Color,
+    dpi Vector2,
+    reusablePixels([]uint8)? = nil
+  ) WindowReadbackRequestStatus;
   func PollCapture() WindowReadbackPollStatus;
   func TakeCaptureResult() WindowReadbackResult?;
   func Dispose();
