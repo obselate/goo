@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.41 - 2026-10-21
+
 - Keep DevTools clients alive while a response is being written so slow readers receive complete snapshots.
 - Update the goo plugin's certifi to 2026.10.19 and mcp to 1.30.0 for security fixes.
 - Fix requester windows remaining dimmed after closing a foreign-parent Wayland file chooser.
