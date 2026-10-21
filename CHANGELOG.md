@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.45 - 2026-10-22
+
+- Fix custom title bar dragging when a drag region sits inside a focusable ancestor.
+
 ## 0.7.44 - 2026-10-21
 
 - Keep DevTools clients alive while a response is being written so slow readers receive complete snapshots.
