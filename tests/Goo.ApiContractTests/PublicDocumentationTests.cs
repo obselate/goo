@@ -43,6 +43,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.TrySetFullscreenDisplay(Goo.WindowDisplayId)",
         "M:Goo.Window.TrySetTopmost(System.Boolean)",
         "M:Goo.Window.RequestCapture",
+        "M:Goo.Window.RequestCapture(Goo.WindowCapture)",
         "M:Goo.Window.PollCapture",
         "M:Goo.Window.CancelFileDialog",
         "M:Goo.Window.SetColors(Goo.Color,Goo.Color)",

@@ -1151,6 +1151,7 @@ method|Goo.Window|ReadClipboardFiles|instance|public|generic:|()->Goo.ClipboardF
 method|Goo.Window|ReadClipboardImage|instance|public|generic:|()->Goo.ClipboardImage
 method|Goo.Window|RequestActivation|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|RequestCapture|instance|public|generic:|()->Goo.WindowCaptureRequestStatus
+method|Goo.Window|RequestCapture|instance|public|generic:|(reusable:Goo.WindowCapture)->Goo.WindowCaptureRequestStatus
 method|Goo.Window|RequestClose|instance|public|generic:|()->System.Void
 method|Goo.Window|Run|instance|public|generic:|()->System.Void
 method|Goo.Window|SetClipboardText|instance|public|generic:|(value:System.String)->System.Void
