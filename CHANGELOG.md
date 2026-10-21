@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Keep DevTools clients alive while a response is being written so slow readers receive complete snapshots.
+- Update the goo plugin's certifi to 2026.10.19 and mcp to 1.30.0 for security fixes.
+- Fix requester windows remaining dimmed after closing a foreign-parent Wayland file chooser.
+
 ## 0.7.40 - 2026-10-20
 
 - Reuse bounded plain-text layouts and right-size retained glyph storage, defer hidden custom arrangement, and preserve target bounds through nested scroll containers.
