@@ -836,6 +836,10 @@ Requests restoration of a minimized window, raising, and keyboard activation. Ca
 
 Starts an asynchronous offscreen replay of the current scene. This may submit a native present and does not sample a specific display scanout. Call PollCapture on the UI thread until it returns pixels.
 
+### `RequestCapture(WindowCapture)`
+
+Reuses a previous capture's caller-owned pixels when its size matches. Do not access or reuse those pixels until PollCapture completes this request. A changed capture size allocates an independent pixel array.
+
 ### `RequestClose`
 
 Queues an idempotent close request. This is safe from any thread.
