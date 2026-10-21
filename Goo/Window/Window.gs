@@ -54,11 +54,16 @@ public sealed class WindowCapture {
   /// Reports that the first pixel is at the top left.
   public prop OriginTopLeft bool{ get -> true }
 
-  internal init(result WindowReadbackResult) {
-    pixels = result.Pixels
+  internal init(result WindowReadbackResult, reusable WindowCapture? = nil) {
     width = result.Width
     height = result.Height
     rowBytes = result.RowBytes
+    let reuse = reusable?.Pixels
+    pixels = if reuse != nil && uint64(reuse.Length) == uint64(rowBytes) * uint64(height) {
+      reuse
+    } else {
+      result.Pixels
+    }
   }
 }
 
@@ -509,6 +514,7 @@ public partial class Window {
   private var captureOwner WindowCaptureOwner
   private var capturePending bool
   private var captureFailed bool
+  private var reusableCapture WindowCapture?
   private var title string
   private var background Color
   private var foreground Color
@@ -622,19 +628,29 @@ public partial class Window {
   /// Starts an asynchronous offscreen replay of the current scene. This may
   /// submit a native present and does not sample a specific display scanout.
   /// Call PollCapture on the UI thread until it returns pixels.
-  public func RequestCapture() WindowCaptureRequestStatus {
+  public func RequestCapture() WindowCaptureRequestStatus -> RequestCapture(nil)
+
+  /// Reuses a previous capture's caller-owned pixels when its size matches.
+  /// Do not access or reuse those pixels until PollCapture completes this request.
+  /// A changed capture size allocates an independent pixel array.
+  public func RequestCapture(reusable WindowCapture?) WindowCaptureRequestStatus {
     requireUiThread("Window.RequestCapture")
     if !IsOpen { return WindowCaptureRequestStatus.NotReady }
     if embeddedHost != nil { return WindowCaptureRequestStatus.Unsupported }
     guard let target = windowTarget else { return WindowCaptureRequestStatus.NotReady }
     if captureOwner != WindowCaptureOwner.None { return WindowCaptureRequestStatus.Busy }
-    return captureRequestStatus(startCapture(target, WindowCaptureOwner.Public))
+    reusableCapture = reusable
+    let status = captureRequestStatus(startCapture(target, WindowCaptureOwner.Public))
+    if status != WindowCaptureRequestStatus.Accepted {
+      reusableCapture = nil
+    }
+    return status
   }
 
   private func startCapture(target WindowRenderTarget, owner WindowCaptureOwner) WindowReadbackRequestStatus {
     if target.PollCapture() == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
     flushForeground()
-    let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi)
+    let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi, reusableCapture?.Pixels)
     capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
     if status == WindowReadbackRequestStatus.Accepted || capturePending {
       captureOwner = owner
@@ -653,6 +669,7 @@ public partial class Window {
     if !captureFailed { return }
     captureFailed = false
     captureOwner = WindowCaptureOwner.None
+    reusableCapture = nil
     throw InvalidOperationException("Goo capture readback failed")
   }
 
@@ -664,18 +681,21 @@ public partial class Window {
     takeCaptureFailure()
     guard let target = windowTarget else {
       captureOwner = WindowCaptureOwner.None
+      reusableCapture = nil
       return nil
     }
     let status = target.PollCapture()
     if status == WindowReadbackPollStatus.NotReady { return nil }
     captureOwner = WindowCaptureOwner.None
+    let reusable = reusableCapture
+    reusableCapture = nil
     if status == WindowReadbackPollStatus.Failed {
       throw InvalidOperationException("Goo capture readback failed")
     }
     guard let result = target.TakeCaptureResult() else {
       throw InvalidOperationException("Goo capture result was unavailable")
     }
-    return WindowCapture(result)
+    return WindowCapture(result, reusable)
   }
 
   private func captureRequestStatus(value WindowReadbackRequestStatus)

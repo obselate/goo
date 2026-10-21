@@ -15,6 +15,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
   private var cpuCopyStartTicks int64
   private var cpuCopyEndTicks int64
   private var disposed bool
+  private var reusablePixels([]uint8)?
 
   internal prop State VulkanReadbackState{ get -> state }
 
@@ -73,9 +74,14 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       region = VulkanReadbackPlan.Full(target.Extent).Region
     }
 
-  internal func Request(frame SceneFrame, clearColor VkClearColorValue,
-    requestedRegion VulkanReadbackRegion, textScaleX float32,
-    textScaleY float32) VkResult{
+  internal func Request(
+    frame SceneFrame,
+    clearColor VkClearColorValue,
+    requestedRegion VulkanReadbackRegion,
+    textScaleX float32,
+    textScaleY float32,
+    destination([]uint8)? = nil
+  ) VkResult {
       EnsureOpen()
       if frame == nil {
         throw ArgumentNullException("frame")
@@ -103,6 +109,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
           region = requestedRegion
           submissionSerial = target.PendingSubmissionSerial
           result = nil
+          reusablePixels = destination
           state = VulkanReadbackState.Pending
         } else {
           state = VulkanReadbackState.Failed
@@ -142,9 +149,16 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
         }
       return completion
     }
-    let bytes = [int32(target.ReadbackByteSize)]uint8
+    let reuse = reusablePixels
+    let length = int32(target.ReadbackByteSize)
+    let bytes = if reuse != nil && reuse.Length == length {
+      reuse
+    } else {
+      [length]uint8
+    }
     cpuCopyStartTicks = Stopwatch.GetTimestamp()
     Marshal.Copy(nint(target.ReadbackPointer), bytes, 0, bytes.Length)
+    reusablePixels = nil
     cpuCopyEndTicks = Stopwatch.GetTimestamp()
     result = VulkanReadbackResult(
       bytes,
@@ -191,6 +205,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
       }
     state = VulkanReadbackState.Idle
     result = nil
+    reusablePixels = nil
     submissionSerial = 0uL
     cpuCopyStartTicks = 0L
     cpuCopyEndTicks = 0L
@@ -204,6 +219,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
     sharedLease.MarkDeviceLost()
     state = VulkanReadbackState.Abandoned
     result = nil
+    reusablePixels = nil
     cpuCopyStartTicks = 0L
     cpuCopyEndTicks = 0L
     target.AbandonAfterDeviceLoss()
@@ -239,6 +255,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
     sharedLease.Release()
     state = VulkanReadbackState.Abandoned
     result = nil
+    reusablePixels = nil
     cpuCopyStartTicks = 0L
     cpuCopyEndTicks = 0L
   }
@@ -259,6 +276,7 @@ internal unsafe sealed class VulkanAsyncReadback : IDisposable {
     sharedLease.Release()
     state = VulkanReadbackState.Abandoned
     result = nil
+    reusablePixels = nil
     cpuCopyStartTicks = 0L
     cpuCopyEndTicks = 0L
   }

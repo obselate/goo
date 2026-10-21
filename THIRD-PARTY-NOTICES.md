@@ -184,6 +184,15 @@ ENHANCEMENTS, OR MODIFICATIONS.
 Hexa.NET.SDL3 distributes SDL native binaries, but its package license covers
 the MIT-licensed wrapper. Goo therefore reproduces SDL's zlib notice directly.
 
+Goo rebuilds the Linux x64 shared and static SDL 3.4.0 payloads from
+the checksum-pinned source in Ubuntu 18.04. In addition to Goo's existing
+Linux patches, `event-wakeup-race.patch` arms the native wake before the final
+event-queue check. `wayland-wakeup-pipe.patch` replaces the Wayland compositor
+sync wake with a local nonblocking pipe. Only Linux payloads contain these
+changes. The pinned Windows x64 and macOS arm64 binaries are unchanged. Build
+inputs and patch provenance are in `.github/scripts/build-sdl-linux-x64.sh`
+and `.github/patches/sdl/`.
+
 ### SDL zlib license
 
 Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>

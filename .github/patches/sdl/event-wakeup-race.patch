@@ -1,0 +1,35 @@
+--- a/src/events/SDL_events.c
++++ b/src/events/SDL_events.c
+@@ -1603,13 +1603,16 @@
+            d) Signals received in WaitEventTimeout() are turned into SDL events
+         */
+         SDL_PumpEventsInternal(true);
++        SDL_SetAtomicPointer(&_this->wakeup_window, wakeup_window);
+ 
+         status = SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST);
+         if (status < 0) {
++            SDL_SetAtomicPointer(&_this->wakeup_window, NULL);
+             // Got an error: return
+             break;
+         }
+         if (status > 0) {
++            SDL_SetAtomicPointer(&_this->wakeup_window, NULL);
+             // There is an event, we can return.
+             return 1;
+         }
+@@ -1617,6 +1620,7 @@
+         if (timeoutNS > 0) {
+             Sint64 elapsed = SDL_GetTicksNS() - start;
+             if (elapsed >= timeoutNS) {
++                SDL_SetAtomicPointer(&_this->wakeup_window, NULL);
+                 return 0;
+             }
+             loop_timeoutNS = (timeoutNS - elapsed);
+@@ -1629,7 +1633,6 @@
+                 loop_timeoutNS = poll_intervalNS;
+             }
+         }
+-        SDL_SetAtomicPointer(&_this->wakeup_window, wakeup_window);
+         status = _this->WaitEventTimeout(_this, loop_timeoutNS);
+         SDL_SetAtomicPointer(&_this->wakeup_window, NULL);
+         if (status == 0 && poll_intervalNS != SDL_MAX_SINT64 && loop_timeoutNS == poll_intervalNS) {

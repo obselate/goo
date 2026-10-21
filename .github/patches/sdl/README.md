@@ -4,6 +4,20 @@
 checksum-pinned SDL source before building the Linux runtime. It also compiles
 and runs `tests/NativeWindow/test_sdl_wayland.py` against the patched handlers.
 
+`event-wakeup-race.patch` arms `wakeup_window` before the final event-queue
+check and clears it on every early return. This prevents a posted event from
+missing the native wake between the empty queue check and the idle wait.
+`test_sdl_wakeup.py` exercises that interleaving against the actual SDL function.
+Only the Linux x64 shared and static payloads carry this patch. SDL remains
+3.4.0. The pinned Windows x64 and macOS arm64 payloads are unchanged.
+
+`wayland-wakeup-pipe.patch` replaces the compositor sync roundtrip with a
+nonblocking, close-on-exec local pipe. Both display-read and blocked-flush
+waits include the pipe and cancel the prepared Wayland read on a local wake.
+`test_sdl_wakeup_pipe.py` checks the read/cancel handshake, timeout, draining,
+simultaneous display and local readiness, and blocked-flush wake paths with
+both `ppoll` and `poll`.
+
 `wayland-no-pointer-cursor.patch` backports the SDL Wayland seat guard from
 [upstream commit 79b40ad](https://github.com/libsdl-org/SDL/commit/79b40ad3975431cbab09f29ad90b5aef469131d8).
 SDL 3.4.0 otherwise dereferences a null `wl_pointer` while initializing its
