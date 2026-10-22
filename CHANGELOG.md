@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.7.51 - 2026-10-22
+
+- Keep secondary Wayland window startup responsive while Vulkan swapchains are prepared.
+- Refresh scroll rectangles set by metrics listeners before painting the current frame, so synchronized scroll viewports have no one-frame visual delay.
+
 ## 0.7.50 - 2026-10-22
 
 - Bound text document undo history to the newest 1,000 edit groups while preserving typing groups and redo.
