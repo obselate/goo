@@ -169,6 +169,7 @@ public sealed class FixtureContractTests
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutTransitionGlidesComputedPosition));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LayoutTransitionRetargetsWithVelocity));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.LongParagraphWrapResolvesScriptsOnce));
+        yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.WrappedMeasurementsMatchShapedLineWidths));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.IdenticalTextLayoutsSurviveSiblingRetirement));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.HiddenCustomLayoutsWaitForVisibleGeometry));
         yield return Contract<LayoutFixtures>(nameof(LayoutFixtures.HiddenScrollLayoutsClearGeometry));

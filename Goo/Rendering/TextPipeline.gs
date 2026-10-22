@@ -442,10 +442,10 @@ internal class TextFlow {
         return shape.Width
       }
 
-    internal func MeasureBase(paragraph TextParagraphAnalysis, start int32, end int32) float32 {
-      using let shape = TextLineShaper.Base(paragraph, start, end)
-      return shape.Width
-    }
+    internal func MeasureBase(paragraph TextParagraphAnalysis, start int32, end int32) float32 ->
+      TextShaping.MeasureLineUncached(paragraph.Text, start, end - start, paragraph.FontFamily,
+        paragraph.FontSize, int32(paragraph.FontWeight), paragraph.Italic, paragraph.LetterSpacing,
+        int32(paragraph.Direction), paragraph.Language, paragraph.Resolution)
   }
 }
 
