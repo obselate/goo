@@ -4,6 +4,7 @@ struct HbGpuTextInstance
     vec4 glyphBounds;
     uvec4 glyphInput;
     vec4 foreground;
+    vec2 runOrigin;
 };
 
 layout(set = 2, binding = 0, std430) readonly buffer HbGpuTextInstanceBuffer
@@ -58,6 +59,11 @@ void main()
             -1.0 - 2.0 * frameConstants.origin.y / frameConstants.viewport.y,
             0.0,
             1.0)) * instance.transform;
+    if (instance.transform[0].y == 0.0 && instance.transform[1].x == 0.0)
+    {
+        vec2 origin = instance.runOrigin * frameConstants.viewport.zw - frameConstants.origin.xy;
+        transform[3].xy += 2.0 * (round(origin) - origin) / frameConstants.viewport.xy;
+    }
     vec2 position = mix(
         instance.glyphBounds.xy,
         instance.glyphBounds.zw,

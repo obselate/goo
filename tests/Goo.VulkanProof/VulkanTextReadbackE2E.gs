@@ -164,6 +164,24 @@ internal unsafe sealed class VulkanTextReadbackFixture : IDisposable {
       uint32(encoding.Bytes.Length / 8), 0xFFFFFFFFu, 2u, 0u, 0.0F)
     target.EndChunk()
   }
+
+  internal func AlignmentFrame(x float32, y float32, identity uint64) SceneFrame {
+    let target = SceneFrame(1)
+    target.ResetForReuse()
+    target.BeginChunk(identity, 1uL, ConservativeBounds{X: 0, Y: 0, Width: 64, Height: 64}, true)
+    let extents = encoding.Extents
+    for index in 0 ... 2 {
+      let transform = TransformRecord{
+        A: 0.018F, D: -0.018F, TX: x + float32(index) * 14.3F, TY: y, ParentIndex: -1,
+      }
+      AppendVulkanProofGlyph(target, identity + uint64(index), atlasId, atlasGeneration,
+        transform, float32(extents.XBearing), float32(extents.YBearing + extents.Height),
+        float32(extents.XBearing + extents.Width), float32(extents.YBearing), 0u,
+        uint32(encoding.Bytes.Length / 8), 0xFFFFFFFFu, 2u, 0u, 0.0F, x, y)
+    }
+    target.EndChunk()
+    return target
+  }
 }
 
 internal unsafe func QueueVulkanTextAtlasUpload(atlas VulkanTextAtlas, bytes []uint8) {
@@ -332,6 +350,25 @@ internal unsafe func RunProductionTextReadback(effects bool) {
         if !VerifyVulkanTextReadback(readback, result.Width, result.Height, analyzed) {
           throw InvalidOperationException("Vulkan text readback ink or background pixels are invalid")
         }
+      }
+    }
+    if !effects {
+      for dpi in []float32{1.0F, 1.5F} {
+        let x = if dpi == 1.0F { 8.2F } else { 8.4F }
+        let y = x + 22.0F
+        let identity = if dpi == 1.0F { 11000uL } else { 12000uL }
+        let shifted = activeFixture.AlignmentFrame(x, y, identity)
+        let aligned = activeFixture.AlignmentFrame(MathF.Round(x * dpi) / dpi,
+          MathF.Round(y * dpi) / dpi, identity + 10uL)
+        WarmVulkanProductionReadback(activeCapture, shifted, clearColor, dpi, dpi)
+        let shiftedPixels = RequestVulkanProductionReadback(activeCapture, shifted, clearColor, dpi, dpi)
+        let alignedPixels = RequestVulkanProductionReadback(activeCapture, aligned, clearColor, dpi, dpi)
+        for index in 0 ... shiftedPixels.Pixels.Length {
+          if Math.Abs(int32(shiftedPixels.Pixels[index]) - int32(alignedPixels.Pixels[index])) > 1 {
+            throw InvalidOperationException("Text run origin is not device aligned or fractional advances changed")
+          }
+        }
+        Console.WriteLine("Text run alignment: dpi=${dpi} fractionalAdvance=14.3 passed")
       }
     }
   } finally {

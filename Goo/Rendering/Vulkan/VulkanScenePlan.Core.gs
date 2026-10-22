@@ -727,6 +727,8 @@ internal partial class SceneFrame {
         || Single.IsInfinity(value.foreground_z)
         || Single.IsNaN(value.foreground_w)
         || Single.IsInfinity(value.foreground_w)
+        || Single.IsNaN(value.runOrigin_x) || Single.IsInfinity(value.runOrigin_x)
+        || Single.IsNaN(value.runOrigin_y) || Single.IsInfinity(value.runOrigin_y)
         || value.foreground_w < 0.0F || value.foreground_w > 1.0F
         || Single.IsNaN(BitConverter.Int32BitsToSingle(int32(value.glyphInput_w)))
         || Single.IsInfinity(BitConverter.Int32BitsToSingle(int32(value.glyphInput_w)))
