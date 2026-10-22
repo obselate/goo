@@ -98,8 +98,8 @@ internal class WindowActivationSmoke {
             WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0)
             Require(child.IsVisible && !target.StartupPending
                 && target.CurrentPresentMode == expectedMode,
-              $"Pending startup: visible={child.IsVisible} pending={target.StartupPending}"
-                + $" expected_mode={expectedMode} actual_mode={target.CurrentPresentMode}")
+              "Pending startup: visible=${child.IsVisible} pending=${target.StartupPending}"
+                + " expected_mode=$expectedMode actual_mode=${target.CurrentPresentMode}")
           }
         } finally {
           release.Set()
