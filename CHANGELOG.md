@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Add Window.UiScale for scaled layout, device-resolution rendering, input and native coordinate mapping, with owner inheritance and scaled size constraints.
+## 0.7.46 - 2026-10-22
+
+- Improve text crispness by aligning run origins to device pixels without rounding glyph advances.
 
 ## 0.7.45 - 2026-10-22
 
