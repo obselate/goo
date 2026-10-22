@@ -163,8 +163,8 @@ internal class FocusManager {
     if n.AutoFocus && n.Focusable {
       return n
     }
-    for child in n.Children {
-      if let found = findAutoFocus(child) {
+    for i in 0 ... n.Children.Count {
+      if let found = findAutoFocus(n.Children[i]) {
         return found
       }
     }

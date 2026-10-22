@@ -238,7 +238,8 @@ internal partial class ScrollbarParts {
                     layoutTree(part)
                 }
             }
-            for child in node.Children {
+            for i in 0 ... node.Children.Count {
+                let child = node.Children[i]
                 if !child.IsPortal {
                     layoutTree(child)
                 }

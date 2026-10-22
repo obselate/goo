@@ -1087,7 +1087,8 @@ internal func childrenAlreadyMatch(yg Facebook.Yoga.Node, n Node) bool {
     return false
   }
   var index int32
-  for child in n.Children {
+  for childIndex in 0 ... n.Children.Count {
+    let child = n.Children[childIndex]
     if !child.IsPortal {
       guard let childYg = child.Yoga else {
         return false
