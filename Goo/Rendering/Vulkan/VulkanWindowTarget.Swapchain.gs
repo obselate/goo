@@ -6,9 +6,14 @@ internal unsafe partial class VulkanWindowTarget {
   private var nextGenerationId uint64 = 1uL
   private var hidden bool
   private var hideReleasePending bool
-  private var deferSurfaceSelection bool
-  private var surfaceSelection Task[VulkanWindowTargetSelection?]?
-  private var surfaceSelectionVsync bool
+  private var startupState VulkanWindowStartupState
+  private var startupTask Task[VulkanSwapchainGeneration?]?
+  private var startupWidth int32
+  private var startupHeight int32
+  private var startupVsync bool
+  internal prop StartupPending bool { get -> startupState == VulkanWindowStartupState.Pending
+    || startupState == VulkanWindowStartupState.Ready
+    || (startupState == VulkanWindowStartupState.Closing && startupTask != nil) }
 
   public func SetHidden(value bool) {
     if disposed || hidden == value { return }
@@ -52,6 +57,9 @@ internal unsafe partial class VulkanWindowTarget {
       recreatePending = true
       return true
     }
+    if startupState == VulkanWindowStartupState.Ready {
+      startupState = VulkanWindowStartupState.Pending
+    }
     if !WaitForGpu() {
       return false
     }
@@ -73,8 +81,8 @@ internal unsafe partial class VulkanWindowTarget {
       }
       surfaceLost = false
     }
-    var selection VulkanWindowTargetSelection = VulkanWindowTargetSelection{}
-    if !TryQuerySelection(out selection) {
+    var next VulkanSwapchainGeneration?
+    if !TryCreateGeneration(width, height, out next) {
       if startup { return false }
       if !surfaceLost {
         return false
@@ -87,53 +95,23 @@ internal unsafe partial class VulkanWindowTarget {
         return false
       }
       surfaceLost = false
-      if !TryQuerySelection(out selection) {
+      if !TryCreateGeneration(width, height, out next) {
         return false
       }
     }
+    guard let created = next else { return false }
     let oldFormat = if let old = generation { old.Format } else { VkFormat(-1) }
-    let generationId = nextGenerationId
-    if nextGenerationId == uint64.MaxValue {
-      throw OverflowException("Vulkan swapchain generation overflow")
-    }
-    nextGenerationId = nextGenerationId + 1uL
+    nextGenerationId++
     let old = generation
-    var oldSwapchain VkSwapchainKHR = 0uL
-    if let current = old {
-      oldSwapchain = current.Handle
-    }
-    if primitiveRenderer != nil && oldFormat != selection.Format.format {
+    if primitiveRenderer != nil && oldFormat != created.Format {
       primitiveRenderer!!.Dispose()
       primitiveRenderer = nil
     }
-    if layerPool != nil && oldFormat != selection.Format.format {
+    if layerPool != nil && oldFormat != created.Format {
       layerPool!!.Dispose()
       layerPool = nil
     }
-    var desiredExtent = VkExtent2D{}
-    desiredExtent.width = uint32(width)
-    desiredExtent.height = uint32(height)
-    let swapStart = DiagnosticTimestamp()
-    let next = VulkanSwapchainGeneration(
-      device,
-      dispatch,
-      surface,
-      selection.Capabilities,
-      selection.Format,
-      selection.PresentMode,
-      desiredExtent,
-      selection.CompositeAlpha,
-      oldSwapchain,
-      generationId,
-      swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
-      windowObjectAccounting,
-      host.PreferRequestedFramebufferExtent)
-    generation = next
-    if !startupFirstSwapchainRecorded {
-      startupFirstSwapchainRecorded = true
-      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainCreate,
-        VulkanDiagnosticCategories.Window, swapStart)
-    }
+    generation = created
     if let previous = old {
       InvalidateLastPresentedImageState()
       retiredSwapchains.Enqueue(previous, presentationRetirement)
@@ -149,8 +127,8 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
     if old == nil { CaptureDiagnosticSwapchains() }
-    next.ResetSceneVersions()
-    EnsureClipMaskAtlas(next.Extent.width, next.Extent.height)
+    created.ResetSceneVersions()
+    EnsureClipMaskAtlas(created.Extent.width, created.Extent.height)
     if primitiveRenderer == nil {
       guard let activeRuntime = runtime else {
         throw InvalidOperationException("Vulkan shared runtime is unavailable")
@@ -158,7 +136,7 @@ internal unsafe partial class VulkanWindowTarget {
       primitiveRenderer = VulkanPrimitiveRenderer(
         device,
         dispatch,
-        selection.Format.format,
+        created.Format,
         64,
         imageResources,
         activeRuntime.Generation,
@@ -183,7 +161,7 @@ internal unsafe partial class VulkanWindowTarget {
         dispatch,
         allocator,
         resources.DescriptorSetLayout,
-        selection.Format.format,
+        created.Format,
         windowObjectAccounting,
         policy.OffscreenLayerInitialCapacity,
         policy.OffscreenLayerHardBytes,
@@ -200,8 +178,8 @@ internal unsafe partial class VulkanWindowTarget {
       clipMaskFrameStats = primitiveRenderer!!.ClipMaskFrameStats
       clipMaskFrameTotals = primitiveRenderer!!.ClipMaskFrameTotals
     }
-    framebufferWidth = int32(next.Extent.width)
-    framebufferHeight = int32(next.Extent.height)
+    framebufferWidth = int32(created.Extent.width)
+    framebufferHeight = int32(created.Extent.height)
     requestedWidth = width
     requestedHeight = height
     recreatePending = false
@@ -382,37 +360,99 @@ internal unsafe partial class VulkanWindowTarget {
     return true
   }
 
-  private func TryQuerySelection(out selection VulkanWindowTargetSelection) bool {
-    selection = VulkanWindowTargetSelection{}
-    var queried VulkanWindowTargetSelection?
-    if deferSurfaceSelection {
-      if surfaceSelection == nil {
-        surfaceSelectionVsync = vsync
-        let requestedVsync = vsync
-        let transparent = host.Transparent
-        let allowInherited = host.AllowInheritedCompositeAlpha
-        surfaceSelection = Task.Run[VulkanWindowTargetSelection?](
-          () -> QuerySelection(requestedVsync, transparent, allowInherited))
-        frameFailureRetryable = true
-        return false
-      }
-      let pending = surfaceSelection!!
-      if !pending.IsCompleted {
-        frameFailureRetryable = true
-        return false
-      }
-      surfaceSelection = nil
-      queried = pending.GetAwaiter().GetResult()
-      if surfaceSelectionVsync != vsync { return TryQuerySelection(out selection) }
-      deferSurfaceSelection = false
-    } else {
-      queried = QuerySelection(vsync, host.Transparent, host.AllowInheritedCompositeAlpha)
+  private func TryCreateGeneration(width int32, height int32,
+    out next VulkanSwapchainGeneration?) bool {
+    next = nil
+    if nextGenerationId == uint64.MaxValue {
+      throw OverflowException("Vulkan swapchain generation overflow")
     }
-    guard let result = queried else {
+    if startupState == VulkanWindowStartupState.Pending {
+      var stale VulkanSwapchainGeneration?
+      if let pending = startupTask {
+        if !pending.IsCompleted {
+          frameFailureRetryable = true
+          return false
+        }
+        startupTask = nil
+        try { next = pending.GetAwaiter().GetResult() }
+        catch (error Exception) {
+          startupState = VulkanWindowStartupState.Failed
+          throw error
+        }
+        if startupWidth == width && startupHeight == height && startupVsync == vsync {
+          if next == nil {
+            surfaceLost = true
+            return false
+          }
+          startupState = VulkanWindowStartupState.Ready
+          return true
+        }
+        stale = next
+        next = nil
+      }
+      startupWidth = width
+      startupHeight = height
+      startupVsync = vsync
+      let requestedVsync = vsync
+      let generationId = nextGenerationId
+      let transparent = host.Transparent
+      let allowInherited = host.AllowInheritedCompositeAlpha
+      let preferExtent = host.PreferRequestedFramebufferExtent
+      let oldSwapchain = generation?.Handle ?? 0uL
+      startupTask = Task.Run[VulkanSwapchainGeneration?](() -> {
+        try {
+          if let probe = SecondaryStartupForTest { probe() }
+          return CreateGeneration(width, height, requestedVsync, transparent,
+            allowInherited, preferExtent, generationId, stale?.Handle ?? oldSwapchain)
+        } finally {
+          try { stale?.Dispose() } finally { host.Wake() }
+        }
+      })
+      frameFailureRetryable = true
+      return false
+    }
+    next = CreateGeneration(width, height, vsync, host.Transparent, host.AllowInheritedCompositeAlpha,
+      host.PreferRequestedFramebufferExtent, nextGenerationId, generation?.Handle ?? 0uL)
+    if next == nil {
       surfaceLost = true
       return false
     }
-    selection = result
+    return true
+  }
+
+  private func CreateGeneration(width int32, height int32, requestedVsync bool,
+    transparent bool, allowInherited bool, preferExtent bool,
+    generationId uint64, oldSwapchain VkSwapchainKHR) VulkanSwapchainGeneration? {
+    guard let selection = QuerySelection(requestedVsync, transparent, allowInherited) else { return nil }
+    let swapStart = DiagnosticTimestamp()
+    let next = VulkanSwapchainGeneration(device, dispatch, surface, selection.Capabilities,
+      selection.Format, selection.PresentMode,
+      VkExtent2D{width: uint32(width), height: uint32(height)},
+      selection.CompositeAlpha, oldSwapchain, generationId,
+      swapchainMaintenanceVariant != VulkanSwapchainMaintenanceVariant.None,
+      windowObjectAccounting, preferExtent)
+    if !startupFirstSwapchainRecorded {
+      startupFirstSwapchainRecorded = true
+      RecordDiagnosticTiming(VulkanDiagnosticEventIds.SwapchainCreate,
+        VulkanDiagnosticCategories.Window, swapStart)
+    }
+    return next
+  }
+
+  internal func DrainStartup() bool {
+    guard let pending = startupTask else { return true }
+    if !pending.IsCompleted { return false }
+    startupTask = nil
+    let unused = pending.GetAwaiter().GetResult()
+    if let current = unused {
+      startupTask = Task.Run[VulkanSwapchainGeneration?](() -> {
+        try {
+          current.Dispose()
+          return nil
+        } finally { host.Wake() }
+      })
+      return false
+    }
     return true
   }
 
@@ -599,6 +639,8 @@ internal unsafe partial class VulkanWindowTarget {
     }
 
   shared {
+    internal var SecondaryStartupForTest Action?
+
     internal func SelectCompositeAlpha(
       supported VkCompositeAlphaFlagsKHR,
       transparent bool,

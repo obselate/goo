@@ -290,6 +290,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func RequestActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if deferFirstShow {
+      firstShowRequested = true
+      Wake()
+      return WindowOperationResult.Accepted
+    }
     let flags = SDL.GetWindowFlags(window)
     if (flags & uint64(SDLWindowFlags.Minimized)) != 0uL && !SDL.RestoreWindow(window) {
       return WindowOperationResult.Failed

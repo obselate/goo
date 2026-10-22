@@ -148,10 +148,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func PrepareForDeviceRecovery() {
-    if let pending = surfaceSelection {
-      try { pending.GetAwaiter().GetResult() } catch (cleanup Exception) { }
-      surfaceSelection = nil
-    }
+    startupState = VulkanWindowStartupState.None
     InvalidateLastPresentedImageState()
     frameFailed = false
     recoveryPending = true
