@@ -18,6 +18,7 @@ internal unsafe func RunVulkanProof() int32 {
     return 0
   }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1" {
+    RunProductionTextReadback(false)
     RunProductionTextReadback(true)
     return 0
   }

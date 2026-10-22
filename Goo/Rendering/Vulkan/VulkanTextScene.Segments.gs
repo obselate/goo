@@ -200,6 +200,8 @@ internal unsafe sealed partial class VulkanTextScene {
     && SameTextFloat(left.foreground_y, right.foreground_y)
     && SameTextFloat(left.foreground_z, right.foreground_z)
     && SameTextFloat(left.foreground_w, right.foreground_w)
+    && SameTextFloat(left.runOrigin_x, right.runOrigin_x)
+    && SameTextFloat(left.runOrigin_y, right.runOrigin_y)
 
   private func SameTextFloat(left float32, right float32) bool -> BitConverter.SingleToInt32Bits(left)
   == BitConverter.SingleToInt32Bits(right)
@@ -320,10 +322,10 @@ internal unsafe sealed partial class VulkanTextScene {
           return false
         }
       result = ConservativeBounds{
-        X: left,
-        Y: top,
-        Width: right - left,
-        Height: bottom - top,
+        X: left - 1.0F,
+        Y: top - 1.0F,
+        Width: right - left + 2.0F,
+        Height: bottom - top + 2.0F,
       }
       return true
     }

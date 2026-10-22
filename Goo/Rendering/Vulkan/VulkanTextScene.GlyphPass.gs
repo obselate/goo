@@ -112,6 +112,9 @@ internal unsafe sealed partial class VulkanTextScene {
       var runIndex int32 = 0
       while runIndex < shape.Runs.Count {
         let run = shape.Runs[runIndex]
+        let runX = lineX + MathF.Min(run.VisualStart, run.VisualEnd)
+        let runOriginX = parentTransform.A * runX + parentTransform.C * baseline + parentTransform.TX
+        let runOriginY = parentTransform.B * runX + parentTransform.D * baseline + parentTransform.TY
         var glyphIndex int32 = 0
         while glyphIndex < run.Glyphs.Length {
           let glyphId = run.Glyphs[glyphIndex]
@@ -269,6 +272,8 @@ internal unsafe sealed partial class VulkanTextScene {
                 foreground_y: foregroundG,
                 foreground_z: foregroundB,
                 foreground_w: foregroundA,
+                runOrigin_x: runOriginX,
+                runOrigin_y: runOriginY,
               }
               workspace.GlyphResources[recordIndex] = glyphRunId
               workspace.GlyphAtlasTexelOffsets[recordIndex] =

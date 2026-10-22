@@ -69,8 +69,8 @@ internal func AwaitVulkanProductionReadback(
 internal func RequestVulkanProductionReadback(
   capture VulkanProductionReadbackCapture,
   frame SceneFrame,
-  clearColor VkClearColorValue) VulkanReadbackResult{
-    let submit = capture.Request(frame, clearColor)
+  clearColor VkClearColorValue, scaleX float32 = 1.0F, scaleY float32 = 1.0F) VulkanReadbackResult{
+    let submit = capture.Request(frame, clearColor, scaleX, scaleY)
     if submit != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan production readback submission failed: " + submit.ToString())
     }
@@ -84,8 +84,8 @@ internal func RequestVulkanProductionReadback(
 internal func WarmVulkanProductionReadback(
   capture VulkanProductionReadbackCapture,
   frame SceneFrame,
-  clearColor VkClearColorValue) {
-    let submit = capture.Request(frame, clearColor)
+  clearColor VkClearColorValue, scaleX float32 = 1.0F, scaleY float32 = 1.0F) {
+    let submit = capture.Request(frame, clearColor, scaleX, scaleY)
     if submit != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan production readback warmup submission failed: "
         +submit.ToString())
@@ -117,7 +117,7 @@ internal func AppendVulkanProofGlyph(
   color uint32,
   renderMode uint32,
   effectMode uint32,
-  effectRadius float32) {
+  effectRadius float32, runOriginX float32 = 0.0F, runOriginY float32 = 0.0F) {
     let firstX = transform.A * minX + transform.C * minY + transform.TX
     let secondX = transform.A * maxX + transform.C * maxY + transform.TX
     let firstY = transform.B * minX + transform.D * minY + transform.TY
@@ -162,6 +162,8 @@ internal func AppendVulkanProofGlyph(
       foreground_y: pipelineKind == 0u ? green * alpha : green,
       foreground_z: pipelineKind == 0u ? blue * alpha : blue,
       foreground_w: alpha,
+      runOrigin_x: runOriginX,
+      runOrigin_y: runOriginY,
     }
     segment.RecordCount = 1
     segment.Runs[0] = VulkanTextSegmentRun{

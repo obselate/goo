@@ -201,7 +201,7 @@ internal unsafe sealed class VulkanTextFrameSlot : IDisposable {
 }
 
 internal unsafe sealed class VulkanTextFrameData : IDisposable {
-  private const RecordBytes VkDeviceSize = 112uL
+  private const RecordBytes VkDeviceSize = 128uL
   private const TopologyHashOffset uint64 = 1469598103934665603uL
   private const TopologyHashPrime uint64 = 1099511628211uL
   private let device VkDevice

@@ -2,7 +2,7 @@ package Goo
 
 import System.Runtime.InteropServices
 
-@StructLayout(LayoutKind.Explicit, Size: 112)
+@StructLayout(LayoutKind.Explicit, Size: 128)
 internal unsafe struct HbGpuTextInstanceRecord {
   @FieldOffset(0) var transform_m00 float32
   @FieldOffset(4) var transform_m01 float32
@@ -32,6 +32,8 @@ internal unsafe struct HbGpuTextInstanceRecord {
   @FieldOffset(100) var foreground_y float32
   @FieldOffset(104) var foreground_z float32
   @FieldOffset(108) var foreground_w float32
+  @FieldOffset(112) var runOrigin_x float32
+  @FieldOffset(116) var runOrigin_y float32
 }
 
 @StructLayout(LayoutKind.Explicit, Size: 32)

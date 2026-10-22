@@ -137,7 +137,7 @@
   "textInstanceRecord": {
     "set": 2,
     "binding": 0,
-    "stride": 112,
+    "stride": 128,
     "stages": [
       "vertex"
     ],
@@ -161,13 +161,18 @@
         "name": "foreground",
         "offset": 96,
         "type": "vec4"
+      },
+      {
+        "name": "runOrigin",
+        "offset": 112,
+        "type": "vec2"
       }
     ],
     "hostPacking": {
       "path": "HbGpuTextInstanceRecord.Generated.gs",
       "typeName": "HbGpuTextInstanceRecord",
-      "sha256": "9dc80707ea63a1493b43639f76118ff2eb61cd1035a15affc3cbdc4c212805ed",
-      "bytes": 1405
+      "sha256": "a5ef6af50e518632f5573059fc161963178fcddb11262f99a65f23504450d67a",
+      "bytes": 1493
     }
   },
   "assemblies": [
@@ -187,7 +192,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-          "sha256": "128842ac415dc642e1c7a31804bf59254743df55725c34d6766890002624bf08"
+          "sha256": "ff65a5e2d7385242e81656a2cba80fbd37c16bec59219a617665825ef86bc775"
         }
       ]
     },
@@ -416,9 +421,9 @@
       "output": "hb_gpu.vert.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_vertex",
-      "sourceSha256": "5d27624080ebf09756166ce47eb5933dbc5f768865f1a42dc209db2c58f7e0c9",
-      "outputSha256": "cac663c227014e75d75c9f939a9bc0bedb4388d9c55550e1e68765cf5433a069",
-      "outputBytes": 4128,
+      "sourceSha256": "6495b45d10545ad85a38ff3f1e7e134bbd5c0a1c238dd585abfa1590e8beb768",
+      "outputSha256": "9e2298fcc2cc6e5244f11be4220d6e9fe30600655c6c45b1ab2a140b3c8c25ee",
+      "outputBytes": 4912,
       "capabilities": [
         1
       ]
