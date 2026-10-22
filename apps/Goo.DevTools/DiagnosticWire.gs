@@ -1492,15 +1492,11 @@ class DiagnosticEndpointDiscovery {
                 Add(result, Path.Combine(runtime, "goo"))
                 Add(result, Path.Combine(runtime, "goo-devtools"))
             }
-            if OperatingSystem.IsWindows() {
-                let local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-                if local != "" {
-                    Add(result, Path.Combine(local, "Goo"))
-                    Add(result, Path.Combine(local, "Goo", "DevTools"))
-                }
+            let local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+            if local != "" {
+                Add(result, Path.Combine(local, "Goo"))
+                Add(result, Path.Combine(local, "Goo", "DevTools"))
             }
-            Add(result, Path.Combine(Path.GetTempPath(), "goo-devtools"))
-            Add(result, Path.Combine(Path.GetTempPath(), "goo"))
             return result
         }
 
