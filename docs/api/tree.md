@@ -1235,7 +1235,7 @@ Places one item of a Virtual element.
 
 ### `Content`
 
-Gets the content to mount. Nil keeps the content that is mounted for this key.
+Gets the content to mount. Nil keeps the mounted or detached content retained for this key.
 
 ### `Height`
 
@@ -1362,6 +1362,14 @@ Gets a mounted item.
 - `index`: The zero-based index, in the order of the last committed Realize.
 
 Returns: The key and the last layout size of the item.
+
+### `HasRetainedItem(string)`
+
+Reports whether Goo retains detached content for this key from the same source and context. Retention is bounded by one viewport and can end at any realization.
+
+- `key`: The stable item key.
+
+Returns: True when Content can be omitted to reattach the retained item.
 
 ### `ChildCount`
 
