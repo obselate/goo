@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.7.52 - 2026-10-22
+
+- Record virtual row realization separately from input-tree updates and add a reusable headless DataGrid CPU benchmark.
+- Measure wrapped line widths without allocating discarded glyph layouts, reducing wrapped thumb-scroll allocation by 60 percent.
+
 ## 0.7.51 - 2026-10-22
 
 - Keep secondary Wayland window startup responsive while Vulkan swapchains are prepared.
