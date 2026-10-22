@@ -29,7 +29,7 @@ public partial class Window {
 internal enum FrameProfileStage {
   Frame; Events; Input; Tree; Motion; Reconcile; Build; Diff; StyleResolve;
   Transitions; Layout; InputTree;
-  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Count
+  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; Count
 }
 
 internal data struct FrameProfilePoint {
@@ -270,6 +270,7 @@ internal class FrameProfiler {
     case FrameProfileStage.CanvasFlush: "canvas_flush"
     case FrameProfileStage.TargetFlush: "target_flush"
     case FrameProfileStage.Present: "present"
+    case FrameProfileStage.Virtualization: "virtualization"
     default: ""
   }
 

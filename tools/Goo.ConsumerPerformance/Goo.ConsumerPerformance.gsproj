@@ -5,6 +5,7 @@
     <RootNamespace>GooConsumerPerformance</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="GridScroll/**/*.gs" />
     <PackageReference Include="Goo" Version="$(GooReleaseVersion)" />
     <Content Include="Assets/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />

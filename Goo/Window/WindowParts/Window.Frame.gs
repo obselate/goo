@@ -254,7 +254,9 @@ public partial class Window {
       }
       var virtualPass int32
       while virtualPass < 3 {
+        let virtualProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         let virtualEffects = refreshVirtualization(n)
+        if profiling { profiler.Record(FrameProfileStage.Virtualization, virtualProfile) }
         if virtualEffects == ReconcileEffects.None { break }
         effects = combineEffects(effects, virtualEffects)
         if hasEffect(virtualEffects, ReconcileEffects.Structure) {
@@ -304,8 +306,9 @@ public partial class Window {
             accessibilityScroll = true
             metricsChanged = true
             layout.RefreshRects(n, portalRoot)
-            let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
+            let virtualProfile = profiling ? profiler.Start() : FrameProfilePoint{}
             let virtualEffects = refreshVirtualization(n)
+            if profiling { profiler.Record(FrameProfileStage.Virtualization, virtualProfile) }
             if virtualEffects != ReconcileEffects.None {
               effects = combineEffects(effects, virtualEffects)
               if hasEffect(virtualEffects, ReconcileEffects.Structure) {
@@ -319,12 +322,15 @@ public partial class Window {
               }
               layoutChanged = true
               accessibilityLayout = true
+              let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
               input.AfterTreeUpdated(n, resolver, true)
+              if profiling { profiler.Record(FrameProfileStage.InputTree, inputTreeProfile) }
               effects = combineEffects(effects, resolver.FlushEffects())
               if layout.NeedsLayout(n, portalRoot, viewW, viewH) {
                 calculateLayout(n, viewW, viewH)
               }
             }
+            let inputTreeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
             if input.RefreshHover(n, resolver) {
               changed = true
               calculateLayout(n, viewW, viewH)

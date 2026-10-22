@@ -1,0 +1,5 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Frames.gs" Link="GridScrollFrames.gs" />
+  </ItemGroup>
+</Project>
