@@ -31,6 +31,16 @@ internal class WindowActivationSmoke {
 
     private func VerifyPendingStartup(owner Window) {
       if !SdlHost.IsWayland() { return }
+      let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
+      let ownerDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+      while ownerTarget.CurrentPresentMode == VkPresentModeKHR(-1)
+        && Stopwatch.GetTimestamp() < ownerDeadline {
+        SdlRuntime.PumpEvents(Int32.MaxValue)
+        owner.PumpScheduled(0.0)
+        Thread.Sleep(1)
+      }
+      let expectedMode = ownerTarget.CurrentPresentMode
+      Require(expectedMode != VkPresentModeKHR(-1), "Owner swapchain was not restored")
       for closeEarly in []bool{true, false} {
         using let entered = ManualResetEventSlim(false)
         using let release = ManualResetEventSlim(false)
@@ -69,6 +79,7 @@ internal class WindowActivationSmoke {
             let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
             while !VulkanSharedRuntime.WaitForHeldQueueCallForTest(0)
               && Stopwatch.GetTimestamp() < deadline {
+              owner.PumpScheduled(0.0)
               child.PumpScheduled(0.0)
               Thread.Sleep(1)
             }
@@ -76,14 +87,19 @@ internal class WindowActivationSmoke {
               "Secondary first submission did not enter")
             child.VSync = true
             VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
-            while target.StartupPending && Stopwatch.GetTimestamp() < deadline {
+            let readyDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+            while target.StartupPending && Stopwatch.GetTimestamp() < readyDeadline {
+              SdlRuntime.PumpEvents(Int32.MaxValue)
+              owner.PumpScheduled(0.0)
               child.PumpScheduled(0.0)
               Thread.Sleep(1)
             }
+            Require(!target.StartupPending, "Pending secondary startup did not complete")
             WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0)
             Require(child.IsVisible && !target.StartupPending
-                && target.CurrentPresentMode == VkConstants.VK_PRESENT_MODE_FIFO_KHR,
-              "Pending size or VSync change did not reach the first presentation")
+                && target.CurrentPresentMode == expectedMode,
+              $"Pending startup: visible={child.IsVisible} pending={target.StartupPending}"
+                + $" expected_mode={expectedMode} actual_mode={target.CurrentPresentMode}")
           }
         } finally {
           release.Set()
