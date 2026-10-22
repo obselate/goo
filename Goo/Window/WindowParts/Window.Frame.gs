@@ -217,9 +217,9 @@ public partial class Window {
     }
     try {
       effects = combineEffects(effects, drainImageCompletions())
-    } catch (error Exception) {
+    } catch (_ Exception) {
       pendingReconcileEffects = combineEffects(pendingReconcileEffects, effects)
-      throw error
+      rethrow
     }
     pendingReconcileEffects = ReconcileEffects.None
     var accessibilityLayout bool

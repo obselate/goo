@@ -474,9 +474,9 @@ public partial class Window {
         if profiling {
           profiler.EndFrame(frameProfile, rendered, windowTarget?.QueueWorkPending == true || (!allowFrame && frameNeeded))
         }
-      } catch (error Exception) {
+      } catch (_ Exception) {
         if profiling { profiler.Record(FrameProfileStage.Frame, frameProfile, -1) }
-        throw error
+        rethrow
       }
     }
 
