@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.46 - 2026-10-22
+
+- Improve text crispness by aligning run origins to device pixels without rounding glyph advances.
+
 ## 0.7.45 - 2026-10-22
 
 - Fix custom title bar dragging when a drag region sits inside a focusable ancestor.
