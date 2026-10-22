@@ -310,6 +310,36 @@ internal class ElementHandleFixtures {
     return snapshots.Count == 4 && !snapshots[3].IsMounted
   }
 
+  func MetricsScrollFollowerUpdatesRectsInSameFrame() bool {
+    let cell = SynchronizedScrollFixtureCell()
+    let window = Window{ Root: cell, Width: 120, Height: 60 }
+    cell.Leader.MetricsChanged += (value ElementMetrics) -> {
+      if value.IsMounted { cell.Follower.JumpTo(value.ScrollOffset.X, 0) }
+    }
+    try {
+      window.UpdateTree()
+      let initial = cell.LeaderChild.BorderBox.X
+      if !cell.Leader.JumpTo(48, 0) || cell.LeaderChild.BorderBox.X != initial {
+        return false
+      }
+      window.UpdateTree()
+      if cell.FollowerChild.BorderBox.X != cell.LeaderChild.BorderBox.X {
+        return false
+      }
+      cell.Leader.ScrollTo(192, 0)
+      for frame in 0 ... 24 {
+        window.UpdateTree(.016)
+        if cell.Follower.ScrollOffset.X != cell.Leader.ScrollOffset.X
+          || cell.FollowerChild.BorderBox.X != cell.LeaderChild.BorderBox.X {
+          return false
+        }
+      }
+      return cell.Leader.ScrollOffset.X > 190
+    } finally {
+      window.Close()
+    }
+  }
+
   func MetricsPinContract() bool {
     let cell = ElementMetricsFixtureCell{}
     cell.Pin = true
@@ -676,6 +706,24 @@ internal class ElementMetricsPairCell : Cell {
   override func Build() Blob -> Container() {
     Container{ Handle: First, Width: Width, Height: 30 },
     Container{ Handle: Second, Width: 100, Height: 30 },
+  }
+}
+
+internal class SynchronizedScrollFixtureCell : Cell {
+  internal let Leader ElementHandle = ElementHandle()
+  internal let Follower ElementHandle = ElementHandle()
+  internal let LeaderChild ElementHandle = ElementHandle()
+  internal let FollowerChild ElementHandle = ElementHandle()
+
+  override func Build() Blob -> Container() {
+    Container{
+      Handle: Follower, Width: 120, Height: 30, FlexShrink: 0, OverflowX: Overflow.Scroll,
+      Container{ Handle: FollowerChild, Width: 600, Height: 30, FlexShrink: 0 },
+    },
+    Container{
+      Handle: Leader, Width: 120, Height: 30, FlexShrink: 0, OverflowX: Overflow.Scroll,
+      Container{ Handle: LeaderChild, Width: 600, Height: 30, FlexShrink: 0 },
+    },
   }
 }
 

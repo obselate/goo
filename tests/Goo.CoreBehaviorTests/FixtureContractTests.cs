@@ -99,6 +99,7 @@ public sealed class FixtureContractTests
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.MetricsCloseContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.MetricsContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.MetricsPinContract));
+        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.MetricsScrollFollowerUpdatesRectsInSameFrame));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.OwnerScopeFailureContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.PrimitiveMatrixContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.RetiredTreeDoesNotRetainThroughHandle));
