@@ -304,6 +304,36 @@ internal class LayoutFixtures {
     return layout.Lines.Count > 100 && covered == n.Content.Length && resolutions <= 1L
   }
 
+  func WrappedMeasurementsMatchShapedLineWidths() bool {
+    for text in []string{"", "office cafe\u0301", "\u05D0\u05D1\u05D2 abc \u0633\u0644\u0627\u0645", "\u65E5\u672C\u8A9E \uD83D\uDE00 text", "a\uD83D b\uDE00"} {
+      for direction in 0 ... 3 {
+        for spacing in []float32{-2.0F, 0.0F, 1.5F} {
+          let resolver = Resolver{}
+          let n = Reconciler{Res: resolver}.Mount(Text{
+            Content: text, FontSize: 16,
+            Direction: direction == 0 ? Direction.Auto : direction == 1 ? Direction.LeftToRight : Direction.RightToLeft,
+            LetterSpacing: float64(spacing),
+          })
+          let paragraph = TextAnalyses.For(n).First
+          let starts = UnicodeGraphemes.Starts(text)
+          for i in 0 ... starts.Length {
+            for j in i + 1 ... starts.Length + 1 {
+              let end = j < starts.Length ? starts[j] : text.Length
+              using let shape = TextLineShaper.Base(paragraph, starts[i], end)
+              if TextFlow.MeasureBase(paragraph, starts[i], end) != shape.Width { return false }
+            }
+          }
+          let layout = TextLayouts.For(n, 40.0F)
+          var covered = 0
+          for line in layout.Lines { covered += line.Content.Length }
+          NodeLifecycle.DisposeTree(n)
+          if covered != text.Length { return false }
+        }
+      }
+    }
+    return true
+  }
+
   func IdenticalTextLayoutsSurviveSiblingRetirement() bool {
     let resolver = Resolver{}
     let reconciler = Reconciler{ Res: resolver }
