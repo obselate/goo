@@ -113,10 +113,10 @@ internal sealed class VirtualNodeState {
     try {
       var state VirtualState?
       try { state = source.State(current) }
-      catch (error Exception) {
+      catch (_ Exception) {
         current?.Cancel()
         contextReader?.Cancel()
-        throw error
+        rethrow
       }
       guard let selected = state else { throw InvalidOperationException("VirtualSource.State returned nil") }
       return realize(n, selected, items)
@@ -132,9 +132,9 @@ internal sealed class VirtualNodeState {
       let requested = state.NeedsRealize(viewport)
       if !contextDirty && !requested { contextReader?.Commit(true) }
       return contextDirty || requested
-    } catch (error Exception) {
+    } catch (_ Exception) {
       contextReader?.Cancel()
-      throw error
+      rethrow
     } finally {
       viewport.Bind(previous)
       ContextEnvironment.Current = previousContext

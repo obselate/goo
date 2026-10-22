@@ -71,9 +71,9 @@ public partial class Window {
       WindowDiagnostics.AttachIfEnabled(this)
       bridge.Wake()
       return this
-    } catch (error Exception) {
+    } catch (_ Exception) {
       try { Close() } catch (cleanup Exception) { }
-      throw error
+      rethrow
     }
   }
 
@@ -100,9 +100,9 @@ public partial class Window {
       consumeNativeMetrics()
       requestRender()
       attachPresentationNotifications(target)
-    } catch (error Exception) {
+    } catch (_ Exception) {
       target.Dispose()
-      throw error
+      rethrow
     }
   }
 
