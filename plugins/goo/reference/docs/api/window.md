@@ -701,6 +701,7 @@ Sources:
 - [`Window.SizeConstraints.gs`](../../Goo/Window/WindowParts/Window.SizeConstraints.gs)
 - [`Window.Timers.gs`](../../Goo/Window/WindowParts/Window.Timers.gs)
 - [`Window.Titlebar.gs`](../../Goo/Window/WindowParts/Window.Titlebar.gs)
+- [`Window.UiScale.gs`](../../Goo/Window/WindowParts/Window.UiScale.gs)
 - [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
@@ -992,19 +993,19 @@ Gets or sets macOS-only material, activation, emphasis and mask options. Changes
 
 ### `MaxHeight`
 
-Gets or sets the native client maximum height in logical pixels; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
+Gets or sets the client maximum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
 
 ### `MaxWidth`
 
-Gets or sets the native client maximum width in logical pixels; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
+Gets or sets the client maximum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
 
 ### `MinHeight`
 
-Gets or sets the native client minimum height in logical pixels; zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
+Gets or sets the client minimum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
 
 ### `MinWidth`
 
-Gets or sets the native client minimum width in logical pixels; zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+Gets or sets the client minimum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
 
 ### `Modal`
 
@@ -1069,6 +1070,10 @@ Gets or sets the requested desktop topmost preference. Unsupported hosts retain 
 ### `Transparent`
 
 Gets or sets next-open per-pixel alpha. An open window is unchanged. Transparency requires the GPU renderer.
+
+### `UiScale`
+
+Gets or sets the layout and rendering scale, clamped to 0.5 through 3. The default is 1, or the owner's scale when not explicitly set. Width and Height remain native logical sizes. Layout uses those sizes divided by UiScale, and rendering multiplies the display scale by UiScale.
 
 ### `VSync`
 
