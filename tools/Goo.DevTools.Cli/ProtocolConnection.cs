@@ -55,7 +55,7 @@ internal sealed class ProtocolConnection : IAsyncDisposable
             const string prefix = "\\\\.\\pipe\\";
             if (pipeName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 pipeName = pipeName[prefix.Length..];
-            var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             try
             {
                 await pipe.ConnectAsync(token);

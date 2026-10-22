@@ -21,7 +21,7 @@ The runtime writes one UTF-8 JSON endpoint descriptor per window into the config
 }
 ```
 
-`pipe` is a .NET named-pipe name or an absolute Unix-domain socket path. `pipeName`, `endpoint`, `socket`, `address`, `processId`, and `applicationName` are accepted aliases. Goo transport is local only. Network endpoints are rejected. The CLI ignores malformed descriptors and stale process IDs.
+`pipe` is a .NET named-pipe name or an absolute Unix-domain socket path. `pipeName`, `endpoint`, `socket`, `address`, `processId`, and `applicationName` are accepted aliases. Goo named pipes accept only the current user. Network endpoints are rejected. The CLI ignores malformed descriptors and stale process IDs.
 
 ## Connection
 
