@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.53 - 2026-10-22
+
+- Avoid boxed collection enumerators in hot grid layout, portal, scrollbar, focus and shaped-text traversals.
+
 ## 0.7.52 - 2026-10-22
 
 - Record virtual row realization separately from input-tree updates and add a reusable headless DataGrid CPU benchmark.
