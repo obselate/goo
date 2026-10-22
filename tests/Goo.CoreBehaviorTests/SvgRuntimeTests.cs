@@ -251,6 +251,24 @@ public sealed class SvgRuntimeTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DeepXmlIsRejectedBeforeBuildingDefinitions(bool fromStream)
+    {
+        var source = "<svg viewBox='0 0 10 10'><defs>"
+            + string.Concat(Enumerable.Repeat("<g>", 50000))
+            + string.Concat(Enumerable.Repeat("</g>", 50000))
+            + "</defs></svg>";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(source));
+
+        var exception = Assert.Throws<SvgParseException>(() =>
+            fromStream ? Svg.Load(stream) : Svg.Parse(source));
+
+        Assert.Contains("node depth exceeds renderer limit 1024", exception.Message);
+        Assert.StartsWith("line 1, column", exception.Message);
+    }
+
+    [Theory]
     [InlineData("s13-representative.svg", 5, 3, 137, 4, 2, 1)]
     [InlineData("s13-animated.svg", 4, 2, 71, 4, 2, 0)]
     [InlineData("s13-morph.svg", 2, 1, 3, 2, 1, 0)]

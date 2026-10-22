@@ -266,6 +266,9 @@ internal partial class SvgParser {
                 throw SvgParseException("input exceeds $MaxInputBytes bytes")
             }
             try {
+                using let depthSource = StringReader(text)
+                using let depthReader = XmlReader.Create(depthSource, CreateXmlSettings(), "<string>")
+                ValidateDepth(depthReader)
                 using let source = StringReader(text)
                 using let reader = XmlReader.Create(source, CreateXmlSettings(), "<string>")
                 return ParseDocument(reader, "<string>")
@@ -316,6 +319,9 @@ internal partial class SvgParser {
             }
             try {
                 using let stream = MemoryStream(bytes, writable: false)
+                using let depthReader = XmlReader.Create(stream, CreateXmlSettings(), sourceName)
+                ValidateDepth(depthReader)
+                stream.Position = 0
                 using let reader = XmlReader.Create(stream, CreateXmlSettings(), sourceName)
                 return ParseDocument(reader, sourceName)
             } catch (SvgParseException) {
@@ -338,6 +344,17 @@ internal partial class SvgParser {
                 )
             } catch (exception Exception) {
                 throw SvgParseException("$sourceName: ${exception.Message}")
+            }
+        }
+
+        private func ValidateDepth(reader XmlReader) {
+            while reader.Read() {
+                if reader.NodeType == XmlNodeType.Element && reader.Depth >= MaxRenderDepth {
+                    let info = cast[IXmlLineInfo](reader)
+                    throw SvgParseException(
+                        "line ${info.LineNumber}, column ${info.LinePosition}: node depth exceeds renderer limit $MaxRenderDepth"
+                    )
+                }
             }
         }
 
