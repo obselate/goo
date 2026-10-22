@@ -57,9 +57,6 @@ internal unsafe partial class VulkanWindowTarget {
       recreatePending = true
       return true
     }
-    if startupState == VulkanWindowStartupState.Ready {
-      startupState = VulkanWindowStartupState.Pending
-    }
     if !WaitForGpu() {
       return false
     }
@@ -376,7 +373,7 @@ internal unsafe partial class VulkanWindowTarget {
         startupTask = nil
         try { next = pending.GetAwaiter().GetResult() }
         catch (error Exception) {
-          startupState = VulkanWindowStartupState.Failed
+          startupState = VulkanWindowStartupState.None
           throw error
         }
         if startupWidth == width && startupHeight == height && startupVsync == vsync {
@@ -398,12 +395,11 @@ internal unsafe partial class VulkanWindowTarget {
       let transparent = host.Transparent
       let allowInherited = host.AllowInheritedCompositeAlpha
       let preferExtent = host.PreferRequestedFramebufferExtent
-      let oldSwapchain = generation?.Handle ?? 0uL
       startupTask = Task.Run[VulkanSwapchainGeneration?](() -> {
         try {
           if let probe = SecondaryStartupForTest { probe() }
           return CreateGeneration(width, height, requestedVsync, transparent,
-            allowInherited, preferExtent, generationId, stale?.Handle ?? oldSwapchain)
+            allowInherited, preferExtent, generationId, stale?.Handle ?? 0uL)
         } finally {
           try { stale?.Dispose() } finally { host.Wake() }
         }
@@ -443,6 +439,10 @@ internal unsafe partial class VulkanWindowTarget {
     guard let pending = startupTask else { return true }
     if !pending.IsCompleted { return false }
     startupTask = nil
+    if !pending.IsCompletedSuccessfully {
+      let _ = pending.Exception
+      return true
+    }
     let unused = pending.GetAwaiter().GetResult()
     if let current = unused {
       startupTask = Task.Run[VulkanSwapchainGeneration?](() -> {

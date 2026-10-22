@@ -1,6 +1,6 @@
 package Goo
 
-internal enum VulkanWindowStartupState { None; Pending; Ready; Closing; Failed }
+internal enum VulkanWindowStartupState { None; Pending; Ready; Closing }
 
 internal unsafe data struct VulkanWindowTargetExtensionPointer {
   var Value * int8

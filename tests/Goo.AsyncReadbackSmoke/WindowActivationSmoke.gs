@@ -74,7 +74,16 @@ internal class WindowActivationSmoke {
             WindowReadbackTestFixture.CaptureTarget(child)!!.HoldNextQueueSubmitForTest()
           }
           release.Set()
-          if !closeEarly {
+          if closeEarly {
+            let closeDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+            while child.IsOpen && Stopwatch.GetTimestamp() < closeDeadline {
+              SdlRuntime.PumpEvents(Int32.MaxValue)
+              owner.PumpScheduled(0.0)
+              child.PumpScheduled(0.0)
+              Thread.Sleep(1)
+            }
+            Require(!child.IsOpen, "Pending close request did not finish")
+          } else {
             let target = WindowReadbackTestFixture.CaptureTarget(child)!!
             let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
             while !VulkanSharedRuntime.WaitForHeldQueueCallForTest(0)

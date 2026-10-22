@@ -21,13 +21,11 @@ internal unsafe partial class SdlHost {
 
   internal func PrepareFirstPresent() bool {
     if deferFirstShow {
-      let properties = SDL.GetWindowProperties(window)
       if !firstShowRequested {
         deferFirstShow = false
-        Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShowAvailable.1", false),
-          "SDL_SetBooleanProperty")
         return true
       }
+      let properties = SDL.GetWindowProperties(window)
       Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShow.1", true),
         "SDL_SetBooleanProperty")
       Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.InitialConfigurePending.1", true),
