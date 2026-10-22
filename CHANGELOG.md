@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.49 - 2026-10-22
+
+- Bound text document undo history to the newest 1,000 edit groups while preserving typing groups and redo.
+
 ## 0.7.48 - 2026-10-22
 
 - Preserve original stack traces for exceptions rethrown from frame, embedding and virtualization handlers.
