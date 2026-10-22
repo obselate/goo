@@ -469,6 +469,7 @@ internal class ProfilerSmoke {
                     int32(FrameProfileStage.StyleResolve)
                 )
                 && trace.Phases.Contains(int32(FrameProfileStage.Layout)) && trace.Phases.Contains(int32(FrameProfileStage.Paint))
+                && trace.Phases.Contains(int32(FrameProfileStage.Virtualization))
                 && trace.Phases.Contains(int32(FrameProfileStage.Frame)),
                 "Real frame phases did not reach the pipe"
             )

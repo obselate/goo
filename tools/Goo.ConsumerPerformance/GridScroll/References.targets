@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Goo.Widgets'">
+    <PackageReference Remove="Goo" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Goo/Goo.gsproj" />
+  </ItemGroup>
+</Project>
