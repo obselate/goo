@@ -2,9 +2,13 @@
 
 ## Unreleased
 
-## 0.7.49 - 2026-10-22
+## 0.7.50 - 2026-10-22
 
 - Bound text document undo history to the newest 1,000 edit groups while preserving typing groups and redo.
+- Add current-display queries and display-change events, and clamp scaled window minimum sizes to the current display usable bounds.
+- Reduce DevTools capture and snapshot allocations while preserving decoded capture pixels and snapshot protocol output.
+
+0.7.49 was tagged but never published. Its change ships in 0.7.50.
 
 ## 0.7.48 - 2026-10-22
 
