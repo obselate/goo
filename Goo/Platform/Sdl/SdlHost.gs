@@ -78,6 +78,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public event MetricsChanged Action[int32, int32, int32, int32]
   public event Moved Action[int32, int32]
+  public event DisplayChanged Action
   public event StateChanged Action[WindowState]
   public event FocusChanged Action[bool]
   public event VisibilityChanged Action

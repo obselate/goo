@@ -257,6 +257,7 @@ internal unsafe partial class SdlHost {
       pixelDensityChange = true
       RefreshMetrics()
       RaiseMetrics()
+      DisplayChanged?.Invoke()
     } else if eventType == SDLEventType.WindowMinimized {
       StateChanged?.Invoke(WindowState.Minimized)
     } else if eventType == SDLEventType.WindowMaximized {

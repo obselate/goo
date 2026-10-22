@@ -329,7 +329,7 @@ internal partial class DevToolsSession : IDisposable {
     +"\"origin\":\"top-left\",\"width\":" + result.Width.ToString()
     +",\"height\":" + result.Height.ToString()
     +",\"stride\":" + result.RowBytes.ToString()
-    +",\"rgbaBase64\":" + quote(Convert.ToBase64String(pixels)) + "}"
+    +",\"rgbaBase64\":\"" + Convert.ToBase64String(pixels) + "\"}"
   }
 
   internal func OverridePayload(payload JsonElement) string {

@@ -102,7 +102,6 @@ public partial class Window {
         VulkanDiagnostics.BindOpenOrigin(originTicks)
       }
       prepare()
-      constrainSize()
       let sdlStart = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       let native = SdlHost(
         Title,
@@ -126,7 +125,7 @@ public partial class Window {
       }
       SyncTitlebarHook()
       configureOwnership(native)
-      if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(scaledSize(minWidth), scaledSize(minHeight)) }
+      if minWidth != 0 || minHeight != 0 || maxWidth != 0 || maxHeight != 0 { pushSize() }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       let target = VulkanWindowTarget(native)
       windowTarget = target
@@ -177,6 +176,10 @@ public partial class Window {
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)
       }
+    native.DisplayChanged += () -> {
+      pushSize()
+      notifications.RaiseDisplayChanged()
+    }
     native.StateChanged += (value WindowState) -> {
       state = value
       requestRender()
@@ -474,9 +477,9 @@ public partial class Window {
         if profiling {
           profiler.EndFrame(frameProfile, rendered, windowTarget?.QueueWorkPending == true || (!allowFrame && frameNeeded))
         }
-      } catch (error Exception) {
+      } catch (_ Exception) {
         if profiling { profiler.Record(FrameProfileStage.Frame, frameProfile, -1) }
-        throw error
+        rethrow
       }
     }
 

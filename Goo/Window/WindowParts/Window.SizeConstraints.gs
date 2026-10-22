@@ -8,29 +8,31 @@ public partial class Window {
   private var minHeight int32
   private var maxWidth int32
   private var maxHeight int32
+  private var nativeMinWidth int32
+  private var nativeMinHeight int32
 
-  /// Gets or sets the client minimum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
-  /// Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+  /// Gets or sets the client minimum width in layout pixels, multiplied by UiScale and clamped to the current display's usable width.
+  /// Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
   public prop MinWidth int32{
     get -> minWidth
     set(v) {
       requireUiThread("Window.MinWidth")
       validateSizeLimit(v, maxWidth, true)
       if minWidth == v { return }
-      host?.SetMinimumSize(scaledSize(v), scaledSize(minHeight))
+      applyMinimumSize(v, minHeight)
       minWidth = v
     }
   }
 
-  /// Gets or sets the client minimum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
-  /// Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
+  /// Gets or sets the client minimum height in layout pixels, multiplied by UiScale and clamped to the current display's usable height.
+  /// Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
   public prop MinHeight int32{
     get -> minHeight
     set(v) {
       requireUiThread("Window.MinHeight")
       validateSizeLimit(v, maxHeight, true)
       if minHeight == v { return }
-      host?.SetMinimumSize(scaledSize(minWidth), scaledSize(v))
+      applyMinimumSize(minWidth, v)
       minHeight = v
     }
   }
@@ -68,9 +70,28 @@ public partial class Window {
       }
   }
 
+  private func applyMinimumSize(minimumWidth int32, minimumHeight int32) {
+    var scaledWidth = scaledSize(minimumWidth)
+    var scaledHeight = scaledSize(minimumHeight)
+    if scaledWidth != 0 || scaledHeight != 0 {
+      if let display = host?.GetCurrentDisplay() {
+        if let usable = display.UsableBounds {
+          if usable.Width > 0.0 { scaledWidth = Math.Min(scaledWidth, int32(usable.Width)) }
+          if usable.Height > 0.0 { scaledHeight = Math.Min(scaledHeight, int32(usable.Height)) }
+        }
+      }
+    }
+    host?.SetMinimumSize(scaledWidth, scaledHeight)
+    nativeMinWidth = scaledWidth
+    nativeMinHeight = scaledHeight
+  }
+
   private func constrainSize() {
-    width = Math.Max(width, scaledSize(minWidth))
-    height = Math.Max(height, scaledSize(minHeight))
+    if embeddedHost == nil { applyMinimumSize(minWidth, minHeight) }
+    if nativeMinWidth < scaledSize(minWidth) { width = Math.Min(width, nativeMinWidth) }
+    if nativeMinHeight < scaledSize(minHeight) { height = Math.Min(height, nativeMinHeight) }
+    width = Math.Max(width, nativeMinWidth)
+    height = Math.Max(height, nativeMinHeight)
     if maxWidth != 0 { width = Math.Min(width, scaledSize(maxWidth)) }
     if maxHeight != 0 { height = Math.Min(height, scaledSize(maxHeight)) }
   }

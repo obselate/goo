@@ -40,6 +40,33 @@ public sealed class WindowDisplay {
 
 /// Provides current desktop display information and selects a native fullscreen output.
 public partial class Window {
+  /// Occurs on the UI thread when this window changes display or native display scale, after updating its minimum size.
+  public event DisplayChanged Action{
+    add{
+      requireUiThread("Window.DisplayChanged")
+      notifications.AddDisplayChanged(value)
+    }
+    remove{
+      requireUiThread("Window.DisplayChanged")
+      notifications.RemoveDisplayChanged(value)
+    }
+  }
+
+  /// Gets this window's current display, or nil for an embedded host or unavailable SDL display.
+  /// Open the window first and call on its UI thread.
+  /// @returns an immutable snapshot of the current display, or nil when unavailable.
+  /// @exception InvalidOperationException when the window is closed or called off its UI thread.
+  public func GetCurrentDisplay() WindowDisplay? {
+    requireUiThread("Window.GetCurrentDisplay")
+    guard let native = host else {
+      throw InvalidOperationException("Open the window before querying its display")
+    }
+    if !IsOpen || native.IsClosing {
+      throw InvalidOperationException("Open the window before querying its display")
+    }
+    return native.GetCurrentDisplay()
+  }
+
   /// Gets an immutable snapshot of the current host's displays. Open the window first and call on its UI thread.
   /// IDs can become stale after hotplug or SDL restart. Embedded hosts return an empty list.
   public func GetDisplays() IReadOnlyList[WindowDisplay] {

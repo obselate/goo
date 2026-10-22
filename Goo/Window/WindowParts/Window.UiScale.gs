@@ -34,7 +34,7 @@ public partial class Window {
     MetricSubscriptions.MarkWindowDirty(this)
     MetricSubscriptions.MarkElementsDirty(this)
     if embeddedHost == nil {
-      host?.SetMinimumSize(scaledSize(minWidth), scaledSize(minHeight))
+      applyMinimumSize(minWidth, minHeight)
       host?.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight))
       pushSize()
     }

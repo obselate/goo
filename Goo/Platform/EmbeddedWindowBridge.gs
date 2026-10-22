@@ -11,6 +11,7 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
 
   public event MetricsChanged Action[int32, int32, int32, int32]
   public event Moved Action[int32, int32]
+  public event DisplayChanged Action
   public event StateChanged Action[WindowState]
   public event FocusChanged Action[bool]
   public event VisibilityChanged Action
@@ -82,6 +83,7 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func SetPosition(x int32, y int32) { }
   public func SetState(value WindowState) { }
   public func GetDisplays() IReadOnlyList[WindowDisplay] -> Array.Empty[WindowDisplay]()
+  public func GetCurrentDisplay() WindowDisplay? -> nil
   public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult -> WindowOperationResult.Unsupported
   public func RequestActivation() WindowOperationResult -> WindowOperationResult.Unsupported
   public func SetBorder(decorated bool, resizable bool) { }
