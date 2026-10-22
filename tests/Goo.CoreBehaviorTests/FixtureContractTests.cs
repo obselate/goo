@@ -1,12 +1,21 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics.Tracing;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading;
 using Goo;
 using Xunit;
+using Xunit.Abstractions;
 
 public sealed class FixtureContractTests
 {
+    private readonly ITestOutputHelper output;
+
+    public FixtureContractTests(ITestOutputHelper output) => this.output = output;
+
     public static IEnumerable<object[]> Cases()
     {
         yield return Contract<PathBuilderFixtures>(nameof(PathBuilderFixtures.ResetPreservesPublishedPathAndClearsContour));
@@ -369,7 +378,53 @@ public sealed class FixtureContractTests
 
         Assert.NotNull(fixture);
         Assert.NotNull(method);
-        Assert.True(((Func<bool>)method.CreateDelegate(typeof(Func<bool>), fixture))());
+        using var trace = fixtureType == typeof(ContextFixtures)
+            && methodName == nameof(ContextFixtures.QueuedStructReadAllocationContract)
+            ? new AllocationTrace() : null;
+        var thread = Environment.CurrentManagedThreadId;
+        var context = SynchronizationContext.Current?.GetType().FullName;
+        try
+        {
+            Assert.True(((Func<bool>)method.CreateDelegate(typeof(Func<bool>), fixture))());
+        }
+        catch
+        {
+            if (trace != null)
+            {
+                Thread.Sleep(100);
+                output.WriteLine($"Allocation contract: managedThread={thread}, nativeThread={CurrentNativeThreadId()}, context={context}");
+                trace.WriteTo(output);
+            }
+            throw;
+        }
+    }
+
+    [DllImport("libc", EntryPoint = "gettid")]
+    private static extern int CurrentNativeThreadId();
+
+    private sealed class AllocationTrace : EventListener
+    {
+        private readonly ConcurrentQueue<EventWrittenEventArgs> ticks = new();
+
+        protected override void OnEventSourceCreated(EventSource source)
+        {
+            if (source.Name == "Microsoft-Windows-DotNETRuntime")
+                EnableEvents(source, EventLevel.Verbose, (EventKeywords)1);
+        }
+
+        protected override void OnEventWritten(EventWrittenEventArgs data)
+        {
+            if (data.EventName?.StartsWith("GCAllocationTick", StringComparison.Ordinal) == true)
+                ticks.Enqueue(data);
+        }
+
+        internal void WriteTo(ITestOutputHelper output)
+        {
+            output.WriteLine($"GCAllocationTick events: {ticks.Count}");
+            foreach (var tick in ticks)
+                output.WriteLine($"{tick.TimeStamp:O} thread={tick.OSThreadId} {tick.EventName} "
+                    + string.Join(", ", tick.PayloadNames!.Zip(tick.Payload!, (name, value) => $"{name}={value}")));
+        }
     }
 
     [Theory]

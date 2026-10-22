@@ -20,9 +20,11 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: 1
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  GOO_QUEUED_ALLOC_DIAG: ${{ (github.head_ref || github.ref_name) == 'diag/queued-alloc' }}
 
 jobs:
   quality:
+    if: (github.head_ref || github.ref_name) != 'diag/queued-alloc'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
@@ -101,6 +103,7 @@ jobs:
           PY
 
   macos-native:
+    if: (github.head_ref || github.ref_name) != 'diag/queued-alloc'
     runs-on: macos-15
     timeout-minutes: 15
 
@@ -126,6 +129,7 @@ jobs:
           path: artifacts/macos-native/
 
   macos-arm64:
+    if: (github.head_ref || github.ref_name) != 'diag/queued-alloc'
     needs: macos-native
     runs-on: macos-15
     timeout-minutes: 30
@@ -290,6 +294,7 @@ jobs:
 
   linux-x64:
     needs: macos-native
+    if: ${{ !cancelled() && ((github.head_ref || github.ref_name) == 'diag/queued-alloc' || needs.macos-native.result == 'success') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -300,6 +305,7 @@ jobs:
         run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
 
       - name: Download macOS native payloads
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         uses: actions/download-artifact@v8
         with:
           name: goo-macos-arm64-native
@@ -404,6 +410,7 @@ jobs:
             '
 
       - name: Compare rebuilt text payloads with the committed files
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           cmp artifacts/native/text/libgoo-harfbuzz.so \
             Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
@@ -414,6 +421,7 @@ jobs:
             artifacts/native/text/text-native-build.json
 
       - name: Verify Vulkan software driver and validation layer
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           mkdir -p artifacts/reports
           VK_LOADER_DEBUG=layer VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
@@ -425,9 +433,11 @@ jobs:
           grep -E 'deviceType *= PHYSICAL_DEVICE_TYPE_CPU$' artifacts/reports/vulkaninfo-summary.txt
 
       - name: Fetch pinned Windows SDL runtime
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: .github/scripts/fetch-sdl-win-x64.sh artifacts/native/win-x64/SDL3.dll
 
       - name: Build library and Vulkan verification projects
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj \
@@ -448,6 +458,7 @@ jobs:
           cmp "$RUNNER_TEMP/filtered_backdrop.goo-effect" Goo/Shaders/Effects/filtered_backdrop.goo-effect
 
       - name: Verify NativeAOT local PNG loading
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -456,6 +467,7 @@ jobs:
           artifacts/image-nativeaot/Goo.ImageLoadingSmoke
 
       - name: Verify local PNG pixels in Vulkan
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           set -o pipefail
           .github/scripts/with-headless-wayland.sh env \
@@ -467,6 +479,7 @@ jobs:
           grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
 
       - name: Verify shared UI audio without a hardware device
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -477,11 +490,13 @@ jobs:
             artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Build Goo DevTools app
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify real Gallery profiler UI
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet build apps/Goo.Gallery/Goo.Gallery.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
@@ -494,7 +509,7 @@ jobs:
             node .github/scripts/devtools-profiler-ui-smoke.mjs artifacts/reports/profiler-ui
 
       - name: Print profiler UI failure logs
-        if: failure()
+        if: failure() && env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           for log in artifacts/reports/profiler-ui/*.log; do
             test -f "$log" || continue
@@ -503,7 +518,7 @@ jobs:
           done
 
       - name: Upload profiler UI evidence
-        if: always()
+        if: always() && env.GOO_QUEUED_ALLOC_DIAG != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: goo-profiler-ui-linux-x64
@@ -511,6 +526,7 @@ jobs:
           path: artifacts/reports/profiler-ui/
 
       - name: Run portable Vulkan checks
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           export SDL_VIDEODRIVER=wayland
           export LIBGL_ALWAYS_SOFTWARE=1
@@ -671,6 +687,7 @@ jobs:
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
       - name: Record dependencies and reject known vulnerabilities
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           mkdir -p artifacts/reports
           dotnet --info >artifacts/reports/dotnet-info.txt
@@ -685,6 +702,25 @@ jobs:
 
       - name: Run focused core behavior tests
         run: |
+          if [ "$GOO_QUEUED_ALLOC_DIAG" = true ]
+          then
+            result=0
+            for attempt in {1..10}
+            do
+              echo "Queued allocation diagnostic core run $attempt/10"
+              .github/scripts/with-headless-wayland.sh env \
+                SDL_VIDEODRIVER=wayland \
+                LIBGL_ALWAYS_SOFTWARE=1 \
+                VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+                LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+                DOTNET_gcServer=0 \
+                dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj \
+                  -c Release -m:2 -nodeReuse:false -p:UseSharedCompilation=false \
+                  -p:TreatWarningsAsErrors=true \
+                  -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" || result=1
+            done
+            exit "$result"
+          fi
           .github/scripts/with-headless-wayland.sh env \
             SDL_VIDEODRIVER=wayland \
             LIBGL_ALWAYS_SOFTWARE=1 \
@@ -695,6 +731,7 @@ jobs:
               -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
       - name: Pack Goo
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           mkdir -p artifacts/packages
           dotnet pack Goo/Goo.gsproj -c Release -o artifacts/packages \
@@ -706,6 +743,7 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
       - name: Collect advisory consumer publish report
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           python3 tools/Goo.ConsumerPerformance/run.py \
             --output artifacts/consumer-performance \
@@ -716,12 +754,14 @@ jobs:
 
 
       - name: Pack and validate native accessibility runtimes
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet pack Goo.Accessibility/Goo.Accessibility.csproj -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
 
       - name: Pack Goo DevTools and template
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
             -c Release -o artifacts/packages \
@@ -741,6 +781,7 @@ jobs:
             -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Validate DevTools package manifests
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           python3 - <<'PY'
           import os
@@ -767,6 +808,7 @@ jobs:
           PY
 
       - name: Generate, build and publish Goo template
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           template_hive="$RUNNER_TEMP/goo-template-hive"
           template_output="$RUNNER_TEMP/goo-template"
@@ -790,6 +832,7 @@ jobs:
           done
 
       - name: Install packed Goo developer tools
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           tool_path="$RUNNER_TEMP/goo-tools"
           mkdir -p "$tool_path"
@@ -809,6 +852,7 @@ jobs:
             | grep -F "goo.devtools.app "
 
       - name: Publish clean package consumer
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         env:
           NUGET_PACKAGES: ${{ runner.temp }}/goo-nuget-packages
         run: |
@@ -820,6 +864,7 @@ jobs:
             -o artifacts/publish
 
       - name: Publish and run clean NativeAOT consumer
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         env:
           NUGET_PACKAGES: ${{ runner.temp }}/goo-nativeaot-packages
         run: |
@@ -848,11 +893,13 @@ jobs:
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Stage minimal Linux bundle and separate symbols
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           .github/scripts/stage-linux-x64.sh \
             artifacts/publish artifacts/linux-x64 artifacts/symbols
 
       - name: Validate package, native ABI, checksums, and bundle size
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           .github/scripts/validate-release.py \
             --package "artifacts/packages/Goo.$GOO_VERSION.nupkg" \
@@ -867,6 +914,7 @@ jobs:
           dotnet artifacts/linux-x64/Goo.PackageSmoke.dll
 
       - name: Archive release candidates
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         run: |
           tar -C artifacts -czf "artifacts/Goo.$GOO_VERSION-linux-x64.tar.gz" linux-x64
           (
@@ -877,6 +925,7 @@ jobs:
 
 
       - name: Upload release validation artifacts
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: goo-${{ env.GOO_VERSION }}-linux-x64
@@ -891,6 +940,7 @@ jobs:
             artifacts/consumer-performance/reports/
 
       - name: Upload symbols separately
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: goo-${{ env.GOO_VERSION }}-symbols
@@ -901,6 +951,7 @@ jobs:
             artifacts/consumer-performance/stage/*/symbols/
 
       - name: Upload release candidates
+        if: env.GOO_QUEUED_ALLOC_DIAG != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: release-candidates
@@ -916,6 +967,7 @@ jobs:
             artifacts/Goo.${{ env.GOO_VERSION }}-linux-x64.tar.gz.sha256
 
   windows-x64:
+    if: (github.head_ref || github.ref_name) != 'diag/queued-alloc'
     needs: linux-x64
     runs-on: windows-2022
     timeout-minutes: 25
@@ -1118,6 +1170,7 @@ jobs:
           fi
 
   android:
+    if: (github.head_ref || github.ref_name) != 'diag/queued-alloc'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -1175,6 +1228,7 @@ jobs:
             Goo/Runtime/Vulkan/android-*/text-native-build.json
 
   android-consumer:
+    if: (github.head_ref || github.ref_name) != 'diag/queued-alloc'
     needs: [linux-x64, android]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
