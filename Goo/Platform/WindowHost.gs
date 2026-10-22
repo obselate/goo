@@ -25,6 +25,7 @@ internal enum WindowCloseReason {
 internal interface WindowHost {
   event MetricsChanged Action[int32, int32, int32, int32]
   event Moved Action[int32, int32]
+  event DisplayChanged Action
   event StateChanged Action[WindowState]
   event FocusChanged Action[bool]
   event VisibilityChanged Action
@@ -80,6 +81,7 @@ internal interface WindowHost {
   func SetPosition(x int32, y int32);
   func SetState(value WindowState);
   func GetDisplays() IReadOnlyList[WindowDisplay];
+  func GetCurrentDisplay() WindowDisplay?;
   func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult;
   func RequestActivation() WindowOperationResult;
   func SetBorder(decorated bool, resizable bool);

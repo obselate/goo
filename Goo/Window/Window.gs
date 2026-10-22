@@ -99,6 +99,7 @@ internal struct WindowNotifications {
   private event visibilityChanged Action[bool]
   private event preferencesChanged Action[PlatformPreferences]
   private event presentationAccepted Action[WindowPresentationAccepted]
+  private event displayChanged Action
 
   internal func AddStateChanged(callback Action[WindowState]) { stateChanged += callback }
   internal func RemoveStateChanged(callback Action[WindowState]) { stateChanged -= callback }
@@ -121,6 +122,9 @@ internal struct WindowNotifications {
   internal func AddPresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted += callback }
   internal func RemovePresentationAccepted(callback Action[WindowPresentationAccepted]) { presentationAccepted -= callback }
   internal func RaisePresentationAccepted(value WindowPresentationAccepted) { presentationAccepted?.Invoke(value) }
+  internal func AddDisplayChanged(callback Action) { displayChanged += callback }
+  internal func RemoveDisplayChanged(callback Action) { displayChanged -= callback }
+  internal func RaiseDisplayChanged() { displayChanged?.Invoke() }
 }
 
 /// Hosts a Goo tree on one process-wide UI thread.

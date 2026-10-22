@@ -706,6 +706,10 @@ Sources:
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
 
+### `DisplayChanged`
+
+Occurs on the UI thread when this window changes display or native display scale, after updating its minimum size.
+
 ### `FocusChanged`
 
 Occurs after the native window focus state changes.
@@ -777,6 +781,12 @@ Returns: An owned format list and explicit query status.
 ### `GetClipboardText`
 
 Gets the current native clipboard text on the window UI thread. An empty result can mean an empty clipboard or native copy failure.
+
+### `GetCurrentDisplay`
+
+Gets this window's current display, or nil for an embedded host or unavailable SDL display. Open the window first and call on its UI thread.
+
+Returns: an immutable snapshot of the current display, or nil when unavailable.
 
 ### `GetDisplays`
 
@@ -1001,11 +1011,11 @@ Gets or sets the client maximum width in layout pixels, multiplied by UiScale fo
 
 ### `MinHeight`
 
-Gets or sets the client minimum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
+Gets or sets the client minimum height in layout pixels, multiplied by UiScale and clamped to the current display's usable height. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
 
 ### `MinWidth`
 
-Gets or sets the client minimum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
+Gets or sets the client minimum width in layout pixels, multiplied by UiScale and clamped to the current display's usable width. Zero removes the limit. Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
 
 ### `Modal`
 

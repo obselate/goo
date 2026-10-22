@@ -659,6 +659,7 @@ event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,r
 event|Goo.ImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
 event|Goo.PlatformInput|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
+event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
@@ -1140,6 +1141,7 @@ method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.Strin
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|GetClipboardFormats|instance|public|generic:|()->Goo.ClipboardFormats
 method|Goo.Window|GetClipboardText|instance|public|generic:|()->System.String
+method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
