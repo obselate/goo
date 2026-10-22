@@ -46,7 +46,8 @@ internal sealed class ShapedText : IDisposable {
       var hasRtl = false
       let inkTop = Ascent
       let inkBottom = Descent
-      for run in runs {
+      for i in 0 ... runs.Count {
+        let run = runs[i]
         if run.RightToLeft { hasRtl = true }
         if run.Glyphs.Length == 0 { continue }
       }
@@ -95,7 +96,7 @@ internal sealed class ShapedText : IDisposable {
   public func Dispose() {
     if disposed { return }
     disposed = true
-    for run in runs { run.Dispose() }
+    for i in 0 ... runs.Count { runs[i].Dispose() }
   }
 
   private func Geometry() TextGeometry {

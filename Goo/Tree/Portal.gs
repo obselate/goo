@@ -100,8 +100,8 @@ internal class Portals {
         overlayRoot.Children.Add(node)
         roots.Add(node, overlayRoot)
       }
-      for child in node.Children {
-        Collect(child, overlayRoot)
+      for i in 0 ... node.Children.Count {
+        Collect(node.Children[i], overlayRoot)
       }
     }
 
