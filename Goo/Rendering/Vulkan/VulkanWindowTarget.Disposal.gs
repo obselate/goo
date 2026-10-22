@@ -29,6 +29,10 @@ internal unsafe partial class VulkanWindowTarget {
     requestedHeight = height
     framebufferWidth = width
     framebufferHeight = height
+    if deferSurfaceSelection && surfaceSelection == nil {
+      recreatePending = true
+      return true
+    }
     if hidden || hideReleasePending || QueueWorkPending || DeferForPendingReadbackSubmission() {
       recreatePending = true
       return true
@@ -53,7 +57,7 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     presentationRetirement.ClearPresentationLatency()
-    if QueueWorkPending {
+    if QueueWorkPending || surfaceSelection?.IsCompleted == false {
       host.Wake()
       return
     }

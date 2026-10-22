@@ -158,6 +158,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   }
 
   public func PrepareClose() bool {
+    if surfaceSelection?.IsCompleted == false { return false }
     PollQueueCompletion()
     if queueStage != QueueStageIdle || frameBegun {
       return false

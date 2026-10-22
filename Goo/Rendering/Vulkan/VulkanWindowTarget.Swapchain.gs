@@ -1,9 +1,14 @@
 package Goo
 
+import System.Threading.Tasks
+
 internal unsafe partial class VulkanWindowTarget {
   private var nextGenerationId uint64 = 1uL
   private var hidden bool
   private var hideReleasePending bool
+  private var deferSurfaceSelection bool
+  private var surfaceSelection Task[VulkanWindowTargetSelection?]?
+  private var surfaceSelectionVsync bool
 
   public func SetHidden(value bool) {
     if disposed || hidden == value { return }
@@ -379,6 +384,47 @@ internal unsafe partial class VulkanWindowTarget {
 
   private func TryQuerySelection(out selection VulkanWindowTargetSelection) bool {
     selection = VulkanWindowTargetSelection{}
+    var queried VulkanWindowTargetSelection?
+    if deferSurfaceSelection {
+      if surfaceSelection == nil {
+        surfaceSelectionVsync = vsync
+        let requestedVsync = vsync
+        let transparent = host.Transparent
+        let allowInherited = host.AllowInheritedCompositeAlpha
+        surfaceSelection = Task.Run[VulkanWindowTargetSelection?](
+          () -> QuerySelection(requestedVsync, transparent, allowInherited))
+        frameFailureRetryable = true
+        return false
+      }
+      let pending = surfaceSelection!!
+      if !pending.IsCompleted {
+        frameFailureRetryable = true
+        return false
+      }
+      surfaceSelection = nil
+      queried = pending.GetAwaiter().GetResult()
+      if surfaceSelectionVsync != vsync { return TryQuerySelection(out selection) }
+      deferSurfaceSelection = false
+    } else {
+      queried = QuerySelection(vsync, host.Transparent, host.AllowInheritedCompositeAlpha)
+    }
+    guard let result = queried else {
+      surfaceLost = true
+      return false
+    }
+    selection = result
+    return true
+  }
+
+  private func QuerySelection(requestedVsync bool, transparent bool,
+    allowInherited bool) VulkanWindowTargetSelection? {
+    var support VkBool32 = VkConstants.VK_FALSE
+    let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
+    let supportResult = surfaceSupport(physicalDevice, queueFamilyIndex, surface, &support)
+    if supportResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR { return nil }
+    if supportResult != VkConstants.VK_SUCCESS || support != VkConstants.VK_TRUE {
+      throw InvalidOperationException("Vulkan selected queue does not support the SDL surface")
+    }
     var capabilities = VkSurfaceCapabilitiesKHR{}
     let getSurfaceCapabilities = instanceDispatch.vkGetPhysicalDeviceSurfaceCapabilitiesKHR
     let capabilitiesResult = getSurfaceCapabilities(
@@ -386,8 +432,7 @@ internal unsafe partial class VulkanWindowTarget {
       surface,
       &capabilities)
     if capabilitiesResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      surfaceLost = true
-      return false
+      return nil
     }
     if capabilitiesResult != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan surface capabilities query failed: " + capabilitiesResult.ToString())
@@ -399,8 +444,7 @@ internal unsafe partial class VulkanWindowTarget {
     let getFormats = instanceDispatch.vkGetPhysicalDeviceSurfaceFormatsKHR
     let formatCountResult = getFormats(physicalDevice, surface, &formatCount, nil)
     if formatCountResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      surfaceLost = true
-      return false
+      return nil
     }
     if formatCountResult != VkConstants.VK_SUCCESS || formatCount == 0u {
       throw InvalidOperationException("Vulkan surface formats are unavailable: " + formatCountResult.ToString())
@@ -421,8 +465,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
     if formatResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      surfaceLost = true
-      return false
+      return nil
     }
     if formatResult != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan surface format query failed: " + formatResult.ToString())
@@ -448,8 +491,7 @@ internal unsafe partial class VulkanWindowTarget {
     let getModes = instanceDispatch.vkGetPhysicalDeviceSurfacePresentModesKHR
     let modeCountResult = getModes(physicalDevice, surface, &modeCount, nil)
     if modeCountResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      surfaceLost = true
-      return false
+      return nil
     }
     if modeCountResult != VkConstants.VK_SUCCESS || modeCount == 0u {
       throw InvalidOperationException("Vulkan surface present modes are unavailable: " + modeCountResult.ToString())
@@ -470,8 +512,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
     }
     if modeResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      surfaceLost = true
-      return false
+      return nil
     }
     if modeResult != VkConstants.VK_SUCCESS {
       throw InvalidOperationException("Vulkan surface present mode query failed: " + modeResult.ToString())
@@ -493,7 +534,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     var presentMode VkPresentModeKHR
     if !VulkanPresentModeSelector.TrySelect(
-      vsync,
+      requestedVsync,
       deviceFacts.DeviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU),
       hasImmediate,
       hasMailbox,
@@ -503,36 +544,21 @@ internal unsafe partial class VulkanWindowTarget {
       }
     let compositeAlpha = SelectCompositeAlpha(
       capabilities.supportedCompositeAlpha,
-      host.Transparent,
-      host.AllowInheritedCompositeAlpha)
+      transparent,
+      allowInherited)
     if compositeAlpha == VkCompositeAlphaFlagBitsKHR(0) {
-      if host.Transparent {
+      if transparent {
         throw InvalidOperationException(
           "Vulkan surface has no supported composite alpha mode for the configured transparent window")
       }
       throw InvalidOperationException("Vulkan surface has no supported composite alpha mode")
     }
-    var support VkBool32 = VkConstants.VK_FALSE
-    let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
-    let supportResult = surfaceSupport(
-      physicalDevice,
-      queueFamilyIndex,
-      surface,
-      &support)
-    if supportResult == VkConstants.VK_ERROR_SURFACE_LOST_KHR {
-      surfaceLost = true
-      return false
-    }
-    if supportResult != VkConstants.VK_SUCCESS || support != VkConstants.VK_TRUE {
-      throw InvalidOperationException("Vulkan selected queue does not support the SDL surface")
-    }
-    selection = VulkanWindowTargetSelection{
+    return VulkanWindowTargetSelection{
       Capabilities: capabilities,
       Format: selectedFormat,
       PresentMode: presentMode,
       CompositeAlpha: compositeAlpha,
     }
-    return true
   }
 
   private func SelectSrgbFormat(
