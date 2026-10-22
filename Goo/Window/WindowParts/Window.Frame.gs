@@ -378,6 +378,11 @@ public partial class Window {
       flushingMetricsBeforeRender = false
       metricsFlushThreadId = 0
     }
+    if node != nil && hasEffect(pendingReconcileEffects, ReconcileEffects.Rect) {
+      layout.RefreshRects(node!!, portalRoot)
+      resolver.VisualDirty = true
+      changed = true
+    }
     if flushForeground() { changed = true }
     return changed
   }
