@@ -49,7 +49,7 @@ public class PlatformInput {
   public func PointerMove(pointerId int64, device PointerDevice, x float32, y float32,
     modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerMove(pointerId, device, x, y, modifiers, pressure)
+      input.QueuePointerMove(pointerId, device, x / owner.UiScale, y / owner.UiScale, modifiers, pressure)
       drain()
     }
 
@@ -57,7 +57,7 @@ public class PlatformInput {
   public func PointerPress(pointerId int64, device PointerDevice, x float32, y float32,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerPress(pointerId, device, x, y, button, modifiers, pressure)
+      input.QueuePointerPress(pointerId, device, x / owner.UiScale, y / owner.UiScale, button, modifiers, pressure)
       drain()
     }
 
@@ -65,7 +65,7 @@ public class PlatformInput {
   public func PointerRelease(pointerId int64, device PointerDevice, x float32, y float32,
     button PointerButton, modifiers KeyModifiers, pressure float32) {
       requireInput()
-      input.QueuePointerRelease(pointerId, device, x, y, button, modifiers, pressure)
+      input.QueuePointerRelease(pointerId, device, x / owner.UiScale, y / owner.UiScale, button, modifiers, pressure)
       drain()
     }
 
@@ -118,7 +118,7 @@ public class PlatformInput {
   public func PointerWheel(x float32, y float32, deltaX float32, deltaY float32,
     modifiers KeyModifiers) {
       requireInput()
-      input.QueuePointerWheel(x, y, deltaX, deltaY, modifiers)
+      input.QueuePointerWheel(x / owner.UiScale, y / owner.UiScale, deltaX, deltaY, modifiers)
       drain()
     }
 

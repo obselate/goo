@@ -145,8 +145,8 @@ internal partial class PointerInput {
     guard let session = dragSession, let files = session.Data.NativeFiles,
       let host = nativeDragHost else { return false }
     if session.NativeActive || !session.IsPointer || session.Device != PointerDevice.Mouse
-      || (x >= 0.0F && y >= 0.0F && x < float32(host.LogicalWidth)
-        && y < float32(host.LogicalHeight)) { return false }
+      || (x >= 0.0F && y >= 0.0F && x < float32(host.LogicalWidth) / UiScale
+        && y < float32(host.LogicalHeight) / UiScale) { return false }
     session.NativeActive = true
     let started = host.BeginNativeFileDrag(files, (accepted bool) -> {
       if dragSession != session || !session.NativeActive { return }

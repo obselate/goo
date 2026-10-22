@@ -9,6 +9,7 @@ internal partial class TextInput {
   private var host WindowHost?
   private var nativeTextInputActive bool
   private var clipFallback string
+  internal var UiScale float32 = 1.0F
 
   internal init(focus FocusManager) {
     this.focus = focus
@@ -403,7 +404,7 @@ internal partial class TextInput {
   private func updateTextInputArea(n Node) {
     if let native = host {
       if n.Kind == NodeKind.Editor {
-        TextEditorInputAdapter.UpdateImeArea(native, n)
+        TextEditorInputAdapter.UpdateImeArea(native, n, UiScale)
         return
       }
       if n.Kind != NodeKind.Entry {
@@ -419,7 +420,7 @@ internal partial class TextInput {
       let p1 = TransformGeometry.NodeToWindow(n, caretX + 1.5F, topY)
       let p2 = TransformGeometry.NodeToWindow(n, caretX, bottomY)
       let p3 = TransformGeometry.NodeToWindow(n, caretX + 1.5F, bottomY)
-      TextEditorInputAdapter.ApplyImeArea(native, p0, p1, p2, p3)
+      TextEditorInputAdapter.ApplyImeArea(native, p0, p1, p2, p3, UiScale)
     }
   }
 

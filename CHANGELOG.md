@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Window.UiScale for scaled layout, device-resolution rendering, input and native coordinate mapping, with owner inheritance and scaled size constraints.
+
 ## 0.7.45 - 2026-10-22
 
 - Fix custom title bar dragging when a drag region sits inside a focusable ancestor.

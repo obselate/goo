@@ -99,10 +99,10 @@ public partial class Window {
         return false
       }
     guard let native = host else { return false }
-    let left = Math.Floor(area.X)
-    let top = Math.Floor(area.Y)
-    let right = Math.Ceiling(area.X + area.Width)
-    let bottom = Math.Ceiling(area.Y + area.Height)
+    let left = Math.Floor(area.X * float64(UiScale))
+    let top = Math.Floor(area.Y * float64(UiScale))
+    let right = Math.Ceiling((area.X + area.Width) * float64(UiScale))
+    let bottom = Math.Ceiling((area.Y + area.Height) * float64(UiScale))
     let width = right > left ? int32(right - left) : 1
     let height = bottom > top ? int32(bottom - top) : 1
     return native.SetImeArea(int32(left), int32(top), width, height, 0)

@@ -126,8 +126,8 @@ public partial class Window {
       }
       SyncTitlebarHook()
       configureOwnership(native)
-      if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(minWidth, minHeight) }
-      if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(maxWidth, maxHeight) }
+      if minWidth != 0 || minHeight != 0 { native.SetMinimumSize(scaledSize(minWidth), scaledSize(minHeight)) }
+      if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       let target = VulkanWindowTarget(native)
       windowTarget = target
       native.SetBackdrop(backdrop == WindowBackdrop.Blur, windowsBackdrop, macOSBackdrop, waylandBackdrop)
@@ -145,6 +145,7 @@ public partial class Window {
         }
       x = native.X
       y = native.Y
+      input.SetUiScale(UiScale)
       input.Attach(native)
       IsOpen = true
       attachPresentationNotifications(target)
@@ -733,13 +734,13 @@ public partial class Window {
     if let target = windowTarget {
       flushForeground()
       if !profiler.Active {
-        target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
+        target.Render(node, portalRoot, RenderBackground, RenderScale, DiagnosticsSession?.Overlay)
         return
       }
       let paintProfile = profiler.Start()
       var completed = false
       try {
-        target.Render(node, portalRoot, RenderBackground, dpi, DiagnosticsSession?.Overlay)
+        target.Render(node, portalRoot, RenderBackground, RenderScale, DiagnosticsSession?.Overlay)
         completed = true
       } finally {
         if profiler.Active {

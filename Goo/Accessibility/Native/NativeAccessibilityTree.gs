@@ -28,8 +28,9 @@ public sealed partial class NativeAccessibilityAdapter {
 
   private func Encode(all bool) nint {
     let metrics = owner?.CurrentWindowMetrics() ?? WindowMetrics{}
-    let nextX = platform == 2 && metrics.DisplayScaleX > 0.0 ? metrics.DisplayScaleX : 1.0
-    let nextY = platform == 2 && metrics.DisplayScaleY > 0.0 ? metrics.DisplayScaleY : 1.0
+    let uiScale = float64(owner?.UiScale ?? 1.0F)
+    let nextX = (platform == 2 && metrics.DisplayScaleX > 0.0 ? metrics.DisplayScaleX : 1.0) * uiScale
+    let nextY = (platform == 2 && metrics.DisplayScaleY > 0.0 ? metrics.DisplayScaleY : 1.0) * uiScale
     let complete = all || nextX != scaleX || nextY != scaleY
     scaleX = nextX
     scaleY = nextY
@@ -45,7 +46,7 @@ public sealed partial class NativeAccessibilityAdapter {
         let root = AccessKitNative.NodeNew(AccessKitSchema.Window)
         try {
           SetString(root, title, 0)
-          AccessKitNative.NodeSetBounds(root, NativeBounds(ElementRect{Width: float64(width), Height: float64(height)}))
+          AccessKitNative.NodeSetBounds(root, NativeBounds(ElementRect{Width: float64(width) / uiScale, Height: float64(height) / uiScale}))
           if let child = currentRoot { AccessKitNative.NodePushChild(root, NodeId(child.Id)) }
         } catch (error Exception) { AccessKitNative.NodeFree(root)
           throw error }

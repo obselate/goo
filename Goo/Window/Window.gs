@@ -650,7 +650,7 @@ public partial class Window {
   private func startCapture(target WindowRenderTarget, owner WindowCaptureOwner) WindowReadbackRequestStatus {
     if target.PollCapture() == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
     flushForeground()
-    let status = target.RequestCapture(node, portalRoot, RenderBackground, dpi, reusableCapture?.Pixels)
+    let status = target.RequestCapture(node, portalRoot, RenderBackground, RenderScale, reusableCapture?.Pixels)
     capturePending = status == WindowReadbackRequestStatus.Busy || status == WindowReadbackRequestStatus.NotReady
     if status == WindowReadbackRequestStatus.Accepted || capturePending {
       captureOwner = owner
