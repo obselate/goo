@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.48 - 2026-10-22
+
+- Preserve original stack traces for exceptions rethrown from frame, embedding and virtualization handlers.
+
 ## 0.7.47 - 2026-10-22
 
 - Add Window.UiScale for whole-window layout, device-resolution rendering and consistent input coordinates.

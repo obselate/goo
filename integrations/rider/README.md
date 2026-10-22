@@ -2,7 +2,7 @@
 
 This integration uses Rider's built-in External Tools support. It is a real command profile for the `goo` CLI, not a separate JVM plugin and not a duplicated inspector.
 
-1. Install the CLI and standalone inspector with `dotnet tool install --global Goo.DevTools --version 0.7.47` and `dotnet tool install --global Goo.DevTools.App --version 0.7.47`.
+1. Install the CLI and standalone inspector with `dotnet tool install --global Goo.DevTools --version 0.7.48` and `dotnet tool install --global Goo.DevTools.App --version 0.7.48`.
 2. In Rider, open Settings > Tools > External Tools and import `GooDevTools.xml`, or copy it into the project's `.idea/tools` directory.
 3. Run the commands from Tools > External Tools > Goo DevTools.
 
