@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.7.47 - 2026-10-22
+
+- Add Window.UiScale for whole-window layout, device-resolution rendering and consistent input coordinates.
+- Snap text run origins in device space before projection so UI-scaled text matches text rendered at the final device size.
+
 ## 0.7.46 - 2026-10-22
 
 - Improve text crispness by aligning run origins to device pixels without rounding glyph advances.
