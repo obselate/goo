@@ -4,6 +4,41 @@ import System
 import System.Collections.Generic
 
 internal class TextInputPrimitivesFixtures {
+  func UndoHistoryDropsOldestGroupsAndPreservesTypingAndRedo() bool {
+    for grouped in []bool{ false, true } {
+      let document = TextDocument("seed")
+      using let controller = TextEditorController(document)
+      for i in 0 ... 1005 {
+        if grouped {
+          document.BeginUndoGroup()
+          document.BeginUndoGroup()
+          document.Apply(TextChange(TextRange(0, document.Length), "pending"))
+          document.EndUndoGroup()
+        }
+        document.Apply(TextChange(TextRange(0, document.Length), i.ToString()))
+        if grouped { document.EndUndoGroup() }
+      }
+      controller.Execute(TextCommand{ Kind: TextCommandKind.MoveDocumentEnd })
+      controller.Execute(TextCommand{ Kind: TextCommandKind.Insert, Text: "a" })
+      controller.Execute(TextCommand{ Kind: TextCommandKind.Insert, Text: "b" })
+      if document.GetText() != "1004ab" || !document.Undo()
+        || document.GetText() != "1004" { return false }
+      for i in 0 ... 999 {
+        if !document.Undo() { return false }
+      }
+      if document.CanUndo || document.Undo() || document.GetText() != "5" { return false }
+      for i in 0 ... 1000 {
+        if !document.Redo() { return false }
+      }
+      if document.CanRedo || document.Redo() || document.GetText() != "1004ab" { return false }
+      if !document.Undo() { return false }
+      document.Apply(TextChange(TextRange(0, document.Length), "branch"))
+      if document.CanRedo || !document.Undo() || document.GetText() != "1004"
+        || !document.Redo() || document.GetText() != "branch" { return false }
+    }
+    return true
+  }
+
   func WordCommandsUseSelectionWordBoundaries() bool {
     for value in []string{ "foo_bar", "a\u0301_b", "\u0301_ab" } {
       let document = TextDocument(value + ", next")

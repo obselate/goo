@@ -55,10 +55,14 @@ public class TextSnapshot {
 
 /// Stores editable text and versioned immutable snapshots.
 public class TextDocument {
+  shared {
+    private const HistoryLimit int32 = 1000
+  }
+
   private var root TextPieceNode?
   private var version int64
-  private let undoHistory List[TextHistoryEntry]
-  private let redoHistory List[TextHistoryEntry]
+  private let undoHistory LinkedList[TextHistoryEntry]
+  private let redoHistory LinkedList[TextHistoryEntry]
   private let groupHistory List[TextHistoryTransaction]
   private var undoGroupDepth int32
   private var currentMutation TextDocumentMutation?
@@ -71,8 +75,8 @@ public class TextDocument {
 
   /// Creates an empty document.
   public init() {
-    undoHistory = List[TextHistoryEntry]()
-    redoHistory = List[TextHistoryEntry]()
+    undoHistory = LinkedList[TextHistoryEntry]()
+    redoHistory = LinkedList[TextHistoryEntry]()
     groupHistory = List[TextHistoryTransaction]()
   }
 
@@ -176,15 +180,15 @@ public class TextDocument {
     if undoHistory.Count == 0 {
       return false
     }
-    let index = undoHistory.Count - 1
-    let entry = undoHistory[index]
-    undoHistory.RemoveAt(index)
+    let node = undoHistory.Last!!
+    let entry = node.Value
+    undoHistory.RemoveLast()
     for i in(entry.Transactions.Count - 1) ... -1 {
       let transaction = entry.Transactions[i]
       applyTransaction(transaction.UndoChanges, true, false, nil,
         TextDocumentMutationKind.Undo, transaction)
     }
-    redoHistory.Add(entry)
+    redoHistory.AddLast(node)
     return true
   }
 
@@ -195,15 +199,15 @@ public class TextDocument {
     if redoHistory.Count == 0 {
       return false
     }
-    let index = redoHistory.Count - 1
-    let entry = redoHistory[index]
-    redoHistory.RemoveAt(index)
+    let node = redoHistory.Last!!
+    let entry = node.Value
+    redoHistory.RemoveLast()
     for i in 0 ... entry.Transactions.Count {
       let transaction = entry.Transactions[i]
       applyTransaction(transaction.ForwardChanges, true, false, nil,
         TextDocumentMutationKind.Redo, transaction)
     }
-    undoHistory.Add(entry)
+    undoHistory.AddLast(node)
     return true
   }
 
@@ -262,19 +266,23 @@ public class TextDocument {
         }
       }
       redoHistory.Clear()
+      let coalescing = undoGroupDepth == 0 && historyGroup != nil
+        && undoHistory.Count != 0 && undoHistory.Last!!.Value.Group == historyGroup
+      if !coalescing && groupHistory.Count == 0 && undoHistory.Count == HistoryLimit {
+        discarded ??= List[TextHistoryTransaction]()
+        for value in undoHistory.First!!.Value.Transactions { discarded!!.Add(value) }
+        undoHistory.RemoveFirst()
+      }
       if undoGroupDepth != 0 {
         groupHistory.Add(transaction)
         return discarded
       }
-      if historyGroup != nil && undoHistory.Count != 0 {
-        let last = undoHistory[undoHistory.Count - 1]
-        if last.Group == historyGroup {
-          last.Transactions.Add(transaction)
-          return discarded
-        }
+      if coalescing {
+        undoHistory.Last!!.Value.Transactions.Add(transaction)
+        return discarded
       }
       let transactions = List[TextHistoryTransaction]{ transaction }
-      undoHistory.Add(TextHistoryEntry(transactions, historyGroup))
+      undoHistory.AddLast(TextHistoryEntry(transactions, historyGroup))
       return discarded
     }
 
@@ -282,7 +290,7 @@ public class TextDocument {
     if groupHistory.Count == 0 {
       return
     }
-    undoHistory.Add(TextHistoryEntry(groupHistory, nil))
+    undoHistory.AddLast(TextHistoryEntry(groupHistory, nil))
     groupHistory.Clear()
   }
 }
