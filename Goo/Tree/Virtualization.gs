@@ -34,6 +34,11 @@ internal data struct VirtualEntry {
   internal var Placement VirtualPlacement
 }
 
+internal data struct VirtualDetachedEntry {
+  internal var Node Node
+  internal var Entry VirtualEntry
+}
+
 internal sealed class VirtualNodeState {
   private var current VirtualState?
   private var pending VirtualState?
@@ -42,6 +47,9 @@ internal sealed class VirtualNodeState {
   private var mounted Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private var next Dictionary[string, VirtualEntry] = Dictionary[string, VirtualEntry](StringComparer.Ordinal)
   private let children List[Blob] = List[Blob]()
+  private let detached Dictionary[string, VirtualDetachedEntry] = Dictionary[string, VirtualDetachedEntry](StringComparer.Ordinal)
+  private let detachedOrder List[string] = List[string]()
+  private var retainPrevious bool
   private let viewport VirtualViewport = VirtualViewport()
   private let output VirtualOutput = VirtualOutput()
   private var originX float32
@@ -107,6 +115,8 @@ internal sealed class VirtualNodeState {
       Reader: contextReader, Virtual: this, StateCallback: stateCallback})
   internal func Prepare(n Node, source VirtualSource, items bool) IList[Blob] {
     Cancel()
+    ClearDetached()
+    retainPrevious = false
     pendingSource = source
     contextReader?.BeginState()
     let previousContext = enterContext(true)
@@ -149,6 +159,7 @@ internal sealed class VirtualNodeState {
       }
     }
     Cancel(true)
+    retainPrevious = true
     return realize(n, state, AccessibilityMetadata.Value(n)?.Role == AccessibilityRole.List)
   }
 
@@ -183,6 +194,74 @@ internal sealed class VirtualNodeState {
   internal func Position(key string) int32? {
     if mounted.TryGetValue(key, out var entry) && !entry.Placement.Item { return entry.Placement.Index }
     return nil
+  }
+
+  internal func HasRetained(key string) bool -> detached.ContainsKey(key)
+
+  internal func IncludeRetained(keyed Dictionary[string, Node]) {
+    for i in 0 ... detachedOrder.Count {
+      let key = detachedOrder[i]
+      keyed.Add(key, detached[key].Node)
+    }
+  }
+
+  internal func RetainUnmatched(owner Node, retired List[Node], unmatched Dictionary[string, Node]) {
+    if !retainPrevious { return }
+    var kept = 0
+    var height = 0.0F
+    for i in 0 ... detachedOrder.Count {
+      let key = detachedOrder[i]
+      if unmatched.ContainsKey(key) {
+        detachedOrder[kept] = key
+        kept++
+        height += detached[key].Node.Rect.H
+      } else {
+        detached.Remove(key)
+      }
+    }
+    detachedOrder.RemoveRange(kept, detachedOrder.Count - kept)
+    let limit = BoxGeometry.ViewportHeight(owner)
+    kept = 0
+    for i in 0 ... retired.Count {
+      let row = retired[i]
+      if let key = row.Key {
+        if !next.ContainsKey(key) && row.Rect.H > 0.0F && row.Rect.H <= limit
+          && mounted.TryGetValue(key, out var entry) && !virtualHasFocus(row) {
+          detached.Add(key, VirtualDetachedEntry{Node: row, Entry: entry})
+          detachedOrder.Add(key)
+          row.Parent = nil
+          row.VirtualDetached = true
+          height += row.Rect.H
+          continue
+        }
+      }
+      retired[kept] = row
+      kept++
+    }
+    retired.RemoveRange(kept, retired.Count - kept)
+    var dropped = 0
+    while dropped < detachedOrder.Count
+      && (height > limit || detachedOrder.Count - dropped > owner.Children.Count) {
+      let key = detachedOrder[dropped]
+      let row = detached[key].Node
+      detached.Remove(key)
+      height -= row.Rect.H
+      retired.Add(row)
+      dropped++
+    }
+    detachedOrder.RemoveRange(0, dropped)
+  }
+
+  private func ClearDetached() {
+    var failure Exception?
+    for i in 0 ... detachedOrder.Count {
+      let key = detachedOrder[i]
+      try { NodeLifecycle.DisposeTree(detached[key].Node) }
+      catch (error Exception) { if failure == nil { failure = error } }
+    }
+    detached.Clear()
+    detachedOrder.Clear()
+    if let failure = failure { throw failure }
   }
 
   private func realize(n Node, state VirtualState, items bool) IList[Blob] {
@@ -253,6 +332,9 @@ internal sealed class VirtualNodeState {
     if mounted.TryGetValue(key, out var previous) {
       marker = previous.Marker
       same = sameVirtualPlacement(previous.Placement, placement)
+    } else if detached.TryGetValue(key, out var retained) {
+      marker = retained.Entry.Marker
+      same = sameVirtualPlacement(retained.Entry.Placement, placement)
     } else {
       if item.Content == nil { throw InvalidOperationException("Virtual item without content is not mounted") }
       marker = VirtualRetainedBlob(key)
@@ -312,6 +394,8 @@ internal sealed class VirtualNodeState {
 
   internal func Dispose() {
     Cancel()
+    var failure Exception?
+    try { ClearDetached() } catch (error Exception) { failure = error }
     contextReader?.Dispose()
     contextReader = nil
     Context = nil
@@ -320,9 +404,19 @@ internal sealed class VirtualNodeState {
     mounted.Clear()
     if let state = current {
       current = nil
-      state.Dispose()
+      try { state.Dispose() } catch (error Exception) { if failure == nil { failure = error } }
     }
+    if let failure = failure { throw failure }
   }
+}
+
+internal func virtualHasDetachedAncestor(n Node) bool {
+  var current Node? = n
+  while let row = current {
+    if row.VirtualDetached { return true }
+    current = row.Parent
+  }
+  return false
 }
 
 internal func validExtent(value float64) bool -> Double.IsFinite(value) && value >= 0.0 && value <= float64(Single.MaxValue)

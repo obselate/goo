@@ -1260,6 +1260,7 @@ internal partial class Reconciler {
     let next = scratchScope.Next
     let provisional = scratchScope.Provisional
     let retire = scratchScope.Retire
+    let virtualState = Virtualization.State(n)
     var childrenChanged = false
     var committed = false
     var i int32
@@ -1271,6 +1272,7 @@ internal partial class Reconciler {
         }
         i++
       }
+      virtualState?.IncludeRetained(scratchScope.Keyed)
       if scratchScope.HasIncomingHandle {
         prepareHandleMoves(n, blobs, scratchScope)
       }
@@ -1363,6 +1365,7 @@ internal partial class Reconciler {
         let child = next[i]
         n.Children.Add(child)
         child.Parent = n
+        child.VirtualDetached = false
         i++
       }
       committed = true
@@ -1370,6 +1373,7 @@ internal partial class Reconciler {
         Stacking.InvalidateStructure(n)
       }
 
+      virtualState?.RetainUnmatched(n, retire, scratchScope.Keyed)
       if let error = disposeTrees(retire) {
         throw error
       }

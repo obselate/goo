@@ -464,6 +464,44 @@ internal class ElementHandleFixtures {
     return Virtualization.State(root) == nil && !cell.Handles[900].IsMounted && cell.Disposes == 1
   }
 
+  func VirtualDetachedWindowContract() bool {
+    let cell = VirtualFixtureCell(1000)
+    cell.ReuseDetached = true
+    let window = Window{Root: cell, Width: 100, Height: 60}
+    window.UpdateTree()
+    guard let root = window.Tree else { return false }
+    let retained = root.Children[2]
+    cell.Handle.JumpTo(0.0, 10000.0)
+    window.UpdateTree()
+    if retained.Retired || retained.Parent != nil || cell.Handles[2].IsMounted || cell.Handles[2].Focus() { return false }
+    cell.Builds.Clear()
+    cell.Handle.JumpTo(0.0, 0.0)
+    window.UpdateTree()
+    if root.Children[2] != retained || cell.Builds.Count != 1 || cell.Builds[0] != 0 { return false }
+    cell.Handle.JumpTo(0.0, 10000.0)
+    window.UpdateTree()
+    cell.Rebuild()
+    window.UpdateTree()
+    if !retained.Retired { return false }
+    cell.Handle.JumpTo(0.0, 0.0)
+    window.UpdateTree()
+    let bounded = root.Children[2]
+    cell.Handle.JumpTo(0.0, 4000.0)
+    window.UpdateTree()
+    cell.Handle.JumpTo(0.0, 8000.0)
+    window.UpdateTree()
+    if !bounded.Retired { return false }
+    cell.Handle.JumpTo(0.0, 0.0)
+    window.UpdateTree()
+    let focused = root.Children[2]
+    if !cell.Handles[2].Focus() { return false }
+    cell.Handle.JumpTo(0.0, 10000.0)
+    window.UpdateTree()
+    if !focused.Retired || cell.Handles[2].IsMounted { return false }
+    window.Close()
+    return cell.Disposes == 1
+  }
+
   func VirtualViewportContract() bool {
     let cell = VirtualFixtureCell(1000)
     cell.Inset = 10
@@ -750,6 +788,7 @@ internal class VirtualFixtureCell : Cell {
   internal var Focused int32
   internal var First VirtualChild
   internal var RowHeight float64 = 13.0
+  internal var ReuseDetached bool
 
   init(count int32) {
     for i in 0 ... count { Items.Add(VirtualFixtureItem{ Id: i }) }
@@ -812,7 +851,8 @@ internal class VirtualFixtureState : VirtualState {
       let item = cell.Items[index]
       let key = "row-${item.Id}"
       var content Blob?
-      if !current.TryGetValue(key, out var previous) || previous.Revision != item.Revision {
+      if (!current.TryGetValue(key, out var previous) || previous.Revision != item.Revision)
+        && (!cell.ReuseDetached || !viewport.HasRetainedItem(key)) {
         content = cell.BuildItem(item)
       }
       output.Add(VirtualItem{ Key: key, Index: index, Y: float64(index) * 20.0, Width: size.Width, Height: height, Content: content })

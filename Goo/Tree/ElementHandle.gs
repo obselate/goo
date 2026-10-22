@@ -182,7 +182,8 @@ public class ElementHandle {
   internal func Attach(n Node, owner Window?) {
     if let current = node {
       if current != n {
-        throw InvalidOperationException("An ElementHandle can be attached to only one element")
+        if virtualHasDetachedAncestor(current) { ElementHandles.Detach(current) }
+        else { throw InvalidOperationException("An ElementHandle can be attached to only one element") }
       }
     }
     node = n
@@ -203,7 +204,7 @@ public class ElementHandle {
   internal func AttachedNodeFor(owner Window) Node? {
     if window != owner { return nil }
     if let current = node {
-      if !current.Retired && ElementHandles.Owns(current, this) { return current }
+      if !current.Retired && ElementHandles.Owns(current, this) && !virtualHasDetachedAncestor(current) { return current }
     }
     return nil
   }
@@ -214,7 +215,7 @@ public class ElementHandle {
     }
     if let current = node {
       if !current.Retired && ElementHandles.Owns(current, this) {
-        return current
+        return virtualHasDetachedAncestor(current) ? nil : current
       }
       node = nil
       window = nil
@@ -693,7 +694,7 @@ internal class MetricSubscriptions {
       guard let node = handle.AttachedNode() else {
         return ElementMetrics{}
       }
-      if node.Retired || !ElementHandles.Owns(node, handle) {
+      if node.Retired || virtualHasDetachedAncestor(node) || !ElementHandles.Owns(node, handle) {
         return ElementMetrics{}
       }
       return ElementMetrics{

@@ -103,7 +103,7 @@ public data struct VirtualItem {
   public prop Width float64? { get -> width; init -> width = value }
   /// Gets the height. Nil takes the height from the content.
   public prop Height float64? { get -> height; init -> height = value }
-  /// Gets the content to mount. Nil keeps the content that is mounted for this key.
+  /// Gets the content to mount. Nil keeps the mounted or detached content retained for this key.
   public prop Content Blob? { get -> content; init -> content = value }
 }
 
@@ -186,6 +186,12 @@ public class VirtualViewport {
       return focused
     }
   }
+
+  /// Reports whether Goo retains detached content for this key from the same source and context.
+  /// Retention is bounded by one viewport and can end at any realization.
+  /// @param key The stable item key.
+  /// @returns True when Content can be omitted to reattach the retained item.
+  public func HasRetainedItem(key string) bool -> Virtualization.State(bound())?.HasRetained(key) ?? false
 
   /// Gets a mounted item.
   /// @param index The zero-based index, in the order of the last committed Realize.

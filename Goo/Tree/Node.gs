@@ -357,6 +357,10 @@ internal class Node {
       lifecycleState = value ? lifecycleState | uint16(4) : lifecycleState & ~uint16(4)
     }
   }
+  internal prop VirtualDetached bool{
+    get -> (lifecycleState & uint16(2048)) != uint16(0)
+    set -> lifecycleState = value ? lifecycleState | uint16(2048) : lifecycleState & ~uint16(2048)
+  }
   internal prop HasElementHandle bool{
     get -> (lifecycleState & uint16(8)) != uint16(0)
     set {
