@@ -87,7 +87,7 @@ public partial class Window {
   }
 
   private func constrainSize() {
-    applyMinimumSize(minWidth, minHeight)
+    if embeddedHost == nil { applyMinimumSize(minWidth, minHeight) }
     if nativeMinWidth < scaledSize(minWidth) { width = Math.Min(width, nativeMinWidth) }
     if nativeMinHeight < scaledSize(minHeight) { height = Math.Min(height, nativeMinHeight) }
     width = Math.Max(width, nativeMinWidth)
