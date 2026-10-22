@@ -3,6 +3,41 @@ package Goo
 import System
 
 internal class PortalFixtures {
+  func UiScaleLayoutInputAndAnchoredPortalContract() bool {
+    let cell = PortalPlacementCell{}
+    let window = Window{Root: cell, Width: 300, Height: 200, UiScale: 1.25F}
+    window.UpdateTree()
+    if window.Tree?.Rect.W != 240.0F || window.Tree?.Rect.H != 160.0F
+      || !samePortalBox(cell.Popup.BorderBox, 150.0, 50.0, 90.0, 50.0) { return false }
+    window.PlatformInput.PointerPress(0, PointerDevice.Mouse, 200.0F, 75.0F,
+      PointerButton.Primary, KeyModifiers{}, 1.0F)
+    window.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 200.0F, 75.0F,
+      PointerButton.Primary, KeyModifiers{}, 0.0F)
+    if cell.Clicks != 1 { return false }
+    let normal = PortalInputCell{}
+    let hitWindow = Window{Root: normal, Width: 250, Height: 125, UiScale: 1.25F}
+    hitWindow.UpdateTree()
+    hitWindow.PlatformInput.PointerPress(0, PointerDevice.Mouse, 100.0F, 100.0F,
+      PointerButton.Primary, KeyModifiers{}, 1.0F)
+    hitWindow.PlatformInput.PointerRelease(0, PointerDevice.Mouse, 100.0F, 100.0F,
+      PointerButton.Primary, KeyModifiers{}, 0.0F)
+    if normal.NormalClicks != 1 { return false }
+    window.UiScale = 1.0F
+    window.UpdateTree()
+    if window.Tree?.Rect.W != 300.0F || window.Tree?.Rect.H != 200.0F { return false }
+    let child = Window{Owner: window}
+    if child.UiScale != 1.0F { return false }
+    window.UiScale = 1.5F
+    if child.UiScale != 1.5F { return false }
+    child.UiScale = 1.25F
+    window.UiScale = 0.8F
+    if child.UiScale != 1.25F { return false }
+    window.UiScale = 10.0F
+    if window.UiScale != 3.0F { return false }
+    window.UiScale = 0.0F
+    return window.UiScale == 0.5F
+  }
+
   func OverlayOrderingInputAndGeometryContract() bool {
     let cell = PortalInputCell{}
     let window = Window{ Root: cell, Width: 200, Height: 100 }

@@ -9,7 +9,7 @@ public partial class Window {
   private var maxWidth int32
   private var maxHeight int32
 
-  /// Gets or sets the native client minimum width in logical pixels; zero removes the limit.
+  /// Gets or sets the client minimum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
   /// Must be nonnegative and no greater than a nonzero MaxWidth. Embedded hosts are unsupported.
   public prop MinWidth int32{
     get -> minWidth
@@ -17,12 +17,12 @@ public partial class Window {
       requireUiThread("Window.MinWidth")
       validateSizeLimit(v, maxWidth, true)
       if minWidth == v { return }
-      host?.SetMinimumSize(v, minHeight)
+      host?.SetMinimumSize(scaledSize(v), scaledSize(minHeight))
       minWidth = v
     }
   }
 
-  /// Gets or sets the native client minimum height in logical pixels; zero removes the limit.
+  /// Gets or sets the client minimum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
   /// Must be nonnegative and no greater than a nonzero MaxHeight. Embedded hosts are unsupported.
   public prop MinHeight int32{
     get -> minHeight
@@ -30,12 +30,12 @@ public partial class Window {
       requireUiThread("Window.MinHeight")
       validateSizeLimit(v, maxHeight, true)
       if minHeight == v { return }
-      host?.SetMinimumSize(minWidth, v)
+      host?.SetMinimumSize(scaledSize(minWidth), scaledSize(v))
       minHeight = v
     }
   }
 
-  /// Gets or sets the native client maximum width in logical pixels; zero removes the limit.
+  /// Gets or sets the client maximum width in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
   /// Must be nonnegative and, when nonzero, no smaller than MinWidth. Embedded hosts are unsupported.
   public prop MaxWidth int32{
     get -> maxWidth
@@ -43,12 +43,12 @@ public partial class Window {
       requireUiThread("Window.MaxWidth")
       validateSizeLimit(v, minWidth, false)
       if maxWidth == v { return }
-      host?.SetMaximumSize(v, maxHeight)
+      host?.SetMaximumSize(scaledSize(v), scaledSize(maxHeight))
       maxWidth = v
     }
   }
 
-  /// Gets or sets the native client maximum height in logical pixels; zero removes the limit.
+  /// Gets or sets the client maximum height in layout pixels, multiplied by UiScale for the native limit; zero removes the limit.
   /// Must be nonnegative and, when nonzero, no smaller than MinHeight. Embedded hosts are unsupported.
   public prop MaxHeight int32{
     get -> maxHeight
@@ -56,7 +56,7 @@ public partial class Window {
       requireUiThread("Window.MaxHeight")
       validateSizeLimit(v, minHeight, false)
       if maxHeight == v { return }
-      host?.SetMaximumSize(maxWidth, v)
+      host?.SetMaximumSize(scaledSize(maxWidth), scaledSize(v))
       maxHeight = v
     }
   }
@@ -69,9 +69,9 @@ public partial class Window {
   }
 
   private func constrainSize() {
-    width = Math.Max(width, minWidth)
-    height = Math.Max(height, minHeight)
-    if maxWidth != 0 { width = Math.Min(width, maxWidth) }
-    if maxHeight != 0 { height = Math.Min(height, maxHeight) }
+    width = Math.Max(width, scaledSize(minWidth))
+    height = Math.Max(height, scaledSize(minHeight))
+    if maxWidth != 0 { width = Math.Min(width, scaledSize(maxWidth)) }
+    if maxHeight != 0 { height = Math.Min(height, scaledSize(maxHeight)) }
   }
 }

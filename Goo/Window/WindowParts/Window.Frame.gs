@@ -236,8 +236,8 @@ public partial class Window {
       if hasEffect(effects, ReconcileEffects.Structure) {
         Portals.Sync(n, portalRoot)
       }
-      let viewW = float32(Width)
-      let viewH = float32(Height)
+      let viewW = LayoutWidth
+      let viewH = LayoutHeight
       let shouldLayout = hasEffect(effects, ReconcileEffects.Structure)
         || hasEffect(effects, ReconcileEffects.Layout)
         || layout.NeedsLayout(n, portalRoot, viewW, viewH)

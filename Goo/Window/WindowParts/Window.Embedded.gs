@@ -60,6 +60,7 @@ public partial class Window {
       host = bridge
       prepare()
       configureHost(bridge)
+      input.SetUiScale(UiScale)
       input.Attach(bridge)
       IsOpen = true
       applyPreferences(bridge.Preferences)

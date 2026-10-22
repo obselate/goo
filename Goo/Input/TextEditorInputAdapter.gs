@@ -41,7 +41,7 @@ internal class TextEditorInputAdapter {
       return true
     }
 
-    internal func UpdateImeArea(host WindowHost, n Node) {
+    internal func UpdateImeArea(host WindowHost, n Node, scale float32 = 1.0F) {
       guard let controller = n.EditorController else {
         return
       }
@@ -52,11 +52,11 @@ internal class TextEditorInputAdapter {
       }
       let left = n.Rect.X + caret.X
       let top = n.Rect.Y + caret.Y
-      setImeArea(host, n, left, top, caret.W, caret.H)
+      setImeArea(host, n, left, top, caret.W, caret.H, scale)
     }
 
     internal func ApplyImeArea(host WindowHost, p0 TransformPoint, p1 TransformPoint,
-      p2 TransformPoint, p3 TransformPoint) {
+      p2 TransformPoint, p3 TransformPoint, scale float32 = 1.0F) {
         if !p0.Valid || !p1.Valid || !p2.Valid || !p3.Valid {
           return
         }
@@ -64,22 +64,22 @@ internal class TextEditorInputAdapter {
         let minY = TransformGeometry.min4(p0.Y, p1.Y, p2.Y, p3.Y)
         let maxX = TransformGeometry.max4(p0.X, p1.X, p2.X, p3.X)
         let maxY = TransformGeometry.max4(p0.Y, p1.Y, p2.Y, p3.Y)
-        let left = MathF.Floor(minX)
-        let top = MathF.Floor(minY)
-        let right = MathF.Ceiling(maxX)
-        let bottom = MathF.Ceiling(maxY)
+        let left = MathF.Floor(minX * scale)
+        let top = MathF.Floor(minY * scale)
+        let right = MathF.Ceiling(maxX * scale)
+        let bottom = MathF.Ceiling(maxY * scale)
         let width = int32(right - left) > 0 ? int32(right - left) : 1
         let height = int32(bottom - top) > 0 ? int32(bottom - top) : 1
         host.SetImeArea(int32(left), int32(top), width, height, 0)
       }
 
     private func setImeArea(host WindowHost, n Node, x float32, y float32, width float32,
-      height float32) {
+      height float32, scale float32) {
         let p0 = TransformGeometry.NodeToWindow(n, x, y)
         let p1 = TransformGeometry.NodeToWindow(n, x + width, y)
         let p2 = TransformGeometry.NodeToWindow(n, x, y + height)
         let p3 = TransformGeometry.NodeToWindow(n, x + width, y + height)
-        ApplyImeArea(host, p0, p1, p2, p3)
+        ApplyImeArea(host, p0, p1, p2, p3, scale)
       }
 
   }

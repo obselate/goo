@@ -122,6 +122,7 @@ class PortalCaptureCell : Cell {
 
 func RunPortalCaptureSmoke() {
   RunWindowColorCaptureSmoke()
+  RunUiScaleTextCaptureSmoke()
   Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1",
     "GOO_VK_DIAGNOSTICS=1 is required")
   let capturedError = StringWriter()
@@ -213,9 +214,10 @@ func RunPortalCaptureSmoke() {
 
 class WindowColorCaptureCell : Cell {
   internal var Replace bool
+  internal var FontSize float64 = 32.0
 
   override func Build() Blob {
-    if Replace { return Text{Content: "MMMM", FontSize: 32} }
+    if Replace { return Text{Content: "MMMM", FontSize: FontSize} }
     return Container() {
       .Width: Percent(100), .Height: Percent(100),
       Text{Content: "MMMM", FontSize: 32},
@@ -277,4 +279,32 @@ func RunWindowColorCaptureSmoke() {
     WindowReadbackTestFixture.Pump(window, 0.0)
   }
   Console.WriteLine("window-color-pair: default=validated atomic_update=validated portal=validated replacement=validated")
+}
+
+func RunUiScaleTextCaptureSmoke() {
+  let cell = WindowColorCaptureCell{Replace: true}
+  let window = Window{Title: "Goo UI scale text", Width: 240, Height: 120,
+    UiScale: 1.25F, VSync: false, Root: cell}
+  try {
+    window.Open()
+    WindowReadbackTestFixture.Pump(window, 0.0)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    let scaled = ClipCaptureReadback(window, metrics)
+    window.UiScale = 1.0F
+    cell.FontSize = 40.0
+    cell.Rebuild()
+    WindowReadbackTestFixture.Pump(window, 0.0)
+    let reference = ClipCaptureReadback(window, metrics)
+    Require(scaled.Width == reference.Width && scaled.Height == reference.Height,
+      "UI scale changed framebuffer size")
+    for i in 0 ... scaled.Pixels.Length {
+      Require(scaled.Pixels[i] == reference.Pixels[i],
+        "UI-scaled text differs from text rendered at the final device size")
+    }
+    RequireWindowColorInk(reference, metrics, 0, 0, 0, 0)
+  } finally {
+    window.RequestClose()
+    WindowReadbackTestFixture.Pump(window, 0.0)
+  }
+  Console.WriteLine("ui-scale-text: device_resolution=validated pixel_exact=validated")
 }

@@ -64,7 +64,7 @@ public partial class Window {
         return WindowHitResult.Right
       }
     }
-    let info = input.HitInfo(n, px, py)
+    let info = input.HitInfo(n, px / UiScale, py / UiScale)
     if info.HasContent {
       return WindowHitResult.Normal
     }

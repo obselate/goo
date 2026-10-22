@@ -30,6 +30,7 @@ internal partial class PointerInput {
   private var wheelDispatchGeneration int64
   internal var WheelScrollScale float32 = 1.0F
   internal var DragStartDistance float32 = 8.0F
+  internal var UiScale float32 = 1.0F
   private var dragCandidate Node?
   private var dragSession PointerDragSession?
   private var dragPointerId int64
@@ -166,6 +167,14 @@ internal partial class PointerInput {
     }
   }
 
+  internal func ChangeUiScale(root Node?, resolver Resolver, value float32) {
+    let position = cursor * (UiScale / value)
+    let hadPosition = cursorValid
+    Reset(root, resolver)
+    UiScale = value
+    if hadPosition { QueueMove(position.X, position.Y, KeyModifiers{}) }
+  }
+
   internal func Bind(host WindowHost) {
     nativeDragHost = host as NativeFileDragHost?
     host.PointerMoved += QueueMoveFromHost
@@ -173,7 +182,7 @@ internal partial class PointerInput {
     host.PointerReleased += QueueReleaseFromHost
     host.PointerCanceled += QueueCancel
     host.PointerHoverInvalidated += QueueHoverInvalidation
-    host.Wheel += QueueWheel
+    host.Wheel += (x, y, dx, dy, modifiers) -> QueueWheel(x / UiScale, y / UiScale, dx, dy, modifiers)
   }
 
   internal func Dispatch(e QueuedPointerEvent, root Node?, resolver Resolver,
@@ -259,7 +268,7 @@ internal partial class PointerInput {
     buttons PointerButtons, pressure float32,
     modifiers KeyModifiers) {
       queue.Add(QueuedPointerEvent{
-        Kind: PointerEventKind.Move, PointerId: pointerId, Device: device, X: x, Y: y,
+        Kind: PointerEventKind.Move, PointerId: pointerId, Device: device, X: x / UiScale, Y: y / UiScale,
         Buttons: buttons, HasButtons: true, Pressure: pressure, HasPressure: true,
         Modifiers: modifiers,
       })
@@ -293,7 +302,7 @@ internal partial class PointerInput {
     button PointerButton,
     buttons PointerButtons, pressure float32, modifiers KeyModifiers) {
       queue.Add(QueuedPointerEvent{
-        Kind: PointerEventKind.Press, PointerId: pointerId, Device: device, X: x, Y: y,
+        Kind: PointerEventKind.Press, PointerId: pointerId, Device: device, X: x / UiScale, Y: y / UiScale,
         Button: button, Buttons: buttons, HasButtons: true, Pressure: pressure, HasPressure: true,
         Modifiers: modifiers,
       })
@@ -327,7 +336,7 @@ internal partial class PointerInput {
     button PointerButton,
     buttons PointerButtons, pressure float32, modifiers KeyModifiers) {
       queue.Add(QueuedPointerEvent{
-        Kind: PointerEventKind.Release, PointerId: pointerId, Device: device, X: x, Y: y,
+        Kind: PointerEventKind.Release, PointerId: pointerId, Device: device, X: x / UiScale, Y: y / UiScale,
         Button: button, Buttons: buttons, HasButtons: true, Pressure: pressure, HasPressure: true,
         Modifiers: modifiers,
       })

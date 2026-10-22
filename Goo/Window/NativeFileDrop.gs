@@ -27,7 +27,7 @@ public partial class Window {
         if host != nil && NativeTransferCapabilities == Goo.NativeTransferCapabilities.None {
           throw NotSupportedException("This host does not support native file drops")
         }
-        let state = NativeDropState(() -> node, () -> CanReceiveNativeDrop(), () -> requestRender())
+        let state = NativeDropState(() -> node, () -> CanReceiveNativeDrop(), () -> requestRender(), () -> UiScale)
         family ??= WindowFamily()
         family!!.NativeDrop = state
         if let native = host as SdlHost? { state.Bind(native) }

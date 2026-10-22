@@ -383,8 +383,8 @@ internal class DiagnosticTreeState {
       }
       if ancestor.IsPortal {
         if let window = owner {
-          result = intersectX(result, 0.0, float64(window.Width))
-          result = intersectY(result, 0.0, float64(window.Height))
+          result = intersectX(result, 0.0, float64(window.LayoutWidth))
+          result = intersectY(result, 0.0, float64(window.LayoutHeight))
         }
         break
       }

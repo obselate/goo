@@ -22,6 +22,7 @@ internal class NativeDropState {
   private var native SdlHost?
   private var offer NativeDropOffer?
   internal var LastError string?
+  private let getScale(() -> float32)?
   shared {
     private let bindings ConditionalWeakTable[SdlHost, NativeDropState] = ConditionalWeakTable[SdlHost, NativeDropState]()
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
@@ -31,8 +32,9 @@ internal class NativeDropState {
     }
   }
 
-  internal init(getRoot(() -> Node?), canReceive(() -> bool), invalidate Action) {
+  internal init(getRoot(() -> Node?), canReceive(() -> bool), invalidate Action, getScale(() -> float32)? = nil) {
     router = NativeDropRouter(getRoot, canReceive, invalidate)
+    this.getScale = getScale
   }
   internal func Bind(host SdlHost) {
     if host.TransferCapabilities() == NativeTransferCapabilities.None {
@@ -71,13 +73,14 @@ internal class NativeDropState {
     if kind == SDLEventType.DropPosition {
       if !Single.IsFinite(x) || !Single.IsFinite(y) { Reject(active, "Native drop coordinates must be finite")
         return }
-      active.X = x
-      active.Y = y
+      let scale = getScale?.Invoke() ?? 1.0F
+      active.X = x / scale
+      active.Y = y / scale
       active.Modifiers = modifiers
       if !active.Started {
         active.Started = true
-        router.Begin(preview, x, y, modifiers)
-      } else { router.Move(x, y, modifiers) }
+        router.Begin(preview, active.X, active.Y, modifiers)
+      } else { router.Move(active.X, active.Y, modifiers) }
       return
     }
     if kind == SDLEventType.DropText {

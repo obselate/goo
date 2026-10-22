@@ -36,6 +36,7 @@ public partial class Window {
       if family == nil && value == nil { return }
       family ??= WindowFamily()
       family!!.Owner = value
+      if !uiScaleSet { invalidateUiScale() }
     }
   }
 

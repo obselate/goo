@@ -34,6 +34,16 @@ internal partial class InputCoordinator {
 
   internal func SetDragStartDistance(value float32) { pointer.DragStartDistance = value }
 
+  internal func SetUiScale(value float32) {
+    pointer.UiScale = value
+    text.UiScale = value
+  }
+
+  internal func ChangeUiScale(root Node?, resolver Resolver, value float32) {
+    pointer.ChangeUiScale(root, resolver, value)
+    text.UiScale = value
+  }
+
   internal func SyncControlledEntry(n Node, value string) bool -> text.SyncControlledEntry(n, value)
 
   internal func Attach(host WindowHost) {
