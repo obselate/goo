@@ -499,6 +499,11 @@ public partial class Window {
     || windowTarget?.NeedsRender == true || windowTarget?.QueueWorkPending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
+    || scheduler.HasPendingStartup()
+
+  internal func SchedulerStartupPending() bool ->
+    (windowTarget as VulkanWindowTarget?)?.StartupPending == true
+      && (IsVisible || firstShowPending() || windowTarget?.QueueWorkPending == true)
 
   private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
