@@ -44,26 +44,30 @@ void main()
     HbGpuTextInstance instance = hbGpuTextInstances.records[gl_InstanceIndex];
     mat4 transform = mat4(
         vec4(
-            2.0 * frameConstants.viewport.z / frameConstants.viewport.x,
+            frameConstants.viewport.z,
             0.0,
             0.0,
             0.0),
         vec4(
             0.0,
-            2.0 * frameConstants.viewport.w / frameConstants.viewport.y,
+            frameConstants.viewport.w,
             0.0,
             0.0),
         vec4(0.0, 0.0, 1.0, 0.0),
         vec4(
-            -1.0 - 2.0 * frameConstants.origin.x / frameConstants.viewport.x,
-            -1.0 - 2.0 * frameConstants.origin.y / frameConstants.viewport.y,
+            -frameConstants.origin.x,
+            -frameConstants.origin.y,
             0.0,
             1.0)) * instance.transform;
     if (instance.transform[0].y == 0.0 && instance.transform[1].x == 0.0)
     {
-        vec2 origin = instance.runOrigin * frameConstants.viewport.zw - frameConstants.origin.xy;
-        transform[3].xy += 2.0 * (round(origin) - origin) / frameConstants.viewport.xy;
+        vec2 origin = round(instance.runOrigin * frameConstants.viewport.zw);
+        vec2 offset = (instance.transform[3].xy - instance.runOrigin) * frameConstants.viewport.zw;
+        transform[3].xy = origin + offset - frameConstants.origin.xy;
     }
+    transform[0].xy *= 2.0 / frameConstants.viewport.xy;
+    transform[1].xy *= 2.0 / frameConstants.viewport.xy;
+    transform[3].xy = 2.0 * transform[3].xy / frameConstants.viewport.xy - 1.0;
     vec2 position = mix(
         instance.glyphBounds.xy,
         instance.glyphBounds.zw,

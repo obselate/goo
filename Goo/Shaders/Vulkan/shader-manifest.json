@@ -192,7 +192,7 @@
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl",
-          "sha256": "ff65a5e2d7385242e81656a2cba80fbd37c16bec59219a617665825ef86bc775"
+          "sha256": "37a82cdf392a96c35dcb6d42f0840f56621e2bfccb5f9ec43a3ce10231d52bb5"
         }
       ]
     },
@@ -421,9 +421,9 @@
       "output": "hb_gpu.vert.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_vertex",
-      "sourceSha256": "6495b45d10545ad85a38ff3f1e7e134bbd5c0a1c238dd585abfa1590e8beb768",
-      "outputSha256": "9e2298fcc2cc6e5244f11be4220d6e9fe30600655c6c45b1ab2a140b3c8c25ee",
-      "outputBytes": 4912,
+      "sourceSha256": "7424e23b65459fb04699aff9c0bf65b682d00b81059ec01a6ff6b4728c5af007",
+      "outputSha256": "d97af8f2d4bad1b49afe93e64c0c01a3150afe7c46a10704f6450daf05f74716",
+      "outputBytes": 5216,
       "capabilities": [
         1
       ]

@@ -871,7 +871,7 @@ internal static class Program
         RequireAssembly(manifest.Assemblies[0], "hb_gpu_vertex", new[]
         {
             new AssemblyPart { Path = HarfBuzzVertexPath, Sha256 = HarfBuzzVertexSha256 },
-            new AssemblyPart { Path = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl", Sha256 = "ff65a5e2d7385242e81656a2cba80fbd37c16bec59219a617665825ef86bc775" }
+            new AssemblyPart { Path = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu.vert.wrapper.glsl", Sha256 = "37a82cdf392a96c35dcb6d42f0840f56621e2bfccb5f9ec43a3ce10231d52bb5" }
         });
         RequireAssembly(manifest.Assemblies[1], "hb_gpu_draw_fragment", new[]
         {
