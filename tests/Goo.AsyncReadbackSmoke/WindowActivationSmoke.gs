@@ -29,6 +29,121 @@ internal class WindowActivationSmoke {
       Require(!window.IsOpen, "Activation smoke window did not close")
     }
 
+    private func VerifyPendingStartup(owner Window) {
+      if !SdlHost.IsWayland() { return }
+      let ownerTarget = WindowReadbackTestFixture.CaptureTarget(owner)!!
+      let ownerDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+      while ownerTarget.CurrentPresentMode == VkPresentModeKHR(-1)
+        && Stopwatch.GetTimestamp() < ownerDeadline {
+        SdlRuntime.PumpEvents(Int32.MaxValue)
+        owner.PumpScheduled(0.0)
+        Thread.Sleep(1)
+      }
+      let expectedMode = ownerTarget.CurrentPresentMode
+      Require(expectedMode != VkPresentModeKHR(-1), "Owner swapchain was not restored")
+      for closeEarly in []bool{true, false} {
+        using let entered = ManualResetEventSlim(false)
+        using let release = ManualResetEventSlim(false)
+        let child = Window{
+          Title: "Goo pending startup", Root: WindowActivationCell{},
+          Width: 320, Height: 100, Owner: owner,
+        }
+        VulkanWindowTarget.SecondaryStartupForTest = () -> {
+          entered.Set()
+          release.Wait()
+        }
+        try {
+          child.Open()
+          Require(!child.IsVisible, "Pending secondary window was mapped before its first frame")
+          let startDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+          while !entered.IsSet && Stopwatch.GetTimestamp() < startDeadline {
+            owner.PumpScheduled(0.0)
+            child.PumpScheduled(0.0)
+            Thread.Sleep(1)
+          }
+          Require(entered.IsSet, "Secondary startup worker did not enter")
+          child.Width = 360
+          child.Height = 180
+          child.VSync = false
+          if closeEarly {
+            child.RequestClose()
+            child.PumpScheduled(0.0)
+            owner.PumpScheduled(0.0)
+            Require(child.IsOpen && !child.IsVisible, "Close discarded or mapped an in-flight startup")
+          } else {
+            WindowReadbackTestFixture.CaptureTarget(child)!!.HoldNextQueueSubmitForTest()
+          }
+          release.Set()
+          if closeEarly {
+            let closeDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+            while child.IsOpen && Stopwatch.GetTimestamp() < closeDeadline {
+              SdlRuntime.PumpEvents(Int32.MaxValue)
+              owner.PumpScheduled(0.0)
+              child.PumpScheduled(0.0)
+              Thread.Sleep(1)
+            }
+            Require(!child.IsOpen, "Pending close request did not finish")
+          } else {
+            let target = WindowReadbackTestFixture.CaptureTarget(child)!!
+            let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+            while !VulkanSharedRuntime.WaitForHeldQueueCallForTest(0)
+              && Stopwatch.GetTimestamp() < deadline {
+              owner.PumpScheduled(0.0)
+              child.PumpScheduled(0.0)
+              Thread.Sleep(1)
+            }
+            Require(VulkanSharedRuntime.WaitForHeldQueueCallForTest(0),
+              "Secondary first submission did not enter")
+            child.VSync = true
+            VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
+            let readyDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+            while target.StartupPending && Stopwatch.GetTimestamp() < readyDeadline {
+              SdlRuntime.PumpEvents(Int32.MaxValue)
+              owner.PumpScheduled(0.0)
+              child.PumpScheduled(0.0)
+              Thread.Sleep(1)
+            }
+            Require(!target.StartupPending, "Pending secondary startup did not complete")
+            WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0)
+            Require(child.IsVisible && !target.StartupPending
+                && target.CurrentPresentMode == expectedMode,
+              "Pending startup: visible=${child.IsVisible} pending=${target.StartupPending}"
+                + " expected_mode=$expectedMode actual_mode=${target.CurrentPresentMode}")
+          }
+        } finally {
+          release.Set()
+          VulkanSharedRuntime.ReleaseHeldQueueCallForTest()
+          VulkanWindowTarget.SecondaryStartupForTest = nil
+          CloseWindow(child)
+        }
+      }
+      let failed = Window{
+        Title: "Goo failed startup", Root: WindowActivationCell{},
+        Width: 320, Height: 100, Owner: owner,
+      }
+      VulkanWindowTarget.SecondaryStartupForTest = () -> {
+        throw InvalidOperationException("secondary-startup-failure")
+      }
+      try {
+        failed.Open()
+        var observed = false
+        let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10
+        while !observed && Stopwatch.GetTimestamp() < deadline {
+          try { failed.PumpScheduled(0.0) }
+          catch (error InvalidOperationException) {
+            if error.Message != "secondary-startup-failure" { throw error }
+            observed = true
+          }
+          Thread.Sleep(1)
+        }
+        Require(observed && !failed.IsVisible, "Startup failure was not delivered on the UI thread")
+      } finally {
+        VulkanWindowTarget.SecondaryStartupForTest = nil
+        CloseWindow(failed)
+      }
+      Console.WriteLine("secondary-startup: close_before_ready=passed resize_vsync=passed failure_on_ui=passed")
+    }
+
     internal func Run() {
       let root = WindowActivationCell{}
       let window = Window{
@@ -119,11 +234,13 @@ internal class WindowActivationSmoke {
           Require(window.Show() == WindowOperationResult.Accepted, "Reshow failed")
         }
         Require(visibility >= 3, "Native lifecycle did not report visibility changes")
+        VerifyPendingStartup(window)
         let child = Window{
           Title: "Goo modal activation smoke", Root: WindowActivationCell{},
           Width: 320, Height: 100, Owner: window, Modal: true,
         }.Open()
         try {
+          WindowReadbackTestFixture.ForceRender(child, 0.0, 10.0)
           Require(window.IsInputBlocked, "Modal child did not block its owner")
           let focused = window.IsFocused
           let events = notifications

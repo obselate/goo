@@ -70,6 +70,15 @@ internal class WindowScheduler {
     }
   }
 
+  internal func HasPendingStartup() bool {
+    lock windowsGate {
+      for window in windows {
+        if window.SchedulerStartupPending() { return true }
+      }
+    }
+    return false
+  }
+
   internal func RequestHotReload() {
     let pending = List[Window]()
     lock windowsGate { pending.AddRange(windows) }

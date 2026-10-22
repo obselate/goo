@@ -4,6 +4,46 @@ import System
 import Hexa.NET.SDL3
 
 internal unsafe partial class SdlHost {
+  private var deferFirstShow bool
+  private var firstShowRequested bool
+  private var firstShowMapping bool
+
+  internal prop FirstShowPending bool { get -> deferFirstShow && firstShowRequested }
+
+  internal func DeferFirstShow() bool {
+    let properties = SDL.GetWindowProperties(window)
+    if !SDL.GetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShowAvailable.1", false) {
+      return false
+    }
+    deferFirstShow = true
+    return true
+  }
+
+  internal func PrepareFirstPresent() bool {
+    if deferFirstShow {
+      if !firstShowRequested {
+        deferFirstShow = false
+        return true
+      }
+      let properties = SDL.GetWindowProperties(window)
+      Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShow.1", true),
+        "SDL_SetBooleanProperty")
+      Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.InitialConfigurePending.1", true),
+        "SDL_SetBooleanProperty")
+      deferFirstShow = false
+      firstShowMapping = true
+      if RequestActivation() != WindowOperationResult.Accepted {
+        throw InvalidOperationException("Native secondary window show failed")
+      }
+    }
+    if firstShowMapping {
+      if SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
+        "Goo.Wayland.InitialConfigurePending.1", true) { return false }
+      firstShowMapping = false
+    }
+    return true
+  }
+
   public prop IsVisible bool { get -> !disposed && !IsClosing
     && (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden)) == 0uL }
 
@@ -53,6 +93,10 @@ internal unsafe partial class SdlHost {
 
   public func Hide() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if deferFirstShow {
+      firstShowRequested = false
+      return WindowOperationResult.Accepted
+    }
     return SDL.HideWindow(window) ? WindowOperationResult.Accepted : WindowOperationResult.Failed
   }
 }

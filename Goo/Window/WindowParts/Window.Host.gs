@@ -426,7 +426,7 @@ public partial class Window {
         // and misreads two far-apart clicks as a double-click -- only the
         // simulation step is bounded; UpdateTree's wallDt/simDt split keeps them
         // separate.
-        let allowFrame = frameAllowed && IsVisible
+        let allowFrame = frameAllowed && (IsVisible || firstShowPending())
         let stepDt = allowFrame ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
         let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         UpdateTree(dt, stepDt)
@@ -447,7 +447,7 @@ public partial class Window {
         }
         advanceCapture()
         let frameNeeded = needsRenderFrame(resolver.VisualDirty)
-        if allowFrame && IsVisible && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
+        if allowFrame && frameNeeded && windowTarget != nil && windowTarget?.QueueWorkPending != true {
           let renderProfile = profiling ? profiler.Start() : FrameProfilePoint{}
           let currentProfile = profiling ? profiler.Start() : FrameProfilePoint{}
           windowTarget?.BeginFrame()
@@ -499,6 +499,13 @@ public partial class Window {
     || windowTarget?.NeedsRender == true || windowTarget?.QueueWorkPending == true
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
+    || scheduler.HasPendingStartup()
+
+  internal func SchedulerStartupPending() bool ->
+    (windowTarget as VulkanWindowTarget?)?.StartupPending == true
+      && (IsVisible || firstShowPending() || windowTarget?.QueueWorkPending == true)
+
+  private func firstShowPending() bool -> (host as SdlHost?)?.FirstShowPending == true
 
   internal func SchedulerHasImmediateService() bool -> host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
@@ -511,9 +518,10 @@ public partial class Window {
     guard let native = host else {
       return false
     }
-    if !IsVisible || !hasDemand() || windowTarget?.QueueWorkPending == true {
+    if (!IsVisible && !firstShowPending()) || !hasDemand() || windowTarget?.QueueWorkPending == true {
       return false
     }
+    if firstShowPending() { return true }
     if !native.SchedulerPacingAvailable { return false }
     return FramePacing == WindowFramePacing.Uncapped || native.IsFrameDue(nowTicks)
   }

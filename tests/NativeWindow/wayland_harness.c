@@ -8,13 +8,14 @@
 typedef uint64_t Uint64;
 typedef uint32_t Uint32;
 typedef struct { int x, y; } SDL_Point;
-typedef struct { unsigned id, flags; bool hit_test; } SDL_Window;
+typedef struct { unsigned id, flags; bool hit_test; void *internal; } SDL_Window;
 typedef struct { unsigned double_click_time; int double_click_radius; } SDL_Mouse;
 struct xdg_surface { int unused; };
 typedef struct {
     SDL_Window *sdlwindow;
     int hit_test_result, shell_surface_type, shell_surface_status;
     bool resizing, pending_config_ack;
+    bool has_been_shown, show_hide_sync_required;
     struct { struct { unsigned serial; struct { void *xdg_toplevel; } toplevel; } xdg; } shell_surface;
 } SDL_WindowData;
 typedef struct {
@@ -44,10 +45,21 @@ enum { SDL_WINDOW_RESIZABLE = 1, SDL_WINDOW_MAXIMIZED = 2, SDL_WINDOW_FULLSCREEN
 static SDL_Mouse mouse = { 500, 8 };
 static int moves, resizes, maximizes, restores, exposes, geometries, acks;
 static bool callback_handles;
+static bool nonblocking_first_show, configure_pending;
 static int callback_count, callback_x, callback_y;
 static bool (*titlebar_callback)(int, int);
 static bool titlebar(int x, int y) { ++callback_count; callback_x = x; callback_y = y; return callback_handles; }
 static unsigned SDL_GetWindowProperties(SDL_Window *window) { return window->id; }
+static bool SDL_GetBooleanProperty(unsigned properties, const char *name, bool fallback) {
+    (void)fallback;
+    assert(properties != 0 && strcmp(name, "Goo.Wayland.NonblockingFirstShow.1") == 0);
+    return nonblocking_first_show;
+}
+static bool SDL_SetBooleanProperty(unsigned properties, const char *name, bool value) {
+    assert(properties != 0 && strcmp(name, "Goo.Wayland.InitialConfigurePending.1") == 0);
+    configure_pending = value;
+    return true;
+}
 static void *SDL_GetPointerProperty(unsigned properties, const char *name, void *fallback) {
     assert(properties != 0 && strcmp(name, "Goo.Window.TitlebarDoubleClick.1") == 0);
     return titlebar_callback ? (void *)titlebar_callback : fallback;
@@ -69,6 +81,16 @@ int main(void)
     SDL_WindowData data = { .sdlwindow = &window, .hit_test_result = SDL_HITTEST_DRAGGABLE,
         .shell_surface_type = WAYLAND_SHELL_SURFACE_TYPE_XDG_TOPLEVEL };
     data.shell_surface.xdg.toplevel.xdg_toplevel = &window;
+    window.internal = &data;
+    for (int state = 0; state < 8; ++state) {
+        nonblocking_first_show = (state & 1) != 0;
+        data.has_been_shown = (state & 2) != 0;
+        data.show_hide_sync_required = (state & 4) != 0;
+        assert(Wayland_CanDeferFirstShow(&window) == (state == 1));
+    }
+    nonblocking_first_show = false;
+    data.has_been_shown = false;
+    data.show_hide_sync_required = false;
     SDL_WaylandSeat seat = { .pointer.focus = &data, .pointer.last_motion = { 100, 20 } };
     assert(Wayland_ProcessHitTest(&seat, 1, SDL_MS_TO_NS(1000), true));
     assert(moves == 1 && maximizes == 0);
@@ -139,5 +161,10 @@ int main(void)
     data.resizing = false;
     handle_xdg_surface_configure(&data, &surface, 103);
     assert(!data.pending_config_ack && acks == 1 && geometries == 1);
+    data.shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE;
+    nonblocking_first_show = true;
+    configure_pending = true;
+    handle_xdg_surface_configure(&data, &surface, 104);
+    assert(!configure_pending && acks == 2 && exposes == 3);
     puts("SDL Wayland titlebar and resize regression checks passed");
 }

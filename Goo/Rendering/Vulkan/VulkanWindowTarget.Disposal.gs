@@ -11,6 +11,7 @@ internal unsafe partial class VulkanWindowTarget {
     if disposed || width < 0 || height < 0 {
       return false
     }
+    if startupState == VulkanWindowStartupState.Closing { return true }
     guard let activeRuntime = runtime else {
       return false
     }
@@ -21,6 +22,7 @@ internal unsafe partial class VulkanWindowTarget {
       if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {
         return false
       }
+      if runtime?.DeviceLost == true { return true }
     }
     if !recreatePending && !surfaceLost && width == requestedWidth && height == requestedHeight {
       return true
@@ -29,6 +31,10 @@ internal unsafe partial class VulkanWindowTarget {
     requestedHeight = height
     framebufferWidth = width
     framebufferHeight = height
+    if startupState == VulkanWindowStartupState.Pending {
+      recreatePending = true
+      return true
+    }
     if hidden || hideReleasePending || QueueWorkPending || DeferForPendingReadbackSubmission() {
       recreatePending = true
       return true
@@ -53,7 +59,7 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     presentationRetirement.ClearPresentationLatency()
-    if QueueWorkPending {
+    if QueueWorkPending || !DrainStartup() {
       host.Wake()
       return
     }

@@ -33,7 +33,9 @@ internal unsafe partial class VulkanWindowTarget {
       ApplySharedRuntime(shared)
       let surfaceStart = DiagnosticTimestamp()
       CreateSurface()
-      ValidateSharedPresentationSupport()
+      if host is SdlHost && SdlHost.IsWayland() && host.DeferFirstShow() {
+        startupState = VulkanWindowStartupState.Pending
+      } else { ValidateSharedPresentationSupport() }
       RecordDiagnosticTiming(VulkanDiagnosticEventIds.SurfaceCreate,
         VulkanDiagnosticCategories.Window, surfaceStart)
       CreateCommandResources()

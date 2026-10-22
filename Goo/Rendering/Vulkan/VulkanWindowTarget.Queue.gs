@@ -365,6 +365,7 @@ internal unsafe partial class VulkanWindowTarget {
       host.Wake()
       return
     }
+    if host is SdlHost && !host.PrepareFirstPresent() { return }
     var completedPresentId uint64 = 0uL
     try {
       let prepareResult = current.TryPreparePresent(activeImageIndex,
@@ -492,6 +493,9 @@ internal unsafe partial class VulkanWindowTarget {
         } else {
           current.CommitLayout(activeImageIndex, VkConstants.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
         }
+      }
+      if startupState == VulkanWindowStartupState.Ready && (completed || recreatePending) {
+        startupState = VulkanWindowStartupState.None
       }
       CaptureDiagnosticWsi()
       clipMaskFrameStarted = false

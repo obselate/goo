@@ -110,6 +110,13 @@ internal class VulkanDeviceRecoveryCoordinator {
         VulkanSharedRuntime.MarkGlobalTerminalFailure(result)
         return false
       }
+      index = 0
+      while index < targetCount {
+        if let target = storage[index] {
+          if !target.DrainStartup() { return true }
+        }
+        index++
+      }
       recoveryInProgress = true
       try {
         guard let oldRuntime = first.RecoveryRuntime() else {

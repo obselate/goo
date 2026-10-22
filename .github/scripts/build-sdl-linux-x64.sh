@@ -63,7 +63,6 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-outbound-file-drag.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-disconnect.patch"
-python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_drop.py" "$work/src"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_no_pointer.py" "$work/src"
 python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_disconnect.py" "$work/src"
@@ -73,6 +72,9 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-foreign-parent.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/static-no-dynapi.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-secondary-startup.patch"
+python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_wayland.py" "$work/src"
 
 # SDL vendors protocols newer than the baseline wayland-scanner schema.
 find "$work/src/wayland-protocols" -type f -name '*.xml' \
