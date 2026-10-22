@@ -201,6 +201,7 @@ Subscription state is sparse. Handles without a listener and ordinary blobs and 
 ## Control scrolling
 
 Set `OverflowX` or `OverflowY` to `Scroll` and attach an `ElementHandle`. `ScrollTo` updates the smoothed target, `JumpTo` applies an immediate clamped offset, and `ScrollIntoView` adjusts every scrollable ancestor. `ScrollOffset` is the displayed position and `ScrollRange` is the maximum legal X/Y offset.
+`JumpTo` calls made by metrics listeners refresh rectangles before the current frame is painted, so a second scroll viewport can follow the reported offset without a one-frame visual delay.
 
 `ScrollbarVisibility.Auto` shows the built-in Vulkan thumb during wheel, programmatic, or drag interaction and then fades it. `Always` keeps the thumb rendered and draggable without creating idle frame demand. `Hidden` suppresses only the built-in thumb; scrolling and custom scrollbar composition continue working.
 
