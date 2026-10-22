@@ -28,6 +28,7 @@ internal partial class SvgParser {
                     Paint: paint
                 }
                 if let dashes = style.Dashes {
+                    ReserveDashes(dashes.Count, element)
                     stroke.Dashes.AddRange(dashes)
                 }
             }
@@ -142,6 +143,9 @@ internal partial class SvgParser {
             chain.Add(current)
             guard let href = GetHref(current.Element) else {
                 break
+            }
+            if chain.Count > MaxGradientHops {
+                throw Fail(current.Element, "gradient reference depth exceeds $MaxGradientHops")
             }
             id = href
         }
@@ -335,6 +339,7 @@ internal partial class SvgParser {
     }
 
     private func ResolveStyle(element XElement, parent SvgStyle) SvgStyle {
+        ReserveDashes(parent.Dashes?.Count ?? 0, element)
         let style = parent.Clone()
         style.LocalOpacity = 1.0
         style.ClipPath = nil
@@ -422,7 +427,9 @@ internal partial class SvgParser {
                     }
                 }
                 case "stroke-dasharray" {
-                    style.Dashes = ParseDashArray(pair.Value, owner)
+                    let dashes = ParseDashArray(pair.Value, owner, MaxTotalDashEntries - reservedDashEntries)
+                    reservedDashEntries += dashes?.Count ?? 0
+                    style.Dashes = dashes
                 }
                 case "stroke-dashoffset" {
                     style.DashOffset = ParseLength(pair.Value, 0.0, owner, pair.Key)
@@ -480,6 +487,13 @@ internal partial class SvgParser {
                 }
             }
         }
+    }
+
+    private func ReserveDashes(count int32, owner XElement) {
+        if count > MaxTotalDashEntries - reservedDashEntries {
+            throw Fail(owner, "dash entry count exceeds $MaxTotalDashEntries")
+        }
+        reservedDashEntries += count
     }
 
     shared {
@@ -561,9 +575,24 @@ internal partial class SvgParser {
                 "stop-opacity"
         )
 
-        private func ParseDashArray(value string, owner XElement) List[float64]? {
+        private func ParseDashArray(value string, owner XElement, remaining int32) List[float64]? {
             if value.Trim().Equals("none", StringComparison.OrdinalIgnoreCase) {
                 return nil
+            }
+            let scanner = SvgNumberScanner(value, owner, "stroke-dasharray")
+            var count = 0
+            while scanner.TryRead(out var number) {
+                if count >= MaxDashEntries {
+                    throw Fail(owner, "stroke-dasharray entry count exceeds $MaxDashEntries")
+                }
+                count++
+            }
+            let normalizedCount = if count % 2 == 0 { count } else { count * 2 }
+            if normalizedCount > MaxDashEntries {
+                throw Fail(owner, "stroke-dasharray entry count exceeds $MaxDashEntries")
+            }
+            if normalizedCount > remaining {
+                throw Fail(owner, "dash entry count exceeds $MaxTotalDashEntries")
             }
             let values = ParseNumberList(value, owner, "stroke-dasharray")
             if values.Count == 0 || values.Any((item float64) -> item < 0.0) {
@@ -573,7 +602,9 @@ internal partial class SvgParser {
                 throw Fail(owner, "stroke-dasharray cannot contain only zero values")
             }
             if values.Count % 2 != 0 {
-                values.AddRange(values.ToArray())
+                for index in 0 ... count {
+                    values.Add(values[index])
+                }
             }
             return values
         }

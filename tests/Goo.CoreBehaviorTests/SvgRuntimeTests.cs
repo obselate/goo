@@ -267,17 +267,53 @@ public sealed class SvgRuntimeTests
         Assert.Equal(clips, asset.ClipCount);
     }
 
-    [Fact]
-    public void LongGradientInheritanceResolvesWithoutRecursion()
+    [Theory]
+    [InlineData("gradient", 256, true)]
+    [InlineData("gradient", 257, false)]
+    [InlineData("definition", 65536, true)]
+    [InlineData("definition", 65537, false)]
+    [InlineData("dash", 511, true)]
+    [InlineData("dash", 513, false)]
+    [InlineData("dash", 1024, true)]
+    [InlineData("dash", 1025, false)]
+    [InlineData("inherited", 127, true)]
+    [InlineData("inherited", 128, false)]
+    [InlineData("animation", 262144, true)]
+    [InlineData("animation", 262145, false)]
+    public void SvgResourceBudgetsBoundDefinitionsAndInheritedValues(string kind, int count, bool accepted)
     {
-        var source = new StringBuilder("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><defs>");
-        for (var index = 0; index < 50000; index++)
+        var content = kind switch
         {
-            source.Append($"<linearGradient id=\"g{index}\" href=\"#g{index + 1}\"/>");
-        }
-        source.Append("<linearGradient id=\"g50000\"><stop offset=\"0\" stop-color=\"red\"/><stop offset=\"1\" stop-color=\"blue\"/></linearGradient></defs><path d=\"M0 0 L10 0 L10 10 Z\" fill=\"url(#g0)\"/></svg>");
+            "gradient" => "<defs>" + string.Concat(Enumerable.Range(0, count)
+                .Select(index => $"<linearGradient id='g{index}' href='#g{index + 1}'/>"))
+                + $"<linearGradient id='g{count}'><stop offset='0' stop-color='red'/><stop offset='1' stop-color='blue'/></linearGradient></defs>"
+                + "<path d='M0 0L1 1' fill='url(#g0)'/>",
+            "definition" => "<defs>" + string.Concat(Enumerable.Range(0, count)
+                .Select(index => $"<linearGradient id='g{index}'/>")) + "</defs>",
+            "dash" => $"<path d='M0 0L1 1' stroke='black' stroke-dasharray='{string.Join(' ', Enumerable.Repeat(1, count))}'/>",
+            "inherited" => $"<g stroke='black' stroke-dasharray='{string.Join(' ', Enumerable.Repeat(1, 1024))}'>"
+                + string.Concat(Enumerable.Repeat("<path d='M0 0L1 1'/>", count)) + "</g>",
+            _ => $"<path d='M0 0L1 1'><animate attributeName='opacity' values='{string.Join(';', Enumerable.Repeat(1, count))}' dur='1s' fill='freeze'/></path>"
+        };
+        var source = $"<svg viewBox='0 0 10 10'>{content}</svg>";
 
-        Assert.Equal(1, Svg.Parse(source.ToString()).PaintCount);
+        if (accepted)
+        {
+            Assert.NotNull(Svg.Parse(source));
+        }
+        else
+        {
+            var exception = Assert.Throws<SvgParseException>(() => Svg.Parse(source));
+            Assert.Contains(kind switch
+            {
+                "gradient" => "gradient reference depth exceeds 256",
+                "definition" => "definition count exceeds 65536",
+                "dash" => "stroke-dasharray entry count exceeds 1024",
+                "inherited" => "dash entry count exceeds 262144",
+                _ => "animation track limit exceeded"
+            }, exception.Message);
+            Assert.StartsWith("line 1, column", exception.Message);
+        }
     }
 
     [Fact]

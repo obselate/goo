@@ -120,11 +120,17 @@ internal partial class SvgParser {
     ) SvgAnimation {
         ValidateAnimationPolicy(element)
         let duration = ParseDuration(string?(element.Attribute("dur")) ?? "", element)
-        let rawValues = ReadAnimationValues(element)
+        let repeat = ReadRepeatCount(element)
+        if reservedAnimationTracks >= MaxAnimationTracks {
+            throw Fail(element, "animation track limit exceeded")
+        }
+        let rawValues = ReadAnimationValues(
+            element,
+            (MaxAnimationKeyframes - reservedAnimationKeyframes) / repeat.Count
+        )
         if rawValues.Count < 2 {
             throw Fail(element, "animation requires at least two values")
         }
-        let repeat = ReadRepeatCount(element)
         let expandedCount = checked(int64(rawValues.Count) * int64(repeat.Count))
         if reservedAnimationTracks >= MaxAnimationTracks ||
             expandedCount > int64(MaxAnimationKeyframes - reservedAnimationKeyframes) {
@@ -252,12 +258,25 @@ internal partial class SvgParser {
             }
         }
 
-        private func ReadAnimationValues(element XElement) List[string] {
+        private func ReadAnimationValues(element XElement, limit int32) List[string] {
             if let values = string?(element.Attribute("values")) {
                 if element.Attribute("from") != nil || element.Attribute("to") != nil || element.Attribute(
                     "by"
                 ) != nil {
                     throw Fail(element, "values cannot be combined with from, to, or by")
+                }
+                var count = 0
+                var inValue = false
+                for character in values {
+                    if character == ';' {
+                        inValue = false
+                    } else if !inValue && !char.IsWhiteSpace(character) {
+                        count++
+                        if count > limit {
+                            throw Fail(element, "animation track limit exceeded")
+                        }
+                        inValue = true
+                    }
                 }
                 return values
                     .Split(';', StringSplitOptions.TrimEntries)
