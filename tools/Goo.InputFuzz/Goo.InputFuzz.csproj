@@ -8,8 +8,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo/Goo.gsproj" />
-    <Reference Include="SharpFuzz" HintPath="../../artifacts/input-fuzz/sharpfuzz/tools/net8.0/any/SharpFuzz.dll" />
-    <Reference Include="SharpFuzz.Common" HintPath="../../artifacts/input-fuzz/sharpfuzz/tools/net8.0/any/SharpFuzz.Common.dll" />
-    <Reference Include="dnlib" HintPath="../../artifacts/input-fuzz/sharpfuzz/tools/net8.0/any/dnlib.dll" />
   </ItemGroup>
 </Project>

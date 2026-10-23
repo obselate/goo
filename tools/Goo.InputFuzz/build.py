@@ -8,7 +8,6 @@ import sys
 import tarfile
 import urllib.request
 import wave
-import zipfile
 
 root = Path(__file__).resolve().parents[2]
 os.chdir(root)
@@ -58,22 +57,7 @@ if not any(corpus.iterdir()):
 
 sanitizers = ["-O1", "-g", "-fno-omit-frame-pointer", "-fsanitize=fuzzer,address,undefined", "-fno-sanitize-recover=all"]
 if target in ("svg", "raster", "wav"):
-    package = fetch(
-        "https://api.nuget.org/v3-flatcontainer/sharpfuzz.commandline/2.3.0/sharpfuzz.commandline.2.3.0.nupkg",
-        "ffb1892f3787ff186364f4039965c9adeaca42a0dd994511295bf4ba8c5f5b03",
-        work / "sharpfuzz.nupkg",
-    )
-    with zipfile.ZipFile(package) as archive:
-        archive.extractall(work / "sharpfuzz")
-    driver = fetch(
-        "https://raw.githubusercontent.com/Metalnem/libfuzzer-dotnet/bd39d4e88d715ab460a929943645be2a186cde52/libfuzzer-dotnet.cc",
-        "90f019e2e9ad3a0b93c7ecc2c5afb2fbfc8b5aab6aac51c7e0d349ec79354f36",
-        work / "libfuzzer-dotnet.cc",
-    )
-    run("clang++", "-O1", "-g", "-fsanitize=fuzzer", str(driver), "-o", str(work / "managed"))
     run("dotnet", "publish", "tools/Goo.InputFuzz/Goo.InputFuzz.csproj", "-c", "Release", "-o", str(work / "managed-target"))
-    prefix = {"svg": "Goo.Svg.", "raster": "Goo.RasterImageDecoder", "wav": "Goo.SoundSource"}[target]
-    run("dotnet", str(work / "managed-target/Goo.InputFuzz.dll"), "--instrument", str(work / "managed-target/Goo.dll"), prefix)
 else:
     hb = manifest["source"]["harfbuzz"]
     archive = fetch(hb["archiveUrl"], hb["archiveSha256"], work / "harfbuzz.tar.xz")
@@ -87,4 +71,4 @@ else:
         stb = manifest["source"]["stbImage"]
         fetch(stb["url"], stb["sha256"], source / "src/stb_image.h")
         run("python3", "tools/Goo.TextNative/apply-source-patches.py", "--manifest", "tools/Goo.TextNative/manifest.json", "--source-root", str(source), "--patch-name", "stb-gif-two-back")
-        run("clang", *sanitizers, "-I" + str(source / "src"), "tools/Goo.TextNative/goo-image.c", "tools/Goo.InputFuzz/image.c", "-lm", "-o", str(work / target))
+        run("clang", *sanitizers, "-I" + str(source / "src"), "tools/Goo.InputFuzz/image.c", "-lm", "-o", str(work / target))

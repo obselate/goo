@@ -47,7 +47,7 @@ jobs:
         if: matrix.target != 'native-image' && matrix.target != 'font'
         run: nice -n 10 ./bootstrap.sh --gsharp-only
 
-      - name: Build instrumented input target
+      - name: Build input target
         run: nice -n 10 python3 tools/Goo.InputFuzz/build.py '${{ matrix.target }}'
 
       - name: Generate and test inputs for ten minutes

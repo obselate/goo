@@ -13,8 +13,7 @@ export INPUT_CURRENT="$work/current-$target"
 status=0
 case "$target" in
   svg|raster|wav)
-    "$work/managed" "${options[@]}" --target_path=dotnet \
-      --target_arg="$work/managed-target/Goo.InputFuzz.dll" "$work/corpus/$target" || status=$?
+    dotnet "$work/managed-target/Goo.InputFuzz.dll" "$work/corpus/$target" || status=$?
     if [[ "$status" != 0 && -f "$INPUT_CURRENT" ]]; then
       cp "$INPUT_CURRENT" "$failures/current-input"
     fi
