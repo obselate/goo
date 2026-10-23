@@ -9,6 +9,8 @@ var xmlPath = Resolve(arguments.GetValueOrDefault("xml"),
     Path.Combine(repositoryRoot, "Goo", "bin", "Release", "net10.0", "Goo.xml"));
 var sourceRoot = Resolve(arguments.GetValueOrDefault("source"), Path.Combine(repositoryRoot, "Goo"));
 var outputRoot = Resolve(arguments.GetValueOrDefault("output"), Path.Combine(repositoryRoot, "docs", "api"));
+var product = Path.GetFileNameWithoutExtension(xmlPath);
+var sourceLink = Path.GetRelativePath(outputRoot, sourceRoot).Replace(Path.DirectorySeparatorChar, '/');
 
 if (!File.Exists(xmlPath))
     throw new FileNotFoundException("Build Goo in Release mode before generating API pages.", xmlPath);
@@ -47,7 +49,7 @@ foreach (var directoryPath in documentedDirectories)
 {
     var directory = Path.GetFileName(directoryPath);
     var pageTypes = types.Where(type => type.Directory == directory).ToArray();
-    var markdown = BuildPage(directory, pageTypes, members, matched, guideRoot);
+    var markdown = BuildPage(directory, pageTypes, members, matched, guideRoot, product, sourceLink);
     pages.Add(directory.ToLowerInvariant() + ".md", FormatPage(markdown));
 }
 
@@ -58,7 +60,7 @@ var unmatched = members.Select(member => member.Id)
 if (unmatched.Length != 0)
     throw new InvalidDataException("Unmapped Goo.xml members:" + Environment.NewLine + string.Join(Environment.NewLine, unmatched));
 
-pages.Add("README.md", FormatPage(BuildIndex(documentedDirectories)));
+pages.Add("README.md", FormatPage(BuildIndex(documentedDirectories, product)));
 Directory.CreateDirectory(outputRoot);
 foreach (var stalePath in Directory.EnumerateFiles(outputRoot, "*.md"))
 {
@@ -81,14 +83,15 @@ static void AppendGradientStopsGuide(StringBuilder text)
     text.AppendLine("per-stop alpha and element opacity.");
 }
 
-static string BuildPage(string directory, ApiType[] types, ApiMember[] members, HashSet<string> matched, string guideRoot)
+static string BuildPage(string directory, ApiType[] types, ApiMember[] members, HashSet<string> matched,
+    string guideRoot, string product, string sourceLink)
 {
     var text = new StringBuilder();
     text.AppendLine($"# {directory} API");
     text.AppendLine();
-    text.AppendLine("Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.");
+    text.AppendLine($"Generated from `{product}.xml`. Source declarations supply type ownership and XML-emitter omissions.");
     text.AppendLine();
-    text.AppendLine($"Source: [`Goo/{directory}`](../../Goo/{directory})");
+    text.AppendLine($"Source: [`{product}/{directory}`]({sourceLink}/{directory})");
 
     if (directory is "Accessibility" or "Window" or "Input" or "Tree" or "Layout")
     {
@@ -117,7 +120,7 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
         text.AppendLine(type.Sources.Count == 1 ? "Source:" : "Sources:");
         text.AppendLine();
         foreach (var source in type.Sources)
-            text.AppendLine($"- [`{source.FileName}`](../../Goo/{source.RelativeFile})");
+            text.AppendLine($"- [`{source.FileName}`]({sourceLink}/{source.RelativeFile})");
 
         var typeId = "T:" + type.XmlName;
         var typeMember = members.SingleOrDefault(member => member.Id == typeId);
@@ -337,12 +340,12 @@ static void AppendShaderEffectGuide(StringBuilder text)
     text.AppendLine("The compiled program stays a sidecar asset in JIT and NativeAOT builds. Goo packages the build adapter, but neither the adapter, authoring modules, nor compiler toolchains are copied to application output. Goo does not invoke a runtime shader compiler. The first use creates a backend pipeline in a device-generation cache. Warm parameter updates reuse that pipeline and the retained layer pool. One target format supports up to 32 distinct effect program identities per device generation. A non-normal `BlendMode` cannot share the same element with an ordinary source-sampling `ShaderEffect`.");
 }
 
-static string BuildIndex(string[] sourceDirectories)
+static string BuildIndex(string[] sourceDirectories, string product)
 {
     var text = new StringBuilder();
-    text.AppendLine("# Goo API");
+    text.AppendLine($"# {product} API");
     text.AppendLine();
-    text.AppendLine("These pages are generated from the Release `Goo.xml` file.");
+    text.AppendLine($"These pages are generated from the Release `{product}.xml` file.");
     text.AppendLine();
     foreach (var path in sourceDirectories)
     {

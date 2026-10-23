@@ -31,6 +31,7 @@
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/test-macos-activation.py
+!/.github/scripts/test-app-host.py
 !/.github/scripts/build-text-native-linux-x64.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh
@@ -59,6 +60,8 @@
 !/Goo.Gestures/**
 !/Goo.Android/
 !/Goo.Android/**
+!/Goo.AppHost/
+!/Goo.AppHost/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -85,6 +88,9 @@
 
 !/docs/audio.md
 !/docs/gestures.md
+!/docs/app-host.md
+!/docs/api-app-host/
+!/docs/api-app-host/**
 !/docs/assets/
 !/docs/assets/**
 !/docs/api/

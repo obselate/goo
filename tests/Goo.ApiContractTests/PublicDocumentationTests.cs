@@ -863,7 +863,9 @@ public sealed class PublicDocumentationTests
     {
         var path = Path.Combine(AppContext.BaseDirectory, "PublicApi.approved.txt");
         Assert.True(File.Exists(path), $"Missing approved public API baseline at {path}.");
-        var abstractTypes = ApiTypes()
+        var apiTypes = ApiTypes().ToArray();
+        var approvedTypes = apiTypes.Select(type => type.FullName).ToHashSet(StringComparer.Ordinal);
+        var abstractTypes = apiTypes
             .Where(type => type.IsAbstract)
             .Select(type => type.FullName)
             .ToHashSet(StringComparer.Ordinal);
@@ -873,6 +875,7 @@ public sealed class PublicDocumentationTests
         };
         var count = File.ReadLines(path)
             .Select(line => line.Split('|'))
+            .Where(parts => approvedTypes.Contains(parts[1]))
             .Count(parts =>
                 parts[0] == "ctor"
                     && parts[1] != "Goo.Cell`1"
