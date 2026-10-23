@@ -4,6 +4,7 @@ import System
 
 internal class TreeFixtures {
   func TreeDepthLimitContract() bool {
+    let message = "Node tree depth exceeds the limit of " + Reconciler.MaximumTreeDepth.ToString() + "."
     var blob Blob = Text{}
     for i in 0 ... Reconciler.MaximumTreeDepth {
       blob = Container(){blob}
@@ -13,7 +14,7 @@ internal class TreeFixtures {
       rec.Mount(blob)
       return false
     } catch (error InvalidOperationException) {
-      if error.Message != "Node tree depth exceeds the limit of 32." { return false }
+      if error.Message != message { return false }
     }
     guard let container = blob as Container else { return false }
     let root = rec.Mount(container.Children[0])
@@ -22,7 +23,7 @@ internal class TreeFixtures {
       rec.Diff(root, blob)
       return false
     } catch (error InvalidOperationException) {
-      if error.Message != "Node tree depth exceeds the limit of 32." { return false }
+      if error.Message != message { return false }
     }
     var leaf = root
     while leaf.Children.Count > 0 { leaf = leaf.Children[0] }
@@ -30,19 +31,19 @@ internal class TreeFixtures {
       rec.Diff(leaf, Container(){Text{}})
       return false
     } catch (error InvalidOperationException) {
-      if error.Message != "Node tree depth exceeds the limit of 32." { return false }
+      if error.Message != message { return false }
     }
     try {
       rec.Mount(Text{}, leaf)
       return false
     } catch (error InvalidOperationException) {
-      if error.Message != "Node tree depth exceeds the limit of 32." { return false }
+      if error.Message != message { return false }
     }
     try {
       rec.MountRoot(TreeDepthCell{Depth: Reconciler.MaximumTreeDepth})
       return false
     } catch (error InvalidOperationException) {
-      if error.Message != "Node tree depth exceeds the limit of 32." { return false }
+      if error.Message != message { return false }
     }
     NodeLifecycle.DisposeTree(root)
     return rec.Mount(Text{Content: "recovered"}).Content == "recovered"

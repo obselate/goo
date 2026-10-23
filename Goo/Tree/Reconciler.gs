@@ -5,10 +5,10 @@ import System.Collections.Generic
 
 internal partial class Reconciler {
   shared {
-    internal let MaximumTreeDepth int32 = 32
+    internal let MaximumTreeDepth int32 = 64
     internal func CheckTreeDepth(depth int32) {
       if depth >= MaximumTreeDepth {
-        throw InvalidOperationException("Node tree depth exceeds the limit of 32.")
+        throw InvalidOperationException("Node tree depth exceeds the limit of " + MaximumTreeDepth.ToString() + ".")
       }
     }
   }
