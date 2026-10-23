@@ -1,0 +1,55 @@
+name: Sync generated docs
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-generated-docs
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
+
+      - name: Build pinned upstream G# authoring tools
+        run: ./bootstrap.sh --gsharp-only
+
+      - name: Regenerate documentation
+        run: |
+          dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
+          python3 plugins/goo/scripts/sync_docs.py .
+
+      - name: Commit generated documentation
+        run: |
+          git add -- docs/api plugins/goo/reference
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Sync generated docs"
+          git push origin HEAD:main

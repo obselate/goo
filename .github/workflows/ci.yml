@@ -88,9 +88,6 @@ jobs:
         if: needs.changes.outputs.tools == 'true'
         run: ./bootstrap.sh --gsharp-only
 
-      - name: Validate onboarding and release metadata
-        run: .github/scripts/validate-onboarding.py
-
       - name: Build repo-local G# linter
         if: needs.changes.outputs.lint == 'true'
         run: |
@@ -121,10 +118,12 @@ jobs:
 
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
+        run: dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
+
+      - name: Validate onboarding and release metadata
         run: |
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
-          git diff --exit-code -- docs/api
-          test -z "$(git status --porcelain -- docs/api)"
+          python3 plugins/goo/scripts/sync_docs.py .
+          .github/scripts/validate-onboarding.py
 
       - name: Run focused API contract tests
         if: needs.changes.outputs.api == 'true'

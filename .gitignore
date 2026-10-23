@@ -14,6 +14,7 @@
 /.github/workflows/*
 !/.github/workflows/ci.yml
 !/.github/workflows/label-issues.yml
+!/.github/workflows/sync-generated-docs.yml
 !/.github/ISSUE_TEMPLATE/
 !/.github/ISSUE_TEMPLATE/**
 !/.github/PULL_REQUEST_TEMPLATE.md
