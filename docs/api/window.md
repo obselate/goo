@@ -425,15 +425,21 @@ Start clipboard calls on the open window's UI thread. Check `result.Status`.
 | Contract | Behavior |
 | --- | --- |
 | Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
-| Owned data | Bytes and URI lists stay valid after clipboard replacement or window close. Caller changes cannot alter published bytes. |
+| Owned data | Byte snapshots and URI values stay unchanged after replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
-| Cut | File Cut requires URIs. It requests a move and never deletes sources. Editor Cut writes Copy data, then removes its selection after Success. |
+| Cut | File Cut requires URIs and never deletes sources. macOS and Android return `Unsupported`. Editor Cut writes Copy data, then removes its selection after Success. |
 | Read status | Missing requested data is `Empty`. A present zero-byte format is `Success`. Failed reads return no partial selection. |
 | Write status | Unsupported formats are not dropped. Native failures can replace or clear the old clipboard. Success does not confirm paste. |
 | Limits | At most 128 MIME names, 256 ASCII bytes per name and 64 MiB total bytes. Text is limited to 16 MiB. Existing file-list bounds apply. |
-| Platforms | These methods support native Wayland. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
-| Lifetime | Wayland needs a clipboard manager to keep data after app exit. A document URI does not grant persistent access. |
+| Platforms | These methods support Windows, macOS, Wayland and `Goo.Android`. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
+| Windows formats | HTML, RTF, PNG and files use native formats. PNG, JPEG and GIF also offer a native bitmap. Other MIME types use OLE streams. |
+| Windows limits | MIME names have at most 255 characters and cannot differ only by case. Plain text cannot contain NUL. An incompatible COM apartment returns `Unsupported`. |
+| macOS formats | MIME bytes use native pasteboard types. File references use separate NSURL items. All data is copied before publication. |
+| Lifetime | Windows and macOS keep data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
+| Android formats | Images and MIME alternatives use read-only content streams, not Binder byte arrays. File references must use `content://` URIs. |
+| Android access | Reads require a focused Goo view. Clipboard data survives view disposal and process recreation. Replacement releases old publication files. URI access is not persistent. |
+| Android limits | Clip metadata is limited to 512 KiB and 4096 items. A MIME stream uses one item alongside any document references. |
 
 
 ## `ClipboardDataResult`
@@ -929,7 +935,6 @@ Reports whether a native service can borrow this window as a modal owner.
 - `Closed`
 - `Cancelled`
 - `Failed`
-
 ## `TransferData`
 
 Source:

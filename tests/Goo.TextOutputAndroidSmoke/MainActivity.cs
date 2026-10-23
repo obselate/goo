@@ -4,6 +4,7 @@ using Android.Util;
 using Goo;
 using Goo.Android;
 using Goo.Printing;
+using Goo.RichText;
 using Goo.SpellCheck;
 
 namespace GooTextOutputProof;
@@ -61,6 +62,7 @@ public sealed class MainActivity : GooActivity
                 && suggested.Range == range && suggested.Word == "helllo" && suggested.Values.Count <= 16,
                 "Android suggestion callback changed its request context");
             Log.Info("GooTextOutputProof", $"PASS: SpellCheckerSession callbacks, {checkedText.Errors.Count} native marks and {suggested.Values.Count} native suggestions");
+            await CheckRichClipboard(deadline.Token);
             var printed = await new AndroidPrinting(this).ShowDialogAsync(GooView.Window, new Document(this), "Goo text output proof");
             Require(printed.Status == PrintStatus.Submitted, "Android print result: " + printed.Status + " " + printed.Error);
             Require(PagesCreated >= 2, "PrintManager did not render two pages");
@@ -72,6 +74,39 @@ public sealed class MainActivity : GooActivity
             Failure = error.ToString();
             Log.Error("GooTextOutputProof", Failure);
         }
+    }
+
+    private async Task CheckRichClipboard(CancellationToken cancellation)
+    {
+        using var controller = new TextEditorController(new TextDocument("rich 🙂"));
+        using var layer = new TextPresentationLayer(controller.Document);
+        layer.SetStyle("bold", new TextRange(0, 7), new Style { FontWeight = 700 });
+        using var clipboard = new RichTextClipboard(GooView.Window, controller, layer);
+        controller.Selection = new TextSelection(new TextPosition(0, TextAffinity.Upstream),
+            new TextPosition(7, TextAffinity.Downstream));
+        var copied = await clipboard.CopyAsync(cancellation);
+        Require(copied.Status == RichTextStatus.Success, "Android rich Copy: " + copied.Status + " " + copied.Error);
+        var data = await GooView.Window.ReadClipboardDataAsync(["text/html", "text/rtf", "text/plain;charset=utf-8"]);
+        Require(data.Status == ClipboardReadStatus.Success && data.Data.Representations.Count == 3,
+            "Android native clipboard lost rich alternatives");
+        Require(controller.Execute(new TextCommand(TextCommandKind.Insert, "before", false)), "Android editor did not replace selection");
+        foreach (var type in new[] { "text/html", "text/rtf" })
+        {
+            var representation = data.Data.Representations.Single(item => item.ContentType == type);
+            var written = await GooView.Window.WriteClipboardAsync(new TransferData([representation], []), ClipboardIntent.Copy);
+            Require(written.Status == DataTransferStatus.Success, "Android " + type + " publication failed: " + written.Error);
+            controller.Selection = new TextSelection(new TextPosition(0, TextAffinity.Upstream),
+                new TextPosition(controller.Document.Length, TextAffinity.Downstream));
+            var pasted = await clipboard.PasteAsync(cancellation);
+            Require(pasted.Status == RichTextStatus.Success && controller.Document.GetText() == "rich 🙂",
+                "Android " + type + " Paste: " + pasted.Status + " " + pasted.Error);
+            var styles = layer.GetStyles();
+            Require(styles.Count == 1 && styles[0].Style.TryGetTextStyle(out var properties) && properties.FontWeight == 700,
+                "Android " + type + " lost bold formatting");
+            Require(controller.Document.Undo() && controller.Document.GetText() == "before",
+                "Android " + type + " did not undo as one edit");
+        }
+        Log.Info("GooTextOutputProof", "PASS: native Android rich Copy, HTML-only and RTF-only Paste, Unicode, bold styles and atomic undo");
     }
 
     private sealed class Document(MainActivity source) : IPrintDocument

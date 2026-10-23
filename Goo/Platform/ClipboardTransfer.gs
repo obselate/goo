@@ -13,6 +13,7 @@ internal unsafe partial class ClipboardTransfer {
     internal const MaxFileListBytes int32 = 1048576
     internal const MaxTextBytes int32 = 16777216
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
+    private let unicode UnicodeEncoding = UnicodeEncoding(false, false, true)
     private let imageTypes []string = []string{"image/png", "image/jpeg", "image/gif", "image/bmp", "image/tiff"}
 
     internal func TextFits(value string) bool ->
@@ -34,19 +35,19 @@ internal unsafe partial class ClipboardTransfer {
 
     internal func Query() ClipboardFormats {
       if !Supported() { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}) }
+      if OperatingSystem.IsWindows() { return WindowsQueryFormats() }
+      if OperatingSystem.IsMacOS() { return MacQueryFormats() }
       SDL.ClearError()
       var count nuint
       let native = SDL.GetClipboardMimeTypes(&count)
       try {
         if native == nil && (SDL.GetErrorS() ?? "") != "" { return ClipboardFormats(ClipboardReadStatus.Failed, []string{}, (SDL.GetErrorS() ?? "")) }
         if count > nuint(128) { return ClipboardFormats(ClipboardReadStatus.TooLarge, []string{}, "Clipboard exceeds 128 MIME types") }
-        let formats = List[string](int32(count) + 1)
+        let formats = List[string](int32(count))
         for i in 0 ... int32(count) {
           let value = BoundedUtf8(Marshal.ReadIntPtr(nint(native), i * nint.Size), 256)
           if !formats.Contains(value) { formats.Add(value) }
         }
-        let nativeFiles = (OperatingSystem.IsWindows() && WindowsHasFiles()) || (OperatingSystem.IsMacOS() && MacHasFiles())
-        if nativeFiles && !formats.Contains("text/uri-list") { formats.Add("text/uri-list") }
         return ClipboardFormats(if formats.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, formats.ToArray())
       } catch (error ClipboardLimitException) { return ClipboardFormats(ClipboardReadStatus.TooLarge, []string{}, error.Message) }
       catch (error Exception) { return ClipboardFormats(ClipboardReadStatus.Failed, []string{}, error.Message) }

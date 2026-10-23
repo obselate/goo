@@ -147,7 +147,7 @@ internal unsafe partial class RasterImageDecoder {
       return ImageSource.Transfer(image.Width, image.Height, pixels.ToArray(), () -> { })
     }
 
-    private func DecodeRaw(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken,
+    internal func DecodeRaw(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken,
       pngOnly bool) NativeImage {
       token.ThrowIfCancellationRequested()
       if bytes.Length > bounds.Limits.MaxEncodedBytes { throw EncodedLimit(bounds.Limits) }

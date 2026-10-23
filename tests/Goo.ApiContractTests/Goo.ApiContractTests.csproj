@@ -11,7 +11,10 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Goo\Goo.gsproj" />
+    <ProjectReference Include="..\..\Goo\Goo.gsproj"
+                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)"
+                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
     <ProjectReference Include="..\..\Goo.SpellCheck\Goo.SpellCheck.csproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck.Hunspell\Goo.SpellCheck.Hunspell.csproj" />
     <ProjectReference Include="..\..\Goo.Printing\Goo.Printing.csproj" />

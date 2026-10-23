@@ -12,6 +12,7 @@ namespace Goo.Android;
 public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 {
     private readonly AndroidVulkanHost host;
+    internal AndroidClipboard Clipboard { get; }
     private readonly Handler handler = new(Looper.MainLooper!);
     private readonly FrameCallback frameCallback;
     private readonly Java.Lang.Runnable scheduleFrame;
@@ -36,6 +37,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (Looper.MyLooper() != Looper.MainLooper)
             throw new InvalidOperationException("Create GooView on the Android main thread.");
         Window = window;
+        Clipboard = new AndroidClipboard(this);
         host = new AndroidVulkanHost(this);
         frameCallback = new FrameCallback(this);
         scheduleFrame = new Java.Lang.Runnable(ScheduleFrame);
@@ -457,6 +459,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
                 handler.RemoveCallbacksAndMessages(null);
             }
             CancelFrames();
+            Clipboard.Dispose();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
             EndTextInput();
             host.Dispose();
