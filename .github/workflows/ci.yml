@@ -23,6 +23,8 @@ jobs:
             [DllImport("shell32.dll")] static extern int SHCreateDataObject(IntPtr folder, uint count, IntPtr children, IntPtr inner, ref Guid iid, out IDataObject obj);
             [DllImport("shlwapi.dll")] static extern IntPtr SHCreateMemStream(byte[] bytes, uint size);
             [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern uint RegisterClipboardFormatW(string name);
+            [DllImport("kernel32.dll")] static extern IntPtr GlobalAlloc(uint flags, UIntPtr size);
+            [DllImport("kernel32.dll")] static extern UIntPtr GlobalSize(IntPtr memory);
             static void Inspect(IDataObject obj, string phase, short format) {
               var e=obj.EnumFormatEtc(DATADIR.DATADIR_GET);
               var arr=new FORMATETC[1]; var fetched=new int[1];
@@ -31,7 +33,7 @@ jobs:
               foreach (var t in new[]{TYMED.TYMED_ISTREAM,TYMED.TYMED_HGLOBAL,TYMED.TYMED_ISTREAM|TYMED.TYMED_HGLOBAL}) {
                 var f=new FORMATETC{cfFormat=format,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=t};
                 Console.WriteLine(phase+" query "+t+"="+obj.QueryGetData(ref f).ToString("X8"));
-                try { STGMEDIUM m; obj.GetData(ref f,out m); Console.WriteLine(phase+" get "+t+"=OK actual="+m.tymed); ReleaseStgMedium(ref m); } catch(Exception ex) {Console.WriteLine(phase+" get "+t+"="+ex.HResult.ToString("X8"));}
+                try { STGMEDIUM m; obj.GetData(ref f,out m); Console.WriteLine(phase+" get "+t+"=OK actual="+m.tymed+(m.tymed==TYMED.TYMED_HGLOBAL ? " size="+GlobalSize(m.unionmember) : "")); ReleaseStgMedium(ref m); } catch(Exception ex) {Console.WriteLine(phase+" get "+t+"="+ex.HResult.ToString("X8"));}
                 var target=new STGMEDIUM{tymed=TYMED.TYMED_ISTREAM,unionmember=SHCreateMemStream(null,0)};
                 f.tymed=TYMED.TYMED_ISTREAM;
                 try {obj.GetDataHere(ref f,ref target);Console.WriteLine(phase+" here=OK");} catch(Exception ex) {Console.WriteLine(phase+" here="+ex.HResult.ToString("X8"));}
@@ -41,12 +43,23 @@ jobs:
             public static void Run() {
               var thread=new Thread(()=>{
                 Console.WriteLine("init="+OleInitialize(IntPtr.Zero).ToString("X8"));
-                foreach(var size in new[]{5,0}) {
+                foreach(var kind in new[]{"stream-end","global"}) foreach(var size in new[]{5,0}) {
+                  Console.WriteLine("KIND="+kind);
                   IDataObject obj; var iid=new Guid("0000010e-0000-0000-c000-000000000046");
                   Marshal.ThrowExceptionForHR(SHCreateDataObject(IntPtr.Zero,0,IntPtr.Zero,IntPtr.Zero,ref iid,out obj));
                   var format=unchecked((short)RegisterClipboardFormatW("application/x-goo-probe"));
                   var f=new FORMATETC{cfFormat=format,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=TYMED.TYMED_ISTREAM};
                   var m=new STGMEDIUM{tymed=TYMED.TYMED_ISTREAM,unionmember=SHCreateMemStream(new byte[size],(uint)size)};
+                  if(kind=="stream-end") {
+                    var s=(IStream)Marshal.GetObjectForIUnknown(m.unionmember);
+                    s.Seek(0,2,IntPtr.Zero);
+                    Marshal.ReleaseComObject(s);
+                  } else {
+                    Marshal.Release(m.unionmember);
+                    f.tymed=TYMED.TYMED_HGLOBAL;
+                    m.tymed=TYMED.TYMED_HGLOBAL;
+                    m.unionmember=GlobalAlloc(66,(UIntPtr)size);
+                  }
                   obj.SetData(ref f,ref m,true);
                   Inspect(obj,"source size="+size,format);
                   Console.WriteLine("set="+OleSetClipboard(obj).ToString("X8"));
