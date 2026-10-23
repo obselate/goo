@@ -14,8 +14,6 @@ public sealed class MainActivity : GooActivity
     private bool menuSmokeStarted;
     internal GooView NativeView => GooView;
 
-    internal GooView NativeView => GooView;
-
     protected override Goo.Window CreateWindow() => Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true
         ? new Goo.Window { Root = new GestureCheckScene(), Background = Goo.Color.Rgb(17, 24, 39) }
         : SmokeApplication.CreateWindow();
