@@ -134,7 +134,7 @@ public class PublicApiTests
 
     private static IEnumerable<Type> ApiTypes()
     {
-        return new[] { typeof(Window).Assembly, typeof(SingleInstance).Assembly }
+        return new[] { typeof(Window).Assembly, typeof(SingleInstance).Assembly, typeof(Notifications).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !IsPackageContainer(type))
             .Where(type => !IsTestFixture(type))

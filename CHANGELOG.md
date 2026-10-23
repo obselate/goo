@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add optional native notifications with explicit permission, delivery and activation results.
+
 ## 0.8.1 - 2026-10-23
 
 - Coalesce scroll-only virtual row work while presentation is blocked, cutting grid thumb-drag p99 and max frame time.

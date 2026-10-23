@@ -66,6 +66,8 @@
 !/Goo.Android/**
 !/Goo.AppHost/
 !/Goo.AppHost/**
+!/Goo.Notifications/
+!/Goo.Notifications/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -93,6 +95,9 @@
 !/docs/audio.md
 !/docs/gestures.md
 !/docs/app-host.md
+!/docs/notifications.md
+!/docs/api-notifications/
+!/docs/api-notifications/**
 !/docs/api-app-host/
 !/docs/api-app-host/**
 !/docs/assets/
