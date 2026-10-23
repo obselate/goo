@@ -1847,6 +1847,7 @@ jobs:
             -storepass:file "$RUNNER_TEMP/upload-password" -keypass:file "$RUNNER_TEMP/upload-password"
           export AndroidSdkDirectory="$ANDROID_HOME"
           export JavaSdkDirectory="$JAVA_HOME"
+          export GooBuildAndroid=true
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
           dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package \
             --target android --project tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj \
