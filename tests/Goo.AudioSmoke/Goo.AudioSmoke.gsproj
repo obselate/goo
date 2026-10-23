@@ -5,7 +5,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Goo/Goo.gsproj" />
+    <ProjectReference Include="../../Goo.Audio/Goo.Audio.gsproj" Condition="'$(GooUsePackageReference)' != 'true'" />
+    <PackageReference Include="Goo.Audio" Version="$(GooReleaseVersion)" Condition="'$(GooUsePackageReference)' == 'true'" />
     <None Include="$(GooLinuxSdlPath)" Link="libSDL3.so"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
           Condition="'$(GooLinuxSdlPath)' != ''" />

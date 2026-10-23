@@ -1,51 +1,72 @@
-# UI sounds
-
-Load each cue once while preparing application assets. Share the immutable
-`SoundSource` across windows. `LoadWav` accepts an ordinary file or embedded
-resource stream and leaves the stream open. It supports unsigned 8-bit and
-signed 16-bit PCM WAV, in mono or stereo. A consumer decoder can instead pass
-normalized interleaved float samples to the `SoundSource` constructor.
+# Optional audio
 
 ```gsharp
 using let file = File.OpenRead("notification.wav")
 let cue = SoundSource.LoadWav(file)
-using let audio = SoundPlayer.TryOpen()
-// In an application callback, after checking its mute/notification policy:
-audio?.TryPlay(cue, 0.5F)
+let opened = SoundPlayer.TryOpen()
+let audio = opened.Player
+let queued = audio?.TryPlay(cue, 0.5F)
 ```
 
-Prepare sources outside input callbacks and `Cell.Build`. WAV input and decoded
-float PCM are each limited to 16 MiB; cues are limited to 30 seconds and sample
-rates from 8000 to 192000 Hz. Invalid/truncated WAV, unsupported encodings,
-incomplete PCM frames, nonfinite samples, and samples outside -1 through 1 are
-rejected before playback.
+Add `Goo.Audio` alongside `Goo` with the same package version. Types use namespace `Goo`.
+Keep the player at application scope.
 
-Open and dispose `SoundPlayer` on the UI thread. If application metadata is
-configured with `Window.ConfigureApplication`, do that first. Keep the player
-at application scope and share it across windows. Multiple players also share
-one default output device; the last player's disposal closes it. Opening audio
-is optional: `TryOpen` returns nil when the audio subsystem/default device is
-unavailable, and on unsupported targets such as Android. Window creation does
-not depend on audio initialization.
+| Operation | Contract |
+| --- | --- |
+| Open and dispose | Use the UI thread, after `Window.ConfigureApplication` if used. Owners of the same output share playback state. |
+| `TryOpen().Status` | `Opened`, `Unsupported`, `SubsystemUnavailable`, or `DeviceUnavailable`. Only `Opened` carries a player. |
+| `TryPlay().Status` | `Queued`, `VoiceLimit`, `QueueBudget`, or `NativeFailure`. Only `Queued` carries playback. |
+| `SoundPlayback.Gain` | Set live gain in [0, 1]. Non-finite or out-of-range gain throws. |
+| `Pause()` / `Resume()` | Retain queued frames while paused, then continue. |
+| `Status` | `Playing`, `Paused`, `Completed`, `Stopped`, `SourceFailure`, or `NativeFailure`. A query reclaims finished streams. |
+| `Stop()` | Release one stream. Device buffering can briefly outlast control changes. |
+| `StopAll()` / player disposal | Stop only this owner's playback. |
 
-`TryPlay` copies the prepared PCM into a native queue and returns immediately
-without waiting for playback. The audio thread converts/mixes it independently
-of window frames. Cues overlap, with a process-wide limit of 16 queued streams
-and 32 MiB of queued PCM. `TryPlay` returns nil if this budget is full or a native
-stream cannot be queued. Completed streams are reclaimed by the next play,
-status query, stop, or owner disposal; they never accumulate beyond that limit.
+All operations except open and dispose are thread-safe. Invalid arguments and
+disposed-owner play calls throw. Completion means drained queues, not exact audible timing.
 
-Use the returned `SoundPlayback.Stop()` or `Dispose()` to stop one cue.
-`SoundPlayer.StopAll()` and player disposal stop only that player's cues.
-`IsPlaying` describes queued data rather than an exact audible completion time;
-the device can briefly retain already-buffered sound after a stop. Play, stop,
-and status calls are thread-safe. Gain is per playback and ranges from zero
-through one. Applications choose their own mute, volume, and notification policy.
+## Sources
 
-The implementation uses Goo's existing SDL desktop payload and .NET PCM decoder,
-with no additional native dependency. The pinned Linux and macOS SDL builds
-enable audio; Linux loads PulseAudio or ALSA dynamically. The native smoke runs
-under SDL's dummy audio backend, including Linux and macOS NativeAOT builds.
-It verifies shared lifetime,
-overlap limits, stop, progress with no frame pump, and device reopening; it does
-not establish speaker output quality.
+| Source | Limits and formats |
+| --- | --- |
+| Immutable `SoundSource` | Mono/stereo float PCM, 8000 through 192000 Hz, up to 30 seconds and 16 MiB. |
+| `LoadWav` / `FromWav` | Unsigned 8-bit PCM, signed 16/24-bit PCM, 32-bit float, and WAVE_FORMAT_EXTENSIBLE carrying these formats. |
+| WAV input | Check the 16 MiB encoded limit before allocation. Caller-owned streams stay open. |
+| Samples | Clamp finite values to [-1, 1]. Non-finite input throws. |
+| `SoundStreamSource(sampleRate, channels, read)` | Pull interleaved float frames on the audio thread. Streams have no duration limit. |
+| Shared queue | The default output and each selected output have separate limits of 16 voices and 32 MiB. |
+
+- The reader gets a reusable 1024-frame buffer and a requested frame count.
+- Return frames written. Zero means permanent end. Short reads continue on the next request.
+- Do not retain the buffer, block, call playback controls, or access UI state.
+- Invalid counts, non-finite samples, and reader exceptions become `SourceFailure`.
+- Consumer code owns compressed decoders, decoder synchronization, looping, seek, and stereo pan.
+- Android uses AAudio without SDL. Desktop uses SDL.
+- Applications own mute and notification policy.
+
+## System UI sounds
+
+```gsharp
+let status = SystemSounds.TryPlay(SystemSound.Alert)
+```
+
+- Windows uses system sound aliases. macOS supports alerts through `NSBeep`.
+- Linux uses the optional system `libcanberra.so.0` and the installed sound theme.
+- Android, macOS clicks and missing platform APIs return `Unsupported`.
+- `Queued` means the platform accepted the request. Sound settings can keep it silent.
+- A native API failure returns `NativeFailure`. No PCM device or `SoundPlayer` is needed.
+
+## Output selection
+
+```gsharp
+using let outputs = SoundPlayer.EnumerateOutputDevices()
+if outputs.Status == SoundDeviceStatus.Enumerated && outputs.Devices.Count > 0 {
+    using let player = SoundPlayer.TryOpen(outputs.Devices[0]).Player
+}
+```
+
+- Desktop enumeration uses SDL. Android returns `Unsupported` and an empty list.
+- Open a choice before disposing the list. Existing players remain usable after list disposal.
+- Names are display labels, not persistent identifiers. Do not retain entries from a disposed list.
+- Enumeration returns `Enumerated`, `Unsupported`, `SubsystemUnavailable` or `NativeFailure`.
+- A device unplugged before open returns `DeviceUnavailable`. The default open still follows platform routing.

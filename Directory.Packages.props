@@ -1,5 +1,5 @@
 <Project>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Goo' or '$(MSBuildProjectName)' == 'Goo.ApiContractTests' or '$(MSBuildProjectName)' == 'Goo.CoreBehaviorTests' or '$(MSBuildProjectName)' == 'Goo.ImageLoadingTests' or '$(MSBuildProjectName)' == 'Goo.Gestures.Tests' or '$(MSBuildProjectName)' == 'Goo.SpellCheckTests'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Goo' or '$(MSBuildProjectName)' == 'Goo.Audio' or '$(MSBuildProjectName)' == 'Goo.ApiContractTests' or '$(MSBuildProjectName)' == 'Goo.CoreBehaviorTests' or '$(MSBuildProjectName)' == 'Goo.ImageLoadingTests' or '$(MSBuildProjectName)' == 'Goo.Gestures.Tests' or '$(MSBuildProjectName)' == 'Goo.SpellCheckTests'">
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup Condition="'$(ManagePackageVersionsCentrally)' == 'true'">
