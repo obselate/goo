@@ -187,11 +187,15 @@ func RunWindowsDataTransferSmoke() {
             other.SetInterval(() -> counter.Advance(), 16.0)
             scene.OnStart = () -> {
                 startTicks = counter.Ticks
-                other.SetTimeout(() -> window.RequestClose(), 600.0)
+                other.SetTimeout(() -> {
+                    Console.WriteLine("close-request " + Environment.TickCount64.ToString())
+                    window.RequestClose()
+                }, 600.0)
             }
             scene.OnEnd = () -> {
                 WindowsTransferRequire(counter.Ticks - startTicks >= 5, "Stationary native tracking stopped sibling animation")
                 other.RequestClose()
+                Console.WriteLine("end-windows " + window.IsOpen.ToString() + " " + other.IsOpen.ToString() + " " + (counter.Ticks - startTicks).ToString())
             }
         }
         Console.WriteLine("ready")
@@ -201,11 +205,13 @@ func RunWindowsDataTransferSmoke() {
             if window.IsOpen {
                 window.TryPost(() -> {})
                 window.Pump(0.0)
+                if cancel && scene.EndCount > 0 { Console.WriteLine("source-pump-return " + window.IsOpen.ToString() + " " + (sibling?.IsOpen ?? false).ToString()) }
             }
             if let other = sibling {
                 if other.IsOpen {
                     other.TryPost(() -> {})
                     other.Pump(0.0)
+                    if cancel && scene.EndCount > 0 { Console.WriteLine("sibling-pump-return " + window.IsOpen.ToString() + " " + other.IsOpen.ToString()) }
                 }
             }
             Thread.Sleep(1)

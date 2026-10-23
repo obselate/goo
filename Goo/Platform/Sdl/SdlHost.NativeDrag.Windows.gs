@@ -95,7 +95,11 @@ internal unsafe partial class SdlHost {
       guard let binding = windowsTracking else { return nint(0) }
       if windowsTrackingTick || NativeDropState.CallbackDepth != 0 { return nint(0) }
       windowsTrackingTick = true
-      try { Window.ServiceNativeTracking() }
+      Console.WriteLine("service-enter " + Environment.TickCount64.ToString())
+      try {
+        Window.ServiceNativeTracking()
+        Console.WriteLine("service-exit " + Environment.TickCount64.ToString() + " " + binding.Host.IsClosing.ToString())
+      }
       catch (error Exception) {
         binding.Host.nativeTransferFailure ??= error
         try { binding.Host.CancelNativeDrag() }
@@ -175,6 +179,7 @@ internal unsafe partial class SdlHost {
       binding.Started = true
       var selected uint32
       let status = WindowsDragComWrappers.Start(binding.WindowsObject, source, uint32(effects), out selected)
+      Console.WriteLine("modal-return " + status.ToString() + " " + selected.ToString())
       let outcome = if status == int32(0x00040100u) { DataTransferStatus.Success }
         else if status == int32(0x00040101u) { DataTransferStatus.Cancelled }
         else if status == int32(0x80070005u) { DataTransferStatus.Denied } else { DataTransferStatus.Failed }
