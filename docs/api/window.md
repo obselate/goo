@@ -826,15 +826,6 @@ Reports observed viewport visibility changes on the owner thread.
 
 Creates a window with default configuration.
 
-### `AccessibilityHitTest(float64,float64)`
-
-Finds the published semantic node at a point in window logical coordinates.
-
-- `x`: The finite horizontal window logical coordinate.
-- `y`: The finite vertical window logical coordinate.
-
-Returns: The topmost semantic identity, or nil outside visible semantic content.
-
 ### `Attach(EmbeddedWindowHost)`
 
 Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
