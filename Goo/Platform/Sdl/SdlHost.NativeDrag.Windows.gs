@@ -56,6 +56,7 @@ internal partial class NativeDragBinding {
 
 internal unsafe partial class SdlHost {
   private var windowsDrop WindowsDropTarget?
+  private var windowsDragDisposePending bool
 
   shared {
     private const WindowsDragServiceMilliseconds uint32 = 16u
@@ -191,8 +192,15 @@ internal unsafe partial class SdlHost {
       ClipboardTransfer.WindowsReleaseObject(source)
       ClipboardTransfer.WindowsReleaseObject(binding.WindowsObject)
       binding.WindowsObject = nint(0)
-      if initialized { ClipboardTransfer.WindowsOleUninitialize() }
-      SdlRuntime.Release()
+      try {
+        if windowsDragDisposePending {
+          windowsDragDisposePending = false
+          Dispose()
+        }
+      } finally {
+        if initialized { ClipboardTransfer.WindowsOleUninitialize() }
+        SdlRuntime.Release()
+      }
     }
   }
 }
