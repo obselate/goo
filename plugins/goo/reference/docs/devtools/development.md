@@ -42,8 +42,10 @@ version configuration.
 
 Each diagnostics-enabled window publishes a JSON endpoint descriptor. Discovery
 checks `GOO_DEVTOOLS_DIR`, the project's `.goo/devtools` directory, XDG runtime
-directories, Windows local application data, and temporary Goo directories.
+directories, and per-user local application data (`Goo/DevTools`).
 The descriptor schema and messages are documented in the [local protocol](protocol.md).
+Without `XDG_RUNTIME_DIR`, the runtime uses `Environment.SpecialFolder.LocalApplicationData`
+on every OS. `GOO_DEVTOOLS_DIR` and XDG runtime paths keep their existing precedence.
 
 The CLI finds the inspector through `GOO_DEVTOOLS_INSPECTOR`, `goo-devtools` on
 `PATH`, or repository build output.

@@ -48,15 +48,14 @@ internal class DiagnosticEndpointDiscovery {
       if directoryOverride != nil && directoryOverride != "" {
         return directoryOverride
       }
-      if OperatingSystem.IsWindows() {
-        let local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-        return Path.Combine(local, "Goo", "DevTools")
+      if !OperatingSystem.IsWindows() {
+        let runtime = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")
+        if runtime != nil && runtime != "" {
+          return Path.Combine(runtime, "goo")
+        }
       }
-      let runtime = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")
-      if runtime != nil && runtime != "" {
-        return Path.Combine(runtime, "goo")
-      }
-      return Path.Combine(Path.GetTempPath(), "goo-devtools")
+      let local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+      return Path.Combine(local, "Goo", "DevTools")
     }
 
     private func writeDescriptor(endpoint DiagnosticEndpoint, title string) {

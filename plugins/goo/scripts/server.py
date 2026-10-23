@@ -340,13 +340,15 @@ def goo_starter(name: str = "HelloGoo", repository: str = "") -> dict:
     project = files[f"{name}.gsproj"]
     sdk = re.search(r'<Project Sdk="Gsharp.NET.Sdk/([^\"]+)"', project)
     package = re.search(r'<PackageReference Include="Goo" Version="([^\"]+)"', project)
+    configured = os.environ.get("GOO_SOURCE_ROOT", "")
+    trusted = root == BUNDLE or bool(configured) and root == Path(configured).expanduser().resolve()
     linter = root / "tools/Goo.Gslint/Goo.Gslint.csproj"
     lint = "unavailable"
-    if linter.is_file():
+    if trusted and linter.is_file():
         lint = f"dotnet run --project {shlex.quote(str(linter))} -c Release -- --strict --severity GL0005=none --severity GL0006=none Program.gs"
     build = f"dotnet build {name}.gsproj -c Release --nologo -warnaserror"
     compiler_path = root / "artifacts/gsharp/compiler/gsc.dll"
-    if compiler_path.is_file():
+    if trusted and compiler_path.is_file():
         build += f" -p:GsharpCompilerFullPath={shlex.quote(str(compiler_path))}"
     provenance = source_provenance(root)
     provenance["sourceFiles"] = source_files

@@ -28,6 +28,6 @@ Commands:
 - Goo: Restart Hot Reload starts the watch command again.
 - Goo: Doctor reports CLI and endpoint health.
 
-Set `goo.cliPath`, `goo.project`, and `goo.inspectorPath` in workspace settings when the defaults do not apply. The status item polls `goo doctor --json` and shows whether a live endpoint exists.
+Set `goo.cliPath` and `goo.inspectorPath` in user or machine settings to absolute executable paths when the defaults do not apply. An empty `goo.cliPath` uses `goo` from PATH. Set `goo.project` in workspace settings to a project inside the workspace. The status item polls `goo doctor --json` and shows whether a live endpoint exists.
 
 The extension is MIT licensed.

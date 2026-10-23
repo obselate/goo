@@ -60,8 +60,9 @@
       "properties": {
         "goo.cliPath": {
           "type": "string",
-          "default": "goo",
-          "description": "Path to the goo CLI executable."
+          "default": "",
+          "scope": "machine",
+          "description": "Absolute path to the goo CLI executable. Empty uses goo from PATH."
         },
         "goo.project": {
           "type": "string",
@@ -71,7 +72,8 @@
         "goo.inspectorPath": {
           "type": "string",
           "default": "",
-          "description": "Standalone Goo DevTools executable or DLL. Empty lets the CLI discover it."
+          "scope": "machine",
+          "description": "Absolute path to the standalone Goo DevTools executable or DLL. Empty lets the CLI discover it."
         },
         "goo.launchInspector": {
           "type": "boolean",
