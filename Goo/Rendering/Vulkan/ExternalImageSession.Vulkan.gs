@@ -34,6 +34,9 @@ public unsafe sealed partial class ExternalImageSession {
             && (sync.QueueFamily != 0xFFFFFFFDu || !Runtime.Dispatch.ForeignQueueFamily) {
             return ExternalImageStatus.UnsupportedSynchronization
         }
+        if frame.Image.Native.AndroidBuffer != nint(0) && sync.QueueFamily != 0xFFFFFFFDu {
+            return ExternalImageStatus.UnsupportedSynchronization
+        }
         if sync.Kind == ExternalImageSyncKind.AlreadyComplete {
             frame.Ready = true
             return ExternalImageStatus.Success

@@ -34,6 +34,7 @@ internal sealed class ExternalFrameLease {
     internal var ReadySemaphore VkSemaphore
     internal var ReadyHandle ExternalNativeHandle?
     internal var Ready bool
+    internal var ReadyResult VkResult = VkConstants.VK_NOT_READY
     internal var Dropped bool
     internal var AcquireCommand VkCommandBuffer
     internal var Retiring bool
@@ -93,7 +94,7 @@ public sealed class ExternalImageSource : ImageSourceProvider, IDisposable {
 
     /// Publishes one frame without waiting for producer GPU work. Busy preserves caller ownership.
     /// @param image An unused image imported by this session.
-    /// @param frame The visible sRGB crop and orientation.
+    /// @param frame The visible crop, orientation and actual SDR source encoding.
     /// @param ready Producer completion and released layout ownership.
     /// @param released Receives exactly one terminal result after a successful publication.
     /// @returns The publication status. A failure does not take a frame lease.
@@ -105,17 +106,13 @@ public sealed class ExternalImageSource : ImageSourceProvider, IDisposable {
         if frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0
             || frame.X > image.Width - frame.Width || frame.Y > image.Height - frame.Height
             || frame.Orientation < 1 || frame.Orientation > 8 { throw ArgumentOutOfRangeException("frame") }
-        if frame.ColorEncoding != ExternalImageColorEncoding.Srgb
-            || (frame.AlphaMode != ExternalImageAlphaMode.Premultiplied && frame.AlphaMode != ExternalImageAlphaMode.Opaque) {
-            return ExternalImageStatus.UnsupportedFormat
-        }
         lock Session.Gate {
             if disposed || Session.IsClosed { return ExternalImageStatus.Closed }
             if image.Native.Runtime.Generation != Session.Generation { return ExternalImageStatus.StaleGeneration }
             if !Object.ReferenceEquals(image.Session, Session) { return ExternalImageStatus.WrongDevice }
             if image.Native.Closed { return ExternalImageStatus.Closed }
             if image.Native.Busy { return ExternalImageStatus.Busy }
-            let alphaStatus = image.Native.EnsureAlphaView(frame.AlphaMode)
+            let alphaStatus = image.Native.PrepareFrame(frame)
             if alphaStatus != ExternalImageStatus.Success { return alphaStatus }
             let next = ExternalFrameLease(this, image, frame, ready, released)
             let status = Session.Accept(next)

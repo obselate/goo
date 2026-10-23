@@ -5,13 +5,16 @@ import System.Collections.Generic
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
-    private const ExternalExtensionCount int32 = 5
+    private const ExternalExtensionCount int32 = 6
     private const DeviceExtensionCapacity int32 = 4 + ExternalExtensionCount
     private var externalMemoryExtension string = ""
     private var externalSemaphoreExtension string = ""
     private var externalDmaExtension string = ""
     private var externalModifierExtension string = ""
     private var externalForeignExtension string = ""
+    private var externalAndroidExtension string = ""
+    private var samplerYcbcrSupported bool
+    private var maintenance6Supported bool
     private var formatModifierQueryAvailable bool
     private var externalSessions List[ExternalImageSession]?
     private var externalCloseError Exception?
@@ -19,13 +22,20 @@ internal unsafe partial class VulkanWindowTarget {
     private func DiscoverExternalExtension(extension *VkExtensionProperties) {
         let memoryName = if OperatingSystem.IsWindows() { "VK_KHR_external_memory_win32" } else { "VK_KHR_external_memory_fd" }
         let semaphoreName = if OperatingSystem.IsWindows() { "VK_KHR_external_semaphore_win32" } else { "VK_KHR_external_semaphore_fd" }
-        if !OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() { return }
+        if !OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsAndroid() { return }
         if ExtensionNameEquals(extension, memoryName) { externalMemoryExtension = memoryName }
         if ExtensionNameEquals(extension, semaphoreName) { externalSemaphoreExtension = semaphoreName }
         if OperatingSystem.IsLinux() {
             if ExtensionNameEquals(extension, "VK_EXT_external_memory_dma_buf") { externalDmaExtension = "VK_EXT_external_memory_dma_buf" }
             if ExtensionNameEquals(extension, "VK_EXT_image_drm_format_modifier") { externalModifierExtension = "VK_EXT_image_drm_format_modifier" }
             if ExtensionNameEquals(extension, "VK_EXT_queue_family_foreign") { externalForeignExtension = "VK_EXT_queue_family_foreign" }
+        }
+        if OperatingSystem.IsAndroid() {
+            if ExtensionNameEquals(extension, "VK_ANDROID_external_memory_android_hardware_buffer") {
+                externalAndroidExtension = "VK_ANDROID_external_memory_android_hardware_buffer"
+            }
+            if ExtensionNameEquals(extension, "VK_EXT_queue_family_foreign") { externalForeignExtension = "VK_EXT_queue_family_foreign" }
+            if ExtensionNameEquals(extension, "VK_KHR_maintenance6") { maintenance6Supported = true }
         }
     }
 
@@ -44,6 +54,26 @@ internal unsafe partial class VulkanWindowTarget {
     private func ResolveExternalDeviceDispatch() {
         dispatch.ExternalMemoryKinds = if externalMemoryExtension == "" { 0u } else if OperatingSystem.IsWindows() { 2u | 8u | 128u } else { 1u }
         dispatch.ForeignQueueFamily = externalForeignExtension != ""
+        if externalAndroidExtension != "" && samplerYcbcrSupported && dispatch.ForeignQueueFamily {
+            let properties = ResolveDeviceProc("vkGetAndroidHardwareBufferPropertiesANDROID") as (unmanaged[Cdecl](VkDevice, nint, *VkAndroidHardwareBufferPropertiesANDROID) -> VkResult)?
+            let create = ResolveDeviceProc("vkCreateSamplerYcbcrConversion") as (unmanaged[Cdecl](VkDevice, *VkSamplerYcbcrConversionCreateInfo, *VkAllocationCallbacks, *uint64) -> VkResult)?
+            let destroy = ResolveDeviceProc("vkDestroySamplerYcbcrConversion") as (unmanaged[Cdecl](VkDevice, uint64, *VkAllocationCallbacks) -> void)?
+            if properties != nil && create != nil && destroy != nil {
+                dispatch.vkGetAndroidHardwareBufferPropertiesANDROID = properties
+                dispatch.vkCreateSamplerYcbcrConversion = create
+                dispatch.vkDestroySamplerYcbcrConversion = destroy
+                dispatch.AndroidHardwareBuffer = true
+                dispatch.ExternalMemoryKinds |= 0x400u
+                var conversion = VkPhysicalDeviceMaintenance6Properties{ sType: 1000545001 }
+                var limits = VkPhysicalDeviceProperties2{ sType: 1000059001,
+                    pNext: if maintenance6Supported { *void(&conversion) } else { nil } }
+                let query = instanceDispatch.vkGetPhysicalDeviceProperties2
+                query(physicalDevice, &limits)
+                dispatch.AndroidDescriptorCount = if maintenance6Supported {
+                    conversion.maxCombinedImageSamplerDescriptorCount
+                } else { 3u }
+            }
+        }
         if externalMemoryExtension != "" && externalDmaExtension != "" && externalModifierExtension != "" && formatModifierQueryAvailable {
             let properties = ResolveDeviceProc("vkGetMemoryFdPropertiesKHR") as (unmanaged[Cdecl](VkDevice, uint32, int32, *VkMemoryFdPropertiesKHR) -> VkResult)?
             if properties != nil {

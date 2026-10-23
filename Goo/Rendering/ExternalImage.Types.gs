@@ -12,8 +12,25 @@ public enum ExternalImageHandleKind { OpaqueFd; DmaBuf; OpaqueWin32; D3D11Textur
 /// Identifies a producer completion dependency.
 public enum ExternalImageSyncKind { OpaqueFdSemaphore; SyncFd; OpaqueWin32Semaphore; D3D12Fence; MetalSharedEvent; AlreadyComplete }
 
-/// Identifies the source sample encoding.
-public enum ExternalImageColorEncoding { Unsupported; Srgb }
+/// Identifies the actual source encoding. Android SDR values use the SMPTE 170M transfer function.
+public enum ExternalImageColorEncoding {
+    /// Unrecognized color data. Publication is rejected.
+    Unsupported;
+    /// sRGB RGBA or BGRA samples.
+    Srgb;
+    /// BT.709 primaries and matrix with limited-range YCbCr.
+    AndroidBt709Limited;
+    /// BT.709 primaries and matrix with full-range YCbCr.
+    AndroidBt709Full;
+    /// BT.601 625-line primaries and matrix with limited-range YCbCr.
+    AndroidBt601_625Limited;
+    /// BT.601 625-line primaries and matrix with full-range YCbCr.
+    AndroidBt601_625Full;
+    /// BT.601 525-line primaries and matrix with limited-range YCbCr.
+    AndroidBt601_525Limited;
+    /// BT.601 525-line primaries and matrix with full-range YCbCr.
+    AndroidBt601_525Full;
+}
 
 /// Identifies source alpha storage.
 public enum ExternalImageAlphaMode { Premultiplied; Opaque }
@@ -84,7 +101,7 @@ public data struct ExternalFrameDescription {
     public prop Orientation int32 { get; init; }
     /// Gets the source alpha storage.
     public prop AlphaMode ExternalImageAlphaMode { get; init; }
-    /// Gets the source color encoding. HDR samples are not supported.
+    /// Gets the producer dataspace, not a value inferred from the buffer format. HDR is rejected.
     public prop ColorEncoding ExternalImageColorEncoding { get; init; }
 }
 

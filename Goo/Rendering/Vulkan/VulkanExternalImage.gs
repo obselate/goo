@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Runtime.InteropServices
 
-internal unsafe sealed class VulkanExternalImage : IDisposable {
+internal unsafe sealed partial class VulkanExternalImage : IDisposable {
     internal let Runtime VulkanSharedLease
     internal let Width int32
     internal let Height int32
@@ -14,12 +14,22 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
     private var memory VkDeviceMemory
     internal var Busy bool
     internal var Closed bool
+    internal var AndroidBuffer nint
+    internal var AndroidFormat VkAndroidHardwareBufferFormatPropertiesANDROID
+    internal var Normalization VulkanAndroidImageNormalization?
 
     private init(runtime VulkanSharedLease, description VulkanExternalImageDescription) {
         Runtime = runtime
         Width = description.Width
         Height = description.Height
         Format = description.Format
+    }
+
+    private init(runtime VulkanSharedLease, width int32, height int32, format int32) {
+        Runtime = runtime
+        Width = width
+        Height = height
+        Format = format
     }
 
     shared {
@@ -230,6 +240,8 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
     public func Dispose() {
         let dispatch = Runtime.Dispatch
         let device = Runtime.Device
+        Normalization?.Dispose()
+        Normalization = nil
         if OpaqueView != 0uL {
             let destroy = dispatch.vkDestroyImageView
             destroy(device, OpaqueView, nil)
@@ -249,6 +261,10 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             let free = dispatch.vkFreeMemory
             free(device, memory, nil)
             memory = 0uL
+        }
+        if AndroidBuffer != nint(0) {
+            AndroidHardwareBuffer.Release(AndroidBuffer)
+            AndroidBuffer = nint(0)
         }
     }
 }

@@ -109,6 +109,11 @@ internal unsafe struct VkDeviceDispatch {
   var ExternalMemoryKinds uint32
   var ExternalSemaphoreKinds uint32
   var ForeignQueueFamily bool
+  var AndroidHardwareBuffer bool
+  var AndroidDescriptorCount uint32
+  var vkGetAndroidHardwareBufferPropertiesANDROID unmanaged[Cdecl](VkDevice, nint, *VkAndroidHardwareBufferPropertiesANDROID) -> VkResult
+  var vkCreateSamplerYcbcrConversion unmanaged[Cdecl](VkDevice, *VkSamplerYcbcrConversionCreateInfo, *VkAllocationCallbacks, *uint64) -> VkResult
+  var vkDestroySamplerYcbcrConversion unmanaged[Cdecl](VkDevice, uint64, *VkAllocationCallbacks) -> void
   var vkGetMemoryFdPropertiesKHR unmanaged[Cdecl](VkDevice, uint32, int32, *VkMemoryFdPropertiesKHR) -> VkResult
   var vkImportSemaphoreFdKHR unmanaged[Cdecl](VkDevice, *VkImportSemaphoreFdInfoKHR) -> VkResult
   var vkImportSemaphoreWin32HandleKHR unmanaged[Cdecl](VkDevice, *VkImportSemaphoreWin32HandleInfoKHR) -> VkResult

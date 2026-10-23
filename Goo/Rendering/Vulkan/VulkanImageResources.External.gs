@@ -41,8 +41,9 @@ internal unsafe partial class VulkanImageResources {
             Id: id, ProviderId: source.ProviderId, SourceId: source.SourceId,
             Width: uint32(frame.Width), Height: uint32(frame.Height), Bytes: bytes,
             SamplerId: samplerId, SamplerMode: VulkanImageSamplerMode.Linear,
-            State: VulkanImageResourceState.Resident, Image: frame.Image.Native.Image,
-            ImageView: if frame.Description.AlphaMode == ExternalImageAlphaMode.Opaque { frame.Image.Native.OpaqueView } else { frame.Image.Native.View },
+            State: VulkanImageResourceState.Resident, Image: frame.Image.Native.Normalization?.Image ?? frame.Image.Native.Image,
+            ImageView: frame.Image.Native.Normalization?.View
+                ?? (if frame.Description.AlphaMode == ExternalImageAlphaMode.Opaque { frame.Image.Native.OpaqueView } else { frame.Image.Native.View }),
             External: frame,
             ImageLayout: VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, LastTouch: TouchValue(),
         }
@@ -67,6 +68,7 @@ internal unsafe partial class VulkanImageResources {
             if frame.Acquired || frame.AcquireCommand == command { continue }
             ExternalImageSession.RecordOwnership(command, dispatch, frame,
                 frame.Image.Native.Runtime.GraphicsFamilyIndex, true)
+            frame.Image.Native.Normalization?.Record(command)
             frame.AcquireCommand = command
         }
     }

@@ -59,7 +59,21 @@ public sealed partial class ExternalImageSession : IDisposable {
             Pump()
         }
         CreateReleaseCommands()
-        timer = Timer((_ object?) -> { Wake() }, nil, Timeout.Infinite, Timeout.Infinite)
+        timer = Timer((_ object?) -> { PollDependencies() }, nil, Timeout.Infinite, Timeout.Infinite)
+    }
+
+    private func PollDependencies() {
+        lock Gate {
+            if disposed { return }
+            for frame in frames {
+                if let current = frame {
+                    if !current.Ready && current.ReadyResult == VkConstants.VK_NOT_READY {
+                        current.ReadyResult = PollReady(current)
+                    }
+                }
+            }
+        }
+        Wake()
     }
 
     private func RequireOwner() {
@@ -95,10 +109,29 @@ public sealed partial class ExternalImageSession : IDisposable {
         }
     }
 
-    /// Imports a retained Android hardware buffer when the platform route is available.
-    /// @param buffer A borrowed AHardwareBuffer pointer.
-    /// @returns Unsupported on platforms without the Android import route.
-    public func ImportAndroidHardwareBuffer(buffer nint) ExternalImageResult -> ExternalImageResult(ExternalImageStatus.Unsupported)
+    /// Retains an Android buffer and normalizes its qualified SDR samples to sRGB on the GPU without CPU readback.
+    /// @param buffer A borrowed AHardwareBuffer pointer. Keep its AImage lease until the frame release callback.
+    /// @returns Success with a retained buffer, or an explicit platform or format status.
+    public func ImportAndroidHardwareBuffer(buffer nint) ExternalImageResult {
+        RequireOwner()
+        if buffer == nint(0) { throw ArgumentNullException("buffer") }
+        lock Gate {
+            if closed { return ExternalImageResult(closeStatus) }
+            if Runtime.DeviceLost { return ExternalImageResult(ExternalImageStatus.DeviceLost) }
+            var index = images.Count - 1
+            while index >= 0 {
+                if images[index].Native.Closed && !images[index].Native.Busy { images.RemoveAt(index) }
+                index--
+            }
+            if images.Count >= FrameCapacity { return ExternalImageResult(ExternalImageStatus.Busy) }
+            let result = VulkanExternalImage.ImportAndroid(Runtime, buffer)
+            if let image = result.Image {
+                image.Session = this
+                images.Add(image)
+            }
+            return result
+        }
+    }
 
     /// Imports a retained Metal texture when the platform route is available.
     /// @param texture A borrowed MTLTexture pointer.
@@ -166,7 +199,7 @@ public sealed partial class ExternalImageSession : IDisposable {
             for index in 0 ... FrameCapacity {
                 guard let frame = frames[index] else { continue }
                 if !frame.Ready {
-                    let result = PollReady(frame)
+                    let result = frame.ReadyResult
                     if result == VkConstants.VK_ERROR_DEVICE_LOST {
                         if let error = Close(ExternalImageStatus.DeviceLost) { throw error }
                         return

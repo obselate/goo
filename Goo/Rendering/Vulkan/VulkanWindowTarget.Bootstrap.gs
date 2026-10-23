@@ -733,6 +733,9 @@ internal unsafe partial class VulkanWindowTarget {
     externalDmaExtension = ""
     externalModifierExtension = ""
     externalForeignExtension = ""
+    externalAndroidExtension = ""
+    samplerYcbcrSupported = false
+    maintenance6Supported = false
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumerateDeviceExtensionProperties
     if enumerate(candidate, nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
@@ -798,8 +801,10 @@ internal unsafe partial class VulkanWindowTarget {
     var features12 = VkPhysicalDeviceVulkan12Features{}
     var features13 = VkPhysicalDeviceVulkan13Features{}
     var maintenance = VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT{}
+    var ycbcr = VkPhysicalDeviceSamplerYcbcrConversionFeatures{ sType: 1000156004 }
     features2.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
-    features2.pNext = *void(&features12)
+    features2.pNext = *void(&ycbcr)
+    ycbcr.pNext = *void(&features12)
     features12.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
     features12.pNext = *void(&features13)
     features13.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES
@@ -809,6 +814,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     let getFeatures = instanceDispatch.vkGetPhysicalDeviceFeatures2
     getFeatures(candidate, &features2)
+    samplerYcbcrSupported = ycbcr.samplerYcbcrConversion == VkConstants.VK_TRUE
     let maintenanceSupported = swapchainMaintenanceVariant == VulkanSwapchainMaintenanceVariant.None
       || maintenance.swapchainMaintenance1 == VkConstants.VK_TRUE
     var textFormatProperties = VkFormatProperties{}
@@ -829,8 +835,11 @@ internal unsafe partial class VulkanWindowTarget {
     var features12 = VkPhysicalDeviceVulkan12Features{}
     var features13 = VkPhysicalDeviceVulkan13Features{}
     var maintenance = VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT{}
+    var ycbcr = VkPhysicalDeviceSamplerYcbcrConversionFeatures{ sType: 1000156004,
+      samplerYcbcrConversion: if samplerYcbcrSupported { VkConstants.VK_TRUE } else { VkConstants.VK_FALSE } }
     features2.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
-    features2.pNext = *void(&features12)
+    features2.pNext = *void(&ycbcr)
+    ycbcr.pNext = *void(&features12)
     features12.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
     features12.pNext = *void(&features13)
     features12.timelineSemaphore = VkConstants.VK_TRUE
@@ -879,7 +888,8 @@ internal unsafe partial class VulkanWindowTarget {
           case 1: externalSemaphoreExtension
           case 2: externalDmaExtension
           case 3: externalModifierExtension
-          default: externalForeignExtension
+          case 4: externalForeignExtension
+          default: externalAndroidExtension
         }
         if extension == "" { continue }
         let extensionIndex = int32(deviceExtensionCount)

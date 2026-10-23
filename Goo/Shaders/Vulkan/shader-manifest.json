@@ -483,6 +483,32 @@
       "capabilities": [
         1
       ]
+    },
+    {
+      "id": "android_normalize_vertex",
+      "stage": "vertex",
+      "source": "android_normalize.vert.slang",
+      "output": "android_normalize.vert.spv",
+      "entryPoint": "main",
+      "sourceSha256": "ff54e22754d89b200f4de6b97f0e03ff88e09ed7df6d29804427c29f0e50bdba",
+      "outputSha256": "06e8fc24fd7c9a6e28df86502d97848f843a948d18301c36533839011cd54837",
+      "outputBytes": 764,
+      "capabilities": [
+        1
+      ]
+    },
+    {
+      "id": "android_normalize_fragment",
+      "stage": "fragment",
+      "source": "android_normalize.frag.slang",
+      "output": "android_normalize.frag.spv",
+      "entryPoint": "main",
+      "sourceSha256": "56598ee247beeb2d8c1b97bfa5da0820ffe835efda4736e59bcf16955a18906b",
+      "outputSha256": "13220dbc5f795e0e81118fe9325fb1107ba78f02cf9cdd6ef0a4f364f265c988",
+      "outputBytes": 3424,
+      "capabilities": [
+        1
+      ]
     }
   ],
   "pipelines": [
@@ -2171,6 +2197,88 @@
         "typeName": "ClipMaskPushConstants",
         "sha256": "05903dcc620b8779f58a0799fa74e51fb29e89378f8a6d51df8f85da6ecf8c86",
         "bytes": 1415
+      }
+    },
+    {
+      "id": "android_normalize",
+      "topology": "triangle-list",
+      "vertexInput": "none",
+      "pushConstants": {
+        "offset": 0,
+        "size": 8,
+        "stages": [
+          "fragment"
+        ],
+        "members": [
+          {
+            "name": "encoding",
+            "offset": 0,
+            "type": "uint"
+          },
+          {
+            "name": "opaque",
+            "offset": 4,
+            "type": "uint"
+          }
+        ]
+      },
+      "descriptorCount": 1,
+      "descriptors": [
+        {
+          "set": 0,
+          "binding": 0,
+          "type": "combined-image-sampler",
+          "count": 1,
+          "stages": [
+            "fragment"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "shader": "android_normalize_vertex",
+          "stage": "vertex",
+          "entryPoint": "main",
+          "inputs": [],
+          "outputs": [
+            {
+              "location": 0,
+              "type": "vec2",
+              "name": "uv"
+            }
+          ]
+        },
+        {
+          "shader": "android_normalize_fragment",
+          "stage": "fragment",
+          "entryPoint": "main",
+          "inputs": [
+            {
+              "location": 0,
+              "type": "vec2",
+              "name": "uv"
+            }
+          ],
+          "outputs": [
+            {
+              "location": 0,
+              "type": "vec4",
+              "name": "outColor"
+            }
+          ]
+        }
+      ],
+      "colorFormat": "swapchain-sRGB",
+      "sampleCount": 1,
+      "blend": "disabled",
+      "depthStencil": "disabled",
+      "cullMode": "none",
+      "frontFace": "counter-clockwise",
+      "hostPacking": {
+        "path": "AndroidNormalizePushConstants.Generated.gs",
+        "typeName": "AndroidNormalizePushConstants",
+        "sha256": "6ec2361e3017a9b0293bbd8189f9362b4432eb046c297543859407d350a4fdfa",
+        "bytes": 235
       }
     }
   ]
