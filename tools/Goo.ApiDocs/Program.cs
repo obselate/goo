@@ -15,10 +15,11 @@ if (!File.Exists(xmlPath))
 
 var sourceDirectories = Directory.EnumerateDirectories(sourceRoot)
     .Where(path => Path.GetFileName(path) is not ("bin" or "obj"))
+    .Append(Path.Combine(repositoryRoot, "Goo.Audio", "Audio"))
     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
     .ToArray();
 var types = sourceDirectories
-    .SelectMany(path => ReadTypes(path, sourceRoot))
+    .SelectMany(path => ReadTypes(path, repositoryRoot))
     .GroupBy(type => type.XmlName, StringComparer.Ordinal)
     .Select(group => group.OrderByDescending(type => type.Sources.Any(source =>
         source.FileName == type.DisplayName.Split('<')[0] + ".gs")).First() with
@@ -30,8 +31,8 @@ var types = sourceDirectories
     .OrderBy(type => type.Directory, StringComparer.Ordinal)
     .ThenBy(type => type.DisplayName, StringComparer.Ordinal)
     .ToArray();
-var members = XDocument.Load(xmlPath)
-    .Descendants("member")
+var members = new[] { xmlPath, Path.Combine(repositoryRoot, "Goo.Audio", "bin", "Release", "net10.0", "Goo.Audio.xml") }
+    .SelectMany(path => XDocument.Load(path).Descendants("member"))
     .Select(element => new ApiMember(
         element.Attribute("name")?.Value ?? throw new InvalidDataException("XML member has no name."),
         element))
@@ -86,9 +87,11 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
     var text = new StringBuilder();
     text.AppendLine($"# {directory} API");
     text.AppendLine();
-    text.AppendLine("Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.");
+    var xmlName = directory == "Audio" ? "Goo.Audio.xml" : "Goo.xml";
+    text.AppendLine($"Generated from `{xmlName}`. Source declarations supply type ownership and XML-emitter omissions.");
     text.AppendLine();
-    text.AppendLine($"Source: [`Goo/{directory}`](../../Goo/{directory})");
+    var sourcePath = directory == "Audio" ? "Goo.Audio/Audio" : $"Goo/{directory}";
+    text.AppendLine($"Source: [`{sourcePath}`](../../{sourcePath})");
 
     if (directory is "Accessibility" or "Window" or "Input" or "Tree" or "Layout")
     {
@@ -117,7 +120,7 @@ static string BuildPage(string directory, ApiType[] types, ApiMember[] members, 
         text.AppendLine(type.Sources.Count == 1 ? "Source:" : "Sources:");
         text.AppendLine();
         foreach (var source in type.Sources)
-            text.AppendLine($"- [`{source.FileName}`](../../Goo/{source.RelativeFile})");
+            text.AppendLine($"- [`{source.FileName}`](../../{source.RelativeFile})");
 
         var typeId = "T:" + type.XmlName;
         var typeMember = members.SingleOrDefault(member => member.Id == typeId);
@@ -342,7 +345,7 @@ static string BuildIndex(string[] sourceDirectories)
     var text = new StringBuilder();
     text.AppendLine("# Goo API");
     text.AppendLine();
-    text.AppendLine("These pages are generated from the Release `Goo.xml` file.");
+    text.AppendLine("These pages are generated from the Release `Goo.xml` and `Goo.Audio.xml` files.");
     text.AppendLine();
     foreach (var path in sourceDirectories)
     {

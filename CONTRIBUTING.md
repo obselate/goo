@@ -64,7 +64,7 @@ Run the focused managed checks for ordinary API or behavior changes:
 ```sh
 dotnet build tools/Goo.Gslint/Goo.Gslint.csproj -c Release
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
-  --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo tests
+  --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo Goo.Audio tests
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
   --strict --severity GL0005=none --severity GL0006=none apps templates plugins/goo/reference/templates
 dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
@@ -79,9 +79,9 @@ and avoids treating public test fixtures as product API.
 
 Edit the explanatory input, window, tree, layout, and accessibility guides in
 [`tools/Goo.ApiDocs/Guides`](tools/Goo.ApiDocs/Guides). Member descriptions belong
-in source XML comments. Regenerate `docs/api` with
-`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release`; do not edit
-generated pages directly. The generator validates all member mappings and parses/formats code
+in source XML comments. Build `Goo.Audio/Goo.Audio.gsproj` in Release mode, then
+regenerate `docs/api` with `dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release`;
+do not edit generated pages directly. The generator validates all member mappings and parses/formats code
 examples before replacing output pages. Compile runnable examples against the
 current package to verify their types and behavior.
 

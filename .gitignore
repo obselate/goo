@@ -53,6 +53,8 @@
 !/Goo/**
 !/Goo.Accessibility/
 !/Goo.Accessibility/**
+!/Goo.Audio/
+!/Goo.Audio/**
 !/Goo.Android/
 !/Goo.Android/**
 !/tests/

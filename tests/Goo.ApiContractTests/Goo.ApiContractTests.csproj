@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
+    <ProjectReference Include="..\..\Goo.Audio\Goo.Audio.gsproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

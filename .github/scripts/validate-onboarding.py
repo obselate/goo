@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_PACKAGE_IDS = {
     "Goo",
     "Goo.Accessibility",
+    "Goo.Audio",
     "Goo.Android",
     "Goo.DevTools",
     "Goo.DevTools.App",

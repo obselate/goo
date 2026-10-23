@@ -133,7 +133,8 @@ public class PublicApiTests
 
     private static IEnumerable<Type> ApiTypes()
     {
-        return typeof(Window).Assembly.GetExportedTypes()
+        return new[] { typeof(Window).Assembly, typeof(SoundPlayer).Assembly }
+            .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !IsPackageContainer(type))
             .Where(type => !IsTestFixture(type))
             .OrderBy(type => type.FullName, StringComparer.Ordinal);
@@ -441,7 +442,7 @@ public class PublicApiTests
 
     private static bool IsForbiddenSignatureType(Type type, Assembly gooAssembly)
     {
-        if (type.Assembly == gooAssembly && !IsPubliclyVisible(type))
+        if ((type.Assembly == gooAssembly || type.Assembly == typeof(SoundPlayer).Assembly) && !IsPubliclyVisible(type))
         {
             return true;
         }

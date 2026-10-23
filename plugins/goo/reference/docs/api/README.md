@@ -1,6 +1,6 @@
 # Goo API
 
-These pages are generated from the Release `Goo.xml` file.
+These pages are generated from the Release `Goo.xml` and `Goo.Audio.xml` files.
 
 - [Accessibility](accessibility.md)
 - [Audio](audio.md)

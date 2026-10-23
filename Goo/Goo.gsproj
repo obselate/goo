@@ -22,6 +22,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.Android" />
+    <InternalsVisibleTo Include="Goo.Audio" />
     <EmbeddedResource Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json"
                       LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Shaders/Effects/*.goo-effect"

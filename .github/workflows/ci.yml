@@ -59,13 +59,13 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo tests
+            --severity GL0001=none Goo Goo.Audio tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
 
-      - name: Build Goo with warnings as errors
-        run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
+      - name: Build Goo and optional audio with warnings as errors
+        run: dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Regenerate API documentation
         run: |
@@ -467,16 +467,6 @@ jobs:
             2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
           grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
 
-      - name: Verify shared UI audio without a hardware device
-        run: |
-          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
-            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
-            -o artifacts/audio-nativeaot
-          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
-          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
-            artifacts/audio-nativeaot/Goo.AudioSmoke
-
       - name: Build Goo DevTools app
         run: |
           dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj \
@@ -706,6 +696,23 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Pack optional audio
+        run: |
+          dotnet pack Goo.Audio/Goo.Audio.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Verify packaged NativeAOT audio without a hardware device
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooUsePackageReference=true -p:RestoreAdditionalProjectSources="$PWD/artifacts/packages" \
+            -o artifacts/audio-nativeaot
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
+
       - name: Collect advisory consumer publish report
         run: |
           python3 tools/Goo.ConsumerPerformance/run.py \
@@ -885,6 +892,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -910,6 +918,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1071,6 +1080,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1098,6 +1111,7 @@ jobs:
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"
