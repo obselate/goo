@@ -70,3 +70,27 @@ The decoder is the pinned `stb_image` source in the `goo-harfbuzz-gpu` native li
 No extra native library ships. The packaged loading smoke covers PNG, baseline/progressive/CMYK JPEG,
 transparent GIF, and the first frame of an animated GIF under NativeAOT;
 the Linux Vulkan smoke also checks rendered pixels and teardown.
+
+## HiDPI asset families
+
+```gsharp
+import Goo.Images
+
+using let variants = ImageVariants([]ImageVariant{
+    ImageVariant("Assets/logo.png", 1),
+    ImageVariant("Assets/logo@2x.png", 2),
+    ImageVariant("Assets/logo@3x.png", 3),
+})
+let result = await variants.LoadAsync(metrics, token)
+if result.Status == ImageAssetStatus.Success {
+    Image{Source: result.Source, PixelsPerUnit: result.PixelsPerUnit}
+}
+```
+
+- Reference the optional `Goo.Images` package.
+- Pass the latest `Window.MetricsChanged` snapshot. It includes `UiScale`.
+- Selection uses the smallest density at least as large as the window scale, else the largest.
+- Each variant must have the same logical size. A 128-pixel 2x source measures 64 logical units.
+- Publish Source and PixelsPerUnit together on the UI thread. Ignore late results from older requests.
+- Each result owns its Source. Dispose it when application state no longer needs it.
+- The family caches decoded pixels. Disposing the family does not invalidate returned sources or mounted leases.

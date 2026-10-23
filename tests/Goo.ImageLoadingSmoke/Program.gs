@@ -1,6 +1,7 @@
 package GooImageLoadingSmoke
 
 import Goo
+import Goo.Images
 import System
 import System.IO
 import System.Threading
@@ -34,3 +35,17 @@ for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg"
   if lease.IsFailed { throw InvalidOperationException("Image ownership failed: " + name) }
 }
 Console.WriteLine("image-loading: jpeg_baseline/progressive/cmyk=3x2 gif_transparent/first_frame=3x2 owners=verified")
+
+using let assets = ImageVariants([]ImageVariant{ImageVariant(path, 2.0F)})
+let selected = assets.LoadAsync(WindowMetrics{DisplayScaleX: 1.5, DisplayScaleY: 1.5},
+  CancellationToken.None).GetAwaiter().GetResult()
+if selected.Status != ImageAssetStatus.Success || selected.PixelsPerUnit != 2.0F {
+  throw InvalidOperationException("Packaged image variant selection failed")
+}
+using let variantSource = selected.Source!!
+assets.Dispose()
+using let variantLease = variantSource.Acquire()
+if variantSource.Width != 2 || variantLease.IsFailed {
+  throw InvalidOperationException("Packaged image variant ownership failed")
+}
+Console.WriteLine("image-loading: asset_scale=1.5 selected_density=2 independent_owner=verified")

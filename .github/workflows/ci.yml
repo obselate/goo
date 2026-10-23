@@ -104,14 +104,14 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Gestures tests
+            --severity GL0001=none Goo Goo.Images Goo.Gestures tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
 
-      - name: Build Goo with warnings as errors
+      - name: Build Goo and image assets with warnings as errors
         if: needs.changes.outputs.api == 'true'
-        run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
+        run: dotnet build Goo.Images/Goo.Images.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
@@ -127,6 +127,9 @@ jobs:
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
             --source Goo.NativeMenus --xml Goo.NativeMenus/bin/Release/net10.0/Goo.NativeMenus.xml \
             --output docs/api-native-menus
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
+            --source Goo.Images --xml Goo.Images/bin/Release/net10.0/Goo.Images.xml \
+            --output docs/api-images
 
       - name: Validate onboarding and release metadata
         run: |
@@ -783,6 +786,23 @@ jobs:
       - name: Stage portable native menu package
         if: needs.changes.outputs.full == 'true'
         run: cp artifacts/portable-native-menus/Goo.NativeMenus.*.nupkg artifacts/packages/
+      - name: Pack image assets and verify the clean NativeAOT consumer
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.Images/Goo.Images.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          consumer="$PWD/artifacts/image-assets-consumer"
+          mkdir -p "$consumer"
+          tar --exclude=bin --exclude=obj -C tests -cf - Goo.ImageLoadingSmoke Shared/Assets \
+            | tar -C "$consumer" -xf -
+          printf '<configuration><packageSources><clear/><add key="local" value="%s"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Images"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>' \
+            "$PWD/artifacts/packages" > "$consumer/NuGet.Config"
+          dotnet publish "$consumer/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj" \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooImageUsePackages=true -p:RestoreConfigFile="$consumer/NuGet.Config" \
+            -p:RestorePackagesPath="$PWD/artifacts/image-assets-package-cache" \
+            -o artifacts/image-assets-nativeaot
+          artifacts/image-assets-nativeaot/Goo.ImageLoadingSmoke
 
       - name: Pack Goo DevTools and template
         if: needs.changes.outputs.full == 'true'
@@ -1026,6 +1046,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -1040,6 +1061,7 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
+            artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
             artifacts/consumer-performance/stage/*/symbols/
 
@@ -1055,6 +1077,8 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1566,6 +1590,14 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Images.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Images.$GOO_VERSION.snupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1595,6 +1627,8 @@ jobs:
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.NativeMenus.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Images.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Images.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

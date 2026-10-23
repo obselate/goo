@@ -235,3 +235,13 @@ bounds must be positive. Goo keeps the original aspect ratio, never enlarges
 the image, and area-filters premultiplied RGBA when reducing it. The decoded-byte
 limit applies to the reduced pixels. The source must obey the encoded-byte and
 pixels-per-dimension limits. The caller owns the returned source.
+
+## Set raster density
+
+```gsharp
+Image{Source: logo2x, PixelsPerUnit: 2, Fit: ImageFit.None}
+```
+
+A 128-by-64 source at density 2 measures 64-by-32 logical units.
+`ImageFit.None` uses that logical size. Other fit modes preserve their existing behavior.
+

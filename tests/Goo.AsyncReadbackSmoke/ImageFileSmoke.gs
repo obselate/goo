@@ -26,18 +26,24 @@ func WriteImage(result VulkanReadbackResult, path string) {
 class ImageFileCell : Cell {
   private var source ImageSource
   private var visible bool = true
+  private var density float32 = 1.0F
+  private var fit ImageFit = ImageFit.Fill
 
   init(image ImageSource) { source = image }
 
   func Hide() { visible = false
     Rebuild() }
-  func Remount(image ImageSource) { source = image
+  func Remount(image ImageSource, pixelsPerUnit float32 = 1.0F, mode ImageFit = ImageFit.Fill) {
+    source = image
+    density = pixelsPerUnit
+    fit = mode
     visible = true
-    Rebuild() }
+    Rebuild()
+  }
 
   override func Build() Blob {
     var child Blob = Container{}
-    if visible { child = Image{ Source: source, Width: 96, Height: 96, Fit: ImageFit.Fill } }
+    if visible { child = Image{Source: source, Width: 96, Height: 96, Fit: fit, PixelsPerUnit: density} }
     return Container() {.Width: 96,.Height: 96,.BackgroundColor: Color.Rgb(0, 0, 0), child,
     }
   }
@@ -48,8 +54,9 @@ func RunImageFileSmoke() {
   using let cache = ImageSourceCache()
   let imagePath = Path.Combine(AppContext.BaseDirectory, "local-rgba.png")
   using let source = cache.LoadAsync(imagePath).GetAwaiter().GetResult()
+  let root = ImageFileCell(source)
   let window = Window{ Title: "Goo local PNG gate", Width: 96, Height: 96, VSync: false,
-    IconPng: File.ReadAllBytes(imagePath), Root: ImageFileCell(source) }
+    IconPng: File.ReadAllBytes(imagePath), Root: root }
   let capturedError = StringWriter()
   let originalError = Console.Error
   try {
@@ -73,6 +80,16 @@ func RunImageFileSmoke() {
       uint8(48), uint8(96), uint8(224), 3, "local_png_blue")
     PrimitiveRequirePixelNear(frame.Pixels, frame.Width, metrics, 84.0, 84.0,
       uint8(240), uint8(192), uint8(48), 3, "local_png_yellow")
+    let densePixels = [64 * 64 * 4]uint8
+    Array.Fill[uint8](densePixels, uint8(255))
+    using let dense = ImageSource(64, 64, densePixels)
+    root.Remount(dense, 2.0F, ImageFit.None)
+    ImageStagingSettle(window)
+    let densityFrame = PrimitiveReadback(window, metrics)
+    PrimitiveRequirePixelNear(densityFrame.Pixels, densityFrame.Width, metrics, 16.0, 16.0,
+      uint8(255), uint8(255), uint8(255), 1, "density_none_inside")
+    PrimitiveRequirePixelNear(densityFrame.Pixels, densityFrame.Width, metrics, 40.0, 40.0,
+      uint8(0), uint8(0), uint8(0), 1, "density_none_outside")
     window.RequestClose()
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     Require(!window.IsOpen && WindowReadbackTestFixture.ResidentResourceBytes(window) == 0uL,
@@ -89,7 +106,7 @@ func RunImageFileSmoke() {
   for line in diagnostics.Split('\n') {
     if line.StartsWith("{\"kind\":\"device\",") && !line.Contains("\"name\":") { Console.WriteLine(line) }
   }
-  Console.WriteLine("image-file-smoke: png_pixels=4 alpha=verified cache_disposed=1 source_disposed=1 close=1")
+  Console.WriteLine("image-file-smoke: png_pixels=4 density_none=verified alpha=verified cache_disposed=1 source_disposed=1 close=1")
   for name in []string {"local-rgb.jpg", "local-progressive.jpg", "local-cmyk.jpg", "local-transparent.gif", "local-animated.gif"} {
     RunOtherImageFile(name)
   }
