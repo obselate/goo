@@ -730,6 +730,9 @@ internal unsafe partial class VulkanWindowTarget {
     memoryBudgetSupported = false
     externalMemoryExtension = ""
     externalSemaphoreExtension = ""
+    externalDmaExtension = ""
+    externalModifierExtension = ""
+    externalForeignExtension = ""
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumerateDeviceExtensionProperties
     if enumerate(candidate, nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
@@ -845,10 +848,10 @@ internal unsafe partial class VulkanWindowTarget {
     queueInfo.queueFamilyIndex = queueFamilyIndex
     queueInfo.queueCount = 1u
     queueInfo.pQueuePriorities = priorities
-    var extensionStorage []nint = [6]nint
+    var extensionStorage []nint = [DeviceExtensionCapacity]nint
     try {
       extensionStorage[0] = Marshal.StringToCoTaskMemUTF8(VkConstants.VK_KHR_SWAPCHAIN_EXTENSION_NAME)
-      let extensionPointers * VulkanWindowTargetExtensionPointer = stackalloc[6]VulkanWindowTargetExtensionPointer
+      let extensionPointers * VulkanWindowTargetExtensionPointer = stackalloc[DeviceExtensionCapacity]VulkanWindowTargetExtensionPointer
       extensionPointers[0].Value = *int8(extensionStorage[0])
       var deviceExtensionCount uint32 = 1u
       if portabilitySubsetSupported {
@@ -870,7 +873,14 @@ internal unsafe partial class VulkanWindowTarget {
         extensionPointers[extensionIndex].Value = *int8(extensionStorage[extensionIndex])
         deviceExtensionCount = deviceExtensionCount + 1u
       }
-      for extension in [2]string{ externalMemoryExtension, externalSemaphoreExtension } {
+      for externalIndex in 0 ... ExternalExtensionCount {
+        let extension = switch externalIndex {
+          case 0: externalMemoryExtension
+          case 1: externalSemaphoreExtension
+          case 2: externalDmaExtension
+          case 3: externalModifierExtension
+          default: externalForeignExtension
+        }
         if extension == "" { continue }
         let extensionIndex = int32(deviceExtensionCount)
         extensionStorage[extensionIndex] = Marshal.StringToCoTaskMemUTF8(extension)

@@ -34,7 +34,7 @@ internal unsafe struct VkSemaphoreGetFdInfoKHR {
 }
 
 internal unsafe partial class VulkanWindowTarget {
-    internal func CreateExternalProducerForProof(timeline bool) VulkanExternalProducer {
+    internal func CreateExternalProducerForProof(timeline bool, dma bool = false, syncFd bool = false) VulkanExternalProducer {
         let savedDevice = device
         let savedDispatch = dispatch
         let savedIdle = deviceWaitIdleAddress
@@ -54,9 +54,11 @@ internal unsafe partial class VulkanWindowTarget {
             LoadDeviceDispatch()
             let getFd = ResolveDeviceProc("vkGetMemoryFdKHR") as (unmanaged[Cdecl](VkDevice, *VkMemoryGetFdInfoKHR, *int32) -> VkResult)?
             if getFd == nil { throw NotSupportedException("External memory FD export is unavailable") }
-            let semaphoreFd = if timeline { ResolveDeviceProc("vkGetSemaphoreFdKHR") } else { nint(0) }
+            let semaphoreFd = if timeline || syncFd { ResolveDeviceProc("vkGetSemaphoreFdKHR") } else { nint(0) }
+            let signal = if syncFd { ResolveDeviceProc("vkSignalSemaphore") } else { nint(0) }
+            let layout = if dma { ResolveDeviceProc("vkGetImageSubresourceLayout") } else { nint(0) }
             let producer = VulkanExternalProducer(device, dispatch, instanceDispatch, physicalDevice,
-                queueFamilyIndex, getFd, semaphoreFd, lease, sharedObjectAccounting)
+                queueFamilyIndex, getFd, semaphoreFd, lease, sharedObjectAccounting, dma, syncFd, signal, layout)
             transferred = true
             try {
                 producer.Initialize()
@@ -83,7 +85,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
 }
 
-internal unsafe sealed class VulkanExternalProducer : IDisposable {
+internal unsafe sealed partial class VulkanExternalProducer : IDisposable {
     private let device VkDevice
     private let dispatch VkDeviceDispatch
     private let runtime VulkanSharedLease
@@ -110,7 +112,8 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
     internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch, instanceDispatch VkInstanceDispatch,
         physical VkPhysicalDevice, queueFamily uint32,
         nativeGetFd unmanaged[Cdecl](VkDevice, *VkMemoryGetFdInfoKHR, *int32) -> VkResult, semaphoreFd nint,
-        sharedRuntime VulkanSharedLease, nativeAccounting VulkanObjectAccounting?) {
+        sharedRuntime VulkanSharedLease, nativeAccounting VulkanObjectAccounting?,
+        useDma bool, useSyncFd bool, nativeSignal nint, nativeLayout nint) {
         device = nativeDevice
         dispatch = nativeDispatch
         family = queueFamily
@@ -118,6 +121,10 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         semaphoreFdAddress = semaphoreFd
         runtime = sharedRuntime
         accounting = nativeAccounting
+        dma = useDma
+        syncFd = useSyncFd
+        signalAddress = nativeSignal
+        layoutAddress = nativeLayout
         ReadProperties(instanceDispatch, physical)
     }
 
@@ -141,14 +148,19 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
     }
 
     private func CreateImage() {
-        var external = VkExternalMemoryImageCreateInfo{ sType: 1000072001, handleTypes: 1u }
+        let handleType = if dma { 0x200u } else { 1u }
+        var external = VkExternalMemoryImageCreateInfo{ sType: 1000072001, handleTypes: handleType }
+        var modifier uint64 = 0uL
+        var modifierInfo = VkImageDrmFormatModifierListCreateInfoEXT{ sType: 1000158003,
+            pNext: *void(&external), drmFormatModifierCount: 1u, pDrmFormatModifiers: &modifier }
         var info = VkImageCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             pNext: *void(&external), imageType: VkConstants.VK_IMAGE_TYPE_2D,
             format: VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
             extent: VkExtent3D{ width: 8u, height: 4u, depth: 1u }, mipLevels: 1u, arrayLayers: 1u,
-            samples: VkConstants.VK_SAMPLE_COUNT_1_BIT, tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL,
+            samples: VkConstants.VK_SAMPLE_COUNT_1_BIT, tiling: if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL },
             usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT),
             sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE }
+        if dma { info.pNext = *void(&modifierInfo) }
         let create = dispatch.vkCreateImage
         Check(create(device, &info, nil, &image))
         var requirements = VkMemoryRequirements2{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 }
@@ -165,7 +177,7 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         if memoryType == 32u { throw InvalidOperationException("External producer memory type is unavailable") }
         allocationSize = requirements.memoryRequirements.size
         var dedicated = VkMemoryDedicatedAllocateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO, image: image }
-        var exportInfo = VkExportMemoryAllocateInfo{ sType: 1000072002, pNext: *void(&dedicated), handleTypes: 1u }
+        var exportInfo = VkExportMemoryAllocateInfo{ sType: 1000072002, pNext: *void(&dedicated), handleTypes: handleType }
         var allocation = VkMemoryAllocateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             pNext: *void(&exportInfo), allocationSize: allocationSize, memoryTypeIndex: memoryType }
         let allocate = dispatch.vkAllocateMemory
@@ -173,7 +185,8 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         var bindInfo = VkBindImageMemoryInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO, image: image, memory: memory }
         let bind = dispatch.vkBindImageMemory2
         Check(bind(device, 1u, &bindInfo))
-        var exportFd = VkMemoryGetFdInfoKHR{ sType: 1000074002, memory: memory, handleType: 1u }
+        if dma { ReadDmaLayout() }
+        var exportFd = VkMemoryGetFdInfoKHR{ sType: 1000074002, memory: memory, handleType: handleType }
         var fd int32 = -1
         Check(getFd(device, &exportFd, &fd))
         handle = ExternalNativeHandle(nint(fd), false)
@@ -227,13 +240,14 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         if index == 32u { throw NotSupportedException("External producer needs coherent host-visible staging memory") }
     }
 
-    internal func Description(session ExternalImageSession) VulkanExternalImageDescription -> VulkanExternalImageDescription{
-        HandleKind: ExternalImageHandleKind.OpaqueFd, Memory: handle!!,
+    internal func Description(session ExternalImageSession, format int32 = 0) VulkanExternalImageDescription -> VulkanExternalImageDescription{
+        HandleKind: if dma { ExternalImageHandleKind.DmaBuf } else { ExternalImageHandleKind.OpaqueFd }, Memory: handle!!,
         DeviceUuid: session.DeviceUuid, DriverUuid: session.DriverUuid,
-        Width: 8, Height: 4, Format: VkConstants.VK_FORMAT_R8G8B8A8_SRGB,
-        Tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL, AllocationSize: allocationSize,
+        Width: 8, Height: 4, Format: if format == 0 { VkConstants.VK_FORMAT_R8G8B8A8_SRGB } else { format },
+        Tiling: if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL }, AllocationSize: allocationSize,
         MemoryTypeIndex: memoryType, DedicatedAllocation: true,
         ImageUsage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT),
+        DrmModifier: 0uL, Planes: DescribePlanes(),
     }
 
     internal prop OriginalHandleOpen bool { get -> handle?.IsClosed == false }
@@ -274,10 +288,12 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
             semaphoreType: VkConstants.VK_SEMAPHORE_TYPE_TIMELINE }
         var semaphoreInfo = VkSemaphoreCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, pNext: *void(&typeInfo) }
         var exportSemaphore = VkExportSemaphoreCreateInfo{ sType: 1000077000, handleTypes: 1u }
-        if semaphoreFdAddress != nint(0) { typeInfo.pNext = *void(&exportSemaphore) }
+        if semaphoreFdAddress != nint(0) && !syncFd { typeInfo.pNext = *void(&exportSemaphore) }
         let createSemaphore = dispatch.vkCreateSemaphore
         Check(createSemaphore(device, &semaphoreInfo, nil, &completion))
-        if semaphoreFdAddress != nint(0) {
+        if syncFd {
+            PrepareSyncFd()
+        } else if semaphoreFdAddress != nint(0) {
             let exportFd = semaphoreFdAddress as (unmanaged[Cdecl](VkDevice, *VkSemaphoreGetFdInfoKHR, *int32) -> VkResult)?
             if exportFd == nil { throw InvalidOperationException("External semaphore export is unavailable") }
             var info = VkSemaphoreGetFdInfoKHR{ sType: 1000079001, semaphore: completion, handleType: 1u }
@@ -288,34 +304,54 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
     }
 
     internal func Ready() ExternalImageSync -> ExternalImageSync{
-        Kind: if semaphoreHandle != nil { ExternalImageSyncKind.OpaqueFdSemaphore } else { ExternalImageSyncKind.AlreadyComplete },
-        Handle: semaphoreHandle, Timeline: semaphoreHandle != nil, Value: 1uL,
+        Kind: if syncFd { ExternalImageSyncKind.SyncFd } else if semaphoreHandle != nil {
+            ExternalImageSyncKind.OpaqueFdSemaphore } else { ExternalImageSyncKind.AlreadyComplete },
+        Handle: semaphoreHandle, Timeline: !syncFd && semaphoreHandle != nil, Value: if syncFd { 0uL } else { 1uL },
         ImageLayout: VkConstants.VK_IMAGE_LAYOUT_GENERAL, QueueFamily: 0xFFFFFFFEu,
     }
 
-    internal func Complete() {
-        if submitted { throw InvalidOperationException("External producer was already submitted") }
+    private func Submit() {
         var commandInfo = VkCommandBufferSubmitInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO, commandBuffer: command }
-        var signal = VkSemaphoreSubmitInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        let signals *VkSemaphoreSubmitInfo = stackalloc[2]VkSemaphoreSubmitInfo
+        signals[0] = VkSemaphoreSubmitInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             semaphore: completion, value: 1uL, stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT }
+        signals[1] = VkSemaphoreSubmitInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            semaphore: readyBinary, stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT }
+        var wait = VkSemaphoreSubmitInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            semaphore: gate, value: 1uL, stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT }
         var submit = VkSubmitInfo2{ sType: VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-            commandBufferInfoCount: 1u, pCommandBufferInfos: &commandInfo, signalSemaphoreInfoCount: 1u, pSignalSemaphoreInfos: &signal }
+            commandBufferInfoCount: 1u, pCommandBufferInfos: &commandInfo,
+            signalSemaphoreInfoCount: if syncFd { 2u } else { 1u }, pSignalSemaphoreInfos: signals,
+            waitSemaphoreInfoCount: if syncFd { 1u } else { 0u }, pWaitSemaphoreInfos: &wait }
         let queueSubmit = dispatch.vkQueueSubmit2
         Check(queueSubmit(queue, 1u, &submit, 0uL))
         submitted = true
+    }
+
+    internal func Complete() {
+        if completed { throw InvalidOperationException("External producer was already completed") }
+        if syncFd { SignalGate() } else { Submit() }
+        WaitCompletion()
+    }
+
+    private func WaitCompletion() {
         var value uint64 = 1uL
         var waitInfo = VkSemaphoreWaitInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
             semaphoreCount: 1u, pSemaphores: &completion, pValues: &value }
         let wait = dispatch.vkWaitSemaphores
-        Check(wait(device, &waitInfo, 5000000000uL))
+        Check(wait(device, &waitInfo, uint64(CompletionTimeoutMilliseconds) * 1000000uL))
+        if syncFd && semaphoreHandle?.IsInvalid == false { WaitSyncFd() }
+        completed = true
     }
 
     public func Dispose() {
         if disposed { return }
+        if syncFd && submitted && !completed { Complete() }
         disposed = true
         handle?.Dispose()
         semaphoreHandle?.Dispose()
         if device == nint(0) { return }
+        DestroySyncFd()
         if completion != 0uL {
             let destroy = dispatch.vkDestroySemaphore
             destroy(device, completion, nil)
