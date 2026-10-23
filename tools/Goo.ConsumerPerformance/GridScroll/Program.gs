@@ -52,6 +52,7 @@ func Main(args []string) {
   let count = args.Length > 0 ? Int32.Parse(args[0]) : 10000
   let pattern = args.Length > 1 ? args[1] : "wheel"
   let wrapped = args.Length > 2 && args[2] == "wrap"
+  let coalesce = args.Length > 3 && args[3] == "coalesce"
   using let font = FontSource("Vend Sans", 400, false, File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf")))
   font.Register()
   let scene = Scene(count, wrapped)
@@ -60,12 +61,15 @@ func Main(args []string) {
   var position = 2000.0
   for frame in 0 ... 1240 {
     let sample = frame >= 240
-    if pattern == "thumb" {
-      position = jumps[(frame / 7) % jumps.Length] * float64(count * 32 - 800)
+    if pattern.StartsWith("thumb") {
+      position = jumps[(pattern == "thumb-service" ? frame : frame / 7) % jumps.Length] * float64(count * 32 - 800)
     } else {
       position += (frame / 70) % 2 == 0 ? 48.0 : -48.0
       position = Math.Max(0.0, position)
     }
-    GridScrollFrames.Step(window, () -> { scene.Viewport.ScrollTo(0.0, position) }, sample)
+    GridScrollFrames.Step(window, () -> {
+      if pattern == "thumb-service" { scene.Viewport.JumpTo(0.0, position) }
+      else { scene.Viewport.ScrollTo(0.0, position) }
+    }, sample, pattern != "thumb-service" || frame % 7 == 0, coalesce)
   }
 }

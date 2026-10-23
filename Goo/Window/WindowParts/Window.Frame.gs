@@ -29,6 +29,15 @@ internal class WindowDefaultTitle {
 
 /// Hosts a Goo tree in a native window.
 public partial class Window {
+  private var virtualRefreshDeferred bool
+
+  internal func FlushDeferredVirtualization() {
+    if virtualRefreshDeferred {
+      virtualRefreshDeferred = false
+      if node != nil { UpdateTree(0.0) }
+    }
+  }
+
   private func prepare() {
     if Width == 0 {
       Width = 1280
@@ -128,11 +137,13 @@ public partial class Window {
   // MotionPump/Resolver/scroll/input.Step, so a stale idle gap cannot make a
   // just-started animation jump straight to its end. Every other caller
   // passes the same value for both, unchanged from before this split.
-  internal func UpdateTree(wallDt float64, simDt float64) bool -> UpdateTreeCore(wallDt, simDt)
+  internal func UpdateTree(wallDt float64, simDt float64, realizeVirtual bool = true) bool ->
+    UpdateTreeCore(wallDt, simDt, realizeVirtual)
 
-  private func UpdateTreeCore(wallDt float64, simDt float64) bool {
+  private func UpdateTreeCore(wallDt float64, simDt float64, realizeVirtual bool = true) bool {
     validateDelta(wallDt, "wallDt")
     validateDelta(simDt, "simDt")
+    virtualRefreshDeferred = false
     timeS = timeS + wallDt
     prepare()
     let profiling = profiler.Active
@@ -147,6 +158,7 @@ public partial class Window {
     if Interlocked.Exchange(&pendingRebuild, 0) != 0 {
       dirty = true
     }
+    let mayDeferVirtual = !realizeVirtual && !dirty && retainedEffects == ReconcileEffects.None
     guard let cell = Root else {
       Portals.Sync(nil, portalRoot)
       input.AfterTreeUpdated(nil, resolver, true)
@@ -247,13 +259,18 @@ public partial class Window {
         accessibilityLayout = true
         metricsChanged = true
       }
+      let deferVirtual = mayDeferVirtual && !layoutChanged
+        && !hasEffect(effects, ReconcileEffects.Structure)
+        && !hasEffect(effects, ReconcileEffects.Layout)
+        && !hasEffect(effects, ReconcileEffects.Content)
+        && input.NextTickDeadlineSeconds() > wallDt
       if hasEffect(effects, ReconcileEffects.Rect) {
         layout.RefreshRects(n, portalRoot)
         accessibilityLayout = true
         metricsChanged = true
       }
       var virtualPass int32
-      while virtualPass < 3 {
+      while !deferVirtual && virtualPass < 3 {
         let virtualProfile = profiling ? profiler.Start() : FrameProfilePoint{}
         let virtualEffects = refreshVirtualization(n)
         if profiling { profiler.Record(FrameProfileStage.Virtualization, virtualProfile) }
@@ -307,7 +324,7 @@ public partial class Window {
             metricsChanged = true
             layout.RefreshRects(n, portalRoot)
             let virtualProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-            let virtualEffects = refreshVirtualization(n)
+            let virtualEffects = deferVirtual ? ReconcileEffects.None : refreshVirtualization(n)
             if profiling { profiler.Record(FrameProfileStage.Virtualization, virtualProfile) }
             if virtualEffects != ReconcileEffects.None {
               effects = combineEffects(effects, virtualEffects)
@@ -355,7 +372,12 @@ public partial class Window {
       for i in 0 ... continuationNodes.Count {
         let candidate = continuationNodes[i]
         if Virtualization.State(candidate)?.NeedsRefresh(candidate) == true {
-          enqueueRetainedInvalidation(ReconcileEffects.Layout)
+          if deferVirtual {
+            virtualRefreshDeferred = true
+            requestRender()
+          } else {
+            enqueueRetainedInvalidation(ReconcileEffects.Layout)
+          }
           break
         }
       }
@@ -369,7 +391,7 @@ public partial class Window {
         || hasEffect(effects, ReconcileEffects.Rect) || hasEffect(effects, ReconcileEffects.Accessibility) {
           semantics.MarkDirty()
         }
-      if semantics.Publish(node) { requestRender() }
+      if !virtualRefreshDeferred && semantics.Publish(node) { requestRender() }
     }
     if changed {
       resolver.VisualDirty = true
@@ -380,7 +402,9 @@ public partial class Window {
     DiagnosticsSession?.OnTreeUpdated(node, effects, layoutChanged, changed)
     metricsFlushThreadId = Environment.CurrentManagedThreadId
     flushingMetricsBeforeRender = true
-    try { MetricSubscriptions.Flush(this) } finally {
+    try {
+      if !virtualRefreshDeferred { MetricSubscriptions.Flush(this) }
+    } finally {
       flushingMetricsBeforeRender = false
       metricsFlushThreadId = 0
     }
