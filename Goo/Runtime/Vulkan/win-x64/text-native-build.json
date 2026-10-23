@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 296663,
+      "bytes": 297175,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -51,7 +51,7 @@
         "goo-harfbuzz.dll",
         "msvcrt.dll"
       ],
-      "sha256": "0e3cdb53d281cbace1e10cebdb2a058874ac3dcc5c0b1566af638c4e1f6e9120"
+      "sha256": "ab6cc6cff5830c55c61628681902fdf31cbd1631c0eb2e3893ef80f4c3325df4"
     },
     "harfbuzz": {
       "bytes": 2008100,
@@ -724,6 +724,15 @@
         "sha256": "0b4b4a10c7e2e2c2601a661af02456d5bf68f750b3cb9a93d435da6590795135",
         "upstreamPath": "src/stb_image.h",
         "upstreamSha256": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3"
+      },
+      {
+        "description": "Skip empty PNG IDAT transfers without forming a pointer from a null data buffer.",
+        "name": "stb-png-empty-idat",
+        "patchedSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015",
+        "path": "tools/Goo.TextNative/patches/stb-image-2.30-png-empty-idat.patch",
+        "sha256": "28c6b49853c923f01638ae5310781a6309a106a640fc58685fef23ee68b7d470",
+        "upstreamPath": "src/stb_image.h",
+        "upstreamSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2"
       }
     ],
     "system": "Meson and Ninja",
