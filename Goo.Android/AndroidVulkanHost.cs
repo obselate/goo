@@ -57,6 +57,9 @@ internal sealed class AndroidVulkanHost(GooView view) : EmbeddedWindowHost
     protected override bool SetImeArea(int x, int y, int width, int height, int cursor) => view.SetImeArea(x, y, width, height);
     protected override string GetClipboardText() => view.GetClipboardText();
     protected override void SetClipboardText(string value) => view.SetClipboardText(value);
+    internal override ClipboardFormats QueryClipboardFormats() => view.Clipboard.Query();
+    internal override Task<ClipboardDataResult> ReadClipboardDataAsync(IReadOnlyList<string> contentTypes) => view.Clipboard.Read(contentTypes);
+    internal override Task<ClipboardWriteResult> WriteClipboardAsync(TransferData data, ClipboardIntent intent) => view.Clipboard.Write(data, intent);
     protected override void RequestFrame() => view.RequestFrame();
     protected override bool LoadVulkanLibrary() => NativeLibrary.TryLoad("libvulkan.so", out library);
     protected override nint GetVulkanGetInstanceProcAddr() => NativeLibrary.GetExport(library, "vkGetInstanceProcAddr");
