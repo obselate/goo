@@ -212,7 +212,7 @@ internal unsafe sealed class ExternalNativeHandle : SafeHandle {
         @DllImport("libc", EntryPoint: "poll", SetLastError: true)
         private func Poll(descriptors *ExternalPollFd, count uint64, timeout int32) int32;
 
-        internal func PollReady(source ExternalNativeHandle) VkResult {
+        internal func PollReady(source SafeHandle) VkResult {
             var descriptor = ExternalPollFd{ fd: int32(source.DangerousGetHandle()), events: int16(1) }
             let result = Poll(&descriptor, 1uL, 0)
             if result < 0 && Marshal.GetLastPInvokeError() == 4 { return VkConstants.VK_NOT_READY }
