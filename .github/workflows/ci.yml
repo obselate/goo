@@ -697,6 +697,19 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Build and check packed CLR interop samples
+        if: needs.changes.outputs.full == 'true'
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/goo-interop-packages
+        run: |
+          for project in samples/interop/CSharp/CSharp.csproj \
+                         samples/interop/FSharp/FSharp.fsproj \
+                         samples/interop/VisualBasic/VisualBasic.vbproj; do
+            dotnet restore "$project" --configfile samples/interop/NuGet.Config
+            dotnet build "$project" -c Release --no-restore -m:4
+            dotnet run --project "$project" -c Release --no-build -- --check
+          done
+
       - name: Pack shared gesture recognizers
         run: |
           dotnet pack Goo.Gestures/Goo.Gestures.gsproj -c Release -o artifacts/packages \

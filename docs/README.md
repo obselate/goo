@@ -22,6 +22,7 @@ SVG examples require the next Goo release, which includes the loader in core.
 
 | Task | Guide |
 | --- | --- |
+| Write Goo in another .NET language | [C#](interop/csharp.md), [F#](interop/fsharp.md), [any CLR language and VB](interop/dotnet.md) |
 | Compose primitives and Cells | [Native authoring](native-authoring.md), [Cell state and identity](api/cell.md), [tree reconciliation](api/tree.md) |
 | Layout, styling and input | [Layout](api/layout.md), [style](api/style.md), [text](api/text.md), [input](api/input.md), [accessibility](api/accessibility.md) |
 | Load raster images, SVG and sound | [Images](images.md), [SVG](svg.md), [audio](audio.md) |
