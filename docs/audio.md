@@ -8,7 +8,7 @@ let audio = opened.Player
 let queued = audio?.TryPlay(cue, 0.5F)
 ```
 
-Add `Goo.Audio` 0.8.2 alongside `Goo`. Types use namespace `Goo`.
+Add `Goo.Audio` 0.9.0 alongside `Goo`. Types use namespace `Goo`.
 Keep the player at application scope.
 
 | Operation | Contract |
