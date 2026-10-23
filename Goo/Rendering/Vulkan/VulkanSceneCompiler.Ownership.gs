@@ -9,6 +9,13 @@ internal partial class VulkanSceneCompiler {
     if Object.ReferenceEquals(node.VulkanOwnerToken, ownerToken) {
       if let cached = node.VulkanOwner { return cached }
     }
+    if let previous = node.VulkanOwnerToken as WeakReference[ConditionalWeakTable[Node, VulkanSceneOwnerId]] {
+      if let previousOwner = node.VulkanOwner {
+        if previous.TryGetTarget(out var previousOwners) {
+          previousOwners.AddOrUpdate(node, previousOwner)
+        }
+      }
+    }
     if owners.TryGetValue(node, out var existing) {
       node.VulkanOwnerToken = ownerToken
       node.VulkanOwner = existing
@@ -18,7 +25,6 @@ internal partial class VulkanSceneCompiler {
       throw OverflowException("Vulkan scene owner id overflow")
     }
     let value = VulkanSceneOwnerId(nextOwnerId)
-    owners.Add(node, value)
     node.VulkanOwnerToken = ownerToken
     node.VulkanOwner = value
     nextOwnerId = nextOwnerId + 1uL
