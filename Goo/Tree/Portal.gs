@@ -63,8 +63,8 @@ public class Portal : Blob {
   /// Initializes an empty child collection.
   public init() { }
 
-  /// Adds a child for mixed composite initialization. Give all siblings stable keys,
-  /// or give no sibling a key.
+  /// Adds a child for mixed composite initialization. Siblings can mix keyed and unkeyed entries.
+  /// Keyed children match by key; unkeyed children match only at the same absolute sibling index.
   /// @param child The child to add.
   public func Add(child Blob) {
     Children.Add(child)
