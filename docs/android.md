@@ -258,6 +258,12 @@ stale focus, and multiline input through the Android input connection. The
 last checks leave a Backspace key-up absent and deliver explicit native repeat
 events, then wait to verify that no additional deletion occurs.
 
+```sh
+adb shell am instrument -w -r org.goo.androidsmoke/org.goo.androidsmoke.GestureChecks
+```
+
+`GOO_GESTURES_PASS` confirms coherent two-contact movement, rotation and native cancellation.
+
 The package checker verifies both ABI payloads against build provenance, checks
 dependencies and page alignment, and rejects legacy native renderer libraries.
 For a single-ABI build pass `--abi arm64-v8a` or `--abi x86_64`.
