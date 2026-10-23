@@ -577,6 +577,22 @@ internal static class Program
             throw new InvalidOperationException("EvenOdd path warm encoding allocated");
         }
         Console.WriteLine("PATH_EVENODD_GATE holes=" + 256 + " curves=" + pathBandEncoding.CurveCount + " words=" + pathBandEncoding.WordCount + " warmAllocated=" + num3 + " warmCalls=64");
+        var largePath = new PathBuilder(0, 0, 1024, 1024);
+        for (int i = 0; i < 8192; i++)
+        {
+            int x = i * 37 % 1024, y = i * 53 % 1024;
+            largePath.MoveTo(x, y).QuadraticTo(x + 16, y - 16, x + 8, y).LineTo(x, y + 8).Close();
+        }
+        var largeEncoding = PathBandEncoder.Encode(largePath.Build());
+        var bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
+            largeEncoding.Words.AsSpan(0, largeEncoding.WordCount));
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        if (largeEncoding.WordCount != 316620
+            || hash != "0010B2BF40712817DE99A41D87B4B016263606BFD4D95F854FF7BBD4516AD574")
+        {
+            throw new InvalidOperationException("Large path encoding changed");
+        }
+        Console.WriteLine("PATH_LARGE_ENCODING_GATE curves=" + largeEncoding.CurveCount + " sha256=" + hash);
     }
 
     private static void SubmitPathUpload(VulkanPathResources resources, ulong fence)
