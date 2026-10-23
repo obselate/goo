@@ -71,4 +71,5 @@ else:
         stb = manifest["source"]["stbImage"]
         fetch(stb["url"], stb["sha256"], source / "src/stb_image.h")
         run("python3", "tools/Goo.TextNative/apply-source-patches.py", "--manifest", "tools/Goo.TextNative/manifest.json", "--source-root", str(source), "--patch-name", "stb-gif-two-back")
+        run("python3", "tools/Goo.TextNative/apply-source-patches.py", "--manifest", "tools/Goo.TextNative/manifest.json", "--source-root", str(source), "--patch-name", "stb-png-empty-idat")
         run("clang", *sanitizers, "-I" + str(source / "src"), "tools/Goo.InputFuzz/image.c", "-lm", "-o", str(work / target))
