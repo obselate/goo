@@ -7,7 +7,7 @@ const fs = require('fs/promises');
 let output;
 let status;
 let attachProcess;
-let devTerminal;
+let devTask;
 let statusTimer;
 let lastSource;
 
@@ -47,13 +47,6 @@ async function projectPath() {
     }
   }
   throw new Error('goo.project must be inside the workspace.');
-}
-
-function shellQuote(value) {
-  if (process.platform === 'win32') {
-    return `"${value.replace(/"/g, '\\"')}"`;
-  }
-  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function showError(error) {
@@ -122,12 +115,15 @@ async function start() {
     if (configuration().get('launchInspector', true)) {
       args.push('--inspector');
     }
-    const command = [shellQuote(cliPath()), ...args.map(shellQuote)].join(' ');
-    if (!devTerminal) {
-      devTerminal = vscode.window.createTerminal({ name: 'Goo DevTools' });
-    }
-    devTerminal.show(true);
-    devTerminal.sendText(command, true);
+    devTask = await vscode.tasks.executeTask(new vscode.Task(
+      { type: 'goo' },
+      vscode.TaskScope.Workspace,
+      'Goo DevTools',
+      'goo',
+      new vscode.ProcessExecution(cliPath(), args, {
+        cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd()
+      })
+    ));
     status.text = '$(sync~spin) Goo starting';
     status.tooltip = project;
     await refreshStatus();
@@ -222,11 +218,15 @@ async function openSource() {
 async function restartHotReload() {
   try {
     const project = await projectPath();
-    if (!devTerminal) {
-      devTerminal = vscode.window.createTerminal({ name: 'Goo DevTools' });
-    }
-    devTerminal.show(true);
-    devTerminal.sendText([shellQuote(cliPath()), 'dev', '--watch', '--project', shellQuote(project)].join(' '), true);
+    devTask = await vscode.tasks.executeTask(new vscode.Task(
+      { type: 'goo' },
+      vscode.TaskScope.Workspace,
+      'Goo DevTools',
+      'goo',
+      new vscode.ProcessExecution(cliPath(), ['dev', '--watch', '--project', project], {
+        cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd()
+      })
+    ));
     status.text = '$(sync~spin) Goo restarting';
   } catch (error) {
     showError(error);
@@ -288,9 +288,9 @@ function activate(context) {
 
 function deactivate() {
   detach();
-  if (devTerminal) {
-    devTerminal.dispose();
-    devTerminal = undefined;
+  if (devTask) {
+    devTask.terminate();
+    devTask = undefined;
   }
   if (statusTimer) {
     clearInterval(statusTimer);
