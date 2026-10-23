@@ -52,7 +52,7 @@ internal sealed class NativeMessageBox : Java.Lang.Object, View.IOnAttachStateCh
                 builder.SetNegativeButton(labels[1], (_, _) => session.Complete(0, ids[1]));
             if (ids.Length > 2)
                 builder.SetNeutralButton(labels[2], (_, _) => session.Complete(0, ids[2]));
-            session.dialog = builder.Create();
+            session.dialog = builder.Create() ?? throw new InvalidOperationException("Android did not create the message box");
             session.dialog.CancelEvent += (_, _) => session.Complete(1);
             session.dialog.DismissEvent += (_, _) => session.Complete(1);
             session.dialog.Show();
