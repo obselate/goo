@@ -14,7 +14,7 @@ public class Container : Blob {
   }
 
   /// Gets the mutable child list. Read-only lists supplied during initialization are copied.
-  /// Give all siblings stable keys, or give no sibling a key.
+  /// Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
   public prop Children IList[Blob]{ get -> children
     init -> children = value.IsReadOnly ? List[Blob](value) : value
   }

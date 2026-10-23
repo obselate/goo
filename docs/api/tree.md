@@ -432,7 +432,7 @@ Adds a child to the end of the ordered child collection.
 
 ### `Children`
 
-Gets the mutable child list. Read-only lists supplied during initialization are copied. Give all siblings stable keys, or give no sibling a key.
+Gets the mutable child list. Read-only lists supplied during initialization are copied. Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
 
 ### `Command`
 
@@ -458,7 +458,7 @@ Adds a child to the end of the ordered child collection.
 
 ### `Children`
 
-Gets the mutable child list. Read-only lists supplied during initialization are copied. Give all siblings stable keys, or give no sibling a key.
+Gets the mutable child list. Read-only lists supplied during initialization are copied. Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
 
 ### `HitTestSelf`
 
@@ -965,7 +965,7 @@ Initializes an empty child collection.
 
 ### `Add(Blob)`
 
-Adds a child for mixed composite initialization. Give all siblings stable keys, or give no sibling a key.
+Adds a child for mixed composite initialization. Siblings can mix keyed and unkeyed entries. Keyed children match by key; unkeyed children match only at the same absolute sibling index.
 
 - `child`: The child to add.
 
