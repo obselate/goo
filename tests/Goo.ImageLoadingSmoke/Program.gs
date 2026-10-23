@@ -49,3 +49,14 @@ if variantSource.Width != 2 || variantLease.IsFailed {
   throw InvalidOperationException("Packaged image variant ownership failed")
 }
 Console.WriteLine("image-loading: asset_scale=1.5 selected_density=2 independent_owner=verified")
+
+let colorPath = Path.Combine(AppContext.BaseDirectory, "Assets", "local-profile.png")
+let color = ImageSource.DecodeColorManaged(File.ReadAllBytes(colorPath), ImageDecodeLimits.Default,
+  CancellationToken.None)
+if color.Status != ImageDecodeStatus.Success { throw InvalidOperationException(color.Detail) }
+using let colorSource = color.Source!!
+using let colorLease = colorSource.Acquire()
+if colorSource.Width != 1 || colorSource.Height != 1 || colorLease.IsFailed {
+  throw InvalidOperationException("Packaged ICC image failed")
+}
+Console.WriteLine("image-loading: managed_icc=DisplayP3_to_sRGB source_lease=verified")

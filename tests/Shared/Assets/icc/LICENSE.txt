@@ -1,0 +1,19 @@
+Compact ICC Profiles by saucecontrol
+https://github.com/saucecontrol/Compact-ICC-Profiles
+Commit bdd84663061bc4ae95ca70decff54f581e27f702
+
+The profiles are released to the public domain under Creative Commons CC0.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Reference RGB8 values in ImageSourceCacheTests were generated with LittleCMS 2.19,
+relative colorimetric intent, optimization disabled, destination cmsCreate_sRGBProfile.
+The reference tool is not a Goo dependency. The allowed conversion error is 2 byte levels
+per RGB channel. Alpha must match exactly.
+
+SHA-256
+c56e1685d888f5edb92fe07f2750f387f8fe8e91b32ff8fb0b56bfbbb9458353 sRGB-v4.icc
+0a8a33aea66a6f154a5642ebe168ef287e73265d9f7b51c42a45e6eedbacda7a sRGB-v2-micro.icc
+cb51de38e482ee974c0c76b9689e16aad04bad16e226fed2f30c842d15ff3a3d DisplayP3-v4.icc
+60fb2adecacf82132db0b1c09b303316f3bbd9e2823e7ba096d01627d12d57c9 AdobeCompat-v2.icc
+090daf740c136b4a63bf979d64f034b4a65aa5abbb04a0917729222afe2bb5c2 ProPhoto-v4.icc
+00c0f94e09127520a17dc0e1d9264b5702081d96dbdb1549ee88e3631ce42a9d sGrey-v4.icc

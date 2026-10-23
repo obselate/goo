@@ -753,6 +753,99 @@ class ImageSourceCacheTests : IDisposable {
         )
     }
 
+    @Theory
+    @InlineData("sRGB-v4.icc", []uint8{0, 0, 0, 255, 255, 255, 16, 32, 64, 64, 128, 192, 180, 90, 30, 128, 128, 128, 230, 230, 230})
+    @InlineData("sRGB-v2-micro.icc", []uint8{0, 0, 0, 255, 255, 255, 16, 32, 64, 64, 128, 192, 180, 90, 30, 128, 128, 128, 230, 230, 230})
+    @InlineData("DisplayP3-v4.icc", []uint8{0, 0, 0, 255, 255, 255, 10, 33, 66, 32, 130, 197, 193, 83, 0, 128, 128, 128, 230, 230, 230})
+    @InlineData("AdobeCompat-v2.icc", []uint8{0, 0, 0, 255, 255, 255, 0, 26, 63, 0, 129, 196, 205, 90, 16, 129, 129, 129, 231, 231, 231})
+    @InlineData("ProPhoto-v4.icc", []uint8{0, 0, 0, 255, 255, 255, 0, 46, 86, 0, 157, 211, 251, 73, 0, 146, 146, 146, 235, 235, 235})
+    @InlineData("sGrey-v4.icc", []uint8{0, 0, 0, 255, 255, 255, 16, 16, 16, 64, 64, 64, 180, 180, 180, 128, 128, 128, 230, 230, 230})
+    func ManagedIccMatchesReferenceConversions(name string, expected []uint8) {
+        let profile = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "icc", name))
+        let gray = name.StartsWith("sGrey", StringComparison.Ordinal)
+        let samples = if gray { []uint8{0, 255, 16, 64, 180, 128, 230} }
+            else { []uint8{0, 0, 0, 255, 255, 255, 16, 32, 64, 64, 128, 192, 180, 90, 30, 128, 128, 128, 230, 230, 230} }
+        let png = WithIcc(Png(7, 1, 8, if gray { 0 } else { 2 }, []uint8{0}.Concat(samples).ToArray()), profile)
+        let result = ImageSource.DecodeColorManaged(png, ImageDecodeLimits.Default, CancellationToken.None)
+        Assert.Equal(ImageDecodeStatus.Success, result.Status)
+        using let source = result.Source!!
+        using let lease = source.Acquire()
+        let pixels = lease.Result()!!.Pixels()!!
+        for pixel in 0 ... 7 {
+            for channel in 0 ... 3 {
+                Assert.InRange(int32(pixels[pixel * 4 + channel]), Math.Max(0, int32(expected[pixel * 3 + channel]) - 2),
+                    Math.Min(255, int32(expected[pixel * 3 + channel]) + 2))
+            }
+            Assert.Equal(uint8(255), pixels[pixel * 4 + 3])
+        }
+    }
+
+    @Fact
+    func ManagedIccPreservesAlphaAndLegacyDecodeKeepsSrgbAssumption() {
+        let profile = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "icc", "DisplayP3-v4.icc"))
+        let png = WithIcc(Png(2, 1, 8, 6, []uint8{0, 180, 90, 30, 128, 180, 90, 30, 0}), profile)
+        let result = ImageSource.DecodeColorManaged(png, ImageDecodeLimits.Default, CancellationToken.None)
+        Assert.Equal(ImageDecodeStatus.Success, result.Status)
+        using let managed = result.Source!!
+        using let managedLease = managed.Acquire()
+        let converted = managedLease.Result()!!.Pixels()!!
+        Assert.InRange(converted[0], uint8(96), uint8(98))
+        Assert.InRange(converted[1], uint8(41), uint8(43))
+        Assert.Equal([]uint8{0, 128, 0, 0, 0, 0}, converted.Skip(2))
+        using let legacy = ImageSource.Decode(png)
+        using let legacyLease = legacy.Acquire()
+        Assert.Equal([]uint8{90, 45, 15, 128, 0, 0, 0, 0}, legacyLease.Result()!!.Pixels())
+    }
+
+    @Fact
+    func ManagedIccRejectsIncompleteFragmentsBoundsAndUnsupportedProfiles() {
+        let profile = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "icc", "sRGB-v4.icc"))
+        let jpeg = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-rgb.jpg"))
+        let png = Png(1, 1, 8, 2, []uint8{0, 180, 90, 30})
+        let fragmented = WithJpegIcc(WithJpegIcc(jpeg, 1, 2, profile[..200]), 2, 2, profile[200..])
+        let result = ImageSource.DecodeColorManaged(fragmented, ImageDecodeLimits.Default, CancellationToken.None)
+        Assert.Equal(ImageDecodeStatus.Success, result.Status)
+        result.Source!!.Dispose()
+        let incomplete = WithJpegIcc(jpeg, 2, 2, profile[200..])
+        Assert.Equal(ImageDecodeStatus.InvalidData, ImageSource.DecodeColorManaged(incomplete,
+            ImageDecodeLimits.Default, CancellationToken.None).Status)
+        let duplicate = WithJpegIcc(WithJpegIcc(jpeg, 1, 2, profile[..200]), 1, 2, profile[200..])
+        Assert.Equal(ImageDecodeStatus.InvalidData, ImageSource.DecodeColorManaged(duplicate,
+            ImageDecodeLimits.Default, CancellationToken.None).Status)
+        let invalid = cast[[]uint8](profile.Clone())
+        invalid.AsSpan(136, 4).Fill(uint8(255))
+        Assert.Equal(ImageDecodeStatus.InvalidData, ImageSource.DecodeColorManaged(WithIcc(png, invalid),
+            ImageDecodeLimits.Default, CancellationToken.None).Status)
+        let lut = cast[[]uint8](profile.Clone())
+        System.Text.Encoding.ASCII.GetBytes("A2B0").CopyTo(lut, 132)
+        Assert.Equal(ImageDecodeStatus.Unsupported, ImageSource.DecodeColorManaged(WithIcc(png, lut),
+            ImageDecodeLimits.Default, CancellationToken.None).Status)
+        let cmyk = cast[[]uint8](profile.Clone())
+        System.Text.Encoding.ASCII.GetBytes("CMYK").CopyTo(cmyk, 16)
+        Assert.Equal(ImageDecodeStatus.Unsupported, ImageSource.DecodeColorManaged(WithIcc(png, cmyk),
+            ImageDecodeLimits.Default, CancellationToken.None).Status)
+        let oversized = [(4 << 20) + 1]uint8
+        Assert.Equal(ImageDecodeStatus.InvalidData, ImageSource.DecodeColorManaged(WithIcc(png, oversized),
+            ImageDecodeLimits.Default, CancellationToken.None).Status)
+        Assert.Equal(ImageDecodeStatus.Cancelled, ImageSource.DecodeColorManaged(png,
+            ImageDecodeLimits.Default, CancellationToken(true)).Status)
+    }
+
+    @Fact
+    func PngCicpSrgbTakesPrecedenceOverEmbeddedIcc() {
+        let profile = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "icc", "DisplayP3-v4.icc"))
+        let png = WithIcc(Png(1, 1, 8, 2, []uint8{0, 180, 90, 30}), profile)
+        using let output = MemoryStream()
+        output.Write(png.AsSpan(0, 33))
+        Chunk(output, "cICP", []uint8{1, 13, 0, 1})
+        output.Write(png.AsSpan(33))
+        let result = ImageSource.DecodeColorManaged(output.ToArray(), ImageDecodeLimits.Default, CancellationToken.None)
+        Assert.Equal(ImageDecodeStatus.Success, result.Status)
+        using let source = result.Source!!
+        using let lease = source.Acquire()
+        Assert.Equal([]uint8{180, 90, 30, 255}, lease.Result()!!.Pixels())
+    }
+
     private func Write(name string, bytes[]uint8) string {
         let path = Path.Combine(directory, name)
         File.WriteAllBytes(path, bytes)
@@ -804,6 +897,33 @@ class ImageSourceCacheTests : IDisposable {
     }
 
     shared {
+        private func WithIcc(png []uint8, profile []uint8) []uint8 {
+            using let compressed = MemoryStream()
+            compressed.Write([]uint8{73, 67, 67, 0, 0})
+            {
+                using let zlib = ZLibStream(compressed, CompressionLevel.Fastest, true)
+                zlib.Write(profile)
+            }
+            using let output = MemoryStream()
+            output.Write(png.AsSpan(0, 33))
+            Chunk(output, "iCCP", compressed.ToArray())
+            output.Write(png.AsSpan(33))
+            return output.ToArray()
+        }
+
+        private func WithJpegIcc(jpeg []uint8, sequence int32, count int32, profile []uint8) []uint8 {
+            using let output = MemoryStream()
+            output.Write(jpeg.AsSpan(0, 2))
+            let size = profile.Length + 16
+            output.Write([]uint8{255, 226, uint8(size >> 8), uint8(size)})
+            output.Write(System.Text.Encoding.ASCII.GetBytes("ICC_PROFILE\0"))
+            output.WriteByte(uint8(sequence))
+            output.WriteByte(uint8(count))
+            output.Write(profile)
+            output.Write(jpeg.AsSpan(2))
+            return output.ToArray()
+        }
+
         private func Exif(orientation int32, little bool)[]uint8 {
             let bytes = [26]uint8
             bytes[0] = (

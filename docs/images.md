@@ -27,7 +27,7 @@ The loader uses the first PNG image and ignores animation and color-profile
 metadata. PNG `eXIf` and JPEG EXIF orientation are applied, including mirrored
 orientations. Width, height and thumbnail bounds refer to the displayed image.
 Malformed or duplicate EXIF metadata is ignored. Those images stay unrotated.
-Color management is not performed. Pixels are treated as sRGB by rendering.
+The `Decode` and cache overloads treat pixels as sRGB without profile conversion.
 Other formats throw
 `NotSupportedException`; a consumer decoder can still create `ImageSource`
 directly. `Image.Path` is legacy metadata: mounting a nonempty path without
@@ -94,3 +94,21 @@ if result.Status == ImageAssetStatus.Success {
 - Publish Source and PixelsPerUnit together on the UI thread. Ignore late results from older requests.
 - Each result owns its Source. Dispose it when application state no longer needs it.
 - The family caches decoded pixels. Disposing the family does not invalidate returned sources or mounted leases.
+
+## Embedded color profiles
+
+```gsharp
+let result = ImageSource.DecodeColorManaged(bytes, ImageDecodeLimits.Default, token)
+if result.Status == ImageDecodeStatus.Success {
+    using let source = result.Source!!
+    Image{Source: source, Width: 240, Height: 160}
+}
+```
+
+- PNG `iCCP` and JPEG APP2 profiles use the same managed converter on all platforms.
+- RGB matrix/TRC and gray ICC v2/v4 profiles convert to SDR sRGB before alpha premultiplication.
+- Parametric curves and sampled curves are supported. Conversion uses relative colorimetric intent.
+- LUT, CMYK and unsupported profile classes return `Unsupported`. Invalid profiles return `InvalidData`.
+- The uncompressed profile limit is 4 MiB. JPEG ICC fragments may arrive in any order.
+- Files without an ICC profile use sRGB. PNG gamma/chromaticity tags do not create an ICC profile.
+- Reference fixtures cover sRGB, Display P3, Adobe RGB, ProPhoto and gray. RGB output is within two byte levels of the reference conversions.

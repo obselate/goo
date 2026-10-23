@@ -112,14 +112,15 @@ internal unsafe partial class RasterImageDecoder {
     }
 
     private func DecodePixels(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds,
-      token CancellationToken) ImageSource {
+      token CancellationToken, profile ([]uint8)? = nil, gray bool = false, validated bool = false) ImageSource {
       if bytes.Length > bounds.Limits.MaxEncodedBytes { throw EncodedLimit(bounds.Limits) }
       let orientation = ReadOrientation(bytes, token)
       let orientedBounds = RasterDecodeBounds{Limits: bounds.Limits,
         MaxWidth: if orientation >= 5 { bounds.MaxHeight } else { bounds.MaxWidth },
         MaxHeight: if orientation >= 5 { bounds.MaxWidth } else { bounds.MaxHeight }}
-      using let image = DecodeRaw(bytes, orientedBounds, token, false)
+      using let image = DecodeRaw(bytes, orientedBounds, token, false, validated)
       let pixels = image.Pixels
+      if let color = profile { IccColorTransform.Convert(color, gray, pixels, token) }
       var offset = 0
       while offset < pixels.Length {
         if (offset & 65535) == 0 { token.ThrowIfCancellationRequested() }
@@ -143,10 +144,12 @@ internal unsafe partial class RasterImageDecoder {
     }
 
     internal func DecodeRaw(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken,
-      pngOnly bool) NativeImage {
+      pngOnly bool, validated bool = false) NativeImage {
       token.ThrowIfCancellationRequested()
       if bytes.Length > bounds.Limits.MaxEncodedBytes { throw EncodedLimit(bounds.Limits) }
-      if pngOnly { ValidatePng(bytes, bounds, token) } else { ValidateFormat(bytes, bounds, token) }
+      if !validated {
+        if pngOnly { ValidatePng(bytes, bounds, token) } else { ValidateFormat(bytes, bounds, token) }
+      }
       if pngOnly && (U32(bytes, 16) > MaxIconEdge || U32(bytes, 20) > MaxIconEdge) {
         throw InvalidDataException("Window icon exceeds 1024 pixels per side")
       }
