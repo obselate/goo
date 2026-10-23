@@ -22,8 +22,8 @@ public partial class Window {
     }
   }
 
-  internal prop LayoutWidth float32 { get -> float32(Width) / UiScale }
-  internal prop LayoutHeight float32 { get -> float32(Height) / UiScale }
+  internal prop LayoutWidth float32 { get -> offscreenViewport?.X ?? float32(Width) / UiScale }
+  internal prop LayoutHeight float32 { get -> offscreenViewport?.Y ?? float32(Height) / UiScale }
   private prop RenderScale Vector2 { get -> dpi * UiScale }
 
   private func invalidateUiScale() {

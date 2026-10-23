@@ -263,6 +263,40 @@ present. It requires an open desktop window and does not capture a specific prio
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
 
+## Render pages without presenting
+
+```gsharp
+let created = window.CreateOffscreenSession()
+if created.Status == OffscreenRenderStatus.Success {
+    using let session = created.Session!!
+    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
+    while !pending.IsCompleted {
+        session.Service()
+        Thread.Sleep(1)
+    }
+    let rendered = pending.GetAwaiter().GetResult()
+}
+```
+
+Create the session on the window thread before opening native UI.
+The session keeps the shared renderer, not the native surface.
+It can render while an embedded host is paused or detached.
+Call `Service` from the host's UI scheduler until each page finishes.
+Create, render, service and dispose on the same thread.
+
+Each page uses a fresh, unattached cell.
+Logical size controls layout. Pixel size controls resolution.
+`MaxBytes` bounds new GPU allocations and CPU pixels.
+Pass a previous capture to reuse its pixels at the same size.
+Do not read those pixels until the next render completes.
+
+`window.RenderOffscreenAsync` uses the window's existing renderer instead.
+Keep pumping that window until completion.
+Both paths return an explicit `OffscreenRenderStatus`.
+Closing the owner cancels pending pages.
+`window.Closed` is a cancellation token for optional owner-bound services.
+
 ## Fullscreen displays
 
 Call `window.GetDisplays()` on an open window's UI thread for an owned read-only
@@ -730,6 +764,7 @@ Sources:
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
+- [`Window.Offscreen.gs`](../../Goo/Window/WindowParts/Window.Offscreen.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
@@ -805,6 +840,12 @@ Configures process-wide application identity before SDL initialization.
 - `name`: human-readable application name
 - `version`: application version
 - `identifier`: unique reverse-domain identifier
+
+### `CreateOffscreenSession`
+
+Creates a renderer lease before opening native UI that can remove this window's presentation surface.
+
+Returns: A session on Success, or an explicit renderer status.
 
 ### `DragRegion(Container)`
 
@@ -896,6 +937,17 @@ Returns: Owned paths and explicit read status; the clipboard may have changed si
 Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
 
 Returns: Owned encoded bytes with a MIME type and explicit read status.
+
+### `RenderOffscreenAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
+
+Renders a fresh, unattached cell at a separate layout size without resizing or presenting this window. Keep pumping the owner until completion. Pixels and new GPU allocations share MaxBytes.
+
+- `root`: The independent page content.
+- `options`: The logical viewport, pixel size, background and memory limit.
+- `cancellation`: Cancels the operation after in-flight GPU work is safe to release.
+- `reusable`: Previous pixels to reuse when the output size matches. Do not access them until completion.
+
+Returns: Owned pixels or an explicit operation status.
 
 ### `RequestActivation`
 
@@ -994,6 +1046,10 @@ Reports whether programmatic window movement is available.
 ### `Capabilities`
 
 Gets supported native lifecycle operations, or None before Open or Attach.
+
+### `Closed`
+
+Gets a token cancelled when this window stops accepting owner-thread work. A posted action can be discarded during teardown. Use this token to complete pending asynchronous work.
 
 ### `Decorated`
 

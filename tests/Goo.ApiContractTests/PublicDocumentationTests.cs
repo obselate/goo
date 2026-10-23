@@ -19,6 +19,11 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)",
         "M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)",
         "M:Goo.Accessibility.#ctor",
+        "M:Goo.Window.CreateOffscreenSession",
+        "M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
+        "M:Goo.OffscreenRenderSession.RenderAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
+        "M:Goo.OffscreenRenderSession.Service",
+        "M:Goo.OffscreenRenderSession.Dispose",
         "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
         "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
         "M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)",
@@ -451,6 +456,9 @@ public sealed class PublicDocumentationTests
     private static readonly HashSet<Type> SynthesizedPrimaryDataTypes =
     [
         typeof(FocusedEditorSnapshot),
+        typeof(OffscreenRenderOptions),
+        typeof(OffscreenRenderResult),
+        typeof(OffscreenRenderSessionResult),
         typeof(TextChange),
         typeof(LayoutTransition),
         typeof(AccessibilityId),
@@ -470,6 +478,9 @@ public sealed class PublicDocumentationTests
         new Dictionary<string, DocumentationShape>(StringComparer.Ordinal)
         {
             ["M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)"] = new(["initial"], [], true),
+            ["M:Goo.Window.CreateOffscreenSession"] = new([], [], true),
+            ["M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)"] = new(["root", "options", "cancellation", "reusable"], [], true),
+            ["M:Goo.OffscreenRenderSession.RenderAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)"] = new(["root", "options", "cancellation", "reusable"], [], true),
             ["M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)"] = new(["value"], [], true),
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),

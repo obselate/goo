@@ -142,7 +142,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
           return true
         }
       }
-      return textRedrawPending || imageRedrawPending || pathRedrawPending
+      return pageCompletion != nil || queuedPage != nil || textRedrawPending || imageRedrawPending || pathRedrawPending
         || clipMaskRedrawPending
         || forceFullRedraw
         || sceneCompiler.Frame.ShaderPlaybackActive
@@ -151,13 +151,15 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   }
 
   public prop LastFrameSubmitted bool{ get -> lastFrameSubmitted }
-  public prop QueueWorkPending bool{ get -> queueStage != QueueStageIdle }
+  public prop QueueWorkPending bool{ get -> queueStage != QueueStageIdle || pageCompletion != nil || queuedPage != nil }
   public prop RetirementWorkPending bool{
     get -> !disposed && runtime?.DeviceLost != true
       && (hideReleasePending || retiredSwapchains.Count != 0)
   }
 
   public func PrepareClose() bool {
+    CancelQueuedPage()
+    if pageCompletion != nil { Interlocked.Exchange(ref pageCancelled, 1) }
     if startupState != VulkanWindowStartupState.None {
       startupState = VulkanWindowStartupState.Closing
       if !DrainStartup() { return false }
@@ -169,7 +171,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       }
     }
     PollQueueCompletion()
-    if queueStage != QueueStageIdle || frameBegun {
+    if queueStage != QueueStageIdle || frameBegun || pageCompletion != nil {
       return false
     }
     if let activeRuntime = runtime {

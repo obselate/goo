@@ -100,6 +100,7 @@ internal sealed class VulkanReadbackResult : WindowReadbackResult {
   internal prop Format VkFormat{ get -> format }
   internal prop Generation uint64{ get -> generation }
   internal prop SubmissionSerial uint64{ get -> submissionSerial }
+  internal prop OwnedPixels []uint8{ get -> pixels }
   public prop Premultiplied bool{ get -> true }
   public prop OriginBottomLeft bool{ get -> false }
   public prop SrgbEncoded bool{ get -> true }
