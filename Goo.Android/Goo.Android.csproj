@@ -14,6 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.NativeMenus" />
+    <InternalsVisibleTo Include="Goo.NativeDialogs" />
     <None Include="../docs/android.md" Pack="true" PackagePath="README.md" />
     <ProjectReference Include="../Goo/Goo.gsproj" />
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-arm64/*.so" Abi="arm64-v8a" />
