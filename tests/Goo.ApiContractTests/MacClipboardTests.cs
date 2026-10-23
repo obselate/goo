@@ -38,6 +38,8 @@ public sealed class MacClipboardTests
             Assert.Equal(html, ReadNativeFormat("public.html"));
             Assert.Equal(rtf, ReadNativeFormat("public.rtf"));
             Assert.Equal(png, ReadNativeFormat("public.png"));
+            foreach (var representation in representations)
+                Assert.Equal(representation.Bytes.ToArray(), ReadNativeFormat("io.github.obselate.goo.mime." + Convert.ToHexString(Encoding.ASCII.GetBytes(representation.ContentType))));
             var formats = Invoke<ClipboardFormats>("Query");
             Assert.True(formats.Status == ClipboardReadStatus.Success, formats.Error);
             Assert.True(formats.HasImage && formats.HasFiles);
