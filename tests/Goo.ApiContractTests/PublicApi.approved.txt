@@ -190,6 +190,7 @@ enum-underlying|Goo.Printing.PrintLayoutStatus|System.Int32
 enum-underlying|Goo.Printing.PrintStatus|System.Int32
 enum-underlying|Goo.ScrollbarVisibility|System.Int32
 enum-underlying|Goo.ShapeFit|System.Int32
+enum-underlying|Goo.SingleInstanceStatus|System.Int32
 enum-underlying|Goo.SpellCheck.SpellingStatus|System.Int32
 enum-underlying|Goo.StrokeCap|System.Int32
 enum-underlying|Goo.StrokeJoin|System.Int32
@@ -710,6 +711,12 @@ enum|Goo.ShapeFit|Contain|0
 enum|Goo.ShapeFit|Cover|1
 enum|Goo.ShapeFit|Fill|2
 enum|Goo.ShapeFit|None|3
+enum|Goo.SingleInstanceStatus|Failed|5
+enum|Goo.SingleInstanceStatus|Forwarded|1
+enum|Goo.SingleInstanceStatus|Primary|0
+enum|Goo.SingleInstanceStatus|Rejected|4
+enum|Goo.SingleInstanceStatus|TimedOut|2
+enum|Goo.SingleInstanceStatus|Unsupported|3
 enum|Goo.SpellCheck.SpellingStatus|Cancelled|4
 enum|Goo.SpellCheck.SpellingStatus|Disabled|3
 enum|Goo.SpellCheck.SpellingStatus|Failed|7
@@ -1279,6 +1286,7 @@ method|Goo.ShaderEffect|SetParameter|instance|public|generic:|(slot:System.Int32
 method|Goo.Simulation|Done|abstract|public|generic:|(elapsed:System.Double)->System.Boolean
 method|Goo.Simulation|Position|abstract|public|generic:|(elapsed:System.Double)->System.Double
 method|Goo.Simulation|Velocity|abstract|public|generic:|(elapsed:System.Double)->System.Double
+method|Goo.SingleInstance|AcquireAsync|static|public|generic:|(applicationId:System.String,activation:Goo.ApplicationActivation,timeoutMilliseconds:System.Int32=3000)->System.Threading.Tasks.Task`1<Goo.SingleInstanceResult>
 method|Goo.SoundPlayback|Dispose|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayback|Stop|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayer|Dispose|instance|public|generic:|()->System.Void
@@ -2068,6 +2076,9 @@ property|Goo.Shape|StrokeCap|Goo.StrokeCap|instance|get:public,init:public|index
 property|Goo.Shape|StrokeEnd|System.Double|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeStart|System.Double|instance|get:public,init:public|index:()
+property|Goo.SingleInstanceResult|Error|System.String|instance|get:public|index:()
+property|Goo.SingleInstanceResult|Lease|System.IDisposable|instance|get:public|index:()
+property|Goo.SingleInstanceResult|Status|Goo.SingleInstanceStatus|instance|get:public|index:()
 property|Goo.SoundPlayback|IsPlaying|System.Boolean|instance|get:public|index:()
 property|Goo.SoundSource|Channels|System.Int32|instance|get:public,set:private|index:()
 property|Goo.SoundSource|DurationSeconds|System.Double|instance|get:public|index:()
@@ -2638,6 +2649,9 @@ type|Goo.ShaderEffect|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShapeFit|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Shape|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Simulation|abstract-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SingleInstanceResult|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SingleInstanceStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.SingleInstance|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SoundPlayback|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.SoundPlayer|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.SoundSource|sealed-class|public|base:System.Object|interfaces:|generic:

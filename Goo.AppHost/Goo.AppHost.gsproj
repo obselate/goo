@@ -1,0 +1,28 @@
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Goo</RootNamespace>
+    <PackageId>Goo.AppHost</PackageId>
+    <Version>$(GooReleaseVersion)</Version>
+    <Authors>Xaz</Authors>
+    <Description>Optional desktop activation and single-instance hosting for Goo.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+    <None Include="../docs/app-host.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+  <Target Name="IncludeAppHostDocumentation" AfterTargets="CoreCompile"
+          BeforeTargets="DocumentationProjectOutputGroup" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <DocumentationProjectOutputGroupOutput Include="@(DocFileItem->'%(FullPath)')"
+          FinalOutputPath="@(FinalDocFile->'%(FullPath)')" TargetPath="@(DocFileItem->'%(Filename)%(Extension)')" />
+    </ItemGroup>
+  </Target>
+</Project>
