@@ -189,6 +189,10 @@ public sealed class PublicDocumentationTests
         "M:Goo.ImageSourceCache.LoadAsync(System.String)",
         "M:Goo.ImageSourceCache.LoadAsync(System.String,System.Threading.CancellationToken)",
         "M:Goo.ImageSourceCache.Dispose",
+        "M:Goo.Images.ImageVariant.#ctor(System.String,System.Single)",
+        "M:Goo.Images.ImageVariants.#ctor(System.Collections.Generic.IReadOnlyList{Goo.Images.ImageVariant},Goo.ImageDecodeLimits)",
+        "M:Goo.Images.ImageVariants.LoadAsync(Goo.WindowMetrics,System.Threading.CancellationToken)",
+        "M:Goo.Images.ImageVariants.Dispose",
         "M:Goo.ImageSource.#ctor(System.Int32,System.Int32,System.Byte[])",
         "M:Goo.ImageSource.Acquire",
         "M:Goo.ImageSourceProvider.Acquire",
@@ -615,6 +619,9 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ImageSource.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "pixels"], [], false),
             ["M:Goo.ImageSource.Acquire"] = new([], [], true),
             ["M:Goo.ImageSource.Transfer(System.Int32,System.Int32,System.Byte[],System.Action)"] = new(["width", "height", "pixels", "released"], [], true),
+            ["M:Goo.Images.ImageVariant.#ctor(System.String,System.Single)"] = new(["path", "pixelsPerUnit"], [], false),
+            ["M:Goo.Images.ImageVariants.#ctor(System.Collections.Generic.IReadOnlyList{Goo.Images.ImageVariant},Goo.ImageDecodeLimits)"] = new(["variants", "limits"], [], false),
+            ["M:Goo.Images.ImageVariants.LoadAsync(Goo.WindowMetrics,System.Threading.CancellationToken)"] = new(["metrics", "cancellationToken"], [], true),
             ["M:Goo.ImageSourceProvider.Acquire"] = new([], [], false),
             ["M:Goo.ImageSourceLease.Complete(Goo.ImageSource)"] = new(["source"], [], true),
             ["M:Goo.ImageSourceLease.Fail"] = new([], [], true),
@@ -764,8 +771,9 @@ public sealed class PublicDocumentationTests
     public void EnumsInterfacesAndWindowPartialsRequireSourceDocumentation()
     {
         var supplemented = LoadSupplementMemberIds();
-        var sources = Directory.EnumerateFiles(
-                Path.Combine(FindRepositoryRoot().FullName, "Goo"), "*.gs", SearchOption.AllDirectories)
+        var sources = new[] { "Goo", "Goo.Images" }
+            .SelectMany(directory => Directory.EnumerateFiles(
+                Path.Combine(FindRepositoryRoot().FullName, directory), "*.gs", SearchOption.AllDirectories))
             .Select(File.ReadAllText)
             .ToArray();
 
@@ -922,16 +930,17 @@ public sealed class PublicDocumentationTests
 
     private static IEnumerable<Type> ApiTypes()
     {
-        return typeof(Window).Assembly.GetExportedTypes()
+        return new[] { typeof(Window).Assembly, typeof(Goo.Images.ImageVariants).Assembly }
+            .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => type.Name != "<Program>")
             .Where(type => type.FullName != "Goo.PerformanceFixtures");
     }
 
     private static Dictionary<string, XElement> LoadDocumentationMembers()
     {
-        var path = Path.ChangeExtension(typeof(Window).Assembly.Location, ".xml");
-        Assert.True(File.Exists(path), $"Missing generated XML documentation at {path}.");
-        return XDocument.Load(path).Root!.Element("members")!.Elements("member")
+        return new[] { typeof(Window).Assembly, typeof(Goo.Images.ImageVariants).Assembly }
+            .Select(assembly => Path.ChangeExtension(assembly.Location, ".xml"))
+            .SelectMany(path => XDocument.Load(path).Root!.Element("members")!.Elements("member"))
             .ToDictionary(member => member.Attribute("name")!.Value, StringComparer.Ordinal);
     }
 

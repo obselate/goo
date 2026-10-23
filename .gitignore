@@ -62,6 +62,8 @@
 !/Goo.Android/**
 !/Goo.NativeMenus/
 !/Goo.NativeMenus/**
+!/Goo.Images/
+!/Goo.Images/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/

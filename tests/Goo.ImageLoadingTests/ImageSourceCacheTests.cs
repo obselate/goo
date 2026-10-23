@@ -553,6 +553,60 @@ public sealed class ImageSourceCacheTests : IDisposable
         return output.ToArray();
     }
 
+    [Theory]
+    [InlineData(1.0, 1f, 1f)]
+    [InlineData(1.25, 1f, 1.5f)]
+    [InlineData(1.6, 1f, 2f)]
+    [InlineData(2.5, 1f, 3f)]
+    [InlineData(4.0, 1f, 3f)]
+    [InlineData(2.0, 1.5f, 3f)]
+    public async Task ImageVariantsUseWindowScaleAndReuseOwnedPixels(double displayScale, float uiScale, float expected)
+    {
+        var family = new[] { 3f, 1f, 2f, 1.5f }.Select(density =>
+        {
+            var edge = (int)(density * 2);
+            var path = Write($"logo@{density}x.png", Png(edge, edge, 8, 6, new byte[edge * (1 + edge * 4)]));
+            return new Goo.Images.ImageVariant(path, density);
+        }).ToArray();
+        using var variants = new Goo.Images.ImageVariants(family);
+        var metrics = new WindowMetrics { DisplayScaleX = displayScale, DisplayScaleY = displayScale, UiScale = uiScale };
+        var result = await variants.LoadAsync(metrics, CancellationToken.None);
+        var second = await variants.LoadAsync(metrics, CancellationToken.None);
+        Assert.Equal(Goo.Images.ImageAssetStatus.Success, result.Status);
+        Assert.Equal(Goo.Images.ImageAssetStatus.Success, second.Status);
+        Assert.Equal(expected, result.PixelsPerUnit);
+        using var source = result.Source!;
+        using var owner = second.Source!;
+        Assert.Equal(expected * 2, source.Width);
+        using var lease = source.Acquire();
+        using var other = owner.Acquire();
+        Assert.Same(lease.Result(), other.Result());
+        variants.Dispose();
+        source.Dispose();
+        Assert.False(lease.IsFailed);
+        Assert.True(other.Result()!.IsValid);
+    }
+
+    [Fact]
+    public async Task ImageVariantsReportMissingMetricsAndMismatchedLogicalSizes()
+    {
+        var path = Write("same-size.png", Png(2, 2, 8, 6, new byte[18]));
+        using var variants = new Goo.Images.ImageVariants([
+            new Goo.Images.ImageVariant(path, 1), new Goo.Images.ImageVariant(path, 2)]);
+        Assert.Equal(Goo.Images.ImageAssetStatus.NotReady,
+            (await variants.LoadAsync(default, CancellationToken.None)).Status);
+        var small = await variants.LoadAsync(new WindowMetrics { DisplayScaleX = 1, DisplayScaleY = 1 }, CancellationToken.None);
+        Assert.Equal(Goo.Images.ImageAssetStatus.Success, small.Status);
+        small.Source!.Dispose();
+        Assert.Equal(Goo.Images.ImageAssetStatus.InvalidData,
+            (await variants.LoadAsync(new WindowMetrics { DisplayScaleX = 2, DisplayScaleY = 2 }, CancellationToken.None)).Status);
+        using var missing = new Goo.Images.ImageVariants([new Goo.Images.ImageVariant(Path.Combine(directory, "missing.png"), 1)]);
+        Assert.Equal(Goo.Images.ImageAssetStatus.NotFound,
+            (await missing.LoadAsync(new WindowMetrics { DisplayScaleX = 1, DisplayScaleY = 1 }, CancellationToken.None)).Status);
+        Assert.Equal(Goo.Images.ImageAssetStatus.Cancelled,
+            (await variants.LoadAsync(new WindowMetrics { DisplayScaleX = 1, DisplayScaleY = 1 }, new CancellationToken(true))).Status);
+    }
+
     private string Write(string name, byte[] bytes)
     {
         var path = Path.Combine(directory, name);
