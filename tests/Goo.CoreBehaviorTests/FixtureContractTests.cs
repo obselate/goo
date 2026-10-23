@@ -19,6 +19,7 @@ public sealed class FixtureContractTests
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.FailedDiffPreservesPublishedTreeContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.FocusLayoutAndScrollContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.HostExplorationAndRevealContract));
+        yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.HostClipAndTransformContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.PrimitiveAndExclusionContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.RetainedIdentityAndRelationshipsContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.RetiredAndInvalidRelationshipContract));

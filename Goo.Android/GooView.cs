@@ -150,6 +150,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             return;
         resumed = false;
         NativeContextMenu?.OwnerClosed();
+        accessibility.SetPresentationReady(false);
         CancelFrames();
         host.Suspend();
     }
@@ -165,6 +166,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         if (disposed || !Window.IsOpen)
             return;
+        accessibility.SetPresentationReady(false);
         if (holder.Surface is { } surface)
             host.RefreshSurface(surface);
         host.Resize(Math.Max(1, (int)Math.Round(width / Density)),
@@ -178,6 +180,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (disposed)
             return;
         NativeContextMenu?.OwnerClosed();
+        accessibility.SetPresentationReady(false);
         CancelFrames();
         Input.FocusLost();
         host.DetachPresentation();
@@ -196,13 +199,24 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         base.OnAttachedToWindow();
         if (!disposed && !nativeOwners.TryGetValue(Window, out _))
             nativeOwners.Add(Window, this);
+        if (!disposed) accessibility.Attach();
     }
+
+    protected override void OnWindowVisibilityChanged(ViewStates visibility)
+    {
+        base.OnWindowVisibilityChanged(visibility);
+        if (!disposed) accessibility.RefreshNativeGeometry();
+    }
+
+    protected override bool DispatchHoverEvent(MotionEvent? e) => !disposed
+        && (e is not null && accessibility.DispatchHover(e) || base.DispatchHoverEvent(e));
 
     protected override void OnDetachedFromWindow()
     {
         nativeOwners.Remove(Window);
         NativeContextMenu?.OwnerClosed();
         CancelFrames();
+        accessibility.Detach();
         base.OnDetachedFromWindow();
     }
 
@@ -242,6 +256,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         var dt = lastFrameTime == 0 ? 0 : Math.Max(0, (frameTime - lastFrameTime) / 1_000_000_000d);
         lastFrameTime = frameTime;
         host.RenderFrame(dt);
+        accessibility.SetPresentationReady(true);
+        accessibility.RefreshNativeGeometry();
         var delay = host.NextFrameDelaySeconds;
         SetFrameDemand(delay <= 0);
         if (double.IsPositiveInfinity(delay))

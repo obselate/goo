@@ -391,7 +391,8 @@ internal class AccessibilityFixtures {
     let visible = scroller.Children[0]
     let offscreen = scroller.Children[1]
     if !password.IsPassword || password.Value.Contains("secret") || visible.IsPassword
-      || offscreen.VisibleBounds != nil || !visible.Disabled { return false }
+      || offscreen.VisibleBounds != nil || !visible.Disabled || scroller.Role != AccessibilityRole.Generic
+      || !hasAction(scroller, AccessibilityAction.Scroll) { return false }
     guard let bounds = visible.VisibleBounds else { return false }
     guard let hit = window.AccessibilityHitTest(bounds.X + bounds.Width / 2.0,
       bounds.Y + bounds.Height / 2.0) else { return false }
@@ -400,6 +401,20 @@ internal class AccessibilityFixtures {
       AccessibilityActionRequest(AccessibilityAction.ScrollIntoView)) { return false }
     window.UpdateTree(1.0)
     return offscreen.VisibleBounds != nil && !offscreen.Focused && scroller.ScrollInfo?.Y > 0.0
+  }
+
+  func HostClipAndTransformContract() bool {
+    let adapter = AccessibilityTestAdapter{}
+    let window = Window{ Root: AccessibilityClipCell{}, Width: 200, Height: 100 }
+    window.AccessibilityAdapter = adapter
+    window.UpdateTree()
+    guard let root = adapter.Tree?.Root else { return false }
+    let child = root.Children[0]
+    guard let bounds = child.VisibleBounds else { return false }
+    guard let inside = window.AccessibilityHitTest(60.0, 10.0),
+      let outside = window.AccessibilityHitTest(110.0, 10.0) else { return false }
+    return child.Bounds.X == 40.0 && bounds.X == 40.0 && bounds.Width == 50.0
+      && inside == child.Id && outside == root.Id
   }
 }
 
@@ -599,7 +614,6 @@ internal class AccessibilityHostCell : Cell {
       .Height: 20.0,
       .FlexShrink: 0.0,
       .OverflowY: Overflow.Scroll,
-      .Accessibility: Accessibility{ Role: AccessibilityRole.List },
       Container{
         Height: 40.0, FlexShrink: 0.0, Disabled: true, HitTestSelf: false,
         Accessibility: Accessibility{ Role: AccessibilityRole.ListItem },
@@ -607,6 +621,24 @@ internal class AccessibilityHostCell : Cell {
       Container{
         Height: 20.0, FlexShrink: 0.0, Disabled: true,
         Accessibility: Accessibility{ Role: AccessibilityRole.ListItem },
+      },
+    },
+  }
+}
+
+internal class AccessibilityClipCell : Cell {
+  override func Build() Blob -> Container() {
+    .Accessibility: Accessibility{ Role: AccessibilityRole.Group },
+    Container() {
+      .Width: 100.0,
+      .Height: 40.0,
+      .Transform: PanelTransform{ TranslateX: 40 },
+      .TransformOriginX: Percent(0),
+      .TransformOriginY: Percent(0),
+      .ClipPath: leftHalf(),
+      Container{
+        Width: 100.0, Height: 40.0, Disabled: true, HitTestSelf: false,
+        Accessibility: Accessibility{ Role: AccessibilityRole.Generic },
       },
     },
   }

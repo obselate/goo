@@ -67,13 +67,24 @@ internal sealed partial class GooAccessibilityProvider
         var node = record.Node;
         if (action == NodeAction.AccessibilityFocus)
         {
-            if (!manager.IsEnabled || accessibilityFocus == virtualViewId) return false;
-            view.Window.PerformAccessibilityAction(node.Id, new AccessibilityActionRequest(AccessibilityAction.ScrollIntoView));
-            SetAccessibilityFocus(virtualViewId);
+            if (!manager.IsEnabled || accessibilityFocus == virtualViewId || pendingFocus == virtualViewId) return false;
+            if (node.VisibleBounds is null)
+            {
+                if (!CanReveal(record) || !view.Window.PerformAccessibilityAction(node.Id,
+                    new AccessibilityActionRequest(AccessibilityAction.ScrollIntoView))) return false;
+                pendingFocus = virtualViewId;
+            }
+            else
+                SetAccessibilityFocus(virtualViewId);
             return true;
         }
         if (action == NodeAction.ClearAccessibilityFocus)
         {
+            if (pendingFocus == virtualViewId)
+            {
+                pendingFocus = HostViewId;
+                return true;
+            }
             if (accessibilityFocus != virtualViewId) return false;
             SetAccessibilityFocus(HostViewId);
             return true;
@@ -220,7 +231,8 @@ internal sealed partial class GooAccessibilityProvider
     private void Send(int id, EventTypes type, ContentChangeTypes changes = 0,
         Action<AccessibilityEvent>? configure = null)
     {
-        if (!Available || !manager.IsEnabled || view.Parent is not { } parent) return;
+        if (disposed || !view.IsAttachedToWindow || !manager.IsEnabled || view.Parent is not { } parent
+            || id != HostViewId && !Available) return;
         using var e = new AccessibilityEvent((int)type);
         e.SetSource(view, id);
         e.PackageName = view.Context!.PackageName;
