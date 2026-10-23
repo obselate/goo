@@ -709,27 +709,30 @@ jobs:
             ${{ runner.temp }}/goo-linux-build.tar.gz
             ${{ runner.temp }}/goo-linux-toolchain.tar.gz
 
-  linux-x64:
+  linux-packages:
     needs: [linux-validation, macos-native]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      - name: Download Linux build state
+      - &linux-build-download
+        name: Download Linux build state
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: goo-linux-build
           path: ${{ runner.temp }}/goo-linux-build
 
-      - name: Restore Linux build state
+      - &linux-build-restore
+        name: Restore Linux build state
         run: |
           tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-build.tar.gz"
           tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-toolchain.tar.gz" -C "$RUNNER_TEMP"
           echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
           echo "VK_LAYER_PATH=$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      - &linux-dotnet
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           global-json-file: global.json
 
@@ -737,7 +740,8 @@ jobs:
       - *linux-vulkan-driver
       - *linux-shader-toolchain
 
-      - name: Download macOS native payloads
+      - &linux-macos-download
+        name: Download macOS native payloads
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: goo-macos-arm64-native
@@ -753,16 +757,6 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
-
-      - name: Collect advisory consumer publish report
-        run: |
-          python3 tools/Goo.ConsumerPerformance/run.py \
-            --output artifacts/consumer-performance \
-            --rid linux-x64 \
-            --package-version "$GOO_VERSION" \
-            --package-source "$PWD/artifacts/packages" \
-            --publish-only
-
 
       - name: Pack and validate native accessibility runtimes
         run: |
@@ -788,6 +782,42 @@ jobs:
             -p:TreatWarningsAsErrors=true \
             -p:ContinuousIntegrationBuild=true \
             -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Upload ready packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: linux-packages
+          if-no-files-found: error
+          path: artifacts/packages/
+
+  linux-x64:
+    needs: linux-packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *linux-build-download
+      - *linux-build-restore
+      - *linux-dotnet
+      - *linux-dependencies
+      - *linux-vulkan-driver
+      - *linux-shader-toolchain
+      - *linux-macos-download
+
+      - name: Download ready packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: linux-packages
+          path: artifacts/packages
+
+      - name: Collect advisory consumer publish report
+        run: |
+          python3 tools/Goo.ConsumerPerformance/run.py \
+            --output artifacts/consumer-performance \
+            --rid linux-x64 \
+            --package-version "$GOO_VERSION" \
+            --package-source "$PWD/artifacts/packages" \
+            --publish-only
 
       - name: Validate DevTools package manifests
         run: |
@@ -965,7 +995,7 @@ jobs:
             artifacts/Goo.${{ env.GOO_VERSION }}-linux-x64.tar.gz.sha256
 
   windows-x64:
-    needs: linux-x64
+    needs: linux-packages
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
@@ -975,8 +1005,8 @@ jobs:
           global-json-file: global.json
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: release-candidates
-          path: artifacts
+          name: linux-packages
+          path: artifacts/packages
       - name: Build managed direct driver consumer
         shell: pwsh
         run: |
@@ -1042,7 +1072,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [quality, macos-arm64, linux-validation, linux-x64, android, android-consumer, windows-x64]
+    needs: [quality, macos-arm64, linux-validation, linux-packages, linux-x64, android, android-consumer, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -1224,7 +1254,7 @@ jobs:
             Goo/Runtime/Vulkan/android-*/text-native-build.json
 
   android-consumer:
-    needs: [linux-x64, android]
+    needs: [linux-packages, android]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -1252,8 +1282,8 @@ jobs:
       - name: Download main package for Android consumer validation
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: release-candidates
-          path: artifacts/main-release
+          name: linux-packages
+          path: artifacts/main-release/packages
       - name: Download Android adapter package
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
