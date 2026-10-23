@@ -266,6 +266,29 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app \
             artifacts/macos-activation-results
 
+      - name: Package and run consumer DMG app
+        if: needs.changes.outputs.full == 'true'
+        env:
+          GooPackageId: org.goo.packagesmoke
+          Product: Goo Package Smoke
+          GooUseProjectReference: true
+        run: |
+          export Version="$GOO_VERSION"
+          export GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          export GooPackageIcon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns"
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
+          dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+            package --target macos --project tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj \
+            --output "$PWD/artifacts/macos consumer"
+          dmg="$PWD/artifacts/macos consumer/org.goo.packagesmoke-$GOO_VERSION-osx-arm64.dmg"
+          mkdir -p "$RUNNER_TEMP/consumer-mount"
+          hdiutil attach "$dmg" -mountpoint "$RUNNER_TEMP/consumer-mount" -nobrowse
+          ditto "$RUNNER_TEMP/consumer-mount/Goo.PackageSmoke.app" "$RUNNER_TEMP/Consumer Copy.app"
+          hdiutil detach "$RUNNER_TEMP/consumer-mount"
+          codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
+          GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            "$RUNNER_TEMP/Consumer Copy.app/Contents/MacOS/Goo.PackageSmoke"
+
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -898,6 +921,28 @@ jobs:
             env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
+      - name: Package and run consumer AppImage
+        if: needs.changes.outputs.full == 'true'
+        env:
+          GooPackageId: org.goo.packagesmoke
+          Product: Goo Package Smoke
+        run: |
+          bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh "$RUNNER_TEMP/appimage-tools"
+          export GOO_APPIMAGETOOL="$RUNNER_TEMP/appimage-tools/appimagetool-x86_64.AppImage"
+          export GOO_APPIMAGE_RUNTIME="$RUNNER_TEMP/appimage-tools/runtime-x86_64"
+          export GooPackageIcon="$PWD/tests/Shared/Assets/local-rgba.png"
+          export Version="$GOO_VERSION"
+          dotnet tool install Goo.DevTools --version "$GOO_VERSION" \
+            --tool-path "$RUNNER_TEMP/goo-package-tool" --configfile tests/Goo.PackageSmoke/NuGet.config
+          "$RUNNER_TEMP/goo-package-tool/goo" \
+            package --project tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj \
+            --target linux --output "$PWD/artifacts/appimage consumer"
+          image="$PWD/artifacts/appimage consumer/org.goo.packagesmoke-$GOO_VERSION-linux-x64.AppImage"
+          test -x "$image"
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            "$image" --appimage-extract-and-run
+
       - name: Stage minimal Linux bundle and separate symbols
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1349,6 +1394,34 @@ jobs:
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build unsigned consumer installer
+        shell: pwsh
+        run: |
+          $version = python .github/scripts/release_version.py --print
+          $installer = & tools/Goo.DevTools.Cli/Packaging/fetch-inno-setup.ps1 "$env:RUNNER_TEMP/goo-inno"
+          $inno = Join-Path $env:RUNNER_TEMP 'goo-inno/compiler'
+          $process = Start-Process $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$inno" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Inno Setup installation failed' }
+          $env:GOO_ISCC = Join-Path $inno 'ISCC.exe'
+          $env:GooPackageId = 'org.goo.packagesmoke'
+          $env:Product = 'Goo Package Smoke'
+          $env:Company = 'Goo'
+          $env:Version = $version
+          $env:GooReleaseVersion = $version
+          $env:ImportDirectoryBuildProps = 'false'
+          $env:GooPackageIcon = Join-Path $env:RUNNER_TEMP 'consumer.ico'
+          Add-Type -AssemblyName System.Drawing
+          $stream = [IO.File]::Create($env:GooPackageIcon)
+          try { [Drawing.SystemIcons]::Application.Save($stream) } finally { $stream.Dispose() }
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package `
+            --target windows --project tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj `
+            --output "$PWD/artifacts/windows installer"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $setup = "artifacts/windows installer/org.goo.packagesmoke-$version-win-x64-setup.exe"
+          if (!(Test-Path $setup)) { throw 'Consumer installer missing' }
+          if ((Get-AuthenticodeSignature $setup).Status -ne 'NotSigned') { throw 'Expected unsigned installer' }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true' && (always())
         with:
@@ -1555,6 +1628,35 @@ jobs:
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - name: Package signed consumer AAB
+        run: |
+          bash tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh "$RUNNER_TEMP/android-tools"
+          export GOO_BUNDLETOOL="$RUNNER_TEMP/android-tools/bundletool-all-1.18.3.jar"
+          export AndroidKeyStore=true
+          export AndroidSigningKeyStore="$RUNNER_TEMP/upload.keystore"
+          export AndroidSigningKeyAlias=upload
+          printf '%s' 'goo-ci-upload-password' >"$RUNNER_TEMP/upload-password"
+          chmod 0600 "$RUNNER_TEMP/upload-password"
+          export AndroidSigningKeyPass="file:$RUNNER_TEMP/upload-password"
+          export AndroidSigningStorePass="file:$RUNNER_TEMP/upload-password"
+          keytool -genkeypair -keystore "$AndroidSigningKeyStore" -alias upload -keyalg RSA -keysize 2048 \
+            -validity 3650 -dname "CN=Goo CI Upload" \
+            -storepass:file "$RUNNER_TEMP/upload-password" -keypass:file "$RUNNER_TEMP/upload-password"
+          export AndroidSdkDirectory="$ANDROID_HOME"
+          export JavaSdkDirectory="$JAVA_HOME"
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
+          dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package \
+            --target android --project tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj \
+            --output "$PWD/artifacts/signed-aab"
+          bundle="$(find artifacts/signed-aab -name '*.[aA][aA][bB]' -print -quit)"
+          test -n "$bundle"
+          python3 .github/scripts/validate-android-package.py "$bundle"
+          java -jar "$GOO_BUNDLETOOL" build-apks --bundle="$bundle" \
+            --output="$RUNNER_TEMP/consumer.apks" --mode=universal \
+            --ks="$AndroidSigningKeyStore" --ks-key-alias=upload \
+            --ks-pass="file:$RUNNER_TEMP/upload-password" --key-pass="file:$RUNNER_TEMP/upload-password"
+          unzip -p "$RUNNER_TEMP/consumer.apks" universal.apk >"$RUNNER_TEMP/consumer.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$RUNNER_TEMP/consumer.apk"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true'
         with:

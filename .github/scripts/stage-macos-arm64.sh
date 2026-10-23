@@ -7,7 +7,12 @@ symbols="${3:?usage: stage-macos-arm64.sh PUBLISH_DIR APP_PATH SYMBOLS_DIR EXECU
 executable="${4:?usage: stage-macos-arm64.sh PUBLISH_DIR APP_PATH SYMBOLS_DIR EXECUTABLE PLIST}"
 plist="${5:?usage: stage-macos-arm64.sh PUBLISH_DIR APP_PATH SYMBOLS_DIR EXECUTABLE PLIST}"
 identity="${GOO_MACOS_CODESIGN_IDENTITY:--}"
-version="$(python3 .github/scripts/release_version.py --print)"
+if [[ $# -eq 6 ]]; then
+  version="$6"
+  identity="-"
+else
+  version="$(python3 .github/scripts/release_version.py --print)"
+fi
 bundle_version="${version%%-*}"
 macos="$app/Contents/MacOS"
 resources="$app/Contents/Resources"
@@ -30,11 +35,21 @@ install -m0644 "$plist" "$app/Contents/Info.plist"
 
 while IFS= read -r -d '' source; do
   relative="${source#"$publish/"}"
+  if [[ $# -eq 6 ]]; then
+    case "$relative" in
+      *.pdb|*.dbg|*.dSYM/*)
+        mkdir -p "$symbols/$(dirname -- "$relative")"
+        install -m0644 "$source" "$symbols/$relative"
+        continue
+        ;;
+    esac
+  else
   case "$relative" in
     *.pdb|*.dbg|*.xml|*.dSYM/*|Vulkan/Shaders/*|*/Authoring/*|Goo.ShaderEffectTool.*|*.so|SDL3.dll|goo-harfbuzz.dll|goo-harfbuzz-gpu.dll|gsc.dll|gsfmt.dll|text-native-build.json|*/text-native-build.json)
       continue
       ;;
   esac
+  fi
   if [[ "$relative" == "$executable" || "$relative" == *.dylib ]]; then
     destination="$macos/$relative"
   else

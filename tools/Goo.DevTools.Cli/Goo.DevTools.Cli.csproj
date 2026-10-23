@@ -27,5 +27,9 @@
   <ItemGroup>
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
+    <None Include="../../.github/scripts/stage-linux-x64.sh" Link="Packaging/stage-linux-x64.sh" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../.github/scripts/stage-macos-arm64.sh" Link="Packaging/stage-macos-arm64.sh" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Packaging/*.sh" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Packaging/*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
