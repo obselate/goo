@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>$(GooReleaseVersion)</Version>
+    <PackageId>Goo.RichText</PackageId>
+    <Description>Optional HTML and RTF clipboard editing for Goo.</Description>
+    <Authors>Xaz</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+  </ItemGroup>
+</Project>
