@@ -12,6 +12,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
   private let signal AutoResetEvent
   private let pending []VulkanQueueMailbox?
   private let thread Thread
+  private let processExit EventHandler
   private var head int32
   private var tail int32
   private var count int32
@@ -125,6 +126,8 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
       pending = [MailboxCapacity]VulkanQueueMailbox?
       thread = Thread(() -> { Run() })
       thread.IsBackground = true
+      processExit = (_, _) -> Dispose()
+      AppDomain.CurrentDomain.ProcessExit += processExit
       thread.Start()
     }
 
@@ -315,6 +318,7 @@ internal unsafe sealed class VulkanQueueWorker : IDisposable {
       disposed = true
       stopping = true
     }
+    AppDomain.CurrentDomain.ProcessExit -= processExit
     VulkanQueueWorker.ReleaseHeldQueueCallForTest()
     VulkanQueueWorker.ClearTestHoldsForShutdown()
     signal.Set()
