@@ -1822,6 +1822,7 @@ jobs:
           dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.Printing.Android/Goo.Printing.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0-android -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          nice -n 10 dotnet build tests/Goo.AndroidClipboardPeer/Goo.AndroidClipboardPeer.csproj -c Release -m:4 -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1852,6 +1853,7 @@ jobs:
           path: |
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
+            tests/Goo.AndroidClipboardPeer/bin/Release/net10.0-android/*.apk
             Goo/Runtime/Vulkan/android-*/text-native-build.json
       - name: Package signed consumer AAB
         run: |

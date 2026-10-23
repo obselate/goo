@@ -14,6 +14,8 @@ public sealed class MainActivity : GooActivity
     private bool menuSmokeStarted;
     private bool nativeDialogSmokeStarted;
     private bool popupSmokeStarted;
+    private bool clipboardSmokeStarted;
+
     internal GooView NativeView => GooView;
 
     protected override Goo.Window CreateWindow() => Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true
@@ -92,5 +94,15 @@ public sealed class MainActivity : GooActivity
         if (attempt >= 100)
             throw new InvalidOperationException("Android popup smoke did not receive a presentation surface.");
         GooView.PostDelayed(() => RunPopupSmoke(attempt + 1), 100);
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
+        if (hasFocus && !clipboardSmokeStarted && Intent?.GetBooleanExtra("goo.clipboard_smoke", false) == true)
+        {
+            clipboardSmokeStarted = true;
+            AndroidClipboardSmoke.Run(GooView);
+        }
     }
 }
