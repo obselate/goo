@@ -13,6 +13,9 @@ internal class WindowScheduler {
   private var snapshotCount int32
   private var nextWindow int32
   private var running bool
+  private var nativeStarts Queue[Action]?
+  private var drainingNativeStarts bool
+  private var servicingWindows bool
 
   private func EnsureSnapshotCapacity(required int32) {
     if required <= snapshot.Length {
@@ -64,6 +67,8 @@ internal class WindowScheduler {
       windows.RemoveAt(index)
       if windows.Count == 0 {
         nextWindow = 0
+        nativeStarts?.Clear()
+        nativeStarts = nil
         Window.CloseApplicationActivations()
       } else if nextWindow >= windows.Count {
         nextWindow = 0
@@ -113,6 +118,51 @@ internal class WindowScheduler {
     }
   }
 
+  internal func QueueNativeStart(action Action) {
+    let work = nativeStarts ?? Queue[Action]()
+    nativeStarts = work
+    work.Enqueue(action)
+  }
+
+  internal func DrainNativeStarts() {
+    if drainingNativeStarts || servicingWindows { return }
+    guard let work = nativeStarts else { return }
+    drainingNativeStarts = true
+    try {
+      while work.Count > 0 { work.Dequeue().Invoke() }
+    } finally { drainingNativeStarts = false }
+  }
+
+  internal func ServiceNativeTracking() {
+    SdlRuntime.PumpEvents(EventBudget)
+    ServiceWindows()
+  }
+
+  private func ServiceWindows() {
+    if servicingWindows { return }
+    servicingWindows = true
+    try {
+      let count = CaptureSnapshot()
+      if count == 0 { return }
+      for index in 0 ... count {
+        let window = snapshot[index]
+        if window.IsOpen && !window.ExternallyDriven { window.RefreshSchedulerMetrics() }
+      }
+      let now = float64(Stopwatch.GetTimestamp())
+      let start = nextWindow % count
+      for offset in 0 ... count {
+        let window = snapshot[(start + offset) % count]
+        if window.IsOpen && !window.ExternallyDriven {
+          let service = window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork()
+          let timed = window.SchedulerTimedServiceDue()
+          let frameDue = window.SchedulerFrameDue(now)
+          if service || timed || frameDue { window.SchedulerPump(now, frameDue) }
+        }
+      }
+      nextWindow = (start + 1) % count
+    } finally { servicingWindows = false }
+  }
+
   internal func Run() {
     if running {
       throw InvalidOperationException("Window scheduler is already running")
@@ -127,7 +177,7 @@ internal class WindowScheduler {
         }
         var hasOpenWindow bool
         let now = float64(Stopwatch.GetTimestamp())
-        var waitMs int32 = DefaultWaitMs
+        var waitMs int32 = if (nativeStarts?.Count ?? 0) > 0 { 0 } else { DefaultWaitMs }
         var currentIndex int32
         while currentIndex < currentCount {
           let window = snapshot[currentIndex]
@@ -150,35 +200,8 @@ internal class WindowScheduler {
         } else {
           SdlRuntime.WaitEventsBounded(waitMs, EventBudget)
         }
-        let afterEventsCount = CaptureSnapshot()
-        var afterEventsIndex int32
-        while afterEventsIndex < afterEventsCount {
-          let window = snapshot[afterEventsIndex]
-          if window.IsOpen && !window.ExternallyDriven {
-            window.RefreshSchedulerMetrics()
-          }
-          afterEventsIndex = afterEventsIndex + 1
-        }
-        let afterEventsNow = float64(Stopwatch.GetTimestamp())
-        let count = afterEventsCount
-        if count == 0 {
-          break
-        }
-        let start = nextWindow % count
-        var offset int32
-        while offset < count {
-          let window = snapshot[(start + offset) % count]
-          if window.IsOpen && !window.ExternallyDriven {
-            let service = window.SchedulerHasImmediateService() || window.SchedulerHasPendingQueueWork()
-            let timed = window.SchedulerTimedServiceDue()
-            let frameDue = window.SchedulerFrameDue(afterEventsNow)
-            if service || timed || frameDue {
-              window.SchedulerPump(afterEventsNow, frameDue)
-            }
-          }
-          offset = offset + 1
-        }
-        nextWindow = (start + 1) % count
+        ServiceWindows()
+        DrainNativeStarts()
       }
     } finally {
       running = false

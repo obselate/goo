@@ -1493,6 +1493,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release --no-restore -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version --filter FullyQualifiedName~WindowsClipboardTests
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check native Windows data drag and effects
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          .github/scripts/check-windows-data-transfer.ps1 `
+            -Application artifacts/windows-smoke/Goo.PackageSmoke.exe `
+            -OutputDirectory artifacts/windows-smoke/results-data-transfer
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true' && (always())
         with:

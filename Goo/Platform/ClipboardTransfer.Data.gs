@@ -172,7 +172,7 @@ internal unsafe partial class ClipboardTransfer {
         }
 
         internal func ReadTransfer(types IReadOnlyList[string]) ClipboardDataResult {
-            if OperatingSystem.IsWindows() { return WindowsReadTransfer(types) }
+            if OperatingSystem.IsWindows() { return WindowsReadTransfer(types, nint(0)) }
             if OperatingSystem.IsMacOS() { return MacReadTransfer(types) }
             if !WaylandDataAvailable() { return ClipboardDataResult(ClipboardReadStatus.Unsupported, error: "This host does not provide multi-format clipboard reads") }
             var watching bool

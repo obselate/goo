@@ -124,6 +124,7 @@ internal partial class NativeDropState {
 internal unsafe partial class SdlHost {
   internal func TransferCapabilities() NativeTransferCapabilities {
     ThrowIfDisposed()
+    if OperatingSystem.IsWindows() { return WindowsTransferCapabilities() }
     try { return NativeTransferCapabilities(GetDataTransferCapabilities(windowHandle)) }
     catch (_ DllNotFoundException) { }
     catch (_ EntryPointNotFoundException) { }

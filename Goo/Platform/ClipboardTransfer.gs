@@ -35,7 +35,7 @@ internal unsafe partial class ClipboardTransfer {
 
     internal func Query() ClipboardFormats {
       if !Supported() { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}) }
-      if OperatingSystem.IsWindows() { return WindowsQueryFormats() }
+      if OperatingSystem.IsWindows() { return WindowsQueryFormats(nint(0)) }
       if OperatingSystem.IsMacOS() { return MacQueryFormats() }
       SDL.ClearError()
       var count nuint
