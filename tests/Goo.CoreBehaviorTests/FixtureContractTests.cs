@@ -200,6 +200,8 @@ public sealed class FixtureContractTests
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.LengthValidationContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.MotionVelocityAdditionPreservesShapeContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.MotionVelocityRoutingContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.PauseResumeSeekContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.PausedSimulationAndForcedCompletionContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PointRetargetCarriesIndependentVelocityContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PointSpecRoutingContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PreMountAnimationWaitsForWindowContract));
