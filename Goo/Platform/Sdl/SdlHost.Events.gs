@@ -236,7 +236,8 @@ internal unsafe partial class SdlHost {
 
   private func DispatchWindow(eventType SDLEventType, nativeEvent SDLWindowEvent) {
     if Environment.GetEnvironmentVariable("GOO_PLACEMENT_DIAGNOSTICS") == "1" {
-      Console.Error.WriteLine($"PLACEMENT SDL event {nativeEvent.Timestamp} {eventType} {nativeEvent.Data1}x{nativeEvent.Data2}")
+      Console.Error.WriteLine("PLACEMENT SDL event " + nativeEvent.Timestamp.ToString() + " " + eventType.ToString()
+        + " " + nativeEvent.Data1.ToString() + "x" + nativeEvent.Data2.ToString())
     }
     if eventType == SDLEventType.WindowMoved || eventType == SDLEventType.WindowResized ||
       eventType == SDLEventType.WindowPixelSizeChanged || eventType == SDLEventType.WindowMaximized ||
