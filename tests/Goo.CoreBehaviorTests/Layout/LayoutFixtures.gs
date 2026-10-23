@@ -349,7 +349,7 @@ internal class LayoutFixtures {
       Text{ Key: "b", Content: "Shared wrapped text layout" },
     })
     resolver.FlushEffects()
-    for i in 0 ... 257 {
+    for i in 0 ... 2049 {
       let n = reconciler.Mount(Text{ Content: "Evict shared layout " + i.ToString() })
       TextLayouts.For(n, 100.0F)
       TextLayouts.Dispose(n)

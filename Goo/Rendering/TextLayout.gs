@@ -124,7 +124,7 @@ internal class TextLayouts {
           }
         }
         let layout = build(n, maxWidth)
-        if sharedOrder.Count == 256 {
+        if sharedOrder.Count == 2048 {
           let retired = sharedOrder.Dequeue()
           let entries = sharedLayouts[retired.Content]
           entries.Remove(retired)
