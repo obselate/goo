@@ -241,13 +241,17 @@ internal static class Program
             Require(minimized.State == WindowState.Maximized && minimized.NormalBounds.Width == 360,
                 "Minimize replaced restorable state or normal size");
             var applied = Placement.Restore(window, restored);
+            Console.Error.WriteLine($"PLACEMENT warm restore {mode} requested={restored.State} observed={window.CapturePlacement().Placement?.State}");
             Require(applied.Status == WindowOperationResult.Accepted, applied.Status + ": " + applied.Error);
             window.RequestClose();
             window.Pump(0);
+            Console.Error.WriteLine($"PLACEMENT previous window open={window.IsOpen}");
             window = new Window { InitiallyVisible = false, Root = new Cell() }.Open();
             var cold = Placement.Restore(window, restored);
+            Console.Error.WriteLine($"PLACEMENT cold restore {mode} fields={restored.Fields} requested={restored.State} observed={window.CapturePlacement().Placement?.State}");
             Require(cold.Status == WindowOperationResult.Accepted, cold.Status + ": " + cold.Error);
             Require(window.Show() == WindowOperationResult.Accepted, "Restored placement window did not show");
+            Console.Error.WriteLine($"PLACEMENT cold show {mode} observed={window.CapturePlacement().Placement?.State}");
             PumpUntil(window, () => window.CapturePlacement().Placement?.State == state
                 && (state == WindowState.Normal ? window.Width == 360 && window.Height == 240
                     : window.Width > 360 && window.Height > 240));

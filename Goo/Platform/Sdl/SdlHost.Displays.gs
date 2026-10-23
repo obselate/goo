@@ -86,6 +86,9 @@ internal unsafe partial class SdlHost {
     if disposed || IsClosing { return WindowOperationResult.Closed }
     let id = display.NativeValue
     if id == 0u || !HasDisplay(id) { return WindowOperationResult.Failed }
+    if Environment.GetEnvironmentVariable("GOO_PLACEMENT_DIAGNOSTICS") == "1" {
+      Console.Error.WriteLine("PLACEMENT fullscreen display " + id.ToString() + " flags=" + SDL.GetWindowFlags(window).ToString())
+    }
     let position = int32(CenteredDisplayMask | id)
     if !SDL.SetWindowPosition(window, position, position) && !IsWayland() {
       return WindowOperationResult.Failed

@@ -285,6 +285,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func SetState(value WindowState) {
     ThrowIfDisposed()
+    if Environment.GetEnvironmentVariable("GOO_PLACEMENT_DIAGNOSTICS") == "1" {
+      Console.Error.WriteLine("PLACEMENT SetState " + value.ToString() + " before=" + SDL.GetWindowFlags(window).ToString())
+    }
     if value == WindowState.Normal || value == WindowState.Minimized ||
     value == WindowState.Maximized{
       Require(SDL.SetWindowFullscreen(window, false), "SDL_SetWindowFullscreen")
@@ -295,6 +298,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       case WindowState.Maximized { Require(SDL.MaximizeWindow(window), "SDL_MaximizeWindow") }
       case WindowState.Fullscreen { Require(SDL.SetWindowFullscreen(window, true), "SDL_SetWindowFullscreen") }
       case _ { throw ArgumentOutOfRangeException("value") }
+    }
+    if Environment.GetEnvironmentVariable("GOO_PLACEMENT_DIAGNOSTICS") == "1" {
+      Console.Error.WriteLine("PLACEMENT SetState " + value.ToString() + " after=" + SDL.GetWindowFlags(window).ToString())
     }
   }
 
