@@ -133,7 +133,7 @@ class ImagePublicationTests {
             }
         }
 
-        open event ContentChanged Action
+        open event ContentChanged Action?
         var Acquisitions int32
         var Releases int32
 
@@ -162,7 +162,7 @@ class ImagePublicationTests {
     ) : ReplaceableProvider(first) {
         private var advance bool = true
 
-        override event ContentChanged Action {
+        override event ContentChanged Action? {
             add {
                 if advance && !duringAcquire {
                     advance = false
