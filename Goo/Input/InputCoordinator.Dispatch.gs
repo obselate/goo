@@ -15,13 +15,14 @@ internal partial class InputCoordinator {
   private func drain(root Node?, resolver Resolver, timeS float64,
     onKeyPress Action[Key, KeyModifiers]?, repeatStartTicks int64) bool {
     let ingressFocusGeneration = focus.Generation
+    var currentRoot = root
     refreshScopes(root, resolver)
     var changed = keyboard.ClearStalePress(resolver)
     resolver.Flush()
     while queue.Take(out var e) {
       try {
         if e.IsFocusLost {
-          loseFocus(root, resolver)
+          loseFocus(currentRoot, resolver)
           changed = true
           continue
         }
@@ -31,11 +32,17 @@ internal partial class InputCoordinator {
           continue
         }
         if !focus.NativeFocusAllowed { continue }
+        if !e.IsPointer || !pointer.CanDeferVirtualization(e.Pointer) {
+          if let owner = resolver.Owner {
+            owner.FlushDeferredVirtualization()
+            currentRoot = owner.Tree
+          }
+        }
         if !e.IsPointer && e.Keyboard.TextFocusGeneration >= ingressFocusGeneration {
           e.Keyboard.TextFocusGeneration = focus.Generation
         }
-        let dispatched = if e.IsPointer { pointer.Dispatch(e.Pointer, root, resolver, timeS, text) }
-          else { keyboard.Dispatch(e.Keyboard, root, resolver, text, onKeyPress, repeatStartTicks, pointer) }
+        let dispatched = if e.IsPointer { pointer.Dispatch(e.Pointer, currentRoot, resolver, timeS, text) }
+          else { keyboard.Dispatch(e.Keyboard, currentRoot, resolver, text, onKeyPress, repeatStartTicks, pointer) }
         if dispatched { changed = true }
       } finally {
         if keyboard.ClearStalePress(resolver) { changed = true }

@@ -23,6 +23,7 @@
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="content/**/*.cs" />
     <Content Include="content/**/*" Exclude="content/**/bin/**;content/**/obj/**" Pack="true" PackagePath="content" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />

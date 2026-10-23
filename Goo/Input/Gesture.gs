@@ -4,13 +4,21 @@ import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
 
+/// Identifies whether samples are direct contacts or a scale-only trackpad gesture.
+public enum GestureSource {
+    /// Provides real contact samples through PointerAt.
+    Touch;
+    /// Provides cumulative scale and a pointer anchor without contact samples.
+    Trackpad
+}
+
 /// Identifies the input transition evaluated by a gesture session.
 public enum GestureInputKind {
-    /// A contact was pressed.
+    /// A contact was pressed, or a trackpad pinch began.
     Down;
-    /// A contact moved.
+    /// A contact moved, or a trackpad pinch scale changed.
     Move;
-    /// A contact was released.
+    /// A contact was released, or a trackpad pinch ended.
     Up;
     /// The session's monotonic deadline was reached.
     Deadline
@@ -73,6 +81,10 @@ public sealed class GestureInput {
     internal var KindValue GestureInputKind
     internal var TimeValue float64
     internal var ChangedId int64
+    internal var SourceValue GestureSource
+    internal var AnchorValue Point
+    internal var WindowAnchorValue Point
+    internal var ScaleValue float64 = 1.0
     internal let Pointers List[GesturePointer] = List[GesturePointer]()
 
     internal init() { }
@@ -80,10 +92,22 @@ public sealed class GestureInput {
     /// Gets the transition being evaluated.
     public prop Kind GestureInputKind { get -> KindValue }
 
+    /// Gets the sample source. Trackpad gestures never create synthetic contacts.
+    public prop Source GestureSource { get -> SourceValue }
+
+    /// Gets the owner-local pointer anchor for a scale-only trackpad gesture.
+    public prop Anchor Point { get -> AnchorValue }
+
+    /// Gets the logical-window pointer anchor for a scale-only trackpad gesture.
+    public prop WindowAnchor Point { get -> WindowAnchorValue }
+
+    /// Gets cumulative scale for a trackpad gesture. Contact sessions calculate scale from their samples.
+    public prop Scale float64 { get -> ScaleValue }
+
     /// Gets monotonic window time in seconds, shared with session deadlines.
     public prop TimeSeconds float64 { get -> TimeValue }
 
-    /// Gets the changed contact identifier, or -1 for a deadline.
+    /// Gets the changed contact identifier, or -1 when no contact changed.
     public prop ChangedPointerId int64 { get -> ChangedId }
 
     /// Gets the number of samples, including the released contact on Up.

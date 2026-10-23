@@ -22,6 +22,10 @@ internal enum WindowCloseReason {
   Terminating;
 }
 
+internal interface PinchInputHost {
+  event Pinch Action[GestureInputKind, float32, float32, float32]
+}
+
 internal interface WindowHost {
   event MetricsChanged Action[int32, int32, int32, int32]
   event Moved Action[int32, int32]

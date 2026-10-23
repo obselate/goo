@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <ApplicationId>com.example.goostarter</ApplicationId>
+    <ApplicationTitle>GooStarter</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidManifest>AndroidManifest.xml</AndroidManifest>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Goo.Android" Version="0.7.54" />
+    <ProjectReference Include="Shared/GooStarter.Shared.gsproj" />
+  </ItemGroup>
+</Project>

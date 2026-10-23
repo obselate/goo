@@ -341,6 +341,8 @@ internal partial class SdlRuntime {
         windowId = nativeEvent.Button.WindowID
       } else if eventType == SDLEventType.MouseWheel {
         windowId = nativeEvent.Wheel.WindowID
+      } else if SdlPinchEventNative.Matches(nativeEvent.Type) {
+        windowId = SdlPinchEventNative.WindowIdFor(nativeEvent)
       } else if eventType == SDLEventType.FingerDown || eventType == SDLEventType.FingerMotion ||
       eventType == SDLEventType.FingerUp || eventType == SDLEventType.FingerCanceled{
         windowId = nativeEvent.Tfinger.WindowID

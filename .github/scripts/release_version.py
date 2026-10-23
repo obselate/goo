@@ -78,20 +78,18 @@ def expected_literal_text(path: Path, version: str) -> str:
     return re.sub(r"(?<=/releases/download/v)0\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?", version, text)
 
 
-def expected_template_project(version: str) -> str:
-    path = ROOT / "templates/Goo.Templates/content/GooStarter.gsproj"
+def expected_template_project(path: Path, version: str) -> str:
     text = path.read_text(encoding="utf-8")
-    pattern = re.compile(r'(<PackageReference Include="Goo" Version=")[^"]+(" />)')
+    pattern = re.compile(r'(<PackageReference Include="Goo(?:\.Android)?" Version=")[^"]+(" />)')
     expected, count = pattern.subn(rf"\g<1>{version}\g<2>", text)
     if count != 1:
         fail(f"{path.relative_to(ROOT)}: expected one Goo PackageReference")
     return expected
 
 
-def expected_template_config(version: str) -> str:
-    path = ROOT / "templates/Goo.Templates/content/.template.config/template.json"
+def expected_template_config(path: Path, version: str) -> str:
     text = path.read_text(encoding="utf-8")
-    pattern = re.compile(r'("(?:defaultValue|replaces)": ")[^"]+("[,])')
+    pattern = re.compile(r'("(?:defaultValue|replaces)": ")' + INLINE_VERSION.pattern + r'("[,])')
     expected, count = pattern.subn(rf"\g<1>{version}\g<2>", text)
     if count != 2:
         fail(f"{path.relative_to(ROOT)}: expected two Goo version fields")
@@ -127,10 +125,11 @@ def synchronized_files(version: str) -> dict[Path, str]:
         ROOT / relative: expected_literal_text(ROOT / relative, version)
         for relative in LITERAL_VERSION_FILES
     }
-    template_project = ROOT / "templates/Goo.Templates/content/GooStarter.gsproj"
-    template_config = ROOT / "templates/Goo.Templates/content/.template.config/template.json"
-    expected[template_project] = expected_template_project(version)
-    expected[template_config] = expected_template_config(version)
+    template_root = ROOT / "templates/Goo.Templates/content"
+    for project in template_root.rglob("*proj"):
+        expected[project] = expected_template_project(project, version)
+    for config in template_root.rglob("template.json"):
+        expected[config] = expected_template_config(config, version)
     expected[ROOT / "plugins/goo/README.md"] = expected_plugin_readme(version)
     expected[ROOT / "plugins/goo/scripts/server.py"] = expected_plugin_server(version)
     return expected

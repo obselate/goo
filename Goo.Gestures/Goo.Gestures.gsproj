@@ -1,0 +1,27 @@
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Goo.Gestures</RootNamespace>
+    <PackageId>Goo.Gestures</PackageId>
+    <Version>$(GooReleaseVersion)</Version>
+    <Authors>Xaz</Authors>
+    <Description>Shared gesture recognizers for Goo core input arbitration.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+    <None Include="../LICENSE" Pack="true" PackagePath="/" />
+    <None Include="../docs/gestures.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+  <Target Name="RegisterGestureDocumentation" AfterTargets="CoreCompile" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)/Goo.Gestures.xml" />
+    </ItemGroup>
+  </Target>
+</Project>
