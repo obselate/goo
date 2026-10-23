@@ -221,9 +221,16 @@ static void input_drag(pid_t from_pid, pid_t to_pid, unsigned int hold)
     mouse_event(kCGEventLeftMouseDown, start);
     @try {
         usleep(150000);
-        mouse_event(kCGEventLeftMouseDragged, CGPointMake(start.x + 24, start.y + 12));
+        CGPoint inside = CGPointMake(start.x + 24, start.y + 12);
+        mouse_event(kCGEventLeftMouseDragged, inside);
         usleep(150000);
-        mouse_event(kCGEventLeftMouseDragged, end);
+        for (int step = 1; step <= 24; ++step) {
+            CGFloat progress = step / 24.0;
+            mouse_event(kCGEventLeftMouseDragged, CGPointMake(
+                inside.x + (end.x - inside.x) * progress,
+                inside.y + (end.y - inside.y) * progress));
+            usleep(20000);
+        }
         usleep(hold * 1000);
         mouse_event(kCGEventLeftMouseUp, end);
     } @catch (NSException *error) {
