@@ -538,6 +538,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       return primitiveFlushResult
     }
     queueMailbox.PrepareSubmit(commandBuffer, 0uL, 0uL)
+    imageResources.AppendExternalWaits(queueMailbox, commandBuffer)
     if !queueMailbox.BeginSubmit() { return VkConstants.VK_NOT_READY }
     if !sharedLease.EnqueueGraphicsSubmission(queueMailbox, validateGraphicsSubmission) {
       queueMailbox.CancelSubmit()
@@ -558,6 +559,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     imageResources.ValidateUploadSubmission(commandBuffer, serial, resourceGeneration)
     renderer.ValidateClipFrameSubmission(ClipFrameSlot, serial)
     pendingSubmissionSerial = serial
+    imageResources.AcceptExternalAcquires(commandBuffer, serial)
   }
 
   internal func MarkSubmitted(result VkResult, submissionSerial uint64) VkResult {

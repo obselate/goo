@@ -234,6 +234,21 @@ jobs:
           name: goo-macos-arm64-native
           path: artifacts/macos-candidate/native
 
+      - name: Verify Metal external image lifecycle
+        run: |
+          dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          proof="$PWD/tests/Goo.VulkanProof/bin/Release/net10.0"
+          clang -fobjc-arc -O2 -Wall -Wextra -Werror -dynamiclib \
+            tests/Goo.VulkanProof/VulkanExternalMetalProducer.m \
+            -framework Foundation -framework Metal -framework CoreVideo -framework IOSurface \
+            -o "$proof/libgoo-external-metal-proof.dylib"
+          .github/scripts/with-headless-wayland.sh env \
+            XDG_CACHE_HOME="$RUNNER_TEMP/goo-metal-cache" \
+            DYLD_LIBRARY_PATH="$proof:$PWD/artifacts/macos-candidate/native" \
+            GOO_VK_EXTERNAL_METAL=1 MTL_DEBUG_LAYER=1 \
+            dotnet "$proof/Goo.VulkanProof.dll"
+
       - name: Publish NativeAOT macOS smoke app
         if: needs.changes.outputs.full == 'true'
         run: |

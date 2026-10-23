@@ -140,6 +140,7 @@ internal unsafe partial class VulkanWindowTarget {
         throw InvalidOperationException("Vulkan window work did not complete during close")
       }
     }
+    CloseExternalSessions(if runtime?.DeviceLost == true { ExternalImageStatus.DeviceLost } else { ExternalImageStatus.Closed })
     CaptureDiagnosticValidationBoundary()
     if !ownedWorkCompleted {
       RemoveTextAtlasDiagnosticContribution()
@@ -256,6 +257,10 @@ internal unsafe partial class VulkanWindowTarget {
     activeImageLayout = VkConstants.VK_IMAGE_LAYOUT_UNDEFINED
     activeFrameId = 0uL
     frameBegun = false
+    if let error = externalCloseError {
+      externalCloseError = nil
+      throw error
+    }
   }
 
   private func DestroyWindowResources() bool {

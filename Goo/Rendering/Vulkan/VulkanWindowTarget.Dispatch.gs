@@ -280,6 +280,7 @@ internal unsafe partial class VulkanWindowTarget {
     let bindDescriptorSets = ResolveDeviceProc("vkCmdBindDescriptorSets") as (unmanaged[Cdecl](VkCommandBuffer, VkPipelineBindPoint, VkPipelineLayout, uint32, uint32, *VkDescriptorSet, uint32, *uint32) -> void)?
     if bindDescriptorSets == nil { throw InvalidOperationException("vkCmdBindDescriptorSets is unavailable") }
     dispatch.vkCmdBindDescriptorSets = bindDescriptorSets
+    ResolveExternalDeviceDispatch()
     deviceWaitIdleAddress = ResolveDeviceProc("vkDeviceWaitIdle")
     if deviceWaitIdleAddress == nint(0) {
       throw InvalidOperationException("vkDeviceWaitIdle is unavailable")

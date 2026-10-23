@@ -86,6 +86,7 @@ internal unsafe partial class VulkanWindowTarget {
       }
       mailbox.PrepareSubmit(slot.CommandBuffer, slot.AcquireSemaphore,
         current.RenderSemaphore(activeImageIndex))
+      imageResources?.AppendExternalWaits(mailbox, slot.CommandBuffer)
       if !mailbox.BeginSubmit() {
         throw InvalidOperationException("Vulkan queue mailbox rejected graphics submission")
       }
@@ -130,6 +131,7 @@ internal unsafe partial class VulkanWindowTarget {
         mailbox.TraceContext = TraceContext()
       }
     }
+    imageResources?.AcceptExternalAcquires(slot.CommandBuffer, serial)
   }
 
   private func RetryQueueSubmit() bool {

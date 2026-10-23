@@ -89,7 +89,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         return
       }
       let lookup = imageResources.Lookup(
-        identities.FindImage(prior.Source, prior.Version, ImageFormat),
+        identities.FindImage(prior.Source, prior.Version),
         identities.LinearSamplerId,
         VulkanImageSamplerMode.Linear,
         generation)
@@ -117,6 +117,9 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       }
       if lease.IsFailed {
         return false
+      }
+      if let external = lease.ExternalResult() {
+        return EmitExternal(frame, bounds, binding, external, fit, opacity, transformIndex, pixelsPerUnit)
       }
       guard let decoded = lease.Result() else {
         return false
@@ -182,6 +185,25 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       if emitted {
         imageResources.PromoteSourceVersion(source)
       }
+      return emitted
+    }
+
+  private func EmitExternal(frame SceneFrame, bounds ConservativeBounds,
+    binding ImageSourceBindingToken, external ExternalFrameLease, fit ImageFit,
+    opacity float32, transformIndex int32, pixelsPerUnit float32) bool {
+      if external.Terminal || external.Source.Session.IsClosed || !external.Ready
+        || external.Image.Native.Runtime.Generation != generation { return false }
+      let identity = identities.ResolveImage(binding.Source, binding.Version,
+        generation, external.Image.Native.Format)
+      let source = VulkanResourceSource{
+        ProviderId: identity.ProviderId, SourceId: identity.SourceId,
+        Version: binding.Version,
+        Bytes: uint64(external.Image.Width) * uint64(external.Image.Height) * 4uL,
+      }
+      let lookup = imageResources.RegisterExternal(identity.ImageId, source, identities.LinearSamplerId, external)
+      if !lookup.Renderable { return false }
+      let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, pixelsPerUnit)
+      if emitted { imageResources.PromoteSourceVersion(source) }
       return emitted
     }
 

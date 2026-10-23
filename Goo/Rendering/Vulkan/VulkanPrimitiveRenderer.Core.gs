@@ -439,6 +439,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     if !primitivePrepared {
       throw InvalidOperationException("Vulkan primitive frame data was not prepared")
     }
+    imageResources?.RecordExternalAcquires(commandBuffer)
     primitiveFrameData.RecordUpload(commandBuffer)
     textFrameData.RecordUpload(commandBuffer)
   }
