@@ -344,6 +344,7 @@ public sealed class FixtureContractTests
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.OutputAndKindReplacementContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.PositionalReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.TextEntryControlledValueContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.TreeDepthLimitContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.TweenFactoryContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TokenCompositionContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.StyleConstructionContract));
