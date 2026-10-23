@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
     <ProjectReference Include="..\..\Goo.AppHost\Goo.AppHost.gsproj" />
+    <ProjectReference Include="..\..\Goo.Notifications\Goo.Notifications.gsproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"
