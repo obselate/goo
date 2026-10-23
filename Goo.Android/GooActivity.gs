@@ -21,6 +21,12 @@ abstract class GooActivity : Activity {
         private set;
     }
 
+    /// <summary>Gets the Activity-owned system document picker and content URI stream service.</summary>
+    public prop Documents AndroidDocuments {
+        get;
+        private set;
+    }
+
     protected open func CreateWindow() Goo.Window;
     protected prop GooView GooView -> view ??
         throw InvalidOperationException("The activity has not created its Goo view.")
@@ -48,6 +54,7 @@ abstract class GooActivity : Activity {
     protected open override func OnCreate(savedInstanceState Bundle?) {
         base.OnCreate(savedInstanceState)
         SavedInstanceState = savedInstanceState
+        Documents = AndroidDocuments(this)
         if !OperatingSystem.IsAndroidVersionAtLeast(35) {
             Window!!.SetDecorFitsSystemWindows(false)
         }
@@ -176,7 +183,13 @@ abstract class GooActivity : Activity {
         base.OnPause()
     }
 
+    protected open override func OnActivityResult(requestCode int32, resultCode Result, data Intent?) {
+        if Documents.HandleResult(requestCode, resultCode, data) { return }
+        base.OnActivityResult(requestCode, resultCode, data)
+    }
+
     protected open override func OnDestroy() {
+        Documents?.Dispose()
         content?.SetOnApplyWindowInsetsListener(nil)
         if view is {} current && current.Parent is ViewGroup parent {
             parent.RemoveView(current)

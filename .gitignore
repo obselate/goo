@@ -45,7 +45,7 @@
 !/.github/scripts/install-vulkan-validation-layer-linux-x64.sh
 !/.github/scripts/validate-android-package.py
 !/.github/scripts/run-android-accessibility.sh
-!/.github/scripts/check-android-clipboard.sh
+!/.github/scripts/check-android-data-transfer.sh
 !/.github/scripts/validate-text-native-rebuild.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
