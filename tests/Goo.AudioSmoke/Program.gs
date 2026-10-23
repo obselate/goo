@@ -196,6 +196,17 @@ try {
     rejected = true
 }
 Require(rejected, "Oversized WAV header was not rejected before reading its body")
+using let trailing = MemoryStream()
+trailing.Write(Wav(16, false, false))
+trailing.WriteByte(0)
+trailing.Position = 0
+rejected = false
+try {
+    SoundSource.LoadWav(trailing)
+} catch (error InvalidDataException) {
+    rejected = true
+}
+Require(rejected && trailing.CanRead, "WAV trailing bytes were accepted or the caller stream was closed")
 let nonfinite = Wav(32, true, true)
 Array.Copy(BitConverter.GetBytes(Single.PositiveInfinity), 0, nonfinite, 68, 4)
 rejected = false
