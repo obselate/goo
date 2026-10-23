@@ -132,7 +132,7 @@ internal partial class DiagnosticPipeHost : IDisposable {
       var current NamedPipeServerStream?
       try {
         let created = NamedPipeServerStream(endpoint.PipeName, PipeDirection.InOut, MaxClients,
-          PipeTransmissionMode.Byte, PipeOptions.Asynchronous)
+          PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly)
         current = created
         var listening = false
         lock gate {

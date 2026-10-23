@@ -1163,7 +1163,12 @@ class DiagnosticPipeTransport : DiagnosticTransport {
         var current NamedPipeClientStream?
         try {
             let pipeName = NormalizePipe(endpoint.PipeName)
-            let created = NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)
+            let created = NamedPipeClientStream(
+                ".",
+                pipeName,
+                PipeDirection.InOut,
+                PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly
+            )
             current = created
             lock gate {
                 if stopRequested || !Object.ReferenceEquals(worker, Thread.CurrentThread) {
