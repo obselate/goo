@@ -72,7 +72,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     source ImageSourceBinding?,
     fit ImageFit,
     opacity float32,
-    transformIndex int32) {
+    transformIndex int32, pixelsPerUnit float32 = 1.0F) {
       if disposed || opacity <= 0.0F || bounds.IsEmpty {
         return
       }
@@ -80,7 +80,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         return
       }
       let token = binding.CurrentToken()
-      if EmitCurrent(frame, bounds, token, fit, opacity, transformIndex)
+      if EmitCurrent(frame, bounds, token, fit, opacity, transformIndex, pixelsPerUnit)
         || (token?.Lease.IsFailed ?? true) {
           binding.Fallback = nil
           return
@@ -94,7 +94,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         VulkanImageSamplerMode.Linear,
         generation)
       if lookup.Renderable {
-        EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex)
+        EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, pixelsPerUnit)
       }
     }
 
@@ -104,7 +104,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     token ImageSourceBindingToken?,
     fit ImageFit,
     opacity float32,
-    transformIndex int32) bool{
+    transformIndex int32, pixelsPerUnit float32) bool{
       guard let binding = token else {
         return false
       }
@@ -138,7 +138,8 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       }
       if cachedLookupState != 0 && cachedVersion == binding.Version
         && Object.ReferenceEquals(cachedProvider, binding.Source) {
-          return if cachedLookupState == 1 { false } else { EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex) }
+          return if cachedLookupState == 1 { false }
+            else { EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex, pixelsPerUnit) }
         }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
         generation, ImageFormat)
@@ -171,13 +172,13 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
           identities.LinearSamplerId, VulkanImageSamplerMode.Linear)
         if prior.Renderable {
           Cache(binding.Source, binding.Version, prior, 2)
-          return EmitLookup(frame, bounds, prior, fit, opacity, transformIndex)
+          return EmitLookup(frame, bounds, prior, fit, opacity, transformIndex, pixelsPerUnit)
         }
         Cache(binding.Source, binding.Version, VulkanImageResourceLookup{}, 1)
         return false
       }
       Cache(binding.Source, binding.Version, lookup, 2)
-      let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex)
+      let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, pixelsPerUnit)
       if emitted {
         imageResources.PromoteSourceVersion(source)
       }
@@ -194,10 +195,10 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
 
   private func EmitLookup(frame SceneFrame, bounds ConservativeBounds,
     lookup VulkanImageResourceLookup, fit ImageFit, opacity float32,
-    transformIndex int32) bool{
+    transformIndex int32, pixelsPerUnit float32) bool{
       EnsurePendingReferenceCapacity(lookup.Id)
       AddPendingReference(lookup.Id)
-      let fitResult = Fit(bounds, lookup.Width, lookup.Height, fit)
+      let fitResult = Fit(bounds, lookup.Width, lookup.Height, fit, pixelsPerUnit)
       if fitResult.Bounds.IsEmpty {
         return true
       }
@@ -270,9 +271,9 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     destination ConservativeBounds,
     width uint32,
     height uint32,
-    fit ImageFit) VulkanImageFitResult{
-      let imageWidth = float32(width)
-      let imageHeight = float32(height)
+    fit ImageFit, pixelsPerUnit float32) VulkanImageFitResult{
+      let imageWidth = float32(width) / pixelsPerUnit
+      let imageHeight = float32(height) / pixelsPerUnit
       var result = VulkanImageFitResult{
         Bounds: destination,
         SourceX: 0.0F,

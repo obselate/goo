@@ -1,5 +1,7 @@
 package Goo
 
+import System
+
 /// Controls how an image fits its destination box.
 public enum ImageFit {
   /// Preserves the image aspect ratio within the destination box.
@@ -14,6 +16,8 @@ public enum ImageFit {
 
 /// Defines a local bitmap image element.
 public class Image : Blob {
+  private var pixelsPerUnit float32 = 1.0F
+
   internal override func coreBlob() {
   }
 
@@ -24,6 +28,16 @@ public class Image : Blob {
   public prop Source ImageSourceProvider? { get; init; }
   /// Gets the image fit mode.
   public prop Fit ImageFit{ get; init; }
+
+  /// Gets source pixels per logical layout unit. Positive and finite, default 1.
+  /// A 128-pixel image at density 2 has a natural width of 64 logical units.
+  public prop PixelsPerUnit float32 {
+    get -> pixelsPerUnit
+    init {
+      if !Single.IsFinite(value) || value <= 0.0F { throw ArgumentOutOfRangeException("PixelsPerUnit") }
+      pixelsPerUnit = value
+    }
+  }
 
   /// Initializes an image with an empty path and contained fit mode.
   public init() {

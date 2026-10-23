@@ -450,6 +450,7 @@ internal class Node {
   internal prop Dashes DashPattern? { get; set; }
   internal prop ShapeStrokeInset bool{ get; set; }
   internal prop ImageFit ImageFit{ get; set; }
+  internal prop ImagePixelsPerUnit float32{ get; set; }
   internal prop ImageSource ImageSourceProvider? { get -> ImageLayouts.Source(this) }
   internal prop ImageLease ImageSourceLease? { get -> ImageLayouts.Lease(this) }
   internal prop ImageSourceCompletion ImageSourceCompletion? {
@@ -492,6 +493,7 @@ internal class Node {
     ShapePath = VectorPath.Empty
     ShapeFit = ShapeFit.Contain
     ImageFit = ImageFit.Contain
+    ImagePixelsPerUnit = 1.0F
     BackgroundImageFit = ImageFit.Cover
     ShapeFillRule = FillRule.NonZero
     ClipPathFillRule = FillRule.NonZero

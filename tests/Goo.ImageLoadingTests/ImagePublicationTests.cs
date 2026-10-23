@@ -50,6 +50,62 @@ public sealed class ImagePublicationTests
         Assert.Equal(provider.Acquisitions, provider.Releases);
     }
 
+    [Fact]
+    public void DensityKeepsNaturalSizeAndUpdatesWithTheSameSource()
+    {
+        using var source = new ImageSource(128, 64, new byte[128 * 64 * 4]);
+        var root = new DensityRoot(source);
+        var window = new Window { Root = root, Width = 300, Height = 200 };
+        try
+        {
+            window.UpdateTree();
+            Assert.Equal(64, window.Tree!.ImageIntrinsicWidth);
+            Assert.Equal(32, window.Tree!.ImageIntrinsicHeight);
+            root.Density = 1;
+            root.Rebuild();
+            window.UpdateTree();
+            Assert.Equal(128, window.Tree!.ImageIntrinsicWidth);
+            Assert.Equal(64, window.Tree!.ImageIntrinsicHeight);
+            Assert.True(window.RenderPending());
+        }
+        finally { window.Close(); }
+    }
+
+    [Fact]
+    public void UiScaleAlonePublishesUpdatedWindowMetrics()
+    {
+        using var source = new ImageSource(1, 1, new byte[4]);
+        var window = new Window { Root = new DensityRoot(source) };
+        WindowMetrics latest = default;
+        var count = 0;
+        window.MetricsChanged += metrics => { latest = metrics; count++; };
+        try
+        {
+            window.UpdateTree();
+            var first = count;
+            Assert.Equal(1, latest.UiScale);
+            window.UiScale = 1.5f;
+            window.UpdateTree();
+            Assert.Equal(first + 1, count);
+            Assert.Equal(1.5f, latest.UiScale);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(-1f)]
+    [InlineData(float.NaN)]
+    [InlineData(float.PositiveInfinity)]
+    public void ImageRejectsInvalidDensity(float density) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Image { PixelsPerUnit = density });
+
+    private sealed class DensityRoot(ImageSource source) : Cell
+    {
+        public float Density = 2;
+        public override Blob Build() => new Image { Source = source, PixelsPerUnit = Density };
+    }
+
     private sealed class ImageRoot(ImageSourceProvider source, bool background) : Cell
     {
         public int Builds;
