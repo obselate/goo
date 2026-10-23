@@ -142,6 +142,15 @@ jobs:
           dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Verify optional spell checking
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhunspell-1.7-0
+          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.csproj \
+            -c Release -p:TreatWarningsAsErrors=true
+          dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
+          dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
+          dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -600,6 +609,26 @@ jobs:
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Verify presentation-independent offscreen pages
+        run: |
+          dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.csproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/offscreen-nativeaot
+          .github/scripts/with-headless-wayland.sh env \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            GOO_VK_DIAGNOSTICS=1 artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
+      - name: Verify independent pages and raster PDF
+        run: |
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.csproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/printing-nativeaot
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
+
       - name: Verify shared UI audio without a hardware device
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -754,6 +783,14 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+
+      - name: Pack optional spelling and printing services
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing; do
+            dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
+              -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          done
 
       - name: Build and check packed CLR interop samples
         if: needs.changes.outputs.full == 'true'
@@ -1059,6 +1096,8 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.SpellCheck*.nupkg
+            artifacts/packages/Goo.Printing*.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
@@ -1090,6 +1129,8 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.SpellCheck*.nupkg
+            artifacts/packages/Goo.Printing*.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
@@ -1625,6 +1666,11 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          for package in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.SpellCheck.Android Goo.Printing Goo.Printing.Android; do
+            dotnet nuget push "artifacts/packages/$package.$GOO_VERSION.nupkg" \
+              --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done
 
       - name: Create GitHub release
         env:
@@ -1644,6 +1690,11 @@ jobs:
             "artifacts/packages/Goo.NativeMenus.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Images.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Images.$GOO_VERSION.snupkg"
+            "artifacts/packages/Goo.SpellCheck.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.SpellCheck.Hunspell.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.SpellCheck.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Printing.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Printing.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"
@@ -1717,9 +1768,17 @@ jobs:
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build Goo.Printing.Android/Goo.Printing.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
-        run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+        run: |
+          dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet pack Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet pack Goo.Printing.Android/Goo.Printing.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet format Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj --verify-no-changes --no-restore
+          dotnet format Goo.Printing.Android/Goo.Printing.Android.csproj --verify-no-changes --no-restore
       - name: Pack Android native menus
         if: needs.changes.outputs.full == 'true'
         run: dotnet pack Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release --no-build -p:GooBuildAndroid=true -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"

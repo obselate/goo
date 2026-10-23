@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>$(GooReleaseVersion)</Version>
+    <PackageId>Goo.SpellCheck</PackageId>
+    <Description>Optional system spell checking and editor suggestions for Goo.</Description>
+    <Authors>Xaz</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+    <InternalsVisibleTo Include="Goo.SpellCheck.Hunspell" />
+    <InternalsVisibleTo Include="Goo.SpellCheck.Android" />
+  </ItemGroup>
+</Project>

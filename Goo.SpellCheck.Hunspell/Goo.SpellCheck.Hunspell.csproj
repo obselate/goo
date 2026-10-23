@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>$(GooReleaseVersion)</Version>
+    <PackageId>Goo.SpellCheck.Hunspell</PackageId>
+    <Description>Opt-in system Hunspell backend for Goo.SpellCheck. No bundled libraries or dictionaries.</Description>
+    <Authors>Xaz</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.csproj" />
+  </ItemGroup>
+</Project>

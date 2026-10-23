@@ -120,6 +120,12 @@ public partial class Window {
   }
 
   private func closeFileDialog() bool {
+    if let lease = family?.ExternalDialog {
+      family!!.Closing = true
+      lease.Cancel()
+      host?.Wake()
+      return false
+    }
     guard let state = family, let dialog = state.Dialog else { return true }
     state.Closing = true
     dialog.Cancel()

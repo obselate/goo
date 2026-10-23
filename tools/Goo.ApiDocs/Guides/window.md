@@ -293,6 +293,40 @@ present. It requires an open desktop window and does not capture a specific prio
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
 
+## Render pages without presenting
+
+```gsharp
+let created = window.CreateOffscreenSession()
+if created.Status == OffscreenRenderStatus.Success {
+  using let session = created.Session!!
+  let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+  let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
+  while !pending.IsCompleted {
+    session.Service()
+    Thread.Sleep(1)
+  }
+  let rendered = pending.GetAwaiter().GetResult()
+}
+```
+
+Create the session on the window thread before opening native UI.
+The session keeps the shared renderer, not the native surface.
+It can render while an embedded host is paused or detached.
+Call `Service` from the host's UI scheduler until each page finishes.
+Create, render, service and dispose on the same thread.
+
+Each page uses a fresh, unattached cell.
+Logical size controls layout. Pixel size controls resolution.
+`MaxBytes` bounds new GPU allocations and CPU pixels.
+Pass a previous capture to reuse its pixels at the same size.
+Do not read those pixels until the next render completes.
+
+`window.RenderOffscreenAsync` uses the window's existing renderer instead.
+Keep pumping that window until completion.
+Both paths return an explicit `OffscreenRenderStatus`.
+Closing the owner cancels pending pages.
+`window.Closed` is a cancellation token for optional owner-bound services.
+
 ## Fullscreen displays
 
 Call `window.GetDisplays()` on an open window's UI thread for an owned read-only
@@ -336,6 +370,10 @@ Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accept
 Use `TryPost` when teardown can race the producer. It returns `false` after posting closes instead of throwing. `true` means the action was atomically accepted into the queue, not that it is guaranteed to execute, because later teardown may still discard queued work.
 
 Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
+
+`Window.Closed` is cancelled when owner-thread dispatch stops. Link asynchronous
+package work to this token so its result can complete even when teardown discards
+an accepted action. Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
 
