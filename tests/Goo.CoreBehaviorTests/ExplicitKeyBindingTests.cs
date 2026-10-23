@@ -43,6 +43,41 @@ public sealed class ExplicitKeyBindingTests
         finally { window.Close(); }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OversizedPasteDoesNotReplaceSelection(bool editor)
+    {
+        using var controller = new TextEditorController(new TextDocument("keep"));
+        var handle = new ElementHandle();
+        var value = "keep";
+        var window = new Window { Width = 320, Height = 120, Root = new BuildCell(() =>
+            editor ? new TextEditor(controller) { Handle = handle } :
+                new TextEntry { Handle = handle, Value = value, OnChange = next => value = next }) };
+        try
+        {
+            window.UpdateTree();
+            Assert.True(handle.Focus());
+            var input = window.PlatformInput;
+            input.Execute(new TextCommand { Kind = TextCommandKind.SelectAll });
+            var intercepted = 0;
+            if (editor) controller.OnCommand = e => { intercepted++; e.Cancel = true; };
+            foreach (var text in new[] { new string('\t', 16777217), new string('\u00e9', 8388609) })
+            {
+                window.InputForTest.SetClipboardFallback(text);
+                Assert.False(input.Execute(new TextCommand { Kind = TextCommandKind.Paste }));
+                Assert.False(input.Execute(new TextCommand { Kind = TextCommandKind.Paste, Text = text }));
+                Assert.Equal(0, intercepted);
+                Assert.Equal("keep", editor ? controller.Document.GetText() : value);
+            }
+            window.InputForTest.SetClipboardFallback("ok");
+            controller.OnCommand = null;
+            Assert.True(input.Execute(new TextCommand { Kind = TextCommandKind.Paste }));
+            Assert.Equal("ok", editor ? controller.Document.GetText() : value);
+        }
+        finally { window.Close(); }
+    }
+
     [Fact]
     public void PrimitivesRequireBindingsAndEntryCancelRestoresTheFocusValue()
     {

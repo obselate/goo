@@ -11,8 +11,12 @@ internal unsafe partial class ClipboardTransfer {
   shared {
     internal const MaxImageBytes int32 = 67108864
     internal const MaxFileListBytes int32 = 1048576
+    internal const MaxTextBytes int32 = 16777216
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
     private let imageTypes []string = []string{"image/png", "image/jpeg", "image/gif", "image/bmp", "image/tiff"}
+
+    internal func TextFits(value string) bool ->
+    value.Length <= MaxTextBytes && Encoding.UTF8.GetByteCount(value) <= MaxTextBytes
 
     internal func FileFormat(formats IReadOnlyList[string]) string {
       for format in formats { if format == "text/uri-list" { return format } }
@@ -116,7 +120,7 @@ internal unsafe partial class ClipboardTransfer {
       } finally { SDL.Free(native) }
     }
 
-    private func BoundedUtf8(value nint, limit int32) string {
+    internal func BoundedUtf8(value nint, limit int32) string {
       if value == nint(0) { return "" }
       var length int32
       while length <= limit && Marshal.ReadByte(value, length) != 0 { length++ }
