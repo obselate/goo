@@ -1412,6 +1412,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python .github/scripts/test-desktop-activation.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Windows protocol-only notifications
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          dotnet publish tests/Goo.Notifications.WindowsSmoke/Goo.Notifications.WindowsSmoke.csproj `
+            -c Release -r win-x64 --self-contained true -m:2 -p:TreatWarningsAsErrors=true `
+            -o artifacts/notifications-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & artifacts/notifications-windows/Goo.Notifications.WindowsSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.full == 'true'
         with:
