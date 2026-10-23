@@ -144,6 +144,7 @@ internal partial class PointerInput {
     || (dragCandidate != nil && dragPointerMatches())
 
   private func promoteNativeDrag(root Node, x float32, y float32) bool {
+    Console.Error.WriteLine("goo promote x=" + x.ToString() + " y=" + y.ToString())
     guard let session = dragSession, let host = dragHost else { return false }
     let generalized = session.Data.NativeData != nil
     if !generalized && session.Data.NativeFiles == nil { return false }

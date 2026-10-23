@@ -21,7 +21,7 @@ new file mode 100644
 index 0000000..1e1cde0
 --- /dev/null
 +++ b/src/video/cocoa/SDL_cocoadatatransfer.m
-@@ -0,0 +1,304 @@
+@@ -0,0 +1,308 @@
 +#include "SDL_internal.h"
 +
 +#ifdef SDL_VIDEO_DRIVER_COCOA
@@ -99,6 +99,7 @@ index 0000000..1e1cde0
 +{
 +    (void)session;
 +    (void)point;
++    SDL_Log("goo drag ended x=%g y=%g operation=%lu cancelled=%d", point.x, point.y, (unsigned long)operation, self.cancelled);
 +    Goo_CocoaDragSource *keep = self;
 +    Goo_CocoaDragCompleted completed = keep.completed;
 +    void *userdata = keep.userdata;
@@ -143,6 +144,7 @@ index 0000000..1e1cde0
 +{
 +    if (!window || !window->internal) return;
 +    SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
++    SDL_Log("goo event type=%ld x=%g y=%g timestamp=%g held=%lu", (long)event.type, event.locationInWindow.x, event.locationInWindow.y, event.timestamp, (unsigned long)[NSEvent pressedMouseButtons]);
 +    if (event.type == NSEventTypeLeftMouseDown) {
 +        data.goo_drag_event = event;
 +    } else if (event.type == NSEventTypeLeftMouseUp) {
@@ -281,6 +283,7 @@ index 0000000..1e1cde0
 +            return 5;
 +        }
 +        NSEvent *event = data.goo_drag_event;
++        SDL_Log("goo drag begin event=%p type=%ld window=%d held=%lu eventtime=%g now=%g", (__bridge void *)event, (long)event.type, event.window == data.nswindow, (unsigned long)[NSEvent pressedMouseButtons], event.timestamp, NSProcessInfo.processInfo.systemUptime);
 +        if (!event || event.window != data.nswindow || !([NSEvent pressedMouseButtons] & 1)) return 1;
 +        Goo_CocoaDragOffer *offer = native_offer;
 +        NSArray<id<NSPasteboardWriting>> *writers = (__bridge NSArray *)offer->writers;
@@ -311,6 +314,7 @@ index 0000000..1e1cde0
 +        NSString *failure = nil;
 +        @try { session = [view beginDraggingSessionWithItems:items event:event source:source]; }
 +        @catch (NSException *error) { failure = error.reason; }
++        SDL_Log("goo drag returned session=%p failure=%s", (__bridge void *)session, failure.UTF8String ?: "");
 +        if (!session) {
 +            [source.timer invalidate];
 +            source.timer = nil;
