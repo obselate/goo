@@ -62,7 +62,9 @@ type Examples(sample: string) as this =
         | "input" -> Cell.Mount<AccountInput, AccountCell>("account", { Name = "Ada" })
         | "virtual" -> VirtualLists.Rows(items, 24., itemKey, buildRow)
         | "variants" ->
-            let basic = Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10., BackgroundColor = Color.Rgb(24, 31, 43))
+            let basic =
+                Style(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
+                    BackgroundColor = Color.Rgb(24, 31, 43))
             Container(Gap = 12., Children = ResizeArray<Blob>([
                 Button(BasedOn = basic, Children = ResizeArray<Blob>([Text(Content = "Base") :> Blob])) :> Blob
                 Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255),

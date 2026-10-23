@@ -80,7 +80,7 @@ Upcast child values with `:> Blob` when building the list.
 ## Variants and lengths
 
 ```fsharp
-let basic = Button(Padding = Edges(Length.Pixels 10.))
+let basic = Style(Padding = Edges(Length.Pixels 10.))
 let primary =
     Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255),
         Children = ResizeArray<Blob>([Text(Content = "Save") :> Blob]))

@@ -80,7 +80,7 @@ VB uses `AddRange` where G# uses spread syntax. Keyed and unkeyed siblings can m
 ## Shared API rules
 
 ```vb
-Dim basic = New Button With {.Padding = 10}
+Dim basic = New Style With {.Padding = 10}
 Dim primary = New Button With {
     .BasedOn = basic,
     .BackgroundColor = Color.Rgb(74, 125, 255)}

@@ -87,7 +87,7 @@ var list = new Container
 ## Variants
 
 ```csharp
-var basic = new Button { Padding = 10, BorderRadius = 10 };
+var basic = new Style { Padding = 10, BorderRadius = 10 };
 var primary = new Button
 {
     BasedOn = basic,

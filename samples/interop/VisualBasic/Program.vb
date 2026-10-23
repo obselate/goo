@@ -16,8 +16,12 @@ Module Program
         If args.Contains("--check") Then
             Dim counter = New Counter()
             DirectCast(DirectCast(counter.Build(), Container).Children(1), Button).OnClick.Invoke()
-            If DirectCast(DirectCast(counter.Build(), Container).Children(0), Text).Content <> "Count: 1" Then Throw New InvalidOperationException("Counter failed.")
-            If Examples.ListView({"Ada", "Grace"}).Children.Count <> 4 Then Throw New InvalidOperationException("Spread failed.")
+            If DirectCast(DirectCast(counter.Build(), Container).Children(0), Text).Content <> "Count: 1" Then
+                Throw New InvalidOperationException("Counter failed.")
+            End If
+            If Examples.ListView({"Ada", "Grace"}).Children.Count <> 4 Then
+                Throw New InvalidOperationException("Spread failed.")
+            End If
             Console.WriteLine("VB interop checks passed.")
         Else
             window.Run()
@@ -100,19 +104,26 @@ Public NotInheritable Class Examples
             Case "virtual"
                 Return VirtualLists.Rows(items, 24, itemKey, buildRow)
             Case "variants"
-                Dim basic = New Button With {.Padding = 10, .BorderRadius = 10, .BackgroundColor = Color.Rgb(24, 31, 43)}
+                Dim basic = New Style With {
+                    .Padding = 10, .BorderRadius = 10, .BackgroundColor = Color.Rgb(24, 31, 43)}
                 Return New Container With {.Gap = 12, .Children = New List(Of Blob) From {
-                    New Button With {.BasedOn = basic, .Children = New List(Of Blob) From {New Text With {.Content = "Base"}}},
+                    New Button With {
+                        .BasedOn = basic, .Children = New List(Of Blob) From {New Text With {.Content = "Base"}}},
                     New Button With {.BasedOn = basic, .BackgroundColor = Color.Rgb(74, 125, 255),
                         .Children = New List(Of Blob) From {New Text With {.Content = "Primary"}}}}}
             Case "layout"
                 Return New Container With {.Height = 200, .Layout = New EqualColumn(),
-                    .Children = New List(Of Blob) From {New Text With {.Content = "One"}, New Text With {.Content = "Two"}}}
+                    .Children = New List(Of Blob) From {
+                        New Text With {.Content = "One"}, New Text With {.Content = "Two"}}}
             Case "dialog"
-                Dim dialog = New ModalDialog With {.Open = isOpen, .Content = New Text With {.Content = "Save account?"},
-                    .Padding = 20, .OnClose = AddressOf CloseDialog, .OnCancel = AddressOf CloseDialog, .OnConfirm = AddressOf CloseDialog}
+                Dim dialog = New ModalDialog With {
+                    .Open = isOpen, .Content = New Text With {.Content = "Save account?"},
+                    .Padding = 20, .OnClose = AddressOf CloseDialog,
+                    .OnCancel = AddressOf CloseDialog, .OnConfirm = AddressOf CloseDialog}
                 Return New Container With {.Children = New List(Of Blob) From {
-                    New Button With {.OnClick = AddressOf OpenDialog, .Children = New List(Of Blob) From {New Text With {.Content = "Open dialog"}}},
+                    New Button With {
+                        .OnClick = AddressOf OpenDialog,
+                        .Children = New List(Of Blob) From {New Text With {.Content = "Open dialog"}}},
                     Cell.Mount(Of ModalDialog, ModalDialogHost)("dialog", dialog)}}
             Case Else
                 Return Cell.Mount(Of Counter)("counter")
@@ -138,7 +149,8 @@ End Class
 
 Public NotInheritable Class EqualColumn
     Implements LayoutAlgorithm
-    Public Function Measure(context As LayoutContext, available As LayoutSize) As LayoutSize Implements LayoutAlgorithm.Measure
+    Public Function Measure(context As LayoutContext, available As LayoutSize) As LayoutSize _
+        Implements LayoutAlgorithm.Measure
         Dim width As Double = 0
         Dim height As Double = 0
         For i = 0 To context.ChildCount - 1
@@ -146,7 +158,8 @@ Public NotInheritable Class EqualColumn
             width = Math.Max(width, child.Width)
             height += child.Height
         Next
-        Return New LayoutSize With {.Width = Math.Min(width, available.Width), .Height = Math.Min(height, available.Height)}
+        Return New LayoutSize With {
+            .Width = Math.Min(width, available.Width), .Height = Math.Min(height, available.Height)}
     End Function
     Public Sub Arrange(context As LayoutContext, finalSize As LayoutSize) Implements LayoutAlgorithm.Arrange
         Dim height = If(context.ChildCount = 0, 0, finalSize.Height / context.ChildCount)
