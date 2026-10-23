@@ -41,6 +41,8 @@ ctor|Goo.ImageDecodeLimits|public|()
 ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntries:System.Int32=128,limits:Goo.ImageDecodeLimits?=null)
 ctor|Goo.ImageSourceLease|public|()
 ctor|Goo.ImageSource|public|(width:System.Int32,height:System.Int32,pixels:System.Byte[])
+ctor|Goo.Images.ImageVariants|public|(variants:System.Collections.Generic.IReadOnlyList`1<Goo.Images.ImageVariant>,limits:Goo.ImageDecodeLimits?=null)
+ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Single)
 ctor|Goo.Image|public|()
 ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
 ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
@@ -135,6 +137,7 @@ enum-underlying|Goo.GestureInputKind|System.Int32
 enum-underlying|Goo.GesturePhase|System.Int32
 enum-underlying|Goo.GestureSource|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
+enum-underlying|Goo.Images.ImageAssetStatus|System.Int32
 enum-underlying|Goo.InputPurpose|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
@@ -370,6 +373,14 @@ enum|Goo.ImageFit|Contain|0
 enum|Goo.ImageFit|Cover|1
 enum|Goo.ImageFit|Fill|2
 enum|Goo.ImageFit|None|3
+enum|Goo.Images.ImageAssetStatus|Cancelled|6
+enum|Goo.Images.ImageAssetStatus|Failed|7
+enum|Goo.Images.ImageAssetStatus|InvalidData|3
+enum|Goo.Images.ImageAssetStatus|LimitExceeded|4
+enum|Goo.Images.ImageAssetStatus|NotFound|2
+enum|Goo.Images.ImageAssetStatus|NotReady|1
+enum|Goo.Images.ImageAssetStatus|Success|0
+enum|Goo.Images.ImageAssetStatus|Unsupported|5
 enum|Goo.InputPurpose|Decimal|4
 enum|Goo.InputPurpose|Email|1
 enum|Goo.InputPurpose|Number|3
@@ -915,6 +926,8 @@ method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Transfer|static|public|generic:|(width:System.Int32,height:System.Int32,pixels:System.Byte[],released:System.Action)->Goo.ImageSource
+method|Goo.Images.ImageVariants|Dispose|instance|public|generic:|()->System.Void
+method|Goo.Images.ImageVariants|LoadAsync|instance|public|generic:|(metrics:Goo.WindowMetrics,cancellationToken:System.Threading.CancellationToken)->System.Threading.Tasks.Task`1<Goo.Images.ImageAssetResult>
 method|Goo.KeyEvent|PreventDefault|instance|public|generic:|()->System.Void
 method|Goo.KeyEvent|StopPropagation|instance|public|generic:|()->System.Void
 method|Goo.KeyModifiers|Deconstruct|instance|public|generic:|(out Alt:System.Boolean&,out Shift:System.Boolean&,out Ctrl:System.Boolean&,out Super:System.Boolean&)->System.Void
@@ -1217,7 +1230,7 @@ method|Goo.WindowDisplayId|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.WindowDisplayId|ToString|virtual|public|generic:|()->System.String
 method|Goo.WindowDisplayId|op_Equality|static|public|generic:|(left:Goo.WindowDisplayId,right:Goo.WindowDisplayId)->System.Boolean
 method|Goo.WindowDisplayId|op_Inequality|static|public|generic:|(left:Goo.WindowDisplayId,right:Goo.WindowDisplayId)->System.Boolean
-method|Goo.WindowMetrics|Deconstruct|instance|public|generic:|(out logicalWidth:System.Int32&,out logicalHeight:System.Int32&,out framebufferWidth:System.Int32&,out framebufferHeight:System.Int32&,out displayScaleX:System.Double&,out displayScaleY:System.Double&)->System.Void
+method|Goo.WindowMetrics|Deconstruct|instance|public|generic:|(out logicalWidth:System.Int32&,out logicalHeight:System.Int32&,out framebufferWidth:System.Int32&,out framebufferHeight:System.Int32&,out displayScaleX:System.Double&,out displayScaleY:System.Double&,out uiScale:System.Single&)->System.Void
 method|Goo.WindowMetrics|Equals|instance|public|generic:|(other:Goo.WindowMetrics)->System.Boolean
 method|Goo.WindowMetrics|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.WindowMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -1569,8 +1582,15 @@ property|Goo.ImageSource|ContentVersion|System.UInt64|instance|get:public|index:
 property|Goo.ImageSource|Height|System.Int32|instance|get:public|index:()
 property|Goo.ImageSource|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.ImageSource|Width|System.Int32|instance|get:public|index:()
+property|Goo.Images.ImageAssetResult|Detail|System.String|instance|get:public|index:()
+property|Goo.Images.ImageAssetResult|PixelsPerUnit|System.Single|instance|get:public|index:()
+property|Goo.Images.ImageAssetResult|Source|Goo.ImageSource?|instance|get:public|index:()
+property|Goo.Images.ImageAssetResult|Status|Goo.Images.ImageAssetStatus|instance|get:public|index:()
+property|Goo.Images.ImageVariant|Path|System.String|instance|get:public|index:()
+property|Goo.Images.ImageVariant|PixelsPerUnit|System.Single|instance|get:public|index:()
 property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,init:public|index:()
 property|Goo.Image|Path|System.String|instance|get:public,init:public|index:()
+property|Goo.Image|PixelsPerUnit|System.Single|instance|get:public,init:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider?|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Action|System.Action?|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Command|Goo.Command?|instance|get:public,init:public|index:()
@@ -1961,6 +1981,7 @@ property|Goo.WindowMetrics|FramebufferHeight|System.Int32|instance|get:public,in
 property|Goo.WindowMetrics|FramebufferWidth|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalWidth|System.Int32|instance|get:public,init:public|index:()
+property|Goo.WindowMetrics|UiScale|System.Single|instance|get:public,init:public|index:()
 property|Goo.WindowPresentationAccepted|AcceptedTicks|System.Int64|instance|get:public,init:public|index:()
 property|Goo.WindowPresentationAccepted|FrameIndex|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.WindowTimer|IsActive|System.Boolean|instance|get:public|index:()
@@ -2109,6 +2130,10 @@ type|Goo.ImageSourceCache|sealed-class|public|base:System.Object|interfaces:Syst
 type|Goo.ImageSourceLease|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.ImageSourceProvider|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageSource|sealed-class|public|base:System.Object|interfaces:Goo.ImageSourceProvider,System.IDisposable|generic:
+type|Goo.Images.ImageAssetResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.Images.ImageAssetStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.Images.ImageVariants|class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.Images.ImageVariant|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Image|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.InputPurpose|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.JustifyContent|enum|public|base:System.Enum|interfaces:|generic:
