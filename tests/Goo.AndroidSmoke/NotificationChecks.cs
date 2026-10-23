@@ -14,7 +14,7 @@ namespace GooAndroidSmokeApp;
 [Activity(Name = "org.goo.androidsmoke.NotificationActivity", Exported = true, LaunchMode = LaunchMode.SingleTop)]
 public sealed class NotificationActivity : GooActivity
 {
-    internal static ApplicationActivation? LastNotification;
+    internal static volatile ApplicationActivation? LastNotification;
 
     protected override Goo.Window CreateWindow()
     {
@@ -104,11 +104,15 @@ public sealed class NotificationChecks : Instrumentation
         RunOnMainSync(() => pending = service.RequestPermissionAsync());
         Require(Call(service.RequestPermissionAsync).Status == NotificationStatus.Failed, "A second permission request was accepted.");
         Wait(() => HasPermissionButton("permission_allow_button"), "Permission dialog did not open.");
-        using (var down = new KeyEvent(KeyEventActions.Down, Keycode.Back))
-            Require(automation.InjectInputEvent(down, true), "Permission dismissal key failed.");
-        using (var up = new KeyEvent(KeyEventActions.Up, Keycode.Back))
-            Require(automation.InjectInputEvent(up, true), "Permission dismissal key failed.");
+        DismissPermission();
         Require(Await(pending!).Permission == NotificationPermission.NotDetermined, "Dismissal changed the permission decision.");
+
+        RunOnMainSync(() => pending = service.RequestPermissionAsync());
+        Wait(() => HasPermissionButton("permission_allow_button"), "Permission dialog did not reopen.");
+        RunOnMainSync(service.Dispose);
+        Require(Await(pending!).Status == NotificationStatus.Failed, "Disposal left a pending permission task.");
+        DismissPermission();
+        RunOnMainSync(() => service = AndroidNotifications.Open(activity, Options("smoke")).Service!);
 
         RunOnMainSync(() => pending = service.RequestPermissionAsync());
         ClickPermission("permission_deny_button");
@@ -118,6 +122,15 @@ public sealed class NotificationChecks : Instrumentation
         RunOnMainSync(() => pending = service.RequestPermissionAsync());
         ClickPermission("permission_allow_button");
         Require(Await(pending!).Permission == NotificationPermission.Granted, "Grant did not report Granted.");
+    }
+
+    private void DismissPermission()
+    {
+        using (var down = new KeyEvent(KeyEventActions.Down, Keycode.Back))
+            Require(automation.InjectInputEvent(down, true), "Permission dismissal key failed.");
+        using (var up = new KeyEvent(KeyEventActions.Up, Keycode.Back))
+            Require(automation.InjectInputEvent(up, true), "Permission dismissal key failed.");
+        Wait(() => !HasPermissionButton("permission_allow_button"), "Permission dialog did not close.");
     }
 
     private void CheckDelivery()
