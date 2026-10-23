@@ -5,12 +5,13 @@ import System.Threading
 
 internal class VulkanExternalProofCell : Cell {
     internal var Source ImageSourceProvider?
+    internal var Opacity float32 = 1.0F
 
     override func Build() Blob {
         if let source = Source {
             return Container{
                 Width: 64, Height: 64, Overflow: Overflow.Hidden, BorderRadius: 8,
-                Children: [1]Blob{ Image{ Source: source, Width: 64, Height: 64, Fit: ImageFit.Fill } },
+                Children: [1]Blob{ Image{ Source: source, Width: 64, Height: 64, Fit: ImageFit.Fill, Opacity: Opacity } },
             }
         }
         return Container{ Width: 64, Height: 64 }
@@ -20,6 +21,7 @@ internal class VulkanExternalProofCell : Cell {
 internal unsafe class VulkanExternalImageProof {
     shared {
         private const TimeoutMilliseconds int64 = 5000L
+        private const SampleGrid uint32 = 8u
 
         private func Require(condition bool, detail string) {
             if !condition { throw InvalidOperationException("External image proof: " + detail) }
@@ -33,6 +35,13 @@ internal unsafe class VulkanExternalImageProof {
                 Thread.Yield()
             }
             Require(false, "operation did not complete")
+        }
+
+        private func WaitReady(window Window, source ExternalImageSource) {
+            PumpUntil(window, () -> {
+                using let lease = source.Acquire()
+                return !lease.IsFailed
+            })
         }
 
         private func Capture(window Window) WindowCapture {
@@ -51,12 +60,38 @@ internal unsafe class VulkanExternalImageProof {
                 Console.WriteLine("External image import: Unsupported (Linux FD producer proof)")
                 return
             }
+            let previous = Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS")
+            let originalError = Console.Error
+            using let capturedError = System.IO.StringWriter()
+            Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", "1")
+            Console.SetError(capturedError)
+            try {
+                if !VerifyLifecycle() { return }
+            } catch (error Exception) {
+                originalError.Write(capturedError.ToString())
+                throw error
+            } finally {
+                Console.SetError(originalError)
+                Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", previous)
+            }
+            let diagnostics = capturedError.ToString()
+            for line in diagnostics.Split('\n') {
+                if !line.Contains("\"validationErrorCount\":") { continue }
+                using let json = System.Text.Json.JsonDocument.Parse(line)
+                Require(json.RootElement.GetProperty("validationErrorCount").GetUInt64() == 0uL,
+                    "Vulkan validation rejected the lifecycle: " + diagnostics)
+            }
+            Console.WriteLine("External image import: passed (two devices, two windows, crop, capture, redraw, release, device loss, close, FD ownership)")
+        }
+
+        private func VerifyLifecycle() bool {
             let root = VulkanExternalProofCell{}
             let window = Window{ Title: "External image lifecycle proof", Width: 64, Height: 64, VSync: false, Root: root }
             var session ExternalImageSession?
             var producer VulkanExternalProducer?
             var image ExternalImage?
             var source ExternalImageSource?
+            var secondWindow Window?
             try {
                 window.Open()
                 WindowReadbackTestFixture.ForceRender(window, 0.0)
@@ -64,7 +99,7 @@ internal unsafe class VulkanExternalImageProof {
                 let opened = ExternalImageSession.Open(window)
                 if opened.Status == ExternalImageStatus.Unsupported {
                     Console.WriteLine("External image import: Unsupported (external memory extension)")
-                    return
+                    return false
                 }
                 Require(opened.Status == ExternalImageStatus.Success, "session did not open")
                 session = opened.Session!!
@@ -73,9 +108,10 @@ internal unsafe class VulkanExternalImageProof {
                 }
                 if !ExportSupported(session.Runtime) {
                     Console.WriteLine("External image import: Unsupported (driver cannot export and import RGBA images)")
-                    return
+                    return false
                 }
                 let timeline = TimelineSupported(session.Runtime)
+                Console.WriteLine("External image readiness: timeline=${timeline}")
                 producer = target.CreateExternalProducerForProof(timeline)
                 if !timeline { producer.Complete() }
                 let imported = session.ImportVulkan(producer.Description(session))
@@ -103,23 +139,30 @@ internal unsafe class VulkanExternalImageProof {
                 if timeline { producer.Complete() }
                 Require(source.Publish(image, frame, ready, (_ ExternalFrameResult) -> { }) == ExternalImageStatus.Busy,
                     "an in-use ring slot was accepted for another write")
-                PumpUntil(window, () -> {
-                    using let lease = source!!.Acquire()
-                    return !lease.IsFailed
-                })
+                WaitReady(window, source)
                 let first = Capture(window)
                 Require(first.Pixels.Length == int32(first.Width * first.Height * 4u), "capture extent is invalid")
+                Require(Math.Abs(int32(first.Pixels[0]) - int32(first.Pixels[2])) < 4, "rounded clip did not mask the imported image")
                 VerifyPixel(first, 1u, 1u, 0, 0, 255)
-                VerifyPixel(first, 3u, 1u, 255, 0, 0)
-                VerifyPixel(first, 1u, 3u, 255, 255, 0)
-                VerifyPixel(first, 3u, 3u, 0, 255, 0)
+                VerifyPixel(first, 7u, 1u, 255, 0, 0)
+                VerifyPixel(first, 1u, 7u, 255, 255, 0)
+                VerifyPixel(first, 7u, 7u, 0, 255, 0)
+                secondWindow = Window{ Title: "External image shared device proof", Width: 64, Height: 64, VSync: false,
+                    Root: VulkanExternalProofCell{ Source: source } }
+                secondWindow.Open()
+                let second = Capture(secondWindow)
+                VerifyPixel(second, 1u, 1u, 0, 0, 255)
+                VerifyPixel(second, 7u, 7u, 0, 255, 0)
                 Require(callbacks == 0, "first draw released the retained frame")
                 Capture(window)
                 Require(callbacks == 0, "redraw released the retained frame")
                 image.Dispose()
                 Require(callbacks == 0, "logical image disposal released a displayed frame")
                 source.Dispose()
-                PumpUntil(window, () -> callbacks == 1)
+                PumpUntil(window, () -> {
+                    secondWindow!!.Pump(0.0)
+                    return callbacks == 1
+                })
                 Require(released == ExternalFrameStatus.Released, "sampled frame did not retire after final GPU use")
                 Require(producer.OriginalHandleOpen, "retirement closed the producer memory handle")
                 source.Dispose()
@@ -128,27 +171,101 @@ internal unsafe class VulkanExternalImageProof {
                 Require(callbacks == 1, "release callback ran more than once")
                 Require(session.ImportVulkan(producer.Description(session)).Status == ExternalImageStatus.Closed,
                     "closed session accepted an import")
-                Console.WriteLine("External image import: passed (separate device, crop, orientation, capture, retained redraw, final-use release, FD ownership)")
+                secondWindow.RequestClose()
+                WindowReadbackTestFixture.ForceRender(secondWindow, 0.0)
+                VerifyRecoveryAndClose(window, root, producer, frame, owner)
             } finally {
                 source?.Dispose()
                 image?.Dispose()
                 session?.Dispose()
+                if let other = secondWindow {
+                    if other.IsOpen {
+                        other.RequestClose()
+                        WindowReadbackTestFixture.ForceRender(other, 0.0)
+                    }
+                }
                 if window.IsOpen {
                     window.RequestClose()
                     WindowReadbackTestFixture.ForceRender(window, 0.0)
                 }
                 producer?.Dispose()
             }
+            return true
         }
 
-        private func VerifyPixel(capture WindowCapture, quarterX uint32, quarterY uint32,
+        private func VerifyRecoveryAndClose(window Window, root VulkanExternalProofCell,
+            producer VulkanExternalProducer, frame ExternalFrameDescription, owner int32) {
+            let opened = ExternalImageSession.Open(window)
+            Require(opened.Status == ExternalImageStatus.Success, "recovery session did not open")
+            using let session = opened.Session!!
+            let imported = session.ImportVulkan(producer.Description(session))
+            Require(imported.Status == ExternalImageStatus.Success, "recovery image import failed")
+            using let image = imported.Image!!
+            using let source = session.CreateSource()
+            var callbacks int32 = 0
+            var status ExternalFrameStatus = ExternalFrameStatus.Closed
+            Require(source.Publish(image, frame, producer.Ready(), (result ExternalFrameResult) -> {
+                Require(Environment.CurrentManagedThreadId == owner, "device-loss callback used a foreign thread")
+                callbacks++
+                status = result.Status
+            }) == ExternalImageStatus.Success, "recovery frame was not published")
+            root.Source = source
+            root.Rebuild()
+            WaitReady(window, source)
+            Capture(window)
+            producer.Dispose()
+            VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
+            root.Opacity = 0.5F
+            root.Rebuild()
+            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            PumpUntil(window, () -> callbacks == 1)
+            Require(callbacks == 1 && status == ExternalFrameStatus.DeviceLost, "device loss did not complete the frame once")
+            using let lease = source.Acquire()
+            Require(lease.IsFailed, "a foreign frame survived device loss")
+            let reopened = ExternalImageSession.Open(window)
+            Require(reopened.Status == ExternalImageStatus.Success, "session did not reopen after device loss")
+            using let next = reopened.Session!!
+            Require(next.Generation != session.Generation, "device loss reused the old generation")
+            VerifyClose(window, root, next, frame, owner)
+        }
+
+        private func VerifyClose(window Window, root VulkanExternalProofCell,
+            session ExternalImageSession, frame ExternalFrameDescription, owner int32) {
+            guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
+                throw InvalidOperationException("Recovered external image target is unavailable")
+            }
+            using let producer = target.CreateExternalProducerForProof(TimelineSupported(session.Runtime))
+            producer.Complete()
+            let imported = session.ImportVulkan(producer.Description(session))
+            Require(imported.Status == ExternalImageStatus.Success, "close image import failed")
+            using let image = imported.Image!!
+            using let source = session.CreateSource()
+            var callbacks int32 = 0
+            var status ExternalFrameStatus = ExternalFrameStatus.Closed
+            Require(source.Publish(image, frame, producer.Ready(), (result ExternalFrameResult) -> {
+                Require(Environment.CurrentManagedThreadId == owner, "close callback used a foreign thread")
+                status = result.Status
+                callbacks++
+            }) == ExternalImageStatus.Success, "close frame was not published")
+            root.Source = source
+            root.Rebuild()
+            WaitReady(window, source)
+            Capture(window)
+            window.RequestClose()
+            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            Require(!window.IsOpen && callbacks == 1, "close did not complete the frame once")
+            Require(status == ExternalFrameStatus.Released, "close did not return a sampled frame")
+            Require(producer.OriginalHandleOpen, "close took ownership of the producer handle")
+        }
+
+        private func VerifyPixel(capture WindowCapture, sampleX uint32, sampleY uint32,
             red int32, green int32, blue int32) {
-            let offset = int32((capture.Height * quarterY / 4u * capture.Width + capture.Width * quarterX / 4u) * 4u)
+            let offset = int32((capture.Height * sampleY / SampleGrid * capture.Width + capture.Width * sampleX / SampleGrid) * 4u)
             Require(Math.Abs(int32(capture.Pixels[offset]) - red) < 4
                 && Math.Abs(int32(capture.Pixels[offset + 1]) - green) < 4
                 && Math.Abs(int32(capture.Pixels[offset + 2]) - blue) < 4
                 && capture.Pixels[offset + 3] > 250,
-                "crop/orientation at ${quarterX},${quarterY}: RGBA=${capture.Pixels[offset]},"
+                "crop/orientation at ${sampleX},${sampleY}: RGBA=${capture.Pixels[offset]},"
                 + "${capture.Pixels[offset + 1]},${capture.Pixels[offset + 2]},${capture.Pixels[offset + 3]}")
         }
 
