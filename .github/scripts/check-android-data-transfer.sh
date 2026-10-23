@@ -4,6 +4,8 @@ set -euo pipefail
 source_apk="$(realpath "${1:?Source APK is required}")"
 peer_apk="$(realpath "${2:?Peer APK is required}")"
 work="$(realpath -m "${3:?Private runtime directory is required}")"
+mode="${4:-clipboard}"
+[[ "$mode" == clipboard || "$mode" == documents ]]
 mkdir -p "$work"/{tmp,avd/device,home,user,cache,logs}
 export TMPDIR="$work/tmp" ANDROID_TMP="$work/tmp"
 export ANDROID_AVD_HOME="$work/avd" ANDROID_EMULATOR_HOME="$work/home"
@@ -14,7 +16,7 @@ export ADB_SERVER_SOCKET="tcp:localhost:$adb_port" ANDROID_ADB_SERVER_PORT="$adb
 adb="${ANDROID_HOME:?Android SDK is required}/platform-tools/adb"
 emulator="${GOO_EMULATOR_DIRECTORY:?Emulator directory is required}/emulator"
 image="${GOO_ANDROID_IMAGE_DIRECTORY:?API 36 image directory is required}"
-cat > "$work/avd/goo-clipboard.ini" <<EOF
+cat > "$work/avd/goo-data-transfer.ini" <<EOF
 avd.ini.encoding=UTF-8
 path=$work/avd/device
 target=android-36
@@ -39,7 +41,7 @@ target=android-36
 PlayStore.enabled=false
 EOF
 "$adb" -P "$adb_port" start-server
-"$emulator" -avd goo-clipboard -port "$port" -no-window -no-qt -no-audio -no-snapshot -no-boot-anim \
+"$emulator" -avd goo-data-transfer -port "$port" -wipe-data -no-window -no-qt -no-audio -no-snapshot -no-boot-anim \
   -no-metrics -gpu lavapipe -cores 2 -memory 2560 -no-direct-adb -adb-path "$adb" > "$work/logs/emulator.log" 2>&1 &
 emulator_pid=$!
 cleanup() {
@@ -59,6 +61,19 @@ done
 "$adb" -P "$adb_port" -s "emulator-$port" install --no-incremental -r "$source_apk"
 "$adb" -P "$adb_port" -s "emulator-$port" install --no-incremental -r "$peer_apk"
 "$adb" -P "$adb_port" -s "emulator-$port" logcat -c
+if [[ "$mode" == documents ]]; then
+  for phase in pick reopen; do
+    if [[ "$phase" == reopen ]]; then
+      "$adb" -P "$adb_port" -s "emulator-$port" shell am force-stop org.goo.androidsmoke
+    fi
+    timeout 240 "$adb" -P "$adb_port" -s "emulator-$port" shell am instrument -w -r -e phase "$phase" \
+      org.goo.androidsmoke/org.goo.androidsmoke.DocumentChecks | tee "$work/logs/documents-$phase.txt"
+    grep -q "GOO_ANDROID_DOCUMENTS_PASS $phase" "$work/logs/documents-$phase.txt"
+    grep -q 'INSTRUMENTATION_CODE: -1' "$work/logs/documents-$phase.txt"
+    ! grep -q 'GOO_ANDROID_DOCUMENTS_FAIL\|INSTRUMENTATION_FAILED\|INSTRUMENTATION_ABORTED' "$work/logs/documents-$phase.txt"
+  done
+  exit 0
+fi
 wait_marker() {
   for attempt in {1..180}; do
     "$adb" -P "$adb_port" -s "emulator-$port" logcat -d -v brief -s GooClipboard:I > "$work/logs/clipboard.txt"

@@ -163,6 +163,29 @@ the frame is scheduled. Pause, surface destruction, view detachment, and
 disposal cancel pending frames and clear demand. The event reports demand
 transitions, not every presented frame.
 
+## Documents and URI streams
+
+```csharp
+var picked = await Documents.ShowPickerAsync(Goo.FileDialogKind.OpenFile);
+if (picked.Status != Goo.FileDialogStatus.Success) return;
+var opened = await Documents.OpenReadAsync(picked.Uris[0]);
+if (opened.Status != DocumentStatus.Success) return;
+await using var stream = opened.Stream!;
+```
+
+Use `GooActivity.Documents` on the Activity's main thread to launch a picker.
+Documents stay as `content://` URIs, not filesystem paths.
+
+| Operation | Contract |
+| --- | --- |
+| Open | MIME filters and optional multiple selection. The default requests Read access. |
+| Save | Creates one new document. Supply one concrete MIME type and Write access. It is not an overwrite dialog. |
+| Folder | Returns one tree URI. Open a child document URI to read its bytes. |
+| Streams | `OpenReadAsync` and `OpenWriteAsync` open off the UI thread. The caller owns each successful stream. Writes replace and truncate contents. Later I/O uses normal .NET stream semantics. |
+| Grants | `GrantedAccess` and `CanPersist` report returned flags. Call `PersistAccess` or `ReleaseAccess` on the main thread. Store URI values in app state. Persistence is never automatic. |
+| Lifetime | Pause and surface loss keep the picker open. Cancellation or Activity destruction completes it with Cancelled. A replacement Activity does not restore an old task. |
+| Failures | Stream and grant results distinguish Unsupported, Denied, NotFound, Cancelled and Failed. A failed stream result has no stream. |
+
 ## Input and keyboard policy
 
 Touch IDs, mouse wheel, physical keys, focus, clipboard, UTF-16 selection,
