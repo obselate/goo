@@ -231,3 +231,31 @@ Core creates one session for each owner and interaction.
 Use `PlatformInput.Selection` to read effective positions and affinities.
 Use `SetSelection(TextSelection)` to preserve affinities and normalize grapheme boundaries.
 
+## Use shared recognizers
+
+```gsharp
+import Goo.Gestures
+
+let navigation = TransformGesture(OnViewportGesture)
+let surface = Container{Gestures: []GestureRecognizer{navigation}}
+```
+
+Reference the optional `Goo.Gestures` package.
+Keep one TransformGesture for combined pan, pinch and rotation.
+
+| Recognizer | Behavior |
+| --- | --- |
+| `PanGesture` | Starts after eight logical units. It adds no inertia. |
+| `TransformGesture` | Pans with one contact. A second contact adds scale and clockwise rotation. |
+| `LongPressGesture` | Starts after 500 ms within eight logical units. Movement can continue after acceptance. |
+| `DoubleTapGesture` | Requires two complete taps within 400 ms and four logical units. It defers the first click. |
+
+- Events use Started, Changed, Completed and Canceled phases.
+- Transform scale starts at 1. Rotation uses radians.
+- Lifting either transform contact ends the gesture. Remaining held contacts stay suppressed.
+- `GestureSource.Trackpad` carries SDL's scale-only pinch stream without fake contacts.
+- Trackpad rotation returns `GestureRotationStatus.Unsupported`. Contact rotation returns Available.
+- The trackpad anchor is the mouse pointer position at gesture start, not a contact centroid.
+- SDL 3.4 cannot distinguish a normal trackpad end from native cancellation.
+
+
