@@ -304,6 +304,10 @@ Gets the style that applies while this element has focus.
 
 Reports whether this element can receive keyboard focus.
 
+### `Gestures`
+
+Gets reusable touch recognizers in same-owner arbitration order. Keep declaration instances stable across rebuilds to preserve active sessions.
+
 ### `Handle`
 
 Gets the consumer-owned handle attached while this element is mounted.
@@ -509,6 +513,12 @@ Returns: False when unmounted, ineligible, or not a focused button.
 Removes keyboard focus when this element owns it.
 
 Returns: False when the handle is unmounted or does not own focus.
+
+### `CancelGestures`
+
+Cancels recognizer sessions owned by this element without replaying pending input.
+
+Returns: True when at least one session was canceled.
 
 ### `EndPress(bool)`
 

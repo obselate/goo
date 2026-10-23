@@ -327,9 +327,14 @@ internal partial class PointerInput {
     var failure Exception?
     try {
       try {
-        dispatchCancel()
+        cancelCurrentGestures(root, GestureCancelReason.PointerCanceled)
       } catch (error Exception) {
         failure = error
+      }
+      try {
+        dispatchCancel()
+      } catch (error Exception) {
+        if failure == nil { failure = error }
       }
       try {
         cancelCurrentDrag(root)
@@ -343,6 +348,7 @@ internal partial class PointerInput {
       current.DragEntry = nil
       current.DragEditor = nil
       current.DragSelectionStarted = false
+      current.TouchCaretPending = false
       clearScrollDrag()
       clearScrollbarPartPress(resolver)
       clearTouchPan()

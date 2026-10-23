@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 
 
 /// Defines the common surface for Goo-owned declarative elements.
@@ -163,6 +164,17 @@ public open class Blob : Style {
       updateSparseInputState()
     }
   }
+
+  /// Gets reusable touch recognizers in same-owner arbitration order.
+  /// Keep declaration instances stable across rebuilds to preserve active sessions.
+  public prop Gestures IReadOnlyList[GestureRecognizer]? {
+    get -> GestureMetadata.Get(this)
+    init {
+      GestureMetadata.Set(this, value)
+      updateSparseInputState()
+    }
+  }
+
   /// Gets explicit key bindings. Primitives have no built-in keyboard bindings.
   public prop KeyBindings ([]KeyBinding)? {
     get -> InputCallbacks.BlobBindings(this)
