@@ -16,6 +16,7 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.DevTools",
     "Goo.DevTools.App",
     "Goo.Gestures",
+    "Goo.NativeMenus",
     "Goo.Templates",
 }
 

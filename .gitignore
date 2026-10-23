@@ -49,6 +49,7 @@
 !/.github/scripts/validate-onboarding.py
 !/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
+!/.github/scripts/run-android-native-menus.sh
 !/.github/scripts/qualify-linux-runtime.sh
 
 !/Goo/
@@ -59,6 +60,8 @@
 !/Goo.Gestures/**
 !/Goo.Android/
 !/Goo.Android/**
+!/Goo.NativeMenus/
+!/Goo.NativeMenus/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -78,6 +81,9 @@
 !/docs/nuget-readme.md
 !/docs/production-readiness.md
 !/docs/android.md
+!/docs/native-menus.md
+!/docs/api-native-menus/
+!/docs/api-native-menus/**
 !/docs/images.md
 !/docs/svg.md
 !/docs/migrations/

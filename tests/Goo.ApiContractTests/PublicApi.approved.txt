@@ -49,6 +49,9 @@ ctor|Goo.LinearGradient|public|(params colors:Goo.Color[])
 ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<!0,System.Double[]>,write:System.Func`2<System.Double[],!0>)
 ctor|Goo.NativeAccessibilityAdapter|public|()
 ctor|Goo.NativeFileDrag|public|(values:System.Collections.Generic.IReadOnlyList`1<System.String>)
+ctor|Goo.NativeMenuBar|public|(owner:Goo.Window)
+ctor|Goo.NativeMenuItem|public|()
+ctor|Goo.NativeMenus|public|()
 ctor|Goo.PathBuilder|public|()
 ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double)
 ctor|Goo.Portal|public|()
@@ -138,6 +141,7 @@ enum-underlying|Goo.Key|System.Int32
 enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
 enum-underlying|Goo.MacOSBackdropState|System.Int32
 enum-underlying|Goo.MotionCompletionReason|System.Int32
+enum-underlying|Goo.NativeMenuStatus|System.Int32
 enum-underlying|Goo.NativeTransferCapabilities|System.Int32
 enum-underlying|Goo.Overflow|System.Int32
 enum-underlying|Goo.PointerButtons|System.Int32
@@ -522,6 +526,12 @@ enum|Goo.MacOSBackdropState|Inactive|2
 enum|Goo.MotionCompletionReason|Disabled|2
 enum|Goo.MotionCompletionReason|Finished|0
 enum|Goo.MotionCompletionReason|ReducedMotion|1
+enum|Goo.NativeMenuStatus|Busy|3
+enum|Goo.NativeMenuStatus|Cancelled|1
+enum|Goo.NativeMenuStatus|Failed|5
+enum|Goo.NativeMenuStatus|OwnerClosed|4
+enum|Goo.NativeMenuStatus|Success|0
+enum|Goo.NativeMenuStatus|Unsupported|2
 enum|Goo.NativeTransferCapabilities|DropPreview|2
 enum|Goo.NativeTransferCapabilities|EffectNegotiation|8
 enum|Goo.NativeTransferCapabilities|FileDrop|1
@@ -718,6 +728,7 @@ event|Goo.ElementHandle|MetricsChanged|System.Action`1<Goo.ElementMetrics>|insta
 event|Goo.ImageSourceLease|Released|System.Action|instance|add:public,remove:public
 event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,remove:public
 event|Goo.ImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
+event|Goo.NativeMenuBar|Activated|System.Action`1<System.String>|instance|add:public,remove:public
 event|Goo.PlatformInput|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
 event|Goo.Window|ApplicationActivated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
@@ -948,6 +959,16 @@ method|Goo.Motion|Tween|static|public|generic:|(durationMs:System.Double,easing:
 method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
 method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
 method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag?&)->System.Boolean
+method|Goo.NativeMenuBar|Dispose|instance|public|generic:|()->System.Void
+method|Goo.NativeMenuBar|SetItems|instance|public|generic:|(items:System.Collections.Generic.IReadOnlyList`1<Goo.NativeMenuItem>)->Goo.NativeMenuResult
+method|Goo.NativeMenuShortcut|Deconstruct|instance|public|generic:|(out Key:System.String&,out Modifiers:Goo.KeyModifiers&)->System.Void
+method|Goo.NativeMenuShortcut|Equals|instance|public|generic:|(other:Goo.NativeMenuShortcut)->System.Boolean
+method|Goo.NativeMenuShortcut|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
+method|Goo.NativeMenuShortcut|GetHashCode|virtual|public|generic:|()->System.Int32
+method|Goo.NativeMenuShortcut|ToString|virtual|public|generic:|()->System.String
+method|Goo.NativeMenuShortcut|op_Equality|static|public|generic:|(left:Goo.NativeMenuShortcut,right:Goo.NativeMenuShortcut)->System.Boolean
+method|Goo.NativeMenuShortcut|op_Inequality|static|public|generic:|(left:Goo.NativeMenuShortcut,right:Goo.NativeMenuShortcut)->System.Boolean
+method|Goo.NativeMenus|ShowContextMenuAsync|static|public|generic:|(owner:Goo.Window,point:Goo.Point,items:System.Collections.Generic.IReadOnlyList`1<Goo.NativeMenuItem>)->System.Threading.Tasks.Task`1<Goo.NativeMenuResult>
 method|Goo.PanelTransform|Equals|instance|public|generic:|(other:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Equality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Inequality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
@@ -1585,6 +1606,18 @@ property|Goo.NativeAccessibilityAdapter|IsAvailable|System.Boolean|static|get:pu
 property|Goo.NativeFileDrag|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
 property|Goo.NativeFileDrop|IsPreview|System.Boolean|instance|get:public,set:private|index:()
 property|Goo.NativeFileDrop|Paths|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public|index:()
+property|Goo.NativeMenuItem|Checked|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.NativeMenuItem|Enabled|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.NativeMenuItem|Id|System.String|instance|get:public,init:public|index:()
+property|Goo.NativeMenuItem|Items|System.Collections.Generic.IReadOnlyList`1<Goo.NativeMenuItem>|instance|get:public,init:public|index:()
+property|Goo.NativeMenuItem|Separator|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.NativeMenuItem|Shortcut|System.Nullable`1<Goo.NativeMenuShortcut>|instance|get:public,init:public|index:()
+property|Goo.NativeMenuItem|Text|System.String|instance|get:public,init:public|index:()
+property|Goo.NativeMenuResult|Error|System.String|instance|get:public|index:()
+property|Goo.NativeMenuResult|ItemId|System.String|instance|get:public|index:()
+property|Goo.NativeMenuResult|Status|Goo.NativeMenuStatus|instance|get:public|index:()
+property|Goo.NativeMenuShortcut|Key|System.String|instance|get:public,init:public|index:()
+property|Goo.NativeMenuShortcut|Modifiers|Goo.KeyModifiers|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|Rotate|System.Double|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|ScaleX|System.Double|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|ScaleY|System.Double|instance|get:public,init:public|index:()
@@ -2097,6 +2130,12 @@ type|Goo.Motion|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeAccessibilityAdapter|class|public|base:System.Object|interfaces:Goo.AccessibilityAdapter,System.IDisposable|generic:
 type|Goo.NativeFileDrag|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeFileDrop|class|public|base:System.Object|interfaces:|generic:
+type|Goo.NativeMenuBar|class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.NativeMenuItem|class|public|base:System.Object|interfaces:|generic:
+type|Goo.NativeMenuResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.NativeMenuShortcut|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.NativeMenuShortcut>|generic:
+type|Goo.NativeMenuStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.NativeMenus|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Overflow|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PanelTransform|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.PanelTransform>|generic:

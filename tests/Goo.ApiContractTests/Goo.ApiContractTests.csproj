@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
+    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"
