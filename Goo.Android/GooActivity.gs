@@ -82,7 +82,7 @@ abstract class GooActivity : Activity {
     protected open override func OnNewIntent(intent Intent?) {
         base.OnNewIntent(intent)
         Intent = intent
-        ForwardActivation(intent, false)
+        ForwardActivation(intent, Goo.Window.IsInitialApplicationActivation)
     }
 
     /// <inheritdoc />
