@@ -80,8 +80,11 @@ internal unsafe partial class ClipboardTransfer {
 
         private func WaylandDataAvailable() bool -> OperatingSystem.IsLinux() && SDL.GetCurrentVideoDriverS() == "wayland"
 
+        private func IsPlainText(contentType string) bool -> contentType == "text/plain" || contentType.StartsWith("text/plain;", StringComparison.Ordinal)
+
         internal func WriteTransfer(data TransferData, intent ClipboardIntent) ClipboardWriteResult {
             if OperatingSystem.IsWindows() { return WindowsWriteTransfer(data, intent) }
+            if OperatingSystem.IsMacOS() { return MacWriteTransfer(data, intent) }
             if !WaylandDataAvailable() { return ClipboardWriteResult(DataTransferStatus.Unsupported, "This host does not provide multi-format clipboard publication") }
             var publication ClipboardPublication?
             let names = List[nint]()
@@ -170,6 +173,7 @@ internal unsafe partial class ClipboardTransfer {
 
         internal func ReadTransfer(types IReadOnlyList[string]) ClipboardDataResult {
             if OperatingSystem.IsWindows() { return WindowsReadTransfer(types) }
+            if OperatingSystem.IsMacOS() { return MacReadTransfer(types) }
             if !WaylandDataAvailable() { return ClipboardDataResult(ClipboardReadStatus.Unsupported, error: "This host does not provide multi-format clipboard reads") }
             var watching bool
             try {
