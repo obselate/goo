@@ -16,6 +16,20 @@ Bridges scalar simulations to a Cell-owned animated value.
 
 Reports completion once after the owning motion pump settles, on its UI thread. Retarget, Set, Snap, and disposal cancel pending delivery. A handler may retarget this animation; the new run advances on a later pump. Handler failures propagate after the remaining completion batch is delivered, unless the window closes.
 
+### `Pause`
+
+Holds the current value until Resume, retargeting, or forced completion.
+
+### `Resume`
+
+Continues a paused animation from its held elapsed time.
+
+### `Seek(float64)`
+
+Sets elapsed time on an active Motion.Tween animation, preserving pause state. Times beyond the duration land on the target. Completion is delivered on the next pump, even when paused. Non-tween or inactive animations throw InvalidOperationException.
+
+- `elapsedMs`: finite, nonnegative elapsed milliseconds, independent of TimeScale
+
 ### `Set(T)`
 
 Snaps to value, stops all scalar simulations, and notifies the owner.
@@ -62,9 +76,13 @@ Animates toward target with one shared or one-per-dimension specification.
 
 Gets whether the owning Cell has disposed this animation.
 
+### `IsPaused`
+
+Gets whether this animation is paused. A paused animation remains Running.
+
 ### `Running`
 
-Gets whether any scalar simulation is still running.
+Gets whether an animation is active, including while paused.
 
 ### `Target`
 
@@ -76,7 +94,7 @@ Gets the current value at the current motion clock time.
 
 ### `Velocity`
 
-Gets the current velocity in converter-coordinate units per second. A resting animation reports zero velocity in every dimension.
+Gets the current velocity in converter-coordinate units per second. A resting or paused animation reports zero velocity in every dimension.
 
 ## `LayoutTransition`
 

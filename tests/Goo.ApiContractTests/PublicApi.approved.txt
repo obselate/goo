@@ -681,6 +681,9 @@ method|Goo.AccessibilityId|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.AccessibilityId|ToString|virtual|public|generic:|()->System.String
 method|Goo.AccessibilityId|op_Equality|static|public|generic:|(left:Goo.AccessibilityId,right:Goo.AccessibilityId)->System.Boolean
 method|Goo.AccessibilityId|op_Inequality|static|public|generic:|(left:Goo.AccessibilityId,right:Goo.AccessibilityId)->System.Boolean
+method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
+method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
+method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
 method|Goo.Anim`1|Set|instance|public|generic:|(value:!0)->System.Void
 method|Goo.Anim`1|Snap|instance|public|generic:|(value:!0)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0)->System.Void
@@ -1258,6 +1261,7 @@ property|Goo.Accessibility|Selected|System.Nullable`1<System.Boolean>|instance|g
 property|Goo.Accessibility|SizeOfSet|System.Nullable`1<System.Int32>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Value|System.String|instance|get:public,init:public|index:()
 property|Goo.Anim`1|IsDisposed|System.Boolean|instance|get:public|index:()
+property|Goo.Anim`1|IsPaused|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Running|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Target|!0|instance|get:public|index:()
 property|Goo.Anim`1|Value|!0|instance|get:public|index:()
