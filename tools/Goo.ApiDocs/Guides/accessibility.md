@@ -2,7 +2,7 @@
 
 Set `Blob.Accessibility` to declare role, name, description, value, state, relationships, and composed-control actions. The model is backend-neutral. An `AccessibilityAdapter` maps the retained tree to a platform API.
 
-Native primitives publish defaults: text, button, text entry, editor, and image. `Role.None` removes only its own node and keeps semantic descendants. `Hidden` removes the complete subtree. Display and visibility exclusion also remove a subtree.
+Native primitives publish defaults: text, button, text entry, editor, image and scroll container. `Role.None` removes only its own node and keeps semantic descendants. `Hidden` removes the complete subtree. Display and visibility exclusion also remove a subtree.
 
 Semantic IDs are stable for the mounted window lifetime. Adapters receive mutable retained node and tree views. Read each view again after an update. Call the adapter and route actions only on Goo's UI thread.
 
@@ -17,6 +17,25 @@ Route neutral actions with `new AccessibilityActionRequest(action)`. Use `SetVal
 Protected `TextEntry` nodes expose one bullet per extended grapheme cluster. Their value, selection, and caret use this masked semantic coordinate space. Copy and cut do not expose or remove protected text, while paste and `SetValue` remain available.
 
 Text editors expose `TextSnapshot`, selection, and caret metadata. The snapshot is versioned and avoids a full document copy.
+
+```gsharp
+if let id = window.AccessibilityHitTest(12.0, 24.0) {
+  window.PerformAccessibilityAction(id, AccessibilityActionRequest(AccessibilityAction.ScrollIntoView))
+}
+```
+
+Hit tests include readable disabled controls and text. Coordinates use window
+logical units, before `UiScale` and framebuffer scaling.
+
+| Adapter data or action | Meaning |
+| --- | --- |
+| `IsPassword` | Text and selection offsets refer to the masked value. |
+| `VisibleBounds` | Clipped axis-aligned bounds, or nil outside the viewport. A path clip can leave empty areas inside the rectangle. |
+| `ScrollInfo` | Current offsets, animation targets, limits and viewport size. Nil without built-in scroll geometry. Changes advance the tree version. |
+| `Blur` | Clears keyboard focus from its current owner. |
+| `ScrollIntoView` | Reveals the node without taking keyboard focus. Disabled nodes can be revealed. |
+
+Hosts own reading focus separately from Goo keyboard focus.
 
 ## Native desktop accessibility
 

@@ -23,11 +23,31 @@ public enum AccessibilityLive { Off; Polite; Assertive }
 /// Selects a command routed from an accessibility adapter.
 public enum AccessibilityAction {
   Focus; Activate; SetValue; SetSelection; Increment; Decrement; Select; Deselect; Expand;
-  Collapse; Scroll;
+  Collapse; Scroll; Blur; ScrollIntoView;
 }
 
 /// Identifies one semantic node by its stable Value for one mounted Window lifetime.
 public data struct AccessibilityId(Value int64) { }
+
+/// Reports logical scroll offsets, targets, limits, and viewport dimensions.
+public data struct AccessibilityScrollInfo {
+  /// Gets the current horizontal offset.
+  public prop X float64 { get; init; }
+  /// Gets the current vertical offset.
+  public prop Y float64 { get; init; }
+  /// Gets the horizontal animation target.
+  public prop TargetX float64 { get; init; }
+  /// Gets the vertical animation target.
+  public prop TargetY float64 { get; init; }
+  /// Gets the maximum horizontal offset.
+  public prop MaximumX float64 { get; init; }
+  /// Gets the maximum vertical offset.
+  public prop MaximumY float64 { get; init; }
+  /// Gets the untransformed viewport width.
+  public prop ViewportWidth float64 { get; init; }
+  /// Gets the untransformed viewport height.
+  public prop ViewportHeight float64 { get; init; }
+}
 
 /// Describes one range value exposed by a semantic widget.
 public class AccessibilityValue {
@@ -481,6 +501,12 @@ public interface AccessibilityNode {
   prop Focused bool { get; }
   /// Gets the transformed border bounds in window logical coordinates.
   prop Bounds ElementRect { get; }
+  /// Gets the conservatively clipped window logical bounds, or nil when outside the viewport.
+  prop VisibleBounds ElementRect? { get; }
+  /// Gets whether exposed text represents a protected password value.
+  prop IsPassword bool { get; }
+  /// Gets built-in scroll geometry, or nil when this node has no scroll container.
+  prop ScrollInfo AccessibilityScrollInfo? { get; }
   /// Gets the immutable editor text snapshot, when this node is a text editor.
   prop TextSnapshot TextSnapshot? { get; }
   /// Gets the UTF-16 selection start in the exposed semantic value, when this node has editable text.
@@ -529,6 +555,9 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
   private var atomic bool?
   private var focused bool
   private var bounds ElementRect
+  private var visibleBounds ElementRect?
+  private var isPassword bool
+  private var scrollInfo AccessibilityScrollInfo?
   private var textSnapshot TextSnapshot?
   private var selectionStart int32?
   private var selectionLength int32?
@@ -567,6 +596,9 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
   public prop Atomic bool? { get -> atomic }
   public prop Focused bool{ get -> focused }
   public prop Bounds ElementRect{ get -> bounds }
+  public prop VisibleBounds ElementRect? { get -> visibleBounds }
+  public prop IsPassword bool { get -> isPassword }
+  public prop ScrollInfo AccessibilityScrollInfo? { get -> scrollInfo }
   public prop TextSnapshot TextSnapshot? { get -> textSnapshot }
   public prop SelectionStart int32? { get -> selectionStart }
   public prop SelectionLength int32? { get -> selectionLength }
@@ -597,7 +629,8 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
     required bool?, invalid bool?, busy bool?, level int32?, orientation AccessibilityOrientation,
     modal bool?, multiline bool?, multiSelectable bool?, hasPopup bool?, live AccessibilityLive,
     atomic bool?, focused bool, bounds ElementRect, actionMask int32,
-    positionInSet int32? = nil, sizeOfSet int32? = nil) bool{
+    positionInSet int32? = nil, sizeOfSet int32? = nil, isPassword bool = false,
+    visibleBounds ElementRect? = nil, scrollInfo AccessibilityScrollInfo? = nil) bool{
       let changed = this.role != role || this.customRole != customRole || this.name != name
         || this.description != description || this.value != value || this.valueText != valueText
         || this.valueNow != valueNow || this.valueMinimum != valueMinimum
@@ -612,6 +645,7 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
         || this.multiline != multiline || this.multiSelectable != multiSelectable
         || this.hasPopup != hasPopup || this.live != live || this.atomic != atomic
         || this.focused != focused || !sameAccessibilityRect(this.bounds, bounds) || !sameActionMask(actionMask)
+        || this.isPassword != isPassword || this.visibleBounds != visibleBounds || this.scrollInfo != scrollInfo
       if !changed { return false }
       Revision++
       this.role = role
@@ -647,6 +681,9 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
       this.atomic = atomic
       this.focused = focused
       this.bounds = bounds
+      this.isPassword = isPassword
+      this.visibleBounds = visibleBounds
+      this.scrollInfo = scrollInfo
       setActions(actionMask)
       return true
     }
@@ -717,7 +754,7 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
 
   private func sameActionMask(mask int32) bool {
     var count int32
-    for value in int32(AccessibilityAction.Focus) ... int32(AccessibilityAction.Scroll) + 1 {
+    for value in int32(AccessibilityAction.Focus) ... int32(AccessibilityAction.ScrollIntoView) + 1 {
       let action = AccessibilityAction(value)
       if (mask & actionBit(action)) != 0 { count++ }
     }
@@ -736,7 +773,7 @@ internal class RetainedAccessibilityNode : AccessibilityNode {
     }
     if actions == nil { actions = List[AccessibilityAction]() }
     actions!!.Clear()
-    for value in int32(AccessibilityAction.Focus) ... int32(AccessibilityAction.Scroll) + 1 {
+    for value in int32(AccessibilityAction.Focus) ... int32(AccessibilityAction.ScrollIntoView) + 1 {
       let action = AccessibilityAction(value)
       if (mask & actionBit(action)) != 0 { actions!!.Add(action) }
     }
@@ -826,7 +863,7 @@ private func requireUnique[T](values []T, name string) {
 }
 
 private func validateAction(value AccessibilityAction) AccessibilityAction {
-  if int32(value) < int32(AccessibilityAction.Focus) || int32(value) > int32(AccessibilityAction.Scroll) {
+  if int32(value) < int32(AccessibilityAction.Focus) || int32(value) > int32(AccessibilityAction.ScrollIntoView) {
     throw ArgumentOutOfRangeException("Action")
   }
   return value

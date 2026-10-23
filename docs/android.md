@@ -205,6 +205,50 @@ Mapped key-up events are consumed without issuing another edit. Printable
 characters are committed from each native key-down when Ctrl and Alt are not
 pressed.
 
+## Accessibility
+
+```gsharp
+TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
+```
+
+- `GooView` exposes Goo semantics as Android virtual accessibility nodes.
+- The bridge runs when an Android accessibility service is active.
+- Give custom controls a role, name, state and supported actions through `Accessibility`.
+- Text, password masks, selection and editing use the shared Goo action path.
+- `GooView` owns `Window.AccessibilityAdapter`. Leave the slot empty before construction.
+- Enable TalkBack in Android settings. No app permission or extra package is needed.
+- Reading focus does not take keyboard focus or open the keyboard.
+- Touch exploration uses Goo stacking, transforms and clipping.
+- Surface replacement keeps virtual IDs and clears reading focus.
+- The virtual subtree is available after the replacement presentation updates.
+- Text, selection, scroll and state changes send events for the changed nodes.
+- Root, native geometry and Surface changes refresh the host subtree.
+- `Accessibility.Live` sets polite or assertive live-region behavior.
+- Atomic regions send their full current text. Resume does not replay old announcements.
+
+### Accessibility checks
+
+```bash
+.github/scripts/run-android-accessibility.sh path/to/org.goo.androidsmoke-Signed.apk
+```
+
+- CI runs the real smoke app through Android `UiAutomation` on API 36.
+- The runner uses pinned emulator and Google APIs image builds. It needs Linux KVM.
+- The checks cover native nodes, hover, actions, text events, password masks, live regions, Surface replacement and Activity replacement.
+- Logs, guest Vulkan details and a screenshot are saved under `artifacts/android-accessibility-36/logs`.
+- These checks do not test TalkBack speech.
+
+Before release, record the Android and TalkBack versions and check:
+
+| Check | Expected result |
+| --- | --- |
+| Explore by touch and swipe | Correct control name, role, state and order. No canvas stop. |
+| Double-tap controls | One action. Text entry opens the keyboard. |
+| Read and select mixed-direction text | Whole characters and correct selection. |
+| Edit a password | No document text in speech. |
+| Change a live region | Correct polite or assertive speech. Atomic regions read the whole update. |
+| Scroll, rotate, background and resume | Correct bounds. No stale focus or repeated live update. |
+
 ## Transparent surfaces
 
 Set `Window.Transparent` before constructing GooView. A transparent window uses

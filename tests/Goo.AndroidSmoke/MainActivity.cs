@@ -12,7 +12,6 @@ public sealed class MainActivity : GooActivity
 {
     private bool inputSmokeStarted;
     private bool menuSmokeStarted;
-
     internal GooView NativeView => GooView;
 
     protected override Goo.Window CreateWindow() => Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true

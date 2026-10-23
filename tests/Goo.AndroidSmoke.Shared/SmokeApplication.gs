@@ -3,6 +3,7 @@ package GooAndroidSmoke
 import Goo
 import System
 import System.IO
+import System.Globalization
 
 /// Creates the same application Window for desktop and Android smoke entry points.
 public class SmokeApplication {
@@ -38,6 +39,8 @@ class SmokeCell : Cell, IDisposable {
   private var count int32
   private var entry string = "Hello Goo"
   private var secret string = "secret"
+  private var checkedState AccessibilityChecked = AccessibilityChecked.Mixed
+  private var level float64 = 25.0
 
   init() {
     using let stream = typeof(SmokeApplication).Assembly.GetManifestResourceStream("Goo.AndroidSmoke.Font.ttf")
@@ -54,13 +57,19 @@ class SmokeCell : Cell, IDisposable {
         Input?.Execute(TextCommand{ Kind: TextCommandKind.DeleteBackward })
       } },
     },
-    Text{ Content: "Goo Vulkan", FontFamily: "Smoke Vend Sans", FontSize: 30, Color: Color.White },
+    Text{ Content: "Goo Vulkan", FontFamily: "Smoke Vend Sans", FontSize: 30, Color: Color.White,
+      Accessibility: Accessibility{ Role: AccessibilityRole.Heading, Level: 1 } },
       Text{ Content: "System fallback: Hello, Android!", FontFamily: "sans-serif", FontSize: 16, Color: Color.White },
       Button() {.Height: 48,.BackgroundColor: Color.Rgb(37, 99, 235),.BorderRadius: 10,.OnClick: () -> { count++ },
       Text{ Content: "Retained count: " + count.ToString(), Color: Color.White},
       },
-      Image{ Source: picture, Width: 64, Height: 64 },
+      Text{ Content: "Count " + count.ToString(), Color: Color.White,
+        Accessibility: Accessibility{ Role: AccessibilityRole.Status, Name: "Counter status", Live: AccessibilityLive.Polite, Atomic: true } },
+      Text{ Content: "Counter changed", Color: Color.White,
+        Accessibility: Accessibility{ Role: AccessibilityRole.Alert, Live: AccessibilityLive.Assertive, Hidden: count == 0 } },
+      Image{ Source: picture, Width: 64, Height: 64, Accessibility: Accessibility{ Name: "Four color image" } },
       TextEntry{
+        Accessibility: Accessibility{ Name: "Name" },
         Value: entry,
         InputOptions: entryOptions,
         Height: 48,
@@ -71,6 +80,7 @@ class SmokeCell : Cell, IDisposable {
         OnChange: (value string) -> { entry = value },
       },
       TextEntry{
+        Accessibility: Accessibility{ Name: "Password" },
         Value: secret,
         Password: true,
         Height: 48,
@@ -81,11 +91,37 @@ class SmokeCell : Cell, IDisposable {
         OnChange: (value string) -> { secret = value },
       },
       TextEditor(controller) {
+        Accessibility = Accessibility{ Name: "Notes" },
         Height = 150,
         Padding = 10,
         FontSize = 18,
         Color = Color.White,
         BackgroundColor = Color.Rgb(31, 41, 55),
+      },
+      Button() {.Height: 48,.BackgroundColor: Color.Rgb(31, 41, 55),
+        .Accessibility: Accessibility{ Role: AccessibilityRole.Checkbox, Name: "Check item", Checked: checkedState },
+        .OnClick: () -> { checkedState = if checkedState == AccessibilityChecked.True { AccessibilityChecked.False } else { AccessibilityChecked.True } },
+        Text{ Content: "Check item", Color: Color.White },
+      },
+      Container() {.Height: 48,.BackgroundColor: Color.Rgb(31, 41, 55),
+        .Accessibility: Accessibility{
+          Role: AccessibilityRole.Slider, Name: "Level", Orientation: AccessibilityOrientation.Horizontal,
+          Range: AccessibilityValue{ Now: level, Minimum: 0.0, Maximum: 100.0, Text: level.ToString(CultureInfo.CurrentCulture) },
+          Actions: []AccessibilityAction{ AccessibilityAction.SetValue, AccessibilityAction.Increment, AccessibilityAction.Decrement },
+          OnAction: (request AccessibilityActionRequest) -> {
+            if request.Action == AccessibilityAction.SetValue {
+              if !Double.TryParse(request.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) { return false }
+              level = Math.Clamp(value, 0.0, 100.0)
+            } else if request.Action == AccessibilityAction.Increment { level = Math.Min(100.0, level + 1.0) }
+            else if request.Action == AccessibilityAction.Decrement { level = Math.Max(0.0, level - 1.0) }
+            else { return false }
+            return true
+          },
+        },
+        Text{ Content: "Level " + level.ToString(CultureInfo.CurrentCulture), Color: Color.White, Accessibility: Accessibility{ Role: AccessibilityRole.None } },
+      },
+      Button() {.Height: 48,.Disabled: true,.OnClick: () -> { count++ },
+        Text{ Content: "Disabled", Color: Color.White },
       },
       Container() {.Height: 240,.BackgroundGradient: LinearGradient(90.0, []GradientStop{
           GradientStop{ Offset: 0.0, Color: Color.Rgb(37, 99, 235) },

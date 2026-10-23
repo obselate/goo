@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="goo_accessibility_mixed">Mixed</string>
+    <string name="goo_accessibility_expanded">Expanded</string>
+    <string name="goo_accessibility_collapsed">Collapsed</string>
+    <string name="goo_accessibility_required">Required</string>
+    <string name="goo_accessibility_read_only">Read only</string>
+    <string name="goo_accessibility_busy">Busy</string>
+    <string name="goo_accessibility_spin_button">Spin button</string>
+    <string name="goo_accessibility_scroll_bar">Scroll bar</string>
+    <string name="goo_accessibility_menu">Menu</string>
+    <string name="goo_accessibility_menu_item">Menu item</string>
+    <string name="goo_accessibility_tab_list">Tab list</string>
+    <string name="goo_accessibility_tab">Tab</string>
+    <string name="goo_accessibility_link">Link</string>
+    <string name="goo_accessibility_tree">Tree</string>
+    <string name="goo_accessibility_tree_item">Tree item</string>
+    <string name="goo_accessibility_grid_cell">Grid cell</string>
+    <string name="goo_accessibility_row">Row</string>
+    <string name="goo_accessibility_column_header">Column header</string>
+    <string name="goo_accessibility_row_header">Row header</string>
+    <string name="goo_accessibility_search">Search field</string>
+    <string name="goo_accessibility_alert">Alert</string>
+    <string name="goo_accessibility_status">Status</string>
+    <string name="goo_accessibility_increase">Increase</string>
+    <string name="goo_accessibility_decrease">Decrease</string>
+    <string name="goo_accessibility_level">Level {0}</string>
+    <item name="goo_accessibility_increase" type="id" />
+    <item name="goo_accessibility_decrease" type="id" />
+</resources>

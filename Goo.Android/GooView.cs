@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using AndroidKeyEvent = Android.Views.KeyEvent;
 using AndroidRect = Android.Graphics.Rect;
+using NativeAccessibilityEvent = Android.Views.Accessibility.AccessibilityEvent;
+using NativeEventTypes = Android.Views.Accessibility.EventTypes;
 
 namespace Goo.Android;
 
@@ -20,6 +22,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     private readonly Java.Lang.Runnable scheduleFrame;
     private readonly Choreographer choreographer;
     private readonly InputMethodManager inputMethod;
+    private readonly GooAccessibilityProvider accessibility;
     private readonly object wakeGate = new();
     private bool framePosted;
     private bool resumed = true;
@@ -39,6 +42,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         ArgumentNullException.ThrowIfNull(window);
         if (Looper.MyLooper() != Looper.MainLooper)
             throw new InvalidOperationException("Create GooView on the Android main thread.");
+        if (window.AccessibilityAdapter is not null)
+            throw new InvalidOperationException("GooView owns the window accessibility adapter.");
         Window = window;
         host = new AndroidVulkanHost(this);
         frameCallback = new FrameCallback(this);
@@ -54,6 +59,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Holder!.SetFormat(Format.Translucent);
         }
         Holder!.AddCallback(this);
+        accessibility = new GooAccessibilityProvider(this);
         window.Attach(host);
         nativeOwners.Add(window, this);
         RefreshPreferences();
@@ -82,6 +88,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         nativeOwners.TryGetValue(window, out var view) && !view.disposed && view.resumed
         && view.IsAttachedToWindow && view.host.IsPresentationAttached ? view : null;
 
+    public override global::Android.Views.Accessibility.AccessibilityNodeProvider? AccessibilityNodeProvider => accessibility;
+
     public void Resume()
     {
         if (disposed || !Window.IsOpen)
@@ -97,6 +105,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         base.OnConfigurationChanged(newConfig);
         RefreshPreferences();
+        accessibility.ConfigurationChanged();
     }
 
     private void RefreshPreferences()
@@ -143,6 +152,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             return;
         resumed = false;
         NativeContextMenu?.OwnerClosed();
+        accessibility.SetPresentationReady(false);
         CancelFrames();
         host.Suspend();
     }
@@ -158,6 +168,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         if (disposed || !Window.IsOpen)
             return;
+        accessibility.SetPresentationReady(false);
         if (holder.Surface is { } surface)
             host.RefreshSurface(surface);
         host.Resize(Math.Max(1, (int)Math.Round(width / Density)),
@@ -171,6 +182,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (disposed)
             return;
         NativeContextMenu?.OwnerClosed();
+        accessibility.SetPresentationReady(false);
         CancelFrames();
         Input.FocusLost();
         host.DetachPresentation();
@@ -189,14 +201,32 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         base.OnAttachedToWindow();
         if (!disposed && !nativeOwners.TryGetValue(Window, out _))
             nativeOwners.Add(Window, this);
+        if (!disposed) accessibility.Attach();
     }
+
+    protected override void OnWindowVisibilityChanged(ViewStates visibility)
+    {
+        base.OnWindowVisibilityChanged(visibility);
+        if (!disposed) accessibility.RefreshNativeGeometry();
+    }
+
+    protected override bool DispatchHoverEvent(MotionEvent? e) => !disposed
+        && (e is not null && accessibility.DispatchHover(e) || base.DispatchHoverEvent(e));
 
     protected override void OnDetachedFromWindow()
     {
         nativeOwners.Remove(Window);
         NativeContextMenu?.OwnerClosed();
         CancelFrames();
+        accessibility.Detach();
         base.OnDetachedFromWindow();
+    }
+
+    public override void SendAccessibilityEventUnchecked(NativeAccessibilityEvent? e)
+    {
+        if (e?.EventType is NativeEventTypes.ViewClicked or NativeEventTypes.ViewFocused
+            or NativeEventTypes.ViewHoverEnter or NativeEventTypes.ViewHoverExit) return;
+        base.SendAccessibilityEventUnchecked(e);
     }
 
     internal void RequestFrame()
@@ -235,6 +265,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         var dt = lastFrameTime == 0 ? 0 : Math.Max(0, (frameTime - lastFrameTime) / 1_000_000_000d);
         lastFrameTime = frameTime;
         host.RenderFrame(dt);
+        accessibility.SetPresentationReady(true);
+        accessibility.RefreshNativeGeometry();
         var delay = host.NextFrameDelaySeconds;
         SetFrameDemand(delay <= 0);
         if (double.IsPositiveInfinity(delay))
@@ -425,9 +457,11 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         RequestFocus();
         inputMethod.RestartInput(this);
-        inputMethod.ShowSoftInput(this, ShowFlags.Implicit);
+        ShowTextInput();
         return true;
     }
+
+    internal void ShowTextInput() => inputMethod.ShowSoftInput(this, ShowFlags.Implicit);
 
     internal void EndTextInput() => inputMethod.HideSoftInputFromWindow(WindowToken, HideSoftInputFlags.None);
 
@@ -586,6 +620,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
             Context!.ContentResolver!.UnregisterContentObserver(preferenceObserver);
             preferenceObserver.Dispose();
+            accessibility.Dispose();
             EndTextInput();
             host.Dispose();
             host.ReleaseSurface();

@@ -261,7 +261,8 @@ internal class AccessibilityManager {
           declaration?.Live ?? AccessibilityLive.Off, declaration?.Atomic, n.Focused,
           ElementHandles.BorderBox(n), resolvedActionMask(n, role, disabled, declaration),
           declaration?.PositionInSet ?? Virtualization.Position(n),
-          declaration?.SizeOfSet ?? Virtualization.State(n)?.ItemCount()) {
+          declaration?.SizeOfSet ?? Virtualization.State(n)?.ItemCount(),
+          n.Kind == NodeKind.Entry && n.Password, visibleBounds(n), scrollInfo(n)) {
             rebuildingChanged = true
           }
         if view.SetChildren(childValues) { rebuildingChanged = true }
@@ -281,6 +282,95 @@ internal class AccessibilityManager {
     return value
   }
 
+  private func scrollInfo(n Node) AccessibilityScrollInfo? {
+    if n.Kind != NodeKind.Editor && n.OverflowX != Overflow.Scroll && n.OverflowY != Overflow.Scroll {
+      return nil
+    }
+    let maximum = scrollRange(n)
+    return AccessibilityScrollInfo{
+      X: float64(n.ScrollX), Y: float64(n.ScrollY),
+      TargetX: n.EditorController?.ScrollTargetX ?? float64(n.ScrollTargetX),
+      TargetY: n.EditorController?.ScrollTargetY ?? float64(n.ScrollTargetY),
+      MaximumX: maximum.X, MaximumY: maximum.Y,
+      ViewportWidth: float64(scrollViewportWidth(n)), ViewportHeight: float64(scrollViewportHeight(n)),
+    }
+  }
+
+  private func visibleBounds(n Node) ElementRect? {
+    let border = ElementHandles.BorderBox(n)
+    var left = Math.Max(0.0, border.X)
+    var top = Math.Max(0.0, border.Y)
+    var right = Math.Min(float64(owner.Width) / float64(owner.UiScale), border.X + border.Width)
+    var bottom = Math.Min(float64(owner.Height) / float64(owner.UiScale), border.Y + border.Height)
+    if right <= left || bottom <= top { return nil }
+    var current Node? = n
+    var child Node? = nil
+    while let ancestor = current {
+      if !ancestor.HasClipPath && (child == nil || ancestor.OverflowX == Overflow.Visible
+        && ancestor.OverflowY == Overflow.Visible && ancestor.Kind != NodeKind.Editor
+        && verticalScrollbarGutter(ancestor) == 0.0F && horizontalScrollbarGutter(ancestor) == 0.0F) {
+          if ancestor.IsPortal { break }
+          child = ancestor
+          current = ancestor.Parent
+          continue
+        }
+      let first = TransformGeometry.WindowToNode(ancestor, float32(left), float32(top))
+      let second = TransformGeometry.WindowToNode(ancestor, float32(right), float32(top))
+      let third = TransformGeometry.WindowToNode(ancestor, float32(left), float32(bottom))
+      let fourth = TransformGeometry.WindowToNode(ancestor, float32(right), float32(bottom))
+      if !first.Valid || !second.Valid || !third.Valid || !fourth.Valid { return nil }
+      var x = TransformGeometry.min4(first.X, second.X, third.X, fourth.X)
+      var y = TransformGeometry.min4(first.Y, second.Y, third.Y, fourth.Y)
+      var endX = TransformGeometry.max4(first.X, second.X, third.X, fourth.X)
+      var endY = TransformGeometry.max4(first.Y, second.Y, third.Y, fourth.Y)
+      if let descendant = child {
+        if ancestor.OverflowX != Overflow.Visible {
+          x = MathF.Max(x, ancestor.Rect.X)
+          endX = MathF.Min(endX, ancestor.Rect.X + ancestor.Rect.W)
+        }
+        if ancestor.OverflowY != Overflow.Visible {
+          y = MathF.Max(y, ancestor.Rect.Y)
+          endY = MathF.Min(endY, ancestor.Rect.Y + ancestor.Rect.H)
+        }
+        if !ScrollbarParts.ActiveChildren(ancestor).Contains(descendant) {
+          if ancestor.Kind == NodeKind.Editor || verticalScrollbarGutter(ancestor) > 0.0F {
+            endX = MathF.Min(endX, BoxGeometry.ContentLeft(ancestor) + scrollViewportWidth(ancestor))
+          }
+          if ancestor.Kind == NodeKind.Editor || horizontalScrollbarGutter(ancestor) > 0.0F {
+            endY = MathF.Min(endY, BoxGeometry.ContentTop(ancestor) + scrollViewportHeight(ancestor))
+          }
+          if ancestor.Kind == NodeKind.Editor {
+            x = MathF.Max(x, BoxGeometry.ContentLeft(ancestor))
+            y = MathF.Max(y, BoxGeometry.ContentTop(ancestor))
+          }
+        }
+      }
+      if let clip = ClipPaths.Get(ancestor) {
+        let mapping = PathGeometry.Map(clip.Path, clip.Fit,
+          ancestor.Rect.X, ancestor.Rect.Y, ancestor.Rect.W, ancestor.Rect.H)
+        let geometry = PathGeometry.For(clip.Path)
+        if !mapping.Valid || !geometry.HasFillContour { return nil }
+        x = MathF.Max(x, MathF.Max(ancestor.Rect.X, geometry.MinX * mapping.ScaleX + mapping.TranslateX))
+        y = MathF.Max(y, MathF.Max(ancestor.Rect.Y, geometry.MinY * mapping.ScaleY + mapping.TranslateY))
+        endX = MathF.Min(endX, MathF.Min(ancestor.Rect.X + ancestor.Rect.W,
+          geometry.MaxX * mapping.ScaleX + mapping.TranslateX))
+        endY = MathF.Min(endY, MathF.Min(ancestor.Rect.Y + ancestor.Rect.H,
+          geometry.MaxY * mapping.ScaleY + mapping.TranslateY))
+      }
+      if endX <= x || endY <= y { return nil }
+      let mapped = TransformGeometry.BoundsToWindow(ancestor, x, y, endX - x, endY - y)
+      left = Math.Max(left, float64(mapped.X))
+      top = Math.Max(top, float64(mapped.Y))
+      right = Math.Min(right, float64(mapped.X + mapped.W))
+      bottom = Math.Min(bottom, float64(mapped.Y + mapped.H))
+      if right <= left || bottom <= top { return nil }
+      if ancestor.IsPortal { break }
+      child = ancestor
+      current = ancestor.Parent
+    }
+    return ElementRect{ X: left, Y: top, Width: right - left, Height: bottom - top }
+  }
+
   private func resolvedRole(n Node, declaration Accessibility?) AccessibilityRole {
     if let metadata = declaration {
       if metadata.Role != AccessibilityRole.Auto { return metadata.Role }
@@ -292,7 +382,8 @@ internal class AccessibilityManager {
       case NodeKind.Editor: AccessibilityRole.TextEditor
       case NodeKind.Image: AccessibilityRole.Image
       case NodeKind.Container: n.Focusable || n.OnClick != nil || declaration != nil || forced.Contains(n)
-      ? AccessibilityRole.Generic : AccessibilityRole.Auto
+        || n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll
+        ? AccessibilityRole.Generic : AccessibilityRole.Auto
       default: declaration != nil || forced.Contains(n) ? AccessibilityRole.Generic : AccessibilityRole.Auto
     }
   }
@@ -392,9 +483,10 @@ internal class AccessibilityManager {
 
   private func resolvedActionMask(n Node, role AccessibilityRole, disabled bool,
     declaration Accessibility?) int32{
-      if disabled { return 0 }
-      var result int32
+      var result = owner.IsInputBlocked ? 0 : actionBit(AccessibilityAction.ScrollIntoView)
+      if disabled { return result }
       if n.Focusable && canReceiveInput(n) { result = result | actionBit(AccessibilityAction.Focus) }
+      if n.Focused { result = result | actionBit(AccessibilityAction.Blur) }
       if role == AccessibilityRole.Button || n.OnClick != nil {
         result = result | actionBit(AccessibilityAction.Activate)
       }

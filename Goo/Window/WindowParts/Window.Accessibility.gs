@@ -44,6 +44,25 @@ public partial class Window {
     }
   }
 
+  /// Finds the published semantic node at a point in window logical coordinates.
+  /// @param x The finite horizontal window logical coordinate.
+  /// @param y The finite vertical window logical coordinate.
+  /// @returns The topmost semantic identity, or nil outside visible semantic content.
+  public func AccessibilityHitTest(x float64, y float64) AccessibilityId? {
+    requireUiThread("Window.AccessibilityHitTest")
+    if !Double.IsFinite(x) || Math.Abs(x) > float64(Single.MaxValue) {
+      throw ArgumentOutOfRangeException("x")
+    }
+    if !Double.IsFinite(y) || Math.Abs(y) > float64(Single.MaxValue) {
+      throw ArgumentOutOfRangeException("y")
+    }
+    if IsInputBlocked || x < 0.0 || y < 0.0 || x >= float64(Width) / float64(UiScale)
+      || y >= float64(Height) / float64(UiScale) { return nil }
+    guard let root = node, let manager = accessibility else { return nil }
+    guard let hit = hitTopmost(root, float32(x), float32(y), manager) else { return nil }
+    return manager.DiagnosticNodeFor(hit)?.Id
+  }
+
   /// Routes one platform-neutral accessibility action to a mounted semantic node.
   /// @param id The retained semantic node identity.
   /// @param request The requested supported operation.
@@ -56,7 +75,7 @@ public partial class Window {
     guard let manager = accessibility else { return false }
     if !manager.Supports(id, request.Action) { return false }
     guard let target = manager.NodeFor(id) else { return false }
-    if !canReceiveInput(target) {
+    if request.Action != AccessibilityAction.ScrollIntoView && !canReceiveInput(target) {
       return false
     }
     var result bool
@@ -65,6 +84,8 @@ public partial class Window {
     } else {
       result = switch request.Action {
         case AccessibilityAction.Focus: FocusElement(target)
+        case AccessibilityAction.Blur: BlurElement(target)
+        case AccessibilityAction.ScrollIntoView: ScrollElementIntoView(target)
         case AccessibilityAction.Activate: hitActivate(node, target)
         case AccessibilityAction.SetValue: input.AccessibilitySetValue(node, resolver, target, request.Value)
         case AccessibilityAction.SetSelection: input.AccessibilitySetSelection(resolver, target,

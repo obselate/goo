@@ -118,20 +118,20 @@ private func hitsMapped(n Node, x float32, y float32) bool {
   return if n.Kind == NodeKind.Shape { ShapeGeometry.HitTest(n, x, y) } else { true }
 }
 
-internal func hitTopmost(root Node, x float32, y float32) Node? {
+internal func hitTopmost(root Node, x float32, y float32, semantics AccessibilityManager? = nil) Node? {
   if let overlay = Portals.Overlay(root) {
     let portals = Stacking.Children(overlay)
     for var i = portals.Count; i > 0; i-- {
       let portal = portals[i - 1]
       if Portals.Presented(portal) {
-        if let hit = hitTreeTopmost(portal, x, y) { return hit }
+        if let hit = hitTreeTopmost(portal, x, y, semantics) { return hit }
       }
     }
   }
-  return hitTreeTopmost(root, x, y)
+  return hitTreeTopmost(root, x, y, semantics)
 }
 
-private func hitTreeTopmost(root Node, x float32, y float32) Node? {
+private func hitTreeTopmost(root Node, x float32, y float32, semantics AccessibilityManager?) Node? {
   let point = TransformGeometry.Unmap(root, x, y)
   if !point.Valid || !hitCanTraverseMapped(root, point.X, point.Y) {
     return nil
@@ -139,16 +139,20 @@ private func hitTreeTopmost(root Node, x float32, y float32) Node? {
   let parts = ScrollbarParts.ActiveChildren(root)
   for var i = parts.Count; i > 0; i-- {
     let child = parts[i - 1]
-    if let hit = hitTreeTopmost(child, point.X, point.Y) { return hit }
+    if let hit = hitTreeTopmost(child, point.X, point.Y, semantics) { return hit }
   }
   if hitCanTraverseChildrenMapped(root, point.X, point.Y) {
     let children = Stacking.Children(root)
     for var i = children.Count; i > 0; i-- {
       let child = children[i - 1]
       if !child.IsPortal {
-        if let hit = hitTreeTopmost(child, point.X, point.Y) { return hit }
+        if let hit = hitTreeTopmost(child, point.X, point.Y, semantics) { return hit }
       }
     }
+  }
+  if let manager = semantics {
+    if manager.DiagnosticNodeFor(root) == nil || !hitWithinMapped(root, point.X, point.Y) { return nil }
+    return root.Kind == NodeKind.Shape && !ShapeGeometry.HitTest(root, point.X, point.Y) ? nil : root
   }
   return hitsMapped(root, point.X, point.Y) ? root : nil
 }
