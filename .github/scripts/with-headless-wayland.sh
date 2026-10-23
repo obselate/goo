@@ -5,6 +5,10 @@ if [[ "$(uname -s)" == Darwin ]]; then
   exec "$@"
 fi
 
+if [[ "${GOO_HEADLESS_PRIVATE_BUS:-}" != 1 ]]; then
+  exec dbus-run-session -- env GOO_HEADLESS_PRIVATE_BUS=1 "$0" "$@"
+fi
+
 runtime_root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/goo-xdg-runtime.XXXXXX")"
 export XDG_RUNTIME_DIR="$runtime_root"
 export WAYLAND_DISPLAY="${GOO_WAYLAND_DISPLAY:-goo-wayland}"
@@ -33,7 +37,7 @@ if [[ "${GOO_WAYLAND_COMPOSITOR:-}" != kwin ]] && command -v weston >/dev/null 2
   compositor_target=$compositor_pid
 else
   XDG_CONFIG_HOME="$runtime_root/config" XDG_CACHE_HOME="$runtime_root/cache" \
-    setsid dbus-run-session -- kwin_wayland --virtual \
+    setsid kwin_wayland --virtual \
     --width 1400 --height 900 --scale 1 --no-global-shortcuts --no-lockscreen --no-kactivities \
     --socket "$WAYLAND_DISPLAY" >"$compositor_log" 2>&1 &
   compositor_pid=$!
