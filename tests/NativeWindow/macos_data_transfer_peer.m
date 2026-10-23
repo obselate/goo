@@ -154,7 +154,10 @@ static void check_data(NSPasteboard *board)
 - (void)draggedImage:(NSImage *)image endedAt:(NSPoint)point operation:(NSDragOperation)operation
 {
     (void)image;
-    [self draggingSession:nil endedAtPoint:point operation:operation];
+    (void)point;
+    int effect = operation & NSDragOperationMove ? 2 : operation & NSDragOperationCopy ? 1 : 0;
+    output([NSString stringWithFormat:@"source-end %d %d %d", effect ? 0 : 1, effect, 0]);
+    stopped = YES;
 }
 - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)point operation:(NSDragOperation)operation
 {
