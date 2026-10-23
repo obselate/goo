@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 240024,
+      "bytes": 243824,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -60,11 +60,11 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "e4735e0a879c8d225dd4d87326f086b652edd2e27761f3f91b757fa117921266",
+      "sha256": "8c5806d813e8478f0be1e79c92dbf18ba8c08b2836b3e15f125da0a4e6bfae0b",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
-      "bytes": 1261984,
+      "bytes": 1502696,
       "exports": [
         "hb_aat_layout_feature_type_get_name_id",
         "hb_aat_layout_feature_type_get_selector_infos",
@@ -174,15 +174,21 @@
         "hb_draw_funcs_reference",
         "hb_draw_funcs_set_close_path_func",
         "hb_draw_funcs_set_cubic_to_func",
+        "hb_draw_funcs_set_get_budget_func",
+        "hb_draw_funcs_set_get_budget_remaining_func",
         "hb_draw_funcs_set_line_to_func",
         "hb_draw_funcs_set_move_to_func",
         "hb_draw_funcs_set_quadratic_to_func",
+        "hb_draw_funcs_set_set_budget_func",
         "hb_draw_funcs_set_user_data",
+        "hb_draw_get_budget",
+        "hb_draw_get_budget_remaining",
         "hb_draw_line",
         "hb_draw_line_to",
         "hb_draw_move_to",
         "hb_draw_quadratic_to",
         "hb_draw_rectangle",
+        "hb_draw_set_budget",
         "hb_face_builder_add_table",
         "hb_face_builder_create",
         "hb_face_builder_sort_tables",
@@ -475,6 +481,8 @@
         "hb_paint_funcs_set_color_glyph_func",
         "hb_paint_funcs_set_custom_palette_color_func",
         "hb_paint_funcs_set_fill_glyph_func",
+        "hb_paint_funcs_set_get_budget_func",
+        "hb_paint_funcs_set_get_budget_remaining_func",
         "hb_paint_funcs_set_image_func",
         "hb_paint_funcs_set_linear_gradient_func",
         "hb_paint_funcs_set_pop_clip_func",
@@ -488,8 +496,11 @@
         "hb_paint_funcs_set_push_group_func",
         "hb_paint_funcs_set_push_transform_func",
         "hb_paint_funcs_set_radial_gradient_func",
+        "hb_paint_funcs_set_set_budget_func",
         "hb_paint_funcs_set_sweep_gradient_func",
         "hb_paint_funcs_set_user_data",
+        "hb_paint_get_budget",
+        "hb_paint_get_budget_remaining",
         "hb_paint_image",
         "hb_paint_linear_gradient",
         "hb_paint_normalize_color_line",
@@ -507,6 +518,7 @@
         "hb_paint_push_transform",
         "hb_paint_radial_gradient",
         "hb_paint_reduce_linear_anchors",
+        "hb_paint_set_budget",
         "hb_paint_sweep_gradient",
         "hb_paint_sweep_gradient_tiles",
         "hb_realloc",
@@ -535,6 +547,7 @@
         "hb_set_has",
         "hb_set_hash",
         "hb_set_intersect",
+        "hb_set_intersects",
         "hb_set_invert",
         "hb_set_is_empty",
         "hb_set_is_equal",
@@ -615,7 +628,7 @@
       ],
       "rpath": [],
       "runpath": [],
-      "sha256": "4c6238ed10d308be0e68ad2473958da09ac52b3fc8b6265fb23de69b0c6f2909",
+      "sha256": "a76bf68087d925970f9e8079853bc331da62260c275eda898f5d237533587eb3",
       "soname": "libgoo-harfbuzz.so"
     }
   },
@@ -706,11 +719,11 @@
       {
         "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding.",
         "name": "cpal-linear-light",
-        "patchedSha256": "b2cc4e10551ff8e49c0e801c5aea1a7886e7468c5e61770df0804ac322de191c",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-14.3.1-cpal-linear-light.patch",
-        "sha256": "225d5b7e5a656e96ee850f41c662e625d9c29ac518c1b834b3c53b7949358b67",
+        "patchedSha256": "44c68d7ceab1be78b6704e4c84b2793ebe6f5f4f1c713b01a04fbe7dc2f71a74",
+        "path": "tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch",
+        "sha256": "db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d",
         "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463"
+        "upstreamSha256": "db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948"
       },
       {
         "description": "Keep the GIF disposal history pointer inside the allocated frame buffer.",
@@ -810,13 +823,13 @@
   "schema": 4,
   "source": {
     "harfbuzz": {
-      "archiveSha256": "9dae9538aae2ffdf70cec31f2c27bf68e2aaeeae3112688467697d5faf6194f7",
-      "archiveUrl": "https://github.com/harfbuzz/harfbuzz/releases/download/14.3.1/harfbuzz-14.3.1.tar.xz",
+      "archiveSha256": "968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df",
+      "archiveUrl": "https://github.com/harfbuzz/harfbuzz/releases/download/15.0.0/harfbuzz-15.0.0.tar.xz",
       "license": "HarfBuzz Old MIT",
-      "licenseUrl": "https://github.com/harfbuzz/harfbuzz/blob/14.3.1/COPYING",
-      "signedTagCommit": "ab5ecbb83985034a76214ac0b2b833dcd590d774",
-      "tag": "14.3.1",
-      "version": "14.3.1"
+      "licenseUrl": "https://github.com/harfbuzz/harfbuzz/blob/15.0.0/COPYING",
+      "signedTagCommit": "35f656a1a2bab548ea7f54a6dd3fba2b09680d14",
+      "tag": "15.0.0",
+      "version": "15.0.0"
     },
     "stbImage": {
       "commit": "013ac3beddff3dbffafd5177e7972067cd2b5083",

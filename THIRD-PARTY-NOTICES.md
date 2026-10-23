@@ -57,31 +57,32 @@ Copyright (C) GSharp Authors. All rights reserved.
 ## HarfBuzz and hb-gpu text runtime
 
 Goo ships private Linux, Windows, macOS, and Android native payloads built from the
-pinned HarfBuzz 14.3.1 upstream archive with `hb-gpu` enabled:
+pinned HarfBuzz 15.0.0 upstream archive with `hb-gpu` enabled:
 `libgoo-harfbuzz.so` and `libgoo-harfbuzz-gpu.so` on Linux and Android, with
 `goo-harfbuzz.dll` and `goo-harfbuzz-gpu.dll` on Windows, and
 `libgoo-harfbuzz.dylib` and `libgoo-harfbuzz-gpu.dylib` on macOS. They are
 private Goo artifacts, not system-library replacements or a runtime fallback.
 
-- HarfBuzz 14.3.1, including hb-gpu: HarfBuzz Old MIT license.
-- Signed tag commit: `ab5ecbb83985034a76214ac0b2b833dcd590d774`.
+- HarfBuzz 15.0.0, including hb-gpu: HarfBuzz Old MIT license.
+- Signed tag commit: `35f656a1a2bab548ea7f54a6dd3fba2b09680d14`.
 - Source archive SHA-256:
-  `9dae9538aae2ffdf70cec31f2c27bf68e2aaeeae3112688467697d5faf6194f7`.
+  `968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df`.
 - Goo applies the checked-in
-  `tools/Goo.TextNative/patches/harfbuzz-14.3.1-cpal-linear-light.patch`
+  `tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch`
   with SHA-256
-  `225d5b7e5a656e96ee850f41c662e625d9c29ac518c1b834b3c53b7949358b67`.
+  `db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d`.
   It patches `src/hb-gpu-paint.cc` at upstream SHA-256
-  `78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463`
+  `db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948`
   to encode explicit CPAL RGB bytes as linear-light Q15 through a fixed
   256-entry lookup. Alpha and foreground color semantics remain unchanged.
 - The selected hb-gpu GLSL inputs and retained `COPYING` text are vendored at
   `tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/`; the native libraries are
-  built from the pinned upstream archive above.
-- [HarfBuzz 14.3.1 license](https://github.com/harfbuzz/harfbuzz/blob/14.3.1/COPYING)
+  built from the pinned upstream archive above. These GLSL inputs are byte-identical
+  in 15.0.0.
+- [HarfBuzz 15.0.0 license](https://github.com/harfbuzz/harfbuzz/blob/15.0.0/COPYING)
 
-The proof's deterministic color-font fixtures originate from the same pinned
-HarfBuzz test archive. `HarfBuzz-chromacheck-colr.ttf` is covered by the
+The proof's deterministic color-font fixtures originate from the HarfBuzz 14.3.1
+test archive. `HarfBuzz-chromacheck-colr.ttf` is covered by the
 ChromaCheck MIT notice in `tests/Goo.VulkanProof/Assets/Text/ChromaCheck-MIT.txt`.
 `HarfBuzz-adwaita-colrv1.ttf` is derived from the exact upstream fixture by
 changing only its CPAL table from version 0 to version 1 with palette type 1.
