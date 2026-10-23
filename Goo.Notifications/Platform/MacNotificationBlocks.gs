@@ -28,22 +28,22 @@ internal data struct MacNotificationReply {
 }
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationObjectBlock(block nint, value nint)
+internal delegate MacNotificationObjectBlock(block nint, value nint);
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationAuthorizationBlock(block nint, granted uint8, error nint)
+internal delegate MacNotificationAuthorizationBlock(block nint, granted uint8, error nint);
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationCopyBlock(destination nint, source nint)
+internal delegate MacNotificationCopyBlock(destination nint, source nint);
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationDisposeBlock(block nint)
+internal delegate MacNotificationDisposeBlock(block nint);
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationVoidCompletion(block nint)
+internal delegate MacNotificationVoidCompletion(block nint);
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationPresentationCompletion(block nint, options nuint)
+internal delegate MacNotificationPresentationCompletion(block nint, options nuint);
 
 internal class MacNotificationBlockLease : IDisposable {
     private var block nint
@@ -63,10 +63,10 @@ internal class MacNotificationBlockLease : IDisposable {
                 Invoke: if mode == 2 { AuthorizationPointer } else { ObjectPointer },
                 Descriptor: Descriptor, Context: GCHandle.ToIntPtr(handle),
             }, block, false)
-        } catch (Exception) {
+        } catch (error Exception) {
             handle.Free()
             if block != nint(0) { Marshal.FreeHGlobal(block) }
-            throw
+            throw error
         }
     }
 
@@ -99,7 +99,7 @@ internal class MacNotificationBlockLease : IDisposable {
         }
 
         private func State(block nint) MacNotificationBlockLease ->
-            (MacNotificationBlockLease)GCHandle.FromIntPtr(Marshal.PtrToStructure[MacNotificationBlock](block).Context).Target!
+            (GCHandle.FromIntPtr(Marshal.PtrToStructure[MacNotificationBlock](block).Context).Target as MacNotificationBlockLease)!!
 
         private func CopyBlock(destination nint, source nint) {
             let context = GCHandle.ToIntPtr(GCHandle.Alloc(State(source)))

@@ -6,7 +6,7 @@ import System.Runtime.InteropServices
 import System.Threading.Tasks
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate MacNotificationDelegate(receiver nint, selector nint, center nint, value nint, completion nint)
+internal delegate MacNotificationDelegate(receiver nint, selector nint, center nint, value nint, completion nint);
 
 internal class MacNotificationService : NotificationService {
     private let center nint
@@ -167,30 +167,30 @@ internal class MacNotificationService : NotificationService {
         private let TargetClass nint = CreateTargetClass()
 
         @DllImport("/usr/lib/libobjc.A.dylib")
-        private extern func objc_getProtocol(name string) nint;
+        private func objc_getProtocol(name string) nint;
         @DllImport("/usr/lib/libobjc.A.dylib")
-        private extern func class_addProtocol(value nint, protocol nint) uint8;
+        private func class_addProtocol(value nint, protocol nint) uint8;
 
         @DllImport("/usr/lib/libobjc.A.dylib")
-        private extern func objc_getClass(name string) nint;
+        private func objc_getClass(name string) nint;
         @DllImport("/usr/lib/libobjc.A.dylib")
-        private extern func objc_allocateClassPair(parent nint, name string, extra nuint) nint;
+        private func objc_allocateClassPair(parent nint, name string, extra nuint) nint;
         @DllImport("/usr/lib/libobjc.A.dylib")
-        private extern func objc_registerClassPair(value nint);
+        private func objc_registerClassPair(value nint);
         @DllImport("/usr/lib/libobjc.A.dylib")
-        private extern func class_addMethod(value nint, selector nint, callback nint, types string) uint8;
+        private func class_addMethod(value nint, selector nint, callback nint, types string) uint8;
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "sel_registerName")
-        private extern func Sel(name string) nint;
+        private func Sel(name string) nint;
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
-        private extern func Send(value nint, selector nint) nint;
+        private func Send(value nint, selector nint) nint;
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
-        private extern func Send(value nint, selector nint, argument nint) nint;
+        private func Send(value nint, selector nint, argument nint) nint;
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
-        private extern func Send(value nint, selector nint, first nint, second nint) nint;
+        private func Send(value nint, selector nint, first nint, second nint) nint;
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
-        private extern func Send(value nint, selector nint, first nint, second nint, third nint) nint;
+        private func Send(value nint, selector nint, first nint, second nint, third nint) nint;
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
-        private extern func SendText(value nint, selector nint, text string) nint;
+        private func SendText(value nint, selector nint, text string) nint;
 
         internal func Retain(value nint) nint -> if value == nint(0) { value } else { Send(value, Sel("retain")) }
 
