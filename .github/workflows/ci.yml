@@ -1936,4 +1936,4 @@ jobs:
         run: |
           dotnet new install artifacts/android-packages/Goo.Templates.*.nupkg
           dotnet new goo-android --name AndroidStarter --output artifacts/android-starter --application-id org.goo.androidstarter
-          dotnet build artifacts/android-starter/AndroidStarter.csproj -c Release -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build artifacts/android-starter/AndroidStarter.gsproj -c Release -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
