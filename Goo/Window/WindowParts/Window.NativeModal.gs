@@ -25,7 +25,7 @@ internal sealed class NativeModalLease : IDisposable {
     }
 }
 
-/// Hosts owner-modal operations from optional native service packages.
+/// Coordinates first-party native owner lifetimes and modal input.
 public partial class Window {
     private var nativeModal NativeModalLease?
     private var nativeModalFocus WeakReference?
@@ -62,14 +62,20 @@ public partial class Window {
         }
         let lease = NativeModalLease(this, BorrowNativeWindow())
         nativeModal = lease
-        if let focused = input.FocusedNode() { nativeModalFocus = WeakReference(focused) }
-        input.Reset(node, resolver)
-        input.FocusLost(node, resolver)
-        RefreshPlatformInput()
-        accessibility?.MarkDirty()
-        requestRender()
-        status = NativeModalStatus.Accepted
-        return lease
+        try {
+            if let focused = input.FocusedNode() { nativeModalFocus = WeakReference(focused) }
+            input.Reset(node, resolver)
+            input.FocusLost(node, resolver)
+            RefreshPlatformInput()
+            accessibility?.MarkDirty()
+            requestRender()
+            status = NativeModalStatus.Accepted
+            return lease
+        } catch (_ Exception) {
+            nativeModal = nil
+            nativeModalFocus = nil
+            rethrow
+        }
     }
 
     internal func EndNativeModal(lease NativeModalLease) {
