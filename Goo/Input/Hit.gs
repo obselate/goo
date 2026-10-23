@@ -1,6 +1,88 @@
 package Goo
 
+import System
 import System.Collections.Generic
+import System.Numerics
+
+internal class DiagnosticHitIndex {
+  private let nodes List[Node] = List[Node]()
+  private let bounds []Vector4
+
+  internal init(root Node) {
+    if let overlay = Portals.Overlay(root) {
+      let portals = Stacking.Children(overlay)
+      for var i = portals.Count; i > 0; i-- {
+        if Portals.Presented(portals[i - 1]) { collect(portals[i - 1]) }
+      }
+    }
+    collect(root)
+    bounds = [nodes.Count * 4]Vector4
+    if nodes.Count > 0 { build(0, nodes.Count, 1) }
+  }
+
+  private func collect(n Node) {
+    if n.PaintInputHidden { return }
+    let parts = ScrollbarParts.ActiveChildren(n)
+    for var i = parts.Count; i > 0; i-- { collect(parts[i - 1]) }
+    let children = Stacking.Children(n)
+    for var i = children.Count; i > 0; i-- {
+      if !children[i - 1].IsPortal { collect(children[i - 1]) }
+    }
+    if n.HitTestSelf { nodes.Add(n) }
+  }
+
+  private func build(start int32, end int32, index int32) Vector4 {
+    if end - start == 1 {
+      let n = nodes[start]
+      var current Node? = n
+      var transformed = false
+      while let ancestor = current {
+        transformed = transformed || ancestor.HasVisualTransform
+        if ancestor.IsPortal { break }
+        current = ancestor.Parent
+      }
+      bounds[index] = if transformed {
+        Vector4(Single.NegativeInfinity, Single.NegativeInfinity, Single.PositiveInfinity, Single.PositiveInfinity)
+      } else { Vector4(n.Rect.X, n.Rect.Y, n.Rect.X + n.Rect.W, n.Rect.Y + n.Rect.H) }
+    } else {
+      let middle = start + (end - start) / 2
+      let left = build(start, middle, index * 2)
+      let right = build(middle, end, index * 2 + 1)
+      bounds[index] = Vector4(MathF.Min(left.X, right.X), MathF.Min(left.Y, right.Y),
+        MathF.Max(left.Z, right.Z), MathF.Max(left.W, right.W))
+    }
+    return bounds[index]
+  }
+
+  internal func Hit(x float32, y float32) Node? -> if nodes.Count == 0 { nil } else { find(0, nodes.Count, 1, x, y) }
+
+  private func find(start int32, end int32, index int32, x float32, y float32) Node? {
+    let box = bounds[index]
+    if !(x >= box.X && y >= box.Y && x < box.Z && y < box.W) { return nil }
+    if end - start == 1 {
+      let n = nodes[start]
+      let point = TransformGeometry.WindowToNode(n, x, y)
+      if !point.Valid || !hitsMapped(n, point.X, point.Y) { return nil }
+      var current Node? = n
+      var child Node? = nil
+      while let ancestor = current {
+        let mapped = TransformGeometry.WindowToNode(ancestor, x, y)
+        if !mapped.Valid || !hitCanTraverseMapped(ancestor, mapped.X, mapped.Y) { return nil }
+        if let descendant = child {
+          if !ScrollbarParts.ActiveChildren(ancestor).Contains(descendant)
+            && !hitCanTraverseChildrenMapped(ancestor, mapped.X, mapped.Y) { return nil }
+        }
+        if ancestor.IsPortal { break }
+        child = ancestor
+        current = ancestor.Parent
+      }
+      return n
+    }
+    let middle = start + (end - start) / 2
+    if let hit = find(start, middle, index * 2, x, y) { return hit }
+    return find(middle, end, index * 2 + 1, x, y)
+  }
+}
 
 private func hitWithinMapped(n Node, x float32, y float32) bool -> !n.PaintInputHidden && n.Rect.Contains(x, y)
 
