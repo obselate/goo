@@ -76,6 +76,8 @@ over core source. Use `--fix` only on the intended files. GL0005 remains a manua
 cannot distinguish intentional fail-fast assertions. Public API documentation
 is enforced by `Goo.ApiContractTests`, which covers supplemented documentation
 and avoids treating public test fixtures as product API.
+The API snapshot marks nullable reference types with `?`, including array elements
+and generic arguments. Value types and non-null reference types keep their existing spelling.
 
 Edit the explanatory input, window, tree, layout, and accessibility guides in
 [`tools/Goo.ApiDocs/Guides`](tools/Goo.ApiDocs/Guides). Member descriptions belong
