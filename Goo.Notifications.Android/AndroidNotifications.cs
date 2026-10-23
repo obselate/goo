@@ -184,7 +184,8 @@ internal sealed class AndroidNotificationService : NotificationService
 
             using var intent = new Intent(activity, activity.Class);
             intent.SetAction("Goo.Android.Notification");
-            intent.SetData(global::Android.Net.Uri.Parse($"goo-notification://{activity.PackageName}/{Uri.EscapeDataString(channelId)}/{Uri.EscapeDataString(message.Id)}"));
+            intent.SetData(global::Android.Net.Uri.Parse(
+                $"goo-notification://{activity.PackageName}/{Uri.EscapeDataString(message.Id)}"));
             intent.PutExtra("Goo.NotificationId", message.Id);
             intent.PutExtra("Goo.ActionId", "");
             intent.PutExtra("Goo.Payload", message.Payload);
@@ -197,7 +198,7 @@ internal sealed class AndroidNotificationService : NotificationService
             builder.SetContentIntent(click);
             builder.SetAutoCancel(true);
             using var notification = builder.Build();
-            manager.Notify(Tag(message.Id), 0, notification);
+            manager.Notify(message.Id, 0, notification);
             return Task.FromResult(Result(NotificationStatus.Accepted, NotificationPermission.Granted,
                 NotificationDelivery.Accepted, message.Id));
         }
@@ -215,12 +216,11 @@ internal sealed class AndroidNotificationService : NotificationService
         try
         {
             var delivery = NotificationDelivery.Removed;
-            var tag = Tag(id);
             foreach (var entry in manager.GetActiveNotifications()!)
             {
                 using (entry)
                 {
-                    if (entry.Tag == tag && entry.Id == 0)
+                    if (entry.Tag == id && entry.Id == 0)
                         delivery = NotificationDelivery.PresentInCenter;
                 }
             }
@@ -239,7 +239,7 @@ internal sealed class AndroidNotificationService : NotificationService
         NotificationMessage.ValidateId(id);
         try
         {
-            manager.Cancel(Tag(id), 0);
+            manager.Cancel(id, 0);
             return Task.FromResult(Result(NotificationStatus.Accepted, QueryPermission().Permission,
                 NotificationDelivery.Removed, id));
         }
@@ -262,8 +262,6 @@ internal sealed class AndroidNotificationService : NotificationService
         pending?.SetResult(Result(NotificationStatus.Failed, error: "The notification service closed during a permission request."));
         pending = null;
     }
-
-    private string Tag(string id) => $"Goo:{channelId.Length}:{channelId}:{id}";
 
     private static NotificationStatus PermissionStatus(NotificationPermission permission) => permission switch
     {
