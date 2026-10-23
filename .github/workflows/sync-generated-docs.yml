@@ -40,16 +40,12 @@ jobs:
       - name: Regenerate documentation
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
-          dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
-            --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
-            --output docs/api-app-host --source Goo.AppHost
           python3 plugins/goo/scripts/sync_docs.py .
 
       - name: Commit generated documentation
         run: |
-          git add -- docs/api docs/api-app-host plugins/goo/reference
+          git add -- docs/api plugins/goo/reference
           if git diff --cached --quiet; then
             exit 0
           fi

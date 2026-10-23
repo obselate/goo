@@ -97,6 +97,7 @@ ctor|Goo.VectorStroke|public|(width:System.Double,paint:Goo.VectorPaint,cap:Goo.
 ctor|Goo.VirtualState|public|()
 ctor|Goo.Virtual|public|(source:Goo.VirtualSource)
 ctor|Goo.WindowBackdropMask|public|(width:System.Int32,height:System.Int32,alpha:System.Byte[])
+ctor|Goo.WindowPlacement|public|()
 ctor|Goo.Window|public|()
 enum-underlying|Goo.AccessibilityAction|System.Int32
 enum-underlying|Goo.AccessibilityChecked|System.Int32
@@ -104,6 +105,7 @@ enum-underlying|Goo.AccessibilityLive|System.Int32
 enum-underlying|Goo.AccessibilityOrientation|System.Int32
 enum-underlying|Goo.AccessibilityRole|System.Int32
 enum-underlying|Goo.ActivationPostStatus|System.Int32
+enum-underlying|Goo.ActivationReadStatus|System.Int32
 enum-underlying|Goo.AlignContent|System.Int32
 enum-underlying|Goo.AlignItems|System.Int32
 enum-underlying|Goo.AlignSelf|System.Int32
@@ -163,6 +165,7 @@ enum-underlying|Goo.WindowCapabilities|System.Int32
 enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
 enum-underlying|Goo.WindowFramePacing|System.Int32
 enum-underlying|Goo.WindowOperationResult|System.Int32
+enum-underlying|Goo.WindowPlacementFields|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
 enum-underlying|Goo.WindowsBackdropMaterial|System.Int32
 enum|Goo.AccessibilityAction|Activate|1
@@ -228,6 +231,8 @@ enum|Goo.ActivationPostStatus|Closed|2
 enum|Goo.ActivationPostStatus|NotInitialized|1
 enum|Goo.ActivationPostStatus|QueueFull|3
 enum|Goo.ActivationPostStatus|TooLarge|4
+enum|Goo.ActivationReadStatus|Accepted|0
+enum|Goo.ActivationReadStatus|Rejected|1
 enum|Goo.AlignContent|Center|1
 enum|Goo.AlignContent|FlexEnd|2
 enum|Goo.AlignContent|FlexStart|0
@@ -695,6 +700,11 @@ enum|Goo.WindowOperationResult|Accepted|0
 enum|Goo.WindowOperationResult|Closed|1
 enum|Goo.WindowOperationResult|Failed|3
 enum|Goo.WindowOperationResult|Unsupported|2
+enum|Goo.WindowPlacementFields|FullscreenDisplay|8
+enum|Goo.WindowPlacementFields|None|0
+enum|Goo.WindowPlacementFields|NormalSize|1
+enum|Goo.WindowPlacementFields|Position|2
+enum|Goo.WindowPlacementFields|State|4
 enum|Goo.WindowState|Fullscreen|3
 enum|Goo.WindowState|Maximized|2
 enum|Goo.WindowState|Minimized|1
@@ -733,6 +743,7 @@ method|Goo.AccessibilityId|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.AccessibilityId|ToString|virtual|public|generic:|()->System.String
 method|Goo.AccessibilityId|op_Equality|static|public|generic:|(left:Goo.AccessibilityId,right:Goo.AccessibilityId)->System.Boolean
 method|Goo.AccessibilityId|op_Inequality|static|public|generic:|(left:Goo.AccessibilityId,right:Goo.AccessibilityId)->System.Boolean
+method|Goo.ActivationArguments|Read|static|public|generic:|(arguments:System.Collections.Generic.IReadOnlyList`1<System.String>,workingDirectory:System.String)->Goo.ActivationReadResult
 method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
 method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
 method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
@@ -950,6 +961,7 @@ method|Goo.PathBuilder|MoveTo|instance|public|generic:|(x:System.Double,y:System
 method|Goo.PathBuilder|Polyline|instance|public|generic:|(points:Goo.Point[],close:System.Boolean)->Goo.PathBuilder
 method|Goo.PathBuilder|QuadraticTo|instance|public|generic:|(controlX:System.Double,controlY:System.Double,x:System.Double,y:System.Double)->Goo.PathBuilder
 method|Goo.PathBuilder|Reset|instance|public|generic:|()->Goo.PathBuilder
+method|Goo.Placement|Restore|static|public|generic:|(window:Goo.Window,saved:Goo.WindowPlacement)->Goo.WindowPlacementResult
 method|Goo.PlatformInput|BeginDrag|instance|public|generic:|(source:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
 method|Goo.PlatformInput|CancelComposition|instance|public|generic:|()->System.Boolean
 method|Goo.PlatformInput|CancelDrag|instance|public|generic:|()->System.Boolean
@@ -1207,8 +1219,10 @@ method|Goo.WindowsBackdropOptions|GetHashCode|virtual|public|generic:|()->System
 method|Goo.WindowsBackdropOptions|ToString|virtual|public|generic:|()->System.String
 method|Goo.WindowsBackdropOptions|op_Equality|static|public|generic:|(left:Goo.WindowsBackdropOptions,right:Goo.WindowsBackdropOptions)->System.Boolean
 method|Goo.WindowsBackdropOptions|op_Inequality|static|public|generic:|(left:Goo.WindowsBackdropOptions,right:Goo.WindowsBackdropOptions)->System.Boolean
+method|Goo.Window|ApplyPlacement|instance|public|generic:|(value:Goo.WindowPlacement)->Goo.WindowPlacementResult
 method|Goo.Window|Attach|instance|public|generic:|(externalHost:Goo.EmbeddedWindowHost)->Goo.Window
 method|Goo.Window|CancelFileDialog|instance|public|generic:|()->System.Boolean
+method|Goo.Window|CapturePlacement|instance|public|generic:|()->Goo.WindowPlacementResult
 method|Goo.Window|ConfigureApplication|static|public|generic:|(name:System.String,version:System.String,identifier:System.String)->System.Void
 method|Goo.Window|DragRegion|static|public|generic:|(region:Goo.Container)->Goo.Container
 method|Goo.Window|GetClipboardFormats|instance|public|generic:|()->Goo.ClipboardFormats
@@ -1331,6 +1345,9 @@ property|Goo.Accessibility|Role|Goo.AccessibilityRole|instance|get:public,init:p
 property|Goo.Accessibility|Selected|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|SizeOfSet|System.Nullable`1<System.Int32>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Value|System.String|instance|get:public,init:public|index:()
+property|Goo.ActivationReadResult|Activation|Goo.ApplicationActivation?|instance|get:public|index:()
+property|Goo.ActivationReadResult|Error|System.String|instance|get:public|index:()
+property|Goo.ActivationReadResult|Status|Goo.ActivationReadStatus|instance|get:public|index:()
 property|Goo.Anim`1|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|IsPaused|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Running|System.Boolean|instance|get:public|index:()
@@ -1637,7 +1654,7 @@ property|Goo.Shape|StrokeEnd|System.Double|instance|get:public,init:public|index
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeStart|System.Double|instance|get:public,init:public|index:()
 property|Goo.SingleInstanceResult|Error|System.String|instance|get:public|index:()
-property|Goo.SingleInstanceResult|Lease|System.IDisposable|instance|get:public|index:()
+property|Goo.SingleInstanceResult|Lease|System.IDisposable?|instance|get:public|index:()
 property|Goo.SingleInstanceResult|Status|Goo.SingleInstanceStatus|instance|get:public|index:()
 property|Goo.SoundPlayback|IsPlaying|System.Boolean|instance|get:public|index:()
 property|Goo.SoundSource|Channels|System.Int32|instance|get:public,set:private|index:()
@@ -1914,6 +1931,16 @@ property|Goo.WindowMetrics|FramebufferHeight|System.Int32|instance|get:public,in
 property|Goo.WindowMetrics|FramebufferWidth|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalWidth|System.Int32|instance|get:public,init:public|index:()
+property|Goo.WindowPlacementResult|AppliedFields|Goo.WindowPlacementFields|instance|get:public|index:()
+property|Goo.WindowPlacementResult|Error|System.String|instance|get:public|index:()
+property|Goo.WindowPlacementResult|Placement|Goo.WindowPlacement?|instance|get:public|index:()
+property|Goo.WindowPlacementResult|Status|Goo.WindowOperationResult|instance|get:public|index:()
+property|Goo.WindowPlacement|DisplayBounds|Goo.ElementRect|instance|get:public,init:public|index:()
+property|Goo.WindowPlacement|DisplayName|System.String|instance|get:public,init:public|index:()
+property|Goo.WindowPlacement|DisplayScale|System.Double|instance|get:public,init:public|index:()
+property|Goo.WindowPlacement|Fields|Goo.WindowPlacementFields|instance|get:public,init:public|index:()
+property|Goo.WindowPlacement|NormalBounds|Goo.ElementRect|instance|get:public,init:public|index:()
+property|Goo.WindowPlacement|State|Goo.WindowState|instance|get:public,init:public|index:()
 property|Goo.WindowPresentationAccepted|AcceptedTicks|System.Int64|instance|get:public,init:public|index:()
 property|Goo.WindowPresentationAccepted|FrameIndex|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.WindowTimer|IsActive|System.Boolean|instance|get:public|index:()
@@ -1985,7 +2012,10 @@ type|Goo.AccessibilityRole|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AccessibilityTree|interface|public|base:-|interfaces:|generic:
 type|Goo.AccessibilityValue|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Accessibility|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.ActivationArguments|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ActivationPostStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.ActivationReadResult|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.ActivationReadStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AlignContent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AlignItems|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AlignSelf|enum|public|base:System.Enum|interfaces:|generic:
@@ -2087,6 +2117,7 @@ type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|gen
 type|Goo.Overflow|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PanelTransform|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.PanelTransform>|generic:
 type|Goo.PathBuilder|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.Placement|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.PlatformInput|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.PlatformPreferences|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.PlatformPreferences>|generic:
 type|Goo.PointerButtons|enum|public|base:System.Enum|interfaces:|generic:
@@ -2175,6 +2206,9 @@ type|Goo.WindowDisplay|class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowMetrics>|generic:
 type|Goo.WindowOperationResult|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowPlacementFields|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowPlacementResult|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.WindowPlacement|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowPresentationAccepted|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowPresentationAccepted>|generic:
 type|Goo.WindowState|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowTimer|class|public|base:System.Object|interfaces:System.IDisposable|generic:
