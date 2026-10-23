@@ -66,16 +66,20 @@ Subscribe before opening the first window. Check the returned status.
 - Closing the last window clears pending requests.
 - The same owner thread can initialize a new delivery lifetime.
 - Hosts and optional packages own native associations, IPC and notifications.
+- macOS cold and warm file or URL opens use this event.
+- Native document batches stay separate from drag/drop into a window.
+- Declare URL schemes and document types in the app bundle.
 
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
 | NotInitialized | Call InitializeApplicationActivation first. |
 | Closed | All windows closed. |
-| QueueFull | 64 requests are pending. |
-| TooLarge | More than 256 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
+| QueueFull | 1024 requests are pending. |
+| TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
 
 Null data and relative URIs are invalid arguments.
+Native requests outside these limits are dropped.
 
 ## Visibility, activation and stacking
 
@@ -746,7 +750,7 @@ Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post 
 
 ### `ApplicationActivated`
 
-Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection.
+Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection. The queue retains 1024 requests, with 4096 arguments or documents per request. Text is limited to 64 KiB per UTF-8 string and 1 MiB per request. Native requests outside these limits, or received before initialization or after close, are dropped.
 
 ### `DisplayChanged`
 
@@ -873,11 +877,11 @@ Queues an action for the UI thread.
 
 ### `PostApplicationActivation(ApplicationActivation)`
 
-Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 256 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
+Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
 
 - `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
 
-Returns: Accepted, NotInitialized, Closed, QueueFull at 64 pending requests, or TooLarge.
+Returns: Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
 
 ### `Pump(float64)`
 
