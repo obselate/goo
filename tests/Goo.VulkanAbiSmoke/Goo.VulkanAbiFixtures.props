@@ -3,5 +3,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)../Shared/FixtureAssemblyInfo.gs" Link="FixtureAssemblyInfo.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)TextShapingFixtures.gs" Link="TextShapingFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)DescriptorLifetimeFixtures.gs" Link="DescriptorLifetimeFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DescriptorLifetimeRegression.gs" Link="DescriptorLifetimeRegression.gs" />
   </ItemGroup>
 </Project>

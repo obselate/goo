@@ -1,15 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>GooVulkanAbiSmoke</RootNamespace>
     <AssemblyName>Goo.VulkanAbiSmoke</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Nullable>enable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="TextShapingFixtures.gs;DescriptorLifetimeFixtures.gs;DescriptorLifetimeRegression.gs" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
                       AdditionalProperties="Configuration=VulkanAbiTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.VulkanAbiFixtures.props" />
     <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
