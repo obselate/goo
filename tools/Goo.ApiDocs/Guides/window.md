@@ -96,20 +96,22 @@ rebuild or rebind can resume vector playback when the preference permits it.
 Embedded adapters publish snapshots with `EmbeddedWindowHost.UpdatePreferences`,
 before or after attaching the window.
 
-Desktop theme follows SDL system theme notifications. The desktop event loop also
-refreshes available preferences at most once per second. Windows reports client
-area animation, high contrast, the DWM colorization accent and whether the selected
-sound scheme is not `No Sounds`. macOS reports reduced motion, increased contrast,
-`NSColor.controlAccentColor` in sRGB and the global `com.apple.sound.uiaudio.enabled`
-preference. Linux reads GNOME `event-sounds` and the appearance `accent-color` and
-`contrast` settings through the settings portal when exposed, and processes its
-change notifications. KDE has no separate sound preference reader. Desktop text
-scale remains unknown when the backend cannot report it. Android reports theme,
-font scale, disabled animations, the theme's `colorAccent`, high text contrast
-and `SOUND_EFFECTS_ENABLED` on attach, resume and configuration changes. Android
-also observes changes to sound and high text contrast settings. Other unsupported
-preferences remain unknown. Applications choose whether to play UI or event sounds from
-`EventSoundsEnabled`. It does not control media playback or system volume.
+Desktop theme follows SDL notifications. Other desktop preferences refresh at
+most once per second. Portal setting changes also trigger a refresh.
+
+| Platform | Available preference sources |
+| --- | --- |
+| Windows | Client-area animation, high contrast, DWM accent and the selected sound scheme. |
+| macOS | Reduced motion, increased contrast, `NSColor.controlAccentColor` in sRGB and `com.apple.sound.uiaudio.enabled`. |
+| Linux | Portal appearance `accent-color` and `contrast`, plus GNOME `event-sounds` when exposed. |
+| Android | Theme, font scale, disabled animations, theme `colorAccent`, high text contrast and `SOUND_EFFECTS_ENABLED`. |
+
+Android refreshes on attach, resume and configuration changes. It also observes
+sound and high text contrast setting changes. Desktop text scale stays unknown
+when the backend cannot report it.
+
+Apps choose whether to play UI sounds from `EventSoundsEnabled`.
+This preference does not control media playback or volume.
 
 ## Native owned and modal windows
 
