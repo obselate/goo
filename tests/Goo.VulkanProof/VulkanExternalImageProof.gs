@@ -258,6 +258,7 @@ internal unsafe partial class VulkanExternalImageProof {
             Capture(window)
             window.RequestClose()
             WindowReadbackTestFixture.ForceRender(window, 0.0)
+            PumpUntil(window, () -> !window.IsOpen)
             Require(!window.IsOpen && callbacks == 1, "close did not complete the frame once")
             Require(status == ExternalFrameStatus.Released, "close did not return a sampled frame")
             Require(producer.OriginalHandleOpen, "close took ownership of the producer handle")

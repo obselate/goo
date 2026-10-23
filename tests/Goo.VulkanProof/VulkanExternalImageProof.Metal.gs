@@ -195,6 +195,7 @@ internal unsafe partial class VulkanExternalImageProof {
             }) == ExternalImageStatus.Success, "pending Metal frame was not published")
             window.RequestClose()
             WindowReadbackTestFixture.ForceRender(window, 0.0)
+            PumpUntil(window, () -> !window.IsOpen)
             Require(!window.IsOpen && callbacks == 1 && result?.Status == ExternalFrameStatus.Closed,
                 "close did not return the pending Metal frame once")
             let closed = result!!

@@ -69,7 +69,7 @@ internal unsafe partial class VulkanImageResources : IDisposable {
     samplerInfo.addressModeV = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.maxLod = 1.0F
-    samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
+    samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK
     let createSampler = dispatch.vkCreateSampler
     var sampler VkSampler = 0uL
     if createSampler(device, &samplerInfo, nil, &sampler) != VkConstants.VK_SUCCESS || sampler == 0uL {
