@@ -54,6 +54,7 @@ public sealed class MainActivity : GooActivity
 
     private async void RunNativeDialogSmoke(int attempt)
     {
+        if (IsFinishing || IsDestroyed) return;
         if (!GooView.Window.IsVisible)
         {
             if (attempt >= 100)
@@ -66,6 +67,7 @@ public sealed class MainActivity : GooActivity
 
     private void RunInputSmoke(int attempt)
     {
+        if (IsFinishing || IsDestroyed) return;
         if (AndroidInputSmoke.TryRun(GooView))
             return;
         if (attempt >= 100)
@@ -75,6 +77,7 @@ public sealed class MainActivity : GooActivity
 
     private void RunMenuSmoke(int attempt)
     {
+        if (IsFinishing || IsDestroyed) return;
         if (AndroidNativeMenuSmoke.TryRun(GooView,
             Intent?.GetBooleanExtra("goo.native_menu_destroy", false) == true ? this : null)) return;
         if (attempt >= 100) throw new InvalidOperationException("Android native menu owner did not attach.");
@@ -83,6 +86,7 @@ public sealed class MainActivity : GooActivity
 
     private void RunPopupSmoke(int attempt)
     {
+        if (IsFinishing || IsDestroyed) return;
         if (AndroidPopupSmoke.TryRun(GooView))
             return;
         if (attempt >= 100)
