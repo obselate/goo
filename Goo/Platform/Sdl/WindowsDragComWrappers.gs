@@ -155,7 +155,7 @@ internal class WindowsDragSource {
   }
 
   internal func Continue(escape bool, keys uint32) int32 {
-    Console.WriteLine("drag-query " + escape.ToString() + " " + Cancelled.ToString() + " " + binding.Host.IsClosing.ToString() + " " + keys.ToString())
+    Console.WriteLine("drag-query " + Environment.TickCount64.ToString() + " " + escape.ToString() + " " + Cancelled.ToString() + " " + binding.Host.IsClosing.ToString() + " " + keys.ToString() + " " + WindowsDragComWrappers.KeyState(1).ToString())
     if escape || Cancelled || binding.Host.IsClosing { return int32(0x00040101u) }
     return if (keys & 1u) == 0u { int32(0x00040100u) } else { 0 }
   }

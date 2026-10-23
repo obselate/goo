@@ -122,6 +122,7 @@ internal unsafe partial class SdlHost {
 
   private func StartWindowsNativeDrag(binding NativeDragBinding) DataTransferStatus {
     let effects = binding.Effects
+    Console.WriteLine("drag-setup " + Environment.TickCount64.ToString())
     if windowsTracking != nil { throw IOException("Another native drag is active on this thread") }
     if WindowsDragComWrappers.KeyState(1) >= int16(0) { throw NotSupportedException("Native drag requires a current primary mouse gesture") }
     let timerWindow = nint(SDL.GetPointerProperty(SDL.GetWindowProperties(window), "SDL.window.win32.hwnd", nil))
@@ -144,6 +145,7 @@ internal unsafe partial class SdlHost {
       timer = SetWindowsDragTimer(timerWindow, nuint(WindowsDragTimerId), WindowsDragServiceMilliseconds, windowsTimerAddress)
       if timer == nuint(0) { throw IOException("Cannot start the native drag service timer: " + Marshal.GetLastPInvokeError().ToString()) }
       binding.Started = true
+      Console.WriteLine("drag-modal " + Environment.TickCount64.ToString())
       var selected uint32
       let status = WindowsDragComWrappers.Start(binding.WindowsObject, source, uint32(effects), out selected)
       let outcome = if status == int32(0x00040100u) { DataTransferStatus.Success }
