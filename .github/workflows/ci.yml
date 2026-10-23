@@ -23,6 +23,7 @@ env:
   GOO_LINUX_APT_PACKAGES: >-
     binutils clang cmake curl ninja-build pkg-config zlib1g-dev
     fonts-dejavu-core fonts-noto-color-emoji
+    libcanberra0 sound-theme-freedesktop
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
@@ -787,6 +788,7 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
             artifacts/audio-nativeaot/Goo.AudioSmoke
+          CANBERRA_DRIVER=null GOO_SYSTEM_SOUND_SMOKE=1 artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Pack and validate native accessibility runtimes
         run: |

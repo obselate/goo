@@ -194,3 +194,42 @@ Gets the interleaved channel count, one or two.
 ### `SampleRate`
 
 Gets frames per second, from 8000 through 192000.
+
+## `SystemSound`
+
+Source:
+
+- [`SystemSounds.gs`](../../Goo.Audio/Audio/SystemSounds.gs)
+
+Identifies a platform UI sound, not an application audio cue.
+
+### Values
+
+- `Click`
+- `Alert`
+
+## `SystemSoundStatus`
+
+Source:
+
+- [`SystemSounds.gs`](../../Goo.Audio/Audio/SystemSounds.gs)
+
+Describes whether the platform accepted a system sound request.
+
+### Values
+
+- `Queued`
+- `Unsupported`
+- `NativeFailure`
+
+## `SystemSounds`
+
+Source:
+
+- [`SystemSounds.gs`](../../Goo.Audio/Audio/SystemSounds.gs)
+
+Plays optional UI feedback through platform sound APIs without opening a SoundPlayer.
+
+### `TryPlay(SystemSound)`
+
+Requests a platform click or alert. Queued does not guarantee audible output. Android and unavailable platform APIs return Unsupported. Invalid sound values throw.

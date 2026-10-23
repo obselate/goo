@@ -295,6 +295,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.SoundSource.#ctor(System.Int32,System.Int32,System.Single[])",
         "M:Goo.SoundSource.FromWav(System.Byte[])",
         "M:Goo.SoundSource.LoadWav(System.IO.Stream)",
+        "M:Goo.SystemSounds.TryPlay(Goo.SystemSound)",
         "M:Goo.Style.#ctor",
         "M:Goo.Svg.SvgParseException.#ctor(System.String,System.Exception)",
         "M:Goo.Svg.Svg.Parse(System.String)",

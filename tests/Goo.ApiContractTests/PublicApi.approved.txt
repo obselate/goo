@@ -149,6 +149,8 @@ enum-underlying|Goo.SoundPlayStatus|System.Int32
 enum-underlying|Goo.SoundPlaybackStatus|System.Int32
 enum-underlying|Goo.StrokeCap|System.Int32
 enum-underlying|Goo.StrokeJoin|System.Int32
+enum-underlying|Goo.SystemSoundStatus|System.Int32
+enum-underlying|Goo.SystemSound|System.Int32
 enum-underlying|Goo.SystemTheme|System.Int32
 enum-underlying|Goo.TextAffinity|System.Int32
 enum-underlying|Goo.TextAlign|System.Int32
@@ -571,6 +573,11 @@ enum|Goo.StrokeCap|Square|2
 enum|Goo.StrokeJoin|Bevel|2
 enum|Goo.StrokeJoin|Miter|0
 enum|Goo.StrokeJoin|Round|1
+enum|Goo.SystemSoundStatus|NativeFailure|2
+enum|Goo.SystemSoundStatus|Queued|0
+enum|Goo.SystemSoundStatus|Unsupported|1
+enum|Goo.SystemSound|Alert|1
+enum|Goo.SystemSound|Click|0
 enum|Goo.SystemTheme|Dark|2
 enum|Goo.SystemTheme|Light|1
 enum|Goo.SystemTheme|Unknown|0
@@ -1026,6 +1033,7 @@ method|Goo.SoundSource|LoadWav|static|public|generic:|(stream:System.IO.Stream)-
 method|Goo.Svg.Svg|Load|static|public|generic:|(path:System.String)->Goo.VectorAsset
 method|Goo.Svg.Svg|Load|static|public|generic:|(stream:System.IO.Stream)->Goo.VectorAsset
 method|Goo.Svg.Svg|Parse|static|public|generic:|(source:System.String)->Goo.VectorAsset
+method|Goo.SystemSounds|TryPlay|static|public|generic:|(sound:Goo.SystemSound)->Goo.SystemSoundStatus
 method|Goo.TextCandidateEvent|Deconstruct|instance|public|generic:|(out Candidates:System.Collections.Generic.IReadOnlyList`1<System.String>&,out SelectedCandidate:System.Int32&,out Horizontal:System.Boolean&)->System.Void
 method|Goo.TextCandidateEvent|Equals|instance|public|generic:|(other:Goo.TextCandidateEvent)->System.Boolean
 method|Goo.TextCandidateEvent|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
@@ -2126,6 +2134,9 @@ type|Goo.StrokeJoin|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Style|class|public|base:System.Object|interfaces:|generic:
 type|Goo.Svg.SvgParseException|sealed-class|public|base:System.FormatException|interfaces:|generic:
 type|Goo.Svg.Svg|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SystemSoundStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.SystemSounds|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SystemSound|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SystemTheme|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAffinity|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.TextAlign|enum|public|base:System.Enum|interfaces:|generic:
