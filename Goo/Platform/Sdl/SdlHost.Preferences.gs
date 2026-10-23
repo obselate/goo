@@ -17,6 +17,7 @@ internal unsafe partial class SdlHost {
 
   private func RefreshPreferences(force bool) {
     if disposed { return }
+    PollPreferenceSignals()
     let now = Stopwatch.GetTimestamp()
     if !force && now < nextPreferencesTicks { return }
     nextPreferencesTicks = now + Stopwatch.Frequency
@@ -27,6 +28,7 @@ internal unsafe partial class SdlHost {
     }
     let value = if OperatingSystem.IsWindows() { ReadWindowsPreferences(theme) }
       else if OperatingSystem.IsMacOS() { ReadMacPreferences(theme) }
+      else if OperatingSystem.IsLinux() { ReadLinuxPreferences(theme) }
       else { PlatformPreferences{Theme: theme} }
     if preferences == value { return }
     preferences = value
