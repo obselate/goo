@@ -12,14 +12,18 @@ internal class NativeFilePaths {
     internal const MaxUtf8Bytes int32 = 131072
 
     internal func Add(paths List[string], path string, ref units int32) {
+      Validate(path, paths.Count, ref units)
+      paths.Add(path)
+    }
+
+    internal func Validate(path string, count int32, ref units int32) {
       if path.IndexOf(char(0)) >= 0 || !Path.IsPathFullyQualified(path) {
         throw InvalidDataException("File paths must be absolute and contain no NUL")
       }
-      if paths.Count >= MaxCount || path.Length > MaxPathUnits || path.Length > MaxTotalUnits - units {
+      if count >= MaxCount || path.Length > MaxPathUnits || path.Length > MaxTotalUnits - units {
         throw NativePathLimitException("File list exceeds its path-count or text budget")
       }
       units += path.Length
-      paths.Add(path)
     }
   }
 }

@@ -11,8 +11,14 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Goo\Goo.gsproj" />
-    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" />
+    <ProjectReference Include="..\..\Goo\Goo.gsproj"
+                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj"
+                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)"
+                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
+    <PackageReference Include="Goo.NativeMenus" VersionOverride="$(GooReleaseVersion)"
+                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

@@ -6,6 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Shared/PrimitiveScene.gs" Link="PrimitiveScene.gs" />
+    <Compile Include="../Shared/ClipboardDataSmoke.gs" Link="ClipboardDataSmoke.gs" />
+    <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="Always" />
     <PackageReference Include="Goo" Version="$(GooReleaseVersion)"
                       Condition="'$(GooUseProjectReference)' != 'true'" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
