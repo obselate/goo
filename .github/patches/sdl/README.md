@@ -100,3 +100,14 @@ The fixture checks the actual xdg-surface listener owner to prevent silent
 libdecor fallback. The runner preloads the exact supplied SDL library even when
 its directory has no SONAME symlink. Use `--xdg-only` for payloads built without
 libdecor support.
+
+`wayland-popup-grab.patch` associates native button, key and touch timestamps with
+their Wayland seat and originating serial. `Goo_ConfigurePopup` configures an
+SDL popup before show, and its initial xdg_popup role takes the explicit grab
+before mapping. A nested menu inherits only an active parent's grab. Missing
+input and removed seats return failure instead of opening an ungrabbed menu.
+The same patch carries the anchor rectangle, side and constraints through the
+SDL positioner and reposition paths. Tooltip surfaces remain ungrabbed.
+`test_sdl_popup_handlers.py` compiles the patched handlers and checks exact
+event-to-seat selection and nested grab state. `test_sdl_popup.py` exercises
+the bridge against the built library under an isolated compositor.

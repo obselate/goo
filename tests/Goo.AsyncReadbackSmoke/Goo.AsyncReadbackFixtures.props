@@ -12,5 +12,7 @@
              Link="ProfilerSmoke.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)WindowActivationSmoke.gs"
              Link="WindowActivationSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PopupWindowSmoke.gs"
+             Link="PopupWindowSmoke.gs" />
   </ItemGroup>
 </Project>

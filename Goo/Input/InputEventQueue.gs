@@ -9,6 +9,7 @@ internal data struct QueuedInputEvent {
   internal var IsPointer bool
   internal var IsFocusLost bool
   internal var IsFocusGained bool
+  internal var NativeTimestamp uint64
   internal var Pointer QueuedPointerEvent
   internal var PointerFrame ([]QueuedPointerEvent)?
   internal var PointerFrameCount int32
@@ -26,7 +27,7 @@ internal class InputEventQueue {
     if received.ReceivedTime == 0.0 {
       received.ReceivedTime = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
     }
-    events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: received })
+    events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: received, NativeTimestamp: PopupInputContext.Timestamp })
   }
 
   internal func AddPointerFrame(samples ReadOnlySpan[QueuedPointerEvent], scale float32) {
@@ -44,7 +45,7 @@ internal class InputEventQueue {
         buffer[i] = sample
       }
       events.Enqueue(QueuedInputEvent{
-        IsPointer: true, PointerFrame: buffer, PointerFrameCount: samples.Length,
+        IsPointer: true, PointerFrame: buffer, PointerFrameCount: samples.Length, NativeTimestamp: PopupInputContext.Timestamp,
       })
       queued = true
     } finally {
@@ -53,7 +54,7 @@ internal class InputEventQueue {
   }
 
   internal func Add(value KeyboardEvent) ->
-    events.Enqueue(QueuedInputEvent{ Keyboard: value })
+    events.Enqueue(QueuedInputEvent{ Keyboard: value, NativeTimestamp: PopupInputContext.Timestamp })
 
   internal func AddFocusLost() -> events.Enqueue(QueuedInputEvent{ IsFocusLost: true })
   internal func AddFocusGained() -> events.Enqueue(QueuedInputEvent{ IsFocusGained: true })
