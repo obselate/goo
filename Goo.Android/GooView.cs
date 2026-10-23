@@ -17,6 +17,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     private readonly Java.Lang.Runnable scheduleFrame;
     private readonly Choreographer choreographer;
     private readonly InputMethodManager inputMethod;
+    private readonly GooAccessibilityProvider accessibility;
     private readonly object wakeGate = new();
     private bool framePosted;
     private bool resumed = true;
@@ -35,6 +36,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         ArgumentNullException.ThrowIfNull(window);
         if (Looper.MyLooper() != Looper.MainLooper)
             throw new InvalidOperationException("Create GooView on the Android main thread.");
+        if (window.AccessibilityAdapter is not null)
+            throw new InvalidOperationException("GooView owns the window accessibility adapter.");
         Window = window;
         host = new AndroidVulkanHost(this);
         frameCallback = new FrameCallback(this);
@@ -50,6 +53,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Holder!.SetFormat(Format.Translucent);
         }
         Holder!.AddCallback(this);
+        accessibility = new GooAccessibilityProvider(this);
+        window.AccessibilityAdapter = accessibility;
         window.Attach(host);
         RefreshPreferences();
         window.PlatformInput.EditorChanged += OnEditorChanged;
@@ -64,6 +69,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     public bool DismissKeyboardOnSubmit { get; set; } = true;
     internal float Density => Math.Max(Resources?.DisplayMetrics?.Density ?? 1f, 0.1f);
     internal PlatformInput Input => Window.PlatformInput;
+
+    public override global::Android.Views.Accessibility.AccessibilityNodeProvider? AccessibilityNodeProvider => accessibility;
 
     public void Resume()
     {
@@ -458,6 +465,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             }
             CancelFrames();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
+            accessibility.Dispose();
             EndTextInput();
             host.Dispose();
             host.ReleaseSurface();

@@ -108,6 +108,18 @@ Mapped key-up events are consumed without issuing another edit. Printable
 characters are committed from each native key-down when Ctrl and Alt are not
 pressed.
 
+## Accessibility
+
+```gsharp
+TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
+```
+
+- `GooView` exposes Goo semantics as Android virtual accessibility nodes.
+- Give custom controls a role, name, state and supported actions through `Accessibility`.
+- Text, password masks, selection and editing use the shared Goo action path.
+- `GooView` owns `Window.AccessibilityAdapter`. Leave the slot empty before construction.
+- Enable TalkBack in Android settings. No app permission or extra package is needed.
+
 ## Transparent surfaces
 
 Set `Window.Transparent` before constructing GooView. A transparent window uses
