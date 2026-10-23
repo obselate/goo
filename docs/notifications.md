@@ -13,7 +13,7 @@ using let notifications = opened.Service!!
 
 Install `Goo.Notifications` for desktop. Subscribe to `Window.ApplicationActivated` and initialize application activation first. Configure the installed application ID with `Window.ConfigureApplication`.
 
-Call `Open` and `Dispose` on the UI thread. On macOS, open before the first window opens. The service does not keep the application running.
+Call `Open` and `Dispose` on the UI thread. On macOS, open before `SingleInstance.AcquireAsync` and before the first window opens. The service does not keep the application running.
 
 ## Permission and submission
 
@@ -48,7 +48,7 @@ IDs contain 1 to 64 UTF-16 units and no NUL. Other strings fit 64 KiB of UTF-8 a
 
 ## Activation
 
-Clicks use `Window.ApplicationActivated` with `Kind == ApplicationActivationKind.Notification`. Read `NotificationId`, `ActionId` and `Payload`. Validate opaque payloads before using them.
+Clicks use `Window.ApplicationActivated` with `Kind == ApplicationActivationKind.Notification`. Read `NotificationId`, `ActionId` and `Payload`. Default clicks have an empty `ActionId`. Validate opaque payloads before using them.
 
 | Activation support | Meaning |
 | --- | --- |
