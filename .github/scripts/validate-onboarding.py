@@ -16,6 +16,11 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.DevTools",
     "Goo.DevTools.App",
     "Goo.Gestures",
+    "Goo.Printing",
+    "Goo.Printing.Android",
+    "Goo.SpellCheck",
+    "Goo.SpellCheck.Android",
+    "Goo.SpellCheck.Hunspell",
     "Goo.Templates",
 }
 
