@@ -191,6 +191,7 @@ enum-underlying|Goo.Printing.PrintLayoutStatus|System.Int32
 enum-underlying|Goo.Printing.PrintStatus|System.Int32
 enum-underlying|Goo.ScrollbarVisibility|System.Int32
 enum-underlying|Goo.ShapeFit|System.Int32
+enum-underlying|Goo.SingleInstanceStatus|System.Int32
 enum-underlying|Goo.SoundDeviceStatus|System.Int32
 enum-underlying|Goo.SoundOpenStatus|System.Int32
 enum-underlying|Goo.SoundPlayStatus|System.Int32
@@ -718,6 +719,12 @@ enum|Goo.ShapeFit|Contain|0
 enum|Goo.ShapeFit|Cover|1
 enum|Goo.ShapeFit|Fill|2
 enum|Goo.ShapeFit|None|3
+enum|Goo.SingleInstanceStatus|Failed|5
+enum|Goo.SingleInstanceStatus|Forwarded|1
+enum|Goo.SingleInstanceStatus|Primary|0
+enum|Goo.SingleInstanceStatus|Rejected|4
+enum|Goo.SingleInstanceStatus|TimedOut|2
+enum|Goo.SingleInstanceStatus|Unsupported|3
 enum|Goo.SoundDeviceStatus|Enumerated|0
 enum|Goo.SoundDeviceStatus|NativeFailure|3
 enum|Goo.SoundDeviceStatus|SubsystemUnavailable|2
@@ -1313,6 +1320,7 @@ method|Goo.ShaderEffect|SetParameter|instance|public|generic:|(slot:System.Int32
 method|Goo.Simulation|Done|abstract|public|generic:|(elapsed:System.Double)->System.Boolean
 method|Goo.Simulation|Position|abstract|public|generic:|(elapsed:System.Double)->System.Double
 method|Goo.Simulation|Velocity|abstract|public|generic:|(elapsed:System.Double)->System.Double
+method|Goo.SingleInstance|AcquireAsync|static|public|generic:|(applicationId:System.String,activation:Goo.ApplicationActivation,timeoutMilliseconds:System.Int32=3000)->System.Threading.Tasks.Task`1<Goo.SingleInstanceResult>
 method|Goo.SoundOutputDevices|Dispose|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayback|Dispose|instance|public|generic:|()->System.Void
 method|Goo.SoundPlayback|Pause|instance|public|generic:|()->System.Void
@@ -2113,6 +2121,9 @@ property|Goo.Shape|StrokeEnd|System.Double|instance|get:public,init:public|index
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeStart|System.Double|instance|get:public,init:public|index:()
 property|Goo.Shape|VectorEffect|Goo.VectorEffect|instance|get:public,init:public|index:()
+property|Goo.SingleInstanceResult|Error|System.String|instance|get:public|index:()
+property|Goo.SingleInstanceResult|Lease|System.IDisposable|instance|get:public|index:()
+property|Goo.SingleInstanceResult|Status|Goo.SingleInstanceStatus|instance|get:public|index:()
 property|Goo.SoundOpenResult|Player|Goo.SoundPlayer?|instance|get:public,set:private|index:()
 property|Goo.SoundOpenResult|Status|Goo.SoundOpenStatus|instance|get:public,set:private|index:()
 property|Goo.SoundOutputDevices|Devices|System.Collections.Generic.IReadOnlyList`1<Goo.SoundOutputDevice>|instance|get:public,set:private|index:()
@@ -2694,6 +2705,9 @@ type|Goo.ShaderEffect|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShapeFit|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Shape|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Simulation|abstract-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SingleInstanceResult|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.SingleInstanceStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.SingleInstance|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SoundDeviceStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.SoundOpenResult|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.SoundOpenStatus|enum|public|base:System.Enum|interfaces:|generic:

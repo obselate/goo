@@ -1841,11 +1841,12 @@ class PublicDocumentationTests {
         private func AssertApprovedCallablesAreTracked() {
             let path = Path.Combine(AppContext.BaseDirectory, "PublicApi.approved.txt")
             Assert.True(File.Exists(path), "Missing approved public API baseline at $path.")
-            let abstractTypes = ApiTypes()
+            let apiTypes = ApiTypes().ToArray()
+            let abstractTypes = apiTypes
                 .Where((type Type) -> type.IsAbstract)
                 .Select((type Type) -> type.FullName)
                 .ToHashSet(StringComparer.Ordinal)
-            let coreTypes = ApiTypes().Select((type Type) -> type.FullName).ToHashSet(StringComparer.Ordinal)
+            let coreTypes = apiTypes.Select((type Type) -> type.FullName).ToHashSet(StringComparer.Ordinal)
             let generatedNames = HashSet[string](StringComparer.Ordinal){
                 "Deconstruct",
                 "Equals",

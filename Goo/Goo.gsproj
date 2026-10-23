@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.Android" />
+    <InternalsVisibleTo Include="Goo.AppHost" />
     <InternalsVisibleTo Include="Goo.NativeDialogs" />
     <InternalsVisibleTo Include="Goo.NativeMenus" />
     <InternalsVisibleTo Include="Goo.Audio" />
