@@ -215,6 +215,8 @@ public class NotificationServiceResult {
 
 /// <summary>Opens optional desktop notifications without changing application lifetime or requesting permission.</summary>
 public class Notifications {
+    private init() {}
+
     shared {
         /// <summary>Uses the configured desktop application ID and installed native activation route.</summary>
         /// <param name="options">Platform identity and channel configuration.</param>

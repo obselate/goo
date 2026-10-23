@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\Goo.Printing\Goo.Printing.gsproj" />
     <ProjectReference Include="..\..\Goo.NativeDialogs\Goo.NativeDialogs.gsproj" SetTargetFramework="TargetFramework=net10.0" />
     <ProjectReference Include="..\..\Goo.Audio\Goo.Audio.gsproj" />
+    <ProjectReference Include="..\..\Goo.Notifications\Goo.Notifications.gsproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"
