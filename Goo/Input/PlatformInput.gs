@@ -17,6 +17,7 @@ public class PlatformInput {
   private let input InputCoordinator
   private let resolver Resolver
   private var published FocusedEditorSnapshot?
+  private var publishedSelection TextSelection?
   private var editorChanged Action[FocusedEditorSnapshot?]?
 
   internal init(owner Window, input InputCoordinator, resolver Resolver) {
@@ -30,6 +31,14 @@ public class PlatformInput {
     get {
       requireThread()
       return input.EditorSnapshot()
+    }
+  }
+
+  /// Gets the focused editor's effective selection, preserving endpoint affinities, or nil without an editor.
+  public prop Selection TextSelection? {
+    get {
+      requireThread()
+      return input.EditorSelection()
     }
   }
 
@@ -207,6 +216,14 @@ public class PlatformInput {
     finally { finish() }
   }
 
+  /// Selects effective UTF-16 positions while preserving both endpoint affinities.
+  /// Grapheme normalization and composition use the same rules as the offset-only overload.
+  public func SetSelection(selection TextSelection) bool {
+    requireInput()
+    try { return input.SetEditorSelection(owner.Tree, selection) }
+    finally { finish() }
+  }
+
   /// Deletes UTF-16 lengths outside the union of selection and composition, retaining both.
   /// Deletion expands to whole grapheme clusters without committing preedit.
   public func DeleteSurroundingText(beforeLength int32, afterLength int32) bool {
@@ -226,11 +243,18 @@ public class PlatformInput {
   internal func Refresh() {
     if input.IsDispatching { return }
     let current = input.EditorSnapshot()
+    let selection = input.EditorSelection()
+    var selectionChanged = (publishedSelection == nil) != (selection == nil)
+    if let prior = publishedSelection, let next = selection {
+      selectionChanged = prior.Anchor.Offset != next.Anchor.Offset || prior.Active.Offset != next.Active.Offset
+        || prior.Anchor.Affinity != next.Anchor.Affinity || prior.Active.Affinity != next.Active.Affinity
+    }
     if published == nil && current == nil { return }
     if let prior = published, let next = current {
-      if prior.Equals(next) { return }
+      if prior.Equals(next) && !selectionChanged { return }
     }
     published = current
+    publishedSelection = selection
     editorChanged?.Invoke(current)
   }
 

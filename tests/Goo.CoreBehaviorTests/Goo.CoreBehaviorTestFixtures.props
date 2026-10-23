@@ -26,5 +26,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Rendering/GradientFixtures.gs" Link="GradientFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Rendering/VulkanQueueWorkerFixtures.gs" Link="VulkanQueueWorkerFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input/ClickSequenceFixtures.gs" Link="ClickSequenceFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input/GestureFixtures.gs" Link="GestureFixtures.gs" />
   </ItemGroup>
 </Project>

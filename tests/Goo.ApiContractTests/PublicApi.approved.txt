@@ -34,6 +34,9 @@ ctor|Goo.FocusedEditorSnapshot|public|(FocusId:System.Int64,Text:System.String,S
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[])
 ctor|Goo.FontSource|public|(family:System.String,weight:System.Int32,italic:System.Boolean,bytes:System.Byte[],faceIndex:System.UInt32,variations:Goo.FontVariation[])
 ctor|Goo.FontVariation|public|(Tag:System.String,Value:System.Single)
+ctor|Goo.GesturePointer|public|(PointerId:System.Int64,Device:Goo.PointerDevice,Position:Goo.Point,WindowPosition:Goo.Point,IsDown:System.Boolean)
+ctor|Goo.GestureRecognizer|public|()
+ctor|Goo.GestureSession|public|()
 ctor|Goo.ImageDecodeLimits|public|()
 ctor|Goo.ImageSourceCache|public|(maxDecodedBytes:System.Int32=67108864,maxEntries:System.Int32=128,limits:Goo.ImageDecodeLimits=null)
 ctor|Goo.ImageSourceLease|public|()
@@ -122,6 +125,10 @@ enum-underlying|Goo.FillRule|System.Int32
 enum-underlying|Goo.FlexDirection|System.Int32
 enum-underlying|Goo.FlexWrap|System.Int32
 enum-underlying|Goo.FontStyle|System.Int32
+enum-underlying|Goo.GestureCancelReason|System.Int32
+enum-underlying|Goo.GestureDecision|System.Int32
+enum-underlying|Goo.GestureInputKind|System.Int32
+enum-underlying|Goo.GesturePhase|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
@@ -326,6 +333,27 @@ enum|Goo.FlexWrap|WrapReverse|2
 enum|Goo.FlexWrap|Wrap|1
 enum|Goo.FontStyle|Italic|1
 enum|Goo.FontStyle|Normal|0
+enum|Goo.GestureCancelReason|CallbackFailed|7
+enum|Goo.GestureCancelReason|Explicit|6
+enum|Goo.GestureCancelReason|FocusLost|3
+enum|Goo.GestureCancelReason|LostArbitration|1
+enum|Goo.GestureCancelReason|None|0
+enum|Goo.GestureCancelReason|OwnerUnavailable|4
+enum|Goo.GestureCancelReason|PointerCanceled|2
+enum|Goo.GestureCancelReason|Replaced|5
+enum|Goo.GestureDecision|Accept|1
+enum|Goo.GestureDecision|Complete|3
+enum|Goo.GestureDecision|Pending|0
+enum|Goo.GestureDecision|Recognize|2
+enum|Goo.GestureDecision|Reject|4
+enum|Goo.GestureInputKind|Deadline|3
+enum|Goo.GestureInputKind|Down|0
+enum|Goo.GestureInputKind|Move|1
+enum|Goo.GestureInputKind|Up|2
+enum|Goo.GesturePhase|Canceled|3
+enum|Goo.GesturePhase|Changed|1
+enum|Goo.GesturePhase|Completed|2
+enum|Goo.GesturePhase|Started|0
 enum|Goo.ImageFit|Contain|0
 enum|Goo.ImageFit|Cover|1
 enum|Goo.ImageFit|Fill|2
@@ -780,6 +808,7 @@ method|Goo.ElementHandle|Activate|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|BeginFocusScope|instance|public|generic:|(options:Goo.FocusScopeOptions=null)->Goo.FocusScope
 method|Goo.ElementHandle|BeginPress|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|Blur|instance|public|generic:|()->System.Boolean
+method|Goo.ElementHandle|CancelGestures|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|EndPress|instance|public|generic:|(activate:System.Boolean)->System.Boolean
 method|Goo.ElementHandle|Focus|instance|public|generic:|()->System.Boolean
 method|Goo.ElementHandle|JumpTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Boolean
@@ -833,6 +862,18 @@ method|Goo.FontVariation|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.FontVariation|ToString|virtual|public|generic:|()->System.String
 method|Goo.FontVariation|op_Equality|static|public|generic:|(left:Goo.FontVariation,right:Goo.FontVariation)->System.Boolean
 method|Goo.FontVariation|op_Inequality|static|public|generic:|(left:Goo.FontVariation,right:Goo.FontVariation)->System.Boolean
+method|Goo.GestureInput|PointerAt|instance|public|generic:|(index:System.Int32)->Goo.GesturePointer
+method|Goo.GesturePointer|Deconstruct|instance|public|generic:|(out PointerId:System.Int64&,out Device:Goo.PointerDevice&,out Position:Goo.Point&,out WindowPosition:Goo.Point&,out IsDown:System.Boolean&)->System.Void
+method|Goo.GesturePointer|Equals|instance|public|generic:|(other:Goo.GesturePointer)->System.Boolean
+method|Goo.GesturePointer|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.GesturePointer|GetHashCode|virtual|public|generic:|()->System.Int32
+method|Goo.GesturePointer|ToString|virtual|public|generic:|()->System.String
+method|Goo.GesturePointer|op_Equality|static|public|generic:|(left:Goo.GesturePointer,right:Goo.GesturePointer)->System.Boolean
+method|Goo.GesturePointer|op_Inequality|static|public|generic:|(left:Goo.GesturePointer,right:Goo.GesturePointer)->System.Boolean
+method|Goo.GestureRecognizer|CreateSession|abstract|public|generic:|()->Goo.GestureSession
+method|Goo.GestureSession|Evaluate|abstract|public|generic:|(input:Goo.GestureInput)->Goo.GestureDecision
+method|Goo.GestureSession|NextDeadlineSeconds|abstract|public|generic:|()->System.Double
+method|Goo.GestureSession|Notify|abstract|public|generic:|(phase:Goo.GesturePhase,reason:Goo.GestureCancelReason)->System.Void
 method|Goo.GradientStop|Deconstruct|instance|public|generic:|(out offset:System.Double&,out color:Goo.Color&)->System.Void
 method|Goo.GradientStop|Equals|instance|public|generic:|(other:Goo.GradientStop)->System.Boolean
 method|Goo.GradientStop|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
@@ -886,6 +927,8 @@ method|Goo.LayoutTransition|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.LayoutTransition|ToString|virtual|public|generic:|()->System.String
 method|Goo.LayoutTransition|op_Equality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
+method|Goo.Length|Percent|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|Pixels|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.Edges
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.Length
@@ -936,6 +979,7 @@ method|Goo.PlatformInput|PointerRelease|instance|public|generic:|(pointerId:Syst
 method|Goo.PlatformInput|PointerWheel|instance|public|generic:|(x:System.Single,y:System.Single,deltaX:System.Single,deltaY:System.Single,modifiers:Goo.KeyModifiers)->System.Void
 method|Goo.PlatformInput|SetCompositionRange|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.PlatformInput|SetComposition|instance|public|generic:|(value:System.String,selectionStart:System.Int32,selectionLength:System.Int32)->System.Boolean
+method|Goo.PlatformInput|SetSelection|instance|public|generic:|(selection:Goo.TextSelection)->System.Boolean
 method|Goo.PlatformInput|SetSelection|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.PlatformInput|UpdateDrag|instance|public|generic:|(target:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
 method|Goo.PlatformPreferences|Deconstruct|instance|public|generic:|(out theme:Goo.SystemTheme&,out reducedMotion:System.Nullable`1<System.Boolean>&,out highContrast:System.Nullable`1<System.Boolean>&,out textScaleFactor:System.Nullable`1<System.Single>&)->System.Void
@@ -1321,6 +1365,7 @@ property|Goo.Blob|DragSource|Goo.DragSource|instance|get:public,init:public|inde
 property|Goo.Blob|DropTarget|Goo.DropTarget|instance|get:public,init:public|index:()
 property|Goo.Blob|Focusable|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Blob|Focus|Goo.Style|instance|get:public,init:public|index:()
+property|Goo.Blob|Gestures|System.Collections.Generic.IReadOnlyList`1<Goo.GestureRecognizer>|instance|get:public,init:public|index:()
 property|Goo.Blob|Handle|Goo.ElementHandle|instance|get:public,init:public|index:()
 property|Goo.Blob|Hover|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Blob|KeyBindings|Goo.KeyBinding[]|instance|get:public,init:public|index:()
@@ -1471,6 +1516,15 @@ property|Goo.FontSource|Variations|Goo.FontVariation[]|instance|get:public|index
 property|Goo.FontSource|Weight|System.Int32|instance|get:public|index:()
 property|Goo.FontVariation|Tag|System.String|instance|get:public,init:public|index:()
 property|Goo.FontVariation|Value|System.Single|instance|get:public,init:public|index:()
+property|Goo.GestureInput|ChangedPointerId|System.Int64|instance|get:public|index:()
+property|Goo.GestureInput|Kind|Goo.GestureInputKind|instance|get:public|index:()
+property|Goo.GestureInput|PointerCount|System.Int32|instance|get:public|index:()
+property|Goo.GestureInput|TimeSeconds|System.Double|instance|get:public|index:()
+property|Goo.GesturePointer|Device|Goo.PointerDevice|instance|get:public,init:public|index:()
+property|Goo.GesturePointer|IsDown|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.GesturePointer|PointerId|System.Int64|instance|get:public,init:public|index:()
+property|Goo.GesturePointer|Position|Goo.Point|instance|get:public,init:public|index:()
+property|Goo.GesturePointer|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.GradientStop|Color|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.GradientStop|Offset|System.Double|instance|get:public,init:public|index:()
 property|Goo.Gradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|abstract|get:public|index:()
@@ -1536,6 +1590,7 @@ property|Goo.PanelTransform|SkewY|System.Double|instance|get:public,init:public|
 property|Goo.PanelTransform|TranslateX|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|TranslateY|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.PlatformInput|Editor|System.Nullable`1<Goo.FocusedEditorSnapshot>|instance|get:public|index:()
+property|Goo.PlatformInput|Selection|System.Nullable`1<Goo.TextSelection>|instance|get:public|index:()
 property|Goo.PlatformPreferences|HighContrast|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|ReducedMotion|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|TextScaleFactor|System.Nullable`1<System.Single>|instance|get:public,init:public|index:()
@@ -1995,6 +2050,14 @@ type|Goo.FocusedEditorSnapshot|struct|public|base:System.ValueType|interfaces:Sy
 type|Goo.FontSource|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.FontStyle|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FontVariation|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.FontVariation>|generic:
+type|Goo.GestureCancelReason|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.GestureDecision|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.GestureInputKind|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.GestureInput|class|public|base:System.Object|interfaces:|generic:
+type|Goo.GesturePhase|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.GesturePointer|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GesturePointer>|generic:
+type|Goo.GestureRecognizer|abstract-class|public|base:System.Object|interfaces:|generic:
+type|Goo.GestureSession|abstract-class|public|base:System.Object|interfaces:|generic:
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GradientStop>|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageDecodeLimits|sealed-class|public|base:System.Object|interfaces:|generic:
