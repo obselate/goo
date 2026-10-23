@@ -179,6 +179,8 @@ public sealed class PublicDocumentationTests
         "M:Goo.FontSource.#ctor(System.String,System.Int32,System.Boolean,System.Byte[])",
         "M:Goo.FontSource.#ctor(System.String,System.Int32,System.Boolean,System.Byte[],System.UInt32,Goo.FontVariation[])",
         "M:Goo.FontSource.Dispose",
+        "M:Goo.FontSource.FromPath(System.String,System.Int32,System.Boolean,System.String)",
+        "M:Goo.FontSource.FromPath(System.String,System.Int32,System.Boolean,System.String,System.UInt32,Goo.FontVariation[])",
         "M:Goo.FontSource.Register",
         "M:Goo.FontVariation.#ctor(System.String,System.Single)",
         "M:Goo.Image.#ctor",

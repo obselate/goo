@@ -9,6 +9,17 @@ public sealed class FontSource : IDisposable {
   shared {
     private const MaxVariations int32 = 16
 
+    /// Creates an unregistered font source by reading a file of at most 64 MiB.
+    /// The source owns the bytes and does not retain an open file.
+    public func FromPath(family string, weight int32, italic bool, path string) FontSource ->
+    FromPath(family, weight, italic, path, 0u, []FontVariation{})
+
+    /// Creates an unregistered file-backed font source for a face and variation set.
+    /// Reads at most 64 MiB and owns the bytes independently of the file.
+    public func FromPath(family string, weight int32, italic bool, path string,
+      faceIndex uint32, variations []FontVariation) FontSource ->
+    FontSource(family, weight, italic, VulkanTextFont.ReadBytes(path), faceIndex, variations, true)
+
     private func NormalizeFamily(value string) string {
       if value == nil { throw ArgumentNullException("family") }
       return value.Trim()
@@ -68,8 +79,13 @@ public sealed class FontSource : IDisposable {
     init(family, weight, italic, bytes, 0u, []FontVariation{})
   }
 
-  public init(family string, weight int32, italic bool, bytes []uint8,
+  public convenience init(family string, weight int32, italic bool, bytes []uint8,
     faceIndex uint32, variations []FontVariation) {
+      init(family, weight, italic, bytes, faceIndex, variations, false)
+    }
+
+  private init(family string, weight int32, italic bool, bytes []uint8,
+    faceIndex uint32, variations []FontVariation, ownsBytes bool) {
       gate = Object()
       let canonical = NormalizeFamily(family)
       if canonical.Length == 0 { throw ArgumentException("Font family is empty", "family") }
@@ -83,8 +99,11 @@ public sealed class FontSource : IDisposable {
       this.weight = weight
       this.italic = italic
       this.faceIndex = faceIndex
-      let ownedBytes = [bytes.Length]uint8
-      Array.Copy(bytes, ownedBytes, bytes.Length)
+      var ownedBytes = bytes
+      if !ownsBytes {
+        ownedBytes = [bytes.Length]uint8
+        Array.Copy(bytes, ownedBytes, bytes.Length)
+      }
       let copied = CopyVariations(variations)
       payload = FontSourcePayload(ownedBytes, copied.Public, copied.Native)
       sourceId = FontRegistry.AllocateSourceId()
