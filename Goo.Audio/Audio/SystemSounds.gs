@@ -17,7 +17,7 @@ public enum SystemSoundStatus {
 
 /// Plays optional UI feedback through platform sound APIs without opening a SoundPlayer.
 public class SystemSounds {
-    private init() {}
+    private init() { }
 
     shared {
         /// Requests a platform click or alert. Queued does not guarantee audible output.
