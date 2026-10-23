@@ -4,6 +4,86 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Platform`](../../Goo/Platform)
 
+## `ActivationPostStatus`
+
+Source:
+
+- [`ApplicationActivation.gs`](../../Goo/Platform/ApplicationActivation.gs)
+
+Reports whether a process activation entered the owner-thread delivery queue.
+
+### Values
+
+- `Accepted`
+- `NotInitialized`
+- `Closed`
+- `QueueFull`
+- `TooLarge`
+
+## `ApplicationActivation`
+
+Source:
+
+- [`ApplicationActivation.gs`](../../Goo/Platform/ApplicationActivation.gs)
+
+Owns the data delivered by the process-wide application activation event. URI values do not grant access to documents and notification payloads are untrusted app data.
+
+### `new`
+
+Creates a Launch request with empty argument, document, and notification data.
+
+### `ActionId`
+
+Gets the notification action ID, or an empty string for its default action.
+
+### `Arguments`
+
+Gets argument values with their original boundaries and empty values preserved.
+
+### `Documents`
+
+Gets absolute document URIs without converting provider URIs to filesystem paths.
+
+### `IsInitial`
+
+Gets whether this request caused the process's initial activation.
+
+### `Kind`
+
+Gets the activation source category.
+
+### `NotificationId`
+
+Gets the application-defined notification ID, or an empty string.
+
+### `Payload`
+
+Gets bounded opaque notification data which the application must validate before use.
+
+### `Target`
+
+Gets the absolute target URI for an OpenUri request, or nil for other requests.
+
+### `WorkingDirectory`
+
+Gets the sender's working directory without changing the receiving process's directory.
+
+## `ApplicationActivationKind`
+
+Source:
+
+- [`ApplicationActivation.gs`](../../Goo/Platform/ApplicationActivation.gs)
+
+Identifies a process launch, forwarded request, URI, documents, or notification response.
+
+### Values
+
+- `Launch`
+- `Arguments`
+- `OpenUri`
+- `OpenDocuments`
+- `Notification`
+
 ## `EmbeddedWindowHost`
 
 Source:

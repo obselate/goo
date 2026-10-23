@@ -5,6 +5,53 @@ import System.IO
 import System.Text.Json
 
 internal class DiagnosticsFixtures {
+  func PerPumpWorkCountersContract() bool {
+    guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
+      throw InvalidOperationException("A profiler trace is already active")
+    }
+    try {
+      let profiler = FrameProfiler()
+      profiler.BeginPump()
+      let firstPump = profiler.Context.PumpId
+      let start = profiler.Start()
+      FrameWorkCounters.VirtualMounts += 2L
+      FrameWorkCounters.VirtualReuses += 3L
+      FrameWorkCounters.VirtualDiscards += 4L
+      FrameWorkCounters.ShapeCalls += 5L
+      profiler.EndFrame(start, false)
+      profiler.BeginPump()
+      let secondPump = profiler.Context.PumpId
+      profiler.EndFrame(profiler.Start(), false)
+      let records = recorder.Read(0L, 4096, out var next, out var more, out var state, out var dropped)
+      if more || dropped != 0L { return false }
+      var first = 0
+      var second = 0
+      var frames = 0
+      for record in records {
+        if record.Kind == FrameTraceKind.Duration && record.EventId == uint64(int32(FrameProfileStage.Frame)) {
+          if record.Context.PumpId == firstPump || record.Context.PumpId == secondPump { frames++ }
+        }
+        if record.Kind != FrameTraceKind.Counter || record.Source != "cpu.work" { continue }
+        if record.Context.WindowId != profiler.WindowId || record.Unit != "count" { return false }
+        let expected = switch record.Name {
+          case "virtual.rows.mount": 2uL
+          case "virtual.rows.reuse": 3uL
+          case "virtual.rows.discard": 4uL
+          case "text.shape.calls": 5uL
+          case _: throw InvalidOperationException("Unexpected work counter")
+        }
+        if record.Context.PumpId == firstPump {
+          if record.Value0 != expected { return false }
+          first++
+        } else if record.Context.PumpId == secondPump {
+          if record.Value0 != 0uL { return false }
+          second++
+        } else { return false }
+      }
+      return first == 4 && second == 4 && frames == 2
+    } finally { recorder.Stop(false) }
+  }
+
   func IdleFramesDeferSnapshotsUntilRequestedContract() bool {
     let root = DevToolsInputCell{}
     let window = Window{Root: root, Width: 320, Height: 220}

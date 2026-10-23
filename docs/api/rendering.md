@@ -85,6 +85,41 @@ Source:
 
 Contains Status, owned Capture pixels on Success and Error detail on failure.
 
+## `OffscreenRenderSession`
+
+Source:
+
+- [`OffscreenRenderSession.gs`](../../Goo/Rendering/OffscreenRenderSession.gs)
+
+Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
+
+### `Dispose`
+
+Cancels pending pages, waits for safe GPU cleanup and releases this session's runtime lease.
+
+### `RenderAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
+
+Renders a fresh page. The session remains usable while its source window has no presentation surface.
+
+- `root`: Independent, unattached page content.
+- `options`: Logical viewport, output pixels, background and allocation limit.
+- `cancellation`: Cancels after in-flight GPU work is safe to release.
+- `reusable`: Previous pixels to reuse when the output size matches.
+
+Returns: Owned pixels or an explicit render status.
+
+### `Service`
+
+Consumes completed GPU work and starts a queued page without presenting a native window.
+
+## `OffscreenRenderSessionResult`
+
+Source:
+
+- [`OffscreenRenderSession.gs`](../../Goo/Rendering/OffscreenRenderSession.gs)
+
+Contains Status, a Session on Success and Error detail on failure.
+
 ## `OffscreenRenderStatus`
 
 Source:

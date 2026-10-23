@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <ApplicationId>org.goo.textoutputproof</ApplicationId>
+    <ApplicationTitle>Goo text output proof</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Goo.Android/Goo.Android.csproj" />
+    <ProjectReference Include="../../Goo.Printing.Android/Goo.Printing.Android.csproj" />
+    <ProjectReference Include="../../Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj" />
+  </ItemGroup>
+</Project>

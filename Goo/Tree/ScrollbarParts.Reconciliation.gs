@@ -93,7 +93,7 @@ internal partial class ScrollbarParts {
                 result.Parent = owner
                 return result
             }
-            let result = reconciler.Mount(blob)
+            let result = reconciler.Mount(blob, owner)
             result.Parent = owner
             return result
         }

@@ -34,6 +34,43 @@ the opaque fallback. Native appearance remains subject to system policy.
 Desktop-wide settings and numeric blur strength are not exposed. For blur of Goo
 content within the window, use `Style.ShaderEffect`.
 
+## Process application activation
+
+```gs
+let window = Window{}
+Window.ApplicationActivated += activation -> {
+    if activation.Kind == ApplicationActivationKind.OpenUri {
+        window.Title = activation.Target!!.AbsoluteUri
+    }
+}
+let status = Window.InitializeApplicationActivation(
+    ApplicationActivation{IsInitial: true})
+```
+
+Subscribe before opening the first window. Check the returned status.
+
+- One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
+- The app chooses the target window and validates notification data.
+- `PostApplicationActivation` copies requests from any thread.
+- Arguments keep their boundaries, empty values and sender directory.
+- Documents remain URIs, including Android `content:` values.
+- A document URI does not grant access to its data.
+- An initial native request replaces a sole pending synthetic Launch.
+- Other requests use FIFO order, with callback posts deferred to the next batch.
+- Closing the last window clears pending requests.
+- The same owner thread can initialize a new delivery lifetime.
+- Hosts and optional packages own native associations, IPC and notifications.
+
+| Post status | Meaning |
+| --- | --- |
+| Accepted | The queue owns the request. |
+| NotInitialized | Call InitializeApplicationActivation first. |
+| Closed | All windows closed. |
+| QueueFull | 64 requests are pending. |
+| TooLarge | More than 256 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
+
+Null data and relative URIs are invalid arguments.
+
 ## Visibility, activation and stacking
 
 Set `Window.IconPng` in the `Window` initializer to embedded PNG bytes before
@@ -220,6 +257,40 @@ Capture replays the current scene offscreen and may submit an additional native
 present. It requires an open desktop window and does not capture a specific prior
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
+
+## Render pages without presenting
+
+```gsharp
+let created = window.CreateOffscreenSession()
+if created.Status == OffscreenRenderStatus.Success {
+  using let session = created.Session!!
+  let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+  let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
+  while !pending.IsCompleted {
+    session.Service()
+    Thread.Sleep(1)
+  }
+  let rendered = pending.GetAwaiter().GetResult()
+}
+```
+
+Create the session on the window thread before opening native UI.
+The session keeps the shared renderer, not the native surface.
+It can render while an embedded host is paused or detached.
+Call `Service` from the host's UI scheduler until each page finishes.
+Create, render, service and dispose on the same thread.
+
+Each page uses a fresh, unattached cell.
+Logical size controls layout. Pixel size controls resolution.
+`MaxBytes` bounds new GPU allocations and CPU pixels.
+Pass a previous capture to reuse its pixels at the same size.
+Do not read those pixels until the next render completes.
+
+`window.RenderOffscreenAsync` uses the window's existing renderer instead.
+Keep pumping that window until completion.
+Both paths return an explicit `OffscreenRenderStatus`.
+Closing the owner cancels pending pages.
+`window.Closed` is a cancellation token for optional owner-bound services.
 
 ## Fullscreen displays
 

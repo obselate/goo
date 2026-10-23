@@ -387,6 +387,7 @@ internal partial class PointerInput {
     try {
       for var i = route.Count; i > 0; i-- {
         let n = route[i - 1]
+        if n.Retired { continue }
         let event = PointerEvent{
           Identity: current.Device == PointerDevice.Mouse ? nil : current,
           IsPrimary: isSemanticPrimary(),

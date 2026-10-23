@@ -88,23 +88,28 @@ public static class Printing
     }
 
     internal static async Task<OffscreenRenderResult> RenderPageAsync(Window owner, IPrintDocument document,
-        int index, PrintPageSettings settings, WindowCapture? reusable, CancellationToken cancellation)
+        int index, PrintPageSettings settings, WindowCapture? reusable, CancellationToken cancellation,
+        OffscreenRenderSession? session = null, Func<Action, bool>? post = null)
     {
         Validate(settings);
-        var width = settings.WidthPoints * settings.DpiX / PointsPerInch;
-        var height = settings.HeightPoints * settings.DpiY / PointsPerInch;
+        var width = Math.Ceiling(settings.WidthPoints * settings.DpiX / PointsPerInch);
+        var height = Math.Ceiling(settings.HeightPoints * settings.DpiY / PointsPerInch);
         if (width > uint.MaxValue || height > uint.MaxValue || width * height > MaxPageBytes / 12.0)
             return new OffscreenRenderResult { Status = OffscreenRenderStatus.BudgetExceeded, Error = "The page exceeds 128 MiB." };
         var options = new OffscreenRenderOptions((float)(settings.WidthPoints * LogicalUnitsPerInch / PointsPerInch),
             (float)(settings.HeightPoints * LogicalUnitsPerInch / PointsPerInch),
-            checked((uint)Math.Ceiling(width)), checked((uint)Math.Ceiling(height)), Color.Rgb(255, 255, 255), MaxPageBytes);
+            checked((uint)width), checked((uint)height), Color.Rgb(255, 255, 255), MaxPageBytes);
         var pending = await OnOwnerAsync(owner, () =>
-            owner.RenderOffscreenAsync(document.CreatePage(index, settings), options, cancellation, reusable), cancellation)
-            .ConfigureAwait(false);
+        {
+            var page = document.CreatePage(index, settings);
+            return session == null ? owner.RenderOffscreenAsync(page, options, cancellation, reusable)
+                : session.RenderAsync(page, options, cancellation, reusable);
+        }, cancellation, post).ConfigureAwait(false);
         return await pending.ConfigureAwait(false);
     }
 
-    internal static Task<T> OnOwnerAsync<T>(Window owner, Func<T> action, CancellationToken cancellation)
+    internal static Task<T> OnOwnerAsync<T>(Window owner, Func<T> action, CancellationToken cancellation,
+        Func<Action, bool>? post = null)
     {
         if (cancellation.IsCancellationRequested)
             return Task.FromCanceled<T>(cancellation);
@@ -115,13 +120,14 @@ public static class Printing
         var claimed = 0;
         var registration = cancellation.Register(() => Cancel(cancellation));
         var closed = ownerClosed.Register(() => Cancel(ownerClosed));
-        if (!owner.TryPost(() =>
+        Action run = () =>
         {
             if (Interlocked.CompareExchange(ref claimed, 1, 0) != 0)
                 return;
             try { completion.TrySetResult(action()); }
             catch (Exception error) { completion.TrySetException(error); }
-        }))
+        };
+        if (!(post == null ? owner.TryPost(run) : post(run)))
             Cancel(new CancellationToken(true));
         return CompleteAsync();
 

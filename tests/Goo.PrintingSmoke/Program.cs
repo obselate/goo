@@ -52,6 +52,12 @@ try
     Require(fullSize.Status == PrintStatus.Exported, "A4 PDF status: " + fullSize.Status + " " + fullSize.Error);
     if (args.Length != 0)
         File.WriteAllBytes(args[0] + ".a4.pdf", a4.ToArray());
+    using var oversized = new MemoryStream();
+    var oversizedDocument = new Document();
+    var bounded = Pump(window, Printing.ExportPdfAsync(window, oversizedDocument,
+        new PrintPageSettings(10000000000, 0.00000001, 0, 0, 0, 0, 1, 1), oversized));
+    Require(bounded.Status == PrintStatus.BudgetExceeded && oversizedDocument.Created == 0,
+        "rounded raster dimensions did not enforce the page budget before creating content");
     var owner = Pump(window, window.AcquireNativeDialogOwnerAsync(CancellationToken.None));
     if (owner.Status == NativeDialogOwnerStatus.Success && owner.Owner != null)
     {

@@ -9,6 +9,19 @@ import System.Threading.Tasks
 public partial class Window {
   private var offscreenViewport Vector2?
 
+  /// Creates a renderer lease before opening native UI that can remove this window's presentation surface.
+  /// @returns A session on Success, or an explicit renderer status.
+  public func CreateOffscreenSession() OffscreenRenderSessionResult {
+    requireUiThread("Window.CreateOffscreenSession")
+    if !IsOpen || Closed.IsCancellationRequested {
+      return OffscreenRenderSessionResult{ Status: OffscreenRenderStatus.NotReady }
+    }
+    guard let target = windowTarget as VulkanWindowTarget? else {
+      return OffscreenRenderSessionResult{ Status: OffscreenRenderStatus.Unsupported }
+    }
+    return target.CreateOffscreenSession(Closed)
+  }
+
   /// Renders a fresh, unattached cell at a separate layout size without resizing or presenting this window.
   /// Keep pumping the owner until completion. Pixels and new GPU allocations share MaxBytes.
   /// @param root The independent page content.
@@ -39,11 +52,11 @@ public partial class Window {
   }
 }
 
-private func validateOffscreenOptions(options OffscreenRenderOptions) {
+internal func validateOffscreenOptions(options OffscreenRenderOptions) {
   if !Single.IsFinite(options.LogicalWidth) || !Single.IsFinite(options.LogicalHeight)
     || options.LogicalWidth <= 0.0F || options.LogicalHeight <= 0.0F
-    || options.LogicalWidth > float32(Int32.MaxValue - 1)
-    || options.LogicalHeight > float32(Int32.MaxValue - 1) {
+    || options.LogicalWidth >= float32(Int32.MaxValue)
+    || options.LogicalHeight >= float32(Int32.MaxValue) {
       throw ArgumentOutOfRangeException("options", "Logical dimensions must be finite and positive")
     }
   if options.PixelWidth == 0u || options.PixelHeight == 0u || options.MaxBytes <= 0 {

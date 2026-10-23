@@ -19,23 +19,28 @@ public sealed class AndroidPrinting
         this.activity = activity;
     }
 
-    /// <summary>Starts printing on the Android main thread. Keep the Goo owner active until the result completes.</summary>
+    /// <summary>Starts printing on the Android main thread. Keep the Activity and Goo owner alive until completion.</summary>
     public Task<PrintResult> ShowDialogAsync(Window owner, IPrintDocument document, string title,
         CancellationToken cancellation = default)
     {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        if (title.Length > 256 || title.Contains('\0'))
+            throw new ArgumentException("The print title exceeds 256 characters or contains NUL.", nameof(title));
         if (Looper.MyLooper() != Looper.MainLooper)
             throw new InvalidOperationException("Start Android printing on the main thread.");
         if (cancellation.IsCancellationRequested)
             return Task.FromResult(new PrintResult(PrintStatus.Cancelled));
         if (activity.IsDestroyed || activity.IsFinishing || owner.Closed.IsCancellationRequested)
             return Task.FromResult(new PrintResult(PrintStatus.NotReady));
-        var manager = activity.GetSystemService(Context.PrintService) as PrintManager;
+        using var manager = activity.GetSystemService(Context.PrintService) as PrintManager;
         if (manager == null)
             return Task.FromResult(new PrintResult(PrintStatus.Unsupported));
-        var adapter = new DocumentAdapter(owner, document, title, cancellation);
+        var created = owner.CreateOffscreenSession();
+        if (created.Status != OffscreenRenderStatus.Success || created.Session == null)
+            return Task.FromResult(Printing.RenderFailure(new() { Status = created.Status, Error = created.Error }));
+        var adapter = new DocumentAdapter(owner, document, title, cancellation, created.Session);
         try
         {
             adapter.Job = manager.Print(title, adapter, null);
@@ -52,7 +57,11 @@ public sealed class AndroidPrinting
             adapter.Release();
             return Task.FromResult(new PrintResult(PrintStatus.NotReady, Error: Printing.Detail(error.Message ?? "")));
         }
-        finally { manager.Dispose(); }
+        catch (Java.Lang.RuntimeException error)
+        {
+            adapter.Release();
+            return Task.FromResult(new PrintResult(PrintStatus.Failed, Error: Printing.Detail(error.Message ?? "")));
+        }
     }
 
     private sealed class DocumentAdapter : PrintDocumentAdapter
@@ -61,22 +70,26 @@ public sealed class AndroidPrinting
         private readonly IPrintDocument document;
         private readonly string title;
         private readonly Handler handler = new(Looper.MainLooper!);
+        private readonly OffscreenRenderSession renderer;
+        private Task writing = Task.CompletedTask;
         private readonly CancellationTokenSource lifetime;
         private readonly CancellationTokenRegistration cancellation;
         private PrintPageSettings settings;
         private int pageCount;
         private int layoutGeneration;
-        private bool finished;
+        private volatile bool finished;
         private bool released;
         private PrintResult? failure;
         internal PrintJob? Job;
         internal readonly TaskCompletionSource<PrintResult> Result = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        internal DocumentAdapter(Window owner, IPrintDocument document, string title, CancellationToken cancellation)
+        internal DocumentAdapter(Window owner, IPrintDocument document, string title, CancellationToken cancellation,
+            OffscreenRenderSession renderer)
         {
             this.owner = owner;
             this.document = document;
             this.title = title;
+            this.renderer = renderer;
             lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellation, owner.Closed);
             this.cancellation = lifetime.Token.Register(() => handler.Post(CheckCancellation));
         }
@@ -149,10 +162,10 @@ public sealed class AndroidPrinting
                 callback.OnWriteCancelled();
                 return;
             }
-            _ = WriteAsync(pages ?? [], destination, cancellationSignal, callback, settings, pageCount, layoutGeneration);
+            writing = WriteAsync(writing, pages ?? [], destination, cancellationSignal, callback, settings, pageCount, layoutGeneration);
         }
 
-        private async Task WriteAsync(PageRange[] pages, ParcelFileDescriptor destination,
+        private async Task WriteAsync(Task previous, PageRange[] pages, ParcelFileDescriptor destination,
             CancellationSignal signal, WriteResultCallback callback, PrintPageSettings pageSettings, int count, int generation)
         {
             using var cancelled = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
@@ -165,6 +178,8 @@ public sealed class AndroidPrinting
                 signal.SetOnCancelListener(listener);
                 if (signal.IsCanceled || finished)
                     cancelled.Cancel();
+                await previous.ConfigureAwait(false);
+                cancelled.Token.ThrowIfCancellationRequested();
                 var selected = new List<int>();
                 var written = new List<PageRange>();
                 foreach (var range in pages)
@@ -188,8 +203,10 @@ public sealed class AndroidPrinting
                     cancelled.Token.ThrowIfCancellationRequested();
                     if (finished || generation != Volatile.Read(ref layoutGeneration))
                         throw new OperationCanceledException(cancelled.Token);
-                    var rendered = await Printing.RenderPageAsync(owner, document, page, pageSettings, reusable,
-                        cancelled.Token).ConfigureAwait(false);
+                    var pending = Printing.RenderPageAsync(owner, document, page, pageSettings, reusable,
+                        cancelled.Token, renderer, handler.Post);
+                    Pump(pending);
+                    var rendered = await pending.ConfigureAwait(false);
                     if (rendered.Status != OffscreenRenderStatus.Success || rendered.Capture == null)
                     {
                         renderFailure = Printing.RenderFailure(rendered);
@@ -235,6 +252,22 @@ public sealed class AndroidPrinting
             });
         }
 
+        private void Pump(Task pending)
+        {
+            Java.Lang.Runnable? poll = null;
+            poll = new Java.Lang.Runnable(() =>
+            {
+                if (released || pending.IsCompleted)
+                {
+                    poll!.Dispose();
+                    return;
+                }
+                renderer.Service();
+                handler.PostDelayed(poll!, 1);
+            });
+            handler.Post(poll);
+        }
+
         public override void OnFinish()
         {
             finished = true;
@@ -276,6 +309,8 @@ public sealed class AndroidPrinting
                 return;
             released = true;
             cancellation.Dispose();
+            lifetime.Cancel();
+            renderer.Dispose();
             lifetime.Dispose();
             Job?.Dispose();
             Job = null;

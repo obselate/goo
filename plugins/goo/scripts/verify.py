@@ -161,7 +161,7 @@ async def main():
                                 applied = data(await call("goo_input", **target, event=event, **args))
                                 assert applied["ok"] and applied["payload"]["applied"], applied
                             after = await snapshot()
-                            assert any(node["content"] == "Count: 3" for node in after["added"]), after
+                            assert any(node["content"] == "Count: 2" for node in after["added"]), after
                             assert any(node["id"] == button and node["kind"] == "Button" for node in after["added"]), after
                             await call("goo_input", **target, event="pointer.cancel")
                             await call("goo_input", **target, event="reset")

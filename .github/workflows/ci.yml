@@ -299,8 +299,7 @@ jobs:
           path: |
             artifacts/macos-candidate/
 
-  linux-x64:
-    needs: macos-native
+  linux-validation:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
@@ -309,12 +308,6 @@ jobs:
 
       - name: Load release version
         run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
-
-      - name: Download macOS native payloads
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: goo-macos-arm64-native
-          path: artifacts/macos-candidate/native
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
@@ -330,7 +323,8 @@ jobs:
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
 
-      - name: Install Linux build and Wayland dependencies
+      - &linux-dependencies
+        name: Install Linux build and Wayland dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -341,7 +335,8 @@ jobs:
             libxkbcommon-dev mesa-vulkan-drivers vulkan-tools \
             wayland-protocols weston
 
-      - name: Pin Vulkan CPU driver
+      - &linux-vulkan-driver
+        name: Pin Vulkan CPU driver
         run: |
           icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           test "${#icds[@]}" -eq 1
@@ -369,7 +364,8 @@ jobs:
         if: steps.shader-toolchain.outputs.cache-hit != 'true'
         run: .github/scripts/install-shader-toolchain-linux-x64.sh "$RUNNER_TEMP/goo-shader-toolchain"
 
-      - name: Select pinned shader toolchain
+      - &linux-shader-toolchain
+        name: Select pinned shader toolchain
         run: |
           root="$RUNNER_TEMP/goo-shader-toolchain"
           test "$("$root/slang-2026.16/bin/slangc" -version 2>&1)" = "2026.16"
@@ -487,6 +483,16 @@ jobs:
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
+
+      - name: Verify presentation-independent offscreen pages
+        run: |
+          dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.csproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/offscreen-nativeaot
+          .github/scripts/with-headless-wayland.sh env \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            GOO_VK_DIAGNOSTICS=1 artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
 
       - name: Verify shared UI audio without a hardware device
         run: |
@@ -715,6 +721,58 @@ jobs:
             dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj \
               -c Release -p:TreatWarningsAsErrors=true \
               -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+
+      - name: Archive Linux build state
+        run: |
+          tar -czf "$RUNNER_TEMP/goo-linux-build.tar.gz" \
+            --exclude=./.git --exclude=./artifacts/image-nativeaot \
+            --exclude=./artifacts/audio-nativeaot .
+          tar -czf "$RUNNER_TEMP/goo-linux-toolchain.tar.gz" \
+            -C "$RUNNER_TEMP" goo-shader-toolchain goo-vulkan-validation-layer
+
+      - name: Upload Linux build state
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: goo-linux-build
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/goo-linux-build.tar.gz
+            ${{ runner.temp }}/goo-linux-toolchain.tar.gz
+
+  linux-x64:
+    needs: [linux-validation, macos-native]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Download Linux build state
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: goo-linux-build
+          path: ${{ runner.temp }}/goo-linux-build
+
+      - name: Restore Linux build state
+        run: |
+          tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-build.tar.gz"
+          tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-toolchain.tar.gz" -C "$RUNNER_TEMP"
+          echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
+          echo "VK_LAYER_PATH=$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
+
+      - *linux-dependencies
+      - *linux-vulkan-driver
+      - *linux-shader-toolchain
+
+      - name: Download macOS native payloads
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: goo-macos-arm64-native
+          path: artifacts/macos-candidate/native
 
       - name: Pack Goo
         run: |
@@ -1026,7 +1084,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [quality, macos-arm64, linux-x64, android, android-consumer, windows-x64]
+    needs: [quality, macos-arm64, linux-validation, linux-x64, android, android-consumer, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -1200,6 +1258,8 @@ jobs:
           dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.Printing.Android/Goo.Printing.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.TextOutputAndroidSmoke/Goo.TextOutputAndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Pack Android adapter
         run: |
           dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"

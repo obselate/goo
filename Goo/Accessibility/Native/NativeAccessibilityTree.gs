@@ -82,7 +82,9 @@ public sealed partial class NativeAccessibilityAdapter {
       throw error }
   }
 
-  private func EncodeNode(update nint, node AccessibilityNode, all bool, ref focus uint64) {
+  private func EncodeNode(update nint, node AccessibilityNode, all bool, ref focus uint64,
+    depth int32 = 0) {
+    Reconciler.CheckTreeDepth(depth)
     if !cache.TryGetValue(node.Id.Value, out var retained) {
       retained = NativeAccessibilityNodeCache()
       cache.Add(node.Id.Value, retained)
@@ -136,7 +138,7 @@ public sealed partial class NativeAccessibilityAdapter {
         run.Dirty = false
       }
     }
-    for i in 0 ... node.Children.Count { EncodeNode(update, node.Children[i], all, ref focus) }
+    for i in 0 ... node.Children.Count { EncodeNode(update, node.Children[i], all, ref focus, depth + 1) }
   }
 
   private func NativeBounds(bounds ElementRect) AccessKitRect -> AccessKitRect {
