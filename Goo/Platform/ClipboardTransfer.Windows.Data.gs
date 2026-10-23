@@ -157,7 +157,8 @@ internal unsafe partial class ClipboardTransfer {
                     WindowsAddFormat(result, WindowsRegisterType(item.ContentType), item.Data)
                     if item.Data.Length == 0 {
                         emptyTypes ??= StringBuilder()
-                        emptyTypes.Append(item.ContentType).Append('\n')
+                        emptyTypes.Append(item.ContentType)
+                        emptyTypes.Append('\n')
                     }
                     if IsPlainText(item.ContentType) && !plainPublished {
                         let text = utf8.GetString(item.Data)
