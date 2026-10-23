@@ -458,6 +458,10 @@ func RunDirectDriverSmoke() {
 
 func Main() {
   Window.ConfigureApplication("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
+  if Environment.GetEnvironmentVariable("GOO_NATIVE_POPUP_MENU_SMOKE") == "1" {
+    RunNativePopupSmoke(PopupKind.Menu)
+    return
+  }
   if Environment.GetEnvironmentVariable("GOO_NATIVE_POPUP_SMOKE") == "1" {
     RunNativePopupSmoke()
     return

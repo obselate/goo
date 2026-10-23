@@ -143,7 +143,7 @@
      if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 --- a/src/video/wayland/SDL_waylandwindow.c
 +++ b/src/video/wayland/SDL_waylandwindow.c
-@@ -261,6 +261,39 @@
+@@ -261,6 +261,40 @@
  #endif
  }
  
@@ -154,8 +154,8 @@
 +        return;
 +    }
 +    const int placement = (int)SDL_GetNumberProperty(props, "Goo.Popup.Placement", 0);
-+    const int x = (int)SDL_GetNumberProperty(props, "Goo.Popup.X", 0);
-+    const int y = (int)SDL_GetNumberProperty(props, "Goo.Popup.Y", 0);
++    int x = (int)SDL_GetNumberProperty(props, "Goo.Popup.X", 0);
++    int y = (int)SDL_GetNumberProperty(props, "Goo.Popup.Y", 0);
 +    const int width = (int)SDL_GetNumberProperty(props, "Goo.Popup.Width", 1);
 +    const int height = (int)SDL_GetNumberProperty(props, "Goo.Popup.Height", 1);
 +    static const enum xdg_positioner_anchor anchors[] = {
@@ -170,6 +170,7 @@
 +        XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT, XDG_POSITIONER_GRAVITY_RIGHT, XDG_POSITIONER_GRAVITY_TOP_RIGHT,
 +        XDG_POSITIONER_GRAVITY_BOTTOM_LEFT, XDG_POSITIONER_GRAVITY_LEFT, XDG_POSITIONER_GRAVITY_TOP_LEFT
 +    };
++    AdjustPopupOffset(window, &x, &y);
 +    xdg_positioner_set_anchor_rect(positioner, x, y, width, height);
 +    xdg_positioner_set_anchor(positioner, anchors[placement]);
 +    xdg_positioner_set_gravity(positioner, gravities[placement]);
