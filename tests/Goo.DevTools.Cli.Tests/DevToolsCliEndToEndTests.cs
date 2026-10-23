@@ -11,6 +11,40 @@ namespace Goo.DevTools.Cli.Tests;
 
 public sealed class DevToolsCliEndToEndTests
 {
+    [Fact]
+    public async Task PackageRejectsUnsupportedTargetsWithStructuredError()
+    {
+        using var directory = TemporaryDirectory.Create();
+        var result = await RunCliAsync(directory.Path, "package", "--target", "unsupported",
+            "--project", Path.Combine(RepositoryRoot, "tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj"), "--json");
+        Assert.Equal(2, result.ExitCode);
+        Assert.Empty(result.StandardOutput);
+        using var error = JsonDocument.Parse(result.StandardError);
+        Assert.Equal("unsupported-target", error.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task ConsumerStagingPreservesNestedXmlAndSeparatesSymbols()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+        using var directory = TemporaryDirectory.Create();
+        var publish = Path.Combine(directory.Path, "publish with spaces");
+        Directory.CreateDirectory(Path.Combine(publish, "Assets"));
+        await File.WriteAllTextAsync(Path.Combine(publish, "Consumer"), "#!/bin/sh\nexit 0\n");
+        await File.WriteAllTextAsync(Path.Combine(publish, "Assets", "data.xml"), "<data />");
+        await File.WriteAllTextAsync(Path.Combine(publish, "Consumer.dbg"), "symbols");
+        var bundle = Path.Combine(directory.Path, "bundle");
+        var symbols = Path.Combine(directory.Path, "symbols");
+        var result = await RunProcessAsync("bash",
+            Path.Combine(RepositoryRoot, ".github/scripts/stage-linux-x64.sh"), publish, bundle, symbols, "Consumer");
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("<data />", await File.ReadAllTextAsync(Path.Combine(bundle, "Assets", "data.xml")));
+        Assert.False(File.Exists(Path.Combine(bundle, "Consumer.dbg")));
+        Assert.Equal("symbols", await File.ReadAllTextAsync(Path.Combine(symbols, "Consumer.dbg")));
+        Assert.Equal(0, (await RunProcessAsync(Path.Combine(bundle, "Consumer"))).ExitCode);
+    }
+
     [Theory]
     [InlineData(true, true, 0)]
     [InlineData(true, false, 1)]

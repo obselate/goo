@@ -897,6 +897,27 @@ jobs:
             env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
+      - name: Package and run consumer AppImage
+        if: needs.changes.outputs.full == 'true'
+        env:
+          GooPackageId: org.goo.packagesmoke
+          Product: Goo Package Smoke
+        run: |
+          bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh "$RUNNER_TEMP/appimage-tools"
+          export GOO_APPIMAGETOOL="$RUNNER_TEMP/appimage-tools/appimagetool-x86_64.AppImage"
+          export GOO_APPIMAGE_RUNTIME="$RUNNER_TEMP/appimage-tools/runtime-x86_64"
+          export GooPackageIcon="$PWD/tests/Shared/Assets/local-rgba.png"
+          dotnet tool install Goo.DevTools --version "$GOO_VERSION" \
+            --tool-path "$RUNNER_TEMP/goo-package-tool" --configfile tests/Goo.PackageSmoke/NuGet.config
+          "$RUNNER_TEMP/goo-package-tool/goo" \
+            package --project tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj \
+            --target linux --output "$PWD/artifacts/appimage consumer"
+          image="$PWD/artifacts/appimage consumer/org.goo.packagesmoke-$GOO_VERSION-linux-x64.AppImage"
+          test -x "$image"
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            "$image" --appimage-extract-and-run
+
       - name: Stage minimal Linux bundle and separate symbols
         if: needs.changes.outputs.full == 'true'
         run: |

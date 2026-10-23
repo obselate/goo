@@ -64,6 +64,8 @@ internal static class CliApplication
                 "dev" => await RunDevAsync(commandLine),
                 "attach" => await RunAttachAsync(commandLine),
                 "doctor" => await RunDoctorAsync(commandLine),
+                "package" => await PackageApplication.RunAsync(commandLine,
+                    ResolveProject(commandLine.Get("project")) ?? throw new CliException("Select an application project with --project.")),
                 "list" => RunList(commandLine),
                 "capture" => await RunCaptureAsync(commandLine),
                 "input" => await RunInputAsync(commandLine),
@@ -1242,6 +1244,7 @@ internal static class CliApplication
         Console.WriteLine("  goo doctor [--json]");
         Console.WriteLine("  goo list [--pid PID] [--project PATH] [--json]");
         Console.WriteLine("  goo capture [options]");
+        Console.WriteLine("  goo package --target linux [--project PATH] [--output PATH] [--json]");
         Console.WriteLine("  goo input <event> [--pid PID --window NAME] [--target HANDLE | --node ID | --x X --y Y] [options]");
         Console.WriteLine();
         Console.WriteLine("Commands:");
@@ -1250,6 +1253,7 @@ internal static class CliApplication
         Console.WriteLine("  doctor    Check the SDK, project, endpoint directory, and inspector installation.");
         Console.WriteLine("  list      List live endpoints without connecting or selecting a window.");
         Console.WriteLine("  capture   Request a screenshot from an attached endpoint.");
+        Console.WriteLine("  package   Publish a Linux x64 NativeAOT app as an AppImage.");
         Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.");
         Console.WriteLine();
         Console.WriteLine("Common options:");

@@ -5,6 +5,22 @@ publish="${1:?usage: stage-linux-x64.sh PUBLISH_DIR BUNDLE_DIR SYMBOLS_DIR}"
 bundle="${2:?usage: stage-linux-x64.sh PUBLISH_DIR BUNDLE_DIR SYMBOLS_DIR}"
 symbols="${3:?usage: stage-linux-x64.sh PUBLISH_DIR BUNDLE_DIR SYMBOLS_DIR}"
 
+if [[ $# -eq 4 ]]; then
+  executable="$4"
+  test -f "$publish/$executable"
+  test ! -e "$bundle"
+  test ! -e "$symbols"
+  mkdir -p "$bundle" "$symbols"
+  cp -a "$publish/." "$bundle/"
+  while IFS= read -r -d '' source; do
+    relative="${source#"$bundle/"}"
+    mkdir -p "$symbols/$(dirname -- "$relative")"
+    mv "$source" "$symbols/$relative"
+  done < <(find "$bundle" -type f \( -name '*.pdb' -o -name '*.dbg' \) -print0)
+  chmod 0755 "$bundle/$executable"
+  exit 0
+fi
+
 mapfile -t runtime_files <"$(dirname "${BASH_SOURCE[0]}")/linux-bundle-files.txt"
 
 rm -rf "$bundle" "$symbols"

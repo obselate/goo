@@ -9,6 +9,7 @@ internal sealed class CommandLine
         ["attach"] = new(["project", "pid", "pipe", "app", "window", "wait", "command", "payload", "require-capabilities", "require-override-property"], ["latest", "inspector", "focus", "once", "json"]),
         ["doctor"] = new(["project"], ["json"]),
         ["list"] = new(["project", "pid", "pipe", "app", "window"], ["json"]),
+        ["package"] = new(["project", "target", "output"], ["json"]),
         ["capture"] = new(["project", "pid", "pipe", "app", "window", "wait", "format", "output"], ["latest", "json"]),
         ["input"] = new(["project", "pid", "pipe", "app", "window", "wait", "gesture", "target", "node", "key", "text", "button", "x", "y", "offset-x", "offset-y", "delta-x", "delta-y"], ["latest", "json", "alt", "ctrl", "shift", "super"])
     };
