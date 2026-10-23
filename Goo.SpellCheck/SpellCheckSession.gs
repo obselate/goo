@@ -59,21 +59,20 @@ class SpellCheckSession : IDisposable {
     }
 
     /// Reports completed automatic or explicit checks on the owner thread.
-    event Updated Action[SpellingResult]
+    event Updated Action[SpellingResult]?
 
     /// Checks a source range and discards stale results.
     async func CheckAsync(
         $range TextRange,
         cancellation CancellationToken = default(CancellationToken)
     ) SpellingResult {
-        var $range = $range
         RequireOwnerThread()
         let snapshot = controller.Document.Snapshot()
         let requestedLanguage = language
         let generation = languageGeneration
         SpellingInput.Validate(snapshot, $range, requestedLanguage)
         using let linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, owner.Closed, cancellation)
-        var result = SpellingResult(SpellingStatus.Cancelled, snapshot.Version, requestedLanguage, []Misspelling{})
+        var result = SpellingResult(SpellingStatus.Cancelled, snapshot.Version, requestedLanguage, Array.Empty[Misspelling]())
         try {
             result = await service.CheckAsync(snapshot, $range, requestedLanguage, linked.Token).ConfigureAwait(false)
         } catch (OperationCanceledException) when linked.IsCancellationRequested { }
@@ -144,7 +143,6 @@ class SpellCheckSession : IDisposable {
         position TextPosition,
         cancellation CancellationToken = default(CancellationToken)
     ) SpellingSuggestions {
-        var position = position
         RequireOwnerThread()
         let snapshot = controller.Document.Snapshot()
         let requestedLanguage = language
@@ -242,7 +240,6 @@ class SpellCheckSession : IDisposable {
     }
 
     private func OnDocumentChanged(change TextDocumentChange) {
-        var change = change
         if disposed || change.Changes.Count == 0 {
             return
         }
@@ -250,7 +247,7 @@ class SpellCheckSession : IDisposable {
         pending?.Dispose()
         pending = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, owner.Closed)
         for var i = errors.Count - 1; i >= 0; i-- {
-            var error = errors[i]
+            let error = errors[i]
             var shift = 0
             var affected = false
             for edit in change.Changes {
@@ -299,7 +296,7 @@ class SpellCheckSession : IDisposable {
             var dirtyStart int64 = dirty.Start
             var dirtyEnd = int64(dirty.Start) + int64(dirty.Length)
             for var i = change.Changes.Count - 1; i >= 0; i-- {
-                var edit = change.Changes[i]
+                let edit = change.Changes[i]
                 let oldEnd = int64(edit.Range.Start) + int64(edit.Range.Length)
                 let shift = edit.InsertedText.Length - edit.Range.Length
                 dirtyStart = if dirtyStart < int64(edit.Range.Start) {
@@ -328,8 +325,8 @@ class SpellCheckSession : IDisposable {
             start = int32(Math.Min(start, dirtyStart))
             end = int32(Math.Max(end, dirtyEnd))
         }
-        var firstLine = snapshot.GetLineRange(snapshot.GetLineIndex(start))
-        var lastLine = snapshot.GetLineRange(snapshot.GetLineIndex(Math.Min(end, snapshot.Length)))
+        let firstLine = snapshot.GetLineRange(snapshot.GetLineIndex(start))
+        let lastLine = snapshot.GetLineRange(snapshot.GetLineIndex(Math.Min(end, snapshot.Length)))
         let range_ = TextRange(firstLine.Start, lastLine.Start + lastLine.Length - firstLine.Start)
         pendingRange = range_
         errors.RemoveAll((error Misspelling) -> Overlaps(error.Range, range_))
@@ -355,7 +352,7 @@ class SpellCheckSession : IDisposable {
     private func PublishLayer() {
         let spans = [errors.Count]TextStyleSpan
         let style = Style{TextDecoration: TextDecoration.Underline}
-        for var i = 0; i < errors.Count; i++ {
+        for i in 0 ... errors.Count {
             spans[i] = TextStyleSpan("spelling:" + i.ToString(), errors[i].Range, style)
         }
         Layer.ReplaceStyles(Array.AsReadOnly(spans))
@@ -371,13 +368,7 @@ class SpellCheckSession : IDisposable {
     shared {
         private const CheckDelayMilliseconds int32 = 200
 
-        private func Overlaps(left TextRange, right TextRange) bool {
-            var left = left
-            var right = right
-            return int64(left.Start) < int64(right.Start) +
-                int64(right.Length) &&
-                int64(right.Start) < int64(left.Start) +
-                int64(left.Length)
-        }
+        private func Overlaps(left TextRange, right TextRange) bool ->
+            left.Start < int64(right.Start) + right.Length && right.Start < int64(left.Start) + left.Length
     }
 }

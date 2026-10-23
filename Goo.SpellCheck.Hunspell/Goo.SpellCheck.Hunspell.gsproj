@@ -14,4 +14,11 @@
   <ItemGroup>
     <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.gsproj" />
   </ItemGroup>
+  <Target Name="RegisterHunspellDocumentation" AfterTargets="CoreCompile" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)/Goo.SpellCheck.Hunspell.xml" />
+    </ItemGroup>
+  </Target>
 </Project>

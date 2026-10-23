@@ -16,4 +16,11 @@
     <InternalsVisibleTo Include="Goo.SpellCheck.Hunspell" />
     <InternalsVisibleTo Include="Goo.SpellCheck.Android" />
   </ItemGroup>
+  <Target Name="RegisterSpellingDocumentation" AfterTargets="CoreCompile" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)/Goo.SpellCheck.xml" />
+    </ItemGroup>
+  </Target>
 </Project>

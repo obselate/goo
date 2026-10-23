@@ -1276,14 +1276,14 @@ method|Goo.Printing.IPrintDocument|CreatePage|abstract|public|generic:|(index:Sy
 method|Goo.Printing.IPrintDocument|Paginate|abstract|public|generic:|(settings:Goo.Printing.PrintPageSettings)->Goo.Printing.PrintLayoutResult
 method|Goo.Printing.PrintLayoutResult|Deconstruct|instance|public|generic:|(out Status:Goo.Printing.PrintLayoutStatus&,out PageCount:System.Int32&,out Error:System.String&)->System.Void
 method|Goo.Printing.PrintLayoutResult|Equals|instance|public|generic:|(other:Goo.Printing.PrintLayoutResult)->System.Boolean
-method|Goo.Printing.PrintLayoutResult|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.Printing.PrintLayoutResult|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.Printing.PrintLayoutResult|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.Printing.PrintLayoutResult|ToString|virtual|public|generic:|()->System.String
 method|Goo.Printing.PrintLayoutResult|op_Equality|static|public|generic:|(left:Goo.Printing.PrintLayoutResult,right:Goo.Printing.PrintLayoutResult)->System.Boolean
 method|Goo.Printing.PrintLayoutResult|op_Inequality|static|public|generic:|(left:Goo.Printing.PrintLayoutResult,right:Goo.Printing.PrintLayoutResult)->System.Boolean
 method|Goo.Printing.PrintPageSettings|Deconstruct|instance|public|generic:|(out WidthPoints:System.Double&,out HeightPoints:System.Double&,out LeftPoints:System.Double&,out TopPoints:System.Double&,out RightPoints:System.Double&,out BottomPoints:System.Double&,out DpiX:System.Int32&,out DpiY:System.Int32&)->System.Void
 method|Goo.Printing.PrintPageSettings|Equals|instance|public|generic:|(other:Goo.Printing.PrintPageSettings)->System.Boolean
-method|Goo.Printing.PrintPageSettings|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.Printing.PrintPageSettings|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.Printing.PrintPageSettings|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.Printing.PrintPageSettings|ToString|virtual|public|generic:|()->System.String
 method|Goo.Printing.PrintPageSettings|op_Equality|static|public|generic:|(left:Goo.Printing.PrintPageSettings,right:Goo.Printing.PrintPageSettings)->System.Boolean
@@ -1330,7 +1330,7 @@ method|Goo.SpellCheck.ISpellingService|CheckAsync|abstract|public|generic:|(snap
 method|Goo.SpellCheck.ISpellingService|SuggestAsync|abstract|public|generic:|(snapshot:Goo.TextSnapshot,range:Goo.TextRange,language:System.String,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.SpellCheck.SpellingSuggestions>
 method|Goo.SpellCheck.Misspelling|Deconstruct|instance|public|generic:|(out Range:Goo.TextRange&,out Word:System.String&)->System.Void
 method|Goo.SpellCheck.Misspelling|Equals|instance|public|generic:|(other:Goo.SpellCheck.Misspelling)->System.Boolean
-method|Goo.SpellCheck.Misspelling|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.SpellCheck.Misspelling|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.SpellCheck.Misspelling|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.SpellCheck.Misspelling|ToString|virtual|public|generic:|()->System.String
 method|Goo.SpellCheck.Misspelling|op_Equality|static|public|generic:|(left:Goo.SpellCheck.Misspelling,right:Goo.SpellCheck.Misspelling)->System.Boolean

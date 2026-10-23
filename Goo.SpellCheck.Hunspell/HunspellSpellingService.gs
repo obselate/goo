@@ -59,7 +59,7 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
                         SpellingStatus.Unsupported,
                         snapshot.Version,
                         language,
-                        []Misspelling{},
+                        Array.Empty[Misspelling](),
                         "The dictionary encoding cannot represent this text."
                     )
                 } catch (DecoderFallbackException) {
@@ -67,7 +67,7 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
                         SpellingStatus.Failed,
                         snapshot.Version,
                         language,
-                        []Misspelling{},
+                        Array.Empty[Misspelling](),
                         "The dictionary returned invalid encoded text."
                     )
                 }
@@ -95,7 +95,7 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
                         language,
                         $range,
                         "",
-                        []string{},
+                        Array.Empty[string](),
                         "The dictionary encoding cannot represent this text."
                     )
                 } catch (DecoderFallbackException) {
@@ -105,7 +105,7 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
                         language,
                         $range,
                         "",
-                        []string{},
+                        Array.Empty[string](),
                         "The dictionary returned invalid encoded text."
                     )
                 }
@@ -138,11 +138,10 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
         requestedLanguage string,
         cancellation CancellationToken
     ) SpellingResult {
-        var $range = $range
         lock gate {
             let status = Ready(requestedLanguage, $range, cancellation)
             if status != SpellingStatus.Success {
-                return SpellingResult(status, snapshot.Version, requestedLanguage, []Misspelling{})
+                return SpellingResult(status, snapshot.Version, requestedLanguage, Array.Empty[Misspelling]())
             }
             let text = snapshot.GetText($range)
             let errors = List[Misspelling]()
@@ -197,7 +196,6 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
         requestedLanguage string,
         cancellation CancellationToken
     ) SpellingSuggestions {
-        var $range = $range
         lock gate {
             let status = Ready(requestedLanguage, $range, cancellation)
             let word = if $range.Length <= SpellingInput.MaxTextLength {
@@ -206,7 +204,7 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
                 ""
             }
             if status != SpellingStatus.Success {
-                return SpellingSuggestions(status, snapshot.Version, requestedLanguage, $range, word, []string{})
+                return SpellingSuggestions(status, snapshot.Version, requestedLanguage, $range, word, Array.Empty[string]())
             }
             EncodeWord(word.AsSpan())
             var list nint = 0
@@ -222,7 +220,7 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
                         requestedLanguage,
                         $range,
                         word,
-                        []string{},
+                        Array.Empty[string](),
                         "Hunspell returned an invalid suggestion list."
                     )
                 }
@@ -259,7 +257,6 @@ unsafe class HunspellSpellingService : ISpellingService, IDisposable {
     }
 
     private func Ready(requestedLanguage string, $range TextRange, cancellation CancellationToken) SpellingStatus {
-        var $range = $range
         ObjectDisposedException.ThrowIf(disposed, this)
         if cancellation.IsCancellationRequested {
             return SpellingStatus.Cancelled

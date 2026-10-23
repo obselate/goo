@@ -203,12 +203,12 @@ internal unsafe shared class WindowsPrinting {
             started = true
             var reusable WindowCapture? = nil
             var pageWritten = false
-            for var index = 0; index < layout.PageCount; index++ {
+            for index in 0 ... layout.PageCount {
                 if !Selected(index + 1, dialog) {
                     continue
                 }
                 cancellation.ThrowIfCancellationRequested()
-                var rendered = Printing
+                let rendered = Printing
                     .RenderPageAsync(owner, document, index, settings, reusable, cancellation)
                     .GetAwaiter()
                     .GetResult()
@@ -286,7 +286,7 @@ internal unsafe shared class WindowsPrinting {
         if dialog.PageRangeCount > uint32(MaxRanges) {
             return false
         }
-        for var index = 0; int64(index) < int64(dialog.PageRangeCount); index++ {
+        for index in 0 ... int32(dialog.PageRangeCount) {
             let range_ = Marshal.PtrToStructure[PageRange](dialog.PageRanges + index * Marshal.SizeOf[PageRange]())
             if int64(page) >= int64(range_.From) && int64(page) <= int64(range_.To) {
                 return true

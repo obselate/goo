@@ -13,6 +13,6 @@
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Goo.Printing/Goo.Printing.csproj" />
+    <ProjectReference Include="../Goo.Printing/Goo.Printing.gsproj" />
   </ItemGroup>
 </Project>

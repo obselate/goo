@@ -14,16 +14,15 @@ class SystemSpellingService : ISpellingService {
         language string,
         cancellation CancellationToken = default(CancellationToken)
     ) Task[SpellingResult] {
-        var $range = $range
         var language = language
         language = SpellingInput.Validate(snapshot, $range, language)
         if cancellation.IsCancellationRequested {
             return Task.FromResult(
-                SpellingResult(SpellingStatus.Cancelled, snapshot.Version, language, []Misspelling{})
+                SpellingResult(SpellingStatus.Cancelled, snapshot.Version, language, Array.Empty[Misspelling]())
             )
         }
         if $range.Length > SpellingInput.MaxTextLength {
-            return Task.FromResult(SpellingResult(SpellingStatus.TooLarge, snapshot.Version, language, []Misspelling{}))
+            return Task.FromResult(SpellingResult(SpellingStatus.TooLarge, snapshot.Version, language, Array.Empty[Misspelling]()))
         }
         if OperatingSystem.IsWindows() {
             return Task.Run[SpellingResult](() -> WindowsSpelling.Check(snapshot, $range, language, cancellation))
@@ -31,7 +30,7 @@ class SystemSpellingService : ISpellingService {
         if OperatingSystem.IsMacOS() {
             return Task.FromResult(MacSpelling.Check(snapshot, $range, language, cancellation))
         }
-        return Task.FromResult(SpellingResult(SpellingStatus.Unsupported, snapshot.Version, language, []Misspelling{}))
+        return Task.FromResult(SpellingResult(SpellingStatus.Unsupported, snapshot.Version, language, Array.Empty[Misspelling]()))
     }
 
     /// Gets bounded replacement choices without learning or automatically correcting words.
@@ -41,17 +40,16 @@ class SystemSpellingService : ISpellingService {
         language string,
         cancellation CancellationToken = default(CancellationToken)
     ) Task[SpellingSuggestions] {
-        var $range = $range
         var language = language
         language = SpellingInput.Validate(snapshot, $range, language)
         if cancellation.IsCancellationRequested {
             return Task.FromResult(
-                SpellingSuggestions(SpellingStatus.Cancelled, snapshot.Version, language, $range, "", []string{})
+                SpellingSuggestions(SpellingStatus.Cancelled, snapshot.Version, language, $range, "", Array.Empty[string]())
             )
         }
         if $range.Length > SpellingInput.MaxTextLength {
             return Task.FromResult(
-                SpellingSuggestions(SpellingStatus.TooLarge, snapshot.Version, language, $range, "", []string{})
+                SpellingSuggestions(SpellingStatus.TooLarge, snapshot.Version, language, $range, "", Array.Empty[string]())
             )
         }
         if OperatingSystem.IsWindows() {
@@ -63,7 +61,7 @@ class SystemSpellingService : ISpellingService {
             return Task.FromResult(MacSpelling.Suggest(snapshot, $range, language, cancellation))
         }
         return Task.FromResult(
-            SpellingSuggestions(SpellingStatus.Unsupported, snapshot.Version, language, $range, "", []string{})
+            SpellingSuggestions(SpellingStatus.Unsupported, snapshot.Version, language, $range, "", Array.Empty[string]())
         )
     }
 }
