@@ -133,11 +133,13 @@ internal partial class TextInput {
     if target.Kind == NodeKind.Editor {
       guard let controller = target.EditorController else { return false }
       if end > controller.Document.Length { return false }
+      let snappedAnchor = controller.SnapPosition(TextPosition{ Offset: anchor,
+        Affinity: anchor <= caret ? TextAffinity.Upstream : TextAffinity.Downstream })
+      let snappedCaret = controller.SnapPosition(TextPosition{ Offset: caret,
+        Affinity: caret <= anchor ? TextAffinity.Upstream : TextAffinity.Downstream })
       controller.Selection = TextSelection{
-        Anchor: controller.SnapPosition(TextPosition{ Offset: anchor,
-          Affinity: anchor <= caret ? TextAffinity.Upstream : TextAffinity.Downstream }),
-        Active: controller.SnapPosition(TextPosition{ Offset: caret,
-          Affinity: caret <= anchor ? TextAffinity.Upstream : TextAffinity.Downstream }),
+        Anchor: TextPosition{ Offset: snappedAnchor.Offset, Affinity: TextAffinity.Upstream },
+        Active: TextPosition{ Offset: snappedCaret.Offset, Affinity: TextAffinity.Downstream },
       }
       return true
     }
