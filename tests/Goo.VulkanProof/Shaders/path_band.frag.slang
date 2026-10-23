@@ -453,13 +453,13 @@ void accumulateVerticalRoot(
     weight = max(weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
 }
 
-AnalyticBand horizontalBandAt(float y)
+uint horizontalBandIndexAt(float y)
 {
     uint count = horizontalBandCount();
     uint base = horizontalBandBase();
     if (count == 0u)
     {
-        return readBand(base);
+        return 0u;
     }
     uint low = 0u;
     uint high = count;
@@ -476,8 +476,12 @@ AnalyticBand horizontalBandAt(float y)
             low = middle + 1u;
         }
     }
-    uint index = low < count ? low : count - 1u;
-    return readBand(base + index * BandWordCount);
+    return low < count ? low : count - 1u;
+}
+
+AnalyticBand horizontalBandAt(float y)
+{
+    return readBand(horizontalBandBase() + horizontalBandIndexAt(y) * BandWordCount);
 }
 
 AnalyticBand verticalBandAt(float x)

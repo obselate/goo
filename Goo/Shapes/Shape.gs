@@ -65,9 +65,9 @@ public class Shape : Blob {
   }
   /// Gets or sets the stroke dash pattern.
   public prop Dashes DashPattern? { get; init; }
-  /// Gets or sets the stroke start in [0, 1]. Lengths use flattened geometry
-  /// after fit mapping, summed across contours in path order.
-  /// NonScalingStroke measures lengths after the full transform.
+  /// Gets or sets the stroke start in [0, 1], summed across contours in path order.
+  /// None measures flattened geometry after fit mapping.
+  /// NonScalingStroke measures geometry after the full transform.
   /// On mount, StrokeStart must not exceed StrokeEnd.
   public prop StrokeStart float64{
     get -> strokeStart

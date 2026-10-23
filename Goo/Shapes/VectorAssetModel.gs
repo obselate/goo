@@ -51,6 +51,7 @@ public sealed class VectorStroke {
   /// Gets the finite miter limit.
   public prop MiterLimit float64{ get -> miterLimit }
   /// Gets the optional dash pattern.
+  /// NonScalingStroke measures dash lengths in window logical pixels.
   public prop Dashes DashPattern? { get -> dashes }
   /// Gets the vector effect. The default is None.
   public prop VectorEffect VectorEffect{ get; init; }
