@@ -62,6 +62,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
 
   internal func BeginCompile() {
     EnsureOpen()
+    CommitCurrentReferences()
     let sharedRedraw = resources.RedrawRequiredSince(observedRedrawSequence)
     observedRedrawSequence = resources.RedrawSequence
     resources.BeginCompile(sceneId)
@@ -178,6 +179,7 @@ internal unsafe sealed class VulkanPathScene : IDisposable {
       return
     }
     currentPaths.Commit()
+    resources.EndCompile(sceneId)
     referencesCommitted = true
   }
 

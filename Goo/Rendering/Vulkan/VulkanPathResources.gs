@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.Collections.Generic
-import System.Linq
 
 internal data struct VulkanPathRenderable {
   internal let PathId ResourceId
@@ -73,6 +72,9 @@ private sealed class VulkanPathResourceRecord {
   internal var FillRuleMask uint32
   internal var GeometryRevision uint64
   internal var LastUseFence uint64
+  internal var Previous VulkanPathResourceRecord?
+  internal var Next VulkanPathResourceRecord?
+  internal var Retired bool
 
   internal init(identity VulkanPathResourceIdentity, baseWord uint32,
     wordCount uint32, bounds ConservativeBounds, fillRuleMask uint32) {
@@ -88,6 +90,7 @@ private sealed class VulkanPathResourceRecord {
       FillRuleMask = fillRuleMask
       GeometryRevision = identity.GeometryRevision
       LastUseFence = 0uL
+      Retired = false
     }
 }
 
@@ -141,6 +144,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   private var atlasLastUseFence uint64
   private var retiredWordCount uint64
   private var completedSubmissionFence uint64
+  private var leastRecentlyUsed VulkanPathResourceRecord?
+  private var mostRecentlyUsed VulkanPathResourceRecord?
   private var disposed bool
 
   internal prop Atlas VulkanPathAtlas{ get -> atlas }
@@ -276,16 +281,30 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       throw ArgumentException("Vulkan path scene identity is not registered", "sceneId")
     }
     identities.SweepDeadRecords()
+    for revisions in active.Values {
+      for revision in revisions.Keys {
+        revisions[revision] = false
+      }
+    }
+  }
+
+  internal func EndCompile(sceneId uint64) {
+    EnsureOpen()
+    let active = sceneActivePathIds[sceneId]
     for pathId in active.Keys {
       let revisions = active[pathId]
       for revision in revisions.Keys {
-        RemoveActiveRevisionOwner(pathId, revision)
+        if !revisions[revision] {
+          RemoveActiveRevisionOwner(pathId, revision)
+          revisions.Remove(revision)
+        }
       }
-      revisions.Clear()
-      sceneRevisionSetPool.Add(revisions)
-      RemoveActiveOwner(pathId)
+      if revisions.Count == 0 {
+        active.Remove(pathId)
+        sceneRevisionSetPool.Add(revisions)
+        RemoveActiveOwner(pathId)
+      }
     }
-    active.Clear()
   }
 
   internal func MarkActive(sceneId uint64, pathId ResourceId) {
@@ -298,6 +317,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     }
     if active.TryGetValue(pathId.LogicalId, out var revisions) {
       if revisions.ContainsKey(pathId.Version) {
+        revisions[pathId.Version] = true
         return
       }
       revisions.Add(pathId.Version, true)
@@ -359,6 +379,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     let identity = identities.Resolve(data)
     if records.TryGetValue(identity.PathId.LogicalId, out var existing)
       && existing.GeometryRevision == identity.GeometryRevision{
+        TouchRecord(existing)
         return BuildRenderable(existing, fillRule, renderAfterPlannedUpload)
       }
 
@@ -386,8 +407,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     }
     let record = AcquireRecord(identity, baseWord, uint32(wordCount),
       bounds, encoding.FillRuleMask)
+    TouchRecord(record)
     let hadRecord = if records.TryGetValue(identity.PathId.LogicalId, out var replaced) {
       retiredRecords.Add(replaced)
+      replaced.Retired = true
       if retiredWordCount > uint64.MaxValue - uint64(replaced.WordCount) {
         throw OverflowException("Vulkan path retired word count overflow")
       }
@@ -906,37 +929,37 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
         queuedUploadEnd = 0u
       }
     }
-    var reclaimed = ReclaimRetiredRecords()
-    let snapshot = records.Values.ToArray()
-    for record in snapshot {
-      let pathId = record.Identity.PathId.LogicalId
-      if activePathOwners.ContainsKey(pathId)
-        || record.LastUseFence > completedSubmissionFence{
-          continue
+    var reclaimed = false
+    while !HasFreeRange(required) {
+      var candidate = leastRecentlyUsed
+      while let record = candidate {
+        if CanReclaim(record) { break }
+        candidate = record.Next
+      }
+      guard let record = candidate else { break }
+      if record.Retired {
+        retiredRecords.Remove(record)
+        retiredWordCount = retiredWordCount - uint64(record.WordCount)
+      } else {
+        records.Remove(record.Identity.PathId.LogicalId)
+        identities.Release(record.Identity)
+        if evictionCount == uint64.MaxValue {
+          throw OverflowException("Vulkan path eviction count overflow")
         }
-      if !records.Remove(pathId) {
-        continue
+        evictionCount++
       }
-      let recordWordCount = record.WordCount
-      AddFreeRange(record.BaseWord, recordWordCount)
-      ClearWords(record.BaseWord, recordWordCount)
-      liveWordCount = liveWordCount - recordWordCount
-      identities.Release(record.Identity)
-      if evictionCount == uint64.MaxValue {
-        throw OverflowException("Vulkan path eviction count overflow")
-      }
-      evictionCount = evictionCount + 1uL
+      AddFreeRange(record.BaseWord, record.WordCount)
+      ClearWords(record.BaseWord, record.WordCount)
+      liveWordCount = liveWordCount - record.WordCount
       RecycleRecord(record)
+      MergeFreeRanges()
       reclaimed = true
     }
-    if !reclaimed {
-      return false
-    }
-    MergeFreeRanges()
+    if !reclaimed { return false }
     if compactionCount == uint64.MaxValue {
       throw OverflowException("Vulkan path compaction count overflow")
     }
-    compactionCount = compactionCount + 1uL
+    compactionCount++
     RequestRedraw()
     return HasFreeRange(required)
   }
@@ -1027,22 +1050,48 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   }
 
   private func RecycleRecord(record VulkanPathResourceRecord) {
+    UnlinkRecord(record)
     record.Reset(VulkanPathResourceIdentity{}, 0u, 0u, ConservativeBounds{}, 0u)
     recordPool.Add(record)
   }
 
-  private func HasInactiveRecords() bool {
-    for record in retiredRecords {
-      if !IsPathRevisionActive(record.Identity.PathId)
-        && record.LastUseFence <= completedSubmissionFence{
-          return true
-        }
+  private func TouchRecord(record VulkanPathResourceRecord) {
+    if Object.ReferenceEquals(mostRecentlyUsed, record) { return }
+    UnlinkRecord(record)
+    record.Previous = mostRecentlyUsed
+    if let previous = mostRecentlyUsed {
+      previous.Next = record
+    } else {
+      leastRecentlyUsed = record
     }
-    for record in records.Values {
-      if !activePathOwners.ContainsKey(record.Identity.PathId.LogicalId)
-        && record.LastUseFence <= completedSubmissionFence{
-          return true
-        }
+    mostRecentlyUsed = record
+  }
+
+  private func UnlinkRecord(record VulkanPathResourceRecord) {
+    if let previous = record.Previous {
+      previous.Next = record.Next
+    } else if Object.ReferenceEquals(leastRecentlyUsed, record) {
+      leastRecentlyUsed = record.Next
+    }
+    if let next = record.Next {
+      next.Previous = record.Previous
+    } else if Object.ReferenceEquals(mostRecentlyUsed, record) {
+      mostRecentlyUsed = record.Previous
+    }
+    record.Previous = nil
+    record.Next = nil
+  }
+
+  private func CanReclaim(record VulkanPathResourceRecord) bool ->
+    record.LastUseFence <= completedSubmissionFence
+    && !(if record.Retired { IsPathRevisionActive(record.Identity.PathId) }
+      else { activePathOwners.ContainsKey(record.Identity.PathId.LogicalId) })
+
+  private func HasInactiveRecords() bool {
+    var candidate = leastRecentlyUsed
+    while let record = candidate {
+      if CanReclaim(record) { return true }
+      candidate = record.Next
     }
     return false
   }
@@ -1268,6 +1317,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     records.Clear()
     retiredRecords.Clear()
     recordPool.Clear()
+    leastRecentlyUsed = nil
+    mostRecentlyUsed = nil
     freeRanges.Clear()
     liveWordCount = 0u
     freeWordCount = 0u

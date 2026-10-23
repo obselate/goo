@@ -20,6 +20,7 @@ internal static class Program
         if (Environment.GetEnvironmentVariable("GOO_VK_PATH_UPLOAD_GATE") == "1")
         {
             RunPathUploadGate();
+            RunPathEvictionGate();
             return 0;
         }
 
@@ -40,6 +41,7 @@ internal static class Program
         RunPathMorphGate();
         RunEvenOddPathGate();
         RunPathUploadGate();
+        RunPathEvictionGate();
         RunUploadRingGrowthGate();
         RunRetainedPrimitiveSpanGate();
 
@@ -536,6 +538,55 @@ internal static class Program
         SubmitPathUpload(vulkanPathResources, 5uL);
         vulkanPathResources.Collect(5uL);
         Console.WriteLine("PATH_UPLOAD_GATE atlasWords=" + vulkanPathResources.Atlas.WordCapacity + " growthCount=" + vulkanPathResources.Stats.GrowthCount + " reuseOffset=" + vulkanPathRenderable5.BaseWord + " reuseWords=" + vulkanPathRenderable5.WordCount + " warmAllocated=" + num + " abortRetained=1 unpublished=1 published=1");
+    }
+
+    private static void RunPathEvictionGate()
+    {
+        VectorPath MakePath(int index)
+        {
+            var builder = new PathBuilder(0, 0, 100, 100);
+            builder.MoveTo(index, 0);
+            builder.LineTo(index + 1, 20);
+            builder.LineTo(index + 2, 0);
+            builder.Close();
+            return builder.Build();
+        }
+
+        var retained = new VectorPath[12];
+        for (int index = 0; index < retained.Length; index++)
+            retained[index] = MakePath(index);
+        ulong words = (ulong)PathBandEncoder.Encode(retained[0]).WordCount;
+        using var resources = new VulkanPathResources(
+            new VulkanPathAtlas(words * 16), new VulkanPathIdentityRegistry());
+        using var scene = new VulkanPathScene(resources);
+        int registrations = 0;
+        for (int frame = 0; frame < 6; frame++)
+        {
+            scene.BeginCompile();
+            for (int marker = 0; marker < 4; marker++)
+                scene.Emit(MakePath(20 + frame * 4 + marker), FillRule.NonZero);
+            foreach (var path in retained)
+            {
+                uint before = resources.LiveWordCount;
+                scene.Emit(path, FillRule.NonZero);
+                if (frame > 0 && resources.LiveWordCount != before)
+                    registrations++;
+            }
+            _ = scene.CurrentPathCount;
+            resources.PrepareUpload();
+            SubmitPathUpload(resources, (ulong)frame + 1);
+            resources.Collect((ulong)frame + 1);
+        }
+        if (registrations != 0)
+            throw new InvalidOperationException(
+                "Retained paths registered again after fresh paths: " + registrations);
+        if (resources.Stats.GrowthCount != 1 || resources.Stats.EvictionCount != 4)
+            throw new InvalidOperationException("Path pressure did not reclaim only the required paths");
+        if (!resources.Resolve(MakePath(24), FillRule.NonZero).Published
+            || resources.Resolve(MakePath(20), FillRule.NonZero).Published)
+            throw new InvalidOperationException("Path pressure did not evict the least recently used paths");
+        Console.WriteLine("PATH_EVICTION_GATE retained=12 frames=6 retainedRegistrations=" + registrations
+            + " growth=" + resources.Stats.GrowthCount + " demandLimited=1 lru=1");
     }
 
     private static void RunEvenOddPathGate()
