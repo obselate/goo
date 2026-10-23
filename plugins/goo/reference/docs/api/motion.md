@@ -96,13 +96,13 @@ Source:
 
 - [`Motion.gs`](../../Goo/Motion/Motion.gs)
 
-Configures the animation core.
+Configures the animation core. Animation durations use milliseconds. Simulation elapsed time and velocity use seconds.
 
 ### `Tween(float64,Easing)`
 
 Creates an exact-duration scalar simulation factory.
 
-- `duration`: duration in seconds, including zero
+- `durationMs`: duration in milliseconds, including zero
 - `easing`: progress curve
 
 Returns: a reusable scalar simulation factory
