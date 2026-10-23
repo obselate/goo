@@ -30,5 +30,6 @@
     <None Include="../../.github/scripts/stage-linux-x64.sh" Link="Packaging/stage-linux-x64.sh" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Packaging/*.sh" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Packaging/*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Packaging/*.ps1" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

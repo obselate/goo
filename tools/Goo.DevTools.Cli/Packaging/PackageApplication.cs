@@ -8,41 +8,54 @@ using System.Text.RegularExpressions;
 
 namespace Goo.DevTools.Cli;
 
-internal static class PackageApplication
+internal static partial class PackageApplication
 {
     private const string AppImageToolHash = "95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6";
     private const string AppImageRuntimeHash = "617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46";
-    private const string MetadataProperties = "AssemblyName,Product,Version,GooPackageId,GooPackageIcon";
+    private const string MetadataProperties = "AssemblyName,Product,Version,GooPackageId,GooPackageIcon,Company";
 
     internal static async Task<int> RunAsync(CommandLine commandLine, string project)
     {
-        if (commandLine.Get("target") != "linux" || !OperatingSystem.IsLinux()
+        var target = commandLine.Get("target");
+        var windows = target == "windows" && OperatingSystem.IsWindows();
+        if ((!windows && (target != "linux" || !OperatingSystem.IsLinux()))
             || RuntimeInformation.OSArchitecture != Architecture.X64)
-            throw new CliException("Packaging requires --target linux on Linux x64.", "unsupported-target", "validation");
+            throw new CliException("Package on the target OS with --target linux or windows (x64).", "unsupported-target", "validation");
 
-        var tool = VerifyTool("GOO_APPIMAGETOOL", AppImageToolHash);
-        var runtime = VerifyTool("GOO_APPIMAGE_RUNTIME", AppImageRuntimeHash);
+        var tool = windows ? Environment.GetEnvironmentVariable("GOO_ISCC") : VerifyTool("GOO_APPIMAGETOOL", AppImageToolHash);
+        if (string.IsNullOrWhiteSpace(tool) || !File.Exists(tool))
+            throw new CliException("Set GOO_ISCC to Inno Setup 7.1.0 ISCC.exe.", "missing-tool", "validation");
+        var runtime = windows ? "" : VerifyTool("GOO_APPIMAGE_RUNTIME", AppImageRuntimeHash);
+        var rid = windows ? "win-x64" : "linux-x64";
         var directory = Path.GetDirectoryName(project)!;
-        var metadata = await ReadMetadataAsync(project, "linux-x64");
+        var metadata = await ReadMetadataAsync(project, rid);
         var output = Path.GetFullPath(commandLine.Get("output") ?? "artifacts/packages", directory);
         var workspace = Path.Combine(directory, "obj", "goo-package", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try
         {
             var publish = Path.Combine(workspace, "publish");
-            await ExecuteAsync("dotnet", ["publish", project, "-c", "Release", "-r", "linux-x64",
-                "--self-contained", "true", "-p:PublishAot=true", "-m:2", "-o", publish], directory, "publish-failed");
+            await ExecuteAsync("dotnet", ["publish", project, "-c", "Release", "-r", rid,
+                "--self-contained", "true", "-p:PublishAot=true", "-m:4", "-o", publish], directory, "publish-failed");
             var appDir = Path.Combine(workspace, "AppDir");
             var symbols = Path.Combine(workspace, "symbols");
-            await ExecuteAsync("bash", [Path.Combine(AppContext.BaseDirectory, "Packaging", "stage-linux-x64.sh"),
-                publish, Path.Combine(appDir, "usr", "bin"), symbols, metadata.Executable], directory, "stage-failed");
-            await WriteAppDirAsync(appDir, metadata);
-            var name = $"{metadata.Id}-{metadata.Version}-linux-x64";
-            var artifact = Path.Combine(workspace, name + ".AppImage");
-            await ExecuteAsync("env", ["ARCH=x86_64", tool, "--appimage-extract-and-run", "--no-appstream",
-                "--runtime-file", runtime, appDir, artifact], workspace, "package-failed");
+            var name = $"{metadata.Id}-{metadata.Version}-{rid}";
+            string artifact;
+            if (windows)
+            {
+                artifact = await PackageWindowsAsync(publish, workspace, symbols, metadata, tool);
+            }
+            else
+            {
+                await ExecuteAsync("bash", [Path.Combine(AppContext.BaseDirectory, "Packaging", "stage-linux-x64.sh"),
+                    publish, Path.Combine(appDir, "usr", "bin"), symbols, metadata.Executable], directory, "stage-failed");
+                await WriteAppDirAsync(appDir, metadata);
+                artifact = Path.Combine(workspace, name + ".AppImage");
+                await ExecuteAsync("env", ["ARCH=x86_64", tool, "--appimage-extract-and-run", "--no-appstream",
+                    "--runtime-file", runtime, appDir, artifact], workspace, "package-failed");
+            }
             if (!File.Exists(artifact) || new FileInfo(artifact).Length == 0)
-                throw new CliException("appimagetool did not create an AppImage.", "package-failed", "package");
+                throw new CliException("The packaging tool did not create an artifact.", "package-failed", "package");
 
             Directory.CreateDirectory(output);
             var artifacts = new List<string>();
@@ -58,7 +71,7 @@ internal static class PackageApplication
             File.Move(artifact, image, true);
             artifacts.Insert(0, image);
             if (commandLine.Has("json"))
-                Console.WriteLine(JsonSerializer.Serialize(new { target = "linux", signing = "unsigned", artifacts }));
+                Console.WriteLine(JsonSerializer.Serialize(new { target, signing = "unsigned", artifacts }));
             else
                 foreach (var path in artifacts)
                     Console.WriteLine(path);
@@ -105,9 +118,13 @@ internal static class PackageApplication
                 throw new CliException("Set AssemblyName, Product, numeric Version, GooPackageId and GooPackageIcon. See docs/shipping.md.",
                     "invalid-package-metadata", "validation");
             icon = Path.GetFullPath(icon, Path.GetDirectoryName(project)!);
-            if (!File.Exists(icon) || !icon.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                throw new CliException("GooPackageIcon must name an existing PNG file.", "invalid-package-metadata", "validation");
-            return new Metadata(executable, name, version, id, icon);
+            var extension = runtime == "win-x64" ? ".ico" : ".png";
+            if (!File.Exists(icon) || !icon.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                throw new CliException($"GooPackageIcon must name an existing {extension} file.", "invalid-package-metadata", "validation");
+            var company = properties.GetProperty("Company").GetString() ?? "";
+            if (runtime == "win-x64" && (string.IsNullOrWhiteSpace(company) || company.Any(char.IsControl)))
+                throw new CliException("Set Company to the Windows app publisher.", "invalid-package-metadata", "validation");
+            return new Metadata(executable, name, version, id, icon, company);
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException)
         {
@@ -167,5 +184,5 @@ internal static class PackageApplication
         }
     }
 
-    private sealed record Metadata(string Executable, string Name, string Version, string Id, string Icon);
+    private sealed record Metadata(string Executable, string Name, string Version, string Id, string Icon, string Company);
 }
