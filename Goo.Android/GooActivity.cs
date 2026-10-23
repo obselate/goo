@@ -15,6 +15,8 @@ public abstract class GooActivity : Activity
 
     /// <summary>Gets the saved activity state passed to CreateWindow, or null for a fresh activity.</summary>
     protected Bundle? SavedInstanceState { get; private set; }
+    /// <summary>Gets the Activity-owned system document picker and content URI stream service.</summary>
+    public AndroidDocuments Documents { get; private set; } = null!;
 
     protected abstract global::Goo.Window CreateWindow();
     protected GooView GooView => view ?? throw new InvalidOperationException("The activity has not created its Goo view.");
@@ -34,6 +36,7 @@ public abstract class GooActivity : Activity
     {
         base.OnCreate(savedInstanceState);
         SavedInstanceState = savedInstanceState;
+        Documents = new AndroidDocuments(this);
         if (!OperatingSystem.IsAndroidVersionAtLeast(35))
             Window!.SetDecorFitsSystemWindows(false);
         Window!.SetSoftInputMode(SoftInput.AdjustResize);
@@ -108,8 +111,15 @@ public abstract class GooActivity : Activity
         base.OnPause();
     }
 
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    {
+        if (Documents.HandleResult(requestCode, resultCode, data)) return;
+        base.OnActivityResult(requestCode, resultCode, data);
+    }
+
     protected override void OnDestroy()
     {
+        Documents?.Dispose();
         content?.SetOnApplyWindowInsetsListener(null);
         if (view is { } current && current.Parent is ViewGroup parent) parent.RemoveView(current);
         view?.Dispose();
