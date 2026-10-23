@@ -16,14 +16,20 @@ if ($LASTEXITCODE -ne 0) { throw 'The native transfer peer did not compile' }
 $png = Join-Path (Split-Path $applicationPath) 'local-rgba.png'
 if (!(Test-Path $png)) { throw 'The native PNG fixture is missing' }
 
+function Read-FixtureOutput([string]$path) {
+    $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    $reader = [IO.StreamReader]::new($stream)
+    try { return $reader.ReadToEnd() } finally { $reader.Dispose() }
+}
+
 function Start-Fixture([string]$executable, [string[]]$arguments, [string]$prefix) {
     $start = @{ FilePath = $executable; RedirectStandardOutput = "$prefix.stdout"; RedirectStandardError = "$prefix.stderr"; PassThru = $true }
     if ($arguments.Count) { $start.ArgumentList = @($arguments | ForEach-Object { '"' + $_ + '"' }) }
     $process = Start-Process @start
     $deadline = [DateTime]::UtcNow.AddSeconds(20)
     while ([DateTime]::UtcNow -lt $deadline) {
-        if ((Test-Path "$prefix.stdout") -and [IO.File]::ReadAllText("$prefix.stdout").Contains('ready')) { return $process }
-        if ($process.HasExited) { throw "Fixture exited before ready: $prefix`n$([IO.File]::ReadAllText("$prefix.stderr"))" }
+        if ((Test-Path "$prefix.stdout") -and (Read-FixtureOutput "$prefix.stdout").Contains('ready')) { return $process }
+        if ($process.HasExited) { throw "Fixture exited before ready: $prefix`n$(Read-FixtureOutput "$prefix.stderr")" }
         Start-Sleep -Milliseconds 50
     }
     $process.Kill()
