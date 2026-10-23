@@ -115,6 +115,7 @@ TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
 ```
 
 - `GooView` exposes Goo semantics as Android virtual accessibility nodes.
+- The bridge runs when an Android accessibility service is active.
 - Give custom controls a role, name, state and supported actions through `Accessibility`.
 - Text, password masks, selection and editing use the shared Goo action path.
 - `GooView` owns `Window.AccessibilityAdapter`. Leave the slot empty before construction.
@@ -123,6 +124,10 @@ TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
 - Touch exploration uses Goo stacking, transforms and clipping.
 - Surface replacement keeps virtual IDs and clears reading focus.
 - The virtual subtree is available after the replacement presentation updates.
+- Text, selection, scroll and state changes send events for the changed nodes.
+- Root, native geometry and Surface changes refresh the host subtree.
+- `Accessibility.Live` sets polite or assertive live-region behavior.
+- Atomic regions send their full current text. Resume does not replay old announcements.
 
 ## Transparent surfaces
 

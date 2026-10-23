@@ -13,7 +13,6 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
     private readonly NativeManager manager;
     private readonly Dictionary<int, NodeRecord> nodes = new();
     private readonly Dictionary<long, int> ids = new();
-    private readonly List<int> retired = new();
     private int nextId;
     private int rootId = HostViewId;
     private long generation;
@@ -25,10 +24,11 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
     {
         this.view = view;
         manager = (NativeManager)view.Context!.GetSystemService(Context.AccessibilityService)!;
+        flushEvents = new Java.Lang.Runnable(FlushEvents);
     }
 
-    private bool Available => !disposed && presentationReady && view.IsAttachedToWindow && view.IsShown
-        && view.Window.IsOpen && view.WindowVisibility == ViewStates.Visible;
+    private bool Available => !disposed && presentationReady && version >= 0 && manager.IsEnabled
+        && view.IsAttachedToWindow && view.IsShown && view.Window.IsOpen && view.WindowVisibility == ViewStates.Visible;
 
     public void Update(AccessibilityTree tree)
     {
@@ -36,22 +36,20 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
             return;
         generation++;
         rootId = tree.Root is { } root ? Collect(root, HostViewId) : HostViewId;
-        retired.Clear();
-        foreach (var pair in nodes)
-            if (pair.Value.Generation != generation)
-                retired.Add(pair.Key);
-        foreach (var id in retired)
-        {
-            if (accessibilityFocus == id)
-                SetAccessibilityFocus(HostViewId);
-            if (hovered == id) SetHover(HostViewId);
-            if (pendingFocus == id) pendingFocus = HostViewId;
-            ids.Remove(nodes[id].Node.Id.Value);
-            nodes.Remove(id);
-        }
+        foreach (var pair in ids)
+            if (!nodes.TryGetValue(pair.Value, out var record) || record.Generation != generation)
+            {
+                var id = pair.Value;
+                if (accessibilityFocus == id) SetAccessibilityFocus(HostViewId);
+                if (hovered == id) SetHover(HostViewId);
+                if (pendingFocus == id) pendingFocus = HostViewId;
+                record?.Words?.Dispose();
+                ids.Remove(pair.Key);
+                nodes.Remove(id);
+            }
         version = tree.Version;
         CompletePendingFocus();
-        Send(HostViewId, EventTypes.WindowContentChanged, ContentChangeTypes.Subtree);
+        ScheduleEvents();
     }
 
     private int Collect(AccessibilityNode node, int parent)
@@ -60,9 +58,12 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         {
             id = checked(++nextId);
             ids.Add(node.Id.Value, id);
-            nodes.Add(id, new NodeRecord(node));
         }
-        var record = nodes[id];
+        if (!nodes.TryGetValue(id, out var record))
+        {
+            record = new NodeRecord(node);
+            nodes.Add(id, record);
+        }
         record.Node = node;
         record.Parent = parent;
         record.Generation = generation;
@@ -83,7 +84,14 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
             host.ClassName = "android.view.View";
             host.Clickable = false;
             host.Focusable = false;
+            host.Focused = false;
+            host.AccessibilityFocused = false;
+            host.ScreenReaderFocusable = false;
             host.RemoveAction(NativeAction.ActionClick!);
+            host.RemoveAction(NativeAction.ActionFocus!);
+            host.RemoveAction(NativeAction.ActionClearFocus!);
+            host.RemoveAction(NativeAction.ActionAccessibilityFocus!);
+            host.RemoveAction(NativeAction.ActionClearAccessibilityFocus!);
             if (Available && rootId != HostViewId)
                 host.AddChild(view, rootId);
             return host;
@@ -104,7 +112,6 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         info.Focusable = Supports(node, AccessibilityAction.Focus);
         info.Focused = node.Focused;
         info.AccessibilityFocused = accessibilityFocus == virtualViewId;
-        info.ScreenReaderFocusable = true;
         info.ImportantForAccessibility = true;
         info.Password = node.IsPassword;
         info.Editable = IsEditor(node) && node.ReadOnly != true && Supports(node, AccessibilityAction.SetValue);
@@ -128,13 +135,17 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         PopulateRelations(info, node);
         PopulateBounds(info, node);
         PopulateActions(info, node, virtualViewId);
+        info.ScreenReaderFocusable = info.Focusable || info.Clickable || node.Name.Length > 0
+            || (IsTextual(node) ? Text(node).Length > 0 : node.Role is not (AccessibilityRole.Generic
+                or AccessibilityRole.Group or AccessibilityRole.List or AccessibilityRole.Grid or AccessibilityRole.Tree
+                or AccessibilityRole.TabList or AccessibilityRole.Menu or AccessibilityRole.Row or AccessibilityRole.Dialog));
         return info;
     }
 
     private void PopulateText(AccessibilityNodeInfo info, AccessibilityNode node)
     {
         var text = Text(node);
-        if (IsEditor(node) || node.Role is AccessibilityRole.Text or AccessibilityRole.Heading or AccessibilityRole.Link)
+        if (IsTextual(node))
         {
             info.Text = text;
             if (node.Name.Length > 0 && node.Relationships.LabelledBy.Count == 0)
@@ -144,9 +155,13 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
             }
             info.TextSelectable = Supports(node, AccessibilityAction.SetSelection);
             if (node.SelectionStart is { } start && node.SelectionLength is { } length)
-                info.SetTextSelection(start, start + length);
+            {
+                var caret = node.Caret ?? start + length;
+                info.SetTextSelection(caret == start ? start + length : start, caret);
+            }
             if (text.Length > 0)
-                info.MovementGranularities = MovementGranularity.Character | MovementGranularity.Word | MovementGranularity.Paragraph;
+                info.MovementGranularities = MovementGranularity.Character
+                    | (node.IsPassword ? 0 : MovementGranularity.Word | MovementGranularity.Paragraph);
         }
         else
             info.ContentDescription = node.Name;
@@ -224,15 +239,19 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
     {
         screenMatrix.Reset();
         view.TransformMatrixToGlobal(screenMatrix);
-        var scale = PixelScale;
-        var bounds = node.VisibleBounds ?? node.Bounds;
-        mappedBounds.Set((float)bounds.X * scale.X, (float)bounds.Y * scale.Y,
-            (float)(bounds.X + bounds.Width) * scale.X, (float)(bounds.Y + bounds.Height) * scale.Y);
+        if (node.Id.Value == 0)
+            mappedBounds.Set(0, 0, view.Width, view.Height);
+        else
+        {
+            var scale = PixelScale;
+            var bounds = node.VisibleBounds ?? node.Bounds;
+            mappedBounds.Set((float)bounds.X * scale.X, (float)bounds.Y * scale.Y,
+                (float)(bounds.X + bounds.Width) * scale.X, (float)(bounds.Y + bounds.Height) * scale.Y);
+        }
         screenMatrix.MapRect(mappedBounds);
         screenBounds.Set((int)Math.Floor(mappedBounds.Left), (int)Math.Floor(mappedBounds.Top),
             (int)Math.Ceiling(mappedBounds.Right), (int)Math.Ceiling(mappedBounds.Bottom));
-        info.SetBoundsInScreen(screenBounds);
-        var visible = node.VisibleBounds is not null && view.GetLocalVisibleRect(clipBounds);
+        var visible = (node.Id.Value == 0 || node.VisibleBounds is not null) && view.GetLocalVisibleRect(clipBounds);
         if (visible)
         {
             mappedBounds.Set(clipBounds);
@@ -241,6 +260,7 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
                 (int)Math.Ceiling(mappedBounds.Right), (int)Math.Ceiling(mappedBounds.Bottom));
             visible = clipBounds.Intersect(screenBounds);
         }
+        info.SetBoundsInScreen(visible ? clipBounds : screenBounds);
         info.VisibleToUser = visible;
     }
 
@@ -300,6 +320,9 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
     private static bool IsEditor(AccessibilityNode node) => node.Role is AccessibilityRole.TextInput
         or AccessibilityRole.TextEditor or AccessibilityRole.SearchBox;
 
+    private static bool IsTextual(AccessibilityNode node) => IsEditor(node) || node.Role is AccessibilityRole.Text
+        or AccessibilityRole.Heading or AccessibilityRole.Link or AccessibilityRole.Status or AccessibilityRole.Alert;
+
     private string Text(AccessibilityNode node)
     {
         if (node.TextSnapshot is not { } snapshot) return node.Value;
@@ -339,8 +362,14 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
 
     private string StateDescription(AccessibilityNode node)
     {
-        var states = new List<string>();
-        if (!OperatingSystem.IsAndroidVersionAtLeast(36))
+        var legacy = !OperatingSystem.IsAndroidVersionAtLeast(36);
+        var value = node.ValueText.Length > 0 ? node.ValueText
+            : !IsTextual(node) && node.Value != node.Name ? node.Value : "";
+        if (node.Required != true && node.ReadOnly != true && node.Busy != true && node.Level is null
+            && (!legacy || node.Checked != AccessibilityChecked.Mixed && node.Expanded is null))
+            return value;
+        var states = new List<string>(6);
+        if (legacy)
         {
             if (node.Checked == AccessibilityChecked.Mixed) states.Add(view.Context!.GetString(Resource.String.goo_accessibility_mixed));
             if (node.Expanded is { } expanded) states.Add(view.Context!.GetString(expanded
@@ -349,7 +378,9 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         if (node.Required == true) states.Add(view.Context!.GetString(Resource.String.goo_accessibility_required));
         if (node.ReadOnly == true) states.Add(view.Context!.GetString(Resource.String.goo_accessibility_read_only));
         if (node.Busy == true) states.Add(view.Context!.GetString(Resource.String.goo_accessibility_busy));
-        if (node.ValueText.Length > 0) states.Add(node.ValueText);
+        if (node.Level is { } level) states.Add(string.Format(System.Globalization.CultureInfo.CurrentCulture,
+            view.Context!.GetString(Resource.String.goo_accessibility_level), level));
+        if (value.Length > 0) states.Add(value);
         return string.Join(", ", states);
     }
 
@@ -380,11 +411,8 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         {
             Detach();
             disposed = true;
-            if (ReferenceEquals(view.Window.AccessibilityAdapter, this))
-                view.Window.AccessibilityAdapter = null;
-            nodes.Clear();
             ids.Clear();
-            retired.Clear();
+            flushEvents.Dispose();
             screenMatrix.Dispose();
             mappedBounds.Dispose();
             screenBounds.Dispose();
@@ -401,6 +429,22 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         internal int ReadingCursor;
         internal TextSnapshot? Snapshot;
         internal string DocumentText = "";
+        internal global::Android.Icu.Text.BreakIterator? Words;
+        internal string? WordText;
+        internal string? BoundaryText;
+        internal int[] Boundaries = Array.Empty<int>();
         internal readonly List<int> Children = new();
+        internal readonly List<int> PublishedChildren = new();
+        internal bool Published;
+        internal long PublishedRevision;
+        internal string PublishedText = "";
+        internal NodeState State;
+        internal int? PublishedSelectionStart;
+        internal int? PublishedSelectionLength;
+        internal int? PublishedCaret;
+        internal bool PublishedFocused;
+        internal AccessibilityScrollInfo? PublishedScroll;
+        internal ElementRect PublishedBounds;
+        internal ElementRect? PublishedVisibleBounds;
     }
 }

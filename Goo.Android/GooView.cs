@@ -6,6 +6,8 @@ using Android.Views.InputMethods;
 using System.Text;
 using AndroidKeyEvent = Android.Views.KeyEvent;
 using AndroidRect = Android.Graphics.Rect;
+using NativeAccessibilityEvent = Android.Views.Accessibility.AccessibilityEvent;
+using NativeEventTypes = Android.Views.Accessibility.EventTypes;
 
 namespace Goo.Android;
 
@@ -54,7 +56,6 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         }
         Holder!.AddCallback(this);
         accessibility = new GooAccessibilityProvider(this);
-        window.AccessibilityAdapter = accessibility;
         window.Attach(host);
         RefreshPreferences();
         window.PlatformInput.EditorChanged += OnEditorChanged;
@@ -87,6 +88,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         base.OnConfigurationChanged(newConfig);
         RefreshPreferences();
+        accessibility.ConfigurationChanged();
     }
 
     private void RefreshPreferences()
@@ -170,6 +172,13 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         CancelFrames();
         accessibility.Detach();
         base.OnDetachedFromWindow();
+    }
+
+    public override void SendAccessibilityEventUnchecked(NativeAccessibilityEvent? e)
+    {
+        if (e?.EventType is NativeEventTypes.ViewClicked or NativeEventTypes.ViewFocused
+            or NativeEventTypes.ViewHoverEnter or NativeEventTypes.ViewHoverExit) return;
+        base.SendAccessibilityEventUnchecked(e);
     }
 
     internal void RequestFrame()
@@ -360,9 +369,11 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         RequestFocus();
         inputMethod.RestartInput(this);
-        inputMethod.ShowSoftInput(this, ShowFlags.Implicit);
+        ShowTextInput();
         return true;
     }
+
+    internal void ShowTextInput() => inputMethod.ShowSoftInput(this, ShowFlags.Implicit);
 
     internal void EndTextInput() => inputMethod.HideSoftInputFromWindow(WindowToken, HideSoftInputFlags.None);
 

@@ -1,4 +1,3 @@
-using Android.Graphics;
 using Android.Icu.Text;
 using Android.OS;
 using Android.Views.Accessibility;
@@ -12,14 +11,15 @@ internal sealed partial class GooAccessibilityProvider
 {
     private void PopulateActions(AccessibilityNodeInfo info, AccessibilityNode node, int id)
     {
-        info.AddAction(accessibilityFocus == id ? NativeAction.ActionClearAccessibilityFocus! : NativeAction.ActionAccessibilityFocus!);
+        if (node.Id.Value != 0)
+            info.AddAction(accessibilityFocus == id ? NativeAction.ActionClearAccessibilityFocus! : NativeAction.ActionAccessibilityFocus!);
         info.Clickable = PrimaryAction(node) is not null;
         if (info.Clickable) info.AddAction(NativeAction.ActionClick!);
         foreach (var action in node.Actions)
         {
             var native = action switch
             {
-                AccessibilityAction.Focus => NativeAction.ActionFocus,
+                AccessibilityAction.Focus when !node.Focused => NativeAction.ActionFocus,
                 AccessibilityAction.Blur => NativeAction.ActionClearFocus,
                 AccessibilityAction.SetSelection => NativeAction.ActionSetSelection,
                 AccessibilityAction.Select => NativeAction.ActionSelect,
@@ -45,8 +45,11 @@ internal sealed partial class GooAccessibilityProvider
             if (scroll.TargetY < scroll.MaximumY) info.AddAction(NativeAction.ActionScrollDown!);
             if (scroll.TargetX > 0) info.AddAction(NativeAction.ActionScrollLeft!);
             if (scroll.TargetX < scroll.MaximumX) info.AddAction(NativeAction.ActionScrollRight!);
-            if (scroll.TargetY > 0 || scroll.TargetX > 0) info.AddAction(NativeAction.ActionScrollBackward!);
-            if (scroll.TargetY < scroll.MaximumY || scroll.TargetX < scroll.MaximumX) info.AddAction(NativeAction.ActionScrollForward!);
+            var rtl = view.LayoutDirection == global::Android.Views.LayoutDirection.Rtl;
+            if (scroll.TargetY > 0 || (rtl ? scroll.TargetX < scroll.MaximumX : scroll.TargetX > 0))
+                info.AddAction(NativeAction.ActionScrollBackward!);
+            if (scroll.TargetY < scroll.MaximumY || (rtl ? scroll.TargetX > 0 : scroll.TargetX < scroll.MaximumX))
+                info.AddAction(NativeAction.ActionScrollForward!);
         }
         foreach (var action in node.Actions)
         {
@@ -91,10 +94,16 @@ internal sealed partial class GooAccessibilityProvider
         }
         if (action is NodeAction.NextAtMovementGranularity or NodeAction.PreviousAtMovementGranularity)
             return MoveText(record, virtualViewId, action, arguments);
+        var refocusEditor = action == NodeAction.Click && IsEditor(node) && node.Focused && node.ReadOnly != true;
         var request = Request(node, action, arguments);
         if (request is null || !view.Window.PerformAccessibilityAction(node.Id, request))
             return false;
-        if (request.Action == AccessibilityAction.Activate)
+        if (refocusEditor)
+        {
+            view.RequestFocus();
+            view.ShowTextInput();
+        }
+        if (action == NodeAction.Click)
             Send(virtualViewId, EventTypes.ViewClicked);
         return true;
     }
@@ -102,6 +111,7 @@ internal sealed partial class GooAccessibilityProvider
     private static AccessibilityAction? PrimaryAction(AccessibilityNode node)
     {
         if (Supports(node, AccessibilityAction.Activate)) return AccessibilityAction.Activate;
+        if (IsEditor(node) && Supports(node, AccessibilityAction.Focus)) return AccessibilityAction.Focus;
         if (node.Selected == true && Supports(node, AccessibilityAction.Deselect)) return AccessibilityAction.Deselect;
         if (Supports(node, AccessibilityAction.Select)) return AccessibilityAction.Select;
         if (node.Expanded == true && Supports(node, AccessibilityAction.Collapse)) return AccessibilityAction.Collapse;
@@ -151,24 +161,27 @@ internal sealed partial class GooAccessibilityProvider
         return neutral is { } valueAction ? new AccessibilityActionRequest(valueAction) : null;
     }
 
-    private static AccessibilityActionRequest? TryScroll(AccessibilityNode node, int action)
+    private AccessibilityActionRequest? TryScroll(AccessibilityNode node, int action)
     {
         if (!Supports(node, AccessibilityAction.Scroll) || node.ScrollInfo is not { } scroll) return null;
         var x = scroll.TargetX;
         var y = scroll.TargetY;
+        var rtl = view.LayoutDirection == global::Android.Views.LayoutDirection.Rtl;
         if (action == NativeAction.ActionScrollUp!.Id) y -= scroll.ViewportHeight;
         else if (action == NativeAction.ActionScrollDown!.Id) y += scroll.ViewportHeight;
         else if (action == NativeAction.ActionScrollLeft!.Id) x -= scroll.ViewportWidth;
         else if (action == NativeAction.ActionScrollRight!.Id) x += scroll.ViewportWidth;
         else if (action == (int)NodeAction.ScrollForward)
         {
-            if (y < scroll.MaximumY) y += scroll.ViewportHeight;
-            else x += scroll.ViewportWidth;
+            var horizontal = node.Orientation == AccessibilityOrientation.Horizontal && (rtl ? x > 0 : x < scroll.MaximumX);
+            if (!horizontal && y < scroll.MaximumY) y += scroll.ViewportHeight;
+            else x += rtl ? -scroll.ViewportWidth : scroll.ViewportWidth;
         }
         else if (action == (int)NodeAction.ScrollBackward)
         {
-            if (y > 0) y -= scroll.ViewportHeight;
-            else x -= scroll.ViewportWidth;
+            var horizontal = node.Orientation == AccessibilityOrientation.Horizontal && (rtl ? x < scroll.MaximumX : x > 0);
+            if (!horizontal && y > 0) y -= scroll.ViewportHeight;
+            else x += rtl ? scroll.ViewportWidth : -scroll.ViewportWidth;
         }
         else return null;
         x = Math.Clamp(x, 0, scroll.MaximumX);
@@ -180,13 +193,12 @@ internal sealed partial class GooAccessibilityProvider
     {
         var granularity = args?.GetInt(AccessibilityNodeInfo.ActionArgumentMovementGranularityInt) ?? 0;
         var text = Text(record.Node);
-        if (text.Length == 0 || granularity is not (1 or 2 or 8)) return false;
+        if (text.Length == 0 || granularity is not (1 or 2 or 8)
+            || record.Node.IsPassword && granularity != 1) return false;
         var forward = action == NodeAction.NextAtMovementGranularity;
         var from = Math.Clamp(record.Node.Caret ?? record.ReadingCursor, 0, text.Length);
-        using var iterator = granularity == 2 ? BreakIterator.WordInstance : BreakIterator.CharacterInstance;
-        iterator!.SetText(text);
         var to = granularity == 8 ? Paragraph(text, from, forward)
-            : forward ? iterator.Following(from) : iterator.Preceding(from);
+            : granularity == 2 ? MoveWord(record, text, from, forward) : MoveCharacter(record, text, from, forward);
         if (to < 0 || to == from) return false;
         if (Supports(record.Node, AccessibilityAction.SetSelection))
         {
@@ -198,14 +210,46 @@ internal sealed partial class GooAccessibilityProvider
             if (!view.Window.PerformAccessibilityAction(record.Node.Id, request)) return false;
         }
         record.ReadingCursor = to;
-        Send(id, EventTypes.ViewTextTraversedAtMovementGranularity, configure: e =>
+        using var e = CreateEvent(id, EventTypes.ViewTextTraversedAtMovementGranularity);
+        if (e is not null)
         {
             e.FromIndex = from;
             e.ToIndex = to;
             e.SetAction((global::Android.AccessibilityServices.GlobalAction)(int)action);
             e.MovementGranularity = (MovementGranularity)granularity;
-        });
+            view.Parent?.RequestSendAccessibilityEvent(view, e);
+        }
         return true;
+    }
+
+    private static int MoveCharacter(NodeRecord record, string text, int from, bool forward)
+    {
+        if (!ReferenceEquals(record.BoundaryText, text))
+        {
+            record.BoundaryText = text;
+            record.Boundaries = StringInfo.ParseCombiningCharacters(text);
+        }
+        var index = Array.BinarySearch(record.Boundaries, from);
+        index = index >= 0 ? forward ? index + 1 : index - 1 : forward ? ~index : ~index - 1;
+        return index < 0 ? -1 : index < record.Boundaries.Length ? record.Boundaries[index] : text.Length;
+    }
+
+    private static int MoveWord(NodeRecord record, string text, int from, bool forward)
+    {
+        var iterator = record.Words ??= BreakIterator.WordInstance!;
+        if (!ReferenceEquals(record.WordText, text))
+        {
+            iterator.SetText(text);
+            record.WordText = text;
+        }
+        var to = forward ? iterator.Following(from) : iterator.Preceding(from);
+        while (to >= 0)
+        {
+            if (!forward) iterator.Following(to);
+            if (iterator.RuleStatus >= (int)BreakWord.NoneLimit) return to;
+            to = forward ? iterator.Next() : iterator.Preceding(to);
+        }
+        return -1;
     }
 
     private static int Paragraph(string text, int from, bool forward)
@@ -228,14 +272,21 @@ internal sealed partial class GooAccessibilityProvider
         view.Invalidate();
     }
 
-    private void Send(int id, EventTypes type, ContentChangeTypes changes = 0,
-        Action<AccessibilityEvent>? configure = null)
+    private void Send(int id, EventTypes type, ContentChangeTypes changes = 0)
     {
-        if (disposed || !view.IsAttachedToWindow || !manager.IsEnabled || view.Parent is not { } parent
-            || id != HostViewId && !Available) return;
-        using var e = new AccessibilityEvent((int)type);
+        using var e = CreateEvent(id, type, changes);
+        if (e is not null) view.Parent?.RequestSendAccessibilityEvent(view, e);
+    }
+
+    private AccessibilityEvent? CreateEvent(int id, EventTypes type, ContentChangeTypes changes = 0)
+    {
+        if (disposed || view.Parent is null || !Available
+            && (type is not (EventTypes.ViewAccessibilityFocusCleared or EventTypes.ViewHoverExit)
+                || !view.IsAttachedToWindow || !manager.IsEnabled)) return null;
+        var e = new AccessibilityEvent((int)type);
         e.SetSource(view, id);
         e.PackageName = view.Context!.PackageName;
+        e.ClassName = "android.view.View";
         if (nodes.TryGetValue(id, out var record))
         {
             var node = record.Node;
@@ -243,11 +294,14 @@ internal sealed partial class GooAccessibilityProvider
             e.Enabled = !node.Disabled;
             e.Password = node.IsPassword;
             e.Checked = node.Checked == AccessibilityChecked.True;
-            if (Text(node) is { Length: > 0 } text) e.Text!.Add(new Java.Lang.String(text));
+            if (Text(node) is { Length: > 0 } value)
+            {
+                using var text = new Java.Lang.String(value);
+                e.Text!.Add(text);
+            }
             e.ContentDescription = node.Name;
         }
         e.ContentChangeTypes = changes;
-        configure?.Invoke(e);
-        parent.RequestSendAccessibilityEvent(view, e);
+        return e;
     }
 }

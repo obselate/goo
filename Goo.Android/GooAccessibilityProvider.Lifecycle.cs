@@ -48,12 +48,14 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
         manager.AddTouchExplorationStateChangeListener(this);
         view.ViewTreeObserver!.AddOnGlobalLayoutListener(this);
         view.ViewTreeObserver.AddOnPreDrawListener(this);
+        if (manager.IsEnabled) BindAdapter();
         geometryKnown = false;
     }
 
     internal void Detach()
     {
         SetPresentationReady(false);
+        SuspendTree();
         if (!observing) return;
         observing = false;
         manager.RemoveAccessibilityStateChangeListener(this);
@@ -70,6 +72,7 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
         if (disposed || presentationReady == value) return;
         if (!value)
         {
+            CancelEvents();
             SetHover(HostViewId);
             SetAccessibilityFocus(HostViewId);
             pendingFocus = HostViewId;
@@ -82,7 +85,7 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
             CompletePendingFocus();
         }
         else
-            Send(HostViewId, EventTypes.WindowContentChanged, ContentChangeTypes.Subtree);
+            RequestFullRefresh();
     }
 
     public void OnGlobalLayout() => RefreshNativeGeometry();
@@ -96,11 +99,14 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
     public void OnAccessibilityStateChanged(bool enabled)
     {
         if (disposed) return;
-        if (!enabled)
+        if (enabled)
+            BindAdapter();
+        else
         {
             SetHover(HostViewId);
             SetAccessibilityFocus(HostViewId);
             pendingFocus = HostViewId;
+            SuspendTree();
         }
         geometryKnown = false;
         RefreshNativeGeometry();
@@ -109,6 +115,18 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
     public void OnTouchExplorationStateChanged(bool enabled)
     {
         if (!enabled) SetHover(HostViewId);
+    }
+
+    internal void ConfigurationChanged()
+    {
+        foreach (var record in nodes.Values)
+        {
+            record.Words?.Dispose();
+            record.Words = null;
+            record.WordText = null;
+        }
+        geometryKnown = false;
+        RequestFullRefresh();
     }
 
     internal void RefreshNativeGeometry()
@@ -142,7 +160,7 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
             SetHover(HostViewId);
             SetAccessibilityFocus(HostViewId);
         }
-        if (changed) Send(HostViewId, EventTypes.WindowContentChanged, ContentChangeTypes.Subtree);
+        if (changed) RequestFullRefresh();
     }
 
     internal bool DispatchHover(MotionEvent e)
@@ -181,6 +199,25 @@ internal sealed partial class GooAccessibilityProvider : NativeManager.IAccessib
             pendingFocus = HostViewId;
             SetAccessibilityFocus(id);
         }
+    }
+
+    private void BindAdapter()
+    {
+        var adapter = view.Window.AccessibilityAdapter;
+        if (adapter is not null && !ReferenceEquals(adapter, this))
+            throw new InvalidOperationException("GooView owns the window accessibility adapter.");
+        view.Window.AccessibilityAdapter = this;
+    }
+
+    private void SuspendTree()
+    {
+        CancelEvents();
+        if (ReferenceEquals(view.Window.AccessibilityAdapter, this))
+            view.Window.AccessibilityAdapter = null;
+        foreach (var record in nodes.Values) record.Words?.Dispose();
+        nodes.Clear();
+        rootId = HostViewId;
+        version = -1;
     }
 
     private bool CanReveal(NodeRecord record)

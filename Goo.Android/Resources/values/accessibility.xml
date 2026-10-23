@@ -24,6 +24,7 @@
     <string name="goo_accessibility_status">Status</string>
     <string name="goo_accessibility_increase">Increase</string>
     <string name="goo_accessibility_decrease">Decrease</string>
+    <string name="goo_accessibility_level">Level {0}</string>
     <item name="goo_accessibility_increase" type="id" />
     <item name="goo_accessibility_decrease" type="id" />
 </resources>
