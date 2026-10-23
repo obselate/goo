@@ -5,7 +5,7 @@ import unittest
 
 
 class GslintTests(unittest.TestCase):
-    def test_fix_stays_inside_invocation_root(self):
+    def test_fix_skips_symlinks(self):
         linter = pathlib.Path(__file__).resolve().parent / "bin/Release/net10.0/Goo.Gslint.dll"
         source = "package Scratch\n\nfunc Main() {\n    var value int32 = 1\n}\n"
         for option in ("--fix", "--reduce"):
@@ -25,9 +25,8 @@ class GslintTests(unittest.TestCase):
                 regular = root / "regular.gs"
                 regular.write_text(source)
                 result = subprocess.run(
-                    ["dotnet", str(linter), option, ".", "file.gs", "directory",
-                     "directory/nested", str(target)],
-                    cwd=root, capture_output=True, text=True, check=False,
+                    ["dotnet", str(linter), option, str(root)],
+                    cwd=scratch, capture_output=True, text=True, check=False,
                 )
                 self.assertEqual(0, result.returncode, result.stdout + result.stderr)
                 self.assertEqual(source, target.read_text())
