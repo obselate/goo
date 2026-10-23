@@ -41,16 +41,16 @@ public sealed class DocumentChecks : Instrumentation {
             using let intent = Intent(TargetContext!!, typeof(MainActivity))
             intent.AddFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask)
             activity = cast[MainActivity](StartActivitySync(intent)!!)
-            Wait(() -> Main(() -> activity!!.Window!!.DecorView!!.HasWindowFocus),
+            Wait(() -> Main(() -> activity!!.Window!!.DecorView.HasWindowFocus),
                 "The source Activity did not receive focus")
             if phase == PickPhase { PickAndPersist() } else { ReopenAndRelease() }
-            result.PutString(ResultStreamKey, "GOO_ANDROID_DOCUMENTS_PASS " + phase + Environment.NewLine)
+            result.PutString(ResultStreamKey, "GOO_ANDROID_DOCUMENTS_PASS " + phase + "\n")
         } catch (error Exception) {
             let tree = StringBuilder()
             using let root = automation?.RootInActiveWindow
             if let node = root { Dump(node, tree, 0) }
-            result.PutString(ResultStreamKey, "GOO_ANDROID_DOCUMENTS_FAIL" + Environment.NewLine
-                + error.ToString() + Environment.NewLine + tree.ToString())
+            result.PutString(ResultStreamKey,
+                "GOO_ANDROID_DOCUMENTS_FAIL\n" + error.ToString() + "\n" + tree.ToString())
             status = Result.Canceled
         }
         Finish(status, result)
@@ -62,7 +62,8 @@ public sealed class DocumentChecks : Instrumentation {
     }
 
     private func PickAndPersist() {
-        var selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
+        var selected = Main[Task[DocumentPickerResult]](
+            () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Click(FirstDocument)
         var selection = Await(selected)
         Require(selection.Status == FileDialogStatus.Success && selection.Uris.Count == 1,
@@ -71,7 +72,8 @@ public sealed class DocumentChecks : Instrumentation {
         Require(uri.Scheme == "content" && (selection.GrantedAccess & DocumentAccess.Read) != DocumentAccess.None
             && selection.CanPersist, "The picker did not report its content URI and actual persistable Read grant")
         Require(ReadText(uri) == DocumentText, "Selected document bytes changed")
-        let persisted = Main(() -> activity!!.Documents.PersistAccess(uri, DocumentAccess.Read))
+        let persisted = Main[DocumentOperationResult](
+            () -> activity!!.Documents.PersistAccess(uri, DocumentAccess.Read))
         Require(persisted.Status == DocumentStatus.Success, "Persist failed: " + persisted.Error)
         {
             using let preferences = TargetContext!!.GetSharedPreferences(PreferencesName, FileCreationMode.Private)!!
@@ -79,7 +81,8 @@ public sealed class DocumentChecks : Instrumentation {
             Require(edit.PutString(UriKey, uri.AbsoluteUri)!!.Commit(), "The persisted URI was not saved")
         }
 
-        selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions(true)))
+        selected = Main[Task[DocumentPickerResult]](
+            () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions(true)))
         Click(FirstDocument, true)
         Click("image.png")
         ClickAny("Select", "Open")
@@ -88,7 +91,8 @@ public sealed class DocumentChecks : Instrumentation {
             "Multiple URI selection failed: " + selection.Error)
         Require(selection.Uris.All(value -> value.Scheme == "content"), "A selected document became a path")
 
-        selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
+        selected = Main[Task[DocumentPickerResult]](
+            () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Click("stream.bin")
         selection = Await(selected)
         Require(selection.Status == FileDialogStatus.Success, "Stream document selection failed: " + selection.Error)
@@ -106,7 +110,8 @@ public sealed class DocumentChecks : Instrumentation {
         let defaults = OpenOptions(access: DocumentAccess.Read | DocumentAccess.Write)
         let save = DocumentPickerOptions{InitialUri: defaults.InitialUri, Access: defaults.Access,
             MimeTypes: []string{"text/plain"}, SuggestedName: "result-" + Guid.NewGuid().ToString("N") + ".txt"}
-        selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.SaveFile, save))
+        selected = Main[Task[DocumentPickerResult]](
+            () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.SaveFile, save))
         Click("Save")
         selection = Await(selected)
         Require(selection.Status == FileDialogStatus.Success
@@ -120,17 +125,18 @@ public sealed class DocumentChecks : Instrumentation {
         CheckTreeSelection()
 
         using let cancellation = CancellationTokenSource()
-        selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions(),
-            cancellation.Token))
+        selected = Main[Task[DocumentPickerResult]](() -> activity!!.Documents.ShowPickerAsync(
+            FileDialogKind.OpenFile, OpenOptions(), cancellation.Token))
         Wait(() -> Exists(FirstDocument), "Cancellable picker did not open")
         cancellation.Cancel()
         Require(Await(selected).Status == FileDialogStatus.Cancelled, "Picker cancellation did not complete")
-        Wait(() -> Main(() -> activity!!.Window!!.DecorView!!.HasWindowFocus),
+        Wait(() -> Main(() -> activity!!.Window!!.DecorView.HasWindowFocus),
             "Cancelled picker did not return focus")
 
-        selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
+        selected = Main[Task[DocumentPickerResult]](
+            () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Wait(() -> Exists(FirstDocument), "Recreation picker did not open")
-        let monitor = AddMonitor(activity!!.ComponentName!!.ClassName!!, nil, false)
+        let monitor = AddMonitor(activity!!.ComponentName!!.ClassName, nil, false)
         try {
             RunOnMainSync(activity!!.Recreate)
             Require(Await(selected).Status == FileDialogStatus.Cancelled,
@@ -147,8 +153,8 @@ public sealed class DocumentChecks : Instrumentation {
     }
 
     private func CheckTreeSelection() {
-        let selected = Main(() -> activity!!.Documents.ShowPickerAsync(FileDialogKind.Folder,
-            OpenOptions(access: DocumentAccess.Read | DocumentAccess.Write)))
+        let selected = Main[Task[DocumentPickerResult]](() -> activity!!.Documents.ShowPickerAsync(
+            FileDialogKind.Folder, OpenOptions(access: DocumentAccess.Read | DocumentAccess.Write)))
         Click("Use this folder")
         Click("Allow")
         let selection = Await(selected)
@@ -169,7 +175,7 @@ public sealed class DocumentChecks : Instrumentation {
         using let preferences = TargetContext!!.GetSharedPreferences(PreferencesName, FileCreationMode.Private)!!
         let uri = Uri(preferences.GetString(UriKey, nil) ?? throw InvalidOperationException("Persisted URI is missing"))
         Require(ReadText(uri) == DocumentText, "Persisted URI did not reopen after process restart")
-        let result = Main(() -> activity!!.Documents.ReleaseAccess(uri, DocumentAccess.Read))
+        let result = Main[DocumentOperationResult](() -> activity!!.Documents.ReleaseAccess(uri, DocumentAccess.Read))
         Require(result.Status == DocumentStatus.Success, "Grant release failed: " + result.Error)
         let denied = Await(activity!!.Documents.OpenReadAsync(uri))
         Require(denied.Status == DocumentStatus.Denied && denied.Stream == nil, "Released URI did not report Denied")

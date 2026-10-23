@@ -143,7 +143,7 @@ internal sealed class DocumentProvider : DocumentsProvider {
         let path = if document.Id == RootId || parentDocumentId == document.Id { []string{document.Id} }
             else { []string{RootId, document.Id} }
         let rootId string? = if parentDocumentId == nil { RootId } else { nil }
-        return DocumentsContract.Path(cast[string](rootId), path)
+        return DocumentsContract.Path(rootId, path)
     }
 
     shared {
