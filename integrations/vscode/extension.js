@@ -2,6 +2,7 @@ const vscode = require('vscode');
 const childProcess = require('child_process');
 const readline = require('readline');
 const path = require('path');
+const fs = require('fs/promises');
 
 let output;
 let status;
@@ -15,23 +16,37 @@ function configuration() {
 }
 
 function cliPath() {
-  return configuration().get('cliPath', 'goo');
+  const configured = configuration().get('cliPath', '');
+  if (configured && !path.isAbsolute(configured)) {
+    throw new Error('goo.cliPath must be an absolute path.');
+  }
+  return configured || 'goo';
 }
 
 async function projectPath() {
-  const configured = configuration().get('project', '');
-  if (configured) {
-    return path.resolve(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd(), configured);
-  }
   const folders = vscode.workspace.workspaceFolders || [];
   if (folders.length === 0) {
-    throw new Error('Open a Goo workspace or set goo.project.');
+    throw new Error('Open a Goo workspace.');
   }
-  const files = await vscode.workspace.findFiles('**/*.{gsproj,csproj}', '**/{bin,obj}/**', 10);
-  if (files.length === 0) {
-    throw new Error('No .gsproj or .csproj file was found. Set goo.project.');
+  const configured = configuration().get('project', '');
+  let project;
+  if (configured) {
+    project = path.resolve(folders[0].uri.fsPath, configured);
+  } else {
+    const files = await vscode.workspace.findFiles('**/*.{gsproj,csproj}', '**/{bin,obj}/**', 10);
+    if (files.length === 0) {
+      throw new Error('No .gsproj or .csproj file was found. Set goo.project.');
+    }
+    project = files[0].fsPath;
   }
-  return files[0].fsPath;
+  project = await fs.realpath(project);
+  for (const folder of folders) {
+    const relative = path.relative(await fs.realpath(folder.uri.fsPath), project);
+    if (relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) {
+      return project;
+    }
+  }
+  throw new Error('goo.project must be inside the workspace.');
 }
 
 function shellQuote(value) {
@@ -79,6 +94,9 @@ function parseJson(line) {
 function runCli(args, onLine) {
   return new Promise((resolve, reject) => {
     const configuredInspector = configuration().get('inspectorPath', '');
+    if (configuredInspector && !path.isAbsolute(configuredInspector)) {
+      throw new Error('goo.inspectorPath must be an absolute path.');
+    }
     const environment = { ...process.env };
     if (configuredInspector) {
       environment.GOO_DEVTOOLS_INSPECTOR = configuredInspector;
