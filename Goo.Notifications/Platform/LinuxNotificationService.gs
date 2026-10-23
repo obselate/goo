@@ -193,7 +193,7 @@ internal class LinuxNotificationService : NotificationService {
             if disposed || !nativeEntries.TryGetValue(signal.Id, out let entry) { return }
             let posted = Window.PostApplicationActivation(ApplicationActivation {
                 Kind: ApplicationActivationKind.Notification, NotificationId: entry.Message.Id,
-                ActionId: "default", Payload: entry.Message.Payload, NativeActivationToken: entry.Token,
+                Payload: entry.Message.Payload, NativeActivationToken: entry.Token,
             })
             entry.Token = nil
             if posted != ActivationPostStatus.Accepted { entry.Error = "Notification activation was not queued: " + posted.ToString() }

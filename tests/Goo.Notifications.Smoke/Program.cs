@@ -29,7 +29,7 @@ internal static class Program
         {
             if (activation.Kind != ApplicationActivationKind.Notification) return;
             Require(Environment.CurrentManagedThreadId == owner, "Notification activation left the UI thread");
-            Require(activation.NotificationId == Id && activation.ActionId == "default"
+            Require(activation.NotificationId == Id && activation.ActionId == ""
                 && activation.Payload == Payload,
                 "Native notification activation changed identity or payload");
             Require(!activation.IsInitial, "A warm notification became a cold activation");
@@ -43,7 +43,10 @@ internal static class Program
                 or NotificationStatus.Disabled, $"Permission query failed: {permission.Status}: {permission.Error}");
             var message = new NotificationMessage
             {
-                Id = Id, Title = "Native notification proof", Body = "plain <&> text", Payload = Payload
+                Id = Id,
+                Title = "Native notification proof",
+                Body = "plain <&> text",
+                Payload = Payload
             };
             if (OperatingSystem.IsLinux())
             {
