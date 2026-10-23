@@ -9,7 +9,7 @@ Use the `goo` MCP tools to look up the actual API and inspect the running applic
 
 ## Source and API
 
-Call `goo_context` once and reuse its result. Inspect preflight before runtime work and resolve failures using its actions. Pass an available standalone Goo checkout as `repository`; otherwise use the bundle. Treat `provenance.revision` plus `dirty` as the selected source identity and `compilerCommit` as its compiler pin. The loaded server reports only itself, not another session. A compiler diagnostic or selected checkout takes precedence over a bundled guide.
+Call `goo_context` once and reuse its result. Inspect preflight before runtime work and resolve failures using its actions. Pass an available standalone Goo checkout as `repository`; otherwise use the bundle. Treat `provenance.files` hashes as the bundle identity, `provenance.revision` plus `dirty` as the checkout identity, and `compilerCommit` as its compiler pin. The loaded server reports only itself, not another session. A compiler diagnostic or selected checkout takes precedence over a bundled guide.
 
 Use one focused natural-language or symbol `goo_search`, then `goo_read` the relevant range. `mode=relaxed` means only some `queryTerms` matched; inspect `matchedTerms` and `missingTerms`. `mode=none` proves only that the selected documents contain no match. Each hit and read includes its source hash. The generated documentation uses XML notation such as `Cell<T>` and `System.Action{T}`; write `Cell[T]` and `Action[T]` in G#. Read adjacent consumer code when exact syntax is unclear.
 

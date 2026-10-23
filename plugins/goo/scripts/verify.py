@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import hashlib
 import json
 import os
 import subprocess
@@ -51,7 +52,10 @@ async def main():
             bundled = data(context)
             assert bundled["provenance"]["kind"] == "bundle"
             assert bundled["preflight"]["configuration"]["configured"], bundled["preflight"]["configuration"]
-            assert bundled["provenance"]["revision"] == bundled["bundleCommit"]
+            assert bundled["provenance"]["files"] == {
+                path: hashlib.sha256((ROOT / "reference" / path).read_bytes()).hexdigest()
+                for path in bundled["documents"]
+            }
             assert len(bundled["provenance"]["compilerCommit"]) == 40
             search = data(await call("goo_search", query="how do I rebuild a cell"))
             assert search["mode"] == "exact" and search["queryTerms"] == ["rebuild", "cell"], search
