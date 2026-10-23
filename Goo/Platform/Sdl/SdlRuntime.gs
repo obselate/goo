@@ -35,7 +35,7 @@ internal class SdlEventRouter {
   }
 }
 
-internal partial class SdlRuntime {
+internal unsafe partial class SdlRuntime {
   shared {
     @DllImport("libdl.so.2", EntryPoint: "dlopen", CallingConvention: CallingConvention.Cdecl)
     private func OpenMainModule(path nint, flags int32) nint;
@@ -278,6 +278,7 @@ internal partial class SdlRuntime {
           }
           Array.Clear(cursors)
           currentCursor = Cursor.Default
+          SdlApplicationActivation.Reset()
           SDL.QuitSubSystem(requiredSubsystems)
         }
       }
@@ -307,8 +308,13 @@ internal partial class SdlRuntime {
       }
     }
 
-    private func DispatchOne(nativeEvent SDLEvent) {
+    internal func DispatchOne(nativeEvent SDLEvent) {
       let eventType = SDLEventType(nativeEvent.Type)
+      if nativeEvent.Drop.WindowID == 0u && (eventType == SDLEventType.DropBegin
+          || eventType == SDLEventType.DropFile || eventType == SDLEventType.DropComplete) {
+        SdlApplicationActivation.Receive(eventType, nint(nativeEvent.Drop.Data))
+        return
+      }
       if eventType == SDLEventType.KeyDown || eventType == SDLEventType.KeyUp {
         eventModifierMask = nativeEvent.Key.Mod
       } else if eventType == SDLEventType.WindowFocusGained {

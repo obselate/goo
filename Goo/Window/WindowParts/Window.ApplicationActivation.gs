@@ -7,7 +7,7 @@ import System.Threading
 /// Delivers process activation independently of window focus and document routing policy.
 public partial class Window {
     shared {
-        private const MaxPendingActivations int32 = 64
+        private const MaxPendingActivations int32 = 1024
         private let activationGate object = Object()
         private let pendingActivations Queue[ApplicationActivation] = Queue[ApplicationActivation](MaxPendingActivations)
         private var activationOwnerThreadId int32
@@ -19,6 +19,9 @@ public partial class Window {
 
         /// Occurs once per application activation on the process UI thread, not once per open window.
         /// Subscribe before initializing activation. Handlers own validation and window selection.
+        /// The queue retains 1024 requests, with 4096 arguments or documents per request.
+        /// Text is limited to 64 KiB per UTF-8 string and 1 MiB per request.
+        /// Native requests outside these limits, or received before initialization or after close, are dropped.
         public event ApplicationActivated Action[ApplicationActivation] {
             add {
                 RequireActivationThread()
@@ -56,9 +59,9 @@ public partial class Window {
 
         /// Copies and queues a request from any thread for the process-wide activation event.
         /// Accepted confirms queue ownership, not handler completion, document access, or focus.
-        /// Requests allow 256 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
+        /// Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
         /// @param value The owned request data to copy. Relative URIs and null values are invalid arguments.
-        /// @returns Accepted, NotInitialized, Closed, QueueFull at 64 pending requests, or TooLarge.
+        /// @returns Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
         public func PostApplicationActivation(value ApplicationActivation) ActivationPostStatus {
             if value == nil { throw ArgumentNullException("value") }
             lock activationGate {
@@ -95,6 +98,10 @@ public partial class Window {
         }
 
         internal prop HasPendingApplicationActivation bool { get -> Volatile.Read(ref pendingActivationCount) != 0 }
+
+        internal prop IsInitialApplicationActivation bool {
+            get -> activationOwnerThreadId != 0 && !activationClosed && !activationDelivered
+        }
 
         internal func DrainApplicationActivations() {
             if !HasPendingApplicationActivation || deliveringActivation { return }

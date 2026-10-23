@@ -8,7 +8,7 @@ deployment_target=14.0
 work="$(mktemp -d -t goo-sdl-macos.XXXXXX)"
 trap 'rm -rf -- "$work"' EXIT
 
-for command_name in awk cmake codesign curl file install_name_tool lipo otool shasum tar; do
+for command_name in awk cmake codesign curl file install_name_tool lipo otool patch shasum tar; do
   command -v "$command_name" >/dev/null || { printf 'required command missing: %s\n' "$command_name" >&2; exit 1; }
 done
 
@@ -18,6 +18,8 @@ curl -fsSL --retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-errors \
   -o "$work/SDL3.tar.gz"
 printf '%s  %s\n' "$sha256" "$work/SDL3.tar.gz" | shasum -a 256 -c -
 tar -xzf "$work/SDL3.tar.gz" -C "$work/src" --strip-components=1
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/cocoa-open-documents.patch"
 cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$work/install" \

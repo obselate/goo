@@ -188,6 +188,12 @@ jobs:
           GOO_NATIVE_BACKDROP_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
+      - name: Verify cold and warm macOS application activation
+        run: |
+          python3 .github/scripts/test-macos-activation.py \
+            artifacts/macos-candidate/Goo.PackageSmoke.app \
+            artifacts/macos-activation-results
+
       - name: Verify NativeAOT UI audio on macOS
         run: |
           dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \

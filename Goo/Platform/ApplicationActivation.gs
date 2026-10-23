@@ -78,9 +78,9 @@ public class ApplicationActivation {
     }
 
     shared {
-        private const MaxItems int32 = 256
-        private const MaxStringBytes int32 = 65536
-        private const MaxRequestBytes int32 = 1048576
+        internal const MaxItems int32 = 4096
+        internal const MaxStringBytes int32 = 65536
+        internal const MaxRequestBytes int32 = 1048576
 
         private func IncludeUri(value Uri, ref bytes int32) bool {
             if value == nil { throw ArgumentNullException("URI") }

@@ -1,0 +1,59 @@
+--- a/src/video/cocoa/SDL_cocoaevents.m
++++ b/src/video/cocoa/SDL_cocoaevents.m
+@@ -303,6 +303,20 @@
+     return (BOOL)SDL_SendDropFile(NULL, NULL, [filename UTF8String]) && SDL_SendDropComplete(NULL);
+ }
+ 
++- (void)application:(NSApplication *)theApplication openFiles:(NSArray<NSString *> *)filenames
++{
++    bool accepted = true;
++    for (NSString *filename in filenames) {
++        if (!SDL_SendDropFile(NULL, NULL, [filename UTF8String])) {
++            accepted = false;
++        }
++    }
++    if (!SDL_SendDropComplete(NULL)) {
++        accepted = false;
++    }
++    [theApplication replyToOpenOrPrint:(accepted ? NSApplicationDelegateReplySuccess : NSApplicationDelegateReplyFailure)];
++}
++
+ - (void)applicationDidFinishLaunching:(NSNotification *)notification
+ {
+     if (!SDL_GetHintBoolean("SDL_MAC_REGISTER_ACTIVATION_HANDLERS", true)) {
+@@ -513,6 +527,7 @@ void Cocoa_RegisterApp(void)
+     @autoreleasepool {
+         // This can get called more than once! Be careful what you initialize!
+ 
++        bool shouldFinishLaunching = false;
+         if (NSApp == nil) {
+             [SDL3Application sharedApplication];
+             SDL_assert(NSApp != nil);
+@@ -535,13 +550,7 @@ void Cocoa_RegisterApp(void)
+                     CreateApplicationMenus();
+                 }
+             }
+-            [NSApp finishLaunching];
+-            if ([NSApp delegate]) {
+-                /* The SDL app delegate calls this in didFinishLaunching if it's
+-                 * attached to the NSApp, otherwise we need to call it manually.
+-                 */
+-                [SDL3Application registerUserDefaults];
+-            }
++            shouldFinishLaunching = true;
+         }
+         if (NSApp && !appDelegate) {
+             appDelegate = [[SDL3AppDelegate alloc] init];
+@@ -564,6 +573,12 @@ void Cocoa_RegisterApp(void)
+                 appDelegate->seenFirstActivate = YES;
+             }
+         }
++        if (shouldFinishLaunching) {
++            [NSApp finishLaunching];
++            if ([NSApp delegate] != appDelegate) {
++                [SDL3Application registerUserDefaults];
++            }
++        }
+     }
+ }
+ 
