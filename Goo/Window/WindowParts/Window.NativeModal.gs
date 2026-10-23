@@ -74,6 +74,11 @@ public partial class Window {
             status = NativeModalStatus.Busy
             return nil
         }
+        if HasChildPopup {
+            DismissChildPopups(PopupDismissReason.OutsideInteraction)
+            status = NativeModalStatus.Busy
+            return nil
+        }
         let lease = NativeModalLease(this, BorrowNativeWindow())
         nativeModal = lease
         try {
