@@ -559,7 +559,6 @@ public sealed class PublicDocumentationTests
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)"] = new(["properties"], [], true),
             ["M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)"] = new(["cancellation"], [], true),
-            ["M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)"] = new(["root", "options", "cancellation", "reusable"], [], true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),
