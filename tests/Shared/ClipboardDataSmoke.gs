@@ -3,9 +3,25 @@ package GooClipboardFixture
 import System
 import System.IO
 import System.Text
+import System.Threading
+import System.Runtime.ExceptionServices
 import Goo
 
 func RunClipboardDataSmoke() {
+    if OperatingSystem.IsWindows() && Thread.CurrentThread.GetApartmentState() != ApartmentState.STA {
+        var failure Exception?
+        let thread = Thread(() -> {
+            try { RunClipboardDataSmoke() }
+            catch (error Exception) { failure = error }
+        })
+        thread.IsBackground = true
+        thread.SetApartmentState(ApartmentState.STA)
+        thread.Start()
+        if !thread.Join(TimeSpan.FromMinutes(2)) { throw InvalidOperationException("Windows clipboard smoke timed out") }
+        if let error = failure { ExceptionDispatchInfo.Capture(error).Throw() }
+        return
+    }
+
     let window = Window{ Title: "Goo MIME clipboard contract", Width: 240, Height: 120, Root: Cell{} }
     let path = Environment.ProcessPath!!
     try {
