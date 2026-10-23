@@ -1,19 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>$(GooReleaseVersion)</Version>
-    <PackageId>Goo.Printing</PackageId>
-    <Description>Optional paginated raster PDF export and native printing for Goo.</Description>
+    <PackageId>Goo.SpellCheck.Hunspell</PackageId>
+    <Description>Opt-in system Hunspell backend for Goo.SpellCheck. No bundled libraries or dictionaries.</Description>
     <Authors>Xaz</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Goo/Goo.gsproj" />
-    <InternalsVisibleTo Include="Goo.Printing.Android" />
+    <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.gsproj" />
   </ItemGroup>
 </Project>
