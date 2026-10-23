@@ -18,6 +18,9 @@ public sealed class PublicDocumentationTests
         "M:Goo.Accessibility.#ctor",
         "M:Goo.NativeDialogOwnerLease.Dispose",
         "M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)",
+        "M:Goo.TextPresentationLayer.GetStyles",
+        "M:Goo.TextPresentationLayer.ApplyTransaction(Goo.TextChange[],System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
+        "M:Goo.TextEditorController.ReplaceSelection(Goo.TextPresentationLayer,System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
         "M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)",
         "M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
         "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
@@ -485,6 +488,9 @@ public sealed class PublicDocumentationTests
         {
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)"] = new(["properties"], [], true),
+            ["M:Goo.TextPresentationLayer.GetStyles"] = new([], [], true),
+            ["M:Goo.TextPresentationLayer.ApplyTransaction(Goo.TextChange[],System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})"] = new(["changes", "styles"], [], true),
+            ["M:Goo.TextEditorController.ReplaceSelection(Goo.TextPresentationLayer,System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})"] = new(["layer", "text", "fragmentRelativeStyles"], [], true),
             ["M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)"] = new(["cancellation"], [], true),
             ["M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)"] = new(["root", "options", "cancellation", "reusable"], [], true),
             ["M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})"] = new(["contentType", "bytes"], [], false),
@@ -856,7 +862,8 @@ public sealed class PublicDocumentationTests
         var count = File.ReadLines(path)
             .Select(line => line.Split('|'))
             .Where(parts => !parts[1].StartsWith("Goo.SpellCheck.", StringComparison.Ordinal) &&
-                !parts[1].StartsWith("Goo.Printing.", StringComparison.Ordinal))
+                !parts[1].StartsWith("Goo.Printing.", StringComparison.Ordinal) &&
+                !parts[1].StartsWith("Goo.RichText.", StringComparison.Ordinal))
             .Count(parts =>
                 parts[0] == "ctor"
                     && parts[1] != "Goo.Cell`1"

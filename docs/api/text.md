@@ -408,6 +408,16 @@ Returns: True when default handling ran.
 
 Marks this controller focused.
 
+### `ReplaceSelection(TextPresentationLayer,string,System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
+
+Replaces the selection with source text and persistent fragment-relative styles as one undoable edit.
+
+- `layer`: The persistent formatting layer bound to this controller's document.
+- `text`: The replacement source text.
+- `fragmentRelativeStyles`: The replacement's inline styles, measured from zero.
+
+Returns: True when the Paste interceptor allowed the edit.
+
 ### `ScrollTo(float64,float64)`
 
 Changes the logical scroll target.
@@ -499,6 +509,15 @@ Creates a presentation layer bound to one document.
 
 - `document`: The document whose source ranges this layer references.
 
+### `ApplyTransaction(TextChange[],System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
+
+Commits source changes and the complete final style state as one undoable operation.
+
+- `changes`: Ordered source replacements against the current document.
+- `styles`: The complete post-edit style state. Projections retain normal rebase behavior.
+
+Returns: The committed document change.
+
 ### `Clear`
 
 Removes every style span and atomic projection from this layer.
@@ -506,6 +525,12 @@ Removes every style span and atomic projection from this layer.
 ### `Dispose`
 
 Releases document subscriptions held by this layer.
+
+### `GetStyles`
+
+Returns an owned immutable snapshot of the layer's current source style spans.
+
+Returns: Keyed source spans in declaration order.
 
 ### `Remove(string)`
 

@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\Goo.SpellCheck\Goo.SpellCheck.csproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck.Hunspell\Goo.SpellCheck.Hunspell.csproj" />
     <ProjectReference Include="..\..\Goo.Printing\Goo.Printing.csproj" />
+    <ProjectReference Include="..\..\Goo.RichText\Goo.RichText.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

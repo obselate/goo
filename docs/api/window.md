@@ -858,6 +858,7 @@ Reports whether a native service can borrow this window as a modal owner.
 - `Closed`
 - `Cancelled`
 - `Failed`
+
 ## `TransferData`
 
 Source:

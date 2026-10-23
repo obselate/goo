@@ -65,6 +65,8 @@
 !/Goo.Printing/**
 !/Goo.Printing.Android/
 !/Goo.Printing.Android/**
+!/Goo.RichText/
+!/Goo.RichText/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -88,6 +90,7 @@
 !/docs/svg.md
 !/docs/spellcheck.md
 !/docs/printing.md
+!/docs/richtext.md
 !/docs/migrations/
 !/docs/migrations/**
 

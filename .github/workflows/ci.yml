@@ -87,6 +87,7 @@ jobs:
           dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
           dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
           dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
+          dotnet format Goo.RichText/Goo.RichText.csproj --verify-no-changes --no-restore
 
       - name: Run local PNG decoder and cache tests
         run: |
@@ -729,7 +730,7 @@ jobs:
 
       - name: Pack optional spelling and printing services
         run: |
-          for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing; do
+          for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing Goo.RichText; do
             dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
               -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           done
@@ -915,6 +916,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SpellCheck*.nupkg
             artifacts/packages/Goo.Printing*.nupkg
+            artifacts/packages/Goo.RichText*.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -942,6 +944,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SpellCheck*.nupkg
             artifacts/packages/Goo.Printing*.nupkg
+            artifacts/packages/Goo.RichText*.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1115,7 +1118,7 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-          for package in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.SpellCheck.Android Goo.Printing Goo.Printing.Android; do
+          for package in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.SpellCheck.Android Goo.Printing Goo.Printing.Android Goo.RichText; do
             dotnet nuget push "artifacts/packages/$package.$GOO_VERSION.nupkg" \
               --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
               --source https://api.nuget.org/v3/index.json --skip-duplicate
@@ -1140,6 +1143,7 @@ jobs:
             "artifacts/packages/Goo.SpellCheck.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.RichText.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

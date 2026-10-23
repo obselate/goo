@@ -56,6 +56,9 @@ ctor|Goo.Printing.PrintPageSettings|public|(WidthPoints:System.Double,HeightPoin
 ctor|Goo.Printing.PrintResult|public|(Status:Goo.Printing.PrintStatus,JobId:System.String="",Error:System.String="")
 ctor|Goo.RadialGradient|public|(centerX:System.Double,centerY:System.Double,radius:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.RadialGradient|public|(params colors:Goo.Color[])
+ctor|Goo.RichText.RichTextClipboard|public|(owner:Goo.Window,controller:Goo.TextEditorController,layer:Goo.TextPresentationLayer)
+ctor|Goo.RichText.RichTextFragment|public|(text:System.String,styles:System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>)
+ctor|Goo.RichText.RichTextResult|public|(Status:Goo.RichText.RichTextStatus,Fragment:Goo.RichText.RichTextFragment,Error:System.String="")
 ctor|Goo.Scrollbar|public|()
 ctor|Goo.ShaderEffectData|public|(bytes:System.Byte[])
 ctor|Goo.ShaderEffectProgram|public|(program:System.Byte[],replacesBackdrop:System.Boolean=false)
@@ -153,6 +156,7 @@ enum-underlying|Goo.PortalPlacement|System.Int32
 enum-underlying|Goo.PositionType|System.Int32
 enum-underlying|Goo.Printing.PrintLayoutStatus|System.Int32
 enum-underlying|Goo.Printing.PrintStatus|System.Int32
+enum-underlying|Goo.RichText.RichTextStatus|System.Int32
 enum-underlying|Goo.ScrollbarVisibility|System.Int32
 enum-underlying|Goo.ShapeFit|System.Int32
 enum-underlying|Goo.SpellCheck.SpellingStatus|System.Int32
@@ -560,6 +564,16 @@ enum|Goo.Printing.PrintStatus|Failed|8
 enum|Goo.Printing.PrintStatus|NotReady|5
 enum|Goo.Printing.PrintStatus|Submitted|1
 enum|Goo.Printing.PrintStatus|Unsupported|3
+enum|Goo.RichText.RichTextStatus|Cancelled|7
+enum|Goo.RichText.RichTextStatus|Empty|4
+enum|Goo.RichText.RichTextStatus|Failed|9
+enum|Goo.RichText.RichTextStatus|PlainText|1
+enum|Goo.RichText.RichTextStatus|ReadOnly|6
+enum|Goo.RichText.RichTextStatus|Stale|8
+enum|Goo.RichText.RichTextStatus|Success|0
+enum|Goo.RichText.RichTextStatus|TooLarge|5
+enum|Goo.RichText.RichTextStatus|UnsupportedContent|3
+enum|Goo.RichText.RichTextStatus|Unsupported|2
 enum|Goo.ScrollbarVisibility|Always|1
 enum|Goo.ScrollbarVisibility|Auto|0
 enum|Goo.ScrollbarVisibility|Hidden|2
@@ -727,6 +741,7 @@ event|Goo.ImageSourceLease|Released|System.Action|instance|add:public,remove:pub
 event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,remove:public
 event|Goo.ImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
 event|Goo.PlatformInput|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
+event|Goo.RichText.RichTextClipboard|Completed|System.Action`1<Goo.RichText.RichTextResult>|instance|add:public,remove:public
 event|Goo.SpellCheck.SpellCheckSession|Updated|System.Action`1<Goo.SpellCheck.SpellingResult>|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
@@ -1040,6 +1055,21 @@ method|Goo.Printing.PrintResult|op_Equality|static|public|generic:|(left:Goo.Pri
 method|Goo.Printing.PrintResult|op_Inequality|static|public|generic:|(left:Goo.Printing.PrintResult,right:Goo.Printing.PrintResult)->System.Boolean
 method|Goo.Printing.Printing|ExportPdfAsync|static|public|generic:|(owner:Goo.Window,document:Goo.Printing.IPrintDocument,settings:Goo.Printing.PrintPageSettings,destination:System.IO.Stream,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.Printing.PrintResult>
 method|Goo.Printing.Printing|ShowDialogAsync|static|public|generic:|(owner:Goo.Window,document:Goo.Printing.IPrintDocument,title:System.String,cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.Printing.PrintResult>
+method|Goo.RichText.RichTextClipboard|CopyAsync|instance|public|generic:|(cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.RichText.RichTextResult>
+method|Goo.RichText.RichTextClipboard|CutAsync|instance|public|generic:|(cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.RichText.RichTextResult>
+method|Goo.RichText.RichTextClipboard|Dispose|instance|public|generic:|()->System.Void
+method|Goo.RichText.RichTextClipboard|PasteAsync|instance|public|generic:|(cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.RichText.RichTextResult>
+method|Goo.RichText.RichTextClipboard|PastePlainTextAsync|instance|public|generic:|(cancellation:System.Threading.CancellationToken=null)->System.Threading.Tasks.Task`1<Goo.RichText.RichTextResult>
+method|Goo.RichText.RichTextCodec|Read|static|public|generic:|(contentType:System.String,bytes:System.ReadOnlyMemory`1<System.Byte>)->Goo.RichText.RichTextResult
+method|Goo.RichText.RichTextCodec|Write|static|public|generic:|(fragment:Goo.RichText.RichTextFragment)->Goo.TransferData
+method|Goo.RichText.RichTextResult|<Clone>$|instance|public|generic:|()->Goo.RichText.RichTextResult
+method|Goo.RichText.RichTextResult|Deconstruct|instance|public|generic:|(out Status:Goo.RichText.RichTextStatus&,out Fragment:Goo.RichText.RichTextFragment&,out Error:System.String&)->System.Void
+method|Goo.RichText.RichTextResult|Equals|instance|public|generic:|(other:Goo.RichText.RichTextResult)->System.Boolean
+method|Goo.RichText.RichTextResult|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.RichText.RichTextResult|GetHashCode|virtual|public|generic:|()->System.Int32
+method|Goo.RichText.RichTextResult|ToString|virtual|public|generic:|()->System.String
+method|Goo.RichText.RichTextResult|op_Equality|static|public|generic:|(left:Goo.RichText.RichTextResult,right:Goo.RichText.RichTextResult)->System.Boolean
+method|Goo.RichText.RichTextResult|op_Inequality|static|public|generic:|(left:Goo.RichText.RichTextResult,right:Goo.RichText.RichTextResult)->System.Boolean
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
 method|Goo.ShaderEffectData|Publish|instance|public|generic:T[attrs:24,constraints:System.ValueType]|(values:System.ReadOnlySpan`1<!!0>)->System.Void
@@ -1161,6 +1191,7 @@ method|Goo.TextEditorController|Cut|instance|public|generic:|()->System.String
 method|Goo.TextEditorController|Dispose|instance|public|generic:|()->System.Void
 method|Goo.TextEditorController|Execute|instance|public|generic:|(command:Goo.TextCommand)->System.Boolean
 method|Goo.TextEditorController|Focus|instance|public|generic:|()->System.Void
+method|Goo.TextEditorController|ReplaceSelection|instance|public|generic:|(layer:Goo.TextPresentationLayer,text:System.String,fragmentRelativeStyles:System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>)->System.Boolean
 method|Goo.TextEditorController|ScrollTo|instance|public|generic:|(x:System.Double,y:System.Double)->System.Void
 method|Goo.TextEditorController|UpdateComposition|instance|public|generic:|(text:System.String,selectionStart:System.Int32,selectionLength:System.Int32)->System.Boolean
 method|Goo.TextPosition|Deconstruct|instance|public|generic:|(out Offset:System.Int32&,out Affinity:Goo.TextAffinity&)->System.Void
@@ -1170,8 +1201,10 @@ method|Goo.TextPosition|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.TextPosition|ToString|virtual|public|generic:|()->System.String
 method|Goo.TextPosition|op_Equality|static|public|generic:|(left:Goo.TextPosition,right:Goo.TextPosition)->System.Boolean
 method|Goo.TextPosition|op_Inequality|static|public|generic:|(left:Goo.TextPosition,right:Goo.TextPosition)->System.Boolean
+method|Goo.TextPresentationLayer|ApplyTransaction|instance|public|generic:|(changes:Goo.TextChange[],styles:System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>)->Goo.TextDocumentChange
 method|Goo.TextPresentationLayer|Clear|instance|public|generic:|()->System.Void
 method|Goo.TextPresentationLayer|Dispose|instance|public|generic:|()->System.Void
+method|Goo.TextPresentationLayer|GetStyles|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>
 method|Goo.TextPresentationLayer|RemoveProjection|instance|public|generic:|(key:System.String)->System.Boolean
 method|Goo.TextPresentationLayer|RemoveStyle|instance|public|generic:|(key:System.String)->System.Boolean
 method|Goo.TextPresentationLayer|Remove|instance|public|generic:|(key:System.String)->System.Boolean
@@ -1710,6 +1743,12 @@ property|Goo.RadialGradient|CenterX|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|CenterY|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|Radius|System.Double|instance|get:public|index:()
 property|Goo.RadialGradient|Stops|System.Collections.Generic.IReadOnlyList`1<Goo.GradientStop>|instance|get:public|index:()
+property|Goo.RichText.RichTextClipboard|ReadOnly|System.Boolean|instance|get:public,set:public|index:()
+property|Goo.RichText.RichTextFragment|Styles|System.Collections.Generic.IReadOnlyList`1<Goo.TextStyleSpan>|instance|get:public|index:()
+property|Goo.RichText.RichTextFragment|Text|System.String|instance|get:public|index:()
+property|Goo.RichText.RichTextResult|Error|System.String|instance|get:public,init:public|index:()
+property|Goo.RichText.RichTextResult|Fragment|Goo.RichText.RichTextFragment|instance|get:public,init:public|index:()
+property|Goo.RichText.RichTextResult|Status|Goo.RichText.RichTextStatus|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|FadeMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|HideDelayMs|System.Double|instance|get:public,init:public|index:()
 property|Goo.Scrollbar|HitThickness|System.Double|instance|get:public,init:public|index:()
@@ -2227,6 +2266,11 @@ type|Goo.Printing.PrintResult|sealed-class|public|base:System.Object|interfaces:
 type|Goo.Printing.PrintStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Printing.Printing|static-class|public|base:System.Object|interfaces:|generic:
 type|Goo.RadialGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gradient|generic:
+type|Goo.RichText.RichTextClipboard|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.RichText.RichTextCodec|static-class|public|base:System.Object|interfaces:|generic:
+type|Goo.RichText.RichTextFragment|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.RichText.RichTextResult|sealed-class|public|base:System.Object|interfaces:System.IEquatable`1<Goo.RichText.RichTextResult>|generic:
+type|Goo.RichText.RichTextStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ScrollbarVisibility|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Scrollbar|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ShaderEffectData|class|public|base:System.Object|interfaces:System.IDisposable|generic:

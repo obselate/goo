@@ -208,6 +208,16 @@ public class TextEditorController : IDisposable {
   /// @returns True when default handling ran.
   public func Execute(command TextCommand) bool {
     if !beginCommand(command) { return false }
+    return ExecuteIntercepted(command)
+  }
+
+  internal func InterceptPaste() bool {
+    let args = TextCommandEvent(TextCommand{ Kind: TextCommandKind.Paste })
+    onCommand?.Invoke(args)
+    return !args.Cancel
+  }
+
+  internal func ExecuteIntercepted(command TextCommand) bool {
     switch command.Kind {
       case TextCommandKind.Insert { return insertDefault(command.Text, TextCommandKind.Insert) }
       case TextCommandKind.DeleteBackward { return deleteBackward(false) }
@@ -274,6 +284,45 @@ public class TextEditorController : IDisposable {
     cutDefault()
     return copied
   }
+
+  /// Replaces the selection with source text and persistent fragment-relative styles as one undoable edit.
+  /// @param layer The persistent formatting layer bound to this controller's document.
+  /// @param text The replacement source text.
+  /// @param fragmentRelativeStyles The replacement's inline styles, measured from zero.
+  /// @returns True when the Paste interceptor allowed the edit.
+  public func ReplaceSelection(layer TextPresentationLayer, text string,
+    fragmentRelativeStyles IReadOnlyList[TextStyleSpan]) bool {
+      if layer == nil { throw ArgumentNullException("layer") }
+      if layer.Document != document { throw ArgumentException("The layer belongs to another document", "layer") }
+      if fragmentRelativeStyles == nil { throw ArgumentNullException("fragmentRelativeStyles") }
+      validateUtf16Text(text, "text")
+      if !beginCommand(TextCommand{ Kind: TextCommandKind.Paste, Text: text }) { return false }
+      let selected = selectedRange()
+      var replaced = overwrite && selected.Length == 0 ? overwriteRange(text) : selected
+      if replaced.Length != 0 {
+        if let mounted = mountedEditor as Node? { replaced = TextEditorLayouts.ExpandAtomicRange(mounted, replaced) }
+      }
+      let finalStyles = spliceTextStyles(layer.GetStyles(), replaced, text, fragmentRelativeStyles)
+      breakUndoGroup()
+      applyingDocumentEdit = true
+      replacingSelection = true
+      try {
+        layer.ApplyTransaction([]TextChange{ TextChange{ Range: replaced, InsertedText: text } }, finalStyles)
+      } finally {
+        replacingSelection = false
+        applyingDocumentEdit = false
+      }
+      let caret = replaced.Start + text.Length
+      selection = TextSelection{
+        Anchor: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
+        Active: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
+      }
+      composition = nil
+      hasDesiredHorizontalPosition = false
+      followCaret()
+      changed()
+      return true
+    }
 
   /// Updates transient IME composition text and its selected segment.
   /// @param text The transient preedit text.

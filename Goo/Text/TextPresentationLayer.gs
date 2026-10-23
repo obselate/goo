@@ -88,6 +88,8 @@ internal sealed class TextStyleRangeEntry {
   }
 }
 
+internal data struct TextFormattingHistory(Before []TextStyleSpan, After []TextStyleSpan) { }
+
 /// Owns keyed text styles and atomic source projections for one document.
 public class TextPresentationLayer : IDisposable {
   shared {
@@ -102,6 +104,7 @@ public class TextPresentationLayer : IDisposable {
   private let styleHistory List[TextStyleHistory]
   private let projectionHistoryTransactions Dictionary[TextHistoryTransaction, List[TextProjectionHistory]]
   private let styleHistoryTransactions Dictionary[TextHistoryTransaction, List[TextStyleHistory]]
+  private let formattingHistory Dictionary[TextHistoryTransaction, TextFormattingHistory]
   private let projectionRangeIndex List[TextPresentationProjection]
   private let styleRangeIndex List[TextStyleRangeEntry]
   private var stylePrefixMaxEnd []int32
@@ -124,6 +127,7 @@ public class TextPresentationLayer : IDisposable {
     styleHistory = List[TextStyleHistory]()
     projectionHistoryTransactions = Dictionary[TextHistoryTransaction, List[TextProjectionHistory]]()
     styleHistoryTransactions = Dictionary[TextHistoryTransaction, List[TextStyleHistory]]()
+    formattingHistory = Dictionary[TextHistoryTransaction, TextFormattingHistory]()
     projectionRangeIndex = List[TextPresentationProjection]()
     styleRangeIndex = List[TextStyleRangeEntry]()
     stylePrefixMaxEnd = []int32{}
@@ -135,6 +139,46 @@ public class TextPresentationLayer : IDisposable {
   internal prop Identity int64{ get -> identity }
   /// Gets the monotonic revision of presentation-layer mutations.
   public prop Revision int64{ get -> revision }
+
+  /// Returns an owned immutable snapshot of the layer's current source style spans.
+  /// @returns Keyed source spans in declaration order.
+  public func GetStyles() IReadOnlyList[TextStyleSpan] {
+    if disposed { throw ObjectDisposedException("TextPresentationLayer") }
+    return Array.AsReadOnly[TextStyleSpan](styleSpans.ToArray())
+  }
+
+  /// Commits source changes and the complete final style state as one undoable operation.
+  /// @param changes Ordered source replacements against the current document.
+  /// @param styles The complete post-edit style state. Projections retain normal rebase behavior.
+  /// @returns The committed document change.
+  public func ApplyTransaction(changes []TextChange, styles IReadOnlyList[TextStyleSpan]) TextDocumentChange {
+    if disposed { throw ObjectDisposedException("TextPresentationLayer") }
+    if styles == nil { throw ArgumentNullException("styles") }
+    return document.ApplyStyledTransaction(changes, this, styles)
+  }
+
+  internal func RecordFormatting(transaction TextHistoryTransaction, styles IReadOnlyList[TextStyleSpan],
+    finalRoot TextPieceNode?) {
+      let keys = HashSet[string](StringComparer.Ordinal)
+      let next = [styles.Count]TextStyleSpan
+      for i in 0 ... next.Length {
+        let span = styles[i]
+        validateKey(span.Key)
+        if !keys.Add(span.Key) { throw ArgumentException("Style keys must be unique", "styles") }
+        validateTextRange(finalRoot, span.Range)
+        validatePresentationStyle(span.Style)
+        next[i] = TextStyleSpan{ Key: span.Key, Range: span.Range, Style: Style{ BasedOn: span.Style } }
+      }
+      formattingHistory.Add(transaction, TextFormattingHistory{ Before: styleSpans.ToArray(), After: next })
+      transaction.FormattingLayer = WeakReference(this)
+    }
+
+  internal func RestoreFormatting(transaction TextHistoryTransaction, undo bool) {
+    if disposed || !formattingHistory.TryGetValue(transaction, out var history) { return }
+    styleSpans.Clear()
+    styleSpans.AddRange(undo ? history.Before : history.After)
+    rebuildStyleRangeIndex()
+  }
   /// Adds or updates a keyed style span.
   /// @param key The stable style-span key.
   /// @param textRange The source range to style.
@@ -145,6 +189,7 @@ public class TextPresentationLayer : IDisposable {
     validatePresentationStyle(style)
     if style == nil { throw ArgumentNullException("style") }
     discardStyleHistory(key)
+    formattingHistory.Clear()
     let value = TextStyleSpan{ Key: key, Range: textRange, Style: style }
     let index = styleIndex(key)
     let previous = index < 0 ? textRange : styleSpans[index].Range
@@ -173,6 +218,7 @@ public class TextPresentationLayer : IDisposable {
     if styleSpans.Count == 0 && next.Count == 0 { return }
     styleHistory.Clear()
     styleHistoryTransactions.Clear()
+    formattingHistory.Clear()
     styleSpans.Clear()
     styleSpans.AddRange(next)
     rebuildStyleRangeIndex()
@@ -184,6 +230,7 @@ public class TextPresentationLayer : IDisposable {
   /// @returns True when a span was removed.
   public func RemoveStyle(key string) bool {
     discardStyleHistory(key)
+    formattingHistory.Clear()
     let index = styleIndex(key)
     if index < 0 { return false }
     let removed = styleSpans[index].Range
@@ -272,6 +319,7 @@ public class TextPresentationLayer : IDisposable {
     styleHistory.Clear()
     projectionHistoryTransactions.Clear()
     styleHistoryTransactions.Clear()
+    formattingHistory.Clear()
     if styleSpans.Count != 0 || projections.Count != 0 {
       var slotChanged = false
       for projection in projections {
@@ -299,6 +347,7 @@ public class TextPresentationLayer : IDisposable {
       styleHistory.Clear()
       projectionHistoryTransactions.Clear()
       styleHistoryTransactions.Clear()
+      formattingHistory.Clear()
     }
   }
 
@@ -443,6 +492,22 @@ public class TextPresentationLayer : IDisposable {
           }
         }
     }
+    let formatting = if let current = mutation { formattingHistory.ContainsKey(current.Transaction) } else { false }
+    if formatting { changedLayer = true }
+    else { changedLayer = rebaseStyles(change, mutation) || changedLayer }
+    if let current = mutation {
+      if current.DiscardedTransactions != nil {
+        discardHistoryTransactions(current.DiscardedTransactions!!)
+      }
+    }
+    if changedLayer {
+      if formatting { mutateAll(slotChanged) }
+      else { mutate(documentChangeRange(change.Changes), slotChanged) }
+    }
+  }
+
+  private func rebaseStyles(change TextDocumentChange, mutation TextDocumentMutation?) bool {
+    var changedLayer = false
     let firstStyle = firstAffectedStyle(change.Changes)
     for i in firstStyle ... styleRangeIndex.Count {
       let indexed = styleRangeIndex[i]
@@ -491,12 +556,7 @@ public class TextPresentationLayer : IDisposable {
       }
     }
     updateStylePrefix(firstStyle)
-    if let current = mutation {
-      if current.DiscardedTransactions != nil {
-        discardHistoryTransactions(current.DiscardedTransactions!!)
-      }
-    }
-    if changedLayer { mutate(documentChangeRange(change.Changes), slotChanged) }
+    return changedLayer
   }
 
   private func projectionRangeAvailable(value TextPresentationProjection,
@@ -561,6 +621,7 @@ public class TextPresentationLayer : IDisposable {
 
   private func discardHistoryTransactions(transactions IReadOnlyList[TextHistoryTransaction]) {
     for transaction in transactions {
+      formattingHistory.Remove(transaction)
       if projectionHistoryTransactions.TryGetValue(transaction, out var projectionsForTransaction) {
         for history in projectionsForTransaction { projectionHistory.Remove(history) }
         projectionHistoryTransactions.Remove(transaction)

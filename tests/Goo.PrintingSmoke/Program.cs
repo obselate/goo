@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Goo;
 using Goo.Printing;
+using Goo.RichText;
 
 var window = new Window { Root = new Page(32, 32), Width = 96, Height = 96, Title = "Goo print check" }.Open();
 try
@@ -61,6 +62,7 @@ try
     }
     else
         Require(owner.Status == NativeDialogOwnerStatus.Unsupported, "unexpected native dialog owner status");
+    CheckRichClipboard(window);
     Console.WriteLine($"printing: 2 PDF pages at 300 DPI A4, independent 480x360 output, {ink} text pixels, reused output, bounded memory");
 }
 finally
@@ -102,6 +104,44 @@ static void Pixel(WindowCapture capture, int x, int y, int red, int green, int b
     var index = checked(y * (int)capture.RowBytes + x * 4);
     Require(Math.Abs(capture.Pixels[index] - red) <= 2 && Math.Abs(capture.Pixels[index + 1] - green) <= 2 &&
         Math.Abs(capture.Pixels[index + 2] - blue) <= 2, $"unexpected pixel at {x},{y}");
+}
+
+static void CheckRichClipboard(Window window)
+{
+    using var controller = new TextEditorController(new TextDocument("rich 😀"));
+    using var layer = new TextPresentationLayer(controller.Document);
+    layer.SetStyle("bold", new TextRange(0, 7), new Style { FontWeight = 700 });
+    var commands = 0;
+    controller.OnCommand = _ => commands++;
+    using var clipboard = new RichTextClipboard(window, controller, layer);
+    controller.Selection = new TextSelection(new TextPosition(0, TextAffinity.Upstream), new TextPosition(7, TextAffinity.Downstream));
+    var copied = Pump(window, clipboard.CopyAsync());
+    Require(copied.Status == RichTextStatus.Success, "rich copy: " + copied.Status + " " + copied.Error);
+    controller.Selection = new TextSelection(new TextPosition(7, TextAffinity.Upstream), new TextPosition(7, TextAffinity.Downstream));
+    var pasted = Pump(window, clipboard.PasteAsync());
+    Require(pasted.Status == RichTextStatus.Success && controller.Document.GetText() == "rich 😀rich 😀", "rich paste did not round-trip");
+    Require(controller.Document.Undo() && controller.Document.GetText() == "rich 😀", "rich paste undo failed");
+    Require(commands == 2, "clipboard command interception ran more than once");
+    controller.Selection = new TextSelection(new TextPosition(0, TextAffinity.Upstream), new TextPosition(7, TextAffinity.Downstream));
+    var pendingCut = clipboard.CutAsync();
+    controller.Selection = new TextSelection(new TextPosition(7, TextAffinity.Upstream), new TextPosition(7, TextAffinity.Downstream));
+    Require(Pump(window, pendingCut).Status == RichTextStatus.Stale && controller.Document.GetText() == "rich 😀",
+        "stale cut deleted the current selection");
+    clipboard.ReadOnly = true;
+    Require(Pump(window, clipboard.PasteAsync()).Status == RichTextStatus.ReadOnly, "read-only paste was accepted");
+    clipboard.ReadOnly = false;
+    foreach (var type in new[] { "text/html", "text/rtf" })
+    {
+        var data = RichTextCodec.Write(new RichTextFragment("only", [new TextStyleSpan("only", new TextRange(0, 4), new Style { FontWeight = 700 })]));
+        var representation = data.Representations.Single(item => item.ContentType == type);
+        var written = Pump(window, window.WriteClipboardAsync(new TransferData([representation], Array.Empty<Uri>())));
+        Require(written.Status == DataTransferStatus.Success, "single-format publication failed");
+        controller.Selection = new TextSelection(new TextPosition(0, TextAffinity.Upstream), new TextPosition(7, TextAffinity.Downstream));
+        var result = Pump(window, clipboard.PasteAsync());
+        Require(result.Status == RichTextStatus.Success && controller.Document.GetText() == "only", "single-format paste failed: " + type);
+        Require(controller.Document.Undo(), "single-format undo failed");
+    }
+    Console.WriteLine("rich clipboard: HTML and RTF round-trip, rich-only paste, atomic undo");
 }
 
 static void Require(bool condition, string error)

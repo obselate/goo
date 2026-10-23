@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo.Printing/Goo.Printing.csproj" />
+    <ProjectReference Include="../../Goo.RichText/Goo.RichText.csproj" />
   </ItemGroup>
 </Project>
