@@ -75,6 +75,7 @@ ctor|Goo.TextEditorController|public|(document:Goo.TextDocument)
 ctor|Goo.TextEditor|public|(controller:Goo.TextEditorController)
 ctor|Goo.TextEditor|public|(controller:Goo.TextEditorController,layers:Goo.TextPresentationLayer[])
 ctor|Goo.TextEntry|public|()
+ctor|Goo.TextInputOptions|public|()
 ctor|Goo.TextPosition|public|(Offset:System.Int32,Affinity:Goo.TextAffinity)
 ctor|Goo.TextPresentationLayer|public|(document:Goo.TextDocument)
 ctor|Goo.TextRange|public|(Start:System.Int32,Length:System.Int32)
@@ -118,6 +119,7 @@ enum-underlying|Goo.DragEffect|System.Int32
 enum-underlying|Goo.DragEndKind|System.Int32
 enum-underlying|Goo.DragEventKind|System.Int32
 enum-underlying|Goo.Easing|System.Int32
+enum-underlying|Goo.EnterAction|System.Int32
 enum-underlying|Goo.FileDialogKind|System.Int32
 enum-underlying|Goo.FileDialogStatus|System.Int32
 enum-underlying|Goo.FillRule|System.Int32
@@ -130,6 +132,7 @@ enum-underlying|Goo.GestureInputKind|System.Int32
 enum-underlying|Goo.GesturePhase|System.Int32
 enum-underlying|Goo.GestureSource|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
+enum-underlying|Goo.InputPurpose|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
 enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
@@ -311,6 +314,12 @@ enum|Goo.Easing|EaseInOut|3
 enum|Goo.Easing|EaseIn|1
 enum|Goo.Easing|EaseOut|2
 enum|Goo.Easing|Linear|0
+enum|Goo.EnterAction|Done|0
+enum|Goo.EnterAction|Go|1
+enum|Goo.EnterAction|Next|2
+enum|Goo.EnterAction|None|5
+enum|Goo.EnterAction|Search|3
+enum|Goo.EnterAction|Send|4
 enum|Goo.FileDialogKind|Folder|2
 enum|Goo.FileDialogKind|OpenFile|0
 enum|Goo.FileDialogKind|SaveFile|1
@@ -357,6 +366,14 @@ enum|Goo.ImageFit|Contain|0
 enum|Goo.ImageFit|Cover|1
 enum|Goo.ImageFit|Fill|2
 enum|Goo.ImageFit|None|3
+enum|Goo.InputPurpose|Decimal|4
+enum|Goo.InputPurpose|Email|1
+enum|Goo.InputPurpose|Number|3
+enum|Goo.InputPurpose|Password|7
+enum|Goo.InputPurpose|Phone|5
+enum|Goo.InputPurpose|Search|6
+enum|Goo.InputPurpose|Text|0
+enum|Goo.InputPurpose|Url|2
 enum|Goo.JustifyContent|Center|1
 enum|Goo.JustifyContent|FlexEnd|2
 enum|Goo.JustifyContent|FlexStart|0
@@ -1483,6 +1500,7 @@ property|Goo.FocusedEditorSnapshot|CaretArea|Goo.ElementRect|instance|get:public
 property|Goo.FocusedEditorSnapshot|CompositionEnd|System.Int32|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|CompositionStart|System.Int32|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|FocusId|System.Int64|instance|get:public,init:public|index:()
+property|Goo.FocusedEditorSnapshot|InputOptions|Goo.TextInputOptions?|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|IsMultiline|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|IsPassword|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.FocusedEditorSnapshot|IsReadOnly|System.Boolean|instance|get:public,init:public|index:()
@@ -1771,6 +1789,7 @@ property|Goo.TextEditorController|UseTabs|System.Boolean|instance|get:public,set
 property|Goo.TextEditor|CaretColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.TextEditor|Controller|Goo.TextEditorController|instance|get:public|index:()
 property|Goo.TextEditor|CurrentLineColor|Goo.Color|instance|get:public,init:public|index:()
+property|Goo.TextEditor|InputOptions|Goo.TextInputOptions?|instance|get:public,init:public|index:()
 property|Goo.TextEditor|Layers|Goo.TextPresentationLayer[]|instance|get:public,init:public|index:()
 property|Goo.TextEditor|LineNumberColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.TextEditor|OnChange|System.Action`1<Goo.TextDocumentChange>?|instance|get:public,init:public|index:()
@@ -1781,12 +1800,16 @@ property|Goo.TextEditor|ReadOnly|System.Boolean|instance|get:public,init:public|
 property|Goo.TextEditor|SelectionColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.TextEditor|ShowLineNumbers|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.TextEntry|Controlled|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.TextEntry|InputOptions|Goo.TextInputOptions?|instance|get:public,init:public|index:()
 property|Goo.TextEntry|OnChange|System.Action`1<System.String>?|instance|get:public,init:public|index:()
 property|Goo.TextEntry|OnSubmit|System.Action`1<System.String>?|instance|get:public,init:public|index:()
 property|Goo.TextEntry|Password|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.TextEntry|Placeholder|System.String|instance|get:public,init:public|index:()
 property|Goo.TextEntry|SelectionColor|Goo.Color|instance|get:public,init:public|index:()
 property|Goo.TextEntry|Value|System.String|instance|get:public,init:public|index:()
+property|Goo.TextInputOptions|AutofillHints|System.String[]|instance|get:public,init:public|index:()
+property|Goo.TextInputOptions|EnterAction|Goo.EnterAction|instance|get:public,init:public|index:()
+property|Goo.TextInputOptions|Purpose|Goo.InputPurpose|instance|get:public,init:public|index:()
 property|Goo.TextPosition|Affinity|Goo.TextAffinity|instance|get:public,init:public|index:()
 property|Goo.TextPosition|Offset|System.Int32|instance|get:public,init:public|index:()
 property|Goo.TextPresentationLayer|Document|Goo.TextDocument|instance|get:public|index:()
@@ -2017,6 +2040,7 @@ type|Goo.ElementHandle|sealed-class|public|base:System.Object|interfaces:|generi
 type|Goo.ElementMetrics|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.ElementMetrics>|generic:
 type|Goo.ElementRect|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.ElementRect>|generic:
 type|Goo.EmbeddedWindowHost|abstract-class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.EnterAction|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FileDialogFilter|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.FileDialogKind|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.FileDialogOptions|sealed-class|public|base:System.Object|interfaces:|generic:
@@ -2051,6 +2075,7 @@ type|Goo.ImageSourceLease|sealed-class|public|base:System.Object|interfaces:Syst
 type|Goo.ImageSourceProvider|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageSource|sealed-class|public|base:System.Object|interfaces:Goo.ImageSourceProvider,System.IDisposable|generic:
 type|Goo.Image|sealed-class|public|base:Goo.Blob|interfaces:|generic:
+type|Goo.InputPurpose|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.JustifyContent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.KeyBinding|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
@@ -2120,6 +2145,7 @@ type|Goo.TextDocument|sealed-class|public|base:System.Object|interfaces:|generic
 type|Goo.TextEditorController|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.TextEditor|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.TextEntry|sealed-class|public|base:Goo.Blob|interfaces:|generic:
+type|Goo.TextInputOptions|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TextPosition|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextPosition>|generic:
 type|Goo.TextPresentationLayer|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.TextRange|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.TextRange>|generic:

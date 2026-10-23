@@ -25,6 +25,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     private long lastFrameTime;
     private long editorFocus;
     private int editorConfiguration;
+    private TextInputOptions? editorOptions;
     private GooInputConnection? batchConnection;
     private int batchDepth;
     private FocusedEditorSnapshot? pendingEditor;
@@ -372,11 +373,30 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         if (disposed || outAttrs is null || Input.Editor is not { IsReadOnly: false } editor)
             return null;
-        outAttrs.InputType = global::Android.Text.InputTypes.ClassText
-            | (editor.IsPassword ? global::Android.Text.InputTypes.TextVariationPassword : 0)
-            | (editor.IsMultiline ? global::Android.Text.InputTypes.TextFlagMultiLine : 0);
-        outAttrs.ImeOptions = (ImeFlags)(editor.IsMultiline ? ImeAction.None : ImeAction.Done)
-            | ImeFlags.NoExtractUi | (editor.IsPassword ? ImeFlags.NoPersonalizedLearning : 0);
+        var purpose = editor.IsPassword ? InputPurpose.Password : editor.InputOptions?.Purpose ?? InputPurpose.Text;
+        outAttrs.InputType = purpose switch
+        {
+            InputPurpose.Email => global::Android.Text.InputTypes.ClassText | global::Android.Text.InputTypes.TextVariationEmailAddress,
+            InputPurpose.Url => global::Android.Text.InputTypes.ClassText | global::Android.Text.InputTypes.TextVariationUri,
+            InputPurpose.Number => global::Android.Text.InputTypes.ClassNumber,
+            InputPurpose.Decimal => global::Android.Text.InputTypes.ClassNumber | global::Android.Text.InputTypes.NumberFlagDecimal,
+            InputPurpose.Phone => global::Android.Text.InputTypes.ClassPhone,
+            InputPurpose.Password => global::Android.Text.InputTypes.ClassText | global::Android.Text.InputTypes.TextVariationPassword,
+            _ => global::Android.Text.InputTypes.ClassText
+        };
+        if (editor.IsMultiline && (outAttrs.InputType & global::Android.Text.InputTypes.MaskClass) == global::Android.Text.InputTypes.ClassText)
+            outAttrs.InputType |= global::Android.Text.InputTypes.TextFlagMultiLine;
+        var action = editor.InputOptions?.EnterAction ?? (editor.IsMultiline ? EnterAction.None
+            : purpose == InputPurpose.Search ? EnterAction.Search : EnterAction.Done);
+        outAttrs.ImeOptions = (ImeFlags)(action switch
+        {
+            EnterAction.Go => ImeAction.Go,
+            EnterAction.Next => ImeAction.Next,
+            EnterAction.Search => ImeAction.Search,
+            EnterAction.Send => ImeAction.Send,
+            EnterAction.None => ImeAction.None,
+            _ => ImeAction.Done
+        }) | ImeFlags.NoExtractUi | (purpose == InputPurpose.Password ? ImeFlags.NoPersonalizedLearning : 0);
         outAttrs.InitialSelStart = editor.SelectionStart;
         outAttrs.InitialSelEnd = editor.SelectionEnd;
         return new GooInputConnection(this, editor.FocusId);
@@ -419,21 +439,33 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         var focus = editor?.FocusId ?? 0;
         var configuration = EditorConfiguration(editor);
-        if (batchDepth > 0 && focus == editorFocus && configuration == editorConfiguration)
+        var optionsChanged = !SameEditorOptions(editor?.InputOptions, editorOptions);
+        if (batchDepth > 0 && focus == editorFocus && configuration == editorConfiguration
+            && !optionsChanged)
         {
             pendingEditor = editor;
             editorPending = true;
             RequestFrame();
             return;
         }
-        if (focus != editorFocus || configuration != editorConfiguration)
+        if (focus != editorFocus || configuration != editorConfiguration || optionsChanged)
         {
+            var autofill = Context?.GetSystemService("autofill") as global::Android.Views.Autofill.AutofillManager;
+            autofill?.NotifyViewExited(this);
+            if (focus != editorFocus)
+                autofill?.Cancel();
             batchConnection = null;
             batchDepth = 0;
             editorPending = false;
             pendingEditor = null;
             editorFocus = focus;
             editorConfiguration = configuration;
+            editorOptions = editor?.InputOptions;
+            SetAutofillHints(editorOptions?.AutofillHints ?? []);
+            ImportantForAutofill = editor is { IsReadOnly: false } && editorOptions?.AutofillHints.Length > 0
+                ? ImportantForAutofill.Yes : ImportantForAutofill.No;
+            if (ImportantForAutofill == ImportantForAutofill.Yes)
+                autofill?.NotifyViewEntered(this);
             inputMethod.RestartInput(this);
             if (editor is { IsReadOnly: false })
                 inputMethod.ShowSoftInput(this, ShowFlags.Implicit);
@@ -485,6 +517,25 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 
     private static int EditorConfiguration(FocusedEditorSnapshot? editor) => editor is { } value
         ? (value.IsPassword ? 1 : 0) | (value.IsMultiline ? 2 : 0) | (value.IsReadOnly ? 4 : 0) : 0;
+
+    private static bool SameEditorOptions(TextInputOptions? left, TextInputOptions? right) =>
+        ReferenceEquals(left, right) || left is not null && right is not null
+        && left.Purpose == right.Purpose && left.EnterAction == right.EnterAction
+        && left.AutofillHints.AsSpan().SequenceEqual(right.AutofillHints);
+
+    public override AutofillType AutofillType => Input.Editor is { IsReadOnly: false }
+        ? AutofillType.Text : AutofillType.None;
+
+    public override global::Android.Views.Autofill.AutofillValue? AutofillValue => Input.Editor is { } editor
+        ? global::Android.Views.Autofill.AutofillValue.ForText(editor.Text) : null;
+
+    public override void Autofill(global::Android.Views.Autofill.AutofillValue? value)
+    {
+        if (value is not { IsText: true } || Input.Editor is not { IsReadOnly: false })
+            return;
+        Input.Execute(new TextCommand(TextCommandKind.SelectAll, "", false));
+        Input.CommitText(value.TextValue?.ToString() ?? "");
+    }
 
     internal string GetClipboardText()
     {

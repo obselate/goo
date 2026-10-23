@@ -197,6 +197,7 @@ internal class Node {
   internal prop EditorState TextEditorRenderState? { get -> EditorBinding?.RenderState
   }
   internal prop EditorReadOnly bool{ get; set; }
+  internal prop InputOptions TextInputOptions? { get; set; }
   internal prop EditorCaretColor Color{ get; set; }
   internal prop EditorCurrentLineColor Color{ get; set; }
   internal prop EditorShowLineNumbers bool{ get; set; }

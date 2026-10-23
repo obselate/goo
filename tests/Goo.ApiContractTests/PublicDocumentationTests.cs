@@ -330,6 +330,7 @@ public sealed class PublicDocumentationTests
         "M:Goo.TextEditorController.ScrollTo(System.Double,System.Double)",
         "M:Goo.TextEditorController.UpdateComposition(System.String,System.Int32,System.Int32)",
         "M:Goo.TextEntry.#ctor",
+        "M:Goo.TextInputOptions.#ctor",
         "M:Goo.TextPresentationLayer.#ctor(Goo.TextDocument)",
         "M:Goo.TextPresentationLayer.Clear",
         "M:Goo.TextPresentationLayer.Dispose",
@@ -430,6 +431,20 @@ public sealed class PublicDocumentationTests
         "F:Goo.GestureCancelReason.Replaced",
         "F:Goo.GestureCancelReason.Explicit",
         "F:Goo.GestureCancelReason.CallbackFailed",
+        "F:Goo.InputPurpose.Text",
+        "F:Goo.InputPurpose.Email",
+        "F:Goo.InputPurpose.Url",
+        "F:Goo.InputPurpose.Number",
+        "F:Goo.InputPurpose.Decimal",
+        "F:Goo.InputPurpose.Phone",
+        "F:Goo.InputPurpose.Search",
+        "F:Goo.InputPurpose.Password",
+        "F:Goo.EnterAction.Done",
+        "F:Goo.EnterAction.Go",
+        "F:Goo.EnterAction.Next",
+        "F:Goo.EnterAction.Search",
+        "F:Goo.EnterAction.Send",
+        "F:Goo.EnterAction.None",
         "F:Goo.MacOSBackdropMaterial.ContentBackground",
         "F:Goo.MacOSBackdropMaterial.FullScreenUI",
         "F:Goo.MacOSBackdropMaterial.HeaderView",
@@ -897,6 +912,7 @@ public sealed class PublicDocumentationTests
         return ExpectedMethodIds.Concat(ExpectedProtectedMethodIds).Concat(ExpectedEqualityDocumentationIds).Concat(ExpectedEnumFieldIds).Concat(typeIds).Concat(propertyIds).Append("P:Goo.TextCommand.Position").Concat(eventIds)
             .Append("P:Goo.LayoutTransition.SimulationFactory")
             .Append("P:Goo.Cell`1.Input")
+            .Append("P:Goo.FocusedEditorSnapshot.InputOptions")
             .Append("M:Goo.Percent(System.Double)");
     }
 

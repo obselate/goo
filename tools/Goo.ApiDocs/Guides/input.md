@@ -1,3 +1,22 @@
+## Software keyboard hints
+
+```gsharp
+TextEntry{
+    InputOptions: TextInputOptions{
+        Purpose: InputPurpose.Email,
+        EnterAction: EnterAction.Next,
+        AutofillHints: []string{"emailAddress"},
+    },
+}
+```
+
+- TextEntry and TextEditor pass these hints through `FocusedEditorSnapshot.InputOptions`.
+- Android uses them for the keyboard and focused-field autofill.
+- Hints do not restrict accepted text.
+- Without options, entries request Done and multiline editors request None.
+- Desktop ignores the hints except TextEntry password protection.
+- Use TextEntry with `InputPurpose.Password` or `Password: true` for masked values.
+
 ## Pointer click sequences
 
 `PointerEvent.ClickCount` is 1, 2, or 3 on a press and its matching button release;
