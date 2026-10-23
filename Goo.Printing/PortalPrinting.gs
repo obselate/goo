@@ -316,15 +316,14 @@ internal shared class PortalPrinting {
             }
 
             private func Open(ref parent Iter, type int32, signature string?) Iter {
-                let nativeSignature = if let value = signature { Marshal.StringToCoTaskMemUTF8(value) } else { nint(0) }
-                try {
-                    if dbus_message_iter_open_container(&parent, type, nativeSignature, out var child) == 0 {
-                        throw IOException("Cannot build print settings.")
-                    }
-                    return child
-                } finally {
-                    Marshal.FreeCoTaskMem(nativeSignature)
+                var child Iter
+                let opened = if let value = signature {
+                    dbus_message_iter_open_container(&parent, type, value, out child)
+                } else {
+                    dbus_message_iter_open_container(&parent, type, nint(0), out child)
                 }
+                if opened == 0 { throw IOException("Cannot build print settings.") }
+                return child
             }
 
             private func Close(ref parent Iter, ref child Iter) {
@@ -466,6 +465,9 @@ internal shared class PortalPrinting {
                 signature nint,
                 out child Iter
             ) int32;
+
+            @DllImport("libdbus-1.so.3")
+            private func dbus_message_iter_open_container(ref parent Iter, type int32, signature string, out child Iter) int32;
 
             @DllImport("libdbus-1.so.3")
             private func dbus_message_iter_close_container(ref parent Iter, ref child Iter) int32;

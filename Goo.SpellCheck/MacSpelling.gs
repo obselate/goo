@@ -23,7 +23,6 @@ internal unsafe shared class MacSpelling {
         language string,
         cancellation CancellationToken
     ) SpellingResult {
-        var $range = $range
         RequireMainThread()
         let errors = List[Misspelling]()
         let pool = objc_autoreleasePoolPush()
@@ -32,7 +31,7 @@ internal unsafe shared class MacSpelling {
         try {
             let status = Open(language, out checker, out document, out var nativeLanguage)
             if status != SpellingStatus.Success {
-                return SpellingResult(status, snapshot.Version, language, []Misspelling{})
+                return SpellingResult(status, snapshot.Version, language, Array.Empty[Misspelling]())
             }
             let text = snapshot.GetText($range)
             let nativeText = MacSpelling.String(text)
@@ -60,7 +59,7 @@ internal unsafe shared class MacSpelling {
                         SpellingStatus.Failed,
                         snapshot.Version,
                         language,
-                        []Misspelling{},
+                        Array.Empty[Misspelling](),
                         "The macOS checker returned an invalid range."
                     )
                 }
@@ -108,7 +107,7 @@ internal unsafe shared class MacSpelling {
         try {
             let status = Open(language, out checker, out document, out var nativeLanguage)
             if status != SpellingStatus.Success {
-                return SpellingSuggestions(status, snapshot.Version, language, $range, word, []string{})
+                return SpellingSuggestions(status, snapshot.Version, language, $range, word, Array.Empty[string]())
             }
             let array = Guesses(
                 checker,

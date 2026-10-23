@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs tests
+            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs Goo.Printing Goo.SpellCheck Goo.SpellCheck.Hunspell tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -153,11 +153,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libhunspell-1.7-0
-          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.csproj \
+          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
-          dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
-          dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
-          dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -294,6 +291,17 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             -o artifacts/native-menu-smoke
           DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" artifacts/native-menu-smoke/Goo.NativeMenuSmoke
+
+      - name: Verify spelling and printing on macOS
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet build tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj -c Release -m:4 \
+            -p:TreatWarningsAsErrors=true -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.gsproj -c Release -m:4 \
+            -p:TreatWarningsAsErrors=true -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          .github/scripts/with-headless-wayland.sh env XDG_CACHE_HOME="$RUNNER_TEMP/goo-print-cache" \
+            DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" \
+            dotnet tests/Goo.PrintingSmoke/bin/Release/net10.0/Goo.PrintingSmoke.dll
 
       - name: Stage, sign, and run macOS smoke bundle
         if: needs.changes.outputs.full == 'true'
@@ -624,7 +632,7 @@ jobs:
 
       - name: Verify presentation-independent offscreen pages
         run: |
-          dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.csproj \
+          dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -o artifacts/offscreen-nativeaot
@@ -633,7 +641,7 @@ jobs:
             GOO_VK_DIAGNOSTICS=1 artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
       - name: Verify independent pages and raster PDF
         run: |
-          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.csproj \
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -o artifacts/printing-nativeaot
@@ -792,7 +800,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing; do
-            dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
+            dotnet pack "$project/$project.gsproj" -c Release -o artifacts/packages \
               -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           done
       - name: Pack optional audio
@@ -1601,6 +1609,20 @@ jobs:
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/native-menu-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & artifacts/native-menu-smoke/Goo.NativeMenuSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify spelling and printing on Windows
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          $sdl = Join-Path $PWD "artifacts/direct-driver-smoke/SDL3.dll"
+          dotnet build tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj -c Release -m:4 `
+            -p:TreatWarningsAsErrors=true -p:GooWindowsSdlPath="$sdl"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.gsproj -c Release -m:4 `
+            -p:TreatWarningsAsErrors=true -p:GooWindowsSdlPath="$sdl"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:XDG_CACHE_HOME = Join-Path $env:RUNNER_TEMP "goo-print-cache"
+          dotnet tests/Goo.PrintingSmoke/bin/Release/net10.0/Goo.PrintingSmoke.dll
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true' && (always())

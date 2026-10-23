@@ -17,14 +17,13 @@ internal unsafe shared class WindowsSpelling {
         language string,
         cancellation CancellationToken
     ) SpellingResult {
-        var $range = $range
         let text = snapshot.GetText($range)
         if text.Contains('\u0000') {
             return SpellingResult(
                 SpellingStatus.Unsupported,
                 snapshot.Version,
                 language,
-                []Misspelling{},
+                Array.Empty[Misspelling](),
                 "Windows spelling does not accept embedded NUL characters."
             )
         }
@@ -114,7 +113,7 @@ internal unsafe shared class WindowsSpelling {
                 language,
                 $range,
                 word,
-                []string{},
+                Array.Empty[string](),
                 "Windows spelling does not accept embedded NUL characters."
             )
         }

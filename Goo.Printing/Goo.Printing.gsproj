@@ -15,4 +15,11 @@
     <ProjectReference Include="../Goo/Goo.gsproj" />
     <InternalsVisibleTo Include="Goo.Printing.Android" />
   </ItemGroup>
+  <Target Name="RegisterPrintingDocumentation" AfterTargets="CoreCompile" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)/Goo.Printing.xml" />
+    </ItemGroup>
+  </Target>
 </Project>

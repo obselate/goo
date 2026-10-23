@@ -13,6 +13,6 @@
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.csproj" />
+    <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.gsproj" />
   </ItemGroup>
 </Project>
