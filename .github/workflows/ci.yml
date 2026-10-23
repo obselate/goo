@@ -315,6 +315,21 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             --filter FullyQualifiedName~MacClipboardTests
 
+      - name: Verify native macOS MIME drag and effects
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          python3 .github/scripts/check-macos-data-transfer.py \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke \
+            artifacts/macos-transfer-results
+
+      - name: Upload macOS transfer proof
+        if: needs.changes.outputs.full == 'true' && (always())
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: goo-macos-data-transfer
+          path: artifacts/macos-transfer-results
+          if-no-files-found: ignore
+
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
         run: |

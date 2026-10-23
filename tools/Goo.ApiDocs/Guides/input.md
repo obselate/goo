@@ -232,7 +232,7 @@ Attach `source` to a `Blob`. Accept `NativeDataDrop` in its destination's `DropT
 | --- | --- |
 | Wayland v3 with Goo's SDL | MIME and file ingress, MIME drag-out, Copy and Move negotiation. |
 | Windows | MIME and file ingress, MIME drag-out, Copy and Move negotiation. |
-| macOS | File ingress and preview. |
+| macOS | MIME and file ingress, MIME drag-out, Copy and Move negotiation. |
 | Android, closed or embedded windows | None. |
 
 `Window.NativeTransferCapabilities` reports the loaded host's support.

@@ -116,6 +116,10 @@ internal partial class NativeDragBinding {
     cancellation.Cancel()
     cancellation.Dispose()
     if Handle.IsAllocated { Handle.Free() }
+    if MacRuntimeHeld {
+      MacRuntimeHeld = false
+      SdlRuntime.Release()
+    }
     let error = Interlocked.CompareExchange(ref failure, nil, nil)
     let terminal = if result.Status == DataTransferStatus.Success && error != nil {
       NativeTransferResult(DataTransferStatus.Failed, error: error)
@@ -173,6 +177,7 @@ internal unsafe partial class SdlHost {
   internal func StartNativeDrag(binding NativeDragBinding) DataTransferStatus {
     if binding.Finished || nativeDrag != binding { return DataTransferStatus.Cancelled }
     if OperatingSystem.IsWindows() { return StartWindowsNativeDrag(binding) }
+    if OperatingSystem.IsMacOS() { return StartMacNativeDrag(binding) }
     using let names = NativeMimeTable(binding.Types)
     binding.Started = true
     return DataTransferStatus(StartDataDrag(windowHandle, names.Pointer, uint32(binding.Types.Length),

@@ -36,7 +36,7 @@ internal unsafe partial class ClipboardTransfer {
     internal func Query() ClipboardFormats {
       if !Supported() { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}) }
       if OperatingSystem.IsWindows() { return WindowsQueryFormats(nint(0)) }
-      if OperatingSystem.IsMacOS() { return MacQueryFormats() }
+      if OperatingSystem.IsMacOS() { return MacQueryFormats(nint(0)) }
       SDL.ClearError()
       var count nuint
       let native = SDL.GetClipboardMimeTypes(&count)
@@ -58,7 +58,7 @@ internal unsafe partial class ClipboardTransfer {
       if !Supported() { return ClipboardFiles(ClipboardReadStatus.Unsupported, []string{}) }
       try {
         if OperatingSystem.IsWindows() && WindowsHasFiles() { return WindowsReadFiles() }
-        if OperatingSystem.IsMacOS() && MacHasFiles() { return MacReadFiles() }
+        if OperatingSystem.IsMacOS() && MacHasFiles() { return MacReadFiles(nint(0)) }
         let formats = Query()
         if formats.Status != ClipboardReadStatus.Success { return ClipboardFiles(formats.Status, []string{}, formats.Error) }
         let formatType = FileFormat(formats.Formats)
