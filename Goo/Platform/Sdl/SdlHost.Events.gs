@@ -36,6 +36,10 @@ internal unsafe partial class SdlHost {
       }
       return
     }
+    if SdlPinchEventNative.Matches(nativeEvent.Type) {
+      DispatchPinch(nativeEvent)
+      return
+    }
     if eventType == SDLEventType.MouseMotion {
       if nativeEvent.Motion.WindowID == windowId && !IsSyntheticMouse(nativeEvent.Motion.Which) {
         pointerButtons = MapPointerButtons(nativeEvent.Motion.State)

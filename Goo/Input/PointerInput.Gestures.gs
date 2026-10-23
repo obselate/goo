@@ -41,12 +41,16 @@ internal class GestureGroup {
     internal var Winner GestureCandidate?
     internal var Claimed bool
     internal var DeferredClick Node?
+    internal var Source GestureSource
+    internal var WindowAnchor Point
+    internal var Scale float64 = 1.0
 }
 
 internal partial class PointerInput {
     private var gestureGroups List[GestureGroup]?
     private var completingTouchTap bool
     private var recognizerTime float64
+    private var nativePinch GestureGroup?
 
     private func gestureGroupFor(id int64) GestureGroup? {
         guard let groups = gestureGroups else { return nil }
@@ -66,6 +70,7 @@ internal partial class PointerInput {
         var group GestureGroup?
         if let groups = gestureGroups {
             for existing in groups {
+                if existing.Source != GestureSource.Touch { continue }
                 if existing.Claimed && existing.Contacts.Count > 0 {
                     if let winner = existing.Winner {
                         if containsNode(hitChain, winner.Owner) {
@@ -143,6 +148,17 @@ internal partial class PointerInput {
         input.TimeValue = time
         input.ChangedId = id
         input.Pointers.Clear()
+        input.SourceValue = group.Source
+        input.ScaleValue = group.Scale
+        if group.Source == GestureSource.Trackpad {
+            let point = TransformGeometry.WindowToNode(candidate.Owner,
+                float32(group.WindowAnchor.X), float32(group.WindowAnchor.Y))
+            if !point.Valid { return false }
+            input.AnchorValue = Point{X: float64(point.X - candidate.Owner.Rect.X),
+                Y: float64(point.Y - candidate.Owner.Rect.Y)}
+            input.WindowAnchorValue = group.WindowAnchor
+            return true
+        }
         for contact in group.Contacts {
             if !candidate.Contacts.Contains(contact.Id) { continue }
             let point = TransformGeometry.WindowToNode(candidate.Owner, contact.X, contact.Y)
@@ -223,6 +239,7 @@ internal partial class PointerInput {
     }
 
     private func clearGestures(root Node?, reason GestureCancelReason) {
+        nativePinch = nil
         guard let groups = gestureGroups else { return }
         var failure Exception?
         for var i = 0; i < groups.Count; i++ {
@@ -310,7 +327,8 @@ internal partial class PointerInput {
                 notifyGesture(root, candidate, GesturePhase.Canceled, GestureCancelReason.OwnerUnavailable)
                 continue
             }
-            if kind != GestureInputKind.Deadline && !candidate.Contacts.Contains(id) { continue }
+            if group.Source == GestureSource.Touch && kind != GestureInputKind.Deadline
+                && !candidate.Contacts.Contains(id) { continue }
             if kind == GestureInputKind.Deadline && candidate.Session.NextDeadlineSeconds() > time { continue }
             if !prepareGestureInput(group, candidate, kind, id, time) {
                 notifyGesture(root, candidate, GesturePhase.Canceled, GestureCancelReason.OwnerUnavailable)
@@ -406,11 +424,11 @@ internal partial class PointerInput {
 
     internal func StepGestures(root Node?, resolver Resolver, time float64) bool {
         guard let groups = gestureGroups else { return false }
+        if GestureDeadlineSeconds() > time { return false }
         var changed = false
         for var i = groups.Count; i > 0; i-- {
             if i > groups.Count { continue }
             let group = groups[i - 1]
-            if GestureDeadlineSeconds() > time { break }
             try {
                 evaluateGestureGroup(root, resolver, group, GestureInputKind.Deadline, -1, time, 0.0F, 0.0F)
                 changed = true

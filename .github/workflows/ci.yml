@@ -66,13 +66,16 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo tests
+            --severity GL0001=none Goo Goo.Gestures tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
 
       - name: Build Goo with warnings as errors
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
+
+      - name: Verify shared gesture recognizers
+        run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Regenerate API documentation
         run: |
@@ -582,6 +585,22 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Pack shared gesture recognizers
+        run: |
+          dotnet pack Goo.Gestures/Goo.Gestures.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Verify packed NativeAOT gesture consumer
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/gesture-nuget
+          XDG_CACHE_HOME: ${{ runner.temp }}/gesture-cache
+        run: |
+          dotnet publish tests/Goo.Gestures.Smoke/Goo.Gestures.Smoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/gesture-nativeaot
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            artifacts/gesture-nativeaot/Goo.Gestures.Smoke
+
       - name: Pack and validate native accessibility runtimes
         run: |
           dotnet pack Goo.Accessibility/Goo.Accessibility.csproj -c Release -o artifacts/packages \
@@ -789,6 +808,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -802,6 +822,7 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
             artifacts/consumer-performance/stage/*/symbols/
 
@@ -814,6 +835,8 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1232,6 +1255,14 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Gestures.$GOO_VERSION.snupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1259,6 +1290,8 @@ jobs:
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Gestures.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

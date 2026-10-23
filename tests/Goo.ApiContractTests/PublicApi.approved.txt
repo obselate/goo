@@ -128,6 +128,7 @@ enum-underlying|Goo.GestureCancelReason|System.Int32
 enum-underlying|Goo.GestureDecision|System.Int32
 enum-underlying|Goo.GestureInputKind|System.Int32
 enum-underlying|Goo.GesturePhase|System.Int32
+enum-underlying|Goo.GestureSource|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
@@ -350,6 +351,8 @@ enum|Goo.GesturePhase|Canceled|3
 enum|Goo.GesturePhase|Changed|1
 enum|Goo.GesturePhase|Completed|2
 enum|Goo.GesturePhase|Started|0
+enum|Goo.GestureSource|Touch|0
+enum|Goo.GestureSource|Trackpad|1
 enum|Goo.ImageFit|Contain|0
 enum|Goo.ImageFit|Cover|1
 enum|Goo.ImageFit|Fill|2
@@ -1495,10 +1498,14 @@ property|Goo.FontSource|Variations|Goo.FontVariation[]|instance|get:public|index
 property|Goo.FontSource|Weight|System.Int32|instance|get:public|index:()
 property|Goo.FontVariation|Tag|System.String|instance|get:public,init:public|index:()
 property|Goo.FontVariation|Value|System.Single|instance|get:public,init:public|index:()
+property|Goo.GestureInput|Anchor|Goo.Point|instance|get:public|index:()
 property|Goo.GestureInput|ChangedPointerId|System.Int64|instance|get:public|index:()
 property|Goo.GestureInput|Kind|Goo.GestureInputKind|instance|get:public|index:()
 property|Goo.GestureInput|PointerCount|System.Int32|instance|get:public|index:()
+property|Goo.GestureInput|Scale|System.Double|instance|get:public|index:()
+property|Goo.GestureInput|Source|Goo.GestureSource|instance|get:public|index:()
 property|Goo.GestureInput|TimeSeconds|System.Double|instance|get:public|index:()
+property|Goo.GestureInput|WindowAnchor|Goo.Point|instance|get:public|index:()
 property|Goo.GesturePointer|Device|Goo.PointerDevice|instance|get:public,init:public|index:()
 property|Goo.GesturePointer|IsDown|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.GesturePointer|PointerId|System.Int64|instance|get:public,init:public|index:()
@@ -2030,6 +2037,7 @@ type|Goo.GesturePhase|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.GesturePointer|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GesturePointer>|generic:
 type|Goo.GestureRecognizer|abstract-class|public|base:System.Object|interfaces:|generic:
 type|Goo.GestureSession|abstract-class|public|base:System.Object|interfaces:|generic:
+type|Goo.GestureSource|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GradientStop>|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageDecodeLimits|sealed-class|public|base:System.Object|interfaces:|generic:
