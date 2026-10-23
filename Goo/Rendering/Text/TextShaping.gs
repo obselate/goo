@@ -689,11 +689,11 @@ internal partial class TextShaping {
         throw InvalidOperationException("System font selection has no path")
       }
       guard let recorder = FrameRecorder.Current else {
-        return TypefaceResource(selection.Family, File.ReadAllBytes(path), 0u, nil, 0uL, 0uL)
+        return TypefaceResource(selection.Family, VulkanTextFont.ReadBytes(path), 0u, nil, 0uL, 0uL)
       }
       let start = Stopwatch.GetTimestamp()
       var bytes []uint8
-      try { bytes = File.ReadAllBytes(path) }
+      try { bytes = VulkanTextFont.ReadBytes(path) }
       catch (error Exception) {
         recorder.ResourceDuration(FrameResourceKind.Font, 0uL, "font.read", start, result: -1)
         throw error
