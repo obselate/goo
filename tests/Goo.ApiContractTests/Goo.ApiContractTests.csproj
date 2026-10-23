@@ -10,20 +10,23 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(GooSmokeUsePackages)' != 'true'">
+    <ProjectReference Include="..\..\Goo\Goo.gsproj" />
+    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" />
     <ProjectReference Include="../../Goo.Images/Goo.Images.gsproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck\Goo.SpellCheck.csproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck.Hunspell\Goo.SpellCheck.Hunspell.csproj" />
     <ProjectReference Include="..\..\Goo.Printing\Goo.Printing.csproj" />
     <ProjectReference Include="..\..\Goo.NativeDialogs\Goo.NativeDialogs.gsproj" SetTargetFramework="TargetFramework=net10.0" />
-    <ProjectReference Include="..\..\Goo\Goo.gsproj"
-                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
-    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj"
-                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
-    <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)"
-                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
-    <PackageReference Include="Goo.NativeMenus" VersionOverride="$(GooReleaseVersion)"
-                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(GooSmokeUsePackages)' == 'true'">
+    <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.NativeMenus" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.Images" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.SpellCheck" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.SpellCheck.Hunspell" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.Printing" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.NativeDialogs" VersionOverride="$(GooReleaseVersion)" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"
