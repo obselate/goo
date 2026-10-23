@@ -101,8 +101,15 @@ public sealed class MainActivity : GooActivity
             Require(pasted.Status == RichTextStatus.Success && controller.Document.GetText() == "rich 🙂",
                 "Android " + type + " Paste: " + pasted.Status + " " + pasted.Error);
             var styles = layer.GetStyles();
-            Require(styles.Count == 1 && styles[0].Style.TryGetTextStyle(out var properties) && properties.FontWeight == 700,
-                "Android " + type + " lost bold formatting");
+            for (var offset = 0; offset < controller.Document.Length; offset++)
+            {
+                double weight = 400;
+                foreach (var span in styles)
+                    if (span.Range.Start <= offset && offset < span.Range.Start + span.Range.Length
+                        && span.Style.TryGetTextStyle(out var properties) && properties.FontWeight is { } explicitWeight)
+                        weight = explicitWeight;
+                Require(weight == 700, $"Android {type} lost bold at {offset}: weight {weight}, spans {styles.Count}");
+            }
             Require(controller.Document.Undo() && controller.Document.GetText() == "before",
                 "Android " + type + " did not undo as one edit");
         }
