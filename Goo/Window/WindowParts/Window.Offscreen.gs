@@ -55,8 +55,8 @@ public partial class Window {
 internal func validateOffscreenOptions(options OffscreenRenderOptions) {
   if !Single.IsFinite(options.LogicalWidth) || !Single.IsFinite(options.LogicalHeight)
     || options.LogicalWidth <= 0.0F || options.LogicalHeight <= 0.0F
-    || options.LogicalWidth > float32(Int32.MaxValue - 1)
-    || options.LogicalHeight > float32(Int32.MaxValue - 1) {
+    || options.LogicalWidth >= float32(Int32.MaxValue)
+    || options.LogicalHeight >= float32(Int32.MaxValue) {
       throw ArgumentOutOfRangeException("options", "Logical dimensions must be finite and positive")
     }
   if options.PixelWidth == 0u || options.PixelHeight == 0u || options.MaxBytes <= 0 {
