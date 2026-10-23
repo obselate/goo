@@ -81,6 +81,7 @@ internal unsafe partial class ClipboardTransfer {
         private func WaylandDataAvailable() bool -> OperatingSystem.IsLinux() && SDL.GetCurrentVideoDriverS() == "wayland"
 
         internal func WriteTransfer(data TransferData, intent ClipboardIntent) ClipboardWriteResult {
+            if OperatingSystem.IsWindows() { return WindowsWriteTransfer(data, intent) }
             if !WaylandDataAvailable() { return ClipboardWriteResult(DataTransferStatus.Unsupported, "This host does not provide multi-format clipboard publication") }
             var publication ClipboardPublication?
             let names = List[nint]()
@@ -129,6 +130,9 @@ internal unsafe partial class ClipboardTransfer {
             } catch (error InvalidDataException) {
                 publication?.Dispose()
                 return ClipboardWriteResult(DataTransferStatus.Unsupported, error.Message)
+            } catch (error NotSupportedException) {
+                publication?.Dispose()
+                return ClipboardWriteResult(DataTransferStatus.Unsupported, error.Message)
             } catch (error DllNotFoundException) {
                 publication?.Dispose()
                 return ClipboardWriteResult(DataTransferStatus.Unsupported, error.Message)
@@ -143,14 +147,10 @@ internal unsafe partial class ClipboardTransfer {
 
         internal func EncodeLocalUris(uris IReadOnlyList[Uri]) string {
             let encoded = StringBuilder()
-            let paths = List[string](uris.Count)
             var units int32 = 0
-            for uri in uris {
-                if !uri.IsFile || uri.Query != "" || uri.Fragment != ""
-                    || (uri.Host != "" && !String.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)) {
-                    throw InvalidDataException("Native desktop file publication requires local file URIs")
-                }
-                NativeFilePaths.Add(paths, uri.LocalPath, ref units)
+            for i in 0 ... uris.Count {
+                let uri = uris[i]
+                LocalTransferPath(uri, i, ref units)
                 encoded.Append(uri.AbsoluteUri)
                 encoded.Append("\r\n")
                 if encoded.Length > MaxFileListBytes - 5 { throw ClipboardLimitException("Clipboard URI list exceeds 1 MiB") }
@@ -158,7 +158,18 @@ internal unsafe partial class ClipboardTransfer {
             return encoded.ToString()
         }
 
+        private func LocalTransferPath(uri Uri, index int32, ref units int32) string {
+            if !uri.IsFile || uri.Query != "" || uri.Fragment != ""
+                || (uri.Host != "" && !String.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)) {
+                throw NotSupportedException("Native desktop file publication requires local file URIs")
+            }
+            let path = uri.LocalPath
+            NativeFilePaths.Validate(path, index, ref units)
+            return path
+        }
+
         internal func ReadTransfer(types IReadOnlyList[string]) ClipboardDataResult {
+            if OperatingSystem.IsWindows() { return WindowsReadTransfer(types) }
             if !WaylandDataAvailable() { return ClipboardDataResult(ClipboardReadStatus.Unsupported, error: "This host does not provide multi-format clipboard reads") }
             var watching bool
             try {
