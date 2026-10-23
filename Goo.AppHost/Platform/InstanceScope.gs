@@ -97,27 +97,23 @@ internal class InstanceLock : IDisposable {
     }
 
     shared {
-        private const LinuxOpenFlags int32 = 2 | 64 | 524288
-        private const MacOpenFlags int32 = 2 | 512 | 16777216
         private const ExclusiveNonBlocking int32 = 2 | 4
         private const Unlock int32 = 8
         private const LinuxWouldBlock int32 = 11
         private const MacWouldBlock int32 = 35
 
         internal func Acquire(path string) IDisposable? {
-            if OperatingSystem.IsWindows() {
-                try { return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None) }
-                catch (error IOException) {
-                    if (error.HResult & 65535) == 32 { return nil }
-                    rethrow
-                }
-            }
+            let windows = OperatingSystem.IsWindows()
             let mac = OperatingSystem.IsMacOS()
-            let mode = int32(UnixFileMode.UserRead | UnixFileMode.UserWrite)
-            let descriptor = if mac { MacOpen(path, MacOpenFlags, mode) } else { LinuxOpen(path, LinuxOpenFlags, mode) }
-            if descriptor < 0 { throw Win32Exception(Marshal.GetLastPInvokeError()) }
-            let handle = SafeFileHandle(nint(descriptor), true)
-            if Flock(nint(descriptor), ExclusiveNonBlocking, mac) == 0 { return InstanceLock(handle, mac) }
+            var handle SafeFileHandle
+            try { handle = File.OpenHandle(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None) }
+            catch (error IOException) {
+                let code = error.HResult & 65535
+                if code == (if windows { 32 } else if mac { MacWouldBlock } else { LinuxWouldBlock }) { return nil }
+                rethrow
+            }
+            if windows { return handle }
+            if Flock(handle.DangerousGetHandle(), ExclusiveNonBlocking, mac) == 0 { return InstanceLock(handle, mac) }
             let error = Marshal.GetLastPInvokeError()
             handle.Dispose()
             if error == (if mac { MacWouldBlock } else { LinuxWouldBlock }) { return nil }
@@ -127,12 +123,8 @@ internal class InstanceLock : IDisposable {
         private func Flock(descriptor nint, operation int32, mac bool) int32 ->
             if mac { MacFlock(int32(descriptor), operation) } else { LinuxFlock(int32(descriptor), operation) }
 
-        @DllImport("libc.so.6", EntryPoint: "open", SetLastError: true)
-        private func LinuxOpen(path string, flags int32, mode int32) int32;
         @DllImport("libc.so.6", EntryPoint: "flock", SetLastError: true)
         private func LinuxFlock(descriptor int32, operation int32) int32;
-        @DllImport("/usr/lib/libSystem.B.dylib", EntryPoint: "open", SetLastError: true)
-        private func MacOpen(path string, flags int32, mode int32) int32;
         @DllImport("/usr/lib/libSystem.B.dylib", EntryPoint: "flock", SetLastError: true)
         private func MacFlock(descriptor int32, operation int32) int32;
     }
