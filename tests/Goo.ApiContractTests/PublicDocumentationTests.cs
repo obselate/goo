@@ -279,6 +279,12 @@ public sealed class PublicDocumentationTests
         "M:Goo.PointerEvent.StopPropagation",
         "M:Goo.Portal.#ctor",
         "M:Goo.Portal.Add(Goo.Blob)",
+        "M:Goo.PopupWindow.#ctor(Goo.Window,Goo.Cell,Goo.PopupKind)",
+        "M:Goo.PopupWindow.#ctor(Goo.PopupWindow,Goo.Cell,Goo.PopupKind)",
+        "M:Goo.PopupWindow.Open(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)",
+        "M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)",
+        "M:Goo.PopupWindow.Close",
+        "M:Goo.PopupWindow.Dispose",
         "M:Goo.KeyEvent.PreventDefault",
         "M:Goo.KeyEvent.StopPropagation",
         "M:Goo.FocusEvent.StopPropagation",
@@ -521,6 +527,21 @@ public sealed class PublicDocumentationTests
         "F:Goo.PortalPlacement.LeftStart",
         "F:Goo.PortalPlacement.Left",
         "F:Goo.PortalPlacement.LeftEnd",
+        "F:Goo.PopupKind.Menu",
+        "F:Goo.PopupKind.Tooltip",
+        "F:Goo.PopupStatus.Opened",
+        "F:Goo.PopupStatus.Closed",
+        "F:Goo.PopupStatus.Unsupported",
+        "F:Goo.PopupStatus.RequiresUserAction",
+        "F:Goo.PopupStatus.Failed",
+        "F:Goo.PopupStatus.Busy",
+        "F:Goo.PopupDismissReason.Programmatic",
+        "F:Goo.PopupDismissReason.Escape",
+        "F:Goo.PopupDismissReason.OutsideInteraction",
+        "F:Goo.PopupDismissReason.FocusLost",
+        "F:Goo.PopupDismissReason.OwnerHidden",
+        "F:Goo.PopupDismissReason.OwnerClosed",
+        "F:Goo.PopupDismissReason.PlatformDismissed",
     };
 
     private static readonly HashSet<Type> SynthesizedPrimaryDataTypes =
@@ -780,6 +801,10 @@ public sealed class PublicDocumentationTests
             ["T:Goo.Cell`1"] = new([], ["TInput"], false),
             ["T:Goo.Edges`1"] = new([], ["T"], false),
             ["T:Goo.MotionConverter`1"] = new([], ["T"], false),
+            ["M:Goo.PopupWindow.#ctor(Goo.Window,Goo.Cell,Goo.PopupKind)"] = new(["owner", "root", "kind"], [], false),
+            ["M:Goo.PopupWindow.#ctor(Goo.PopupWindow,Goo.Cell,Goo.PopupKind)"] = new(["owner", "root", "kind"], [], false),
+            ["M:Goo.PopupWindow.Open(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)"] = new(["anchor", "width", "height", "placement"], [], true),
+            ["M:Goo.PopupWindow.UpdatePlacement(Goo.ElementRect,System.Int32,System.Int32,Goo.PortalPlacement)"] = new(["anchor", "width", "height", "placement"], [], true),
         };
 
     [Fact]

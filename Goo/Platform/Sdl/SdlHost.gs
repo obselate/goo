@@ -37,7 +37,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   internal init(title string, width int32, height int32, x int32, y int32,
     positionSet bool, state WindowState, decorated bool, resizable bool,
-    transparent bool, vsync bool, hitTest((int32, int32) -> WindowHitResult)) {
+    transparent bool, vsync bool, hitTest((int32, int32) -> WindowHitResult),
+    popupParent SdlHost? = nil, popupKind PopupKind = PopupKind.Menu, popupTimestamp uint64 = 0uL,
+    popupAnchor ElementRect = default(ElementRect), popupPlacement PortalPlacement = PortalPlacement.BottomStart,
+    popupScale float32 = 1.0F) {
       this.hitTest = hitTest
       hitTestRawDelegate = HitTest
       hitTestCallbackAddress = Marshal.GetFunctionPointerForDelegate(hitTestRawDelegate)
@@ -48,7 +51,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           ThrowSdl("SDL_Vulkan_LoadLibrary")
         }
         vulkanOwned = true
-        CreateWindow(title, width, height, transparent)
+        if let parent = popupParent {
+          CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
+        } else { CreateWindow(title, width, height, transparent) }
         windowId = SDL.GetWindowID(window)
         if windowId == 0u {
           ThrowSdl("SDL_GetWindowID")
@@ -58,11 +63,13 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           ThrowSdl("SDL_GetWindowFromID")
         }
         SdlRuntime.Register(windowId, Dispatch)
-        if positionSet && CanMove {
-          Require(SDL.SetWindowPosition(window, x, y), "SDL_SetWindowPosition")
+        if popupParent == nil {
+          if positionSet && CanMove {
+            Require(SDL.SetWindowPosition(window, x, y), "SDL_SetWindowPosition")
+          }
+          SetBorder(decorated, resizable)
+          SetState(state)
         }
-        SetBorder(decorated, resizable)
-        SetState(state)
         SetVSync(vsync)
         RefreshMetrics()
         if LogicalWidth > 0 && FramebufferWidth > 0 {

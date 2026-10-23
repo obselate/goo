@@ -70,6 +70,11 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/portal-dialog-lifetime.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-foreign-parent.patch"
+printf '%s  %s\n' \
+  "012b04d5b028facd33e9321a7a83c86556e6c4af22ecf516dc424c3c26a5d57d" \
+  "$(dirname "$0")/../patches/sdl/wayland-popup-grab.patch" | sha256sum -c -
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/wayland-popup-grab.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/static-no-dynapi.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
@@ -111,12 +116,13 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
   -DSDL_X11=OFF
 "$cmake" --build "$work/build"
 "$cmake" --install "$work/build" --strip
+python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_popup_handlers.py" "$work/src" "$work/install/lib/libSDL3.so"
 
 install -D -m 0644 "$(readlink -f "$work/install/lib/libSDL3.so")" "$output"
 if [[ -n "$static_output" ]]; then
   install -D -m 0644 "$work/install/lib/libSDL3.a" "$static_output"
 fi
-for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_StartFileDrag Goo_CancelFileDrag Goo_SetForeignParent; do
+for symbol in Goo_ShowPortalFileDialog Goo_CancelFileDialog Goo_StartFileDrag Goo_CancelFileDrag Goo_SetForeignParent Goo_ConfigurePopup; do
   if ! readelf --dyn-syms --wide "$output" | grep " $symbol@@" >/dev/null; then
     printf 'libSDL3.so is missing the chooser bridge export: %s\n' "$symbol" >&2
     exit 1
