@@ -89,6 +89,10 @@ public partial class Window {
       scheduler.Run()
     }
 
+    internal func ServiceNativeTracking() {
+      scheduler.ServiceNativeTracking()
+    }
+
     internal func RequestHotReload() {
       scheduler.RequestHotReload()
     }
@@ -170,6 +174,7 @@ public partial class Window {
       y = native.Y
       input.SetUiScale(UiScale)
       native.TransferPost = TryPost
+      native.NativeDragPost = postNativeDragStart
       input.Attach(native)
       IsOpen = true
       attachPresentationNotifications(target)
@@ -317,6 +322,14 @@ public partial class Window {
     }
     pumpCore(dt, true, true, dt)
     schedulerLastTicks = float64(Stopwatch.GetTimestamp())
+    scheduler.DrainNativeStarts()
+  }
+
+  private func postNativeDragStart(action Action) bool {
+    if !IsOpen || host?.IsClosing == true { return false }
+    scheduler.QueueNativeStart(action)
+    host?.Wake()
+    return true
   }
 
   internal func PumpScheduled(dt float64) {

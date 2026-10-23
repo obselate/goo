@@ -42,12 +42,15 @@ internal partial class NativeDropState {
   private var mimeOffer NativeMimeOffer?
 
   shared {
+    @ThreadStatic
+    internal var CallbackDepth int32
     private let callback NativeDataDropCallback = ReceiveDataDrop
     private let callbackAddress nint = Marshal.GetFunctionPointerForDelegate(callback)
     private let emptyData TransferData = TransferData(Array.Empty[TransferRepresentation](), Array.Empty[Uri]())
 
-    private func ReceiveDataDrop(userData nint, kind int32, x float32, y float32,
+    internal func ReceiveDataDrop(userData nint, kind int32, x float32, y float32,
       types nint, count uint32, effects uint32, token uint64, source nint) uint32 {
+      CallbackDepth++
       try {
         if let state = GCHandle.FromIntPtr(userData).Target as NativeDropState? {
           try { return uint32(state.ReceiveMime(kind, x, y, types, count, effects, token, source)) }
@@ -58,6 +61,7 @@ internal partial class NativeDropState {
           }
         }
       } catch (_ Exception) { }
+      finally { CallbackDepth-- }
       return uint32(0)
     }
 
@@ -121,7 +125,7 @@ internal partial class NativeDropState {
     mimeOffer = nil
   }
 
-  private func SetTransferResult(status DataTransferStatus, error string = "") {
+  internal func SetTransferResult(status DataTransferStatus, error string = "") {
     LastStatus = status
     LastTransferError = if error.Length <= 1024 { error } else { error.Substring(0, 1024) }
     LastError = if error == "" { nil } else { LastTransferError }
@@ -141,19 +145,37 @@ internal partial class NativeDropState {
     let scale = getScale?.Invoke() ?? 1.0F
     let allowed = DragEffect(effects & uint32(3))
     if allowed == DragEffect.None { return DragEffect.None }
-    let local NativeDragBinding? = if source != nint(0) { GCHandle.FromIntPtr(source).Target as NativeDragBinding? } else { nil }
+    if OperatingSystem.IsWindows() && source == nint(0) { throw InvalidDataException("The native OLE offer is missing") }
+    let local NativeDragBinding? = if OperatingSystem.IsLinux() && source != nint(0) { GCHandle.FromIntPtr(source).Target as NativeDragBinding? } else { nil }
     if mimeOffer?.Token != token {
       CancelMimeOffer()
-      let available = List[string]()
-      var generic bool
-      for i in 0 ... int32(count) {
-        let name = ClipboardTransfer.BoundedUtf8(Marshal.ReadIntPtr(types, i * nint.Size), 256)
-        if Array.IndexOf(Formats, name) >= 0 { generic = true }
-        if !available.Contains(name) { available.Add(name) }
+      router.Cancel()
+      var available IReadOnlyList[string]
+      if OperatingSystem.IsWindows() {
+        let queried = ClipboardTransfer.WindowsQueryFormats(source)
+        if queried.Status != ClipboardReadStatus.Success {
+          SetTransferResult(if queried.Status == ClipboardReadStatus.TooLarge { DataTransferStatus.TooLarge }
+            else if queried.Status == ClipboardReadStatus.Unsupported || queried.Status == ClipboardReadStatus.Empty { DataTransferStatus.Unsupported }
+            else { DataTransferStatus.Failed }, queried.Error)
+          return DragEffect.None
+        }
+        available = queried.Formats
+      } else {
+        let names = List[string](int32(count))
+        for i in 0 ... int32(count) {
+          let name = ClipboardTransfer.BoundedUtf8(Marshal.ReadIntPtr(types, i * nint.Size), 256)
+          if !names.Contains(name) { names.Add(name) }
+        }
+        available = names
       }
       let matched = List[string]()
-      for name in available {
-        if generic ? Array.IndexOf(Formats, name) >= 0 : FileEnabled && name == "text/uri-list" { matched.Add(name) }
+      for name in available { if Array.IndexOf(Formats, name) >= 0 { matched.Add(name) } }
+      let generic = matched.Count > 0
+      if !generic && FileEnabled {
+        for name in available {
+          if name == "text/uri-list" { matched.Add(name)
+            break }
+        }
       }
       if matched.Count == 0 { return DragEffect.None }
       let active = NativeMimeOffer(token, matched.ToArray(), generic, if generic { allowed } else { allowed & DragEffect.Copy })
@@ -172,9 +194,30 @@ internal partial class NativeDropState {
     active.Y = y / scale
     active.Modifiers = host.NativeDropModifiers()
     let selected = router.Move(active.X, active.Y, active.Modifiers) & allowed
-    if kind != 3 || selected == DragEffect.None { return selected }
+    if kind != 3 { return selected }
+    if selected == DragEffect.None {
+      CancelMimeOffer()
+      router.Cancel()
+      SetTransferResult(DataTransferStatus.Cancelled)
+      return DragEffect.None
+    }
     active.Allowed = allowed
     active.Capturing = true
+    if OperatingSystem.IsWindows() {
+      let captured = ClipboardTransfer.WindowsReadTransfer(active.Formats, source)
+      var outcome = if captured.Status == ClipboardReadStatus.Success { DataTransferStatus.Success }
+        else if captured.Status == ClipboardReadStatus.TooLarge { DataTransferStatus.TooLarge }
+        else if captured.Status == ClipboardReadStatus.Unsupported { DataTransferStatus.Unsupported }
+        else { DataTransferStatus.Failed }
+      var error = captured.Error
+      if outcome == DataTransferStatus.Success &&
+        captured.Data.Representations.Count + (captured.Data.Uris.Count > 0 ? 1 : 0) != active.Formats.Length {
+        outcome = DataTransferStatus.Failed
+        error = "The native offer did not contain every matched MIME type"
+      }
+      CompleteMime(active, captured.Data, outcome, error)
+      return selected
+    }
     if let binding = local {
       Task.Run(() -> CaptureMime(active, Array.Empty[SafeFileHandle](), binding.Representations))
       return selected
@@ -279,10 +322,15 @@ internal unsafe partial class SdlHost {
     private func FinishDataDropNative(window nint, token uint64, effect uint32);
   }
   internal func SetDataDrop(types IReadOnlyList[string], callback nint, userData nint) bool {
+    if OperatingSystem.IsWindows() { return SetWindowsDataDrop(callback, userData) }
     using let names = NativeMimeTable(types)
     return SetDataDropCallback(windowHandle, callback, userData, names.Pointer, uint32(types.Count)) != uint8(0)
   }
   internal func ReceiveDataDrop(token uint64, contentType nint) int32 -> ReceiveDataDropNative(windowHandle, token, contentType)
-  internal func FinishDataDrop(token uint64, effect DragEffect) -> FinishDataDropNative(windowHandle, token, uint32(effect))
-  internal func NativeDropModifiers() KeyModifiers -> MapModifiers(Hexa.NET.SDL3.SDL.GetModState())
+  internal func FinishDataDrop(token uint64, effect DragEffect) {
+    if OperatingSystem.IsWindows() { windowsDrop?.Commit(token, effect)
+      return }
+    FinishDataDropNative(windowHandle, token, uint32(effect))
+  }
+  internal func NativeDropModifiers() KeyModifiers -> windowsDrop?.Modifiers ?? MapModifiers(Hexa.NET.SDL3.SDL.GetModState())
 }

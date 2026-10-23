@@ -36,14 +36,16 @@ internal sealed class WindowsTransferException : IOException {
 
 internal unsafe partial class ClipboardTransfer {
     shared {
-        private func WindowsQueryFormats() ClipboardFormats {
+        internal func WindowsQueryFormats(offer nint) ClipboardFormats {
             var initialized bool
             var dataObject nint
             var enumerator nint
             try {
-                WindowsCheck(WindowsOleInitialize(nint(0)), "OleInitialize")
-                initialized = true
-                WindowsCheck(WindowsOleGetClipboard(out dataObject), "OleGetClipboard")
+                if offer == nint(0) {
+                    WindowsCheck(WindowsOleInitialize(nint(0)), "OleInitialize")
+                    initialized = true
+                    WindowsCheck(WindowsOleGetClipboard(out dataObject), "OleGetClipboard")
+                } else { dataObject = offer }
                 let enumerate = cast[unmanaged[Stdcall](nint, uint32, * nint) -> int32](
                     Marshal.ReadIntPtr(Marshal.ReadIntPtr(dataObject), 8 * nint.Size))
                 WindowsCheck(enumerate(dataObject, 1u, &enumerator), "IDataObject.EnumFormatEtc")
@@ -71,7 +73,7 @@ internal unsafe partial class ClipboardTransfer {
             catch (error EntryPointNotFoundException) { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}, error.Message) }
             finally {
                 WindowsReleaseObject(enumerator)
-                WindowsReleaseObject(dataObject)
+                if offer == nint(0) { WindowsReleaseObject(dataObject) }
                 if initialized { WindowsOleUninitialize() }
             }
         }
@@ -104,9 +106,9 @@ internal unsafe partial class ClipboardTransfer {
         private const EmptyMimeTypesFormat string = "Goo Empty MIME Types"
 
         @DllImport("ole32.dll", EntryPoint: "OleInitialize")
-        private func WindowsOleInitialize(reserved nint) int32;
+        internal func WindowsOleInitialize(reserved nint) int32;
         @DllImport("ole32.dll", EntryPoint: "OleUninitialize")
-        private func WindowsOleUninitialize();
+        internal func WindowsOleUninitialize();
         @DllImport("ole32.dll", EntryPoint: "OleSetClipboard")
         private func WindowsOleSetClipboard(dataObject nint) int32;
         @DllImport("ole32.dll", EntryPoint: "OleGetClipboard")
@@ -250,13 +252,15 @@ internal unsafe partial class ClipboardTransfer {
             }
         }
 
-        private func WindowsReadTransfer(types IReadOnlyList[string]) ClipboardDataResult {
+        internal func WindowsReadTransfer(types IReadOnlyList[string], offer nint) ClipboardDataResult {
             var initialized bool
             var dataObject nint
             try {
-                WindowsCheck(WindowsOleInitialize(nint(0)), "OleInitialize")
-                initialized = true
-                WindowsCheck(WindowsOleGetClipboard(out dataObject), "OleGetClipboard")
+                if offer == nint(0) {
+                    WindowsCheck(WindowsOleInitialize(nint(0)), "OleInitialize")
+                    initialized = true
+                    WindowsCheck(WindowsOleGetClipboard(out dataObject), "OleGetClipboard")
+                } else { dataObject = offer }
                 let items = List[TransferRepresentation](types.Count)
                 let uris = List[Uri]()
                 var total int64
@@ -301,7 +305,7 @@ internal unsafe partial class ClipboardTransfer {
             catch (error IOException) { return ClipboardDataResult(ClipboardReadStatus.Failed, error: error.Message) }
             catch (error ArgumentException) { return ClipboardDataResult(ClipboardReadStatus.Failed, error: error.Message) }
             finally {
-                WindowsReleaseObject(dataObject)
+                if offer == nint(0) { WindowsReleaseObject(dataObject) }
                 if initialized { WindowsOleUninitialize() }
             }
         }
