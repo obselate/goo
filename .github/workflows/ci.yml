@@ -466,7 +466,8 @@ jobs:
           dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
           dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
           dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
-          dotnet format Goo.RichText/Goo.RichText.csproj --verify-no-changes --no-restore
+          dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll --strict \
+            --severity GL0005=none --severity GL0006=none --severity GL0001=none Goo.RichText
 
       - name: Verify independent pages and raster PDF
         run: |
@@ -630,10 +631,12 @@ jobs:
 
       - name: Pack optional spelling and printing services
         run: |
-          for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing Goo.RichText; do
+          for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing; do
             dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
               -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           done
+          dotnet pack Goo.RichText/Goo.RichText.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack shared gesture recognizers
         run: |
