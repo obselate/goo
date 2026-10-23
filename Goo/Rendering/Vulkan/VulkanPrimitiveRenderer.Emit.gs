@@ -481,6 +481,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_y = value.SourceY
       push.params_z = value.SourceWidth
       push.params_w = value.SourceHeight
+      if let external = lookup.External {
+        ApplyExternalFrame(&push, external, value, transform, extent)
+      }
       if !primitivePrepass {
         EnsureDescriptorLayout(pipelineLayout)
         let sameDescriptor = sampledDescriptorBound
