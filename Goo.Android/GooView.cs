@@ -113,7 +113,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
                 : (global::Goo.Color?)null;
         var locales = configuration?.Locales;
         var preferredLocales = locales is { IsEmpty: false }
-            ? Enumerable.Range(0, locales.Size()).Select(index => locales.Get(index)!.ToLanguageTag()).ToArray()
+            ? locales.ToLanguageTags()?.Split(',')
             : null;
         host.UpdatePreferences(new PlatformPreferences
         {
