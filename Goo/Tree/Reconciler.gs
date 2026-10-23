@@ -4,6 +4,31 @@ import System
 import System.Collections.Generic
 
 internal partial class Reconciler {
+  shared {
+    internal let MaximumTreeDepth int32 = 64
+    internal func CheckTreeDepth(depth int32) {
+      if depth >= MaximumTreeDepth {
+        throw InvalidOperationException("Node tree depth exceeds the limit of " + MaximumTreeDepth.ToString() + ".")
+      }
+    }
+  }
+  private var treeDepth int32
+
+  private func enterTree(parent Node?) int32 {
+    let previous = treeDepth
+    var depth = previous
+    if depth == 0 {
+      var ancestor = parent
+      while let node = ancestor {
+        depth++
+        ancestor = node.Parent
+      }
+    }
+    CheckTreeDepth(depth)
+    treeDepth = depth + 1
+    return previous
+  }
+
   internal prop Owner Window? {
     get;
     init;
@@ -142,11 +167,14 @@ internal partial class Reconciler {
       nodes = nodes + Res.Flush()
       MarkEffects(Res.FlushEffects())
       operationDepth++
+      let previousDepth = treeDepth
+      treeDepth = 0
       var parts bool
       try {
         parts = Res.Scrollbars.Flush(this)
       } finally {
         operationDepth--
+        treeDepth = previousDepth
       }
       if !parts { return nodes }
     }
@@ -166,7 +194,8 @@ internal partial class Reconciler {
     }
   }
 
-  internal func Mount(b Blob) Node {
+  internal func Mount(b Blob, parent Node? = nil) Node {
+    let previousDepth = enterTree(parent)
     let outer = operationDepth == 0
     operationDepth++
     var completed = false
@@ -179,6 +208,7 @@ internal partial class Reconciler {
       return result
     } finally {
       operationDepth--
+      treeDepth = previousDepth
       if outer && !completed {
         DiscardStyles()
       }
@@ -662,6 +692,7 @@ internal partial class Reconciler {
   }
 
   internal func Diff(n Node, b Blob) Node {
+    let previousDepth = enterTree(n.Parent)
     let outer = operationDepth == 0
     if outer {
       rememberStyleRetryRoot(n)
@@ -677,6 +708,7 @@ internal partial class Reconciler {
       return result
     } finally {
       operationDepth--
+      treeDepth = previousDepth
       if outer && !completed {
         DiscardStyles()
       }
@@ -787,7 +819,7 @@ internal partial class Reconciler {
   private func replace(n Node, b Blob) Node {
     let previous = ElementHandles.Detach(n)
     try {
-      return Mount(b)
+      return mountCore(b)
     } catch (error Exception) {
       if let handle = previous {
         ElementHandles.Bind(n, handle, Owner)
@@ -866,6 +898,7 @@ internal partial class Reconciler {
   }
 
   internal func rebuildMounted(existing Node?, cell Cell, owner Cell?) Node {
+    let previousDepth = enterTree(existing?.Parent)
     let slotKey = existing?.Key
     let top = existing?.Fiber
     let previousContext = Context
@@ -912,6 +945,7 @@ internal partial class Reconciler {
       return result
     } finally {
       Context = previousContext
+      treeDepth = previousDepth
       if !completed {
         cell.contextReader?.Cancel()
         if let prior = detached {
@@ -943,10 +977,13 @@ internal partial class Reconciler {
       rememberStyleRetryRoot(n)
     }
     operationDepth++
+    let previousDepth = treeDepth
+    treeDepth = 0
     try {
       return rebuildDirty(n, cell, nil)
     } finally {
       operationDepth--
+      treeDepth = previousDepth
     }
   }
 
