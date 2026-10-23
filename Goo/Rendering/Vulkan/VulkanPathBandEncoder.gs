@@ -23,6 +23,7 @@ internal sealed class PathBandEncoder {
     private var scratchMinimumY float32
     private var scratchMaximumX float32
     private var scratchMaximumY float32
+    internal var BuildCount uint64
 
     internal func Encode(path VectorPath) PathBandEncoding {
       guard let data = path.payload else { return PathBandEncoding.Empty }
@@ -72,6 +73,7 @@ internal sealed class PathBandEncoder {
 
     private func BuildScratch(path PathGeometry) bool {
       if path == nil || path.QuadraticCount == 0 { return false }
+      BuildCount++
       curveScratch.Clear()
       horizontalBandScratch.Clear()
       verticalBandScratch.Clear()

@@ -26,6 +26,7 @@ public class Shape : Blob {
   }
 
   /// Gets or sets the vector path to display.
+  /// Reuse one path and position instances with Transform to share encoded geometry.
   public prop Path VectorPath{ get; init; }
   /// Gets or sets the geometry fit. Cover clips, Fill stretches, and None preserves view-box units.
   public prop Fit ShapeFit{ get; init; }

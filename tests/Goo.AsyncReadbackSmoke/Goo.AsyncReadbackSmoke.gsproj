@@ -23,6 +23,7 @@
     <Compile Remove="ProfilerSmoke.gs" />
     <Compile Remove="WindowActivationSmoke.gs" />
     <Compile Remove="PopupWindowSmoke.gs" />
+    <Compile Remove="VectorRetainSmoke.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" />
