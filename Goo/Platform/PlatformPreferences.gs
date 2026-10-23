@@ -12,6 +12,7 @@ public data struct PlatformPreferences {
   private var reducedMotion bool?
   private var highContrast bool?
   private var textScaleFactor float32?
+  private var eventSoundsEnabled bool?
 
   /// Gets the preferred theme, or Unknown when unavailable.
   public prop Theme SystemTheme { get -> theme init -> theme = value }
@@ -19,6 +20,8 @@ public data struct PlatformPreferences {
   public prop ReducedMotion bool? { get -> reducedMotion init -> reducedMotion = value }
   /// Gets whether increased contrast is requested, or nil when unavailable.
   public prop HighContrast bool? { get -> highContrast init -> highContrast = value }
+  /// Gets whether UI and event sounds are enabled, or nil when unavailable.
+  public prop EventSoundsEnabled bool? { get -> eventSoundsEnabled init -> eventSoundsEnabled = value }
   /// Gets the positive user text scale, independently of display density, or nil when unavailable.
   public prop TextScaleFactor float32? {
     get -> textScaleFactor

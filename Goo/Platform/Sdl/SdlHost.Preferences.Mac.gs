@@ -1,5 +1,6 @@
 package Goo
 
+import System
 import System.Runtime.InteropServices
 
 internal unsafe partial class SdlHost {
@@ -12,15 +13,37 @@ internal unsafe partial class SdlHost {
     private func PreferenceObject(receiver nint, selector nint) nint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
     private func PreferenceBool(receiver nint, selector nint) uint8;
+    @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    private func CFStringCreateWithCString(allocator nint, value string, encoding uint32) nint;
+    @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    private func CFPreferencesGetAppBooleanValue(key nint, application nint, out valid uint8) uint8;
+    @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    private func CFPreferencesAppSynchronize(application nint) uint8;
+    private let soundPreferenceKey nint = if OperatingSystem.IsMacOS() {
+      CFStringCreateWithCString(nint(0), "com.apple.sound.uiaudio.enabled", 0x08000100u)
+    } else { nint(0) }
+    private let globalPreferences nint = if OperatingSystem.IsMacOS() {
+      CFStringCreateWithCString(nint(0), ".GlobalPreferences", 0x08000100u)
+    } else { nint(0) }
 
     private func ReadMacPreferences(theme SystemTheme) PlatformPreferences {
       let workspace = PreferenceObject(objc_getClass("NSWorkspace"), sel_registerName("sharedWorkspace"))
-      if workspace == nint(0) { return PlatformPreferences{Theme: theme} }
+      let sounds = ReadMacEventSounds()
+      if workspace == nint(0) { return PlatformPreferences{Theme: theme, EventSoundsEnabled: sounds} }
       return PlatformPreferences{
         Theme: theme,
         ReducedMotion: PreferenceBool(workspace, sel_registerName("accessibilityDisplayShouldReduceMotion")) != uint8(0),
         HighContrast: PreferenceBool(workspace, sel_registerName("accessibilityDisplayShouldIncreaseContrast")) != uint8(0),
+        EventSoundsEnabled: sounds,
       }
+    }
+
+    private func ReadMacEventSounds() bool? {
+      CFPreferencesAppSynchronize(globalPreferences)
+      var valid uint8
+      let enabled = CFPreferencesGetAppBooleanValue(soundPreferenceKey, globalPreferences, out valid)
+      if valid != uint8(0) { return enabled != uint8(0) }
+      return nil
     }
   }
 }
