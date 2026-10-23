@@ -372,6 +372,7 @@ public sealed class FixtureContractTests
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.VisibilityLifecycleContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.ButtonSemanticPrimitiveContract));
         yield return Contract<VulkanQueueWorkerFixtures>(nameof(VulkanQueueWorkerFixtures.WakeFailureDrainsFollowingMailboxAndQuiesces));
+        yield return Contract<VulkanSceneCompilerFixtures>(nameof(VulkanSceneCompilerFixtures.OwnerIdentitySurvivesCompilerHandoff));
     }
 
     [Theory]

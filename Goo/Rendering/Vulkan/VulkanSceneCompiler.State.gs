@@ -64,7 +64,7 @@ internal partial class VulkanSceneCompiler {
     frame = SceneFrame(capacity)
     InitializeRetention(capacity)
     owners = ConditionalWeakTable[Node, VulkanSceneOwnerId]()
-    ownerToken = Object()
+    ownerToken = WeakReference[ConditionalWeakTable[Node, VulkanSceneOwnerId]](owners)
     roundedOverflowPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
     backdropBlurPaths = ConditionalWeakTable[Node, VulkanRoundedOverflowPathCacheEntry]()
     unsupportedDetails = [capacity]VulkanSceneUnsupportedDetail
