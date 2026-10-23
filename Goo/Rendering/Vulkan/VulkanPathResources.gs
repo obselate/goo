@@ -679,17 +679,18 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       let uploadRecorded = needsUpload && atlas.UploadRecorded
       let uploadSubmitted = needsUpload && atlas.UploadSubmitted
       let submittedUploadCovers = SubmittedUploadCovers(record)
+      let curveCount = cpuWords[int32(record.BaseWord) + 6]
       return VulkanPathRenderable{
         PathId: record.Identity.PathId,
         GeometryRevision: record.GeometryRevision,
         AtlasId: atlasId,
         BaseWord: record.BaseWord,
         WordCount: record.WordCount,
-        CurveCount: cpuWords[int32(record.BaseWord) + 6],
+        CurveCount: curveCount,
         Bounds: record.Bounds,
         FillRule: fillRuleCode,
         Renderable: (published || submittedUploadCovers || renderAfterPlannedUpload)
-          && supportsFill && record.WordCount > 0u,
+          && supportsFill && curveCount > 0u,
         Published: published,
         RedrawRequired: needsUpload,
         UploadPending: uploadPending,

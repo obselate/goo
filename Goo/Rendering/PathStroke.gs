@@ -970,7 +970,7 @@ internal sealed class PathStrokeCache {
     commands List[VectorPathCommand]) {
       let closed = subpath.Closed
       let cleaned = CleanPoints(subpath.Points, closed)
-      if cleaned.Count == 1 && !closed {
+      if cleaned.Count == 1 {
         let center = cleaned[0]
         let half = width * 0.5F
         if cap == StrokeCap.Round {

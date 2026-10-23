@@ -148,6 +148,11 @@ bool strokeCurveHit(uint index, QuadraticCurve curve, float2 point, StrokeState 
     float highDistance = min(state.trimEnd - prefix, total);
     if (highDistance < lowDistance || (highDistance == lowDistance && total > 0.0)) return false;
     bool closed = (flags & 4u) != 0u && state.trimStart <= contourStart && state.trimEnd >= contourEnd;
+    if (closed && all(curve.start == curve.control) && all(curve.start == curve.finish))
+    {
+        uint local = pathWord(7u) + 1u;
+        closed = wordFloat(local + first * 2u) != wordFloat(local + (last + 1u) * 2u);
+    }
     float2 a = strokeHost(curve.start - point, state);
     float2 b = strokeHost(curve.control - point, state);
     float2 c = strokeHost(curve.finish - point, state);

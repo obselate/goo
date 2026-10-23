@@ -9,7 +9,7 @@ import System.Globalization
 import System.IO
 
 class NonScalingStrokeCell : Cell {
-    internal let Source VectorPath = PathBuilder(0.0, 0.0, 200.0, 200.0)
+    internal var Source VectorPath = PathBuilder(0.0, 0.0, 200.0, 200.0)
         .MoveTo(20.0, 20.0)
         .LineTo(50.0, 20.0)
         .QuadraticTo(80.0, 20.0, 65.0, 40.0)
@@ -34,6 +34,7 @@ class NonScalingStrokeCell : Cell {
     internal var Reference VectorPath = VectorPath.Empty
     internal var Pose PanelTransform = PanelTransform{TranslateX: 20, TranslateY: 20}
     internal var Style int32
+    internal var Stretch bool
 
     override func Build() Blob -> Container{
         Width: 400,
@@ -63,9 +64,9 @@ class NonScalingStrokeCell : Cell {
 
     private func Stroke(path VectorPath, effect VectorEffect, pose PanelTransform) Shape -> Shape{
         Path: path,
-        Fit: ShapeFit.None,
-        Width: 200,
-        Height: 200,
+        Fit: Stretch && effect == VectorEffect.NonScalingStroke ? ShapeFit.Fill: ShapeFit.None,
+        Width: Stretch && effect == VectorEffect.NonScalingStroke ? 100: 200,
+        Height: Stretch && effect == VectorEffect.NonScalingStroke ? 160: 200,
         Position: PositionType.Absolute,
         Left: 0,
         Top: 0,
@@ -144,23 +145,49 @@ func RunNonScalingStrokeSmoke() {
     try {
         Console.SetError(errors)
         VectorRetainSmoke.VerifyNonScalingStrokeHitBounds()
+        VerifyNonScalingStrokeSvgStyle()
         VerifyNonScalingStrokePixels()
-        let asset = Svg.Parse(
-            "<svg viewBox='0 0 12 12'><path d='M1 10 L6 1 L11 10 Z'"
-            + " fill='#40c080' stroke='white' stroke-width='1' vector-effect='non-scaling-stroke'/></svg>"
-        )
-        for count in[]int32{1, 1000} {
-            VectorRetainSmoke.Measure(asset, count, false)
-            VectorRetainSmoke.Measure(asset, count, true)
-            MeasureNonScalingStroke(asset.PathForNode(1), count, false)
-            MeasureNonScalingStroke(asset.PathForNode(1), count, true)
+        if Environment.GetEnvironmentVariable("GOO_NON_SCALING_STROKE_MEASURE") != "0" {
+            let asset = Svg.Parse(
+                "<svg viewBox='0 0 12 12'><path d='M1 10 L6 1 L11 10 Z'"
+                + " fill='#40c080' stroke='white' stroke-width='1' vector-effect='non-scaling-stroke'/></svg>"
+            )
+            for count in[]int32{1, 1000} {
+                VectorRetainSmoke.Measure(asset, count, false)
+                VectorRetainSmoke.Measure(asset, count, true)
+                MeasureNonScalingStroke(asset.PathForNode(1), count, false)
+                MeasureNonScalingStroke(asset.PathForNode(1), count, true)
+            }
         }
+    } catch (error Exception) {
+        previousError.Write(errors.ToString())
+        throw
     } finally {
         Console.SetError(previousError)
     }
     ReadbackValidateCommonDiagnostics(errors.ToString())
     Console.WriteLine(
-        "non-scaling-stroke: pixels=60 dpi=1,1.5,2 hit=1 transform_style_dpi_encodes=0 validation=0 cleanup=1"
+        "non-scaling-stroke: pixels=77 dpi=1,1.5,2 fit=1 flat=5 hit=1 transform_style_dpi_encodes=0 validation=0 cleanup=1"
+    )
+}
+
+func VerifyNonScalingStrokeSvgStyle() {
+    let asset = Svg.Parse(
+        "<svg viewBox='0 0 100 100' stroke='white'>"
+        + "<g vector-effect='non-scaling-stroke'>"
+        + "<path d='M0 0 L1 1'/>"
+        + "<path d='M0 0 L1 1' vector-effect='non-scaling-stroke'/>"
+        + "<path d='M0 0 L1 1' vector-effect='non-scaling-stroke' style='vector-effect:none'/>"
+        + "<path d='M0 0 L1 1' vector-effect='none' style='vector-effect:non-scaling-stroke'/>"
+        + "</g></svg>"
+    )
+    let paths = asset.Nodes[0].Children[0].Children
+    Require(
+        paths[0].Stroke!!.VectorEffect == VectorEffect.None
+        && paths[1].Stroke!!.VectorEffect == VectorEffect.NonScalingStroke
+        && paths[2].Stroke!!.VectorEffect == VectorEffect.None
+        && paths[3].Stroke!!.VectorEffect == VectorEffect.NonScalingStroke,
+        "SVG vector effect inheritance or style precedence changed"
     )
 }
 
@@ -180,6 +207,7 @@ func VerifyNonScalingStrokePixels() {
         PanelTransform{TranslateX: 20, TranslateY: 20, Scale: 2.0},
         PanelTransform{TranslateX: 20, TranslateY: 20, ScaleX: 1.7, ScaleY: 0.6, SkewX: 25, SkewY: -10, Rotate: 25},
         PanelTransform{TranslateX: 150, TranslateY: 20, ScaleX: -1.3, ScaleY: 0.8},
+        PanelTransform{TranslateX: 40, TranslateY: 40},
     }
     try {
         window.Open()
@@ -202,6 +230,7 @@ func VerifyNonScalingStrokePixels() {
                     root.Reference = VectorPath.Empty
                     root.Pose = poses[poseIndex]
                     root.Style = style
+                    root.Stretch = poseIndex == 5
                     root.Rebuild()
                     WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
                     Require(
@@ -211,32 +240,82 @@ func VerifyNonScalingStrokePixels() {
                     guard let shape = FindNonScalingStrokeNode(window.PathProbeNodeForTest()!!) else {
                         throw InvalidOperationException("Non-scaling proof shape was not retained")
                     }
-                    let matrix = TransformGeometry.WindowMatrix(shape)
+                    let matrix = NonScalingStrokeHostMatrix(shape)
                     if style == 0 {
                         VerifyNonScalingStrokeHostHit(shape, matrix)
                     }
                     root.Reference = NonScalingStrokeHostPath(root.Source, matrix)
                     root.Rebuild()
-                    WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
-                    let metrics = WindowReadbackTestFixture.Metrics(window)
-                    ReadbackRequestReadbackUntilAccepted(
+                    CaptureNonScalingStrokePair(
                         window,
-                        uint32(metrics.FramebufferWidth),
-                        uint32(metrics.FramebufferHeight)
-                    )
-                    ReadbackAwaitReadbackReady(window, 10000)
-                    let frame = ReadbackTakeReadback(window)
-                    PrimitiveValidateResult(frame, metrics)
-                    CompareNonScalingStrokePixels(
-                        frame,
                         "dpi=" + dpi.ToString(CultureInfo.InvariantCulture)
                         + " pose=" + poseIndex.ToString() + " style=" + style.ToString()
                     )
                 }
             }
         }
+        let flat = []VectorPath{
+            PathBuilder(0.0, 0.0, 200.0, 200.0).MoveTo(40.0, 40.0).LineTo(120.0, 40.0).Build(),
+            PathBuilder(0.0, 0.0, 200.0, 200.0).MoveTo(40.0, 40.0).LineTo(40.0, 120.0).Build(),
+            PathBuilder(0.0, 0.0, 200.0, 200.0).MoveTo(60.0, 60.0).LineTo(60.0, 60.0).Build(),
+            PathBuilder(0.0, 0.0, 200.0, 200.0)
+                .MoveTo(60.0, 60.0)
+                .LineTo(60.0, 60.0)
+                .LineTo(60.0, 60.0)
+                .Close()
+                .Build(),
+            PathBuilder(0.0, 0.0, 200.0, 200.0).MoveTo(60.0, 60.0).Close().Build(),
+        }
+        for index in 0 ... flat.Length {
+            root.Source = flat[index]
+            root.Reference = VectorPath.Empty
+            root.Style = index == 4 ? 1: 3
+            root.Stretch = false
+            root.Pose = PanelTransform{TranslateX: 20, TranslateY: 20}
+            root.Rebuild()
+            WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+            let builds = PathBandEncoder.BuildCount
+            root.Pose = PanelTransform{TranslateX: 25, TranslateY: 20}
+            root.Rebuild()
+            WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+            Require(PathBandEncoder.BuildCount == builds, "Flat stroke translation encoded geometry")
+            let shape = FindNonScalingStrokeNode(window.PathProbeNodeForTest()!!)!!
+            root.Reference = NonScalingStrokeHostPath(root.Source, NonScalingStrokeHostMatrix(shape))
+            root.Rebuild()
+            CaptureNonScalingStrokePair(window, "flat=" + index.ToString())
+        }
     } finally {
         window.Close()
+    }
+}
+
+func CaptureNonScalingStrokePair(window Window, context string) {
+    WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+    let metrics = WindowReadbackTestFixture.Metrics(window)
+    try {
+        ReadbackRequestReadbackUntilAccepted(window, uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    } catch (error Exception) {
+        let actual = WindowReadbackTestFixture.CaptureTarget(window)!!.FramebufferExtentForTest()
+        throw InvalidOperationException("Stroke capture failed: " + context
+            + " requested=" + metrics.FramebufferWidth.ToString() + "x" + metrics.FramebufferHeight.ToString()
+            + " actual=" + actual.Width.ToString() + "x" + actual.Height.ToString(), error)
+    }
+    ReadbackAwaitReadbackReady(window, 10000)
+    let frame = ReadbackTakeReadback(window)
+    PrimitiveValidateResult(frame, metrics)
+    CompareNonScalingStrokePixels(frame, context)
+}
+
+func NonScalingStrokeHostMatrix(shape Node) Affine2D {
+    let world = TransformGeometry.WindowMatrix(shape)
+    let mapping = ShapeGeometry.Resolve(shape, shape.Rect).Mapping
+    return Affine2D{
+        A: world.A * mapping.ScaleX,
+        B: world.B * mapping.ScaleY,
+        C: world.C * mapping.ScaleX,
+        D: world.D * mapping.ScaleY,
+        TX: world.A * mapping.TranslateX + world.B * mapping.TranslateY + world.TX,
+        TY: world.C * mapping.TranslateX + world.D * mapping.TranslateY + world.TY,
     }
 }
 

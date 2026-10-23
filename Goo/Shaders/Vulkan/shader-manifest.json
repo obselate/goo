@@ -491,8 +491,8 @@
       "output": "path_stroke.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "6f57803d01d0945b4967c4f755d8a3fbe180af155a3a60bd7047b5351a3cc749",
-      "outputSha256": "aee8df8922fc938b860a348272e8c2b61639d976ee1aa9159294515357c236d2",
-      "outputBytes": 82144,
+      "outputSha256": "881904b7426c8e8217c14fdefeaa20957d46d579dcb07e726a816c453b71e5ed",
+      "outputBytes": 82856,
       "capabilities": [
         1
       ]
@@ -504,8 +504,8 @@
       "output": "stroke_mask.frag.spv",
       "entryPoint": "main",
       "sourceSha256": "ffb444f919f2eb234d4d9e9498650af79e45e1de7ec3cc72584a72d372c069b7",
-      "outputSha256": "773b1e8255c8b0d2d0dbe65a9b3355d829c8dc9550fdcaf787191c87ae311bca",
-      "outputBytes": 75136,
+      "outputSha256": "12d90cbb3a77467da3843cadba113f0983b1dac3cf7c8101fb96a2908a7b8215",
+      "outputBytes": 75848,
       "capabilities": [
         1
       ]
