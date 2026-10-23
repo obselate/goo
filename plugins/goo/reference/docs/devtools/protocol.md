@@ -64,7 +64,7 @@ uses request envelopes for plain command lines. On stdin EOF it drains responses
 for sent request IDs up to `--wait`, then detaches. Use `--once` for one scripted
 request.
 
-Supported CLI requests are `snapshot`, `capture`, and the command supplied by `goo attach --command`. A capture response may first return `payload.pending: true`; repeat the `capture` request until it returns `pending: false` or the bounded CLI wait expires. The completed response uses `format: "rgba8-srgb-premultiplied"`, `width`, `height`, `stride`, and `rgbaBase64`. The CLI encodes this pixel payload as a real PNG. Legacy responses can contain `payload.contentBase64`, `payload.base64`, `payload.data`, or `payload.path`.
+Supported CLI requests are `snapshot`, `capture`, and the command supplied by `goo attach --command`. A capture response may first return `payload.pending: true`; repeat the `capture` request until it returns `pending: false` or the bounded CLI wait expires. The completed response uses `format: "rgba8-srgb-premultiplied"`, `width`, `height`, `stride`, and `rgbaBase64`. The CLI encodes this pixel payload as a real PNG. Legacy responses can contain `payload.contentBase64`, `payload.base64`, or `payload.data`.
 
 Clients must inspect the handshake capabilities before enabling optional panels. An older runtime may omit capabilities or close the connection for an unsupported request. The CLI treats that as a connection failure and reports the endpoint and command. The server hello includes its PID, window ID, and diagnostic session ID. The CLI rejects a hello whose PID or window does not match the selected descriptor.
 

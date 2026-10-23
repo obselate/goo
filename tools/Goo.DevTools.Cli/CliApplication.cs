@@ -925,12 +925,6 @@ internal static class CliApplication
             ?? StringValue(payload["data"]);
         if (data is null)
         {
-            var remotePath = StringValue(payload["path"]);
-            if (remotePath is not null && outputPath is not null)
-            {
-                return WriteCaptureBytes(File.ReadAllBytes(remotePath), outputPath);
-            }
-
             Console.WriteLine(response.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
