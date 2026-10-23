@@ -7,7 +7,8 @@ import System.Runtime.InteropServices
 
 internal sealed class PathBandEncoder {
   shared {
-    private const MaxBandCount int32 = 32
+    private const BaseBandCount int32 = 32
+    private const MaxBandCount int32 = 2048
     private const NonZeroFillRuleMask uint32 = 1u
     private const EvenOddFillRuleMask uint32 = 2u
     private let cache ConditionalWeakTable[VectorPathData, PathBandEncoding] =
@@ -26,6 +27,8 @@ internal sealed class PathBandEncoder {
     private var scratchMaximumX float32
     private var scratchMaximumY float32
     internal var BuildCount uint64
+    private var scratchCurveWidth float64
+    private var scratchCurveHeight float64
 
     internal func Encode(path VectorPath) PathBandEncoding {
       guard let data = path.payload else { return PathBandEncoding.Empty }
@@ -86,6 +89,8 @@ internal sealed class PathBandEncoder {
       scratchMinimumY = Single.PositiveInfinity
       scratchMaximumX = Single.NegativeInfinity
       scratchMaximumY = Single.NegativeInfinity
+      scratchCurveWidth = 0.0
+      scratchCurveHeight = 0.0
       for contourIndex in 0 ... path.ContourCount {
         let contour = path.Contours[contourIndex]
         if contour.End <= contour.Start { continue }
@@ -119,8 +124,10 @@ internal sealed class PathBandEncoder {
         scratchMinimumY = scratchMaximumY
         scratchMaximumY = swap
       }
-      let horizontalCount = chooseBandCount(curveScratch.Count)
-      let verticalCount = chooseBandCount(curveScratch.Count)
+      let horizontalCount = chooseBandCount(curveScratch.Count,
+        scratchMaximumY - scratchMinimumY, scratchCurveHeight)
+      let verticalCount = chooseBandCount(curveScratch.Count,
+        scratchMaximumX - scratchMinimumX, scratchCurveWidth)
       buildBands(curveScratch, scratchMinimumY, scratchMaximumY, horizontalCount, true,
         scratchMinimumX, scratchMaximumX, horizontalBandScratch, horizontalIndexScratch)
       buildBands(curveScratch, scratchMinimumX, scratchMaximumX, verticalCount, false,
@@ -147,18 +154,23 @@ internal sealed class PathBandEncoder {
         MaximumY: quadraticMaximum(quadratic.Y0, quadratic.CY, quadratic.Y1),
       }
       boundsScratch.Add(bounds)
+      scratchCurveWidth += float64(bounds.MaximumX) - float64(bounds.MinimumX)
+      scratchCurveHeight += float64(bounds.MaximumY) - float64(bounds.MinimumY)
       if bounds.MinimumX < scratchMinimumX { scratchMinimumX = bounds.MinimumX }
       if bounds.MinimumY < scratchMinimumY { scratchMinimumY = bounds.MinimumY }
       if bounds.MaximumX > scratchMaximumX { scratchMaximumX = bounds.MaximumX }
       if bounds.MaximumY > scratchMaximumY { scratchMaximumY = bounds.MaximumY }
     }
 
-    private func chooseBandCount(curveCount int32) int32 {
+    private func chooseBandCount(curveCount int32, extent float32, curveExtent float64) int32 {
       var count int32 = 1
-      while count < MaxBandCount && count * count < curveCount {
+      while count < BaseBandCount && count * count < curveCount {
         count++
       }
-      return count
+      let desired = Math.Min(MaxBandCount, (curveCount - 1) / 64 + 1)
+      if desired <= count || extent <= 0.0F || curveExtent <= 0.0 { return count }
+      let useful = Math.Ceiling(float64(extent) * float64(curveCount) / curveExtent)
+      return Math.Max(count, int32(Math.Min(float64(desired), useful)))
     }
 
     private func buildBands(curves List[PathAnalyticCurve], minimum float32, maximum float32,
