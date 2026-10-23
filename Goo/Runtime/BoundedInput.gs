@@ -17,7 +17,7 @@ internal class BoundedInput {
     internal func ReadAll(stream Stream, limitBytes int32, what string, prefix []uint8) []uint8 {
       if limitBytes < 0 { throw ArgumentOutOfRangeException("limitBytes") }
       if prefix.Length > limitBytes { throw InvalidDataException("$what exceeds $limitBytes bytes") }
-      var capacity = Math.Max(prefix.Length, Math.Min(65536, limitBytes))
+      var capacity = if prefix.Length == 0 { Math.Min(65536, limitBytes) } else { limitBytes }
       if stream.CanSeek {
         let remaining = stream.Length - stream.Position
         if remaining > limitBytes - prefix.Length { throw InvalidDataException("$what exceeds $limitBytes bytes") }
