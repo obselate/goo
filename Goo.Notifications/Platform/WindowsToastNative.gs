@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Runtime.CompilerServices
 import System.Runtime.InteropServices
 
 @StructLayout(LayoutKind.Sequential)
@@ -10,12 +11,8 @@ internal struct ToastGuid {
     internal var C uint32
     internal var D uint32
 
-    internal init(value string) {
-        let bytes = Guid(value).ToByteArray()
-        A = BitConverter.ToUInt32(bytes, 0)
-        B = BitConverter.ToUInt32(bytes, 4)
-        C = BitConverter.ToUInt32(bytes, 8)
-        D = BitConverter.ToUInt32(bytes, 12)
+    shared {
+        internal func Parse(value string) ToastGuid -> Unsafe.BitCast[Guid, ToastGuid](Guid(value))
     }
 }
 
@@ -87,7 +84,7 @@ internal class WindowsToastNative {
         internal func Factory(name string, identity string) nint {
             let text = String(name)
             try {
-                var iid = ToastGuid(identity)
+                var iid = ToastGuid.Parse(identity)
                 Check(RoGetActivationFactory(text, ref iid, out var result))
                 return result
             } finally { WindowsDeleteString(text) }
