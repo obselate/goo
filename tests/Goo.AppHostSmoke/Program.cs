@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Goo;
 
 internal static class Program
@@ -15,6 +17,7 @@ internal static class Program
         if (args.Length < 3) throw new ArgumentException("mode, identity and output directory are required");
         string mode = args[0], identity = args[1], root = Path.GetFullPath(args[2]);
         string tag = args.Length == 4 ? args[3] : mode;
+        if (mode == "placement") { RunPlacement(root, tag); return 0; }
         if (mode == "activated") { RunActivated(identity, root, args[3..]); return 0; }
         if (mode == "secondary") { Send(identity, root); return 0; }
         if (mode == "closed")
@@ -198,6 +201,97 @@ internal static class Program
         finally { Window.ApplicationActivated -= handler; }
     }
 
+    private static void RunPlacement(string root, string mode)
+    {
+        Directory.CreateDirectory(root);
+        var state = mode switch { "max" => WindowState.Maximized, "full" => WindowState.Fullscreen, _ => WindowState.Normal };
+        var window = new Window { InitiallyVisible = false, Root = new Cell() };
+        Require(window.CapturePlacement().Status == WindowOperationResult.Closed, "Closed placement capture changed");
+        var staged = window.ApplyPlacement(new()
+        {
+            Fields = WindowPlacementFields.NormalSize | WindowPlacementFields.Position | WindowPlacementFields.State,
+            NormalBounds = new() { X = 64, Y = 70, Width = 360, Height = 240 }, State = state,
+        });
+        Require(staged.Status == WindowOperationResult.Accepted, staged.Error);
+        Require(staged.AppliedFields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Staged position mask changed");
+        window.Open();
+        try
+        {
+            Require(window.Show() == WindowOperationResult.Accepted, "Placement window did not show");
+            PumpUntil(window, () => window.IsVisible && (state == WindowState.Normal
+                ? window.Width == 360 && window.Height == 240 : window.Width > 360 && window.Height > 240));
+            var captured = window.CapturePlacement();
+            Require(captured.Status == WindowOperationResult.Accepted && captured.Placement is not null, captured.Error);
+            var saved = captured.Placement!;
+            Require(saved.State == state && saved.NormalBounds.Width == 360 && saved.NormalBounds.Height == 240,
+                $"Cold {mode} lost normal bounds: {saved.NormalBounds} {saved.State}");
+            Require(saved.Fields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Captured position mask changed");
+            string path = Path.Combine(root, mode + ".json");
+            File.WriteAllBytes(path, JsonSerializer.SerializeToUtf8Bytes(saved, PlacementJson.Default.WindowPlacement));
+            var restored = JsonSerializer.Deserialize(File.ReadAllBytes(path), PlacementJson.Default.WindowPlacement)!;
+            window.State = WindowState.Normal;
+            PumpUntil(window, () => window.Width == 360 && window.Height == 240);
+            window.State = WindowState.Maximized;
+            PumpUntil(window, () => window.Width > 360 && window.Height > 240);
+            window.State = WindowState.Minimized;
+            for (int i = 0; i < 20; i++) { window.Pump(0.005); Thread.Sleep(5); }
+            var minimized = window.CapturePlacement().Placement!;
+            Require(minimized.State == WindowState.Maximized && minimized.NormalBounds.Width == 360,
+                "Minimize replaced restorable state or normal size");
+            var applied = Placement.Restore(window, restored);
+            Require(applied.Status == WindowOperationResult.Accepted, applied.Status + ": " + applied.Error);
+            window.RequestClose();
+            window.Pump(0);
+            window = new Window { InitiallyVisible = false, Root = new Cell() }.Open();
+            var cold = Placement.Restore(window, restored);
+            Require(cold.Status == WindowOperationResult.Accepted, cold.Status + ": " + cold.Error);
+            Require(window.Show() == WindowOperationResult.Accepted, "Restored placement window did not show");
+            PumpUntil(window, () => window.CapturePlacement().Placement?.State == state
+                && (state == WindowState.Normal ? window.Width == 360 && window.Height == 240
+                    : window.Width > 360 && window.Height > 240));
+            Require(window.CapturePlacement().Placement!.NormalBounds.Width == 360, "Cold restore replaced normal size");
+            window.MinWidth = 100;
+            window.MinHeight = 100;
+            window.MaxWidth = 500;
+            window.MaxHeight = 400;
+            var moved = Placement.Restore(window, new()
+            {
+                Fields = WindowPlacementFields.NormalSize | WindowPlacementFields.Position | WindowPlacementFields.State,
+                NormalBounds = new() { X = 100064, Y = 100070, Width = 100000, Height = 100000 },
+                State = WindowState.Minimized, DisplayName = "removed display",
+                DisplayBounds = new() { X = 100000, Y = 100000, Width = 1920, Height = 1080 },
+                DisplayScale = Math.Max(1, saved.DisplayScale * 2),
+            });
+            Require(moved.Status == WindowOperationResult.Accepted, moved.Status + ": " + moved.Error);
+            Require(moved.AppliedFields.HasFlag(WindowPlacementFields.Position) == !OperatingSystem.IsLinux(), "Restored position mask changed");
+            PumpUntil(window, () => window.Width == 500 && window.Height == 400);
+            Require(window.CapturePlacement().Placement!.State == WindowState.Normal, "Saved minimized state was restored");
+            var invalid = window.ApplyPlacement(new()
+            {
+                Fields = WindowPlacementFields.NormalSize,
+                NormalBounds = new() { Width = double.NaN, Height = 240 },
+            });
+            Require(invalid.Status == WindowOperationResult.Failed && window.Width == 500, "Invalid placement changed geometry");
+            var stateOnly = window.ApplyPlacement(new() { Fields = WindowPlacementFields.State, State = WindowState.Normal });
+            Require(stateOnly.Status == WindowOperationResult.Accepted && stateOnly.AppliedFields == WindowPlacementFields.State,
+                "State-only placement changed its applied mask");
+            Console.WriteLine($"placement: cold {mode}, JSON persistence, normal bounds, minimize, display/scale change and masks passed");
+        }
+        finally { window.RequestClose(); window.Pump(0); }
+    }
+
+    private static void PumpUntil(Window window, Func<bool> ready)
+    {
+        long deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 15;
+        do
+        {
+            window.Pump(0.005);
+            if (ready()) return;
+            Thread.Sleep(5);
+        } while (Stopwatch.GetTimestamp() < deadline);
+        throw new TimeoutException("Native placement did not reach its requested state");
+    }
+
     private static void WaitFor(string path)
     {
         long deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 20;
@@ -213,3 +307,6 @@ internal static class Program
         if (!value) throw new InvalidOperationException(message);
     }
 }
+
+[JsonSerializable(typeof(WindowPlacement))]
+internal partial class PlacementJson : JsonSerializerContext { }
