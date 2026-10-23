@@ -9,6 +9,7 @@ public sealed class FixtureContractTests
 {
     public static IEnumerable<object[]> Cases()
     {
+        yield return Contract<ApplicationActivationFixtures>(nameof(ApplicationActivationFixtures.ProcessQueueOwnsStartupAndForwardedData));
         yield return Contract<PathBuilderFixtures>(nameof(PathBuilderFixtures.ResetPreservesPublishedPathAndClearsContour));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.UiScaleLayoutInputAndAnchoredPortalContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.AdapterDeliveryThreadContract));

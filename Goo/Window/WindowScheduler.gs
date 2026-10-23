@@ -64,10 +64,24 @@ internal class WindowScheduler {
       windows.RemoveAt(index)
       if windows.Count == 0 {
         nextWindow = 0
+        Window.CloseApplicationActivations()
       } else if nextWindow >= windows.Count {
         nextWindow = 0
       }
     }
+  }
+
+  internal func WakeForApplicationActivation() {
+    var target Window? = nil
+    lock windowsGate {
+      for window in windows {
+        if window.IsOpen {
+          target = window
+          break
+        }
+      }
+    }
+    target?.WakeForApplicationActivation()
   }
 
   internal func HasPendingStartup() bool {

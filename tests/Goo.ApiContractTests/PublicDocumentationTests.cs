@@ -15,6 +15,9 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedMethodIds =
     {
+        "M:Goo.ApplicationActivation.#ctor",
+        "M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)",
+        "M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)",
         "M:Goo.Accessibility.#ctor",
         "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
         "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
@@ -463,6 +466,8 @@ public sealed class PublicDocumentationTests
     private static readonly IReadOnlyDictionary<string, DocumentationShape> Shapes =
         new Dictionary<string, DocumentationShape>(StringComparer.Ordinal)
         {
+            ["M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)"] = new(["initial"], [], true),
+            ["M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)"] = new(["value"], [], true),
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),
