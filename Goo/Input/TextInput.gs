@@ -443,20 +443,39 @@ internal partial class TextInput {
 }
 
 internal class EntryUndoHistory {
-  internal let Undo Stack[EntryUndoStep] = Stack[EntryUndoStep]()
-  internal let Redo Stack[EntryUndoStep] = Stack[EntryUndoStep]()
+  shared {
+    private const HistoryLimit int32 = 1000
+    private const RetainedTextLimit int64 = 64L * 1024L * 1024L
+  }
+
+  internal let Undo LinkedList[EntryUndoStep] = LinkedList[EntryUndoStep]()
+  internal let Redo LinkedList[EntryUndoStep] = LinkedList[EntryUndoStep]()
   internal var Typing bool
+  private var retainedTextBytes int64
 
   internal func Record(before EditState, after EditState, typing bool) {
-    var start = before
+    while Redo.Count != 0 {
+      retainedTextBytes -= Redo.Last!!.Value.RetainedTextBytes
+      Redo.RemoveLast()
+    }
+    var step = EntryUndoStep{ Before: before, After: after }
+    var coalescing = false
     if typing && Typing && Undo.Count != 0 {
-      let last = Undo.Peek().After
-      if before.Text == last.Text && before.Caret == last.Caret && before.Anchor == last.Anchor {
-        start = Undo.Pop().Before
+      let last = Undo.Last!!.Value
+      if before.Text == last.After.Text && before.Caret == last.After.Caret
+        && before.Anchor == last.After.Anchor {
+        step.Before = last.Before
+        retainedTextBytes -= last.RetainedTextBytes
+        coalescing = true
       }
     }
-    Undo.Push(EntryUndoStep{ Before: start, After: after })
-    Redo.Clear()
+    if coalescing { Undo.Last!!.Value = step }
+    else { Undo.AddLast(step) }
+    retainedTextBytes += step.RetainedTextBytes
+    while Undo.Count > HistoryLimit || retainedTextBytes > RetainedTextLimit {
+      retainedTextBytes -= Undo.First!!.Value.RetainedTextBytes
+      Undo.RemoveFirst()
+    }
     Typing = typing
   }
 }
@@ -464,4 +483,7 @@ internal class EntryUndoHistory {
 internal data struct EntryUndoStep {
   internal var Before EditState
   internal var After EditState
+  internal prop RetainedTextBytes int64 {
+    get -> (int64(Before.Text.Length) + int64(After.Text.Length)) * 2L
+  }
 }

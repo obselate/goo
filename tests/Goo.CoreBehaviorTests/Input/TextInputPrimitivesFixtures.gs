@@ -4,6 +4,51 @@ import System
 import System.Collections.Generic
 
 internal class TextInputPrimitivesFixtures {
+  func EntryUndoDropsOldestGroupsAtCountAndByteLimits() bool {
+    for length in []int32{ 4, 32768 } {
+      let limit = length == 4 ? 1000 : 512
+      let resolver = Resolver{}
+      let focus = FocusManager()
+      let text = TextInput(focus)
+      let root = Reconciler{ Res: resolver }.Mount(TextEntry{ Value: String('x', length) })
+      focus.SetFocus(resolver, root)
+      for i in 0 ... (limit + 1) {
+        text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.SelectAll })
+        text.ExecuteEditorCommand(root, resolver, TextCommand{
+          Kind: TextCommandKind.Paste, Text: String('x', length - 4) + i.ToString("D4") })
+      }
+      for i in 0 ... limit {
+        if !text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Undo }) {
+          return false
+        }
+      }
+      if root.Buffer != String('x', length - 4) + "0000" || root.Anchor != 0 || root.Caret != length
+        || text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Undo }) {
+          return false
+        }
+      for i in 0 ... limit {
+        if !text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Redo }) {
+          return false
+        }
+      }
+      if root.Buffer != String('x', length - 4) + limit.ToString("D4")
+        || root.Anchor != length || root.Caret != length
+        || text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Redo }) {
+          return false
+        }
+      text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Undo })
+      text.HandleChar(root, "a")
+      text.HandleChar(root, "b")
+      if text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Redo })
+        || !text.ExecuteEditorCommand(root, resolver, TextCommand{ Kind: TextCommandKind.Undo })
+        || root.Buffer != String('x', length - 4) + (limit - 1).ToString("D4")
+        || root.Anchor != 0 || root.Caret != length {
+          return false
+        }
+    }
+    return true
+  }
+
   func UndoHistoryDropsOldestGroupsAndPreservesTypingAndRedo() bool {
     for grouped in []bool{ false, true } {
       let document = TextDocument("seed")
