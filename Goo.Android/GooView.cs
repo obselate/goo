@@ -3,6 +3,7 @@ using Android.Graphics;
 using Android.OS;
 using Android.Views;
 using Android.Views.InputMethods;
+using System.Runtime.CompilerServices;
 using System.Text;
 using AndroidKeyEvent = Android.Views.KeyEvent;
 using AndroidRect = Android.Graphics.Rect;
@@ -11,6 +12,7 @@ namespace Goo.Android;
 
 public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 {
+    private static readonly ConditionalWeakTable<global::Goo.Window, GooView> nativeOwners = new();
     private readonly AndroidVulkanHost host;
     private readonly Handler handler = new(Looper.MainLooper!);
     private readonly FrameCallback frameCallback;
@@ -51,6 +53,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         }
         Holder!.AddCallback(this);
         window.Attach(host);
+        nativeOwners.Add(window, this);
         RefreshPreferences();
         window.PlatformInput.EditorChanged += OnEditorChanged;
     }
@@ -64,6 +67,10 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     public bool DismissKeyboardOnSubmit { get; set; } = true;
     internal float Density => Math.Max(Resources?.DisplayMetrics?.Density ?? 1f, 0.1f);
     internal PlatformInput Input => Window.PlatformInput;
+
+    internal static GooView? TryGetNativeOwner(global::Goo.Window window) =>
+        nativeOwners.TryGetValue(window, out var view) && !view.disposed && view.resumed
+        && view.IsAttachedToWindow && view.host.IsPresentationAttached ? view : null;
 
     public void Resume()
     {
@@ -140,8 +147,16 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             host.SetFocused(hasWindowFocus && resumed);
     }
 
+    protected override void OnAttachedToWindow()
+    {
+        base.OnAttachedToWindow();
+        if (!disposed && !nativeOwners.TryGetValue(Window, out _))
+            nativeOwners.Add(Window, this);
+    }
+
     protected override void OnDetachedFromWindow()
     {
+        nativeOwners.Remove(Window);
         CancelFrames();
         base.OnDetachedFromWindow();
     }
@@ -454,6 +469,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             lock (wakeGate)
             {
                 disposed = true;
+                nativeOwners.Remove(Window);
                 handler.RemoveCallbacksAndMessages(null);
             }
             CancelFrames();
