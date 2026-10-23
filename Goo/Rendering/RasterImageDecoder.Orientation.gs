@@ -2,7 +2,6 @@ package Goo
 
 import System
 import System.Buffers.Binary
-import System.IO
 import System.Threading
 
 internal unsafe partial class RasterImageDecoder {
@@ -16,10 +15,10 @@ internal unsafe partial class RasterImageDecoder {
         while bytes.Length - offset >= 12 {
           token.ThrowIfCancellationRequested()
           let size = U32(bytes, offset)
-          if int64(size) + 12 > bytes.Length - offset { return orientation }
+          if int64(size) + 12 > bytes.Length - offset { return 1 }
           let length = int32(size)
           if U32(bytes, offset + 4) == 0x65584966u {
-            if found { throw InvalidDataException("Duplicate PNG EXIF metadata") }
+            if found { return 1 }
             found = true
             orientation = TiffOrientation(bytes.Slice(offset + 8, length))
           }
@@ -29,20 +28,20 @@ internal unsafe partial class RasterImageDecoder {
         var offset = 2
         while offset < bytes.Length {
           token.ThrowIfCancellationRequested()
-          if bytes[offset] != 255 { return orientation }
+          if bytes[offset] != 255 { return 1 }
           while offset < bytes.Length && bytes[offset] == 255 { offset++ }
-          if offset >= bytes.Length { return orientation }
+          if offset >= bytes.Length { return 1 }
           let marker = bytes[offset]
           offset++
           if marker == 218 || marker == 217 { return orientation }
           if marker == 1 { continue }
-          if bytes.Length - offset < 2 { return orientation }
+          if bytes.Length - offset < 2 { return 1 }
           let size = Big16(bytes, offset)
-          if size < 2 || size > bytes.Length - offset { return orientation }
+          if size < 2 || size > bytes.Length - offset { return 1 }
           if marker == 225 && size >= 8 && bytes[offset + 2] == 69 && bytes[offset + 3] == 120
             && bytes[offset + 4] == 105 && bytes[offset + 5] == 102
             && bytes[offset + 6] == 0 && bytes[offset + 7] == 0 {
-              if found { throw InvalidDataException("Duplicate JPEG EXIF metadata") }
+              if found { return 1 }
               found = true
               orientation = TiffOrientation(bytes.Slice(offset + 8, size - 8))
             }
@@ -53,15 +52,15 @@ internal unsafe partial class RasterImageDecoder {
     }
 
     private func TiffOrientation(bytes ReadOnlySpan[uint8]) int32 {
-      if bytes.Length < 8 { throw InvalidDataException("Truncated EXIF header") }
+      if bytes.Length < 8 { return 1 }
       let little = bytes[0] == 73 && bytes[1] == 73
-      if !little && !(bytes[0] == 77 && bytes[1] == 77) { throw InvalidDataException("Invalid EXIF byte order") }
-      if Tiff16(bytes, 2, little) != 42 { throw InvalidDataException("Invalid EXIF TIFF header") }
+      if !little && !(bytes[0] == 77 && bytes[1] == 77) { return 1 }
+      if Tiff16(bytes, 2, little) != 42 { return 1 }
       let start = Tiff32(bytes, 4, little)
-      if start < 8u || int64(start) + 2 > bytes.Length { throw InvalidDataException("Invalid EXIF directory offset") }
+      if start < 8u || int64(start) + 2 > bytes.Length { return 1 }
       let count = Tiff16(bytes, int32(start), little)
       if int64(start) + 2 + int64(count) * 12 + 4 > bytes.Length {
-        throw InvalidDataException("Truncated EXIF directory")
+        return 1
       }
       var orientation = 1
       var found = false
@@ -69,11 +68,11 @@ internal unsafe partial class RasterImageDecoder {
         let offset = int32(start) + 2 + i * 12
         if Tiff16(bytes, offset, little) != 0x0112 { continue }
         if found || Tiff16(bytes, offset + 2, little) != 3 || Tiff32(bytes, offset + 4, little) != 1u {
-          throw InvalidDataException("Invalid EXIF orientation tag")
+          return 1
         }
         found = true
         orientation = Tiff16(bytes, offset + 8, little)
-        if orientation < 1 || orientation > 8 { throw InvalidDataException("Invalid EXIF orientation value") }
+        if orientation < 1 || orientation > 8 { return 1 }
       }
       return orientation
     }

@@ -473,15 +473,41 @@ public sealed class ImageSourceCacheTests : IDisposable
     }
 
     [Fact]
-    public void InvalidExifOffsetsAndOrientationFailBeforePublication()
+    public void MalformedOrDuplicateExifKeepsPngAndJpegUnrotated()
     {
-        var png = Png(1, 1, 8, 6, [0, 10, 20, 30, 255]);
-        var invalidOffset = Exif(1, true);
+        var png = Png(3, 2, 8, 2, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90,
+            0, 100, 110, 120, 130, 140, 150, 160, 170, 180]);
+        var jpeg = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-rgb.jpg"));
+        var invalidOffset = Exif(6, true);
         invalidOffset.AsSpan(4, 4).Fill(255);
-        foreach (var exif in new[] { invalidOffset, Exif(0, true), Exif(9, false), Exif(1, true)[..^1] })
-            Assert.Throws<InvalidDataException>(() => ImageSource.Decode(WithExif(png, exif)));
-        var once = WithExif(png, Exif(1, true));
-        Assert.Throws<InvalidDataException>(() => ImageSource.Decode(WithExif(once, Exif(6, false))));
+        var invalidOrder = Exif(6, true);
+        invalidOrder[0] = 0;
+        var invalidHeader = Exif(6, true);
+        invalidHeader[2] = 0;
+        var invalidType = Exif(6, true);
+        invalidType[12] = 4;
+        var invalidCount = Exif(6, true);
+        invalidCount[14] = 2;
+        var duplicateTag = new byte[38];
+        Exif(6, true).AsSpan(0, 22).CopyTo(duplicateTag);
+        duplicateTag[8] = 2;
+        duplicateTag.AsSpan(10, 12).CopyTo(duplicateTag.AsSpan(22, 12));
+        foreach (var encoded in new[] { png, jpeg })
+        {
+            using var original = ImageSource.Decode(encoded);
+            using var originalLease = original.Acquire();
+            var malformed = new[] { invalidOffset, invalidOrder, invalidHeader, invalidType, invalidCount,
+                duplicateTag, Exif(0, true), Exif(9, false), Exif(6, true)[..7], Exif(6, true)[..^1] };
+            var inputs = malformed.Select(exif => WithExif(encoded, exif))
+                .Append(WithExif(WithExif(encoded, Exif(6, true)), Exif(1, false)));
+            foreach (var input in inputs)
+            {
+                using var source = ImageSource.Decode(input);
+                using var lease = source.Acquire();
+                Assert.Equal((original.Width, original.Height), (source.Width, source.Height));
+                Assert.Equal(originalLease.Result()!.Pixels(), lease.Result()!.Pixels());
+            }
+        }
     }
 
     private static byte[] Exif(int orientation, bool little)

@@ -26,7 +26,7 @@ later frames are structurally checked but are neither decoded nor scheduled.
 The loader uses the first PNG image and ignores animation and color-profile
 metadata. PNG `eXIf` and JPEG EXIF orientation are applied, including mirrored
 orientations. Width, height and thumbnail bounds refer to the displayed image.
-Malformed or duplicate EXIF headers and invalid orientation tags fail decoding.
+Malformed or duplicate EXIF metadata is ignored. Those images stay unrotated.
 Color management is not performed. Pixels are treated as sRGB by rendering.
 Other formats throw
 `NotSupportedException`; a consumer decoder can still create `ImageSource`
