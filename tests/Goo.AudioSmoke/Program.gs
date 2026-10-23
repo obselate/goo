@@ -118,6 +118,23 @@ func Wav(bits int32, floating bool, extensible bool)[]uint8 {
     return bytes.ToArray()
 }
 
+if Environment.GetEnvironmentVariable("GOO_SYSTEM_SOUND_SMOKE") == "1" {
+    let expected = Enum.Parse[SystemSoundStatus](Environment.GetEnvironmentVariable("GOO_SYSTEM_SOUND_EXPECT") ?? "Queued")
+    for sound in []SystemSound{SystemSound.Click, SystemSound.Alert} {
+        let status = SystemSounds.TryPlay(sound)
+        Require(status == expected, "System sound status: " + status.ToString())
+    }
+    var rejected = false
+    try {
+        SystemSounds.TryPlay(SystemSound(-1))
+    } catch (error ArgumentOutOfRangeException) {
+        rejected = true
+    }
+    Require(rejected, "Invalid system sound was accepted")
+    Console.WriteLine("system-sounds: platform status=" + expected.ToString() + " invalid-value rejected")
+    return
+}
+
 let opened = SoundPlayer.TryOpen()
 if Environment.GetEnvironmentVariable("GOO_AUDIO_UNAVAILABLE_SMOKE") == "1" {
     Require(

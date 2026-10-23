@@ -42,4 +42,16 @@ disposed-owner play calls throw. Completion means drained queues, not exact audi
 - Invalid counts, non-finite samples, and reader exceptions become `SourceFailure`.
 - Consumer code owns compressed decoders, decoder synchronization, looping, seek, and stereo pan.
 - Android uses AAudio without SDL. Desktop uses SDL.
-- Applications own mute and notification policy. System sounds and output-device selection are not included.
+- Applications own mute and notification policy. Output-device selection is not included.
+
+## System UI sounds
+
+```gsharp
+let status = SystemSounds.TryPlay(SystemSound.Alert)
+```
+
+- Windows uses system sound aliases. macOS supports alerts through `NSBeep`.
+- Linux uses the optional system `libcanberra.so.0` and the installed sound theme.
+- Android, macOS clicks and missing platform APIs return `Unsupported`.
+- `Queued` means the platform accepted the request. Sound settings can keep it silent.
+- A native API failure returns `NativeFailure`. No PCM device or `SoundPlayer` is needed.
