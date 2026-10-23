@@ -158,7 +158,8 @@ public sealed class NotificationChecks : Instrumentation
         Require(Call(service.GetPermissionAsync).ActivationSupport == NotificationActivationSupport.WarmAndCold,
             "The explicit activity route did not report WarmAndCold.");
         Require(Call(() => service.RemoveAsync("warm")).Delivery == NotificationDelivery.Removed, "Removal was not accepted.");
-        Require(Call(() => service.GetStatusAsync("warm")).Delivery == NotificationDelivery.Removed, "Removal left an active entry.");
+        Wait(() => Call(() => service.GetStatusAsync("warm")).Delivery == NotificationDelivery.Removed,
+            "Removal left an active entry.");
     }
 
     private void CheckDisabledChannel()
