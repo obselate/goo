@@ -32,6 +32,42 @@ public partial class Window {
 
   shared {
     private let scheduler WindowScheduler = WindowScheduler()
+    private var nativeActivationHeld bool
+
+    internal func PrepareNativeApplicationActivation(out initial []ApplicationActivation) WindowOperationResult {
+      initial = Array.Empty[ApplicationActivation]()
+      RequireActivationThread()
+      if activationOwnerThreadId == 0 || activationClosed { return WindowOperationResult.Accepted }
+      SdlRuntime.RequireMainThread("SingleInstance.AcquireAsync")
+      if !nativeActivationHeld {
+        try { SdlRuntime.Acquire() }
+        catch (_ InvalidOperationException) { return WindowOperationResult.Failed }
+        nativeActivationHeld = true
+      }
+      SdlRuntime.PollEvents()
+      lock activationGate {
+        var count int32 = 0
+        for value in pendingActivations {
+          if value.IsInitial && value.Kind != ApplicationActivationKind.Launch { count++ }
+        }
+        if count == 0 { return WindowOperationResult.Accepted }
+        initial = [count]ApplicationActivation
+        count = 0
+        for value in pendingActivations {
+          if value.IsInitial && value.Kind != ApplicationActivationKind.Launch {
+            initial[count] = value
+            count++
+          }
+        }
+      }
+      return WindowOperationResult.Accepted
+    }
+
+    private func ReleaseNativeApplicationActivation() {
+      if !nativeActivationHeld { return }
+      nativeActivationHeld = false
+      SdlRuntime.Release()
+    }
 
     /// Configures process-wide application identity before SDL initialization.
     /// @param name human-readable application name

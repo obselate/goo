@@ -8,6 +8,7 @@ internal static class Program
     private static readonly string[] ExpectedArguments = ["", "two words", "\"quoted\"", "λ😀", "a\\b"];
     private const string Link = "goo-instance-test://route/%CE%BB";
     private const string Document = "content://org.goo.test/document/λ";
+    private const string NativeToken = "goo-instance-token-λ";
 
     private static int Main(string[] args)
     {
@@ -52,9 +53,12 @@ internal static class Program
         if (mode != "primary") { WaitFor(Path.Combine(root, "stop")); return 0; }
         var received = new List<ApplicationActivation>();
         int owner = Environment.CurrentManagedThreadId;
+        var currentToken = typeof(Window).GetProperty("CurrentActivationToken", BindingFlags.Static | BindingFlags.NonPublic)!;
         Action<ApplicationActivation> handler = value =>
         {
             Require(Environment.CurrentManagedThreadId == owner, "Activation left the owner thread");
+            Require((string?)currentToken.GetValue(null) == (!value.IsInitial && OperatingSystem.IsLinux() ? NativeToken : null),
+                "Native activation token changed");
             received.Add(value);
         };
         Window.ApplicationActivated += handler;
@@ -62,6 +66,7 @@ internal static class Program
         {
             WaitFor(Path.Combine(root, "send.done"));
             typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null);
+            Require(currentToken.GetValue(null) is null, "Native activation token escaped its callback");
             Verify(received, root);
             typeof(Window).GetMethod("CloseApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null);
             File.WriteAllText(Path.Combine(root, "closed.ready"), "ready");
@@ -84,6 +89,7 @@ internal static class Program
 
     private static void Send(string identity, string root)
     {
+        if (OperatingSystem.IsLinux()) Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", NativeToken);
         string[] arguments = (string[])ExpectedArguments.Clone();
         string directory = Environment.CurrentDirectory;
         ApplicationActivation[] requests =
@@ -101,6 +107,12 @@ internal static class Program
         arguments[1] = "changed after forwarding";
         var tooLarge = Acquire(identity, new() { Arguments = [new string('x', 65537)] });
         Require(tooLarge.Status == SingleInstanceStatus.Rejected, "Oversized request was accepted");
+        if (OperatingSystem.IsLinux())
+        {
+            Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", new string('x', 65516));
+            Require(Acquire(identity, new()).Status == SingleInstanceStatus.Rejected, "Oversized native token was accepted");
+            Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", NativeToken);
+        }
         foreach (string[] invalid in new string[][] {
             ["--goo-open-uri", "relative.txt"], ["--goo-open-documents"],
             ["--goo-notification", "example-private://wrong/activate?id=n&action=&data="],
@@ -138,12 +150,20 @@ internal static class Program
     private static void RunActivated(string identity, string root, string[] arguments)
     {
         int owner = Environment.CurrentManagedThreadId, count = 0;
+        bool nativeWayland = OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("GOO_ACTIVATION_NATIVE_WINDOW") == "1";
+        Window? native = null;
         Action<ApplicationActivation> handler = value =>
         {
             Require(Environment.CurrentManagedThreadId == owner, "Native activation left the owner thread");
+            if (native is not null && value.Kind != ApplicationActivationKind.Launch)
+                Require(native.RequestActivation() == WindowOperationResult.Accepted, "Native activation request failed");
+            if (nativeWayland)
+                Require(Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN") is null, "Forwarding changed the receiver environment");
             string target = value.Kind == ApplicationActivationKind.OpenDocuments
                 ? value.Documents[0].LocalPath : value.Target?.OriginalString ?? "";
             string path = Path.Combine(root, (++count) + ".event");
+            if (value.Kind == ApplicationActivationKind.OpenDocuments)
+                File.WriteAllLines(Path.Combine(root, count + ".documents"), value.Documents.Select(uri => uri.AbsoluteUri));
             File.WriteAllLines(path + ".new", [value.Kind.ToString(), value.IsInitial ? "initial" : "warm", target]);
             File.Move(path + ".new", path);
         };
@@ -157,16 +177,20 @@ internal static class Program
             Require(result.Status == SingleInstanceStatus.Primary && result.Lease is not null, result.Status + ": " + result.Error);
             using (result.Lease!)
             {
+                if (OperatingSystem.IsMacOS() || nativeWayland)
+                    native = new Window { Width = 160, Height = 100, Root = new Cell() }.Open();
                 File.WriteAllText(Path.Combine(root, "pid"), Environment.ProcessId.ToString());
                 var drain = typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!;
                 string stop = Path.Combine(root, "stop");
                 long deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 40;
                 while (!File.Exists(stop) && Stopwatch.GetTimestamp() < deadline)
                 {
-                    drain.Invoke(null, null);
+                    if (native is null) drain.Invoke(null, null);
+                    else native.Pump(0.005);
                     Thread.Sleep(5);
                 }
                 Require(File.Exists(stop), "Native activation did not stop");
+                if (native is not null) { native.RequestClose(); native.Pump(0); }
             }
             File.WriteAllText(Path.Combine(root, "exited"), "passed");
         }

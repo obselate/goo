@@ -8,10 +8,10 @@ import System.Text
 internal class ActivationWire {
     shared {
         internal const MaxBytes int32 = 2 * ApplicationActivation.MaxRequestBytes
-        private const Magic int32 = 0x314F4F47
+        private const Magic int32 = 0x324F4F47
         private let utf8 UTF8Encoding = UTF8Encoding(false, true)
 
-        internal func Encode(value ApplicationActivation) MemoryStream {
+        internal func Encode(value ApplicationActivation, nativeToken string? = nil) MemoryStream {
             let stream = MemoryStream()
             try {
                 using let writer = BinaryWriter(stream, utf8, true)
@@ -30,15 +30,21 @@ internal class ActivationWire {
                 writer.Write(Magic)
                 writer.Write(int32(value.Kind))
                 if let target = value.Target { WriteUri(writer, target, ref bytes) }
-                else { WriteText(writer, "", ref bytes) }
+                else { WriteText(writer, "", ref bytes, ApplicationActivation.MaxStringBytes) }
                 writer.Write(value.Documents.Count)
                 for i in 0 ... value.Documents.Count { WriteUri(writer, value.Documents[i], ref bytes) }
                 writer.Write(value.Arguments.Count)
-                for i in 0 ... value.Arguments.Count { WriteText(writer, value.Arguments[i], ref bytes) }
-                WriteText(writer, value.WorkingDirectory, ref bytes)
-                WriteText(writer, value.NotificationId, ref bytes)
-                WriteText(writer, value.ActionId, ref bytes)
-                WriteText(writer, value.Payload, ref bytes)
+                for i in 0 ... value.Arguments.Count {
+                    WriteText(writer, value.Arguments[i], ref bytes, ApplicationActivation.MaxStringBytes)
+                }
+                WriteText(writer, value.WorkingDirectory, ref bytes, ApplicationActivation.MaxStringBytes)
+                WriteText(writer, value.NotificationId, ref bytes, ApplicationActivation.MaxStringBytes)
+                WriteText(writer, value.ActionId, ref bytes, ApplicationActivation.MaxStringBytes)
+                WriteText(writer, value.Payload, ref bytes, ApplicationActivation.MaxStringBytes)
+                writer.Write(if nativeToken == nil { 0 } else { 1 })
+                if let token = nativeToken {
+                    WriteText(writer, token, ref bytes, ApplicationActivation.MaxNativeTokenBytes)
+                }
                 writer.Flush()
                 return stream
             } catch (_ Exception) {
@@ -72,26 +78,30 @@ internal class ActivationWire {
             let notification = ReadText(data, length, ref offset)
             let action = ReadText(data, length, ref offset)
             let dataValue = ReadText(data, length, ref offset)
+            let tokenPresent = ReadInt32(data, length, ref offset)
+            if tokenPresent < 0 || tokenPresent > 1 { throw InvalidDataException("Invalid activation token marker") }
+            let nativeToken string? = if tokenPresent == 0 { nil } else { ReadText(data, length, ref offset) }
             if offset != length { throw InvalidDataException("Unexpected activation fields") }
             return ApplicationActivation{
                 Kind: if kind == int32(ApplicationActivationKind.Launch) { ApplicationActivationKind.Arguments }
                     else { ApplicationActivationKind(kind) },
                 IsInitial: false, Target: target, Documents: documents, Arguments: arguments,
                 WorkingDirectory: directory, NotificationId: notification, ActionId: action, Payload: dataValue,
+                NativeActivationToken: nativeToken,
             }
         }
 
         private func WriteUri(writer BinaryWriter, value Uri, ref bytes int32) {
             if value == nil || !value.IsAbsoluteUri { throw ArgumentException("Activation URIs must be absolute") }
-            WriteText(writer, value.OriginalString, ref bytes)
+            WriteText(writer, value.OriginalString, ref bytes, ApplicationActivation.MaxStringBytes)
         }
 
-        private func WriteText(writer BinaryWriter, value string, ref bytes int32) {
-            if value == nil || value.Length > ApplicationActivation.MaxStringBytes {
+        private func WriteText(writer BinaryWriter, value string, ref bytes int32, limit int32) {
+            if value == nil || value.Length > limit {
                 throw ArgumentException("Activation text exceeds its limit")
             }
             let count = utf8.GetByteCount(value)
-            if count > ApplicationActivation.MaxStringBytes || count > ApplicationActivation.MaxRequestBytes - bytes {
+            if count > limit || count > ApplicationActivation.MaxRequestBytes - bytes {
                 throw ArgumentException("Activation text exceeds its limit")
             }
             bytes += count

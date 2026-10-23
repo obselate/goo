@@ -368,9 +368,12 @@ jobs:
         run: |
           dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj \
             -c Release -r osx-arm64 --self-contained true -m:4 \
-            -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/app-host-aot
           python3 .github/scripts/test-app-host.py \
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
+          python3 .github/scripts/test-macos-app-host.py \
+            artifacts/app-host-aot "$RUNNER_TEMP/macos-app-host"
 
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
@@ -668,6 +671,16 @@ jobs:
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
+      - name: Verify Wayland application activation forwarding
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj -c Release -m:4 \
+            -p:TreatWarningsAsErrors=true -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+          .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            python3 .github/scripts/test-wayland-activation.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
+            artifacts/reports/wayland-activation
 
       - name: Verify shared UI audio without a hardware device
         if: needs.changes.outputs.full == 'true'

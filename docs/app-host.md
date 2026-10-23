@@ -126,6 +126,8 @@ Use the stable application ID as `CFBundleIdentifier`.
 
 LaunchServices delivers these requests directly to the shared Window event.
 Goo retains cold launches and multi-document batches. Do not parse a second copy of a native request from CLI arguments.
+The single-instance package initializes native activation before election on macOS.
+A forced new process forwards its retained native URI requests or document batch before it exits.
 
 ### Linux Wayland
 
@@ -158,6 +160,10 @@ The separate commands retain URI intent without guessing from document schemes.
 Both processes use the same application ID for single-instance acquisition.
 Install the app's MIME definitions and refresh the desktop and MIME databases.
 Use OS settings for the user's default-handler choice.
+
+Forwarding retains the launcher's Wayland activation token without changing the primary's environment.
+Call `RequestActivation` on the selected window from the activation handler to use that token.
+The compositor decides whether to grant focus.
 
 ### Android
 
