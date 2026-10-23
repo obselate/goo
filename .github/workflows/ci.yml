@@ -27,7 +27,7 @@ env:
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
-    wayland-protocols weston
+    kwin-wayland wayland-protocols weston
 
 jobs:
   changes:
@@ -680,12 +680,12 @@ jobs:
         run: |
           dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj -c Release -m:4 \
             -p:TreatWarningsAsErrors=true -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-          .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             python3 .github/scripts/test-wayland-activation.py \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/wayland-activation
-          .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             python3 .github/scripts/test-window-placement.py \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
