@@ -40,7 +40,7 @@ try
     else Check((nint)Field(backend, "image") == 0, "Native icon released");
     using var closing = TrayIcon.Create(owner, Options("Owner close")).Icon!;
     owner.RequestClose();
-    owner.Pump(0);
+    Until(() => !owner.IsOpen);
     Check(closing.Status == TrayStatus.Closed, "Owner closes tray");
     Console.WriteLine($"Tray smoke passed: {result.Status}, create, update, menu invocation, dispose, owner close.");
 }

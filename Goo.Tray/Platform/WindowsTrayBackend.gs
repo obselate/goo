@@ -158,7 +158,10 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
             } else if GetCursorPos(&location) == 0 { icon.PostStatus(TrayStatus.Failed) return }
             if ScreenToClient(window, &location) == 0 { icon.PostStatus(TrayStatus.Failed) return }
             SetForegroundWindow(window)
-            let point = Point{X: float64(location.X) / float64(icon.Owner.UiScale), Y: float64(location.Y) / float64(icon.Owner.UiScale)}
+            let point = Point{
+                X: float64(location.X) / float64(icon.Owner.UiScale),
+                Y: float64(location.Y) / float64(icon.Owner.UiScale)
+            }
             let result = WindowsMenuBridge.ShowContext(icon.Owner, point, content.Menu, lease)
             if result.Status == NativeMenuStatus.Success { icon.PostCommand(result.ItemId) }
             else if result.Status == NativeMenuStatus.Failed { icon.PostStatus(TrayStatus.Failed) }
