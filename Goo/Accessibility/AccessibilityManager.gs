@@ -382,7 +382,8 @@ internal class AccessibilityManager {
       case NodeKind.Editor: AccessibilityRole.TextEditor
       case NodeKind.Image: AccessibilityRole.Image
       case NodeKind.Container: n.Focusable || n.OnClick != nil || declaration != nil || forced.Contains(n)
-      ? AccessibilityRole.Generic : AccessibilityRole.Auto
+        || n.OverflowX == Overflow.Scroll || n.OverflowY == Overflow.Scroll
+        ? AccessibilityRole.Generic : AccessibilityRole.Auto
       default: declaration != nil || forced.Contains(n) ? AccessibilityRole.Generic : AccessibilityRole.Auto
     }
   }

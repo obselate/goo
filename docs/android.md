@@ -119,6 +119,10 @@ TextEntry{ Accessibility: Accessibility{ Name: "Name" } }
 - Text, password masks, selection and editing use the shared Goo action path.
 - `GooView` owns `Window.AccessibilityAdapter`. Leave the slot empty before construction.
 - Enable TalkBack in Android settings. No app permission or extra package is needed.
+- Reading focus does not take keyboard focus or open the keyboard.
+- Touch exploration uses Goo stacking, transforms and clipping.
+- Surface replacement keeps virtual IDs and clears reading focus.
+- The virtual subtree is available after the replacement presentation updates.
 
 ## Transparent surfaces
 

@@ -1,8 +1,6 @@
 using Android.Content;
-using Android.Graphics;
 using Android.Views;
 using Android.Views.Accessibility;
-using AndroidRect = Android.Graphics.Rect;
 using NativeAction = Android.Views.Accessibility.AccessibilityNodeInfo.AccessibilityAction;
 using NativeManager = Android.Views.Accessibility.AccessibilityManager;
 
@@ -29,7 +27,8 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         manager = (NativeManager)view.Context!.GetSystemService(Context.AccessibilityService)!;
     }
 
-    private bool Available => !disposed && view.IsAttachedToWindow && view.Visibility == ViewStates.Visible;
+    private bool Available => !disposed && presentationReady && view.IsAttachedToWindow && view.IsShown
+        && view.Window.IsOpen && view.WindowVisibility == ViewStates.Visible;
 
     public void Update(AccessibilityTree tree)
     {
@@ -45,10 +44,13 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         {
             if (accessibilityFocus == id)
                 SetAccessibilityFocus(HostViewId);
+            if (hovered == id) SetHover(HostViewId);
+            if (pendingFocus == id) pendingFocus = HostViewId;
             ids.Remove(nodes[id].Node.Id.Value);
             nodes.Remove(id);
         }
         version = tree.Version;
+        CompletePendingFocus();
         Send(HostViewId, EventTypes.WindowContentChanged, ContentChangeTypes.Subtree);
     }
 
@@ -90,7 +92,6 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
             return null;
         var node = record.Node;
         var info = new AccessibilityNodeInfo(view, virtualViewId);
-        info.SetSource(view, virtualViewId);
         if (record.Parent == HostViewId)
             info.SetParent(view);
         else
@@ -125,7 +126,7 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         info.LiveRegion = (AccessibilityLiveRegion)(int)node.Live;
         PopulateText(info, node);
         PopulateRelations(info, node);
-        PopulateBounds(info, node, record.Parent);
+        PopulateBounds(info, node);
         PopulateActions(info, node, virtualViewId);
         return info;
     }
@@ -219,20 +220,28 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
         return true;
     }
 
-    private void PopulateBounds(AccessibilityNodeInfo info, AccessibilityNode node, int parent)
+    private void PopulateBounds(AccessibilityNodeInfo info, AccessibilityNode node)
     {
-        using var matrix = new Matrix();
-        view.TransformMatrixToGlobal(matrix);
-        var scale = view.Density * view.Window.UiScale;
-        using var bounds = new RectF((float)node.Bounds.X * scale, (float)node.Bounds.Y * scale,
-            (float)(node.Bounds.X + node.Bounds.Width) * scale, (float)(node.Bounds.Y + node.Bounds.Height) * scale);
-        matrix.MapRect(bounds);
-        using var screen = new AndroidRect((int)Math.Floor(bounds.Left), (int)Math.Floor(bounds.Top),
-            (int)Math.Ceiling(bounds.Right), (int)Math.Ceiling(bounds.Bottom));
-        info.SetBoundsInScreen(screen);
-        using var visible = new AndroidRect();
-        info.VisibleToUser = node.VisibleBounds is { } clipped && view.GetGlobalVisibleRect(visible)
-            && visible.Intersect(screen) && clipped.Width > 0 && clipped.Height > 0;
+        screenMatrix.Reset();
+        view.TransformMatrixToGlobal(screenMatrix);
+        var scale = PixelScale;
+        var bounds = node.VisibleBounds ?? node.Bounds;
+        mappedBounds.Set((float)bounds.X * scale.X, (float)bounds.Y * scale.Y,
+            (float)(bounds.X + bounds.Width) * scale.X, (float)(bounds.Y + bounds.Height) * scale.Y);
+        screenMatrix.MapRect(mappedBounds);
+        screenBounds.Set((int)Math.Floor(mappedBounds.Left), (int)Math.Floor(mappedBounds.Top),
+            (int)Math.Ceiling(mappedBounds.Right), (int)Math.Ceiling(mappedBounds.Bottom));
+        info.SetBoundsInScreen(screenBounds);
+        var visible = node.VisibleBounds is not null && view.GetLocalVisibleRect(clipBounds);
+        if (visible)
+        {
+            mappedBounds.Set(clipBounds);
+            screenMatrix.MapRect(mappedBounds);
+            clipBounds.Set((int)Math.Floor(mappedBounds.Left), (int)Math.Floor(mappedBounds.Top),
+                (int)Math.Ceiling(mappedBounds.Right), (int)Math.Ceiling(mappedBounds.Bottom));
+            visible = clipBounds.Intersect(screenBounds);
+        }
+        info.VisibleToUser = visible;
     }
 
     public override AccessibilityNodeInfo? FindFocus(NodeFocus focus)
@@ -369,12 +378,17 @@ internal sealed partial class GooAccessibilityProvider : AccessibilityNodeProvid
     {
         if (disposing && !disposed)
         {
+            Detach();
             disposed = true;
             if (ReferenceEquals(view.Window.AccessibilityAdapter, this))
                 view.Window.AccessibilityAdapter = null;
             nodes.Clear();
             ids.Clear();
             retired.Clear();
+            screenMatrix.Dispose();
+            mappedBounds.Dispose();
+            screenBounds.Dispose();
+            clipBounds.Dispose();
         }
         base.Dispose(disposing);
     }
