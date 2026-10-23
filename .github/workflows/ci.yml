@@ -265,6 +265,29 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app \
             artifacts/macos-activation-results
 
+      - name: Package and run consumer DMG app
+        if: needs.changes.outputs.full == 'true'
+        env:
+          GooPackageId: org.goo.packagesmoke
+          Product: Goo Package Smoke
+          GooUseProjectReference: true
+        run: |
+          export Version="$GOO_VERSION"
+          export GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          export GooPackageIcon="/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns"
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
+          dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+            package --target macos --project tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj \
+            --output "$PWD/artifacts/macos consumer"
+          dmg="$PWD/artifacts/macos consumer/org.goo.packagesmoke-$GOO_VERSION-osx-arm64.dmg"
+          mkdir -p "$RUNNER_TEMP/consumer-mount"
+          hdiutil attach "$dmg" -mountpoint "$RUNNER_TEMP/consumer-mount" -nobrowse
+          ditto "$RUNNER_TEMP/consumer-mount/Goo.PackageSmoke.app" "$RUNNER_TEMP/Consumer Copy.app"
+          hdiutil detach "$RUNNER_TEMP/consumer-mount"
+          codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
+          GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            "$RUNNER_TEMP/Consumer Copy.app/Contents/MacOS/Goo.PackageSmoke"
+
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
         run: |

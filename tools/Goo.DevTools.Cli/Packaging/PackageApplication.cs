@@ -18,15 +18,17 @@ internal static partial class PackageApplication
     {
         var target = commandLine.Get("target");
         var windows = target == "windows" && OperatingSystem.IsWindows();
-        if ((!windows && (target != "linux" || !OperatingSystem.IsLinux()))
-            || RuntimeInformation.OSArchitecture != Architecture.X64)
-            throw new CliException("Package on the target OS with --target linux or windows (x64).", "unsupported-target", "validation");
+        var macos = target == "macos" && OperatingSystem.IsMacOS() && RuntimeInformation.OSArchitecture == Architecture.Arm64;
+        if (!macos && ((!windows && (target != "linux" || !OperatingSystem.IsLinux()))
+            || RuntimeInformation.OSArchitecture != Architecture.X64))
+            throw new CliException("Package on the target OS with --target linux, windows (x64) or macos (arm64).", "unsupported-target", "validation");
 
-        var tool = windows ? Environment.GetEnvironmentVariable("GOO_ISCC") : VerifyTool("GOO_APPIMAGETOOL", AppImageToolHash);
+        var tool = windows ? Environment.GetEnvironmentVariable("GOO_ISCC")
+            : macos ? "/usr/bin/hdiutil" : VerifyTool("GOO_APPIMAGETOOL", AppImageToolHash);
         if (string.IsNullOrWhiteSpace(tool) || !File.Exists(tool))
-            throw new CliException("Set GOO_ISCC to Inno Setup 7.1.0 ISCC.exe.", "missing-tool", "validation");
-        var runtime = windows ? "" : VerifyTool("GOO_APPIMAGE_RUNTIME", AppImageRuntimeHash);
-        var rid = windows ? "win-x64" : "linux-x64";
+            throw new CliException("The target packaging tool is missing. See docs/shipping.md.", "missing-tool", "validation");
+        var runtime = windows || macos ? "" : VerifyTool("GOO_APPIMAGE_RUNTIME", AppImageRuntimeHash);
+        var rid = windows ? "win-x64" : macos ? "osx-arm64" : "linux-x64";
         var directory = Path.GetDirectoryName(project)!;
         var metadata = await ReadMetadataAsync(project, rid);
         var output = Path.GetFullPath(commandLine.Get("output") ?? "artifacts/packages", directory);
@@ -44,6 +46,10 @@ internal static partial class PackageApplication
             if (windows)
             {
                 artifact = await PackageWindowsAsync(publish, workspace, symbols, metadata, tool);
+            }
+            else if (macos)
+            {
+                artifact = await PackageMacOsAsync(publish, workspace, symbols, metadata);
             }
             else
             {
@@ -70,8 +76,16 @@ internal static partial class PackageApplication
             var image = Path.Combine(output, Path.GetFileName(artifact));
             File.Move(artifact, image, true);
             artifacts.Insert(0, image);
+            if (macos)
+            {
+                var app = Path.Combine(output, metadata.Executable + ".app");
+                if (Directory.Exists(app))
+                    throw new CliException($"The output app already exists: {app}", "output-exists", "package");
+                await ExecuteAsync("ditto", [Path.Combine(workspace, metadata.Executable + ".app"), app], workspace, "package-failed");
+                artifacts.Add(app);
+            }
             if (commandLine.Has("json"))
-                Console.WriteLine(JsonSerializer.Serialize(new { target, signing = "unsigned", artifacts }));
+                Console.WriteLine(JsonSerializer.Serialize(new { target, signing = macos ? "ad-hoc" : "unsigned", artifacts }));
             else
                 foreach (var path in artifacts)
                     Console.WriteLine(path);
@@ -118,7 +132,7 @@ internal static partial class PackageApplication
                 throw new CliException("Set AssemblyName, Product, numeric Version, GooPackageId and GooPackageIcon. See docs/shipping.md.",
                     "invalid-package-metadata", "validation");
             icon = Path.GetFullPath(icon, Path.GetDirectoryName(project)!);
-            var extension = runtime == "win-x64" ? ".ico" : ".png";
+            var extension = runtime == "win-x64" ? ".ico" : runtime == "osx-arm64" ? ".icns" : ".png";
             if (!File.Exists(icon) || !icon.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
                 throw new CliException($"GooPackageIcon must name an existing {extension} file.", "invalid-package-metadata", "validation");
             var company = properties.GetProperty("Company").GetString() ?? "";

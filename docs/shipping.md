@@ -45,6 +45,23 @@ Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING
 It does not automatically embed app-owned assets. Single-file publishing is not
 validated for this sample.
 
+## macOS app and DMG
+
+```sh
+goo package --project MyApp.gsproj --target macos --output artifacts/packages
+```
+
+- Build on Apple silicon with the NativeAOT build tools.
+- Set `Product`, numeric `Version`, `GooPackageId` and `GooPackageIcon`.
+- Use an `.icns` icon. The bundle requires macOS 14 or later.
+- Output includes `AssemblyName.app`, `Id-Version-osx-arm64.dmg` and symbols when present.
+- Choose a new output directory if the app bundle already exists.
+- Copy the app from the mounted DMG to Applications before launch.
+- The app is ad-hoc signed. The DMG is not notarized.
+- Gatekeeper can block downloaded copies. Use Apple's per-app **Open Anyway** control only for an app you trust.
+- A managed Mac can prohibit this override. Do not disable Gatekeeper or remove quarantine.
+- Developer ID, notarization and Intel Mac support are not included.
+
 ## Windows installer
 
 ```powershell
