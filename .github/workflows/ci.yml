@@ -395,7 +395,7 @@ jobs:
       - name: Verify NativeAOT macOS notifications
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.csproj \
+          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.gsproj \
             -c Release -r osx-arm64 --self-contained true -m:4 \
             -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/notifications-nativeaot
@@ -696,7 +696,7 @@ jobs:
         run: |
           mkdir -p artifacts/notifications-static
           cp artifacts/native/libSDL3.a artifacts/native/text/libgoo-harfbuzz*.a artifacts/notifications-static/
-          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.csproj \
+          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.gsproj \
             -c Release -r linux-x64 --self-contained true -m:4 \
             -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooNativeAotStaticRoot="$PWD/artifacts/notifications-static" \
@@ -1651,7 +1651,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          dotnet publish tests/Goo.Notifications.WindowsSmoke/Goo.Notifications.WindowsSmoke.csproj `
+          dotnet publish tests/Goo.Notifications.WindowsSmoke/Goo.Notifications.WindowsSmoke.gsproj `
             -c Release -r win-x64 --self-contained true -m:4 -p:TreatWarningsAsErrors=true `
             -p:PublishAot=true -o artifacts/notifications-windows
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
