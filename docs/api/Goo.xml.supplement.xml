@@ -114,6 +114,9 @@ Assign before Window.Open. Requires the optional Goo.Accessibility native runtim
     <member name="M:Goo.FontVariation.op_Inequality(Goo.FontVariation,Goo.FontVariation)">
       <summary>Tests whether two variations are different.</summary>
     </member>
+    <member name="T:Goo.ExternalImageSession">
+      <summary>Imports GPU images for one device generation. Open, import and Dispose require the window owner thread.</summary>
+    </member>
     <member name="T:Goo.ImageSource">
       <summary>Owns one immutable premultiplied RGBA image resource.</summary>
     </member>
