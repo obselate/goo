@@ -254,7 +254,8 @@ jobs:
             artifacts/macos-candidate/symbols \
             Goo.PackageSmoke \
             tests/Goo.PackageSmoke/Info.plist
-          GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+          .github/scripts/with-headless-wayland.sh env MTL_DEBUG_LAYER=1 \
+            XDG_CACHE_HOME="$RUNNER_TEMP/goo-metal-cache" GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_NATIVE_BACKDROP_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke

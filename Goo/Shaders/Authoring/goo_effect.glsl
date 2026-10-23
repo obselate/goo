@@ -129,6 +129,10 @@ float gooClipCoverage()
             return 0.0;
         }
         vec2 atlasUv = screen * uvTransform.xy + uvTransform.zw;
+        if (atlasUv.x < 0.0 || atlasUv.y < 0.0 || atlasUv.x >= 1.0 || atlasUv.y >= 1.0)
+        {
+            return 0.0;
+        }
         uint layer = gooClipChainBuffer.words[entryBase + 8u];
         coverage *= clamp(texture(gooClipMaskAtlas, vec3(atlasUv, float(layer))).r, 0.0, 1.0);
     }

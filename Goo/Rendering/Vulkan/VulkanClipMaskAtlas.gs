@@ -290,9 +290,9 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     samplerInfo.magFilter = VkConstants.VK_FILTER_LINEAR
     samplerInfo.minFilter = VkConstants.VK_FILTER_LINEAR
     samplerInfo.mipmapMode = VkConstants.VK_SAMPLER_MIPMAP_MODE_NEAREST
-    samplerInfo.addressModeU = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
-    samplerInfo.addressModeV = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
-    samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
+    samplerInfo.addressModeU = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+    samplerInfo.addressModeV = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+    samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.maxLod = 1.0F
     samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
     let createSampler = Dispatch.vkCreateSampler

@@ -92,6 +92,10 @@ float shapeMaskSample(float2 screenPoint)
     }
     uint layer = packedMask >> 1u;
     float2 atlasUv = screenPoint * pc.stopPositions.xy + pc.stopPositions.zw;
+    if (atlasUv.x < 0.0 || atlasUv.y < 0.0 || atlasUv.x >= 1.0 || atlasUv.y >= 1.0)
+    {
+        return 0.0;
+    }
     return clamp(gooClipMaskAtlas.Sample(float3(atlasUv, float(layer))).r, 0.0, 1.0);
 }
 
