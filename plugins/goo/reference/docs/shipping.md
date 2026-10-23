@@ -45,6 +45,34 @@ Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING
 It does not automatically embed app-owned assets. Single-file publishing is not
 validated for this sample.
 
+## Windows installer
+
+```powershell
+$env:GOO_ISCC = 'C:\Program Files\Inno Setup 7\ISCC.exe'
+goo package --project MyApp.gsproj --target windows --output artifacts/packages
+```
+
+- Run on Windows x64 with Inno Setup 7.1.0 and the NativeAOT build tools.
+- Set `Product`, `Version`, `Company`, `GooPackageId` and `GooPackageIcon` in the project.
+- Use a `.ico` file for the Windows icon. Keep the ID stable across releases.
+- Output is `Id-Version-win-x64-setup.exe`, plus a symbol archive when present.
+- The installer uses the current user's Local AppData directory. It does not request elevation.
+- It adds one Start Menu shortcut and an uninstaller. It keeps application data.
+- Windows 11 x64 is required. No Windows Arm or Windows 10 support is implied.
+- The installer is unsigned. SmartScreen can show **unknown publisher** or block the download.
+- Signing, automatic updates and store uploads are not part of this command.
+
+Fetch the pinned Inno Setup installer, then run it to install the compiler:
+
+```powershell
+.\tools\Goo.DevTools.Cli\Packaging\fetch-inno-setup.ps1 "$HOME\.cache\goo-inno"
+```
+
+The script checks SHA-256
+`0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f`.
+It does not install the compiler. Check [Inno Setup's license](https://jrsoftware.org/isinfo.php)
+for commercial use.
+
 ## Linux AppImage
 
 `goo package` is part of the optional `Goo.DevTools` dotnet tool. It publishes a
