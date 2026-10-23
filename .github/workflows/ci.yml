@@ -1986,7 +1986,7 @@ jobs:
           import shutil
           from pathlib import Path
           source = Path('artifacts/android-packages').resolve()
-          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Gestures"/><package pattern="Goo.NativeMenus"/><package pattern="Goo.NativeDialogs"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
+          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Gestures"/><package pattern="Goo.NativeMenus"/><package pattern="Goo.NativeDialogs"/><package pattern="Goo.Audio"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
           consumer = Path('artifacts/android-consumer')
           for name in ['Goo.AndroidSmoke', 'Goo.AndroidSmoke.Shared']:
               shutil.copytree(Path('tests') / name, consumer / name, ignore=shutil.ignore_patterns('bin', 'obj'))
