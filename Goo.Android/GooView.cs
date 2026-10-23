@@ -74,7 +74,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 
     public void Resume()
     {
-        if (disposed)
+        if (disposed || !Window.IsOpen)
             return;
         resumed = true;
         RefreshPreferences();
@@ -143,7 +143,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     public override void OnWindowFocusChanged(bool hasWindowFocus)
     {
         base.OnWindowFocusChanged(hasWindowFocus);
-        if (!disposed)
+        if (!disposed && Window.IsOpen)
             host.SetFocused(hasWindowFocus && resumed);
     }
 

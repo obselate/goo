@@ -16,6 +16,9 @@
   <ItemGroup>
     <ProjectReference Include="../../Goo.Android/Goo.Android.csproj" Condition="'$(GooSmokeUsePackages)' != 'true'" />
     <PackageReference Include="Goo.Android" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
+    <ProjectReference Include="../../Goo.NativeDialogs/Goo.NativeDialogs.gsproj"
+                      AdditionalProperties="GooBuildAndroid=true" Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <PackageReference Include="Goo.NativeDialogs" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
     <ProjectReference Include="../Goo.AndroidSmoke.Shared/Goo.AndroidSmoke.Shared.gsproj" />
   </ItemGroup>
 </Project>

@@ -1176,7 +1176,7 @@ jobs:
       - name: Build shared desktop scene and Android adapter
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0-android -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Pack Android adapter
         run: |
@@ -1239,12 +1239,12 @@ jobs:
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
         run: |
-          cp artifacts/main-release/packages/Goo.*.nupkg artifacts/android-packages/
+          cp artifacts/main-release/packages/Goo.[0-9]*.nupkg artifacts/android-packages/
           python3 - <<'PYCONFIG'
           import shutil
           from pathlib import Path
           source = Path('artifacts/android-packages').resolve()
-          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
+          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.NativeDialogs"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
           consumer = Path('artifacts/android-consumer')
           for name in ['Goo.AndroidSmoke', 'Goo.AndroidSmoke.Shared']:
               shutil.copytree(Path('tests') / name, consumer / name, ignore=shutil.ignore_patterns('bin', 'obj'))
