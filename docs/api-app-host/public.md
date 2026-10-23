@@ -54,6 +54,23 @@ Reports whether desktop startup arguments form an owned activation request.
 - `Accepted`
 - `Rejected`
 
+## `Placement`
+
+Source:
+
+- [`Placement.gs`](../../Goo.AppHost/Public/Placement.gs)
+
+Restores app-owned placement against the current desktop display inventory.
+
+### `Restore(Window,WindowPlacement)`
+
+Matches display hints and clamps normal geometry to current usable bounds and size constraints. Open the window hidden first. Restore does not read or write application settings. Saved Minimized becomes Normal. Native capture already retains the last non-minimized state. Wayland does not apply position. Fullscreen, focus and final geometry remain OS decisions.
+
+- `window`: The open window on its owner thread.
+- `saved`: App-owned saved geometry, state and display hints.
+
+Returns: Accepted with the applied mask, Closed, Unsupported, or Failed for invalid data or host failure.
+
 ## `SingleInstance`
 
 Source:

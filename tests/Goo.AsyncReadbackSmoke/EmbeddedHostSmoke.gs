@@ -163,6 +163,11 @@ internal class EmbeddedHostSmoke {
       Require(window.Show() == WindowOperationResult.Unsupported
           && window.Hide() == WindowOperationResult.Unsupported,
         "Embedded lifecycle operations claimed native window support")
+      Require(window.CapturePlacement().Status == WindowOperationResult.Unsupported
+          && window.ApplyPlacement(WindowPlacement{
+            Fields: WindowPlacementFields.State, State: WindowState.Normal,
+          }).Status == WindowOperationResult.Unsupported,
+        "Embedded hosts claimed desktop placement support")
     }
 
     private func Settle(host EmbeddedSmokeHost) {
