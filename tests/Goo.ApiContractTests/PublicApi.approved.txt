@@ -1113,7 +1113,7 @@ method|Goo.WindowDisplayId|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.WindowDisplayId|ToString|virtual|public|generic:|()->System.String
 method|Goo.WindowDisplayId|op_Equality|static|public|generic:|(left:Goo.WindowDisplayId,right:Goo.WindowDisplayId)->System.Boolean
 method|Goo.WindowDisplayId|op_Inequality|static|public|generic:|(left:Goo.WindowDisplayId,right:Goo.WindowDisplayId)->System.Boolean
-method|Goo.WindowMetrics|Deconstruct|instance|public|generic:|(out logicalWidth:System.Int32&,out logicalHeight:System.Int32&,out framebufferWidth:System.Int32&,out framebufferHeight:System.Int32&,out displayScaleX:System.Double&,out displayScaleY:System.Double&)->System.Void
+method|Goo.WindowMetrics|Deconstruct|instance|public|generic:|(out logicalWidth:System.Int32&,out logicalHeight:System.Int32&,out framebufferWidth:System.Int32&,out framebufferHeight:System.Int32&,out displayScaleX:System.Double&,out displayScaleY:System.Double&,out uiScale:System.Single&)->System.Void
 method|Goo.WindowMetrics|Equals|instance|public|generic:|(other:Goo.WindowMetrics)->System.Boolean
 method|Goo.WindowMetrics|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
 method|Goo.WindowMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -1440,6 +1440,7 @@ property|Goo.ImageSource|IsDisposed|System.Boolean|instance|get:public|index:()
 property|Goo.ImageSource|Width|System.Int32|instance|get:public|index:()
 property|Goo.Image|Fit|Goo.ImageFit|instance|get:public,init:public|index:()
 property|Goo.Image|Path|System.String|instance|get:public,init:public|index:()
+property|Goo.Image|PixelsPerUnit|System.Single|instance|get:public,init:public|index:()
 property|Goo.Image|Source|Goo.ImageSourceProvider|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Action|System.Action|instance|get:public,init:public|index:()
 property|Goo.KeyBinding|Command|Goo.Command|instance|get:public,init:public|index:()
@@ -1809,6 +1810,7 @@ property|Goo.WindowMetrics|FramebufferHeight|System.Int32|instance|get:public,in
 property|Goo.WindowMetrics|FramebufferWidth|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalHeight|System.Int32|instance|get:public,init:public|index:()
 property|Goo.WindowMetrics|LogicalWidth|System.Int32|instance|get:public,init:public|index:()
+property|Goo.WindowMetrics|UiScale|System.Single|instance|get:public,init:public|index:()
 property|Goo.WindowPresentationAccepted|AcceptedTicks|System.Int64|instance|get:public,init:public|index:()
 property|Goo.WindowPresentationAccepted|FrameIndex|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.WindowTimer|IsActive|System.Boolean|instance|get:public|index:()

@@ -259,6 +259,9 @@ Subscribe to `StateChanged`, `FocusChanged`, and `KeyPressed` with `+=` on the w
 
 `OnClosing` is different: it is the single close-policy callback, and returning `false` vetoes the pending close request.
 
+`MetricsChanged` includes `UiScale` and runs when that scale changes.
+Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
+
 ## Post UI work
 
 Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accepts work before the first `Open`. A pending `RequestClose` still accepts work because `OnClosing` can veto the request.
@@ -1308,6 +1311,10 @@ Gets the reported logical height.
 ### `LogicalWidth`
 
 Gets the reported logical width.
+
+### `UiScale`
+
+Gets the retained UI scale. A default snapshot uses 1.
 
 ## `WindowOperationResult`
 

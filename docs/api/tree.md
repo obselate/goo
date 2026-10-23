@@ -260,6 +260,16 @@ the image, and area-filters premultiplied RGBA when reducing it. The decoded-byt
 limit applies to the reduced pixels. The source must obey the encoded-byte and
 pixels-per-dimension limits. The caller owns the returned source.
 
+## Set raster density
+
+```gsharp
+Image{Source: logo2x, PixelsPerUnit: 2, Fit: ImageFit.None}
+```
+
+A 128-by-64 source at density 2 measures 64-by-32 logical units.
+`ImageFit.None` uses that logical size. Other fit modes preserve their existing behavior.
+
+
 ## `Blob`
 
 Source:
@@ -677,6 +687,10 @@ Gets the image fit mode.
 ### `Path`
 
 Legacy path metadata. A nonempty path without Source throws when mounted. Load local PNG assets with ImageSourceCache.LoadAsync and set Source instead.
+
+### `PixelsPerUnit`
+
+Gets source pixels per logical layout unit. Positive and finite, default 1. A 128-pixel image at density 2 has a natural width of 64 logical units.
 
 ### `Source`
 
