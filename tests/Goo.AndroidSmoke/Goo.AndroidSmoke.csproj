@@ -18,6 +18,9 @@
     <PackageReference Include="Goo.Android" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
     <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" Condition="'$(GooSmokeUsePackages)' != 'true'" />
     <PackageReference Include="Goo.NativeMenus" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
+    <ProjectReference Include="../../Goo.NativeDialogs/Goo.NativeDialogs.gsproj"
+                      AdditionalProperties="GooBuildAndroid=true" Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <PackageReference Include="Goo.NativeDialogs" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
     <ProjectReference Include="../Goo.AndroidSmoke.Shared/Goo.AndroidSmoke.Shared.gsproj" />
     <ProjectReference Include="../../Goo.Gestures/Goo.Gestures.gsproj" Condition="'$(GooSmokeUsePackages)' != 'true'" />
     <PackageReference Include="Goo.Gestures" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
