@@ -1397,6 +1397,22 @@ internal class InputFixtures {
   }
 
   func KeyboardQueueAndRepeatLifecycle() bool {
+    let preview = entryDriver(InputEntryCell{ value: "aa" })
+    preview.Key(Key.End, false, false)
+    var consumed = true
+    var previewCalls = 0
+    let handler Func[Key, KeyModifiers, bool] = (key Key, modifiers KeyModifiers) -> {
+      previewCalls++
+      return consumed
+    }
+    preview.Window.PreviewKeyPressed += handler
+    preview.Key(Key.Backspace, false, false)
+    if previewCalls != 1 || entry(preview).Buffer != "aa" { return false }
+    consumed = false
+    preview.Key(Key.Backspace, false, false)
+    if previewCalls != 2 || entry(preview).Buffer != "a" { return false }
+    preview.Window.PreviewKeyPressed -= handler
+
     let orderedCell = InputEntryCell{}
     let ordered = entryDriver(orderedCell)
     ordered.Input.QueueKeyPress(Key.A, KeyModifiers{})

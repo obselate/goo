@@ -913,6 +913,7 @@ event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|a
 event|Goo.Window|MetricsChanged|System.Action`1<Goo.WindowMetrics>|instance|add:public,remove:public
 event|Goo.Window|PreferencesChanged|System.Action`1<Goo.PlatformPreferences>|instance|add:public,remove:public
 event|Goo.Window|PresentationAccepted|System.Action`1<Goo.WindowPresentationAccepted>|instance|add:public,remove:public
+event|Goo.Window|PreviewKeyPressed|System.Func`3<Goo.Key,Goo.KeyModifiers,System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|StateChanged|System.Action`1<Goo.WindowState>|instance|add:public,remove:public
 event|Goo.Window|TitlebarDoubleClicked|System.Action`1<Goo.WindowTitlebarEvent>|instance|add:public,remove:public
 event|Goo.Window|VisibilityChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
