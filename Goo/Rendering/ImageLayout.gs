@@ -9,6 +9,7 @@ internal open class ImageSourceBinding {
   internal var Lease ImageSourceLease?
   internal var SourceCompletion ImageSourceCompletion?
   internal var Fallback ImageSourceBindingToken?
+  internal var PixelsPerUnit float32 = 1.0F
   private var sourceChangedRegistration Action?
   private var sourceChangedHandler Action?
   private var contentVersionSnapshot uint64
@@ -207,10 +208,11 @@ internal class ImageLayouts {
 
     internal func ApplySource(n Node, source ImageSourceProvider, fit ImageFit,
       completed((Node, object) -> void)?,
-      owner Window?) {
+      owner Window?, pixelsPerUnit float32 = 1.0F) {
         n.ImageFit = fit
         let prior = sourceState(n)
         if prior?.Source == source {
+          prior!!.PixelsPerUnit = pixelsPerUnit
           Refresh(n)
           return
         }
@@ -222,6 +224,7 @@ internal class ImageLayouts {
         n.ImageIntrinsicWidth = intrinsicWidth
         n.ImageIntrinsicHeight = intrinsicHeight
         let value = ImageSourceBinding()
+        value.PixelsPerUnit = pixelsPerUnit
         value.SetSourceChanged(() -> {
           ImageLayouts.refreshSource(n, value, completed)
         })
@@ -243,10 +246,10 @@ internal class ImageLayouts {
       if !lease.IsComplete { return false }
       let decoded = value.CompletedResult()
       let width = if let image = decoded {
-        image.IsValid && image.Width > 0 ? float32(image.Width) / n.ImagePixelsPerUnit : 0.0F
+        image.IsValid && image.Width > 0 ? float32(image.Width) / value.PixelsPerUnit : 0.0F
       } else { 0.0F }
       let height = if let image = decoded {
-        image.IsValid && image.Height > 0 ? float32(image.Height) / n.ImagePixelsPerUnit : 0.0F
+        image.IsValid && image.Height > 0 ? float32(image.Height) / value.PixelsPerUnit : 0.0F
       } else { 0.0F }
       if n.DecodedImage == decoded
         && n.ImageIntrinsicWidth == width

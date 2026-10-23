@@ -1113,14 +1113,18 @@ internal partial class Reconciler {
       initial || ImageLayouts.Source(n) != nil || i.Path != ""
     }
     let fitChanged = n.ImageFit != i.Fit
-    if n.ImagePixelsPerUnit != i.PixelsPerUnit {
-      n.ImagePixelsPerUnit = i.PixelsPerUnit
-      ImageLayouts.Refresh(n)
-      MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
+    if !sourceChanged {
+      if let binding = ImageLayouts.Binding(n) {
+        if binding.PixelsPerUnit != i.PixelsPerUnit {
+          binding.PixelsPerUnit = i.PixelsPerUnit
+          ImageLayouts.Refresh(n)
+          MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
+        }
+      }
     }
     if sourceChanged {
       if let source = i.Source {
-        ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner)
+        ImageLayouts.ApplySource(n, source, i.Fit, ImageCompleted, Owner, i.PixelsPerUnit)
       } else {
         ImageLayouts.ApplyPath(n, i.Path, i.Fit)
       }

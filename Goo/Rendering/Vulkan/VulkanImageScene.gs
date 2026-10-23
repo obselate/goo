@@ -72,7 +72,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     source ImageSourceBinding?,
     fit ImageFit,
     opacity float32,
-    transformIndex int32, pixelsPerUnit float32 = 1.0F) {
+    transformIndex int32) {
       if disposed || opacity <= 0.0F || bounds.IsEmpty {
         return
       }
@@ -80,7 +80,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         return
       }
       let token = binding.CurrentToken()
-      if EmitCurrent(frame, bounds, token, fit, opacity, transformIndex, pixelsPerUnit)
+      if EmitCurrent(frame, bounds, token, fit, opacity, transformIndex, binding.PixelsPerUnit)
         || (token?.Lease.IsFailed ?? true) {
           binding.Fallback = nil
           return
@@ -94,7 +94,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         VulkanImageSamplerMode.Linear,
         generation)
       if lookup.Renderable {
-        EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, pixelsPerUnit)
+        EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, prior.Binding.PixelsPerUnit)
       }
     }
 
