@@ -11,6 +11,7 @@ namespace GooAndroidSmokeApp;
 public sealed class MainActivity : GooActivity
 {
     private bool inputSmokeStarted;
+    private bool clipboardSmokeStarted;
 
     protected override Goo.Window CreateWindow() => SmokeApplication.CreateWindow();
 
@@ -31,5 +32,15 @@ public sealed class MainActivity : GooActivity
         if (attempt >= 100)
             throw new InvalidOperationException("Android input smoke did not receive a mounted editor.");
         GooView.PostDelayed(() => RunInputSmoke(attempt + 1), 100);
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
+        if (hasFocus && !clipboardSmokeStarted && Intent?.GetBooleanExtra("goo.clipboard_smoke", false) == true)
+        {
+            clipboardSmokeStarted = true;
+            AndroidClipboardSmoke.Run(GooView);
+        }
     }
 }
