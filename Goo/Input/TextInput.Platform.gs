@@ -106,10 +106,11 @@ internal partial class TextInput {
       SelectionEnd: active,
       CompositionStart: compositionStart,
       CompositionEnd: compositionEnd,
-      IsPassword: n.Kind == NodeKind.Entry && n.Password,
+      IsPassword: n.Password || n.InputOptions?.Purpose == InputPurpose.Password,
       IsMultiline: n.Kind == NodeKind.Editor,
       IsReadOnly: n.Kind == NodeKind.Editor && n.EditorReadOnly,
       CaretArea: editorCaretArea(n),
+      InputOptions: n.InputOptions,
     }
   }
 

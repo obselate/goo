@@ -4,11 +4,14 @@ import System
 import System.Diagnostics
 
 /// Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart,
-/// CompositionEnd, IsPassword, IsMultiline, IsReadOnly, and logical CaretArea for one editor.
+/// CompositionEnd, IsPassword, IsMultiline, IsReadOnly, logical CaretArea, and optional InputOptions for one editor.
 /// Password text is available only to the trusted host, which must apply platform privacy rules.
 public data struct FocusedEditorSnapshot(FocusId int64, Text string, SelectionStart int32,
   SelectionEnd int32, CompositionStart int32, CompositionEnd int32, IsPassword bool,
-  IsMultiline bool, IsReadOnly bool, CaretArea ElementRect) { }
+  IsMultiline bool, IsReadOnly bool, CaretArea ElementRect) {
+  /// Gets optional software keyboard and autofill hints.
+  public prop InputOptions TextInputOptions? { get; init; }
+}
 
 /// Routes platform events and semantic editing through the window's existing input system.
 /// Call on the window owner thread. Use Window.Post to dispatch from another thread.
@@ -257,7 +260,7 @@ public class PlatformInput {
     }
     if published == nil && current == nil { return }
     if let prior = published, let next = current {
-      if prior.Equals(next) && !selectionChanged { return }
+      if prior.Equals(next) && !selectionChanged && prior.InputOptions == next.InputOptions { return }
     }
     published = current
     publishedSelection = selection

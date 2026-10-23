@@ -566,6 +566,10 @@ internal partial class Reconciler {
         n.EditorReadOnly = t.ReadOnly
         inputChanged = true
       }
+      if n.InputOptions != t.InputOptions {
+        n.InputOptions = t.InputOptions
+        inputChanged = true
+      }
       if n.Placeholder != t.Placeholder {
         n.Placeholder = t.Placeholder
         paintChanged = true
@@ -650,8 +654,13 @@ internal partial class Reconciler {
   internal func applyEntry(n Node, t TextEntry, initial bool) {
     applyStyle(n, t, t.Focusable, initial)
     var paintChanged = false
-    if n.Password != t.Password {
-      n.Password = t.Password
+    if n.InputOptions != t.InputOptions {
+      n.InputOptions = t.InputOptions
+      MarkEffects(ReconcileEffects.Input)
+    }
+    let password = t.Password || t.InputOptions?.Purpose == InputPurpose.Password
+    if n.Password != password {
+      n.Password = password
       MarkEffects(ReconcileEffects.Accessibility)
       paintChanged = true
     }

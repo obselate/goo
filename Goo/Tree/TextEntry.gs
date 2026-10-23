@@ -20,6 +20,8 @@ public class TextEntry : Blob {
   public prop Placeholder string{ get; init; }
   /// Reports whether the value is presented as protected text.
   public prop Password bool{ get; init; }
+  /// Gets optional software keyboard and autofill hints.
+  public prop InputOptions TextInputOptions? { get; init; }
   /// Gets the action that receives each edited value.
   public prop OnChange Action[string]? { get; init; }
   /// Gets the action that receives the submitted value.

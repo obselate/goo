@@ -17,6 +17,14 @@ internal static class AndroidInputSmoke
         using var entryInfo = new EditorInfo();
         using var entry = view.OnCreateInputConnection(entryInfo)
             ?? throw new InvalidOperationException("Entry input connection is missing.");
+        Require((entryInfo.InputType & InputTypes.MaskVariation) == InputTypes.TextVariationEmailAddress
+            && (entryInfo.ImeOptions & (ImeFlags)ImeAction.ImeMaskAction) == (ImeFlags)ImeAction.Next,
+            "Entry input metadata did not reach EditorInfo.");
+        Require(view.GetAutofillHints()?.SequenceEqual(new[] { "emailAddress" }) == true,
+            "Entry autofill hints did not reach the view.");
+        using (var fill = Android.Views.Autofill.AutofillValue.ForText("filled@example.com"))
+            view.Autofill(fill);
+        AssertEditor(input, "filled@example.com", 18, 18, -1, -1);
         SetText(input, entry, "");
         using (var key = new Android.Views.KeyEvent(0, 0, Android.Views.KeyEventActions.Down,
             Android.Views.Keycode.Numpad1, 0, Android.Views.MetaKeyStates.NumLockOn))

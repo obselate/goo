@@ -49,6 +49,23 @@ internal class TextInputPrimitivesFixtures {
     return true
   }
 
+  func EntryInputOptionsReachPlatformAndProtectPasswords() bool {
+    let resolver = Resolver{}
+    let reconciler = Reconciler{ Res: resolver }
+    let options = TextInputOptions{
+      Purpose: InputPurpose.Password, EnterAction: EnterAction.Next,
+      AutofillHints: []string{ "password" },
+    }
+    let root = reconciler.Mount(TextEntry{ Value: "secret", InputOptions: options })
+    let input = InputCoordinator()
+    if !input.FocusElement(resolver, root) { return false }
+    let first = input.EditorSnapshot()!!
+    if first.InputOptions != options || !first.IsPassword || !root.Password { return false }
+    reconciler.Diff(root, TextEntry{ Value: "secret" })
+    let next = input.EditorSnapshot()!!
+    return next.InputOptions == nil && !next.IsPassword && !root.Password && next.Text == "secret"
+  }
+
   func UndoHistoryDropsOldestGroupsAndPreservesTypingAndRedo() bool {
     for grouped in []bool{ false, true } {
       let document = TextDocument("seed")

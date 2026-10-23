@@ -1,3 +1,13 @@
+## Software keyboard hints
+
+`TextEntry.InputOptions` and `TextEditor.InputOptions` carry `TextInputOptions`
+through `FocusedEditorSnapshot.InputOptions` to embedded hosts. Android maps
+`Purpose`, `EnterAction` and `AutofillHints` to its IME and focused-field autofill
+contracts. Hints do not restrict accepted text. With no options, entries request
+Done and multiline editors request None. Desktop ignores these hints except
+`InputPurpose.Password`, which protects TextEntry like `Password: true`.
+Use TextEntry for masked values, not TextEditor.
+
 ## Pointer click sequences
 
 `PointerEvent.ClickCount` is 1, 2, or 3 on a press and its matching button release;

@@ -172,6 +172,16 @@ surrounding and extracted text returned to the IME.
 
 Each Android move event updates all contact positions before gesture recognition.
 An accepted gesture receives one coherent update per move event.
+Set `TextEntry.InputOptions` or `TextEditor.InputOptions` to `TextInputOptions`
+with `Purpose`, `EnterAction`, and Android `AutofillHints` names such as
+`username`, `password`, or `emailAddress`. Goo maps these to `EditorInfo` and
+the focused view's autofill contract. Hints do not validate input. Autofill
+replaces the focused editor's complete value. This is a focused-field
+integration, not a virtual multi-field autofill form.
+Without options, entries use Done and multiline editors use None.
+`InputPurpose.Password` masks TextEntry like its existing `Password` property.
+Use TextEntry, not TextEditor, for protected values. Desktop hosts ignore the
+other keyboard and autofill hints.
 
 `GooView.DismissKeyboardOnSubmit` defaults to `true`: the IME Done action sends
 the shared Submit command and hides the software keyboard. Set the property to

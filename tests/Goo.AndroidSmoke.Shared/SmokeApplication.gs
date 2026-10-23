@@ -26,6 +26,10 @@ public class SmokeApplication {
 class SmokeCell : Cell, IDisposable {
   internal prop Input PlatformInput? { get; set; }
   private let font FontSource
+  private let entryOptions TextInputOptions = TextInputOptions{
+    Purpose: InputPurpose.Email, EnterAction: EnterAction.Next,
+    AutofillHints: []string{ "emailAddress" },
+  }
   private let controller TextEditorController = TextEditorController(TextDocument("Multiline Goo editor\nCompose, select, and scroll."))
   private let picture ImageSource = ImageSource(2, 2, []uint8{
     239, 68, 68, 255, 34, 197, 94, 255,
@@ -58,6 +62,7 @@ class SmokeCell : Cell, IDisposable {
       Image{ Source: picture, Width: 64, Height: 64 },
       TextEntry{
         Value: entry,
+        InputOptions: entryOptions,
         Height: 48,
         Padding: 10,
         FontSize: 18,
