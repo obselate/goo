@@ -1426,3 +1426,10 @@ jobs:
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - name: Build Android starter from the packed template
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
+        run: |
+          dotnet new install artifacts/android-packages/Goo.Templates.*.nupkg
+          dotnet new goo-android --name AndroidStarter --output artifacts/android-starter --application-id org.goo.androidstarter
+          dotnet build artifacts/android-starter/AndroidStarter.csproj -c Release -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true

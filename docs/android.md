@@ -28,6 +28,53 @@ second control tree, text editor, renderer, or asset API.
 The sample handles orientation and size changes in the existing activity. Goo
 receives a resized viewport while its retained Cells stay mounted.
 
+## Android starter
+
+```sh
+dotnet new install Goo.Templates
+dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
+dotnet build HelloGoo/HelloGoo.csproj -c Release
+```
+
+- Requires the .NET Android workload, its supported Android SDK and JDK.
+- Includes an Activity, a shared G# library, Vulkan manifest rules and ARM64/x64 RIDs.
+- Requires API 33 and a compatible Vulkan 1.3 device.
+- Use `--goo-version` to select the matching Goo and Goo.Android release.
+- Set `AndroidSdkDirectory` and `JavaSdkDirectory` if tool discovery fails.
+
+## Launch and document activation
+
+```csharp
+private static bool subscribed;
+
+protected override Goo.Window CreateWindow()
+{
+    if (!subscribed)
+    {
+        Goo.Window.ApplicationActivated += activation =>
+            Android.Util.Log.Info("Goo", activation.Kind.ToString());
+        subscribed = true;
+    }
+    return MyApplication.CreateWindow();
+}
+```
+
+| Android input | Goo activation | Data |
+| --- | --- | --- |
+| `Goo.Android.Notification` action | `Notification` | `Goo.NotificationId`, `Goo.ActionId`, `Goo.Payload` extras |
+| Launcher | `Launch` | None |
+| Data URI other than `content:` or `file:` | `OpenUri` | `Target` |
+| `content:`, `file:`, or ClipData URIs | `OpenDocuments` | `Documents`, in source order |
+
+- Register once before `CreateWindow()` returns.
+- Cold launch and `OnNewIntent` use the same UI-thread event.
+- `IsInitial` marks the first process launch. Activity recreation does not replay the old Intent.
+- Override `OnNewIntent` only if needed. Call base, then read `LastActivationStatus` for queue or size failures.
+- The starter uses SingleTop. Add your app's URI filters and MIME types to its manifest.
+- Open document URIs with `ContentResolver`, not file paths.
+- Android owns URI grants. Use `TakePersistableUriPermission` only when the sender offers it.
+- Copy data before a temporary URI grant expires.
+
 ## Device requirements
 
 - Android 13 / API 33 or newer, with a Vulkan 1.3 implementation and Goo's
