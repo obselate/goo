@@ -21,6 +21,8 @@ internal class ElementHandleFixtures {
       cell.Handle.JumpTo(0.0, 12000.0)
       window.UpdateTree(0.01, 0.0, false)
       if cell.Builds.Count != 0 { return false }
+      window.PlatformInput.PointerWheel(5.0F, 5.0F, 0.0F, -3.0F, KeyModifiers{})
+      if cell.Builds.Count != 0 { return false }
       let bounds = cell.Handle.BorderBox
       if bounds.Height != 60.0 || cell.Builds.Count != 5 || !cell.Handles[600].IsMounted { return false }
       cell.Builds.Clear()

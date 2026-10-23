@@ -81,8 +81,9 @@ internal partial class PointerInput {
   internal func ConsumeScrollRectsDirty() bool -> PointerScrollStates.ConsumeDirty(this)
 
   internal func CanDeferVirtualization(e QueuedPointerEvent) bool ->
-    e.Kind == PointerEventKind.Move && e.Device == PointerDevice.Mouse
-      && PointerScrollStates.Drag(mouse) != nil
+    e.Kind == PointerEventKind.Wheel
+      || (e.Kind == PointerEventKind.Move && e.Device == PointerDevice.Mouse
+        && PointerScrollStates.Drag(mouse) != nil)
 
   internal func ResetScrollbars(resolver Resolver) {
     clearScrollDrag()
