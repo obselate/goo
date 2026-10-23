@@ -34,6 +34,7 @@ internal unsafe partial class ClipboardTransfer {
 
     internal func Query() ClipboardFormats {
       if !Supported() { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}) }
+      if OperatingSystem.IsWindows() { return WindowsQueryFormats() }
       SDL.ClearError()
       var count nuint
       let native = SDL.GetClipboardMimeTypes(&count)
