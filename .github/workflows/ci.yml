@@ -20,6 +20,13 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: 1
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  GOO_LINUX_APT_PACKAGES: >-
+    binutils clang cmake curl ninja-build pkg-config zlib1g-dev
+    fonts-dejavu-core fonts-noto-color-emoji
+    libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
+    libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
+    libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
+    wayland-protocols weston
 
 jobs:
   quality:
@@ -313,17 +320,30 @@ jobs:
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
 
+      - &linux-apt-update
+        name: Update Linux package lists
+        id: linux-apt
+        run: |
+          sudo apt-get update
+          mkdir -p "$RUNNER_TEMP/goo-apt-archives"
+          sudo apt-get --print-uris --yes --no-install-recommends install $GOO_LINUX_APT_PACKAGES \
+            > "$RUNNER_TEMP/goo-apt-packages"
+          read -r key _ < <(sha256sum "$RUNNER_TEMP/goo-apt-packages")
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - &linux-apt-cache
+        name: Restore Linux package archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/goo-apt-archives/*.deb
+          key: apt-linux-x64-${{ steps.linux-apt.outputs.key }}
+
       - &linux-dependencies
         name: Install Linux build and Wayland dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            binutils clang cmake curl ninja-build pkg-config zlib1g-dev \
-            fonts-dejavu-core fonts-noto-color-emoji \
-            libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri \
-            libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev \
-            libxkbcommon-dev mesa-vulkan-drivers vulkan-tools \
-            wayland-protocols weston
+            -o Dir::Cache::archives="$RUNNER_TEMP/goo-apt-archives" \
+            $GOO_LINUX_APT_PACKAGES
 
       - &linux-vulkan-driver
         name: Pin Vulkan CPU driver
@@ -736,6 +756,8 @@ jobs:
         with:
           global-json-file: global.json
 
+      - *linux-apt-update
+      - *linux-apt-cache
       - *linux-dependencies
       - *linux-vulkan-driver
       - *linux-shader-toolchain
@@ -799,6 +821,8 @@ jobs:
       - *linux-build-download
       - *linux-build-restore
       - *linux-dotnet
+      - *linux-apt-update
+      - *linux-apt-cache
       - *linux-dependencies
       - *linux-vulkan-driver
       - *linux-shader-toolchain
