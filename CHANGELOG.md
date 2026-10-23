@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.12.0 - 2026-10-23
+
+- Fix an early Wayland popup presentation that could close the display connection.
+- Breaking: sound moves into the optional Goo.Audio package. Add a Goo.Audio reference if your app plays sounds. It has explicit statuses, bounded streaming, live gain, pause/resume and extended WAV decoding.
+- Add Android playback to Goo.Audio.
+- Add optional platform click and alert sounds.
+- Add output-device selection to Goo.Audio.
+- Reduce paint cost for large paths 4x to 14x without changing encoded band output.
+- Keep retained paths resident when fresh paths need cache space mid-frame, reclaiming only what is needed, least recently used first.
+- Cut GPU paint cost for large retained paths with density-aware band counts (a 10,000-point path: 75 to 28 ms GPU per frame).
+
 ## 0.11.0 - 2026-10-23
 
 - Drain Vulkan work before process exit, fixing intermittent crashes when an app returns from Main with a window open.
