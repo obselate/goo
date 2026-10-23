@@ -1957,7 +1957,7 @@ jobs:
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
         run: |
-          cp artifacts/main-release/packages/Goo.[0-9]*.nupkg artifacts/main-release/packages/Goo.Gestures.*.nupkg artifacts/android-packages/
+          cp artifacts/main-release/packages/Goo.[0-9]*.nupkg artifacts/main-release/packages/Goo.Gestures.*.nupkg artifacts/main-release/packages/Goo.Templates.*.nupkg artifacts/android-packages/
           python3 - <<'PYCONFIG'
           import shutil
           from pathlib import Path
