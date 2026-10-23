@@ -77,6 +77,7 @@ public data struct WindowMetrics {
   private var framebufferHeight int32
   private var displayScaleX float64
   private var displayScaleY float64
+  private var uiScale float32
 
   /// Gets the reported logical width.
   public prop LogicalWidth int32{ get -> logicalWidth init -> logicalWidth = value }
@@ -90,6 +91,8 @@ public data struct WindowMetrics {
   public prop DisplayScaleX float64{ get -> displayScaleX init -> displayScaleX = value }
   /// Gets the vertical framebuffer-to-logical scale.
   public prop DisplayScaleY float64{ get -> displayScaleY init -> displayScaleY = value }
+  /// Gets the retained UI scale. A default snapshot uses 1.
+  public prop UiScale float32{ get -> uiScale == 0.0F ? 1.0F : uiScale init -> uiScale = value }
 }
 
 internal struct WindowNotifications {

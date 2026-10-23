@@ -308,7 +308,7 @@ internal partial class VulkanSceneCompiler {
             ImageLayouts.Binding(node),
             node.ImageFit,
             opacity,
-            transformIndex)
+            transformIndex, node.ImagePixelsPerUnit)
           frame.SetActiveClipChain(shapePaintParentChainId)
         }
       }

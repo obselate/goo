@@ -16,7 +16,7 @@ public partial class Window {
 
   internal func CurrentWindowMetrics() WindowMetrics {
     if let reported = MetricSubscriptions.ReportedWindowMetrics(this) {
-      return reported
+      return WindowMetrics{...reported, UiScale: UiScale}
     }
     var logicalWidth = Width
     var logicalHeight = Height
@@ -28,8 +28,9 @@ public partial class Window {
       nativeWidth = native.FramebufferWidth
       nativeHeight = native.FramebufferHeight
     }
-    return ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
+    let metrics = ResolveWindowMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight,
       host?.DisplayScale ?? 0.0F)
+    return WindowMetrics{...metrics, UiScale: UiScale}
   }
 
   internal func FocusElement(n Node) bool {

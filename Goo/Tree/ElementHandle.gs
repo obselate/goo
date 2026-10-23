@@ -817,6 +817,7 @@ private func sameElementRect(left ElementRect, right ElementRect) bool -> left.X
 private func sameWindowMetrics(left WindowMetrics, right WindowMetrics) bool -> left.LogicalWidth == right.LogicalWidth && left.LogicalHeight == right.LogicalHeight
   && left.FramebufferWidth == right.FramebufferWidth && left.FramebufferHeight == right.FramebufferHeight
   && left.DisplayScaleX == right.DisplayScaleX && left.DisplayScaleY == right.DisplayScaleY
+  && left.UiScale == right.UiScale
 
 internal class TextGeometryQueries {
   shared {
