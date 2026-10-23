@@ -224,9 +224,21 @@ Source:
 
 Holds platform preferences independently of framebuffer density. Nil values mean the host cannot report that preference.
 
+### `AccentColor`
+
+Gets the system accent color, or nil when unavailable.
+
+### `EventSoundsEnabled`
+
+Gets whether UI and event sounds are enabled, or nil when unavailable.
+
 ### `HighContrast`
 
 Gets whether increased contrast is requested, or nil when unavailable.
+
+### `PreferredLocales`
+
+Gets an immutable, ordered list of preferred BCP-47 language tags, or nil when unavailable.
 
 ### `ReducedMotion`
 
