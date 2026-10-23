@@ -87,9 +87,9 @@ window from retaining the input block.
 ## Platform preferences
 
 `Window.Preferences` is an immutable `PlatformPreferences` snapshot.
-`Theme` is `Unknown`, `Light` or `Dark`. `ReducedMotion`, `HighContrast`,
+`Theme` is `Unknown`, `Light` or `Dark`. `AccentColor`, `ReducedMotion`, `HighContrast`,
 `EventSoundsEnabled` and `TextScaleFactor` are nullable so unsupported values
-remain distinct from false or the default scale. Text scale must be finite and positive and is independent
+remain distinct from an explicit value. Text scale must be finite and positive and is independent
 of display density. It affects text measurement, shaping and geometry, including
 explicit font sizes and styled spans, without changing declared sizes or DPI.
 
@@ -104,15 +104,17 @@ before or after attaching the window.
 
 Desktop theme follows SDL system theme notifications. The desktop event loop also
 refreshes available preferences at most once per second. Windows reports client
-area animation, high contrast and whether the selected sound scheme is not
-`No Sounds`. macOS reports reduced motion, increased contrast and the global
-`com.apple.sound.uiaudio.enabled` preference. Linux reads GNOME `event-sounds`
-through the settings portal when exposed and processes its change notifications.
-KDE has no separate sound preference reader. Desktop text scale remains unknown
-when the backend cannot report it. Android reports theme, font scale, disabled
-animations and `SOUND_EFFECTS_ENABLED` on attach, resume and configuration changes.
-Android also observes changes to the sound setting. Other unsupported preferences
-remain unknown. Applications choose whether to play UI or event sounds from
+area animation, high contrast, the DWM colorization accent and whether the selected
+sound scheme is not `No Sounds`. macOS reports reduced motion, increased contrast,
+`NSColor.controlAccentColor` in sRGB and the global `com.apple.sound.uiaudio.enabled`
+preference. Linux reads GNOME `event-sounds` and the appearance `accent-color` and
+`contrast` settings through the settings portal when exposed, and processes its
+change notifications. KDE has no separate sound preference reader. Desktop text
+scale remains unknown when the backend cannot report it. Android reports theme,
+font scale, disabled animations, the theme's `colorAccent`, high text contrast
+and `SOUND_EFFECTS_ENABLED` on attach, resume and configuration changes. Android
+also observes changes to sound and high text contrast settings. Other unsupported
+preferences remain unknown. Applications choose whether to play UI or event sounds from
 `EventSoundsEnabled`. It does not control media playback or system volume.
 
 ## Native owned and modal windows
