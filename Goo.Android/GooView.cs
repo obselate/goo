@@ -14,6 +14,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 {
     private static readonly ConditionalWeakTable<global::Goo.Window, GooView> nativeOwners = new();
     private readonly AndroidVulkanHost host;
+    internal AndroidClipboard Clipboard { get; }
     private readonly Handler handler = new(Looper.MainLooper!);
     private readonly FrameCallback frameCallback;
     private readonly PreferenceObserver preferenceObserver;
@@ -40,6 +41,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (Looper.MyLooper() != Looper.MainLooper)
             throw new InvalidOperationException("Create GooView on the Android main thread.");
         Window = window;
+        Clipboard = new AndroidClipboard(this);
         host = new AndroidVulkanHost(this);
         frameCallback = new FrameCallback(this);
         scheduleFrame = new Java.Lang.Runnable(ScheduleFrame);
@@ -583,6 +585,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             }
             NativeContextMenu?.OwnerClosed();
             CancelFrames();
+            Clipboard.Dispose();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
             Context!.ContentResolver!.UnregisterContentObserver(preferenceObserver);
             preferenceObserver.Dispose();
