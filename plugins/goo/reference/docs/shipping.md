@@ -45,6 +45,69 @@ Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING
 It does not automatically embed app-owned assets. Single-file publishing is not
 validated for this sample.
 
+## Linux AppImage
+
+`goo package` is part of the optional `Goo.DevTools` dotnet tool. It publishes a
+Release, self-contained NativeAOT app and stages the complete publish tree.
+Normal build, run and publish behavior is unchanged. Packaging currently requires
+Linux x64 and the NativeAOT build tools. No Flatpak or X11 support is added.
+
+Set these properties in the application project:
+
+```xml
+<PropertyGroup>
+  <Product>My App</Product>
+  <Version>1.0.0</Version>
+  <GooPackageId>org.example.myapp</GooPackageId>
+  <GooPackageIcon>Assets/icon.png</GooPackageIcon>
+</PropertyGroup>
+```
+
+Use a stable reverse-DNS ID with lowercase letters, digits, dots and hyphens.
+`Version` must contain three numeric components. `AssemblyName` must be a portable
+filename containing only letters, digits, dots, underscores and hyphens.
+The icon must be an existing PNG, relative to the project directory.
+App-owned assets and notices must already have `CopyToPublishDirectory` metadata.
+They remain beside the executable, including XML data and nested directories.
+
+Install the tool, then fetch the pinned AppImage creator and static type-2 runtime.
+From a Goo source checkout:
+
+```sh
+bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh "$HOME/.cache/goo-appimage"
+export GOO_APPIMAGETOOL="$HOME/.cache/goo-appimage/appimagetool-x86_64.AppImage"
+export GOO_APPIMAGE_RUNTIME="$HOME/.cache/goo-appimage/runtime-x86_64"
+goo package --project MyApp.gsproj --target linux --output artifacts/packages
+```
+
+The fetch script is also shipped as `Packaging/fetch-appimage-tools.sh` beside the
+installed tool DLL. It downloads fixed GitHub asset IDs and checks SHA-256 before
+making the creator executable. Packaging checks the same hashes and never downloads
+tools or a moving latest runtime itself.
+
+| Input | SHA-256 |
+| --- | --- |
+| [appimagetool asset 610035789](https://api.github.com/repos/AppImage/appimagetool/releases/assets/610035789) | `95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6` |
+| [type-2 runtime asset 657374641](https://api.github.com/repos/AppImage/type2-runtime/releases/assets/657374641) | `617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46` |
+
+Output is `Id-Version-linux-x64.AppImage`, plus a `.symbols.zip` if the publish
+contains debug symbols. A relative output path is relative to the project.
+`--json` reports artifact paths and unsigned status. Expected failures include
+`unsupported-target`, `missing-tool`, `invalid-tool`, `invalid-package-metadata`,
+`publish-failed`, `stage-failed` and `package-failed`.
+
+Run the AppImage from another directory to check asset paths. The runtime does
+not need a separate `libfuse2` install. If FUSE mounts are prohibited, use
+`./MyApp.AppImage --appimage-extract-and-run`. The mounted app is read-only.
+Keep writable application data outside the bundle.
+
+AppImage is not a sandbox, updater, publisher certificate or desktop installation
+service. This command does not install launchers or file/URI associations.
+The host still needs the supported glibc, native Wayland session, fonts, Vulkan
+loader and GPU driver. Packaging does not expand Goo's platform requirements.
+Keep all required application and dependency license notices in the published
+content, including notices required for the embedded AppImage runtime.
+
 ## Publish presets
 
 New starter apps include opt-in profiles in `Properties/PublishProfiles`.
