@@ -134,7 +134,9 @@ public class PublicApiTests
 
     private static IEnumerable<Type> ApiTypes()
     {
-        return new[] { typeof(Window).Assembly, typeof(NativeMenus).Assembly, typeof(Goo.Images.ImageVariants).Assembly }
+        return new[] { typeof(Window).Assembly, typeof(NativeMenus).Assembly, typeof(Goo.Images.ImageVariants).Assembly,
+                typeof(Goo.SpellCheck.SpellCheckSession).Assembly, typeof(Goo.SpellCheck.HunspellSpellingService).Assembly,
+                typeof(Goo.Printing.Printing).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !IsPackageContainer(type))
             .Where(type => !IsTestFixture(type))
