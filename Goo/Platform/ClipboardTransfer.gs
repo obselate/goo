@@ -111,7 +111,11 @@ internal unsafe partial class ClipboardTransfer {
       SDL.ClearError()
       var size nuint
       let native = SDL.GetClipboardData(formatType, &size)
-      if native == nil { throw IOException("Native clipboard read failed: " + (SDL.GetErrorS() ?? "")) }
+      if native == nil {
+        let error = SDL.GetErrorS() ?? ""
+        if size == nuint(0) && error == "" { return Array.Empty[uint8]() }
+        throw IOException("Native clipboard read failed: " + error)
+      }
       try {
         if size > nuint(limit) { throw ClipboardLimitException("Clipboard payload exceeds its byte budget") }
         let bytes = [int32(size)]uint8
