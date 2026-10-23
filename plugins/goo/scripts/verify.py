@@ -85,6 +85,29 @@ async def main():
                 "templates/Goo.Templates/content/GooStarter.gsproj",
             }
             assert set(starter["provenance"]["generatedFiles"]) == {"Program.gs", "AgentProbe.gsproj"}
+            for relative in starter["provenance"]["sourceFiles"]:
+                template = checkout / relative
+                template.parent.mkdir(parents=True, exist_ok=True)
+                template.write_bytes((ROOT / "reference" / relative).read_bytes())
+            linter = checkout / "tools/Goo.Gslint/Goo.Gslint.csproj"
+            compiler = checkout / "artifacts/gsharp/compiler/gsc.dll"
+            for path in (linter, compiler):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+            untrusted = data(await call("goo_starter", name="AgentProbe", repository=repository))
+            assert untrusted["lint"] == "unavailable", untrusted
+            assert untrusted["build"] == starter["build"], untrusted
+            configured = StdioServerParameters(command=parameters.command, args=parameters.args,
+                                              env=dict(env, GOO_SOURCE_ROOT=repository))
+            async with stdio_client(configured) as configured_streams:
+                async with ClientSession(*configured_streams) as configured_session:
+                    await configured_session.initialize()
+                    for args in ({}, {"repository": repository}):
+                        result = await configured_session.call_tool("goo_starter", dict(name="AgentProbe", **args))
+                        assert not result.isError, result
+                        trusted = data(result)
+                        assert trusted["lint"].startswith(f"dotnet run --project {linter} "), trusted
+                        assert trusted["build"] == starter["build"] + f" -p:GsharpCompilerFullPath={compiler}", trusted
             for name, content in starter["files"].items():
                 (app / name).write_text(content)
             build = subprocess.run(["dotnet", "build", str(app / "AgentProbe.gsproj"), "-c", "Release", "--nologo", "-warnaserror"], capture_output=True, text=True, timeout=180)
