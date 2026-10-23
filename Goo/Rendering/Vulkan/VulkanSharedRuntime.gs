@@ -28,6 +28,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
   private let graphicsTimeline VkSemaphore
   private var lastTracedGraphicsSerial uint64
   private let queueWorker VulkanQueueWorker
+  private let processExit EventHandler
   private let graphicsFamilyIndex uint32
   private let presentFamilyIndex uint32
   private let deviceWaitIdleAddress nint
@@ -529,6 +530,11 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       deviceDestroyAvailable = nativeDeviceDestroyAvailable
       generation = nativeGeneration
       references = 1
+      processExit = (_, _) -> {
+        queueWorker.Dispose()
+        WaitDeviceIdleResult()
+      }
+      AppDomain.CurrentDomain.ProcessExit += processExit
     }
 
   internal prop Instance VkInstance{ get -> instance }
@@ -817,6 +823,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       return
     }
     disposed = true
+    AppDomain.CurrentDomain.ProcessExit -= processExit
     try { queueWorker.Dispose() } catch (cleanup Exception) { }
     try { pathResources.Collect(uint64.MaxValue) } catch (cleanup Exception) { }
     try { pathResources.Dispose() } catch (cleanup Exception) { }
@@ -844,6 +851,7 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
       return
     }
     disposed = true
+    AppDomain.CurrentDomain.ProcessExit -= processExit
     references = 0
     try { queueWorker.Dispose() } catch (cleanup Exception) { }
     try { pathResources.DisposeAfterDeviceLoss() } catch (cleanup Exception) { }
