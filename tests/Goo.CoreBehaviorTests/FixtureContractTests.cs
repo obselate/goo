@@ -80,6 +80,7 @@ public sealed class FixtureContractTests
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.ResolvedSemanticsAndEditorPrivacyContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.RuntimeOverrideInheritanceAndResetContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.SnapshotIdentityAndDeltaContract));
+        yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.PerPumpWorkCountersContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.ArbitrationReentrantResetAndCaptureCleanupContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.CallbackFailureTerminatesAndDoesNotRetry));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.CancellationContactAndCleanupContract));

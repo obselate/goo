@@ -308,11 +308,13 @@ internal partial class Reconciler {
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent()
     try {
+      let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
       validateChildren(children, scratchScope)
       for child in children {
         let mounted = Mount(child)
         mounted.Parent = n
         n.Children.Add(mounted)
+        if virtualRows { FrameWorkCounters.VirtualMounts++ }
       }
     } catch (error Exception) {
       NodeLifecycle.DisposeTree(n)
@@ -1260,6 +1262,7 @@ internal partial class Reconciler {
     let next = scratchScope.Next
     let provisional = scratchScope.Provisional
     let retire = scratchScope.Retire
+    let virtualRows = FrameRecorder.Current != nil && Virtualization.State(n) != nil
     var childrenChanged = false
     var committed = false
     var i int32
@@ -1314,10 +1317,15 @@ internal partial class Reconciler {
               markStructure()
               childrenChanged = true
             }
+            if virtualRows {
+              if child == hit { FrameWorkCounters.VirtualReuses++ }
+              else { FrameWorkCounters.VirtualMounts++ }
+            }
             next.Add(child)
           } else {
             let oldHandle = ElementHandles.Current(hit)
             let child = replace(hit, blob)
+            if virtualRows { FrameWorkCounters.VirtualMounts++ }
             if let handle = oldHandle {
               scratchScope.HandleReplacements.Add(ChildDiffHandleReplacement{
                 Old: hit,
@@ -1332,6 +1340,7 @@ internal partial class Reconciler {
           }
         } else {
           let child = Mount(blob)
+          if virtualRows { FrameWorkCounters.VirtualMounts++ }
           provisional.Add(child)
           markStructure()
           childrenChanged = true

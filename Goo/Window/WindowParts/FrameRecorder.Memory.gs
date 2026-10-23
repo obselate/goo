@@ -22,9 +22,11 @@ internal partial class FrameRecorder {
     }
 
     internal func Counter(name string, source string, value uint64?, ticks int64,
-        validity string = "available", gcIndex int64? = nil, unit string = "bytes") {
+        validity string = "available", gcIndex int64? = nil, unit string = "bytes",
+        context FrameTraceContext? = nil) {
         Publish(FrameTraceRecord{
             Kind: FrameTraceKind.Counter, Ticks: ticks - Origin,
+            Context: context ?? FrameTraceContext{},
             EventId: VulkanDiagnosticEventIds.LiveMemory, Category: VulkanDiagnosticCategories.Runtime,
             ThreadId: Environment.CurrentManagedThreadId, Name: name, Source: source,
             Value0: value, SampleTicks: ticks - Origin, GcIndex: gcIndex,
