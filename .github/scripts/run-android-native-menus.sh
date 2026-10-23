@@ -52,13 +52,13 @@ EOF
     -no-direct-adb -adb-path "$adb" > "$work/logs/emulator.log" 2>&1 &
 emulator_pid=$!
 cleanup() {
-    timeout 15 "$adb" -P 5042 -s emulator-5564 logcat -d > "$work/logs/logcat.txt" 2>&1 || true
-    timeout 15 "$adb" -P 5042 -s emulator-5564 shell cat /data/local/tmp/goo-native-menu.xml > "$work/logs/menu.xml" 2>&1 || true
-    timeout 15 "$adb" -P 5042 -s emulator-5564 shell dumpsys activity activities > "$work/logs/activities.txt" 2>&1 || true
-    timeout 15 "$adb" -P 5042 -s emulator-5564 exec-out screencap -p > "$work/logs/screen.png" 2>/dev/null || true
-    timeout 10 "$adb" -P 5042 -s emulator-5564 emu kill >/dev/null 2>&1 || true
-    kill "$emulator_pid" 2>/dev/null || true
-    wait "$emulator_pid" 2>/dev/null || true
+    timeout --kill-after=5 15 "$adb" -P 5042 -s emulator-5564 logcat -d > "$work/logs/logcat.txt" 2>&1 || true
+    timeout --kill-after=5 15 "$adb" -P 5042 -s emulator-5564 shell cat /data/local/tmp/goo-native-menu.xml > "$work/logs/menu.xml" 2>&1 || true
+    timeout --kill-after=5 15 "$adb" -P 5042 -s emulator-5564 shell dumpsys activity activities > "$work/logs/activities.txt" 2>&1 || true
+    timeout --kill-after=5 15 "$adb" -P 5042 -s emulator-5564 exec-out screencap -p > "$work/logs/screen.png" 2>/dev/null || true
+    timeout --kill-after=5 10 "$adb" -P 5042 -s emulator-5564 emu kill >/dev/null 2>&1 || true
+    kill -KILL "$emulator_pid" 2>/dev/null || true
+    timeout --kill-after=5 10 "$adb" -P 5042 kill-server >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 python3 - "$adb" "$apk" <<'PY'
@@ -89,6 +89,8 @@ started = run('shell', 'am', 'start', '-n', 'org.goo.androidsmoke/org.goo.androi
     '--ez', 'goo.native_menu_smoke', 'true')
 if started.returncode or 'Error' in started.stderr:
     raise RuntimeError(started.stdout + started.stderr)
+until(lambda: 'selection-ready' in run('logcat', '-d', '-s', 'GooNativeMenus:I', '*:S').stdout,
+    'Android native menu selection did not become ready')
 def item(text):
     run('shell', 'uiautomator', 'dump', '/data/local/tmp/goo-native-menu.xml')
     xml = run('shell', 'cat', '/data/local/tmp/goo-native-menu.xml').stdout
