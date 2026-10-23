@@ -3,6 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Runtime.CompilerServices
+import System.Runtime.InteropServices
 
 internal sealed class PathBandEncoder {
   shared {
@@ -197,8 +198,8 @@ internal sealed class PathBandEncoder {
           for i in 0 ... candidateScratch.Count {
             reverseCandidateScratch.Add(candidateScratch[i])
           }
-          sortCandidates(candidateScratch, false)
-          sortCandidates(reverseCandidateScratch, true)
+          sortCandidates(CollectionsMarshal.AsSpan(candidateScratch), false)
+          sortCandidates(CollectionsMarshal.AsSpan(reverseCandidateScratch), true)
           var splitMinimum = rayMinimum
           var splitMaximum = rayMaximum
           if candidateScratch.Count != 0 {
@@ -234,9 +235,9 @@ internal sealed class PathBandEncoder {
         }
       }
 
-    private func sortCandidates(values List[PathBandCandidate], reverse bool) {
-      var root = values.Count / 2
-      var end = values.Count
+    private func sortCandidates(values Span[PathBandCandidate], reverse bool) {
+      var root = values.Length / 2
+      var end = values.Length
       while end > 1 {
         if root > 0 {
           root--
