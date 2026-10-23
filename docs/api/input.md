@@ -4,6 +4,25 @@ Generated from `Goo.xml`. Source declarations supply type ownership and XML-emit
 
 Source: [`Goo/Input`](../../Goo/Input)
 
+## Software keyboard hints
+
+```gsharp
+TextEntry{
+    InputOptions: TextInputOptions{
+        Purpose: InputPurpose.Email,
+        EnterAction: EnterAction.Next,
+        AutofillHints: []string{"emailAddress"},
+    },
+}
+```
+
+- TextEntry and TextEditor pass these hints through `FocusedEditorSnapshot.InputOptions`.
+- Android uses them for the keyboard and focused-field autofill.
+- Hints do not restrict accepted text.
+- Without options, entries request Done and multiline editors request None.
+- Desktop ignores the hints except TextEntry password protection.
+- Use TextEntry with `InputPurpose.Password` or `Password: true` for masked values.
+
 ## Pointer click sequences
 
 `PointerEvent.ClickCount` is 1, 2, or 3 on a press and its matching button release;
@@ -531,6 +550,47 @@ Gets the callback that selects one allowed effect or rejects the drag.
 
 Gets whether this target blocks ancestor fallback when its query rejects a drag.
 
+## `EnterAction`
+
+Source:
+
+- [`TextInputOptions.gs`](../../Goo/Input/TextInputOptions.gs)
+
+Selects the software keyboard's enter action.
+
+### Values
+
+- `Done`
+- `Go`
+- `Next`
+- `Search`
+- `Send`
+- `None`
+
+### `Done`
+
+Submits and finishes editing.
+
+### `Go`
+
+Submits navigation input.
+
+### `Next`
+
+Moves focus to the next field.
+
+### `None`
+
+Requests no submit action.
+
+### `Search`
+
+Submits a search.
+
+### `Send`
+
+Submits a message.
+
 ## `FocusEvent`
 
 Source:
@@ -597,7 +657,11 @@ Source:
 
 - [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
 
-Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, and logical CaretArea for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
+Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, logical CaretArea, and optional InputOptions for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
+
+### `InputOptions`
+
+Gets optional software keyboard and autofill hints.
 
 ## `GestureCancelReason`
 
@@ -852,6 +916,57 @@ Provides real contact samples through PointerAt.
 ### `Trackpad`
 
 Provides cumulative scale and a pointer anchor without contact samples.
+
+## `InputPurpose`
+
+Source:
+
+- [`TextInputOptions.gs`](../../Goo/Input/TextInputOptions.gs)
+
+Selects the software keyboard's input purpose.
+
+### Values
+
+- `Text`
+- `Email`
+- `Url`
+- `Number`
+- `Decimal`
+- `Phone`
+- `Search`
+- `Password`
+
+### `Decimal`
+
+Requests a decimal number.
+
+### `Email`
+
+Requests an email address.
+
+### `Number`
+
+Requests an integer.
+
+### `Password`
+
+Requests protected text. Use TextEntry for masked display.
+
+### `Phone`
+
+Requests a telephone number.
+
+### `Search`
+
+Requests search text.
+
+### `Text`
+
+Requests ordinary text.
+
+### `Url`
+
+Requests a URL.
 
 ## `Key`
 
@@ -1410,6 +1525,30 @@ Source:
 - [`TextInputEvent.gs`](../../Goo/Input/TextInputEvent.gs)
 
 Describes transient IME composition Text and its selected UTF-16 SelectionStart and SelectionLength.
+
+## `TextInputOptions`
+
+Source:
+
+- [`TextInputOptions.gs`](../../Goo/Input/TextInputOptions.gs)
+
+Supplies optional platform editing hints. Desktop hosts ignore these except entry password protection.
+
+### `new`
+
+Creates default text input options.
+
+### `AutofillHints`
+
+Gets platform autofill hint names, such as username, password or emailAddress.
+
+### `EnterAction`
+
+Gets the enter action. Defaults to Done.
+
+### `Purpose`
+
+Gets the keyboard purpose. Defaults to Text.
 
 ## `WheelEvent`
 

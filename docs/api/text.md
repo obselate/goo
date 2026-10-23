@@ -24,6 +24,14 @@ Creates a font source for a face and variation set.
 
 Releases the source and unregisters it when necessary.
 
+### `FromPath(string,int32,bool,string)`
+
+Creates an unregistered font source by reading a file of at most 64 MiB. The source owns the bytes and does not retain an open file.
+
+### `FromPath(string,int32,bool,string,System.UInt32,FontVariation[])`
+
+Creates an unregistered file-backed font source for a face and variation set. Reads at most 64 MiB and owns the bytes independently of the file.
+
 ### `Register`
 
 Registers the source with Goo's font registry.

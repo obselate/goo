@@ -1000,7 +1000,7 @@ Sets whether items wrap onto multiple lines.
 
 ### `FontFamily`
 
-Sets the preferred font family.
+Sets preferred font family names, never file paths. Register files with FontSource.FromPath.
 
 ### `FontSize`
 

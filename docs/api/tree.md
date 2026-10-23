@@ -1121,6 +1121,10 @@ Gets the per-view editing controller.
 
 Gets the current-line highlight color.
 
+### `InputOptions`
+
+Gets optional software keyboard and autofill hints.
+
 ### `Layers`
 
 Gets the ordered presentation layers.
@@ -1172,6 +1176,10 @@ Initializes an empty text entry with the default selection highlight.
 ### `Controlled`
 
 Applies Value while focused without reporting an edit. Defaults to false. Preserves an IME composition when Value matches its committed text; a replacement cancels it.
+
+### `InputOptions`
+
+Gets optional software keyboard and autofill hints.
 
 ### `OnChange`
 
