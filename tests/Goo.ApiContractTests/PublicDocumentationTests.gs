@@ -186,6 +186,9 @@ class PublicDocumentationTests {
             "M:Goo.ApplicationActivation.#ctor",
             "M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)",
             "M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)",
+            "M:Goo.WindowPlacement.#ctor",
+            "M:Goo.Window.CapturePlacement",
+            "M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)",
             "M:Goo.ElementHandle.CancelGestures",
             "M:Goo.GestureInput.PointerAt(System.Int32)",
             "M:Goo.GestureRecognizer.CreateSession",
@@ -621,6 +624,11 @@ class PublicDocumentationTests {
             "F:Goo.GestureInputKind.Move",
             "F:Goo.GestureInputKind.Up",
             "F:Goo.GestureInputKind.Deadline",
+            "F:Goo.WindowPlacementFields.None",
+            "F:Goo.WindowPlacementFields.NormalSize",
+            "F:Goo.WindowPlacementFields.Position",
+            "F:Goo.WindowPlacementFields.State",
+            "F:Goo.WindowPlacementFields.FullscreenDisplay",
             "F:Goo.GestureDecision.Pending",
             "F:Goo.GestureDecision.Accept",
             "F:Goo.GestureDecision.Recognize",
@@ -741,6 +749,8 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.Window.CapturePlacement"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
+            ["M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)"] = DocumentationShape(
                 []string{"initial"},
                 System.Array.Empty[string](),
