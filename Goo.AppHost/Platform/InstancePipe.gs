@@ -94,6 +94,12 @@ internal class InstancePipe : IDisposable {
             }
             var election IDisposable? = nil
             try {
+                var native []ApplicationActivation = Array.Empty[ApplicationActivation]()
+                if OperatingSystem.IsMacOS() {
+                    if Window.PrepareNativeApplicationActivation(out native) != WindowOperationResult.Accepted {
+                        return SingleInstanceResult(SingleInstanceStatus.Failed, error: "Native application activation could not initialize")
+                    }
+                }
                 let address = InstanceScope.Create(applicationId)
                 election = InstanceLock.Acquire(address.LeasePath)
                 if let owned = election {
@@ -103,25 +109,31 @@ internal class InstancePipe : IDisposable {
                     election = nil
                     return SingleInstanceResult(SingleInstanceStatus.Primary, lease)
                 }
-                var encoded MemoryStream
-                try { encoded = ActivationWire.Encode(activation) }
-                catch (_ ArgumentException) {
-                    return SingleInstanceResult(SingleInstanceStatus.Rejected, error: "Activation data is invalid or exceeds its limits")
-                }
-                using let data = encoded
                 using let deadline = CancellationTokenSource(timeoutMilliseconds)
-                using let client = NamedPipeClientStream(".", address.PipeName, PipeDirection.InOut,
-                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly)
-                await client.ConnectAsync(timeoutMilliseconds, deadline.Token).ConfigureAwait(false)
-                let header = [4]uint8
-                BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(), int32(data.Length))
-                await client.WriteAsync(header.AsMemory(), deadline.Token).ConfigureAwait(false)
-                await client.WriteAsync(data.GetBuffer().AsMemory(0, int32(data.Length)), deadline.Token).ConfigureAwait(false)
-                await client.ReadExactlyAsync(header.AsMemory(0, 1), deadline.Token).ConfigureAwait(false)
-                if header[0] == uint8(ActivationPostStatus.Accepted) {
-                    return SingleInstanceResult(SingleInstanceStatus.Forwarded)
+                let nativeToken = if OperatingSystem.IsLinux() { Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN") }
+                    else { nil }
+                let count = if native.Length == 0 { 1 } else { native.Length }
+                for i in 0 ... count {
+                    var encoded MemoryStream
+                    try {
+                        encoded = ActivationWire.Encode(if native.Length == 0 { activation } else { native[i] }, nativeToken)
+                    } catch (_ ArgumentException) {
+                        return SingleInstanceResult(SingleInstanceStatus.Rejected, error: "Activation data is invalid or exceeds its limits")
+                    }
+                    using let data = encoded
+                    using let client = NamedPipeClientStream(".", address.PipeName, PipeDirection.InOut,
+                        PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly)
+                    await client.ConnectAsync(timeoutMilliseconds, deadline.Token).ConfigureAwait(false)
+                    let header = [4]uint8
+                    BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(), int32(data.Length))
+                    await client.WriteAsync(header.AsMemory(), deadline.Token).ConfigureAwait(false)
+                    await client.WriteAsync(data.GetBuffer().AsMemory(0, int32(data.Length)), deadline.Token).ConfigureAwait(false)
+                    await client.ReadExactlyAsync(header.AsMemory(0, 1), deadline.Token).ConfigureAwait(false)
+                    if header[0] != uint8(ActivationPostStatus.Accepted) {
+                        return SingleInstanceResult(SingleInstanceStatus.Rejected, error: "The primary rejected activation data or its queue is unavailable")
+                    }
                 }
-                return SingleInstanceResult(SingleInstanceStatus.Rejected, error: "The primary rejected activation data or its queue is unavailable")
+                return SingleInstanceResult(SingleInstanceStatus.Forwarded)
             } catch (_ OperationCanceledException) {
                 return SingleInstanceResult(SingleInstanceStatus.TimedOut)
             } catch (_ TimeoutException) {

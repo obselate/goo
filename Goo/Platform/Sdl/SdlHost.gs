@@ -291,6 +291,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func RequestActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if OperatingSystem.IsLinux() && Window.CurrentActivationToken != nil {
+      if !SDL.SetStringProperty(SDL.GetWindowProperties(window), "Goo.Wayland.ActivationToken.1",
+        Window.CurrentActivationToken!!) { return WindowOperationResult.Failed }
+    }
     if deferFirstShow {
       firstShowRequested = true
       Wake()
