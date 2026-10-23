@@ -4,6 +4,8 @@ import Android.Runtime
 import Android.Views
 import Goo
 import System
+import System.Collections.Generic
+import System.Threading.Tasks
 import System.Runtime.InteropServices
 
 internal class AndroidVulkanHost(view GooView) : EmbeddedWindowHost {
@@ -68,6 +70,14 @@ internal class AndroidVulkanHost(view GooView) : EmbeddedWindowHost {
     protected override func GetClipboardText() string -> view.GetClipboardText()
 
     protected override func SetClipboardText(value string) -> view.SetClipboardText(value)
+
+    internal override func QueryClipboardFormats() ClipboardFormats -> view.Clipboard.Query()
+
+    internal override func ReadClipboardDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] ->
+        view.Clipboard.Read(contentTypes)
+
+    internal override func WriteClipboardAsync(data TransferData, intent ClipboardIntent) Task[ClipboardWriteResult] ->
+        view.Clipboard.Write(data, intent)
 
     protected override func RequestFrame() -> view.RequestFrame()
 
