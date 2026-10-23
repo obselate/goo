@@ -14,6 +14,27 @@ jobs:
           using System.Runtime.InteropServices.ComTypes;
           using System.Threading;
           public class Probe {
+            [ComVisible(true), ClassInterface(ClassInterfaceType.None)]
+            public class Renderable : IDataObject {
+              public IDataObject Source;
+              public void GetData(ref FORMATETC f,out STGMEDIUM m) {Source.GetData(ref f,out m);}
+              public void GetDataHere(ref FORMATETC f,ref STGMEDIUM m) {
+                STGMEDIUM source; Source.GetData(ref f,out source);
+                try {
+                  var input=(IStream)Marshal.GetObjectForIUnknown(source.unionmember);
+                  var output=(IStream)Marshal.GetObjectForIUnknown(m.unionmember);
+                  try {STATSTG stat; input.Stat(out stat,1);input.Seek(0,0,IntPtr.Zero);input.CopyTo(output,stat.cbSize,IntPtr.Zero,IntPtr.Zero);}
+                  finally {Marshal.ReleaseComObject(input);Marshal.ReleaseComObject(output);}
+                } finally {ReleaseStgMedium(ref source);}
+              }
+              public int QueryGetData(ref FORMATETC f) {return Source.QueryGetData(ref f);}
+              public int GetCanonicalFormatEtc(ref FORMATETC f,out FORMATETC o) {return Source.GetCanonicalFormatEtc(ref f,out o);}
+              public void SetData(ref FORMATETC f,ref STGMEDIUM m,bool release) {Source.SetData(ref f,ref m,release);}
+              public IEnumFORMATETC EnumFormatEtc(DATADIR d) {return Source.EnumFormatEtc(d);}
+              public int DAdvise(ref FORMATETC f,ADVF flags,IAdviseSink sink,out int connection) {return Source.DAdvise(ref f,flags,sink,out connection);}
+              public void DUnadvise(int connection) {Source.DUnadvise(connection);}
+              public int EnumDAdvise(out IEnumSTATDATA e) {return Source.EnumDAdvise(out e);}
+            }
             [DllImport("ole32.dll")] static extern int OleInitialize(IntPtr p);
             [DllImport("ole32.dll")] static extern void OleUninitialize();
             [DllImport("ole32.dll")] static extern int OleSetClipboard(IDataObject obj);
@@ -43,14 +64,14 @@ jobs:
             public static void Run() {
               var thread=new Thread(()=>{
                 Console.WriteLine("init="+OleInitialize(IntPtr.Zero).ToString("X8"));
-                foreach(var kind in new[]{"stream-end","global"}) foreach(var size in new[]{5,0}) {
+                foreach(var kind in new[]{"wrapper"}) foreach(var size in new[]{5,0}) {
                   Console.WriteLine("KIND="+kind);
                   IDataObject obj; var iid=new Guid("0000010e-0000-0000-c000-000000000046");
                   Marshal.ThrowExceptionForHR(SHCreateDataObject(IntPtr.Zero,0,IntPtr.Zero,IntPtr.Zero,ref iid,out obj));
                   var format=unchecked((short)RegisterClipboardFormatW("application/x-goo-probe"));
                   var f=new FORMATETC{cfFormat=format,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=TYMED.TYMED_ISTREAM};
                   var m=new STGMEDIUM{tymed=TYMED.TYMED_ISTREAM,unionmember=SHCreateMemStream(new byte[size],(uint)size)};
-                  if(kind=="stream-end") {
+                  if(kind=="stream-end" || kind=="wrapper") {
                     var s=(IStream)Marshal.GetObjectForIUnknown(m.unionmember);
                     s.Seek(0,2,IntPtr.Zero);
                     Marshal.ReleaseComObject(s);
@@ -61,12 +82,13 @@ jobs:
                     m.unionmember=GlobalAlloc(66,(UIntPtr)size);
                   }
                   obj.SetData(ref f,ref m,true);
+                  if(kind=="wrapper") obj=new Renderable{Source=obj};
                   Inspect(obj,"source size="+size,format);
                   Console.WriteLine("set="+OleSetClipboard(obj).ToString("X8"));
                   IDataObject before; Marshal.ThrowExceptionForHR(OleGetClipboard(out before)); Inspect(before,"before size="+size,format);Marshal.ReleaseComObject(before);
                   Console.WriteLine("flush="+OleFlushClipboard().ToString("X8"));
                   IDataObject after; Marshal.ThrowExceptionForHR(OleGetClipboard(out after));Inspect(after,"after size="+size,format);Marshal.ReleaseComObject(after);
-                  Marshal.ReleaseComObject(obj);
+                  if(Marshal.IsComObject(obj)) Marshal.ReleaseComObject(obj);
                 }
                 OleUninitialize();
               });
