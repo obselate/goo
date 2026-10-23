@@ -161,6 +161,9 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
         @DllImport("libaaudio.so", EntryPoint: "AAudioStream_requestStart")
         private func StartStream(stream nint) int32;
 
+        @DllImport("libaaudio.so", EntryPoint: "AAudioStream_setStartThresholdInFrames")
+        private func SetStartThreshold(stream nint, frames int32) int32;
+
         @DllImport("libaaudio.so", EntryPoint: "AAudioStream_requestPause")
         private func PauseStream(stream nint) int32;
 
@@ -207,7 +210,7 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
                     return SoundPlayResult(SoundPlayStatus.NativeFailure)
                 }
                 state.Stream = stream
-                if StartStream(stream) != 0 {
+                if SetStartThreshold(stream, 1) < 0 || StartStream(stream) != 0 {
                     CloseStream(stream)
                     return SoundPlayResult(SoundPlayStatus.NativeFailure)
                 }
