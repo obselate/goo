@@ -143,7 +143,7 @@ index 0000000..1e1cde0
 +{
 +    if (!window || !window->internal) return;
 +    SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
-+    if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeLeftMouseDragged) {
++    if (event.type == NSEventTypeLeftMouseDown) {
 +        data.goo_drag_event = event;
 +    } else if (event.type == NSEventTypeLeftMouseUp) {
 +        data.goo_drag_event = nil;
@@ -430,15 +430,7 @@ index d377bdb..c47de48 100644
          // The mouse is no longer over any window in the application
          SDL_SetMouseFocus(NULL);
          return;
-@@ -1930,6 +1944,7 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
- 
- - (void)mouseDragged:(NSEvent *)theEvent
- {
-+    Cocoa_GooMouseEvent(_data.window, theEvent);
-     [self mouseMoved:theEvent];
- }
- 
-@@ -3204,6 +3219,7 @@ bool Cocoa_SetWindowMouseGrab(SDL_VideoDevice *_this, SDL_Window *window, bool g
+@@ -3204,6 +3218,7 @@ bool Cocoa_SetWindowMouseGrab(SDL_VideoDevice *_this, SDL_Window *window, bool g
  void Cocoa_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
  {
      @autoreleasepool {
@@ -446,7 +438,7 @@ index d377bdb..c47de48 100644
          SDL_CocoaWindowData *data = (SDL_CocoaWindowData *)CFBridgingRelease(window->internal);
  
          if (data) {
-@@ -3313,6 +3329,10 @@ void Cocoa_AcceptDragAndDrop(SDL_Window *window, bool accept)
+@@ -3313,6 +3328,10 @@ void Cocoa_AcceptDragAndDrop(SDL_Window *window, bool accept)
  {
      @autoreleasepool {
          SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
