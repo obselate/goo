@@ -33,16 +33,18 @@ func RunClipboardDataSmoke() {
         let rtf = TransferRepresentation("text/rtf", ReadOnlyMemory[uint8](Encoding.UTF8.GetBytes("{\\rtf1 clipboard plain}")))
         let png = TransferRepresentation("image/png", ReadOnlyMemory[uint8](File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "local-rgba.png"))))
         let empty = TransferRepresentation("application/x-goo-empty", ReadOnlyMemory[uint8].Empty)
-        let data = TransferData([]TransferRepresentation{plain, html, rtf, png, empty}, []Uri{Uri(path)})
+        let zero = TransferRepresentation("application/x-goo-zero", ReadOnlyMemory[uint8]([]uint8{0}))
+        let secondEmpty = TransferRepresentation("application/x-goo-empty-two", ReadOnlyMemory[uint8].Empty)
+        let data = TransferData([]TransferRepresentation{plain, html, rtf, png, empty, zero, secondEmpty}, []Uri{Uri(path)})
         source[0] = uint8(120)
         let written = window.WriteClipboardAsync(data, ClipboardIntent.Cut).GetAwaiter().GetResult()
         ClipboardDataRequire(written.Status == DataTransferStatus.Success, "MIME clipboard publication failed: " + written.Error)
-        let types = []string{"text/plain;charset=utf-8", "text/html", "text/rtf", "image/png", "application/x-goo-empty", "text/uri-list"}
+        let types = []string{"text/plain;charset=utf-8", "text/html", "text/rtf", "image/png", "application/x-goo-empty", "application/x-goo-zero", "application/x-goo-empty-two", "text/uri-list"}
         let read = window.ReadClipboardDataAsync(types).GetAwaiter().GetResult()
         ClipboardDataRequire(read.Status == ClipboardReadStatus.Success, "MIME clipboard read failed: " + read.Error)
         ClipboardDataRequire(read.Intent == ClipboardIntent.Cut && read.Data.Uris.Count == 1 && read.Data.Uris[0].LocalPath == path,
             "Clipboard file selection or Cut marker changed")
-        ClipboardDataRequire(read.Data.Representations.Count == 5, "A MIME alternative was silently discarded")
+        ClipboardDataRequire(read.Data.Representations.Count == data.Representations.Count, "A MIME alternative was silently discarded")
         for i in 0 ... data.Representations.Count {
             let expected = data.Representations[i]
             let actual = read.Data.Representations[i]
