@@ -97,15 +97,17 @@ internal unsafe class SoundVoice {
     }
 }
 
-internal class SoundRuntime : SoundBackend {
+internal unsafe class SoundRuntime : SoundBackend {
     private let gate object = Object()
     private let voices List[SoundPlayback] = List[SoundPlayback]()
     private let device uint32
+    private let requestedDevice uint32
     private var references int32 = 1
     private var queuedBytes int32
 
-    private init(device uint32) {
+    private init(device uint32, requestedDevice uint32) {
         this.device = device
+        this.requestedDevice = requestedDevice
     }
 
     shared {
@@ -114,9 +116,11 @@ internal class SoundRuntime : SoundBackend {
         private const MaxQueueBytes int32 = 33554432
         private const DefaultPlaybackDevice uint32 = 0xFFFFFFFFu
         private let sharedGate object = Object()
-        private var sharedRuntime SoundRuntime?
+        private let sharedRuntimes Dictionary[uint32, SoundRuntime] = Dictionary[uint32, SoundRuntime]()
 
-        internal func Open() SoundOpenResult {
+        internal func Open() SoundOpenResult -> Open(DefaultPlaybackDevice, nil)
+
+        internal func Open(requested uint32, outputs SoundOutputDevices?) SoundOpenResult {
             if OperatingSystem.IsAndroid()
             || (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()) {
                 return SoundOpenResult(SoundOpenStatus.Unsupported)
@@ -124,14 +128,20 @@ internal class SoundRuntime : SoundBackend {
             try {
                 SdlRuntime.RequireMainThread("SoundPlayer.TryOpen")
                 lock sharedGate {
-                    if let current = sharedRuntime {
+                    if outputs?.Disposed == true {
+                        throw ObjectDisposedException("SoundOutputDevices")
+                    }
+                    if outputs != nil && String.IsNullOrEmpty(SDL.GetAudioDeviceNameS(requested)) {
+                        return SoundOpenResult(SoundOpenStatus.DeviceUnavailable)
+                    }
+                    if sharedRuntimes.TryGetValue(requested, out var current) {
                         current.references++
                         return SoundOpenResult(SoundOpenStatus.Opened, SoundPlayer(current))
                     }
                     if !SDL.InitSubSystem(uint32(SDLInitFlags.Audio)) {
                         return SoundOpenResult(SoundOpenStatus.SubsystemUnavailable)
                     }
-                    let device = SDL.OpenAudioDevice(DefaultPlaybackDevice, SDLAudioSpecPtr.Null)
+                    let device = SDL.OpenAudioDevice(requested, SDLAudioSpecPtr.Null)
                     if device == 0u {
                         SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
                         return SoundOpenResult(SoundOpenStatus.DeviceUnavailable)
@@ -141,14 +151,72 @@ internal class SoundRuntime : SoundBackend {
                         SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
                         return SoundOpenResult(SoundOpenStatus.DeviceUnavailable)
                     }
-                    let runtime = SoundRuntime(device)
-                    sharedRuntime = runtime
+                    let runtime = SoundRuntime(device, requested)
+                    sharedRuntimes.Add(requested, runtime)
                     return SoundOpenResult(SoundOpenStatus.Opened, SoundPlayer(runtime))
                 }
             } catch (error DllNotFoundException) {
                 return SoundOpenResult(SoundOpenStatus.Unsupported)
             } catch (error EntryPointNotFoundException) {
                 return SoundOpenResult(SoundOpenStatus.Unsupported)
+            }
+        }
+
+        internal func EnumerateOutputs() SoundOutputDevices {
+            if OperatingSystem.IsAndroid()
+            || (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()) {
+                return SoundOutputDevices(SoundDeviceStatus.Unsupported)
+            }
+            try {
+                SdlRuntime.RequireMainThread("SoundPlayer.EnumerateOutputDevices")
+                lock sharedGate {
+                    if !SDL.InitSubSystem(uint32(SDLInitFlags.Audio)) {
+                        return SoundOutputDevices(SoundDeviceStatus.SubsystemUnavailable)
+                    }
+                    var count int32
+                    let ids = SDL.GetAudioPlaybackDevices(&count)
+                    var accepted = false
+                    try {
+                        if nint(ids) == nint(0) {
+                            return SoundOutputDevices(SoundDeviceStatus.NativeFailure)
+                        }
+                        let devices = [count]SoundOutputDevice
+                        let result = SoundOutputDevices(SoundDeviceStatus.Enumerated, devices, true)
+                        for i in 0 ... count {
+                            let name = SDL.GetAudioDeviceNameS(ids[i])
+                            if String.IsNullOrEmpty(name) {
+                                return SoundOutputDevices(SoundDeviceStatus.NativeFailure)
+                            }
+                            devices[i] = SoundOutputDevice(result, ids[i], name)
+                        }
+                        accepted = true
+                        return result
+                    } finally {
+                        SDL.Free(nint(ids))
+                        if !accepted {
+                            SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                        }
+                    }
+                }
+            } catch (error DllNotFoundException) {
+                return SoundOutputDevices(SoundDeviceStatus.Unsupported)
+            } catch (error EntryPointNotFoundException) {
+                return SoundOutputDevices(SoundDeviceStatus.Unsupported)
+            }
+        }
+
+        internal func ReleaseOutputs(outputs SoundOutputDevices) {
+            if outputs.Initialized {
+                SdlRuntime.RequireMainThread("SoundOutputDevices.Dispose")
+            }
+            lock sharedGate {
+                if outputs.Disposed {
+                    return
+                }
+                outputs.Disposed = true
+                if outputs.Initialized {
+                    SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
+                }
             }
         }
 
@@ -172,7 +240,7 @@ internal class SoundRuntime : SoundBackend {
                 if references == 0 {
                     SDL.CloseAudioDevice(device)
                     SDL.QuitSubSystem(uint32(SDLInitFlags.Audio))
-                    sharedRuntime = nil
+                    sharedRuntimes.Remove(requestedDevice)
                 }
             }
         }

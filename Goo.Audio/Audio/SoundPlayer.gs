@@ -2,7 +2,7 @@ package Goo
 
 import System
 
-/// Describes whether the optional default audio device opened.
+/// Describes whether the optional audio output opened.
 public enum SoundOpenStatus {
     Opened,
     Unsupported,
@@ -68,7 +68,7 @@ public class SoundPlayResult {
     }
 }
 
-/// Owns cues and streams on a process-shared default device. Open and dispose on the UI thread.
+/// Owns cues and streams on a process-shared output device. Open and dispose on the UI thread.
 /// Configure application metadata before opening audio. Other operations are thread-safe.
 public class SoundPlayer : IDisposable {
     internal let Backend SoundBackend
@@ -85,10 +85,23 @@ public class SoundPlayer : IDisposable {
         } else {
             SoundRuntime.Open()
         }
+
+        /// Enumerates desktop SDL outputs on the UI thread. Dispose the returned list after opening a choice.
+        /// Unsupported platforms return Unsupported with an empty list.
+        public func EnumerateOutputDevices() SoundOutputDevices -> SoundRuntime.EnumerateOutputs()
+
+        /// Opens an output from an undisposed enumeration on the UI thread.
+        /// An unplugged device returns DeviceUnavailable. Nil or disposed-list arguments throw.
+        public func TryOpen(output SoundOutputDevice) SoundOpenResult {
+            if Object.ReferenceEquals(output, nil) {
+                throw ArgumentNullException("output")
+            }
+            return SoundRuntime.Open(output.Id, output.Owner)
+        }
     }
 
     /// Queues an immutable cue with initial gain from zero through one.
-    /// The shared budget is 16 voices and 32 MiB. Throws for invalid arguments or a disposed owner.
+    /// Each shared output budget is 16 voices and 32 MiB. Throws for invalid arguments or a disposed owner.
     public func TryPlay(source SoundSource, gain float32 = 1.0F) SoundPlayResult {
         if Object.ReferenceEquals(source, nil) {
             throw ArgumentNullException("source")

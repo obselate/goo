@@ -38,6 +38,9 @@ public sealed class AudioChecks : Instrumentation
     private static void Run()
     {
         Require(SystemSounds.TryPlay(SystemSound.Alert) == SystemSoundStatus.Unsupported, "Android system sound status");
+        using var outputs = SoundPlayer.EnumerateOutputDevices();
+        Require(outputs.Status == SoundDeviceStatus.Unsupported && outputs.Devices.Count == 0,
+            "Android output selection status");
         using var first = Open();
         using var second = Open();
         var cue = new SoundSource(8000, 1, new float[80000]);

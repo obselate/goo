@@ -277,9 +277,32 @@ guard let failed = second.TryPlay(broken).Playback else {
 Finish(failed, SoundPlaybackStatus.SourceFailure)
 second.Dispose()
 stream.Stop()
+using let outputs = SoundPlayer.EnumerateOutputDevices()
+Require(outputs.Status == SoundDeviceStatus.Enumerated && outputs.Devices.Count > 0, "Output enumeration failed")
+let output = outputs.Devices[0]
+Require(output.Name.Length > 0, "Output has no name")
+guard let selected = SoundPlayer.TryOpen(output).Player else {
+    throw InvalidOperationException("Selected output did not open")
+}
+using let selectedOwner = selected
+guard let sameOutput = SoundPlayer.TryOpen(output).Player else {
+    throw InvalidOperationException("Selected output did not share")
+}
+Require(Object.ReferenceEquals(selected.Backend, sameOutput.Backend), "Selected output owners did not share a device")
+sameOutput.Dispose()
+outputs.Dispose()
+Finish(Play(selected, SoundSource(8000, 1, [160]float32)), SoundPlaybackStatus.Completed)
+rejected = false
+try {
+    SoundPlayer.TryOpen(output)
+} catch (error ObjectDisposedException) {
+    rejected = true
+}
+Require(rejected, "A disposed output list still accepted opens")
+selected.Dispose()
 let reopened = SoundPlayer.TryOpen()
 Require(reopened.Status == SoundOpenStatus.Opened, "Device did not reopen after last owner disposed")
 reopened.Player?.Dispose()
 Console.WriteLine(
-    "audio: statuses clamping wav=pcm8,pcm16,pcm24,float32,extensible gain pause overlap budgets stream-end source-failure reopen verified"
+    "audio: statuses clamping wav gain pause overlap budgets stream-end source-failure reopen output-selection verified"
 )

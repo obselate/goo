@@ -13,7 +13,7 @@ Keep the player at application scope.
 
 | Operation | Contract |
 | --- | --- |
-| Open and dispose | Use the UI thread, after `Window.ConfigureApplication` if used. Owners share the default platform output. |
+| Open and dispose | Use the UI thread, after `Window.ConfigureApplication` if used. Owners of the same output share playback state. |
 | `TryOpen().Status` | `Opened`, `Unsupported`, `SubsystemUnavailable`, or `DeviceUnavailable`. Only `Opened` carries a player. |
 | `TryPlay().Status` | `Queued`, `VoiceLimit`, `QueueBudget`, or `NativeFailure`. Only `Queued` carries playback. |
 | `SoundPlayback.Gain` | Set live gain in [0, 1]. Non-finite or out-of-range gain throws. |
@@ -34,7 +34,7 @@ disposed-owner play calls throw. Completion means drained queues, not exact audi
 | WAV input | Check the 16 MiB encoded limit before allocation. Caller-owned streams stay open. |
 | Samples | Clamp finite values to [-1, 1]. Non-finite input throws. |
 | `SoundStreamSource(sampleRate, channels, read)` | Pull interleaved float frames on the audio thread. Streams have no duration limit. |
-| Shared queue | 16 voices and 32 MiB of cue data or reserved stream buffers. |
+| Shared queue | The default output and each selected output have separate limits of 16 voices and 32 MiB. |
 
 - The reader gets a reusable 1024-frame buffer and a requested frame count.
 - Return frames written. Zero means permanent end. Short reads continue on the next request.
@@ -42,7 +42,7 @@ disposed-owner play calls throw. Completion means drained queues, not exact audi
 - Invalid counts, non-finite samples, and reader exceptions become `SourceFailure`.
 - Consumer code owns compressed decoders, decoder synchronization, looping, seek, and stereo pan.
 - Android uses AAudio without SDL. Desktop uses SDL.
-- Applications own mute and notification policy. Output-device selection is not included.
+- Applications own mute and notification policy.
 
 ## System UI sounds
 
@@ -55,3 +55,18 @@ let status = SystemSounds.TryPlay(SystemSound.Alert)
 - Android, macOS clicks and missing platform APIs return `Unsupported`.
 - `Queued` means the platform accepted the request. Sound settings can keep it silent.
 - A native API failure returns `NativeFailure`. No PCM device or `SoundPlayer` is needed.
+
+## Output selection
+
+```gsharp
+using let outputs = SoundPlayer.EnumerateOutputDevices()
+if outputs.Status == SoundDeviceStatus.Enumerated && outputs.Devices.Count > 0 {
+    using let player = SoundPlayer.TryOpen(outputs.Devices[0]).Player
+}
+```
+
+- Desktop enumeration uses SDL. Android returns `Unsupported` and an empty list.
+- Open a choice before disposing the list. Existing players remain usable after list disposal.
+- Names are display labels, not persistent identifiers. Do not retain entries from a disposed list.
+- Enumeration returns `Enumerated`, `Unsupported`, `SubsystemUnavailable` or `NativeFailure`.
+- A device unplugged before open returns `DeviceUnavailable`. The default open still follows platform routing.
