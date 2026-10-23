@@ -35,6 +35,7 @@ internal unsafe partial class VulkanWindowTarget {
         || frameBegun {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Busy })
       }
+      VulkanDeviceRecoveryCoordinator.ServiceQueueCompletions(this)
       guard let active = runtime else {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.NotReady })
       }

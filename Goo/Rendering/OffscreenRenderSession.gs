@@ -35,6 +35,7 @@ public sealed class OffscreenRenderSession : IDisposable {
   /// Consumes completed GPU work and starts a queued page without presenting a native window.
   public func Service() {
     requireThread()
+    VulkanDeviceRecoveryCoordinator.ServiceQueueCompletions(target)
     target.PollQueueCompletion()
   }
 
