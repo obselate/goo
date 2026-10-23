@@ -21,6 +21,7 @@ internal unsafe partial class ClipboardTransfer {
 
         private func MacTransferType(contentType string) nint {
             if IsPlainText(contentType) { return MacString("public.utf8-plain-text") }
+            if contentType == "text/rtf" || contentType == "application/rtf" { return MacString("public.rtf") }
             let value = UTTypeCreatePreferredIdentifierForTag(MacString("public.mime-type"), MacString(contentType), nint(0))
             if value == nint(0) { throw NotSupportedException("The pasteboard cannot represent MIME type " + contentType) }
             return MacSend(value, sel_registerName("autorelease"))
