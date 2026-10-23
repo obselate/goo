@@ -31,8 +31,8 @@ internal unsafe sealed class NativeBytes : IDisposable {
     capacity = size
   }
 
-  internal func Tail(maximum int32) Span[uint8] {
-    if capacity == Length { Reserve(int32(Math.Min(int64(capacity) * 2, int64(Int32.MaxValue)))) }
+  internal func Tail(maximum int32, limit int32 = Int32.MaxValue) Span[uint8] {
+    if capacity == Length { Reserve(int32(Math.Min(int64(capacity) * 2, int64(limit)))) }
     return Span[uint8](pointer + Length, Math.Min(capacity - Length, maximum))
   }
 

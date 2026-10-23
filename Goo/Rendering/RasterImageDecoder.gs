@@ -65,21 +65,10 @@ internal unsafe partial class RasterImageDecoder {
 
     private func Load(stream Stream, bounds RasterDecodeBounds, token CancellationToken) ImageSource {
       token.ThrowIfCancellationRequested()
-      let limits = bounds.Limits
-      var size int64 = 65536
-      if stream.CanSeek {
-        size = stream.Length - stream.Position
-        if size > limits.MaxEncodedBytes { throw EncodedLimit(limits) }
-        size++
-      }
-      using let encoded = NativeBytes(int32(Math.Min(size, int64(Int32.MaxValue))))
-      while true {
-        token.ThrowIfCancellationRequested()
-        let count = stream.Read(encoded.Tail(65536))
-        if count == 0 { break }
-        if encoded.Length + count > limits.MaxEncodedBytes { throw EncodedLimit(limits) }
-        encoded.Length += count
-      }
+      var encoded NativeBytes
+      try { encoded = BoundedInput.ReadAll(stream, bounds.Limits.MaxEncodedBytes, "Encoded image", token) }
+      catch (error InvalidDataException) { throw EncodedLimit(bounds.Limits) }
+      using let retained = encoded
       return DecodeCore(encoded.Bytes, bounds, token)
     }
 

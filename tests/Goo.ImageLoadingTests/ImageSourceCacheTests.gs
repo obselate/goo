@@ -315,6 +315,20 @@ class ImageSourceCacheTests : IDisposable {
         await Assert.ThrowsAnyAsync[OperationCanceledException](() -> cache.LoadAsync(path))
     }
 
+    @Theory
+    @InlineData(true, int64(33), int32(0))
+    @InlineData(true, int64(1), int32(33))
+    @InlineData(false, int64(0), int32(33))
+    func StreamSizeLimitRejectsKnownGrowingAndForwardOnlyInput(seekable bool, length int64, readBytes int32) {
+        using let stream = SizedInputStream([33]uint8, seekable, length)
+        let error = Assert.Throws[ImageLimitException](
+            () -> ImageSource.Decode(stream, ImageDecodeLimits{MaxEncodedBytes: 32}, CancellationToken.None)
+        )
+        Assert.Equal("Encoded image exceeds 32 bytes", error.Message)
+        Assert.Equal(int64(readBytes), stream.Position)
+        Assert.True(stream.CanRead)
+    }
+
     @Fact
     func LegacyPathFailsWithMigrationInstruction() {
         let error = Assert.Throws[NotSupportedException](
@@ -747,6 +761,12 @@ class ImageSourceCacheTests : IDisposable {
 
     private class ForwardOnlyStream(bytes[]uint8) : MemoryStream(bytes) {
         override prop CanSeek bool -> false
+    }
+
+    private class SizedInputStream(bytes []uint8, seekable bool, length int64) : MemoryStream(bytes) {
+        override prop CanSeek bool -> seekable
+
+        override prop Length int64 -> length
     }
 
     private class CancelAfterReadStream(bytes[]uint8, cancellation CancellationTokenSource) : MemoryStream(bytes) {

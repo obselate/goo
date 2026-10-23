@@ -12,9 +12,8 @@ internal class BackdropBlurEffect {
       using let stream = typeof(BackdropBlurEffect).Assembly.GetManifestResourceStream(
         "Goo.Effects.backdrop_blur.goo-effect")
       if stream == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
-      using let output = MemoryStream()
-      stream.CopyTo(output)
-      let program = ShaderEffectProgram(output.ToArray(), true)
+      let program = ShaderEffectProgram(
+        BoundedInput.ReadAll(stream, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program"), true)
       return ShaderEffect(program, true)
     }
   }
