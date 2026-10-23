@@ -1,0 +1,30 @@
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Goo</RootNamespace>
+    <PackageId>Goo.NativeMenus</PackageId>
+    <Version>$(GooReleaseVersion)</Version>
+    <Authors>Xaz</Authors>
+    <Description>Optional operating-system menu bars and context menus for Goo.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Goo.Tray" />
+    <ProjectReference Include="../Goo/Goo.gsproj" />
+    <None Include="../docs/native-menus.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+  <Target Name="IncludeNativeMenuDocumentation" AfterTargets="CoreCompile"
+          BeforeTargets="DocumentationProjectOutputGroup" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <DocumentationProjectOutputGroupOutput Include="@(DocFileItem->'%(FullPath)')"
+          FinalOutputPath="@(FinalDocFile->'%(FullPath)')" TargetPath="@(DocFileItem->'%(Filename)%(Extension)')" />
+    </ItemGroup>
+  </Target>
+</Project>

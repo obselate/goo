@@ -359,7 +359,8 @@ public partial class Window {
         if profiling { profiler.BeginFrameTrace() }
         Window.DrainApplicationActivations()
         let repeatStartTicks = Stopwatch.GetTimestamp()
-        if !native.IsClosing && drainCloseRequest() {
+        nativeModal?.DrainCompletion()
+        if IsOpen && !native.IsClosing && drainCloseRequest() {
           if windowTarget?.PrepareClose() != false {
             stopPosts()
             native.BeginClose()
@@ -367,7 +368,7 @@ public partial class Window {
         }
         if native.IsClosing || !IsOpen {
           try {
-            Close()
+            if IsOpen { Close() }
           } finally {
             if profiling {
               profiler.Record(FrameProfileStage.Events, eventsProfile)
@@ -512,6 +513,7 @@ public partial class Window {
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
     || Window.HasPendingApplicationActivation
+    || nativeModal?.HasCompletion == true
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
     || windowTarget?.RetirementWorkPending == true
@@ -687,6 +689,7 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    if !closeNativeModal() { return }
     if !closeFileDialog() { return }
     if !closeOwnedWindows() { return }
     if windowTarget?.PrepareClose() == false {

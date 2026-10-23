@@ -116,6 +116,10 @@ jobs:
       - name: Verify shared gesture recognizers
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Build optional native menus
+        if: needs.changes.outputs.api == 'true'
+        run: dotnet build Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -p:TreatWarningsAsErrors=true
+
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
         run: dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
@@ -243,6 +247,15 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             -o artifacts/image-nativeaot
           artifacts/image-nativeaot/Goo.ImageLoadingSmoke
+
+      - name: Verify NativeAOT native menus on macOS
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.csproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/native-menu-smoke
+          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" artifacts/native-menu-smoke/Goo.NativeMenuSmoke
 
       - name: Stage, sign, and run macOS smoke bundle
         if: needs.changes.outputs.full == 'true'
@@ -756,6 +769,12 @@ jobs:
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
 
+      - name: Pack optional native menus
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+
       - name: Pack Goo DevTools and template
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -997,6 +1016,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -1025,6 +1045,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1521,6 +1542,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.NativeMenus.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1549,6 +1574,7 @@ jobs:
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.NativeMenus.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

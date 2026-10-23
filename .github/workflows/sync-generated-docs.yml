@@ -39,13 +39,30 @@ jobs:
 
       - name: Regenerate documentation
         run: |
-          dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
+          dotnet build tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release -p:TreatWarningsAsErrors=true
+          dotnet build tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          for project in sorted(Path('.').glob('Goo*/*.gsproj')):
+              xml = project.parent / 'bin' / 'Release' / 'net10.0' / f'{project.stem}.xml'
+              if not xml.is_file():
+                  continue
+              package = project.stem.removeprefix('Goo.')
+              slug = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', package).lower()
+              output = 'docs/api' if project.stem == 'Goo' else f'docs/api-{slug}'
+              subprocess.run([
+                  'dotnet', 'tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll',
+                  '--source', str(project.parent), '--xml', str(xml), '--output', output,
+              ], check=True)
+          PY
           python3 plugins/goo/scripts/sync_docs.py .
 
       - name: Commit generated documentation
         run: |
-          git add -- docs/api plugins/goo/reference
+          git add -- docs/api*/ plugins/goo/reference
           if git diff --cached --quiet; then
             exit 0
           fi
