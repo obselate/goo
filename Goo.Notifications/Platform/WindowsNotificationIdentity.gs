@@ -7,7 +7,7 @@ import Microsoft.Win32
 
 @StructLayout(LayoutKind.Sequential)
 internal struct ToastPropertyKey {
-    internal var Format Guid
+    internal var Format ToastGuid
     internal var Id uint32
 }
 
@@ -26,7 +26,7 @@ internal class WindowsNotificationIdentity {
     shared {
         @DllImport("shell32.dll", CharSet: CharSet.Unicode)
         private func SHGetPropertyStoreFromParsingName(path string, context nint, flags uint32,
-            ref iid Guid, out store nint) int32;
+            ref iid ToastGuid, out store nint) int32;
 
         @DllImport("ole32.dll")
         private func PropVariantClear(ref value ToastPropertyValue) int32;
@@ -39,11 +39,11 @@ internal class WindowsNotificationIdentity {
                 || scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
                 || scheme.Equals("file", StringComparison.OrdinalIgnoreCase) { return false }
             using let protocol = Registry.ClassesRoot.OpenSubKey(scheme)
-            using let command = protocol?.OpenSubKey("shell\\open\\command")
+            using let command = protocol?.OpenSubKey(`shell\open\command`)
             let executable = Environment.ProcessPath
             if executable == nil || protocol?.GetValue("URL Protocol") == nil { return false }
             let registered = command?.GetValue("") as string?
-            if registered == nil || !registered.Equals("\"" + executable + "\" --goo-notification \"%1\"",
+            if registered == nil || !registered.Equals(`"` + executable + `" --goo-notification "%1"`,
                 StringComparison.OrdinalIgnoreCase) { return false }
 
             for folder in []Environment.SpecialFolder{Environment.SpecialFolder.StartMenu,
@@ -58,10 +58,10 @@ internal class WindowsNotificationIdentity {
         }
 
         private func Matches(path string, identifier string) bool {
-            var iid = Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")
+            var iid = ToastGuid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")
             if SHGetPropertyStoreFromParsingName(path, nint(0), 0u, ref iid, out var store) < 0 { return false }
             try {
-                var key = ToastPropertyKey{ Format: Guid("9f4c2855-9f79-4b39-a8d0-e1d42de1d5f3"), Id: 5u }
+                var key = ToastPropertyKey{ Format: ToastGuid("9f4c2855-9f79-4b39-a8d0-e1d42de1d5f3"), Id: 5u }
                 let get = WindowsToastNative.Method[ToastPropertyGet](store, 5)
                 if get(store, ref key, out var value) < 0 { return false }
                 try {
