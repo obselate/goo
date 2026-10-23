@@ -431,7 +431,7 @@ public partial class Window {
         let allowFrame = frameAllowed && (IsVisible || firstShowPending())
         let stepDt = allowFrame ? Math.Min(simulationDt, 1.0 / 30.0) : 0.0
         let treeProfile = profiling ? profiler.Start() : FrameProfilePoint{}
-        UpdateTree(dt, stepDt, allowFrame && windowTarget?.QueueWorkPending != true)
+        UpdateTree(dt, stepDt, windowTarget == nil || (allowFrame && !windowTarget!!.QueueWorkPending))
         if !IsOpen {
           if profiling { profiler.EndFrame(frameProfile, false) }
           return

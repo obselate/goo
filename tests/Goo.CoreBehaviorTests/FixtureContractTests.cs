@@ -119,6 +119,7 @@ public sealed class FixtureContractTests
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualTransactionContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.VirtualViewportContract));
         yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.DeferredVirtualScrollContract));
+        yield return Contract<ElementHandleFixtures>(nameof(ElementHandleFixtures.ScrollToItemWithoutPresentationContract));
         yield return Contract<GradientFixtures>(nameof(GradientFixtures.LongGradientsCompileWithoutUnsupportedFallback));
         yield return Contract<InputFixtures>(nameof(InputFixtures.AutoFocusSelectsFirstEligibleNodeOnlyWhenFocusIsEmpty));
         yield return Contract<InputFixtures>(nameof(InputFixtures.AxisOverflowInteractionContract));

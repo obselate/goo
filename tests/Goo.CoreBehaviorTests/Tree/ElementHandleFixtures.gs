@@ -4,6 +4,21 @@ import System
 import System.Collections.Generic
 
 internal class ElementHandleFixtures {
+  func ScrollToItemWithoutPresentationContract() bool {
+    using let host = ElementHandleEmbeddedHost()
+    host.Resize(100, 60, 100, 60)
+    let cell = VirtualFixtureCell(1000)
+    let window = Window{Root: cell}
+    window.Attach(host)
+    host.RenderFrame(0.016)
+    if !cell.Handle.ScrollToItem("row-30") { return false }
+    host.RenderFrame(0.016)
+    if !cell.Handles[30].IsMounted || cell.Handles[0].IsMounted { return false }
+    cell.Handle.JumpTo(0.0, 4000.0)
+    host.RenderFrame(0.016)
+    return cell.Handles[200].IsMounted && !cell.Handles[30].IsMounted
+  }
+
   func DeferredVirtualScrollContract() bool {
     let cell = VirtualFixtureCell(1000)
     let window = Window{Root: cell, Width: 100, Height: 60}
@@ -687,6 +702,18 @@ internal class ElementHandleFixtures {
     NodeLifecycle.DisposeTree(root)
     return weak
   }
+}
+
+internal class ElementHandleEmbeddedHost : EmbeddedWindowHost {
+  protected override func RequestFrame() { }
+  protected override func LoadVulkanLibrary() bool -> throw NotSupportedException()
+  protected override func GetVulkanGetInstanceProcAddr() nint -> throw NotSupportedException()
+  protected override func UnloadVulkanLibrary() { throw NotSupportedException() }
+  protected override func GetVulkanInstanceExtensions() []string -> throw NotSupportedException()
+  protected override func CreateVulkanSurface(instance nint, out surface uint64) bool {
+    throw NotSupportedException()
+  }
+  protected override func DestroyVulkanSurface(instance nint, surface uint64) { throw NotSupportedException() }
 }
 
 internal class ElementHandleNestedCell : Cell {
