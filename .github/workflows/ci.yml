@@ -1828,10 +1828,6 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
-          dotnet nuget push "artifacts/packages/Goo.Notifications.Android.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate --no-symbols
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
