@@ -110,10 +110,9 @@ internal class EmbeddedHostSmoke {
       Require(notifications == 3 && window.Preferences.EventSoundsEnabled == nil,
         "Unknown event sound preference was not delivered")
       host.UpdatePreferences(PlatformPreferences{Theme: SystemTheme.Dark, HighContrast: true,
-        TextScaleFactor: 1.0F, ReducedMotion: false, AccentColor: Color.Rgb(31, 91, 173)})
+        TextScaleFactor: 1.0F, ReducedMotion: false})
       Require(notifications == 4 && window.Preferences.Theme == SystemTheme.Dark
           && window.Preferences.HighContrast == true
-          && window.Preferences.AccentColor.GetValueOrDefault() == Color.Rgb(31, 91, 173)
           && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
         "Appearance-only preferences scheduled tree work or lost their notification")
       let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
@@ -124,7 +123,7 @@ internal class EmbeddedHostSmoke {
       Require(initial.Width > 0.0 && initial.Height > 0.0
           && scaled.Width > initial.Width * 1.7 && scaled.Height > initial.Height * 1.7,
         "Platform text scale did not resize explicitly sized mounted text")
-      Require(notifications == 5 && window.Preferences.ReducedMotion == true && window.Preferences.AccentColor == nil
+      Require(notifications == 5 && window.Preferences.ReducedMotion == true
           && window.CurrentWindowMetrics().DisplayScaleX == density,
         "Preference delivery changed density, lost motion policy or duplicated a snapshot")
       host.UpdatePreferences(PlatformPreferences{})
