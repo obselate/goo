@@ -245,12 +245,13 @@ internal class ImageLayouts {
       guard let value = known ?? sourceState(n), let lease = value.Lease else { return false }
       if !lease.IsComplete { return false }
       let decoded = value.CompletedResult()
+      let external = lease.ExternalResult()
       let width = if let image = decoded {
         image.IsValid && image.Width > 0 ? float32(image.Width) / value.PixelsPerUnit : 0.0F
-      } else { 0.0F }
+      } else { float32(external?.Width ?? 0) }
       let height = if let image = decoded {
         image.IsValid && image.Height > 0 ? float32(image.Height) / value.PixelsPerUnit : 0.0F
-      } else { 0.0F }
+      } else { float32(external?.Height ?? 0) }
       if n.DecodedImage == decoded
         && n.ImageIntrinsicWidth == width
         && n.ImageIntrinsicHeight == height{

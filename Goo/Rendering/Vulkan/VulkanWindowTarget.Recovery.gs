@@ -148,6 +148,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func PrepareForDeviceRecovery() {
+    CloseExternalSessions(ExternalImageStatus.DeviceLost)
     startupState = VulkanWindowStartupState.None
     InvalidateLastPresentedImageState()
     frameFailed = false

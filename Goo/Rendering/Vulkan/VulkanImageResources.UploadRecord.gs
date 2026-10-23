@@ -101,10 +101,16 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         SamplerId: samplerId,
         SamplerMode: samplerMode,
         UploadedVersion: entry.UploadedVersion,
+        External: entry.External,
       }
     }
 
   private func DestroyImage(index int32, entry VulkanImageResourceEntry) {
+    if let frame = entry.External {
+      externalSlots?.Remove(index)
+      frame.Release()
+      return
+    }
     if entry.ImageView != 0uL {
       let destroyView = dispatch.vkDestroyImageView
       try { destroyView(device, entry.ImageView, nil) } catch (cleanup Exception) { }
