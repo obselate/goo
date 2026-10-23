@@ -931,7 +931,13 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
             artifacts/audio-nativeaot/Goo.AudioSmoke
-          CANBERRA_DRIVER=null GOO_SYSTEM_SOUND_SMOKE=1 artifacts/audio-nativeaot/Goo.AudioSmoke
+          mkdir -p artifacts/audio-theme/sounds/freedesktop/stereo
+          cp /usr/share/sounds/freedesktop/index.theme artifacts/audio-theme/sounds/freedesktop/
+          ln -s /usr/share/sounds/freedesktop/stereo/bell.oga artifacts/audio-theme/sounds/freedesktop/stereo/button-pressed.oga
+          ln -s /usr/share/sounds/freedesktop/stereo/dialog-warning.oga artifacts/audio-theme/sounds/freedesktop/stereo/
+          printf 'pcm.!default { type null }\n' > artifacts/audio-asound.conf
+          ALSA_CONFIG_PATH="$PWD/artifacts/audio-asound.conf" XDG_DATA_HOME="$PWD/artifacts/audio-theme" \
+            CANBERRA_DRIVER=alsa GOO_SYSTEM_SOUND_SMOKE=1 artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Collect advisory consumer publish report
         if: needs.changes.outputs.full == 'true'
