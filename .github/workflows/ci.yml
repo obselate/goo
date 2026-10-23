@@ -1011,7 +1011,6 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
-            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
             artifacts/consumer-performance/stage/*/symbols/
 
@@ -1026,7 +1025,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1523,10 +1521,6 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-          dotnet nuget push "artifacts/packages/Goo.Gestures.$GOO_VERSION.snupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1555,7 +1549,6 @@ jobs:
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg"
-            "artifacts/packages/Goo.Gestures.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"
