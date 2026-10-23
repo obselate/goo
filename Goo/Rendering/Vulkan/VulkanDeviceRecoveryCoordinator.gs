@@ -84,6 +84,13 @@ internal class VulkanDeviceRecoveryCoordinator {
       }
     }
 
+    internal func ServiceExternalImageCompletions() {
+      guard let storage = targets else { return }
+      for index in 0 ... targetCount {
+        if let target = storage[index] { target.ServiceExternalImageCompletion() }
+      }
+    }
+
     internal func Recover(result VkResult) bool {
       if recoveryInProgress {
         VulkanSharedRuntime.MarkGlobalTerminalFailure(result)

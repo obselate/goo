@@ -1,8 +1,17 @@
 package Goo.VulkanProof
 
 import System
+import Goo
 
 internal unsafe func RunVulkanProof() int32 {
+  if Environment.GetEnvironmentVariable("GOO_VK_EXTERNAL_IMAGE") == "1" {
+    VulkanExternalImageProof.Run()
+    return 0
+  }
+  if Environment.GetEnvironmentVariable("GOO_VK_DMA_BUF") == "1" {
+    VulkanExternalImageProof.Run(true)
+    return 0
+  }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_E2E") == "1" {
     RunVulkanTextE2E()
     return 0
@@ -15,6 +24,8 @@ internal unsafe func RunVulkanProof() int32 {
     RunProductionImageReadback()
     RunLongGradientReadback()
     RunPresentEncodeReadback()
+    VulkanExternalImageProof.Run()
+    VulkanExternalImageProof.Run(true)
     return 0
   }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1" {

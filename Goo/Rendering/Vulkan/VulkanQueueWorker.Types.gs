@@ -22,6 +22,11 @@ internal unsafe sealed class VulkanQueueMailbox {
   private var presentResult VkResult = VkConstants.VK_NOT_READY
   private var syntheticDrainResult VkResult = VkConstants.VK_NOT_READY
   private var syntheticDrainPerformed bool
+  private const ExternalSemaphoreCapacity int32 = 64
+  private let waitInfos []VkSemaphoreSubmitInfo = [ExternalSemaphoreCapacity + 1]VkSemaphoreSubmitInfo
+  private let signalInfos []VkSemaphoreSubmitInfo = [2]VkSemaphoreSubmitInfo
+  private let waitPins []object? = [ExternalSemaphoreCapacity]object?
+  private var externalWaitCount int32
 
   internal var SubmitCommandBuffer VkCommandBuffer
   internal var SubmitWaitSemaphore VkSemaphore
@@ -62,6 +67,8 @@ internal unsafe sealed class VulkanQueueMailbox {
 
   internal func PrepareSubmit(commandBuffer VkCommandBuffer, waitSemaphore VkSemaphore,
     signalSemaphore VkSemaphore) {
+      if externalWaitCount != 0 { System.Array.Clear(waitPins, 0, externalWaitCount) }
+      externalWaitCount = 0
       SubmitCommandBuffer = commandBuffer
       SubmitWaitSemaphore = waitSemaphore
       SubmitSignalSemaphore = signalSemaphore
@@ -70,6 +77,25 @@ internal unsafe sealed class VulkanQueueMailbox {
       SubmitHasWait = waitSemaphore != 0uL
       SubmitHasSignal = signalSemaphore != 0uL
     }
+
+  internal func AddExternalWait(semaphore VkSemaphore, value uint64, pin object) {
+    if Phase != VulkanQueueMailboxPhase.Idle { throw System.InvalidOperationException("External waits require an idle mailbox") }
+    for index in 0 ... externalWaitCount {
+      if waitInfos[index + 1].semaphore == semaphore {
+        waitInfos[index + 1].value = System.Math.Max(waitInfos[index + 1].value, value)
+        return
+      }
+    }
+    if externalWaitCount == ExternalSemaphoreCapacity { throw System.InvalidOperationException("External semaphore capacity reached") }
+    waitInfos[externalWaitCount + 1] = VkSemaphoreSubmitInfo{
+      sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+      semaphore: semaphore,
+      value: value,
+      stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    }
+    waitPins[externalWaitCount] = pin
+    externalWaitCount++
+  }
 
   internal func PreparePresent(swapchain VkSwapchainKHR, imageIndex uint32,
     waitSemaphore VkSemaphore, fence VkFence, fenceEnabled bool) {
@@ -147,16 +173,17 @@ internal unsafe sealed class VulkanQueueMailbox {
       Interlocked.Exchange(ref phase, VulkanQueueMailboxPhase.SubmitComplete)
       return
     }
-    var waitInfo = VkSemaphoreSubmitInfo{}
-    waitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
-    waitInfo.semaphore = SubmitWaitSemaphore
-    waitInfo.stageMask = VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
-    let signalInfos * VkSemaphoreSubmitInfo = stackalloc[2]VkSemaphoreSubmitInfo
-    signalInfos[0] = VkSemaphoreSubmitInfo{}
-    signalInfos[0].sType = VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
-    signalInfos[0].semaphore = SubmitTimeline
-    signalInfos[0].value = SubmitSerial
-    signalInfos[0].stageMask = VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT
+    waitInfos[0] = VkSemaphoreSubmitInfo{
+      sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+      semaphore: SubmitWaitSemaphore,
+      stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    }
+    signalInfos[0] = VkSemaphoreSubmitInfo{
+      sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+      semaphore: SubmitTimeline,
+      value: SubmitSerial,
+      stageMask: VkConstants.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    }
     if SubmitHasSignal {
       signalInfos[1] = VkSemaphoreSubmitInfo{}
       signalInfos[1].sType = VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
@@ -168,17 +195,21 @@ internal unsafe sealed class VulkanQueueMailbox {
     commandInfo.commandBuffer = SubmitCommandBuffer
     var submitInfo = VkSubmitInfo2{}
     submitInfo.sType = VkConstants.VK_STRUCTURE_TYPE_SUBMIT_INFO_2
-    submitInfo.waitSemaphoreInfoCount = if SubmitHasWait { 1u } else { 0u }
-    submitInfo.pWaitSemaphoreInfos = if SubmitHasWait { &waitInfo } else { nil }
+    submitInfo.waitSemaphoreInfoCount = uint32(externalWaitCount) + if SubmitHasWait { 1u } else { 0u }
     let hasCommand = SubmitCommandBuffer != nint(0)
     submitInfo.commandBufferInfoCount = if hasCommand { 1u } else { 0u }
     submitInfo.pCommandBufferInfos = if hasCommand { &commandInfo } else { nil }
     submitInfo.signalSemaphoreInfoCount = if SubmitHasSignal { 2u } else { 1u }
-    submitInfo.pSignalSemaphoreInfos = signalInfos
     let queueSubmit = dispatch.vkQueueSubmit2
     let recorder = TraceRecorder
     let start = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
-    submitResult = queueSubmit(queue, 1u, &submitInfo, 0uL)
+    fixed waits *VkSemaphoreSubmitInfo = waitInfos {
+      fixed signals *VkSemaphoreSubmitInfo = signalInfos {
+        submitInfo.pWaitSemaphoreInfos = if SubmitHasWait { waits } else { waits + 1 }
+        submitInfo.pSignalSemaphoreInfos = signals
+        submitResult = queueSubmit(queue, 1u, &submitInfo, 0uL)
+      }
+    }
     if let current = TraceRecorder {
       current.Duration(VulkanDiagnosticEventIds.Submit, VulkanDiagnosticCategories.Timing,
         TraceContext, start, Stopwatch.GetTimestamp(), result: int32(submitResult), source: "vkQueueSubmit2")

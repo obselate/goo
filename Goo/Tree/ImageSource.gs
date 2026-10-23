@@ -147,7 +147,7 @@ public partial class ImageSource : ImageSourceProvider, IDisposable {
 /// Owns one provider result while it is mounted by Goo.
 public class ImageSourceLease : IDisposable {
   private let registrations List[ImageSourceCompletion]
-  private var image DecodedImage?
+  private var payload object?
   private var completed bool
   private var failed bool
   private var disposed bool
@@ -168,8 +168,15 @@ public class ImageSourceLease : IDisposable {
     registrations = List[ImageSourceCompletion]()
     let retained = source.retainImage()
     completed = true
-    image = retained
+    payload = retained
     failed = retained == nil
+  }
+
+  internal init(frame ExternalFrameLease) {
+    registrations = List[ImageSourceCompletion]()
+    frame.Retain()
+    payload = frame
+    completed = true
   }
 
   internal func BindContentVersion(version uint64) bool -> BindContentVersion(version, nil)
@@ -271,7 +278,7 @@ public class ImageSourceLease : IDisposable {
           published = false
         } else {
           completed = true
-          image = retained
+          payload = retained
           failed = retained == nil
           completedRegistrations = registrations.ToArray()
           registrations.Clear()
@@ -327,13 +334,15 @@ public class ImageSourceLease : IDisposable {
   /// Releases the retained result and notifies the provider.
   public func Dispose() {
     var current DecodedImage?
+    var external ExternalFrameLease?
     var cancelled [] ? ImageSourceCompletion = nil
     var release bool
     lock registrations {
       if !disposed {
         disposed = true
-        current = image
-        image = nil
+        current = payload as DecodedImage?
+        external = payload as ExternalFrameLease?
+        payload = nil
         contentVersionProvider = nil
         cancelled = registrations.ToArray()
         registrations.Clear()
@@ -349,6 +358,7 @@ public class ImageSourceLease : IDisposable {
       for registration in currentCancelled { registration.Dispose() }
     }
     current?.Release()
+    external?.Release()
     try {
       Released?.Invoke()
     } catch (error Exception) {
@@ -357,8 +367,15 @@ public class ImageSourceLease : IDisposable {
 
   internal func Result() DecodedImage? {
     var result DecodedImage?
-    lock registrations { result = image }
+    lock registrations { result = payload as DecodedImage? }
     return result
+  }
+
+  internal func ExternalResult() ExternalFrameLease? {
+    lock registrations {
+      let frame = payload as ExternalFrameLease?
+      return if frame?.Terminal == true { nil } else { frame }
+    }
   }
 }
 

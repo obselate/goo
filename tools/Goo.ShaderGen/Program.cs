@@ -751,13 +751,14 @@ internal static class Program
         AddArtifact(manifest.TextInstanceRecord.HostPacking, manifest.TextInstanceRecord.Stride, manifest.TextInstanceRecord.Members);
         foreach (Pipeline pipeline in manifest.Pipelines)
         {
-            BuiltShader vertexShader = builtShaders.Single(value => value.Spec.Id == pipeline.Stages.Single(stage => stage.Stage == "vertex").Shader);
             int packingSize;
             IReadOnlyList<PushConstantMember> packingMembers;
             if (pipeline.PushConstants.Stages.Count > 0)
             {
-                SpirvPushConstant pushConstant = vertexShader.Reflection.PushConstant
-                    ?? throw new InvalidOperationException($"Vertex shader has no reflected push constants: {pipeline.Id}");
+                BuiltShader pushShader = builtShaders.Single(value => value.Spec.Id == pipeline.Stages
+                    .Single(stage => stage.Stage == pipeline.PushConstants.Stages[0]).Shader);
+                SpirvPushConstant pushConstant = pushShader.Reflection.PushConstant
+                    ?? throw new InvalidOperationException($"Shader has no reflected push constants: {pipeline.Id}");
                 PushConstants expected = pipeline.PushConstants;
                 Require(pushConstant.Size == expected.Size, $"pipeline[{pipeline.Id}].hostPacking.size", expected.Size.ToString());
                 packingSize = pushConstant.Size;
@@ -888,9 +889,9 @@ internal static class Program
             new AssemblyPart { Path = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl", Sha256 = "892f76421162819caae0db0d0a29aa6b50e3fbdacfa82926b79d423cb27e0274" },
             new AssemblyPart { Path = "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/hb_gpu_paint.frag.wrapper.glsl", Sha256 = "7d492c19e2872bbac1a120ba17e6f2324ae3f02f02ff35dfd3cabe795c19bdd7" }
         });
-        if (manifest.Shaders.Count != 17)
+        if (manifest.Shaders.Count != 19)
         {
-            throw new InvalidOperationException("shaders must contain exactly seventeen entries");
+            throw new InvalidOperationException("shaders must contain exactly nineteen entries");
         }
         RequireShader(manifest.Shaders[0], "solid_quad_vertex", "vertex", "solid_quad.vert.slang", "solid_quad.vert.spv");
         RequireShader(manifest.Shaders[1], "solid_quad_fragment", "fragment", "solid_quad.frag.slang", "solid_quad.frag.spv");
@@ -909,9 +910,11 @@ internal static class Program
         RequireShader(manifest.Shaders[14], "hb_gpu_paint_fragment", "fragment", "hb_gpu_paint.frag.wrapper.glsl", "hb_gpu_paint.frag.spv", "hb_gpu_paint_fragment");
         RequireShader(manifest.Shaders[15], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv");
         RequireShader(manifest.Shaders[16], "clip_mask_fragment", "fragment", "clip_mask.frag.slang", "clip_mask.frag.spv");
-        if (manifest.Pipelines.Count != 12)
+        RequireShader(manifest.Shaders[17], "android_normalize_vertex", "vertex", "android_normalize.vert.slang", "android_normalize.vert.spv");
+        RequireShader(manifest.Shaders[18], "android_normalize_fragment", "fragment", "android_normalize.frag.slang", "android_normalize.frag.spv");
+        if (manifest.Pipelines.Count != 13)
         {
-            throw new InvalidOperationException("pipelines must contain exactly twelve entries");
+            throw new InvalidOperationException("pipelines must contain exactly thirteen entries");
         }
         RequirePipeline(manifest.Pipelines[0], "solid_quad", "SolidQuadPushConstants.Generated.gs", "SolidQuadPushConstants", 32, new[]
         {
@@ -1036,6 +1039,16 @@ internal static class Program
         {
             new Descriptor { Set = 0, Binding = 0, Type = "storage-buffer", Count = 1, Stages = new List<string> { "vertex", "fragment" } }
         }, false, "r8-unorm");
+        RequirePipeline(manifest.Pipelines[12], "android_normalize", "AndroidNormalizePushConstants.Generated.gs",
+            "AndroidNormalizePushConstants", 8,
+            new[] { new PushConstantMember { Name = "encoding", Offset = 0, Type = "uint" },
+                new PushConstantMember { Name = "opaque", Offset = 4, Type = "uint" } },
+            new[] { "fragment" }, "disabled", null, "android_normalize_vertex", "android_normalize_fragment",
+            "vec2", "uv", new[]
+            {
+                new Descriptor { Set = 0, Binding = 0, Type = "combined-image-sampler", Count = 1,
+                    Stages = new List<string> { "fragment" } }
+            }, false);
 
     }
 
