@@ -119,7 +119,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         return false
       }
       if let external = lease.ExternalResult() {
-        return EmitExternal(frame, bounds, binding, external, fit, opacity, transformIndex)
+        return EmitExternal(frame, bounds, binding, external, fit, opacity, transformIndex, pixelsPerUnit)
       }
       guard let decoded = lease.Result() else {
         return false
@@ -190,7 +190,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
 
   private func EmitExternal(frame SceneFrame, bounds ConservativeBounds,
     binding ImageSourceBindingToken, external ExternalFrameLease, fit ImageFit,
-    opacity float32, transformIndex int32) bool {
+    opacity float32, transformIndex int32, pixelsPerUnit float32) bool {
       if external.Terminal || external.Source.Session.IsClosed || !external.Ready
         || external.Image.Native.Runtime.Generation != generation { return false }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
@@ -202,7 +202,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       }
       let lookup = imageResources.RegisterExternal(identity.ImageId, source, identities.LinearSamplerId, external)
       if !lookup.Renderable { return false }
-      let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex)
+      let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, pixelsPerUnit)
       if emitted { imageResources.PromoteSourceVersion(source) }
       return emitted
     }
