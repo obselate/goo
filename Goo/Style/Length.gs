@@ -24,6 +24,16 @@ public struct Length {
   internal prop Px float32{ get -> Unit == LengthUnit.Px ? Value : 0.0F }
 
   shared {
+    /// Creates an absolute pixel length.
+    /// @param value length in pixels
+    /// @returns a pixel length
+    public func Pixels(value float64) Length -> Length { Unit: LengthUnit.Px, Value: float32(value) }
+
+    /// Creates a percentage of the available size.
+    /// @param value percentage of the available size
+    /// @returns a percentage length
+    public func Percent(value float64) Length -> Length { Unit: LengthUnit.Percent, Value: float32(value) }
+
     /// Gets an automatic layout length.
     public prop Auto Length{
       get -> Length { Unit: LengthUnit.Auto }

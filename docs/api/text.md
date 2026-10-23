@@ -457,7 +457,7 @@ Gets whether this controller currently owns editor focus.
 
 ### `OnCommand`
 
-Gets or sets the interceptor called before every semantic command.
+Gets or sets the interceptor called before every semantic command. Paste with nil Text is intercepted before clipboard reads. Supplied paste text is passed unchanged.
 
 ### `OnSubmit`
 

@@ -59,6 +59,8 @@ public class Anim[T] {
   private var currentT T
   private var toT T
   private var startTime float64
+  private var elapsedOffset float64
+  private var paused bool
   private var running bool
   private var disposed bool
   private var mutating bool
@@ -104,7 +106,7 @@ public class Anim[T] {
   /// Gets the current value at the current motion clock time.
   public prop Value T{
     get {
-      if !running {
+      if !running || paused {
         return currentT
       }
       guard let pump = boundPump else {
@@ -119,16 +121,16 @@ public class Anim[T] {
   public prop Target T{ get -> toT }
 
   /// Gets the current velocity in converter-coordinate units per second.
-  /// A resting animation reports zero velocity in every dimension.
+  /// A resting or paused animation reports zero velocity in every dimension.
   public prop Velocity MotionVelocity{
     get {
-      if !running || disposed {
+      if !running || paused || disposed {
         return zeroVelocity()
       }
       guard let pump = boundPump else {
         return zeroVelocity()
       }
-      let elapsed = (pump.Now - startTime) * Motion.TimeScale
+      let elapsed = elapsedAt(pump.Now)
       for var i = 0; i < sims.Length; i++ {
         velRead[i] = simAt(i).Velocity(elapsed)
       }
@@ -136,8 +138,11 @@ public class Anim[T] {
     }
   }
 
-  /// Gets whether any scalar simulation is still running.
+  /// Gets whether an animation is active, including while paused.
   public prop Running bool{ get -> running }
+
+  /// Gets whether this animation is paused. A paused animation remains Running.
+  public prop IsPaused bool{ get -> paused }
 
   /// Gets whether the owning Cell has disposed this animation.
   public prop IsDisposed bool{ get -> disposed }
@@ -181,6 +186,62 @@ public class Anim[T] {
       retargetRequired(target, velocity, true, spec, specs)
     }
 
+  /// Holds the current value until Resume, retargeting, or forced completion.
+  public func Pause() {
+    if disposed || !running || paused { return }
+    beginMutation()
+    try {
+      let now = currentNow()
+      currentT = memoize(now)
+      elapsedOffset = elapsedAt(now)
+      paused = true
+    } finally {
+      mutating = false
+    }
+  }
+
+  /// Continues a paused animation from its held elapsed time.
+  public func Resume() {
+    if disposed || !paused { return }
+    beginMutation()
+    try {
+      startTime = currentNow()
+      paused = false
+      memoValid = false
+    } finally {
+      mutating = false
+    }
+  }
+
+  /// Sets elapsed time on an active Motion.Tween animation, preserving pause state.
+  /// Times beyond the duration land on the target. Completion is delivered on the
+  /// next pump, even when paused. Non-tween or inactive animations throw InvalidOperationException.
+  /// @param elapsedMs finite, nonnegative elapsed milliseconds, independent of TimeScale
+  public func Seek(elapsedMs float64) {
+    if disposed { return }
+    beginMutation()
+    try {
+      if !motionFinite(elapsedMs) || elapsedMs < 0.0 {
+        throw ArgumentOutOfRangeException("elapsedMs")
+      }
+      if !running {
+        throw InvalidOperationException("Seek requires an active Motion.Tween animation")
+      }
+      for var i = 0; i < sims.Length; i++ {
+        if !(simAt(i) is LinearTimed) {
+          throw InvalidOperationException("Seek requires Motion.Tween in every dimension")
+        }
+      }
+      elapsedOffset = elapsedMs / 1000.0
+      startTime = currentNow()
+      memoValid = false
+      currentT = memoize(startTime)
+      notifyOwner(currentT)
+    } finally {
+      mutating = false
+    }
+  }
+
   /// Snaps to value, stops all scalar simulations, and notifies the owner.
   /// @param value value to set
   public func Set(value T) {
@@ -216,6 +277,7 @@ public class Anim[T] {
       toT = value
       memoValid = false
       running = false
+      paused = false
       pendingCompletion = nil
       if let owner = handle.registrationPump {
         owner.Deregister(handle)
@@ -295,7 +357,7 @@ public class Anim[T] {
       for var i = 0; i < sims.Length; i++ {
         let sim = simAt(i)
         work[i] = sim.Position(elapsed)
-        velDims[i] = sim.Velocity(elapsed)
+        velDims[i] = if paused { 0.0 } else { sim.Velocity(elapsed) }
       }
     } else {
       for var i = 0; i < velDims.Length; i++ {
@@ -316,6 +378,8 @@ public class Anim[T] {
     }
     toT = target
     startTime = now
+    elapsedOffset = 0.0
+    paused = false
     memoValid = false
     running = true
     if let pump = boundPump {
@@ -357,7 +421,7 @@ public class Anim[T] {
 
   private func memoize(now float64) T {
     let scale = Motion.TimeScale
-    let elapsed = (now - startTime) * scale
+    let elapsed = elapsedAt(now)
     for var i = 0; i < sims.Length; i++ {
       work[i] = simAt(i).Position(elapsed)
     }
@@ -380,6 +444,7 @@ public class Anim[T] {
       }
     } finally {
       running = false
+      paused = false
       pendingCompletion = nil
       if let owner = handle.registrationPump {
         owner.Deregister(handle)
@@ -401,6 +466,7 @@ public class Anim[T] {
       converter.Read(toT, work)
       currentT = toT
       running = false
+      paused = false
       clearSims()
       pendingCompletion = if Motion.TimeScale <= 0.0 { MotionCompletionReason.Disabled }
         else { MotionCompletionReason.ReducedMotion }
@@ -417,12 +483,14 @@ public class Anim[T] {
     if done {
       currentT = memoize(now)
       running = false
+      paused = false
       clearSims()
       memoValid = false
       pendingCompletion = MotionCompletionReason.Finished
       notifyOwner(currentT)
       return false
     }
+    if paused { return true }
     let value = memoize(now)
     var changed = false
     for var i = 0; i < work.Length; i++ {
@@ -489,7 +557,8 @@ public class Anim[T] {
     }
   }
 
-  private func elapsedAt(now float64) float64 -> (now - startTime) * Motion.TimeScale
+  private func elapsedAt(now float64) float64 ->
+    if paused { elapsedOffset } else { elapsedOffset + (now - startTime) * Motion.TimeScale }
 
   private func simAt(i int32) Simulation {
     guard let sim = sims[i] else {

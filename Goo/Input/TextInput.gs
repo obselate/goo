@@ -115,12 +115,16 @@ internal partial class TextInput {
     if end < start || (caret != start && caret != end) { return false }
     let anchor = caret == start ? end : start
     if target.Kind == NodeKind.Entry {
-      let semanticLength = target.Password
-      ? UnicodeGraphemes.Starts(target.Buffer).Length : target.Buffer.Length
+      let starts = UnicodeGraphemes.Starts(target.Buffer)
+      let semanticLength = target.Password ? starts.Length : target.Buffer.Length
       if end > semanticLength { return false }
       if let history = target.EntryHistory { history.Typing = false }
-      target.Anchor = target.Password ? protectedTextSourceOffset(target.Buffer, anchor) : anchor
-      target.Caret = target.Password ? protectedTextSourceOffset(target.Buffer, caret) : caret
+      let low = target.Password ? protectedTextSourceOffset(target.Buffer, start)
+        : start == target.Buffer.Length ? start : compositionBoundaryBefore(starts, start)
+      let high = target.Password ? protectedTextSourceOffset(target.Buffer, end)
+        : length == 0 ? low : compositionBoundaryAfter(starts, target.Buffer.Length, end)
+      target.Anchor = caret == start ? high : low
+      target.Caret = caret == start ? low : high
       target.AnchorAffinity = TextAffinity.Upstream
       target.CaretAffinity = TextAffinity.Downstream
       target.BlinkT = 0.0
@@ -129,9 +133,13 @@ internal partial class TextInput {
     if target.Kind == NodeKind.Editor {
       guard let controller = target.EditorController else { return false }
       if end > controller.Document.Length { return false }
+      let snappedAnchor = controller.SnapPosition(TextPosition{ Offset: anchor,
+        Affinity: anchor <= caret ? TextAffinity.Upstream : TextAffinity.Downstream })
+      let snappedCaret = controller.SnapPosition(TextPosition{ Offset: caret,
+        Affinity: caret <= anchor ? TextAffinity.Upstream : TextAffinity.Downstream })
       controller.Selection = TextSelection{
-        Anchor: TextPosition{ Offset: anchor, Affinity: TextAffinity.Upstream },
-        Active: TextPosition{ Offset: caret, Affinity: TextAffinity.Downstream },
+        Anchor: TextPosition{ Offset: snappedAnchor.Offset, Affinity: TextAffinity.Upstream },
+        Active: TextPosition{ Offset: snappedCaret.Offset, Affinity: TextAffinity.Downstream },
       }
       return true
     }

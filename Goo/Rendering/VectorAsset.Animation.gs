@@ -163,7 +163,8 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
     pump.Register(this)
   }
 
-  private func attachHandles(blob Blob) {
+  private func attachHandles(blob Blob, depth int32 = 0) {
+    Reconciler.CheckTreeDepth(depth)
     var nodeIndex int32 = -1
     var fillIndex int32 = -1
     var strokeIndex int32 = -1
@@ -187,7 +188,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
     }
     if let container = blob as Container {
       for child in container.Children {
-        attachHandles(child)
+        attachHandles(child, depth + 1)
       }
     }
   }

@@ -75,6 +75,7 @@ public sealed class RichTextClipboard : IDisposable
             command.Cancel = true;
             return;
         }
+        if (command.Command.Kind == TextCommandKind.Paste && command.Command.Text != null) return;
         if (command.Cancel || disposed || command.Command.Kind is not (TextCommandKind.Copy or TextCommandKind.Cut or TextCommandKind.Paste)) return;
         command.Cancel = true;
         _ = ObserveAsync(RunAsync(command.Command.Kind, false, false, CancellationToken.None));

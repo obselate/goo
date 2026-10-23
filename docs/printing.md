@@ -38,7 +38,7 @@ Install `Goo.Printing`. Call from the window thread and keep pumping Goo while a
 | Windows | Windows print dialog and GDI spooler |
 | macOS | System print panel and PDFKit |
 | Linux Wayland | XDG desktop print portal and system `libdbus-1.so.3` |
-| Android | `Goo.Printing.Android` and `PrintManager` |
+| Android | `Goo.Printing.Android` and `PrintManager`, at up to 300 DPI |
 
 ## PDF export
 
@@ -69,4 +69,5 @@ var printing = new AndroidPrinting(activity);
 var result = await printing.ShowDialogAsync(window, new Report("Hello"), "Report");
 ```
 
-Call from the Activity main thread. Android controls paper, page ranges and the destination.
+Run on the Activity main thread. Keep the Activity and window alive until completion.
+The renderer stays alive while Android pauses the Activity or removes its surface.

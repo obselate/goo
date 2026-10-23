@@ -40,6 +40,43 @@ the opaque fallback. Native appearance remains subject to system policy.
 Desktop-wide settings and numeric blur strength are not exposed. For blur of Goo
 content within the window, use `Style.ShaderEffect`.
 
+## Process application activation
+
+```gs
+let window = Window{}
+Window.ApplicationActivated += activation -> {
+    if activation.Kind == ApplicationActivationKind.OpenUri {
+        window.Title = activation.Target!!.AbsoluteUri
+    }
+}
+let status = Window.InitializeApplicationActivation(
+    ApplicationActivation{IsInitial: true})
+```
+
+Subscribe before opening the first window. Check the returned status.
+
+- One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
+- The app chooses the target window and validates notification data.
+- `PostApplicationActivation` copies requests from any thread.
+- Arguments keep their boundaries, empty values and sender directory.
+- Documents remain URIs, including Android `content:` values.
+- A document URI does not grant access to its data.
+- An initial native request replaces a sole pending synthetic Launch.
+- Other requests use FIFO order, with callback posts deferred to the next batch.
+- Closing the last window clears pending requests.
+- The same owner thread can initialize a new delivery lifetime.
+- Hosts and optional packages own native associations, IPC and notifications.
+
+| Post status | Meaning |
+| --- | --- |
+| Accepted | The queue owns the request. |
+| NotInitialized | Call InitializeApplicationActivation first. |
+| Closed | All windows closed. |
+| QueueFull | 64 requests are pending. |
+| TooLarge | More than 256 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
+
+Null data and relative URIs are invalid arguments.
+
 ## Visibility, activation and stacking
 
 Set `Window.IconPng` in the `Window` initializer to embedded PNG bytes before
@@ -225,6 +262,40 @@ Capture replays the current scene offscreen and may submit an additional native
 present. It requires an open desktop window and does not capture a specific prior
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
+
+## Render pages without presenting
+
+```gsharp
+let created = window.CreateOffscreenSession()
+if created.Status == OffscreenRenderStatus.Success {
+    using let session = created.Session!!
+    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
+    while !pending.IsCompleted {
+        session.Service()
+        Thread.Sleep(1)
+    }
+    let rendered = pending.GetAwaiter().GetResult()
+}
+```
+
+Create the session on the window thread before opening native UI.
+The session keeps the shared renderer, not the native surface.
+It can render while an embedded host is paused or detached.
+Call `Service` from the host's UI scheduler until each page finishes.
+Create, render, service and dispose on the same thread.
+
+Each page uses a fresh, unattached cell.
+Logical size controls layout. Pixel size controls resolution.
+`MaxBytes` bounds new GPU allocations and CPU pixels.
+Pass a previous capture to reuse its pixels at the same size.
+Do not read those pixels until the next render completes.
+
+`window.RenderOffscreenAsync` uses the window's existing renderer instead.
+Keep pumping that window until completion.
+Both paths return an explicit `OffscreenRenderStatus`.
+Closing the owner cancels pending pages.
+`window.Closed` is a cancellation token for optional owner-bound services.
 
 ## Fullscreen displays
 
@@ -933,6 +1004,7 @@ Sources:
 - [`Window.gs`](../../Goo/Window/Window.gs)
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
 - [`Window.Activation.gs`](../../Goo/Window/WindowParts/Window.Activation.gs)
+- [`Window.ApplicationActivation.gs`](../../Goo/Window/WindowParts/Window.ApplicationActivation.gs)
 - [`Window.Backdrop.gs`](../../Goo/Window/WindowParts/Window.Backdrop.gs)
 - [`Window.Context.gs`](../../Goo/Window/WindowParts/Window.Context.gs)
 - [`Window.Dispatcher.gs`](../../Goo/Window/WindowParts/Window.Dispatcher.gs)
@@ -958,6 +1030,10 @@ Sources:
 - [`Window.Visibility.gs`](../../Goo/Window/WindowParts/Window.Visibility.gs)
 
 Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post and RequestClose are safe from another thread.
+
+### `ApplicationActivated`
+
+Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection.
 
 ### `DisplayChanged`
 
@@ -1025,6 +1101,12 @@ Configures process-wide application identity before SDL initialization.
 - `version`: application version
 - `identifier`: unique reverse-domain identifier
 
+### `CreateOffscreenSession`
+
+Creates a renderer lease before opening native UI that can remove this window's presentation surface.
+
+Returns: A session on Success, or an explicit renderer status.
+
 ### `DragRegion(Container)`
 
 Marks a container subtree as a native drag region for undecorated windows. Clickable or focusable descendants still win their own pointer input.
@@ -1057,6 +1139,14 @@ Gets an immutable snapshot of the current host's displays. Open the window first
 
 Hides an open desktop window and cancels transient input without destroying its tree. Releases the swapchain and clip atlas after pending GPU work completes. Show recreates them. Modal windows and owners blocked by a modal child or chooser cannot be hidden.
 
+### `InitializeApplicationActivation(ApplicationActivation)`
+
+Binds activation to the current UI thread and retains the initial request until a window pumps. Call before opening the first desktop window or from the embedded host's owner thread. After all windows close, the same owner thread may initialize a new delivery lifetime.
+
+- `initial`: The initial request, copied with its IsInitial value unchanged.
+
+Returns: Accepted when retained, or Failed when the request exceeds the activation data limits.
+
 ### `Open`
 
 Creates the native window and returns this window.
@@ -1081,6 +1171,14 @@ Takes a completed capture, or returns nil while it is pending. Failed readback t
 Queues an action for the UI thread.
 
 - `action`: action to run during the next Pump
+
+### `PostApplicationActivation(ApplicationActivation)`
+
+Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 256 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
+
+- `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
+
+Returns: Accepted, NotInitialized, Closed, QueueFull at 64 pending requests, or TooLarge.
 
 ### `Pump(float64)`
 

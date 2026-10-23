@@ -48,8 +48,10 @@ if (result.Status == RichTextStatus.UnsupportedContent)
 `PasteAsync` prefers HTML, then RTF. It uses plain text only when no rich representation is present.
 
 - A paste replaces the captured selection as one undo step.
+- Supplied Paste text and direct styled replacements do not read the clipboard.
 - Changed text, selection, formatting, composition or read-only state returns `Stale`.
 - Cut publishes Copy intent. It deletes only after publication succeeds and the captured state still matches.
 - A stale Cut leaves the text intact. The clipboard can already contain the copied selection.
 - One publication contains plain text, HTML and RTF. Native publication failure can replace the old clipboard.
 - Android HTML uses the native text clip. RTF is offered through an exact-MIME document reference for compatible consumers.
+- MIME transport comes from the Window host. The binding does not install another native clipboard adapter.

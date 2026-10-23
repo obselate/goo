@@ -12,6 +12,13 @@ internal class NodeLifecycle {
     }
 
     private func disposeTree(n Node) Exception? {
+      if !n.Retired && FrameRecorder.Current != nil {
+        if Virtualization.State(n) != nil {
+          FrameWorkCounters.VirtualDiscards += n.Children.Count
+        } else if let parent = n.Parent {
+          if Virtualization.State(parent) != nil { FrameWorkCounters.VirtualDiscards++ }
+        }
+      }
       n.Retired = true
       n.Context = nil
       ElementHandles.Detach(n)

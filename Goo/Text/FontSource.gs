@@ -7,7 +7,6 @@ public data struct FontVariation(Tag string, Value float32) { }
 
 public sealed class FontSource : IDisposable {
   shared {
-    private const MaxFontBytes int32 = 67108864
     private const MaxVariations int32 = 16
 
     private func NormalizeFamily(value string) string {
@@ -76,7 +75,7 @@ public sealed class FontSource : IDisposable {
       if canonical.Length == 0 { throw ArgumentException("Font family is empty", "family") }
       if canonical.Contains(",") { throw ArgumentException("Font family cannot contain commas", "family") }
       if weight < 1 || weight > 1000 { throw ArgumentOutOfRangeException("weight") }
-      if bytes.Length == 0 || bytes.Length > MaxFontBytes {
+      if bytes.Length == 0 || bytes.Length > VulkanTextFont.MaxFontBytes {
         throw ArgumentOutOfRangeException("bytes")
       }
       this.family = canonical

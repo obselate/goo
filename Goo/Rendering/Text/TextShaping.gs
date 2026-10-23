@@ -152,6 +152,7 @@ internal partial class TextShaping {
       families string, size float32, weight int32, italic bool, letterSpacing float32,
       direction int32, paragraphResolution BidiResolution?, language string,
       out width float32, measureOnly bool = false) ShapedText?{
+        if FrameRecorder.Current != nil { FrameWorkCounters.ShapeCalls++ }
         width = 0.0F
         let text = measureOnly ? "" : paragraph.Substring(lineStart, lineLength)
         let primary = ResolveCachedPrimary(families, weight, italic)
@@ -688,11 +689,11 @@ internal partial class TextShaping {
         throw InvalidOperationException("System font selection has no path")
       }
       guard let recorder = FrameRecorder.Current else {
-        return TypefaceResource(selection.Family, File.ReadAllBytes(path), 0u, nil, 0uL, 0uL)
+        return TypefaceResource(selection.Family, VulkanTextFont.ReadBytes(path), 0u, nil, 0uL, 0uL)
       }
       let start = Stopwatch.GetTimestamp()
       var bytes []uint8
-      try { bytes = File.ReadAllBytes(path) }
+      try { bytes = VulkanTextFont.ReadBytes(path) }
       catch (error Exception) {
         recorder.ResourceDuration(FrameResourceKind.Font, 0uL, "font.read", start, result: -1)
         throw error

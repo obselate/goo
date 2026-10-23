@@ -8,6 +8,7 @@ import System.Text
 
 internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   const MaxTextUnits int32 = 1048576
+  internal const MaxFontBytes int32 = 67108864
   const MaxVariations int32 = 16
   const MaxFeatures int32 = 32
   const MaxLanguageUnits int32 = 64
@@ -37,10 +38,20 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   public prop AbiVersion uint32{ get -> VulkanTextProviderAbi.Version }
 
   shared {
+    internal func ReadBytes(path string) []uint8 {
+      using let stream = File.OpenRead(path)
+      let length = stream.Length
+      if length > MaxFontBytes { throw InvalidDataException("Font exceeds 64 MiB") }
+      let bytes = [int32(length)]uint8
+      stream.ReadExactly(bytes, 0, bytes.Length)
+      return bytes
+    }
+
     internal func ValidateFace(bytes []uint8, selectedFaceIndex uint32) uint32 {
       if bytes.Length == 0 {
         throw ArgumentException("Font bytes are empty", "bytes")
       }
+      if bytes.Length > MaxFontBytes { throw ArgumentOutOfRangeException("bytes") }
       var pin GCHandle
       var blob nint
       try {
@@ -74,6 +85,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
       if bytes.Length == 0 {
         throw ArgumentException("Font bytes are empty", "bytes")
       }
+      if bytes.Length > MaxFontBytes { throw ArgumentOutOfRangeException("bytes") }
       if pixelHeight == 0u || pixelHeight > 33554431u {
         throw ArgumentOutOfRangeException("pixelHeight")
       }
@@ -539,7 +551,7 @@ internal func LoadVulkanTextFont(
     if path == nil {
       throw ArgumentNullException("path")
     }
-    return VulkanTextFont(File.ReadAllBytes(path), pixelHeight, faceIndex, variations)
+    return VulkanTextFont(VulkanTextFont.ReadBytes(path), pixelHeight, faceIndex, variations)
   }
 
 internal func VulkanTextTag(value string) uint32 {
