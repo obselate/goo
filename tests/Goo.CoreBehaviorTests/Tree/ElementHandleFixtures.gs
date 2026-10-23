@@ -4,6 +4,45 @@ import System
 import System.Collections.Generic
 
 internal class ElementHandleFixtures {
+  func DeferredVirtualScrollContract() bool {
+    let cell = VirtualFixtureCell(1000)
+    let window = Window{Root: cell, Width: 100, Height: 60}
+    try {
+      window.UpdateTree()
+      cell.Builds.Clear()
+      for offset in []float64{4000.0, 8000.0, 4000.0} {
+        cell.Handle.JumpTo(0.0, offset)
+        window.UpdateTree(0.01, 0.0, false)
+        if cell.Builds.Count != 0 || !cell.Handles[0].IsMounted { return false }
+      }
+      window.UpdateTree(0.01, 0.01, true)
+      if cell.Builds.Count != 5 || !cell.Handles[200].IsMounted || cell.Handles[0].IsMounted { return false }
+      cell.Builds.Clear()
+      cell.Handle.JumpTo(0.0, 12000.0)
+      window.UpdateTree(0.01, 0.0, false)
+      if cell.Builds.Count != 0 { return false }
+      let bounds = cell.Handle.BorderBox
+      if bounds.Height != 60.0 || cell.Builds.Count != 5 || !cell.Handles[600].IsMounted { return false }
+      cell.Builds.Clear()
+      cell.Handle.JumpTo(0.0, 16000.0)
+      window.UpdateTree(0.01, 0.0, false)
+      if cell.Builds.Count != 0 { return false }
+      window.PlatformInput.PointerPress(0L, PointerDevice.Mouse, 5.0F, 5.0F,
+        PointerButton.Primary, KeyModifiers{}, 1.0F)
+      if cell.Builds.Count != 5 || cell.Handles[800].AttachedNode()?.Focused != true { return false }
+      cell.Builds.Clear()
+      cell.Items[800] = VirtualFixtureItem{Id: 800, Revision: 1}
+      cell.Rebuild()
+      window.UpdateTree(0.01, 0.0, false)
+      if cell.Builds.Count != 1 || cell.Builds[0] != 800 { return false }
+      cell.Handle.JumpTo(0.0, 18000.0)
+      window.UpdateTree(0.01, 0.0, false)
+      window.Close()
+      window.FlushDeferredVirtualization()
+      return cell.Disposes == 1 && !cell.Handles[800].IsMounted && window.Tree == nil
+    } finally { window.Close() }
+  }
+
   func ThrowingVirtualDisposalContract() bool {
     let node = Node{}
     let owner = VirtualNodeState()

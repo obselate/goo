@@ -52,6 +52,7 @@ public partial class Window {
     requireUiThread("Window.PerformAccessibilityAction")
     if request == nil { throw ArgumentNullException("request") }
     if IsInputBlocked { return false }
+    FlushDeferredVirtualization()
     guard let manager = accessibility else { return false }
     if !manager.Supports(id, request.Action) { return false }
     guard let target = manager.NodeFor(id) else { return false }

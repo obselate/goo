@@ -234,7 +234,10 @@ public class PlatformInput {
     editorChanged?.Invoke(current)
   }
 
-  private func requireThread() -> owner.RequireElementHandleThread("Window.PlatformInput")
+  private func requireThread() {
+    owner.RequireElementHandleThread("Window.PlatformInput")
+    owner.FlushDeferredVirtualization()
+  }
 
   private func requireInput() {
     requireThread()

@@ -22,7 +22,7 @@ public class ElementHandle {
   /// An unmounted handle returns an empty rectangle.
   public prop BorderBox ElementRect{
     get {
-      guard let n = mountedNode() else { return ElementRect{} }
+      guard let n = mountedNode(true) else { return ElementRect{} }
       return ElementHandles.BorderBox(n)
     }
   }
@@ -31,7 +31,7 @@ public class ElementHandle {
   /// An unmounted handle returns an empty rectangle.
   public prop ContentBox ElementRect{
     get {
-      guard let n = mountedNode() else { return ElementRect{} }
+      guard let n = mountedNode(true) else { return ElementRect{} }
       return ElementHandles.ContentBox(n)
     }
   }
@@ -40,7 +40,7 @@ public class ElementHandle {
   /// An unmounted handle returns the origin.
   public prop ScrollOffset Point{
     get {
-      guard let n = mountedNode() else { return Point{} }
+      guard let n = mountedNode(true) else { return Point{} }
       return Point{ X: float64(n.ScrollX), Y: float64(n.ScrollY) }
     }
   }
@@ -48,7 +48,7 @@ public class ElementHandle {
   /// An unmounted handle returns the origin.
   public prop ScrollRange Point{
     get {
-      guard let n = mountedNode() else { return Point{} }
+      guard let n = mountedNode(true) else { return Point{} }
       return scrollRange(n)
     }
   }
@@ -156,7 +156,7 @@ public class ElementHandle {
   public func TryGetTextPositionAt(point Point, space TextCoordinateSpace,
     out position TextPosition) bool{
       position = TextPosition{}
-      guard let n = mountedNode() else { return false }
+      guard let n = mountedNode(true) else { return false }
       return TextGeometryQueries.PositionAt(n, point, space, out position)
     }
 
@@ -165,7 +165,7 @@ public class ElementHandle {
   public func TryGetTextCaretRect(position TextPosition, space TextCoordinateSpace,
     out rect ElementRect) bool{
       rect = ElementRect{}
-      guard let n = mountedNode() else { return false }
+      guard let n = mountedNode(true) else { return false }
       return TextGeometryQueries.CaretRect(n, position, space, out rect)
     }
 
@@ -175,7 +175,7 @@ public class ElementHandle {
   public func TryCopyTextRangeRects(textRange TextRange, space TextCoordinateSpace,
     destination Span[ElementRect], out required int32) bool{
       required = 0
-      guard let n = mountedNode() else { return false }
+      guard let n = mountedNode(true) else { return false }
       return TextGeometryQueries.CopyRangeRects(n, textRange, space, destination, out required)
     }
 
@@ -208,9 +208,10 @@ public class ElementHandle {
     return nil
   }
 
-  private func mountedNode() Node? {
+  private func mountedNode(flush bool = false) Node? {
     if let owner = window {
       owner.RequireElementHandleThread("ElementHandle")
+      if flush { owner.FlushDeferredVirtualization() }
     }
     if let current = node {
       if !current.Retired && ElementHandles.Owns(current, this) {

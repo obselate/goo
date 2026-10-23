@@ -652,6 +652,8 @@ public partial class Window {
   }
 
   private func startCapture(target WindowRenderTarget, owner WindowCaptureOwner) WindowReadbackRequestStatus {
+    FlushDeferredVirtualization()
+    if windowTarget != target { return WindowReadbackRequestStatus.NotReady }
     if target.PollCapture() == WindowReadbackPollStatus.Complete { target.TakeCaptureResult() }
     flushForeground()
     let status = target.RequestCapture(node, portalRoot, RenderBackground, RenderScale, reusableCapture?.Pixels)
