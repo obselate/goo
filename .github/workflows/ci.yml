@@ -122,7 +122,11 @@ jobs:
 
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
-        run: dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
+        run: |
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
+            --source Goo.NativeMenus --xml Goo.NativeMenus/bin/Release/net10.0/Goo.NativeMenus.xml \
+            --output docs/api-native-menus
 
       - name: Validate onboarding and release metadata
         run: |
