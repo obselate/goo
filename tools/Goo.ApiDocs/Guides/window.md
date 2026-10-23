@@ -365,3 +365,31 @@ File reads support local `text/uri-list`, GNOME copied-file lists, Windows `CF_H
 Image reads prefer PNG, JPEG, GIF, BMP, then macOS TIFF. PNG/JPEG/GIF bytes keep their declared MIME type; a successful transfer does not validate their encoding. Windows DIB/BMP and macOS TIFF are converted to PNG. Every encoded result is limited to 64 MiB. Native bitmap conversion checks dimensions before raster decode, allowing at most 8192 pixels per dimension and 64 MiB of RGBA pixels. These are payload and raster limits, not peak temporary-memory limits. Encoded bytes can be saved directly or passed to an application image-loading workflow.
 
 Linux relies on the active SDL clipboard backend. Windows uses native file-list and DIB access; macOS uses pasteboard items and ImageIO for TIFF conversion. Backend failures are reported explicitly; native Windows/macOS execution requires validation on those systems.
+
+## Publish multiple clipboard formats
+
+```gsharp
+let plain = System.Text.Encoding.UTF8.GetBytes("Hello")
+let html = System.Text.Encoding.UTF8.GetBytes("<b>Hello</b>")
+let data = TransferData([]TransferRepresentation{
+  TransferRepresentation("text/plain", ReadOnlyMemory[uint8](plain)),
+  TransferRepresentation("text/html", ReadOnlyMemory[uint8](html))
+}, []Uri{})
+let result = await window.WriteClipboardAsync(data)
+```
+
+Start clipboard calls on the open window's UI thread. Check `result.Status`.
+
+| Contract | Behavior |
+| --- | --- |
+| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Owned data | Bytes and URI lists stay valid after clipboard replacement or window close. Caller changes cannot alter published bytes. |
+| Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
+| Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
+| Cut | File Cut requires URIs. It requests a move and never deletes sources. Editor Cut writes Copy data, then removes its selection after Success. |
+| Read status | Missing requested data is `Empty`. A present zero-byte format is `Success`. Failed reads return no partial selection. |
+| Write status | Unsupported formats are not dropped. Native failures can replace or clear the old clipboard. Success does not confirm paste. |
+| Limits | At most 128 MIME names, 256 ASCII bytes per name and 64 MiB total bytes. Text is limited to 16 MiB. Existing file-list bounds apply. |
+| Platforms | These methods support native Wayland. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
+| Lifetime | Wayland needs a clipboard manager to keep data after app exit. A document URI does not grant persistent access. |
+
