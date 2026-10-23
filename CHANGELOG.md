@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.11.0 - 2026-10-23
+
+- Drain Vulkan work before process exit, fixing intermittent crashes when an app returns from Main with a window open.
+- Release unmounted window roots when their host closes.
+- Add optional owned native message boxes for Windows, macOS and Android.
+- Add native popup surfaces with platform grabs, dismissal and typed results.
+- Android now supports native Goo popup surfaces with owner-bound rendering and dismissal.
+- Bound Android accessibility harness teardown after its checks finish.
+- Retain shared vector identities across transform-only draws and sweep dead identities once per frame.
+
 ## 0.10.0 - 2026-10-23
 
 - Add external Vulkan image import and retained frame release ownership.
