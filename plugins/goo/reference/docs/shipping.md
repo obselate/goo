@@ -45,6 +45,44 @@ Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING
 It does not automatically embed app-owned assets. Single-file publishing is not
 validated for this sample.
 
+## Android signed AAB
+
+```sh
+bash tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh "$HOME/.cache/goo-android-tools"
+export GOO_BUNDLETOOL="$HOME/.cache/goo-android-tools/bundletool-all-1.18.3.jar"
+goo package --project App.Android.csproj --target android --output artifacts/packages
+```
+
+Use an existing `net10.0-android` application with the pinned Android workload,
+SDK and JDK. Put signing paths in a private MSBuild import or environment:
+
+```xml
+<PropertyGroup>
+  <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+  <ApplicationVersion>1</ApplicationVersion>
+  <AndroidKeyStore>true</AndroidKeyStore>
+  <AndroidSigningKeyStore>/private/upload.keystore</AndroidSigningKeyStore>
+  <AndroidSigningKeyAlias>upload</AndroidSigningKeyAlias>
+  <AndroidSigningKeyPass>file:/private/key-password</AndroidSigningKeyPass>
+  <AndroidSigningStorePass>file:/private/store-password</AndroidSigningStorePass>
+</PropertyGroup>
+```
+
+- Create the upload key once with JDK `keytool`. Keep encrypted backups.
+- Keep keys and passwords out of the repository and published files.
+- Use `file:` password references. AAB signing does not support `env:` password references.
+- Keep `ApplicationId` stable. Increase `ApplicationVersion` for each Play release.
+- The command creates Release AAB only. It checks the bundle and upload certificate.
+- The bundletool JAR is pinned to SHA-256 `a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29`.
+- AAB is not an installable APK. Use `bundletool build-apks` and `install-apks` for device checks.
+- Check 16 KB alignment on the generated APK, not the AAB.
+- Play App Signing uses a separate installed-app signing key. Configure it in Play Console.
+- A locally signed APK cannot be assumed to update a Play-installed copy.
+- Store uploads, key creation and device installation are separate operations.
+- Keep signing logs private. Do not publish diagnostic build logs.
+
+See [Android integration](android.md) for device, Vulkan and native-library checks.
+
 ## macOS app and DMG
 
 ```sh
