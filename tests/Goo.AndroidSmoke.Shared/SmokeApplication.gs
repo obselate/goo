@@ -8,17 +8,23 @@ import System.IO
 public class SmokeApplication {
   shared {
     /// Creates one retained smoke scene with shared assets and controls.
-    public func CreateWindow() Window -> Window {
-      Title: "Goo Vulkan Android smoke",
-      Width: 420,
-      Height: 760,
-      Background: Color.Rgb(17, 24, 39),
-      Root: SmokeCell{},
+    public func CreateWindow() Window {
+      let scene = SmokeCell{}
+      let window = Window{
+        Title: "Goo Vulkan Android smoke",
+        Width: 420,
+        Height: 760,
+        Background: Color.Rgb(17, 24, 39),
+        Root: scene,
+      }
+      scene.Input = window.PlatformInput
+      return window
     }
   }
 }
 
 class SmokeCell : Cell, IDisposable {
+  internal prop Input PlatformInput? { get; set; }
   private let font FontSource
   private let controller TextEditorController = TextEditorController(TextDocument("Multiline Goo editor\nCompose, select, and scroll."))
   private let picture ImageSource = ImageSource(2, 2, []uint8{
@@ -39,6 +45,11 @@ class SmokeCell : Cell, IDisposable {
   }
 
   override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Overflow: Overflow.Scroll,.Padding: 20,.Gap: 14,
+    .KeyBindings: []KeyBinding{
+      KeyBinding{ Key: Key.Backspace, Repeat: true, Action: () -> {
+        Input?.Execute(TextCommand{ Kind: TextCommandKind.DeleteBackward })
+      } },
+    },
     Text{ Content: "Goo Vulkan", FontFamily: "Smoke Vend Sans", FontSize: 30, Color: Color.White },
       Text{ Content: "System fallback: Hello, Android!", FontFamily: "sans-serif", FontSize: 16, Color: Color.White },
       Button() {.Height: 48,.BackgroundColor: Color.Rgb(37, 99, 235),.BorderRadius: 10,.OnClick: () -> { count++ },
