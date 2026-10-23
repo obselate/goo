@@ -136,7 +136,7 @@ public class PublicApiTests
     {
         return new[] { typeof(Window).Assembly, typeof(NativeMenus).Assembly, typeof(Goo.Images.ImageVariants).Assembly,
                 typeof(Goo.SpellCheck.SpellCheckSession).Assembly, typeof(Goo.SpellCheck.HunspellSpellingService).Assembly,
-                typeof(Goo.Printing.Printing).Assembly }
+                typeof(Goo.Printing.Printing).Assembly, typeof(NativeDialogs).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !IsPackageContainer(type))
             .Where(type => !IsTestFixture(type))

@@ -75,6 +75,8 @@
 !/Goo.Printing/**
 !/Goo.Printing.Android/
 !/Goo.Printing.Android/**
+!/Goo.NativeDialogs/
+!/Goo.NativeDialogs/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -110,6 +112,9 @@
 !/docs/assets/**
 !/docs/api/
 !/docs/api/**
+!/docs/native-dialogs.md
+!/docs/api-native-dialogs/
+!/docs/api-native-dialogs/**
 !/docs/devtools/
 !/docs/devtools/**
 !/docs/perf/
