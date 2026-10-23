@@ -32,14 +32,14 @@ def wait_for(name):
 
 
 with (root / "native.log").open("w", encoding="utf-8") as log:
-    primary = subprocess.Popen(command + ["activated", identity, str(root)], env=environment,
+    primary = subprocess.Popen(command + ["activated", identity, "--output=" + str(root)], env=environment,
                                stdout=log, stderr=subprocess.STDOUT)
     try:
         wait_for("1.event")
         for index, token in enumerate(("goo-native-token-one", "goo-native-token-two"), 2):
             forwarded = environment.copy()
             forwarded["XDG_ACTIVATION_TOKEN"] = token
-            subprocess.run(command + ["activated", identity, str(root), "--goo-open-uri",
+            subprocess.run(command + ["activated", identity, "--output=" + str(root), "--goo-open-uri",
                                       f"goo-token-test://route/{index}"],
                            env=forwarded, check=True, timeout=15, stdout=log, stderr=subprocess.STDOUT)
             actual = wait_for(f"{index}.event").read_text(encoding="utf-8").splitlines()

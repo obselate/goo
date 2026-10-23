@@ -18,7 +18,7 @@ children = []
 
 
 def start(mode, identity, output, tag=None, cwd=None):
-    arguments = command + [mode, identity, str(output)]
+    arguments = command + [mode, identity, "--output=" + str(output)]
     if tag is not None:
         arguments.append(tag)
     child = subprocess.Popen(arguments, cwd=cwd or output, env=environment,
