@@ -55,6 +55,11 @@ public sealed class FixtureContractTests
         yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.RoutedInteractiveChildIsRelativeToEachHandler));
         yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.TextSelectionUsesTheRoutedCountAndCaptureDoesNotCreateFalseClicks));
         yield return Contract<ClickSequenceFixtures>(nameof(ClickSequenceFixtures.TouchCountsArePerContactAndPenSequencesAreIndependent));
+        yield return Contract<GestureFixtures>(nameof(GestureFixtures.RoutedWinnerSuppressesClickScrollAndLosingRecognizer));
+        yield return Contract<GestureFixtures>(nameof(GestureFixtures.DeadlineAndExplicitCancelHaveOneTerminalNotification));
+        yield return Contract<GestureFixtures>(nameof(GestureFixtures.CaptureAndNativeCancelDoNotLeakRecognition));
+        yield return Contract<GestureFixtures>(nameof(GestureFixtures.SelectionMutationPreservesBothEndpointAffinities));
+        yield return Contract<GestureFixtures>(nameof(GestureFixtures.CallbackFailureSuppressesReleaseAndKeepsOriginalError));
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.CaptureContinuesOutsideClipUntilRelease));
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.NestedClipPathsIntersect));
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.NormalPointerAcquisitionRespectsClipPath));

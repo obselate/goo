@@ -1,6 +1,7 @@
 package Goo
 
 import System.Collections.Generic
+import System.Diagnostics
 
 internal data struct QueuedInputEvent {
   internal var IsPointer bool
@@ -16,8 +17,13 @@ internal class InputEventQueue {
   internal prop IsDispatching bool{ get -> draining }
   internal prop HasPending bool{ get -> events.Count > 0 }
 
-  internal func Add(value QueuedPointerEvent) ->
-    events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: value })
+  internal func Add(value QueuedPointerEvent) {
+    var received = value
+    if received.ReceivedTime == 0.0 {
+      received.ReceivedTime = float64(Stopwatch.GetTimestamp()) / float64(Stopwatch.Frequency)
+    }
+    events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: received })
+  }
 
   internal func Add(value KeyboardEvent) ->
     events.Enqueue(QueuedInputEvent{ Keyboard: value })
