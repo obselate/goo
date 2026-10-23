@@ -161,7 +161,7 @@ func RunNonScalingStrokeSmoke() {
         }
     } catch (error Exception) {
         previousError.Write(errors.ToString())
-        throw
+        throw error
     } finally {
         Console.SetError(previousError)
     }
