@@ -14,10 +14,12 @@ if (args.Length == 2 && args[0] == "--goo-notification")
     Require(Window.InitializeApplicationActivation(read.Activation!) == WindowOperationResult.Accepted, "Activation initialization failed");
     typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null);
     Require(received?.Kind == ApplicationActivationKind.Notification, "Protocol did not raise notification activation");
-    File.WriteAllText(Output(new Uri(args[1]).Scheme), JsonSerializer.Serialize(new[]
+    string activationOutput = Output(new Uri(args[1]).Scheme);
+    File.WriteAllText(activationOutput + ".new", JsonSerializer.Serialize(new[]
     {
         received!.NotificationId, received.ActionId, received.Payload
     }));
+    File.Move(activationOutput + ".new", activationOutput);
     return;
 }
 
