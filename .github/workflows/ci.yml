@@ -308,6 +308,8 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_NATIVE_POPUP_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_POPUP_MENU_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify cold and warm macOS application activation
         run: |

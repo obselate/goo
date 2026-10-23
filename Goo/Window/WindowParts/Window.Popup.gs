@@ -105,7 +105,9 @@ public partial class Window {
   }
 
   private func checkPopupDismissal() {
-    if !IsVisible {
+    if !PopupOwnerOpen {
+      DismissChildPopups(PopupDismissReason.OwnerClosed)
+    } else if !IsVisible {
       DismissChildPopups(PopupDismissReason.OwnerHidden)
     } else if IsInputBlocked {
       DismissChildPopups(PopupDismissReason.OutsideInteraction)
