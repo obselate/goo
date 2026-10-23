@@ -851,6 +851,8 @@ method|Goo.LayoutTransition|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.LayoutTransition|ToString|virtual|public|generic:|()->System.String
 method|Goo.LayoutTransition|op_Equality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
 method|Goo.LayoutTransition|op_Inequality|static|public|generic:|(left:Goo.LayoutTransition,right:Goo.LayoutTransition)->System.Boolean
+method|Goo.Length|Percent|static|public|generic:|(value:System.Double)->Goo.Length
+method|Goo.Length|Pixels|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:Goo.Length)->Goo.Edges
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Double)->Goo.Length
 method|Goo.Length|op_Implicit|static|public|generic:|(value:System.Int32)->Goo.Length
