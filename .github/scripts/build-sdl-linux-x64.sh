@@ -116,7 +116,7 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
   -DSDL_X11=OFF
 "$cmake" --build "$work/build"
 "$cmake" --install "$work/build" --strip
-python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_popup_handlers.py" "$work/src" "$work/install/lib/libSDL3.so"
+LD_LIBRARY_PATH="$work/install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" python3 "$(dirname "$0")/../../tests/NativeWindow/test_sdl_popup_handlers.py" "$work/src" "$work/install/lib/libSDL3.so"
 
 install -D -m 0644 "$(readlink -f "$work/install/lib/libSDL3.so")" "$output"
 if [[ -n "$static_output" ]]; then
