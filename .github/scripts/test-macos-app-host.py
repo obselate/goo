@@ -66,9 +66,10 @@ try:
     observed(1, "OpenUri", True, scheme + "://cold/route")
     launch([scheme + "://warm/route"])
     observed(2, "OpenUri", False, scheme + "://warm/route")
-    launch([scheme + "://forwarded/one", scheme + "://forwarded/two"], fresh=True)
     forwarded = []
     for index in (3, 4):
+        target = scheme + "://forwarded/" + ("one" if index == 3 else "two")
+        launch([target], fresh=True)
         event = wait_for(f"{index}.event").read_text(encoding="utf-8").splitlines()
         if event[:2] != ["OpenUri", "warm"]:
             raise RuntimeError(f"Forwarded native activation changed: {event}")
