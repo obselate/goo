@@ -3,6 +3,22 @@ package Goo
 import System
 import System.Runtime.InteropServices
 
+@StructLayout(LayoutKind.Sequential)
+internal struct ToastGuid {
+    internal var A uint32
+    internal var B uint32
+    internal var C uint32
+    internal var D uint32
+
+    internal init(value string) {
+        let bytes = Guid(value).ToByteArray()
+        A = BitConverter.ToUInt32(bytes, 0)
+        B = BitConverter.ToUInt32(bytes, 4)
+        C = BitConverter.ToUInt32(bytes, 8)
+        D = BitConverter.ToUInt32(bytes, 12)
+    }
+}
+
 @UnmanagedFunctionPointer(CallingConvention.Winapi)
 internal delegate ToastGet(self nint, out value nint) int32;
 @UnmanagedFunctionPointer(CallingConvention.Winapi)
@@ -40,7 +56,7 @@ internal class WindowsToastNative {
         private func WindowsGetStringRawBuffer(value nint, out length uint32) nint;
 
         @DllImport("combase.dll")
-        private func RoGetActivationFactory(name nint, ref iid Guid, out result nint) int32;
+        private func RoGetActivationFactory(name nint, ref iid ToastGuid, out result nint) int32;
 
         @DllImport("combase.dll")
         private func RoActivateInstance(name nint, out result nint) int32;
@@ -55,9 +71,11 @@ internal class WindowsToastNative {
             return Marshal.PtrToStringUni(data, int32(length)) ?? ""
         }
 
-        internal func Check(result int32) { Marshal.ThrowExceptionForHR(result) }
+        internal func Check(result int32) {
+            if result < 0 { throw COMException("Windows toast operation failed", result) }
+        }
 
-        internal func Method[T Delegate](value nint, slot int32) T ->
+        internal func Method[T any](value nint, slot int32) T ->
             Marshal.GetDelegateForFunctionPointer[T](Marshal.ReadIntPtr(Marshal.ReadIntPtr(value), slot * IntPtr.Size))
 
         internal func Query(value nint, identity string) nint {
@@ -69,7 +87,7 @@ internal class WindowsToastNative {
         internal func Factory(name string, identity string) nint {
             let text = String(name)
             try {
-                var iid = Guid(identity)
+                var iid = ToastGuid(identity)
                 Check(RoGetActivationFactory(text, ref iid, out var result))
                 return result
             } finally { WindowsDeleteString(text) }
