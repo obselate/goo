@@ -6,7 +6,7 @@ import System.Collections.Generic
 import System.Diagnostics
 import System.Runtime.InteropServices
 
-internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost, NativeFileDragHost {
+internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost, NativeFileDragHost, PinchInputHost {
   private const MousePointerId int64 = 0L
   private const TouchMouseId uint32 = uint32.MaxValue
   private const PenMouseId uint32 = uint32.MaxValue - 1u

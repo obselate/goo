@@ -215,6 +215,7 @@ internal partial class DevToolsSession : IDisposable {
   internal func CaptureSnapshot(full bool = false) DiagnosticSnapshot {
     owner.RequireElementHandleThread("DevToolsSession.CaptureSnapshot")
     if disposed { throw ObjectDisposedException("DevToolsSession") }
+    owner.FlushDeferredVirtualization()
     let current = if full { captureCurrent(true) } else { captureIfNeeded() }
     guard let available = current else { throw InvalidOperationException("The diagnostics snapshot is unavailable.") }
     return full ? identity.FullSnapshot(available) : available

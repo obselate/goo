@@ -66,13 +66,16 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo tests
+            --severity GL0001=none Goo Goo.Gestures tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
 
       - name: Build Goo with warnings as errors
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
+
+      - name: Verify shared gesture recognizers
+        run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Regenerate API documentation
         run: |
@@ -85,20 +88,6 @@ jobs:
           dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
-      - name: Verify optional spell checking
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libhunspell-1.7-0
-          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
-          dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
-          dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
-          dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
-
-      - name: Run local PNG decoder and cache tests
-        run: |
-          dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj \
-            -c Release -p:TreatWarningsAsErrors=true
 
       - name: Build Goo DevTools CLI
         run: |
@@ -454,44 +443,18 @@ jobs:
       - name: Fetch pinned Windows SDL runtime
         run: .github/scripts/fetch-sdl-win-x64.sh artifacts/native/win-x64/SDL3.dll
 
-      - name: Build library and Vulkan verification projects
+      - name: Build library
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj \
-            -c Release -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-          dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj \
+
+      - name: Verify optional spell checking
+        run: |
+          sudo apt-get install -y --no-install-recommends libhunspell-1.7-0
+          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj \
-            -c Release -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-          dotnet exec tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll compile \
-            Goo/Shaders/Effects/backdrop_blur.slang Goo/Shaders/Authoring \
-            "$RUNNER_TEMP/backdrop_blur.goo-effect" "$RUNNER_TEMP/backdrop_blur.goo-effect.json"
-          cmp "$RUNNER_TEMP/backdrop_blur.goo-effect" Goo/Shaders/Effects/backdrop_blur.goo-effect
-          dotnet exec tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll compile \
-            Goo/Shaders/Effects/filtered_backdrop.slang Goo/Shaders/Authoring \
-            "$RUNNER_TEMP/filtered_backdrop.goo-effect" "$RUNNER_TEMP/filtered_backdrop.goo-effect.json"
-          cmp "$RUNNER_TEMP/filtered_backdrop.goo-effect" Goo/Shaders/Effects/filtered_backdrop.goo-effect
-
-      - name: Verify NativeAOT local PNG loading
-        run: |
-          dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
-            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
-            -o artifacts/image-nativeaot
-          artifacts/image-nativeaot/Goo.ImageLoadingSmoke
-
-      - name: Verify local PNG pixels in Vulkan
-        run: |
-          set -o pipefail
-          .github/scripts/with-headless-wayland.sh env \
-            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
-            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
-            GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
-            2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
-          grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
+          dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
+          dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
+          dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
 
       - name: Verify independent pages and raster PDF
         run: |
@@ -541,6 +504,19 @@ jobs:
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             node .github/scripts/devtools-profiler-ui-smoke.mjs artifacts/reports/profiler-ui
 
+      - name: Verify compiled shader effects
+        run: |
+          dotnet build tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj \
+            -c Release -p:TreatWarningsAsErrors=true
+          dotnet exec tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll compile \
+            Goo/Shaders/Effects/backdrop_blur.slang Goo/Shaders/Authoring \
+            "$RUNNER_TEMP/backdrop_blur.goo-effect" "$RUNNER_TEMP/backdrop_blur.goo-effect.json"
+          cmp "$RUNNER_TEMP/backdrop_blur.goo-effect" Goo/Shaders/Effects/backdrop_blur.goo-effect
+          dotnet exec tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll compile \
+            Goo/Shaders/Effects/filtered_backdrop.slang Goo/Shaders/Authoring \
+            "$RUNNER_TEMP/filtered_backdrop.goo-effect" "$RUNNER_TEMP/filtered_backdrop.goo-effect.json"
+          cmp "$RUNNER_TEMP/filtered_backdrop.goo-effect" Goo/Shaders/Effects/filtered_backdrop.goo-effect
+
       - name: Print profiler UI failure logs
         if: failure()
         run: |
@@ -558,166 +534,6 @@ jobs:
           if-no-files-found: ignore
           path: artifacts/reports/profiler-ui/
 
-      - name: Run portable Vulkan checks
-        run: |
-          export SDL_VIDEODRIVER=wayland
-          export LIBGL_ALWAYS_SOFTWARE=1
-          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
-          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
-          GOO_VK_DAMAGE_JOURNAL=1 \
-            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
-          GOO_VK_SCENE_ALLOC=1 \
-            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
-
-          run_vulkan_proof_lane() {
-            .github/scripts/with-headless-wayland.sh env "$1=1" \
-              dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
-          }
-          run_vulkan_proof_lane GOO_VK_TEXT_E2E
-          run_vulkan_proof_lane GOO_VK_TEXT_PAINT_E2E
-          run_vulkan_proof_lane GOO_VK_TEXT_EFFECT_READBACK
-          run_vulkan_proof_lane GOO_VK_TEXT_PAINT_READBACK
-          run_vulkan_proof_lane GOO_VK_IMAGE_READBACK
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_LIQUID_GLASS_ALPHA_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_BACKDROP_BLUR_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SHADER_EFFECT_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SHADER_GENERATOR_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_FRAGMENT_CORRECTNESS_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_QUEUE_WAKE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_SVG_CORPUS_OUTPUT="$PWD/artifacts/reports/svg-corpus" \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_SVG_MORPH_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PROFILER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PROFILER_SMOKE=1 GOO_PROFILE_START=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_EMBEDDED_HOST_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_WINDOW_ACTIVATION_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_WINDOW_DISPLAY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_TIMELINE_COMPLETION_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_PRIMITIVE_METRICS_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PIPELINE_IDENTITY_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_CLIP_CAPTURE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PARTIAL_REDRAW_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_EDITOR_GUTTER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_SCROLLBAR_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_PORTAL_CAPTURE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_HIDE_RESOURCES_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_IMAGE_STAGING_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_IMAGE_RELEASE_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_TRANSPARENT_WINDOW_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_ORDERED_MODIFIER_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
-          .github/scripts/with-headless-wayland.sh env GOO_VK_DIAGNOSTICS=1 \
-            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
-
       - name: Record dependencies and reject known vulnerabilities
         run: |
           mkdir -p artifacts/reports
@@ -730,17 +546,6 @@ jobs:
             cat artifacts/reports/vulnerabilities.json
             exit 1
           fi
-
-      - name: Run focused core behavior tests
-        run: |
-          .github/scripts/with-headless-wayland.sh env \
-            SDL_VIDEODRIVER=wayland \
-            LIBGL_ALWAYS_SOFTWARE=1 \
-            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
-            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-            dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj \
-              -c Release -p:TreatWarningsAsErrors=true \
-              -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
       - name: Archive Linux build state
         run: |
@@ -817,6 +622,22 @@ jobs:
             dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
               -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           done
+
+      - name: Pack shared gesture recognizers
+        run: |
+          dotnet pack Goo.Gestures/Goo.Gestures.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Verify packed NativeAOT gesture consumer
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/gesture-nuget
+          XDG_CACHE_HOME: ${{ runner.temp }}/gesture-cache
+        run: |
+          dotnet publish tests/Goo.Gestures.Smoke/Goo.Gestures.Smoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/gesture-nativeaot
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            artifacts/gesture-nativeaot/Goo.Gestures.Smoke
 
       - name: Pack and validate native accessibility runtimes
         run: |
@@ -1027,6 +848,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SpellCheck*.nupkg
             artifacts/packages/Goo.Printing*.nupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -1040,6 +862,7 @@ jobs:
           if-no-files-found: error
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
             artifacts/consumer-performance/stage/*/symbols/
 
@@ -1054,11 +877,270 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SpellCheck*.nupkg
             artifacts/packages/Goo.Printing*.nupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
             artifacts/Goo.${{ env.GOO_VERSION }}-linux-x64.tar.gz
             artifacts/Goo.${{ env.GOO_VERSION }}-linux-x64.tar.gz.sha256
+
+  linux-fixtures:
+    name: linux-${{ matrix.lane }}
+    needs: linux-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: abi
+            project: tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj
+          - lane: proof
+            project: tests/Goo.VulkanProof/Goo.VulkanProof.gsproj
+          - lane: async-readback
+            project: tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj
+          - lane: core
+            project: tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj
+          - lane: image
+            project: tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - *linux-build-download
+      - *linux-build-restore
+      - *linux-dotnet
+      - *linux-apt-update
+      - *linux-apt-cache
+      - *linux-dependencies
+      - *linux-vulkan-driver
+      - *linux-shader-toolchain
+
+      - name: Build fixture
+        run: |
+          dotnet build "${{ matrix.project }}" -c Release -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+
+      - name: Run ABI checks
+        if: matrix.lane == 'abi'
+        run: |
+          export SDL_VIDEODRIVER=wayland
+          export LIBGL_ALWAYS_SOFTWARE=1
+          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
+          GOO_VK_DAMAGE_JOURNAL=1 \
+            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
+          GOO_VK_SCENE_ALLOC=1 \
+            dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
+
+      - name: Run Vulkan proof checks
+        if: matrix.lane == 'proof'
+        run: |
+          export SDL_VIDEODRIVER=wayland
+          export LIBGL_ALWAYS_SOFTWARE=1
+          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          run_vulkan_proof_lane() {
+            .github/scripts/with-headless-wayland.sh env "$1=1" \
+              dotnet tests/Goo.VulkanProof/bin/Release/net10.0/Goo.VulkanProof.dll
+          }
+          run_vulkan_proof_lane GOO_VK_TEXT_E2E
+          run_vulkan_proof_lane GOO_VK_TEXT_PAINT_E2E
+          run_vulkan_proof_lane GOO_VK_TEXT_EFFECT_READBACK
+          run_vulkan_proof_lane GOO_VK_TEXT_PAINT_READBACK
+          run_vulkan_proof_lane GOO_VK_IMAGE_READBACK
+
+      - name: Run async readback checks
+        if: matrix.lane == 'async-readback'
+        run: |
+          export SDL_VIDEODRIVER=wayland
+          export LIBGL_ALWAYS_SOFTWARE=1
+          export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+          export LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_LIQUID_GLASS_ALPHA_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_BACKDROP_BLUR_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_SHADER_EFFECT_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_SHADER_GENERATOR_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_FRAGMENT_CORRECTNESS_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_QUEUE_WAKE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_SVG_CORPUS_OUTPUT="$PWD/artifacts/reports/svg-corpus" \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_SVG_MORPH_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_PROFILER_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_PROFILER_SMOKE=1 GOO_PROFILE_START=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_EMBEDDED_HOST_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_WINDOW_ACTIVATION_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_WINDOW_DISPLAY_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_TIMELINE_COMPLETION_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_PRIMITIVE_METRICS_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_PIPELINE_IDENTITY_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_CLIP_CAPTURE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_PARTIAL_REDRAW_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_EDITOR_GUTTER_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_SCROLLBAR_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_PORTAL_CAPTURE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_ROUNDED_RESIZE_FIRST_FRAME_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_HIDE_RESOURCES_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_IMAGE_STAGING_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_IMAGE_RELEASE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_TRANSPARENT_WINDOW_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_ORDERED_MODIFIER_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env GOO_VK_DIAGNOSTICS=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+      - name: Verify local PNG pixels in Vulkan
+        if: matrix.lane == 'async-readback'
+        run: |
+          set -o pipefail
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            GOO_IMAGE_FILE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
+            2>&1 | tee artifacts/reports/vulkan-cpu-startup.txt
+          grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
+
+      - name: Run focused core behavior tests
+        if: matrix.lane == 'core'
+        run: |
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_VIDEODRIVER=wayland \
+            LIBGL_ALWAYS_SOFTWARE=1 \
+            VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj \
+              -c Release --no-build -p:TreatWarningsAsErrors=true \
+              -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+
+      - name: Run local PNG decoder and cache tests
+        if: matrix.lane == 'image'
+        run: |
+          dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj \
+            -c Release --no-build -p:TreatWarningsAsErrors=true
+
+      - name: Verify NativeAOT local PNG loading
+        if: matrix.lane == 'image'
+        run: |
+          dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
+            -o artifacts/image-nativeaot
+          artifacts/image-nativeaot/Goo.ImageLoadingSmoke
+
+      - name: Upload fixture reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: goo-linux-${{ matrix.lane }}-reports
+          if-no-files-found: ignore
+          path: artifacts/reports/
 
   windows-x64:
     needs: linux-packages
@@ -1138,7 +1220,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [quality, macos-arm64, linux-validation, linux-packages, linux-x64, android, android-consumer, windows-x64]
+    needs: [quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-consumer, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -1215,6 +1297,14 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Gestures.$GOO_VERSION.snupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1252,6 +1342,8 @@ jobs:
             "artifacts/packages/Goo.SpellCheck.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Gestures.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"
@@ -1395,3 +1487,10 @@ jobs:
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - name: Build Android starter from the packed template
+        env:
+          NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
+        run: |
+          dotnet new install artifacts/android-packages/Goo.Templates.*.nupkg
+          dotnet new goo-android --name AndroidStarter --output artifacts/android-starter --application-id org.goo.androidstarter
+          dotnet build artifacts/android-starter/AndroidStarter.csproj -c Release -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true

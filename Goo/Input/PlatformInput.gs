@@ -126,7 +126,7 @@ public class PlatformInput {
   /// Dispatches wheel deltas at a window logical position.
   public func PointerWheel(x float32, y float32, deltaX float32, deltaY float32,
     modifiers KeyModifiers) {
-      requireInput()
+      requireInput(false)
       input.QueuePointerWheel(x / owner.UiScale, y / owner.UiScale, deltaX, deltaY, modifiers)
       drain()
     }
@@ -258,10 +258,13 @@ public class PlatformInput {
     editorChanged?.Invoke(current)
   }
 
-  private func requireThread() -> owner.RequireElementHandleThread("Window.PlatformInput")
+  private func requireThread(flush bool = true) {
+    owner.RequireElementHandleThread("Window.PlatformInput")
+    if flush { owner.FlushDeferredVirtualization() }
+  }
 
-  private func requireInput() {
-    requireThread()
+  private func requireInput(flush bool = true) {
+    requireThread(flush)
     if owner.IsInputBlocked { throw InvalidOperationException("Window input is blocked by its modal child") }
   }
 

@@ -34,6 +34,7 @@ public partial class Window {
 
   internal func FocusElement(n Node) bool {
     requireUiThread("ElementHandle.Focus")
+    FlushDeferredVirtualization()
     if IsInputBlocked { return false }
     let result = input.FocusElement(resolver, n)
     if result {
@@ -52,6 +53,7 @@ public partial class Window {
 
   internal func ActivateElement(n Node) bool {
     requireUiThread("ElementHandle.Activate")
+    FlushDeferredVirtualization()
     if IsInputBlocked || n.Kind != NodeKind.Button { return false }
     let result = hitActivate(node, n)
     if result { markDirtyAndRender() }
@@ -60,6 +62,7 @@ public partial class Window {
 
   internal func BeginElementPress(n Node) bool {
     requireUiThread("ElementHandle.BeginPress")
+    FlushDeferredVirtualization()
     if IsInputBlocked { return false }
     let result = input.BeginPress(resolver, n)
     if result { markDirtyAndRender() }
@@ -68,6 +71,7 @@ public partial class Window {
 
   internal func EndElementPress(n Node, activate bool) bool {
     requireUiThread("ElementHandle.EndPress")
+    FlushDeferredVirtualization()
     let result = input.EndPress(node, resolver, n, activate && !IsInputBlocked)
     if result { markDirtyAndRender() }
     return result
@@ -75,6 +79,7 @@ public partial class Window {
 
   internal func BeginFocusScope(n Node, options FocusScopeOptions) FocusScope {
     requireUiThread("ElementHandle.BeginFocusScope")
+    FlushDeferredVirtualization()
     guard let tree = node else {
       throw InvalidOperationException("The window has no mounted tree")
     }
@@ -90,6 +95,7 @@ public partial class Window {
 
   internal func BlurElement(n Node) bool {
     requireUiThread("ElementHandle.Blur")
+    FlushDeferredVirtualization()
     let result = input.BlurElement(resolver, n)
     if result {
       markDirtyAndRender()
@@ -100,6 +106,7 @@ public partial class Window {
 
   internal func SetTextInputArea(n Node, area ElementRect) bool {
     requireUiThread("ElementHandle.SetTextInputArea")
+    FlushDeferredVirtualization()
     if !IsOpen || n.Retired || input.FocusedNode() != n
       || n.Kind == NodeKind.Entry || n.Kind == NodeKind.Editor
       || !TextInputCallbacks.HasNodeCallbacks(n) {
@@ -142,6 +149,7 @@ public partial class Window {
 
   internal func ScrollElementIntoView(n Node) bool {
     requireUiThread("ElementHandle.ScrollIntoView")
+    FlushDeferredVirtualization()
     if n.Retired { return false }
     var subject = n.Rect
     var parent = n.IsPortal ? nil : n.Parent

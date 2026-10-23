@@ -1,7 +1,9 @@
 package Goo
 
+import Hexa.NET.SDL3
 import System
 import System.Collections.Generic
+import System.Runtime.InteropServices
 
 internal class GestureFixtures {
     func RoutedWinnerSuppressesClickScrollAndLosingRecognizer() bool {
@@ -107,11 +109,45 @@ internal class GestureFixtures {
             && probe.Phases[0] == GesturePhase.Started && probe.Phases[1] == GesturePhase.Canceled
     }
 
+    func TrackpadScaleKeepsContactSamplesEmpty() bool {
+        let begin = NativePinch(SdlPinchEventNative.BeginType, 7u, 1.0F)
+        let update = NativePinch(SdlPinchEventNative.UpdateType, 0u, 2.0F)
+        let end = NativePinch(SdlPinchEventNative.EndType, 0u, 1.0F)
+        if Marshal.SizeOf[SdlPinchEventNative]() != 24 || SdlPinchEventNative.Read(update).Scale != 2.0F
+            || SdlPinchEventNative.WindowIdFor(begin) != 7u || SdlPinchEventNative.WindowIdFor(update) != 7u
+            || SdlPinchEventNative.WindowIdFor(end) != 7u || SdlPinchEventNative.WindowIdFor(update) != 0u {
+            return false
+        }
+        let resolver = Resolver{}
+        let focus = FocusManager()
+        let pointer = PointerInput(focus, InputEventQueue())
+        let text = TextInput(focus)
+        let probe = GestureProbe()
+        let root = Reconciler{Res: resolver}.Mount(Container{
+            Width: 200, Height: 100, Gestures: []GestureRecognizer{probe},
+        })
+        Layout().Calculate(root, 200.0F, 100.0F)
+        Send(pointer, text, resolver, root, PointerEventKind.PinchBegin, 0, 20.0F, 20.0F, 10.0)
+        Send(pointer, text, resolver, root, PointerEventKind.PinchUpdate, 0, 20.0F, 20.0F, 10.1, 2.0F)
+        Send(pointer, text, resolver, root, PointerEventKind.PinchEnd, 0, 20.0F, 20.0F, 10.2)
+        return probe.Phases.Count == 3 && probe.Phases[0] == GesturePhase.Started
+            && probe.Phases[1] == GesturePhase.Changed && probe.Phases[2] == GesturePhase.Completed
+            && probe.Source == GestureSource.Trackpad && probe.Samples == 0 && probe.Scale == 2.0
+    }
+
+    private func NativePinch(kind uint32, windowId uint32, scale float32) SDLEvent {
+        var value = SDLEvent{}
+        let pinch = SdlPinchEventNative{Type: kind, WindowId: windowId, Scale: scale}
+        MemoryMarshal.Write[SdlPinchEventNative](MemoryMarshal.AsBytes[SDLEvent](
+            MemoryMarshal.CreateSpan[SDLEvent](ref value, 1)), in pinch)
+        return value
+    }
+
     private func Send(pointer PointerInput, text TextInput, resolver Resolver, root Node,
-        kind PointerEventKind, id int64, x float32, y float32, time float64) {
+        kind PointerEventKind, id int64, x float32, y float32, time float64, scale float32 = 1.0F) {
         pointer.Dispatch(QueuedPointerEvent{
             Kind: kind, PointerId: id, Device: PointerDevice.Touch, X: x, Y: y,
-            Button: PointerButton.Primary, ReceivedTime: time,
+            Button: PointerButton.Primary, ReceivedTime: time, PinchScale: scale,
         }, root, resolver, time, text)
         resolver.Flush()
     }
@@ -120,6 +156,9 @@ internal class GestureFixtures {
 internal class GestureProbe : GestureRecognizer {
     internal var Timed bool
     internal var Started Action?
+    internal var Source GestureSource
+    internal var Samples int32
+    internal var Scale float64
     internal let Phases List[GesturePhase] = List[GesturePhase]()
 
     public override func CreateSession() GestureSession -> GestureProbeSession(this)
@@ -133,6 +172,12 @@ internal class GestureProbeSession : GestureSession {
     internal init(probe GestureProbe) { this.probe = probe }
 
     public override func Evaluate(input GestureInput) GestureDecision {
+        probe.Source = input.Source
+        probe.Samples = input.PointerCount
+        probe.Scale = input.Scale
+        if input.Source == GestureSource.Trackpad {
+            return input.Kind == GestureInputKind.Up ? GestureDecision.Complete : GestureDecision.Accept
+        }
         if input.Kind == GestureInputKind.Down {
             start = input.PointerAt(0).WindowPosition
             if probe.Timed { deadline = input.TimeSeconds + 0.5 }

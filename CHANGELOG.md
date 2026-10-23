@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.8.0 - 2026-10-23
+
+- Bound text entry undo history to 1,000 groups and 64 MiB of retained text while preserving undo and redo within those limits.
+- Reduce DevTools snapshot costs for large interactive trees without changing snapshot output.
+- Clamp accessibility text selections to complete graphemes before editing or clipboard operations.
+- Do not dispatch pointer-cancel callbacks to retired nodes.
+- Attribute virtualized Cell builds and report per-pump row mount, reuse, discard and uncached shaping counts.
+- Bound all font file reads to 64 MiB before allocation and skip oversized system font candidates.
+- Change Motion.Tween to take milliseconds instead of seconds (breaking: multiply existing second values by 1000). The default tween stays 180 ms.
+- Start Linux validation in parallel with macOS native builds without removing checks.
+- Correct the plugin verifier count for a Button without explicit keyboard bindings.
+- Reject UI trees deeper than 64 nodes with a clear exception before recursive processing can exhaust the stack.
+- Add process-wide application activation delivery with bounded owner-thread routing.
+- Add per-animation Pause, Resume, IsPaused and millisecond Seek for active tween animations.
+- Add named Length.Pixels and Length.Percent factories for C#, F# and VB callers.
+- Start platform consumer checks as soon as packages are ready.
+- Reuse apt package archives between Linux CI jobs without changing installed dependencies.
+
 ## 0.7.54 - 2026-10-22
 
 - Pin CI actions and verify the pinned AccessKit Rust installer download.
