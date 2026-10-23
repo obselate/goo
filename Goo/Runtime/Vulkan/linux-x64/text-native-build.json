@@ -60,10 +60,10 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "2c0d0eb988bd09e92955b1fe8db3341080bcd1e1c6eaba51a33aa2473a255f5c"
+      "sha256": "1055a0d04159681538ace8bdb7fa5798a45ae80b053c86af5c2d38746de24a37"
     },
     "harfbuzz": {
-      "bytes": 1894304,
+      "bytes": 1898400,
       "exports": [
         "hb_aat_layout_feature_type_get_name_id",
         "hb_aat_layout_feature_type_get_selector_infos",
@@ -629,7 +629,7 @@
       ],
       "rpath": [],
       "runpath": [],
-      "sha256": "a35c381f2b8a76d8afc20cd14343ec8585db513fc109958772eb28b5d00ea7b3"
+      "sha256": "74233f9c9dc57bb5190ec9fc5152023487a21c4f3cf1108c2b2b693e50cfe63c"
     }
   },
   "build": {
@@ -642,8 +642,8 @@
     ],
     "environments": {
       "linux-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none",
         "SOURCE_DATE_EPOCH": "0"
       }
@@ -735,8 +735,8 @@
   },
   "buildEvidence": {
     "environment": {
-      "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-      "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+      "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+      "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
       "LDFLAGS": "-Wl,--build-id=none",
       "SOURCE_DATE_EPOCH": "0"
     },

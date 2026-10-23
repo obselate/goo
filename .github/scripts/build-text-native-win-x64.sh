@@ -40,8 +40,8 @@ if windows["target"] != "x86_64-w64-mingw32" or windows["requiredFormat"] != "PE
 if windows["gpuImport"] != "goo-harfbuzz.dll":
     raise SystemExit("hb-gpu core import drift")
 if windows["requiredNeeded"] != {
-    "harfbuzz": ["KERNEL32.dll", "msvcrt.dll"],
-    "gpu": ["KERNEL32.dll", "goo-harfbuzz.dll", "msvcrt.dll"],
+    "harfbuzz": ["ADVAPI32.dll", "KERNEL32.dll", "msvcrt.dll"],
+    "gpu": ["ADVAPI32.dll", "KERNEL32.dll", "goo-harfbuzz.dll", "msvcrt.dll"],
 }:
     raise SystemExit("Windows dependency policy drift")
 required = {
@@ -60,9 +60,9 @@ if set(manifest["build"]["harfbuzzOptions"]) != required:
     raise SystemExit("HarfBuzz integration options drift")
 if manifest["build"]["environments"]["win-x64"] != {
     "SOURCE_DATE_EPOCH": "0",
-    "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-    "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-    "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++",
+    "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+    "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+    "LDFLAGS": "-Wl,--no-insert-timestamp -static -static-libgcc -static-libstdc++ -fstack-protector-strong -Wl,--exclude-libs,libssp.a",
 }:
     raise SystemExit("Windows build environment drift")
 PY
@@ -159,19 +159,19 @@ Path(path).write_text(
     "\n[properties]\n"
     "needs_exe_wrapper = true\n"
     "\n[built-in options]\n"
-    f"c_args = ['-O3', '-g0', '-ffile-prefix-map={work}=.']\n"
-    f"cpp_args = ['-O3', '-g0', '-ffile-prefix-map={work}=.']\n"
-    "c_link_args = ['-static-libgcc', '-static-libstdc++', '-Wl,--no-insert-timestamp']\n"
-    "cpp_link_args = ['-static-libgcc', '-static-libstdc++', '-Wl,--no-insert-timestamp']\n",
+    f"c_args = ['-O3', '-g0', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=2', '-fstack-protector-strong', '-fcf-protection=full', '-ffile-prefix-map={work}=.']\n"
+    f"cpp_args = ['-O3', '-g0', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=2', '-fstack-protector-strong', '-fcf-protection=full', '-ffile-prefix-map={work}=.']\n"
+    "c_link_args = ['-static', '-static-libgcc', '-static-libstdc++', '-fstack-protector-strong', '-Wl,--exclude-libs,libssp.a', '-Wl,--no-insert-timestamp']\n"
+    "cpp_link_args = ['-static', '-static-libgcc', '-static-libstdc++', '-fstack-protector-strong', '-Wl,--exclude-libs,libssp.a', '-Wl,--no-insert-timestamp']\n",
     encoding="utf-8",
 )
 PY
 
 python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"
 export SOURCE_DATE_EPOCH=0
-export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
+export CFLAGS="-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
-export LDFLAGS='-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++'
+export LDFLAGS='-Wl,--no-insert-timestamp -static -static-libgcc -static-libstdc++ -fstack-protector-strong -Wl,--exclude-libs,libssp.a'
 common_options=(--prefix=/usr --libdir=lib --buildtype=release --default-library=shared --wrap-mode=nodownload)
 harfbuzz_options=(-Dglib=disabled -Dgobject=disabled -Dcairo=disabled -Dchafa=disabled -Dpng=disabled -Dzlib=disabled -Dicu=disabled -Dgraphite=disabled -Dgraphite2=disabled -Dfreetype=disabled -Dfontations=disabled -Dgdi=disabled -Ddirectwrite=disabled -Dcoretext=disabled -Dharfrust=disabled -Dkbts=disabled -Dwasm=disabled -Draster=disabled -Dvector=disabled -Dgpu=enabled -Dsubset=disabled -Dtests=disabled -Dintrospection=disabled -Ddocs=disabled -Ddoc_tests=false -Dutilities=disabled -Dbenchmark=disabled -Dgpu_demo=disabled -Dwith_libstdcxx=false)
 meson setup "$work/harfbuzz-build" "$work/harfbuzz-15.0.0" --cross-file "$cross_file" "${common_options[@]}" "${harfbuzz_options[@]}"

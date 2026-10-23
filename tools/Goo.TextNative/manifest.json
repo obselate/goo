@@ -33,32 +33,32 @@
     "environments": {
       "linux-x64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none"
       },
       "osx-arm64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,-dead_strip"
       },
       "win-x64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++"
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "LDFLAGS": "-Wl,--no-insert-timestamp -static -static-libgcc -static-libstdc++ -fstack-protector-strong -Wl,--exclude-libs,libssp.a"
       },
       "android-arm64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384"
       },
       "android-x64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384"
       }
     },
@@ -141,18 +141,23 @@
       "target": "x86_64-w64-mingw32",
       "requiredFormat": "PE32+ x86-64",
       "linkerFlags": [
+        "-static",
         "-static-libgcc",
         "-static-libstdc++",
+        "-fstack-protector-strong",
+        "-Wl,--exclude-libs,libssp.a",
         "-Wl,--no-insert-timestamp"
       ],
       "sourcePatch": "Rename the core and GPU targets to goo-harfbuzz.dll and goo-harfbuzz-gpu.dll, remove Meson version suffixes, and keep hb-gpu's core import as goo-harfbuzz.dll.",
       "gpuImport": "goo-harfbuzz.dll",
       "requiredNeeded": {
         "harfbuzz": [
+          "ADVAPI32.dll",
           "KERNEL32.dll",
           "msvcrt.dll"
         ],
         "gpu": [
+          "ADVAPI32.dll",
           "KERNEL32.dll",
           "goo-harfbuzz.dll",
           "msvcrt.dll"
@@ -161,6 +166,7 @@
       "forbiddenImports": [
         "libstdc++",
         "libgcc",
+        "libssp",
         "winpthread",
         "libstdc++-6.dll",
         "libgcc_s_seh-1.dll",

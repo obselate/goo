@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 295302,
+      "bytes": 296663,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -46,14 +46,15 @@
       "format": "PE32+ x86-64",
       "imageName": "goo-harfbuzz-gpu.dll",
       "needed": [
+        "ADVAPI32.dll",
         "KERNEL32.dll",
         "goo-harfbuzz.dll",
         "msvcrt.dll"
       ],
-      "sha256": "98b814007646345a9a75cd8a0b45dbcff8e18cbb4c5dee2e81c1b73464c76f4e"
+      "sha256": "0e3cdb53d281cbace1e10cebdb2a058874ac3dcc5c0b1566af638c4e1f6e9120"
     },
     "harfbuzz": {
-      "bytes": 1984723,
+      "bytes": 2008100,
       "exports": [
         "hb_CrapPool",
         "hb_NullPool",
@@ -646,10 +647,11 @@
       "format": "PE32+ x86-64",
       "imageName": "goo-harfbuzz.dll",
       "needed": [
+        "ADVAPI32.dll",
         "KERNEL32.dll",
         "msvcrt.dll"
       ],
-      "sha256": "09e01a86c7c09f3fca27fa3dee93b7a513d54172395bebf1594c3230891ac298"
+      "sha256": "384803e6f574fd0f36a713c0c160787aec73d0cd0653bc368aa5ff807d89c198"
     }
   },
   "build": {
@@ -662,9 +664,9 @@
     ],
     "environments": {
       "win-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "LDFLAGS": "-Wl,--no-insert-timestamp -static -static-libgcc -static-libstdc++ -fstack-protector-strong -Wl,--exclude-libs,libssp.a",
         "SOURCE_DATE_EPOCH": "0"
       }
     },
@@ -729,6 +731,7 @@
       "forbiddenImports": [
         "libstdc++",
         "libgcc",
+        "libssp",
         "winpthread",
         "libstdc++-6.dll",
         "libgcc_s_seh-1.dll",
@@ -743,18 +746,23 @@
       ],
       "gpuImport": "goo-harfbuzz.dll",
       "linkerFlags": [
+        "-static",
         "-static-libgcc",
         "-static-libstdc++",
+        "-fstack-protector-strong",
+        "-Wl,--exclude-libs,libssp.a",
         "-Wl,--no-insert-timestamp"
       ],
       "requiredFormat": "PE32+ x86-64",
       "requiredNeeded": {
         "gpu": [
+          "ADVAPI32.dll",
           "KERNEL32.dll",
           "goo-harfbuzz.dll",
           "msvcrt.dll"
         ],
         "harfbuzz": [
+          "ADVAPI32.dll",
           "KERNEL32.dll",
           "msvcrt.dll"
         ]
@@ -776,9 +784,9 @@
       "windres": "x86_64-w64-mingw32-windres"
     },
     "environment": {
-      "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-      "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-      "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++",
+      "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+      "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+      "LDFLAGS": "-Wl,--no-insert-timestamp -static -static-libgcc -static-libstdc++ -fstack-protector-strong -Wl,--exclude-libs,libssp.a",
       "SOURCE_DATE_EPOCH": "0"
     },
     "sourceDirectory": "temporary",

@@ -81,7 +81,9 @@ needs_exe_wrapper = true
 EOF
 python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$source_root"
 export SOURCE_DATE_EPOCH=0
-export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
+branch_protection=-fcf-protection=full
+if [[ "$target" == android-arm64 ]]; then branch_protection=-mbranch-protection=standard; fi
+export CFLAGS="-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong $branch_protection -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS='-Wl,--build-id=none -Wl,-z,max-page-size=16384'
 readarray -t options < <(python3 - "$manifest" <<'PY'
