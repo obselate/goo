@@ -992,11 +992,36 @@ public static class Program
         return source.Length == 0 ? 0 : Math.Min(index, source.Length - 1);
     }
 
+    private static bool HasRelativeReparsePoint(string path)
+    {
+        if (Path.IsPathRooted(path))
+        {
+            return false;
+        }
+
+        for (var component = Path.TrimEndingDirectorySeparator(path); !string.IsNullOrEmpty(component); component = Path.GetDirectoryName(component))
+        {
+            if (Path.GetFileName(component) is not ("." or "..")
+                && (File.GetAttributes(component) & FileAttributes.ReparsePoint) != 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static IReadOnlyList<string> DiscoverFiles(IEnumerable<string> paths)
     {
         var result = new HashSet<string>(StringComparer.Ordinal);
         foreach (var path in paths)
         {
+            if (HasRelativeReparsePoint(path))
+            {
+                Console.Error.WriteLine($"gslint: warning: skipping path through a symlink or reparse point: {path}");
+                continue;
+            }
+
             if (File.Exists(path))
             {
                 if (Path.GetExtension(path) == ".gs" && (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0)
