@@ -4,6 +4,10 @@ import System
 import Goo
 
 internal unsafe func RunVulkanProof() int32 {
+  if Environment.GetEnvironmentVariable("GOO_VK_EXTERNAL_METAL") == "1" {
+    VulkanExternalImageProof.RunMetal()
+    return 0
+  }
   if Environment.GetEnvironmentVariable("GOO_VK_EXTERNAL_IMAGE") == "1" {
     VulkanExternalImageProof.Run()
     return 0

@@ -110,6 +110,10 @@ internal unsafe struct VkDeviceDispatch {
   var ExternalSemaphoreKinds uint32
   var ForeignQueueFamily bool
   var vkGetMemoryFdPropertiesKHR unmanaged[Cdecl](VkDevice, uint32, int32, *VkMemoryFdPropertiesKHR) -> VkResult
+  var MetalObjects bool
+  var MetalDevice nint
+  var ImageViewFormatSwizzle bool
+  var vkExportMetalObjectsEXT unmanaged[Cdecl](VkDevice, *VkExportMetalObjectsInfoEXT) -> void
   var vkImportSemaphoreFdKHR unmanaged[Cdecl](VkDevice, *VkImportSemaphoreFdInfoKHR) -> VkResult
   var vkImportSemaphoreWin32HandleKHR unmanaged[Cdecl](VkDevice, *VkImportSemaphoreWin32HandleInfoKHR) -> VkResult
   var vkGetMemoryWin32HandlePropertiesKHR unmanaged[Cdecl](VkDevice, uint32, nint, *VkMemoryWin32HandlePropertiesKHR) -> VkResult

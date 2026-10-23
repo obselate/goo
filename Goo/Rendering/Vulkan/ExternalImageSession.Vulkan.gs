@@ -38,6 +38,7 @@ public unsafe sealed partial class ExternalImageSession {
             frame.Ready = true
             return ExternalImageStatus.Success
         }
+        if sync.Kind == ExternalImageSyncKind.MetalSharedEvent { return ImportMetalReady(frame) }
         let syncFd = sync.Kind == ExternalImageSyncKind.SyncFd
         if (!syncFd && !sync.Timeline) || (syncFd && (sync.Timeline || sync.Value != 0uL)) {
             return ExternalImageStatus.UnsupportedSynchronization

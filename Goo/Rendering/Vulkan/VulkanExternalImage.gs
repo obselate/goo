@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Runtime.InteropServices
 
-internal unsafe sealed class VulkanExternalImage : IDisposable {
+internal unsafe sealed partial class VulkanExternalImage : IDisposable {
     internal let Runtime VulkanSharedLease
     internal let Width int32
     internal let Height int32
@@ -12,14 +12,15 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
     internal var View VkImageView
     internal var OpaqueView VkImageView
     private var memory VkDeviceMemory
+    private var storage SafeHandle?
     internal var Busy bool
     internal var Closed bool
 
-    private init(runtime VulkanSharedLease, description VulkanExternalImageDescription) {
+    private init(runtime VulkanSharedLease, width int32, height int32, format int32) {
         Runtime = runtime
-        Width = description.Width
-        Height = description.Height
-        Format = description.Format
+        Width = width
+        Height = height
+        Format = format
     }
 
     shared {
@@ -71,7 +72,7 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             if uint32(description.Width) > properties.maxExtent.width || uint32(description.Height) > properties.maxExtent.height {
                 return ExternalImageResult(ExternalImageStatus.UnsupportedFormat)
             }
-            let imported = VulkanExternalImage(runtime, description)
+            let imported = VulkanExternalImage(runtime, description.Width, description.Height, description.Format)
             var succeeded bool = false
             try {
                 imported.Create(description, handleType,
@@ -203,17 +204,21 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             image: Image, memory: memory, memoryOffset: description.MemoryOffset }
         let bind = dispatch.vkBindImageMemory2
         Check(bind(device, 1u, &bindInfo), "External memory binding failed")
-        var viewInfo = VkImageViewCreateInfo{
+        CreateView()
+    }
+
+    private func CreateView() {
+        var info = VkImageViewCreateInfo{
             sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, image: Image,
             viewType: VkConstants.VK_IMAGE_VIEW_TYPE_2D, format: Format,
-            subresourceRange: VulkanTransitions.ColorSubresourceRange(),
-        }
-        let createView = dispatch.vkCreateImageView
-        Check(createView(device, &viewInfo, nil, &View), "External image view creation failed")
+            subresourceRange: VulkanTransitions.ColorSubresourceRange() }
+        let create = Runtime.Dispatch.vkCreateImageView
+        Check(create(Runtime.Device, &info, nil, &View), "External image view creation failed")
     }
 
     internal func EnsureAlphaView(alpha ExternalImageAlphaMode) ExternalImageStatus {
         if alpha != ExternalImageAlphaMode.Opaque || OpaqueView != 0uL { return ExternalImageStatus.Success }
+        if !Runtime.Dispatch.ImageViewFormatSwizzle { return ExternalImageStatus.UnsupportedFormat }
         var info = VkImageViewCreateInfo{
             sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, image: Image,
             viewType: VkConstants.VK_IMAGE_VIEW_TYPE_2D, format: Format,
@@ -250,5 +255,7 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             free(device, memory, nil)
             memory = 0uL
         }
+        storage?.Dispose()
+        storage = nil
     }
 }

@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Runtime.InteropServices
 import System.Threading
 
 /// Owns one imported GPU allocation. Dispose retires it after its last frame lease.
@@ -32,7 +33,7 @@ internal sealed class ExternalFrameLease {
     internal let Source ExternalImageSource
     internal let Released Action[ExternalFrameResult]
     internal var ReadySemaphore VkSemaphore
-    internal var ReadyHandle ExternalNativeHandle?
+    internal var ReadyHandle SafeHandle?
     internal var Ready bool
     internal var ReadyResult VkResult = VkConstants.VK_NOT_READY
     internal var Dropped bool

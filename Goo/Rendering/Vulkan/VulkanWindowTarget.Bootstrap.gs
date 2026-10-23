@@ -334,6 +334,9 @@ internal unsafe partial class VulkanWindowTarget {
         driverList.pDrivers = driverInfos
         createInfo.pNext = *void(&driverList)
       }
+      var metalExports = VkExportMetalObjectCreateInfoEXT{
+        sType: 1000311000, pNext: createInfo.pNext, exportObjectType: 1u }
+      if OperatingSystem.IsMacOS() { createInfo.pNext = *void(&metalExports) }
       if let currentDiagnostics = diagnostics {
         currentDiagnostics.CaptureInstanceFacts(
           VkConstants.VK_API_VERSION_1_3,
@@ -733,6 +736,8 @@ internal unsafe partial class VulkanWindowTarget {
     externalDmaExtension = ""
     externalModifierExtension = ""
     externalForeignExtension = ""
+    externalMetalExtension = ""
+    externalSwizzleSupported = true
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumerateDeviceExtensionProperties
     if enumerate(candidate, nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
@@ -807,8 +812,11 @@ internal unsafe partial class VulkanWindowTarget {
       features13.pNext = *void(&maintenance)
       maintenance.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT
     }
+    var portability = VkPhysicalDevicePortabilitySubsetFeaturesKHR{ sType: 1000163000, pNext: features13.pNext }
+    if portabilitySubsetSupported { features13.pNext = *void(&portability) }
     let getFeatures = instanceDispatch.vkGetPhysicalDeviceFeatures2
     getFeatures(candidate, &features2)
+    externalSwizzleSupported = !portabilitySubsetSupported || portability.imageViewFormatSwizzle != 0u
     let maintenanceSupported = swapchainMaintenanceVariant == VulkanSwapchainMaintenanceVariant.None
       || maintenance.swapchainMaintenance1 == VkConstants.VK_TRUE
     var textFormatProperties = VkFormatProperties{}
@@ -842,6 +850,10 @@ internal unsafe partial class VulkanWindowTarget {
       maintenance.sType = VkConstants.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT
       maintenance.swapchainMaintenance1 = VkConstants.VK_TRUE
     }
+    var portability = VkPhysicalDevicePortabilitySubsetFeaturesKHR{
+      sType: 1000163000, pNext: features13.pNext,
+      imageViewFormatSwizzle: if externalSwizzleSupported { VkConstants.VK_TRUE } else { VkConstants.VK_FALSE } }
+    if portabilitySubsetSupported { features13.pNext = *void(&portability) }
     let priorities * float32 = stackalloc[1]float32{1.0F}
     var queueInfo = VkDeviceQueueCreateInfo{}
     queueInfo.sType = VkConstants.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO
@@ -879,7 +891,8 @@ internal unsafe partial class VulkanWindowTarget {
           case 1: externalSemaphoreExtension
           case 2: externalDmaExtension
           case 3: externalModifierExtension
-          default: externalForeignExtension
+          case 4: externalForeignExtension
+          default: externalMetalExtension
         }
         if extension == "" { continue }
         let extensionIndex = int32(deviceExtensionCount)

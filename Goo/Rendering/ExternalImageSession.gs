@@ -90,23 +90,31 @@ public sealed partial class ExternalImageSession : IDisposable {
             || description.DeviceUuid.Length != 16 || description.DriverUuid.Length != 16
             || Object.ReferenceEquals(description.Memory, nil) { throw ArgumentException("Invalid external allocation description", "description") }
         lock Gate {
-            if closed { return ExternalImageResult(closeStatus) }
-            if Runtime.DeviceLost { return ExternalImageResult(ExternalImageStatus.DeviceLost) }
+            let status = ImportStatus()
+            if status != ExternalImageStatus.Success { return ExternalImageResult(status) }
             if !description.DeviceUuid.Span.SequenceEqual(DeviceUuid.Span)
                 || !description.DriverUuid.Span.SequenceEqual(DriverUuid.Span) { return ExternalImageResult(ExternalImageStatus.WrongDevice) }
-            var retiredIndex = images.Count - 1
-            while retiredIndex >= 0 {
-                if images[retiredIndex].Native.Closed && !images[retiredIndex].Native.Busy { images.RemoveAt(retiredIndex) }
-                retiredIndex--
-            }
-            if images.Count >= FrameCapacity { return ExternalImageResult(ExternalImageStatus.Busy) }
-            let result = VulkanExternalImage.Import(Runtime, description)
-            if let image = result.Image {
-                image.Session = this
-                images.Add(image)
-            }
-            return result
+            return TrackImport(VulkanExternalImage.Import(Runtime, description))
         }
+    }
+
+    private func ImportStatus() ExternalImageStatus {
+        if closed { return closeStatus }
+        if Runtime.DeviceLost { return ExternalImageStatus.DeviceLost }
+        var index = images.Count - 1
+        while index >= 0 {
+            if images[index].Native.Closed && !images[index].Native.Busy { images.RemoveAt(index) }
+            index--
+        }
+        return if images.Count >= FrameCapacity { ExternalImageStatus.Busy } else { ExternalImageStatus.Success }
+    }
+
+    private func TrackImport(result ExternalImageResult) ExternalImageResult {
+        if let image = result.Image {
+            image.Session = this
+            images.Add(image)
+        }
+        return result
     }
 
     /// Imports a retained Android hardware buffer when the platform route is available.
@@ -116,14 +124,34 @@ public sealed partial class ExternalImageSession : IDisposable {
 
     /// Imports a retained Metal texture when the platform route is available.
     /// @param texture A borrowed MTLTexture pointer.
-    /// @returns Unsupported on platforms without the Metal import route.
-    public func ImportMetalTexture(texture nint) ExternalImageResult -> ExternalImageResult(ExternalImageStatus.Unsupported)
+    /// @returns Success with a caller-owned image, or an explicit platform or format status.
+    public func ImportMetalTexture(texture nint) ExternalImageResult {
+        RequireOwner()
+        if !OperatingSystem.IsMacOS() { return ExternalImageResult(ExternalImageStatus.Unsupported) }
+        if texture == nint(0) { throw ArgumentNullException("texture") }
+        lock Gate {
+            let status = ImportStatus()
+            return if status != ExternalImageStatus.Success { ExternalImageResult(status) }
+                else { TrackImport(VulkanExternalImage.ImportMetal(Runtime, texture, false)) }
+        }
+    }
 
     /// Imports a retained IOSurface plane when the platform route is available.
     /// @param surface A borrowed IOSurface pointer.
     /// @param plane The surface plane index.
-    /// @returns Unsupported on platforms without the Metal import route.
-    public func ImportMetalIoSurface(surface nint, plane int32) ExternalImageResult -> ExternalImageResult(ExternalImageStatus.Unsupported)
+    /// @returns Success with a caller-owned RGBA plane, or an explicit platform or format status.
+    public func ImportMetalIoSurface(surface nint, plane int32) ExternalImageResult {
+        RequireOwner()
+        if !OperatingSystem.IsMacOS() { return ExternalImageResult(ExternalImageStatus.Unsupported) }
+        if surface == nint(0) { throw ArgumentNullException("surface") }
+        if plane < 0 { throw ArgumentOutOfRangeException("plane") }
+        if plane != 0 { return ExternalImageResult(ExternalImageStatus.UnsupportedFormat) }
+        lock Gate {
+            let status = ImportStatus()
+            return if status != ExternalImageStatus.Success { ExternalImageResult(status) }
+                else { TrackImport(VulkanExternalImage.ImportMetal(Runtime, surface, true)) }
+        }
+    }
 
     /// Creates a bounded latest-frame image provider.
     /// @returns A caller-owned provider for images from this session.

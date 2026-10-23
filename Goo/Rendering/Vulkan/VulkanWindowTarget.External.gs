@@ -5,7 +5,7 @@ import System.Collections.Generic
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
-    private const ExternalExtensionCount int32 = 5
+    private const ExternalExtensionCount int32 = 6
     private const DeviceExtensionCapacity int32 = 4 + ExternalExtensionCount
     private var externalMemoryExtension string = ""
     private var externalSemaphoreExtension string = ""
@@ -13,10 +13,16 @@ internal unsafe partial class VulkanWindowTarget {
     private var externalModifierExtension string = ""
     private var externalForeignExtension string = ""
     private var formatModifierQueryAvailable bool
+    private var externalMetalExtension string = ""
+    private var externalSwizzleSupported bool = true
     private var externalSessions List[ExternalImageSession]?
     private var externalCloseError Exception?
 
     private func DiscoverExternalExtension(extension *VkExtensionProperties) {
+        if OperatingSystem.IsMacOS() {
+            if ExtensionNameEquals(extension, "VK_EXT_metal_objects") { externalMetalExtension = "VK_EXT_metal_objects" }
+            return
+        }
         let memoryName = if OperatingSystem.IsWindows() { "VK_KHR_external_memory_win32" } else { "VK_KHR_external_memory_fd" }
         let semaphoreName = if OperatingSystem.IsWindows() { "VK_KHR_external_semaphore_win32" } else { "VK_KHR_external_semaphore_fd" }
         if !OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() { return }
@@ -51,6 +57,18 @@ internal unsafe partial class VulkanWindowTarget {
                 dispatch.ExternalMemoryKinds |= 0x200u
             }
         }
+        dispatch.ImageViewFormatSwizzle = externalSwizzleSupported
+        if externalMetalExtension != "" {
+            let exportObjects = ResolveDeviceProc("vkExportMetalObjectsEXT") as (unmanaged[Cdecl](VkDevice, *VkExportMetalObjectsInfoEXT) -> void)?
+            if exportObjects != nil {
+                var identity = VkExportMetalDeviceInfoEXT{ sType: 1000311002 }
+                var info = VkExportMetalObjectsInfoEXT{ sType: 1000311001, pNext: *void(&identity) }
+                exportObjects(device, &info)
+                dispatch.vkExportMetalObjectsEXT = exportObjects
+                dispatch.MetalDevice = identity.mtlDevice
+                dispatch.MetalObjects = identity.mtlDevice != nint(0)
+            }
+        }
         if OperatingSystem.IsWindows() && externalMemoryExtension != "" {
             let properties = ResolveDeviceProc("vkGetMemoryWin32HandlePropertiesKHR") as (unmanaged[Cdecl](VkDevice, uint32, nint, *VkMemoryWin32HandlePropertiesKHR) -> VkResult)?
             if properties != nil { dispatch.vkGetMemoryWin32HandlePropertiesKHR = properties }
@@ -76,8 +94,8 @@ internal unsafe partial class VulkanWindowTarget {
         if disposed { return ExternalImageSessionResult(ExternalImageStatus.Closed) }
         guard let active = runtime else { return ExternalImageSessionResult(ExternalImageStatus.Busy) }
         if active.DeviceLost { return ExternalImageSessionResult(ExternalImageStatus.DeviceLost) }
-        if active.Dispatch.ExternalMemoryKinds == 0u {
-            return ExternalImageSessionResult(ExternalImageStatus.Unsupported, detail: "External memory extension is unavailable")
+        if active.Dispatch.ExternalMemoryKinds == 0u && !active.Dispatch.MetalObjects {
+            return ExternalImageSessionResult(ExternalImageStatus.Unsupported, detail: "External image extension is unavailable")
         }
         if let sessions = externalSessions {
             var index = sessions.Count - 1
