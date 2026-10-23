@@ -28,7 +28,7 @@ env:
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
-    kwin-wayland wayland-protocols weston
+    kwin-wayland mako-notifier wayland-protocols weston
 
 jobs:
   changes:
@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs Goo.Printing Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.AppHost tests
+            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs Goo.Printing Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.AppHost Goo.Notifications tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -129,6 +129,10 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: dotnet build Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
 
+      - name: Build optional notifications
+        if: needs.changes.outputs.api == 'true'
+        run: dotnet build Goo.Notifications/Goo.Notifications.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
         run: |
@@ -145,6 +149,9 @@ jobs:
           dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
             --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
             --output docs/api-app-host --source Goo.AppHost
+          dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
+            --xml Goo.Notifications/bin/Release/net10.0/Goo.Notifications.xml \
+            --output docs/api-notifications --source Goo.Notifications
 
       - name: Validate onboarding and release metadata
         run: |
@@ -384,6 +391,16 @@ jobs:
           python3 .github/scripts/test-window-placement.py \
             "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
             "$RUNNER_TEMP/window-placement"
+
+      - name: Verify NativeAOT macOS notifications
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.csproj \
+            -c Release -r osx-arm64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/notifications-nativeaot
+          python3 .github/scripts/test-macos-notifications.py \
+            artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications"
 
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
@@ -674,6 +691,20 @@ jobs:
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/window-placement
 
+      - name: Verify NativeAOT Wayland notifications
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          mkdir -p artifacts/notifications-static
+          cp artifacts/native/libSDL3.a artifacts/native/text/libgoo-harfbuzz*.a artifacts/notifications-static/
+          dotnet publish tests/Goo.Notifications.Smoke/Goo.Notifications.Smoke.csproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooNativeAotStaticRoot="$PWD/artifacts/notifications-static" \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" -o artifacts/notifications-nativeaot
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            dbus-run-session -- python3 .github/scripts/test-wayland-notifications.py \
+            artifacts/notifications-nativeaot/Goo.Notifications.Smoke artifacts/reports/wayland-notifications
       - name: Build Goo DevTools app
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -875,6 +906,12 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet pack Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Pack optional notifications
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.Notifications/Goo.Notifications.gsproj -c Release -m:4 -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack and validate native accessibility runtimes
@@ -1209,6 +1246,7 @@ jobs:
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.AppHost.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Notifications.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1783,6 +1821,14 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
           dotnet nuget push "artifacts/packages/Goo.AppHost.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate --no-symbols
+          dotnet nuget push "artifacts/packages/Goo.Notifications.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate --no-symbols
+          dotnet nuget push "artifacts/packages/Goo.Notifications.Android.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols

@@ -36,6 +36,8 @@
 !/.github/scripts/test-macos-app-host.py
 !/.github/scripts/test-wayland-activation.py
 !/.github/scripts/test-window-placement.py
+!/.github/scripts/test-wayland-notifications.py
+!/.github/scripts/test-macos-notifications.py
 !/.github/scripts/build-text-native-linux-x64.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh

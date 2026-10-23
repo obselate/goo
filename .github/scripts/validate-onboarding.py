@@ -26,6 +26,7 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.SpellCheck",
     "Goo.SpellCheck.Android",
     "Goo.SpellCheck.Hunspell",
+    "Goo.Notifications",
     "Goo.Templates",
 }
 
