@@ -20,6 +20,7 @@ class MainActivity : GooActivity {
     private var menuSmokeStarted bool
     private var nativeDialogSmokeStarted bool
     private var popupSmokeStarted bool
+    private var clipboardSmokeStarted bool
     internal prop NativeView GooView -> GooView
     protected override func CreateWindow() Window -> if Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true {
         Window{Root: GestureCheckScene(), Background: Color.Rgb(17, 24, 39)}
@@ -111,5 +112,13 @@ class MainActivity : GooActivity {
             throw InvalidOperationException("Android popup smoke did not receive a presentation surface.")
         }
         GooView.PostDelayed(() -> RunPopupSmoke(attempt + 1), 100)
+    }
+
+    public override func OnWindowFocusChanged(hasFocus bool) {
+        base.OnWindowFocusChanged(hasFocus)
+        if hasFocus && !clipboardSmokeStarted && Intent?.GetBooleanExtra("goo.clipboard_smoke", false) == true {
+            clipboardSmokeStarted = true
+            AndroidClipboardSmoke.Run(GooView)
+        }
     }
 }
