@@ -633,7 +633,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.Simulation.Position(System.Double)"] = new(["elapsed"], [], true),
             ["M:Goo.Simulation.Velocity(System.Double)"] = new(["elapsed"], [], true),
             ["M:Goo.MotionConverter`1.#ctor(System.Int32,System.Action{`0,System.Double[]},System.Func{System.Double[],`0})"] = new(["dimensions", "read", "write"], [], false),
-            ["M:Goo.Motion.Tween(System.Double,Goo.Easing)"] = new(["duration", "easing"], [], true),
+            ["M:Goo.Motion.Tween(System.Double,Goo.Easing)"] = new(["durationMs", "easing"], [], true),
             ["M:Goo.MotionVelocity.Add(Goo.MotionVelocity)"] = new(["other"], [], true),
             ["M:Goo.MotionVelocity.Components(System.Double[])"] = new(["values"], [], true),
             ["M:Goo.MotionVelocity.Uniform(System.Double)"] = new(["value"], [], true),

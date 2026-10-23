@@ -864,7 +864,7 @@ method|Goo.MacOSBackdropOptions|op_Inequality|static|public|generic:|(left:Goo.M
 method|Goo.MotionVelocity|Add|instance|public|generic:|(other:Goo.MotionVelocity)->Goo.MotionVelocity
 method|Goo.MotionVelocity|Components|static|public|generic:|(params values:System.Double[])->Goo.MotionVelocity
 method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->Goo.MotionVelocity
-method|Goo.Motion|Tween|static|public|generic:|(duration:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
+method|Goo.Motion|Tween|static|public|generic:|(durationMs:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
 method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
 method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
 method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag&)->System.Boolean
