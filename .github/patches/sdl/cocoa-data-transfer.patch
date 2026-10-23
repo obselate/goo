@@ -18,7 +18,7 @@ index 0000000..2c16c62
 +#endif
 diff --git a/src/video/cocoa/SDL_cocoadatatransfer.m b/src/video/cocoa/SDL_cocoadatatransfer.m
 new file mode 100644
-index 0000000..be8b45c
+index 0000000..8c201f8
 --- /dev/null
 +++ b/src/video/cocoa/SDL_cocoadatatransfer.m
 @@ -0,0 +1,304 @@
@@ -170,7 +170,7 @@ index 0000000..be8b45c
 +    if (!transfer.callback) return NSDragOperationNone;
 +    const NSDragOperation native = sender.draggingSourceOperationMask;
 +    const Uint32 allowed = ((native & NSDragOperationCopy) ? 1 : 0) | ((native & NSDragOperationMove) ? 2 : 0);
-+    if (kind == 0 || transfer.sequence != sender.draggingSequenceNumber || transfer.allowed != allowed) {
++    if (kind != 2 && (kind == 0 || transfer.sequence != sender.draggingSequenceNumber || transfer.allowed != allowed)) {
 +        transfer.token++;
 +        if (!transfer.token) transfer.token++;
 +        transfer.sequence = sender.draggingSequenceNumber;
