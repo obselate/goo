@@ -144,7 +144,12 @@ internal partial class NativeDropState {
     if !Single.IsFinite(x) || !Single.IsFinite(y) || count > uint32(128) { return DragEffect.None }
     let scale = getScale?.Invoke() ?? 1.0F
     let allowed = DragEffect(effects & uint32(3))
-    if allowed == DragEffect.None { return DragEffect.None }
+    if allowed == DragEffect.None {
+      CancelMimeOffer()
+      router.Cancel()
+      SetTransferResult(DataTransferStatus.Cancelled)
+      return DragEffect.None
+    }
     let borrowed = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
     if borrowed && source == nint(0) { throw InvalidDataException("The native data offer is missing") }
     let local NativeDragBinding? = if OperatingSystem.IsLinux() && source != nint(0) { GCHandle.FromIntPtr(source).Target as NativeDragBinding? } else { nil }
