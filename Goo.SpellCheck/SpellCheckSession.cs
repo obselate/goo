@@ -11,6 +11,7 @@ public sealed class SpellCheckSession : IDisposable
     private readonly List<Misspelling> errors = [];
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? pending;
+    private TextRange? pendingRange;
     private string language;
     private int languageGeneration;
     private bool disposed;
@@ -96,6 +97,9 @@ public sealed class SpellCheckSession : IDisposable
                         continue;
                     errors.Add(error);
                 }
+                if (pendingRange is { } dirty && range.Start <= dirty.Start &&
+                    (long)range.Start + range.Length >= (long)dirty.Start + dirty.Length)
+                    pendingRange = null;
                 PublishLayer();
             }
             completion.TrySetResult(result);
@@ -209,9 +213,26 @@ public sealed class SpellCheckSession : IDisposable
             end = Math.Max(end, edit.Range.Start + delta + edit.InsertedText.Length);
             delta += edit.InsertedText.Length - edit.Range.Length;
         }
+        if (pendingRange is { } dirty)
+        {
+            long dirtyStart = dirty.Start, dirtyEnd = (long)dirty.Start + dirty.Length;
+            for (var i = change.Changes.Count - 1; i >= 0; i--)
+            {
+                var edit = change.Changes[i];
+                var oldEnd = (long)edit.Range.Start + edit.Range.Length;
+                var shift = edit.InsertedText.Length - edit.Range.Length;
+                dirtyStart = dirtyStart < edit.Range.Start ? dirtyStart :
+                    dirtyStart <= oldEnd ? edit.Range.Start : dirtyStart + shift;
+                dirtyEnd = dirtyEnd < edit.Range.Start ? dirtyEnd :
+                    dirtyEnd <= oldEnd ? (long)edit.Range.Start + edit.InsertedText.Length : dirtyEnd + shift;
+            }
+            start = (int)Math.Min(start, dirtyStart);
+            end = (int)Math.Max(end, dirtyEnd);
+        }
         var firstLine = snapshot.GetLineRange(snapshot.GetLineIndex(start));
         var lastLine = snapshot.GetLineRange(snapshot.GetLineIndex(Math.Min(end, snapshot.Length)));
         var range = new TextRange(firstLine.Start, lastLine.Start + lastLine.Length - firstLine.Start);
+        pendingRange = range;
         errors.RemoveAll(error => Overlaps(error.Range, range));
         PublishLayer();
         _ = CheckAfterDelayAsync(range, pending.Token);
