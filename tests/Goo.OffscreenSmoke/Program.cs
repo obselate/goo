@@ -8,6 +8,10 @@ try
     var creation = owner.CreateOffscreenSession();
     Require(creation.Status == OffscreenRenderStatus.Success && creation.Session != null, "session creation failed");
     using var session = creation.Session!;
+    var rejected = false;
+    try { _ = session.RenderAsync(new Page(), new OffscreenRenderOptions((float)int.MaxValue, 180, 480, 360, Color.White, 134217728), CancellationToken.None); }
+    catch (ArgumentOutOfRangeException) { rejected = true; }
+    Require(rejected, "a logical viewport outside the layout integer range was accepted");
     var first = Pump(session, session.RenderAsync(new Page(), options, CancellationToken.None));
     Require(first.Status == OffscreenRenderStatus.Success && first.Capture != null, "session render failed: " + first.Status);
     var capture = first.Capture!;
