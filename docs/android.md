@@ -117,14 +117,6 @@ recreation persistence keep their data in their normal application state owner.
 
 ### Activity state restoration
 
-`SavedInstanceState` exposes Android's saved `Bundle` before `CreateWindow()`
-runs. It is null on a fresh launch. Override the inherited
-`OnSaveInstanceState(Bundle)` callback to store application data and call base.
-The app owns keys, serialization, versioning, and rebuilding its state owner.
-Goo does not serialize Cells, Windows, controllers, or native resources.
-
-For example, an Activity can own and restore a draft:
-
 ```csharp
 private string draft = "";
 
@@ -144,9 +136,11 @@ protected override void OnSaveInstanceState(Android.OS.Bundle outState)
 }
 ```
 
-Keep large or durable data in app storage. A Bundle is Android's bounded
-recreation handoff, not a persistence database. Normal orientation and size
-changes handled by the activity configuration do not recreate the tree.
+- `SavedInstanceState` holds Android's Bundle during `CreateWindow()`. It is null on a fresh launch.
+- The app owns keys, serialization, versioning, and state restoration.
+- Call base from `OnSaveInstanceState`. Goo does not serialize Cells or native resources.
+- Store large or durable data outside the Bundle.
+- Handled orientation and size changes keep the current tree.
 
 ### Frame scheduling
 
