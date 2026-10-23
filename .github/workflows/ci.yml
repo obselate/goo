@@ -923,6 +923,7 @@ jobs:
           dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooUsePackageReference=true -p:RestoreAdditionalProjectSources="$PWD/artifacts/packages" \
+            -p:RestorePackagesPath="$RUNNER_TEMP/goo-audio-packages" \
             -o artifacts/audio-nativeaot
           .github/scripts/with-headless-wayland.sh env \
             SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
@@ -1140,6 +1141,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
+            artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.snupkg
             artifacts/symbols/
             artifacts/consumer-performance/stage/*/symbols/
 
@@ -1161,6 +1163,7 @@ jobs:
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1696,6 +1699,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Audio.$GOO_VERSION.snupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1739,6 +1746,7 @@ jobs:
             "artifacts/packages/Goo.Printing.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Audio.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"
