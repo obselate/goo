@@ -115,6 +115,35 @@ reference. A replacement Surface attaches to the same Window and mounted Cells.
 Full activity destruction closes that Window. Apps that need process or activity
 recreation persistence keep their data in their normal application state owner.
 
+### Activity state restoration
+
+```csharp
+private string draft = "";
+
+protected override Goo.Window CreateWindow()
+{
+    draft = SavedInstanceState?.GetString("draft") ?? "";
+    return new Goo.Window
+    {
+        Root = new Goo.TextEntry { Value = draft, OnChange = value => draft = value }
+    };
+}
+
+protected override void OnSaveInstanceState(Android.OS.Bundle outState)
+{
+    outState.PutString("draft", draft);
+    base.OnSaveInstanceState(outState);
+}
+```
+
+- `SavedInstanceState` holds Android's Bundle during `CreateWindow()`. It is null on a fresh launch.
+- The app owns keys, serialization, versioning, and state restoration.
+- Call base from `OnSaveInstanceState`. Goo does not serialize Cells or native resources.
+- Store large or durable data outside the Bundle.
+- Handled orientation and size changes keep the current tree.
+
+### Frame scheduling
+
 Choreographer runs frames only on demand or at Goo's next animation/timer
 deadline. Pause cancels scheduling and transient input. Resume resets the frame
 clock.

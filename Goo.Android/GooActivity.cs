@@ -12,6 +12,9 @@ public abstract class GooActivity : Activity
     private GooView? view;
     private InsetsListener? insets;
 
+    /// <summary>Gets the saved activity state passed to CreateWindow, or null for a fresh activity.</summary>
+    protected Bundle? SavedInstanceState { get; private set; }
+
     protected abstract global::Goo.Window CreateWindow();
     protected GooView GooView => view ?? throw new InvalidOperationException("The activity has not created its Goo view.");
 
@@ -21,6 +24,7 @@ public abstract class GooActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        SavedInstanceState = savedInstanceState;
         if (!OperatingSystem.IsAndroidVersionAtLeast(35))
             Window!.SetDecorFitsSystemWindows(false);
         Window!.SetSoftInputMode(SoftInput.AdjustResize);
