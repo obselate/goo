@@ -420,6 +420,15 @@ index d377bdb..c47de48 100644
  
      SDL_Mouse *mouse = SDL_GetMouse();
      int button;
+@@ -1865,7 +1878,7 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
+         return;
+     }
+ 
+-    if (!Cocoa_GetMouseFocus()) {
++    if (!Cocoa_GetMouseFocus() && !mouse->capture_window) {
+         // The mouse is no longer over any window in the application
+         SDL_SetMouseFocus(NULL);
+         return;
 @@ -1930,6 +1943,7 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
  
  - (void)mouseDragged:(NSEvent *)theEvent
