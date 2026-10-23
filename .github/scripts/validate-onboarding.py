@@ -65,8 +65,9 @@ def project_versions(version: str, files: list[str]) -> None:
                 or relative.startswith("plugins/goo/reference/templates/Goo.Templates/content/")
             )
             expected = version if standalone_template else "$(GooReleaseVersion)"
-            if reference.get("Version") != expected:
-                fail(f"{relative}: Goo reference is {reference.get('Version')}, expected {expected}")
+            declared = reference.get("VersionOverride") or reference.get("Version")
+            if declared != expected:
+                fail(f"{relative}: Goo reference is {declared}, expected {expected}")
     if package_ids != EXPECTED_PACKAGE_IDS:
         fail(f"Goo package IDs differ: found={sorted(package_ids)} expected={sorted(EXPECTED_PACKAGE_IDS)}")
 
