@@ -9,7 +9,7 @@ CI workflow is the source of truth for complete cross-platform verification.
 dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
 dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release
 dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj -c Release
-dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.csproj -c Release
+dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.gsproj -c Release
 ```
 
 ## Vulkan checks
