@@ -93,7 +93,7 @@ async def main():
                 template = checkout / relative
                 template.parent.mkdir(parents=True, exist_ok=True)
                 template.write_bytes((ROOT / "reference" / relative).read_bytes())
-            linter = checkout / "tools/Goo.Gslint/Goo.Gslint.csproj"
+            linter = checkout / "tools/Goo.Gslint/Goo.Gslint.gsproj"
             compiler = checkout / "artifacts/gsharp/compiler/gsc.dll"
             for path in (linter, compiler):
                 path.parent.mkdir(parents=True, exist_ok=True)

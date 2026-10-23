@@ -92,10 +92,9 @@ jobs:
       - name: Build repo-local G# linter
         if: needs.changes.outputs.lint == 'true'
         run: |
-          dotnet build tools/Goo.Gslint/Goo.Gslint.csproj \
+          dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
-          dotnet format tools/Goo.Gslint/Goo.Gslint.csproj \
-            --verify-no-changes --no-restore
+          dotnet artifacts/gsharp/formatter/gsfmt.dll --check tools/Goo.Gslint/Program.gs
           python3 tools/Goo.Gslint/test.py
 
       - name: Enforce strict G# lint
