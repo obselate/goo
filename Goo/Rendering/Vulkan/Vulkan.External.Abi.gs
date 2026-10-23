@@ -132,7 +132,71 @@ internal unsafe struct VkMemoryWin32HandlePropertiesKHR {
     var memoryTypeBits uint32
 }
 
-internal sealed class ExternalNativeHandle : SafeHandle {
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkFormatProperties2 {
+    var sType int32
+    var pNext *void
+    var formatProperties VkFormatProperties
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal struct VkDrmFormatModifierPropertiesEXT {
+    var drmFormatModifier uint64
+    var drmFormatModifierPlaneCount uint32
+    var drmFormatModifierTilingFeatures uint32
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkDrmFormatModifierPropertiesListEXT {
+    var sType int32
+    var pNext *void
+    var drmFormatModifierCount uint32
+    var pDrmFormatModifierProperties *VkDrmFormatModifierPropertiesEXT
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkPhysicalDeviceImageDrmFormatModifierInfoEXT {
+    var sType int32
+    var pNext *void
+    var drmFormatModifier uint64
+    var sharingMode int32
+    var queueFamilyIndexCount uint32
+    var pQueueFamilyIndices *uint32
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal struct VkSubresourceLayout {
+    var offset uint64
+    var size uint64
+    var rowPitch uint64
+    var arrayPitch uint64
+    var depthPitch uint64
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkImageDrmFormatModifierExplicitCreateInfoEXT {
+    var sType int32
+    var pNext *void
+    var drmFormatModifier uint64
+    var drmFormatModifierPlaneCount uint32
+    var pPlaneLayouts *VkSubresourceLayout
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkMemoryFdPropertiesKHR {
+    var sType int32
+    var pNext *void
+    var memoryTypeBits uint32
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal struct ExternalPollFd {
+    var fd int32
+    var events int16
+    var revents int16
+}
+
+internal unsafe sealed class ExternalNativeHandle : SafeHandle {
     private let windows bool
 
     internal init(value nint, isWindows bool) : base(nint(-1), true) {
@@ -145,6 +209,19 @@ internal sealed class ExternalNativeHandle : SafeHandle {
     protected override func ReleaseHandle() bool -> if windows { CloseHandle(handle) != 0 } else { CloseFd(int32(handle)) == 0 }
 
     shared {
+        @DllImport("libc", EntryPoint: "poll", SetLastError: true)
+        private func Poll(descriptors *ExternalPollFd, count uint64, timeout int32) int32;
+
+        internal func PollReady(source ExternalNativeHandle) VkResult {
+            var descriptor = ExternalPollFd{ fd: int32(source.DangerousGetHandle()), events: int16(1) }
+            let result = Poll(&descriptor, 1uL, 0)
+            if result < 0 && Marshal.GetLastPInvokeError() == 4 { return VkConstants.VK_NOT_READY }
+            if result < 0 || (descriptor.revents & int16(8 | 16 | 32)) != 0 { return VkConstants.VK_ERROR_UNKNOWN }
+            return if result != 0 && (descriptor.revents & int16(1)) != 0 {
+                VkConstants.VK_SUCCESS
+            } else { VkConstants.VK_NOT_READY }
+        }
+
         @DllImport("libc", EntryPoint: "fcntl", SetLastError: true)
         private func Fcntl(fd int32, command int32, value int32) int32;
         @DllImport("libc", EntryPoint: "close")

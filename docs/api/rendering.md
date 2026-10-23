@@ -111,11 +111,11 @@ Source:
 
 - [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
 
-Reports a completed frame lease. CPU notification follows the final completed GPU use.
+Reports the end of a frame lease. Wait the returned dependency before reuse.
 
 ### `ReleaseSync`
 
-Gets an optional owned release handle. The receiver must dispose it.
+Gets an owned completion or unused acquire handle. Dispose the handle after use.
 
 ### `Status`
 
@@ -123,7 +123,7 @@ Gets the terminal frame status.
 
 ### `Value`
 
-Gets the release timeline value, when present.
+Gets the synchronization value for the returned handle, when present.
 
 ## `ExternalFrameStatus`
 
@@ -720,7 +720,7 @@ Gets the explicit DRM format modifier for DMA-BUF import.
 
 ### `Format`
 
-Gets the numeric VkFormat. Supported opaque imports use sRGB RGBA8 or BGRA8.
+Gets the numeric VkFormat. Supported imports use sRGB RGBA8 or BGRA8.
 
 ### `HandleKind`
 

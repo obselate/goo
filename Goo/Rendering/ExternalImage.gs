@@ -32,6 +32,7 @@ internal sealed class ExternalFrameLease {
     internal let Source ExternalImageSource
     internal let Released Action[ExternalFrameResult]
     internal var ReadySemaphore VkSemaphore
+    internal var ReadyHandle ExternalNativeHandle?
     internal var Ready bool
     internal var Dropped bool
     internal var AcquireCommand VkCommandBuffer

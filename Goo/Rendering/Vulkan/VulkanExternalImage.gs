@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Runtime.InteropServices
 
 internal unsafe sealed class VulkanExternalImage : IDisposable {
     internal let Runtime VulkanSharedLease
@@ -26,6 +27,7 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             if description.KeyedMutex { return ExternalImageResult(ExternalImageStatus.UnsupportedSynchronization) }
             let handleType = switch description.HandleKind {
                 case ExternalImageHandleKind.OpaqueFd: 1u
+                case ExternalImageHandleKind.DmaBuf: 0x200u
                 case ExternalImageHandleKind.OpaqueWin32: 2u
                 case ExternalImageHandleKind.D3D11TextureNt: 8u
                 case ExternalImageHandleKind.D3D12Resource: 128u
@@ -38,14 +40,23 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
                 && description.Format != VkConstants.VK_FORMAT_B8G8R8A8_SRGB {
                 return ExternalImageResult(ExternalImageStatus.UnsupportedFormat)
             }
-            if description.Tiling != VkConstants.VK_IMAGE_TILING_OPTIMAL || description.ImageCreateFlags != 0u {
-                return ExternalImageResult(ExternalImageStatus.UnsupportedFormat, detail: "Import requires optimal tiling and no image create flags")
+            let dma = handleType == 0x200u
+            let tiling = if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL }
+            if description.Tiling != tiling || description.ImageCreateFlags != 0u {
+                return ExternalImageResult(ExternalImageStatus.UnsupportedFormat, detail: "Image tiling or create flags are unsupported")
+            }
+            if dma && !SupportsModifier(runtime, description) {
+                return ExternalImageResult(ExternalImageStatus.UnsupportedFormat, detail: "DRM modifier cannot sample this image")
             }
             if (description.ImageUsage & uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT)) == 0u {
                 throw ArgumentException("External image usage must include sampled usage", "description")
             }
             let query = runtime.InstanceDispatch.vkGetPhysicalDeviceImageFormatProperties2
             var externalInfo = VkPhysicalDeviceExternalImageFormatInfo{ sType: 1000071000, handleType: handleType }
+            var modifierInfo = VkPhysicalDeviceImageDrmFormatModifierInfoEXT{
+                sType: 1000158002, drmFormatModifier: description.DrmModifier,
+                sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE }
+            if dma { externalInfo.pNext = *void(&modifierInfo) }
             var queryInfo = VkPhysicalDeviceImageFormatInfo2{
                 sType: 1000059004, pNext: *void(&externalInfo), format: description.Format,
                 imageType: VkConstants.VK_IMAGE_TYPE_2D, tiling: description.Tiling,
@@ -78,6 +89,36 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
                 if !succeeded { imported.Dispose() }
             }
         }
+
+        private func SupportsModifier(runtime VulkanSharedLease, description VulkanExternalImageDescription) bool {
+            if description.Planes.Length < 1 || description.Planes.Length > 4 {
+                throw ArgumentException("DMA-BUF requires one to four explicit memory planes", "description")
+            }
+            var list = VkDrmFormatModifierPropertiesListEXT{ sType: 1000158000 }
+            var properties = VkFormatProperties2{ sType: 1000059002, pNext: *void(&list) }
+            let query = runtime.InstanceDispatch.vkGetPhysicalDeviceFormatProperties2
+            query(runtime.PhysicalDevice, description.Format, &properties)
+            if list.drmFormatModifierCount == 0u { return false }
+            let size = System.Runtime.CompilerServices.Unsafe.SizeOf[VkDrmFormatModifierPropertiesEXT]()
+            let storage = Marshal.AllocHGlobal(nint(list.drmFormatModifierCount) * nint(size))
+            try {
+                list.pDrmFormatModifierProperties = *VkDrmFormatModifierPropertiesEXT(storage)
+                query(runtime.PhysicalDevice, description.Format, &properties)
+                for index in 0 ... int32(list.drmFormatModifierCount) {
+                    let modifier = list.pDrmFormatModifierProperties[index]
+                    if modifier.drmFormatModifier != description.DrmModifier { continue }
+                    if modifier.drmFormatModifierPlaneCount != uint32(description.Planes.Length) {
+                        throw ArgumentException("DMA-BUF memory plane count does not match the modifier", "description")
+                    }
+                    let required = uint32(VkConstants.VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+                        | uint32(VkConstants.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
+                    return (modifier.drmFormatModifierTilingFeatures & required) == required
+                }
+                return false
+            } finally {
+                Marshal.FreeHGlobal(storage)
+            }
+        }
     }
 
     private func Check(result VkResult, operation string) {
@@ -88,6 +129,16 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
         let dispatch = Runtime.Dispatch
         let device = Runtime.Device
         var externalInfo = VkExternalMemoryImageCreateInfo{ sType: 1000072001, handleTypes: handleType }
+        let planes *VkSubresourceLayout = stackalloc[4]VkSubresourceLayout
+        var modifierInfo = VkImageDrmFormatModifierExplicitCreateInfoEXT{
+            sType: 1000158004, pNext: *void(&externalInfo), drmFormatModifier: description.DrmModifier,
+            drmFormatModifierPlaneCount: uint32(description.Planes.Length), pPlaneLayouts: planes }
+        if handleType == 0x200u {
+            for index in 0 ... description.Planes.Length {
+                let plane = description.Planes.Span[index]
+                planes[index] = VkSubresourceLayout{ offset: plane.Offset, rowPitch: plane.RowPitch }
+            }
+        }
         var imageInfo = VkImageCreateInfo{
             sType: VkConstants.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, pNext: *void(&externalInfo),
             imageType: VkConstants.VK_IMAGE_TYPE_2D, format: Format,
@@ -96,6 +147,7 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             tiling: description.Tiling, usage: description.ImageUsage,
             sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE, initialLayout: VkConstants.VK_IMAGE_LAYOUT_UNDEFINED,
         }
+        if handleType == 0x200u { imageInfo.pNext = *void(&modifierInfo) }
         let createImage = dispatch.vkCreateImage
         Check(createImage(device, &imageInfo, nil, &Image), "External image creation failed")
         var dedicated = VkMemoryDedicatedRequirements{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS }
@@ -115,6 +167,15 @@ internal unsafe sealed class VulkanExternalImage : IDisposable {
             throw InvalidOperationException("External memory handle duplication failed")
         }
         using let handle = duplicate
+        if handleType == 0x200u {
+            var properties = VkMemoryFdPropertiesKHR{ sType: 1000074001 }
+            let getProperties = dispatch.vkGetMemoryFdPropertiesKHR
+            Check(getProperties(device, handleType, int32(handle.DangerousGetHandle()), &properties),
+                "DMA-BUF memory properties failed")
+            if (properties.memoryTypeBits & (1u << int32(description.MemoryTypeIndex))) == 0u {
+                throw InvalidOperationException("DMA-BUF memory type does not match the handle")
+            }
+        }
         if OperatingSystem.IsWindows() && handleType != 2u {
             var properties = VkMemoryWin32HandlePropertiesKHR{ sType: 1000073002 }
             let getProperties = dispatch.vkGetMemoryWin32HandlePropertiesKHR

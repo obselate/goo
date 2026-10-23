@@ -8,6 +8,10 @@ internal unsafe func RunVulkanProof() int32 {
     VulkanExternalImageProof.Run()
     return 0
   }
+  if Environment.GetEnvironmentVariable("GOO_VK_DMA_BUF") == "1" {
+    VulkanExternalImageProof.Run(true)
+    return 0
+  }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_E2E") == "1" {
     RunVulkanTextE2E()
     return 0
@@ -21,6 +25,7 @@ internal unsafe func RunVulkanProof() int32 {
     RunLongGradientReadback()
     RunPresentEncodeReadback()
     VulkanExternalImageProof.Run()
+    VulkanExternalImageProof.Run(true)
     return 0
   }
   if Environment.GetEnvironmentVariable("GOO_VK_TEXT_EFFECT_READBACK") == "1" {
