@@ -57,6 +57,7 @@ public partial class Window {
         let lease = NativeModalLease(this, BorrowNativeWindow())
         nativeModal = lease
         if let focused = input.FocusedNode() { nativeModalFocus = WeakReference(focused) }
+        input.Reset(node, resolver)
         input.FocusLost(node, resolver)
         RefreshPlatformInput()
         accessibility?.MarkDirty()
@@ -71,6 +72,8 @@ public partial class Window {
         let previous = nativeModalFocus
         nativeModalFocus = nil
         host?.PollEvents()
+        input.Reset(node, resolver)
+        if IsFocused { input.FocusGained() }
         if nativeModalClosePending || drainCloseRequest() {
             nativeModalClosePending = false
             Close()
@@ -92,6 +95,7 @@ public partial class Window {
                 nativeModalClosePending = true
                 lease.Closing?.Invoke()
             }
+            if family?.Dialog != nil { closeFileDialog() }
             return false
         }
         let closing = NativeWindowClosing
