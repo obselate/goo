@@ -12,7 +12,7 @@ internal sealed class InstalledIdentity : IDisposable
     internal InstalledIdentity(string identifier, string scheme)
     {
         this.scheme = scheme;
-        shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), scheme + ".lnk");
+        shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), scheme + ".lnk");
         using (var protocol = Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + scheme))
         {
             protocol.SetValue("URL Protocol", "");
