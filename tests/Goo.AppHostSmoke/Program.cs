@@ -14,6 +14,7 @@ internal static class Program
         if (args.Length < 3) throw new ArgumentException("mode, identity and output directory are required");
         string mode = args[0], identity = args[1], root = Path.GetFullPath(args[2]);
         string tag = args.Length == 4 ? args[3] : mode;
+        if (mode == "activated") { RunActivated(identity, root, args[3..]); return 0; }
         if (mode == "secondary") { Send(identity, root); return 0; }
         if (mode == "closed")
         {
@@ -74,18 +75,23 @@ internal static class Program
     private static SingleInstanceResult Acquire(string identity, ApplicationActivation value) =>
         SingleInstance.AcquireAsync(identity, value).GetAwaiter().GetResult();
 
+    private static ApplicationActivation Parsed(string[] arguments, string directory)
+    {
+        var result = ActivationArguments.Read(arguments, directory);
+        Require(result.Status == ActivationReadStatus.Accepted && result.Activation is not null, result.Error);
+        return result.Activation!;
+    }
+
     private static void Send(string identity, string root)
     {
         string[] arguments = (string[])ExpectedArguments.Clone();
         string directory = Environment.CurrentDirectory;
         ApplicationActivation[] requests =
         [
-            new() { Kind = ApplicationActivationKind.Launch, IsInitial = true, Arguments = arguments, WorkingDirectory = directory },
-            new() { Kind = ApplicationActivationKind.OpenUri, IsInitial = true, Target = new Uri(Link), WorkingDirectory = directory },
-            new() { Kind = ApplicationActivationKind.OpenDocuments, IsInitial = true,
-                Documents = [new Uri(Path.Combine(directory, "one file.txt")), new Uri(Document)], WorkingDirectory = directory },
-            new() { Kind = ApplicationActivationKind.Notification, IsInitial = true,
-                NotificationId = "notice", ActionId = "open", Payload = "opaque λ", WorkingDirectory = directory },
+            Parsed(arguments, directory),
+            Parsed(["--goo-open-uri", Link], directory),
+            Parsed(["--goo-open-documents", "one file.txt", Document], directory),
+            Parsed(["--goo-notification", "example-private://goo-notification/activate?id=notice&action=open&data=opaque%20%CE%BB"], directory),
         ];
         foreach (var request in requests)
         {
@@ -95,6 +101,16 @@ internal static class Program
         arguments[1] = "changed after forwarding";
         var tooLarge = Acquire(identity, new() { Arguments = [new string('x', 65537)] });
         Require(tooLarge.Status == SingleInstanceStatus.Rejected, "Oversized request was accepted");
+        foreach (string[] invalid in new string[][] {
+            ["--goo-open-uri", "relative.txt"], ["--goo-open-documents"],
+            ["--goo-notification", "example-private://wrong/activate?id=n&action=&data="],
+            ["--goo-notification", "example-private://goo-notification/activate?id=n&id=n&action=&data="],
+            [new string('x', 65537)],
+        })
+        {
+            var rejected = ActivationArguments.Read(invalid, directory);
+            Require(rejected.Status == ActivationReadStatus.Rejected && rejected.Activation is null, "Invalid startup data was accepted");
+        }
         File.WriteAllText(Path.Combine(root, "send.done"), "passed");
     }
 
@@ -117,6 +133,45 @@ internal static class Program
             Require(!request.IsInitial && request.WorkingDirectory == Path.Combine(root, "sender cwd"), "Forwarded context changed");
         }
         Require(Environment.CurrentDirectory == Path.Combine(root, "receiver cwd"), "Receiver directory changed");
+    }
+
+    private static void RunActivated(string identity, string root, string[] arguments)
+    {
+        int owner = Environment.CurrentManagedThreadId, count = 0;
+        Action<ApplicationActivation> handler = value =>
+        {
+            Require(Environment.CurrentManagedThreadId == owner, "Native activation left the owner thread");
+            string target = value.Kind == ApplicationActivationKind.OpenDocuments
+                ? value.Documents[0].LocalPath : value.Target?.OriginalString ?? "";
+            string path = Path.Combine(root, (++count) + ".event");
+            File.WriteAllLines(path + ".new", [value.Kind.ToString(), value.IsInitial ? "initial" : "warm", target]);
+            File.Move(path + ".new", path);
+        };
+        Window.ApplicationActivated += handler;
+        try
+        {
+            var initial = Parsed(arguments, Environment.CurrentDirectory);
+            Require(Window.InitializeApplicationActivation(initial) == WindowOperationResult.Accepted, "Native initialization failed");
+            var result = Acquire(identity, initial);
+            if (result.Status == SingleInstanceStatus.Forwarded) return;
+            Require(result.Status == SingleInstanceStatus.Primary && result.Lease is not null, result.Status + ": " + result.Error);
+            using (result.Lease!)
+            {
+                File.WriteAllText(Path.Combine(root, "pid"), Environment.ProcessId.ToString());
+                var drain = typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.Static | BindingFlags.NonPublic)!;
+                string stop = Path.Combine(root, "stop");
+                long deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 40;
+                while (!File.Exists(stop) && Stopwatch.GetTimestamp() < deadline)
+                {
+                    drain.Invoke(null, null);
+                    Thread.Sleep(5);
+                }
+                Require(File.Exists(stop), "Native activation did not stop");
+            }
+            File.WriteAllText(Path.Combine(root, "exited"), "passed");
+        }
+        catch (Exception error) { File.WriteAllText(Path.Combine(root, "error"), error.ToString()); throw; }
+        finally { Window.ApplicationActivated -= handler; }
     }
 
     private static void WaitFor(string path)
