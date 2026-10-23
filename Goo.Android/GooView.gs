@@ -101,7 +101,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
     }
 
     /// Reports changes in immediate frame demand on the Android UI thread.
-    event FrameDemandChanged Action[bool]
+    event FrameDemandChanged Action[bool]?
 
     /// Gets whether a frame is pending or another immediate frame is needed.
     prop HasFrameDemand bool {
