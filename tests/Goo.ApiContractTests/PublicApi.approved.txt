@@ -867,6 +867,8 @@ method|Goo.FocusedEditorSnapshot|ToString|virtual|public|generic:|()->System.Str
 method|Goo.FocusedEditorSnapshot|op_Equality|static|public|generic:|(left:Goo.FocusedEditorSnapshot,right:Goo.FocusedEditorSnapshot)->System.Boolean
 method|Goo.FocusedEditorSnapshot|op_Inequality|static|public|generic:|(left:Goo.FocusedEditorSnapshot,right:Goo.FocusedEditorSnapshot)->System.Boolean
 method|Goo.FontSource|Dispose|instance|public|generic:|()->System.Void
+method|Goo.FontSource|FromPath|static|public|generic:|(family:System.String,weight:System.Int32,italic:System.Boolean,path:System.String)->Goo.FontSource
+method|Goo.FontSource|FromPath|static|public|generic:|(family:System.String,weight:System.Int32,italic:System.Boolean,path:System.String,faceIndex:System.UInt32,variations:Goo.FontVariation[])->Goo.FontSource
 method|Goo.FontSource|Register|instance|public|generic:|()->System.Void
 method|Goo.FontVariation|Deconstruct|instance|public|generic:|(out Tag:System.String&,out Value:System.Single&)->System.Void
 method|Goo.FontVariation|Equals|instance|public|generic:|(other:Goo.FontVariation)->System.Boolean

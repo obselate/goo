@@ -296,7 +296,7 @@ public open class Style {
   /// Sets the defensively copied inherited front-to-back text shadow stack.
   /// An empty array clears inherited text shadows.
   public prop TextShadows []TextShadow{ init -> pushTextShadowStack(copyTextShadows(value)) }
-  /// Sets the preferred font family.
+  /// Sets preferred font family names, never file paths. Register files with FontSource.FromPath.
   public prop FontFamily string{ init -> pushText(StyleField.FontFamily, value) }
 
   /// Sets the inherited BCP 47 language used for text shaping. Empty uses the shaper default.

@@ -184,15 +184,33 @@ internal static class Program
 
     private static void RunFontCacheGate(string fontPath)
     {
+        using (var familyOnly = TextShaping.Shape("office", fontPath, 16f, 400, false, 0f, 1))
+        {
+            if (familyOnly.Runs.Count == 0 || familyOnly.Runs[0].Family != "sans-serif")
+                throw new InvalidOperationException("Font family was treated as a file path");
+        }
+
         var oversizedPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".ttf");
         try
         {
+            File.Copy(fontPath, oversizedPath);
+            using (var pathSource = FontSource.FromPath("GooAbiPath", 400, false, oversizedPath,
+                0u, new[] { new FontVariation("wght", 400f) }))
+            {
+                File.Delete(oversizedPath);
+                if (pathSource.IsRegistered)
+                    throw new InvalidOperationException("Font path source registered eagerly");
+                pathSource.Register();
+                using var shapedPath = TextShaping.Shape("office", "GooAbiPath", 16f, 400, false, 0f, 1);
+                if (shapedPath.HasMissingGlyph || shapedPath.GlyphCount <= 0)
+                    throw new InvalidOperationException("Font path source did not retain its bytes");
+            }
             File.Copy(fontPath, oversizedPath);
             using (var stream = File.OpenWrite(oversizedPath))
                 stream.SetLength((long)VulkanTextFont.MaxFontBytes + 1);
             try
             {
-                using var rejected = TextShaping.Shape("office", oversizedPath, 16f, 400, false, 0f, 1);
+                using var rejected = FontSource.FromPath("GooAbiRejected", 400, false, oversizedPath);
                 throw new InvalidOperationException("Oversized font path was accepted");
             }
             catch (InvalidDataException) { }

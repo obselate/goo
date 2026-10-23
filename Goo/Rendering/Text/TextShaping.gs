@@ -3,7 +3,6 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Diagnostics
-import System.IO
 import System.Text
 import System.Threading
 
@@ -774,7 +773,6 @@ internal partial class TextShaping {
         if let found = FontRegistry.Resolve(name, weight, italic) {
           return TextFontSelection(found.Family, nil, found)
         }
-        if File.Exists(name) { return TextFontSelection(name, name, nil) }
         if let found = SystemFontResolvers.Current().Find(name, weight, italic) {
           return TextFontSelection(name, found, nil)
         }
