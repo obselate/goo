@@ -714,6 +714,8 @@ public partial class Window {
     Portals.Sync(nil, portalRoot)
     if let current = tree {
       firstError = captureCleanupError(firstError, () -> NodeLifecycle.DisposeTree(current))
+    } else if let current = Root {
+      firstError = captureCleanupError(firstError, () -> current.DisposeMounted())
     }
     ClearContextValues()
     firstError = captureCleanupError(firstError, () -> MetricSubscriptions.Flush(this))

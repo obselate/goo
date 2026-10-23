@@ -306,6 +306,13 @@ internal class EmbeddedHostSmoke {
       }
 
     internal func Run() {
+      let unmountedRoot = EmbeddedSmokeCell()
+      using let unmountedHost = EmbeddedSmokeHost()
+      let unmountedWindow = Window{Root: unmountedRoot}.Attach(unmountedHost)
+      unmountedHost.Dispose()
+      unmountedHost.Dispose()
+      Require(unmountedRoot.Builds == 0 && unmountedRoot.Disposals == 1 && !unmountedWindow.IsOpen,
+        "Host disposal before the first frame did not dispose the root exactly once")
       VerifyPreferences()
       let host = EmbeddedSmokeHost()
       let root = EmbeddedSmokeCell()
