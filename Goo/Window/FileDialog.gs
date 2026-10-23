@@ -83,9 +83,14 @@ public partial class Window {
     }
     if IsInputBlocked { throw InvalidOperationException("The owner already has a modal child or native chooser") }
     guard let native = host as SdlHost ? else { throw NotSupportedException("A native desktop host is required") }
-    let dialog = NativeFileDialog(this, native.WindowHandle, kind, selected)
     var modalStatus NativeModalStatus
-    let lease = BeginNativeModal(&modalStatus)!!
+    guard let lease = BeginNativeModal(&modalStatus) else {
+      if modalStatus == NativeModalStatus.OwnerClosed {
+        return Task.FromResult(FileDialogResult(FileDialogStatus.Cancelled, []string{}))
+      }
+      throw InvalidOperationException("The owner already has a modal child or native chooser")
+    }
+    let dialog = NativeFileDialog(this, native.WindowHandle, kind, selected)
     lease.Closing = () -> dialog.Cancel()
     family ??= WindowFamily()
     let state = family!!
