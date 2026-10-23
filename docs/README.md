@@ -39,3 +39,4 @@ SVG examples require the next Goo release, which includes the loader in core.
 - [Production-readiness assessment](production-readiness.md) describes older
   0.6.6/0.7.0-era work, not a current release qualification report.
 - [GCV1 migration](migrations/gcv1.md) is for older compiled vector assets.
+
