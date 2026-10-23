@@ -1,0 +1,54 @@
+--- a/src/video/cocoa/SDL_cocoawindow.m
++++ b/src/video/cocoa/SDL_cocoawindow.m
+@@ -62,6 +62,19 @@
+ #define NSAppKitVersionNumber10_14 1671
+ #endif
+ 
++static void GooPlacementLog(SDL_Window *window, NSWindow *nswindow, const char *phase)
++{
++    if (!SDL_getenv("GOO_PLACEMENT_DIAGNOSTICS")) { return; }
++    int w = 0, h = 0, pw = 0, ph = 0;
++    SDL_GetWindowSize(window, &w, &h);
++    SDL_GetWindowSizeInPixels(window, &pw, &ph);
++    NSLog(@"PLACEMENT %s id=%u frame=%@ content=%@ min=%@ max=%@ visible=%@ scale=%g SDL=%dx%d pixels=%dx%d requested=%dx%d flags=%llu", phase, window->id,
++        NSStringFromRect(nswindow.frame), NSStringFromRect([nswindow contentRectForFrameRect:nswindow.frame]),
++        NSStringFromSize(nswindow.contentMinSize), NSStringFromSize(nswindow.contentMaxSize),
++        NSStringFromRect(nswindow.screen.visibleFrame), nswindow.backingScaleFactor,
++        w, h, pw, ph, window->pending.w, window->pending.h, (unsigned long long)window->flags);
++}
++
+ @implementation SDL_CocoaWindowData
+ 
+ @end
+@@ -1235,6 +1248,7 @@
+     }
+     window = _data.window;
+     nswindow = _data.nswindow;
++    GooPlacementLog(window, nswindow, "windowDidResize");
+     rect = [nswindow contentRectForFrameRect:[nswindow frame]];
+     ConvertNSRect(&rect);
+     x = (int)rect.origin.x;
+@@ -2640,6 +2654,7 @@
+     @autoreleasepool {
+         SDL_CocoaWindowData *windata = (__bridge SDL_CocoaWindowData *)window->internal;
+         NSWindow *nswindow = windata.nswindow;
++        GooPlacementLog(window, nswindow, "SetWindowSize before");
+ 
+         if ([windata.listener isInFullscreenSpaceTransition]) {
+             windata.pending_size = YES;
+@@ -2667,6 +2682,7 @@
+             // Can't set the window size.
+             window->last_size_pending = false;
+         }
++        GooPlacementLog(window, nswindow, "SetWindowSize after");
+     }
+ }
+ 
+@@ -2693,6 +2709,7 @@
+         maxSize.height = window->max_h ? window->max_h : CGFLOAT_MAX;
+ 
+         [windata.nswindow setContentMaxSize:maxSize];
++        GooPlacementLog(window, windata.nswindow, "SetMaximumSize");
+     }
+ }
+ 

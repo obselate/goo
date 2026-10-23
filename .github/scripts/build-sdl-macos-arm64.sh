@@ -20,6 +20,8 @@ printf '%s  %s\n' "$sha256" "$work/SDL3.tar.gz" | shasum -a 256 -c -
 tar -xzf "$work/SDL3.tar.gz" -C "$work/src" --strip-components=1
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/cocoa-open-documents.patch"
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/cocoa-placement-diagnostics.patch"
 cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$work/install" \
