@@ -95,7 +95,7 @@ def source_provenance(root: Path) -> dict:
     elif compiler:
         compiler_commit = compiler.group(1)
     if root == BUNDLE:
-        return {"kind": "bundle", "repository": MANIFEST["repository"], "revision": MANIFEST["commit"],
+        return {"kind": "bundle", "repository": MANIFEST["repository"], "files": MANIFEST["files"],
                 "dirty": False, "compilerCommit": compiler_commit}
     revision = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True)
     status = subprocess.run(["git", "-C", str(root), "status", "--porcelain"], capture_output=True, text=True)
@@ -255,7 +255,7 @@ def goo_context(repository: str = "") -> dict:
     """List available API guides, template files, source provenance and runtime tool setup. Pass a Goo checkout for current docs."""
     root = source(repository)
     current_fingerprint = disk_plugin_fingerprint()
-    return {"source": str(root), "bundled": root == BUNDLE, "bundleCommit": MANIFEST["commit"],
+    return {"source": str(root), "bundled": root == BUNDLE,
             "provenance": source_provenance(root), "documents": documents(root),
             "runtime": "Install Goo.DevTools 0.8.0 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.", "preflight": {"plugin": {"version": LOADED_PLUGIN_VERSION, "loadedSource": str(ROOT), "loadedFingerprint": LOADED_PLUGIN_FINGERPRINT, "diskFingerprint": current_fingerprint, "restartRequired": current_fingerprint != LOADED_PLUGIN_FINGERPRINT}, "configuration": configuration_status(), "cli": cli_preflight(), "scope": "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."}}
 
