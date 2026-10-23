@@ -259,7 +259,7 @@ internal class MacNotificationService : NotificationService {
                     Window.PostApplicationActivation(ApplicationActivation {
                         Kind: ApplicationActivationKind.Notification, IsInitial: Window.IsInitialApplicationActivation,
                         NotificationId: ReadText(Send(data, Sel("objectForKey:"), Text("Goo.NotificationId"))),
-                        ActionId: "default", Payload: ReadText(Send(data, Sel("objectForKey:"), Text("Goo.Payload"))),
+                        Payload: ReadText(Send(data, Sel("objectForKey:"), Text("Goo.Payload"))),
                     })
                 }
             } finally {
