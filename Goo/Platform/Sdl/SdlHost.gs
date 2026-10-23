@@ -188,14 +188,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     ThrowIfDisposed()
     SdlRuntime.PollEvents()
     ThrowNativeTransferFailure()
-    RefreshMetricsIfChanged()
+    if !disposed { RefreshMetricsIfChanged() }
   }
 
   public func WaitEvents(timeoutMs int32) {
     ThrowIfDisposed()
     SdlRuntime.WaitEvents(timeoutMs)
     ThrowNativeTransferFailure()
-    RefreshMetricsIfChanged()
+    if !disposed { RefreshMetricsIfChanged() }
   }
 
   public func ClearPendingEvents() {
