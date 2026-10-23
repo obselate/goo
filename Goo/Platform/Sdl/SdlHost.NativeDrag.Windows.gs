@@ -56,6 +56,7 @@ internal unsafe partial class SdlHost {
 
   shared {
     private const WindowsDragServiceMilliseconds uint32 = 16u
+    private const WindowsDragTimerId uint32 = 0x474F4Fu
     @ThreadStatic
     private var windowsTracking NativeDragBinding?
     @ThreadStatic
@@ -122,6 +123,8 @@ internal unsafe partial class SdlHost {
     let effects = binding.Effects
     if windowsTracking != nil { throw IOException("Another native drag is active on this thread") }
     if WindowsDragComWrappers.KeyState(1) >= int16(0) { throw NotSupportedException("Native drag requires a current primary mouse gesture") }
+    let timerWindow = nint(SDL.GetPointerProperty(SDL.GetWindowProperties(window), "SDL.window.win32.hwnd", nil))
+    if timerWindow == nint(0) { throw NotSupportedException("The native Windows drag window is unavailable") }
     SdlRuntime.Acquire()
     var initialized bool
     var source nint
@@ -137,7 +140,7 @@ internal unsafe partial class SdlHost {
       binding.WindowsSource = sourceObject
       source = WindowsDragComWrappers.Create(sourceObject, WindowsDragComWrappers.SourceId)
       windowsTracking = binding
-      timer = SetWindowsDragTimer(nint(0), nuint(0), WindowsDragServiceMilliseconds, windowsTimerAddress)
+      timer = SetWindowsDragTimer(timerWindow, nuint(WindowsDragTimerId), WindowsDragServiceMilliseconds, windowsTimerAddress)
       if timer == nuint(0) { throw IOException("Cannot start the native drag service timer: " + Marshal.GetLastPInvokeError().ToString()) }
       binding.Started = true
       var selected uint32
@@ -151,7 +154,7 @@ internal unsafe partial class SdlHost {
         } else { "" })
       return DataTransferStatus.Success
     } finally {
-      if timer != nuint(0) { KillWindowsDragTimer(nint(0), timer) }
+      if timer != nuint(0) { KillWindowsDragTimer(timerWindow, nuint(WindowsDragTimerId)) }
       windowsTracking = nil
       binding.WindowsSource = nil
       ClipboardTransfer.WindowsReleaseObject(source)
