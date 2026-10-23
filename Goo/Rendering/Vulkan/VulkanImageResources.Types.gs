@@ -46,6 +46,7 @@ internal data struct VulkanImageResourceEntry {
   var Image VkImage
   var ImageView VkImageView
   var Allocation VulkanMemoryAllocation?
+  var External ExternalFrameLease?
   var NearestDescriptor VulkanImageDescriptorBinding
   var LinearDescriptor VulkanImageDescriptorBinding
   var ImageLayout VkImageLayout
@@ -99,4 +100,5 @@ internal data struct VulkanImageResourceLookup {
   var SamplerId ResourceId
   var SamplerMode VulkanImageSamplerMode
   var UploadedVersion uint64
+  var External ExternalFrameLease?
 }

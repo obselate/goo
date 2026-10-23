@@ -22,6 +22,9 @@ internal unsafe struct VkInstanceDispatch {
   var vkCreateDevice unmanaged[Cdecl](VkPhysicalDevice, *VkDeviceCreateInfo, *VkAllocationCallbacks, *VkDevice) -> VkResult
   var vkCreateDebugUtilsMessengerEXT unmanaged[Cdecl](VkInstance, *VkDebugUtilsMessengerCreateInfoEXT, *VkAllocationCallbacks, *VkDebugUtilsMessengerEXT) -> VkResult
   var vkDestroyDebugUtilsMessengerEXT unmanaged[Cdecl](VkInstance, VkDebugUtilsMessengerEXT, *VkAllocationCallbacks) -> void
+  var vkGetPhysicalDeviceProperties2 unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceProperties2) -> void
+  var vkGetPhysicalDeviceImageFormatProperties2 unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceImageFormatInfo2, *VkImageFormatProperties2) -> VkResult
+  var vkGetPhysicalDeviceExternalSemaphoreProperties unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceExternalSemaphoreInfo, *VkExternalSemaphoreProperties) -> void
 }
 @StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkDeviceDispatch {
@@ -102,4 +105,9 @@ internal unsafe struct VkDeviceDispatch {
   var vkAllocateDescriptorSets unmanaged[Cdecl](VkDevice, *VkDescriptorSetAllocateInfo, *VkDescriptorSet) -> VkResult
   var vkUpdateDescriptorSets unmanaged[Cdecl](VkDevice, uint32, *VkWriteDescriptorSet, uint32, *VkCopyDescriptorSet) -> void
   var vkCmdBindDescriptorSets unmanaged[Cdecl](VkCommandBuffer, VkPipelineBindPoint, VkPipelineLayout, uint32, uint32, *VkDescriptorSet, uint32, *uint32) -> void
+  var ExternalMemoryKinds uint32
+  var ExternalSemaphoreKinds uint32
+  var vkImportSemaphoreFdKHR unmanaged[Cdecl](VkDevice, *VkImportSemaphoreFdInfoKHR) -> VkResult
+  var vkImportSemaphoreWin32HandleKHR unmanaged[Cdecl](VkDevice, *VkImportSemaphoreWin32HandleInfoKHR) -> VkResult
+  var vkGetMemoryWin32HandlePropertiesKHR unmanaged[Cdecl](VkDevice, uint32, nint, *VkMemoryWin32HandlePropertiesKHR) -> VkResult
 }

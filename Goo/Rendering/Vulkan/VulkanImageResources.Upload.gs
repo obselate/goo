@@ -544,6 +544,9 @@ internal unsafe partial class VulkanImageResources : IDisposable {
       return false
     }
     entry.RecordingUseCount--
+    if let frame = entry.External {
+      if !frame.Acquired { frame.AcquireCommand = nint(0) }
+    }
     let retire = entry.PendingRetire && entry.RecordingUseCount == 0
       && currentReferenceCounts[index] == 0
     if retire {
@@ -575,6 +578,11 @@ internal unsafe partial class VulkanImageResources : IDisposable {
         throw InvalidOperationException("Vulkan image upload is not complete")
       }
     var entry = entries[index]
+    if let frame = entry.External {
+      frame.Acquired = true
+      frame.Sampled = true
+      frame.LastUse = Math.Max(frame.LastUse, fence)
+    }
     if fence > entry.LastUseFence {
       entry.LastUseFence = fence
     }

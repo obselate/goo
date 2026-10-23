@@ -172,8 +172,7 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
       return created
     }
 
-  internal func FindImage(provider ImageSourceProvider, contentVersion uint64,
-    format VkFormat) ResourceId{
+  internal func FindImage(provider ImageSourceProvider, contentVersion uint64) ResourceId{
       if disposed || !providerIdentities.TryGetValue(provider, out var identity) {
         return ResourceId{}
       }
@@ -182,7 +181,7 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
         let existing = imageIdentities[index]
         if existing.IsValid && existing.ProviderId == identity.ProviderId
           && existing.SourceId == identity.SourceId
-          && existing.ContentVersion == contentVersion && existing.Format == format{
+          && existing.ContentVersion == contentVersion{
             return existing.ImageId
           }
         index++

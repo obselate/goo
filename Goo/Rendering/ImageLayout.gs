@@ -242,12 +242,13 @@ internal class ImageLayouts {
       guard let value = known ?? sourceState(n), let lease = value.Lease else { return false }
       if !lease.IsComplete { return false }
       let decoded = value.CompletedResult()
+      let external = lease.ExternalResult()
       let width = if let image = decoded {
         image.IsValid && image.Width > 0 ? float32(image.Width) : 0.0F
-      } else { 0.0F }
+      } else { float32(external?.Width ?? 0) }
       let height = if let image = decoded {
         image.IsValid && image.Height > 0 ? float32(image.Height) : 0.0F
-      } else { 0.0F }
+      } else { float32(external?.Height ?? 0) }
       if n.DecodedImage == decoded
         && n.ImageIntrinsicWidth == width
         && n.ImageIntrinsicHeight == height{
@@ -278,10 +279,9 @@ internal class ImageLayouts {
       height float32, heightMode MeasureMode) YGSize{
         let n = nodeFromYoga(yoga)
         Refresh(n)
-        guard let image = n.DecodedImage else { return YGSize{} }
-        if !image.IsValid || image.Width <= 0 || image.Height <= 0 { return YGSize{} }
-        let naturalWidth = float32(image.Width)
-        let naturalHeight = float32(image.Height)
+        let naturalWidth = n.ImageIntrinsicWidth
+        let naturalHeight = n.ImageIntrinsicHeight
+        if naturalWidth <= 0.0F || naturalHeight <= 0.0F { return YGSize{} }
         var measuredWidth = naturalWidth
         var measuredHeight = naturalHeight
         if widthMode == MeasureMode.Exactly && heightMode != MeasureMode.Exactly {

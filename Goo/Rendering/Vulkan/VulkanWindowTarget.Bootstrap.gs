@@ -495,6 +495,7 @@ internal unsafe partial class VulkanWindowTarget {
     let getPhysicalDeviceFormatProperties = ResolveGlobalProc(instance, "vkGetPhysicalDeviceFormatProperties") as (unmanaged[Cdecl](VkPhysicalDevice, VkFormat, *VkFormatProperties) -> void)?
     if getPhysicalDeviceFormatProperties == nil { throw InvalidOperationException("vkGetPhysicalDeviceFormatProperties is unavailable") }
     instanceDispatch.vkGetPhysicalDeviceFormatProperties = getPhysicalDeviceFormatProperties
+    ResolveExternalInstanceDispatch()
     let createDevice = ResolveGlobalProc(instance, "vkCreateDevice") as (unmanaged[Cdecl](VkPhysicalDevice, *VkDeviceCreateInfo, *VkAllocationCallbacks, *VkDevice) -> VkResult)?
     if createDevice == nil { throw InvalidOperationException("vkCreateDevice is unavailable") }
     instanceDispatch.vkCreateDevice = createDevice
@@ -727,6 +728,8 @@ internal unsafe partial class VulkanWindowTarget {
     swapchainMaintenanceVariant = VulkanSwapchainMaintenanceVariant.None
     portabilitySubsetSupported = false
     memoryBudgetSupported = false
+    externalMemoryExtension = ""
+    externalSemaphoreExtension = ""
     var count uint32 = 0u
     let enumerate = instanceDispatch.vkEnumerateDeviceExtensionProperties
     if enumerate(candidate, nil, &count, nil) != VkConstants.VK_SUCCESS || count == 0u {
@@ -755,6 +758,7 @@ internal unsafe partial class VulkanWindowTarget {
     var index uint32 = 0u
     fixed extensions * VkExtensionProperties = extensionValues {
       while index < count {
+        DiscoverExternalExtension(&extensions[index])
         if ExtensionNameEquals(&extensions[index], VkConstants.VK_KHR_SWAPCHAIN_EXTENSION_NAME) {
           hasSwapchain = true
         }
@@ -841,10 +845,10 @@ internal unsafe partial class VulkanWindowTarget {
     queueInfo.queueFamilyIndex = queueFamilyIndex
     queueInfo.queueCount = 1u
     queueInfo.pQueuePriorities = priorities
-    var extensionStorage []nint = [4]nint
+    var extensionStorage []nint = [6]nint
     try {
       extensionStorage[0] = Marshal.StringToCoTaskMemUTF8(VkConstants.VK_KHR_SWAPCHAIN_EXTENSION_NAME)
-      let extensionPointers * VulkanWindowTargetExtensionPointer = stackalloc[4]VulkanWindowTargetExtensionPointer
+      let extensionPointers * VulkanWindowTargetExtensionPointer = stackalloc[6]VulkanWindowTargetExtensionPointer
       extensionPointers[0].Value = *int8(extensionStorage[0])
       var deviceExtensionCount uint32 = 1u
       if portabilitySubsetSupported {
@@ -865,6 +869,13 @@ internal unsafe partial class VulkanWindowTarget {
         extensionStorage[extensionIndex] = Marshal.StringToCoTaskMemUTF8(VkConstants.VK_EXT_MEMORY_BUDGET_EXTENSION_NAME)
         extensionPointers[extensionIndex].Value = *int8(extensionStorage[extensionIndex])
         deviceExtensionCount = deviceExtensionCount + 1u
+      }
+      for extension in [2]string{ externalMemoryExtension, externalSemaphoreExtension } {
+        if extension == "" { continue }
+        let extensionIndex = int32(deviceExtensionCount)
+        extensionStorage[extensionIndex] = Marshal.StringToCoTaskMemUTF8(extension)
+        extensionPointers[extensionIndex].Value = *int8(extensionStorage[extensionIndex])
+        deviceExtensionCount++
       }
       var createInfo = VkDeviceCreateInfo{}
       createInfo.sType = VkConstants.VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
