@@ -44,7 +44,7 @@ internal class WindowsNotificationService : NotificationService {
         ObjectDisposedException.ThrowIf(disposed, this)
         let initialized = WindowsToastNative.RoInitialize(1u)
         if initialized < 0 && initialized != -2147417850 {
-            return Task.FromResult(Failure(initialized, id))
+            return Task.FromResult(Failure(initialized, id, operation == 1))
         }
         try {
             let manager = WindowsToastNative.Factory(WindowsToastNative.Manager, WindowsToastNative.ManagerId)
@@ -56,7 +56,7 @@ internal class WindowsNotificationService : NotificationService {
                     try {
                         WindowsToastNative.Check(WindowsToastNative.Method[ToastSize](notifier, 8)(notifier,
                             out var setting))
-                        if setting != 0u {
+                        if setting != 0u && operation <= 1 {
                             return Task.FromResult(Result(NotificationStatus.Disabled, id,
                                 permission: NotificationPermission.Disabled))
                         }
@@ -66,12 +66,13 @@ internal class WindowsNotificationService : NotificationService {
                             else { NotificationDelivery.Unknown }
                         return Task.FromResult(Result(if operation == 1 || operation == 3 {
                             NotificationStatus.Accepted
-                        } else { NotificationStatus.Success }, id, delivery))
+                        } else { NotificationStatus.Success }, id, delivery,
+                            if setting == 0u { NotificationPermission.Granted } else { NotificationPermission.Disabled }))
                     } finally { WindowsToastNative.Release(notifier) }
                 } finally { WindowsToastNative.WindowsDeleteString(application) }
             } finally { WindowsToastNative.Release(manager) }
         } catch (error COMException) {
-            return Task.FromResult(Failure(error.HResult, id))
+            return Task.FromResult(Failure(error.HResult, id, operation == 1))
         } finally {
             if initialized >= 0 { WindowsToastNative.RoUninitialize() }
         }
@@ -193,9 +194,17 @@ internal class WindowsNotificationService : NotificationService {
         private func Tag(id string) string ->
             Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(id))).Substring(0, 16)
 
-        private func Failure(code int32, id string) NotificationResult ->
-            NotificationResult(NotificationStatus.Failed, delivery: NotificationDelivery.Failed,
+        private func Failure(code int32, id string, submission bool) NotificationResult {
+            let status = switch code {
+                case -2147221164 or -2147467263 or -2147467262: NotificationStatus.Unsupported
+                case -2147023728: NotificationStatus.MissingIdentity
+                case -2147024891: NotificationStatus.Denied
+                default: NotificationStatus.Failed
+            }
+            return NotificationResult(status, delivery: if submission { NotificationDelivery.Failed }
+                else { NotificationDelivery.Unknown },
                 activationSupport: NotificationActivationSupport.WarmAndCold, id: id,
                 error: "Windows toast HRESULT 0x" + code.ToString("X8"))
+        }
     }
 }
