@@ -41,9 +41,12 @@ internal class AndroidSoundVoice {
                     if Stream == nint(0) {
                         return
                     }
-                    if Progress == SoundPlaybackStatus.Playing && EndFrame < 0 {
+                    if Progress == SoundPlaybackStatus.Playing {
                         if remaining == 0 {
-                            if let pcm = samples {
+                            if EndFrame >= 0 {
+                                Array.Clear(buffer)
+                                remaining = SoundRuntime.StreamFrames
+                            } else if let pcm = samples {
                                 remaining = Math.Min(SoundRuntime.StreamFrames, (pcm.Length - position) / channels)
                                 Array.Copy(pcm, position, buffer, 0, remaining * channels)
                                 position += remaining * channels
@@ -57,7 +60,7 @@ internal class AndroidSoundVoice {
                                 buffer[i] = SoundSource.Clamp(buffer[i]) * Level
                             }
                             offset = 0
-                            if remaining == 0 {
+                            if remaining == 0 && EndFrame < 0 {
                                 EndFrame = AndroidSoundRuntime.FramesWritten(Stream)
                             }
                         }
@@ -161,9 +164,6 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
         @DllImport("libaaudio.so", EntryPoint: "AAudioStream_requestStart")
         private func StartStream(stream nint) int32;
 
-        @DllImport("libaaudio.so", EntryPoint: "AAudioStream_setStartThresholdInFrames")
-        private func SetStartThreshold(stream nint, frames int32) int32;
-
         @DllImport("libaaudio.so", EntryPoint: "AAudioStream_requestPause")
         private func PauseStream(stream nint) int32;
 
@@ -210,7 +210,7 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
                     return SoundPlayResult(SoundPlayStatus.NativeFailure)
                 }
                 state.Stream = stream
-                if SetStartThreshold(stream, 1) < 0 || StartStream(stream) != 0 {
+                if StartStream(stream) != 0 {
                     CloseStream(stream)
                     return SoundPlayResult(SoundPlayStatus.NativeFailure)
                 }
