@@ -128,6 +128,7 @@ internal partial class PointerInput {
       }
       try {
         updateDragTarget(tree, x, y, modifiers, true)
+        promoteNativeDrag(tree, x, y)
       } catch (error Exception) {
         terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
       }
