@@ -143,7 +143,7 @@ index 0000000..1e1cde0
 +{
 +    if (!window || !window->internal) return;
 +    SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
-+    if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeLeftMouseDragged) {
++    if (event.type == NSEventTypeLeftMouseDown) {
 +        data.goo_drag_event = event;
 +    } else if (event.type == NSEventTypeLeftMouseUp) {
 +        data.goo_drag_event = nil;
@@ -420,14 +420,16 @@ index d377bdb..c47de48 100644
  
      SDL_Mouse *mouse = SDL_GetMouse();
      int button;
-@@ -1930,6 +1943,7 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
+@@ -1865,7 +1878,8 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
+         return;
+     }
  
- - (void)mouseDragged:(NSEvent *)theEvent
- {
-+    Cocoa_GooMouseEvent(_data.window, theEvent);
-     [self mouseMoved:theEvent];
- }
- 
+-    if (!Cocoa_GetMouseFocus()) {
++    if (!Cocoa_GetMouseFocus() && !mouse->capture_window &&
++        !SDL_GetMouseState(NULL, NULL)) {
+         // The mouse is no longer over any window in the application
+         SDL_SetMouseFocus(NULL);
+         return;
 @@ -3204,6 +3218,7 @@ bool Cocoa_SetWindowMouseGrab(SDL_VideoDevice *_this, SDL_Window *window, bool g
  void Cocoa_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
  {
