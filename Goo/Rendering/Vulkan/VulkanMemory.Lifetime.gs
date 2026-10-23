@@ -82,6 +82,10 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   }
 
   private func EnsureBlockCapacity(heapIndex uint32, blockSize VkDeviceSize) {
+    if operationLimitActive {
+      if blockSize > operationBytesRemaining { throw VulkanOperationBudgetException() }
+      operationBytesRemaining = operationBytesRemaining - blockSize
+    }
     if residentAllocations >= maxAllocationCount {
       throw InvalidOperationException("Vulkan memory allocation count limit reached")
     }

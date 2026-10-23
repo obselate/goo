@@ -32,6 +32,20 @@ internal unsafe partial class VulkanMemoryAllocator : IDisposable {
   private var residentAllocations uint64
   private var lastResult VkResult = VkConstants.VK_SUCCESS
   private var disposed bool
+  private var operationLimitActive bool
+  private var operationBytesRemaining VkDeviceSize
+
+  internal func TryBeginOperationLimit(bytes VkDeviceSize) bool {
+    if operationLimitActive { return false }
+    operationLimitActive = true
+    operationBytesRemaining = bytes
+    return true
+  }
+
+  internal func EndOperationLimit() VkDeviceSize {
+    operationLimitActive = false
+    return operationBytesRemaining
+  }
 
   internal prop LiveBytes VkDeviceSize{ get -> liveBytes }
   internal prop LiveAllocationCount uint64{ get -> liveAllocations }
