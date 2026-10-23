@@ -407,6 +407,17 @@ internal unsafe struct VkGraphicsPipelineCreateInfo {
 }
 
 @StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkComputePipelineCreateInfo {
+  var sType VkStructureType
+  var pNext * void
+  var flags VkPipelineCreateFlags
+  var stage VkPipelineShaderStageCreateInfo
+  var layout VkPipelineLayout
+  var basePipelineHandle VkPipeline
+  var basePipelineIndex int32
+}
+
+@StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkPipelineCacheCreateInfo {
   var sType VkStructureType
   var pNext * void

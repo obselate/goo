@@ -53,6 +53,28 @@ internal class VectorRetainSmoke {
             }
         }
 
+        internal func VerifyNonScalingStrokeHitBounds() {
+            let node = Node{
+                Kind: NodeKind.Shape, Rect: Rect{X: 10.0F, Y: 10.0F, W: 100.0F, H: 100.0F}, HitTestSelf: true,
+                ShapePath: PathBuilder(0.0, 0.0, 100.0, 100.0).MoveTo(20.0, 0.0).LineTo(80.0, 0.0).Build(),
+                ShapeFit: ShapeFit.None, ShapeVectorEffect: VectorEffect.NonScalingStroke,
+                BorderLeftWidth: 6, BorderLeftColor: Color.White, MiterLimit: 4.0, StrokeEnd: 1.0,
+            }
+            let builds = PathBandEncoder.BuildCount
+            if !Object.ReferenceEquals(hitTopmost(node, 60.0F, 7.5F), node) {
+                throw InvalidOperationException("Non-scaling stroke outside layout was not hit")
+            }
+            if !Object.ReferenceEquals(DiagnosticHitIndex(node).Hit(60.0F, 7.5F), node) {
+                throw InvalidOperationException("Indexed non-scaling stroke outside layout was not hit")
+            }
+            if hitTopmost(node, 60.0F, 5.5F) != nil {
+                throw InvalidOperationException("Non-scaling stroke hit exceeded its width")
+            }
+            if PathBandEncoder.BuildCount != builds {
+                throw InvalidOperationException("Stroke hit testing encoded GPU geometry")
+            }
+        }
+
         private func VerifyRegistry() {
             let paths = [3000]VectorPath
             let registry = VulkanPathIdentityRegistry()
@@ -108,7 +130,7 @@ internal class VectorRetainSmoke {
             return identity
         }
 
-        private func Measure(asset VectorAsset, count int32, markers bool) {
+        internal func Measure(asset VectorAsset, count int32, markers bool) {
             let root = VectorRetainCell(asset, count, markers)
             let window = Window{
                 Title: "Goo retained vector zoom", Width: 800, Height: 600,

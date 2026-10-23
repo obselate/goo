@@ -1479,21 +1479,12 @@ internal shared class Program {
             manifest.TextInstanceRecord.Members
         )
         for pipeline in manifest.Pipelines {
-            let vertexShader = builtShaders.Single(
-                (value BuiltShader) -> value
-                    .Spec
-                    .Id == pipeline
-                    .Stages
-                    .Single((stage PipelineStage) -> stage.Stage == "vertex")
-                    .Shader
-            )
+            let firstShader = builtShaders.Single((value BuiltShader) -> value.Spec.Id == pipeline.Stages[0].Shader)
             var packingSize int32
             var packingMembers IReadOnlyList[PushConstantMember]
             if pipeline.PushConstants.Stages.Count > 0 {
-                let pushConstant = vertexShader
-                    .Reflection
-                    .PushConstant ??
-                    throw InvalidOperationException("Vertex shader has no reflected push constants: ${pipeline.Id}")
+                let pushConstant = firstShader.Reflection.PushConstant ??
+                    throw InvalidOperationException("First shader has no reflected push constants: ${pipeline.Id}")
                 let expected = pipeline.PushConstants
                 Require(
                     pushConstant.Size == expected.Size,
@@ -1758,8 +1749,8 @@ internal shared class Program {
                 }
             }
         )
-        if manifest.Shaders.Count != 17 {
-            throw InvalidOperationException("shaders must contain exactly seventeen entries")
+        if manifest.Shaders.Count != 20 {
+            throw InvalidOperationException("shaders must contain exactly twenty entries")
         }
         RequireShader(
             manifest.Shaders[0],
@@ -1865,8 +1856,11 @@ internal shared class Program {
             "clip_mask.frag.slang",
             "clip_mask.frag.spv"
         )
-        if manifest.Pipelines.Count != 12 {
-            throw InvalidOperationException("pipelines must contain exactly twelve entries")
+        RequireShader(manifest.Shaders[17], "path_stroke_fragment", "fragment", "path_stroke.frag.slang", "path_stroke.frag.spv")
+        RequireShader(manifest.Shaders[18], "stroke_mask_fragment", "fragment", "stroke_mask.frag.slang", "stroke_mask.frag.spv")
+        RequireShader(manifest.Shaders[19], "path_stroke_compute", "compute", "path_stroke.comp.slang", "path_stroke.comp.spv")
+        if manifest.Pipelines.Count != 15 {
+            throw InvalidOperationException("pipelines must contain exactly fifteen entries")
         }
         RequirePipeline(
             manifest.Pipelines[0],
@@ -2204,6 +2198,42 @@ internal shared class Program {
             false,
             "r8-unorm"
         )
+        RequirePipeline(manifest.Pipelines[12], "path_stroke", "PathBandPushConstants.Generated.gs", "PathBandPushConstants",
+            80, manifest.Pipelines[8].PushConstants.Members, []string{"vertex", "fragment"},
+            "source-over-premultiplied-linear", "path-band-premultiplied-linear",
+            "path_band_vertex", "path_stroke_fragment", "vec2", "pathPosition", []Descriptor{
+                Descriptor{Set: 0, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"vertex", "fragment"}},
+                Descriptor{Set: 1, Binding: 0, Type: "combined-image-sampler", Count: 1, Stages: List[string]{"fragment"}},
+                Descriptor{Set: 1, Binding: 1, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}},
+                Descriptor{Set: 2, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
+            })
+        RequirePipeline(manifest.Pipelines[13], "stroke_mask", "ClipMaskPushConstants.Generated.gs", "ClipMaskPushConstants",
+            112, manifest.Pipelines[11].PushConstants.Members, []string{"vertex", "fragment"},
+            "disabled", "clip-mask-r8-coverage", "clip_mask_vertex", "stroke_mask_fragment", "vec2", "pathPosition", []Descriptor{
+                Descriptor{Set: 0, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"vertex", "fragment"}},
+                Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"fragment"}}
+            }, false, "r8-unorm")
+        let metrics = manifest.Pipelines[14]
+        Require(metrics.Id == "path_stroke_metrics", "pipeline.path_stroke_metrics.id", "path_stroke_metrics")
+        Require(metrics.Topology == "compute" && metrics.VertexInput == "none", "pipeline.path_stroke_metrics.topology", "compute")
+        Require(metrics.ColorFormat == "none" && metrics.SampleCount == 0, "pipeline.path_stroke_metrics.colorFormat", "none")
+        Require(metrics.Blend == "disabled" && metrics.ColorPacking == nil, "pipeline.path_stroke_metrics.blend", "disabled")
+        Require(metrics.DepthStencil == "disabled" && metrics.CullMode == "none" && metrics.FrontFace == "none",
+            "pipeline.path_stroke_metrics.rasterization", "none")
+        Require(metrics.DescriptorCount == 2, "pipeline.path_stroke_metrics.descriptorCount", "2")
+        RequireDescriptors(metrics.Descriptors, []Descriptor{
+            Descriptor{Set: 0, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"compute"}},
+            Descriptor{Set: 1, Binding: 0, Type: "storage-buffer", Count: 1, Stages: List[string]{"compute"}}
+        }, "pipeline.path_stroke_metrics.descriptors")
+        Require(metrics.HostPacking.Path == "StrokeMetricPushConstants.Generated.gs"
+            && metrics.HostPacking.TypeName == "StrokeMetricPushConstants", "pipeline.path_stroke_metrics.hostPacking", "StrokeMetricPushConstants")
+        Require(metrics.PushConstants.Offset == 0 && metrics.PushConstants.Size == 4, "pipeline.path_stroke_metrics.pushConstants", "4 bytes")
+        RequireSequence(metrics.PushConstants.Stages, []string{"compute"}, "pipeline.path_stroke_metrics.pushConstants.stages")
+        RequireMembers(metrics.PushConstants, []PushConstantMember{PushConstantMember{Name: "request", Offset: 0, Type: "uint"}},
+            "pipeline.path_stroke_metrics.pushConstants.members")
+        Require(metrics.Stages.Count == 1, "pipeline.path_stroke_metrics.stages", "1")
+        RequirePipelineStage(metrics.Stages[0], "path_stroke_compute", "compute",
+            Array.Empty[InterfaceLocation](), Array.Empty[InterfaceLocation]())
     }
 
     private func RequireAssembly(assembly ShaderAssembly, id string, parts IReadOnlyList[AssemblyPart]) {

@@ -1234,6 +1234,10 @@ bool validHeader()
         && curveCount() != 0u;
 }
 
+#ifdef GOO_STROKE
+#include "path_stroke.slang"
+#endif
+
 #ifdef GOO_CLIP_MASK
 float clipBorderCoverage()
 {
@@ -1249,13 +1253,21 @@ float clipBorderCoverage()
 
 void shade()
 {
+#ifdef GOO_STROKE
+    float alpha = validHeader() ? strokeCoverage() : 0.0;
+#else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
+#endif
     outColor = float4(alpha * clipBorderCoverage(), 0.0, 0.0, 1.0);
 }
 #else
 void shade()
 {
+#ifdef GOO_STROKE
+    float alpha = validHeader() ? strokeCoverage() : 0.0;
+#else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
+#endif
     if (pc.params.z == 0u)
     {
         outColor = float4(0.0, 0.0, 0.0, alpha) * gooClipCoverage();

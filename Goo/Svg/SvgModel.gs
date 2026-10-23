@@ -108,6 +108,7 @@ internal class SvgStroke {
         get;
         init
     }
+    internal prop VectorEffect Goo.VectorEffect { get; init; }
     internal prop Animation SvgAnimation?
     internal prop Paint SvgPaint {
         get;
@@ -332,6 +333,7 @@ internal class SvgStyle {
     internal prop MiterLimit float64
     internal prop DashOffset float64
     internal prop Dashes List[float64]?
+    internal prop VectorEffect Goo.VectorEffect
     internal prop FillRule uint32
     internal prop ClipRule uint32
     internal prop Opacity float64

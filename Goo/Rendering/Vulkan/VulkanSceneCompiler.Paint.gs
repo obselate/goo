@@ -442,8 +442,9 @@ internal partial class VulkanSceneCompiler {
         }
       }
       if strokeVisible {
-        if outline.CommandCount != 0 {
-          let path = renderer.Emit(outline, FillRule.NonZero)
+        let strokeSource = if node.ShapeVectorEffect == VectorEffect.NonScalingStroke { shapePath } else { outline }
+        if strokeSource.CommandCount != 0 {
+          let path = renderer.Emit(strokeSource, FillRule.NonZero)
           if path.Renderable {
             frame.AddAnalyticPathBand(AnalyticPathBandRecord{
               Bounds: bounds.Inflate(geometry.StrokeExtent),
@@ -451,6 +452,8 @@ internal partial class VulkanSceneCompiler {
               AtlasId: path.AtlasId,
               AtlasWordOffset: path.BaseWord,
               AtlasWordCount: path.WordCount,
+              CurveCount: path.CurveCount,
+              Stroke: ShapeGeometry.StrokeStyle(node),
               FillColor: node.BorderLeftColor.ToPackedRgba(),
               FillRule: path.FillRule,
               Opacity: opacity,
@@ -596,8 +599,9 @@ internal partial class VulkanSceneCompiler {
       }
       var strokePath VulkanPathRenderable{}
       if strokeVisible {
-        if outline.CommandCount != 0 {
-          strokePath = renderer.Emit(outline, FillRule.NonZero)
+        let strokeSource = if node.ShapeVectorEffect == VectorEffect.NonScalingStroke { shapePath } else { outline }
+        if strokeSource.CommandCount != 0 {
+          strokePath = renderer.Emit(strokeSource, FillRule.NonZero)
         }
       }
       var index = first
@@ -664,6 +668,8 @@ internal partial class VulkanSceneCompiler {
       let stableId = ShapeShadowMaskId(node, shadowIndex, stroke, inset)
       var contentKey = ClipContentKey(node, shapePath, node.ShapeFit,
         uint32(fillRule), maskBounds, transformIndex)
+      contentKey = MixPathHash(contentKey, path.PathId.LogicalId)
+      contentKey = MixPathHash(contentKey, path.GeometryRevision)
       contentKey = MixPathHash(contentKey, uint64(shadowIndex + 1))
       contentKey = MixPathHash(contentKey, stroke ? 3uL : 5uL)
       contentKey = MixPathHash(contentKey, inset ? 7uL : 11uL)
@@ -677,6 +683,8 @@ internal partial class VulkanSceneCompiler {
         AtlasId: path.AtlasId,
         AtlasWordOffset: path.BaseWord,
         AtlasWordCount: path.WordCount,
+        CurveCount: path.CurveCount,
+        Stroke: if stroke { ShapeGeometry.StrokeStyle(node) } else { PathStrokeStyle{} },
         Bounds: maskBounds,
         PathBounds: maskBounds,
         Fit: ShapeFit.Fill,
@@ -918,8 +926,7 @@ internal partial class VulkanSceneCompiler {
         let width = ResolveLength(node.BorderLeftWidth, MinDimension(bounds))
         if width > 0.0F && node.BorderLeftColor.A > 0.0F
           && node.StrokeStart < node.StrokeEnd {
-          result = result.Inflate(resolveShapeStrokeExtent(width, node.ShapeStrokeJoin,
-            float32(node.MiterLimit)))
+          result = result.Inflate(ShapeGeometry.StrokeExtent(node, width))
         }
       }
       return result

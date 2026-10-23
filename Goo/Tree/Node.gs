@@ -443,6 +443,7 @@ internal class Node {
   internal prop ShapeFillRule FillRule{ get; set; }
   internal prop ShapeStrokeCap StrokeCap{ get; set; }
   internal prop ShapeStrokeJoin StrokeJoin{ get; set; }
+  internal prop ShapeVectorEffect VectorEffect{ get; set; }
   internal prop MiterLimit float64{ get; set; }
   internal prop StrokeStart float64{ get; set; }
   internal prop StrokeEnd float64{ get; set; }

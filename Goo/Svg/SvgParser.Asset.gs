@@ -264,7 +264,7 @@ internal partial class SvgParser {
             StrokeJoin(stroke.Join),
             stroke.MiterLimit,
             dashes
-        )
+        ){.VectorEffect: stroke.VectorEffect}
     }
 
     private func BuildPath(source IReadOnlyList[SvgContour]?) VectorPath {

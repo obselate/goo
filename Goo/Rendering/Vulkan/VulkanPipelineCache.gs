@@ -157,6 +157,13 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
       }
     }
 
+  internal func CreateComputePipeline(info * VkComputePipelineCreateInfo, pipeline * VkPipeline) VkResult {
+    lock (gate) {
+      let create = dispatch.vkCreateComputePipelines
+      return create(device, cache, 1u, info, nil, pipeline)
+    }
+  }
+
   private func Create(initialData []uint8) VkPipelineCache {
     var pin GCHandle
     var pinned bool = false

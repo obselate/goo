@@ -94,8 +94,13 @@ internal sealed class PathBandEncoder {
       for contourIndex in 0 ... path.ContourCount {
         let contour = path.Contours[contourIndex]
         if contour.End <= contour.Start { continue }
+        let contourStart = uint32(curveScratch.Count)
+        let contourEnd = contourStart + uint32(contour.End - contour.Start) - 1u
         for quadraticIndex in contour.Start ... contour.End {
-          appendScratchQuadratic(path.Quadratics[quadraticIndex])
+          var flags = (contourEnd << 4) | (contour.Closed ? 4u : 0u)
+          if quadraticIndex == contour.Start { flags |= 1u }
+          if quadraticIndex + 1 == contour.End { flags |= 2u }
+          appendScratchQuadratic(path.Quadratics[quadraticIndex], flags, contourStart)
         }
         if !contour.Closed {
           let first = path.Quadratics[contour.Start]
@@ -108,7 +113,7 @@ internal sealed class PathBandEncoder {
               CY: (last.Y1 + first.Y0) * 0.5F,
               X1: first.X0,
               Y1: first.Y0,
-            })
+            }, 8u, contourStart)
           }
         }
       }
@@ -135,7 +140,7 @@ internal sealed class PathBandEncoder {
       return true
     }
 
-    private func appendScratchQuadratic(quadratic PathQuadratic) {
+    private func appendScratchQuadratic(quadratic PathQuadratic, flags uint32, contourStart uint32) {
       if !finiteQuadratic(quadratic) { return }
       curveScratch.Add(PathAnalyticCurve{
         X0: quadratic.X0,
@@ -144,8 +149,8 @@ internal sealed class PathBandEncoder {
         CY: quadratic.CY,
         X1: quadratic.X1,
         Y1: quadratic.Y1,
-        Flags: 0u,
-        Reserved: 0u,
+        Flags: flags,
+        ContourStart: contourStart,
       })
       let bounds = PathCurveBounds{
         MinimumX: quadraticMinimum(quadratic.X0, quadratic.CX, quadratic.X1),

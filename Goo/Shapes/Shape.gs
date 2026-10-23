@@ -15,6 +15,9 @@ public enum StrokeCap { Butt; Round; Square }
 /// Selects the join style for stroked paths.
 public enum StrokeJoin { Miter; Round; Bevel }
 
+/// Selects whether strokes scale with geometry or remain in window logical pixels.
+public enum VectorEffect { None; NonScalingStroke }
+
 /// Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
 public class Shape : Blob {
   private var miterLimit float64
@@ -36,6 +39,10 @@ public class Shape : Blob {
   public prop StrokeCap StrokeCap{ get; init; }
   /// Gets or sets the stroke join style. The default is Miter.
   public prop StrokeJoin StrokeJoin{ get; init; }
+  /// Gets or sets the vector effect. The default is None.
+  /// NonScalingStroke keeps widths and dash lengths in window logical pixels.
+  /// The stroke stays centered on the path.
+  public prop VectorEffect VectorEffect{ get; init; }
   /// Gets or sets the non-negative finite miter limit. The default is 4.
   public prop MiterLimit float64{
     get -> miterLimit
@@ -60,6 +67,7 @@ public class Shape : Blob {
   public prop Dashes DashPattern? { get; init; }
   /// Gets or sets the stroke start in [0, 1]. Lengths use flattened geometry
   /// after fit mapping, summed across contours in path order.
+  /// NonScalingStroke measures lengths after the full transform.
   /// On mount, StrokeStart must not exceed StrokeEnd.
   public prop StrokeStart float64{
     get -> strokeStart

@@ -257,6 +257,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
       VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
       VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
       VkConstants.VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT
+      | VkConstants.VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
       | VkConstants.VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
       VkConstants.VK_ACCESS_2_SHADER_STORAGE_READ_BIT)
     uploadCommandBuffer = commandBuffer

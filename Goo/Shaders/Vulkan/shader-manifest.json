@@ -407,7 +407,7 @@
       "source": "path_band.frag.slang",
       "output": "path_band.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "6c370d048e66ea8a13a091405cc69f54005d402378ba31428e10bac4dd4b1891",
+      "sourceSha256": "862775fa0b80de571cae2eab717573152b7ec525cbd0d6774e1c440a0983ef9a",
       "outputSha256": "b11d1121fbcf06d90016d181dff9b67bdf48e3ec0c946e20a84ca9e09497e339",
       "outputBytes": 106372,
       "capabilities": [
@@ -480,6 +480,45 @@
       "sourceSha256": "21ef8bfa25dce6aa42fc885699535b2d5a55ed6339e72e62741ac99a64170cea",
       "outputSha256": "200f41772633b0279f281f0ef165155da25528ab00e091affd8767e1cdb7f473",
       "outputBytes": 99336,
+      "capabilities": [
+        1
+      ]
+    },
+    {
+      "id": "path_stroke_fragment",
+      "stage": "fragment",
+      "source": "path_stroke.frag.slang",
+      "output": "path_stroke.frag.spv",
+      "entryPoint": "main",
+      "sourceSha256": "6f57803d01d0945b4967c4f755d8a3fbe180af155a3a60bd7047b5351a3cc749",
+      "outputSha256": "f8d07e03128966237412415c67e87fda58e76c83ac7509b5d7e59e0ba89ce771",
+      "outputBytes": 80792,
+      "capabilities": [
+        1
+      ]
+    },
+    {
+      "id": "stroke_mask_fragment",
+      "stage": "fragment",
+      "source": "stroke_mask.frag.slang",
+      "output": "stroke_mask.frag.spv",
+      "entryPoint": "main",
+      "sourceSha256": "ffb444f919f2eb234d4d9e9498650af79e45e1de7ec3cc72584a72d372c069b7",
+      "outputSha256": "d7fb376be36ff57b5f40f9b94d7744a07617521eb9e05901f8871fbf6486b270",
+      "outputBytes": 73784,
+      "capabilities": [
+        1
+      ]
+    },
+    {
+      "id": "path_stroke_compute",
+      "stage": "compute",
+      "source": "path_stroke.comp.slang",
+      "output": "path_stroke.comp.spv",
+      "entryPoint": "main",
+      "sourceSha256": "c064fddd0676d8d07d4eb607909437f5848230c9958f654468daaed5a3f2d450",
+      "outputSha256": "3ea4f1c82360a3fb0f89a4f0b2273a9295221d3da361973d6db557ccf72b8945",
+      "outputBytes": 6680,
       "capabilities": [
         1
       ]
@@ -2171,6 +2210,323 @@
         "typeName": "ClipMaskPushConstants",
         "sha256": "05903dcc620b8779f58a0799fa74e51fb29e89378f8a6d51df8f85da6ecf8c86",
         "bytes": 1415
+      }
+    },
+    {
+      "id": "path_stroke",
+      "topology": "triangle-list",
+      "vertexInput": "none",
+      "pushConstants": {
+        "offset": 0,
+        "size": 80,
+        "stages": [
+          "vertex",
+          "fragment"
+        ],
+        "members": [
+          {
+            "name": "transform0",
+            "offset": 0,
+            "type": "vec4"
+          },
+          {
+            "name": "transform1",
+            "offset": 16,
+            "type": "vec4"
+          },
+          {
+            "name": "sampleStep",
+            "offset": 32,
+            "type": "vec4"
+          },
+          {
+            "name": "color",
+            "offset": 48,
+            "type": "vec4"
+          },
+          {
+            "name": "params",
+            "offset": 64,
+            "type": "uvec4"
+          }
+        ]
+      },
+      "descriptorCount": 4,
+      "descriptors": [
+        {
+          "set": 0,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "vertex",
+            "fragment"
+          ]
+        },
+        {
+          "set": 1,
+          "binding": 0,
+          "type": "combined-image-sampler",
+          "count": 1,
+          "stages": [
+            "fragment"
+          ]
+        },
+        {
+          "set": 1,
+          "binding": 1,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "fragment"
+          ]
+        },
+        {
+          "set": 2,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "fragment"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "shader": "path_band_vertex",
+          "stage": "vertex",
+          "entryPoint": "main",
+          "inputs": [],
+          "outputs": [
+            {
+              "location": 0,
+              "type": "vec2",
+              "name": "pathPosition"
+            },
+            {
+              "location": 2,
+              "type": "uint",
+              "name": "gooClipDrawOrdinal"
+            }
+          ]
+        },
+        {
+          "shader": "path_stroke_fragment",
+          "stage": "fragment",
+          "entryPoint": "main",
+          "inputs": [
+            {
+              "location": 0,
+              "type": "vec2",
+              "name": "pathPosition"
+            },
+            {
+              "location": 2,
+              "type": "uint",
+              "name": "gooClipDrawOrdinal"
+            }
+          ],
+          "outputs": [
+            {
+              "location": 0,
+              "type": "vec4",
+              "name": "outColor"
+            }
+          ]
+        }
+      ],
+      "colorFormat": "swapchain-sRGB",
+      "sampleCount": 1,
+      "blend": "source-over-premultiplied-linear",
+      "colorPacking": "path-band-premultiplied-linear",
+      "depthStencil": "disabled",
+      "cullMode": "none",
+      "frontFace": "counter-clockwise",
+      "hostPacking": {
+        "path": "PathBandPushConstants.Generated.gs",
+        "typeName": "PathBandPushConstants",
+        "sha256": "a7ca637b53ab1af1ea0404f5604322db5ff60743db94e1eec441dd14fb7f5150",
+        "bytes": 991
+      }
+    },
+    {
+      "id": "stroke_mask",
+      "topology": "triangle-list",
+      "vertexInput": "none",
+      "pushConstants": {
+        "offset": 0,
+        "size": 112,
+        "stages": [
+          "vertex",
+          "fragment"
+        ],
+        "members": [
+          {
+            "name": "transform0",
+            "offset": 0,
+            "type": "vec4"
+          },
+          {
+            "name": "transform1",
+            "offset": 16,
+            "type": "vec4"
+          },
+          {
+            "name": "sampleStep",
+            "offset": 32,
+            "type": "vec4"
+          },
+          {
+            "name": "borderRect",
+            "offset": 48,
+            "type": "vec4"
+          },
+          {
+            "name": "borderTransform0",
+            "offset": 64,
+            "type": "vec4"
+          },
+          {
+            "name": "borderTransform1",
+            "offset": 80,
+            "type": "vec4"
+          },
+          {
+            "name": "params",
+            "offset": 96,
+            "type": "uvec4"
+          }
+        ]
+      },
+      "descriptorCount": 2,
+      "descriptors": [
+        {
+          "set": 0,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "vertex",
+            "fragment"
+          ]
+        },
+        {
+          "set": 1,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "fragment"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "shader": "clip_mask_vertex",
+          "stage": "vertex",
+          "entryPoint": "main",
+          "inputs": [],
+          "outputs": [
+            {
+              "location": 0,
+              "type": "vec2",
+              "name": "pathPosition"
+            }
+          ]
+        },
+        {
+          "shader": "stroke_mask_fragment",
+          "stage": "fragment",
+          "entryPoint": "main",
+          "inputs": [
+            {
+              "location": 0,
+              "type": "vec2",
+              "name": "pathPosition"
+            }
+          ],
+          "outputs": [
+            {
+              "location": 0,
+              "type": "vec4",
+              "name": "outColor"
+            }
+          ]
+        }
+      ],
+      "colorFormat": "r8-unorm",
+      "sampleCount": 1,
+      "blend": "disabled",
+      "colorPacking": "clip-mask-r8-coverage",
+      "depthStencil": "disabled",
+      "cullMode": "none",
+      "frontFace": "counter-clockwise",
+      "hostPacking": {
+        "path": "ClipMaskPushConstants.Generated.gs",
+        "typeName": "ClipMaskPushConstants",
+        "sha256": "05903dcc620b8779f58a0799fa74e51fb29e89378f8a6d51df8f85da6ecf8c86",
+        "bytes": 1415
+      }
+    },
+    {
+      "id": "path_stroke_metrics",
+      "topology": "compute",
+      "vertexInput": "none",
+      "pushConstants": {
+        "offset": 0,
+        "size": 4,
+        "stages": [
+          "compute"
+        ],
+        "members": [
+          {
+            "name": "request",
+            "offset": 0,
+            "type": "uint"
+          }
+        ]
+      },
+      "descriptorCount": 2,
+      "descriptors": [
+        {
+          "set": 0,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "compute"
+          ]
+        },
+        {
+          "set": 1,
+          "binding": 0,
+          "type": "storage-buffer",
+          "count": 1,
+          "stages": [
+            "compute"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "shader": "path_stroke_compute",
+          "stage": "compute",
+          "entryPoint": "main",
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "colorFormat": "none",
+      "sampleCount": 0,
+      "blend": "disabled",
+      "depthStencil": "disabled",
+      "cullMode": "none",
+      "frontFace": "none",
+      "hostPacking": {
+        "path": "StrokeMetricPushConstants.Generated.gs",
+        "typeName": "StrokeMetricPushConstants",
+        "sha256": "bf4fc2eccafa502e4ee32b8efdba9af46bb9c0e5167a62ca87f07c2cf4d2792a",
+        "bytes": 194
       }
     }
   ]

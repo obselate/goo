@@ -291,6 +291,7 @@ public sealed class VectorAsset {
           FillRule: node.FillRule,
           StrokeCap: stroke.Cap,
           StrokeJoin: stroke.Join,
+          VectorEffect: stroke.VectorEffect,
           MiterLimit: stroke.MiterLimit,
           Dashes: stroke.Dashes,
           BorderWidth: stroke.Width,

@@ -12,7 +12,7 @@ internal data struct PathAnalyticHeader {
   internal let HorizontalCurveIndexCount uint32
   internal let VerticalCurveIndexCount uint32
   internal let CurveCount uint32
-  internal let Reserved uint32
+  internal let MetricWordOffset uint32
   internal let MinimumX float32
   internal let MinimumY float32
   internal let MaximumX float32
@@ -38,7 +38,7 @@ internal data struct PathAnalyticCurve {
   internal let X1 float32
   internal let Y1 float32
   internal let Flags uint32
-  internal let Reserved uint32
+  internal let ContourStart uint32
 }
 
 internal sealed class PathBandEncoding {
@@ -136,6 +136,7 @@ internal sealed class PathBandEncoding {
     get -> int64(horizontalCurveIndices.Count + verticalCurveIndices.Count) * IndexByteStride
   }
   internal prop CurveByteCount int64{ get -> int64(curves.Count) * CurveByteStride }
+  internal prop MetricByteCount int64{ get -> curves.Count == 0 ? 0L : (int64(curves.Count) * 2L + 2L) * 4L }
 
   internal func Rebuild(minimumX float32, minimumY float32, maximumX float32, maximumY float32,
     nextHorizontalBands IReadOnlyList[PathAnalyticBand],
@@ -180,6 +181,10 @@ internal sealed class PathBandEncoding {
       }
       fillRuleMask = nextFillRuleMask
       geometryRevision = revision == 0uL ? 1uL : revision
+      let metricWordOffset = int32(HeaderByteStride / 4)
+        + (horizontalBands.Count + verticalBands.Count) * int32(BandByteStride / 4)
+        + (horizontalCurveIndices.Count + verticalCurveIndices.Count) * int32(IndexByteStride / 4)
+        + curves.Count * int32(CurveByteStride / 4)
       header = PathAnalyticHeader{
         Format: FormatVersion,
         FillRuleMask: fillRuleMask,
@@ -188,7 +193,7 @@ internal sealed class PathBandEncoding {
         HorizontalCurveIndexCount: uint32(horizontalIndexBuffer.Count),
         VerticalCurveIndexCount: uint32(verticalIndexBuffer.Count),
         CurveCount: uint32(curveBuffer.Count),
-        Reserved: 0u,
+        MetricWordOffset: uint32(metricWordOffset),
         MinimumX: minimumX,
         MinimumY: minimumY,
         MaximumX: maximumX,
@@ -224,10 +229,7 @@ internal sealed class PathBandEncoding {
   }
 
   private func Repack() {
-    let requiredWordCount = int32(HeaderByteStride / 4)
-    +(horizontalBands.Count + verticalBands.Count) * int32(BandByteStride / 4)
-    +(horizontalCurveIndices.Count + verticalCurveIndices.Count) * int32(IndexByteStride / 4)
-    +curves.Count * int32(CurveByteStride / 4)
+    let requiredWordCount = int32(header.MetricWordOffset) + int32(MetricByteCount / 4L)
     if requiredWordCount > words.Length {
       words = [ArrayGrowthCapacity(words.Length, requiredWordCount,
         requiredWordCount)]uint32
@@ -258,7 +260,7 @@ internal sealed class PathBandEncoding {
     offset++
     words[offset] = header.CurveCount
     offset++
-    words[offset] = header.Reserved
+    words[offset] = header.MetricWordOffset
     offset++
     words[offset] = BitConverter.SingleToUInt32Bits(header.MinimumX)
     offset++
@@ -303,8 +305,14 @@ internal sealed class PathBandEncoding {
 
   private func appendCurves(words []uint32, ref offset int32,
     values IReadOnlyList[PathAnalyticCurve]) {
+      if values.Count == 0 { return }
+      let extent = Math.Max(float64(maximumX) - float64(minimumX), float64(maximumY) - float64(minimumY))
+      let normalization = float32(extent > 0.0 ? Math.Min(extent, float64(Single.MaxValue)) : 1.0)
+      let metrics = int32(header.MetricWordOffset)
+      words[metrics] = BitConverter.SingleToUInt32Bits(normalization)
+      var prefix = 0.0
       for i in 0 ... values.Count {
-        let value = values[i]
+        var value = values[i]
         words[offset] = BitConverter.SingleToUInt32Bits(value.X0)
         offset++
         words[offset] = BitConverter.SingleToUInt32Bits(value.Y0)
@@ -319,8 +327,35 @@ internal sealed class PathBandEncoding {
         offset++
         words[offset] = value.Flags
         offset++
-        words[offset] = value.Reserved
+        words[offset] = value.ContourStart
         offset++
+        let length = (value.Flags & 8u) != 0u ? 0.0 : curveLength(ref value) / float64(normalization)
+        words[metrics + 1 + i * 2] = BitConverter.SingleToUInt32Bits(float32(prefix))
+        words[metrics + 2 + i * 2] = BitConverter.SingleToUInt32Bits(float32(length))
+        prefix += length
       }
+      words[metrics + 1 + values.Count * 2] = BitConverter.SingleToUInt32Bits(float32(prefix))
     }
+
+  private func curveLength(ref value PathAnalyticCurve) float64 {
+    let x = 2.0 * (float64(value.CX) - float64(value.X0))
+    let y = 2.0 * (float64(value.CY) - float64(value.Y0))
+    let dx = 2.0 * (float64(value.X0) - 2.0 * float64(value.CX) + float64(value.X1))
+    let dy = 2.0 * (float64(value.Y0) - 2.0 * float64(value.CY) + float64(value.Y1))
+    let a = dx * dx + dy * dy
+    let b = dx * x + dy * y
+    let c = x * x + y * y
+    if a == 0.0 || a < c * 1e-10 {
+      let chordX = float64(value.X1) - float64(value.X0)
+      let chordY = float64(value.Y1) - float64(value.Y0)
+      return Math.Sqrt(chordX * chordX + chordY * chordY)
+    }
+    var length = ((a + b) * Math.Sqrt(Math.Max(a + 2.0 * b + c, 0.0)) - b * Math.Sqrt(c)) / (2.0 * a)
+    let determinant = Math.Max(a * c - b * b, 0.0)
+    if determinant > 0.0 {
+      let root = Math.Sqrt(determinant)
+      length += determinant * (Math.Asinh((a + b) / root) - Math.Asinh(b / root)) / (2.0 * a * Math.Sqrt(a))
+    }
+    return Math.Max(length, 0.0)
+  }
 }
