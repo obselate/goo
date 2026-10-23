@@ -7,6 +7,7 @@ import System.Threading
 public partial class ImageSource {
   shared {
     /// Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source.
+    /// PNG and JPEG EXIF orientation is applied. Color-profile metadata is not converted.
     /// The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException.
     /// Decoding is synchronous. Call from a worker when loading outside the UI thread.
     public func Decode(encoded ReadOnlyMemory[uint8]) ImageSource ->
@@ -41,7 +42,7 @@ public partial class ImageSource {
       }
 
     /// Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail.
-    /// The image keeps its aspect ratio, never grows, and retains only the reduced pixels.
+    /// The image applies EXIF orientation, keeps its displayed aspect ratio, never grows, and retains only reduced pixels.
     /// This synchronous operation belongs on a worker outside the UI thread.
     public func LoadThumbnail(path string, maxWidth int32, maxHeight int32) ImageSource ->
     LoadThumbnail(path, maxWidth, maxHeight, CancellationToken.None)

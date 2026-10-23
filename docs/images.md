@@ -23,9 +23,11 @@ images (at most 64 scans); JPEG alpha is opaque. GIF87a/GIF89a loads the first
 image onto the logical screen, including palette transparency and interlacing.
 Animated GIFs are accepted as static first-frame images, at most 1024 frames;
 later frames are structurally checked but are neither decoded nor scheduled.
-The loader also uses the first PNG image, ignores animation and color-profile
-metadata, and does not perform color management or apply EXIF orientation.
-Pixels retain their encoded orientation and are treated as sRGB by rendering.
+The loader uses the first PNG image and ignores animation and color-profile
+metadata. PNG `eXIf` and JPEG EXIF orientation are applied, including mirrored
+orientations. Width, height and thumbnail bounds refer to the displayed image.
+Malformed or duplicate EXIF metadata is ignored. Those images stay unrotated.
+Color management is not performed. Pixels are treated as sRGB by rendering.
 Other formats throw
 `NotSupportedException`; a consumer decoder can still create `ImageSource`
 directly. `Image.Path` is legacy metadata: mounting a nonempty path without

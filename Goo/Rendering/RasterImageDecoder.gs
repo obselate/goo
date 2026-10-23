@@ -124,7 +124,12 @@ internal unsafe partial class RasterImageDecoder {
 
     private func DecodePixels(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds,
       token CancellationToken) ImageSource {
-      using let image = DecodeRaw(bytes, bounds, token, false)
+      if bytes.Length > bounds.Limits.MaxEncodedBytes { throw EncodedLimit(bounds.Limits) }
+      let orientation = ReadOrientation(bytes, token)
+      let orientedBounds = RasterDecodeBounds{Limits: bounds.Limits,
+        MaxWidth: if orientation >= 5 { bounds.MaxHeight } else { bounds.MaxWidth },
+        MaxHeight: if orientation >= 5 { bounds.MaxWidth } else { bounds.MaxHeight }}
+      using let image = DecodeRaw(bytes, orientedBounds, token, false)
       let pixels = image.Pixels
       var offset = 0
       while offset < pixels.Length {
@@ -137,14 +142,15 @@ internal unsafe partial class RasterImageDecoder {
         }
         offset += 4
       }
-      ThumbnailSize(image.Width, image.Height, bounds, out var width, out var height)
+      ThumbnailSize(image.Width, image.Height, orientedBounds, out var width, out var height)
       if width != image.Width || height != image.Height {
-        let resized = Resample(pixels, image.Width, image.Height, width, height, token)
+        let resized = Resample(pixels, image.Width, image.Height, width, height, orientation, token)
         token.ThrowIfCancellationRequested()
-        return ImageSource.Transfer(width, height, resized, () -> { })
+        return ImageSource.Transfer(if orientation >= 5 { height } else { width },
+          if orientation >= 5 { width } else { height }, resized, () -> { })
       }
       token.ThrowIfCancellationRequested()
-      return ImageSource.Transfer(image.Width, image.Height, pixels.ToArray(), () -> { })
+      return OrientedSource(image.Width, image.Height, pixels, orientation, token)
     }
 
     private func DecodeRaw(bytes ReadOnlySpan[uint8], bounds RasterDecodeBounds, token CancellationToken,
@@ -169,7 +175,7 @@ internal unsafe partial class RasterImageDecoder {
     }
 
     private func Resample(pixels ReadOnlySpan[uint8], sourceWidth int32, sourceHeight int32,
-      width int32, height int32, token CancellationToken) []uint8 {
+      width int32, height int32, orientation int32, token CancellationToken) []uint8 {
         let resized = [width * height * 4]uint8
         let spans = [width * 4]int32
         let row = [width * 4]int32
@@ -187,6 +193,7 @@ internal unsafe partial class RasterImageDecoder {
         }
         let area = float64(sourceWidth) * float64(sourceHeight)
         var cachedRow = -1
+        let step = OrientationStep(height, orientation) * 4
         for y in 0 ... height {
           token.ThrowIfCancellationRequested()
           Array.Clear(sums)
@@ -201,8 +208,13 @@ internal unsafe partial class RasterImageDecoder {
             let weight = Math.Min(bottom, (sy + 1) * height) - Math.Max(top, sy * height)
             for channel in 0 ... row.Length { sums[channel] += int64(row[channel]) * weight }
           }
-          let target = y * row.Length
-          for channel in 0 ... row.Length { resized[target + channel] = uint8(Math.Round(float64(sums[channel]) / area)) }
+          var target = OrientationRow(width, height, y, orientation) * 4
+          for x in 0 ... width {
+            for channel in 0 ... 4 {
+              resized[target + channel] = uint8(Math.Round(float64(sums[x * 4 + channel]) / area))
+            }
+            target += step
+          }
         }
         return resized
       }
