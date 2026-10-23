@@ -17,7 +17,7 @@ nice -n 10 "${CC:-cc}" -Wall -Wextra -Werror \
 nice -n 10 "${CC:-cc}" -Wall -Wextra -Werror -Wno-unused-parameter \
   -I"$sdl_source/include" "$root/tests/NativeWindow/data_transfer_peer.c" \
   "$work/libSDL3.so.0" -Wl,-rpath,"$work" -o "$work/peer" "${wayland_flags[@]}"
-nice -n 10 dotnet build "$root/tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj" \
+nice -n 10 dotnet build "$root/tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj" \
   -c Release --nologo -m:4 -warnaserror
 output="$root/tests/Goo.ApiContractTests/bin/Release/net10.0"
 for library in libSDL3.so libgoo-harfbuzz.so libgoo-harfbuzz-gpu.so; do
@@ -26,6 +26,6 @@ done
 GOO_HEADLESS_COMPOSITOR=kwin GOO_NATIVE_TRANSFER_INPUT="$work/input" \
   GOO_NATIVE_TRANSFER_PEER="$work/peer" \
   nice -n 10 "$root/.github/scripts/with-headless-wayland.sh" \
-  dotnet test "$root/tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj" \
+  dotnet test "$root/tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj" \
   -c Release --no-build --nologo -m:4 \
   --filter FullyQualifiedName~NativeMimeBytesAndNegotiatedEffectsSurviveCrossProcessHandoff

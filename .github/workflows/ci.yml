@@ -390,7 +390,7 @@ jobs:
           GOO_CLIPBOARD_DATA_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_CLIPBOARD_CHILD="$PWD/artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke" \
-            dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
+            dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj \
             -c Release -r osx-arm64 --nologo \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             --filter FullyQualifiedName~MacClipboardTests
@@ -1699,9 +1699,9 @@ jobs:
         run: |
           $version = python .github/scripts/release_version.py --print
           $env:GOO_CLIPBOARD_CHILD = (Resolve-Path artifacts/windows-smoke/Goo.PackageSmoke.exe).Path
-          dotnet restore tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj --configfile tests/Goo.PackageSmoke/NuGet.config -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version
+          dotnet restore tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj --configfile tests/Goo.PackageSmoke/NuGet.config -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release --no-restore -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version --filter FullyQualifiedName~WindowsClipboardTests
+          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release --no-restore -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version --filter FullyQualifiedName~WindowsClipboardTests
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check native Windows data drag and effects
         if: needs.changes.outputs.full == 'true'
@@ -1912,7 +1912,7 @@ jobs:
           dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.Printing.Android/Goo.Printing.Android.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0-android -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
-          nice -n 10 dotnet build tests/Goo.AndroidClipboardPeer/Goo.AndroidClipboardPeer.csproj -c Release -m:4 -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          nice -n 10 dotnet build tests/Goo.AndroidClipboardPeer/Goo.AndroidClipboardPeer.gsproj -c Release -m:4 -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
         run: |
