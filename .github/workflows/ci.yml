@@ -167,7 +167,7 @@ jobs:
       - name: Verify application hosting process ownership
         if: needs.changes.outputs.api == 'true'
         run: |
-          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj \
+          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
             -c Release -m:4 -p:TreatWarningsAsErrors=true
           python3 .github/scripts/test-app-host.py \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll "$RUNNER_TEMP/app-host-managed"
@@ -175,7 +175,7 @@ jobs:
       - name: Verify NativeAOT application hosting on Linux
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj \
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
             -c Release -r linux-x64 --self-contained true -m:4 \
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
           python3 .github/scripts/test-app-host.py \
@@ -373,7 +373,7 @@ jobs:
       - name: Verify NativeAOT application hosting on macOS
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj \
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
             -c Release -r osx-arm64 --self-contained true -m:4 \
             -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/app-host-aot
@@ -661,7 +661,7 @@ jobs:
       - name: Verify Wayland application activation and placement
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj -c Release -m:4 \
+          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj -c Release -m:4 \
             -p:TreatWarningsAsErrors=true -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
           GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
@@ -1539,7 +1539,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj `
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj `
             -c Release -r win-x64 --self-contained true -m:4 `
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
