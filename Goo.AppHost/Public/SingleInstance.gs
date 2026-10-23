@@ -36,6 +36,8 @@ public class SingleInstance {
     shared {
         /// Acquires a primary lease or forwards to the current user's existing desktop instance.
         /// Initialize Window application activation on the UI thread before calling this method.
+        /// macOS captures native launch requests before election and forwards each retained request.
+        /// On Wayland, RequestActivation inside the receiving handler uses the forwarded activation token.
         /// Keep the primary lease until shutdown. Forwarded confirms queue ownership, not handler completion.
         /// A timeout never elects a second primary and does not prove that an unacknowledged request was unused.
         /// Android and other non-desktop targets return Unsupported.
@@ -46,6 +48,7 @@ public class SingleInstance {
         /// @exception ArgumentException when the identity is empty or exceeds 255 UTF-8 bytes.
         /// @exception ArgumentNullException when activation is nil.
         /// @exception ArgumentOutOfRangeException when the timeout is not positive.
+        /// @exception InvalidOperationException on macOS when initialized activation belongs to another UI thread.
         public func AcquireAsync(applicationId string, activation ApplicationActivation,
             timeoutMilliseconds int32 = 3000) Task[SingleInstanceResult] ->
             InstancePipe.AcquireAsync(applicationId, activation, timeoutMilliseconds)

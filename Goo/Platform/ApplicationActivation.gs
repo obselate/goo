@@ -32,6 +32,8 @@ public class ApplicationActivation {
     /// Gets bounded opaque notification data which the application must validate before use.
     public prop Payload string { get; init; }
 
+    internal prop NativeActivationToken string? { get; init; }
+
     /// Creates a Launch request with empty argument, document, and notification data.
     public init() {
         Documents = Array.Empty[Uri]()
@@ -50,8 +52,13 @@ public class ApplicationActivation {
         if Documents == nil || Arguments == nil { throw ArgumentNullException("Documents or Arguments") }
         if Documents.Count > MaxItems || Arguments.Count > MaxItems { return false }
         var bytes int32 = 0
-        if !IncludeString(WorkingDirectory, ref bytes) || !IncludeString(NotificationId, ref bytes)
-            || !IncludeString(ActionId, ref bytes) || !IncludeString(Payload, ref bytes) { return false }
+        if !IncludeString(WorkingDirectory, ref bytes, MaxStringBytes)
+            || !IncludeString(NotificationId, ref bytes, MaxStringBytes)
+            || !IncludeString(ActionId, ref bytes, MaxStringBytes)
+            || !IncludeString(Payload, ref bytes, MaxStringBytes) { return false }
+        if let token = NativeActivationToken {
+            if !IncludeString(token, ref bytes, MaxNativeTokenBytes) { return false }
+        }
         if let target = Target {
             if !IncludeUri(target, ref bytes) { return false }
         }
@@ -65,7 +72,7 @@ public class ApplicationActivation {
         let arguments = if Arguments.Count == 0 { Array.Empty[string]() } else { [Arguments.Count]string }
         for i in 0 ... arguments.Length {
             let value = Arguments[i]
-            if !IncludeString(value, ref bytes) { return false }
+            if !IncludeString(value, ref bytes, MaxStringBytes) { return false }
             arguments[i] = value
         }
         owned = ApplicationActivation{
@@ -73,6 +80,7 @@ public class ApplicationActivation {
             Documents: if documents.Length == 0 { documents } else { Array.AsReadOnly[Uri](documents) },
             Arguments: if arguments.Length == 0 { arguments } else { Array.AsReadOnly[string](arguments) },
             WorkingDirectory: WorkingDirectory, NotificationId: NotificationId, ActionId: ActionId, Payload: Payload,
+            NativeActivationToken: NativeActivationToken,
         }
         return true
     }
@@ -81,18 +89,19 @@ public class ApplicationActivation {
         internal const MaxItems int32 = 4096
         internal const MaxStringBytes int32 = 65536
         internal const MaxRequestBytes int32 = 1048576
+        internal const MaxNativeTokenBytes int32 = 65515
 
         private func IncludeUri(value Uri, ref bytes int32) bool {
             if value == nil { throw ArgumentNullException("URI") }
             if !value.IsAbsoluteUri { throw ArgumentException("Activation URIs must be absolute") }
-            return IncludeString(value.OriginalString, ref bytes)
+            return IncludeString(value.OriginalString, ref bytes, MaxStringBytes)
         }
 
-        private func IncludeString(value string, ref bytes int32) bool {
+        private func IncludeString(value string, ref bytes int32, limit int32) bool {
             if value == nil { throw ArgumentNullException("Activation text") }
-            if value.Length > MaxStringBytes { return false }
+            if value.Length > limit { return false }
             let count = Encoding.UTF8.GetByteCount(value)
-            if count > MaxStringBytes || count > MaxRequestBytes - bytes { return false }
+            if count > limit || count > MaxRequestBytes - bytes { return false }
             bytes += count
             return true
         }
