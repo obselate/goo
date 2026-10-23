@@ -107,13 +107,9 @@ internal unsafe partial class SdlHost {
                     return WindowPlacementResult(result, appliedFields: applied, error: "Fullscreen display selection failed")
                 }
                 applied |= WindowPlacementFields.FullscreenDisplay | WindowPlacementFields.State
-                Require(SDL.SyncWindow(window), "SDL_SyncWindow")
             } else if (value.Fields & WindowPlacementFields.State) != WindowPlacementFields.None
                 || ((size || position) && original != WindowState.Normal) {
-                if target != NativePlacementState(SDL.GetWindowFlags(window)) {
-                    SetState(target)
-                    Require(SDL.SyncWindow(window), "SDL_SyncWindow")
-                }
+                if target != NativePlacementState(SDL.GetWindowFlags(window)) { SetState(target) }
                 if (value.Fields & WindowPlacementFields.State) != WindowPlacementFields.None {
                     applied |= WindowPlacementFields.State
                 }
