@@ -16,6 +16,10 @@ public sealed class PublicDocumentationTests
     private static readonly string[] ExpectedMethodIds =
     {
         "M:Goo.Accessibility.#ctor",
+        "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
+        "M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},System.Collections.Generic.IReadOnlyList{System.Uri})",
+        "M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
+        "M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)",
         "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
         "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
         "M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)",
@@ -393,6 +397,14 @@ public sealed class PublicDocumentationTests
     private static readonly string[] ExpectedEnumFieldIds =
     {
         "F:Goo.MacOSBackdropMaterial.ContentBackground",
+        "F:Goo.ClipboardIntent.Copy",
+        "F:Goo.ClipboardIntent.Cut",
+        "F:Goo.DataTransferStatus.Success",
+        "F:Goo.DataTransferStatus.Cancelled",
+        "F:Goo.DataTransferStatus.Unsupported",
+        "F:Goo.DataTransferStatus.TooLarge",
+        "F:Goo.DataTransferStatus.Denied",
+        "F:Goo.DataTransferStatus.Failed",
         "F:Goo.MacOSBackdropMaterial.FullScreenUI",
         "F:Goo.MacOSBackdropMaterial.HeaderView",
         "F:Goo.MacOSBackdropMaterial.HudWindow",
@@ -464,6 +476,10 @@ public sealed class PublicDocumentationTests
         new Dictionary<string, DocumentationShape>(StringComparer.Ordinal)
         {
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
+            ["M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})"] = new(["contentType", "bytes"], [], false),
+            ["M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},System.Collections.Generic.IReadOnlyList{System.Uri})"] = new(["representations", "uris"], [], false),
+            ["M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] = new(["contentTypes"], [], true),
+            ["M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)"] = new(["data", "intent"], [], true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32,System.Int32)"] = new(["start", "length", "caret"], [], false),

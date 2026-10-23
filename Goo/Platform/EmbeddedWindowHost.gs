@@ -1,6 +1,8 @@
 package Goo
 
 import System
+import System.Collections.Generic
+import System.Threading.Tasks
 
 /// Connects a host-owned viewport and frame loop to an ordinary Goo window.
 /// All calls except RequestFrame run on the thread that attaches the window.
@@ -155,6 +157,15 @@ public open class EmbeddedWindowHost : IDisposable {
   protected open func SetClipboardText(value string) { }
   /// Updates the pointer cursor when the platform supports one.
   protected open func SetCursor(value Cursor) { }
+
+  internal open func QueryClipboardFormats() ClipboardFormats ->
+    ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}, "The embedded host does not provide clipboard data")
+
+  internal open func ReadClipboardDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] ->
+    Task.FromResult(ClipboardDataResult(ClipboardReadStatus.Unsupported, error: "The embedded host does not provide clipboard data"))
+
+  internal open func WriteClipboardAsync(data TransferData, intent ClipboardIntent) Task[ClipboardWriteResult] ->
+    Task.FromResult(ClipboardWriteResult(DataTransferStatus.Unsupported, "The embedded host does not publish clipboard data"))
 
   internal prop LogicalWidth int32{ get -> logicalWidth }
   internal prop LogicalHeight int32{ get -> logicalHeight }
