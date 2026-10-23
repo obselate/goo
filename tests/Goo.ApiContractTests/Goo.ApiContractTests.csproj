@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\Goo.SpellCheck.Hunspell\Goo.SpellCheck.Hunspell.csproj" />
     <ProjectReference Include="..\..\Goo.Printing\Goo.Printing.csproj" />
     <ProjectReference Include="..\..\Goo.NativeDialogs\Goo.NativeDialogs.gsproj" SetTargetFramework="TargetFramework=net10.0" />
+    <ProjectReference Include="..\..\Goo.Audio\Goo.Audio.gsproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

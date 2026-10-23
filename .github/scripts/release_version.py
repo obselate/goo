@@ -25,6 +25,7 @@ LITERAL_VERSION_FILES = (
     "CONTRIBUTING.md",
     "README.md",
     "docs/nuget-readme.md",
+    "docs/audio.md",
     "apps/Goo.DevTools/DiagnosticWire.gs",
     "apps/Goo.DevTools/Program.gs",
     "apps/Goo.DevTools/README.md",

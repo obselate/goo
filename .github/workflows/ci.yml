@@ -104,14 +104,16 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Images Goo.Gestures Goo.NativeDialogs tests
+            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
 
-      - name: Build Goo and image assets with warnings as errors
+      - name: Build Goo and optional packages with warnings as errors
         if: needs.changes.outputs.api == 'true'
-        run: dotnet build Goo.Images/Goo.Images.gsproj -c Release -p:TreatWarningsAsErrors=true
+        run: |
+          dotnet build Goo.Images/Goo.Images.gsproj -c Release -p:TreatWarningsAsErrors=true
+          dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
@@ -637,17 +639,6 @@ jobs:
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
 
-      - name: Verify shared UI audio without a hardware device
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
-            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
-            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
-            -o artifacts/audio-nativeaot
-          SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
-          SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
-            artifacts/audio-nativeaot/Goo.AudioSmoke
-
       - name: Build Goo DevTools app
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -801,6 +792,11 @@ jobs:
             dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
               -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           done
+      - name: Pack optional audio
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.Audio/Goo.Audio.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Build and check packed CLR interop samples
         if: needs.changes.outputs.full == 'true'
@@ -920,6 +916,19 @@ jobs:
         with:
           name: linux-packages
           path: artifacts/packages
+
+      - name: Verify packaged NativeAOT audio without a hardware device
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
+            -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooUsePackageReference=true -p:RestoreAdditionalProjectSources="$PWD/artifacts/packages" \
+            -o artifacts/audio-nativeaot
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_AUDIO_DRIVER=dummy artifacts/audio-nativeaot/Goo.AudioSmoke
+          .github/scripts/with-headless-wayland.sh env \
+            SDL_AUDIO_DRIVER=goo-unavailable GOO_AUDIO_UNAVAILABLE_SMOKE=1 \
+            artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Collect advisory consumer publish report
         if: needs.changes.outputs.full == 'true'
@@ -1115,6 +1124,7 @@ jobs:
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -1150,6 +1160,7 @@ jobs:
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
+            artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1681,6 +1692,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1723,6 +1738,7 @@ jobs:
             "artifacts/packages/Goo.SpellCheck.Android.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Printing.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Templates.$GOO_VERSION.nupkg"

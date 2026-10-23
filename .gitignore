@@ -59,6 +59,8 @@
 !/Goo.Accessibility/**
 !/Goo.Gestures/
 !/Goo.Gestures/**
+!/Goo.Audio/
+!/Goo.Audio/**
 !/Goo.Android/
 !/Goo.Android/**
 !/Goo.NativeMenus/

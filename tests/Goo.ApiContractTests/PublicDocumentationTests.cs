@@ -321,6 +321,10 @@ public sealed class PublicDocumentationTests
         "M:Goo.SoundPlayer.TryPlay(Goo.SoundSource,System.Single)",
         "M:Goo.SoundPlayer.StopAll",
         "M:Goo.SoundPlayer.TryOpen",
+        "M:Goo.SoundPlayer.TryPlay(Goo.SoundStreamSource,System.Single)",
+        "M:Goo.SoundPlayback.Pause",
+        "M:Goo.SoundPlayback.Resume",
+        "M:Goo.SoundStreamSource.#ctor(System.Int32,System.Int32,System.Func{System.Single[],System.Int32,System.Int32})",
         "M:Goo.SoundSource.#ctor(System.Int32,System.Int32,System.Single[])",
         "M:Goo.SoundSource.FromWav(System.Byte[])",
         "M:Goo.SoundSource.LoadWav(System.IO.Stream)",
@@ -837,7 +841,7 @@ public sealed class PublicDocumentationTests
     public void EnumsInterfacesAndWindowPartialsRequireSourceDocumentation()
     {
         var supplemented = LoadSupplementMemberIds();
-        var sources = new[] { "Goo", "Goo.Images" }
+        var sources = new[] { "Goo", "Goo.Images", "Goo.Audio" }
             .SelectMany(directory => Directory.EnumerateFiles(
                 Path.Combine(FindRepositoryRoot().FullName, directory), "*.gs", SearchOption.AllDirectories))
             .Select(File.ReadAllText)
@@ -996,7 +1000,7 @@ public sealed class PublicDocumentationTests
 
     private static IEnumerable<Type> ApiTypes()
     {
-        return new[] { typeof(Window).Assembly, typeof(Goo.Images.ImageVariants).Assembly }
+        return new[] { typeof(Window).Assembly, typeof(Goo.Images.ImageVariants).Assembly, typeof(SoundPlayer).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => type.Name != "<Program>")
             .Where(type => type.FullName != "Goo.PerformanceFixtures");
@@ -1004,7 +1008,7 @@ public sealed class PublicDocumentationTests
 
     private static Dictionary<string, XElement> LoadDocumentationMembers()
     {
-        return new[] { typeof(Window).Assembly, typeof(Goo.Images.ImageVariants).Assembly }
+        return new[] { typeof(Window).Assembly, typeof(Goo.Images.ImageVariants).Assembly, typeof(SoundPlayer).Assembly }
             .Select(assembly => Path.ChangeExtension(assembly.Location, ".xml"))
             .SelectMany(path => XDocument.Load(path).Root!.Element("members")!.Elements("member"))
             .ToDictionary(member => member.Attribute("name")!.Value, StringComparer.Ordinal);

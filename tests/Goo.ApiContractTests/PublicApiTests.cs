@@ -136,7 +136,7 @@ public class PublicApiTests
     {
         return new[] { typeof(Window).Assembly, typeof(NativeMenus).Assembly, typeof(Goo.Images.ImageVariants).Assembly,
                 typeof(Goo.SpellCheck.SpellCheckSession).Assembly, typeof(Goo.SpellCheck.HunspellSpellingService).Assembly,
-                typeof(Goo.Printing.Printing).Assembly, typeof(NativeDialogs).Assembly }
+                typeof(Goo.Printing.Printing).Assembly, typeof(NativeDialogs).Assembly, typeof(SoundPlayer).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !IsPackageContainer(type))
             .Where(type => !IsTestFixture(type))
@@ -453,7 +453,7 @@ public class PublicApiTests
 
     private static bool IsForbiddenSignatureType(Type type, Assembly gooAssembly)
     {
-        if (type.Assembly == gooAssembly && !IsPubliclyVisible(type))
+        if ((type.Assembly == gooAssembly || type.Assembly == typeof(SoundPlayer).Assembly) && !IsPubliclyVisible(type))
         {
             return true;
         }
