@@ -1,12 +1,21 @@
 ## Software keyboard hints
 
-`TextEntry.InputOptions` and `TextEditor.InputOptions` carry `TextInputOptions`
-through `FocusedEditorSnapshot.InputOptions` to embedded hosts. Android maps
-`Purpose`, `EnterAction` and `AutofillHints` to its IME and focused-field autofill
-contracts. Hints do not restrict accepted text. With no options, entries request
-Done and multiline editors request None. Desktop ignores these hints except
-`InputPurpose.Password`, which protects TextEntry like `Password: true`.
-Use TextEntry for masked values, not TextEditor.
+```gsharp
+TextEntry{
+    InputOptions: TextInputOptions{
+        Purpose: InputPurpose.Email,
+        EnterAction: EnterAction.Next,
+        AutofillHints: []string{"emailAddress"},
+    },
+}
+```
+
+- TextEntry and TextEditor pass these hints through `FocusedEditorSnapshot.InputOptions`.
+- Android uses them for the keyboard and focused-field autofill.
+- Hints do not restrict accepted text.
+- Without options, entries request Done and multiline editors request None.
+- Desktop ignores the hints except TextEntry password protection.
+- Use TextEntry with `InputPurpose.Password` or `Password: true` for masked values.
 
 ## Pointer click sequences
 
