@@ -49,13 +49,6 @@ async function projectPath() {
   throw new Error('goo.project must be inside the workspace.');
 }
 
-function shellQuote(value) {
-  if (process.platform === 'win32') {
-    return `"${value.replace(/"/g, '\\"')}"`;
-  }
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
 function showError(error) {
   const message = error instanceof Error ? error.message : String(error);
   vscode.window.showErrorMessage(`Goo DevTools: ${message}`);
@@ -115,6 +108,17 @@ function runCli(args, onLine) {
   });
 }
 
+function launchDev(args) {
+  devTerminal?.dispose();
+  devTerminal = vscode.window.createTerminal({
+    name: 'Goo DevTools',
+    shellPath: cliPath(),
+    shellArgs: args,
+    cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd()
+  });
+  devTerminal.show(true);
+}
+
 async function start() {
   try {
     const project = await projectPath();
@@ -122,12 +126,7 @@ async function start() {
     if (configuration().get('launchInspector', true)) {
       args.push('--inspector');
     }
-    const command = [shellQuote(cliPath()), ...args.map(shellQuote)].join(' ');
-    if (!devTerminal) {
-      devTerminal = vscode.window.createTerminal({ name: 'Goo DevTools' });
-    }
-    devTerminal.show(true);
-    devTerminal.sendText(command, true);
+    launchDev(args);
     status.text = '$(sync~spin) Goo starting';
     status.tooltip = project;
     await refreshStatus();
@@ -222,11 +221,7 @@ async function openSource() {
 async function restartHotReload() {
   try {
     const project = await projectPath();
-    if (!devTerminal) {
-      devTerminal = vscode.window.createTerminal({ name: 'Goo DevTools' });
-    }
-    devTerminal.show(true);
-    devTerminal.sendText([shellQuote(cliPath()), 'dev', '--watch', '--project', shellQuote(project)].join(' '), true);
+    launchDev(['dev', '--watch', '--project', project]);
     status.text = '$(sync~spin) Goo restarting';
   } catch (error) {
     showError(error);
@@ -272,6 +267,11 @@ function activate(context) {
   status.text = '$(circle-outline) Goo';
   status.show();
   context.subscriptions.push(output, status);
+  context.subscriptions.push(vscode.window.onDidCloseTerminal(terminal => {
+    if (terminal === devTerminal) {
+      devTerminal = undefined;
+    }
+  }));
   context.subscriptions.push(vscode.commands.registerCommand('goo.start', start));
   context.subscriptions.push(vscode.commands.registerCommand('goo.attach', attach));
   context.subscriptions.push(vscode.commands.registerCommand('goo.detach', detach));
