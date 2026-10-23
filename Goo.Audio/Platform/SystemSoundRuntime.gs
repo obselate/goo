@@ -11,7 +11,11 @@ internal unsafe class SystemSoundRuntime {
         internal func Play(sound SystemSound) SystemSoundStatus {
             try {
                 if OperatingSystem.IsWindows() {
-                    let alias = if sound == SystemSound.Click { "MenuCommand" } else { "SystemExclamation" }
+                    let alias = if sound == SystemSound.Click {
+                        "MenuCommand"
+                    } else {
+                        "SystemExclamation"
+                    }
                     return if PlayWindows(alias, nint(0), 0x10003u) != 0 {
                         SystemSoundStatus.Queued
                     } else {
@@ -35,7 +39,11 @@ internal unsafe class SystemSoundRuntime {
                             linuxContext = context
                             AppDomain.CurrentDomain.ProcessExit += Shutdown
                         }
-                        let eventId = if sound == SystemSound.Click { "button-pressed" } else { "dialog-warning" }
+                        let eventId = if sound == SystemSound.Click {
+                            "button-pressed"
+                        } else {
+                            "dialog-warning"
+                        }
                         let result = PlayLinux(linuxContext, 0u, "event.id", eventId, nint(0))
                         return if result == 0 {
                             SystemSoundStatus.Queued
