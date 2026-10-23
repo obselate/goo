@@ -3,13 +3,13 @@
   "name": "Goo.TextNative",
   "source": {
     "harfbuzz": {
-      "version": "14.3.1",
-      "tag": "14.3.1",
-      "signedTagCommit": "ab5ecbb83985034a76214ac0b2b833dcd590d774",
-      "archiveUrl": "https://github.com/harfbuzz/harfbuzz/releases/download/14.3.1/harfbuzz-14.3.1.tar.xz",
-      "archiveSha256": "9dae9538aae2ffdf70cec31f2c27bf68e2aaeeae3112688467697d5faf6194f7",
+      "version": "15.0.0",
+      "tag": "15.0.0",
+      "signedTagCommit": "35f656a1a2bab548ea7f54a6dd3fba2b09680d14",
+      "archiveUrl": "https://github.com/harfbuzz/harfbuzz/releases/download/15.0.0/harfbuzz-15.0.0.tar.xz",
+      "archiveSha256": "968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df",
       "license": "HarfBuzz Old MIT",
-      "licenseUrl": "https://github.com/harfbuzz/harfbuzz/blob/14.3.1/COPYING"
+      "licenseUrl": "https://github.com/harfbuzz/harfbuzz/blob/15.0.0/COPYING"
     },
     "stbImage": {
       "version": "2.30",
@@ -33,32 +33,32 @@
     "environments": {
       "linux-x64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none"
       },
       "osx-arm64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,-dead_strip"
       },
       "win-x64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "LDFLAGS": "-Wl,--no-insert-timestamp -static-libgcc -static-libstdc++"
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "LDFLAGS": "-Wl,--no-insert-timestamp -static -static-libgcc -static-libstdc++ -fstack-protector-strong -Wl,--exclude-libs,libssp.a"
       },
       "android-arm64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384"
       },
       "android-x64": {
         "SOURCE_DATE_EPOCH": "0",
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384"
       }
     },
@@ -66,11 +66,11 @@
     "sourcePatches": [
       {
         "name": "cpal-linear-light",
-        "path": "tools/Goo.TextNative/patches/harfbuzz-14.3.1-cpal-linear-light.patch",
-        "sha256": "225d5b7e5a656e96ee850f41c662e625d9c29ac518c1b834b3c53b7949358b67",
+        "path": "tools/Goo.TextNative/patches/harfbuzz-15.0.0-cpal-linear-light.patch",
+        "sha256": "db74dc354fdcb7bc3ae8b9f7e02dcda1e662d8ff9b4737726a9569caced3072d",
         "upstreamPath": "src/hb-gpu-paint.cc",
-        "upstreamSha256": "78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463",
-        "patchedSha256": "b2cc4e10551ff8e49c0e801c5aea1a7886e7468c5e61770df0804ac322de191c",
+        "upstreamSha256": "db822c4f947c787e583bb80d28143e7e9094728822fc81bcea9e901ca353c948",
+        "patchedSha256": "44c68d7ceab1be78b6704e4c84b2793ebe6f5f4f1c713b01a04fbe7dc2f71a74",
         "description": "Convert explicit CPAL RGB bytes to linear-light Q15 with a fixed 256-entry lookup. Preserve alpha and foreground encoding."
       },
       {
@@ -81,6 +81,15 @@
         "upstreamSha256": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3",
         "patchedSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2",
         "description": "Keep the GIF disposal history pointer inside the allocated frame buffer."
+      },
+      {
+        "name": "stb-png-empty-idat",
+        "path": "tools/Goo.TextNative/patches/stb-image-2.30-png-empty-idat.patch",
+        "sha256": "28c6b49853c923f01638ae5310781a6309a106a640fc58685fef23ee68b7d470",
+        "upstreamPath": "src/stb_image.h",
+        "upstreamSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2",
+        "patchedSha256": "30430015be90e41c4f046daa463eb9d995341976c78e52868faa3f9a3dca5015",
+        "description": "Skip empty PNG IDAT transfers without forming a pointer from a null data buffer."
       }
     ],
     "soname": {
@@ -109,7 +118,8 @@
         "gpu": [
           "libc.so.6",
           "libgoo-harfbuzz.so",
-          "libm.so.6"
+          "libm.so.6",
+          "libpthread.so.0"
         ]
       }
     },
@@ -140,18 +150,23 @@
       "target": "x86_64-w64-mingw32",
       "requiredFormat": "PE32+ x86-64",
       "linkerFlags": [
+        "-static",
         "-static-libgcc",
         "-static-libstdc++",
+        "-fstack-protector-strong",
+        "-Wl,--exclude-libs,libssp.a",
         "-Wl,--no-insert-timestamp"
       ],
       "sourcePatch": "Rename the core and GPU targets to goo-harfbuzz.dll and goo-harfbuzz-gpu.dll, remove Meson version suffixes, and keep hb-gpu's core import as goo-harfbuzz.dll.",
       "gpuImport": "goo-harfbuzz.dll",
       "requiredNeeded": {
         "harfbuzz": [
+          "ADVAPI32.dll",
           "KERNEL32.dll",
           "msvcrt.dll"
         ],
         "gpu": [
+          "ADVAPI32.dll",
           "KERNEL32.dll",
           "goo-harfbuzz.dll",
           "msvcrt.dll"
@@ -160,6 +175,7 @@
       "forbiddenImports": [
         "libstdc++",
         "libgcc",
+        "libssp",
         "winpthread",
         "libstdc++-6.dll",
         "libgcc_s_seh-1.dll",

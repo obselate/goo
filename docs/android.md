@@ -184,7 +184,7 @@ Its NuGet package omits that archive and uses Goo's native payloads, which preve
 duplicate libraries. No SDL, Skia, OpenGL, FreeType, or C++
 runtime payload is added for the Android renderer.
 
-Build the pinned HarfBuzz 14.3.1 libraries on Linux with Android NDK
+Build the pinned HarfBuzz 15.0.0 libraries on Linux with Android NDK
 `27.2.12479018`, Meson, Ninja, Python 3, and the normal archive tools:
 
 ```sh

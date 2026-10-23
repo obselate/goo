@@ -32,14 +32,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--source-root", required=True, type=Path)
-    parser.add_argument("--patch-name", default="cpal-linear-light", choices=("cpal-linear-light", "stb-gif-two-back"))
+    parser.add_argument("--patch-name", default="cpal-linear-light", choices=("cpal-linear-light", "stb-gif-two-back", "stb-png-empty-idat"))
     args = parser.parse_args()
 
     manifest_path = args.manifest.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     patches = manifest.get("build", {}).get("sourcePatches")
-    if not isinstance(patches, list) or {patch["name"] for patch in patches} != {"cpal-linear-light", "stb-gif-two-back"}:
-        raise SystemExit("expected HarfBuzz CPAL and stb_image GIF source patches")
+    if not isinstance(patches, list) or {patch["name"] for patch in patches} != {"cpal-linear-light", "stb-gif-two-back", "stb-png-empty-idat"}:
+        raise SystemExit("expected HarfBuzz CPAL and stb_image GIF and PNG source patches")
     patch = next(patch for patch in patches if patch["name"] == args.patch_name)
     if not shutil.which("patch"):
         raise SystemExit("required command missing: patch")
@@ -74,7 +74,7 @@ def main():
     patched = source_path.read_text(encoding="utf-8")
     if sha256(source_path) != patch["patchedSha256"]:
         raise SystemExit("patched source SHA-256 drift")
-    if args.patch_name == "stb-gif-two-back":
+    if args.patch_name != "cpal-linear-light":
         print(f"Applied {patch['name']} {patch['sha256']} to {patch['upstreamPath']}")
         return
     if patched.count("static const uint16_t srgb8_to_linear_q15[256] = {") != 1:

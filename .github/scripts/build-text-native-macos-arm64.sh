@@ -5,8 +5,8 @@ output="${1:?usage: build-text-native-macos-arm64.sh OUTPUT_DIRECTORY}"
 script_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(CDPATH= cd -- "$script_dir/../.." && pwd)"
 manifest="$repo_root/tools/Goo.TextNative/manifest.json"
-hb_url='https://github.com/harfbuzz/harfbuzz/releases/download/14.3.1/harfbuzz-14.3.1.tar.xz'
-hb_sha256='9dae9538aae2ffdf70cec31f2c27bf68e2aaeeae3112688467697d5faf6194f7'
+hb_url='https://github.com/harfbuzz/harfbuzz/releases/download/15.0.0/harfbuzz-15.0.0.tar.xz'
+hb_sha256='968536e9abd782f07f7954044c0c4020199fcdd39b41d221ec42d2a3be4a44df'
 deployment_target='14.0'
 
 for command_name in awk codesign curl file lipo meson ninja nm otool patch python3 shasum strip tar xcodebuild; do
@@ -20,9 +20,9 @@ from pathlib import Path
 
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 source = manifest["source"]["harfbuzz"]
-if source["version"] != "14.3.1" or source["tag"] != "14.3.1":
+if source["version"] != "15.0.0" or source["tag"] != "15.0.0":
     raise SystemExit("HarfBuzz version/tag drift")
-if source["signedTagCommit"] != "ab5ecbb83985034a76214ac0b2b833dcd590d774":
+if source["signedTagCommit"] != "35f656a1a2bab548ea7f54a6dd3fba2b09680d14":
     raise SystemExit("HarfBuzz signed tag commit drift")
 if source["archiveSha256"] != sys.argv[2] or source["archiveUrl"] != sys.argv[3]:
     raise SystemExit("HarfBuzz archive provenance drift")
@@ -33,8 +33,8 @@ if manifest["outputs"]["osx-arm64"] != {
     raise SystemExit("macOS output name drift")
 if manifest["build"]["environments"]["osx-arm64"] != {
     "SOURCE_DATE_EPOCH": "0",
-    "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-    "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+    "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
+    "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
     "LDFLAGS": "-Wl,-dead_strip",
 }:
     raise SystemExit("macOS build environment drift")
@@ -82,9 +82,9 @@ curl -fsSL --retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-errors \
   "$hb_url" -o "$work/harfbuzz.tar.xz"
 printf '%s  %s\n' "$hb_sha256" "$work/harfbuzz.tar.xz" | shasum -a 256 -c -
 tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
-python3 "$repo_root/tools/Goo.TextNative/apply-source-patches.py" --manifest "$manifest" --source-root "$work/harfbuzz-14.3.1"
+python3 "$repo_root/tools/Goo.TextNative/apply-source-patches.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"
 
-python3 - "$work/harfbuzz-14.3.1/src/meson.build" <<'PY'
+python3 - "$work/harfbuzz-15.0.0/src/meson.build" <<'PY'
 import sys
 from pathlib import Path
 
@@ -126,15 +126,16 @@ text = patch_target(
 path.write_text(text, encoding="utf-8")
 PY
 
-python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-14.3.1"
+python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"
 export SOURCE_DATE_EPOCH=0
 export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
-export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
+export CFLAGS="-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS='-Wl,-dead_strip'
 common_options=(--prefix=/usr --libdir=lib --buildtype=release --default-library=shared --wrap-mode=nodownload)
 harfbuzz_options=(-Dglib=disabled -Dgobject=disabled -Dcairo=disabled -Dchafa=disabled -Dpng=disabled -Dzlib=disabled -Dicu=disabled -Dgraphite=disabled -Dgraphite2=disabled -Dfreetype=disabled -Dfontations=disabled -Dgdi=disabled -Ddirectwrite=disabled -Dcoretext=disabled -Dharfrust=disabled -Dkbts=disabled -Dwasm=disabled -Draster=disabled -Dvector=disabled -Dgpu=enabled -Dsubset=disabled -Dtests=disabled -Dintrospection=disabled -Ddocs=disabled -Ddoc_tests=false -Dutilities=disabled -Dbenchmark=disabled -Dgpu_demo=disabled -Dwith_libstdcxx=false)
-meson setup "$work/harfbuzz-build" "$work/harfbuzz-14.3.1" "${common_options[@]}" "${harfbuzz_options[@]}"
+meson setup "$work/harfbuzz-build" "$work/harfbuzz-15.0.0" "${common_options[@]}" "${harfbuzz_options[@]}"
+python3 "$repo_root/tools/Goo.TextNative/validate-build-options.py" "$work/harfbuzz-build"
 ninja -C "$work/harfbuzz-build" -j"$(sysctl -n hw.logicalcpu)"
 
 harfbuzz_library="$(find "$work/harfbuzz-build" -type f -name 'libgoo-harfbuzz.dylib' -print | LC_ALL=C sort | head -n 1)"
