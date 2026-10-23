@@ -59,7 +59,21 @@ public sealed partial class ExternalImageSession : IDisposable {
             Pump()
         }
         CreateReleaseCommands()
-        timer = Timer((_ object?) -> { Wake() }, nil, Timeout.Infinite, Timeout.Infinite)
+        timer = Timer((_ object?) -> { PollDependencies() }, nil, Timeout.Infinite, Timeout.Infinite)
+    }
+
+    private func PollDependencies() {
+        lock Gate {
+            if disposed { return }
+            for frame in frames {
+                if let current = frame {
+                    if !current.Ready && current.ReadyResult == VkConstants.VK_NOT_READY {
+                        current.ReadyResult = PollReady(current)
+                    }
+                }
+            }
+        }
+        Wake()
     }
 
     private func RequireOwner() {
@@ -166,7 +180,7 @@ public sealed partial class ExternalImageSession : IDisposable {
             for index in 0 ... FrameCapacity {
                 guard let frame = frames[index] else { continue }
                 if !frame.Ready {
-                    let result = PollReady(frame)
+                    let result = frame.ReadyResult
                     if result == VkConstants.VK_ERROR_DEVICE_LOST {
                         if let error = Close(ExternalImageStatus.DeviceLost) { throw error }
                         return
