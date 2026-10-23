@@ -121,6 +121,7 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: dotnet build Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
 
+
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
         run: |
@@ -307,6 +308,14 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             -o artifacts/native-menu-smoke
           DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" artifacts/native-menu-smoke/Goo.NativeMenuSmoke
+
+      - name: Verify native tray lifecycle on macOS
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.csproj \
+            -c Release -r osx-arm64 -m:2 -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/tray-smoke
+          DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" dotnet artifacts/tray-smoke/Goo.TraySmoke.dll
 
       - name: Stage, sign, and run macOS smoke bundle
         if: needs.changes.outputs.full == 'true'
@@ -922,6 +931,24 @@ jobs:
             -o artifacts/image-assets-nativeaot
           artifacts/image-assets-nativeaot/Goo.ImageLoadingSmoke
 
+      - name: Pack optional native tray icons
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.Tray/Goo.Tray.gsproj -c Release -m:2 -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+
+      - name: Verify packed tray on private Linux session
+        if: needs.changes.outputs.full == 'true'
+        env:
+          NUGET_PACKAGES: ${{ runner.temp }}/tray-nuget
+          XDG_CACHE_HOME: ${{ runner.temp }}/tray-cache
+        run: |
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.csproj -c Release -r linux-x64 -m:2 \
+            -p:TreatWarningsAsErrors=true -p:GooTrayUsePackages=true \
+            --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/tray-smoke
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            dbus-run-session -- dotnet artifacts/tray-smoke/Goo.TraySmoke.dll
+
       - name: Pack Goo DevTools and template
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1176,6 +1203,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.Tray.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -1205,6 +1233,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.AppHost.${{ env.GOO_VERSION }}.nupkg
+
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1692,6 +1721,18 @@ jobs:
           .github/scripts/check-windows-data-transfer.ps1 `
             -Application artifacts/windows-smoke/Goo.PackageSmoke.exe `
             -OutputDirectory artifacts/windows-smoke/results-data-transfer
+      - name: Verify packaged Windows tray lifecycle
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          $version = python .github/scripts/release_version.py --print
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.csproj -c Release -r win-x64 -m:2 `
+            -p:TreatWarningsAsErrors=true -p:GooTrayUsePackages=true `
+            -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version `
+            --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/tray-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet artifacts/tray-smoke/Goo.TraySmoke.dll
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true' && (always())
         with:
@@ -1779,6 +1820,7 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
+
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \

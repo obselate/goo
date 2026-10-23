@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Goo.Tray/Goo.Tray.gsproj" Condition="'$(GooTrayUsePackages)' != 'true'" />
+    <PackageReference Include="Goo.Tray" Version="$(GooReleaseVersion)" Condition="'$(GooTrayUsePackages)' == 'true'" />
+  </ItemGroup>
+</Project>

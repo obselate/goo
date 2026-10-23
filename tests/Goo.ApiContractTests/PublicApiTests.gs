@@ -125,6 +125,7 @@ open class PublicApiTests {
         private func ApiTypes() IEnumerable[Type] -> []Assembly{
             typeof(Window).Assembly,
             typeof(SingleInstance).Assembly,
+
             typeof(SoundPlayer).Assembly
         }
             .SelectMany((assembly Assembly) -> assembly.GetExportedTypes())

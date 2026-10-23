@@ -18,6 +18,7 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.DevTools",
     "Goo.DevTools.App",
     "Goo.Templates",
+    "Goo.Tray",
 }
 
 
