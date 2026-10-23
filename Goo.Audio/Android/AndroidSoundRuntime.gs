@@ -4,8 +4,7 @@ import System
 import System.Collections.Generic
 import System.Runtime.InteropServices
 
-@UnmanagedFunctionPointer(CallingConvention.Cdecl)
-internal delegate AndroidSoundPull(stream nint, userData nint, data nint, frames int32) int32;
+import System.Threading
 
 internal class AndroidSoundVoice {
     internal let Gate object = Object()
@@ -14,7 +13,7 @@ internal class AndroidSoundVoice {
     internal var Level float32
     internal var Progress SoundPlaybackStatus = SoundPlaybackStatus.Playing
     internal var EndFrame int64 = -1
-    internal let Callback AndroidSoundPull
+    internal let Worker Thread
     private let channels int32
     private let samples([]float32)?
     private let read Func[[]float32, int32, int32]?
@@ -28,43 +27,60 @@ internal class AndroidSoundVoice {
         Level = gain
         buffer = [SoundRuntime.StreamFrames * channels]float32
         Bytes = if let pcm = samples { pcm.Length * 4 } else { buffer.Length * 4 }
-        Callback = Pull
+        Worker = Thread(() -> { Pull() })
+        Worker.IsBackground = true
     }
 
-    private func Pull(stream nint, userData nint, data nint, frames int32) int32 {
-        lock Gate {
-            try {
-                var offset = 0
-                while offset < frames {
-                    let requested = Math.Min(SoundRuntime.StreamFrames, frames - offset)
-                    Array.Clear(buffer)
-                    var count = 0
-                    if EndFrame < 0 && Progress == SoundPlaybackStatus.Playing {
-                        if let pcm = samples {
-                            count = Math.Min(requested, (pcm.Length - position) / channels)
-                            Array.Copy(pcm, position, buffer, 0, count * channels)
-                            position += count * channels
-                        } else if let reader = read {
-                            count = reader(buffer, requested)
-                            if count < 0 || count > requested {
-                                throw ArgumentOutOfRangeException("frames")
+    private func Pull() {
+        let pin = GCHandle.Alloc(buffer, GCHandleType.Pinned)
+        var remaining = 0
+        var offset = 0
+        try {
+            while true {
+                lock Gate {
+                    if Stream == nint(0) {
+                        return
+                    }
+                    if Progress == SoundPlaybackStatus.Playing && EndFrame < 0 {
+                        if remaining == 0 {
+                            if let pcm = samples {
+                                remaining = Math.Min(SoundRuntime.StreamFrames, (pcm.Length - position) / channels)
+                                Array.Copy(pcm, position, buffer, 0, remaining * channels)
+                                position += remaining * channels
+                            } else if let reader = read {
+                                remaining = reader(buffer, SoundRuntime.StreamFrames)
+                                if remaining < 0 || remaining > SoundRuntime.StreamFrames {
+                                    throw ArgumentOutOfRangeException("frames")
+                                }
+                            }
+                            for i in 0 ... remaining * channels {
+                                buffer[i] = SoundSource.Clamp(buffer[i]) * Level
+                            }
+                            offset = 0
+                            if remaining == 0 {
+                                EndFrame = AndroidSoundRuntime.FramesWritten(Stream)
                             }
                         }
-                        for i in 0 ... count * channels {
-                            buffer[i] = SoundSource.Clamp(buffer[i]) * Level
-                        }
-                        if count == 0 {
-                            EndFrame = AndroidSoundRuntime.FramesWritten(stream) + offset
+                        if remaining > 0 {
+                            let written = AndroidSoundRuntime.WriteStream(Stream,
+                                pin.AddrOfPinnedObject() + nint(offset * channels * 4), remaining, 1000000L)
+                            if written < 0 {
+                                Progress = SoundPlaybackStatus.NativeFailure
+                                return
+                            }
+                            remaining -= written
+                            offset += written
                         }
                     }
-                    Marshal.Copy(buffer, 0, data + nint(offset * channels * 4), requested * channels)
-                    offset += requested
                 }
-                return 0
-            } catch (error Exception) {
-                Progress = SoundPlaybackStatus.SourceFailure
-                return 1
+                Thread.Sleep(1)
             }
+        } catch (error Exception) {
+            lock Gate {
+                Progress = SoundPlaybackStatus.SourceFailure
+            }
+        } finally {
+            pin.Free()
         }
     }
 }
@@ -133,8 +149,8 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
         @DllImport("libaaudio.so", EntryPoint: "AAudioStreamBuilder_setFormat")
         private func SetFormat(builder nint, format int32);
 
-        @DllImport("libaaudio.so", EntryPoint: "AAudioStreamBuilder_setDataCallback")
-        private func SetCallback(builder nint, callback nint, userData nint);
+        @DllImport("libaaudio.so", EntryPoint: "AAudioStream_write")
+        internal func WriteStream(stream nint, buffer nint, frames int32, timeoutNanoseconds int64) int32;
 
         @DllImport("libaaudio.so", EntryPoint: "AAudioStreamBuilder_openStream")
         private func OpenStream(builder nint, stream *nint) int32;
@@ -186,7 +202,6 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
                 SetSampleRate(builder, sampleRate)
                 SetChannels(builder, channels)
                 SetFormat(builder, 2)
-                SetCallback(builder, Marshal.GetFunctionPointerForDelegate(state.Callback), nint(0))
                 var stream nint
                 if OpenStream(builder, &stream) != 0 {
                     return SoundPlayResult(SoundPlayStatus.NativeFailure)
@@ -202,6 +217,7 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
             let playback = SoundPlayback(owner, state)
             voices.Add(playback)
             queuedBytes += bytes
+            state.Worker.Start()
             return SoundPlayResult(SoundPlayStatus.Queued, playback)
         }
     }
@@ -312,6 +328,7 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
             state.Stream = nint(0)
             state.Progress = progress
         }
+        state.Worker.Join()
         CloseStream(stream)
         queuedBytes -= state.Bytes
         voices.Remove(playback)
