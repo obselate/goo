@@ -17,7 +17,7 @@ internal unsafe partial class ClipboardTransfer {
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacSendArg(receiver nint, selector nint, argument nint) nint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacCount(receiver nint, selector nint) nuint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacAt(receiver nint, selector nint, index nuint) nint;
-    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacContains(receiver nint, selector nint, argument nint) uint8;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacBoolArg(receiver nint, selector nint, argument nint) uint8;
     @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation") private func CFRelease(value nint);
     @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation") private func CFDataCreate(allocator nint, bytes * uint8, length nint) nint;
     @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation") private func CFDataCreateMutable(allocator nint, capacity nint) nint;
@@ -44,7 +44,7 @@ internal unsafe partial class ClipboardTransfer {
       let pool = objc_autoreleasePoolPush()
       try {
         let types = MacSend(MacPasteboard(), sel_registerName("types"))
-        return MacContains(types, sel_registerName("containsObject:"), MacString("public.file-url")) != 0
+        return MacBoolArg(types, sel_registerName("containsObject:"), MacString("public.file-url")) != 0
       } finally { objc_autoreleasePoolPop(pool) }
     }
 
@@ -53,7 +53,7 @@ internal unsafe partial class ClipboardTransfer {
       try {
         let items = MacSend(MacPasteboard(), sel_registerName("pasteboardItems"))
         let count = MacCount(items, sel_registerName("count"))
-        if count > nuint(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Clipboard exceeds 4096 pasteboard items") }
+        if count > nuint(NativeFilePaths.MaxCount + 1) { throw ClipboardLimitException("Clipboard exceeds 4097 pasteboard items") }
         let paths = List[string](int32(count))
         let formatType = MacString("public.file-url")
         var units = 0
