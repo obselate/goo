@@ -50,7 +50,7 @@ def wait_for(name):
 def launch(targets, fresh=False):
     args = ["open"] + (["-n"] if fresh else []) + ["-a", str(app), *targets]
     if fresh:
-        args += ["--args", "activated", identity, str(session)]
+        args += ["--args", "activated", identity, "--output=" + str(session)]
     subprocess.run(args, check=True, timeout=15)
 
 
