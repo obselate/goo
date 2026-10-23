@@ -311,7 +311,7 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_CLIPBOARD_CHILD="$PWD/artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke" \
             dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
-            -c Release -r osx-arm64 --nologo -p:BuildProjectReferences=false \
+            -c Release -r osx-arm64 --nologo \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             --filter FullyQualifiedName~MacClipboardTests
 
