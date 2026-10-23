@@ -908,14 +908,14 @@ method|Goo.EmbeddedWindowHost|Suspend|instance|public|generic:|()->System.Void
 method|Goo.EmbeddedWindowHost|UpdatePreferences|instance|public|generic:|(value:Goo.PlatformPreferences)->System.Void
 method|Goo.ExternalFrameDescription|Deconstruct|instance|public|generic:|(out X:System.Int32&,out Y:System.Int32&,out Width:System.Int32&,out Height:System.Int32&,out Orientation:System.Int32&,out AlphaMode:Goo.ExternalImageAlphaMode&,out ColorEncoding:Goo.ExternalImageColorEncoding&)->System.Void
 method|Goo.ExternalFrameDescription|Equals|instance|public|generic:|(other:Goo.ExternalFrameDescription)->System.Boolean
-method|Goo.ExternalFrameDescription|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.ExternalFrameDescription|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ExternalFrameDescription|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.ExternalFrameDescription|ToString|virtual|public|generic:|()->System.String
 method|Goo.ExternalFrameDescription|op_Equality|static|public|generic:|(left:Goo.ExternalFrameDescription,right:Goo.ExternalFrameDescription)->System.Boolean
 method|Goo.ExternalFrameDescription|op_Inequality|static|public|generic:|(left:Goo.ExternalFrameDescription,right:Goo.ExternalFrameDescription)->System.Boolean
 method|Goo.ExternalImagePlane|Deconstruct|instance|public|generic:|(out Offset:System.UInt64&,out RowPitch:System.UInt64&)->System.Void
 method|Goo.ExternalImagePlane|Equals|instance|public|generic:|(other:Goo.ExternalImagePlane)->System.Boolean
-method|Goo.ExternalImagePlane|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
+method|Goo.ExternalImagePlane|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ExternalImagePlane|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.ExternalImagePlane|ToString|virtual|public|generic:|()->System.String
 method|Goo.ExternalImagePlane|op_Equality|static|public|generic:|(left:Goo.ExternalImagePlane,right:Goo.ExternalImagePlane)->System.Boolean
@@ -1588,23 +1588,23 @@ property|Goo.ExternalFrameDescription|Orientation|System.Int32|instance|get:publ
 property|Goo.ExternalFrameDescription|Width|System.Int32|instance|get:public,init:public|index:()
 property|Goo.ExternalFrameDescription|X|System.Int32|instance|get:public,init:public|index:()
 property|Goo.ExternalFrameDescription|Y|System.Int32|instance|get:public,init:public|index:()
-property|Goo.ExternalFrameResult|ReleaseSync|System.Runtime.InteropServices.SafeHandle|instance|get:public|index:()
+property|Goo.ExternalFrameResult|ReleaseSync|System.Runtime.InteropServices.SafeHandle?|instance|get:public|index:()
 property|Goo.ExternalFrameResult|Status|Goo.ExternalFrameStatus|instance|get:public|index:()
 property|Goo.ExternalFrameResult|Value|System.UInt64|instance|get:public|index:()
 property|Goo.ExternalImagePlane|Offset|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.ExternalImagePlane|RowPitch|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.ExternalImageResult|Detail|System.String|instance|get:public|index:()
-property|Goo.ExternalImageResult|Image|Goo.ExternalImage|instance|get:public|index:()
+property|Goo.ExternalImageResult|Image|Goo.ExternalImage?|instance|get:public|index:()
 property|Goo.ExternalImageResult|Status|Goo.ExternalImageStatus|instance|get:public|index:()
 property|Goo.ExternalImageSessionResult|Detail|System.String|instance|get:public|index:()
-property|Goo.ExternalImageSessionResult|Session|Goo.ExternalImageSession|instance|get:public|index:()
+property|Goo.ExternalImageSessionResult|Session|Goo.ExternalImageSession?|instance|get:public|index:()
 property|Goo.ExternalImageSessionResult|Status|Goo.ExternalImageStatus|instance|get:public|index:()
 property|Goo.ExternalImageSession|DeviceUuid|System.ReadOnlyMemory`1<System.Byte>|instance|get:public|index:()
 property|Goo.ExternalImageSession|DriverUuid|System.ReadOnlyMemory`1<System.Byte>|instance|get:public|index:()
 property|Goo.ExternalImageSession|Generation|System.UInt64|instance|get:public|index:()
-property|Goo.ExternalImageSession|WindowsDevice|Goo.ExternalImageWindowsDevice|instance|get:public|index:()
+property|Goo.ExternalImageSession|WindowsDevice|Goo.ExternalImageWindowsDevice?|instance|get:public|index:()
 property|Goo.ExternalImageSource|ContentVersion|System.UInt64|instance|get:public|index:()
-property|Goo.ExternalImageSync|Handle|System.Runtime.InteropServices.SafeHandle|instance|get:public,init:public|index:()
+property|Goo.ExternalImageSync|Handle|System.Runtime.InteropServices.SafeHandle?|instance|get:public,init:public|index:()
 property|Goo.ExternalImageSync|ImageLayout|System.Int32|instance|get:public,init:public|index:()
 property|Goo.ExternalImageSync|Kind|Goo.ExternalImageSyncKind|instance|get:public,init:public|index:()
 property|Goo.ExternalImageSync|QueueFamily|System.UInt32|instance|get:public,init:public|index:()

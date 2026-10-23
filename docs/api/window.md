@@ -763,7 +763,6 @@ Sources:
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
 - [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
 - [`Window.Embedded.gs`](../../Goo/Window/WindowParts/Window.Embedded.gs)
-- [`Window.ExternalImages.gs`](../../Goo/Window/WindowParts/Window.ExternalImages.gs)
 - [`Window.Frame.gs`](../../Goo/Window/WindowParts/Window.Frame.gs)
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
