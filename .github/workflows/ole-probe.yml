@@ -1,0 +1,64 @@
+name: OLE clipboard probe
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-2022
+    steps:
+      - shell: pwsh
+        run: |
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          using System.Runtime.InteropServices.ComTypes;
+          using System.Threading;
+          public class Probe {
+            [DllImport("ole32.dll")] static extern int OleInitialize(IntPtr p);
+            [DllImport("ole32.dll")] static extern void OleUninitialize();
+            [DllImport("ole32.dll")] static extern int OleSetClipboard(IDataObject obj);
+            [DllImport("ole32.dll")] static extern int OleGetClipboard(out IDataObject obj);
+            [DllImport("ole32.dll")] static extern int OleFlushClipboard();
+            [DllImport("ole32.dll")] static extern void ReleaseStgMedium(ref STGMEDIUM m);
+            [DllImport("shell32.dll")] static extern int SHCreateDataObject(IntPtr folder, uint count, IntPtr children, IntPtr inner, ref Guid iid, out IDataObject obj);
+            [DllImport("shlwapi.dll")] static extern IntPtr SHCreateMemStream(byte[] bytes, uint size);
+            [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern uint RegisterClipboardFormatW(string name);
+            static void Inspect(IDataObject obj, string phase, short format) {
+              var e=obj.EnumFormatEtc(DATADIR.DATADIR_GET);
+              var arr=new FORMATETC[1]; var fetched=new int[1];
+              while(e.Next(1,arr,fetched)==0) Console.WriteLine(phase+" enum format="+(ushort)arr[0].cfFormat+" tymed="+arr[0].tymed+" aspect="+arr[0].dwAspect+" index="+arr[0].lindex);
+              Marshal.ReleaseComObject(e);
+              foreach (var t in new[]{TYMED.TYMED_ISTREAM,TYMED.TYMED_HGLOBAL,TYMED.TYMED_ISTREAM|TYMED.TYMED_HGLOBAL}) {
+                var f=new FORMATETC{cfFormat=format,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=t};
+                Console.WriteLine(phase+" query "+t+"="+obj.QueryGetData(ref f).ToString("X8"));
+                try { STGMEDIUM m; obj.GetData(ref f,out m); Console.WriteLine(phase+" get "+t+"=OK actual="+m.tymed); ReleaseStgMedium(ref m); } catch(Exception ex) {Console.WriteLine(phase+" get "+t+"="+ex.HResult.ToString("X8"));}
+                var target=new STGMEDIUM{tymed=TYMED.TYMED_ISTREAM,unionmember=SHCreateMemStream(null,0)};
+                f.tymed=TYMED.TYMED_ISTREAM;
+                try {obj.GetDataHere(ref f,ref target);Console.WriteLine(phase+" here=OK");} catch(Exception ex) {Console.WriteLine(phase+" here="+ex.HResult.ToString("X8"));}
+                ReleaseStgMedium(ref target);
+              }
+            }
+            public static void Run() {
+              var thread=new Thread(()=>{
+                Console.WriteLine("init="+OleInitialize(IntPtr.Zero).ToString("X8"));
+                foreach(var size in new[]{5,0}) {
+                  IDataObject obj; var iid=new Guid("0000010e-0000-0000-c000-000000000046");
+                  Marshal.ThrowExceptionForHR(SHCreateDataObject(IntPtr.Zero,0,IntPtr.Zero,IntPtr.Zero,ref iid,out obj));
+                  var format=unchecked((short)RegisterClipboardFormatW("application/x-goo-probe"));
+                  var f=new FORMATETC{cfFormat=format,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=TYMED.TYMED_ISTREAM};
+                  var m=new STGMEDIUM{tymed=TYMED.TYMED_ISTREAM,unionmember=SHCreateMemStream(new byte[size],(uint)size)};
+                  obj.SetData(ref f,ref m,true);
+                  Inspect(obj,"source size="+size,format);
+                  Console.WriteLine("set="+OleSetClipboard(obj).ToString("X8"));
+                  IDataObject before; Marshal.ThrowExceptionForHR(OleGetClipboard(out before)); Inspect(before,"before size="+size,format);Marshal.ReleaseComObject(before);
+                  Console.WriteLine("flush="+OleFlushClipboard().ToString("X8"));
+                  IDataObject after; Marshal.ThrowExceptionForHR(OleGetClipboard(out after));Inspect(after,"after size="+size,format);Marshal.ReleaseComObject(after);
+                  Marshal.ReleaseComObject(obj);
+                }
+                OleUninitialize();
+              });
+              thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();
+            }
+          }
+          '@
+          [Probe]::Run()
