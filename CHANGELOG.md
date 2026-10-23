@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+## 0.8.2 - 2026-10-23
+
+- Shipped in 0.8.1 without a note: clip atlas samplers clamp to edges with transparent UV bounds, so Metal through MoltenVK can create them (#311).
+- Update HarfBuzz to 15.0.0 to include COLR correctness fixes and bounded paint work.
+- Build text and image natives with bounds, stack and branch protection, and fix a stb_image empty-IDAT pointer edge case.
+- Check Windows native build reproducibility and disabled optional HarfBuzz components in CI.
+- Expose the saved activity Bundle during Android window creation.
+- Add consumer Linux AppImage packaging through goo package.
+- Add unsigned Windows consumer installer packaging.
+- Add macOS consumer app and DMG packaging.
+- Add signed Android AAB packaging and upload-key guidance.
+- Sync generated documentation on main after merge instead of requiring it in PRs.
+- Add C#, F# and VB interop guides and package-backed samples.
+- Apply EXIF orientation to PNG and JPEG images and thumbnails, ignoring malformed metadata.
+- Detect nullable reference annotation changes in the public API gate.
+- Deliver coherent Android contact frames to shared gesture recognizers.
+- Publish Goo.Gestures with embedded symbols only, so the release job publishes every package (Goo.DevTools, Goo.DevTools.App and Goo.Templates missed 0.8.1).
+- Expose OS UI and event sound preferences through PlatformPreferences.EventSoundsEnabled.
+- Report system accent colors and available Linux and Android contrast preferences.
+- Expose ordered preferred locale tags through platform preference snapshots and change events.
+- Reduce grid scroll GC pauses by keeping scene owner IDs on nodes until a compiler handoff.
+
 ## 0.8.1 - 2026-10-23
 
 - Coalesce scroll-only virtual row work while presentation is blocked, cutting grid thumb-drag p99 and max frame time.
