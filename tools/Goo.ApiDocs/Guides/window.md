@@ -194,11 +194,13 @@ Menu keep their current in-window behavior.
 | `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
 | `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
 | `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
-| `Close`, `Dispose` | Request dismissal without blocking on GPU retirement. |
+| `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
 
 Use another PopupWindow as the owner for a submenu. Each owner permits one popup.
 Create a new root and popup for each opening. Close it when its anchor becomes
-invalid. Embedded and Android hosts return `Unsupported`.
+invalid. Android uses a native PopupWindow with a separate GooView surface.
+It follows the owner view's lifecycle and the app's display bounds.
+Other embedded hosts return `Unsupported`.
 Native dialogs return `Busy` while a popup retires. Launch them after `Dismissed`.
 
 ## Native owned and modal windows

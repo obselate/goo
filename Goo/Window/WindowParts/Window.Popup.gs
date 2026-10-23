@@ -7,9 +7,12 @@ public partial class Window {
   private var popup PopupWindow?
   private var popupAnchor ElementRect
   private var popupPlacement PortalPlacement
+  private var pendingPopupFocus WeakReference?
+  internal var EmbeddedPopupFactory Func[Window, PopupKind, Action[PopupDismissReason], EmbeddedPopupSurface]?
+  internal prop NativePopupPlacement PortalPlacement { get -> popupPlacement }
 
-  internal prop PopupOwnerOpen bool { get -> IsOpen && host?.IsClosing != true && family?.Closing != true }
-  internal prop PopupOwnerSupported bool { get -> embeddedHost == nil && host is SdlHost }
+  internal prop PopupOwnerOpen bool { get -> IsOpen && !NativeOwnerClosing }
+  internal prop PopupOwnerSupported bool { get -> EmbeddedPopupFactory != nil || (embeddedHost == nil && host is SdlHost) }
   internal prop PopupFocusedNode Node? { get -> input.FocusedNode() }
 
   internal prop HasChildPopup bool {
@@ -50,10 +53,15 @@ public partial class Window {
   }
 
   internal func UpdateNativePopup(anchor ElementRect, contentWidth int32, contentHeight int32,
-    placement PortalPlacement) WindowOperationResult {
-    guard let native = host as SdlHost? else { return WindowOperationResult.Closed }
+    placement PortalPlacement, surface EmbeddedPopupSurface? = nil) WindowOperationResult {
     popupAnchor = anchor
     popupPlacement = resolvePopupPlacement(placement)
+    if let embedded = surface {
+      width = scaledSize(contentWidth)
+      height = scaledSize(contentHeight)
+      return embedded.UpdatePlacement(anchor, width, height, popupPlacement)
+    }
+    guard let native = host as SdlHost? else { return WindowOperationResult.Closed }
     return native.UpdatePopup(anchor, scaledSize(contentWidth), scaledSize(contentHeight), popupPlacement, UiScale)
   }
 
@@ -78,8 +86,15 @@ public partial class Window {
 
   internal func RestorePopupInput(previous Node?) {
     if !PopupOwnerOpen || !IsVisible || IsInputBlocked { return }
-    guard let native = host as SdlHost? else { return }
-    if !native.HasPopupKeyboardFocus { return }
+    if embeddedHost != nil {
+      if !IsFocused {
+        pendingPopupFocus = if previous != nil { WeakReference(previous) } else { nil }
+        return
+      }
+    } else {
+      guard let native = host as SdlHost? else { return }
+      if !native.HasPopupKeyboardFocus { return }
+    }
     handleFocusChanged(true)
     if let focused = previous {
       if !focused.Retired { FocusElement(focused) }
@@ -90,7 +105,7 @@ public partial class Window {
 
   internal func DismissChildPopups(reason PopupDismissReason) {
     guard let children = family?.Children else { return }
-    for child in children {
+    for child in children.ToArray() {
       child.popup?.Dismiss(reason)
     }
   }
@@ -111,14 +126,14 @@ public partial class Window {
       DismissChildPopups(PopupDismissReason.OwnerHidden)
     } else if IsInputBlocked {
       DismissChildPopups(PopupDismissReason.OutsideInteraction)
-    } else if popup == nil && !popupChainFocused() {
+    } else if embeddedHost == nil && popup == nil && !popupChainFocused() {
       DismissChildMenus(PopupDismissReason.FocusLost)
     }
   }
 
   private func DismissChildMenus(reason PopupDismissReason) {
     guard let children = family?.Children else { return }
-    for child in children {
+    for child in children.ToArray() {
       if child.popup?.Kind == PopupKind.Menu { child.popup?.Dismiss(reason) }
     }
   }

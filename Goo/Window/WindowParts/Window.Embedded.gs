@@ -44,8 +44,10 @@ public partial class Window {
     if externalHost == nil { throw ArgumentNullException("externalHost") }
     requireUiThread("Window.Attach")
     if IsOpen { throw InvalidOperationException("Window is already open") }
-    if Owner != nil || ForeignParentHandle != "" || Modal { throw NotSupportedException("Embedded hosts own their native window relationships") }
-    if !InitiallyVisible || !Focusable || Topmost { throw NotSupportedException("Embedded hosts own visibility, focusability and stacking") }
+    if popup == nil {
+      if Owner != nil || ForeignParentHandle != "" || Modal { throw NotSupportedException("Embedded hosts own their native window relationships") }
+      if !InitiallyVisible || !Focusable || Topmost { throw NotSupportedException("Embedded hosts own visibility, focusability and stacking") }
+    }
     if accessibility?.Adapter is NativeAccessibilityAdapter { throw NotSupportedException("Embedded hosts provide their own native accessibility adapter") }
     if NativeFileDropEnabled { throw NotSupportedException("Embedded hosts own their native file-drop ingress") }
     if minWidth != 0 || minHeight != 0 || maxWidth != 0 || maxHeight != 0 {
@@ -63,6 +65,7 @@ public partial class Window {
       input.SetUiScale(UiScale)
       input.Attach(bridge)
       IsOpen = true
+      registerOwnership()
       applyPreferences(bridge.Preferences)
       queueNativeMetrics(bridge.LogicalWidth, bridge.LogicalHeight,
         bridge.FramebufferWidth, bridge.FramebufferHeight)

@@ -70,10 +70,11 @@ public sealed partial class PopupWindow : IDisposable {
   private var closing bool
   private var reason PopupDismissReason
   private var previousFocus WeakReference?
+  private var embeddedSurface EmbeddedPopupSurface?
   internal var NativeTimestamp uint64
 
-  /// Creates a popup with an independent root and an ordinary desktop owner.
-  /// @param owner The open desktop owner on the same UI thread.
+  /// Creates a popup with an independent root and a desktop or Android owner.
+  /// @param owner The open native owner on the same UI thread.
   /// @param root A root Cell not mounted in another window.
   /// @param kind Interactive menu or input-transparent tooltip.
   public init(owner Window, root Cell, kind PopupKind = PopupKind.Menu) {
@@ -116,7 +117,7 @@ public sealed partial class PopupWindow : IDisposable {
   /// Runs once after the popup and all descendants release their native resources.
   public event Dismissed Action[PopupDismissReason]
 
-  /// Opens a desktop popup relative to its parent's content rectangle in layout units.
+  /// Opens a native popup relative to its parent's content rectangle in layout units.
   /// Wayland menus must open from native input or an active parent popup grab.
   /// @param anchor The finite parent-content anchor rectangle.
   /// @param width Requested positive content width in layout units.
@@ -139,8 +140,19 @@ public sealed partial class PopupWindow : IDisposable {
     if let focused = owner.PopupFocusedNode { previousFocus = WeakReference(focused) }
     started = true
     try {
-      window.Open()
-      window.ShowNativePopup()
+      if let factory = owner.EmbeddedPopupFactory {
+        let surface = factory(window, kind, Dismiss)
+        embeddedSurface = surface
+        let result = surface.Open(anchor, window.Width, window.Height, window.NativePopupPlacement)
+        if result.Status != PopupStatus.Opened {
+          surface.Dispose()
+          embeddedSurface = nil
+          return result
+        }
+      } else {
+        window.Open()
+        window.ShowNativePopup()
+      }
       owner.SuspendPopupInput(kind)
       announced = true
       return PopupResult(PopupStatus.Opened)
@@ -167,7 +179,7 @@ public sealed partial class PopupWindow : IDisposable {
     requireUsable()
     ValidatePlacement(anchor, width, height, placement)
     if !IsOpen || closing { return WindowOperationResult.Closed }
-    return window.UpdateNativePopup(anchor, width, height, placement)
+    return window.UpdateNativePopup(anchor, width, height, placement, embeddedSurface)
   }
 
   /// Requests descendant-first dismissal. GPU retirement can defer native destruction.
@@ -193,13 +205,17 @@ public sealed partial class PopupWindow : IDisposable {
     if !IsOpen || closing { return }
     closing = true
     reason = value
-    window.DismissChildPopups(value)
     window.RequestClose()
+    window.DismissChildPopups(value)
+    embeddedSurface?.RequestClose()
   }
 
   internal func CompleteDismissal() {
     let focus = previousFocus?.Target as Node?
     previousFocus = nil
+    let surface = embeddedSurface
+    embeddedSurface = nil
+    surface?.Dispose()
     if !announced { return }
     announced = false
     if kind == PopupKind.Menu { owner.RestorePopupInput(focus) }
@@ -207,6 +223,37 @@ public sealed partial class PopupWindow : IDisposable {
   }
 
   shared {
+    internal func PopupCoordinate(value float64, scale float32) int32 {
+      let result = Math.Round(value * float64(scale))
+      if result < float64(Int32.MinValue) || result > float64(Int32.MaxValue) {
+        throw ArgumentOutOfRangeException("anchor", "Scaled popup coordinates exceed the native range")
+      }
+      return int32(result)
+    }
+
+    internal func PopupPosition(anchor ElementRect, width int32, height int32,
+      placement PortalPlacement, scale float32) Point {
+      let left = PopupCoordinate(anchor.X, scale)
+      let top = PopupCoordinate(anchor.Y, scale)
+      let anchorWidth = PopupCoordinate(anchor.Width, scale)
+      let anchorHeight = PopupCoordinate(anchor.Height, scale)
+      let x = switch placement {
+        case PortalPlacement.Bottom or PortalPlacement.Top: float64(left) + (float64(anchorWidth) - width) / 2.0
+        case PortalPlacement.BottomEnd or PortalPlacement.TopEnd: float64(left) + anchorWidth - width
+        case PortalPlacement.RightStart or PortalPlacement.Right or PortalPlacement.RightEnd: float64(left) + anchorWidth
+        case PortalPlacement.LeftStart or PortalPlacement.Left or PortalPlacement.LeftEnd: float64(left) - width
+        case _: float64(left)
+      }
+      let y = switch placement {
+        case PortalPlacement.TopStart or PortalPlacement.Top or PortalPlacement.TopEnd: float64(top) - height
+        case PortalPlacement.Right or PortalPlacement.Left: float64(top) + (float64(anchorHeight) - height) / 2.0
+        case PortalPlacement.RightEnd or PortalPlacement.LeftEnd: float64(top) + anchorHeight - height
+        case PortalPlacement.RightStart or PortalPlacement.LeftStart: float64(top)
+        case _: float64(top) + anchorHeight
+      }
+      return Point{ X: PopupCoordinate(x, 1.0F), Y: PopupCoordinate(y, 1.0F) }
+    }
+
     internal func ValidatePlacement(anchor ElementRect, width int32, height int32, placement PortalPlacement) {
       if !Double.IsFinite(anchor.X) || !Double.IsFinite(anchor.Y) || !Double.IsFinite(anchor.Width)
         || !Double.IsFinite(anchor.Height) || anchor.Width < 0.0 || anchor.Height < 0.0 {

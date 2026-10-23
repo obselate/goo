@@ -21,6 +21,9 @@ public class SmokeApplication {
       scene.Input = window.PlatformInput
       return window
     }
+
+    /// Creates a distinct root for native popup presentation checks.
+    public func CreatePopupRoot(attached Action[Window]) Cell -> PopupSmokeCell{ Attached: attached }
   }
 }
 
@@ -136,5 +139,17 @@ class SmokeCell : Cell, IDisposable {
     font.Dispose()
     picture.Dispose()
     controller.Dispose()
+  }
+}
+
+class PopupSmokeCell : Cell {
+  internal var Attached Action[Window]?
+  private let context Context[bool] = Context[bool]()
+
+  override func Build() Blob {
+    let attached = Attached
+    Attached = nil
+    attached?.Invoke(context.Window)
+    return Container{ Width: Percent(100), Height: Percent(100), BackgroundColor: Color.Rgb(40, 160, 80) }
   }
 }

@@ -127,7 +127,10 @@ public partial class Window {
     while index > 0 {
       index--
       let child = pending[index]
-      state.CloseError = captureCleanupError(state.CloseError, () -> child.Close())
+      state.CloseError = captureCleanupError(state.CloseError, () -> {
+        child.popup?.Dismiss(PopupDismissReason.OwnerClosed)
+        if child.IsOpen { child.Close() }
+      })
       if child.IsOpen {
         complete = false
         if child.popup != nil { break }
