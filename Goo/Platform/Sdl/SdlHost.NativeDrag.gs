@@ -38,11 +38,12 @@ internal class NativeMimeTable : IDisposable {
   }
 }
 
-internal class NativeDragBinding {
+internal partial class NativeDragBinding {
   internal let Host SdlHost
+  internal let Data TransferData
   internal let Effects DragEffect
   internal let Completed Action[NativeTransferResult]
-  internal let Representations List[TransferRepresentation]
+  internal let Representations IReadOnlyList[TransferRepresentation]
   internal let Types []string
   internal var Handle GCHandle
   internal var Started bool
@@ -52,29 +53,41 @@ internal class NativeDragBinding {
 
   internal init(host SdlHost, data TransferData, effects DragEffect, completed Action[NativeTransferResult]) {
     Host = host
+    Data = data
     Effects = effects
     Completed = completed
-    Representations = List[TransferRepresentation](data.Representations.Count + (data.Uris.Count > 0 ? 1 : 0))
-    for item in data.Representations { Representations.Add(item) }
-    if data.Uris.Count > 0 {
-      Representations.Add(TransferRepresentation("text/uri-list", Encoding.UTF8.GetBytes(ClipboardTransfer.EncodeLocalUris(data.Uris))))
+    let count = data.Representations.Count + (data.Uris.Count > 0 ? 1 : 0)
+    if count == 0 { throw InvalidDataException("Native drag requires MIME data or URI references") }
+    if count > 128 { throw ClipboardLimitException("Native drag exceeds 128 MIME types") }
+    var items IReadOnlyList[TransferRepresentation] = data.Representations
+    if data.Uris.Count > 0 && OperatingSystem.IsLinux() {
+      let encoded = List[TransferRepresentation](count)
+      for item in data.Representations { encoded.Add(item) }
+      encoded.Add(TransferRepresentation("text/uri-list", Encoding.UTF8.GetBytes(ClipboardTransfer.EncodeLocalUris(data.Uris))))
+      items = encoded
     }
-    if Representations.Count == 0 { throw InvalidDataException("Native drag requires MIME data or URI references") }
-    if Representations.Count > 128 { throw ClipboardLimitException("Native drag exceeds 128 MIME types") }
-    Types = [Representations.Count]string
-    for i in 0 ... Types.Length { Types[i] = Representations[i].ContentType }
+    Representations = items
+    Types = [count]string
+    for i in 0 ... data.Representations.Count { Types[i] = data.Representations[i].ContentType }
+    if data.Uris.Count > 0 { Types[count - 1] = "text/uri-list" }
     Handle = GCHandle.Alloc(this)
   }
 
   internal func Start() {
     if Finished { return }
     try {
-      using let names = NativeMimeTable(Types)
-      let status = Host.StartNativeDrag(names.Pointer, uint32(Types.Length), Effects, GCHandle.ToIntPtr(Handle))
-      if status == DataTransferStatus.Success { Started = true }
-      else { Finish(NativeTransferResult(status, error: SDL.GetErrorS() ?? "Native drag setup failed")) }
+      let status = Host.StartNativeDrag(this)
+      if status != DataTransferStatus.Success { Finish(NativeTransferResult(status, error: SDL.GetErrorS() ?? "Native drag setup failed")) }
     } catch (error DllNotFoundException) { Finish(NativeTransferResult(DataTransferStatus.Unsupported, error: error.Message)) }
     catch (error EntryPointNotFoundException) { Finish(NativeTransferResult(DataTransferStatus.Unsupported, error: error.Message)) }
+    catch (error WindowsTransferException) { Finish(NativeTransferResult(error.Status, error: error.Message)) }
+    catch (error ImageLimitException) { Finish(NativeTransferResult(DataTransferStatus.TooLarge, error: error.Message)) }
+    catch (error NativePathLimitException) { Finish(NativeTransferResult(DataTransferStatus.TooLarge, error: error.Message)) }
+    catch (error ClipboardLimitException) { Finish(NativeTransferResult(DataTransferStatus.TooLarge, error: error.Message)) }
+    catch (error NotSupportedException) { Finish(NativeTransferResult(DataTransferStatus.Unsupported, error: error.Message)) }
+    catch (error IOException) { Finish(NativeTransferResult(DataTransferStatus.Failed, error: error.Message)) }
+    catch (error DecoderFallbackException) { Finish(NativeTransferResult(DataTransferStatus.Failed, error: error.Message)) }
+    Host.ThrowNativeTransferFailure()
   }
 
   internal func Send(handle SafeFileHandle, contentType string) {
@@ -117,6 +130,7 @@ internal unsafe partial class SdlHost {
   internal var nativeDrag NativeDragBinding?
   internal var nativeTransferFailure Exception?
   internal var TransferPost ((Action) -> bool)?
+  internal var NativeDragPost ((Action) -> bool)?
 
   shared {
     @DllImport("SDL3", EntryPoint: "Goo_StartDataDrag", CallingConvention: CallingConvention.Cdecl)
@@ -156,8 +170,14 @@ internal unsafe partial class SdlHost {
     }
   }
 
-  internal func StartNativeDrag(types nint, count uint32, effects DragEffect, userData nint) DataTransferStatus ->
-    DataTransferStatus(StartDataDrag(windowHandle, types, count, uint32(effects), nint(0), sendAddress, finishedAddress, userData))
+  internal func StartNativeDrag(binding NativeDragBinding) DataTransferStatus {
+    if binding.Finished || nativeDrag != binding { return DataTransferStatus.Cancelled }
+    if OperatingSystem.IsWindows() { return StartWindowsNativeDrag(binding) }
+    using let names = NativeMimeTable(binding.Types)
+    binding.Started = true
+    return DataTransferStatus(StartDataDrag(windowHandle, names.Pointer, uint32(binding.Types.Length),
+      uint32(binding.Effects), nint(0), sendAddress, finishedAddress, GCHandle.ToIntPtr(binding.Handle)))
+  }
 
   public func BeginNativeDrag(data TransferData, effects DragEffect, completed Action[NativeTransferResult]) NativeTransferResult {
     ThrowIfDisposed()
@@ -165,7 +185,7 @@ internal unsafe partial class SdlHost {
     if (TransferCapabilities() & NativeTransferCapabilities.OutboundData) == NativeTransferCapabilities.None {
       return NativeTransferResult(DataTransferStatus.Unsupported, error: "This host does not support native MIME drags")
     }
-    guard let post = TransferPost else { return NativeTransferResult(DataTransferStatus.Unsupported, error: "Native drag has no owner dispatcher") }
+    guard let post = NativeDragPost else { return NativeTransferResult(DataTransferStatus.Unsupported, error: "Native drag has no owner dispatcher") }
     try {
       let binding = NativeDragBinding(this, data, effects, completed)
       nativeDrag = binding
@@ -182,12 +202,17 @@ internal unsafe partial class SdlHost {
 
   public func CancelNativeDrag() {
     if let binding = nativeDrag {
-      if binding.Started { CancelDataDrag(windowHandle) }
+      if binding.Started {
+        if OperatingSystem.IsWindows() {
+          if let source = binding.WindowsSource { source.Cancelled = true }
+        } else { CancelDataDrag(windowHandle) }
+        return
+      }
       if nativeDrag == binding { binding.Finish(NativeTransferResult(DataTransferStatus.Cancelled)) }
     }
   }
 
-  private func ThrowNativeTransferFailure() {
+  internal func ThrowNativeTransferFailure() {
     if let error = nativeTransferFailure {
       nativeTransferFailure = nil
       ExceptionDispatchInfo.Capture(error).Throw()

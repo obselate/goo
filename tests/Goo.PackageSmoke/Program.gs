@@ -3,6 +3,7 @@ package GooPackageSmoke
 import Goo
 import GooClipboardFixture
 import GooPrimitiveFixture
+import GooWindowsTransferFixture
 import System
 import System.Diagnostics
 import System.IO
@@ -481,6 +482,10 @@ func Main() {
     return
   }
   VerifyImageDecode()
+  if Environment.GetEnvironmentVariable("GOO_NATIVE_TRANSFER_SMOKE") == "1" {
+    RunWindowsDataTransferSmoke()
+    return
+  }
   if Environment.GetEnvironmentVariable("GOO_CLIPBOARD_DATA_SMOKE") == "1" {
     RunClipboardDataSmoke()
     return

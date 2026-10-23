@@ -392,6 +392,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     SdlRuntime.RequireMainThread("SdlHost.Dispose")
     CancelNativeDrag()
+    windowsDrop?.Dispose()
+    windowsDrop = nil
     ReleasePreferencePortal()
     nativeBackdrop?.Dispose()
     nativeBackdrop = nil

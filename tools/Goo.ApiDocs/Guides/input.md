@@ -218,7 +218,7 @@ Attach `source` to a `Blob`. Accept `NativeDataDrop` in its destination's `DropT
 | `IsPreview = true` | Formats are available. Bytes and URI references are empty. |
 | `IsPreview = false` | All requested bytes and URI references are owned snapshots. |
 | `DragSource.End` | At most once while the source stays mounted. Reports `Status`, `Effect` and bounded `Error`. |
-| `SourceRemovalRequired` | An accepted Move needs application-owned source cleanup. Goo never deletes data or files. |
+| `SourceRemovalRequired` | True when the app must remove its source after Move. Native file moves may already be complete. Goo never deletes sources. |
 | `LastNativeTransferStatus` and `LastNativeTransferError` | The latest incoming capture result. |
 
 - Set formats on the open window's UI thread. An empty list disables MIME drops.
@@ -231,7 +231,8 @@ Attach `source` to a `Blob`. Accept `NativeDataDrop` in its destination's `DropT
 | Host | Native support |
 | --- | --- |
 | Wayland v3 with Goo's SDL | MIME and file ingress, MIME drag-out, Copy and Move negotiation. |
-| Windows and macOS | File ingress and preview. |
+| Windows | MIME and file ingress, MIME drag-out, Copy and Move negotiation. |
+| macOS | File ingress and preview. |
 | Android, closed or embedded windows | None. |
 
 `Window.NativeTransferCapabilities` reports the loaded host's support.
