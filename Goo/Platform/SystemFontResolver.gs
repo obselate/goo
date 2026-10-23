@@ -93,8 +93,10 @@ internal sealed class FileSystemFontResolver {
         try {
           for file in Directory.GetFiles(root, "*.*", SearchOption.AllDirectories) {
             let extension = Path.GetExtension(file).ToLowerInvariant()
-            if extension == ".ttf" || extension == ".otf" || extension == ".ttc"
-              || extension == ".otc" { result.Add(file) }
+            if (extension == ".ttf" || extension == ".otf" || extension == ".ttc"
+              || extension == ".otc") && FileInfo(file).Length <= VulkanTextFont.MaxFontBytes {
+              result.Add(file)
+            }
           }
         } catch (error Exception) { }
       }
