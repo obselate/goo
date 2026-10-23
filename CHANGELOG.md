@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.9.0 - 2026-10-23
+
+- Breaking: FontFamily no longer loads font files from paths. Load them explicitly with the size-bounded FontSource.FromPath factories.
+- Keep scrollbar thumb drags active when virtual rows retire.
+- Add shared edit hints and Android keyboard and focused-field autofill mapping.
+- Add optional macOS native menu bars and context menus.
+- Add Windows native menu bars, context menus and accelerators.
+- Add Android native context menus to Goo.NativeMenus.
+- Keep DevTools pipe cleanup from masking capture results after a peer disconnect.
+- Add raster density metadata and scale-change snapshots for HiDPI image assets.
+- Add optional scale-aware image asset families.
+
 ## 0.8.2 - 2026-10-23
 
 - Shipped in 0.8.1 without a note: clip atlas samplers clamp to edges with transparent UV bounds, so Metal through MoltenVK can create them (#311).
