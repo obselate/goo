@@ -61,6 +61,7 @@ protected override Goo.Window CreateWindow()
 
 | Android input | Goo activation | Data |
 | --- | --- | --- |
+| `Goo.Android.Notification` action | `Notification` | `Goo.NotificationId`, `Goo.ActionId`, `Goo.Payload` extras |
 | Launcher | `Launch` | None |
 | Data URI other than `content:` or `file:` | `OpenUri` | `Target` |
 | `content:`, `file:`, or ClipData URIs | `OpenDocuments` | `Documents`, in source order |

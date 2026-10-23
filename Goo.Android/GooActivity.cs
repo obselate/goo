@@ -45,31 +45,36 @@ public abstract class GooActivity : Activity
 
     private void ForwardActivation(Intent? intent, bool initial)
     {
-        var documents = new List<Uri>();
+        List<Uri>? documents = null;
         Uri? target = null;
-        if (Uri.TryCreate(intent?.DataString, UriKind.Absolute, out var data))
+        var notification = intent?.Action == "Goo.Android.Notification";
+        if (!notification && Uri.TryCreate(intent?.DataString, UriKind.Absolute, out var data))
         {
             if (data.Scheme is "content" or "file")
-                documents.Add(data);
+                (documents ??= []).Add(data);
             else
                 target = data;
         }
-        if (intent?.ClipData is { } clips)
+        if (!notification && intent?.ClipData is { } clips)
         {
             for (var i = 0; i < clips.ItemCount; i++)
             {
                 if (Uri.TryCreate(clips.GetItemAt(i)?.Uri?.ToString(), UriKind.Absolute, out var document)
-                    && !documents.Contains(document))
-                    documents.Add(document);
+                    && documents?.Contains(document) != true)
+                    (documents ??= []).Add(document);
             }
         }
         var activation = new ApplicationActivation
         {
-            Kind = documents.Count > 0 ? ApplicationActivationKind.OpenDocuments
+            Kind = notification ? ApplicationActivationKind.Notification
+                : documents is not null ? ApplicationActivationKind.OpenDocuments
                 : target is not null ? ApplicationActivationKind.OpenUri : ApplicationActivationKind.Launch,
             IsInitial = initial,
-            Target = documents.Count == 0 ? target : null,
-            Documents = documents
+            Target = documents is null ? target : null,
+            Documents = documents is null ? Array.Empty<Uri>() : documents,
+            NotificationId = notification ? intent?.GetStringExtra("Goo.NotificationId") ?? "" : "",
+            ActionId = notification ? intent?.GetStringExtra("Goo.ActionId") ?? "" : "",
+            Payload = notification ? intent?.GetStringExtra("Goo.Payload") ?? "" : ""
         };
         LastActivationStatus = global::Goo.Window.PostApplicationActivation(activation);
         if (LastActivationStatus is ActivationPostStatus.NotInitialized or ActivationPostStatus.Closed)
