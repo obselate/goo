@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
+    <ProjectReference Include="..\..\Goo.NativeDialogs\Goo.NativeDialogs.gsproj" SetTargetFramework="TargetFramework=net10.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

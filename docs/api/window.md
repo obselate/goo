@@ -692,6 +692,7 @@ Sources:
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
+- [`Window.NativeModal.gs`](../../Goo/Window/WindowParts/Window.NativeModal.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
@@ -979,7 +980,7 @@ Reports whether the window currently holds native input focus.
 
 ### `IsInputBlocked`
 
-Gets whether a modal child or native chooser blocks this window's native, platform, focus, and accessibility input.
+Gets whether a modal child, native chooser, or native modal service blocks this window's input and accessibility actions.
 
 ### `IsOpen`
 

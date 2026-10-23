@@ -55,6 +55,8 @@
 !/Goo.Accessibility/**
 !/Goo.Android/
 !/Goo.Android/**
+!/Goo.NativeDialogs/
+!/Goo.NativeDialogs/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -84,6 +86,9 @@
 !/docs/assets/**
 !/docs/api/
 !/docs/api/**
+!/docs/native-dialogs.md
+!/docs/api-native-dialogs/
+!/docs/api-native-dialogs/**
 !/docs/devtools/
 !/docs/devtools/**
 !/docs/perf/

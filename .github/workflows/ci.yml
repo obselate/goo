@@ -59,7 +59,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo tests
+            --severity GL0001=none Goo Goo.NativeDialogs tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -67,11 +67,15 @@ jobs:
       - name: Build Goo with warnings as errors
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
+      - name: Build optional native dialogs
+        run: dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0 -p:TreatWarningsAsErrors=true
+
       - name: Regenerate API documentation
         run: |
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
-          git diff --exit-code -- docs/api
-          test -z "$(git status --porcelain -- docs/api)"
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- --source Goo.NativeDialogs --xml Goo.NativeDialogs/bin/Release/net10.0/Goo.NativeDialogs.xml --output docs/api-native-dialogs
+          git diff --exit-code -- docs/api docs/api-native-dialogs
+          test -z "$(git status --porcelain -- docs/api docs/api-native-dialogs)"
 
       - name: Run focused API contract tests
         run: |
@@ -1063,6 +1067,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.NativeDialogs.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.$GOO_VERSION.snupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1097,6 +1105,7 @@ jobs:
             "artifacts/packages/Goo.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.NativeDialogs.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.DevTools.App.$GOO_VERSION.nupkg"
@@ -1156,8 +1165,11 @@ jobs:
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0-android -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Pack Android adapter
-        run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+        run: |
+          dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet pack Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -o artifacts/android-packages -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-package
