@@ -96,6 +96,12 @@ public sealed class AccessibilityChecks : Instrumentation
         CheckRangeAndScroll();
         CheckSurface();
         CheckActivityReplacement();
+        Wait(() =>
+        {
+            var idle = false;
+            RunOnMainSync(() => idle = !activity.NativeView.HasFrameDemand);
+            return idle;
+        }, "Replacement Activity frames did not settle.");
         Drain();
         using var serviced = new ManualResetEventSlim();
         RunOnMainSync(() => activity.NativeView.Window.Post(serviced.Set));
