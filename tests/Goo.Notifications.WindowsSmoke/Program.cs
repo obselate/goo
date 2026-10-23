@@ -45,7 +45,8 @@ var message = new NotificationMessage
 var shown = await service.ShowAsync(message);
 Require(Enum.IsDefined(shown.Status) && shown.Id == message.Id, "Show did not return a typed result");
 Require(shown.Status is NotificationStatus.Accepted or NotificationStatus.Disabled or NotificationStatus.Denied
-    or NotificationStatus.Unsupported or NotificationStatus.Failed, "Unexpected show status: " + shown.Status);
+    or NotificationStatus.MissingIdentity or NotificationStatus.Unsupported or NotificationStatus.Failed,
+    "Unexpected show status: " + shown.Status);
 Console.WriteLine("show: " + shown.Status + " / " + shown.Delivery + " / " + shown.Error);
 if (shown.Status == NotificationStatus.Accepted)
 {
