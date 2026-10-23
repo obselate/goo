@@ -156,7 +156,7 @@ internal class WindowsNotificationService : NotificationService {
         NotificationResult(status, permission, delivery, NotificationActivationSupport.WarmAndCold, id)
 
     shared {
-        private func Content(scheme string, message NotificationMessage) string {
+        internal func Content(scheme string, message NotificationMessage) string {
             let launch = scheme + "://goo-notification/activate?id=" + Uri.EscapeDataString(message.Id)
                 + "&action=&data=" + Uri.EscapeDataString(message.Payload)
             return `<toast activationType="protocol" launch="` + SecurityElement.Escape(launch)
