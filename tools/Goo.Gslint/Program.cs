@@ -110,10 +110,16 @@ public static class Program
             paths.Add(".");
         }
 
+        var root = Directory.GetCurrentDirectory();
         var failed = false;
         var fixedFiles = 0;
         foreach (var file in DiscoverFiles(paths))
         {
+            if ((fix || reduce) && !CanWriteFile(file, root))
+            {
+                continue;
+            }
+
             var source = File.ReadAllText(file);
             var tree = SyntaxTree.Load(file);
             var parseErrors = tree.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToList();
@@ -131,7 +137,7 @@ public static class Program
             if (fix || reduce)
             {
                 var rewritten = reduce ? ReduceSource(source, file) : FixSource(tree, source);
-                if (rewritten != source)
+                if (rewritten != source && CanWriteFile(file, root))
                 {
                     File.WriteAllText(file, rewritten, new System.Text.UTF8Encoding(false));
                     source = rewritten;
@@ -992,6 +998,31 @@ public static class Program
         return source.Length == 0 ? 0 : Math.Min(index, source.Length - 1);
     }
 
+    private static bool CanWriteFile(string file, string root)
+    {
+        var relative = Path.GetRelativePath(root, file);
+        if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var path = file;
+        while (true)
+        {
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            {
+                return false;
+            }
+
+            if (Path.GetRelativePath(root, path) == ".")
+            {
+                return true;
+            }
+
+            path = Path.GetDirectoryName(path)!;
+        }
+    }
+
     private static IReadOnlyList<string> DiscoverFiles(IEnumerable<string> paths)
     {
         var result = new HashSet<string>(StringComparer.Ordinal);
@@ -999,7 +1030,7 @@ public static class Program
         {
             if (File.Exists(path))
             {
-                if (Path.GetExtension(path) == ".gs")
+                if (Path.GetExtension(path) == ".gs" && (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0)
                 {
                     result.Add(Path.GetFullPath(path));
                 }
@@ -1020,9 +1051,17 @@ public static class Program
 
     private static void WalkDirectory(string directory, HashSet<string> result)
     {
+        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+        {
+            return;
+        }
+
         foreach (var file in Directory.EnumerateFiles(directory, "*.gs").OrderBy(path => path, StringComparer.Ordinal))
         {
-            result.Add(Path.GetFullPath(file));
+            if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0)
+            {
+                result.Add(Path.GetFullPath(file));
+            }
         }
 
         foreach (var subdirectory in Directory.EnumerateDirectories(directory).OrderBy(path => path, StringComparer.Ordinal))
