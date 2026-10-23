@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.12.1 - 2026-10-23
+
+- Publish Goo.Audio without an empty symbol package, so every package publishes. Goo.DevTools, Goo.DevTools.App, Goo.Templates, Goo.SpellCheck and Goo.Printing missed 0.12.0.
+
 ## 0.12.0 - 2026-10-23
 
 - Fix an early Wayland popup presentation that could close the display connection.
