@@ -35,4 +35,10 @@
           TargetPath="@(DocFileItem->'%(Filename)%(Extension)')" />
     </ItemGroup>
   </Target>
+  <Target Name="SetAndroidReferencePackagePath" AfterTargets="_GsharpGetRefAssemblyForPack"
+          Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <ItemGroup>
+      <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
+    </ItemGroup>
+  </Target>
 </Project>
