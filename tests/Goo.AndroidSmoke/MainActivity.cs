@@ -12,6 +12,7 @@ public sealed class MainActivity : GooActivity
 {
     private bool inputSmokeStarted;
     private bool menuSmokeStarted;
+    private bool clipboardSmokeStarted;
 
     internal GooView NativeView => GooView;
 
@@ -56,5 +57,15 @@ public sealed class MainActivity : GooActivity
             Intent?.GetBooleanExtra("goo.native_menu_destroy", false) == true ? this : null)) return;
         if (attempt >= 100) throw new InvalidOperationException("Android native menu owner did not attach.");
         GooView.PostDelayed(() => RunMenuSmoke(attempt + 1), 100);
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
+        if (hasFocus && !clipboardSmokeStarted && Intent?.GetBooleanExtra("goo.clipboard_smoke", false) == true)
+        {
+            clipboardSmokeStarted = true;
+            AndroidClipboardSmoke.Run(GooView);
+        }
     }
 }

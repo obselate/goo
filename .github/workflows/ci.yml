@@ -1686,6 +1686,7 @@ jobs:
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          nice -n 10 dotnet build tests/Goo.AndroidClipboardPeer/Goo.AndroidClipboardPeer.csproj -c Release -m:4 -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
         run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
@@ -1710,6 +1711,7 @@ jobs:
           path: |
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
+            tests/Goo.AndroidClipboardPeer/bin/Release/net10.0-android/*.apk
             Goo/Runtime/Vulkan/android-*/text-native-build.json
       - name: Package signed consumer AAB
         run: |

@@ -427,6 +427,6 @@ Start clipboard calls on the open window's UI thread. Check `result.Status`.
 | macOS formats | MIME bytes use native pasteboard types. File references use separate NSURL items. All data is copied before publication. |
 | Lifetime | Windows and macOS keep data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
 | Android formats | Images and MIME alternatives use read-only content streams, not Binder byte arrays. File references must use `content://` URIs. |
-| Android access | Reads require a focused Goo view. Clipboard data survives view disposal and process recreation. Replacement releases old publication files. URI access is not persistent. |
+| Android access | Reads require a focused Goo view. MIME data survives view disposal and process recreation. The next MIME write releases old publication files. URI access is not persistent. |
 | Android limits | Clip metadata is limited to 512 KiB and 4096 items. A MIME stream uses one item alongside any document references. |
 
