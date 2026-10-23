@@ -78,6 +78,48 @@ public sealed class ExplicitKeyBindingTests
         finally { window.Close(); }
     }
 
+    [Theory]
+    [InlineData(false, "a😀b", 2, 3)]
+    [InlineData(true, "a😀b", 2, 3)]
+    [InlineData(false, "ae\u0301b", 2, 3)]
+    [InlineData(true, "ae\u0301b", 2, 3)]
+    public void AccessibilitySelectionSnapsToGraphemesBeforeCopyAndPaste(bool editor, string content,
+        int interior, int end)
+    {
+        using var controller = new TextEditorController(new TextDocument(content));
+        var handle = new ElementHandle();
+        var value = content;
+        var adapter = new AccessibilityTestAdapter();
+        var window = new Window { Width = 320, Height = 120, AccessibilityAdapter = adapter,
+            Root = new BuildCell(() => editor ? new TextEditor(controller) { Handle = handle } :
+                new TextEntry { Handle = handle, Value = value, OnChange = next => value = next }) };
+        try
+        {
+            window.UpdateTree();
+            Assert.True(handle.Focus());
+            var id = adapter.Tree!.Root!.Id;
+            Assert.True(window.PerformAccessibilityAction(id, AccessibilityActionRequest.SetSelection(interior, 0)));
+            var snapshot = window.InputForTest.EditorSnapshot()!.Value;
+            Assert.Equal(1, snapshot.SelectionStart);
+            Assert.Equal(1, snapshot.SelectionEnd);
+            foreach (var (start, stop) in new[] { (1, interior), (interior, end) })
+                foreach (var caret in new[] { start, stop })
+                {
+                    Assert.True(window.PerformAccessibilityAction(id,
+                        AccessibilityActionRequest.SetSelection(start, stop - start, caret)));
+                    snapshot = window.InputForTest.EditorSnapshot()!.Value;
+                    Assert.Equal(caret == start ? end : 1, snapshot.SelectionStart);
+                    Assert.Equal(caret == start ? 1 : end, snapshot.SelectionEnd);
+                }
+            var input = window.PlatformInput;
+            Assert.True(input.Execute(new TextCommand { Kind = TextCommandKind.Copy }));
+            Assert.True(input.Execute(new TextCommand { Kind = TextCommandKind.SelectAll }));
+            Assert.True(input.Execute(new TextCommand { Kind = TextCommandKind.Paste }));
+            Assert.Equal(content.Substring(1, end - 1), editor ? controller.Document.GetText() : value);
+        }
+        finally { window.Close(); }
+    }
+
     [Fact]
     public void PrimitivesRequireBindingsAndEntryCancelRestoresTheFocusValue()
     {

@@ -810,8 +810,8 @@ public class TextEditorController : IDisposable {
       return
     }
     selection = TextSelection{
-      Anchor: snapRebasedPosition(rebaseTextPosition(selection.Anchor, change.Changes)),
-      Active: snapRebasedPosition(rebaseTextPosition(selection.Active, change.Changes)),
+      Anchor: SnapPosition(rebaseTextPosition(selection.Anchor, change.Changes)),
+      Active: SnapPosition(rebaseTextPosition(selection.Active, change.Changes)),
     }
     if let current = composition {
       let nextRange = rebaseTextRange(current.Range, change.Changes)
@@ -842,7 +842,7 @@ public class TextEditorController : IDisposable {
           Affinity: position.Affinity }
       }
       let sourceOffset = position.Offset < start ? position.Offset : position.Offset - current.Text.Length + current.Range.Length
-      let source = snapRebasedPosition(rebaseTextPosition(TextPosition{
+      let source = SnapPosition(rebaseTextPosition(TextPosition{
         Offset: sourceOffset, Affinity: position.Affinity }, changes))
       let nextEnd = nextRange.Start + nextRange.Length
       var offset = source.Offset
@@ -861,10 +861,15 @@ public class TextEditorController : IDisposable {
     return TextRange{ Start: Math.Min(a, b), Length: Math.Abs(a - b) }
   }
 
-  private func snapRebasedPosition(position TextPosition) TextPosition {
-    if documentGraphemeBoundary(position.Offset) { return position }
+  internal func SnapPosition(position TextPosition) TextPosition {
+    let root = document.SnapshotRoot()
+    let split = position.Offset > 0 && position.Offset < document.Length
+      && Char.IsHighSurrogate(textCharAt(root, position.Offset - 1))
+      && Char.IsLowSurrogate(textCharAt(root, position.Offset))
+    if !split && documentGraphemeBoundary(position.Offset) { return position }
     let offset = position.Affinity == TextAffinity.Upstream
-    ? previousDocumentElement(position.Offset) : nextDocumentElement(position.Offset)
+      ? previousDocumentElement(position.Offset + (split ? 1 : 0))
+      : nextDocumentElement(position.Offset - (split ? 1 : 0))
     return TextPosition{ Offset: offset, Affinity: position.Affinity }
   }
 
