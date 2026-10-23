@@ -907,6 +907,7 @@ jobs:
           export GOO_APPIMAGETOOL="$RUNNER_TEMP/appimage-tools/appimagetool-x86_64.AppImage"
           export GOO_APPIMAGE_RUNTIME="$RUNNER_TEMP/appimage-tools/runtime-x86_64"
           export GooPackageIcon="$PWD/tests/Shared/Assets/local-rgba.png"
+          export Version="$GOO_VERSION"
           dotnet tool install Goo.DevTools --version "$GOO_VERSION" \
             --tool-path "$RUNNER_TEMP/goo-package-tool" --configfile tests/Goo.PackageSmoke/NuGet.config
           "$RUNNER_TEMP/goo-package-tool/goo" \
