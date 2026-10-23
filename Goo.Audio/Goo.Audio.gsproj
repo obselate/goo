@@ -22,6 +22,7 @@
     <ItemGroup>
       <DocFileItem Include="$(DocumentationFile)" />
       <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)/Goo.Audio.xml" />
     </ItemGroup>
   </Target>
 </Project>
