@@ -491,7 +491,7 @@ Start clipboard calls on the open window's UI thread. Check `result.Status`.
 | Write status | Unsupported formats are not dropped. Native failures can replace or clear the old clipboard. Success does not confirm paste. |
 | Limits | At most 128 MIME names, 256 ASCII bytes per name and 64 MiB total bytes. Text is limited to 16 MiB. Existing file-list bounds apply. |
 | Platforms | These methods support Windows, macOS, Wayland and `Goo.Android`. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
-| Windows formats | HTML, RTF, PNG and files use native formats. PNG, JPEG and GIF also offer a native bitmap. Other MIME types use OLE streams. |
+| Windows formats | HTML, RTF, PNG and files use native formats. PNG, JPEG and GIF also offer a native bitmap. MIME bytes use owned global memory. |
 | Windows limits | MIME names have at most 255 characters and cannot differ only by case. Plain text cannot contain NUL. An incompatible COM apartment returns `Unsupported`. |
 | macOS formats | MIME bytes use native pasteboard types. File references use separate NSURL items. All data is copied before publication. |
 | Lifetime | Windows and macOS keep data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
