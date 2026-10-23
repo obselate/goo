@@ -11,7 +11,7 @@ $source = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../tests/NativeWin
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
 $vcvars = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC/Auxiliary/Build/vcvars64.bat'
 if (!$vcvars) { throw 'The Visual C++ toolchain is missing' }
-& cmd.exe /d /s /c "`"`"$vcvars`" && cl /nologo /std:c++17 /EHsc /W4 /WX /MT /DUNICODE /D_UNICODE /D_WIN32_WINNT=0x0A00 /Fo`"$root/peer.obj`" /Fe`"$peer`" `"$source`" ole32.lib shell32.lib user32.lib uuid.lib`""
+& cmd.exe /d /c "call `"$vcvars`" && cl /nologo /std:c++17 /EHsc /W4 /WX /MT /DUNICODE /D_UNICODE /D_WIN32_WINNT=0x0A00 /Fo`"$root/peer.obj`" /Fe`"$peer`" `"$source`" ole32.lib shell32.lib user32.lib uuid.lib"
 if ($LASTEXITCODE -ne 0) { throw 'The native transfer peer did not compile' }
 $png = Join-Path (Split-Path $applicationPath) 'local-rgba.png'
 if (!(Test-Path $png)) { throw 'The native PNG fixture is missing' }
