@@ -13,6 +13,7 @@ EXPECTED_PACKAGE_IDS = {
     "Goo",
     "Goo.Accessibility",
     "Goo.Android",
+    "Goo.NativeDialogs",
     "Goo.DevTools",
     "Goo.DevTools.App",
     "Goo.Templates",

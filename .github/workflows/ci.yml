@@ -896,6 +896,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.NativeDialogs.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json
@@ -921,6 +922,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.NativeDialogs.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
