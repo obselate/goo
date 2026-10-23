@@ -27,6 +27,7 @@ and removal. The native inspector test validates both wire signatures.
 The `goo-harfbuzz-gpu` native library includes `stb_image` 2.30, built for PNG, JPEG,
 GIF and BMP. No additional native library ships. The source declares
 `MIT OR Unlicense`.
+Goo patches GIF disposal history and skips empty PNG IDAT transfers.
 
 - Source commit: `013ac3beddff3dbffafd5177e7972067cd2b5083`.
 - [stb_image source and license](https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h)
