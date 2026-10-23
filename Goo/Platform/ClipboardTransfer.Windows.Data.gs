@@ -101,6 +101,7 @@ internal unsafe partial class ClipboardTransfer {
         private const UnicodeTextFormat uint32 = 13u
         private const FileDropFormat uint32 = 15u
         private const DibV5Format uint32 = 17u
+        private const EmptyMimeTypesFormat string = "Goo Empty MIME Types"
 
         @DllImport("ole32.dll", EntryPoint: "OleInitialize")
         private func WindowsOleInitialize(reserved nint) int32;
@@ -118,8 +119,6 @@ internal unsafe partial class ClipboardTransfer {
         private func WindowsReleaseMedium(ref medium WindowsTransferMedium);
         @DllImport("shell32.dll", EntryPoint: "SHCreateDataObject")
         private func WindowsCreateDataObject(folder nint, count uint32, children nint, inner nint, id nint, out result nint) int32;
-        @DllImport("shlwapi.dll", EntryPoint: "SHCreateMemStream")
-        private func WindowsCreateMemoryStream(bytes * uint8, size uint32) nint;
         @DllImport("kernel32.dll", EntryPoint: "GlobalAlloc", SetLastError: true)
         private func WindowsAllocateGlobal(flags uint32, size nuint) nint;
         @DllImport("kernel32.dll", EntryPoint: "GlobalFree")
@@ -152,31 +151,39 @@ internal unsafe partial class ClipboardTransfer {
             }
             var plainPublished bool
             var bitmapPublished bool
+            var emptyTypes StringBuilder?
             try {
                 for item in data.Representations {
-                    WindowsAddFormat(result, WindowsRegisterType(item.ContentType), item.Data, true)
+                    WindowsAddFormat(result, WindowsRegisterType(item.ContentType), item.Data)
+                    if item.Data.Length == 0 {
+                        emptyTypes ??= StringBuilder()
+                        emptyTypes.Append(item.ContentType).Append('\n')
+                    }
                     if IsPlainText(item.ContentType) && !plainPublished {
                         let text = utf8.GetString(item.Data)
                         if text.IndexOf(char(0)) >= 0 { throw NotSupportedException("Native plain text cannot contain NUL") }
-                        WindowsAddFormat(result, UnicodeTextFormat, unicode.GetBytes(text + "\0"), false)
+                        WindowsAddFormat(result, UnicodeTextFormat, unicode.GetBytes(text + "\0"))
                         plainPublished = true
                     } else if item.ContentType == "text/html" {
-                        WindowsAddFormat(result, WinRegisterClipboardFormat("HTML Format"), WindowsHtml(item.Data), false)
+                        WindowsAddFormat(result, WinRegisterClipboardFormat("HTML Format"), WindowsHtml(item.Data))
                     } else if item.ContentType == "text/rtf" || item.ContentType == "application/rtf" {
-                        WindowsAddFormat(result, WinRegisterClipboardFormat("Rich Text Format"), item.Data, false, true)
+                        WindowsAddFormat(result, WinRegisterClipboardFormat("Rich Text Format"), item.Data, true)
                     } else if item.ContentType == "image/png" {
-                        WindowsAddFormat(result, WinRegisterClipboardFormat("PNG"), item.Data, false)
+                        WindowsAddFormat(result, WinRegisterClipboardFormat("PNG"), item.Data)
                     }
                     if !bitmapPublished && (item.ContentType == "image/png" || item.ContentType == "image/jpeg" || item.ContentType == "image/gif") {
-                        WindowsAddFormat(result, DibV5Format, WindowsBitmap(item.Data), false)
+                        WindowsAddFormat(result, DibV5Format, WindowsBitmap(item.Data))
                         bitmapPublished = true
                     }
                 }
+                if let empty = emptyTypes {
+                    WindowsAddFormat(result, WinRegisterClipboardFormat(EmptyMimeTypesFormat), utf8.GetBytes(empty.ToString()))
+                }
                 if data.Uris.Count > 0 {
-                    WindowsAddFormat(result, FileDropFormat, files, false)
+                    WindowsAddFormat(result, FileDropFormat, files)
                     let effect Span[uint8] = stackalloc [4]uint8
                     BinaryPrimitives.WriteUInt32LittleEndian(effect, if intent == ClipboardIntent.Cut { 2u } else { 1u })
-                    WindowsAddFormat(result, WinRegisterClipboardFormat("Preferred DropEffect"), effect, false)
+                    WindowsAddFormat(result, WinRegisterClipboardFormat("Preferred DropEffect"), effect)
                 }
                 completed = true
                 return result
@@ -190,23 +197,18 @@ internal unsafe partial class ClipboardTransfer {
             return format
         }
 
-        private func WindowsAddFormat(dataObject nint, format uint32, bytes ReadOnlySpan[uint8], stream bool, terminate bool = false) {
+        private func WindowsAddFormat(dataObject nint, format uint32, bytes ReadOnlySpan[uint8], terminate bool = false) {
             if format == 0u { throw IOException("Native clipboard format registration failed") }
-            var medium = WindowsTransferMedium{}
-            if stream {
-                fixed pointer * uint8 = bytes { medium.Value = WindowsCreateMemoryStream(pointer, uint32(bytes.Length)) }
-                medium.Medium = StreamMedium
-                if medium.Value == nint(0) { throw IOException("Cannot create native clipboard stream") }
-            } else {
-                medium.Value = WindowsAllocateGlobal(66u, nuint(Math.Max(1, bytes.Length + (terminate ? 1 : 0))))
-                medium.Medium = GlobalMedium
-                if medium.Value == nint(0) { throw IOException("Cannot allocate native clipboard data") }
-                let pointer = WinGlobalLock(medium.Value)
-                if pointer == nint(0) { WindowsFreeGlobal(medium.Value)
-                    throw IOException("Cannot lock native clipboard data") }
-                try { bytes.CopyTo(Span[uint8](cast[* uint8](pointer), bytes.Length)) }
-                finally { WinGlobalUnlock(medium.Value) }
+            var medium = WindowsTransferMedium{
+                Value: WindowsAllocateGlobal(66u, nuint(Math.Max(1, bytes.Length + (terminate ? 1 : 0)))),
+                Medium: GlobalMedium
             }
+            if medium.Value == nint(0) { throw IOException("Cannot allocate native clipboard data") }
+            let pointer = WinGlobalLock(medium.Value)
+            if pointer == nint(0) { WindowsFreeGlobal(medium.Value)
+                throw IOException("Cannot lock native clipboard data") }
+            try { bytes.CopyTo(Span[uint8](cast[* uint8](pointer), bytes.Length)) }
+            finally { WinGlobalUnlock(medium.Value) }
             var descriptor = WindowsTransferFormat{ Format: uint16(format), Aspect: 1u, Index: -1, Medium: medium.Medium }
             let set = cast[unmanaged[Stdcall](nint, * WindowsTransferFormat, * WindowsTransferMedium, int32) -> int32](
                 Marshal.ReadIntPtr(Marshal.ReadIntPtr(dataObject), 7 * nint.Size))
@@ -257,6 +259,9 @@ internal unsafe partial class ClipboardTransfer {
                 let uris = List[Uri]()
                 var total int64
                 var intent = ClipboardIntent.Copy
+                let emptyTypes = if WindowsReadFormat(dataObject, WinRegisterClipboardFormat(EmptyMimeTypesFormat), 128 * 256, out var names) {
+                    "\n" + utf8.GetString(names)
+                } else { "" }
                 for contentType in types {
                     if contentType == UriList {
                         if WindowsGetMedium(dataObject, FileDropFormat, GlobalMedium, out var medium) {
@@ -275,7 +280,12 @@ internal unsafe partial class ClipboardTransfer {
                         continue
                     }
                     let limit = Math.Min(if contentType.StartsWith("text/", StringComparison.Ordinal) { MaxTextBytes } else { MaxImageBytes }, int32(MaxImageBytes - total))
-                    if !WindowsReadRepresentation(dataObject, contentType, limit, out var bytes) { continue }
+                    let empty = emptyTypes.Length > 0 && emptyTypes.Contains("\n" + contentType + "\n", StringComparison.Ordinal)
+                    if !WindowsReadRepresentation(dataObject, contentType, if empty { 1 } else { limit }, out var bytes) { continue }
+                    if empty {
+                        if bytes.Length != 1 || bytes[0] != 0 { throw InvalidDataException("Invalid empty MIME representation") }
+                        bytes = Array.Empty[uint8]()
+                    }
                     total += bytes.Length
                     items.Add(TransferRepresentation(contentType, bytes))
                 }
