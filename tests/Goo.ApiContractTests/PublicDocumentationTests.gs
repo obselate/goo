@@ -448,6 +448,7 @@ class PublicDocumentationTests {
             "M:Goo.ImageSource.Decode(System.IO.Stream,System.Threading.CancellationToken)",
             "M:Goo.ImageSource.Decode(System.IO.Stream,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
             "M:Goo.ImageSource.DecodeColorManaged(System.ReadOnlyMemory{System.Byte},Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
+            "M:Goo.ImageColorProfile.ToSrgb(System.ReadOnlyMemory{System.Byte},System.Span{System.Byte},System.Boolean,System.Threading.CancellationToken)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,System.Threading.CancellationToken)",
             "M:Goo.ImageSource.LoadThumbnail(System.String,System.Int32,System.Int32,Goo.ImageDecodeLimits,System.Threading.CancellationToken)",
@@ -1365,6 +1366,11 @@ class PublicDocumentationTests {
             ),
             ["M:Goo.ImageSource.DecodeColorManaged(System.ReadOnlyMemory{System.Byte},Goo.ImageDecodeLimits,System.Threading.CancellationToken)"] = DocumentationShape(
                 []string{"encoded", "limits", "cancellationToken"},
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ImageColorProfile.ToSrgb(System.ReadOnlyMemory{System.Byte},System.Span{System.Byte},System.Boolean,System.Threading.CancellationToken)"] = DocumentationShape(
+                []string{"profile", "straightRgba", "gray", "cancellationToken"},
                 System.Array.Empty[string](),
                 true
             ),

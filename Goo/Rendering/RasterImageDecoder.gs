@@ -120,7 +120,7 @@ internal unsafe partial class RasterImageDecoder {
         MaxHeight: if orientation >= 5 { bounds.MaxWidth } else { bounds.MaxHeight }}
       using let image = DecodeRaw(bytes, orientedBounds, token, false, validated)
       let pixels = image.Pixels
-      if let color = profile { IccColorTransform.Convert(color, gray, pixels, token) }
+      if let color = profile { ImageColorProfile.Convert(color, gray, pixels, token) }
       var offset = 0
       while offset < pixels.Length {
         if (offset & 65535) == 0 { token.ThrowIfCancellationRequested() }

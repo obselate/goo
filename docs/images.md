@@ -112,3 +112,24 @@ if result.Status == ImageDecodeStatus.Success {
 - The uncompressed profile limit is 4 MiB. JPEG ICC fragments may arrive in any order.
 - Files without an ICC profile use sRGB. PNG gamma/chromaticity tags do not create an ICC profile.
 - Reference fixtures cover sRGB, Display P3, Adobe RGB, ProPhoto and gray. RGB output is within two byte levels of the reference conversions.
+
+## Consumer WebP and AVIF decoders
+
+```gsharp
+let status = ImageColorProfile.ToSrgb(iccBytes, straightRgba, false, token)
+```
+
+On `Success`, premultiply alpha and pass the buffer to `ImageSource.Transfer`.
+Use an `ImageSourceProvider` and `ImageSourceLease` for asynchronous delivery.
+
+| Decoder output | Consumer work before publication |
+| --- | --- |
+| WebP | Apply EXIF orientation. Extract ICCP metadata and convert the straight RGB samples. |
+| AVIF | Apply irot/imir. Convert YUV range, matrix and transfer to SDR RGB. Use embedded ICC when present. |
+| Untagged SDR sRGB | Skip profile conversion. Premultiply alpha and transfer immutable RGBA8 pixels. |
+
+- Consumer decoders own encoded-input limits, codec lifetime and cancellation.
+- `ToSrgb` shares the PNG/JPEG managed converter. It leaves alpha unchanged.
+- Do not publish failed or cancelled conversion output.
+- `Transfer` takes ownership. Its release callback runs after the last source or mounted lease releases the buffer.
+- Core adds no WebP or AVIF codec dependency and no global decoder registry.

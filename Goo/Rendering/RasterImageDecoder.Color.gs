@@ -52,7 +52,7 @@ internal unsafe partial class RasterImageDecoder {
           starts[part] = offset + 16
           lengths[part] = size - 16
           encodedBytes += size - 16
-          if encodedBytes > IccColorTransform.MaxProfileBytes { throw InvalidDataException("ICC profile exceeds its byte limit") }
+          if encodedBytes > ImageColorProfile.MaxProfileBytes { throw InvalidDataException("ICC profile exceeds its byte limit") }
           fragments++
         }
         offset += size
@@ -95,7 +95,7 @@ internal unsafe partial class RasterImageDecoder {
           fixed compressed * uint8 = chunk.Slice(zero + 2) {
             using let input = UnmanagedMemoryStream(compressed, int64(chunk.Length - zero - 2))
             using let inflated = ZLibStream(input, CompressionMode.Decompress)
-            using let output = BoundedInput.ReadAll(inflated, IccColorTransform.MaxProfileBytes, "ICC profile", token)
+            using let output = BoundedInput.ReadAll(inflated, ImageColorProfile.MaxProfileBytes, "ICC profile", token)
             profile = output.Bytes.ToArray()
           }
         } else if kind == 0x73524742u { srgb = true }

@@ -5,13 +5,41 @@ import System.Buffers.Binary
 import System.IO
 import System.Threading
 
-internal class IccColorTransform {
+/// Converts consumer-decoded straight RGBA samples from bounded ICC profiles to SDR sRGB.
+public sealed class ImageColorProfile {
+  private init() { }
+
   shared {
     internal const MaxProfileBytes int32 = 4194304
     private const Rgb uint32 = 0x52474220u
     private const Gray uint32 = 0x47524159u
     private const Curve uint32 = 0x63757276u
     private const Parametric uint32 = 0x70617261u
+
+    /// Converts straight RGBA8 samples in place before ImageSource.Transfer or alpha premultiplication.
+    /// Alpha bytes are unchanged. Failed or cancelled output must not be published.
+    /// @param profile The complete ICC v2/v4 profile, at most 4 MiB.
+    /// @param straightRgba The nonempty RGBA8 buffer. Its length must be divisible by four.
+    /// @param gray True for original gray samples replicated into the RGB channels.
+    /// @param cancellationToken Cancels conversion before publication.
+    /// @returns Success, InvalidData, Unsupported for LUT or incompatible profiles, or Cancelled.
+    public func ToSrgb(profile ReadOnlyMemory[uint8], straightRgba Span[uint8], gray bool,
+      cancellationToken CancellationToken) ImageDecodeStatus {
+        if straightRgba.Length == 0 || straightRgba.Length % 4 != 0 {
+          throw ArgumentException("A complete RGBA pixel buffer is required", "straightRgba")
+        }
+        try {
+          cancellationToken.ThrowIfCancellationRequested()
+          Convert(profile.Span, gray, straightRgba, cancellationToken)
+          return ImageDecodeStatus.Success
+        } catch (error OperationCanceledException) {
+          return ImageDecodeStatus.Cancelled
+        } catch (error InvalidDataException) {
+          return ImageDecodeStatus.InvalidData
+        } catch (error NotSupportedException) {
+          return ImageDecodeStatus.Unsupported
+        }
+      }
 
     internal func Convert(profile ReadOnlySpan[uint8], gray bool, pixels Span[uint8], token CancellationToken) {
       if profile.Length < 132 || profile.Length > MaxProfileBytes || U32(profile, 0) != uint32(profile.Length)

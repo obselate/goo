@@ -846,6 +846,30 @@ class ImageSourceCacheTests : IDisposable {
         Assert.Equal([]uint8{180, 90, 30, 255}, lease.Result()!!.Pixels())
     }
 
+    @Fact
+    func ConsumerDecodedPixelsShareColorAndTransferLifetimeContracts() {
+        let profile = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "icc", "DisplayP3-v4.icc"))
+        let pixels = []uint8{180, 90, 30, 128}
+        Assert.Equal(ImageDecodeStatus.Success, ImageColorProfile.ToSrgb(profile, pixels, false, CancellationToken.None))
+        Assert.Equal(uint8(128), pixels[3])
+        Assert.InRange(pixels[0], uint8(191), uint8(195))
+        Assert.InRange(pixels[1], uint8(81), uint8(85))
+        Assert.Equal(uint8(0), pixels[2])
+        Assert.Equal(ImageDecodeStatus.InvalidData, ImageColorProfile.ToSrgb([4]uint8,
+            pixels, false, CancellationToken.None))
+        Assert.Equal(ImageDecodeStatus.Cancelled, ImageColorProfile.ToSrgb(profile,
+            pixels, false, CancellationToken(true)))
+        for channel in 0 ... 3 { pixels[channel] = uint8((int32(pixels[channel]) * pixels[3] + 127) / 255) }
+        var releases = 0
+        using let source = ImageSource.Transfer(1, 1, pixels, () -> releases++)
+        using let lease = source.Acquire()
+        source.Dispose()
+        Assert.Equal(0, releases)
+        Assert.Equal(pixels, lease.Result()!!.Pixels())
+        lease.Dispose()
+        Assert.Equal(1, releases)
+    }
+
     private func Write(name string, bytes[]uint8) string {
         let path = Path.Combine(directory, name)
         File.WriteAllBytes(path, bytes)
