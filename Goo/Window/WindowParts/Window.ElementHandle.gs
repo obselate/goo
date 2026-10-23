@@ -43,6 +43,13 @@ public partial class Window {
     return result
   }
 
+  internal func CancelElementGestures(n Node) bool {
+    requireUiThread("ElementHandle.CancelGestures")
+    let result = input.CancelGestures(node, resolver, n)
+    if result { markDirtyAndRender() }
+    return result
+  }
+
   internal func ActivateElement(n Node) bool {
     requireUiThread("ElementHandle.Activate")
     if IsInputBlocked || n.Kind != NodeKind.Button { return false }

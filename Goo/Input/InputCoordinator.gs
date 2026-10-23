@@ -88,9 +88,10 @@ internal partial class InputCoordinator {
     }
   }
 
-  // Shortens idle waits to the next caret blink or key-repeat edge.
   internal func NextTickDeadlineSeconds(elapsed float64 = 0.0) float64 ->
-  Math.Min(text.BlinkDeadlineSeconds() - elapsed, keyboard.RepeatDeadlineSeconds(elapsed))
+    Math.Min(Math.Min(text.BlinkDeadlineSeconds() - elapsed, keyboard.RepeatDeadlineSeconds(elapsed)),
+      pointer.GestureDeadlineSeconds() - float64(System.Diagnostics.Stopwatch.GetTimestamp())
+        / float64(System.Diagnostics.Stopwatch.Frequency))
 
   internal func RefreshHover(root Node?, resolver Resolver) bool {
     try {
@@ -144,6 +145,11 @@ internal partial class InputCoordinator {
     finally { resolver.Flush() }
   }
 
+  internal func CancelGestures(root Node?, resolver Resolver, target Node) bool {
+    try { return pointer.CancelGestures(root, target) }
+    finally { resolver.Flush() }
+  }
+
   internal func BeginDrag(root Node?, resolver Resolver, source Node, modifiers KeyModifiers) bool {
     try { return pointer.BeginDrag(root, source, modifiers) }
     finally { resolver.Flush() }
@@ -186,6 +192,8 @@ internal partial class InputCoordinator {
 
   internal func EditorSnapshot() FocusedEditorSnapshot ? -> text.EditorSnapshot()
 
+  internal func EditorSelection() TextSelection? -> text.EditorSelection()
+
   internal func CommitEditorText(root Node?, value string) bool -> text.CommitPlatformText(root, value)
 
   internal func ClearEditorFocus(resolver Resolver) -> focus.SetFocus(resolver, nil)
@@ -195,6 +203,9 @@ internal partial class InputCoordinator {
 
   internal func SetEditorSelection(root Node?, start int32, end int32) bool ->
   text.SetEditorSelection(root, start, end)
+
+  internal func SetEditorSelection(root Node?, selection TextSelection) bool ->
+    text.SetEditorSelection(root, selection.Anchor.Offset, selection.Active.Offset, selection)
 
   internal func SetEditorComposition(root Node?, value string, start int32, length int32) bool ->
   text.HandleComposition(root, value, start, length)

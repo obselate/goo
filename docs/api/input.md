@@ -165,7 +165,7 @@ Callbacks run only for the currently focused, enabled, visible client. Queued te
 
 `PointerEvent.IsPrimary` is true for the mouse and the first active touch or pen contact in a device-type sequence. The primary contact stays primary through its up callback. Goo does not promote another held contact during that sequence.
 
-`PointerEvent.Pressure` is normalized to the inclusive range from 0 to 1. Mouse pressure is 1 only while the primary button is held and 0 otherwise. Touch samples every SDL down, move, and up event. Pen samples its latest pressure-axis value on the next down, move, up, or pen-button event. A pressure-axis event alone emits no `PointerMove`. A pen proximity-out clears that pen's sampled pressure. Goo does not coalesce movement or expose tilt, twist, contact geometry, raw history, or gesture recognition.
+`PointerEvent.Pressure` is normalized to the inclusive range from 0 to 1. Mouse pressure is 1 only while the primary button is held and 0 otherwise. Touch samples every SDL down, move, and up event. Pen samples its latest pressure-axis value on the next down, move, up, or pen-button event. A pressure-axis event alone emits no `PointerMove`. A pen proximity-out clears that pen's sampled pressure. Goo does not coalesce movement or expose tilt, twist, contact geometry or raw history. Shared recognizers participate through the gesture arbitration contract below.
 
 ## Transfer data within a Goo window
 
@@ -221,6 +221,36 @@ Wheel input preserves fractional deltas and platform scroll scaling. `Window.Whe
 Primary touch begins a pan after eight logical window units when pointer callbacks, capture, text selection, or drag-and-drop have not claimed the interaction. Panning cancels the pending press and click, follows the pointer directly in each scroller's transformed local coordinates, and passes unused movement to ancestors. Recent movement can continue as bounded momentum after release. A new scroll action, input reset, or reduced-motion preference stops momentum. Reduced motion also makes ordinary scroll targets immediate on the next frame.
 
 `ElementHandle.ScrollIntoView()` uses the usable viewport, including reserved scrollbar gutters. Scroll interpolation and momentum run on the owning UI thread through the existing frame clock.
+
+## Participate in touch gesture arbitration
+
+```gsharp
+let surface = Container{Gestures: []GestureRecognizer{panRecognizer}}
+surface.Handle = ElementHandle()
+```
+
+Keep each recognizer instance stable across rebuilds.
+Core creates one session for each owner and interaction.
+
+| Rule | Behavior |
+| --- | --- |
+| `Evaluate` | Read samples and update private state. Do not call app code or retain the input. |
+| `Notify` | Deliver the resolved Started, Changed, Completed or Canceled event. |
+| Deadline | Return an absolute input time, or positive infinity. Core wakes without continuous rendering. |
+| Contact release | The Up sample includes the released contact with `IsDown = false`. |
+| Winner | The deepest owner wins. Declaration order breaks a same-owner tie. |
+| Default action | A same-owner recognizer wins a tie with scrolling or drag/drop. Deeper defaults keep their region. |
+| Threshold | Scroll starts at eight logical units. Touch drag/drop starts at four. |
+| Capture | Raw Capture or PreventDefault takes precedence. |
+| Stable ownership | A later contact cannot steal a winning interaction. |
+| Completion | Suppress losing clicks, selection drags and drops. |
+| Cancellation | Native cancel, focus loss, owner loss, replacement and callback failure terminate once. |
+| Explicit cancel | `ElementHandle.CancelGestures()` cancels its sessions without replay. |
+| Touch editor | Defer caret placement until an unclaimed tap release. Mouse selection stays unchanged. |
+
+Use `PlatformInput.Selection` to read effective positions and affinities.
+Use `SetSelection(TextSelection)` to preserve affinities and normalize grapheme boundaries.
+
 
 ## `Command`
 
@@ -540,6 +570,223 @@ Source:
 - [`PlatformInput.gs`](../../Goo/Input/PlatformInput.gs)
 
 Captures FocusId, effective UTF-16 Text, SelectionStart, SelectionEnd, CompositionStart, CompositionEnd, IsPassword, IsMultiline, IsReadOnly, and logical CaretArea for one editor. Password text is available only to the trusted host, which must apply platform privacy rules.
+
+## `GestureCancelReason`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Explains why a gesture session did not complete normally.
+
+### Values
+
+- `None`
+- `LostArbitration`
+- `PointerCanceled`
+- `FocusLost`
+- `OwnerUnavailable`
+- `Replaced`
+- `Explicit`
+- `CallbackFailed`
+
+### `CallbackFailed`
+
+A gesture callback failed.
+
+### `Explicit`
+
+The consumer explicitly canceled the gesture.
+
+### `FocusLost`
+
+The window lost input focus.
+
+### `LostArbitration`
+
+Another interaction acquired the contacts.
+
+### `None`
+
+The transition is not a cancellation.
+
+### `OwnerUnavailable`
+
+The owner was removed, hidden, disabled or blocked.
+
+### `PointerCanceled`
+
+The platform canceled a contact.
+
+### `Replaced`
+
+The owner's recognizer declarations changed.
+
+## `GestureDecision`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Selects the next arbitration operation without invoking application callbacks.
+
+### Values
+
+- `Pending`
+- `Accept`
+- `Recognize`
+- `Complete`
+- `Reject`
+
+### `Accept`
+
+Claims the interaction or updates its current winner.
+
+### `Complete`
+
+Completes an accepted gesture.
+
+### `Pending`
+
+Keeps the session eligible without changing ownership.
+
+### `Recognize`
+
+Claims and completes a discrete gesture.
+
+### `Reject`
+
+Withdraws this session.
+
+## `GestureInput`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Provides callback-lifetime access to an owner's settled contact samples. Do not retain this object beyond GestureSession.Evaluate.
+
+### `PointerAt(int32)`
+
+Gets a contact sample by arrival order. An invalid index is an argument error.
+
+### `ChangedPointerId`
+
+Gets the changed contact identifier, or -1 for a deadline.
+
+### `Kind`
+
+Gets the transition being evaluated.
+
+### `PointerCount`
+
+Gets the number of samples, including the released contact on Up.
+
+### `TimeSeconds`
+
+Gets monotonic window time in seconds, shared with session deadlines.
+
+## `GestureInputKind`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Identifies the input transition evaluated by a gesture session.
+
+### Values
+
+- `Down`
+- `Move`
+- `Up`
+- `Deadline`
+
+### `Deadline`
+
+The session's monotonic deadline was reached.
+
+### `Down`
+
+A contact was pressed.
+
+### `Move`
+
+A contact moved.
+
+### `Up`
+
+A contact was released.
+
+## `GesturePhase`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Identifies a gesture callback's lifecycle transition.
+
+### Values
+
+- `Started`
+- `Changed`
+- `Completed`
+- `Canceled`
+
+### `Canceled`
+
+The session was canceled or rejected.
+
+### `Changed`
+
+The accepted session changed.
+
+### `Completed`
+
+The gesture completed normally.
+
+### `Started`
+
+The session acquired the interaction.
+
+## `GesturePointer`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Describes one contact with stable PointerId, Device, owner-local Position, logical WindowPosition and IsDown state. Up retains its contact through evaluation.
+
+## `GestureRecognizer`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Declares a reusable recognizer whose mutable state belongs to created sessions.
+
+### `CreateSession`
+
+Creates a distinct session for one mounted owner and interaction.
+
+## `GestureSession`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Evaluates input before core resolves ownership, then receives settled lifecycle notifications.
+
+### `Evaluate(GestureInput)`
+
+Updates private recognition state without invoking application callbacks or changing the tree.
+
+### `NextDeadlineSeconds`
+
+Gets the next absolute TimeSeconds deadline, or positive infinity when none is required.
+
+### `Notify(GesturePhase,GestureCancelReason)`
+
+Delivers a resolved transition. Every session receives exactly one terminal notification. Pending rejection also uses Canceled, but need not produce a public recognizer callback.
 
 ## `Key`
 
@@ -941,6 +1188,10 @@ Updates preedit and its selected UTF-16 segment without committing the value.
 
 Marks an existing effective UTF-16 range as composing text.
 
+### `SetSelection(TextSelection)`
+
+Selects effective UTF-16 positions while preserving both endpoint affinities. Grapheme normalization and composition use the same rules as the offset-only overload.
+
 ### `SetSelection(int32,int32)`
 
 Selects effective UTF-16 offsets. Goo expands ranges to whole grapheme clusters. Selection direction and composing ranges remain independent.
@@ -954,6 +1205,10 @@ Returns: True when a drop target accepts the drag.
 ### `Editor`
 
 Gets a current immutable snapshot, or nil when no text editor has focus.
+
+### `Selection`
+
+Gets the focused editor's effective selection, preserving endpoint affinities, or nil without an editor.
 
 ## `PointerButton`
 
