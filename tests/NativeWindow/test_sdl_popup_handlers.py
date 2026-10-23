@@ -15,6 +15,6 @@ with tempfile.TemporaryDirectory(prefix="goo-popup-handlers-") as temporary:
     test = Path(temporary) / "test.c"
     test.write_text(harness.replace("PATCHED_HANDLERS", source[start:end]))
     binary = Path(temporary) / "test"
-    flags = shlex.split(subprocess.check_output(["pkg-config", "--cflags", "--libs", "wayland-client"], text=True))
+    flags = shlex.split(subprocess.check_output(["pkg-config", "--cflags", "--libs", "wayland-client"], universal_newlines=True))
     subprocess.run([os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra", "-Werror", "-I", str(source_root / "include"), str(test), str(Path(sys.argv[2]).resolve()), *flags, "-o", str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
