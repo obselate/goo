@@ -146,7 +146,7 @@ jobs:
       - name: Run focused API contract tests
         if: needs.changes.outputs.api == 'true'
         run: |
-          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
+          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify optional spell checking
