@@ -151,6 +151,42 @@ internal class ScrollbarFixtures {
     return canceled.ScrollY == 0.0F && canceled.ScrollTargetY == 0.0F
   }
 
+  func VirtualThumbDragSurvivesRowRetirementContract() bool {
+    for deferred in []bool{ false, true } {
+      let cell = ScrollbarVirtualDragCell()
+      let window = Window{ Root: cell, Width: 75, Height: 60 }
+      try {
+        window.UpdateTree()
+        let root = window.Tree!!
+        let row = cell.Rows.Handles[0].AttachedNode()!!
+        var geometry ScrollThumbGeometry
+        if !verticalScrollThumb(root, out geometry) { return false }
+        let x = geometry.Bounds.X + geometry.Bounds.W / 2.0F
+        let start = geometry.Bounds.Y + geometry.Bounds.H / 2.0F
+        let travel = geometry.TrackBounds.H - geometry.Bounds.H
+        if hitTopmost(root, x, start) != row { return false }
+
+        let input = window.InputForTest
+        input.QueuePointerPress(x, start, PointerButton.Primary, KeyModifiers{})
+        window.DrainQueuedInputForTest()
+        for index in 1 ... 121 {
+          input.QueuePointerMove(x, start + travel * float32(index) / 120.0F, KeyModifiers{})
+          window.DrainQueuedInputForTest()
+          window.UpdateTree(0.01, 0.01, !deferred || index % 3 == 0)
+          if index == 60 && (!row.Retired || root.Retired || root.ScrollY >= geometry.Maximum) {
+            return false
+          }
+        }
+        input.QueuePointerRelease(x, start + travel, PointerButton.Primary, KeyModifiers{})
+        window.DrainQueuedInputForTest()
+        if root.Retired || !row.Retired || Math.Abs(root.ScrollY - geometry.Maximum) > 0.01F {
+          return false
+        }
+      } finally { window.Close() }
+    }
+    return true
+  }
+
   func TrackPagingAndPreventDefaultContract() bool {
     let paged = mountScrollViewport(false, ScrollbarVisibility.Always)
     let resolver = Resolver{}
@@ -748,5 +784,15 @@ internal class ScrollbarDescriptorSwitchSource : VirtualState, VirtualSource {
     }
     output.ContentSize = LayoutSize{ Width: 200, Height: 3200 }
     output.ItemCount = 100
+  }
+}
+
+internal class ScrollbarVirtualDragCell : Cell {
+  internal let Rows VirtualFixtureCell = VirtualFixtureCell(50)
+
+  override func Build() Blob -> Virtual(VirtualFixtureSource(Rows)){
+    Width = 75, Height = 60,
+    ScrollbarY = Scrollbar{ Thickness: 4, Inset: 0, MinThumbLength: 24, Thumb: Container{} },
+    ScrollbarVisibilityY = ScrollbarVisibility.Always,
   }
 }
