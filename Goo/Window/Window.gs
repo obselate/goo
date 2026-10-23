@@ -426,7 +426,7 @@ public partial class Window {
   }
 
   /// Gets the current native clipboard text on the window UI thread.
-  /// An empty result can mean an empty clipboard, native copy failure, or text exceeding 1 MiB of UTF-8.
+  /// An empty result can mean an empty clipboard, native copy failure, or text exceeding 16 MiB of UTF-8.
   /// @exception InvalidOperationException when the window is not open.
   public func GetClipboardText() string {
     requireUiThread("Window.GetClipboardText")

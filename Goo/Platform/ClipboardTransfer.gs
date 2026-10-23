@@ -11,7 +11,7 @@ internal unsafe partial class ClipboardTransfer {
   shared {
     internal const MaxImageBytes int32 = 67108864
     internal const MaxFileListBytes int32 = 1048576
-    internal const MaxTextBytes int32 = 1048576
+    internal const MaxTextBytes int32 = 16777216
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
     private let imageTypes []string = []string{"image/png", "image/jpeg", "image/gif", "image/bmp", "image/tiff"}
 

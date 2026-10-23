@@ -62,7 +62,7 @@ public sealed class ExplicitKeyBindingTests
             input.Execute(new TextCommand { Kind = TextCommandKind.SelectAll });
             var intercepted = 0;
             if (editor) controller.OnCommand = e => { intercepted++; e.Cancel = true; };
-            foreach (var text in new[] { new string('\t', 1048577), new string('\u00e9', 524289) })
+            foreach (var text in new[] { new string('\t', 16777217), new string('\u00e9', 8388609) })
             {
                 window.InputForTest.SetClipboardFallback(text);
                 Assert.False(input.Execute(new TextCommand { Kind = TextCommandKind.Paste }));
