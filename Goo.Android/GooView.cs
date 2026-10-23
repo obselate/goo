@@ -452,8 +452,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         {
             var autofill = Context?.GetSystemService("autofill") as global::Android.Views.Autofill.AutofillManager;
             autofill?.NotifyViewExited(this);
-            if (focus != editorFocus && autofill?.NextAutofillId is { } autofillId)
-                AutofillId = autofillId;
+            if (focus != editorFocus)
+                autofill?.Cancel();
             batchConnection = null;
             batchDepth = 0;
             editorPending = false;

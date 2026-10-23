@@ -25,6 +25,7 @@ internal static class AndroidInputSmoke
         using (var fill = Android.Views.Autofill.AutofillValue.ForText("filled@example.com"))
             view.Autofill(fill);
         AssertEditor(input, "filled@example.com", 18, 18, -1, -1);
+        Log.Info("GooInputSmoke", "PASS edit_metadata autofill_hints autofill_value");
         SetText(input, entry, "");
         using (var key = new Android.Views.KeyEvent(0, 0, Android.Views.KeyEventActions.Down,
             Android.Views.Keycode.Numpad1, 0, Android.Views.MetaKeyStates.NumLockOn))
