@@ -57,12 +57,12 @@ EOF
   -no-direct-adb -adb-path "$adb" > "$work/logs/emulator.log" 2>&1 &
 emulator_pid=$!
 cleanup() {
-  timeout 20 "$adb" -P 5038 -s emulator-5560 logcat -d > "$work/logs/logcat.txt" 2>&1 || true
-  timeout 20 "$adb" -P 5038 -s emulator-5560 shell cmd gpu vkjson > "$work/logs/vulkan.json" 2>&1 || true
-  timeout 20 "$adb" -P 5038 -s emulator-5560 exec-out screencap -p > "$work/logs/screen.png" 2>/dev/null || true
-  timeout 10 "$adb" -P 5038 -s emulator-5560 emu kill >/dev/null 2>&1 || true
-  kill "$emulator_pid" 2>/dev/null || true
-  wait "$emulator_pid" 2>/dev/null || true
+  timeout --kill-after=5 20 "$adb" -P 5038 -s emulator-5560 logcat -d > "$work/logs/logcat.txt" 2>&1 || true
+  timeout --kill-after=5 20 "$adb" -P 5038 -s emulator-5560 shell cmd gpu vkjson > "$work/logs/vulkan.json" 2>&1 || true
+  timeout --kill-after=5 20 "$adb" -P 5038 -s emulator-5560 exec-out screencap -p > "$work/logs/screen.png" 2>/dev/null || true
+  timeout --kill-after=5 10 "$adb" -P 5038 -s emulator-5560 emu kill >/dev/null 2>&1 || true
+  kill -KILL "$emulator_pid" 2>/dev/null || true
+  timeout --kill-after=5 10 "$adb" -P 5038 kill-server >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 for attempt in {1..180}; do
