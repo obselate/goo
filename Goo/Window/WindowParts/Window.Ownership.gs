@@ -14,6 +14,7 @@ internal class WindowFamily {
   internal var Closing bool
   internal var CloseError Exception?
   internal var Dialog NativeFileDialog?
+  internal var ExternalDialog NativeDialogOwnerLease?
   internal var NativeDrop NativeDropState?
 }
 
@@ -67,7 +68,9 @@ public partial class Window {
   }
 
   /// Gets whether a modal child or native chooser blocks this window's native, platform, focus, and accessibility input.
-  public prop IsInputBlocked bool{ get -> family?.BlockingChild?.IsOpen == true || family?.Dialog != nil }
+  public prop IsInputBlocked bool{
+    get -> family?.BlockingChild?.IsOpen == true || family?.Dialog != nil || family?.ExternalDialog != nil
+  }
 
   private func validateOwnership() {
     if Owner != nil && ForeignParentHandle != "" { throw InvalidOperationException("Owner and ForeignParentHandle cannot be combined") }

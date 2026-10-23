@@ -55,6 +55,16 @@
 !/Goo.Accessibility/**
 !/Goo.Android/
 !/Goo.Android/**
+!/Goo.SpellCheck/
+!/Goo.SpellCheck/**
+!/Goo.SpellCheck.Hunspell/
+!/Goo.SpellCheck.Hunspell/**
+!/Goo.SpellCheck.Android/
+!/Goo.SpellCheck.Android/**
+!/Goo.Printing/
+!/Goo.Printing/**
+!/Goo.Printing.Android/
+!/Goo.Printing.Android/**
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/
@@ -76,6 +86,8 @@
 !/docs/android.md
 !/docs/images.md
 !/docs/svg.md
+!/docs/spellcheck.md
+!/docs/printing.md
 !/docs/migrations/
 !/docs/migrations/**
 

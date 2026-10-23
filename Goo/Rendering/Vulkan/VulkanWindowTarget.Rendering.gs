@@ -12,7 +12,7 @@ internal unsafe partial class VulkanWindowTarget {
     if frameFailed {
       throw InvalidOperationException("Vulkan window target cannot continue after a failed frame")
     }
-    if disposed || frameBegun || queueStage != QueueStageIdle
+    if disposed || frameBegun || queueStage != QueueStageIdle || pageCompletion != nil || queuedPage != nil
       || startupState == VulkanWindowStartupState.Closing {
       return
     }

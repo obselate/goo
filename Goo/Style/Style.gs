@@ -30,6 +30,41 @@ public open class Style {
     }
   }
 
+  /// Reads explicit inline declarations without resolving inherited values.
+  /// Returns false when the style contains other fields or a non-pixel font size.
+  /// @param properties The supported declarations, or an empty value on failure.
+  /// @returns True when every declaration can be represented.
+  public func TryGetTextStyle(out properties TextStyleProperties) bool {
+    properties = TextStyleProperties{}
+    var family string?
+    var size float64?
+    var weight float64?
+    var fontStyle FontStyle?
+    var color Color?
+    var decoration TextDecoration?
+    if let values = entries {
+      var cursor = values.Cursor()
+      while cursor.MoveNext() {
+        let entry = cursor.Current
+        switch entry.Field {
+          case StyleField.FontFamily { family = entryText(entry) }
+          case StyleField.FontSize {
+            if int32(entry.B) != int32(LengthUnit.Px) { return false }
+            size = float64(entry.A)
+          }
+          case StyleField.FontWeight { weight = float64(entry.A) }
+          case StyleField.FontStyle { fontStyle = FontStyle(int32(entry.A)) }
+          case StyleField.Color { color = Color.FromNormalized(entry.A, entry.B, entry.C, entry.D) }
+          case StyleField.TextDecoration { decoration = TextDecoration(int32(entry.A)) }
+          case _ { return false }
+        }
+      }
+    }
+    properties = TextStyleProperties{ FontFamily: family, FontSize: size, FontWeight: weight,
+      FontStyle: fontStyle, Color: color, TextDecoration: decoration }
+    return true
+  }
+
   internal func push(f StyleField, a float32, b float32, c float32, d float32) {
     addEntry(StyleEntry{ Field: f, A: a, B: b, C: c, D: d })
   }

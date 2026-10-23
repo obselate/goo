@@ -80,6 +80,11 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   private var pendingSubmissionSerial uint64
   private var primitiveRenderer VulkanPrimitiveRenderer? = nil
   private var layerPool VulkanOffscreenLayerPool? = nil
+  private var includeResourceUploads bool
+
+  internal func EnableResourceUploads() {
+    includeResourceUploads = true
+  }
 
   internal prop PendingSubmissionSerial uint64{ get -> pendingSubmissionSerial }
   internal prop Extent VkExtent2D{ get -> extent }
@@ -405,7 +410,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
     if plan.ByteSize > stagingByteSize {
       throw ArgumentOutOfRangeException("requestedRegion")
     }
-    EnsureResidentResources()
+    if !includeResourceUploads { EnsureResidentResources() }
     if state == VulkanOffscreenState.Pending {
       lastResult = VkConstants.VK_NOT_READY
       return VkConstants.VK_NOT_READY
@@ -470,6 +475,11 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         renderer.PreparePrimitiveFrame(frame, extent, textScaleX, textScaleY,
           clipMaskSubmissionSerial)
         BeginRecord()
+        if includeResourceUploads {
+          imageResources.RecordUploads(commandBuffer, resourceGeneration, out var imageBytes, out var imageBarriers)
+          pathResources.RecordUpload(commandBuffer)
+          textAtlases?.RecordUploads(commandBuffer, out var textBytes, out var textBarriers)
+        }
         renderer.RecordPrimitiveFrameUpload(commandBuffer)
         renderer.RecordClipMasks(commandBuffer, extent)
         BeginRendering(clearColor, VkRect2D{ extent: extent })
@@ -515,6 +525,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
           try { renderer.Abort(ClipFrameSlot) } catch (cleanup Exception) { }
         }
         layerPool?.Abort()
+        AbortResourceUploads()
         ReleaseReservedImageReferences()
         state = VulkanOffscreenState.Idle
         throw error
@@ -536,6 +547,16 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
         sharedLease.MarkDeviceLost()
       }
       return primitiveFlushResult
+    }
+    if includeResourceUploads {
+      let imageFlush = imageResources.FlushBeforeSubmit()
+      if imageFlush != VkConstants.VK_SUCCESS { return imageFlush }
+      let pathFlush = pathResources.FlushBeforeSubmit()
+      if pathFlush != VkConstants.VK_SUCCESS { return pathFlush }
+      if let atlases = textAtlases {
+        let textFlush = atlases.FlushBeforeSubmit()
+        if textFlush != VkConstants.VK_SUCCESS { return textFlush }
+      }
     }
     queueMailbox.PrepareSubmit(commandBuffer, 0uL, 0uL)
     if !queueMailbox.BeginSubmit() { return VkConstants.VK_NOT_READY }
@@ -577,6 +598,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       primitiveFrameSubmissionReconcilePending = primitiveRenderer != nil
       layerSubmissionReconcilePending = layerPool != nil
       try {
+        ReconcileUploadSubmission(submissionSerial)
         MarkSubmittedResourceUses(submissionSerial)
       } catch (error Exception) { throw error }
       guard let renderer = primitiveRenderer else {
@@ -661,6 +683,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       renderer.Abort(ClipFrameSlot)
     }
     layerPool?.Abort()
+    AbortResourceUploads()
     ReleaseReservedImageReferences()
     clipFrameSubmissionReconcilePending = false
     primitiveFrameSubmissionReconcilePending = false
@@ -736,6 +759,7 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
   }
 
   private func ReconcileSubmittedBookkeeping() {
+    ReconcileUploadSubmission(clipMaskSubmissionSerial)
     if clipFrameSubmissionReconcilePending {
       guard let renderer = primitiveRenderer else {
         throw InvalidOperationException("Vulkan offscreen clip renderer is unavailable during submission reconciliation")
@@ -758,6 +782,20 @@ internal unsafe sealed class VulkanOffscreenTarget : IDisposable {
       pool.MarkSubmitted(clipMaskSubmissionSerial)
       layerSubmissionReconcilePending = false
     }
+  }
+
+  private func ReconcileUploadSubmission(serial uint64) {
+    if !includeResourceUploads { return }
+    imageResources.MarkSubmitted(commandBuffer, serial, resourceGeneration)
+    textAtlases?.MarkSubmitted(commandBuffer, serial)
+    pathResources.MarkSubmitted(commandBuffer, serial)
+  }
+
+  private func AbortResourceUploads() {
+    if !includeResourceUploads { return }
+    imageResources.AbortUploads(commandBuffer, resourceGeneration)
+    textAtlases?.AbortUploads()
+    pathResources.AbortUpload()
   }
 
   internal func AbandonAfterDeviceLoss() {

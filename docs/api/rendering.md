@@ -69,6 +69,41 @@ lists use Goo-owned GPU storage and remain a single gradient draw; device storag
 limits still apply. Interpolation uses premultiplied linear color, including
 per-stop alpha and element opacity.
 
+## `OffscreenRenderOptions`
+
+Source:
+
+- [`OffscreenRender.gs`](../../Goo/Rendering/OffscreenRender.gs)
+
+Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
+
+## `OffscreenRenderResult`
+
+Source:
+
+- [`OffscreenRender.gs`](../../Goo/Rendering/OffscreenRender.gs)
+
+Contains Status, owned Capture pixels on Success and Error detail on failure.
+
+## `OffscreenRenderStatus`
+
+Source:
+
+- [`OffscreenRender.gs`](../../Goo/Rendering/OffscreenRender.gs)
+
+Reports an independent render operation without exposing GPU resource handles.
+
+### Values
+
+- `Success`
+- `Busy`
+- `NotReady`
+- `Unsupported`
+- `BudgetExceeded`
+- `DeviceLost`
+- `Cancelled`
+- `Failed`
+
 ## `ShaderEffect`
 
 Source:

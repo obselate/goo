@@ -16,6 +16,10 @@ public sealed class PublicDocumentationTests
     private static readonly string[] ExpectedMethodIds =
     {
         "M:Goo.Accessibility.#ctor",
+        "M:Goo.NativeDialogOwnerLease.Dispose",
+        "M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)",
+        "M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)",
+        "M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)",
         "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
         "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
         "M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)",
@@ -445,6 +449,10 @@ public sealed class PublicDocumentationTests
     private static readonly HashSet<Type> SynthesizedPrimaryDataTypes =
     [
         typeof(FocusedEditorSnapshot),
+        typeof(NativeDialogOwnerResult),
+        typeof(OffscreenRenderOptions),
+        typeof(OffscreenRenderResult),
+        typeof(TextStyleProperties),
         typeof(TextChange),
         typeof(LayoutTransition),
         typeof(AccessibilityId),
@@ -464,6 +472,9 @@ public sealed class PublicDocumentationTests
         new Dictionary<string, DocumentationShape>(StringComparer.Ordinal)
         {
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
+            ["M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)"] = new(["properties"], [], true),
+            ["M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)"] = new(["cancellation"], [], true),
+            ["M:Goo.Window.RenderOffscreenAsync(Goo.Cell,Goo.OffscreenRenderOptions,System.Threading.CancellationToken,Goo.WindowCapture)"] = new(["root", "options", "cancellation", "reusable"], [], true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32,System.Int32)"] = new(["start", "length", "caret"], [], false),
@@ -828,6 +839,8 @@ public sealed class PublicDocumentationTests
         };
         var count = File.ReadLines(path)
             .Select(line => line.Split('|'))
+            .Where(parts => !parts[1].StartsWith("Goo.SpellCheck.", StringComparison.Ordinal) &&
+                !parts[1].StartsWith("Goo.Printing.", StringComparison.Ordinal))
             .Count(parts =>
                 parts[0] == "ctor"
                     && parts[1] != "Goo.Cell`1"

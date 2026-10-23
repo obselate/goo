@@ -213,6 +213,8 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   public func PollQueueCompletion() bool {
+    StartQueuedPage()
+    PollPage()
     if RetirementWorkPending && queueStage == QueueStageIdle && !frameBegun {
       if hideReleasePending { ReleaseHiddenResources() }
       PollRetiredSwapchains()

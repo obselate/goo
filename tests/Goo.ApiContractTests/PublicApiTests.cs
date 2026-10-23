@@ -133,7 +133,9 @@ public class PublicApiTests
 
     private static IEnumerable<Type> ApiTypes()
     {
-        return typeof(Window).Assembly.GetExportedTypes()
+        return new[] { typeof(Window).Assembly, typeof(Goo.SpellCheck.SpellCheckSession).Assembly,
+                typeof(Goo.SpellCheck.HunspellSpellingService).Assembly, typeof(Goo.Printing.Printing).Assembly }
+            .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !IsPackageContainer(type))
             .Where(type => !IsTestFixture(type))
             .OrderBy(type => type.FullName, StringComparer.Ordinal);

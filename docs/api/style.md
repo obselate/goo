@@ -818,6 +818,14 @@ Collects ordered layout, paint, and text declarations. Use BasedOn to copy reusa
 
 Creates an empty write-only style declaration sink.
 
+### `TryGetTextStyle(TextStyleProperties@)`
+
+Reads explicit inline declarations without resolving inherited values. Returns false when the style contains other fields or a non-pixel font size.
+
+- `properties`: The supported declarations, or an empty value on failure.
+
+Returns: True when every declaration can be represented.
+
 ### `AlignContent`
 
 Sets cross-axis line distribution.

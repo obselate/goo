@@ -89,7 +89,7 @@ internal unsafe partial class VulkanWindowTarget {
           }
         }
       }
-      if frameBegun {
+      if frameBegun || pageCompletion != nil || queuedPage != nil {
         return WindowReadbackRequestStatus.Busy
       }
       var captureFrame SceneFrame? = nil

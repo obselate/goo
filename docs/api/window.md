@@ -267,6 +267,10 @@ Use `TryPost` when teardown can race the producer. It returns `false` after post
 
 Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
 
+`Window.Closed` is cancelled when owner-thread dispatch stops. Link asynchronous
+package work to this token so its result can complete even when teardown discards
+an accepted action. Cancellation callbacks must not throw or use torn-down UI state.
+
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
 
 ## Schedule window timers
@@ -654,6 +658,74 @@ Follows native window activation. This is the default.
 
 Uses the inactive material appearance.
 
+## `NativeDialogOwnerKind`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Identifies the borrowed native owner representation.
+
+### Values
+
+- `Win32`
+- `Cocoa`
+- `Wayland`
+
+## `NativeDialogOwnerLease`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Keeps a native dialog owner alive and blocks only that owner's Goo input until disposed.
+
+### `Dispose`
+
+Releases modal ownership on the window thread after native callbacks stop using the owner.
+
+### `Closed`
+
+Gets a token cancelled when the owner requests close. Release the lease after native dismissal.
+
+### `Handle`
+
+Gets the HWND or NSWindow. Wayland owners use Identifier instead.
+
+### `Identifier`
+
+Gets the exported wayland: parent identifier, or an empty string on other hosts.
+
+### `Kind`
+
+Gets the kind of borrowed native owner. The lease never owns the native window.
+
+## `NativeDialogOwnerResult`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Contains Status, an Owner lease on Success and Error detail on failure.
+
+## `NativeDialogOwnerStatus`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Reports whether a native service can borrow this window as a modal owner.
+
+### Values
+
+- `Success`
+- `Unsupported`
+- `Busy`
+- `NotReady`
+- `Closed`
+- `Cancelled`
+- `Failed`
+
 ## `WaylandBackdropOptions`
 
 Source:
@@ -677,6 +749,7 @@ Sources:
 - [`NativeAccessibilityHost.gs`](../../Goo/Accessibility/Native/NativeAccessibilityHost.gs)
 - [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
 - [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
 - [`NativeFileDrop.gs`](../../Goo/Window/NativeFileDrop.gs)
 - [`Window.gs`](../../Goo/Window/Window.gs)
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
@@ -692,6 +765,7 @@ Sources:
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
+- [`Window.Offscreen.gs`](../../Goo/Window/WindowParts/Window.Offscreen.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
@@ -745,6 +819,14 @@ Reports observed viewport visibility changes on the owner thread.
 ### `new`
 
 Creates a window with default configuration.
+
+### `AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)`
+
+Borrows a native owner for one optional package dialog without exposing SDL state.
+
+- `cancellation`: Cancels acquisition before native ownership begins.
+
+Returns: A lease on Success, or an explicit host or lifecycle status.
 
 ### `Attach(EmbeddedWindowHost)`
 
@@ -838,6 +920,17 @@ Returns: Owned paths and explicit read status; the clipboard may have changed si
 Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
 
 Returns: Owned encoded bytes with a MIME type and explicit read status.
+
+### `RenderOffscreenAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
+
+Renders a fresh, unattached cell at a separate layout size without resizing or presenting this window. Keep pumping the owner until completion. Pixels and new GPU allocations share MaxBytes.
+
+- `root`: The independent page content.
+- `options`: The logical viewport, pixel size, background and memory limit.
+- `cancellation`: Cancels the operation after in-flight GPU work is safe to release.
+- `reusable`: Previous pixels to reuse when the output size matches. Do not access them until completion.
+
+Returns: Owned pixels or an explicit operation status.
 
 ### `RequestActivation`
 
@@ -936,6 +1029,10 @@ Reports whether programmatic window movement is available.
 ### `Capabilities`
 
 Gets supported native lifecycle operations, or None before Open or Attach.
+
+### `Closed`
+
+Gets a token cancelled when this window stops accepting owner-thread work. A posted action can be discarded during teardown. Use this token to complete pending asynchronous work.
 
 ### `Decorated`
 

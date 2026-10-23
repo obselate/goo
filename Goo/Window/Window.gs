@@ -65,6 +65,13 @@ public sealed class WindowCapture {
       result.Pixels
     }
   }
+
+  internal init(result VulkanReadbackResult) {
+    width = result.Width
+    height = result.Height
+    rowBytes = result.RowBytes
+    pixels = result.OwnedPixels
+  }
 }
 
 internal enum WindowCaptureOwner { None; Public; Diagnostics }
