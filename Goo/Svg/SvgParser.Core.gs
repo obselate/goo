@@ -20,6 +20,7 @@ internal partial class SvgParser {
     private let ids HashSet[string] = HashSet[string](StringComparer.Ordinal)
     private let nodes List[SvgNode] = List[SvgNode]()
     private var reservedCurveCount int32
+    private var reservedDashEntries int32
     private var reservedAnimationTracks int32
     private var reservedAnimationKeyframes int32
     private var reservedMorphCurves int64
@@ -67,6 +68,10 @@ internal partial class SvgParser {
             if let id = string?(element.Attribute("id")) {
                 if id.Length == 0 || !ids.Add(id) {
                     throw Fail(element, "duplicate or empty id")
+                }
+                if (name is "linearGradient" or "radialGradient" or "clipPath") &&
+                    gradients.Count + clips.Count >= MaxDefinitions {
+                    throw Fail(element, "definition count exceeds $MaxDefinitions")
                 }
                 if (name is "linearGradient" or "radialGradient") {
                     gradients.Add(id, SvgGradientDefinition(element))
@@ -232,6 +237,10 @@ internal partial class SvgParser {
         private const MaxInputBytes int32 = 16 * 1024 * 1024
         private const MaxXmlCharacters int32 = 32 * 1024 * 1024
         private const MaxNodes int32 = 65536
+        private const MaxDefinitions int32 = 65536
+        private const MaxGradientHops int32 = 256
+        private const MaxDashEntries int32 = 1024
+        private const MaxTotalDashEntries int32 = 262144
         private const MaxCurves int32 = 262144
         private const MaxPaints int32 = 65536
         private const MaxStrokes int32 = 65536
