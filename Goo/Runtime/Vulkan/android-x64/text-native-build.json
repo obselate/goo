@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "gpu": {
-      "bytes": 243824,
+      "bytes": 246680,
       "exports": [
         "goo_image_decode_rgba",
         "goo_image_free",
@@ -60,11 +60,11 @@
       "runpath": [
         "$ORIGIN/"
       ],
-      "sha256": "8c5806d813e8478f0be1e79c92dbf18ba8c08b2836b3e15f125da0a4e6bfae0b",
+      "sha256": "556ee2daaac73e2072711a53b10cab31ac0547c2d0f95ccce0d1a1a77895045c",
       "soname": "libgoo-harfbuzz-gpu.so"
     },
     "harfbuzz": {
-      "bytes": 1502696,
+      "bytes": 1526792,
       "exports": [
         "hb_aat_layout_feature_type_get_name_id",
         "hb_aat_layout_feature_type_get_selector_infos",
@@ -628,7 +628,7 @@
       ],
       "rpath": [],
       "runpath": [],
-      "sha256": "a76bf68087d925970f9e8079853bc331da62260c275eda898f5d237533587eb3",
+      "sha256": "719deb5bafe59317c66cdccb65ccea4880e17741ed6e6d6cae78a66861aa84d3",
       "soname": "libgoo-harfbuzz.so"
     }
   },
@@ -673,8 +673,8 @@
     ],
     "environments": {
       "android-x64": {
-        "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-        "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+        "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+        "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
         "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384",
         "SOURCE_DATE_EPOCH": "0"
       }
@@ -739,8 +739,8 @@
   },
   "buildEvidence": {
     "environment": {
-      "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-      "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+      "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+      "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
       "LDFLAGS": "-Wl,--build-id=none -Wl,-z,max-page-size=16384",
       "SOURCE_DATE_EPOCH": "0"
     },

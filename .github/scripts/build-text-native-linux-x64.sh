@@ -46,8 +46,8 @@ if set(manifest["build"]["harfbuzzOptions"]) != required:
     raise SystemExit("HarfBuzz integration options drift")
 if manifest["build"]["environments"]["linux-x64"] != {
     "SOURCE_DATE_EPOCH": "0",
-    "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-    "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+    "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
+    "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=<temporary-source-root>=.",
     "LDFLAGS": "-Wl,--build-id=none",
 }:
     raise SystemExit("Linux build environment drift")
@@ -92,7 +92,7 @@ path.write_text(text, encoding="utf-8")
 PY
 python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"
 export SOURCE_DATE_EPOCH=0
-export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
+export CFLAGS="-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fcf-protection=full -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS='-Wl,--build-id=none'
 library_mode=shared

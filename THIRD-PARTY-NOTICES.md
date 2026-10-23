@@ -63,6 +63,11 @@ pinned HarfBuzz 15.0.0 upstream archive with `hb-gpu` enabled:
 `libgoo-harfbuzz.dylib` and `libgoo-harfbuzz-gpu.dylib` on macOS. They are
 private Goo artifacts, not system-library replacements or a runtime fallback.
 
+All native targets use strong stack protection and fortify level 2. The pinned
+glibc, MinGW, Bionic and Darwin headers do not implement fortify level 3.
+The x64 targets enable CET instrumentation and the arm64 targets enable PAC/BTI
+instrumentation. These flags do not establish Windows CFG support.
+
 - HarfBuzz 15.0.0, including hb-gpu: HarfBuzz Old MIT license.
 - Signed tag commit: `35f656a1a2bab548ea7f54a6dd3fba2b09680d14`.
 - Source archive SHA-256:

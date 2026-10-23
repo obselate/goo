@@ -33,8 +33,8 @@ if manifest["outputs"]["osx-arm64"] != {
     raise SystemExit("macOS output name drift")
 if manifest["build"]["environments"]["osx-arm64"] != {
     "SOURCE_DATE_EPOCH": "0",
-    "CFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
-    "CXXFLAGS": "-O3 -g0 -ffile-prefix-map=<temporary-source-root>=.",
+    "CFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
+    "CXXFLAGS": "-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=<temporary-source-root>=.",
     "LDFLAGS": "-Wl,-dead_strip",
 }:
     raise SystemExit("macOS build environment drift")
@@ -129,7 +129,7 @@ PY
 python3 "$repo_root/tools/Goo.TextNative/add-image-sources.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"
 export SOURCE_DATE_EPOCH=0
 export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
-export CFLAGS="-O3 -g0 -ffile-prefix-map=$work=."
+export CFLAGS="-O3 -g0 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-strong -mbranch-protection=standard -ffile-prefix-map=$work=."
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS='-Wl,-dead_strip'
 common_options=(--prefix=/usr --libdir=lib --buildtype=release --default-library=shared --wrap-mode=nodownload)
