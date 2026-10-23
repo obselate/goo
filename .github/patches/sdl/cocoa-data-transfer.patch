@@ -18,7 +18,7 @@ index 0000000..2c16c62
 +#endif
 diff --git a/src/video/cocoa/SDL_cocoadatatransfer.m b/src/video/cocoa/SDL_cocoadatatransfer.m
 new file mode 100644
-index 0000000..8c201f8
+index 0000000..1e1cde0
 --- /dev/null
 +++ b/src/video/cocoa/SDL_cocoadatatransfer.m
 @@ -0,0 +1,304 @@
@@ -205,13 +205,13 @@ index 0000000..8c201f8
 +    return [NSString stringWithUTF8String:text];
 +}
 +
-+SDL_DECLSPEC Uint32 SDLCALL Goo_GetDataTransferCapabilities(SDL_Window *window)
++__attribute__((visibility("default"))) Uint32 SDLCALL Goo_GetDataTransferCapabilities(SDL_Window *window)
 +{
 +    const char *driver = SDL_GetCurrentVideoDriver();
 +    return window && window->internal && driver && SDL_strcmp(driver, "cocoa") == 0 ? 31 : 0;
 +}
 +
-+SDL_DECLSPEC bool SDLCALL Goo_SetDataDropCallback(SDL_Window *window, Goo_CocoaDropCallback callback,
++__attribute__((visibility("default"))) bool SDLCALL Goo_SetDataDropCallback(SDL_Window *window, Goo_CocoaDropCallback callback,
 +    void *userdata, const char **types, Uint32 count)
 +{
 +    if (!Goo_GetDataTransferCapabilities(window) || count > 128) return SDL_SetError("Invalid Cocoa data drop configuration");
@@ -244,7 +244,7 @@ index 0000000..8c201f8
 +    }
 +}
 +
-+SDL_DECLSPEC int SDLCALL Goo_ReceiveDataDrop(SDL_Window *window, Uint64 token, const char *mime)
++__attribute__((visibility("default"))) int SDLCALL Goo_ReceiveDataDrop(SDL_Window *window, Uint64 token, const char *mime)
 +{
 +    (void)window;
 +    (void)token;
@@ -253,18 +253,18 @@ index 0000000..8c201f8
 +    return -1;
 +}
 +
-+SDL_DECLSPEC void SDLCALL Goo_FinishDataDrop(SDL_Window *window, Uint64 token, Uint32 effect)
++__attribute__((visibility("default"))) void SDLCALL Goo_FinishDataDrop(SDL_Window *window, Uint64 token, Uint32 effect)
 +{
 +    Goo_CocoaDataTransfer *transfer = Goo_CocoaTransfer(window, false);
 +    if (transfer.dropping && transfer.token == token) transfer.committed = effect & transfer.allowed & 3;
 +}
 +
-+SDL_DECLSPEC void SDLCALL Goo_CancelDataDrag(SDL_Window *window)
++__attribute__((visibility("default"))) void SDLCALL Goo_CancelDataDrag(SDL_Window *window)
 +{
 +    Goo_CocoaTransfer(window, false).source.cancelled = YES;
 +}
 +
-+SDL_DECLSPEC Uint32 SDLCALL Goo_StartDataDrag(SDL_Window *window, const char **types, Uint32 count,
++__attribute__((visibility("default"))) Uint32 SDLCALL Goo_StartDataDrag(SDL_Window *window, const char **types, Uint32 count,
 +    Uint32 effects, void *native_offer, void *send, Goo_CocoaDragCompleted completed, void *userdata)
 +{
 +    (void)types;
