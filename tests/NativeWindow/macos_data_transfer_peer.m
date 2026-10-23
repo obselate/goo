@@ -62,11 +62,6 @@ static NSArray<id<NSPasteboardWriting>> *make_data(void)
     if (![content_kind isEqualToString:@"mime"]) {
         NSMutableArray<NSURL *> *urls = [NSMutableArray arrayWithCapacity:2];
         for (int i = 0; i < 2; ++i) [urls addObject:[NSURL fileURLWithPath:[directory_path stringByAppendingPathComponent:[NSString stringWithFormat:@"source-%d.txt", i]]]];
-        if ([content_kind isEqualToString:@"legacy"]) {
-            NSPasteboardItem *item = [NSPasteboardItem new];
-            require([item setPropertyList:[urls valueForKey:@"path"] forType:NSFilenamesPboardType], @"Cannot publish native file names");
-            return @[item];
-        }
         return urls;
     }
     NSPasteboardItem *item = [NSPasteboardItem new];
@@ -119,8 +114,17 @@ static void check_data(NSPasteboard *board)
     if (!source_mode) return;
     @try {
         NSArray *writers = make_data();
-        NSMutableArray<NSDraggingItem *> *items = [NSMutableArray arrayWithCapacity:writers.count];
         NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+        if ([content_kind isEqualToString:@"legacy"]) {
+            NSPasteboard *board = [NSPasteboard pasteboardWithName:NSPasteboardNameDrag];
+            [board declareTypes:@[NSFilenamesPboardType] owner:nil];
+            require([board setPropertyList:[writers valueForKey:@"path"] forType:NSFilenamesPboardType], @"Cannot publish native file names");
+            output(@"start 0");
+            [self dragImage:[NSImage imageNamed:NSImageNameMultipleDocuments] at:point offset:NSZeroSize
+                event:event pasteboard:board source:self slideBack:NO];
+            return;
+        }
+        NSMutableArray<NSDraggingItem *> *items = [NSMutableArray arrayWithCapacity:writers.count];
         for (id<NSPasteboardWriting> writer in writers) {
             NSDraggingItem *item = [[NSDraggingItem alloc] initWithPasteboardWriter:writer];
             [item setDraggingFrame:NSMakeRect(point.x, point.y, 24, 24) contents:[NSImage imageNamed:NSImageNameMultipleDocuments]];
@@ -141,6 +145,19 @@ static void check_data(NSPasteboard *board)
     (void)session;
     (void)context;
     return NSDragOperationCopy | NSDragOperationMove;
+}
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
+{
+    (void)isLocal;
+    return NSDragOperationCopy | NSDragOperationMove;
+}
+- (void)draggedImage:(NSImage *)image endedAt:(NSPoint)point operation:(NSDragOperation)operation
+{
+    (void)image;
+    (void)point;
+    int effect = operation & NSDragOperationMove ? 2 : operation & NSDragOperationCopy ? 1 : 0;
+    output([NSString stringWithFormat:@"source-end %d %d %d", effect ? 0 : 1, effect, 0]);
+    stopped = YES;
 }
 - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)point operation:(NSDragOperation)operation
 {
