@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 
 /// Configures the animation core.
+/// Animation durations use milliseconds. Simulation elapsed time and velocity use seconds.
 public class Motion {
   private init() {
   }
@@ -28,24 +29,25 @@ public class Motion {
     public prop Default((float64, float64, float64) -> Simulation) { get; set; }
 
     /// Creates an exact-duration scalar simulation factory.
-    /// @param duration duration in seconds, including zero
+    /// @param durationMs duration in milliseconds, including zero
     /// @param easing progress curve
     /// @returns a reusable scalar simulation factory
-    public func Tween(duration float64, easing Easing = Easing.Linear)(float64, float64, float64) -> Simulation {
-      if !motionFinite(duration) || duration < 0.0 {
-        throw ArgumentOutOfRangeException("duration")
+    public func Tween(durationMs float64, easing Easing = Easing.Linear)(float64, float64, float64) -> Simulation {
+      if !motionFinite(durationMs) || durationMs < 0.0 {
+        throw ArgumentOutOfRangeException("durationMs")
       }
       if easing != Easing.Linear && easing != Easing.EaseIn
         && easing != Easing.EaseOut && easing != Easing.EaseInOut{
           throw ArgumentOutOfRangeException("easing")
         }
+      let duration = durationMs / 1000.0
       return (from float64, to float64, velocity float64) ->
       LinearTimed(duration, from, to, easing)
     }
 
     init{
       TimeScale = 1.0
-      Default = Tween(0.18)
+      Default = Tween(180.0)
     }
   }
 }
