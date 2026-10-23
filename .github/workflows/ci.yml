@@ -1685,6 +1685,14 @@ jobs:
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: needs.changes.outputs.full == 'true'
+        with:
+          name: android-smoke
+          path: |
+            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
+            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
+            Goo/Runtime/Vulkan/android-*/text-native-build.json
       - name: Package signed consumer AAB
         run: |
           bash tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh "$RUNNER_TEMP/android-tools"
@@ -1714,14 +1722,6 @@ jobs:
             --ks-pass="file:$RUNNER_TEMP/upload-password" --key-pass="file:$RUNNER_TEMP/upload-password"
           unzip -p "$RUNNER_TEMP/consumer.apks" universal.apk >"$RUNNER_TEMP/consumer.apk"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$RUNNER_TEMP/consumer.apk"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: needs.changes.outputs.full == 'true'
-        with:
-          name: android-smoke
-          path: |
-            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
-            tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
-            Goo/Runtime/Vulkan/android-*/text-native-build.json
 
   android-native-menus:
     needs: [changes, android]
