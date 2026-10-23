@@ -114,6 +114,8 @@ internal sealed class AndroidPopupSurface(
                 native.Dismiss();
             native.Dispose();
         }
+        if (view is { Parent: ViewGroup parent } child)
+            parent.RemoveView(child);
         view?.Dispose();
         view = null;
     }
