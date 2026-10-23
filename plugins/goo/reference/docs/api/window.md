@@ -371,6 +371,64 @@ Image reads prefer PNG, JPEG, GIF, BMP, then macOS TIFF. PNG/JPEG/GIF bytes keep
 
 Linux relies on the active SDL clipboard backend. Windows uses native file-list and DIB access; macOS uses pasteboard items and ImageIO for TIFF conversion. Backend failures are reported explicitly; native Windows/macOS execution requires validation on those systems.
 
+## Publish multiple clipboard formats
+
+```gsharp
+let plain = System.Text.Encoding.UTF8.GetBytes("Hello")
+let html = System.Text.Encoding.UTF8.GetBytes("<b>Hello</b>")
+let data = TransferData(
+    []TransferRepresentation{
+        TransferRepresentation("text/plain", ReadOnlyMemory[uint8](plain)),
+        TransferRepresentation("text/html", ReadOnlyMemory[uint8](html))
+    },
+    []Uri{}
+)
+let result = await window.WriteClipboardAsync(data)
+```
+
+Start clipboard calls on the open window's UI thread. Check `result.Status`.
+
+| Contract | Behavior |
+| --- | --- |
+| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Owned data | Bytes and URI lists stay valid after clipboard replacement or window close. Caller changes cannot alter published bytes. |
+| Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
+| Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
+| Cut | File Cut requires URIs and never deletes sources. macOS returns `Unsupported`. Editor Cut writes Copy data, then removes its selection after Success. |
+| Read status | Missing requested data is `Empty`. A present zero-byte format is `Success`. Failed reads return no partial selection. |
+| Write status | Unsupported formats are not dropped. Native failures can replace or clear the old clipboard. Success does not confirm paste. |
+| Limits | At most 128 MIME names, 256 ASCII bytes per name and 64 MiB total bytes. Text is limited to 16 MiB. Existing file-list bounds apply. |
+| Platforms | These methods support native Windows, macOS and Wayland. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
+| Windows formats | HTML, RTF, PNG and files use native formats. PNG, JPEG and GIF also offer a native bitmap. Other MIME types use OLE streams. |
+| Windows limits | MIME names have at most 255 characters and cannot differ only by case. Plain text cannot contain NUL. An incompatible COM apartment returns `Unsupported`. |
+| macOS formats | MIME bytes use native pasteboard types. File references use separate NSURL items. All data is copied before publication. |
+| Lifetime | Windows and macOS keep data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
+
+
+## `ClipboardDataResult`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Contains an owned multi-format clipboard snapshot and its file-transfer intent.
+
+### `Data`
+
+Gets owned MIME bytes and URI references, or an empty payload on failure.
+
+### `Error`
+
+Gets a bounded explanation of native failure or excessive data.
+
+### `Intent`
+
+Gets the native file-transfer hint, defaulting to Copy when no marker exists.
+
+### `Status`
+
+Gets the snapshot outcome, independently of individual representation lengths.
+
 ## `ClipboardFiles`
 
 Source:
@@ -443,6 +501,27 @@ Gets a native failure or limit explanation, or an empty string.
 
 Gets the read outcome.
 
+## `ClipboardIntent`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Selects whether a file clipboard publication prefers copying or a deferred move.
+
+### Values
+
+- `Copy`
+- `Cut`
+
+### `Copy`
+
+Publishes references without requesting source removal.
+
+### `Cut`
+
+Requests a deferred file move where the native clipboard supports that intent.
+
 ## `ClipboardReadStatus`
 
 Source:
@@ -458,6 +537,63 @@ Reports a native clipboard query/read outcome independently of payload contents.
 - `Unsupported`
 - `TooLarge`
 - `Failed`
+
+## `ClipboardWriteResult`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Reports whether all requested clipboard representations were published.
+
+### `Error`
+
+Gets a bounded native failure explanation, or an empty string.
+
+### `Status`
+
+Gets the publication outcome, not confirmation that another application pasted it.
+
+## `DataTransferStatus`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Reports a native data publication outcome without throwing for platform failures.
+
+### Values
+
+- `Success`
+- `Cancelled`
+- `Unsupported`
+- `TooLarge`
+- `Denied`
+- `Failed`
+
+### `Cancelled`
+
+The transfer was cancelled before completion.
+
+### `Denied`
+
+The operating system denied access to the transfer.
+
+### `Failed`
+
+A native transfer operation failed.
+
+### `Success`
+
+Every requested representation was published.
+
+### `TooLarge`
+
+The transfer exceeds a native or managed data budget.
+
+### `Unsupported`
+
+The host cannot provide the requested transfer or intent.
 
 ## `FileDialogFilter`
 
@@ -695,6 +831,52 @@ Follows native window activation. This is the default.
 
 Uses the inactive material appearance.
 
+## `TransferData`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Owns MIME alternatives and an ordered document URI selection without reading document contents.
+
+### `new(System.Collections.Generic.IReadOnlyList{TransferRepresentation},System.Collections.Generic.IReadOnlyList{System.Uri})`
+
+Captures at most 128 representations, 64 MiB total bytes and 4096 bounded absolute URIs.
+
+- `representations`: Owned MIME alternatives with unique exact type names.
+- `uris`: Absolute document references in selection order, without a duplicate text/uri-list representation.
+
+### `Representations`
+
+Gets immutable MIME alternatives for the same logical selection.
+
+### `Uris`
+
+Gets document references, which do not imply local paths or persistent access grants.
+
+## `TransferRepresentation`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Owns immutable bytes for one exact MIME representation of a selection.
+
+### `new(string,System.ReadOnlyMemory{System.Byte})`
+
+Copies a bounded MIME representation into managed ownership.
+
+- `contentType`: A MIME type of at most 256 ASCII bytes, without control characters.
+- `bytes`: Encoded bytes, at most 64 MiB, without a text terminator.
+
+### `Bytes`
+
+Gets owned bytes that remain valid after clipboard replacement or window close.
+
+### `ContentType`
+
+Gets the exact MIME type offered to native consumers.
+
 ## `WaylandBackdropOptions`
 
 Source:
@@ -889,6 +1071,14 @@ Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
 
+### `ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{string})`
+
+Copies requested available MIME alternatives and URI references from one native clipboard offer.
+
+- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
+
+Returns: Owned data and explicit status, with no partial payload on a native read failure.
+
 ### `ReadClipboardFiles`
 
 Reads at most 4096 absolute paths and 1048576 UTF-16 path units from the current clipboard.
@@ -970,6 +1160,15 @@ Requests borderless fullscreen on the selected display, including retargeting an
 Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
 
 Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
+
+### `WriteClipboardAsync(TransferData,ClipboardIntent)`
+
+Publishes every MIME alternative and URI reference in one native clipboard publication.
+
+- `data`: The immutable selection to publish without opening referenced documents.
+- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+
+Returns: Explicit publication status. Success does not confirm that a paste occurred.
 
 ### `AccessibilityAdapter`
 
