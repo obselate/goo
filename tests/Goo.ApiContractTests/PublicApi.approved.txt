@@ -47,6 +47,8 @@ ctor|Goo.NativeAccessibilityAdapter|public|()
 ctor|Goo.NativeFileDrag|public|(values:System.Collections.Generic.IReadOnlyList`1<System.String>)
 ctor|Goo.PathBuilder|public|()
 ctor|Goo.PathBuilder|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double)
+ctor|Goo.PopupWindow|public|(owner:Goo.PopupWindow,root:Goo.Cell,kind:Goo.PopupKind=Menu)
+ctor|Goo.PopupWindow|public|(owner:Goo.Window,root:Goo.Cell,kind:Goo.PopupKind=Menu)
 ctor|Goo.Portal|public|()
 ctor|Goo.RadialGradient|public|(centerX:System.Double,centerY:System.Double,radius:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.RadialGradient|public|(params colors:Goo.Color[])
@@ -129,6 +131,9 @@ enum-underlying|Goo.Overflow|System.Int32
 enum-underlying|Goo.PointerButtons|System.Int32
 enum-underlying|Goo.PointerButton|System.Int32
 enum-underlying|Goo.PointerDevice|System.Int32
+enum-underlying|Goo.PopupDismissReason|System.Int32
+enum-underlying|Goo.PopupKind|System.Int32
+enum-underlying|Goo.PopupStatus|System.Int32
 enum-underlying|Goo.PortalPlacement|System.Int32
 enum-underlying|Goo.PositionType|System.Int32
 enum-underlying|Goo.ScrollbarVisibility|System.Int32
@@ -484,6 +489,21 @@ enum|Goo.PointerButton|Secondary|2
 enum|Goo.PointerDevice|Mouse|0
 enum|Goo.PointerDevice|Pen|2
 enum|Goo.PointerDevice|Touch|1
+enum|Goo.PopupDismissReason|Escape|1
+enum|Goo.PopupDismissReason|FocusLost|3
+enum|Goo.PopupDismissReason|OutsideInteraction|2
+enum|Goo.PopupDismissReason|OwnerClosed|5
+enum|Goo.PopupDismissReason|OwnerHidden|4
+enum|Goo.PopupDismissReason|PlatformDismissed|6
+enum|Goo.PopupDismissReason|Programmatic|0
+enum|Goo.PopupKind|Menu|0
+enum|Goo.PopupKind|Tooltip|1
+enum|Goo.PopupStatus|Busy|5
+enum|Goo.PopupStatus|Closed|1
+enum|Goo.PopupStatus|Failed|4
+enum|Goo.PopupStatus|Opened|0
+enum|Goo.PopupStatus|RequiresUserAction|3
+enum|Goo.PopupStatus|Unsupported|2
 enum|Goo.PortalPlacement|BottomEnd|2
 enum|Goo.PortalPlacement|BottomStart|0
 enum|Goo.PortalPlacement|Bottom|1
@@ -658,6 +678,7 @@ event|Goo.ImageSourceLease|Released|System.Action|instance|add:public,remove:pub
 event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,remove:public
 event|Goo.ImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
 event|Goo.PlatformInput|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
+event|Goo.PopupWindow|Dismissed|System.Action`1<Goo.PopupDismissReason>|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
@@ -921,6 +942,10 @@ method|Goo.Point|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.Point|ToString|virtual|public|generic:|()->System.String
 method|Goo.Point|op_Equality|static|public|generic:|(left:Goo.Point,right:Goo.Point)->System.Boolean
 method|Goo.Point|op_Inequality|static|public|generic:|(left:Goo.Point,right:Goo.Point)->System.Boolean
+method|Goo.PopupWindow|Close|instance|public|generic:|()->System.Void
+method|Goo.PopupWindow|Dispose|instance|public|generic:|()->System.Void
+method|Goo.PopupWindow|Open|instance|public|generic:|(anchor:Goo.ElementRect,width:System.Int32,height:System.Int32,placement:Goo.PortalPlacement=BottomStart)->Goo.PopupResult
+method|Goo.PopupWindow|UpdatePlacement|instance|public|generic:|(anchor:Goo.ElementRect,width:System.Int32,height:System.Int32,placement:Goo.PortalPlacement=BottomStart)->Goo.WindowOperationResult
 method|Goo.Portal|Add|instance|public|generic:|(child:Goo.Blob)->System.Void
 method|Goo.ShaderEffectData|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ShaderEffectData|PublishTransferred|instance|public|generic:|(bytes:System.Byte[],released:System.Action)->System.Void
@@ -1504,6 +1529,10 @@ property|Goo.PointerEvent|Pressure|System.Double|instance|get:public,init:public
 property|Goo.PointerEvent|WindowPosition|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.Point|X|System.Double|instance|get:public,init:public|index:()
 property|Goo.Point|Y|System.Double|instance|get:public,init:public|index:()
+property|Goo.PopupResult|Error|System.String|instance|get:public,set:private|index:()
+property|Goo.PopupResult|Status|Goo.PopupStatus|instance|get:public,set:private|index:()
+property|Goo.PopupWindow|IsOpen|System.Boolean|instance|get:public|index:()
+property|Goo.PopupWindow|Metrics|Goo.WindowMetrics|instance|get:public|index:()
 property|Goo.Portal|Anchor|Goo.ElementHandle|instance|get:public,init:public|index:()
 property|Goo.Portal|Placement|Goo.PortalPlacement|instance|get:public,init:public|index:()
 property|Goo.RadialGradient|CenterX|System.Double|instance|get:public|index:()
@@ -1977,6 +2006,11 @@ type|Goo.PointerButton|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerDevice|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.PointerEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Point|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.Point>|generic:
+type|Goo.PopupDismissReason|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.PopupKind|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.PopupResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.PopupStatus|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.PopupWindow|class|public|base:System.Object|interfaces:System.IDisposable|generic:
 type|Goo.PortalPlacement|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Portal|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.PositionType|enum|public|base:System.Enum|interfaces:|generic:

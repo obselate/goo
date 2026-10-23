@@ -19,6 +19,8 @@ internal partial class InputCoordinator {
     var changed = keyboard.ClearStalePress(resolver)
     resolver.Flush()
     while queue.Take(out var e) {
+      let previousTimestamp = PopupInputContext.Timestamp
+      PopupInputContext.Timestamp = e.NativeTimestamp
       try {
         if e.IsFocusLost {
           loseFocus(root, resolver)
@@ -38,6 +40,7 @@ internal partial class InputCoordinator {
           else { keyboard.Dispatch(e.Keyboard, root, resolver, text, onKeyPress, repeatStartTicks, pointer) }
         if dispatched { changed = true }
       } finally {
+        PopupInputContext.Timestamp = previousTimestamp
         if keyboard.ClearStalePress(resolver) { changed = true }
         resolver.Flush()
       }

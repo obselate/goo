@@ -109,6 +109,31 @@ increased contrast. Desktop text scale remains unknown when the backend cannot
 report it. Android reports theme, font scale and disabled animations on attach,
 resume and configuration changes. Other unsupported preferences remain unknown.
 
+## Native popup surfaces
+
+```gsharp
+using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
+let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+```
+
+A popup hosts a new Cell root outside its owner's bounds. Portal and widgets
+Menu keep their current in-window behavior.
+
+| Operation | Contract |
+| --- | --- |
+| `Open` | Call once per instance on the owner thread. Use parent-content layout units. Size follows the owner's UiScale. |
+| `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
+| `PopupKind.Tooltip` | Receives no input. It needs no grab. |
+| `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
+| `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
+| `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
+| `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
+| `Close`, `Dispose` | Request dismissal without blocking on GPU retirement. |
+
+Use another PopupWindow as the owner for a submenu. Each owner permits one popup.
+Create a new root and popup for each opening. Close it when its anchor becomes
+invalid. Embedded and Android hosts return `Unsupported`.
+
 ## Native owned and modal windows
 
 Portal backends can set `ForeignParentHandle` to the request's full
@@ -654,6 +679,196 @@ Follows native window activation. This is the default.
 
 Uses the inactive material appearance.
 
+## `PopupDismissReason`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Identifies why a complete native popup chain was dismissed.
+
+### Values
+
+- `Programmatic`
+- `Escape`
+- `OutsideInteraction`
+- `FocusLost`
+- `OwnerHidden`
+- `OwnerClosed`
+- `PlatformDismissed`
+
+### `Escape`
+
+Escape dismissed the popup.
+
+### `FocusLost`
+
+Keyboard focus left the owner and popup chain.
+
+### `OutsideInteraction`
+
+Input outside the popup chain dismissed it.
+
+### `OwnerClosed`
+
+The owner closed.
+
+### `OwnerHidden`
+
+The owner became hidden.
+
+### `PlatformDismissed`
+
+The compositor dismissed the popup without a more specific reason.
+
+### `Programmatic`
+
+The application requested dismissal.
+
+## `PopupKind`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Selects an interactive native popup or an input-transparent tooltip.
+
+### Values
+
+- `Menu`
+- `Tooltip`
+
+### `Menu`
+
+Receives input and joins the owner's native popup grab chain.
+
+### `Tooltip`
+
+Does not receive keyboard or pointer input.
+
+## `PopupResult`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Contains a native popup creation outcome and owned failure detail.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the native creation outcome.
+
+## `PopupStatus`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Reports native popup creation without substituting an ordinary window.
+
+### Values
+
+- `Opened`
+- `Closed`
+- `Unsupported`
+- `RequiresUserAction`
+- `Failed`
+- `Busy`
+
+### `Busy`
+
+The owner already has a popup or modal operation.
+
+### `Closed`
+
+The owner is closed or closing.
+
+### `Failed`
+
+Native creation or presentation initialization failed.
+
+### `Opened`
+
+Native creation and mapping were accepted, subject to compositor policy.
+
+### `RequiresUserAction`
+
+A Wayland menu requires an originating native input event.
+
+### `Unsupported`
+
+The host does not provide the requested native popup operation.
+
+## `PopupWindow`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Hosts one new Goo root in a transient native surface outside its owner's bounds. Create a new root and PopupWindow for each opening. Portal ownership is unchanged.
+
+### `Dismissed`
+
+Runs once after the popup and all descendants release their native resources.
+
+### `new(PopupWindow,Cell,PopupKind)`
+
+Creates a submenu whose native parent is another open popup.
+
+- `owner`: The open parent popup on the same UI thread.
+- `root`: A root Cell not mounted in another window.
+- `kind`: Interactive menu or input-transparent tooltip.
+
+### `new(Window,Cell,PopupKind)`
+
+Creates a popup with an independent root and an ordinary desktop owner.
+
+- `owner`: The open desktop owner on the same UI thread.
+- `root`: A root Cell not mounted in another window.
+- `kind`: Interactive menu or input-transparent tooltip.
+
+### `Close`
+
+Requests descendant-first dismissal. GPU retirement can defer native destruction.
+
+### `Dispose`
+
+Requests dismissal and prevents this instance from reopening.
+
+### `Open(ElementRect,int32,int32,PortalPlacement)`
+
+Opens a desktop popup relative to its parent's content rectangle in layout units. Wayland menus must open from native input or an active parent popup grab.
+
+- `anchor`: The finite parent-content anchor rectangle.
+- `width`: Requested positive content width in layout units.
+- `height`: Requested positive content height in layout units.
+- `placement`: Preferred side and alignment before native display constraints.
+
+Returns: An explicit native creation result, never a top-level-window fallback.
+
+### `UpdatePlacement(ElementRect,int32,int32,PortalPlacement)`
+
+Updates requested size and parent-local placement without changing the root.
+
+- `anchor`: The finite parent-content anchor rectangle.
+- `width`: Requested positive content width in layout units.
+- `height`: Requested positive content height in layout units.
+- `placement`: Preferred side and alignment before native display constraints.
+
+Returns: Accepted, Closed, Unsupported or Failed from the native operation.
+
+### `IsOpen`
+
+Reports whether the surface is open, including deferred GPU retirement during close.
+
+### `Metrics`
+
+Gets the current logical and framebuffer metrics on the owner thread.
+
 ## `WaylandBackdropOptions`
 
 Source:
@@ -694,6 +909,7 @@ Sources:
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
+- [`Window.Popup.gs`](../../Goo/Window/WindowParts/Window.Popup.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
 - [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
 - [`Window.Profile.gs`](../../Goo/Window/WindowParts/Window.Profile.gs)

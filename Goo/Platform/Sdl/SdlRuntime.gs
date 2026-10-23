@@ -308,6 +308,13 @@ internal partial class SdlRuntime {
     }
 
     private func DispatchOne(nativeEvent SDLEvent) {
+      let previousTimestamp = PopupInputContext.Timestamp
+      PopupInputContext.Timestamp = nativeEvent.Common.Timestamp
+      try { DispatchNativeEvent(nativeEvent) }
+      finally { PopupInputContext.Timestamp = previousTimestamp }
+    }
+
+    private func DispatchNativeEvent(nativeEvent SDLEvent) {
       let eventType = SDLEventType(nativeEvent.Type)
       if eventType == SDLEventType.KeyDown || eventType == SDLEventType.KeyUp {
         eventModifierMask = nativeEvent.Key.Mod

@@ -6,6 +6,7 @@ internal data struct QueuedInputEvent {
   internal var IsPointer bool
   internal var IsFocusLost bool
   internal var IsFocusGained bool
+  internal var NativeTimestamp uint64
   internal var Pointer QueuedPointerEvent
   internal var Keyboard KeyboardEvent
 }
@@ -17,10 +18,10 @@ internal class InputEventQueue {
   internal prop HasPending bool{ get -> events.Count > 0 }
 
   internal func Add(value QueuedPointerEvent) ->
-    events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: value })
+    events.Enqueue(QueuedInputEvent{ IsPointer: true, Pointer: value, NativeTimestamp: PopupInputContext.Timestamp })
 
   internal func Add(value KeyboardEvent) ->
-    events.Enqueue(QueuedInputEvent{ Keyboard: value })
+    events.Enqueue(QueuedInputEvent{ Keyboard: value, NativeTimestamp: PopupInputContext.Timestamp })
 
   internal func AddFocusLost() -> events.Enqueue(QueuedInputEvent{ IsFocusLost: true })
   internal func AddFocusGained() -> events.Enqueue(QueuedInputEvent{ IsFocusGained: true })
