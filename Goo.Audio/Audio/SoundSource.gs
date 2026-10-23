@@ -87,13 +87,7 @@ public class SoundSource {
             || length < 12 || length > MaxBytes {
                 throw InvalidDataException("Expected RIFF/WAVE within 16 MiB")
             }
-            let encoded = [int32(length)]uint8
-            Array.Copy(header, encoded, header.Length)
-            stream.ReadExactly(encoded, 12, encoded.Length - 12)
-            if stream.ReadByte() != -1 {
-                throw InvalidDataException("WAV has trailing data")
-            }
-            return FromWav(encoded)
+            return FromWav(BoundedInput.ReadAll(stream, int32(length), "WAV", header))
         }
 
         /// Decodes 8/16/24-bit PCM or 32-bit float RIFF WAV, including EXTENSIBLE, within 16 MiB.
