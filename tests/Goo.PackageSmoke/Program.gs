@@ -467,6 +467,10 @@ func Main() {
     RunDirectDriverSmoke()
     return
   }
+  if Environment.GetEnvironmentVariable("GOO_NATIVE_DIALOGS_SMOKE") == "1" {
+    RunNativeDialogsSmoke()
+    return
+  }
   VerifyImageDecode()
   if Environment.GetEnvironmentVariable("GOO_APPLICATION_QUIT_SMOKE") == "1" {
     RunApplicationQuitSmoke()

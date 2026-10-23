@@ -30,6 +30,9 @@
     <ItemGroup>
       <DocFileItem Include="$(DocumentationFile)" />
       <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <DocumentationProjectOutputGroupOutput Include="@(DocFileItem->'%(FullPath)')"
+          FinalOutputPath="@(FinalDocFile->'%(FullPath)')"
+          TargetPath="@(DocFileItem->'%(Filename)%(Extension)')" />
     </ItemGroup>
   </Target>
 </Project>
