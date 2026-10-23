@@ -4,10 +4,13 @@ import System
 import System.Globalization
 import System.IO
 import System.Runtime.InteropServices
+import System.Threading
 import Hexa.NET.SDL3
 
 @UnmanagedFunctionPointer(CallingConvention.StdCall)
-internal delegate WindowsDragTimer(window nint, message uint32, identity nuint, time uint32);
+internal delegate WindowsDragTimer(window nint, fired uint8);
+@UnmanagedFunctionPointer(CallingConvention.StdCall)
+internal delegate WindowsDragSubclass(window nint, message uint32, wparam nuint, lparam nint, identity nuint, data nuint) nint;
 
 internal partial class NativeDragBinding {
   internal var WindowsObject nint
@@ -57,21 +60,40 @@ internal unsafe partial class SdlHost {
   shared {
     private const WindowsDragServiceMilliseconds uint32 = 16u
     private const WindowsDragTimerId uint32 = 0x474F4Fu
+    private const WindowsDragServiceMessage uint32 = 0x8474u
+    private var windowsPulsePending int32
     @ThreadStatic
     private var windowsTracking NativeDragBinding?
     @ThreadStatic
     private var windowsTrackingTick bool
-    private let windowsTimer WindowsDragTimer = ServiceWindowsDrag
+    private let windowsTimer WindowsDragTimer = PulseWindowsDrag
     private let windowsTimerAddress nint = Marshal.GetFunctionPointerForDelegate(windowsTimer)
+    private let windowsMessage WindowsDragSubclass = ServiceWindowsDrag
+    private let windowsMessageAddress nint = Marshal.GetFunctionPointerForDelegate(windowsMessage)
 
-    @DllImport("user32.dll", EntryPoint: "SetTimer", SetLastError: true)
-    private func SetWindowsDragTimer(window nint, identity nuint, milliseconds uint32, callback nint) nuint;
-    @DllImport("user32.dll", EntryPoint: "KillTimer")
-    private func KillWindowsDragTimer(window nint, identity nuint) int32;
+    @DllImport("kernel32.dll", EntryPoint: "CreateTimerQueueTimer", SetLastError: true)
+    private func CreateWindowsDragTimer(out timer nint, queue nint, callback nint, context nint, due uint32, period uint32, flags uint32) int32;
+    @DllImport("kernel32.dll", EntryPoint: "DeleteTimerQueueTimer")
+    private func DeleteWindowsDragTimer(queue nint, timer nint, completion nint) int32;
+    @DllImport("comctl32.dll", EntryPoint: "SetWindowSubclass", SetLastError: true)
+    private func SetWindowsDragSubclass(window nint, callback nint, identity nuint, data nuint) int32;
+    @DllImport("comctl32.dll", EntryPoint: "RemoveWindowSubclass")
+    private func RemoveWindowsDragSubclass(window nint, callback nint, identity nuint) int32;
+    @DllImport("comctl32.dll", EntryPoint: "DefSubclassProc")
+    private func DefaultWindowsDragMessage(window nint, message uint32, wparam nuint, lparam nint) nint;
+    @DllImport("user32.dll", EntryPoint: "SendMessageTimeoutW")
+    private func SendWindowsDragMessage(window nint, message uint32, wparam nuint, lparam nint, flags uint32, timeout uint32, out result nuint) nint;
 
-    private func ServiceWindowsDrag(window nint, message uint32, identity nuint, time uint32) {
-      guard let binding = windowsTracking else { return }
-      if windowsTrackingTick || NativeDropState.CallbackDepth != 0 { return }
+    private func PulseWindowsDrag(window nint, fired uint8) {
+      if Interlocked.CompareExchange(ref windowsPulsePending, 1, 0) != 0 { return }
+      try { SendWindowsDragMessage(window, WindowsDragServiceMessage, nuint(0), nint(0), 3u, 100u, out var result) }
+      finally { Interlocked.Exchange(ref windowsPulsePending, 0) }
+    }
+
+    private func ServiceWindowsDrag(window nint, message uint32, wparam nuint, lparam nint, identity nuint, data nuint) nint {
+      if message != WindowsDragServiceMessage { return DefaultWindowsDragMessage(window, message, wparam, lparam) }
+      guard let binding = windowsTracking else { return nint(0) }
+      if windowsTrackingTick || NativeDropState.CallbackDepth != 0 { return nint(0) }
       windowsTrackingTick = true
       try { Window.ServiceNativeTracking() }
       catch (error Exception) {
@@ -79,6 +101,7 @@ internal unsafe partial class SdlHost {
         try { binding.Host.CancelNativeDrag() }
         catch (_ Exception) { }
       } finally { windowsTrackingTick = false }
+      return nint(0)
     }
 
     private func WindowsDropFailure(userData nint, status DataTransferStatus, error string) bool {
@@ -128,7 +151,8 @@ internal unsafe partial class SdlHost {
     SdlRuntime.Acquire()
     var initialized bool
     var source nint
-    var timer nuint
+    var timer nint
+    var subclassed bool
     try {
       let apartment = ClipboardTransfer.WindowsOleInitialize(nint(0))
       if apartment < 0 { throw WindowsTransferException("OleInitialize", apartment) }
@@ -140,8 +164,14 @@ internal unsafe partial class SdlHost {
       binding.WindowsSource = sourceObject
       source = WindowsDragComWrappers.Create(sourceObject, WindowsDragComWrappers.SourceId)
       windowsTracking = binding
-      timer = SetWindowsDragTimer(timerWindow, nuint(WindowsDragTimerId), WindowsDragServiceMilliseconds, windowsTimerAddress)
-      if timer == nuint(0) { throw IOException("Cannot start the native drag service timer: " + Marshal.GetLastPInvokeError().ToString()) }
+      if SetWindowsDragSubclass(timerWindow, windowsMessageAddress, nuint(WindowsDragTimerId), nuint(0)) == 0 {
+        throw IOException("Cannot install the native drag service callback")
+      }
+      subclassed = true
+      if CreateWindowsDragTimer(out timer, nint(0), windowsTimerAddress, timerWindow,
+        WindowsDragServiceMilliseconds, WindowsDragServiceMilliseconds, 0u) == 0 {
+        throw IOException("Cannot start the native drag service timer: " + Marshal.GetLastPInvokeError().ToString())
+      }
       binding.Started = true
       var selected uint32
       let status = WindowsDragComWrappers.Start(binding.WindowsObject, source, uint32(effects), out selected)
@@ -154,7 +184,8 @@ internal unsafe partial class SdlHost {
         } else { "" })
       return DataTransferStatus.Success
     } finally {
-      if timer != nuint(0) { KillWindowsDragTimer(timerWindow, nuint(WindowsDragTimerId)) }
+      if timer != nint(0) { DeleteWindowsDragTimer(nint(0), timer, nint(0)) }
+      if subclassed { RemoveWindowsDragSubclass(timerWindow, windowsMessageAddress, nuint(WindowsDragTimerId)) }
       windowsTracking = nil
       binding.WindowsSource = nil
       ClipboardTransfer.WindowsReleaseObject(source)
