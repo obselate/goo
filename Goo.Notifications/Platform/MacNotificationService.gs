@@ -89,12 +89,14 @@ internal class MacNotificationService : NotificationService {
         let reply = await QueryAsync("getDeliveredNotificationsWithCompletionHandler:").ConfigureAwait(false)
         try {
             let count = int64(Send(reply.Value, Sel("count")))
-            for index in int64(0) ... count {
+            var index int64 = 0
+            while index < count {
                 let notification = Send(reply.Value, Sel("objectAtIndex:"), nint(index))
                 let request = Send(notification, Sel("request"))
                 if ReadText(Send(request, Sel("identifier"))) == id {
                     return Result(delivery: NotificationDelivery.PresentInCenter, id: id)
                 }
+                index++
             }
             return Result(id: id)
         } finally {
