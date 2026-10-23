@@ -78,6 +78,12 @@ public class PlatformInput {
       drain()
     }
 
+  internal func PointerMotionFrame(samples ReadOnlySpan[QueuedPointerEvent]) {
+    requireInput()
+    input.QueuePointerFrame(samples, owner.UiScale)
+    drain()
+  }
+
   /// Cancels one pointer, releasing capture without generating a click.
   public func PointerCancel(pointerId int64, device PointerDevice) {
     requireThread()

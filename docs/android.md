@@ -170,6 +170,9 @@ composition, and semantic editor commands use shared Goo input. Stale IME
 connections cannot edit a different focused field. Password fields suppress
 surrounding and extracted text returned to the IME.
 
+Each Android move event updates all contact positions before gesture recognition.
+An accepted gesture receives one coherent update per move event.
+
 `GooView.DismissKeyboardOnSubmit` defaults to `true`: the IME Done action sends
 the shared Submit command and hides the software keyboard. Set the property to
 `false` for a composer that should keep the keyboard open after submission.

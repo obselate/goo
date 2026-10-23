@@ -44,6 +44,7 @@ internal class GestureGroup {
     internal var Source GestureSource
     internal var WindowAnchor Point
     internal var Scale float64 = 1.0
+    internal var MotionFrame int64
 }
 
 internal partial class PointerInput {
@@ -371,6 +372,7 @@ internal partial class PointerInput {
         x float32, y float32) bool {
         if current.Device != PointerDevice.Touch { return false }
         guard let group = gestureGroupFor(current.Id) else { return false }
+        if activeMotionFrame != 0 && group.MotionFrame == activeMotionFrame { return group.Claimed }
         if kind == GestureInputKind.Down && group.Claimed {
             if let winner = group.Winner { claimGesture(root, resolver, group, winner) }
         }
@@ -382,7 +384,9 @@ internal partial class PointerInput {
             }
         }
         try {
-            return evaluateGestureGroup(root, resolver, group, kind, current.Id, recognizerTime, x, y)
+            let claimed = evaluateGestureGroup(root, resolver, group, kind, current.Id, recognizerTime, x, y)
+            if claimed && activeMotionFrame != 0 { group.MotionFrame = activeMotionFrame }
+            return claimed
         } catch (error Exception) {
             try { abortGestureGroup(root, resolver, group) }
             finally { ExceptionDispatchInfo.Capture(error).Throw() }

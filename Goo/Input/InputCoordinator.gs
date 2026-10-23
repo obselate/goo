@@ -327,6 +327,9 @@ internal partial class InputCoordinator {
       pointer.QueueMove(pointerId, device, x, y, modifiers, pressure)
     }
 
+  internal func QueuePointerFrame(samples ReadOnlySpan[QueuedPointerEvent], scale float32) ->
+    queue.AddPointerFrame(samples, scale)
+
   internal func QueuePointerPress(pointerId int64, device PointerDevice, x float32, y float32,
     button PointerButton, modifiers KeyModifiers) {
       pointer.QueuePress(pointerId, device, x, y, button, modifiers)

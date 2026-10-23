@@ -371,6 +371,7 @@ internal partial class PointerInput {
 
   internal func Reset(root Node?, resolver Resolver, preserveNative bool = false) {
     if resetting { return }
+    motionResetVersion++
     resetting = true
     try { reset(root, resolver, preserveNative) }
     finally { resetting = false }
