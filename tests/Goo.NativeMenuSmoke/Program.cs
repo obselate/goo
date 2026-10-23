@@ -21,7 +21,22 @@ try
         throw new InvalidOperationException("Duplicate identifiers accepted");
     }
     catch (ArgumentException) { }
-    if (!OperatingSystem.IsMacOS())
+    if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
+    {
+        var child = new Window { Owner = second, Title = "Native menu child", Width = 160, Height = 120 }.Open();
+        var pending = NativeMenus.ShowContextMenuAsync(child, new Point(), firstItems);
+        var conflict = NativeMenus.ShowContextMenuAsync(second, new Point(), secondItems);
+        Check(conflict.IsCompleted && conflict.Result.Status == NativeMenuStatus.Busy, "Owner chain is Busy before launch");
+        child.RequestClose();
+        child.Pump(0);
+        Check(pending.IsCompleted && pending.Result.Status == NativeMenuStatus.OwnerClosed && !child.IsOpen,
+            "Owner close before native launch completes once");
+    }
+    if (OperatingSystem.IsWindows())
+    {
+        WindowsSmoke.Run(first, second, firstBar, secondBar, firstItems, secondItems, () => firstCount, () => secondCount);
+    }
+    else if (!OperatingSystem.IsMacOS())
     {
         Check(firstBar.SetItems(firstItems).Status == NativeMenuStatus.Unsupported, "Unsupported native bar");
         Check(NativeMenus.ShowContextMenuAsync(first, new Point(), firstItems).Result.Status == NativeMenuStatus.Unsupported,
@@ -75,7 +90,8 @@ finally
 {
     first.RequestClose();
     second.RequestClose();
-    first.Run();
+    if (first.IsOpen) first.Run();
+    else if (second.IsOpen) second.Run();
 }
 
 static NativeMenuItem[] Model(string id) =>
@@ -86,7 +102,8 @@ static NativeMenuItem[] Model(string id) =>
         Items = [new NativeMenuItem
         {
             Id = id, Text = "Action", Checked = true,
-            Shortcut = new NativeMenuShortcut { Key = "x", Modifiers = new KeyModifiers { Super = true } }
+            Shortcut = new NativeMenuShortcut { Key = "X", Modifiers = new KeyModifiers
+                { Super = OperatingSystem.IsMacOS(), Ctrl = OperatingSystem.IsWindows() } }
         }, new NativeMenuItem { Id = id + ".disabled", Text = "Disabled", Enabled = false }]
     }
 ];

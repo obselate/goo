@@ -29,11 +29,14 @@ Reference `Goo.NativeMenus`. Share `Command` objects with widgets.
 | Platform | Bar | Context |
 | --- | --- | --- |
 | macOS | Global bar selected by the key Goo window | NSMenu |
-| Windows | Unsupported in this slice | Unsupported in this slice |
+| Windows | Per-window HMENU | TrackPopupMenuEx |
 | Wayland | Unsupported | Unsupported |
 | Android | Unsupported | Unsupported in this slice |
 
 macOS keeps SDL's application and system menus. `Super` means Command.
 The default bar is restored only while this package still owns the menu.
+Windows uses the active keyboard layout and rebuilds accelerators when it changes.
+`Super` and keys outside that layout return `Unsupported`.
+The official SDL binary supplies the pre-TranslateMessage hook. No SDL patch is required.
 
 See [API reference](api-native-menus/public.md).

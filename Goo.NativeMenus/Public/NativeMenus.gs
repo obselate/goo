@@ -61,6 +61,7 @@ public sealed class NativeMenuResult {
 public sealed class NativeMenuBar : IDisposable {
     private let owner Window
     private var binding NativeMenuBinding?
+    private var windowsBinding WindowsMenuBinding?
     private var disposed bool
     /// Reports a selected bar identifier on the owner's Goo queue after native dispatch.
     public event Activated Action[string]
@@ -82,6 +83,10 @@ public sealed class NativeMenuBar : IDisposable {
         ObjectDisposedException.ThrowIf(disposed, this)
         let snapshot = NativeMenuSnapshot(items)
         if !owner.IsOpen { return NativeMenuResult(NativeMenuStatus.OwnerClosed) }
+        if OperatingSystem.IsWindows() {
+            windowsBinding ??= WindowsMenuBinding(owner, id -> Activated?.Invoke(id))
+            return windowsBinding!!.SetItems(snapshot)
+        }
         if !OperatingSystem.IsMacOS() { return NativeMenuResult(NativeMenuStatus.Unsupported) }
         binding ??= NativeMenuBinding(owner, id -> Activated?.Invoke(id))
         return binding!!.SetItems(snapshot)
@@ -94,6 +99,8 @@ public sealed class NativeMenuBar : IDisposable {
         disposed = true
         binding?.Dispose()
         binding = nil
+        windowsBinding?.Dispose()
+        windowsBinding = nil
     }
 }
 
@@ -114,7 +121,7 @@ public sealed class NativeMenus {
             }
             let snapshot = NativeMenuSnapshot(items)
             if !owner.IsOpen { return Task.FromResult(NativeMenuResult(NativeMenuStatus.OwnerClosed)) }
-            if !OperatingSystem.IsMacOS() {
+            if !OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows() {
                 return Task.FromResult(NativeMenuResult(NativeMenuStatus.Unsupported))
             }
             let lease = owner.BeginNativeModal(out var status)
@@ -127,7 +134,10 @@ public sealed class NativeMenus {
             let launch Action = () -> {
                 var result = NativeMenuResult(NativeMenuStatus.OwnerClosed)
                 try {
-                    if !lease.IsOwnerClosing { result = MacMenuBridge.ShowContext(owner, point, snapshot, lease) }
+                    if !lease.IsOwnerClosing {
+                        result = if OperatingSystem.IsWindows() { WindowsMenuBridge.ShowContext(owner, point, snapshot, lease) }
+                            else { MacMenuBridge.ShowContext(owner, point, snapshot, lease) }
+                    }
                 } catch (error Exception) {
                     result = NativeMenuResult(NativeMenuStatus.Failed, error: error.Message)
                 } finally {
@@ -158,7 +168,7 @@ internal sealed class NativeMenuSnapshot {
         Items = Copy(items, HashSet[NativeMenuItem]())
     }
 
-    private func Copy(items IReadOnlyList[NativeMenuItem], path HashSet[NativeMenuItem]) IReadOnlyList[NativeMenuItem] {
+    private func Copy(items IReadOnlyList[NativeMenuItem], path HashSet[NativeMenuItem], enabled bool = true) IReadOnlyList[NativeMenuItem] {
         let copy = [items.Count]NativeMenuItem
         for i in 0 ... items.Count {
             let item = items[i]
@@ -189,8 +199,8 @@ internal sealed class NativeMenuSnapshot {
                 if !shortcuts.Add(key) { throw ArgumentException("Menu shortcuts must be unique", "items") }
             }
             copy[i] = NativeMenuItem{
-                Id: item.Id, Text: item.Text, Enabled: item.Enabled, Checked: item.Checked,
-                Separator: item.Separator, Shortcut: item.Shortcut, Items: Copy(item.Items, path),
+                Id: item.Id, Text: item.Text, Enabled: item.Enabled && enabled, Checked: item.Checked,
+                Separator: item.Separator, Shortcut: item.Shortcut, Items: Copy(item.Items, path, enabled && item.Enabled),
             }
             if !item.Separator {
                 Actions.Add(copy[i])
