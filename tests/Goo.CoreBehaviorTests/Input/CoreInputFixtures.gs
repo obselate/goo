@@ -1401,17 +1401,26 @@ internal class InputFixtures {
     preview.Key(Key.End, false, false)
     var consumed = true
     var previewCalls = 0
+    var laterCalls = 0
     let handler Func[Key, KeyModifiers, bool] = (key Key, modifiers KeyModifiers) -> {
       previewCalls++
       return consumed
     }
+    let later Func[Key, KeyModifiers, bool] = (key Key, modifiers KeyModifiers) -> {
+      laterCalls++
+      return false
+    }
     preview.Window.PreviewKeyPressed += handler
+    preview.Window.PreviewKeyPressed += later
     preview.Key(Key.Backspace, false, false)
-    if previewCalls != 1 || entry(preview).Buffer != "aa" { return false }
+    if previewCalls != 1 || laterCalls != 0 || entry(preview).Buffer != "aa" { return false }
     consumed = false
     preview.Key(Key.Backspace, false, false)
-    if previewCalls != 2 || entry(preview).Buffer != "a" { return false }
+    if previewCalls != 2 || laterCalls != 1 || entry(preview).Buffer != "a" { return false }
     preview.Window.PreviewKeyPressed -= handler
+    preview.Window.PreviewKeyPressed -= later
+    preview.Key(Key.Backspace, false, false)
+    if previewCalls != 2 || laterCalls != 1 || entry(preview).Buffer != "" { return false }
 
     let orderedCell = InputEntryCell{}
     let ordered = entryDriver(orderedCell)
