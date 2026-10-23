@@ -16,6 +16,7 @@ public partial class Window {
         private var activationDelivered bool
         private var deliveringActivation bool
         private var applicationActivated Action[ApplicationActivation]?
+        internal prop CurrentActivationToken string? { get; private set; }
 
         /// Occurs once per application activation on the process UI thread, not once per open window.
         /// Subscribe before initializing activation. Handlers own validation and window selection.
@@ -118,7 +119,9 @@ public partial class Window {
                         activationDelivered = true
                         Volatile.Write(ref pendingActivationCount, pendingActivations.Count)
                     }
-                    applicationActivated?.Invoke(value)
+                    CurrentActivationToken = value.NativeActivationToken
+                    try { applicationActivated?.Invoke(value) }
+                    finally { CurrentActivationToken = nil }
                 }
             } finally { deliveringActivation = false }
         }
@@ -129,6 +132,7 @@ public partial class Window {
                 pendingActivations.Clear()
                 Volatile.Write(ref pendingActivationCount, 0)
             }
+            ReleaseNativeApplicationActivation()
         }
     }
 
