@@ -205,7 +205,7 @@ let data = TransferData(
   Array.Empty[Uri]()
 )
 let source = DragSource((_ DragStartEvent) ->
-  DragData("selection", DragEffect.Copy | DragEffect.Move){ NativeData: data })
+  DragData("selection", DragEffect.Copy | DragEffect.Move){ NativeData = data })
 let result = window.SetNativeDataDropFormats(
   []string{"text/plain;charset=utf-8", "image/png"})
 ```
