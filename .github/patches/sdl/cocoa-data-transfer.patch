@@ -426,7 +426,7 @@ index d377bdb..c47de48 100644
  
 -    if (!Cocoa_GetMouseFocus()) {
 +    if (!Cocoa_GetMouseFocus() && !mouse->capture_window &&
-+        !SDL_GetMouseButtonState(mouse, SDL_GLOBAL_MOUSE_ID, false)) {
++        !SDL_GetMouseState(NULL, NULL)) {
          // The mouse is no longer over any window in the application
          SDL_SetMouseFocus(NULL);
          return;
