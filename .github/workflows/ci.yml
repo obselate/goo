@@ -51,6 +51,7 @@ jobs:
             -c Release -p:TreatWarningsAsErrors=true
           dotnet format tools/Goo.Gslint/Goo.Gslint.csproj \
             --verify-no-changes --no-restore
+          python3 tools/Goo.Gslint/test.py
 
       - name: Enforce strict G# lint
         run: |

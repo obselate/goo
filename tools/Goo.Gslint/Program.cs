@@ -999,7 +999,7 @@ public static class Program
         {
             if (File.Exists(path))
             {
-                if (Path.GetExtension(path) == ".gs")
+                if (Path.GetExtension(path) == ".gs" && (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0)
                 {
                     result.Add(Path.GetFullPath(path));
                 }
@@ -1020,9 +1020,17 @@ public static class Program
 
     private static void WalkDirectory(string directory, HashSet<string> result)
     {
+        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+        {
+            return;
+        }
+
         foreach (var file in Directory.EnumerateFiles(directory, "*.gs").OrderBy(path => path, StringComparer.Ordinal))
         {
-            result.Add(Path.GetFullPath(file));
+            if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0)
+            {
+                result.Add(Path.GetFullPath(file));
+            }
         }
 
         foreach (var subdirectory in Directory.EnumerateDirectories(directory).OrderBy(path => path, StringComparer.Ordinal))
