@@ -363,7 +363,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func GetClipboardText() string {
     ThrowIfDisposed()
-    return SDL.GetClipboardTextS() ?? ""
+    let native = SDL.GetClipboardText()
+    try { return ClipboardTransfer.BoundedUtf8(nint(native), ClipboardTransfer.MaxTextBytes) }
+    catch (_ ClipboardLimitException) { return "" }
+    finally { SDL.Free(native) }
   }
 
   public func SetClipboardText(value string) {

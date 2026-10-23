@@ -350,6 +350,8 @@ internal partial class TextInput {
     if command.Kind == TextCommandKind.Paste && command.Text == nil {
       command = TextCommand{ Kind: TextCommandKind.Paste, Text: clipboardGet() }
     }
+    if command.Kind == TextCommandKind.Paste
+      && (command.Text == "" || !ClipboardTransfer.TextFits(command.Text ?? "")) { return false }
     if (n.Kind != NodeKind.Editor || command.Kind != TextCommandKind.Paste)
       && !FinishComposition(root) { return false }
     if n.Kind == NodeKind.Editor {

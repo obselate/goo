@@ -274,7 +274,7 @@ Keep the returned timer and call `Dispose` when its owner no longer needs callba
 
 ## Use the native clipboard
 
-Call `Window.GetClipboardText` and `Window.SetClipboardText` only on the open window's UI thread. Both fail deterministically after close. An empty getter result can mean either an empty clipboard or a native copy failure; setter failures propagate. Built-in text entry and editor shortcuts use the same native clipboard path.
+Call `Window.GetClipboardText` and `Window.SetClipboardText` only on the open window's UI thread. Both fail deterministically after close. Reads reject text above 1 MiB of UTF-8, without truncation. An empty getter result can mean an empty clipboard, a native copy failure, or an oversized payload. Setter failures propagate. Built-in text entry and editor paste use the same limit, including supplied paste text, and leave the selection unchanged when rejected. This budget permits about one million ASCII characters while bounding text conversion and input processing separately from the 64 MiB image budget.
 
 ## Native file dialogs
 

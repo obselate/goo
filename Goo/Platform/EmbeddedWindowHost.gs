@@ -190,7 +190,10 @@ public open class EmbeddedWindowHost : IDisposable {
   internal func EndTextInput() { StopTextInput() }
   internal func SetTextArea(x int32, y int32, width int32, height int32, cursor int32) bool ->
   SetImeArea(x, y, width, height, cursor)
-  internal func ClipboardText() string -> GetClipboardText()
+  internal func ClipboardText() string {
+    let value = GetClipboardText()
+    return ClipboardTransfer.TextFits(value) ? value : ""
+  }
   internal func CopyText(value string) { SetClipboardText(value) }
   internal func ChangeCursor(value Cursor) { SetCursor(value) }
 }

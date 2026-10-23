@@ -5,6 +5,7 @@ using Android.Views;
 using Android.Views.InputMethods;
 using System.Text;
 using AndroidKeyEvent = Android.Views.KeyEvent;
+using AndroidRect = Android.Graphics.Rect;
 
 namespace Goo.Android;
 
@@ -341,7 +342,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         if (batchDepth > 0)
             return true;
-        var area = new Rect((int)(x * Density), (int)(y * Density),
+        var area = new AndroidRect((int)(x * Density), (int)(y * Density),
             (int)((x + width) * Density), (int)((y + height) * Density));
         RequestRectangleOnScreen(area);
         if (Input.Editor is not { } editor)
@@ -434,7 +435,10 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     internal string GetClipboardText()
     {
         var clipboard = (ClipboardManager)Context!.GetSystemService(Context.ClipboardService)!;
-        return clipboard.PrimaryClip?.GetItemAt(0)?.CoerceToText(Context)?.ToString() ?? "";
+        using var text = clipboard.PrimaryClip?.GetItemAt(0)?.CoerceToTextFormatted(Context);
+        if (text == null || text.Length() > ClipboardTransfer.MaxTextBytes) return "";
+        var value = text.ToString();
+        return ClipboardTransfer.TextFits(value) ? value : "";
     }
 
     internal void SetClipboardText(string value)
