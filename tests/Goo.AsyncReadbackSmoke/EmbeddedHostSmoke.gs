@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 import System.Diagnostics
 import System.Threading
 
@@ -96,10 +97,24 @@ internal class EmbeddedHostSmoke {
       let density = window.CurrentWindowMetrics().DisplayScaleX
       var notifications = 0
       window.PreferencesChanged += (value PlatformPreferences) -> { notifications++ }
+      let muted = PlatformPreferences{EventSoundsEnabled: false}
+      host.UpdatePreferences(muted)
+      host.UpdatePreferences(muted)
+      Require(notifications == 1 && window.Preferences.EventSoundsEnabled == false
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "Disabled event sounds were lost or duplicated a preference notification")
+      host.UpdatePreferences(PlatformPreferences{EventSoundsEnabled: true})
+      Require(notifications == 2 && window.Preferences.EventSoundsEnabled == true
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "Enabling event sounds scheduled tree work or lost its notification")
+      host.UpdatePreferences(PlatformPreferences{})
+      Require(notifications == 3 && window.Preferences.EventSoundsEnabled == nil,
+        "Unknown event sound preference was not delivered")
       host.UpdatePreferences(PlatformPreferences{Theme: SystemTheme.Dark, HighContrast: true,
         TextScaleFactor: 1.0F, ReducedMotion: false})
-      Require(notifications == 1 && window.Preferences.Theme == SystemTheme.Dark
+      Require(notifications == 4 && window.Preferences.Theme == SystemTheme.Dark
           && window.Preferences.HighContrast == true
+
           && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
         "Appearance-only preferences scheduled tree work or lost their notification")
       let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
@@ -110,13 +125,41 @@ internal class EmbeddedHostSmoke {
       Require(initial.Width > 0.0 && initial.Height > 0.0
           && scaled.Width > initial.Width * 1.7 && scaled.Height > initial.Height * 1.7,
         "Platform text scale did not resize explicitly sized mounted text")
-      Require(notifications == 2 && window.Preferences.ReducedMotion == true
+      Require(notifications == 5 && window.Preferences.ReducedMotion == true
           && window.CurrentWindowMetrics().DisplayScaleX == density,
         "Preference delivery changed density, lost motion policy or duplicated a snapshot")
       host.UpdatePreferences(PlatformPreferences{})
       host.RenderFrame(0.0)
       Require(Math.Abs(root.TextHandle.BorderBox.Width - initial.Width) < 0.1,
         "Removing host text scale did not restore mounted text geometry")
+      let accented = PlatformPreferences{AccentColor: Color.Rgb(17, 101, 191)}
+      host.UpdatePreferences(accented)
+      host.UpdatePreferences(accented)
+      Require(notifications == 7 && window.Preferences.AccentColor == accented.AccentColor
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "An accent-only update was lost, duplicated or scheduled tree work")
+      host.UpdatePreferences(PlatformPreferences{})
+      Require(notifications == 8 && window.Preferences.AccentColor == nil,
+        "An unavailable accent did not clear the previous color")
+      let source = List[string]()
+      source.Add("fr-CA")
+      source.Add("en")
+      let localized = PlatformPreferences{PreferredLocales: source}
+      source[0] = "ja"
+      host.UpdatePreferences(localized)
+      host.UpdatePreferences(PlatformPreferences{PreferredLocales: List[string](localized.PreferredLocales!!)})
+      Require(notifications == 9 && window.Preferences.PreferredLocales!![0] == "fr-CA"
+          && window.Preferences.PreferredLocales!![1] == "en"
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "Locale preferences lost their order, retained mutable input or duplicated equal lists")
+      source[0] = "en"
+      source[1] = "fr-CA"
+      host.UpdatePreferences(PlatformPreferences{PreferredLocales: source})
+      Require(notifications == 10 && window.Preferences.PreferredLocales!![0] == "en",
+        "A locale-order change did not notify")
+      host.UpdatePreferences(PlatformPreferences{})
+      Require(notifications == 11 && window.Preferences.PreferredLocales == nil,
+        "Unknown preferred locales did not clear the previous list")
       Require(window.Show() == WindowOperationResult.Unsupported
           && window.Hide() == WindowOperationResult.Unsupported,
         "Embedded lifecycle operations claimed native window support")

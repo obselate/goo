@@ -122,9 +122,9 @@ window from retaining the input block.
 ## Platform preferences
 
 `Window.Preferences` is an immutable `PlatformPreferences` snapshot.
-`Theme` is `Unknown`, `Light` or `Dark`. `ReducedMotion`, `HighContrast` and
-`TextScaleFactor` are nullable so unsupported values remain distinct from false
-or the default scale. Text scale must be finite and positive and is independent
+`Theme` is `Unknown`, `Light` or `Dark`. `AccentColor`, `ReducedMotion`, `HighContrast`,
+`EventSoundsEnabled` and `TextScaleFactor` are nullable so unsupported values
+remain distinct from an explicit value. Text scale must be finite and positive and is independent
 of display density. It affects text measurement, shaping and geometry, including
 explicit font sizes and styled spans, without changing declared sizes or DPI.
 
@@ -137,12 +137,43 @@ rebuild or rebind can resume vector playback when the preference permits it.
 Embedded adapters publish snapshots with `EmbeddedWindowHost.UpdatePreferences`,
 before or after attaching the window.
 
-Desktop theme follows SDL system theme notifications. The desktop event loop also
-refreshes available preferences at most once per second. Windows reports client
-area animation and high contrast settings. macOS reports reduced motion and
-increased contrast. Desktop text scale remains unknown when the backend cannot
-report it. Android reports theme, font scale and disabled animations on attach,
-resume and configuration changes. Other unsupported preferences remain unknown.
+Desktop theme follows SDL notifications. Other desktop preferences refresh at
+most once per second. Portal setting changes also trigger a refresh.
+
+| Platform | Available preference sources |
+| --- | --- |
+| Windows | Client-area animation, high contrast, DWM accent and the selected sound scheme. |
+| macOS | Reduced motion, increased contrast, `NSColor.controlAccentColor` in sRGB and `com.apple.sound.uiaudio.enabled`. |
+| Linux | Portal appearance `accent-color` and `contrast`, plus GNOME `event-sounds` when exposed. |
+| Android | Theme, font scale, disabled animations, theme `colorAccent`, high text contrast and `SOUND_EFFECTS_ENABLED`. |
+
+Android refreshes on attach, resume and configuration changes. It also observes
+sound and high text contrast setting changes. Desktop text scale stays unknown
+when the backend cannot report it.
+
+Apps choose whether to play UI sounds from `EventSoundsEnabled`.
+This preference does not control media playback or volume.
+
+```gsharp
+window.PreferencesChanged += (preferences PlatformPreferences) -> {
+    if let locales = preferences.PreferredLocales {
+        for tag in locales { Console.WriteLine(tag) }
+    }
+}
+```
+
+`PreferredLocales` contains ordered BCP-47 tags. Nil means unavailable.
+Lists are copied and immutable. Equal lists do not notify.
+
+| Platform | Source and updates |
+| --- | --- |
+| Windows | SDL reads `GetUserPreferredUILanguages`. SDL locale changes refresh the list. |
+| macOS | SDL reads `NSLocale.preferredLanguages`. SDL locale changes refresh the list. |
+| Linux | `LANGUAGE`, then `LC_ALL`, then `LANG`. POSIX names become language tags. SDL is the fallback. |
+| Android | Configuration `LocaleList`, read on attach, resume and configuration changes. |
+
+The settings portal has no preferred-locale key. Apps own translations and choose
+how to apply locale tags to language and direction styles.
 
 ## Native owned and modal windows
 

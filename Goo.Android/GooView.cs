@@ -14,6 +14,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     private readonly AndroidVulkanHost host;
     private readonly Handler handler = new(Looper.MainLooper!);
     private readonly FrameCallback frameCallback;
+    private readonly PreferenceObserver preferenceObserver;
     private readonly Java.Lang.Runnable scheduleFrame;
     private readonly Choreographer choreographer;
     private readonly InputMethodManager inputMethod;
@@ -52,6 +53,13 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         Holder!.AddCallback(this);
         window.Attach(host);
         RefreshPreferences();
+        preferenceObserver = new PreferenceObserver(this, handler);
+        context.ContentResolver!.RegisterContentObserver(
+            global::Android.Provider.Settings.System.GetUriFor(
+                global::Android.Provider.Settings.System.SoundEffectsEnabled)!, false, preferenceObserver);
+        context.ContentResolver.RegisterContentObserver(
+            global::Android.Provider.Settings.Secure.GetUriFor("high_text_contrast_enabled")!,
+            false, preferenceObserver);
         window.PlatformInput.EditorChanged += OnEditorChanged;
     }
 
@@ -86,12 +94,37 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         var configuration = Resources?.Configuration;
         var mode = configuration?.UiMode & global::Android.Content.Res.UiMode.NightMask;
+        var sounds = global::Android.Provider.Settings.System.GetInt(Context!.ContentResolver!,
+            global::Android.Provider.Settings.System.SoundEffectsEnabled, -1);
+        var contrast = -1;
+        try
+        {
+            contrast = global::Android.Provider.Settings.Secure.GetInt(Context!.ContentResolver!,
+                "high_text_contrast_enabled", -1);
+        }
+        catch (Java.Lang.SecurityException) { }
+        using var accent = new global::Android.Util.TypedValue();
+        global::Goo.Color? accentColor = Context.Theme?.ResolveAttribute(
+            global::Android.Resource.Attribute.ColorAccent, accent, true) == true
+            && accent.Type >= global::Android.Util.DataType.FirstColorInt
+            && accent.Type <= global::Android.Util.DataType.LastColorInt
+                ? global::Goo.Color.Rgba((accent.Data >> 16) & 255, (accent.Data >> 8) & 255,
+                    accent.Data & 255, (int)((uint)accent.Data >> 24))
+                : (global::Goo.Color?)null;
+        var locales = configuration?.Locales;
+        var preferredLocales = locales is { IsEmpty: false }
+            ? locales.ToLanguageTags()?.Split(',')
+            : null;
         host.UpdatePreferences(new PlatformPreferences
         {
             Theme = mode == global::Android.Content.Res.UiMode.NightYes ? SystemTheme.Dark
                 : mode == global::Android.Content.Res.UiMode.NightNo ? SystemTheme.Light : SystemTheme.Unknown,
             TextScaleFactor = configuration?.FontScale,
-            ReducedMotion = !global::Android.Animation.ValueAnimator.AreAnimatorsEnabled()
+            PreferredLocales = preferredLocales,
+            ReducedMotion = !global::Android.Animation.ValueAnimator.AreAnimatorsEnabled(),
+            AccentColor = accentColor,
+            HighContrast = contrast switch { 0 => false, 1 => true, _ => (bool?)null },
+            EventSoundsEnabled = sounds switch { 0 => false, 1 => true, _ => (bool?)null }
         });
     }
 
@@ -479,6 +512,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             }
             CancelFrames();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
+            Context!.ContentResolver!.UnregisterContentObserver(preferenceObserver);
+            preferenceObserver.Dispose();
             EndTextInput();
             host.Dispose();
             host.ReleaseSurface();
@@ -504,6 +539,16 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         Ctrl = (state & MetaKeyStates.CtrlOn) != 0,
         Super = (state & MetaKeyStates.MetaOn) != 0,
     };
+
+    private sealed class PreferenceObserver(GooView view, Handler handler)
+        : global::Android.Database.ContentObserver(handler)
+    {
+        public override void OnChange(bool selfChange)
+        {
+            if (!view.disposed)
+                view.RefreshPreferences();
+        }
+    }
 
     private sealed class FrameCallback(GooView view) : Java.Lang.Object, Choreographer.IFrameCallback
     {

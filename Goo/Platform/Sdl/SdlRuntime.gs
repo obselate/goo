@@ -323,7 +323,7 @@ internal unsafe partial class SdlRuntime {
         eventModifierMask = uint16(0)
       }
       if eventType == SDLEventType.Quit || eventType == SDLEventType.Terminating
-        || eventType == SDLEventType.SystemThemeChanged {
+        || eventType == SDLEventType.SystemThemeChanged || eventType == SDLEventType.LocaleChanged {
         events.RouteAll(nativeEvent)
       } else if eventType >= SDLEventType.DisplayFirst &&
       eventType <= SDLEventType.DisplayLast{
