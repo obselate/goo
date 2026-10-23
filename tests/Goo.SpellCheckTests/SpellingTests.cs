@@ -61,7 +61,31 @@ public sealed class SpellingTests
             Assert.Equal(SpellingStatus.Stale, session.ApplySuggestion(suggestions, index));
             Assert.Equal(SpellingStatus.LanguageUnavailable,
                 service.CheckAsync(document.Snapshot(), range, "fr-FR").GetAwaiter().GetResult().Status);
-            var closing = session.CheckAsync(range);
+            SpellingResult? refreshed = null;
+            session.Updated += result =>
+            {
+                if (result.Version == document.Version && result.Status == SpellingStatus.Success)
+                    refreshed = result;
+            };
+            controller.Selection = new TextSelection(new TextPosition(0, TextAffinity.Downstream),
+                new TextPosition(document.Length, TextAffinity.Upstream));
+            Assert.True(controller.Execute(new TextCommand(TextCommandKind.Insert, "hello\nhello", false)));
+            controller.Selection = new TextSelection(new TextPosition(4, TextAffinity.Downstream),
+                new TextPosition(5, TextAffinity.Upstream));
+            Assert.True(controller.Execute(new TextCommand(TextCommandKind.Insert, "", false)));
+            controller.Selection = new TextSelection(new TextPosition(9, TextAffinity.Downstream),
+                new TextPosition(10, TextAffinity.Upstream));
+            Assert.True(controller.Execute(new TextCommand(TextCommandKind.Insert, "", false)));
+            deadline.Restart();
+            while (refreshed == null && deadline.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                drain.Invoke(owner, null);
+                Thread.Yield();
+            }
+            Assert.NotNull(refreshed);
+            Assert.Equal("hell\nhell", document.GetText());
+            Assert.Equal(2, refreshed.Errors.Count);
+            var closing = session.CheckAsync(new TextRange(0, document.Length));
             typeof(Window).GetMethod("Close", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(owner, null);
             Assert.Equal(SpellingStatus.Cancelled,
                 closing.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult().Status);
