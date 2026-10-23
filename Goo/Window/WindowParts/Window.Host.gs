@@ -681,6 +681,7 @@ public partial class Window {
 
   internal func Close() {
     requireUiThread("Window.Close")
+    if !closeNativeModal() { return }
     if !closeFileDialog() { return }
     DismissChildPopups(PopupDismissReason.OwnerClosed)
     if !closeOwnedWindows() { return }

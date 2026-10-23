@@ -84,14 +84,12 @@ public partial class Window {
     if IsInputBlocked { throw InvalidOperationException("The owner already has a modal child or native chooser") }
     guard let native = host as SdlHost ? else { throw NotSupportedException("A native desktop host is required") }
     let dialog = NativeFileDialog(this, native.WindowHandle, kind, selected)
+    var modalStatus NativeModalStatus
+    let lease = BeginNativeModal(&modalStatus)!!
+    lease.Closing = () -> dialog.Cancel()
     family ??= WindowFamily()
     let state = family!!
     state.Dialog = dialog
-    if let focused = input.FocusedNode() { state.PreviousFocus = WeakReference(focused) }
-    input.FocusLost(node, resolver)
-    RefreshPlatformInput()
-    accessibility?.MarkDirty()
-    requestRender()
     dialog.Start()
     DrainFileDialog()
     return dialog.Task
@@ -112,16 +110,7 @@ public partial class Window {
     guard let state = family, let dialog = state.Dialog else { return }
     if !dialog.NativeCompleted { return }
     state.Dialog = nil
-    let previous = state.PreviousFocus
-    state.PreviousFocus = nil
-    accessibility?.MarkDirty()
-    if IsOpen && host?.IsClosing != true && !state.Closing {
-      RequestActivation()
-      if let focused = previous?.Target as Node? {
-        if !focused.Retired { FocusElement(focused) }
-      }
-      requestRender()
-    }
+    nativeModal?.Dispose()
     dialog.Complete()
   }
 
