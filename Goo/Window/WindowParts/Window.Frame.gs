@@ -577,6 +577,7 @@ public partial class Window {
       RetainedInvalidated: retainedInvalidationHook,
       Res: resolver,
       ChildScratch: childDiffScratch,
+      Profiler: profiler.Active ? profiler : nil,
       DeferStyleFlush: true,
       Pump: motionPump,
     }

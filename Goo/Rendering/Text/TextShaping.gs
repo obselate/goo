@@ -152,6 +152,7 @@ internal partial class TextShaping {
       families string, size float32, weight int32, italic bool, letterSpacing float32,
       direction int32, paragraphResolution BidiResolution?, language string,
       out width float32, measureOnly bool = false) ShapedText?{
+        if FrameRecorder.Current != nil { FrameWorkCounters.ShapeCalls++ }
         width = 0.0F
         let text = measureOnly ? "" : paragraph.Substring(lineStart, lineLength)
         let primary = ResolveCachedPrimary(families, weight, italic)

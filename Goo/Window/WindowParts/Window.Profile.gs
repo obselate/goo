@@ -37,6 +37,19 @@ internal data struct FrameProfilePoint {
   internal var Bytes int64
 }
 
+internal class FrameWorkCounters {
+  shared {
+    @ThreadStatic
+    internal var VirtualMounts int64
+    @ThreadStatic
+    internal var VirtualReuses int64
+    @ThreadStatic
+    internal var VirtualDiscards int64
+    @ThreadStatic
+    internal var ShapeCalls int64
+  }
+}
+
 internal interface FrameProfileSink {
   prop Active bool { get }
   func BeginPump(recorder FrameRecorder, context FrameTraceContext);
@@ -70,6 +83,10 @@ internal class FrameProfiler {
   private var context FrameTraceContext
   private var activeTraceId string?
   private var frameStart FrameProfilePoint
+  private var virtualMountStart int64
+  private var virtualReuseStart int64
+  private var virtualDiscardStart int64
+  private var shapeStart int64
 
   internal prop Context FrameTraceContext { get -> context }
 
@@ -115,6 +132,10 @@ internal class FrameProfiler {
       activeTraceId = current.TraceId
       frameStart = FrameProfilePoint{}
       context = FrameTraceContext{WindowId: WindowId, PumpId: current.NextPump()}
+      virtualMountStart = FrameWorkCounters.VirtualMounts
+      virtualReuseStart = FrameWorkCounters.VirtualReuses
+      virtualDiscardStart = FrameWorkCounters.VirtualDiscards
+      shapeStart = FrameWorkCounters.ShapeCalls
       sink?.BeginPump(current, context)
     }
   }
@@ -207,6 +228,15 @@ internal class FrameProfiler {
   internal func EndFrame(start FrameProfilePoint, didRender bool, deferred bool = false) {
     if !enabled && FrameRecorder.Current == nil { return }
     Record(FrameProfileStage.Frame, start, if didRender { 1 } else if deferred { 2 } else { 0 })
+    if let current = FrameRecorder.Current {
+      if activeTraceId == current.TraceId {
+        let ticks = Stopwatch.GetTimestamp()
+        current.Counter("virtual.rows.mount", "cpu.work", uint64(FrameWorkCounters.VirtualMounts - virtualMountStart), ticks, unit: "count", context: context)
+        current.Counter("virtual.rows.reuse", "cpu.work", uint64(FrameWorkCounters.VirtualReuses - virtualReuseStart), ticks, unit: "count", context: context)
+        current.Counter("virtual.rows.discard", "cpu.work", uint64(FrameWorkCounters.VirtualDiscards - virtualDiscardStart), ticks, unit: "count", context: context)
+        current.Counter("text.shape.calls", "cpu.work", uint64(FrameWorkCounters.ShapeCalls - shapeStart), ticks, unit: "count", context: context)
+      }
+    }
     if !enabled { return }
     if warmupFrames > 0 {
       warmupFrames--
