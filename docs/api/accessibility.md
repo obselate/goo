@@ -24,6 +24,25 @@ Protected `TextEntry` nodes expose one bullet per extended grapheme cluster. The
 
 Text editors expose `TextSnapshot`, selection, and caret metadata. The snapshot is versioned and avoids a full document copy.
 
+```gsharp
+if let id = window.AccessibilityHitTest(12.0, 24.0) {
+    window.PerformAccessibilityAction(id, AccessibilityActionRequest(AccessibilityAction.ScrollIntoView))
+}
+```
+
+Hit tests include readable disabled controls and text. Coordinates use window
+logical units, before `UiScale` and framebuffer scaling.
+
+| Adapter data or action | Meaning |
+| --- | --- |
+| `IsPassword` | Text and selection offsets refer to the masked value. |
+| `VisibleBounds` | Clipped axis-aligned bounds, or nil outside the viewport. A path clip can leave empty areas inside the rectangle. |
+| `ScrollInfo` | Current offsets, animation targets, limits and viewport size. Nil without built-in scroll geometry. Changes advance the tree version. |
+| `Blur` | Clears keyboard focus from its current owner. |
+| `ScrollIntoView` | Reveals the node without taking keyboard focus. Disabled nodes can be revealed. |
+
+Hosts own reading focus separately from Goo keyboard focus.
+
 ## Native desktop accessibility
 
 Add the optional `Goo.Accessibility` package alongside `Goo`. Assign one adapter
@@ -222,6 +241,8 @@ Selects a command routed from an accessibility adapter.
 - `Expand`
 - `Collapse`
 - `Scroll`
+- `Blur`
+- `ScrollIntoView`
 
 ## `AccessibilityActionRequest`
 
@@ -412,6 +433,10 @@ Gets the stable public semantic identifier.
 
 Gets the resolved invalid state.
 
+### `IsPassword`
+
+Gets whether exposed text represents a protected password value.
+
 ### `Level`
 
 Gets the resolved heading level.
@@ -460,6 +485,10 @@ Gets the resolved required state.
 
 Gets the resolved role.
 
+### `ScrollInfo`
+
+Gets built-in scroll geometry, or nil when this node has no scroll container.
+
 ### `Selected`
 
 Gets the resolved selected state.
@@ -499,6 +528,10 @@ Gets the resolved numeric value.
 ### `ValueText`
 
 Gets the resolved localized value text.
+
+### `VisibleBounds`
+
+Gets the conservatively clipped window logical bounds, or nil when outside the viewport.
 
 ## `AccessibilityOrientation`
 
@@ -637,6 +670,46 @@ Selects the semantic role exposed to an accessibility adapter.
 - `SearchBox`
 - `Status`
 - `Custom`
+
+## `AccessibilityScrollInfo`
+
+Source:
+
+- [`Accessibility.gs`](../../Goo/Accessibility/Accessibility.gs)
+
+Reports logical scroll offsets, targets, limits, and viewport dimensions.
+
+### `MaximumX`
+
+Gets the maximum horizontal offset.
+
+### `MaximumY`
+
+Gets the maximum vertical offset.
+
+### `TargetX`
+
+Gets the horizontal animation target.
+
+### `TargetY`
+
+Gets the vertical animation target.
+
+### `ViewportHeight`
+
+Gets the untransformed viewport height.
+
+### `ViewportWidth`
+
+Gets the untransformed viewport width.
+
+### `X`
+
+Gets the current horizontal offset.
+
+### `Y`
+
+Gets the current vertical offset.
 
 ## `AccessibilityTree`
 

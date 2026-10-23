@@ -18,6 +18,25 @@ Protected `TextEntry` nodes expose one bullet per extended grapheme cluster. The
 
 Text editors expose `TextSnapshot`, selection, and caret metadata. The snapshot is versioned and avoids a full document copy.
 
+```gsharp
+if let id = window.AccessibilityHitTest(12.0, 24.0) {
+  window.PerformAccessibilityAction(id, AccessibilityActionRequest(AccessibilityAction.ScrollIntoView))
+}
+```
+
+Hit tests include readable disabled controls and text. Coordinates use window
+logical units, before `UiScale` and framebuffer scaling.
+
+| Adapter data or action | Meaning |
+| --- | --- |
+| `IsPassword` | Text and selection offsets refer to the masked value. |
+| `VisibleBounds` | Clipped axis-aligned bounds, or nil outside the viewport. A path clip can leave empty areas inside the rectangle. |
+| `ScrollInfo` | Current offsets, animation targets, limits and viewport size. Nil without built-in scroll geometry. Changes advance the tree version. |
+| `Blur` | Clears keyboard focus from its current owner. |
+| `ScrollIntoView` | Reveals the node without taking keyboard focus. Disabled nodes can be revealed. |
+
+Hosts own reading focus separately from Goo keyboard focus.
+
 ## Native desktop accessibility
 
 Add the optional `Goo.Accessibility` package alongside `Goo`. Assign one adapter

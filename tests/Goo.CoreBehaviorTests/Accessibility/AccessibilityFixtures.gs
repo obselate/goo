@@ -160,7 +160,7 @@ internal class AccessibilityFixtures {
     let entry = root.Children[1]
     let scroll = root.Children[2]
     let priorVersion = tree.Version
-    if !disabled.Disabled || disabled.Actions.Count != 0
+    if !disabled.Disabled || disabled.Actions.Count != 1 || !hasAction(disabled, AccessibilityAction.ScrollIntoView)
       || window.PerformAccessibilityAction(disabled.Id,
         AccessibilityActionRequest(AccessibilityAction.Increment))
       || !hasAction(entry, AccessibilityAction.SetValue)
@@ -275,7 +275,12 @@ internal class AccessibilityFixtures {
     if !window.PerformAccessibilityAction(entry.Id,
       AccessibilityActionRequest(AccessibilityAction.Focus)) { return false }
     window.UpdateTree()
-    if !entry.Focused { return false }
+    if !entry.Focused || !hasAction(entry, AccessibilityAction.Blur)
+      || !window.PerformAccessibilityAction(entry.Id, AccessibilityActionRequest(AccessibilityAction.Blur)) {
+        return false
+      }
+    window.UpdateTree()
+    if entry.Focused || hasAction(entry, AccessibilityAction.Blur) { return false }
     cell.Widen()
     window.UpdateTree()
     if root.Bounds.Width <= width || adapter.Tree!!.Version <= version { return false }
@@ -283,7 +288,9 @@ internal class AccessibilityFixtures {
       return false
     }
     window.UpdateTree(1.0)
-    return child.Bounds.Y < childY
+    guard let metrics = scroller.ScrollInfo, let visible = child.VisibleBounds else { return false }
+    return child.Bounds.Y < childY && metrics.Y > 0.0 && metrics.MaximumY > 0.0
+      && visible.Height <= metrics.ViewportHeight && metrics.TargetY == 48.0
   }
 
   func RetiredAndInvalidRelationshipContract() bool {
@@ -371,6 +378,28 @@ internal class AccessibilityFixtures {
     window.AccessibilityAdapter = adapter
     window.UpdateTree()
     return adapter.ThreadId == expected
+  }
+
+  func HostExplorationAndRevealContract() bool {
+    let adapter = AccessibilityTestAdapter{}
+    let window = Window{ Root: AccessibilityHostCell{}, Width: 100, Height: 100, UiScale: 2.0F }
+    window.AccessibilityAdapter = adapter
+    window.UpdateTree()
+    guard let root = adapter.Tree?.Root else { return false }
+    let password = root.Children[0]
+    let scroller = root.Children[1]
+    let visible = scroller.Children[0]
+    let offscreen = scroller.Children[1]
+    if !password.IsPassword || password.Value.Contains("secret") || visible.IsPassword
+      || offscreen.VisibleBounds != nil || !visible.Disabled { return false }
+    guard let bounds = visible.VisibleBounds else { return false }
+    guard let hit = window.AccessibilityHitTest(bounds.X + bounds.Width / 2.0,
+      bounds.Y + bounds.Height / 2.0) else { return false }
+    if hit != visible.Id || window.AccessibilityHitTest(80.0, 80.0) != nil { return false }
+    if !window.PerformAccessibilityAction(offscreen.Id,
+      AccessibilityActionRequest(AccessibilityAction.ScrollIntoView)) { return false }
+    window.UpdateTree(1.0)
+    return offscreen.VisibleBounds != nil && !offscreen.Focused && scroller.ScrollInfo?.Y > 0.0
   }
 }
 
@@ -559,6 +588,28 @@ internal class AccessibilityGeometryCell : Cell {
     },
       Container{ Height: 100.0, Accessibility: Accessibility{ Role: AccessibilityRole.Generic } }
     } }
+}
+
+internal class AccessibilityHostCell : Cell {
+  override func Build() Blob -> Container() {
+    .Width: 50.0,
+    .Accessibility: Accessibility{ Role: AccessibilityRole.Group },
+    TextEntry{ Value: "secret", Password: true, Height: 10.0, FlexShrink: 0.0 },
+    Container() {
+      .Height: 20.0,
+      .FlexShrink: 0.0,
+      .OverflowY: Overflow.Scroll,
+      .Accessibility: Accessibility{ Role: AccessibilityRole.List },
+      Container{
+        Height: 40.0, FlexShrink: 0.0, Disabled: true, HitTestSelf: false,
+        Accessibility: Accessibility{ Role: AccessibilityRole.ListItem },
+      },
+      Container{
+        Height: 20.0, FlexShrink: 0.0, Disabled: true,
+        Accessibility: Accessibility{ Role: AccessibilityRole.ListItem },
+      },
+    },
+  }
 }
 
 internal class AccessibilityRelationshipTargetsCell : Cell {

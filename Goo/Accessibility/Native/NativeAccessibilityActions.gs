@@ -51,6 +51,8 @@ public sealed partial class NativeAccessibilityAdapter {
       }
       case 1 { return AccessibilityActionRequest(AccessibilityAction.Focus)
       }
+      case 2 { return AccessibilityActionRequest(AccessibilityAction.Blur)
+      }
       case 3 { return AccessibilityActionRequest(AccessibilityAction.Collapse)
       }
       case 4 { return AccessibilityActionRequest(AccessibilityAction.Expand)
@@ -70,6 +72,8 @@ public sealed partial class NativeAccessibilityAdapter {
         let x = (source.EditorController?.ScrollTargetX ?? float64(source.ScrollTargetX)) + (request.Action == uint8(12) ? -dx : request.Action == uint8(13) ? dx : 0.0)
         let y = (source.EditorController?.ScrollTargetY ?? float64(source.ScrollTargetY)) + (request.Action == uint8(14) ? -dy : request.Action == uint8(11) ? dy : 0.0)
         return AccessibilityActionRequest.Scroll(Math.Max(0.0, x), Math.Max(0.0, y))
+      }
+      case 15 { return AccessibilityActionRequest(AccessibilityAction.ScrollIntoView)
       }
       case 17 {
         if request.Tag == 6 && Double.IsFinite(request.X) && Double.IsFinite(request.Y) {
@@ -152,13 +156,20 @@ public sealed partial class NativeAccessibilityAdapter {
     }
 
     private func EncodeActions(target nint, node AccessibilityNode) {
-      if node.Disabled { return }
+      if node.Disabled {
+        if Supports(node, AccessibilityAction.ScrollIntoView) { AccessKitNative.NodeAddAction(target, uint8(15)) }
+        return
+      }
       if Supports(node, AccessibilityAction.Select) || Supports(node, AccessibilityAction.Deselect)
         || Supports(node, AccessibilityAction.Expand) || Supports(node, AccessibilityAction.Collapse) { AccessKitNative.NodeAddAction(target, uint8(0)) }
       for i in 0 ... node.Actions.Count {
         let action = node.Actions[i]
         switch action {
           case AccessibilityAction.Focus { AccessKitNative.NodeAddAction(target, uint8(1))
+          }
+          case AccessibilityAction.Blur { AccessKitNative.NodeAddAction(target, uint8(2))
+          }
+          case AccessibilityAction.ScrollIntoView { AccessKitNative.NodeAddAction(target, uint8(15))
           }
           case AccessibilityAction.Activate { AccessKitNative.NodeAddAction(target, uint8(0))
           }
