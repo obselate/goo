@@ -2,7 +2,6 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
-using Android.Views;
 using Android.Views.Accessibility;
 using Goo;
 using Goo.Android;
@@ -126,10 +125,8 @@ public sealed class NotificationChecks : Instrumentation
 
     private void DismissPermission()
     {
-        using (var down = new KeyEvent(KeyEventActions.Down, Keycode.Back))
-            Require(automation.InjectInputEvent(down, true), "Permission dismissal key failed.");
-        using (var up = new KeyEvent(KeyEventActions.Up, Keycode.Back))
-            Require(automation.InjectInputEvent(up, true), "Permission dismissal key failed.");
+        Require(automation.PerformGlobalAction(global::Android.AccessibilityServices.GlobalAction.Back),
+            "Permission dialog back action failed.");
         Wait(() => !HasPermissionButton("permission_allow_button"), "Permission dialog did not close.");
     }
 

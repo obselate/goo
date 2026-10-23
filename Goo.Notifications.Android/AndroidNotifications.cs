@@ -154,6 +154,8 @@ internal sealed class AndroidNotificationService : NotificationService
             {
                 if (permissions[i] != PermissionName)
                     continue;
+                if (grants[i] != Permission.Granted && !owner!.ShouldShowRequestPermissionRationale(PermissionName))
+                    break;
 
                 using var preferences = owner!.GetSharedPreferences("Goo.Notifications", FileCreationMode.Private)!;
                 using var edit = preferences.Edit()!;
