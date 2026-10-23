@@ -8,6 +8,6 @@
       <HintPath>$(MSBuildThisFileDirectory)../../artifacts/gsharp/formatter/GSharp.Formatting.dll</HintPath>
       <Private>true</Private>
     </Reference>
-    <Compile Include="$(MSBuildThisFileDirectory)SourceFormatting.cs" Link="SourceFormatting.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SourceFormatting.gs" Link="SourceFormatting.gs" />
   </ItemGroup>
 </Project>

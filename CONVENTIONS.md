@@ -111,7 +111,7 @@ Use only forms supported by `Gsharp.NET.Sdk` 0.5.26. Authority order: pinned com
 - Strict `Goo.Gslint` enforces GL0002/3/4/7/8/10/11. GL0001 checks formatting for samples and templates, not core or tests.
 - Review GL0005 manually. API contract tests enforce product documentation, not public test-fixture documentation under GL0006.
 - Review function size, comments, ownership, error semantics and constant meaning manually. The linter does not enforce these rules.
-- Keep `dotnet format --verify-no-changes` for C# tools. It does not check G# formatting.
+- Use the pinned `gsfmt --check` for G# tools.
 - For public API changes, update `tests/Goo.ApiContractTests/PublicApi.approved.txt` and source XML documentation. Do not commit regenerated API pages or the plugin reference bundle in PRs, because `main` syncs them after merge.
 - Internal file moves must leave the approved public surface unchanged. Do not add compatibility aliases for internal moves.
 

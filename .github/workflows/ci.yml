@@ -92,10 +92,9 @@ jobs:
       - name: Build repo-local G# linter
         if: needs.changes.outputs.lint == 'true'
         run: |
-          dotnet build tools/Goo.Gslint/Goo.Gslint.csproj \
+          dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
-          dotnet format tools/Goo.Gslint/Goo.Gslint.csproj \
-            --verify-no-changes --no-restore
+          dotnet artifacts/gsharp/formatter/gsfmt.dll --check tools/Goo.Gslint/Program.gs
           python3 tools/Goo.Gslint/test.py
 
       - name: Enforce strict G# lint
@@ -128,14 +127,14 @@ jobs:
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
         run: |
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
             --source Goo.NativeMenus --xml Goo.NativeMenus/bin/Release/net10.0/Goo.NativeMenus.xml \
             --output docs/api-native-menus
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
             --source Goo.Images --xml Goo.Images/bin/Release/net10.0/Goo.Images.xml \
             --output docs/api-images
-          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
             --source Goo.Audio --xml Goo.Audio/bin/Release/net10.0/Goo.Audio.xml \
             --output docs/api-audio
 
@@ -665,7 +664,7 @@ jobs:
       - name: Verify compiled shader effects
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet build tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj \
+          dotnet build tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
           dotnet exec tools/Goo.ShaderEffectTool/bin/Release/net10.0/Goo.ShaderEffectTool.dll compile \
             Goo/Shaders/Effects/backdrop_blur.slang Goo/Shaders/Authoring \
@@ -834,7 +833,7 @@ jobs:
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet pack Goo.Accessibility/Goo.Accessibility.csproj -c Release -o artifacts/packages \
+          dotnet pack Goo.Accessibility/Goo.Accessibility.gsproj -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
 
@@ -880,7 +879,7 @@ jobs:
             -p:ContinuousIntegrationBuild=true \
             -p:RepositoryCommit="$GITHUB_SHA" \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
-          dotnet pack templates/Goo.Templates/Goo.Templates.csproj \
+          dotnet pack templates/Goo.Templates/Goo.Templates.gsproj \
             -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true \
             -p:ContinuousIntegrationBuild=true \
