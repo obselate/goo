@@ -38,13 +38,26 @@ internal unsafe partial class VulkanWindowTarget {
         let savedDevice = device
         let savedDispatch = dispatch
         let savedIdle = deviceWaitIdleAddress
+        SdlRuntime.Acquire()
+        if !SdlRuntime.AcquireVulkan() {
+            SdlRuntime.Release()
+            throw InvalidOperationException("External producer loader acquisition failed")
+        }
+        guard let lease = VulkanSharedRuntime.TryAcquire() else {
+            SdlRuntime.ReleaseVulkan()
+            SdlRuntime.Release()
+            throw InvalidOperationException("External producer runtime is unavailable")
+        }
+        var transferred bool = false
         try {
             CreateDevice()
             LoadDeviceDispatch()
             let getFd = ResolveDeviceProc("vkGetMemoryFdKHR") as (unmanaged[Cdecl](VkDevice, *VkMemoryGetFdInfoKHR, *int32) -> VkResult)?
             if getFd == nil { throw NotSupportedException("External memory FD export is unavailable") }
             let semaphoreFd = if timeline { ResolveDeviceProc("vkGetSemaphoreFdKHR") } else { nint(0) }
-            let producer = VulkanExternalProducer(device, dispatch, instanceDispatch, physicalDevice, queueFamilyIndex, getFd, semaphoreFd)
+            let producer = VulkanExternalProducer(device, dispatch, instanceDispatch, physicalDevice,
+                queueFamilyIndex, getFd, semaphoreFd, lease, sharedObjectAccounting)
+            transferred = true
             try {
                 producer.Initialize()
                 return producer
@@ -53,9 +66,19 @@ internal unsafe partial class VulkanWindowTarget {
                 throw error
             }
         } finally {
+            if !transferred && device != savedDevice {
+                let destroyDevice = savedDispatch.vkDestroyDevice
+                destroyDevice(device, nil)
+                sharedObjectAccounting?.Release()
+            }
             device = savedDevice
             dispatch = savedDispatch
             deviceWaitIdleAddress = savedIdle
+            if !transferred {
+                lease.Release()
+                SdlRuntime.ReleaseVulkan()
+                SdlRuntime.Release()
+            }
         }
     }
 }
@@ -63,6 +86,8 @@ internal unsafe partial class VulkanWindowTarget {
 internal unsafe sealed class VulkanExternalProducer : IDisposable {
     private let device VkDevice
     private let dispatch VkDeviceDispatch
+    private let runtime VulkanSharedLease
+    private let accounting VulkanObjectAccounting?
     private let getFd unmanaged[Cdecl](VkDevice, *VkMemoryGetFdInfoKHR, *int32) -> VkResult
     private let family uint32
     private var memoryProperties VkPhysicalDeviceMemoryProperties
@@ -84,12 +109,15 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
 
     internal init(nativeDevice VkDevice, nativeDispatch VkDeviceDispatch, instanceDispatch VkInstanceDispatch,
         physical VkPhysicalDevice, queueFamily uint32,
-        nativeGetFd unmanaged[Cdecl](VkDevice, *VkMemoryGetFdInfoKHR, *int32) -> VkResult, semaphoreFd nint) {
+        nativeGetFd unmanaged[Cdecl](VkDevice, *VkMemoryGetFdInfoKHR, *int32) -> VkResult, semaphoreFd nint,
+        sharedRuntime VulkanSharedLease, nativeAccounting VulkanObjectAccounting?) {
         device = nativeDevice
         dispatch = nativeDispatch
         family = queueFamily
         getFd = nativeGetFd
         semaphoreFdAddress = semaphoreFd
+        runtime = sharedRuntime
+        accounting = nativeAccounting
         ReadProperties(instanceDispatch, physical)
     }
 
@@ -161,10 +189,9 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         var requirements = VkMemoryRequirements2{ sType: VkConstants.VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 }
         let getRequirements = dispatch.vkGetBufferMemoryRequirements2
         getRequirements(device, &request, &requirements)
-        var properties = memoryProperties
-        let types = *VkMemoryType(&properties.memoryTypes_0)
+        let types = *VkMemoryType(&memoryProperties.memoryTypes_0)
         var hostType uint32 = 32u
-        for index in 0 ... int32(properties.memoryTypeCount) {
+        for index in 0 ... int32(memoryProperties.memoryTypeCount) {
             if (requirements.memoryRequirements.memoryTypeBits & (1u << index)) != 0u && (types[index].propertyFlags & 6u) == 6u {
                 hostType = uint32(index)
                 break
@@ -186,10 +213,10 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         for y in 0 ... 4 {
             for x in 0 ... 8 {
                 let offset = (y * 8 + x) * 4
-                pixels[offset] = if (y < 2 && x < 4) || (y >= 2 && x >= 4) { 255u8 } else { 0u8 }
-                pixels[offset + 1] = if x >= 4 { 255u8 } else { 0u8 }
-                pixels[offset + 2] = if y >= 2 && x < 4 { 255u8 } else { 0u8 }
-                pixels[offset + 3] = 0u8
+                pixels[offset] = if (y < 2 && x < 4) || (y >= 2 && x >= 4) { uint8(255) } else { uint8(0) }
+                pixels[offset + 1] = if x >= 4 { uint8(255) } else { uint8(0) }
+                pixels[offset + 2] = if y >= 2 && x < 4 { uint8(255) } else { uint8(0) }
+                pixels[offset + 3] = uint8(0)
             }
         }
         let unmap = dispatch.vkUnmapMemory
@@ -315,5 +342,9 @@ internal unsafe sealed class VulkanExternalProducer : IDisposable {
         }
         let destroyDevice = dispatch.vkDestroyDevice
         destroyDevice(device, nil)
+        accounting?.Release()
+        runtime.Release()
+        SdlRuntime.ReleaseVulkan()
+        SdlRuntime.Release()
     }
 }

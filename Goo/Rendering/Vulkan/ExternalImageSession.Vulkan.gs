@@ -205,7 +205,7 @@ public unsafe sealed partial class ExternalImageSession {
     }
 
     private func CloseFrames(status ExternalImageStatus) {
-        let lost = status == ExternalImageStatus.DeviceLost || Runtime.DeviceLost
+        var lost = status == ExternalImageStatus.DeviceLost || Runtime.DeviceLost
         if lost { Runtime.QuiesceQueueAfterDeviceLoss() }
         if !lost {
             let serial = Runtime.QueueWorker.LastEnqueuedGraphicsSubmissionSerial
@@ -216,7 +216,15 @@ public unsafe sealed partial class ExternalImageSession {
         for index in 0 ... FrameCapacity {
             guard let frame = frames[index] else { continue }
             if !lost && frame.Acquired {
-                while !ReleaseFrame(index, frame) { Thread.Yield() }
+                while !ReleaseFrame(index, frame) {
+                    if Runtime.DeviceLost {
+                        lost = true
+                        Runtime.QuiesceQueueAfterDeviceLoss()
+                        FinishFrame(index, frame, ExternalFrameStatus.DeviceLost)
+                        break
+                    }
+                    Thread.Yield()
+                }
             } else {
                 FinishFrame(index, frame, if lost { ExternalFrameStatus.DeviceLost } else { ExternalFrameStatus.Closed })
             }
