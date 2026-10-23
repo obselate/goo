@@ -57,7 +57,7 @@ if not any(corpus.iterdir()):
 
 sanitizers = ["-O1", "-g", "-fno-omit-frame-pointer", "-fsanitize=fuzzer,address,undefined", "-fno-sanitize-recover=all"]
 if target in ("svg", "raster", "wav"):
-    run("dotnet", "publish", "tools/Goo.InputFuzz/Goo.InputFuzz.gsproj", "-c", "Release", "-o", str(work / "managed-target"))
+    run("dotnet", "publish", "tools/Goo.InputFuzz/Goo.InputFuzz.gsproj", "-c", "Release", "-m:4", "-o", str(work / "managed-target"))
 else:
     hb = manifest["source"]["harfbuzz"]
     archive = fetch(hb["archiveUrl"], hb["archiveSha256"], work / "harfbuzz.tar.xz")
