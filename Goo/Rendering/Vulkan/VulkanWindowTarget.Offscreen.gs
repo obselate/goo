@@ -31,8 +31,7 @@ internal unsafe partial class VulkanWindowTarget {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Cancelled })
       }
       if pageCompletion != nil || queuedPage != nil || readbackRequest?.IsPending == true
-        || readbackRequest?.State == VulkanReadbackState.Complete || readbackPrerequisiteFrame != nil
-        || frameBegun {
+        || readbackRequest?.State == VulkanReadbackState.Complete || readbackPrerequisiteFrame != nil {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.Busy })
       }
       VulkanDeviceRecoveryCoordinator.ServiceQueueCompletions(this)
@@ -43,7 +42,7 @@ internal unsafe partial class VulkanWindowTarget {
         return Task.FromResult(OffscreenRenderResult{ Status: OffscreenRenderStatus.DeviceLost })
       }
       let completion = TaskCompletionSource[OffscreenRenderResult](TaskCreationOptions.RunContinuationsAsynchronously)
-      if queueStage != QueueStageIdle || active.QueueWorker.HasOutstandingWork {
+      if frameBegun || queueStage != QueueStageIdle || active.QueueWorker.HasOutstandingWork {
         queuedPageResult = completion
         queuedPage = () -> BeginPage(root, options, cancellation, ownerClosed, reusable, completion)
         host.Wake()
@@ -225,7 +224,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func StartQueuedPage() {
-    if queuedPage == nil || queueStage != QueueStageIdle
+    if queuedPage == nil || frameBegun || queueStage != QueueStageIdle
       || runtime?.QueueWorker.HasOutstandingWork == true { return }
     let start = queuedPage
     queuedPage = nil
