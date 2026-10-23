@@ -75,6 +75,7 @@ class WindowsTransferScene : Cell {
 
     private func End(e DragEndEvent) {
         EndCount++
+        Console.WriteLine("source-end " + int32(e.Status).ToString() + " " + int32(e.Effect).ToString() + " " + if e.SourceRemovalRequired { "1" } else { "0" })
         if cancel || reject {
             WindowsTransferRequire(e.Status == DataTransferStatus.Cancelled && e.Effect == DragEffect.None && !e.SourceRemovalRequired,
                 "Canceled native source result changed")
@@ -83,7 +84,6 @@ class WindowsTransferScene : Cell {
             WindowsTransferRequire(e.SourceRemovalRequired == (!files && effect == DragEffect.Move), "Native source removal intent changed")
         }
         OnEnd?.Invoke()
-        Console.WriteLine("source-end " + int32(e.Status).ToString() + " " + int32(e.Effect).ToString() + " " + if e.SourceRemovalRequired { "1" } else { "0" })
         Owner?.RequestClose()
     }
 
