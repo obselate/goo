@@ -16,6 +16,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 {
     private static readonly ConditionalWeakTable<global::Goo.Window, GooView> nativeOwners = new();
     private readonly AndroidVulkanHost host;
+    internal AndroidClipboard Clipboard { get; }
     private readonly Handler handler = new(Looper.MainLooper!);
     private readonly FrameCallback frameCallback;
     private readonly PreferenceObserver preferenceObserver;
@@ -46,6 +47,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (window.AccessibilityAdapter is not null)
             throw new InvalidOperationException("GooView owns the window accessibility adapter.");
         Window = window;
+        Clipboard = new AndroidClipboard(this);
         host = new AndroidVulkanHost(this);
         frameCallback = new FrameCallback(this);
         scheduleFrame = new Java.Lang.Runnable(ScheduleFrame);
@@ -628,6 +630,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Window.EmbeddedPopupFactory = null;
             Window.DismissChildPopups(PopupDismissReason.OwnerClosed);
             CancelFrames();
+            Clipboard.Dispose();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
             Context!.ContentResolver!.UnregisterContentObserver(preferenceObserver);
             preferenceObserver.Dispose();
