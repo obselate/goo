@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Runtime.CompilerServices
 
 internal data struct VulkanPathResourceIdentity {
   internal let PathId ResourceId
@@ -24,6 +25,7 @@ private sealed class VulkanPathIdentityRecord {
   internal var Identity VulkanPathResourceIdentity
   internal var Hash uint64
   internal var ResidencyCount int32
+  internal var BucketIndex int32
 
   internal init(data VectorPathData, identity VulkanPathResourceIdentity, hash uint64) {
     Reference = WeakReference(data)
@@ -34,7 +36,9 @@ private sealed class VulkanPathIdentityRecord {
 
 internal sealed class VulkanPathIdentityRegistry {
   private let identities Dictionary[uint64, List[VulkanPathIdentityRecord]]
-  private let records List[VulkanPathIdentityRecord]
+  private let records Dictionary[uint64, VulkanPathIdentityRecord]
+  private let matches ConditionalWeakTable[object, VulkanPathIdentityRecord]
+  private let deadRecords List[VulkanPathIdentityRecord]
   private var nextLogicalId uint64
   private var nextSourceId uint64
   private var count int32
@@ -44,7 +48,9 @@ internal sealed class VulkanPathIdentityRegistry {
 
   internal init() {
     identities = Dictionary[uint64, List[VulkanPathIdentityRecord]]()
-    records = List[VulkanPathIdentityRecord]()
+    records = Dictionary[uint64, VulkanPathIdentityRecord]()
+    matches = ConditionalWeakTable[object, VulkanPathIdentityRecord]()
+    deadRecords = List[VulkanPathIdentityRecord]()
     nextLogicalId = 1uL
     nextSourceId = 1uL
   }
@@ -64,29 +70,12 @@ internal sealed class VulkanPathIdentityRegistry {
     if data.GeometryRevision == 0uL {
       throw InvalidOperationException("Vulkan path geometry revision is invalid")
     }
-    SweepDeadRecords()
-    if let owner = data.NormalizedOwner {
-      var ownerIndex int32 = 0
-      while ownerIndex < records.Count {
-        let ownerRecord = records[ownerIndex]
-        if let ownerData = ownerRecord.Reference.Target as VectorPathData {
-          if Object.ReferenceEquals(ownerData.NormalizedOwner, owner) {
-            if ownerRecord.Identity.GeometryRevision != data.GeometryRevision {
-              ownerRecord.Identity = VulkanPathResourceIdentity{
-                PathId: ResourceId{
-                  Kind: ownerRecord.Identity.PathId.Kind,
-                  LogicalId: ownerRecord.Identity.PathId.LogicalId,
-                  Version: data.GeometryRevision,
-                },
-                SourceId: ownerRecord.Identity.SourceId,
-                GeometryRevision: data.GeometryRevision,
-              }
-            }
-            return ownerRecord.Identity
-          }
-        }
-        ownerIndex++
+    let key object = if let owner = data.NormalizedOwner { owner } else { data }
+    if matches.TryGetValue(key, out var cached) {
+      if records.ContainsKey(cached.Identity.PathId.LogicalId) {
+        return Refresh(cached, data.GeometryRevision)
       }
+      matches.Remove(key)
     }
     if identities.TryGetValue(data.Hash, out var bucket) {
       var index int32 = 0
@@ -94,18 +83,8 @@ internal sealed class VulkanPathIdentityRegistry {
         let existing = bucket[index]
         if let existingData = existing.Reference.Target as VectorPathData {
           if Object.ReferenceEquals(existingData, data) || existingData.Equals(data) {
-            if existing.Identity.GeometryRevision != data.GeometryRevision {
-              existing.Identity = VulkanPathResourceIdentity{
-                PathId: ResourceId{
-                  Kind: existing.Identity.PathId.Kind,
-                  LogicalId: existing.Identity.PathId.LogicalId,
-                  Version: data.GeometryRevision,
-                },
-                SourceId: existing.Identity.SourceId,
-                GeometryRevision: data.GeometryRevision,
-              }
-            }
-            return existing.Identity
+            matches.Add(key, existing)
+            return Refresh(existing, data.GeometryRevision)
           }
         }
         index++
@@ -130,8 +109,10 @@ internal sealed class VulkanPathIdentityRegistry {
       created
     }
     let createdRecord = VulkanPathIdentityRecord(data, identity, data.Hash)
+    createdRecord.BucketIndex = createdBucket.Count
     createdBucket.Add(createdRecord)
-    records.Add(createdRecord)
+    records.Add(logicalId, createdRecord)
+    matches.Add(key, createdRecord)
     if count == int32.MaxValue {
       throw OverflowException("Vulkan path identity count overflow")
     }
@@ -179,57 +160,55 @@ internal sealed class VulkanPathIdentityRegistry {
     disposed = true
     identities.Clear()
     records.Clear()
+    matches.Clear()
+    deadRecords.Clear()
     count = 0
   }
 
-  private func Find(logicalId uint64) VulkanPathIdentityRecord? {
-    var index int32 = 0
-    while index < records.Count {
-      let record = records[index]
-      if record.Identity.PathId.LogicalId == logicalId {
-        return record
+  private func Find(logicalId uint64) VulkanPathIdentityRecord? ->
+  if records.TryGetValue(logicalId, out var record) { record } else { nil }
+
+  private func Refresh(record VulkanPathIdentityRecord, revision uint64) VulkanPathResourceIdentity {
+    if record.Identity.GeometryRevision != revision {
+      record.Identity = VulkanPathResourceIdentity{
+        PathId: ResourceId{
+          Kind: record.Identity.PathId.Kind,
+          LogicalId: record.Identity.PathId.LogicalId,
+          Version: revision,
+        },
+        SourceId: record.Identity.SourceId,
+        GeometryRevision: revision,
       }
-      index++
     }
-    return nil
+    return record.Identity
   }
 
-  private func SweepDeadRecords() {
-    var index int32 = 0
-    while index < records.Count {
-      let record = records[index]
-      if record.ResidencyCount == 0
-        && (!record.Reference.IsAlive || record.Reference.Target == nil) {
-          RemoveRecord(record)
-          count = count - 1
-        } else {
-          index++
-        }
+  internal func SweepDeadRecords() {
+    EnsureOpen()
+    deadRecords.Clear()
+    for record in records.Values {
+      if record.ResidencyCount == 0 && record.Reference.Target == nil {
+        deadRecords.Add(record)
+      }
     }
+    for record in deadRecords {
+      RemoveRecord(record)
+      count--
+    }
+    deadRecords.Clear()
   }
 
   private func RemoveRecord(record VulkanPathIdentityRecord) {
     Remove(record)
-    var index int32 = 0
-    while index < records.Count {
-      if Object.ReferenceEquals(records[index], record) {
-        records.RemoveAt(index)
-        return
-      }
-      index++
-    }
+    records.Remove(record.Identity.PathId.LogicalId)
   }
 
   private func Remove(record VulkanPathIdentityRecord) {
     if identities.TryGetValue(record.Hash, out var bucket) {
-      var index int32 = 0
-      while index < bucket.Count {
-        if Object.ReferenceEquals(bucket[index], record) {
-          bucket.RemoveAt(index)
-          break
-        }
-        index++
-      }
+      let last = bucket[bucket.Count - 1]
+      bucket[record.BucketIndex] = last
+      last.BucketIndex = record.BucketIndex
+      bucket.RemoveAt(bucket.Count - 1)
       if bucket.Count == 0 {
         identities.Remove(record.Hash)
       }

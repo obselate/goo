@@ -14,5 +14,7 @@
              Link="WindowActivationSmoke.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)PopupWindowSmoke.gs"
              Link="PopupWindowSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VectorRetainSmoke.gs"
+             Link="VectorRetainSmoke.gs" />
   </ItemGroup>
 </Project>

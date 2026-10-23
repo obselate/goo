@@ -275,6 +275,7 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     if !sceneActivePathIds.TryGetValue(sceneId, out var active) {
       throw ArgumentException("Vulkan path scene identity is not registered", "sceneId")
     }
+    identities.SweepDeadRecords()
     for pathId in active.Keys {
       let revisions = active[pathId]
       for revision in revisions.Keys {
