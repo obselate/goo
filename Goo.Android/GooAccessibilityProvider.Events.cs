@@ -168,6 +168,15 @@ internal sealed partial class GooAccessibilityProvider
 
     private void QueueContent(int id, ContentChangeTypes changes, bool live = true)
     {
+        if (!live)
+        {
+            var ancestor = id;
+            while (nodes.TryGetValue(ancestor, out var item))
+            {
+                if (item.Node.Live != AccessibilityLive.Off) id = item.Parent;
+                ancestor = item.Parent;
+            }
+        }
         var region = live ? LiveRegion(id) : HostViewId;
         var atomic = nodes.TryGetValue(region, out var record) && record.Node.Atomic == true;
         if (atomic) id = region;

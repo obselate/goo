@@ -197,9 +197,11 @@ internal sealed partial class GooAccessibilityProvider
             || record.Node.IsPassword && granularity != 1) return false;
         var forward = action == NodeAction.NextAtMovementGranularity;
         var from = Math.Clamp(record.Node.Caret ?? record.ReadingCursor, 0, text.Length);
-        var to = granularity == 8 ? Paragraph(text, from, forward)
-            : granularity == 2 ? MoveWord(record, text, from, forward) : MoveCharacter(record, text, from, forward);
+        var segment = granularity == 2 ? MoveWord(record, text, from, forward) : default;
+        var to = granularity == 2 ? forward ? segment.End : segment.Start
+            : granularity == 8 ? Paragraph(text, from, forward) : MoveCharacter(record, text, from, forward);
         if (to < 0 || to == from) return false;
+        if (granularity != 2) segment = (Math.Min(from, to), Math.Max(from, to));
         if (Supports(record.Node, AccessibilityAction.SetSelection))
         {
             var anchor = from;
@@ -213,8 +215,8 @@ internal sealed partial class GooAccessibilityProvider
         using var e = CreateEvent(id, EventTypes.ViewTextTraversedAtMovementGranularity);
         if (e is not null)
         {
-            e.FromIndex = from;
-            e.ToIndex = to;
+            e.FromIndex = segment.Start;
+            e.ToIndex = segment.End;
             e.SetAction((global::Android.AccessibilityServices.GlobalAction)(int)action);
             e.MovementGranularity = (MovementGranularity)granularity;
             view.Parent?.RequestSendAccessibilityEvent(view, e);
@@ -234,7 +236,7 @@ internal sealed partial class GooAccessibilityProvider
         return index < 0 ? -1 : index < record.Boundaries.Length ? record.Boundaries[index] : text.Length;
     }
 
-    private static int MoveWord(NodeRecord record, string text, int from, bool forward)
+    private static (int Start, int End) MoveWord(NodeRecord record, string text, int from, bool forward)
     {
         var iterator = record.Words ??= BreakIterator.WordInstance!;
         if (!ReferenceEquals(record.WordText, text))
@@ -246,10 +248,11 @@ internal sealed partial class GooAccessibilityProvider
         while (to >= 0)
         {
             if (!forward) iterator.Following(to);
-            if (iterator.RuleStatus >= (int)BreakWord.NoneLimit) return to;
+            if (iterator.RuleStatus >= (int)BreakWord.NoneLimit)
+                return forward ? (iterator.Previous(), to) : (to, iterator.Current());
             to = forward ? iterator.Next() : iterator.Preceding(to);
         }
-        return -1;
+        return (-1, -1);
     }
 
     private static int Paragraph(string text, int from, bool forward)
@@ -281,7 +284,7 @@ internal sealed partial class GooAccessibilityProvider
     private AccessibilityEvent? CreateEvent(int id, EventTypes type, ContentChangeTypes changes = 0)
     {
         if (disposed || view.Parent is null || !Available
-            && (type is not (EventTypes.ViewAccessibilityFocusCleared or EventTypes.ViewHoverExit)
+            && (id != HostViewId && type is not (EventTypes.ViewAccessibilityFocusCleared or EventTypes.ViewHoverExit)
                 || !view.IsAttachedToWindow || !manager.IsEnabled)) return null;
         var e = new AccessibilityEvent((int)type);
         e.SetSource(view, id);

@@ -12,6 +12,7 @@ public sealed class MainActivity : GooActivity
 {
     private bool inputSmokeStarted;
     private bool menuSmokeStarted;
+    internal GooView NativeView => GooView;
 
     internal GooView NativeView => GooView;
 

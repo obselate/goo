@@ -1481,7 +1481,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [changes, quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-consumer, android-native-menus, windows-x64]
+    needs: [changes, quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-accessibility, android-consumer, android-native-menus, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -1745,6 +1745,26 @@ jobs:
         with:
           name: android-native-menu-results
           path: artifacts/android-native-menus/logs/
+
+  android-accessibility:
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: android-smoke
+          path: artifacts/android-smoke
+      - name: Enable KVM
+        run: sudo chmod a+rw /dev/kvm
+      - name: Check native accessibility through UiAutomation
+        run: .github/scripts/run-android-accessibility.sh "$(find artifacts/android-smoke -name org.goo.androidsmoke-Signed.apk -print -quit)"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: android-accessibility-36
+          path: artifacts/android-accessibility-36/logs
 
   android-consumer:
     needs: [changes, linux-packages, android]

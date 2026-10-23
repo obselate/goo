@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+apk="$(realpath "${1:?APK path is required}")"
+work="$(realpath -m "${2:-artifacts/android-accessibility-36}")"
+mkdir -p "$work"/{tmp,avd/device,home,user,cache,logs}
+export TMPDIR="$work/tmp" ANDROID_TMP="$work/tmp"
+export ANDROID_AVD_HOME="$work/avd" ANDROID_EMULATOR_HOME="$work/home"
+export ANDROID_USER_HOME="$work/user" XDG_CACHE_HOME="$work/cache"
+export ADB_SERVER_SOCKET=tcp:localhost:5038 ANDROID_ADB_SERVER_PORT=5038
+adb="${ANDROID_HOME:?ANDROID_HOME must name the Android SDK}/platform-tools/adb"
+image=x86_64-36_r07.zip
+image_hash=c6bf44bdcd885bb902b4ba752d111a073ad7a817
+if [[ -z "${GOO_EMULATOR_DIRECTORY:-}" ]]; then
+  curl --fail --location --retry 3 https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip -o "$work/emulator.zip"
+  printf '%s  %s\n' cd7362ea55dfb86a418958138dc396e74165dd01 "$work/emulator.zip" | sha1sum -c -
+  unzip -q "$work/emulator.zip" -d "$work/runtime"
+  rm "$work/emulator.zip"
+  GOO_EMULATOR_DIRECTORY="$work/runtime/emulator"
+fi
+if [[ -z "${GOO_ANDROID_IMAGE_DIRECTORY:-}" ]]; then
+  curl --fail --location --retry 3 "https://dl.google.com/android/repository/sys-img/google_apis/$image" -o "$work/image.zip"
+  printf '%s  %s\n' "$image_hash" "$work/image.zip" | sha1sum -c -
+  unzip -q "$work/image.zip" -d "$work/image"
+  rm "$work/image.zip"
+  GOO_ANDROID_IMAGE_DIRECTORY="$work/image/x86_64"
+fi
+cat > "$work/avd/goo-accessibility.ini" <<EOF
+avd.ini.encoding=UTF-8
+path=$work/avd/device
+target=android-36
+EOF
+cat > "$work/avd/device/config.ini" <<EOF
+avd.ini.encoding=UTF-8
+abi.type=x86_64
+hw.cpu.arch=x86_64
+hw.cpu.ncore=2
+hw.ramSize=2560
+hw.lcd.width=1080
+hw.lcd.height=1920
+hw.lcd.density=420
+hw.gpu.enabled=yes
+hw.gpu.mode=lavapipe
+hw.keyboard=yes
+hw.mainKeys=no
+disk.dataPartition.size=2G
+image.sysdir.1=$GOO_ANDROID_IMAGE_DIRECTORY
+tag.id=google_apis
+target=android-36
+PlayStore.enabled=false
+EOF
+[[ -r /dev/kvm && -w /dev/kvm ]]
+"$GOO_EMULATOR_DIRECTORY/emulator" -accel-check
+"$adb" -P 5038 start-server
+"$GOO_EMULATOR_DIRECTORY/emulator" -avd goo-accessibility -port 5560 -no-window -no-audio \
+  -no-snapshot -no-boot-anim -no-metrics -gpu lavapipe -cores 2 -memory 2560 \
+  -no-direct-adb -adb-path "$adb" > "$work/logs/emulator.log" 2>&1 &
+emulator_pid=$!
+cleanup() {
+  timeout 20 "$adb" -P 5038 -s emulator-5560 logcat -d > "$work/logs/logcat.txt" 2>&1 || true
+  timeout 20 "$adb" -P 5038 -s emulator-5560 shell cmd gpu vkjson > "$work/logs/vulkan.json" 2>&1 || true
+  timeout 20 "$adb" -P 5038 -s emulator-5560 exec-out screencap -p > "$work/logs/screen.png" 2>/dev/null || true
+  timeout 10 "$adb" -P 5038 -s emulator-5560 emu kill >/dev/null 2>&1 || true
+  kill "$emulator_pid" 2>/dev/null || true
+  wait "$emulator_pid" 2>/dev/null || true
+}
+trap cleanup EXIT
+for attempt in {1..180}; do
+  if [[ "$(timeout 10 "$adb" -P 5038 -s emulator-5560 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; then break; fi
+  kill -0 "$emulator_pid"
+  sleep 2
+done
+[[ "$(timeout 10 "$adb" -P 5038 -s emulator-5560 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]
+"$adb" -P 5038 -s emulator-5560 shell settings put global window_animation_scale 0
+"$adb" -P 5038 -s emulator-5560 shell settings put global transition_animation_scale 0
+"$adb" -P 5038 -s emulator-5560 shell settings put global animator_duration_scale 0
+"$adb" -P 5038 -s emulator-5560 install --no-incremental -r "$apk"
+timeout 180 "$adb" -P 5038 -s emulator-5560 shell am instrument -w -r \
+  org.goo.androidsmoke/org.goo.androidsmoke.AccessibilityChecks | tee "$work/logs/instrumentation.txt"
+grep -q 'GOO_ACCESSIBILITY_PASS' "$work/logs/instrumentation.txt"
+grep -q 'INSTRUMENTATION_CODE: -1' "$work/logs/instrumentation.txt"
+! grep -q 'GOO_ACCESSIBILITY_FAIL\|INSTRUMENTATION_FAILED\|INSTRUMENTATION_ABORTED' "$work/logs/instrumentation.txt"
