@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -29,7 +30,42 @@ env:
     wayland-protocols weston
 
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      full: ${{ steps.paths.outputs.full }}
+      tools: ${{ steps.paths.outputs.tools }}
+      lint: ${{ steps.paths.outputs.lint }}
+      api: ${{ steps.paths.outputs.api }}
+    steps:
+      - id: paths
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            let full = context.eventName !== 'pull_request';
+            let plugin = false;
+            let api = false;
+            if (!full) {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                ...context.repo, pull_number: context.issue.number, per_page: 100
+              });
+              full = files.length !== context.payload.pull_request.changed_files;
+              for (const file of files) {
+                for (const path of [file.filename, file.previous_filename].filter(Boolean)) {
+                  if (path.startsWith('plugins/goo/')) plugin = true;
+                  else if (path.startsWith('docs/') && path.endsWith('.md') && path !== 'docs/nuget-readme.md') {
+                    if (path.startsWith('docs/api/')) api = true;
+                  } else if (!path.startsWith('integrations/vscode/')) full = true;
+                }
+              }
+            }
+            core.setOutput('full', full);
+            core.setOutput('tools', full || plugin || api);
+            core.setOutput('lint', full || plugin);
+            core.setOutput('api', full || api);
+
   quality:
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
@@ -37,22 +73,26 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: needs.changes.outputs.tools == 'true'
         with:
           global-json-file: global.json
 
       - name: Restore pinned G# authoring tools
+        if: needs.changes.outputs.tools == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: artifacts/gsharp
           key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
+        if: needs.changes.outputs.tools == 'true'
         run: ./bootstrap.sh --gsharp-only
 
       - name: Validate onboarding and release metadata
         run: .github/scripts/validate-onboarding.py
 
       - name: Build repo-local G# linter
+        if: needs.changes.outputs.lint == 'true'
         run: |
           dotnet build tools/Goo.Gslint/Goo.Gslint.csproj \
             -c Release -p:TreatWarningsAsErrors=true
@@ -61,6 +101,7 @@ jobs:
           python3 tools/Goo.Gslint/test.py
 
       - name: Enforce strict G# lint
+        if: needs.changes.outputs.lint == 'true'
         run: |
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict \
@@ -72,28 +113,33 @@ jobs:
             apps templates plugins/goo/reference/templates
 
       - name: Build Goo with warnings as errors
+        if: needs.changes.outputs.api == 'true'
         run: dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Regenerate API documentation
+        if: needs.changes.outputs.api == 'true'
         run: |
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release
           git diff --exit-code -- docs/api
           test -z "$(git status --porcelain -- docs/api)"
 
       - name: Run focused API contract tests
+        if: needs.changes.outputs.api == 'true'
         run: |
           dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Build Goo DevTools CLI
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Run Goo DevTools CLI tests
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.csproj \
             -c Release -p:TreatWarningsAsErrors=true
@@ -107,16 +153,23 @@ jobs:
           PY
 
   macos-native:
-    runs-on: macos-15
+    needs: changes
+    runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 15
 
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: needs.changes.outputs.full == 'true'
 
       - name: Install native build tools
+        if: needs.changes.outputs.full == 'true'
         run: brew install cmake meson ninja
 
       - name: Build pinned macOS arm64 native payloads
+        if: needs.changes.outputs.full == 'true'
         run: |
           native="$PWD/artifacts/macos-native"
           mkdir -p "$native"
@@ -125,6 +178,7 @@ jobs:
           .github/scripts/build-text-native-macos-arm64.sh "$native"
 
       - name: Upload macOS native payloads
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: goo-macos-arm64-native
@@ -132,36 +186,46 @@ jobs:
           path: artifacts/macos-native/
 
   macos-arm64:
-    needs: macos-native
-    runs-on: macos-15
+    needs: [changes, macos-native]
+    runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: 30
 
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: needs.changes.outputs.full == 'true'
 
       - name: Load release version
+        if: needs.changes.outputs.full == 'true'
         run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
 
       - name: Restore pinned G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: artifacts/gsharp
           key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         run: ./bootstrap.sh --gsharp-only
 
       - name: Download macOS native payloads
+        if: needs.changes.outputs.full == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: goo-macos-arm64-native
           path: artifacts/macos-candidate/native
 
       - name: Publish NativeAOT macOS smoke app
+        if: needs.changes.outputs.full == 'true'
         run: |
           mkdir -p artifacts/packages
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj \
@@ -173,6 +237,7 @@ jobs:
             -o artifacts/publish-macos-smoke
 
       - name: Verify NativeAOT local PNG loading on macOS
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
             -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -181,6 +246,7 @@ jobs:
           artifacts/image-nativeaot/Goo.ImageLoadingSmoke
 
       - name: Stage, sign, and run macOS smoke bundle
+        if: needs.changes.outputs.full == 'true'
         run: |
           .github/scripts/stage-macos-arm64.sh \
             artifacts/publish-macos-smoke \
@@ -200,6 +266,7 @@ jobs:
             artifacts/macos-activation-results
 
       - name: Verify NativeAOT UI audio on macOS
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
             -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -210,6 +277,7 @@ jobs:
             artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Fetch pinned Slang compiler
+        if: needs.changes.outputs.full == 'true'
         run: |
           archive="$RUNNER_TEMP/slang-2026.16-macos-aarch64.tar.gz"
           sdk="$RUNNER_TEMP/slang-2026.16"
@@ -225,6 +293,7 @@ jobs:
           echo "SLANG_SDK=$sdk" >> "$GITHUB_ENV"
 
       - name: Restore pinned SPIR-V validator
+        if: needs.changes.outputs.full == 'true'
         id: spirv-val
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
@@ -232,7 +301,7 @@ jobs:
           key: spirv-val-macos-arm64-1.4.357.0-9a49b0883b9b635689a85b5647dbfcb223268151
 
       - name: Build pinned SPIR-V validator
-        if: steps.spirv-val.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.full == 'true' && (steps.spirv-val.outputs.cache-hit != 'true')
         run: |
           brew install cmake ninja
           source="$RUNNER_TEMP/SPIRV-Tools-1.4.357.0"
@@ -262,6 +331,7 @@ jobs:
           install -m0755 "$build/tools/spirv-val" "$sdk/bin/spirv-val"
 
       - name: Select pinned SPIR-V validator
+        if: needs.changes.outputs.full == 'true'
         run: |
           sdk="$RUNNER_TEMP/vulkan-sdk-1.4.357.0"
           "$sdk/bin/spirv-val" --version 2>&1 \
@@ -269,6 +339,7 @@ jobs:
           echo "VULKAN_SDK=$sdk" >> "$GITHUB_ENV"
 
       - name: Bundle Goo Gallery for testers
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet publish apps/Goo.Gallery/Goo.Gallery.gsproj \
             -c Release -r osx-arm64 --self-contained true \
@@ -293,6 +364,7 @@ jobs:
             artifacts/macos-candidate/install-goo-gallery-macos.sh
 
       - name: Upload macOS release candidate
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: goo-macos-arm64-candidate
@@ -301,30 +373,39 @@ jobs:
             artifacts/macos-candidate/
 
   linux-validation:
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: needs.changes.outputs.full == 'true'
 
       - name: Load release version
+        if: needs.changes.outputs.full == 'true'
         run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
 
       - name: Restore pinned G# authoring tools
-        if: github.ref_type != 'tag'
+        if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: artifacts/gsharp
           key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         run: ./bootstrap.sh --gsharp-only
 
       - &linux-apt-update
+        if: needs.changes.outputs.full == 'true'
         name: Update Linux package lists
         id: linux-apt
         run: |
@@ -336,6 +417,7 @@ jobs:
           echo "key=$key" >> "$GITHUB_OUTPUT"
 
       - &linux-apt-cache
+        if: needs.changes.outputs.full == 'true'
         name: Restore Linux package archives
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
@@ -343,6 +425,7 @@ jobs:
           key: apt-linux-x64-${{ steps.linux-apt.outputs.key }}
 
       - &linux-dependencies
+        if: needs.changes.outputs.full == 'true'
         name: Install Linux build and Wayland dependencies
         run: |
           sudo apt-get install -y --no-install-recommends \
@@ -350,6 +433,7 @@ jobs:
             $GOO_LINUX_APT_PACKAGES
 
       - &linux-vulkan-driver
+        if: needs.changes.outputs.full == 'true'
         name: Pin Vulkan CPU driver
         run: |
           icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
@@ -358,6 +442,7 @@ jobs:
           echo "VK_DRIVER_FILES=${icds[0]}" >> "$GITHUB_ENV"
 
       - name: Install pinned Vulkan validation layer
+        if: needs.changes.outputs.full == 'true'
         run: |
           root="$RUNNER_TEMP/goo-vulkan-validation-layer"
           .github/scripts/install-vulkan-validation-layer-linux-x64.sh "$root"
@@ -366,7 +451,7 @@ jobs:
 
       - name: Restore pinned shader toolchain
         id: shader-toolchain
-        if: github.ref_type != 'tag'
+        if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
@@ -375,10 +460,11 @@ jobs:
           key: shader-toolchain-linux-x64-${{ hashFiles('.github/scripts/install-shader-toolchain-linux-x64.sh') }}
 
       - name: Install pinned shader toolchain
-        if: steps.shader-toolchain.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.full == 'true' && (steps.shader-toolchain.outputs.cache-hit != 'true')
         run: .github/scripts/install-shader-toolchain-linux-x64.sh "$RUNNER_TEMP/goo-shader-toolchain"
 
       - &linux-shader-toolchain
+        if: needs.changes.outputs.full == 'true'
         name: Select pinned shader toolchain
         run: |
           root="$RUNNER_TEMP/goo-shader-toolchain"
@@ -390,7 +476,7 @@ jobs:
 
       - name: Restore glibc 2.27 native payloads
         id: glibc-native
-        if: github.ref_type != 'tag'
+        if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
@@ -400,7 +486,7 @@ jobs:
           key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/**', 'tools/Goo.TextNative/**') }}
 
       - name: Build glibc 2.27 native payloads
-        if: steps.glibc-native.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.full == 'true' && (steps.glibc-native.outputs.cache-hit != 'true')
         run: |
           mkdir -p artifacts/native/text
           docker run --rm \
@@ -425,6 +511,7 @@ jobs:
             '
 
       - name: Compare rebuilt text payloads with the committed files
+        if: needs.changes.outputs.full == 'true'
         run: |
           cmp artifacts/native/text/libgoo-harfbuzz.so \
             Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
@@ -435,6 +522,7 @@ jobs:
             artifacts/native/text/text-native-build.json
 
       - name: Verify Vulkan software driver and validation layer
+        if: needs.changes.outputs.full == 'true'
         run: |
           mkdir -p artifacts/reports
           VK_LOADER_DEBUG=layer VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
@@ -446,13 +534,16 @@ jobs:
           grep -E 'deviceType *= PHYSICAL_DEVICE_TYPE_CPU$' artifacts/reports/vulkaninfo-summary.txt
 
       - name: Fetch pinned Windows SDL runtime
+        if: needs.changes.outputs.full == 'true'
         run: .github/scripts/fetch-sdl-win-x64.sh artifacts/native/win-x64/SDL3.dll
 
       - name: Build library
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared UI audio without a hardware device
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet publish tests/Goo.AudioSmoke/Goo.AudioSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -463,11 +554,13 @@ jobs:
             artifacts/audio-nativeaot/Goo.AudioSmoke
 
       - name: Build Goo DevTools app
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify real Gallery profiler UI
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build apps/Goo.Gallery/Goo.Gallery.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
@@ -480,6 +573,7 @@ jobs:
             node .github/scripts/devtools-profiler-ui-smoke.mjs artifacts/reports/profiler-ui
 
       - name: Verify compiled shader effects
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj \
             -c Release -p:TreatWarningsAsErrors=true
@@ -493,7 +587,7 @@ jobs:
           cmp "$RUNNER_TEMP/filtered_backdrop.goo-effect" Goo/Shaders/Effects/filtered_backdrop.goo-effect
 
       - name: Print profiler UI failure logs
-        if: failure()
+        if: needs.changes.outputs.full == 'true' && (failure())
         run: |
           for log in artifacts/reports/profiler-ui/*.log; do
             test -f "$log" || continue
@@ -502,7 +596,7 @@ jobs:
           done
 
       - name: Upload profiler UI evidence
-        if: always()
+        if: needs.changes.outputs.full == 'true' && (always())
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: goo-profiler-ui-linux-x64
@@ -510,6 +604,7 @@ jobs:
           path: artifacts/reports/profiler-ui/
 
       - name: Record dependencies and reject known vulnerabilities
+        if: needs.changes.outputs.full == 'true'
         run: |
           mkdir -p artifacts/reports
           dotnet --info >artifacts/reports/dotnet-info.txt
@@ -523,6 +618,7 @@ jobs:
           fi
 
       - name: Archive Linux build state
+        if: needs.changes.outputs.full == 'true'
         run: |
           tar -czf "$RUNNER_TEMP/goo-linux-build.tar.gz" \
             --exclude=./.git --exclude=./artifacts/image-nativeaot \
@@ -531,6 +627,7 @@ jobs:
             -C "$RUNNER_TEMP" goo-shader-toolchain goo-vulkan-validation-layer
 
       - name: Upload Linux build state
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: goo-linux-build
@@ -541,13 +638,18 @@ jobs:
             ${{ runner.temp }}/goo-linux-toolchain.tar.gz
 
   linux-packages:
-    needs: [linux-validation, macos-native]
+    needs: [changes, linux-validation, macos-native]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.changes.outputs.full == 'true'
 
       - &linux-build-download
+        if: needs.changes.outputs.full == 'true'
         name: Download Linux build state
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
@@ -555,6 +657,7 @@ jobs:
           path: ${{ runner.temp }}/goo-linux-build
 
       - &linux-build-restore
+        if: needs.changes.outputs.full == 'true'
         name: Restore Linux build state
         run: |
           tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-build.tar.gz"
@@ -563,6 +666,7 @@ jobs:
           echo "VK_LAYER_PATH=$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" >> "$GITHUB_ENV"
 
       - &linux-dotnet
+        if: needs.changes.outputs.full == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           global-json-file: global.json
@@ -574,6 +678,7 @@ jobs:
       - *linux-shader-toolchain
 
       - &linux-macos-download
+        if: needs.changes.outputs.full == 'true'
         name: Download macOS native payloads
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
@@ -581,6 +686,7 @@ jobs:
           path: artifacts/macos-candidate/native
 
       - name: Pack Goo
+        if: needs.changes.outputs.full == 'true'
         run: |
           mkdir -p artifacts/packages
           dotnet pack Goo/Goo.gsproj -c Release -o artifacts/packages \
@@ -608,12 +714,14 @@ jobs:
             artifacts/gesture-nativeaot/Goo.Gestures.Smoke
 
       - name: Pack and validate native accessibility runtimes
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet pack Goo.Accessibility/Goo.Accessibility.csproj -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
 
       - name: Pack Goo DevTools and template
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj \
             -c Release -o artifacts/packages \
@@ -633,6 +741,7 @@ jobs:
             -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Upload ready packages
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: linux-packages
@@ -640,11 +749,15 @@ jobs:
           path: artifacts/packages/
 
   linux-x64:
-    needs: linux-packages
+    needs: [changes, linux-packages]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.changes.outputs.full == 'true'
       - *linux-build-download
       - *linux-build-restore
       - *linux-dotnet
@@ -656,12 +769,14 @@ jobs:
       - *linux-macos-download
 
       - name: Download ready packages
+        if: needs.changes.outputs.full == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: linux-packages
           path: artifacts/packages
 
       - name: Collect advisory consumer publish report
+        if: needs.changes.outputs.full == 'true'
         run: |
           python3 tools/Goo.ConsumerPerformance/run.py \
             --output artifacts/consumer-performance \
@@ -671,6 +786,7 @@ jobs:
             --publish-only
 
       - name: Validate DevTools package manifests
+        if: needs.changes.outputs.full == 'true'
         run: |
           python3 - <<'PY'
           import os
@@ -697,6 +813,7 @@ jobs:
           PY
 
       - name: Generate, build and publish Goo template
+        if: needs.changes.outputs.full == 'true'
         run: |
           template_hive="$RUNNER_TEMP/goo-template-hive"
           template_output="$RUNNER_TEMP/goo-template"
@@ -720,6 +837,7 @@ jobs:
           done
 
       - name: Install packed Goo developer tools
+        if: needs.changes.outputs.full == 'true'
         run: |
           tool_path="$RUNNER_TEMP/goo-tools"
           mkdir -p "$tool_path"
@@ -739,6 +857,7 @@ jobs:
             | grep -F "goo.devtools.app "
 
       - name: Publish clean package consumer
+        if: needs.changes.outputs.full == 'true'
         env:
           NUGET_PACKAGES: ${{ runner.temp }}/goo-nuget-packages
         run: |
@@ -750,6 +869,7 @@ jobs:
             -o artifacts/publish
 
       - name: Publish and run clean NativeAOT consumer
+        if: needs.changes.outputs.full == 'true'
         env:
           NUGET_PACKAGES: ${{ runner.temp }}/goo-nativeaot-packages
         run: |
@@ -778,11 +898,13 @@ jobs:
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Stage minimal Linux bundle and separate symbols
+        if: needs.changes.outputs.full == 'true'
         run: |
           .github/scripts/stage-linux-x64.sh \
             artifacts/publish artifacts/linux-x64 artifacts/symbols
 
       - name: Validate package, native ABI, checksums, and bundle size
+        if: needs.changes.outputs.full == 'true'
         run: |
           .github/scripts/validate-release.py \
             --package "artifacts/packages/Goo.$GOO_VERSION.nupkg" \
@@ -797,6 +919,7 @@ jobs:
           dotnet artifacts/linux-x64/Goo.PackageSmoke.dll
 
       - name: Archive release candidates
+        if: needs.changes.outputs.full == 'true'
         run: |
           tar -C artifacts -czf "artifacts/Goo.$GOO_VERSION-linux-x64.tar.gz" linux-x64
           (
@@ -807,6 +930,7 @@ jobs:
 
 
       - name: Upload release validation artifacts
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: goo-${{ env.GOO_VERSION }}-linux-x64
@@ -822,6 +946,7 @@ jobs:
             artifacts/consumer-performance/reports/
 
       - name: Upload symbols separately
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: goo-${{ env.GOO_VERSION }}-symbols
@@ -833,6 +958,7 @@ jobs:
             artifacts/consumer-performance/stage/*/symbols/
 
       - name: Upload release candidates
+        if: needs.changes.outputs.full == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-candidates
@@ -851,7 +977,7 @@ jobs:
 
   linux-fixtures:
     name: linux-${{ matrix.lane }}
-    needs: linux-validation
+    needs: [changes, linux-validation]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -869,7 +995,11 @@ jobs:
           - lane: image
             project: tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.changes.outputs.full == 'true'
       - *linux-build-download
       - *linux-build-restore
       - *linux-dotnet
@@ -880,12 +1010,13 @@ jobs:
       - *linux-shader-toolchain
 
       - name: Build fixture
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build "${{ matrix.project }}" -c Release -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
       - name: Run ABI checks
-        if: matrix.lane == 'abi'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'abi')
         run: |
           export SDL_VIDEODRIVER=wayland
           export LIBGL_ALWAYS_SOFTWARE=1
@@ -898,7 +1029,7 @@ jobs:
             dotnet tests/Goo.VulkanAbiSmoke/bin/Release/net10.0/Goo.VulkanAbiSmoke.dll
 
       - name: Run Vulkan proof checks
-        if: matrix.lane == 'proof'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'proof')
         run: |
           export SDL_VIDEODRIVER=wayland
           export LIBGL_ALWAYS_SOFTWARE=1
@@ -915,7 +1046,7 @@ jobs:
           run_vulkan_proof_lane GOO_VK_IMAGE_READBACK
 
       - name: Run async readback checks
-        if: matrix.lane == 'async-readback'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
         run: |
           export SDL_VIDEODRIVER=wayland
           export LIBGL_ALWAYS_SOFTWARE=1
@@ -1060,7 +1191,7 @@ jobs:
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
       - name: Verify local PNG pixels in Vulkan
-        if: matrix.lane == 'async-readback'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'async-readback')
         run: |
           set -o pipefail
           .github/scripts/with-headless-wayland.sh env \
@@ -1072,7 +1203,7 @@ jobs:
           grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-cpu-startup.txt
 
       - name: Run focused core behavior tests
-        if: matrix.lane == 'core'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'core')
         run: |
           .github/scripts/with-headless-wayland.sh env \
             SDL_VIDEODRIVER=wayland \
@@ -1084,13 +1215,13 @@ jobs:
               -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
       - name: Run local PNG decoder and cache tests
-        if: matrix.lane == 'image'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'image')
         run: |
           dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj \
             -c Release --no-build -p:TreatWarningsAsErrors=true
 
       - name: Verify NativeAOT local PNG loading
-        if: matrix.lane == 'image'
+        if: needs.changes.outputs.full == 'true' && (matrix.lane == 'image')
         run: |
           dotnet publish tests/Goo.ImageLoadingSmoke/Goo.ImageLoadingSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -1099,7 +1230,7 @@ jobs:
           artifacts/image-nativeaot/Goo.ImageLoadingSmoke
 
       - name: Upload fixture reports
-        if: always()
+        if: needs.changes.outputs.full == 'true' && (always())
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: goo-linux-${{ matrix.lane }}-reports
@@ -1107,25 +1238,33 @@ jobs:
           path: artifacts/reports/
 
   windows-x64:
-    needs: linux-packages
-    runs-on: windows-2022
+    needs: [changes, linux-packages]
+    runs-on: ${{ needs.changes.outputs.full == 'true' && 'windows-2022' || 'ubuntu-24.04' }}
     timeout-minutes: 25
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: needs.changes.outputs.full == 'true'
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        if: needs.changes.outputs.full == 'true'
         with:
           name: linux-packages
           path: artifacts/packages
       - name: Build managed direct driver consumer
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/direct-driver-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check elevated app-local direct Vulkan loading without an installed ICD
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -1149,6 +1288,7 @@ jobs:
           if (!($smoke -match 'direct-drivers: pixels matched')) { throw "Direct driver pixel check missing" }
           Remove-Item Env:GOO_DIRECT_DRIVER_SMOKE, Env:GOO_VK_DIAGNOSTICS
       - name: Install software Vulkan for native Windows checks
+        if: needs.changes.outputs.full == 'true'
         uses: jakoch/install-vulkan-sdk-action@d17de7e2f5e50efb5d2123efed18497d3c58c533 # v1
         with:
           vulkan_version: 1.4.357.0
@@ -1157,6 +1297,7 @@ jobs:
           cache: true
           github_token: ${{ github.token }}
       - name: Enable cached Vulkan runtime
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $runtime = Join-Path $env:VULKAN_SDK "runtime\x64"
@@ -1164,6 +1305,7 @@ jobs:
           & (Join-Path $runtime "vulkaninfo.exe") --summary
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build NativeAOT consumer using the released G# SDK
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
@@ -1172,19 +1314,20 @@ jobs:
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: always()
+        if: needs.changes.outputs.full == 'true' && (always())
         with:
           name: goo-windows-qualification
           path: artifacts/windows-smoke/results-*/
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-consumer, windows-x64]
+    needs: [changes, quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-consumer, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -1319,33 +1462,44 @@ jobs:
           fi
 
   android:
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: needs.changes.outputs.full == 'true'
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
 
       - name: Restore pinned G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: artifacts/gsharp
           key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         run: ./bootstrap.sh --gsharp-only
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           distribution: temurin
           java-version: '21'
       - name: Install Android and native toolchains
+        if: needs.changes.outputs.full == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y meson ninja-build
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
       - name: Rebuild Android native payloads and compare with the committed files
+        if: needs.changes.outputs.full == 'true'
         run: |
           for rid in android-arm64 android-x64; do
             bash .github/scripts/build-text-native-android.sh "$rid" "artifacts/android-rebuild/$rid" "$ANDROID_HOME/ndk/27.2.12479018"
@@ -1353,21 +1507,26 @@ jobs:
             cmp "artifacts/android-rebuild/$rid/libgoo-harfbuzz-gpu.so" "Goo/Runtime/Vulkan/$rid/libgoo-harfbuzz-gpu.so"
           done
       - name: Build shared desktop scene and Android adapter
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
+        if: needs.changes.outputs.full == 'true'
         run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: needs.changes.outputs.full == 'true'
         with:
           name: android-package
           path: artifacts/android-packages/*.nupkg
       - name: Verify Release APK and AAB payloads
+        if: needs.changes.outputs.full == 'true'
         run: |
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: needs.changes.outputs.full == 'true'
         with:
           name: android-smoke
           path: |
@@ -1376,42 +1535,54 @@ jobs:
             Goo/Runtime/Vulkan/android-*/text-native-build.json
 
   android-consumer:
-    needs: [linux-packages, android]
+    needs: [changes, linux-packages, android]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - name: No affected inputs
+        if: needs.changes.outputs.full != 'true'
+        run: echo "No affected inputs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: needs.changes.outputs.full == 'true'
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
 
       - name: Restore pinned G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: artifacts/gsharp
           key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
 
       - name: Build pinned upstream G# authoring tools
+        if: needs.changes.outputs.full == 'true'
         run: ./bootstrap.sh --gsharp-only
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        if: needs.changes.outputs.full == 'true'
         with:
           distribution: temurin
           java-version: '21'
       - name: Install Android toolchain
+        if: needs.changes.outputs.full == 'true'
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
           dotnet workload install android
       - name: Download main package for Android consumer validation
+        if: needs.changes.outputs.full == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: linux-packages
           path: artifacts/main-release/packages
       - name: Download Android adapter package
+        if: needs.changes.outputs.full == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: android-package
           path: artifacts/android-packages
       - name: Build clean Android package consumer
+        if: needs.changes.outputs.full == 'true'
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
         run: |
