@@ -296,8 +296,7 @@ internal unsafe partial class ClipboardTransfer {
 
         internal func WindowsReadFormat(dataObject nint, format uint32, limit int32, out bytes []uint8) bool {
             bytes = Array.Empty[uint8]()
-            if !WindowsGetMedium(dataObject, format, StreamMedium, out var medium)
-                && !WindowsGetMedium(dataObject, format, GlobalMedium, out medium) { return false }
+            if !WindowsGetMedium(dataObject, format, StreamMedium | GlobalMedium, out var medium) { return false }
             try {
                 if medium.Medium == StreamMedium { bytes = WindowsReadStream(medium.Value, limit) }
                 else if medium.Medium == GlobalMedium { bytes = WindowsReadGlobal(medium.Value, limit) }
