@@ -85,6 +85,8 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func GetDisplays() IReadOnlyList[WindowDisplay] -> Array.Empty[WindowDisplay]()
   public func GetCurrentDisplay() WindowDisplay? -> nil
   public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult -> WindowOperationResult.Unsupported
+  public func CapturePlacement() WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
+  public func ApplyPlacement(value WindowPlacement) WindowPlacementResult -> WindowPlacementResult(WindowOperationResult.Unsupported)
   public func RequestActivation() WindowOperationResult -> WindowOperationResult.Unsupported
   public func SetBorder(decorated bool, resizable bool) { }
   public func SetVSync(value bool) { }

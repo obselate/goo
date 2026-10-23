@@ -327,6 +327,42 @@ remains compositor-controlled. This API does not enable `CanMove` or switch the
 monitor into an exclusive video mode. `State = WindowState.Fullscreen` remains
 available when no explicit output selection is needed.
 
+## Save and restore placement
+
+```gsharp
+let saved = WindowPlacement{
+    Fields: WindowPlacementFields.NormalSize | WindowPlacementFields.State,
+    NormalBounds: ElementRect{Width: 800, Height: 600},
+    State: WindowState.Maximized,
+}
+let window = Window{Root: Cell{}}
+let result = window.ApplyPlacement(saved)
+if result.Status == WindowOperationResult.Accepted {
+    window.Run()
+}
+```
+
+Call `CapturePlacement()` on the open window's UI thread before teardown.
+Save its `Placement` only when `Status` is `Accepted`.
+Normal bounds remain separate from maximized, fullscreen and minimized geometry.
+Capturing a minimized window records its last non-minimized state.
+
+`ApplyPlacement()` stages normal size, position and state before `Open`, or applies them to an open window.
+`AppliedFields` lists accepted fields. Fullscreen output selection requires an open window and matching display hints.
+Capture after native configure to observe the result. Accepted does not force compositor placement.
+
+| Host | Supported fields |
+| --- | --- |
+| Windows and macOS | Normal client size, position, state and fullscreen output selection. |
+| Linux Wayland | Normal size, state and fullscreen output selection. No global position. |
+| Android and embedded hosts | Unsupported. The host owns viewport geometry. |
+
+Geometry uses SDL screen units, not framebuffer pixels. Display names, bounds and scale are matching hints.
+Do not persist `WindowDisplayId`, native handles, macOS Spaces or Windows snap groups.
+The app owns its serializer and settings file. NativeAOT serializers need generated metadata.
+Install `Goo.AppHost` for `Placement.Restore`, which matches current displays and clamps usable bounds and size limits.
+Wayland has no direct unminimize request. Restore into a new window or request activation through the app's normal activation route.
+
 ## Observe window notifications
 
 Subscribe to `StateChanged`, `FocusChanged`, and `KeyPressed` with `+=` on the window UI thread. Each event supports independent listeners. Remove listeners with `-=` when their ownership ends.
@@ -768,6 +804,7 @@ Sources:
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
+- [`Window.Placement.gs`](../../Goo/Window/WindowParts/Window.Placement.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
 - [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
@@ -825,6 +862,14 @@ Reports observed viewport visibility changes on the owner thread.
 
 Creates a window with default configuration.
 
+### `ApplyPlacement(WindowPlacement)`
+
+Applies supported fields on the owner thread, or stages normal size, position and state before Open. Geometry rounds to SDL integer screen units. Wayland never applies global position. Fullscreen display selection requires an open window. Unsupported fields remain absent from AppliedFields. Accepted means the request was accepted, not that the compositor granted its final geometry or state. Applying normal geometry can wait for a finite native window transition. Capture again after native configure to observe the result. Android and embedded hosts return Unsupported.
+
+- `value`: Saved normal geometry, state and display matching hints.
+
+Returns: Applied fields with Accepted, Unsupported, Closed, or Failed for invalid data or native failure.
+
 ### `Attach(EmbeddedWindowHost)`
 
 Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
@@ -834,6 +879,12 @@ Attaches this window to an external viewport without creating a desktop window. 
 Cancels delivery of a pending chooser result on the UI thread and requests native dismissal where available. Native ownership remains active until the platform callback returns.
 
 Returns: True when a pending native chooser exists, including one already awaiting dismissal.
+
+### `CapturePlacement`
+
+Captures normal client bounds and restorable state from the open native window. Maximized, fullscreen and minimized sizes do not replace normal bounds. Display hints are not permanent monitor IDs. Android and embedded hosts return Unsupported.
+
+Returns: Accepted with owned placement, Closed without an open window, or an explicit host failure.
 
 ### `ConfigureApplication(string,string,string)`
 
@@ -1418,6 +1469,82 @@ Reports whether a window operation was submitted to the host. Accepted does not 
 - `Closed`
 - `Unsupported`
 - `Failed`
+
+## `WindowPlacement`
+
+Source:
+
+- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
+
+Owns restorable desktop geometry and display matching hints, without process-local display IDs.
+
+### `new`
+
+Creates an empty placement. Set Fields and its corresponding values before applying it.
+
+### `DisplayBounds`
+
+Gets the display bounds used to match a current display after topology changes.
+
+### `DisplayName`
+
+Gets a display name hint, not a unique or permanent monitor identity.
+
+### `DisplayScale`
+
+Gets the display's expected content scale, or zero when unavailable.
+
+### `Fields`
+
+Gets the fields present in this saved placement.
+
+### `NormalBounds`
+
+Gets normal client geometry in SDL integer screen units, not framebuffer pixels. Position is meaningful only when Fields includes Position.
+
+### `State`
+
+Gets the restorable state. Capture records the last non-minimized state for a minimized window.
+
+## `WindowPlacementFields`
+
+Source:
+
+- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
+
+Identifies the placement fields retained or accepted by a desktop host.
+
+### Values
+
+- `None`
+- `NormalSize`
+- `Position`
+- `State`
+- `FullscreenDisplay`
+
+## `WindowPlacementResult`
+
+Source:
+
+- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
+
+Reports captured placement or the fields accepted by an apply request.
+
+### `AppliedFields`
+
+Gets fields accepted for application. Capture results use None.
+
+### `Error`
+
+Gets bounded failure detail, or an empty string.
+
+### `Placement`
+
+Gets captured placement, or nil for an apply request or a failed capture.
+
+### `Status`
+
+Gets Accepted, Closed, Unsupported or Failed for this placement operation.
 
 ## `WindowPresentationAccepted`
 

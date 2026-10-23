@@ -241,12 +241,20 @@ internal unsafe partial class SdlHost {
       PointerHoverInvalidated?.Invoke()
     }
     if eventType == SDLEventType.WindowMoved {
+      if IsNormalPlacement(SDL.GetWindowFlags(window)) {
+        placementX = nativeEvent.Data1
+        placementY = nativeEvent.Data2
+      }
       X = nativeEvent.Data1
       Y = nativeEvent.Data2
       Moved?.Invoke(X, Y)
       RefreshMetrics()
       RaiseMetrics()
     } else if eventType == SDLEventType.WindowResized {
+      if IsNormalPlacement(SDL.GetWindowFlags(window)) {
+        placementWidth = nativeEvent.Data1
+        placementHeight = nativeEvent.Data2
+      }
       LogicalWidth = nativeEvent.Data1
       LogicalHeight = nativeEvent.Data2
       RefreshFramebuffer()
@@ -266,6 +274,7 @@ internal unsafe partial class SdlHost {
     } else if eventType == SDLEventType.WindowMinimized {
       StateChanged?.Invoke(WindowState.Minimized)
     } else if eventType == SDLEventType.WindowMaximized {
+      placementRestoredState = WindowState.Maximized
       StateChanged?.Invoke(WindowState.Maximized)
     } else if eventType == SDLEventType.WindowShown {
       RefreshDisplayPacing(true)
@@ -273,12 +282,15 @@ internal unsafe partial class SdlHost {
     } else if eventType == SDLEventType.WindowHidden {
       VisibilityChanged?.Invoke()
     } else if eventType == SDLEventType.WindowRestored {
+      placementRestoredState = WindowState.Normal
       RefreshDisplayPacing(true)
       StateChanged?.Invoke(WindowState.Normal)
     } else if eventType == SDLEventType.WindowEnterFullscreen {
+      placementRestoredState = WindowState.Fullscreen
       RefreshDisplayPacing(true)
       StateChanged?.Invoke(WindowState.Fullscreen)
     } else if eventType == SDLEventType.WindowLeaveFullscreen {
+      placementRestoredState = WindowState.Normal
       RefreshDisplayPacing(true)
       StateChanged?.Invoke(WindowState.Normal)
     } else if eventType == SDLEventType.WindowFocusGained {

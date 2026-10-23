@@ -62,6 +62,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           Require(SDL.SetWindowPosition(window, x, y), "SDL_SetWindowPosition")
         }
         SetBorder(decorated, resizable)
+        ObserveNormalPlacement()
         SetState(state)
         SetVSync(vsync)
         RefreshMetrics()
