@@ -1,0 +1,35 @@
+--- a/src/video/SDL_video.c
++++ b/src/video/SDL_video.c
+@@ -1918,6 +1918,7 @@
+ 
+     // Get the correct display for this operation
+     if (fullscreen) {
++        if (SDL_getenv("GOO_PLACEMENT_DIAGNOSTICS")) SDL_Log("PLACEMENT fullscreen enter id=%u pendingDisplay=%u modeDisplay=%u flags=%llu pendingFlags=%llu", window->id, window->pending_displayID, window->current_fullscreen_mode.displayID, (unsigned long long)window->flags, (unsigned long long)window->pending_flags);
+         display = SDL_GetVideoDisplayForFullscreenWindow(window);
+         if (!display) {
+             // This should never happen, but it did...
+@@ -2270,5 +2271,6 @@
+ static void ApplyWindowFlags(SDL_Window *window, SDL_WindowFlags flags)
+ {
++    if (SDL_getenv("GOO_PLACEMENT_DIAGNOSTICS")) SDL_Log("PLACEMENT ApplyWindowFlags id=%u flags=%llu pendingFlags=%llu", window->id, (unsigned long long)flags, (unsigned long long)window->pending_flags);
+     if (!SDL_WINDOW_IS_POPUP(window)) {
+         if (!(flags & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_MAXIMIZED))) {
+             SDL_RestoreWindow(window);
+--- a/src/video/cocoa/SDL_cocoawindow.m
++++ b/src/video/cocoa/SDL_cocoawindow.m
+@@ -915,6 +915,7 @@
+     SDL_Window *window = _data.window;
+     NSWindow *nswindow = _data.nswindow;
+     SDL_CocoaVideoData *videodata = ((__bridge SDL_CocoaWindowData *)window->internal).videodata;
++    if (SDL_getenv("GOO_PLACEMENT_DIAGNOSTICS")) NSLog(@"PLACEMENT setFullscreenSpace id=%u request=%d current=%d transition=%d allowed=%d", window->id, state, isFullscreenSpace, inFullscreenTransition, videodata.allow_spaces);
+ 
+     if (!videodata.allow_spaces) {
+         return NO; // Spaces are forcibly disabled.
+@@ -1430,6 +1431,7 @@
+  */
+ - (void)windowDidFailToEnterFullScreen:(NSNotification *)aNotification
+ {
++    if (SDL_getenv("GOO_PLACEMENT_DIAGNOSTICS")) NSLog(@"PLACEMENT fullscreen failed id=%u notification=%@", _data.window->id, aNotification);
+     [self clearAllPendingWindowOperations];
+ }
+ 
