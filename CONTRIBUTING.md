@@ -62,7 +62,7 @@ See [code conventions](CONVENTIONS.md) for repository rules and native authoring
 Run the focused managed checks for ordinary API or behavior changes:
 
 ```sh
-dotnet build tools/Goo.Gslint/Goo.Gslint.csproj -c Release
+dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj -c Release
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
   --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo tests
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
