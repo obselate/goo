@@ -110,7 +110,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             && accent.Type <= global::Android.Util.DataType.LastColorInt
                 ? global::Goo.Color.Rgba((accent.Data >> 16) & 255, (accent.Data >> 8) & 255,
                     accent.Data & 255, (int)((uint)accent.Data >> 24))
-                : null;
+                : (global::Goo.Color?)null;
         host.UpdatePreferences(new PlatformPreferences
         {
             Theme = mode == global::Android.Content.Res.UiMode.NightYes ? SystemTheme.Dark
