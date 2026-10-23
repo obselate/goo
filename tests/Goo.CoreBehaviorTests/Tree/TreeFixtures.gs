@@ -3,6 +3,52 @@ package Goo
 import System
 
 internal class TreeFixtures {
+  func TreeDepthLimitContract() bool {
+    let message = "Node tree depth exceeds the limit of " + Reconciler.MaximumTreeDepth.ToString() + "."
+    var blob Blob = Text{}
+    for i in 0 ... Reconciler.MaximumTreeDepth {
+      blob = Container(){blob}
+    }
+    let rec = Reconciler{Res: Resolver{}}
+    try {
+      rec.Mount(blob)
+      return false
+    } catch (error InvalidOperationException) {
+      if error.Message != message { return false }
+    }
+    guard let container = blob as Container else { return false }
+    let root = rec.Mount(container.Children[0])
+    rec.Diff(root, container.Children[0])
+    try {
+      rec.Diff(root, blob)
+      return false
+    } catch (error InvalidOperationException) {
+      if error.Message != message { return false }
+    }
+    var leaf = root
+    while leaf.Children.Count > 0 { leaf = leaf.Children[0] }
+    try {
+      rec.Diff(leaf, Container(){Text{}})
+      return false
+    } catch (error InvalidOperationException) {
+      if error.Message != message { return false }
+    }
+    try {
+      rec.Mount(Text{}, leaf)
+      return false
+    } catch (error InvalidOperationException) {
+      if error.Message != message { return false }
+    }
+    try {
+      rec.MountRoot(TreeDepthCell{Depth: Reconciler.MaximumTreeDepth})
+      return false
+    } catch (error InvalidOperationException) {
+      if error.Message != message { return false }
+    }
+    NodeLifecycle.DisposeTree(root)
+    return rec.Mount(Text{Content: "recovered"}).Content == "recovered"
+  }
+
   func KeyedReconciliationContract() bool {
     TreeKeyedCell.DisposedA = 0
     let parent = TreeKeyedParent{}
@@ -611,6 +657,12 @@ internal class TreeFixtures {
   internal func markBackgroundApplied(node Node) {
     node.AppliedMask = styleMaskWith(node.AppliedMask, StyleField.BackgroundColor)
   }
+}
+
+internal class TreeDepthCell : Cell {
+  internal var Depth int32
+  override func Build() Blob -> if Depth == 0 { Text{} }
+    else { Cell.Mount[TreeDepthCell](() -> TreeDepthCell{Depth: Depth - 1}, nil) }
 }
 
 internal class TreeKeyedParent : Cell {

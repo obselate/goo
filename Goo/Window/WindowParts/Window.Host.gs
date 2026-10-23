@@ -332,6 +332,8 @@ public partial class Window {
       if !IsOpen {
         return
       }
+      Window.DrainApplicationActivations()
+      if !IsOpen { return }
       let imageEpoch = ImageSource.DisposeEpoch
       if imageEpoch != imageDisposeEpoch {
         imageDisposeEpoch = imageEpoch
@@ -510,6 +512,7 @@ public partial class Window {
   internal func SchedulerHasImmediateService() bool -> host?.HasPendingEvents == true || hasPostedActions()
     || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0
     || host?.IsClosing == true
+    || Window.HasPendingApplicationActivation
 
   internal func SchedulerHasPendingQueueWork() bool -> windowTarget?.QueueWorkPending == true
     || windowTarget?.RetirementWorkPending == true

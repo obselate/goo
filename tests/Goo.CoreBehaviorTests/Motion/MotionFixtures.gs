@@ -48,7 +48,7 @@ internal class MotionFixtures {
   }
 
   func TweenFactoryContract() bool {
-    let tween = Motion.Tween(2.0, Easing.EaseInOut)
+    let tween = Motion.Tween(durationMs: 2000.0, easing: Easing.EaseInOut)
     let simulation = tween(2.0, 10.0, 99.0)
     let instantTween = Motion.Tween(0.0)
     let instant = instantTween(2.0, 10.0, 99.0)
@@ -65,6 +65,91 @@ internal class MotionFixtures {
       && instant.Velocity(0.0) == 0.0
   }
 
+  func PauseResumeSeekContract() bool {
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    var changes = 0
+    var completions = 0
+    let anim = cell.Animate(0.0, (value float64) -> { changes++ })
+    let other = cell.Animate(0.0)
+    anim.Completed += (reason MotionCompletionReason) -> {
+      if reason == MotionCompletionReason.Finished { completions++ }
+    }
+    try {
+      anim.To(8.0, Motion.Tween(1000.0))
+      other.To(8.0, Motion.Tween(1000.0))
+      pump.Sweep(0.25)
+      anim.Pause()
+      anim.Pause()
+      pump.Sweep(0.25)
+      pump.Sweep(0.25)
+      if !anim.IsPaused || !anim.Running || anim.Value != 2.0
+        || other.Value != 6.0 || changes != 1 || completions != 0 { return false }
+      anim.Resume()
+      anim.Resume()
+      pump.Sweep(0.25)
+      if anim.IsPaused || anim.Value != 4.0 || other.Value != 8.0 { return false }
+      anim.Seek(250.0)
+      if anim.Value != 2.0 { return false }
+      pump.Sweep(0.25)
+      if anim.Value != 4.0 { return false }
+      anim.Pause()
+      anim.Seek(750.0)
+      pump.Sweep(1.0)
+      if anim.Value != 6.0 || !anim.IsPaused || completions != 0 { return false }
+      anim.Seek(2000.0)
+      if anim.Value != 8.0 || completions != 0 { return false }
+      pump.Sweep(0.0)
+      pump.Sweep(1.0)
+      return completions == 1 && !anim.Running && !anim.IsPaused && !pump.Active
+    } finally {
+      cell.DisposeMounted()
+    }
+  }
+
+  func PausedSimulationAndForcedCompletionContract() bool {
+    let originalScale = Motion.TimeScale
+    let cell = MotionFixtureCell{}
+    cell.BindPump(pump)
+    let anim = cell.Animate(0.0)
+    var reduced = 0
+    var disabled = 0
+    anim.Completed += (reason MotionCompletionReason) -> {
+      if reason == MotionCompletionReason.ReducedMotion { reduced++ }
+      if reason == MotionCompletionReason.Disabled { disabled++ }
+    }
+    try {
+      anim.To(8.0, (from float64, to float64, velocity float64) -> ClockEchoSimulation())
+      pump.Sweep(0.25)
+      anim.Pause()
+      try {
+        anim.Seek(500.0)
+        return false
+      } catch (error InvalidOperationException) {
+        if !error.Message.Contains("Motion.Tween") { return false }
+      }
+      pump.Sweep(0.5)
+      if anim.Value != 0.25 || !anim.IsPaused { return false }
+      anim.Resume()
+      pump.Sweep(0.25)
+      if anim.Value != 0.5 { return false }
+      anim.To(8.0, Motion.Tween(1000.0))
+      anim.Pause()
+      pump.ReducedMotion = true
+      pump.Sweep(0.0)
+      if reduced != 1 || anim.Value != 8.0 || anim.Running || anim.IsPaused { return false }
+      pump.ReducedMotion = false
+      anim.To(16.0, Motion.Tween(1000.0))
+      anim.Pause()
+      Motion.TimeScale = 0.0
+      pump.Sweep(0.0)
+      return disabled == 1 && anim.Value == 16.0 && !anim.Running && !anim.IsPaused && !pump.Active
+    } finally {
+      Motion.TimeScale = originalScale
+      cell.DisposeMounted()
+    }
+  }
+
   func CallbackAnimationContract() bool {
     let cell = MotionFixtureCell{}
     cell.BindPump(pump)
@@ -79,7 +164,7 @@ internal class MotionFixtures {
       if calls != 1 || latest != 2.0 || cell.HasDirty() {
         return false
       }
-      anim.To(10.0, Motion.Tween(1.0, Easing.EaseIn))
+      anim.To(10.0, Motion.Tween(1000.0, Easing.EaseIn))
       pump.Sweep(0.5)
       if calls != 2 || latest != 4.0 || cell.HasDirty() {
         return false
@@ -89,7 +174,7 @@ internal class MotionFixtures {
         return false
       }
       cell.DisposeMounted()
-      anim.To(20.0, Motion.Tween(1.0))
+      anim.To(20.0, Motion.Tween(1000.0))
       pump.Sweep(1.0)
       return calls == 3
     } finally {
@@ -103,7 +188,7 @@ internal class MotionFixtures {
     var calls = 0
     let anim = cell.Animate(0.0, (value float64) -> { calls++ })
     try {
-      anim.To(10.0, Motion.Tween(1.0))
+      anim.To(10.0, Motion.Tween(1000.0))
       pump.Sweep(0.0)
       if calls != 0 || !anim.Running { return false }
       pump.Sweep(0.25)
@@ -135,11 +220,11 @@ internal class MotionFixtures {
         } catch (error InvalidOperationException) {
           rejectedReentry = true
         }
-        anim.To(20.0, Motion.Tween(1.0))
+        anim.To(20.0, Motion.Tween(1000.0))
       }
     }
     try {
-      anim.To(10.0, Motion.Tween(1.0))
+      anim.To(10.0, Motion.Tween(1000.0))
       pump.Sweep(1.0)
       if completions != 1 || !reasonsCorrect || !rejectedReentry
         || !anim.Running || anim.Value != 10.0 || !pump.Active { return false }
@@ -167,26 +252,26 @@ internal class MotionFixtures {
     }
     try {
       Motion.TimeScale = 1.0
-      anim.To(1.0, Motion.Tween(1.0))
+      anim.To(1.0, Motion.Tween(1000.0))
       anim.To(2.0, Motion.Tween(0.0))
       pump.Sweep(0.0)
       if finished != 1 { return false }
-      anim.To(3.0, Motion.Tween(1.0))
+      anim.To(3.0, Motion.Tween(1000.0))
       anim.Set(4.0)
-      anim.To(5.0, Motion.Tween(1.0))
+      anim.To(5.0, Motion.Tween(1000.0))
       anim.Snap(6.0)
       pump.Sweep(1.0)
       if finished != 1 || disabled != 0 || reduced != 0 { return false }
       Motion.TimeScale = 0.0
-      anim.To(7.0, Motion.Tween(1.0))
+      anim.To(7.0, Motion.Tween(1000.0))
       pump.Sweep(0.0)
       if disabled != 1 { return false }
       Motion.TimeScale = 1.0
       pump.ReducedMotion = true
-      anim.To(8.0, Motion.Tween(1.0))
+      anim.To(8.0, Motion.Tween(1000.0))
       pump.Sweep(0.0)
       if reduced != 1 { return false }
-      anim.To(9.0, Motion.Tween(1.0))
+      anim.To(9.0, Motion.Tween(1000.0))
       cell.DisposeMounted()
       pump.Sweep(1.0)
       return anim.IsDisposed && !anim.Running
@@ -250,7 +335,7 @@ internal class MotionFixtures {
     let second = secondCell.Animate(0.0)
     var delivered = 0
     first.Completed += (reason MotionCompletionReason) -> {
-      second.To(2.0, Motion.Tween(1.0))
+      second.To(2.0, Motion.Tween(1000.0))
     }
     second.Completed += (reason MotionCompletionReason) -> { delivered++ }
     try {

@@ -15,6 +15,9 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedMethodIds =
     {
+        "M:Goo.ApplicationActivation.#ctor",
+        "M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)",
+        "M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)",
         "M:Goo.Accessibility.#ctor",
         "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
         "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
@@ -27,6 +30,9 @@ public sealed class PublicDocumentationTests
         "M:Goo.AccessibilityAdapter.Update(Goo.AccessibilityTree)",
         "M:Goo.AccessibilityRelationships.#ctor",
         "M:Goo.AccessibilityValue.#ctor",
+        "M:Goo.Anim`1.Pause",
+        "M:Goo.Anim`1.Resume",
+        "M:Goo.Anim`1.Seek(System.Double)",
         "M:Goo.Anim`1.Set(`0)",
         "M:Goo.Anim`1.Snap(`0)",
         "M:Goo.Anim`1.To(`0)",
@@ -467,6 +473,8 @@ public sealed class PublicDocumentationTests
     private static readonly IReadOnlyDictionary<string, DocumentationShape> Shapes =
         new Dictionary<string, DocumentationShape>(StringComparer.Ordinal)
         {
+            ["M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)"] = new(["initial"], [], true),
+            ["M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)"] = new(["value"], [], true),
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),
@@ -488,6 +496,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.ElementHandle.EndPress(System.Boolean)"] = new(["activate"], [], true),
             ["M:Goo.ElementHandle.Activate"] = new([], [], true),
             ["M:Goo.ElementHandle.BeginPress"] = new([], [], true),
+            ["M:Goo.Anim`1.Seek(System.Double)"] = new(["elapsedMs"], [], false),
             ["M:Goo.Anim`1.Set(`0)"] = new(["value"], [], false),
             ["M:Goo.Anim`1.Snap(`0)"] = new(["value"], [], false),
             ["M:Goo.Anim`1.To(`0)"] = new(["target"], [], false),
@@ -637,7 +646,7 @@ public sealed class PublicDocumentationTests
             ["M:Goo.Simulation.Position(System.Double)"] = new(["elapsed"], [], true),
             ["M:Goo.Simulation.Velocity(System.Double)"] = new(["elapsed"], [], true),
             ["M:Goo.MotionConverter`1.#ctor(System.Int32,System.Action{`0,System.Double[]},System.Func{System.Double[],`0})"] = new(["dimensions", "read", "write"], [], false),
-            ["M:Goo.Motion.Tween(System.Double,Goo.Easing)"] = new(["duration", "easing"], [], true),
+            ["M:Goo.Motion.Tween(System.Double,Goo.Easing)"] = new(["durationMs", "easing"], [], true),
             ["M:Goo.MotionVelocity.Add(Goo.MotionVelocity)"] = new(["other"], [], true),
             ["M:Goo.MotionVelocity.Components(System.Double[])"] = new(["values"], [], true),
             ["M:Goo.MotionVelocity.Uniform(System.Double)"] = new(["value"], [], true),

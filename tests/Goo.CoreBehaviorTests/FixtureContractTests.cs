@@ -9,6 +9,7 @@ public sealed class FixtureContractTests
 {
     public static IEnumerable<object[]> Cases()
     {
+        yield return Contract<ApplicationActivationFixtures>(nameof(ApplicationActivationFixtures.ProcessQueueOwnsStartupAndForwardedData));
         yield return Contract<PathBuilderFixtures>(nameof(PathBuilderFixtures.ResetPreservesPublishedPathAndClearsContour));
         yield return Contract<PortalFixtures>(nameof(PortalFixtures.UiScaleLayoutInputAndAnchoredPortalContract));
         yield return Contract<AccessibilityFixtures>(nameof(AccessibilityFixtures.AdapterDeliveryThreadContract));
@@ -80,6 +81,7 @@ public sealed class FixtureContractTests
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.ResolvedSemanticsAndEditorPrivacyContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.RuntimeOverrideInheritanceAndResetContract));
         yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.SnapshotIdentityAndDeltaContract));
+        yield return Contract<DiagnosticsFixtures>(nameof(DiagnosticsFixtures.PerPumpWorkCountersContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.ArbitrationReentrantResetAndCaptureCleanupContract));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.CallbackFailureTerminatesAndDoesNotRetry));
         yield return Contract<DragDropFixtures>(nameof(DragDropFixtures.CancellationContactAndCleanupContract));
@@ -199,6 +201,8 @@ public sealed class FixtureContractTests
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.LengthValidationContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.MotionVelocityAdditionPreservesShapeContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.MotionVelocityRoutingContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.PauseResumeSeekContract));
+        yield return Contract<MotionFixtures>(nameof(MotionFixtures.PausedSimulationAndForcedCompletionContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PointRetargetCarriesIndependentVelocityContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PointSpecRoutingContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.PreMountAnimationWaitsForWindowContract));
@@ -345,6 +349,7 @@ public sealed class FixtureContractTests
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.OutputAndKindReplacementContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.PositionalReconciliationContract));
         yield return Contract<TreeFixtures>(nameof(TreeFixtures.TextEntryControlledValueContract));
+        yield return Contract<TreeFixtures>(nameof(TreeFixtures.TreeDepthLimitContract));
         yield return Contract<MotionFixtures>(nameof(MotionFixtures.TweenFactoryContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.TokenCompositionContract));
         yield return Contract<StyleFixtures>(nameof(StyleFixtures.StyleConstructionContract));

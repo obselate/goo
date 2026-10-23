@@ -34,6 +34,43 @@ the opaque fallback. Native appearance remains subject to system policy.
 Desktop-wide settings and numeric blur strength are not exposed. For blur of Goo
 content within the window, use `Style.ShaderEffect`.
 
+## Process application activation
+
+```gs
+let window = Window{}
+Window.ApplicationActivated += activation -> {
+    if activation.Kind == ApplicationActivationKind.OpenUri {
+        window.Title = activation.Target!!.AbsoluteUri
+    }
+}
+let status = Window.InitializeApplicationActivation(
+    ApplicationActivation{IsInitial: true})
+```
+
+Subscribe before opening the first window. Check the returned status.
+
+- One process event reaches the UI thread during `Pump`, an embedded frame or `Run`.
+- The app chooses the target window and validates notification data.
+- `PostApplicationActivation` copies requests from any thread.
+- Arguments keep their boundaries, empty values and sender directory.
+- Documents remain URIs, including Android `content:` values.
+- A document URI does not grant access to its data.
+- An initial native request replaces a sole pending synthetic Launch.
+- Other requests use FIFO order, with callback posts deferred to the next batch.
+- Closing the last window clears pending requests.
+- The same owner thread can initialize a new delivery lifetime.
+- Hosts and optional packages own native associations, IPC and notifications.
+
+| Post status | Meaning |
+| --- | --- |
+| Accepted | The queue owns the request. |
+| NotInitialized | Call InitializeApplicationActivation first. |
+| Closed | All windows closed. |
+| QueueFull | 64 requests are pending. |
+| TooLarge | More than 256 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
+
+Null data and relative URIs are invalid arguments.
+
 ## Visibility, activation and stacking
 
 Set `Window.IconPng` in the `Window` initializer to embedded PNG bytes before

@@ -4,6 +4,7 @@ ctor|Goo.AccessibilityId|public|(Value:System.Int64)
 ctor|Goo.AccessibilityRelationships|public|()
 ctor|Goo.AccessibilityValue|public|()
 ctor|Goo.Accessibility|public|()
+ctor|Goo.ApplicationActivation|public|()
 ctor|Goo.Button|public|()
 ctor|Goo.Cell`1|public|()
 ctor|Goo.Cell|public|()
@@ -100,9 +101,11 @@ enum-underlying|Goo.AccessibilityChecked|System.Int32
 enum-underlying|Goo.AccessibilityLive|System.Int32
 enum-underlying|Goo.AccessibilityOrientation|System.Int32
 enum-underlying|Goo.AccessibilityRole|System.Int32
+enum-underlying|Goo.ActivationPostStatus|System.Int32
 enum-underlying|Goo.AlignContent|System.Int32
 enum-underlying|Goo.AlignItems|System.Int32
 enum-underlying|Goo.AlignSelf|System.Int32
+enum-underlying|Goo.ApplicationActivationKind|System.Int32
 enum-underlying|Goo.BlendMode|System.Int32
 enum-underlying|Goo.BorderStyle|System.Int32
 enum-underlying|Goo.ClipboardReadStatus|System.Int32
@@ -215,6 +218,11 @@ enum|Goo.AccessibilityRole|TextInput|5
 enum|Goo.AccessibilityRole|Text|3
 enum|Goo.AccessibilityRole|TreeItem|27
 enum|Goo.AccessibilityRole|Tree|26
+enum|Goo.ActivationPostStatus|Accepted|0
+enum|Goo.ActivationPostStatus|Closed|2
+enum|Goo.ActivationPostStatus|NotInitialized|1
+enum|Goo.ActivationPostStatus|QueueFull|3
+enum|Goo.ActivationPostStatus|TooLarge|4
 enum|Goo.AlignContent|Center|1
 enum|Goo.AlignContent|FlexEnd|2
 enum|Goo.AlignContent|FlexStart|0
@@ -232,6 +240,11 @@ enum|Goo.AlignSelf|Center|3
 enum|Goo.AlignSelf|FlexEnd|4
 enum|Goo.AlignSelf|FlexStart|2
 enum|Goo.AlignSelf|Stretch|1
+enum|Goo.ApplicationActivationKind|Arguments|1
+enum|Goo.ApplicationActivationKind|Launch|0
+enum|Goo.ApplicationActivationKind|Notification|4
+enum|Goo.ApplicationActivationKind|OpenDocuments|3
+enum|Goo.ApplicationActivationKind|OpenUri|2
 enum|Goo.BlendMode|ColorBurn|7
 enum|Goo.BlendMode|ColorDodge|6
 enum|Goo.BlendMode|Color|14
@@ -677,6 +690,7 @@ event|Goo.ImageSourceProvider|ContentChanged|System.Action|abstract|add:public,r
 event|Goo.ImageSource|ContentChanged|System.Action|virtual|add:public,remove:public
 event|Goo.PlatformInput|EditorChanged|System.Action`1<System.Nullable`1<Goo.FocusedEditorSnapshot>>|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
+event|Goo.Window|ApplicationActivated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
 event|Goo.Window|KeyPressed|System.Action`2<Goo.Key,Goo.KeyModifiers>|instance|add:public,remove:public
@@ -699,6 +713,9 @@ method|Goo.AccessibilityId|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.AccessibilityId|ToString|virtual|public|generic:|()->System.String
 method|Goo.AccessibilityId|op_Equality|static|public|generic:|(left:Goo.AccessibilityId,right:Goo.AccessibilityId)->System.Boolean
 method|Goo.AccessibilityId|op_Inequality|static|public|generic:|(left:Goo.AccessibilityId,right:Goo.AccessibilityId)->System.Boolean
+method|Goo.Anim`1|Pause|instance|public|generic:|()->System.Void
+method|Goo.Anim`1|Resume|instance|public|generic:|()->System.Void
+method|Goo.Anim`1|Seek|instance|public|generic:|(elapsedMs:System.Double)->System.Void
 method|Goo.Anim`1|Set|instance|public|generic:|(value:!0)->System.Void
 method|Goo.Anim`1|Snap|instance|public|generic:|(value:!0)->System.Void
 method|Goo.Anim`1|To|instance|public|generic:|(target:!0)->System.Void
@@ -882,7 +899,7 @@ method|Goo.MacOSBackdropOptions|op_Inequality|static|public|generic:|(left:Goo.M
 method|Goo.MotionVelocity|Add|instance|public|generic:|(other:Goo.MotionVelocity)->Goo.MotionVelocity
 method|Goo.MotionVelocity|Components|static|public|generic:|(params values:System.Double[])->Goo.MotionVelocity
 method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->Goo.MotionVelocity
-method|Goo.Motion|Tween|static|public|generic:|(duration:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
+method|Goo.Motion|Tween|static|public|generic:|(durationMs:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
 method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
 method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
 method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag&)->System.Boolean
@@ -1165,9 +1182,11 @@ method|Goo.Window|GetClipboardText|instance|public|generic:|()->System.String
 method|Goo.Window|GetCurrentDisplay|instance|public|generic:|()->Goo.WindowDisplay
 method|Goo.Window|GetDisplays|instance|public|generic:|()->System.Collections.Generic.IReadOnlyList`1<Goo.WindowDisplay>
 method|Goo.Window|Hide|instance|public|generic:|()->Goo.WindowOperationResult
+method|Goo.Window|InitializeApplicationActivation|static|public|generic:|(initial:Goo.ApplicationActivation)->Goo.WindowOperationResult
 method|Goo.Window|Open|instance|public|generic:|()->Goo.Window
 method|Goo.Window|PerformAccessibilityAction|instance|public|generic:|(id:Goo.AccessibilityId,request:Goo.AccessibilityActionRequest)->System.Boolean
 method|Goo.Window|PollCapture|instance|public|generic:|()->Goo.WindowCapture
+method|Goo.Window|PostApplicationActivation|static|public|generic:|(value:Goo.ApplicationActivation)->Goo.ActivationPostStatus
 method|Goo.Window|Post|instance|public|generic:|(action:System.Action)->System.Void
 method|Goo.Window|Pump|instance|public|generic:|(dt:System.Double)->System.Void
 method|Goo.Window|ReadClipboardFiles|instance|public|generic:|()->Goo.ClipboardFiles
@@ -1279,10 +1298,20 @@ property|Goo.Accessibility|Selected|System.Nullable`1<System.Boolean>|instance|g
 property|Goo.Accessibility|SizeOfSet|System.Nullable`1<System.Int32>|instance|get:public,init:public|index:()
 property|Goo.Accessibility|Value|System.String|instance|get:public,init:public|index:()
 property|Goo.Anim`1|IsDisposed|System.Boolean|instance|get:public|index:()
+property|Goo.Anim`1|IsPaused|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Running|System.Boolean|instance|get:public|index:()
 property|Goo.Anim`1|Target|!0|instance|get:public|index:()
 property|Goo.Anim`1|Value|!0|instance|get:public|index:()
 property|Goo.Anim`1|Velocity|Goo.MotionVelocity|instance|get:public|index:()
+property|Goo.ApplicationActivation|ActionId|System.String|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|Arguments|System.Collections.Generic.IReadOnlyList`1<System.String>|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|Documents|System.Collections.Generic.IReadOnlyList`1<System.Uri>|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|IsInitial|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|Kind|Goo.ApplicationActivationKind|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|NotificationId|System.String|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|Payload|System.String|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|Target|System.Uri|instance|get:public,init:public|index:()
+property|Goo.ApplicationActivation|WorkingDirectory|System.String|instance|get:public,init:public|index:()
 property|Goo.Blob|Accessibility|Goo.Accessibility|instance|get:public,init:public|index:()
 property|Goo.Blob|Active|Goo.Style|instance|get:public,init:public|index:()
 property|Goo.Blob|AutoFocus|System.Boolean|instance|get:public,init:public|index:()
@@ -1908,10 +1937,13 @@ type|Goo.AccessibilityRole|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AccessibilityTree|interface|public|base:-|interfaces:|generic:
 type|Goo.AccessibilityValue|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.Accessibility|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.ActivationPostStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AlignContent|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AlignItems|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.AlignSelf|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Anim`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
+type|Goo.ApplicationActivationKind|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.ApplicationActivation|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.BlendMode|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.Blob|abstract-class|public|base:Goo.Style|interfaces:|generic:
 type|Goo.BorderStyle|enum|public|base:System.Enum|interfaces:|generic:

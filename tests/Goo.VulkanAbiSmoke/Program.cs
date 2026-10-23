@@ -184,6 +184,24 @@ internal static class Program
 
     private static void RunFontCacheGate(string fontPath)
     {
+        var oversizedPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".ttf");
+        try
+        {
+            File.Copy(fontPath, oversizedPath);
+            using (var stream = File.OpenWrite(oversizedPath))
+                stream.SetLength((long)VulkanTextFont.MaxFontBytes + 1);
+            try
+            {
+                using var rejected = TextShaping.Shape("office", oversizedPath, 16f, 400, false, 0f, 1);
+                throw new InvalidOperationException("Oversized font path was accepted");
+            }
+            catch (InvalidDataException) { }
+        }
+        finally
+        {
+            File.Delete(oversizedPath);
+        }
+
         var cacheBudget = TextShaping.PrimaryFaceCacheByteBudgetForTests();
         var callerBytes = File.ReadAllBytes(fontPath);
         var oversizedBytes = new byte[checked((int)cacheBudget + 1)];
