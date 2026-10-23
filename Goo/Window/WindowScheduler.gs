@@ -134,7 +134,6 @@ internal class WindowScheduler {
   }
 
   internal func ServiceNativeTracking() {
-    SdlRuntime.PumpEvents(EventBudget)
     ServiceWindows()
   }
 
