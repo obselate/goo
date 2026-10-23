@@ -152,6 +152,13 @@ public class TextDocument {
     historyGroup object) TextDocumentChange -> applyTransaction(changes, true, true,
       historyGroup, TextDocumentMutationKind.Normal, nil)
 
+  internal func ApplyStyledTransaction(changes []TextChange, layer TextPresentationLayer,
+    styles IReadOnlyList[TextStyleSpan]) TextDocumentChange {
+      let edits = if changes.Length == 0 { []TextChange{ TextChange{ Range: TextRange{}, InsertedText: "" } } }
+      else { changes }
+      return applyTransaction(edits, false, true, nil, TextDocumentMutationKind.Normal, nil, layer, styles)
+    }
+
   /// Starts an undo group. Nested groups commit when the outer group ends.
   public func BeginUndoGroup() {
     undoGroupDepth++
@@ -213,9 +220,10 @@ public class TextDocument {
 
   private func applyTransaction(changes []TextChange, ownChanges bool, recordHistory bool,
     historyGroup object?, mutationKind TextDocumentMutationKind,
-    transaction TextHistoryTransaction?) TextDocumentChange{
+    transaction TextHistoryTransaction?, layer TextPresentationLayer? = nil,
+    styles IReadOnlyList[TextStyleSpan]? = nil) TextDocumentChange{
       validateTextChanges(root, changes)
-      if changes.Length == 0 || noTextChanges(changes) {
+      if layer == nil && transaction == nil && (changes.Length == 0 || noTextChanges(changes)) {
         let committedChanges = if ownChanges { changes } else { copyTextChanges(changes) }
         return TextDocumentChange{
           BeforeVersion: version,
@@ -233,6 +241,9 @@ public class TextDocument {
       for i in(forward.Length - 1) ... -1 {
         changedRoot = replaceText(changedRoot, forward[i])
       }
+      if let formatting = layer {
+        formatting.RecordFormatting(committedTransaction, styles!!, changedRoot)
+      }
       root = changedRoot
       version++
       let committed = TextDocumentChange{
@@ -245,6 +256,10 @@ public class TextDocument {
       let previousMutation = currentMutation
       currentMutation = TextDocumentMutation{ Kind: mutationKind,
         Transaction: committedTransaction, DiscardedTransactions: discarded }
+      if let formatting = layer { formatting.RestoreFormatting(committedTransaction, false) }
+      else if let source = committedTransaction.FormattingLayer?.Target as TextPresentationLayer? {
+        source.RestoreFormatting(committedTransaction, mutationKind == TextDocumentMutationKind.Undo)
+      }
       try {
         Committed?(committed)
         if Changed != nil {
@@ -298,6 +313,7 @@ public class TextDocument {
 internal sealed class TextHistoryTransaction {
   internal let ForwardChanges []TextChange
   internal let UndoChanges []TextChange
+  internal var FormattingLayer WeakReference?
 
   internal init(forwardChanges []TextChange, undoChanges []TextChange) {
     ForwardChanges = forwardChanges
