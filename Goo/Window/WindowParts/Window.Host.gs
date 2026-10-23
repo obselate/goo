@@ -351,6 +351,7 @@ public partial class Window {
             native.WaitEvents(idleWaitMs())
           }
         }
+        checkPopupDismissal()
         if profiling { profiler.BeginFrameTrace() }
         Window.DrainApplicationActivations()
         let repeatStartTicks = Stopwatch.GetTimestamp()
@@ -568,7 +569,6 @@ public partial class Window {
 
   internal func RefreshSchedulerMetrics() {
     host?.RefreshMetricsIfChanged()
-    checkPopupDismissal()
   }
 
   // The idle wait timeout: 250ms by default, shortened to land on the next

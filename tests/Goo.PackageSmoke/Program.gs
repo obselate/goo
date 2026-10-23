@@ -463,6 +463,10 @@ func Main() {
     RunApplicationActivationSmoke(Path.GetFullPath(arguments[2]))
     return
   }
+  if Environment.GetEnvironmentVariable("GOO_NATIVE_POPUP_MENU_SMOKE") == "1" {
+    RunNativePopupSmoke(PopupKind.Menu)
+    return
+  }
   if Environment.GetEnvironmentVariable("GOO_NATIVE_POPUP_SMOKE") == "1" {
     RunNativePopupSmoke()
     return

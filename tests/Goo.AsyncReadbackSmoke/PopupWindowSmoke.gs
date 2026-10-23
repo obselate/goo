@@ -59,8 +59,8 @@ internal class PopupWindowSmoke {
         Require(result.Status == PopupStatus.Opened, "Tooltip open failed: " + result.Error)
         PumpUntil(owner, popup, () -> root.Host?.IsVisible == true)
         WindowReadbackTestFixture.ForceRender(root.Host!!, 0.0, 15.0)
-        Require(popup.Metrics.LogicalWidth > 0 && popup.Metrics.FramebufferWidth > 0,
-          "Native popup metrics are empty")
+        Require(popup.Metrics.LogicalWidth == 150 && popup.Metrics.LogicalHeight == 120
+          && popup.Metrics.FramebufferWidth > 0, "Native popup did not apply the owner's UI scale")
         let update = popup.UpdatePlacement(ElementRect{ X: 10.0, Y: 10.0, Width: 20.0, Height: 20.0 }, 120, 90)
         Require(update == WindowOperationResult.Accepted, "Native popup reposition failed")
         WindowReadbackTestFixture.ForceRender(root.Host!!, 0.0, 15.0)
@@ -75,6 +75,23 @@ internal class PopupWindowSmoke {
         PumpUntil(owner, popup, () -> !popup.IsOpen && !child.IsOpen, child)
         Require(dismissed == 1 && dismissReason == PopupDismissReason.OwnerHidden,
           "Owner hide did not deliver one tooltip dismissal after retirement")
+        Require(owner.Show() == WindowOperationResult.Accepted, "Owner restore failed")
+        WindowReadbackTestFixture.ForceRender(owner, 0.0, 15.0)
+        let modalRoot = PopupSmokeCell{}
+        using let modalPopup = PopupWindow(owner, modalRoot, PopupKind.Tooltip)
+        Require(modalPopup.Open(ElementRect{ X: 10.0, Y: 10.0, Width: 20.0, Height: 20.0 }, 80, 60).Status
+          == PopupStatus.Opened, "Modal ordering tooltip did not open")
+        PumpUntil(owner, modalPopup, () -> modalRoot.Host?.IsVisible == true)
+        WindowReadbackTestFixture.ForceRender(modalRoot.Host!!, 0.0, 15.0)
+        var modalStatus NativeModalStatus
+        let busy = owner.BeginNativeModal(&modalStatus)
+        Require(busy == nil && modalStatus == NativeModalStatus.Busy,
+          "Native modal acceptance overtook popup retirement")
+        PumpUntil(owner, modalPopup, () -> !modalPopup.IsOpen)
+        using let accepted = owner.BeginNativeModal(&modalStatus)
+          ?? throw InvalidOperationException("Native modal lease stayed busy after popup retirement")
+        Require(modalStatus == NativeModalStatus.Accepted, "Native modal acceptance returned the wrong status")
+        accepted.Dispose()
         owner.RequestClose()
         PumpUntil(owner, popup, () -> !owner.IsOpen)
       } finally {
@@ -82,7 +99,7 @@ internal class PopupWindowSmoke {
         owner.RequestClose()
         PumpUntil(owner, popup, () -> !owner.IsOpen && !popup.IsOpen)
       }
-      Console.WriteLine("native-popup: tooltip_render=passed missing_grab=passed scale=passed reposition=passed owner_hide=passed teardown=passed")
+      Console.WriteLine("native-popup: tooltip_render=passed missing_grab=passed scale=passed reposition=passed owner_hide=passed modal_order=passed teardown=passed")
     }
   }
 }
