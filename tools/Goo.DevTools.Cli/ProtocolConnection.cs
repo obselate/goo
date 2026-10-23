@@ -177,9 +177,18 @@ internal sealed class ProtocolConnection : IAsyncDisposable
         if (_disposed)
             return;
         _disposed = true;
-        await _writer.DisposeAsync();
-        _reader.Dispose();
-        await _stream.DisposeAsync();
+        try
+        {
+            await _writer.DisposeAsync();
+        }
+        catch (IOException)
+        {
+        }
+        finally
+        {
+            _reader.Dispose();
+            await _stream.DisposeAsync();
+        }
     }
 
     private void ThrowIfDisposed()
