@@ -134,9 +134,13 @@ public sealed class NotificationChecks : Instrumentation
     {
         Require(Call(() => service.ShowAsync(Message("warm", "Goo warm activation", "old"))).Delivery == NotificationDelivery.Accepted,
             "Submission did not report Accepted.");
-        Require(Call(() => service.ShowAsync(Message("warm", "Goo warm activation", "new-😀"))).Status == NotificationStatus.Accepted,
-            "Replacement failed.");
-        Require(Call(() => service.GetStatusAsync("warm")).Delivery == NotificationDelivery.PresentInCenter,
+        RunOnMainSync(() =>
+        {
+            using var replacement = AndroidNotifications.Open(activity, Options("replacement")).Service!;
+            Require(replacement.ShowAsync(Message("warm", "Goo warm activation", "new-😀")).Result.Status
+                == NotificationStatus.Accepted, "Cross-channel replacement failed.");
+        });
+        Wait(() => Call(() => service.GetStatusAsync("warm")).Delivery == NotificationDelivery.PresentInCenter,
             "Accepted notification was not in the center.");
         var manager = (NotificationManager)activity.GetSystemService(Context.NotificationService)!;
         var active = manager.GetActiveNotifications()!;
