@@ -78,18 +78,13 @@ internal static class Discovery
             Add(Path.Combine(runtime, "goo-devtools"));
         }
 
-        if (OperatingSystem.IsWindows())
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(local))
         {
-            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (!string.IsNullOrWhiteSpace(local))
-            {
-                Add(Path.Combine(local, "Goo"));
-                Add(Path.Combine(local, "Goo", "DevTools"));
-            }
+            Add(Path.Combine(local, "Goo"));
+            Add(Path.Combine(local, "Goo", "DevTools"));
         }
 
-        Add(Path.Combine(Path.GetTempPath(), "goo-devtools"));
-        Add(Path.Combine(Path.GetTempPath(), "goo"));
         return directories;
 
         void Add(string? path)
