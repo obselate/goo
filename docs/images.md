@@ -125,7 +125,7 @@ Use an `ImageSourceProvider` and `ImageSourceLease` for asynchronous delivery.
 | Decoder output | Consumer work before publication |
 | --- | --- |
 | WebP | Apply EXIF orientation. Extract ICCP metadata and convert the straight RGB samples. |
-| AVIF | Apply irot/imir. Convert YUV range, matrix and transfer to SDR RGB. Use embedded ICC when present. |
+| AVIF | Apply irot/imir. Decode YUV range and matrix to straight RGB. Convert embedded ICC with `ToSrgb`. Otherwise map NCLX primaries and transfer to SDR sRGB. |
 | Untagged SDR sRGB | Skip profile conversion. Premultiply alpha and transfer immutable RGBA8 pixels. |
 
 - Consumer decoders own encoded-input limits, codec lifetime and cancellation.
