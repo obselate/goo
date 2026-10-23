@@ -294,7 +294,7 @@ private unsafe sealed class VulkanClipMaskAtlasGeneration : IDisposable {
     samplerInfo.addressModeV = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.maxLod = 1.0F
-    samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK
+    samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
     let createSampler = Dispatch.vkCreateSampler
     if createSampler(Device, &samplerInfo, nil, &Sampler) != VkConstants.VK_SUCCESS || Sampler == 0uL {
       throw InvalidOperationException("vkCreateSampler failed for Vulkan clip mask atlas")

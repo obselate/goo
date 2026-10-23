@@ -831,7 +831,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     samplerInfo.addressModeV = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.addressModeW = VkConstants.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
     samplerInfo.maxLod = 1.0F
-    samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK
+    samplerInfo.borderColor = VkConstants.VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
     var result VkSampler = 0uL
     let createSampler = dispatch.vkCreateSampler
     let createResult = createSampler(device, &samplerInfo, nil, &result)
