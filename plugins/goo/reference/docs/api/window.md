@@ -66,16 +66,20 @@ Subscribe before opening the first window. Check the returned status.
 - Closing the last window clears pending requests.
 - The same owner thread can initialize a new delivery lifetime.
 - Hosts and optional packages own native associations, IPC and notifications.
+- macOS cold and warm file or URL opens use this event.
+- Native document batches stay separate from drag/drop into a window.
+- Declare URL schemes and document types in the app bundle.
 
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
 | NotInitialized | Call InitializeApplicationActivation first. |
 | Closed | All windows closed. |
-| QueueFull | 64 requests are pending. |
-| TooLarge | More than 256 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
+| QueueFull | 1024 requests are pending. |
+| TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
 
 Null data and relative URIs are invalid arguments.
+Native requests outside these limits are dropped.
 
 ## Visibility, activation and stacking
 
@@ -367,6 +371,64 @@ Image reads prefer PNG, JPEG, GIF, BMP, then macOS TIFF. PNG/JPEG/GIF bytes keep
 
 Linux relies on the active SDL clipboard backend. Windows uses native file-list and DIB access; macOS uses pasteboard items and ImageIO for TIFF conversion. Backend failures are reported explicitly; native Windows/macOS execution requires validation on those systems.
 
+## Publish multiple clipboard formats
+
+```gsharp
+let plain = System.Text.Encoding.UTF8.GetBytes("Hello")
+let html = System.Text.Encoding.UTF8.GetBytes("<b>Hello</b>")
+let data = TransferData(
+    []TransferRepresentation{
+        TransferRepresentation("text/plain", ReadOnlyMemory[uint8](plain)),
+        TransferRepresentation("text/html", ReadOnlyMemory[uint8](html))
+    },
+    []Uri{}
+)
+let result = await window.WriteClipboardAsync(data)
+```
+
+Start clipboard calls on the open window's UI thread. Check `result.Status`.
+
+| Contract | Behavior |
+| --- | --- |
+| Read | `ReadClipboardDataAsync(types)` copies requested formats from one offer. Include `text/uri-list` for document references. |
+| Owned data | Bytes and URI lists stay valid after clipboard replacement or window close. Caller changes cannot alter published bytes. |
+| Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
+| Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
+| Cut | File Cut requires URIs and never deletes sources. macOS returns `Unsupported`. Editor Cut writes Copy data, then removes its selection after Success. |
+| Read status | Missing requested data is `Empty`. A present zero-byte format is `Success`. Failed reads return no partial selection. |
+| Write status | Unsupported formats are not dropped. Native failures can replace or clear the old clipboard. Success does not confirm paste. |
+| Limits | At most 128 MIME names, 256 ASCII bytes per name and 64 MiB total bytes. Text is limited to 16 MiB. Existing file-list bounds apply. |
+| Platforms | These methods support native Windows, macOS and Wayland. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
+| Windows formats | HTML, RTF, PNG and files use native formats. PNG, JPEG and GIF also offer a native bitmap. Other MIME types use OLE streams. |
+| Windows limits | MIME names have at most 255 characters and cannot differ only by case. Plain text cannot contain NUL. An incompatible COM apartment returns `Unsupported`. |
+| macOS formats | MIME bytes use native pasteboard types. File references use separate NSURL items. All data is copied before publication. |
+| Lifetime | Windows and macOS keep data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
+
+
+## `ClipboardDataResult`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Contains an owned multi-format clipboard snapshot and its file-transfer intent.
+
+### `Data`
+
+Gets owned MIME bytes and URI references, or an empty payload on failure.
+
+### `Error`
+
+Gets a bounded explanation of native failure or excessive data.
+
+### `Intent`
+
+Gets the native file-transfer hint, defaulting to Copy when no marker exists.
+
+### `Status`
+
+Gets the snapshot outcome, independently of individual representation lengths.
+
 ## `ClipboardFiles`
 
 Source:
@@ -439,6 +501,27 @@ Gets a native failure or limit explanation, or an empty string.
 
 Gets the read outcome.
 
+## `ClipboardIntent`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Selects whether a file clipboard publication prefers copying or a deferred move.
+
+### Values
+
+- `Copy`
+- `Cut`
+
+### `Copy`
+
+Publishes references without requesting source removal.
+
+### `Cut`
+
+Requests a deferred file move where the native clipboard supports that intent.
+
 ## `ClipboardReadStatus`
 
 Source:
@@ -454,6 +537,63 @@ Reports a native clipboard query/read outcome independently of payload contents.
 - `Unsupported`
 - `TooLarge`
 - `Failed`
+
+## `ClipboardWriteResult`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Reports whether all requested clipboard representations were published.
+
+### `Error`
+
+Gets a bounded native failure explanation, or an empty string.
+
+### `Status`
+
+Gets the publication outcome, not confirmation that another application pasted it.
+
+## `DataTransferStatus`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Reports a native data publication outcome without throwing for platform failures.
+
+### Values
+
+- `Success`
+- `Cancelled`
+- `Unsupported`
+- `TooLarge`
+- `Denied`
+- `Failed`
+
+### `Cancelled`
+
+The transfer was cancelled before completion.
+
+### `Denied`
+
+The operating system denied access to the transfer.
+
+### `Failed`
+
+A native transfer operation failed.
+
+### `Success`
+
+Every requested representation was published.
+
+### `TooLarge`
+
+The transfer exceeds a native or managed data budget.
+
+### `Unsupported`
+
+The host cannot provide the requested transfer or intent.
 
 ## `FileDialogFilter`
 
@@ -691,6 +831,52 @@ Follows native window activation. This is the default.
 
 Uses the inactive material appearance.
 
+## `TransferData`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Owns MIME alternatives and an ordered document URI selection without reading document contents.
+
+### `new(System.Collections.Generic.IReadOnlyList{TransferRepresentation},System.Collections.Generic.IReadOnlyList{System.Uri})`
+
+Captures at most 128 representations, 64 MiB total bytes and 4096 bounded absolute URIs.
+
+- `representations`: Owned MIME alternatives with unique exact type names.
+- `uris`: Absolute document references in selection order, without a duplicate text/uri-list representation.
+
+### `Representations`
+
+Gets immutable MIME alternatives for the same logical selection.
+
+### `Uris`
+
+Gets document references, which do not imply local paths or persistent access grants.
+
+## `TransferRepresentation`
+
+Source:
+
+- [`TransferData.gs`](../../Goo/Window/TransferData.gs)
+
+Owns immutable bytes for one exact MIME representation of a selection.
+
+### `new(string,System.ReadOnlyMemory{System.Byte})`
+
+Copies a bounded MIME representation into managed ownership.
+
+- `contentType`: A MIME type of at most 256 ASCII bytes, without control characters.
+- `bytes`: Encoded bytes, at most 64 MiB, without a text terminator.
+
+### `Bytes`
+
+Gets owned bytes that remain valid after clipboard replacement or window close.
+
+### `ContentType`
+
+Gets the exact MIME type offered to native consumers.
+
 ## `WaylandBackdropOptions`
 
 Source:
@@ -746,7 +932,7 @@ Hosts a Goo tree on one process-wide UI thread. After Open or Attach, only Post 
 
 ### `ApplicationActivated`
 
-Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection.
+Occurs once per application activation on the process UI thread, not once per open window. Subscribe before initializing activation. Handlers own validation and window selection. The queue retains 1024 requests, with 4096 arguments or documents per request. Text is limited to 64 KiB per UTF-8 string and 1 MiB per request. Native requests outside these limits, or received before initialization or after close, are dropped.
 
 ### `DisplayChanged`
 
@@ -873,17 +1059,25 @@ Queues an action for the UI thread.
 
 ### `PostApplicationActivation(ApplicationActivation)`
 
-Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 256 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
+Copies and queues a request from any thread for the process-wide activation event. Accepted confirms queue ownership, not handler completion, document access, or focus. Requests allow 4096 arguments and documents each, 64 KiB per UTF-8 string and 1 MiB total text.
 
 - `value`: The owned request data to copy. Relative URIs and null values are invalid arguments.
 
-Returns: Accepted, NotInitialized, Closed, QueueFull at 64 pending requests, or TooLarge.
+Returns: Accepted, NotInitialized, Closed, QueueFull at 1024 pending requests, or TooLarge.
 
 ### `Pump(float64)`
 
 Processes one frame with the specified elapsed time.
 
 - `dt`: elapsed seconds since the previous frame
+
+### `ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{string})`
+
+Copies requested available MIME alternatives and URI references from one native clipboard offer.
+
+- `contentTypes`: Exact MIME types to read, including text/uri-list for document references.
+
+Returns: Owned data and explicit status, with no partial payload on a native read failure.
 
 ### `ReadClipboardFiles`
 
@@ -932,6 +1126,14 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 
 Runs a callback repeatedly on the UI thread at the requested interval.
 
+### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
+
+Enables an exact MIME allow-list for native drops on the owning UI thread.
+
+- `formats`: At most 128 unique MIME names. An empty list disables MIME drops.
+
+Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported host.
+
 ### `SetTimeout(System.Action,float64)`
 
 Runs a callback once on the UI thread after the delay.
@@ -966,6 +1168,15 @@ Requests borderless fullscreen on the selected display, including retargeting an
 Attempts to submit a topmost request to the current native host. Accepted means the host accepted the request; desktop policy still controls observed stacking.
 
 Returns: Closed, Unsupported, Accepted, or Failed for the host operation.
+
+### `WriteClipboardAsync(TransferData,ClipboardIntent)`
+
+Publishes every MIME alternative and URI reference in one native clipboard publication.
+
+- `data`: The immutable selection to publish without opening referenced documents.
+- `intent`: Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+
+Returns: Explicit publication status. Success does not confirm that a paste occurred.
 
 ### `AccessibilityAdapter`
 
@@ -1054,6 +1265,14 @@ Gets the most recent adapter exception. Failed delivery retries on the next UI-t
 ### `LastNativeFileDropError`
 
 Gets the most recent rejected native file-list explanation, cleared when the next offer begins.
+
+### `LastNativeTransferError`
+
+Gets the latest native drop explanation, bounded to 1024 characters.
+
+### `LastNativeTransferStatus`
+
+Gets the latest native drop capture status.
 
 ### `MacOSBackdrop`
 
