@@ -25,7 +25,6 @@ internal unsafe partial class SdlHost {
     let position = PopupWindow.PopupPosition(anchor, width, height, placement, scale)
     var flags = SDLWindowFlags.HighPixelDensity | SDLWindowFlags.Hidden
     flags = flags | (kind == PopupKind.Menu ? SDLWindowFlags.PopupMenu : SDLWindowFlags.Tooltip)
-    if OperatingSystem.IsWindows() && kind == PopupKind.Menu { flags = flags | SDLWindowFlags.NotFocusable }
     if !VulkanDrivers.Enabled { flags = flags | SDLWindowFlags.Vulkan }
     window = SDL.CreatePopupWindow(parent.window, int32(position.X), int32(position.Y), width, height, uint64(flags))
     if window.IsNull { ThrowSdl("SDL_CreatePopupWindow") }
@@ -50,9 +49,12 @@ internal unsafe partial class SdlHost {
 
   internal func ShowPopup() {
     ThrowIfDisposed()
+    if OperatingSystem.IsWindows() && popupKind == PopupKind.Menu {
+      Require(SDL.RaiseWindow(popupParent!!.window), "SDL_RaiseWindow")
+    }
     Require(SDL.ShowWindow(window), "SDL_ShowWindow")
     if OperatingSystem.IsWindows() && popupKind == PopupKind.Menu {
-      Require(SDL.SetWindowFocusable(window, true), "SDL_SetWindowFocusable")
+      Require(SDL.RaiseWindow(window), "SDL_RaiseWindow")
     }
   }
 
