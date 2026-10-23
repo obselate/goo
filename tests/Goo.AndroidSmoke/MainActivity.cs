@@ -12,7 +12,11 @@ public sealed class MainActivity : GooActivity
 {
     private bool inputSmokeStarted;
 
-    protected override Goo.Window CreateWindow() => SmokeApplication.CreateWindow();
+    internal GooView NativeView => GooView;
+
+    protected override Goo.Window CreateWindow() => Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true
+        ? new Goo.Window { Root = new GestureCheckScene(), Background = Goo.Color.Rgb(17, 24, 39) }
+        : SmokeApplication.CreateWindow();
 
     protected override void OnResume()
     {

@@ -135,6 +135,46 @@ internal class GestureFixtures {
             && probe.Source == GestureSource.Trackpad && probe.Samples == 0 && probe.Scale == 2.0
     }
 
+    func ContactFrameUsesOneCoherentSampleSetAndStopsAfterReset() bool {
+        let resolver = Resolver{}
+        let input = InputCoordinator()
+        let observed = List[Point]()
+        let probe = GestureProbe{Evaluate: (sample GestureInput) -> {
+            if sample.Kind == GestureInputKind.Move {
+                observed.Add(Point{X: sample.PointerAt(0).WindowPosition.X,
+                    Y: sample.PointerAt(1).WindowPosition.X})
+            }
+        }}
+        var clicks = 0
+        var reset = false
+        let root = Reconciler{Res: resolver}.Mount(Container{
+            Width: 200, Height: 100, Gestures: []GestureRecognizer{probe},
+            OnClick: () -> { clicks++ },
+        })
+        Layout().Calculate(root, 200.0F, 100.0F)
+        input.QueuePointerPress(1, PointerDevice.Touch, 20.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
+        input.QueuePointerPress(2, PointerDevice.Touch, 40.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
+        input.Drain(root, resolver, 10.0, nil)
+        let frame = []QueuedPointerEvent{
+            QueuedPointerEvent{PointerId: 1, Device: PointerDevice.Touch, X: 80.0F, Y: 40.0F},
+            QueuedPointerEvent{PointerId: 2, Device: PointerDevice.Touch, X: 120.0F, Y: 40.0F},
+        }
+        input.QueuePointerFrame(frame, 2.0F)
+        input.Drain(root, resolver, 10.1, nil)
+        if observed.Count != 1 || observed[0].X != 40.0 || observed[0].Y != 60.0 { return false }
+        probe.Changed = () -> {
+            reset = true
+            input.Reset(root, resolver)
+        }
+        input.QueuePointerFrame(frame, 2.0F)
+        input.Drain(root, resolver, 10.2, nil)
+        input.QueuePointerRelease(1, PointerDevice.Touch, 40.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
+        input.QueuePointerRelease(2, PointerDevice.Touch, 60.0F, 20.0F, PointerButton.Primary, KeyModifiers{})
+        input.Drain(root, resolver, 10.3, nil)
+        return reset && clicks == 0 && observed.Count == 2 && probe.Phases.Count == 3
+            && probe.Phases[2] == GesturePhase.Canceled
+    }
+
     private func NativePinch(kind uint32, windowId uint32, scale float32) SDLEvent {
         var value = SDLEvent{}
         let pinch = SdlPinchEventNative{Type: kind, WindowId: windowId, Scale: scale}
@@ -156,6 +196,8 @@ internal class GestureFixtures {
 internal class GestureProbe : GestureRecognizer {
     internal var Timed bool
     internal var Started Action?
+    internal var Changed Action?
+    internal var Evaluate Action[GestureInput]?
     internal var Source GestureSource
     internal var Samples int32
     internal var Scale float64
@@ -173,6 +215,7 @@ internal class GestureProbeSession : GestureSession {
 
     public override func Evaluate(input GestureInput) GestureDecision {
         probe.Source = input.Source
+        probe.Evaluate?.Invoke(input)
         probe.Samples = input.PointerCount
         probe.Scale = input.Scale
         if input.Source == GestureSource.Trackpad {
@@ -200,5 +243,6 @@ internal class GestureProbeSession : GestureSession {
         probe.Phases.Add(phase)
         if phase == GesturePhase.Canceled || phase == GesturePhase.Completed { deadline = Double.PositiveInfinity }
         if phase == GesturePhase.Started { probe.Started?.Invoke() }
+        if phase == GesturePhase.Changed { probe.Changed?.Invoke() }
     }
 }

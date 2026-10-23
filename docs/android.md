@@ -170,6 +170,9 @@ composition, and semantic editor commands use shared Goo input. Stale IME
 connections cannot edit a different focused field. Password fields suppress
 surrounding and extracted text returned to the IME.
 
+Each Android move event updates all contact positions before gesture recognition.
+An accepted gesture receives one coherent update per move event.
+
 `GooView.DismissKeyboardOnSubmit` defaults to `true`: the IME Done action sends
 the shared Submit command and hides the software keyboard. Set the property to
 `false` for a composer that should keep the keyboard open after submission.
@@ -254,6 +257,12 @@ surrounding deletion, code points, context queries, batches, password privacy,
 stale focus, and multiline input through the Android input connection. The
 last checks leave a Backspace key-up absent and deliver explicit native repeat
 events, then wait to verify that no additional deletion occurs.
+
+```sh
+adb shell am instrument -w -r org.goo.androidsmoke/org.goo.androidsmoke.GestureChecks
+```
+
+`GOO_GESTURES_PASS` confirms coherent two-contact movement, rotation and native cancellation.
 
 The package checker verifies both ABI payloads against build provenance, checks
 dependencies and page alignment, and rejects legacy native renderer libraries.

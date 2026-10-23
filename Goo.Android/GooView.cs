@@ -219,30 +219,51 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Parent?.RequestDisallowInterceptTouchEvent(true);
         }
         var modifiers = Modifiers(e.MetaState);
-        var first = e.ActionMasked == MotionEventActions.Move || e.ActionMasked == MotionEventActions.Cancel ? 0 : e.ActionIndex;
-        var count = e.ActionMasked == MotionEventActions.Move || e.ActionMasked == MotionEventActions.Cancel ? e.PointerCount : first + 1;
-        for (var i = first; i < count; i++)
+        if (e.ActionMasked == MotionEventActions.Move)
         {
-            var id = e.GetPointerId(i);
-            var device = Device(e.GetToolType(i));
-            var x = e.GetX(i) / Density;
-            var y = e.GetY(i) / Density;
-            switch (e.ActionMasked)
+            Span<QueuedPointerEvent> samples = stackalloc QueuedPointerEvent[e.PointerCount];
+            for (var i = 0; i < samples.Length; i++)
             {
-                case MotionEventActions.Down:
-                case MotionEventActions.PointerDown:
-                    Input.PointerPress(id, device, x, y, PointerButton.Primary, modifiers, e.GetPressure(i));
-                    break;
-                case MotionEventActions.Up:
-                case MotionEventActions.PointerUp:
-                    Input.PointerRelease(id, device, x, y, PointerButton.Primary, modifiers, e.GetPressure(i));
-                    break;
-                case MotionEventActions.Cancel:
-                    Input.PointerCancel(id, device);
-                    break;
-                default:
-                    Input.PointerMove(id, device, x, y, modifiers, e.GetPressure(i));
-                    break;
+                samples[i] = new QueuedPointerEvent
+                {
+                    PointerId = e.GetPointerId(i),
+                    Device = Device(e.GetToolType(i)),
+                    X = e.GetX(i) / Density,
+                    Y = e.GetY(i) / Density,
+                    Modifiers = modifiers,
+                    Pressure = e.GetPressure(i),
+                    HasPressure = true
+                };
+            }
+            Input.PointerMotionFrame(samples);
+        }
+        else
+        {
+            var first = e.ActionMasked == MotionEventActions.Cancel ? 0 : e.ActionIndex;
+            var count = e.ActionMasked == MotionEventActions.Cancel ? e.PointerCount : first + 1;
+            for (var i = first; i < count; i++)
+            {
+                var id = e.GetPointerId(i);
+                var device = Device(e.GetToolType(i));
+                var x = e.GetX(i) / Density;
+                var y = e.GetY(i) / Density;
+                switch (e.ActionMasked)
+                {
+                    case MotionEventActions.Down:
+                    case MotionEventActions.PointerDown:
+                        Input.PointerPress(id, device, x, y, PointerButton.Primary, modifiers, e.GetPressure(i));
+                        break;
+                    case MotionEventActions.Up:
+                    case MotionEventActions.PointerUp:
+                        Input.PointerRelease(id, device, x, y, PointerButton.Primary, modifiers, e.GetPressure(i));
+                        break;
+                    case MotionEventActions.Cancel:
+                        Input.PointerCancel(id, device);
+                        break;
+                    default:
+                        Input.PointerMove(id, device, x, y, modifiers, e.GetPressure(i));
+                        break;
+                }
             }
         }
         if (e.ActionMasked == MotionEventActions.Up)

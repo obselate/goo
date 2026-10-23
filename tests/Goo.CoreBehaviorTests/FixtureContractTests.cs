@@ -61,6 +61,7 @@ public sealed class FixtureContractTests
         yield return Contract<GestureFixtures>(nameof(GestureFixtures.SelectionMutationPreservesBothEndpointAffinities));
         yield return Contract<GestureFixtures>(nameof(GestureFixtures.CallbackFailureSuppressesReleaseAndKeepsOriginalError));
         yield return Contract<GestureFixtures>(nameof(GestureFixtures.TrackpadScaleKeepsContactSamplesEmpty));
+        yield return Contract<GestureFixtures>(nameof(GestureFixtures.ContactFrameUsesOneCoherentSampleSetAndStopsAfterReset));
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.CaptureContinuesOutsideClipUntilRelease));
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.NestedClipPathsIntersect));
         yield return Contract<ClipPathInputFixtures>(nameof(ClipPathInputFixtures.NormalPointerAcquisitionRespectsClipPath));

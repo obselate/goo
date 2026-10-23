@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Buffers
 import System.Diagnostics
 import System.Runtime.ExceptionServices
 
@@ -41,10 +42,13 @@ internal partial class InputCoordinator {
         if !e.IsPointer && e.Keyboard.TextFocusGeneration >= ingressFocusGeneration {
           e.Keyboard.TextFocusGeneration = focus.Generation
         }
-        let dispatched = if e.IsPointer { pointer.Dispatch(e.Pointer, currentRoot, resolver, timeS, text) }
+        let dispatched = if let frame = e.PointerFrame {
+            pointer.DispatchFrame(frame, e.PointerFrameCount, currentRoot, resolver, timeS, text)
+          } else if e.IsPointer { pointer.Dispatch(e.Pointer, currentRoot, resolver, timeS, text) }
           else { keyboard.Dispatch(e.Keyboard, currentRoot, resolver, text, onKeyPress, repeatStartTicks, pointer) }
         if dispatched { changed = true }
       } finally {
+        if let frame = e.PointerFrame { ArrayPool[QueuedPointerEvent].Shared.Return(frame) }
         if keyboard.ClearStalePress(resolver) { changed = true }
         resolver.Flush()
       }
