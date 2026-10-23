@@ -175,6 +175,8 @@ jobs:
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
           python3 .github/scripts/test-app-host.py \
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
+          python3 .github/scripts/test-desktop-activation.py \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1511,6 +1513,8 @@ jobs:
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python .github/scripts/test-app-host.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/app-host-aot"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python .github/scripts/test-desktop-activation.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.full == 'true'
