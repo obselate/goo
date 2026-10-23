@@ -259,6 +259,12 @@ internal class Program {
                     "Minimize replaced restorable state or normal size")
                 let applied = Placement.Restore(window, restored)
                 Require(applied.Status == WindowOperationResult.Accepted, "${applied.Status}: ${applied.Error}")
+                if state == WindowState.Fullscreen {
+                    PumpUntil(window, () -> window.CapturePlacement().Placement?.State == WindowState.Fullscreen)
+                    window.State = WindowState.Normal
+                    PumpUntil(window, () -> window.CapturePlacement().Placement?.State == WindowState.Normal
+                        && window.Width == 360 && window.Height == 240)
+                }
                 window.RequestClose()
                 window.Pump(0)
                 window = Window{ InitiallyVisible: false, Root: Cell() }.Open()
