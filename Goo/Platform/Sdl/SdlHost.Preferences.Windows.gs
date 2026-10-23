@@ -1,5 +1,8 @@
 package Goo
 
+import System
+import System.IO
+import Microsoft.Win32
 import System.Runtime.InteropServices
 
 @StructLayout(LayoutKind.Sequential)
@@ -24,7 +27,20 @@ internal unsafe partial class SdlHost {
       var native = WindowsHighContrast{Size: size}
       var contrast bool?
       if ReadContrastPreference(0x0042u, size, ref native, 0u) != 0 { contrast = (native.Flags & 1u) != 0u }
-      return PlatformPreferences{Theme: theme, ReducedMotion: motion, HighContrast: contrast}
+      return PlatformPreferences{
+        Theme: theme, ReducedMotion: motion, HighContrast: contrast,
+        EventSoundsEnabled: ReadWindowsEventSounds(),
+      }
+    }
+
+    private func ReadWindowsEventSounds() bool? {
+      try {
+        let scheme = Registry.GetValue("HKEY_CURRENT_USER\\AppEvents\\Schemes", "", nil)
+        if scheme is string name { return !String.Equals(name, ".None", StringComparison.OrdinalIgnoreCase) }
+      } catch (_ System.Security.SecurityException) { }
+      catch (_ UnauthorizedAccessException) { }
+      catch (_ IOException) { }
+      return nil
     }
   }
 }

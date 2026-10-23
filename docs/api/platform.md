@@ -144,6 +144,10 @@ Source:
 
 Holds platform preferences independently of framebuffer density. Nil values mean the host cannot report that preference.
 
+### `EventSoundsEnabled`
+
+Gets whether UI and event sounds are enabled, or nil when unavailable.
+
 ### `HighContrast`
 
 Gets whether increased contrast is requested, or nil when unavailable.
