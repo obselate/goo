@@ -175,6 +175,34 @@ Lists are copied and immutable. Equal lists do not notify.
 The settings portal has no preferred-locale key. Apps own translations and choose
 how to apply locale tags to language and direction styles.
 
+## Native popup surfaces
+
+```gsharp
+using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
+let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+```
+
+A popup hosts a new Cell root outside its owner's bounds. Portal and widgets
+Menu keep their current in-window behavior.
+
+| Operation | Contract |
+| --- | --- |
+| `Open` | Call once per instance on the owner thread. Use parent-content layout units. Size follows the owner's UiScale. |
+| `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
+| `PopupKind.Tooltip` | Receives no input. It needs no grab. |
+| `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
+| `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
+| `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
+| `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
+| `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
+
+Use another PopupWindow as the owner for a submenu. Each owner permits one popup.
+Create a new root and popup for each opening. Close it when its anchor becomes
+invalid. Android uses a native PopupWindow with a separate GooView surface.
+It follows the owner view's lifecycle and the app's display bounds.
+Other embedded hosts return `Unsupported`.
+Native dialogs return `Busy` while a popup retires. Launch them after `Dismissed`.
+
 ## Native owned and modal windows
 
 Portal backends can set `ForeignParentHandle` to the request's full

@@ -21,6 +21,8 @@ internal partial class InputCoordinator {
     var changed = keyboard.ClearStalePress(resolver)
     resolver.Flush()
     while queue.Take(out var e) {
+      let previousTimestamp = PopupInputContext.Timestamp
+      PopupInputContext.Timestamp = e.NativeTimestamp
       try {
         if e.IsFocusLost {
           loseFocus(currentRoot, resolver)
@@ -49,6 +51,7 @@ internal partial class InputCoordinator {
         if dispatched { changed = true }
       } finally {
         if let frame = e.PointerFrame { ArrayPool[QueuedPointerEvent].Shared.Return(frame) }
+        PopupInputContext.Timestamp = previousTimestamp
         if keyboard.ClearStalePress(resolver) { changed = true }
         resolver.Flush()
       }

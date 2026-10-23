@@ -249,6 +249,21 @@ Before release, record the Android and TalkBack versions and check:
 | Change a live region | Correct polite or assertive speech. Atomic regions read the whole update. |
 | Scroll, rotate, background and resume | Correct bounds. No stale focus or repeated live update. |
 
+## Native popup surfaces
+
+```gsharp
+using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
+let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+```
+
+- Uses Android `PopupWindow` with a separate GooView and Vulkan surface.
+- A menu receives focus and dismisses on Back or outside input. A tooltip receives no input.
+- Coordinates use owner-content layout units. Size follows the owner's UiScale and display density.
+- The native window may extend beyond its owner view. Android clips it to the app's display bounds.
+- Pause, surface loss, view detach and owner disposal dismiss the popup chain.
+- A missing live owner view returns `Unsupported`. Native window failure returns `Failed`.
+- Portal and widgets Menu keep their in-window behavior.
+
 ## Transparent surfaces
 
 Set `Window.Transparent` before constructing GooView. A transparent window uses
@@ -325,6 +340,14 @@ adb shell am instrument -w -r org.goo.androidsmoke/org.goo.androidsmoke.GestureC
 ```
 
 `GOO_GESTURES_PASS` confirms coherent two-contact movement, rotation and native cancellation.
+
+```sh
+adb shell am start -S -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p org.goo.androidsmoke --ez goo.popup_smoke true
+adb logcat -d -s GooPopupSmoke:I
+```
+
+The `PASS` log covers popup rendering, scale, placement updates, nested teardown,
+menu focus and owner pause.
 
 The package checker verifies both ABI payloads against build provenance, checks
 dependencies and page alignment, and rejects legacy native renderer libraries.

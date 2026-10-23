@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Images Goo.Gestures tests
+            --severity GL0001=none Goo Goo.Images Goo.Gestures Goo.NativeDialogs tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -115,6 +115,8 @@ jobs:
 
       - name: Verify shared gesture recognizers
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
+      - name: Build optional native dialogs
+        run: dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0 -p:TreatWarningsAsErrors=true
 
       - name: Build optional native menus
         if: needs.changes.outputs.api == 'true'
@@ -301,6 +303,12 @@ jobs:
             XDG_CACHE_HOME="$RUNNER_TEMP/goo-metal-cache" GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_NATIVE_BACKDROP_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_DIALOGS_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_POPUP_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_POPUP_MENU_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify cold and warm macOS application activation
@@ -783,6 +791,8 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          dotnet pack Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack optional spelling and printing services
         if: needs.changes.outputs.full == 'true'
@@ -1032,6 +1042,9 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_NATIVE_DIALOGS_SMOKE=1 \
+            artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Package and run consumer AppImage
         if: needs.changes.outputs.full == 'true'
@@ -1098,6 +1111,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SpellCheck*.nupkg
             artifacts/packages/Goo.Printing*.nupkg
+            artifacts/packages/Goo.NativeDialogs.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
@@ -1131,6 +1145,7 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.SpellCheck*.nupkg
             artifacts/packages/Goo.Printing*.nupkg
+            artifacts/packages/Goo.NativeDialogs.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Gestures.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.NativeMenus.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
@@ -1276,6 +1291,11 @@ jobs:
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \
             GOO_WINDOW_ACTIVATION_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_NATIVE_POPUP_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
@@ -1514,6 +1534,9 @@ jobs:
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:GOO_NATIVE_DIALOGS_SMOKE = "1"
+          & artifacts/windows-smoke/Goo.PackageSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned consumer installer
         shell: pwsh
         run: |
@@ -1630,6 +1653,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+          dotnet nuget push "artifacts/packages/Goo.NativeDialogs.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.$GOO_VERSION.snupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1685,6 +1712,7 @@ jobs:
             "artifacts/packages/Goo.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.$GOO_VERSION.snupkg"
             "artifacts/packages/Goo.Android.$GOO_VERSION.nupkg"
+            "artifacts/packages/Goo.NativeDialogs.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.Gestures.$GOO_VERSION.nupkg"
             "artifacts/packages/Goo.NativeMenus.$GOO_VERSION.nupkg"
@@ -1771,6 +1799,7 @@ jobs:
           dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.Printing.Android/Goo.Printing.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0-android -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1779,6 +1808,7 @@ jobs:
           dotnet pack Goo.Printing.Android/Goo.Printing.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           dotnet format Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj --verify-no-changes --no-restore
           dotnet format Goo.Printing.Android/Goo.Printing.Android.csproj --verify-no-changes --no-restore
+          dotnet pack Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -o artifacts/android-packages -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android native menus
         if: needs.changes.outputs.full == 'true'
         run: dotnet pack Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release --no-build -p:GooBuildAndroid=true -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
@@ -1817,6 +1847,7 @@ jobs:
             -storepass:file "$RUNNER_TEMP/upload-password" -keypass:file "$RUNNER_TEMP/upload-password"
           export AndroidSdkDirectory="$ANDROID_HOME"
           export JavaSdkDirectory="$JAVA_HOME"
+          export GooBuildAndroid=true
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
           dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package \
             --target android --project tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj \
@@ -1926,12 +1957,12 @@ jobs:
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
         run: |
-          cp artifacts/main-release/packages/Goo.*.nupkg artifacts/android-packages/
+          cp artifacts/main-release/packages/Goo.[0-9]*.nupkg artifacts/main-release/packages/Goo.Gestures.*.nupkg artifacts/main-release/packages/Goo.Templates.*.nupkg artifacts/android-packages/
           python3 - <<'PYCONFIG'
           import shutil
           from pathlib import Path
           source = Path('artifacts/android-packages').resolve()
-          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Gestures"/><package pattern="Goo.NativeMenus"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
+          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Gestures"/><package pattern="Goo.NativeMenus"/><package pattern="Goo.NativeDialogs"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
           consumer = Path('artifacts/android-consumer')
           for name in ['Goo.AndroidSmoke', 'Goo.AndroidSmoke.Shared']:
               shutil.copytree(Path('tests') / name, consumer / name, ignore=shutil.ignore_patterns('bin', 'obj'))

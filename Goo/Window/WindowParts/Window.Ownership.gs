@@ -91,6 +91,7 @@ public partial class Window {
   }
 
   private func configureOwnership(native SdlHost) {
+    if popup != nil { return }
     if let parent = Owner {
       guard let parentHost = parent.host as SdlHost ? else { throw NotSupportedException("The owner does not have a native desktop host") }
       native.SetOwner(parentHost, Modal)
@@ -122,9 +123,18 @@ public partial class Window {
     // Child teardown may also close siblings through application callbacks.
     let pending = children.ToArray()
     var complete = true
-    for child in pending {
-      state.CloseError = captureCleanupError(state.CloseError, () -> child.Close())
-      if child.IsOpen { complete = false }
+    var index = pending.Length
+    while index > 0 {
+      index--
+      let child = pending[index]
+      state.CloseError = captureCleanupError(state.CloseError, () -> {
+        child.popup?.Dismiss(PopupDismissReason.OwnerClosed)
+        if child.IsOpen { child.Close() }
+      })
+      if child.IsOpen {
+        complete = false
+        if child.popup != nil { break }
+      }
     }
     if !complete { host?.Wake() }
     return complete

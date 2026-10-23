@@ -103,19 +103,7 @@ public partial class Window {
       }
       prepare()
       let sdlStart = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
-      let native = SdlHost(
-        Title,
-        Width,
-        Height,
-        x,
-        y,
-        positionSet,
-        State,
-        decorated,
-        resizable,
-        transparent || backdrop == WindowBackdrop.Blur,
-        VSync,
-        func(px int32, py int32) WindowHitResult { return hitTest(px, py) })
+      let native = createNativeHost()
       let sdlEnd = if captureStartup { uint64(Stopwatch.GetTimestamp()) } else { 0uL }
       host = native
       if let icon = iconPng { native.SetIconPng(icon) }
@@ -171,6 +159,12 @@ public partial class Window {
 
   private func configureHost(native WindowHost) {
     native.PreferencesChanged += applyPreferences
+    native.PointerPressed += (id, device, px, py, button, buttons, pressure, modifiers) -> {
+      DismissChildMenus(PopupDismissReason.OutsideInteraction)
+    }
+    native.KeyPressed += (key, modifiers) -> {
+      if key == Key.Escape { popup?.Dismiss(PopupDismissReason.Escape) }
+    }
     native.VisibilityChanged += observeVisibility
     native.MetricsChanged += (logicalWidth int32, logicalHeight int32,
       nativeWidth int32, nativeHeight int32) -> {
@@ -196,6 +190,7 @@ public partial class Window {
       requestRender()
     }
     native.CloseRequested += reason -> {
+      if popup != nil { popup?.Dismiss(PopupDismissReason.PlatformDismissed) }
       if reason == WindowCloseReason.Terminating {
         Interlocked.Exchange(&closeRequested, 2)
       } else {
@@ -234,6 +229,11 @@ public partial class Window {
     IsFocused = focused
     if focused {
       input.FocusGained()
+      let previousPopupFocus = pendingPopupFocus?.Target as Node?
+      pendingPopupFocus = nil
+      if let previous = previousPopupFocus {
+        if !previous.Retired && PopupOwnerOpen && !IsInputBlocked { FocusElement(previous) }
+      }
     } else {
       input.FocusLost(node, resolver)
       markDirtyAndRender()
@@ -356,6 +356,7 @@ public partial class Window {
             native.WaitEvents(idleWaitMs())
           }
         }
+        checkPopupDismissal()
         if profiling { profiler.BeginFrameTrace() }
         Window.DrainApplicationActivations()
         let repeatStartTicks = Stopwatch.GetTimestamp()
@@ -743,6 +744,7 @@ public partial class Window {
       WindowOwnerThread.Release()
       ownerThreadRegistered = false
     }
+    popup?.CompleteDismissal()
     if let error = firstError {
       throw error
     }
