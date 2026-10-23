@@ -3,6 +3,13 @@ using Goo;
 using Goo.Svg;
 using SharpFuzz;
 
+if (args is ["--instrument", var assembly, var prefix])
+{
+    foreach (var type in Fuzzer.Instrument(assembly, name => name.StartsWith(prefix, StringComparison.Ordinal), Options.Value))
+        Console.WriteLine(type);
+    return;
+}
+
 var target = Environment.GetEnvironmentVariable("INPUT_TARGET") ?? throw new InvalidOperationException("INPUT_TARGET is required");
 var current = Environment.GetEnvironmentVariable("INPUT_CURRENT") ?? throw new InvalidOperationException("INPUT_CURRENT is required");
 if (target is not ("svg" or "raster" or "wav"))
@@ -30,6 +37,7 @@ Fuzzer.LibFuzzer.Run(input =>
             try { SoundSource.FromWav(input.ToArray()); }
             catch (InvalidDataException) { }
             catch (NotSupportedException) { }
+            catch (ArgumentOutOfRangeException) { }
             break;
     }
 });

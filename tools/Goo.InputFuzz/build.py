@@ -36,7 +36,12 @@ patterns = {
     "svg": ["tests/Goo.CoreBehaviorTests/Assets/*.svg"],
     "raster": ["tests/Shared/Assets/local-*.png", "tests/Shared/Assets/local-*.jpg", "tests/Shared/Assets/local-*.gif"],
     "native-image": ["tests/Shared/Assets/local-*.png", "tests/Shared/Assets/local-*.jpg", "tests/Shared/Assets/local-*.gif"],
-    "font": ["tests/Goo.VulkanProof/Assets/Text/*.ttf"],
+    "font": [
+        "tests/Goo.VulkanProof/Assets/Text/*.ttf",
+        "tests/Goo.VulkanProof/Assets/Text/*.otf",
+        "tests/Goo.VulkanProof/Assets/Text/*.ttc",
+        "tests/Goo.VulkanProof/Assets/Text/*.otc",
+    ],
     "wav": ["tests/**/*.wav"],
 }
 for pattern in patterns[target]:
@@ -67,8 +72,8 @@ if target in ("svg", "raster", "wav"):
     )
     run("clang++", "-O1", "-g", "-fsanitize=fuzzer", str(driver), "-o", str(work / "managed"))
     run("dotnet", "publish", "tools/Goo.InputFuzz/Goo.InputFuzz.csproj", "-c", "Release", "-o", str(work / "managed-target"))
-    os.environ["DOTNET_ROLL_FORWARD"] = "Major"
-    run("dotnet", str(work / "sharpfuzz/tools/net8.0/any/SharpFuzz.CommandLine.dll"), str(work / "managed-target/Goo.dll"))
+    prefix = {"svg": "Goo.Svg.", "raster": "Goo.RasterImageDecoder", "wav": "Goo.SoundSource"}[target]
+    run("dotnet", str(work / "managed-target/Goo.InputFuzz.dll"), "--instrument", str(work / "managed-target/Goo.dll"), prefix)
 else:
     hb = manifest["source"]["harfbuzz"]
     archive = fetch(hb["archiveUrl"], hb["archiveSha256"], work / "harfbuzz.tar.xz")
