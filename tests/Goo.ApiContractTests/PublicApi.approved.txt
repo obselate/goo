@@ -42,6 +42,8 @@ ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
 ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
 ctor|Goo.LinearGradient|public|(angle:System.Double,stops:Goo.GradientStop[])
 ctor|Goo.LinearGradient|public|(params colors:Goo.Color[])
+ctor|Goo.MessageBoxButton|public|()
+ctor|Goo.MessageBoxOptions|public|()
 ctor|Goo.MotionConverter`1|public|(dimensions:System.Int32,read:System.Action`2<!0,System.Double[]>,write:System.Func`2<System.Double[],!0>)
 ctor|Goo.NativeAccessibilityAdapter|public|()
 ctor|Goo.NativeFileDrag|public|(values:System.Collections.Generic.IReadOnlyList`1<System.String>)
@@ -123,6 +125,8 @@ enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
 enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
 enum-underlying|Goo.MacOSBackdropState|System.Int32
+enum-underlying|Goo.MessageBoxIcon|System.Int32
+enum-underlying|Goo.MessageBoxStatus|System.Int32
 enum-underlying|Goo.MotionCompletionReason|System.Int32
 enum-underlying|Goo.NativeTransferCapabilities|System.Int32
 enum-underlying|Goo.Overflow|System.Int32
@@ -458,6 +462,15 @@ enum|Goo.MacOSBackdropMaterial|WindowBackground|12
 enum|Goo.MacOSBackdropState|Active|1
 enum|Goo.MacOSBackdropState|FollowWindow|0
 enum|Goo.MacOSBackdropState|Inactive|2
+enum|Goo.MessageBoxIcon|Error|2
+enum|Goo.MessageBoxIcon|Information|0
+enum|Goo.MessageBoxIcon|Warning|1
+enum|Goo.MessageBoxStatus|Busy|3
+enum|Goo.MessageBoxStatus|Cancelled|1
+enum|Goo.MessageBoxStatus|Failed|5
+enum|Goo.MessageBoxStatus|OwnerClosed|4
+enum|Goo.MessageBoxStatus|Success|0
+enum|Goo.MessageBoxStatus|Unsupported|2
 enum|Goo.MotionCompletionReason|Disabled|2
 enum|Goo.MotionCompletionReason|Finished|0
 enum|Goo.MotionCompletionReason|ReducedMotion|1
@@ -867,6 +880,7 @@ method|Goo.MotionVelocity|Uniform|static|public|generic:|(value:System.Double)->
 method|Goo.Motion|Tween|static|public|generic:|(duration:System.Double,easing:Goo.Easing=Linear)->System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>
 method|Goo.NativeAccessibilityAdapter|Dispose|instance|public|generic:|()->System.Void
 method|Goo.NativeAccessibilityAdapter|Update|instance|public|generic:|(tree:Goo.AccessibilityTree)->System.Void
+method|Goo.NativeDialogs|ShowMessageBoxAsync|static|public|generic:|(owner:Goo.Window,options:Goo.MessageBoxOptions)->System.Threading.Tasks.Task`1<Goo.MessageBoxResult>
 method|Goo.NativeFileDrag|TryCreate|static|public|generic:|(values:System.Collections.Generic.IReadOnlyList`1<System.String>,out result:Goo.NativeFileDrag&)->System.Boolean
 method|Goo.PanelTransform|Equals|instance|public|generic:|(other:Goo.PanelTransform)->System.Boolean
 method|Goo.PanelTransform|op_Equality|static|public|generic:|(left:Goo.PanelTransform,right:Goo.PanelTransform)->System.Boolean
@@ -1471,6 +1485,17 @@ property|Goo.MacOSBackdropOptions|Emphasized|System.Boolean|instance|get:public,
 property|Goo.MacOSBackdropOptions|Mask|Goo.WindowBackdropMask|instance|get:public,init:public|index:()
 property|Goo.MacOSBackdropOptions|Material|Goo.MacOSBackdropMaterial|instance|get:public,init:public|index:()
 property|Goo.MacOSBackdropOptions|State|Goo.MacOSBackdropState|instance|get:public,init:public|index:()
+property|Goo.MessageBoxButton|Cancel|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.MessageBoxButton|Default|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.MessageBoxButton|Id|System.Int32|instance|get:public,init:public|index:()
+property|Goo.MessageBoxButton|Text|System.String|instance|get:public,init:public|index:()
+property|Goo.MessageBoxOptions|Buttons|System.Collections.Generic.IReadOnlyList`1<Goo.MessageBoxButton>|instance|get:public,init:public|index:()
+property|Goo.MessageBoxOptions|Icon|Goo.MessageBoxIcon|instance|get:public,init:public|index:()
+property|Goo.MessageBoxOptions|Message|System.String|instance|get:public,init:public|index:()
+property|Goo.MessageBoxOptions|Title|System.String|instance|get:public,init:public|index:()
+property|Goo.MessageBoxResult|ButtonId|System.Int32|instance|get:public|index:()
+property|Goo.MessageBoxResult|Error|System.String|instance|get:public|index:()
+property|Goo.MessageBoxResult|Status|Goo.MessageBoxStatus|instance|get:public|index:()
 property|Goo.Motion|Default|System.Func`4<System.Double,System.Double,System.Double,Goo.Simulation>|static|get:public,set:public|index:()
 property|Goo.Motion|TimeScale|System.Double|static|get:public,set:public|index:()
 property|Goo.NativeAccessibilityAdapter|IsAvailable|System.Boolean|static|get:public|index:()
@@ -1959,11 +1984,17 @@ type|Goo.LinearGradient|sealed-class|public|base:System.Object|interfaces:Goo.Gr
 type|Goo.MacOSBackdropMaterial|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.MacOSBackdropOptions|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.MacOSBackdropOptions>|generic:
 type|Goo.MacOSBackdropState|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.MessageBoxButton|class|public|base:System.Object|interfaces:|generic:
+type|Goo.MessageBoxIcon|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.MessageBoxOptions|class|public|base:System.Object|interfaces:|generic:
+type|Goo.MessageBoxResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.MessageBoxStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.MotionCompletionReason|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.MotionConverter`1|sealed-class|public|base:System.Object|interfaces:|generic:T[attrs:0,constraints:]
 type|Goo.MotionVelocity|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.Motion|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeAccessibilityAdapter|class|public|base:System.Object|interfaces:Goo.AccessibilityAdapter,System.IDisposable|generic:
+type|Goo.NativeDialogs|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeFileDrag|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeFileDrop|class|public|base:System.Object|interfaces:|generic:
 type|Goo.NativeTransferCapabilities|enum|public|base:System.Enum|interfaces:|generic:

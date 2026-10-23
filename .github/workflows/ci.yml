@@ -191,6 +191,8 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_NATIVE_BACKDROP_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_DIALOGS_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify NativeAOT UI audio on macOS
         run: |
@@ -709,6 +711,8 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          dotnet pack Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Collect advisory consumer publish report
         run: |
@@ -851,6 +855,9 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_NATIVE_DIALOGS_SMOKE=1 \
+            artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Stage minimal Linux bundle and separate symbols
         run: |
@@ -989,6 +996,9 @@ jobs:
         shell: pwsh
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:GOO_NATIVE_DIALOGS_SMOKE = "1"
+          & artifacts/windows-smoke/Goo.PackageSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()

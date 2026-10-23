@@ -59,6 +59,8 @@ public sealed class MessageBoxResult {
 
 /// Shows owned native dialogs without a managed fallback.
 public sealed class NativeDialogs {
+    private init() { }
+
     shared {
         /// Queues an owned native message box from the open owner's UI thread.
         /// Desktop SDL display blocks Goo rendering, timers and posted actions until dismissal.

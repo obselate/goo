@@ -822,12 +822,14 @@ public sealed class PublicDocumentationTests
             .Where(type => type.IsAbstract)
             .Select(type => type.FullName)
             .ToHashSet(StringComparer.Ordinal);
+        var coreTypes = ApiTypes().Select(type => type.FullName).ToHashSet(StringComparer.Ordinal);
         var generatedNames = new HashSet<string>(StringComparer.Ordinal)
         {
             "Deconstruct", "Equals", "GetHashCode", "ToString", "op_Equality", "op_Inequality",
         };
         var count = File.ReadLines(path)
             .Select(line => line.Split('|'))
+            .Where(parts => coreTypes.Contains(parts[1]))
             .Count(parts =>
                 parts[0] == "ctor"
                     && parts[1] != "Goo.Cell`1"
