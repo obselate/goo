@@ -3,6 +3,8 @@ import argparse
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 
@@ -19,6 +21,11 @@ def main() -> None:
         raise SystemExit("stb_image.h hash drift")
     sources = args.source_root / "src"
     (sources / "stb_image.h").write_bytes(header)
+    subprocess.run([
+        sys.executable, str(Path(__file__).resolve().parent / "apply-source-patches.py"),
+        "--manifest", str(args.manifest), "--source-root", str(args.source_root),
+        "--patch-name", "stb-gif-two-back",
+    ], check=True)
     shutil.copyfile(Path(__file__).resolve().parent / "goo-image.c", sources / "goo-image.c")
     meson = sources / "meson.build"
     text = meson.read_text(encoding="utf-8")

@@ -1,0 +1,11 @@
+--- a/src/stb_image.h
++++ b/src/stb_image.h
+@@ -7020,7 +7020,7 @@
+             }
+             memcpy( out + ((layers - 1) * stride), u, stride );
+             if (layers >= 2) {
+-               two_back = out - 2 * stride;
++               two_back = out + (layers - 2) * stride;
+             }
+ 
+             if (delays) {

@@ -32,16 +32,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--source-root", required=True, type=Path)
+    parser.add_argument("--patch-name", default="cpal-linear-light", choices=("cpal-linear-light", "stb-gif-two-back"))
     args = parser.parse_args()
 
     manifest_path = args.manifest.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     patches = manifest.get("build", {}).get("sourcePatches")
-    if not isinstance(patches, list) or len(patches) != 1:
-        raise SystemExit("expected one HarfBuzz source patch")
-    patch = patches[0]
-    if patch.get("name") != "cpal-linear-light":
-        raise SystemExit("CPAL source patch name drift")
+    if not isinstance(patches, list) or {patch["name"] for patch in patches} != {"cpal-linear-light", "stb-gif-two-back"}:
+        raise SystemExit("expected HarfBuzz CPAL and stb_image GIF source patches")
+    patch = next(patch for patch in patches if patch["name"] == args.patch_name)
     if not shutil.which("patch"):
         raise SystemExit("required command missing: patch")
 
@@ -58,14 +57,15 @@ def main():
         raise SystemExit("upstream source SHA-256 drift")
 
     original = source_path.read_text(encoding="utf-8")
-    if "srgb8_to_linear_q15" in original:
-        raise SystemExit("CPAL source patch already applied")
-    if original.count("color_to_q15_rgba (hb_color_t color, int16_t out[4])") != 1:
-        raise SystemExit("CPAL source shape drift")
-    if original.count("color_to_q15_rgba (color, o + 8);") != 1:
-        raise SystemExit("CPAL solid call shape drift")
-    if original.count("color_to_q15_rgba (stops[i].color, p + 4);") != 1:
-        raise SystemExit("CPAL stop call shape drift")
+    if args.patch_name == "cpal-linear-light":
+        if "srgb8_to_linear_q15" in original:
+            raise SystemExit("CPAL source patch already applied")
+        if original.count("color_to_q15_rgba (hb_color_t color, int16_t out[4])") != 1:
+            raise SystemExit("CPAL source shape drift")
+        if original.count("color_to_q15_rgba (color, o + 8);") != 1:
+            raise SystemExit("CPAL solid call shape drift")
+        if original.count("color_to_q15_rgba (stops[i].color, p + 4);") != 1:
+            raise SystemExit("CPAL stop call shape drift")
 
     patch_text = patch_path.read_text(encoding="utf-8")
     run_patch(["patch", "--dry-run", "--batch", "--fuzz=0", "-p1"], patch_text, args.source_root)
@@ -74,6 +74,9 @@ def main():
     patched = source_path.read_text(encoding="utf-8")
     if sha256(source_path) != patch["patchedSha256"]:
         raise SystemExit("patched source SHA-256 drift")
+    if args.patch_name == "stb-gif-two-back":
+        print(f"Applied {patch['name']} {patch['sha256']} to {patch['upstreamPath']}")
+        return
     if patched.count("static const uint16_t srgb8_to_linear_q15[256] = {") != 1:
         raise SystemExit("CPAL lookup shape drift")
     lookup = re.search(
