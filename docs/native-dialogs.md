@@ -31,7 +31,7 @@ Reference optional `Goo.NativeDialogs`. Call from the open owner's Goo UI thread
 - Android owner detach, disposal or Activity destruction closes the box and returns `OwnerClosed`.
 - Focus returns only to a mounted target while the owner is visible and focused.
 
-See the [generated API](api-native-dialogs/public.md).
+Generate the API reference locally:
 
 ```sh
 dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
