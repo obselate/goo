@@ -109,7 +109,7 @@ internal unsafe partial class SdlHost {
                 applied |= WindowPlacementFields.FullscreenDisplay | WindowPlacementFields.State
             } else if (value.Fields & WindowPlacementFields.State) != WindowPlacementFields.None
                 || ((size || position) && original != WindowState.Normal) {
-                SetState(target)
+                if target != NativePlacementState(SDL.GetWindowFlags(window)) { SetState(target) }
                 if (value.Fields & WindowPlacementFields.State) != WindowPlacementFields.None {
                     applied |= WindowPlacementFields.State
                 }
