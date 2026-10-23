@@ -192,7 +192,17 @@
          xdg_popup_reposition(wind->shell_surface.xdg.popup.xdg_popup,
                               wind->shell_surface.xdg.popup.xdg_positioner,
                               0);
-@@ -1987,6 +2025,7 @@
+@@ -1091,9 +1129,5 @@
+     wind->last_configure.width = width;
+     wind->last_configure.height = height;
+-
+-    if (wind->shell_surface_status == WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE) {
+-        wind->shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_FRAME;
+-    }
+ }
+ 
+ static void handle_xdg_popup_done(void *data, struct xdg_popup *xdg_popup)
+@@ -1987,6 +2021,7 @@
              xdg_positioner_set_offset(data->shell_surface.xdg.popup.xdg_positioner, position_x, position_y);
  
              // Assign the popup role
@@ -200,7 +210,7 @@
              data->shell_surface.xdg.popup.xdg_popup = xdg_surface_get_popup(data->shell_surface.xdg.surface,
                                                                                  parent_xdg_surface,
                                                                                  data->shell_surface.xdg.popup.xdg_positioner);
-@@ -1994,5 +2033,6 @@
+@@ -1994,5 +2029,6 @@
              xdg_popup_add_listener(data->shell_surface.xdg.popup.xdg_popup, &_xdg_popup_listener, data);
  
 +            Goo_GrabPopup(window, data->shell_surface.xdg.popup.xdg_popup);

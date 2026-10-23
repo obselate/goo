@@ -71,7 +71,7 @@ patch -d "$work/src" -p1 --fuzz=0 < \
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-foreign-parent.patch"
 printf '%s  %s\n' \
-  "947f490d930dd91405c0d83272a3cfac131b0c499dcb5ea35f887d5d09b67fc5" \
+  "5cac7e4f15540477490ea3903e374a1d3f959c70ffed1c2c15ec2ab695c69dd2" \
   "$(dirname "$0")/../patches/sdl/wayland-popup-grab.patch" | sha256sum -c -
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/wayland-popup-grab.patch"
