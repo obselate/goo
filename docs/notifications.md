@@ -8,7 +8,7 @@ if opened.Status != NotificationStatus.Success {
     Console.Error.WriteLine(opened.Status)
     return
 }
-using let notifications = opened.Service!
+using let notifications = opened.Service!!
 ```
 
 Install `Goo.Notifications` for desktop. Subscribe to `Window.ApplicationActivated` and initialize application activation first. Configure the installed application ID with `Window.ConfigureApplication`.

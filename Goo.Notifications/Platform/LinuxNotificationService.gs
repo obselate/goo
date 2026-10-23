@@ -63,21 +63,20 @@ internal class LinuxNotificationService : NotificationService {
 
     private func GetCapabilitiesAsync() Task[[]string] {
         using let writer = connection.GetMessageWriter()
-        writer.WriteMethodCallHeader(destination: destination, path: Path, @interface: Service, member: "GetCapabilities")
+        writer.WriteMethodCallHeader(destination, Path, Service, "GetCapabilities")
         return connection.CallMethodAsync[[]string](writer.CreateMessage(), ReadCapabilities)
     }
 
     private func NotifyAsync(message NotificationMessage, previous uint32) Task[uint32] {
         using let writer = connection.GetMessageWriter()
-        writer.WriteMethodCallHeader(destination: destination, path: Path, @interface: Service,
-            member: "Notify", signature: "susssasa{sv}i")
+        writer.WriteMethodCallHeader(destination, Path, Service, "Notify", "susssasa{sv}i")
         writer.WriteString(identifier)
         writer.WriteUInt32(previous)
         writer.WriteString("")
         writer.WriteString(message.Title)
         writer.WriteString(if markup { message.Body.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") }
             else { message.Body })
-        writer.WriteArray(if actions { ["default", "Open"] } else { Array.Empty[string]() })
+        writer.WriteArray(if actions { []string{"default", "Open"} } else { Array.Empty[string]() })
         let hints = writer.WriteDictionaryStart()
         writer.WriteDictionaryEntryStart()
         writer.WriteString("desktop-entry")
@@ -89,8 +88,7 @@ internal class LinuxNotificationService : NotificationService {
 
     private func CloseAsync(id uint32) Task {
         using let writer = connection.GetMessageWriter()
-        writer.WriteMethodCallHeader(destination: destination, path: Path, @interface: Service,
-            member: "CloseNotification", signature: "u")
+        writer.WriteMethodCallHeader(destination, Path, Service, "CloseNotification", "u")
         writer.WriteUInt32(id)
         return connection.CallMethodAsync(writer.CreateMessage())
     }
@@ -147,7 +145,7 @@ internal class LinuxNotificationService : NotificationService {
         NotificationMessage.ValidateId(id)
         RequireOpen()
         lock gate {
-            if watcher!.GetOwnerChangedCancellationToken(destination).IsCancellationRequested {
+            if watcher!!.GetOwnerChangedCancellationToken(destination).IsCancellationRequested {
                 return Task.FromResult(Result(NotificationStatus.Failed, id: id,
                     error: "The notification service owner changed. Reopen the service"))
             }
