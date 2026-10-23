@@ -321,6 +321,7 @@ public sealed class FixtureContractTests
         yield return Contract<TextPresentationLayerFixtures>(nameof(TextPresentationLayerFixtures.ViewportScrollReusesStyleSpansUntilRevisionChanges));
         yield return Contract<TextPresentationLayerFixtures>(nameof(TextPresentationLayerFixtures.AbsolutePreviewEditorAvoidsFullDocumentInitialMeasure));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.UndoHistoryDropsOldestGroupsAndPreservesTypingAndRedo));
+        yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.EntryUndoDropsOldestGroupsAtCountAndByteLimits));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.BuiltInDefaultsPrecedeThrowingObserversAndRetainQueuedSuffix));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.ThrowingPlatformCommitSettlesEditorAndRebuildsOwner));
         yield return Contract<TextInputPrimitivesFixtures>(nameof(TextInputPrimitivesFixtures.GenericCallbacksReceiveNormalizedUtf16Payloads));

@@ -439,8 +439,10 @@ internal partial class TextInput {
     if source.Count == 0 { return false }
     let target = redo ? history.Undo : history.Redo
     let before = editState(n)
-    let step = source.Pop()
-    target.Push(step)
+    let node = source.Last!!
+    let step = node.Value
+    source.RemoveLast()
+    target.AddLast(node)
     commitEdit(root, n, before, redo ? step.After : step.Before, record: false)
     return true
   }
