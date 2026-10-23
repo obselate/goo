@@ -38,7 +38,6 @@
 !/.github/scripts/install-vulkan-validation-layer-linux-x64.sh
 !/.github/scripts/validate-android-package.py
 !/.github/scripts/validate-text-native-rebuild.py
-!/.github/scripts/validate-image-decoder-symbols.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
 !/.github/scripts/stage-windows-x64-nativeaot.sh

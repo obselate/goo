@@ -71,8 +71,8 @@ def normalize_environment_value(name, value):
 
 def verify_source_patches(manifest, manifest_path):
     patches = manifest.get("build", {}).get("sourcePatches")
-    if not isinstance(patches, list) or len(patches) != 1:
-        raise SystemExit("expected one HarfBuzz source patch")
+    if not isinstance(patches, list) or {patch["name"] for patch in patches} != {"cpal-linear-light", "stb-gif-two-back"}:
+        raise SystemExit("expected HarfBuzz CPAL and stb_image GIF source patches")
     repo_root = manifest_path.resolve().parents[2]
     for patch in patches:
         path = repo_root / patch["path"]

@@ -700,6 +700,15 @@
         "sha256": "225d5b7e5a656e96ee850f41c662e625d9c29ac518c1b834b3c53b7949358b67",
         "upstreamPath": "src/hb-gpu-paint.cc",
         "upstreamSha256": "78c12e63968ae3de1d56cc6bc788930f8474bd0e34beed66ca24375ad137a463"
+      },
+      {
+        "description": "Keep the GIF disposal history pointer inside the allocated frame buffer.",
+        "name": "stb-gif-two-back",
+        "patchedSha256": "48b9cabe23f0a6b07654f2b7787535165695bd8bf563449088f0ab8ad7d842b2",
+        "path": "tools/Goo.TextNative/patches/stb-image-2.30-gif-two-back.patch",
+        "sha256": "0b4b4a10c7e2e2c2601a661af02456d5bf68f750b3cb9a93d435da6590795135",
+        "upstreamPath": "src/stb_image.h",
+        "upstreamSha256": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3"
       }
     ],
     "system": "Meson and Ninja",

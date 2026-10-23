@@ -323,7 +323,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            binutils clang cmake curl llvm ninja-build pkg-config zlib1g-dev \
+            binutils clang cmake curl ninja-build pkg-config zlib1g-dev \
             fonts-dejavu-core fonts-noto-color-emoji \
             libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri \
             libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev \
@@ -412,14 +412,6 @@ jobs:
           python3 .github/scripts/validate-text-native-rebuild.py \
             Goo/Runtime/Vulkan/linux-x64/text-native-build.json \
             artifacts/native/text/text-native-build.json
-
-      - name: Reject multi-frame GIF decoder symbols in shipped payloads
-        run: |
-          python3 .github/scripts/validate-image-decoder-symbols.py \
-            Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz-gpu.so \
-            Goo/Runtime/Vulkan/android-*/libgoo-harfbuzz-gpu.so \
-            Goo/Runtime/Vulkan/win-x64/goo-harfbuzz-gpu.dll \
-            artifacts/macos-candidate/native/libgoo-harfbuzz-gpu.dylib
 
       - name: Verify Vulkan software driver and validation layer
         run: |
