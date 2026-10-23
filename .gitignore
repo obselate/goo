@@ -32,6 +32,7 @@
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/test-macos-activation.py
 !/.github/scripts/test-app-host.py
+!/.github/scripts/test-desktop-activation.py
 !/.github/scripts/build-text-native-linux-x64.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh

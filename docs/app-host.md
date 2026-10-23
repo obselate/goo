@@ -9,11 +9,14 @@ func Main() {
     Window.ApplicationActivated += (request) -> {
         Console.WriteLine(String.Join(" | ", request.Arguments))
     }
-    let initial = ApplicationActivation{
-        IsInitial: true,
-        Arguments: Environment.GetCommandLineArgs(),
-        WorkingDirectory: Environment.CurrentDirectory,
+    let arguments = Environment.GetCommandLineArgs()
+    let parsed = ActivationArguments.Read(
+        ArraySegment[string](arguments, 1, arguments.Length - 1), Environment.CurrentDirectory)
+    if parsed.Status != ActivationReadStatus.Accepted {
+        Console.Error.WriteLine(parsed.Error)
+        return
     }
+    let initial = parsed.Activation!!
     if Window.InitializeApplicationActivation(initial) != WindowOperationResult.Accepted {
         Console.Error.WriteLine("Initial activation exceeds its limits")
         return
@@ -39,7 +42,7 @@ Its types use namespace `Goo`.
 - A forwarded Launch becomes Arguments. All forwarded requests have IsInitial set to false.
 - Argument boundaries, empty strings, Unicode and the sender's working directory are retained.
 - The receiver's current directory does not change.
-- `Environment.GetCommandLineArgs()` includes the executable. Pass only the values the app wants to forward.
+- `ActivationArguments.Read` excludes the executable name and owns the returned data.
 - Before a window exists, block on the acquisition task as shown. An ordinary console entry point has no UI synchronization context.
 
 ## Outcomes
@@ -73,3 +76,92 @@ An exited process releases ownership. Empty lease files may remain in the user r
 Requests retain at most 4096 arguments and 4096 document URIs.
 Text is limited to 64 KiB per UTF-8 string and 1 MiB per request.
 The versioned wire frame is bounded to 2 MiB. Each connected client has three seconds to complete its exchange.
+
+## Desktop associations
+
+`ActivationArguments.Read` recognizes these leading flags:
+
+| Arguments | Result |
+| --- | --- |
+| `--goo-open-uri <absolute-uri>` | One OpenUri request. |
+| `--goo-open-documents <uri-or-path>...` | One OpenDocuments batch. Relative paths use the captured working directory. |
+| `--goo-notification <private-uri>` | One Notification request. |
+| Other argument values | One Launch request with the original values. |
+
+Association input allows 64 KiB per UTF-8 string and 1 MiB total text, including the leading flag.
+Malformed or oversized association data returns Rejected. It does not start a different activation route.
+The OS can normalize URI text before launch. Route with URI fields, not byte-for-byte input comparisons.
+Apps own document access, window selection and requests to raise a window.
+
+Use a separate private notification scheme with this URI format:
+
+```text
+example-notify://goo-notification/activate?id=job-42&action=open&data=record-42
+```
+
+Escape each field as URI data. All three fields are required and may be empty.
+Unknown or repeated notification fields return Rejected.
+Register the private scheme with `--goo-notification`, not `--goo-open-uri`.
+
+### Windows
+
+The app's installer owns its associations. Quote the executable and each substituted argument.
+Do not invoke a command shell.
+
+| Per-user registry key under `HKCU\Software\Classes` | Value |
+| --- | --- |
+| `example` | Default value `URL:Example`, plus an empty `URL Protocol` string. |
+| `example\shell\open\command` | `"C:\Program Files\Example\Example.exe" --goo-open-uri "%1"` |
+| `.example` | Default value `Example.Document`. |
+| `Example.Document\shell\open\command` | `"C:\Program Files\Example\Example.exe" --goo-open-documents "%1"` |
+
+A cold shell launch initializes the typed request. A warm launch forwards it to the primary.
+Keep user-selected default handlers under OS control.
+
+### macOS
+
+Declare the app's schemes in `CFBundleURLTypes`.
+Declare document types and UTIs in `CFBundleDocumentTypes` and `UTExportedTypeDeclarations` as needed.
+Use the stable application ID as `CFBundleIdentifier`.
+
+LaunchServices delivers these requests directly to the shared Window event.
+Goo retains cold launches and multi-document batches. Do not parse a second copy of a native request from CLI arguments.
+
+### Linux Wayland
+
+Install a normal document entry as `org.example.App.desktop`:
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=Example
+Exec=/opt/example/Example --goo-open-documents %U
+Icon=org.example.App
+MimeType=application/x-example-document;
+Terminal=false
+```
+
+Install a separate hidden scheme handler as `org.example.App.Links.desktop`:
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=Example links
+Exec=/opt/example/Example --goo-open-uri %u
+Icon=org.example.App
+MimeType=x-scheme-handler/example;
+NoDisplay=true
+Terminal=false
+```
+
+The separate commands retain URI intent without guessing from document schemes.
+Both processes use the same application ID for single-instance acquisition.
+Install the app's MIME definitions and refresh the desktop and MIME databases.
+Use OS settings for the user's default-handler choice.
+
+### Android
+
+Use GooActivity Intent activation, not desktop CLI flags.
+Cold and warm VIEW or document requests use the same Window event.
+Provider document URIs remain URIs and do not become filesystem paths.
+
