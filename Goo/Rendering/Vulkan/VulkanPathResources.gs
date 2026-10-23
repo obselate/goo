@@ -72,7 +72,9 @@ private sealed class VulkanPathResourceRecord {
   internal var FillRuleMask uint32
   internal var GeometryRevision uint64
   internal var LastUseFence uint64
-  internal var LastUseSequence uint64
+  internal var Previous VulkanPathResourceRecord?
+  internal var Next VulkanPathResourceRecord?
+  internal var Retired bool
 
   internal init(identity VulkanPathResourceIdentity, baseWord uint32,
     wordCount uint32, bounds ConservativeBounds, fillRuleMask uint32) {
@@ -88,7 +90,7 @@ private sealed class VulkanPathResourceRecord {
       FillRuleMask = fillRuleMask
       GeometryRevision = identity.GeometryRevision
       LastUseFence = 0uL
-      LastUseSequence = 0uL
+      Retired = false
     }
 }
 
@@ -142,7 +144,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   private var atlasLastUseFence uint64
   private var retiredWordCount uint64
   private var completedSubmissionFence uint64
-  private var useSequence uint64
+  private var leastRecentlyUsed VulkanPathResourceRecord?
+  private var mostRecentlyUsed VulkanPathResourceRecord?
   private var disposed bool
 
   internal prop Atlas VulkanPathAtlas{ get -> atlas }
@@ -374,13 +377,9 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       return EmptyRenderable(fillRule)
     }
     let identity = identities.Resolve(data)
-    if useSequence == uint64.MaxValue {
-      throw OverflowException("Vulkan path use sequence overflow")
-    }
-    useSequence++
     if records.TryGetValue(identity.PathId.LogicalId, out var existing)
       && existing.GeometryRevision == identity.GeometryRevision{
-        existing.LastUseSequence = useSequence
+        TouchRecord(existing)
         return BuildRenderable(existing, fillRule, renderAfterPlannedUpload)
       }
 
@@ -408,9 +407,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     }
     let record = AcquireRecord(identity, baseWord, uint32(wordCount),
       bounds, encoding.FillRuleMask)
-    record.LastUseSequence = useSequence
+    TouchRecord(record)
     let hadRecord = if records.TryGetValue(identity.PathId.LogicalId, out var replaced) {
       retiredRecords.Add(replaced)
+      replaced.Retired = true
       if retiredWordCount > uint64.MaxValue - uint64(replaced.WordCount) {
         throw OverflowException("Vulkan path retired word count overflow")
       }
@@ -931,27 +931,14 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     }
     var reclaimed = false
     while !HasFreeRange(required) {
-      var oldest VulkanPathResourceRecord? = nil
-      var retiredIndex int32 = -1
-      for record in records.Values {
-        if !activePathOwners.ContainsKey(record.Identity.PathId.LogicalId)
-          && record.LastUseFence <= completedSubmissionFence
-          && (oldest == nil || record.LastUseSequence < oldest.LastUseSequence) {
-            oldest = record
-          }
+      var candidate = leastRecentlyUsed
+      while let record = candidate {
+        if CanReclaim(record) { break }
+        candidate = record.Next
       }
-      for index in 0 ... retiredRecords.Count {
-        let record = retiredRecords[index]
-        if !IsPathRevisionActive(record.Identity.PathId)
-          && record.LastUseFence <= completedSubmissionFence
-          && (oldest == nil || record.LastUseSequence < oldest.LastUseSequence) {
-            oldest = record
-            retiredIndex = index
-          }
-      }
-      guard let record = oldest else { break }
-      if retiredIndex >= 0 {
-        retiredRecords.RemoveAt(retiredIndex)
+      guard let record = candidate else { break }
+      if record.Retired {
+        retiredRecords.Remove(record)
         retiredWordCount = retiredWordCount - uint64(record.WordCount)
       } else {
         records.Remove(record.Identity.PathId.LogicalId)
@@ -1063,22 +1050,48 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   }
 
   private func RecycleRecord(record VulkanPathResourceRecord) {
+    UnlinkRecord(record)
     record.Reset(VulkanPathResourceIdentity{}, 0u, 0u, ConservativeBounds{}, 0u)
     recordPool.Add(record)
   }
 
-  private func HasInactiveRecords() bool {
-    for record in retiredRecords {
-      if !IsPathRevisionActive(record.Identity.PathId)
-        && record.LastUseFence <= completedSubmissionFence{
-          return true
-        }
+  private func TouchRecord(record VulkanPathResourceRecord) {
+    if Object.ReferenceEquals(mostRecentlyUsed, record) { return }
+    UnlinkRecord(record)
+    record.Previous = mostRecentlyUsed
+    if let previous = mostRecentlyUsed {
+      previous.Next = record
+    } else {
+      leastRecentlyUsed = record
     }
-    for record in records.Values {
-      if !activePathOwners.ContainsKey(record.Identity.PathId.LogicalId)
-        && record.LastUseFence <= completedSubmissionFence{
-          return true
-        }
+    mostRecentlyUsed = record
+  }
+
+  private func UnlinkRecord(record VulkanPathResourceRecord) {
+    if let previous = record.Previous {
+      previous.Next = record.Next
+    } else if Object.ReferenceEquals(leastRecentlyUsed, record) {
+      leastRecentlyUsed = record.Next
+    }
+    if let next = record.Next {
+      next.Previous = record.Previous
+    } else if Object.ReferenceEquals(mostRecentlyUsed, record) {
+      mostRecentlyUsed = record.Previous
+    }
+    record.Previous = nil
+    record.Next = nil
+  }
+
+  private func CanReclaim(record VulkanPathResourceRecord) bool ->
+    record.LastUseFence <= completedSubmissionFence
+    && !(if record.Retired { IsPathRevisionActive(record.Identity.PathId) }
+      else { activePathOwners.ContainsKey(record.Identity.PathId.LogicalId) })
+
+  private func HasInactiveRecords() bool {
+    var candidate = leastRecentlyUsed
+    while let record = candidate {
+      if CanReclaim(record) { return true }
+      candidate = record.Next
     }
     return false
   }
@@ -1304,6 +1317,8 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     records.Clear()
     retiredRecords.Clear()
     recordPool.Clear()
+    leastRecentlyUsed = nil
+    mostRecentlyUsed = nil
     freeRanges.Clear()
     liveWordCount = 0u
     freeWordCount = 0u
