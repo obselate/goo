@@ -1,0 +1,59 @@
+name: Nightly inputs
+
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-inputs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  inputs:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [svg, raster, native-image, wav, font]
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        if: matrix.target != 'native-image' && matrix.target != 'font'
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        if: matrix.target != 'native-image' && matrix.target != 'font'
+        with:
+          path: artifacts/gsharp
+          key: gsharp-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bootstrap.sh', 'global.json') }}
+
+      - name: Build pinned G# tools
+        if: matrix.target != 'native-image' && matrix.target != 'font'
+        run: nice -n 10 ./bootstrap.sh --gsharp-only
+
+      - name: Build instrumented input target
+        run: nice -n 10 python3 tools/Goo.InputFuzz/build.py '${{ matrix.target }}'
+
+      - name: Generate and test inputs for ten minutes
+        run: nice -n 10 tools/Goo.InputFuzz/run.sh '${{ matrix.target }}'
+
+      - name: Upload failing inputs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: input-failures-${{ matrix.target }}-${{ github.sha }}
+          path: artifacts/input-fuzz/failures/${{ matrix.target }}/
+          if-no-files-found: ignore
+          retention-days: 30
