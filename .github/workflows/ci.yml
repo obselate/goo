@@ -1532,12 +1532,6 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $dumps = Join-Path $PWD "artifacts/windows-smoke/results-dumps"
-          New-Item -ItemType Directory -Force $dumps | Out-Null
-          $key = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Goo.PackageSmoke.exe"
-          New-Item -Path $key -Force | Out-Null
-          New-ItemProperty -Path $key -Name DumpFolder -Value $dumps -PropertyType ExpandString -Force | Out-Null
-          New-ItemProperty -Path $key -Name DumpType -Value 2 -PropertyType DWord -Force | Out-Null
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:GOO_NATIVE_DIALOGS_SMOKE = "1"
