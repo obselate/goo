@@ -47,8 +47,9 @@ internal class LinuxNotificationService : NotificationService {
         let capabilities = await GetCapabilitiesAsync().ConfigureAwait(false)
         actions = Array.IndexOf(capabilities, "actions") >= 0
         markup = Array.IndexOf(capabilities, "body-markup") >= 0
-        watcher = await connection.WatchNameOwnerAsync(Service).ConfigureAwait(false)
-        destination = watcher.GetCurrentOwner() ?? throw InvalidOperationException("The notification service has no owner")
+        let owner = await connection.WatchNameOwnerAsync(Service).ConfigureAwait(false)
+        watcher = owner
+        destination = owner.GetCurrentOwner() ?? throw InvalidOperationException("The notification service has no owner")
         observers.Add(await connection.AddMatchAsync[LinuxNotificationSignal](
             Rule("ActionInvoked"), ReadSignal, OnAction, emitOnCapturedContext: false).ConfigureAwait(false))
         observers.Add(await connection.AddMatchAsync[LinuxNotificationSignal](
@@ -132,9 +133,7 @@ internal class LinuxNotificationService : NotificationService {
                 nativeEntries[id] = entry
             }
             return Result(NotificationStatus.Accepted, NotificationDelivery.Accepted, message.Id)
-        } catch (error DBusException) {
-            return Result(NotificationStatus.Failed, NotificationDelivery.Failed, message.Id, error.Message)
-        } catch (error DBusConnectionException) {
+        } catch (error DBusExceptionBase) {
             return Result(NotificationStatus.Failed, NotificationDelivery.Failed, message.Id, error.Message)
         } finally {
             requests.Release()
@@ -170,9 +169,7 @@ internal class LinuxNotificationService : NotificationService {
             await CloseAsync(nativeId).ConfigureAwait(false)
             Forget(nativeId)
             return Result(NotificationStatus.Accepted, NotificationDelivery.Removed, id)
-        } catch (error DBusException) {
-            return Result(NotificationStatus.Failed, id: id, error: error.Message)
-        } catch (error DBusConnectionException) {
+        } catch (error DBusExceptionBase) {
             return Result(NotificationStatus.Failed, id: id, error: error.Message)
         } finally {
             requests.Release()
@@ -236,10 +233,15 @@ internal class LinuxNotificationService : NotificationService {
             try {
                 service.StartAsync().GetAwaiter().GetResult()
                 return NotificationServiceResult(NotificationStatus.Success, service)
-            } catch (error DBusException) {
+            } catch (error DBusErrorReplyException) {
                 service.Dispose()
-                return NotificationServiceResult(NotificationStatus.Unsupported, error: error.Message)
-            } catch (error DBusConnectionException) {
+                let status = if error.ErrorName == "org.freedesktop.DBus.Error.AccessDenied" { NotificationStatus.Denied }
+                    else if error.ErrorName == "org.freedesktop.DBus.Error.ServiceUnknown"
+                        || error.ErrorName == "org.freedesktop.DBus.Error.NameHasNoOwner"
+                        || error.ErrorName == "org.freedesktop.DBus.Error.UnknownMethod" { NotificationStatus.Unsupported }
+                    else { NotificationStatus.Failed }
+                return NotificationServiceResult(status, error: error.Message)
+            } catch (error DBusExceptionBase) {
                 service.Dispose()
                 return NotificationServiceResult(NotificationStatus.Failed, error: error.Message)
             } catch (error InvalidOperationException) {
