@@ -113,7 +113,7 @@ internal class EmbeddedHostSmoke {
         TextScaleFactor: 1.0F, ReducedMotion: false, AccentColor: Color.Rgb(31, 91, 173)})
       Require(notifications == 4 && window.Preferences.Theme == SystemTheme.Dark
           && window.Preferences.HighContrast == true
-          && window.Preferences.AccentColor == Color.Rgb(31, 91, 173)
+          && window.Preferences.AccentColor.GetValueOrDefault() == Color.Rgb(31, 91, 173)
           && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
         "Appearance-only preferences scheduled tree work or lost their notification")
       let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
