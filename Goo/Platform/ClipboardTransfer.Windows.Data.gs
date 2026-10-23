@@ -95,7 +95,6 @@ internal unsafe partial class ClipboardTransfer {
         }
 
         private let dataObjectId []uint8 = Guid("0000010e-0000-0000-c000-000000000046").ToByteArray()
-        private let unicode UnicodeEncoding = UnicodeEncoding(false, false, true)
         private let windowsImageLimits ImageDecodeLimits = ImageDecodeLimits{ MaxEncodedBytes: MaxImageBytes }
         private const GlobalMedium uint32 = 1u
         private const StreamMedium uint32 = 4u
@@ -388,8 +387,6 @@ internal unsafe partial class ClipboardTransfer {
             if bytes.Length > limit { throw ClipboardLimitException("Clipboard representation exceeds its byte budget") }
             return true
         }
-
-        private func IsPlainText(contentType string) bool -> contentType == "text/plain" || contentType.StartsWith("text/plain;", StringComparison.Ordinal)
 
         internal func WindowsHtml(fragment []uint8) []uint8 {
             const prefix string = "<html><body><!--StartFragment-->"
