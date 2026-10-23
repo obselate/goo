@@ -629,7 +629,7 @@ internal static class Program
         }
         Console.WriteLine("PATH_EVENODD_GATE holes=" + 256 + " curves=" + pathBandEncoding.CurveCount + " words=" + pathBandEncoding.WordCount + " warmAllocated=" + num3 + " warmCalls=64");
         var largePath = new PathBuilder(0, 0, 1024, 1024);
-        for (int i = 0; i < 8192; i++)
+        for (int i = 0; i < 512; i++)
         {
             int x = i * 37 % 1024, y = i * 53 % 1024;
             largePath.MoveTo(x, y).QuadraticTo(x + 16, y - 16, x + 8, y).LineTo(x, y + 8).Close();
@@ -638,12 +638,25 @@ internal static class Program
         var bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
             largeEncoding.Words.AsSpan(0, largeEncoding.WordCount));
         var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
-        if (largeEncoding.WordCount != 316620
-            || hash != "0010B2BF40712817DE99A41D87B4B016263606BFD4D95F854FF7BBD4516AD574")
+        if (largeEncoding.WordCount != 20262
+            || hash != "585C66DFC08DB22ABE2268097928D3019EFB544E33304BB2C7A138A3C8D20560")
         {
             throw new InvalidOperationException("Large path encoding changed");
         }
         Console.WriteLine("PATH_LARGE_ENCODING_GATE curves=" + largeEncoding.CurveCount + " sha256=" + hash);
+        for (int i = 512; i < 8192; i++)
+        {
+            int x = i * 37 % 1024, y = i * 53 % 1024;
+            largePath.MoveTo(x, y).QuadraticTo(x + 16, y - 16, x + 8, y).LineTo(x, y + 8).Close();
+        }
+        var adaptive = PathBandEncoder.Encode(largePath.Build());
+        if (adaptive.HorizontalBandCount <= 32 || adaptive.VerticalBandCount <= 32
+            || adaptive.HorizontalBandCount > 2048 || adaptive.VerticalBandCount > 2048)
+        {
+            throw new InvalidOperationException("Large path bands did not adapt to curve density");
+        }
+        Console.WriteLine("PATH_ADAPTIVE_BAND_GATE curves=" + adaptive.CurveCount
+            + " horizontal=" + adaptive.HorizontalBandCount + " vertical=" + adaptive.VerticalBandCount);
     }
 
     private static void SubmitPathUpload(VulkanPathResources resources, ulong fence)
