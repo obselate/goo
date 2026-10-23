@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <Compile Remove="MessageBoxRequest.Desktop.gs" />
-    <ProjectReference Include="../Goo.Android/Goo.Android.csproj" />
+    <ProjectReference Include="../Goo.Android/Goo.Android.gsproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-android'">
     <Compile Remove="MessageBoxRequest.Android.gs" />

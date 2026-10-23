@@ -1,19 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
-    <ApplicationId>com.example.goostarter</ApplicationId>
-    <ApplicationTitle>GooStarter</ApplicationTitle>
+    <ApplicationId>org.goo.offscreenproof</ApplicationId>
+    <ApplicationTitle>Goo offscreen proof</ApplicationTitle>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <AndroidManifest>AndroidManifest.xml</AndroidManifest>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Goo.Android" Version="0.13.0" />
-    <ProjectReference Include="Shared/GooStarter.Shared.gsproj" />
-  </ItemGroup>
+  <ItemGroup><ProjectReference Include="../../Goo.Android/Goo.Android.gsproj" /></ItemGroup>
 </Project>

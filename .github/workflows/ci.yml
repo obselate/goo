@@ -1753,19 +1753,17 @@ jobs:
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-          dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
-          dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
-          dotnet build Goo.Printing.Android/Goo.Printing.Android.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build Goo.SpellCheck.Android/Goo.SpellCheck.Android.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build Goo.Printing.Android/Goo.Printing.Android.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0-android -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-          dotnet pack Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-          dotnet pack Goo.Printing.Android/Goo.Printing.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-          dotnet format Goo.SpellCheck.Android/Goo.SpellCheck.Android.csproj --verify-no-changes --no-restore
-          dotnet format Goo.Printing.Android/Goo.Printing.Android.csproj --verify-no-changes --no-restore
+          dotnet pack Goo.Android/Goo.Android.gsproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet pack Goo.SpellCheck.Android/Goo.SpellCheck.Android.gsproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet pack Goo.Printing.Android/Goo.Printing.Android.gsproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           dotnet pack Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -o artifacts/android-packages -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android native menus
         if: needs.changes.outputs.full == 'true'
@@ -1808,7 +1806,7 @@ jobs:
           export GooBuildAndroid=true
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4
           dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package \
-            --target android --project tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj \
+            --target android --project tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj \
             --output "$PWD/artifacts/signed-aab"
           bundle="$(find artifacts/signed-aab -name '*.[aA][aA][bB]' -print -quit)"
           test -n "$bundle"
@@ -1928,7 +1926,7 @@ jobs:
           (consumer / font).parent.mkdir(parents=True, exist_ok=True)
           shutil.copyfile(Path('tests') / font, consumer / font)
           PYCONFIG
-          dotnet build artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk

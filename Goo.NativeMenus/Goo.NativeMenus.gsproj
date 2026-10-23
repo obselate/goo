@@ -22,7 +22,7 @@
     <None Include="../docs/native-menus.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
-    <ProjectReference Include="../Goo.Android/Goo.Android.csproj" />
+    <ProjectReference Include="../Goo.Android/Goo.Android.gsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Platform/AndroidMenuBridge.gs" Condition="'$(TargetFramework)' != 'net10.0-android'" />

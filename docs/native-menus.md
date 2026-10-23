@@ -45,7 +45,7 @@ Activity teardown completes the menu as `OwnerClosed`.
 Build both package targets with `-p:GooBuildAndroid=true`.
 
 ```sh
-dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true
+dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooBuildAndroid=true
 adb shell am start -n org.goo.androidsmoke/.MainActivity --ez goo.native_menu_smoke true
 adb logcat -s GooNativeMenus
 ```
