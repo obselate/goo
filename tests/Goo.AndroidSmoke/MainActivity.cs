@@ -11,8 +11,16 @@ namespace GooAndroidSmokeApp;
 public sealed class MainActivity : GooActivity
 {
     private bool inputSmokeStarted;
+    private bool externalSmokeStarted;
+    private ExternalImageSmokeCell? externalScene;
 
-    protected override Goo.Window CreateWindow() => SmokeApplication.CreateWindow();
+    protected override Goo.Window CreateWindow()
+    {
+        if (Intent?.GetBooleanExtra("goo.ahb_smoke", false) != true)
+            return SmokeApplication.CreateWindow();
+        externalScene = new ExternalImageSmokeCell();
+        return new Goo.Window { Root = externalScene, Background = Goo.Color.Black };
+    }
 
     protected override void OnResume()
     {
@@ -21,6 +29,11 @@ public sealed class MainActivity : GooActivity
         {
             inputSmokeStarted = true;
             GooView.PostDelayed(() => RunInputSmoke(0), 100);
+        }
+        if (!externalSmokeStarted && externalScene is { } scene)
+        {
+            externalSmokeStarted = true;
+            _ = AndroidExternalImageSmoke.Run(GooView, scene);
         }
     }
 
