@@ -86,7 +86,8 @@ internal class DiagnosticTreeState {
     var rootId int64
     if let treeRoot = root {
       rootId = identity.Get(treeRoot)
-      collect(treeRoot, nil, 0, current, semantics)
+      let hits = if let window = owner { if let tree = window.Tree { DiagnosticHitIndex(tree) } else { nil } } else { nil }
+      collect(treeRoot, nil, 0, current, semantics, hits)
       previousRoot = WeakReference(treeRoot)
     } else {
       previousRoot = nil
@@ -161,23 +162,23 @@ internal class DiagnosticTreeState {
   private func optionalId(value int64) int64 ? -> value == 0 ? nil : value
 
   private func collect(n Node, parent Node?, childIndex int32,
-    destination Dictionary[int64, DiagnosticNodeSnapshot], semantics AccessibilityManager?) {
+    destination Dictionary[int64, DiagnosticNodeSnapshot], semantics AccessibilityManager?, hits DiagnosticHitIndex?) {
       if n.Retired {
         return
       }
       let id = identity.Get(n)
       nodes[id] = WeakReference(n)
-      let snapshot = makeSnapshot(n, parent, childIndex, id, semantics)
+      let snapshot = makeSnapshot(n, parent, childIndex, id, semantics, hits)
       destination.Add(id, snapshot)
       var index int32
       for child in n.Children {
-        collect(child, n, index, destination, semantics)
+        collect(child, n, index, destination, semantics, hits)
         index = index + 1
       }
     }
 
   private func makeSnapshot(n Node, parent Node?, childIndex int32, id int64,
-    semantics AccessibilityManager?)
+    semantics AccessibilityManager?, hits DiagnosticHitIndex?)
   DiagnosticNodeSnapshot{
     let result = DiagnosticNodeSnapshot()
     result.Id = id
@@ -334,7 +335,7 @@ internal class DiagnosticTreeState {
     } else {
       result.AccessibilityHidden = true
     }
-    resolveActionability(n, result)
+    resolveActionability(n, result, hits)
     result.Configuration = configurationText(result)
     result.Computed = computedText(result)
     result.State = stateText(result)
@@ -423,7 +424,7 @@ internal class DiagnosticTreeState {
     return false
   }
 
-  private func resolveActionability(n Node, result DiagnosticNodeSnapshot) {
+  private func resolveActionability(n Node, result DiagnosticNodeSnapshot, hits DiagnosticHitIndex?) {
     guard let window = owner else {
       result.ActionStatus = "unavailable"
       return
@@ -457,7 +458,7 @@ internal class DiagnosticTreeState {
       result.ActionStatus = "not-hit-testable"
       return
     }
-    guard let point = verifiedPoint(root, n, result.ClipBox) else {
+    guard let point = verifiedPoint(root, n, result.ClipBox, hits) else {
       result.ActionStatus = "no-verified-point"
       return
     }
@@ -466,19 +467,20 @@ internal class DiagnosticTreeState {
     result.ActionPoint = point
   }
 
-  private func verifiedPoint(root Node, target Node, bounds DiagnosticRect) DiagnosticPoint? {
+  private func verifiedPoint(root Node, target Node, bounds DiagnosticRect, hits DiagnosticHitIndex?) DiagnosticPoint? {
     let factors = []float64{0.5, 0.25, 0.75, 0.1, 0.9}
     for y in factors {
       for x in factors {
         let point = DiagnosticPoint{X: bounds.X + bounds.Width * x, Y: bounds.Y + bounds.Height * y}
-        if pointTargets(root, target, point) { return point }
+        if pointTargets(root, target, point, hits) { return point }
       }
     }
     return nil
   }
 
-  private func pointTargets(root Node, target Node, point DiagnosticPoint) bool {
-    guard let hit = hitTopmost(root, float32(point.X), float32(point.Y)) else { return false }
+  private func pointTargets(root Node, target Node, point DiagnosticPoint, hits DiagnosticHitIndex?) bool {
+    guard let index = hits else { return false }
+    guard let hit = index.Hit(float32(point.X), float32(point.Y)) else { return false }
     return FocusScopes.Contains(target, hit) && canReceiveInput(hit) && FocusScopes.Allows(root, hit)
   }
 
