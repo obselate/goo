@@ -1244,7 +1244,7 @@ internal static class CliApplication
         Console.WriteLine("  goo doctor [--json]");
         Console.WriteLine("  goo list [--pid PID] [--project PATH] [--json]");
         Console.WriteLine("  goo capture [options]");
-        Console.WriteLine("  goo package --target linux|windows|macos [--project PATH] [--output PATH] [--json]");
+        Console.WriteLine("  goo package --target linux|windows|macos|android [--project PATH] [--output PATH] [--json]");
         Console.WriteLine("  goo input <event> [--pid PID --window NAME] [--target HANDLE | --node ID | --x X --y Y] [options]");
         Console.WriteLine();
         Console.WriteLine("Commands:");
@@ -1253,7 +1253,7 @@ internal static class CliApplication
         Console.WriteLine("  doctor    Check the SDK, project, endpoint directory, and inspector installation.");
         Console.WriteLine("  list      List live endpoints without connecting or selecting a window.");
         Console.WriteLine("  capture   Request a screenshot from an attached endpoint.");
-        Console.WriteLine("  package   Publish a desktop NativeAOT app as an AppImage, installer or DMG.");
+        Console.WriteLine("  package   Publish a desktop package or signed Android app bundle.");
         Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.");
         Console.WriteLine();
         Console.WriteLine("Common options:");

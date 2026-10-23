@@ -17,6 +17,8 @@ internal static partial class PackageApplication
     internal static async Task<int> RunAsync(CommandLine commandLine, string project)
     {
         var target = commandLine.Get("target");
+        if (target == "android")
+            return await PackageAndroidAsync(commandLine, project);
         var windows = target == "windows" && OperatingSystem.IsWindows();
         var macos = target == "macos" && OperatingSystem.IsMacOS() && RuntimeInformation.OSArchitecture == Architecture.Arm64;
         if (!macos && ((!windows && (target != "linux" || !OperatingSystem.IsLinux()))
