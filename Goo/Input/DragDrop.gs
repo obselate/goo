@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Runtime.CompilerServices
 
-/// Selects the effects allowed or accepted by an in-app drag operation.
+/// Selects the effects allowed or accepted by a drag operation.
 @Flags
 public enum DragEffect {
   None = 0;
@@ -14,20 +14,30 @@ public enum DragEffect {
 /// Identifies a drop-target lifecycle callback.
 public enum DragEventKind { Enter; Move; Leave; Drop }
 
-/// Identifies how an in-app drag operation ended.
+/// Identifies how a drag operation ended.
 public enum DragEndKind { Dropped; Canceled }
 
-/// Holds the consumer-owned value and allowed effects for one in-app drag operation.
+/// Holds the consumer-owned value, allowed effects and optional native representations.
 public sealed class DragData {
   private let value object
   private let allowedEffects DragEffect
   private let nativeFiles NativeFileDrag?
+  private var nativeData TransferData?
   /// Gets the consumer-owned payload.
   public prop Value object{ get -> value }
   /// Gets the effects that a target may select.
   public prop AllowedEffects DragEffect{ get -> allowedEffects }
   /// Gets the optional native file representation offered after a pointer leaves the window.
   public prop NativeFiles NativeFileDrag?{ get -> nativeFiles }
+  /// Gets the owned MIME and URI representations offered to native targets.
+  /// Cannot be combined with NativeFiles.
+  public prop NativeData TransferData? {
+    get -> nativeData
+    init {
+      if value != nil && nativeFiles != nil { throw ArgumentException("Use NativeData or NativeFiles, not both", "value") }
+      nativeData = value
+    }
+  }
 
   /// Creates drag data for a non-null payload and one or more allowed effects.
   /// @param value consumer-owned payload retained for the drag lifetime
@@ -94,15 +104,22 @@ public struct DragEvent {
   public prop Effect DragEffect{ get; init; }
 }
 
-/// Describes the terminal source callback for one in-app drag operation.
+/// Describes the terminal source callback for an in-app or native drag.
 public struct DragEndEvent {
   /// Gets how the operation ended.
   public prop Kind DragEndKind{ get; init; }
   /// Gets the completed effect, or None when canceled.
   public prop Effect DragEffect{ get; init; }
+  /// Gets Success for an accepted drop, Cancelled for cancellation, or the native failure.
+  public prop Status DataTransferStatus { get; init; }
+  /// Gets the bounded native failure message, or an empty string.
+  public prop Error string { get; init; }
+  /// Gets whether an accepted Move requires application-owned source cleanup.
+  /// Goo never deletes source data or files.
+  public prop SourceRemovalRequired bool { get; init; }
 }
 
-/// Defines payload creation and terminal notification for an in-app drag source.
+/// Defines data creation and terminal notification for a drag source.
 public sealed class DragSource {
   private let create((DragStartEvent) -> DragData?)
   private let end Action[DragEndEvent]?
