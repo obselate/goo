@@ -304,6 +304,8 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
           GOO_NATIVE_BACKDROP_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_NATIVE_DIALOGS_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify cold and warm macOS application activation
         run: |
@@ -785,6 +787,8 @@ jobs:
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
+          dotnet pack Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack optional spelling and printing services
         if: needs.changes.outputs.full == 'true'
@@ -1033,6 +1037,9 @@ jobs:
           grep -E '"kind":"device".*"deviceType":4,' artifacts/reports/vulkan-nativeaot-cpu-startup.txt
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             env -u LD_LIBRARY_PATH GOO_NATIVE_BACKDROP_SMOKE=1 GOO_REQUIRE_BACKDROP=0 \
+            artifacts/nativeaot-onefile/Goo.PackageSmoke
+          LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
+            env -u LD_LIBRARY_PATH GOO_NATIVE_DIALOGS_SMOKE=1 \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
 
       - name: Package and run consumer AppImage
@@ -1515,6 +1522,9 @@ jobs:
         shell: pwsh
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:GOO_NATIVE_DIALOGS_SMOKE = "1"
+          & artifacts/windows-smoke/Goo.PackageSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned consumer installer
         shell: pwsh
