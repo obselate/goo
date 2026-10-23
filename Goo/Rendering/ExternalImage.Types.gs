@@ -46,7 +46,7 @@ public sealed class VulkanExternalImageDescription {
     public prop Width int32 { get; init; }
     /// Gets the allocation height in pixels.
     public prop Height int32 { get; init; }
-    /// Gets the numeric VkFormat. Supported opaque imports use sRGB RGBA8 or BGRA8.
+    /// Gets the numeric VkFormat. Supported imports use sRGB RGBA8 or BGRA8.
     public prop Format int32 { get; init; }
     /// Gets the numeric VkImageTiling.
     public prop Tiling int32 { get; init; }
@@ -107,16 +107,20 @@ public sealed class ExternalImageSync {
     public prop QueueFamily uint32 { get; init; }
 }
 
-/// Reports a completed frame lease. CPU notification follows the final completed GPU use.
+/// Reports the end of a frame lease. Wait the returned dependency before reuse.
 public sealed class ExternalFrameResult {
     /// Gets the terminal frame status.
     public prop Status ExternalFrameStatus { get; }
-    /// Gets an optional owned release handle. The receiver must dispose it.
+    /// Gets an owned completion or unused acquire handle. Dispose the handle after use.
     public prop ReleaseSync SafeHandle? { get; }
-    /// Gets the release timeline value, when present.
+    /// Gets the synchronization value for the returned handle, when present.
     public prop Value uint64 { get; }
 
-    internal init(status ExternalFrameStatus) { Status = status }
+    internal init(status ExternalFrameStatus, releaseSync SafeHandle? = nil, value uint64 = 0uL) {
+        Status = status
+        ReleaseSync = releaseSync
+        Value = value
+    }
 }
 
 /// Reports an external image import.

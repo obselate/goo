@@ -30,14 +30,21 @@ public unsafe sealed partial class ExternalImageSession {
         if sync.ImageLayout != VkConstants.VK_IMAGE_LAYOUT_GENERAL && sync.ImageLayout != VkConstants.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL {
             return ExternalImageStatus.UnsupportedSynchronization
         }
-        if sync.QueueFamily != 0xFFFFFFFEu { return ExternalImageStatus.UnsupportedSynchronization }
+        if sync.QueueFamily != 0xFFFFFFFEu
+            && (sync.QueueFamily != 0xFFFFFFFDu || !Runtime.Dispatch.ForeignQueueFamily) {
+            return ExternalImageStatus.UnsupportedSynchronization
+        }
         if sync.Kind == ExternalImageSyncKind.AlreadyComplete {
             frame.Ready = true
             return ExternalImageStatus.Success
         }
-        if !sync.Timeline { return ExternalImageStatus.UnsupportedSynchronization }
+        let syncFd = sync.Kind == ExternalImageSyncKind.SyncFd
+        if (!syncFd && !sync.Timeline) || (syncFd && (sync.Timeline || sync.Value != 0uL)) {
+            return ExternalImageStatus.UnsupportedSynchronization
+        }
         let handleType = switch sync.Kind {
             case ExternalImageSyncKind.OpaqueFdSemaphore: 1u
+            case ExternalImageSyncKind.SyncFd: 16u
             case ExternalImageSyncKind.OpaqueWin32Semaphore: 2u
             case ExternalImageSyncKind.D3D12Fence: 8u
             default: 0u
@@ -52,43 +59,69 @@ public unsafe sealed partial class ExternalImageSession {
         using let handle = duplicate
         let dispatch = Runtime.Dispatch
         var typeInfo = VkSemaphoreTypeCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
-            semaphoreType: VkConstants.VK_SEMAPHORE_TYPE_TIMELINE }
+            semaphoreType: if syncFd { 0 } else { VkConstants.VK_SEMAPHORE_TYPE_TIMELINE } }
         var externalInfo = VkPhysicalDeviceExternalSemaphoreInfo{ sType: 1000076000, pNext: *void(&typeInfo), handleType: handleType }
         var properties = VkExternalSemaphoreProperties{ sType: 1000076001 }
         let getProperties = Runtime.InstanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties
         getProperties(Runtime.PhysicalDevice, &externalInfo, &properties)
         if (properties.externalSemaphoreFeatures & 2u) == 0u { return ExternalImageStatus.UnsupportedSynchronization }
-        var createInfo = VkSemaphoreCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, pNext: *void(&typeInfo) }
-        let createSemaphore = dispatch.vkCreateSemaphore
         var semaphore VkSemaphore
-        var result = createSemaphore(Runtime.Device, &createInfo, nil, &semaphore)
-        if result != VkConstants.VK_SUCCESS { return ExternalImageStatus.Failed }
-        if OperatingSystem.IsWindows() {
-            var importInfo = VkImportSemaphoreWin32HandleInfoKHR{ sType: 1000078000, semaphore: semaphore,
-                handleType: handleType, handle: handle.DangerousGetHandle() }
-            let importSemaphore = dispatch.vkImportSemaphoreWin32HandleKHR
-            result = importSemaphore(Runtime.Device, &importInfo)
-        } else {
-            var importInfo = VkImportSemaphoreFdInfoKHR{ sType: 1000079000, semaphore: semaphore,
-                handleType: handleType, fd: int32(handle.DangerousGetHandle()) }
-            let importSemaphore = dispatch.vkImportSemaphoreFdKHR
-            result = importSemaphore(Runtime.Device, &importInfo)
-            if result == VkConstants.VK_SUCCESS { handle.SetHandleAsInvalid() }
+        var dependency ExternalNativeHandle?
+        var accepted bool = false
+        try {
+            dependency = ExternalNativeHandle.Duplicate(original, OperatingSystem.IsWindows())
+            if dependency == nil { return ExternalImageStatus.Failed }
+            var createInfo = VkSemaphoreCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, pNext: *void(&typeInfo) }
+            let createSemaphore = dispatch.vkCreateSemaphore
+            var result = createSemaphore(Runtime.Device, &createInfo, nil, &semaphore)
+            if result != VkConstants.VK_SUCCESS { return ExternalImageStatus.Failed }
+            if OperatingSystem.IsWindows() {
+                var importInfo = VkImportSemaphoreWin32HandleInfoKHR{ sType: 1000078000, semaphore: semaphore,
+                    handleType: handleType, handle: handle.DangerousGetHandle() }
+                let importSemaphore = dispatch.vkImportSemaphoreWin32HandleKHR
+                result = importSemaphore(Runtime.Device, &importInfo)
+            } else {
+                var importInfo = VkImportSemaphoreFdInfoKHR{ sType: 1000079000, semaphore: semaphore,
+                    flags: if syncFd { 1u } else { 0u }, handleType: handleType, fd: int32(handle.DangerousGetHandle()) }
+                let importSemaphore = dispatch.vkImportSemaphoreFdKHR
+                result = importSemaphore(Runtime.Device, &importInfo)
+                if result == VkConstants.VK_SUCCESS { handle.SetHandleAsInvalid() }
+            }
+            if result != VkConstants.VK_SUCCESS {
+                return if result == VkConstants.VK_ERROR_DEVICE_LOST { ExternalImageStatus.DeviceLost } else { ExternalImageStatus.Failed }
+            }
+            frame.ReadySemaphore = semaphore
+            frame.ReadyHandle = dependency
+            accepted = true
+            return ExternalImageStatus.Success
+        } finally {
+            if !accepted {
+                dependency?.Dispose()
+                if semaphore != 0uL {
+                    let destroy = dispatch.vkDestroySemaphore
+                    destroy(Runtime.Device, semaphore, nil)
+                }
+            }
         }
-        if result != VkConstants.VK_SUCCESS {
-            let destroy = dispatch.vkDestroySemaphore
-            destroy(Runtime.Device, semaphore, nil)
-            return if result == VkConstants.VK_ERROR_DEVICE_LOST { ExternalImageStatus.DeviceLost } else { ExternalImageStatus.Failed }
-        }
-        frame.ReadySemaphore = semaphore
-        return ExternalImageStatus.Success
     }
 
     private func PollReady(frame ExternalFrameLease) VkResult {
         if frame.Ready { return VkConstants.VK_SUCCESS }
+        if frame.Sync.Kind == ExternalImageSyncKind.SyncFd {
+            let result = ExternalNativeHandle.PollReady(frame.ReadyHandle!!)
+            if result == VkConstants.VK_SUCCESS {
+                frame.ReadyHandle!!.Dispose()
+                frame.ReadyHandle = nil
+            }
+            return result
+        }
         var value uint64
         let counter = Runtime.Dispatch.vkGetSemaphoreCounterValue
         let result = counter(Runtime.Device, frame.ReadySemaphore, &value)
+        if result == VkConstants.VK_SUCCESS && value >= frame.Sync.Value {
+            frame.ReadyHandle?.Dispose()
+            frame.ReadyHandle = nil
+        }
         return if result != VkConstants.VK_SUCCESS { result } else if value >= frame.Sync.Value {
             VkConstants.VK_SUCCESS
         } else { VkConstants.VK_NOT_READY }
@@ -193,6 +226,9 @@ public unsafe sealed partial class ExternalImageSession {
         if frame.Terminal { return }
         Runtime.ImageResources.ReleaseExternalFrame()
         frame.Terminal = true
+        let dependency = if !frame.Ready { frame.ReadyHandle } else { nil }
+        if dependency == nil { frame.ReadyHandle?.Dispose() }
+        frame.ReadyHandle = nil
         frames[index] = nil
         if frame.ReadySemaphore != 0uL {
             let destroy = Runtime.Dispatch.vkDestroySemaphore
@@ -201,7 +237,9 @@ public unsafe sealed partial class ExternalImageSession {
         }
         frame.Image.Native.Busy = false
         if frame.Image.Native.Closed { frame.Image.Native.Dispose() }
-        try { frame.Released(ExternalFrameResult(status)) } catch (error Exception) { callbackError ??= error }
+        try {
+            frame.Released(ExternalFrameResult(status, dependency, if dependency != nil { frame.Sync.Value } else { 0uL }))
+        } catch (error Exception) { callbackError ??= error }
     }
 
     private func CloseFrames(status ExternalImageStatus) {

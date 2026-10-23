@@ -18,7 +18,7 @@ internal class VulkanExternalProofCell : Cell {
     }
 }
 
-internal unsafe class VulkanExternalImageProof {
+internal unsafe partial class VulkanExternalImageProof {
     shared {
         private const TimeoutMilliseconds int64 = 5000L
         private const SampleGrid uint32 = 8u
@@ -55,7 +55,7 @@ internal unsafe class VulkanExternalImageProof {
             return capture!!
         }
 
-        internal func Run() {
+        internal func Run(dma bool = false) {
             if !OperatingSystem.IsLinux() {
                 Console.WriteLine("External image import: Unsupported (Linux FD producer proof)")
                 return
@@ -66,7 +66,8 @@ internal unsafe class VulkanExternalImageProof {
             Environment.SetEnvironmentVariable("GOO_VK_DIAGNOSTICS", "1")
             Console.SetError(capturedError)
             try {
-                if !VerifyLifecycle() { return }
+                let supported = if dma { VerifyDmaLifecycle() } else { VerifyLifecycle() }
+                if !supported { return }
             } catch (error Exception) {
                 originalError.Write(capturedError.ToString())
                 throw error
@@ -81,7 +82,11 @@ internal unsafe class VulkanExternalImageProof {
                 Require(json.RootElement.GetProperty("validationErrorCount").GetUInt64() == 0uL,
                     "Vulkan validation rejected the lifecycle: " + diagnostics)
             }
-            Console.WriteLine("External image import: passed (two devices, two windows, crop, capture, redraw, release, device loss, close, FD ownership)")
+            Console.WriteLine(if dma {
+                "DMA-BUF import: passed (padded stride, sync-FD gate, pending replacement, capture, release, close dependency)"
+            } else {
+                "External image import: passed (two devices, two windows, crop, capture, redraw, release, device loss, close, FD ownership)"
+            })
         }
 
         private func VerifyLifecycle() bool {
@@ -110,7 +115,7 @@ internal unsafe class VulkanExternalImageProof {
                     Console.WriteLine("External image import: Unsupported (driver cannot export and import RGBA images)")
                     return false
                 }
-                let timeline = TimelineSupported(session.Runtime)
+                let timeline = SemaphoreSupported(session.Runtime)
                 Console.WriteLine("External image readiness: timeline=${timeline}")
                 producer = target.CreateExternalProducerForProof(timeline)
                 if !timeline { producer.Complete() }
@@ -234,7 +239,7 @@ internal unsafe class VulkanExternalImageProof {
             guard let target = WindowReadbackTestFixture.CaptureTarget(window) else {
                 throw InvalidOperationException("Recovered external image target is unavailable")
             }
-            using let producer = target.CreateExternalProducerForProof(TimelineSupported(session.Runtime))
+            using let producer = target.CreateExternalProducerForProof(SemaphoreSupported(session.Runtime))
             producer.Complete()
             let imported = session.ImportVulkan(producer.Description(session))
             Require(imported.Status == ExternalImageStatus.Success, "close image import failed")
@@ -295,22 +300,26 @@ internal unsafe class VulkanExternalImageProof {
             Require(pendingProducer.OriginalHandleOpen, "dropped frame closed its producer memory handle")
         }
 
-        private func TimelineSupported(runtime VulkanSharedLease) bool {
-            if (runtime.Dispatch.ExternalSemaphoreKinds & 1u) == 0u { return false }
+        private func SemaphoreSupported(runtime VulkanSharedLease, syncFd bool = false) bool {
+            let handleType = if syncFd { 16u } else { 1u }
+            if (runtime.Dispatch.ExternalSemaphoreKinds & handleType) == 0u { return false }
             var timeline = VkSemaphoreTypeCreateInfo{ sType: VkConstants.VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
-                semaphoreType: VkConstants.VK_SEMAPHORE_TYPE_TIMELINE }
-            var info = VkPhysicalDeviceExternalSemaphoreInfo{ sType: 1000076000, pNext: *void(&timeline), handleType: 1u }
+                semaphoreType: if syncFd { 0 } else { VkConstants.VK_SEMAPHORE_TYPE_TIMELINE } }
+            var info = VkPhysicalDeviceExternalSemaphoreInfo{ sType: 1000076000, pNext: *void(&timeline), handleType: handleType }
             var properties = VkExternalSemaphoreProperties{ sType: 1000076001 }
             let query = runtime.InstanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties
             query(runtime.PhysicalDevice, &info, &properties)
             return (properties.externalSemaphoreFeatures & 3u) == 3u
         }
 
-        private func ExportSupported(runtime VulkanSharedLease) bool {
-            var external = VkPhysicalDeviceExternalImageFormatInfo{ sType: 1000071000, handleType: 1u }
+        private func ExportSupported(runtime VulkanSharedLease, dma bool = false) bool {
+            var external = VkPhysicalDeviceExternalImageFormatInfo{ sType: 1000071000, handleType: if dma { 0x200u } else { 1u } }
+            var modifier = VkPhysicalDeviceImageDrmFormatModifierInfoEXT{ sType: 1000158002,
+                sharingMode: VkConstants.VK_SHARING_MODE_EXCLUSIVE }
+            if dma { external.pNext = *void(&modifier) }
             var info = VkPhysicalDeviceImageFormatInfo2{ sType: 1000059004, pNext: *void(&external),
                 format: VkConstants.VK_FORMAT_R8G8B8A8_SRGB, imageType: VkConstants.VK_IMAGE_TYPE_2D,
-                tiling: VkConstants.VK_IMAGE_TILING_OPTIMAL,
+                tiling: if dma { 1000158000 } else { VkConstants.VK_IMAGE_TILING_OPTIMAL },
                 usage: uint32(VkConstants.VK_IMAGE_USAGE_SAMPLED_BIT) | uint32(VkConstants.VK_IMAGE_USAGE_TRANSFER_DST_BIT) }
             var externalProperties = VkExternalImageFormatProperties{ sType: 1000071001 }
             var properties = VkImageFormatProperties2{ sType: 1000059003, pNext: *void(&externalProperties) }

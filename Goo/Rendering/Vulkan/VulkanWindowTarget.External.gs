@@ -5,8 +5,14 @@ import System.Collections.Generic
 import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
+    private const ExternalExtensionCount int32 = 5
+    private const DeviceExtensionCapacity int32 = 4 + ExternalExtensionCount
     private var externalMemoryExtension string = ""
     private var externalSemaphoreExtension string = ""
+    private var externalDmaExtension string = ""
+    private var externalModifierExtension string = ""
+    private var externalForeignExtension string = ""
+    private var formatModifierQueryAvailable bool
     private var externalSessions List[ExternalImageSession]?
     private var externalCloseError Exception?
 
@@ -16,6 +22,11 @@ internal unsafe partial class VulkanWindowTarget {
         if !OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() { return }
         if ExtensionNameEquals(extension, memoryName) { externalMemoryExtension = memoryName }
         if ExtensionNameEquals(extension, semaphoreName) { externalSemaphoreExtension = semaphoreName }
+        if OperatingSystem.IsLinux() {
+            if ExtensionNameEquals(extension, "VK_EXT_external_memory_dma_buf") { externalDmaExtension = "VK_EXT_external_memory_dma_buf" }
+            if ExtensionNameEquals(extension, "VK_EXT_image_drm_format_modifier") { externalModifierExtension = "VK_EXT_image_drm_format_modifier" }
+            if ExtensionNameEquals(extension, "VK_EXT_queue_family_foreign") { externalForeignExtension = "VK_EXT_queue_family_foreign" }
+        }
     }
 
     private func ResolveExternalInstanceDispatch() {
@@ -23,12 +34,23 @@ internal unsafe partial class VulkanWindowTarget {
         if properties != nil { instanceDispatch.vkGetPhysicalDeviceProperties2 = properties }
         let formats = ResolveGlobalProc(instance, "vkGetPhysicalDeviceImageFormatProperties2") as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceImageFormatInfo2, *VkImageFormatProperties2) -> VkResult)?
         if formats != nil { instanceDispatch.vkGetPhysicalDeviceImageFormatProperties2 = formats }
+        let modifierFormats = ResolveGlobalProc(instance, "vkGetPhysicalDeviceFormatProperties2") as (unmanaged[Cdecl](VkPhysicalDevice, VkFormat, *VkFormatProperties2) -> void)?
+        formatModifierQueryAvailable = modifierFormats != nil
+        if modifierFormats != nil { instanceDispatch.vkGetPhysicalDeviceFormatProperties2 = modifierFormats }
         let semaphores = ResolveGlobalProc(instance, "vkGetPhysicalDeviceExternalSemaphoreProperties") as (unmanaged[Cdecl](VkPhysicalDevice, *VkPhysicalDeviceExternalSemaphoreInfo, *VkExternalSemaphoreProperties) -> void)?
         if semaphores != nil { instanceDispatch.vkGetPhysicalDeviceExternalSemaphoreProperties = semaphores }
     }
 
     private func ResolveExternalDeviceDispatch() {
         dispatch.ExternalMemoryKinds = if externalMemoryExtension == "" { 0u } else if OperatingSystem.IsWindows() { 2u | 8u | 128u } else { 1u }
+        dispatch.ForeignQueueFamily = externalForeignExtension != ""
+        if externalMemoryExtension != "" && externalDmaExtension != "" && externalModifierExtension != "" && formatModifierQueryAvailable {
+            let properties = ResolveDeviceProc("vkGetMemoryFdPropertiesKHR") as (unmanaged[Cdecl](VkDevice, uint32, int32, *VkMemoryFdPropertiesKHR) -> VkResult)?
+            if properties != nil {
+                dispatch.vkGetMemoryFdPropertiesKHR = properties
+                dispatch.ExternalMemoryKinds |= 0x200u
+            }
+        }
         if OperatingSystem.IsWindows() && externalMemoryExtension != "" {
             let properties = ResolveDeviceProc("vkGetMemoryWin32HandlePropertiesKHR") as (unmanaged[Cdecl](VkDevice, uint32, nint, *VkMemoryWin32HandlePropertiesKHR) -> VkResult)?
             if properties != nil { dispatch.vkGetMemoryWin32HandlePropertiesKHR = properties }
@@ -45,7 +67,7 @@ internal unsafe partial class VulkanWindowTarget {
             let importSemaphore = ResolveDeviceProc("vkImportSemaphoreFdKHR") as (unmanaged[Cdecl](VkDevice, *VkImportSemaphoreFdInfoKHR) -> VkResult)?
             if importSemaphore != nil {
                 dispatch.vkImportSemaphoreFdKHR = importSemaphore
-                dispatch.ExternalSemaphoreKinds = 1u
+                dispatch.ExternalSemaphoreKinds = 1u | 16u
             }
         }
     }
