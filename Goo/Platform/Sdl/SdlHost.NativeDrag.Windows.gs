@@ -71,6 +71,7 @@ internal unsafe partial class SdlHost {
 
     private func ServiceWindowsDrag(window nint, message uint32, identity nuint, time uint32) {
       guard let binding = windowsTracking else { return }
+      Console.WriteLine("drag-timer " + windowsTrackingTick.ToString() + " " + NativeDropState.CallbackDepth.ToString())
       if windowsTrackingTick || NativeDropState.CallbackDepth != 0 { return }
       windowsTrackingTick = true
       try { Window.ServiceNativeTracking() }

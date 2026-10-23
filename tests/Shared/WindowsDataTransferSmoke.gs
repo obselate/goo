@@ -187,7 +187,11 @@ func RunWindowsDataTransferSmoke() {
             other.SetInterval(() -> counter.Advance(), 16.0)
             scene.OnStart = () -> {
                 startTicks = counter.Ticks
-                other.SetTimeout(() -> window.RequestClose(), 600.0)
+                Console.WriteLine("close-scheduled")
+                other.SetTimeout(() -> {
+                    Console.WriteLine("close-requested " + counter.Ticks.ToString())
+                    window.RequestClose()
+                }, 600.0)
             }
             scene.OnEnd = () -> {
                 WindowsTransferRequire(counter.Ticks - startTicks >= 5, "Stationary native tracking stopped sibling animation")
