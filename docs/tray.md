@@ -7,7 +7,7 @@ let result = TrayIcon.Create(window, TrayOptions{
     Menu: [1]NativeMenuItem{NativeMenuItem{Id: "open", Text: "Open"}}
 })
 if let icon = result.Icon {
-    icon.CommandActivated += id -> window.RequestActivation()
+    icon.CommandActivated += id -> { window.RequestActivation() }
 }
 ```
 

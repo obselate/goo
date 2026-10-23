@@ -14,8 +14,13 @@ try
         $"Native registration: {result.Status}");
     var activations = 0;
     var commands = 0;
-    icon.Activated += () => activations++;
-    icon.CommandActivated += id => { Check(id == "open", "Stable command ID"); commands++; };
+    var thread = Environment.CurrentManagedThreadId;
+    icon.Activated += () => { Check(Environment.CurrentManagedThreadId == thread, "Activation owner thread"); activations++; };
+    icon.CommandActivated += id =>
+    {
+        Check(Environment.CurrentManagedThreadId == thread && id == "open", "Command owner thread and stable ID");
+        commands++;
+    };
     var backend = Field(icon, "backend");
     if (watcher != null)
     {

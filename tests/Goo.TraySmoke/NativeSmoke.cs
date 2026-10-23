@@ -33,6 +33,8 @@ internal static class WindowsSmoke
         try
         {
             SendMessageW(window, message, 0, (nint)((id << 16) | 0x7B));
+            using var timeout = new Timer(_ => PostMessageW(window, 0x1F, 0, 0),
+                null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
             owner.Pump(0);
         }
         finally { RemoveWindowSubclass(window, callback, 0x4754); }

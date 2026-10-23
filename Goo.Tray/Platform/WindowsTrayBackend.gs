@@ -7,6 +7,12 @@ import System.Security.Cryptography
 import System.Text
 import System.Threading
 
+@StructLayout(LayoutKind.Sequential)
+internal struct TrayWinGuid {
+    internal var Low uint64
+    internal var High uint64
+}
+
 @StructLayout(LayoutKind.Explicit, Size: 976)
 internal struct TrayWinData {
     @FieldOffset(0) internal var Size uint32
@@ -15,9 +21,9 @@ internal struct TrayWinData {
     @FieldOffset(20) internal var Flags uint32
     @FieldOffset(24) internal var Callback uint32
     @FieldOffset(32) internal var Image nint
-    @FieldOffset(40) internal var Tip char
+    @FieldOffset(40) internal var Tip uint16
     @FieldOffset(816) internal var Version uint32
-    @FieldOffset(952) internal var Guid Guid
+    @FieldOffset(952) internal var Guid TrayWinGuid
 }
 
 @StructLayout(LayoutKind.Sequential)
@@ -44,12 +50,12 @@ internal struct TrayWinIcon {
     internal var Color nint
 }
 
-@StructLayout(LayoutKind.Sequential)
+@StructLayout(LayoutKind.Explicit, Size: 40)
 internal struct TrayWinIdentifier {
-    internal var Size uint32
-    internal var Window nint
-    internal var Id uint32
-    internal var Guid Guid
+    @FieldOffset(0) internal var Size uint32
+    @FieldOffset(8) internal var Window nint
+    @FieldOffset(16) internal var Id uint32
+    @FieldOffset(20) internal var Guid TrayWinGuid
 }
 
 @StructLayout(LayoutKind.Sequential)
@@ -66,7 +72,7 @@ internal delegate TrayWinSubclass(window nint, message uint32, wparam nuint, lpa
 internal unsafe class WindowsTrayBackend : TrayBackend {
     private let icon TrayIcon
     private let window nint
-    private let identity Guid
+    private let identity TrayWinGuid
     private let id uint32
     private var root GCHandle
     private var image nint
@@ -87,7 +93,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
         if value.Menu.Actions.Count > int16.MaxValue { return TrayStatus.Unsupported }
         let next = CreateImage(value, pixels)
         if next == nint(0) { return TrayStatus.Failed }
-        let result = if registered && FindWindowW("Shell_TrayWnd", nil) != nint(0) {
+        let result = if registered && FindWindowW("Shell_TrayWnd", nint(0)) != nint(0) {
             if Notify(NimModify, next, value.Tooltip) { TrayStatus.Registered } else { TrayStatus.Failed }
         } else { Register(next, value.Tooltip) }
         if result == TrayStatus.Failed {
@@ -115,7 +121,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
 
     private func Register(value nint, tooltip string) TrayStatus {
         registered = false
-        if FindWindowW("Shell_TrayWnd", nil) == nint(0) { return TrayStatus.NoHost }
+        if FindWindowW("Shell_TrayWnd", nint(0)) == nint(0) { return TrayStatus.NoHost }
         if !Notify(NimAdd, value, tooltip) { return TrayStatus.Failed }
         if !Notify(NimSetVersion, value, tooltip) {
             Notify(NimDelete, value, tooltip)
@@ -127,13 +133,13 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
 
     private func Notify(operation uint32, value nint, tooltip string) bool {
         var data = TrayWinData{
-            Size: uint32(sizeof[TrayWinData]), Window: window, Id: id,
+            Size: uint32(Marshal.SizeOf[TrayWinData]()), Window: window, Id: id,
             Flags: NifMessage | NifIcon | NifTip | NifGuid | NifShowTip,
             Callback: callbackMessage, Image: value, Version: NotifyVersion, Guid: identity
         }
-        let tip * char = &data.Tip
-        for index in 0 ... tooltip.Length { tip[index] = tooltip[index] }
-        tip[tooltip.Length] = char(0)
+        let tip * uint16 = &data.Tip
+        for index in 0 ... tooltip.Length { tip[index] = uint16(tooltip[index]) }
+        tip[tooltip.Length] = uint16(0)
         return Shell_NotifyIconW(operation, &data) != 0
     }
 
@@ -144,7 +150,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
             var location = MenuWinPoint{}
             var bounds = TrayWinRect{}
             var identifier = TrayWinIdentifier{
-                Size: uint32(sizeof[TrayWinIdentifier]), Window: window, Id: id, Guid: identity
+                Size: uint32(Marshal.SizeOf[TrayWinIdentifier]()), Window: window, Id: id, Guid: identity
             }
             if Shell_NotifyIconGetRect(&identifier, &bounds) >= 0 {
                 location.X = bounds.Left + (bounds.Right - bounds.Left) / 2
@@ -152,7 +158,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
             } else if GetCursorPos(&location) == 0 { icon.PostStatus(TrayStatus.Failed) return }
             if ScreenToClient(window, &location) == 0 { icon.PostStatus(TrayStatus.Failed) return }
             SetForegroundWindow(window)
-            let point = Point(float32(location.X) / icon.Owner.UiScale, float32(location.Y) / icon.Owner.UiScale)
+            let point = Point{X: float64(location.X) / float64(icon.Owner.UiScale), Y: float64(location.Y) / float64(icon.Owner.UiScale)}
             let result = WindowsMenuBridge.ShowContext(icon.Owner, point, content.Menu, lease)
             if result.Status == NativeMenuStatus.Success { icon.PostCommand(result.ItemId) }
             else if result.Status == NativeMenuStatus.Failed { icon.PostStatus(TrayStatus.Failed) }
@@ -193,7 +199,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
         @DllImport("shell32.dll") private func Shell_NotifyIconW(operation uint32, value *TrayWinData) int32;
         @DllImport("shell32.dll") private func Shell_NotifyIconGetRect(value *TrayWinIdentifier, bounds *TrayWinRect) int32;
         @DllImport("user32.dll", CharSet: CharSet.Unicode) private func RegisterWindowMessageW(name string) uint32;
-        @DllImport("user32.dll", CharSet: CharSet.Unicode) private func FindWindowW(name string, title string?) nint;
+        @DllImport("user32.dll", CharSet: CharSet.Unicode) private func FindWindowW(name string, title nint) nint;
         @DllImport("user32.dll") private func CreateIconIndirect(value *TrayWinIcon) nint;
         @DllImport("user32.dll") private func DestroyIcon(value nint) int32;
         @DllImport("user32.dll") private func GetCursorPos(point *MenuWinPoint) int32;
@@ -215,7 +221,7 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
             let handle = SDL_GetPointerProperty(SDL_GetWindowProperties(icon.Owner.BorrowNativeWindow()),
                 "SDL.window.win32.hwnd", nint(0))
             if handle == nint(0) { return nil }
-            let identifier = Interlocked.Increment(&nextId)
+            let identifier = Interlocked.Increment(ref nextId)
             if identifier <= 0 || identifier > uint16.MaxValue {
                 error = "The process exhausted Windows tray callback identities"
                 return nil
@@ -264,18 +270,19 @@ internal unsafe class WindowsTrayBackend : TrayBackend {
             return DefSubclassProc(window, message, wparam, lparam)
         }
 
-        private func GuidFor(value string) Guid {
+        private func GuidFor(value string) TrayWinGuid {
             let capacity = Encoding.UTF8.GetMaxByteCount(value.Length)
             let bytes * uint8 = stackalloc[capacity]uint8
             let count = Encoding.UTF8.GetBytes(value.AsSpan(), Span[uint8](bytes, capacity))
             let hash * uint8 = stackalloc[32]uint8
             SHA256.HashData(ReadOnlySpan[uint8](bytes, count), Span[uint8](hash, 32))
-            return Guid(ReadOnlySpan[uint8](hash, 16))
+            let parts = *uint64(hash)
+            return TrayWinGuid{Low: parts[0], High: parts[1]}
         }
 
         private func CreateImage(content TrayContent, pixels IReadOnlyList[uint8]) nint {
             var header = TrayWinBitmap{
-                Size: uint32(sizeof[TrayWinBitmap]), Width: content.Width, Height: -content.Height,
+                Size: uint32(Marshal.SizeOf[TrayWinBitmap]()), Width: content.Width, Height: -content.Height,
                 Planes: uint16(1), Bits: uint16(32)
             }
             var memory = nint(0)

@@ -122,6 +122,7 @@ ctor|Goo.Text|public|()
 ctor|Goo.Text|public|(content:System.String)
 ctor|Goo.TransferData|public|(representations:System.Collections.Generic.IReadOnlyList`1<Goo.TransferRepresentation>,uris:System.Collections.Generic.IReadOnlyList`1<System.Uri>)
 ctor|Goo.TransferRepresentation|public|(contentType:System.String,bytes:System.ReadOnlyMemory`1<System.Byte>)
+ctor|Goo.TrayOptions|public|()
 ctor|Goo.VectorAsset|public|(viewBoxX:System.Double,viewBoxY:System.Double,viewBoxWidth:System.Double,viewBoxHeight:System.Double,roots:Goo.VectorNode[])
 ctor|Goo.VectorNodeStyle|public|()
 ctor|Goo.VectorNode|public|(children:Goo.VectorNode[])
@@ -234,6 +235,7 @@ enum-underlying|Goo.TextTransform|System.Int32
 enum-underlying|Goo.TextTrimming|System.Int32
 enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
+enum-underlying|Goo.TrayStatus|System.Int32
 enum-underlying|Goo.VectorEffect|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
 enum-underlying|Goo.WindowBackdrop|System.Int32
@@ -934,6 +936,11 @@ enum|Goo.TransitionProperty|RowGap|19
 enum|Goo.TransitionProperty|Top|25
 enum|Goo.TransitionProperty|Transform|51
 enum|Goo.TransitionProperty|Width|1
+enum|Goo.TrayStatus|Closed|3
+enum|Goo.TrayStatus|Failed|4
+enum|Goo.TrayStatus|NoHost|1
+enum|Goo.TrayStatus|Registered|0
+enum|Goo.TrayStatus|Unsupported|2
 enum|Goo.VectorEffect|NonScalingStroke|1
 enum|Goo.VectorEffect|None|0
 enum|Goo.Visibility|Hidden|1
@@ -983,6 +990,9 @@ event|Goo.PlatformInput|EditorChanged|System.Action`1<System.Nullable`1<Goo.Focu
 event|Goo.PopupWindow|Dismissed|System.Action`1<Goo.PopupDismissReason>|instance|add:public,remove:public
 event|Goo.SpellCheck.SpellCheckSession|Updated|System.Action`1<Goo.SpellCheck.SpellingResult>?|instance|add:public,remove:public
 event|Goo.TextDocument|Changed|System.Action`1<Goo.TextDocumentChange>|instance|add:public,remove:public
+event|Goo.TrayIcon|Activated|System.Action|instance|add:public,remove:public
+event|Goo.TrayIcon|CommandActivated|System.Action`1<System.String>|instance|add:public,remove:public
+event|Goo.TrayIcon|StatusChanged|System.Action`1<Goo.TrayStatus>|instance|add:public,remove:public
 event|Goo.Window|ApplicationActivated|System.Action`1<Goo.ApplicationActivation>|static|add:public,remove:public
 event|Goo.Window|DisplayChanged|System.Action|instance|add:public,remove:public
 event|Goo.Window|FocusChanged|System.Action`1<System.Boolean>|instance|add:public,remove:public
@@ -1621,6 +1631,9 @@ method|Goo.TextStyleSpan|op_Equality|static|public|generic:|(left:Goo.TextStyleS
 method|Goo.TextStyleSpan|op_Inequality|static|public|generic:|(left:Goo.TextStyleSpan,right:Goo.TextStyleSpan)->System.Boolean
 method|Goo.Tokens|Get|static|public|generic:T[attrs:0,constraints:]|()->!!0
 method|Goo.Tokens|Scope|static|public|generic:T[attrs:0,constraints:];R[attrs:0,constraints:]|(tokens:!!0,body:System.Func`1<!!1>)->!!1
+method|Goo.TrayIcon|Create|static|public|generic:|(owner:Goo.Window,options:Goo.TrayOptions)->Goo.TrayResult
+method|Goo.TrayIcon|Dispose|instance|public|generic:|()->System.Void
+method|Goo.TrayIcon|Update|instance|public|generic:|(options:Goo.TrayOptions)->Goo.TrayStatus
 method|Goo.VectorAsset|NodeAt|instance|public|generic:|(index:System.Int32)->Goo.VectorNode
 method|Goo.VectorAsset|PathForNode|instance|public|generic:|(index:System.Int32)->Goo.VectorPath
 method|Goo.VectorAsset|Render|instance|public|generic:|()->Goo.Blob
@@ -2519,6 +2532,16 @@ property|Goo.TransferData|Representations|System.Collections.Generic.IReadOnlyLi
 property|Goo.TransferData|Uris|System.Collections.Generic.IReadOnlyList`1<System.Uri>|instance|get:public|index:()
 property|Goo.TransferRepresentation|Bytes|System.ReadOnlyMemory`1<System.Byte>|instance|get:public|index:()
 property|Goo.TransferRepresentation|ContentType|System.String|instance|get:public|index:()
+property|Goo.TrayIcon|Status|Goo.TrayStatus|instance|get:public|index:()
+property|Goo.TrayOptions|Height|System.Int32|instance|get:public,init:public|index:()
+property|Goo.TrayOptions|Id|System.String|instance|get:public,init:public|index:()
+property|Goo.TrayOptions|Menu|System.Collections.Generic.IReadOnlyList`1<Goo.NativeMenuItem>|instance|get:public,init:public|index:()
+property|Goo.TrayOptions|Rgba|System.Collections.Generic.IReadOnlyList`1<System.Byte>|instance|get:public,init:public|index:()
+property|Goo.TrayOptions|Tooltip|System.String|instance|get:public,init:public|index:()
+property|Goo.TrayOptions|Width|System.Int32|instance|get:public,init:public|index:()
+property|Goo.TrayResult|Error|System.String|instance|get:public|index:()
+property|Goo.TrayResult|Icon|Goo.TrayIcon?|instance|get:public|index:()
+property|Goo.TrayResult|Status|Goo.TrayStatus|instance|get:public|index:()
 property|Goo.VectorAsset|ClipCount|System.Int32|instance|get:public|index:()
 property|Goo.VectorAsset|ContourCount|System.Int32|instance|get:public|index:()
 property|Goo.VectorAsset|CurveCount|System.Int32|instance|get:public|index:()
@@ -2987,6 +3010,10 @@ type|Goo.Tokens|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferData|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransferRepresentation|class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransitionProperty|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.TrayIcon|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:
+type|Goo.TrayOptions|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.TrayResult|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.TrayStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.VectorAsset|class|public|base:System.Object|interfaces:|generic:
 type|Goo.VectorEffect|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.VectorNodeStyle|struct|public|base:System.ValueType|interfaces:|generic:

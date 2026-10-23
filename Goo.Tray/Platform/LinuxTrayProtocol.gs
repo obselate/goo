@@ -64,7 +64,7 @@ internal partial class LinuxTrayBackend {
                 return
             }
             using var writer = connection.GetMessageWriter()
-            writer.WriteSignalHeader(MenuPath, MenuInterface, "ItemActivationRequested", "iu")
+            writer.WriteSignalHeader(nil, MenuPath, MenuInterface, "ItemActivationRequested", "iu")
             writer.WriteInt32(0)
             writer.WriteUInt32(uint32(0))
             if connection.TrySendMessage(writer.CreateMessage()) { ReplyEmpty(context) }
@@ -132,7 +132,7 @@ internal partial class LinuxTrayBackend {
         else if name == "Id" { writer.WriteVariantString(state.Content.Id) }
         else if name == "Title" { writer.WriteVariantString(state.Content.Tooltip) }
         else if name == "Status" { writer.WriteVariantString("Active") }
-        else if name == "WindowId" { writer.WriteVariantInt32(0) }
+        else if name == "WindowId" { writer.WriteVariantUInt32(uint32(0)) }
         else if name == "ItemIsMenu" { writer.WriteVariantBool(false) }
         else if name == "Menu" {
             writer.WriteSignature("o")
@@ -152,6 +152,11 @@ internal partial class LinuxTrayBackend {
             writer.WriteVariantString("")
         } else { return false }
         return true
+    }
+
+    private func ReplyEmpty(context MethodContext) {
+        using var writer = context.CreateReplyWriter("")
+        context.Reply(writer.CreateMessage())
     }
 
     shared {
@@ -175,7 +180,7 @@ internal partial class LinuxTrayBackend {
         private const ItemXml string = "<node>" + StandardXml + "<interface name='org.kde.StatusNotifierItem'>"
             + "<property name='Category' type='s' access='read'/><property name='Id' type='s' access='read'/>"
             + "<property name='Title' type='s' access='read'/><property name='Status' type='s' access='read'/>"
-            + "<property name='WindowId' type='i' access='read'/><property name='ItemIsMenu' type='b' access='read'/>"
+            + "<property name='WindowId' type='u' access='read'/><property name='ItemIsMenu' type='b' access='read'/>"
             + "<property name='Menu' type='o' access='read'/><property name='IconName' type='s' access='read'/>"
             + "<property name='IconPixmap' type='a(iiay)' access='read'/>"
             + "<property name='IconThemePath' type='s' access='read'/>"
@@ -214,11 +219,6 @@ internal partial class LinuxTrayBackend {
             + "<signal name='LayoutUpdated'><arg type='u'/><arg type='i'/></signal>"
             + "<signal name='ItemsPropertiesUpdated'><arg type='a(ia{sv})'/><arg type='a(ias)'/></signal>"
             + "<signal name='ItemActivationRequested'><arg type='i'/><arg type='u'/></signal></interface></node>"
-
-        private func ReplyEmpty(context MethodContext) {
-            using var writer = context.CreateReplyWriter()
-            context.Reply(writer.CreateMessage())
-        }
 
         private func WritePixmap(ref writer MessageWriter, state LinuxTrayState, include bool) {
             let array = writer.WriteArrayStart(DBusType.Struct)

@@ -29,7 +29,7 @@ internal sealed class LinuxSmoke : IPathMethodHandler, IDisposable
         {
             var reader = request.GetBodyReader();
             service = reader.ReadString();
-            using var writer = context.CreateReplyWriter();
+            using var writer = context.CreateReplyWriter("");
             context.Reply(writer.CreateMessage());
             Registered.TrySetResult(service);
         }
@@ -65,15 +65,18 @@ internal sealed class LinuxSmoke : IPathMethodHandler, IDisposable
         Console.WriteLine($"Private SNI watcher and DBusMenu passed: {title}, ID {id}.");
     }
 
-    internal async Task VerifyDisposedAsync()
+    internal Task VerifyDisposedAsync()
     {
         using var writer = connection.GetMessageWriter();
         writer.WriteMethodCallHeader("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
             "NameHasOwner", "s");
         writer.WriteString(service);
-        var owned = await connection.CallMethodAsync(writer.CreateMessage(),
-            (message, _) => { var reader = message.GetBodyReader(); return reader.ReadBool(); });
-        Check(!owned, "SNI service removed on dispose");
+        return connection.CallMethodAsync(writer.CreateMessage(), (message, _) =>
+        {
+            var reader = message.GetBodyReader();
+            Check(!reader.ReadBool(), "SNI service removed on dispose");
+            return true;
+        });
     }
 
     private Task<VariantValue> Property(string name)

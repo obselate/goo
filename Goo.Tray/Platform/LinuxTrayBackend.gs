@@ -157,13 +157,13 @@ internal partial class LinuxTrayBackend : TrayBackend, IPathMethodHandler {
 
     private func Signal(path string, iface string, member string) bool {
         using var writer = connection.GetMessageWriter()
-        writer.WriteSignalHeader(path, iface, member)
+        writer.WriteSignalHeader(nil, path, iface, member, "")
         return connection.TrySendMessage(writer.CreateMessage())
     }
 
     private func LayoutUpdated(revision uint32) bool {
         using var writer = connection.GetMessageWriter()
-        writer.WriteSignalHeader(MenuPath, MenuInterface, "LayoutUpdated", "ui")
+        writer.WriteSignalHeader(nil, MenuPath, MenuInterface, "LayoutUpdated", "ui")
         writer.WriteUInt32(revision)
         writer.WriteInt32(0)
         return connection.TrySendMessage(writer.CreateMessage())
