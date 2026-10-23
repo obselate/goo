@@ -110,9 +110,10 @@ internal class EmbeddedHostSmoke {
       Require(notifications == 3 && window.Preferences.EventSoundsEnabled == nil,
         "Unknown event sound preference was not delivered")
       host.UpdatePreferences(PlatformPreferences{Theme: SystemTheme.Dark, HighContrast: true,
-        TextScaleFactor: 1.0F, ReducedMotion: false})
+        TextScaleFactor: 1.0F, ReducedMotion: false, AccentColor: Color.Rgb(31, 91, 173)})
       Require(notifications == 4 && window.Preferences.Theme == SystemTheme.Dark
           && window.Preferences.HighContrast == true
+          && window.Preferences.AccentColor == Color.Rgb(31, 91, 173)
           && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
         "Appearance-only preferences scheduled tree work or lost their notification")
       let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
@@ -123,13 +124,22 @@ internal class EmbeddedHostSmoke {
       Require(initial.Width > 0.0 && initial.Height > 0.0
           && scaled.Width > initial.Width * 1.7 && scaled.Height > initial.Height * 1.7,
         "Platform text scale did not resize explicitly sized mounted text")
-      Require(notifications == 5 && window.Preferences.ReducedMotion == true
+      Require(notifications == 5 && window.Preferences.ReducedMotion == true && window.Preferences.AccentColor == nil
           && window.CurrentWindowMetrics().DisplayScaleX == density,
         "Preference delivery changed density, lost motion policy or duplicated a snapshot")
       host.UpdatePreferences(PlatformPreferences{})
       host.RenderFrame(0.0)
       Require(Math.Abs(root.TextHandle.BorderBox.Width - initial.Width) < 0.1,
         "Removing host text scale did not restore mounted text geometry")
+      let accented = PlatformPreferences{AccentColor: Color.Rgb(17, 101, 191)}
+      host.UpdatePreferences(accented)
+      host.UpdatePreferences(accented)
+      Require(notifications == 7 && window.Preferences.AccentColor == accented.AccentColor
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "An accent-only update was lost, duplicated or scheduled tree work")
+      host.UpdatePreferences(PlatformPreferences{})
+      Require(notifications == 8 && window.Preferences.AccentColor == nil,
+        "An unavailable accent did not clear the previous color")
       Require(window.Show() == WindowOperationResult.Unsupported
           && window.Hide() == WindowOperationResult.Unsupported,
         "Embedded lifecycle operations claimed native window support")

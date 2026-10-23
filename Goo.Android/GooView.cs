@@ -57,6 +57,9 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         context.ContentResolver!.RegisterContentObserver(
             global::Android.Provider.Settings.System.GetUriFor(
                 global::Android.Provider.Settings.System.SoundEffectsEnabled)!, false, preferenceObserver);
+        context.ContentResolver.RegisterContentObserver(
+            global::Android.Provider.Settings.Secure.GetUriFor("high_text_contrast_enabled")!,
+            false, preferenceObserver);
         window.PlatformInput.EditorChanged += OnEditorChanged;
     }
 
@@ -93,12 +96,29 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         var mode = configuration?.UiMode & global::Android.Content.Res.UiMode.NightMask;
         var sounds = global::Android.Provider.Settings.System.GetInt(Context!.ContentResolver!,
             global::Android.Provider.Settings.System.SoundEffectsEnabled, -1);
+        var contrast = -1;
+        try
+        {
+            contrast = global::Android.Provider.Settings.Secure.GetInt(Context!.ContentResolver!,
+                "high_text_contrast_enabled", -1);
+        }
+        catch (Java.Lang.SecurityException) { }
+        using var accent = new global::Android.Util.TypedValue();
+        global::Goo.Color? accentColor = Context.Theme?.ResolveAttribute(
+            global::Android.Resource.Attribute.ColorAccent, accent, true) == true
+            && accent.Type >= global::Android.Util.DataType.FirstColorInt
+            && accent.Type <= global::Android.Util.DataType.LastColorInt
+                ? global::Goo.Color.Rgba((accent.Data >> 16) & 255, (accent.Data >> 8) & 255,
+                    accent.Data & 255, (int)((uint)accent.Data >> 24))
+                : null;
         host.UpdatePreferences(new PlatformPreferences
         {
             Theme = mode == global::Android.Content.Res.UiMode.NightYes ? SystemTheme.Dark
                 : mode == global::Android.Content.Res.UiMode.NightNo ? SystemTheme.Light : SystemTheme.Unknown,
             TextScaleFactor = configuration?.FontScale,
             ReducedMotion = !global::Android.Animation.ValueAnimator.AreAnimatorsEnabled(),
+            AccentColor = accentColor,
+            HighContrast = contrast switch { 0 => false, 1 => true, _ => (bool?)null },
             EventSoundsEnabled = sounds switch { 0 => false, 1 => true, _ => (bool?)null }
         });
     }
