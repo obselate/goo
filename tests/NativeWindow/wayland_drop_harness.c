@@ -48,6 +48,9 @@ static void wl_data_offer_set_actions(struct wl_data_offer *offer, uint32_t acti
     selected_action = actions;
 }
 static SDL_WindowData *Wayland_GetWindowDataForOwnedSurface(struct wl_surface *surface) { return &window_data; }
+static bool Goo_EnterDrop(SDL_WaylandDataDevice *device, SDL_Window *target, struct wl_data_offer *offer, float x, float y) {
+    return false;
+}
 static void SDL_SendDropPosition(SDL_Window *target, float x, float y) {
     assert(target == &window && x == 12.5f && y == 17.25f);
     positions++;

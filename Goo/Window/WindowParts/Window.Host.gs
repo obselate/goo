@@ -133,6 +133,7 @@ public partial class Window {
       x = native.X
       y = native.Y
       input.SetUiScale(UiScale)
+      native.TransferPost = TryPost
       input.Attach(native)
       IsOpen = true
       attachPresentationNotifications(target)

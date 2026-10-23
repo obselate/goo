@@ -6,7 +6,7 @@ import System.Collections.Generic
 import System.Diagnostics
 import System.Runtime.InteropServices
 
-internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost, NativeFileDragHost, PinchInputHost {
+internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHost, NativeDragHost, PinchInputHost {
   private const MousePointerId int64 = 0L
   private const TouchMouseId uint32 = uint32.MaxValue
   private const PenMouseId uint32 = uint32.MaxValue - 1u
@@ -187,14 +187,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public func PollEvents() {
     ThrowIfDisposed()
     SdlRuntime.PollEvents()
-    ThrowNativeFileDragFailure()
+    ThrowNativeTransferFailure()
     RefreshMetricsIfChanged()
   }
 
   public func WaitEvents(timeoutMs int32) {
     ThrowIfDisposed()
     SdlRuntime.WaitEvents(timeoutMs)
-    ThrowNativeFileDragFailure()
+    ThrowNativeTransferFailure()
     RefreshMetricsIfChanged()
   }
 
@@ -391,7 +391,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       return
     }
     SdlRuntime.RequireMainThread("SdlHost.Dispose")
-    CancelNativeFileDrag()
+    CancelNativeDrag()
     ReleasePreferencePortal()
     nativeBackdrop?.Dispose()
     nativeBackdrop = nil
