@@ -1341,6 +1341,34 @@ jobs:
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build unsigned consumer installer
+        shell: pwsh
+        run: |
+          $version = python .github/scripts/release_version.py --print
+          $installer = & tools/Goo.DevTools.Cli/Packaging/fetch-inno-setup.ps1 "$env:RUNNER_TEMP/goo-inno"
+          $inno = Join-Path $env:RUNNER_TEMP 'goo-inno/compiler'
+          $process = Start-Process $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$inno" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Inno Setup installation failed' }
+          $env:GOO_ISCC = Join-Path $inno 'ISCC.exe'
+          $env:GooPackageId = 'org.goo.packagesmoke'
+          $env:Product = 'Goo Package Smoke'
+          $env:Company = 'Goo'
+          $env:Version = $version
+          $env:GooReleaseVersion = $version
+          $env:ImportDirectoryBuildProps = 'false'
+          $env:GooPackageIcon = Join-Path $env:RUNNER_TEMP 'consumer.ico'
+          Add-Type -AssemblyName System.Drawing
+          $stream = [IO.File]::Create($env:GooPackageIcon)
+          try { [Drawing.SystemIcons]::Application.Save($stream) } finally { $stream.Dispose() }
+          dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -m:4
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package `
+            --target windows --project tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj `
+            --output "$PWD/artifacts/windows installer"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $setup = "artifacts/windows installer/org.goo.packagesmoke-$version-win-x64-setup.exe"
+          if (!(Test-Path $setup)) { throw 'Consumer installer missing' }
+          if ((Get-AuthenticodeSignature $setup).Status -ne 'NotSigned') { throw 'Expected unsigned installer' }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true' && (always())
         with:
