@@ -36,6 +36,7 @@
           "exclude": [
             "**/[Bb]in/**",
             "**/[Oo]bj/**",
+            "Android/**",
             "**/.template.config/**"
           ]
         }

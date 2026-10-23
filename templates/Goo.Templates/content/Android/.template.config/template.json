@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Goo",
+  "classifications": ["Goo", "G#", "UI", "Android"],
+  "identity": "Goo.Templates.Android",
+  "name": "Goo Android application",
+  "shortName": "goo-android",
+  "sourceName": "GooStarter",
+  "preferNameDirectory": true,
+  "description": "An Android Activity hosting a shared G# Goo application.",
+  "symbols": {
+    "goo-version": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "0.7.53",
+      "replaces": "0.7.53",
+      "description": "Goo package version."
+    },
+    "application-id": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "com.example.goostarter",
+      "replaces": "com.example.goostarter",
+      "description": "Android application ID."
+    }
+  },
+  "primaryOutputs": [{"path": "GooStarter.csproj"}],
+  "sources": [{
+    "source": "./",
+    "target": "./",
+    "modifiers": [{"exclude": ["**/[Bb]in/**", "**/[Oo]bj/**", "**/.template.config/**"]}]
+  }]
+}
