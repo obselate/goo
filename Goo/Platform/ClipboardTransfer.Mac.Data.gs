@@ -15,6 +15,10 @@ internal unsafe partial class ClipboardTransfer {
         @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend")
         private func MacSetTypeData(receiver nint, selector nint, data nint, formatType nint) uint8;
 
+        private const MacMimePrefix string = "io.github.obselate.goo.mime."
+        private func MacRawType(contentType string) nint ->
+            MacString(MacMimePrefix + Convert.ToHexString(Encoding.ASCII.GetBytes(contentType)))
+
         private func MacTransferType(contentType string) nint {
             if IsPlainText(contentType) { return MacString("public.utf8-plain-text") }
             let value = UTTypeCreatePreferredIdentifierForTag(MacString("public.mime-type"), MacString(contentType), nint(0))
@@ -27,7 +31,12 @@ internal unsafe partial class ClipboardTransfer {
             let name = BoundedUtf8(MacSend(formatType, sel_registerName("UTF8String")), 16384)
             if name == "public.file-url" { return UriList }
             if name == "public.utf8-plain-text" { return "text/plain;charset=utf-8" }
-            if name.IndexOf('/') >= 0 { return name }
+            if name.StartsWith(MacMimePrefix, StringComparison.Ordinal) {
+                let encoded = name.Substring(MacMimePrefix.Length)
+                if encoded.Length > 512 { return "" }
+                try { return Encoding.ASCII.GetString(Convert.FromHexString(encoded)) }
+                catch (_ FormatException) { return "" }
+            }
             let mime = UTTypeCopyPreferredTagWithClass(formatType, MacString("public.mime-type"))
             if mime == nint(0) { return "" }
             try {
@@ -81,7 +90,7 @@ internal unsafe partial class ClipboardTransfer {
                     fixed pointer * uint8 = representation.Data { native = CFDataCreate(nint(0), pointer, nint(representation.Data.Length)) }
                     if native == nint(0) { throw IOException("Cannot copy pasteboard bytes") }
                     try {
-                        if MacSetTypeData(item, sel_registerName("setData:forType:"), native, MacString(representation.ContentType)) == 0 {
+                        if MacSetTypeData(item, sel_registerName("setData:forType:"), native, MacRawType(representation.ContentType)) == 0 {
                             throw IOException("Cannot set pasteboard MIME data")
                         }
                         let formatType = MacTransferType(representation.ContentType)
@@ -147,7 +156,7 @@ internal unsafe partial class ClipboardTransfer {
         }
 
         private func MacReadRepresentation(board nint, contentType string, limit int32, out bytes []uint8) bool {
-            if MacReadNativeType(board, MacString(contentType), limit, out bytes) { return true }
+            if MacReadNativeType(board, MacRawType(contentType), limit, out bytes) { return true }
             if MacReadNativeType(board, MacTransferType(contentType), limit, out bytes) { return true }
             if !IsPlainText(contentType) { return false }
             for i in 0 ... 2 {
@@ -177,7 +186,7 @@ internal unsafe partial class ClipboardTransfer {
                 var total int64
                 for contentType in types {
                     if contentType == UriList {
-                        let files = if MacReadNativeType(board, MacString(UriList), MaxFileListBytes, out var encoded) {
+                        let files = if MacReadNativeType(board, MacRawType(UriList), MaxFileListBytes, out var encoded) {
                             ParseFiles(utf8.GetString(encoded), false)
                         } else { MacReadFiles() }
                         for path in files.Paths { uris.Add(Uri(path)) }
