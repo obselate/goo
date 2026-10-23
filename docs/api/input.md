@@ -214,65 +214,17 @@ second drag cannot start while a drag or pointer press is active. Only one in-ap
 drag can be active per window. Goo provides no visual drag preview or automatic
 scrolling.
 
-### Native MIME and file drops
+### Native file drops
 
-```gsharp
-let data = TransferData(
-    []TransferRepresentation{
-        TransferRepresentation("text/plain;charset=utf-8", ReadOnlyMemory[uint8](Encoding.UTF8.GetBytes("Hello")))
-    },
-    Array.Empty[Uri]()
-)
-let source = DragSource(
-    (_ DragStartEvent) ->
-    DragData("selection", DragEffect.Copy | DragEffect.Move){NativeData: data}
-)
-let result = window.SetNativeDataDropFormats([]string{"text/plain;charset=utf-8", "image/png"})
-```
+Set `Window.NativeFileDropEnabled = true` before `Open` or on its owning UI thread to receive external file lists through `DropTarget`. `Window.NativeTransferCapabilities` reports support for `FileDrop`, `DropPreview`, `OutboundData`, and `EffectNegotiation`. The supported Windows and Cocoa hosts support the first two; native Wayland also supports `OutboundData`. Native effect feedback is unsupported. Closed/embedded windows report `None`; enabling on an unsupported host throws. Native file ingress is off by default. Linux requires Goo's patched SDL payload to preserve file-URI priority when a file manager also offers plain text.
 
-Attach `source` to a `Blob`. Accept `NativeDataDrop` in its destination's `DropTarget`.
+To drag files to another Wayland application, pass `NativeFileDrag(paths)` as the third argument to `DragData` from a pointer `DragSource`. `paths` must be nonempty absolute local paths. `NativeFileDrag.TryCreate(paths, out offer)` returns false if the whole selection exceeds native transfer limits; callers can then use the two-argument `DragData` for an internal-only drag. `DragData.Value` remains available to Goo targets for in-window Move or Copy. If the held primary mouse pointer leaves the window, Goo starts a Copy-only `text/uri-list` offer. `DragSource.End` reports `Dropped` with `Copy` after the native target finishes, or `Canceled` with `None` if the offer is rejected. A drag started through `PlatformInput.BeginDrag` cannot become a native offer. Other hosts do not report `OutboundData`.
 
-| Contract | Behavior |
-| --- | --- |
-| `NativeDataDrop.Formats` | Offered formats that match the window's exact allow-list. |
-| `IsPreview = true` | Formats are available. Bytes and URI references are empty. |
-| `IsPreview = false` | All requested bytes and URI references are owned snapshots. |
-| `DragSource.End` | At most once while the source stays mounted. Reports `Status`, `Effect` and bounded `Error`. |
-| `SourceRemovalRequired` | An accepted Move needs application-owned source cleanup. Goo never deletes data or files. |
-| `LastNativeTransferStatus` and `LastNativeTransferError` | The latest incoming capture result. |
+Accept `DragData.Value is NativeFileDrop` with `DragEffect.Copy`. Preview callbacks carry `IsPreview = true` and an empty `Paths` list because SDL does not expose file names until drop. A preview may ultimately be a text offer or an empty/cancelled offer, so it never promises deliverable files. The final query and `Drop` use an immutable owned `Paths` list with `IsPreview = false`. Paths follow the same absolute-path validation and order as clipboard file lists (`text/uri-list` on Linux); Goo does not open or read them. Retaining the payload after drop or window close is safe.
 
-- Set formats on the open window's UI thread. An empty list disables MIME drops.
-- The final query runs after capture. Invalid or oversized data rejects the whole offer.
-- Captured data stays valid after the drag or window closes.
-- Only a held primary mouse drag can leave the window. Keyboard drags stay in Goo.
-- `NativeData` cannot be combined with `NativeFiles`. Setup failure ends a native MIME drag with an explicit status.
-- Limits are 128 formats, 64 MiB total, 16 MiB per text format, 1 MiB of URI text and 4096 local file references.
+The deepest eligible target accepting Copy receives Enter, Move, and either Drop or Leave. Coordinates are logical window/target coordinates, `PointerId` is -1, and native ingress does not capture a Goo pointer. Leaving, cancellation, disabling ingress, blocking the owner with a modal window, and owner close cancel the preview. Retired or disabled targets receive no stale callbacks. Missing-position, text-only, and malformed offers do not produce a Drop. Native callbacks run on the window UI thread and rebuild their owning Cell through the usual input invalidation path.
 
-| Host | Native support |
-| --- | --- |
-| Wayland v3 with Goo's SDL | MIME and file ingress, MIME drag-out, Copy and Move negotiation. |
-| Windows and macOS | File ingress and preview. |
-| Android, closed or embedded windows | None. |
-
-`Window.NativeTransferCapabilities` reports the loaded host's support.
-Missing bridges return `Unsupported`. Goo does not claim support from the OS name alone.
-
-#### File-only drags
-
-```gsharp
-window.NativeFileDropEnabled = true
-let source = DragSource(
-    (_ DragStartEvent) ->
-    DragData("selection", DragEffect.Copy, NativeFileDrag(paths))
-)
-```
-
-- Enable file ingress before `Open` or on the window's UI thread.
-- Accept `NativeFileDrop` with Copy. Preview paths are empty. Final paths are owned absolute local paths.
-- If MIME ingress is also enabled, a matching MIME offer uses `NativeDataDrop`. Only one Drop is delivered.
-- File-only drag-out stays Copy-only. A setup failure keeps the existing in-window drag.
-- The file limit is 4096 paths, 32768 UTF-16 units per path and 1048576 total path units.
-- Incoming paths are limited to 131072 UTF-8 bytes each. `LastNativeFileDropError` explains a rejected list.
+The bridge accepts at most 4,096 paths, 32,768 UTF-16 units per path, 1,048,576 total path units, and 131,072 UTF-8 bytes per incoming path. An invalid or oversized path rejects the whole offer and records `Window.LastNativeFileDropError`, cleared by the next offer. No partial list is delivered. SDL's source cursor/effect remains Copy independently of Goo target acceptance; `EffectNegotiation` is absent to expose that backend limit. These rules do not add work to frame painting; disabled windows allocate no transfer state.
 
 ## Composite Tab stops
 
@@ -373,7 +325,7 @@ Source:
 
 - [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
-Holds the consumer-owned value, allowed effects and optional native representations.
+Holds the consumer-owned value and allowed effects for one in-app drag operation.
 
 ### `new(System.Object,DragEffect)`
 
@@ -394,10 +346,6 @@ Creates drag data with an optional native file representation.
 
 Gets the effects that a target may select.
 
-### `NativeData`
-
-Gets the owned MIME and URI representations offered to native targets. Cannot be combined with NativeFiles.
-
 ### `NativeFiles`
 
 Gets the optional native file representation offered after a pointer leaves the window.
@@ -412,7 +360,7 @@ Source:
 
 - [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
-Selects the effects allowed or accepted by a drag operation.
+Selects the effects allowed or accepted by an in-app drag operation.
 
 ### Values
 
@@ -426,27 +374,15 @@ Source:
 
 - [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
-Describes the terminal source callback for an in-app or native drag.
+Describes the terminal source callback for one in-app drag operation.
 
 ### `Effect`
 
 Gets the completed effect, or None when canceled.
 
-### `Error`
-
-Gets the bounded native failure message, or an empty string.
-
 ### `Kind`
 
 Gets how the operation ended.
-
-### `SourceRemovalRequired`
-
-Gets whether an accepted Move requires application-owned source cleanup. Goo never deletes source data or files.
-
-### `Status`
-
-Gets Success for an accepted drop, Cancelled for cancellation, or the native failure.
 
 ## `DragEndKind`
 
@@ -454,7 +390,7 @@ Source:
 
 - [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
-Identifies how a drag operation ended.
+Identifies how an in-app drag operation ended.
 
 ### Values
 
@@ -530,7 +466,7 @@ Source:
 
 - [`DragDrop.gs`](../../Goo/Input/DragDrop.gs)
 
-Defines data creation and terminal notification for a drag source.
+Defines payload creation and terminal notification for an in-app drag source.
 
 ### `new(System.Func{DragStartEvent,DragData},System.Action{DragEndEvent})`
 
@@ -1253,26 +1189,6 @@ Reports whether Shift is pressed.
 
 Reports whether Super is pressed.
 
-## `NativeDataDrop`
-
-Source:
-
-- [`NativeFileDrop.gs`](../../Goo/Input/NativeFileDrop.gs)
-
-Contains the allowed MIME formats and owned data for one native offer.
-
-### `Data`
-
-Gets captured bytes and URI references, or empty data during preview.
-
-### `Formats`
-
-Gets the offered formats that match the window's exact allow-list.
-
-### `IsPreview`
-
-Gets whether final data is still unavailable.
-
 ## `NativeFileDrag`
 
 Source:
@@ -1331,15 +1247,10 @@ Reports the native transfer operations supported by an open desktop window.
 - `DropPreview`
 - `OutboundData`
 - `EffectNegotiation`
-- `DataDrop`
-
-### `DataDrop`
-
-The host can deliver owned MIME data and URI references to DropTarget.
 
 ### `DropPreview`
 
-The host reports drag positions before final transfer data is available.
+The host reports drag positions before the final file list is available.
 
 ### `EffectNegotiation`
 

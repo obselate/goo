@@ -385,6 +385,7 @@ jobs:
             "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
             "$RUNNER_TEMP/window-placement"
       - name: Verify native macOS clipboard formats and source exit
+        if: needs.changes.outputs.full == 'true'
         run: |
           GOO_CLIPBOARD_DATA_SMOKE=1 \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
@@ -1678,6 +1679,7 @@ jobs:
           & artifacts/native-menu-smoke/Goo.NativeMenuSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check native Windows clipboard formats
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
