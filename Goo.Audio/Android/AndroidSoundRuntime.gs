@@ -26,8 +26,16 @@ internal class AndroidSoundVoice {
         this.read = read
         Level = gain
         buffer = [SoundRuntime.StreamFrames * channels]float32
-        Bytes = if let pcm = samples { pcm.Length * 4 } else { buffer.Length * 4 }
-        Worker = Thread(() -> { Pull() })
+        Bytes = if let pcm = samples {
+            pcm.Length * 4
+        } else {
+            buffer.Length * 4
+        }
+        Worker = Thread(
+            () -> {
+                Pull()
+            }
+        )
         Worker.IsBackground = true
     }
 
@@ -65,8 +73,12 @@ internal class AndroidSoundVoice {
                             }
                         }
                         if remaining > 0 {
-                            let written = AndroidSoundRuntime.WriteStream(Stream,
-                                pin.AddrOfPinnedObject() + nint(offset * channels * 4), remaining, 1000000L)
+                            let written = AndroidSoundRuntime.WriteStream(
+                                Stream,
+                                pin.AddrOfPinnedObject() + nint(offset * channels * 4),
+                                remaining,
+                                1000000L
+                            )
                             if written < 0 {
                                 Progress = SoundPlaybackStatus.NativeFailure
                                 return
@@ -177,8 +189,14 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
         private func FramesRead(stream nint) int64;
     }
 
-    public func Play(owner SoundPlayer, sampleRate int32, channels int32, samples([]float32)?,
-        read Func[[]float32, int32, int32]?, gain float32) SoundPlayResult {
+    public func Play(
+        owner SoundPlayer,
+        sampleRate int32,
+        channels int32,
+        samples([]float32)?,
+        read Func[[]float32, int32, int32]?,
+        gain float32
+    ) SoundPlayResult {
         ValidateGain(gain)
         lock gate {
             if owner.Disposed {
@@ -189,7 +207,11 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
                 Status(voices[index])
                 index--
             }
-            let bytes = if let pcm = samples { pcm.Length * 4 } else { SoundRuntime.StreamFrames * channels * 4 }
+            let bytes = if let pcm = samples {
+                pcm.Length * 4
+            } else {
+                SoundRuntime.StreamFrames * channels * 4
+            }
             if voices.Count >= MaxVoices {
                 return SoundPlayResult(SoundPlayStatus.VoiceLimit)
             }
@@ -235,7 +257,7 @@ internal unsafe class AndroidSoundRuntime : SoundBackend {
                     if StreamState(state.Stream) == 13 {
                         progress = SoundPlaybackStatus.NativeFailure
                     } else if progress == SoundPlaybackStatus.Playing && state.EndFrame >= 0
-                        && FramesRead(state.Stream) >= state.EndFrame {
+                    && FramesRead(state.Stream) >= state.EndFrame {
                         progress = SoundPlaybackStatus.Completed
                     }
                 }
