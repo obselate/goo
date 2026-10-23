@@ -312,7 +312,7 @@ jobs:
       - name: Verify native tray lifecycle on macOS
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.csproj \
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj \
             -c Release -r osx-arm64 -m:2 -p:TreatWarningsAsErrors=true \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/tray-smoke
           DYLD_LIBRARY_PATH="$PWD/artifacts/macos-candidate/native" dotnet artifacts/tray-smoke/Goo.TraySmoke.dll
@@ -943,7 +943,7 @@ jobs:
           NUGET_PACKAGES: ${{ runner.temp }}/tray-nuget
           XDG_CACHE_HOME: ${{ runner.temp }}/tray-cache
         run: |
-          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.csproj -c Release -r linux-x64 -m:2 \
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj -c Release -r linux-x64 -m:2 \
             -p:TreatWarningsAsErrors=true -p:GooTrayUsePackages=true \
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/tray-smoke
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
@@ -1726,7 +1726,7 @@ jobs:
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
-          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.csproj -c Release -r win-x64 -m:2 `
+          dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj -c Release -r win-x64 -m:2 `
             -p:TreatWarningsAsErrors=true -p:GooTrayUsePackages=true `
             -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version `
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/tray-smoke
