@@ -367,7 +367,7 @@ ViewTreeObserver
             mappedBounds.Set(0.0f, 0.0f, float32(view.Width), float32(view.Height))
         } else {
             let scale = PixelScale
-            var bounds = node.VisibleBounds ?? node.Bounds
+            let bounds = node.VisibleBounds ?? node.Bounds
             mappedBounds.Set(
                 float32(bounds.X) * scale.X,
                 float32(bounds.Y) * scale.Y,

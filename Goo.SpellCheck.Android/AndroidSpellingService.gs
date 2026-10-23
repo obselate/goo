@@ -42,7 +42,6 @@ class AndroidSpellingService : ISpellingService {
         language string,
         cancellation CancellationToken = default(CancellationToken)
     ) SpellingSuggestions {
-        var $range = $range
         var language = language
         language = SpellingInput.Validate(snapshot, $range, language)
         let result = await RequestAsync(snapshot, $range, language, cancellation).ConfigureAwait(false)
@@ -67,7 +66,6 @@ class AndroidSpellingService : ISpellingService {
         language string,
         cancellation CancellationToken
     ) NativeResult {
-        var $range = $range
         if Looper.MyLooper() != Looper.MainLooper {
             throw InvalidOperationException("Start Android spelling requests on the Android main thread.")
         }

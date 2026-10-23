@@ -38,7 +38,7 @@ class MainActivity : GooActivity {
     }
 
     private func StartProof() {
-        var result = GooView.Window.CreateOffscreenSession()
+        let result = GooView.Window.CreateOffscreenSession()
         if result.Status != OffscreenRenderStatus.Success || result.Session == nil {
             throw InvalidOperationException("session creation: " + result.Status.ToString())
         }
@@ -88,7 +88,7 @@ class PageActivity : Android.App.Activity {
                 await Task.Delay(1)
             }
             Require(task.IsCompleted, "detached page render did not complete")
-            var rendered = await task
+            let rendered = await task
             Require(
                 rendered.Status == OffscreenRenderStatus.Success && rendered.Capture != nil,
                 "detached render: " + rendered.Status.ToString()

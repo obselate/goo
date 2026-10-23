@@ -607,7 +607,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             int32((float32((y + height)) * Density))
         )
         RequestRectangleOnScreen(area)
-        var editor FocusedEditorSnapshot? = Input.Editor
+        let editor FocusedEditorSnapshot? = Input.Editor
         if editor == nil {
             return false
         }

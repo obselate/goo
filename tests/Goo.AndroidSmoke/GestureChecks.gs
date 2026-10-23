@@ -101,7 +101,7 @@ class GestureChecks : Instrumentation {
             RunOnMainSync(
                 () -> {
                     Require(scene.Events.Count == 2, "Android move emitted more than one accepted gesture update.")
-                    var moved = scene.Events[1]
+                    let moved = scene.Events[1]
                     Require(
                         Math.Abs(moved.Scale - float64(1.0)) < 0.0001 && Math.Abs(moved.Rotation.Radians) < 0.0001,
                         "A translated contact pair changed scale or rotation."

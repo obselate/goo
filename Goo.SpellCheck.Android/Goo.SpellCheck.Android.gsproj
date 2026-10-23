@@ -15,4 +15,9 @@
   <ItemGroup>
     <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.gsproj" />
   </ItemGroup>
+  <Target Name="NormalizeAndroidReferencePath" AfterTargets="_GsharpGetRefAssemblyForPack">
+    <ItemGroup>
+      <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
+    </ItemGroup>
+  </Target>
 </Project>

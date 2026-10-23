@@ -468,7 +468,7 @@ ViewTreeObserver
     }
 
     private func SendScrollChange(id int32, record NodeRecord, scroll AccessibilityScrollInfo) {
-        var scroll = scroll
+        let scroll = scroll
         using let e AccessibilityEvent? = CreateEvent(id, EventTypes.ViewScrolled)
         if e == nil {
             return

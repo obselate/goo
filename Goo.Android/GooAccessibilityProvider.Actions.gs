@@ -298,7 +298,7 @@ ViewTreeObserver
         if !Supports(node, AccessibilityAction.Scroll) {
             return nil
         }
-        var scroll AccessibilityScrollInfo? = node.ScrollInfo
+        let scroll AccessibilityScrollInfo? = node.ScrollInfo
         if scroll == nil {
             return nil
         }

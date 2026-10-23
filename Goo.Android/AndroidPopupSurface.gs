@@ -82,7 +82,7 @@ internal class AndroidPopupSurface(
     }
 
     private func Position(anchor ElementRect, width int32, height int32, placement PortalPlacement)(X int32, Y int32) {
-        var point = Goo.PopupWindow.PopupPosition(
+        let point = Goo.PopupWindow.PopupPosition(
             anchor,
             width,
             height,

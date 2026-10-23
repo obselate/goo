@@ -270,7 +270,7 @@ Yb`, 5, 5, -1, -1)
         composingStart int32,
         composingEnd int32
     ) {
-        var editor = input.Editor ?? throw InvalidOperationException("Editor focus was lost.")
+        let editor = input.Editor ?? throw InvalidOperationException("Editor focus was lost.")
         Require(
             editor.Text == text &&
                 editor.SelectionStart == start &&

@@ -60,7 +60,7 @@ internal shared class AndroidPopupSmoke {
                 if tooltip is not{} current || stage > 1 {
                     return
                 }
-                var metrics = current.Metrics
+                let metrics = current.Metrics
                 if stage == 0 {
                     Require(
                         metrics.LogicalWidth == Logical(180) &&

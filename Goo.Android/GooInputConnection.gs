@@ -84,7 +84,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
     }
 
     override func SetComposingRegion(start int32, end int32) bool {
-        var editor FocusedEditorSnapshot? = Editor
+        let editor FocusedEditorSnapshot? = Editor
         if editor == nil {
             return false
         }
@@ -109,7 +109,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
         .DeleteSurroundingText(beforeLength, afterLength)
 
     override func DeleteSurroundingTextInCodePoints(beforeLength int32, afterLength int32) bool {
-        var editor FocusedEditorSnapshot? = Editor
+        let editor FocusedEditorSnapshot? = Editor
         if editor == nil || beforeLength < 0 || afterLength < 0 {
             return false
         }
@@ -249,7 +249,7 @@ internal class GooInputConnection(view GooView, focusId int64) : BaseInputConnec
     }
 
     override func PerformContextMenuAction(id int32) bool {
-        var editor FocusedEditorSnapshot? = Editor
+        let editor FocusedEditorSnapshot? = Editor
         if editor == nil {
             return false
         }

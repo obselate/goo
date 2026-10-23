@@ -124,7 +124,7 @@ class AndroidPrinting {
                     DpiY: SystemMath.Min(resolution?.VerticalDpi ?? 300, 300)
                 }
                 Printing.Validate(next)
-                var layout = document.Paginate(next)
+                let layout = document.Paginate(next)
                 if cancellationSignal?.IsCanceled == true || layout.Status == PrintLayoutStatus.Cancelled {
                     callback!!.OnLayoutCancelled()
                     return
@@ -221,7 +221,7 @@ class AndroidPrinting {
                     if finished || generation != Volatile.Read(&layoutGeneration) {
                         throw OperationCanceledException(cancelled.Token)
                     }
-                    var rendered = await Printing.RenderPageAsync(
+                    let rendered = await Printing.RenderPageAsync(
                         owner,
                         document,
                         page,
