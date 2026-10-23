@@ -67,6 +67,13 @@ public class ElementHandle {
     return owner.FocusElement(n)
   }
 
+  /// Cancels recognizer sessions owned by this element without replaying pending input.
+  /// @returns True when at least one session was canceled.
+  public func CancelGestures() bool {
+    guard let n = mountedNode(), let owner = window else { return false }
+    return owner.CancelElementGestures(n)
+  }
+
   /// Begins a nested focus scope on this mounted, visible, enabled, focusable element.
   /// @param options Modal blocking, initial focus, and restoration policy.
   /// @returns A scope to dispose when the overlay closes; removal also closes it automatically.

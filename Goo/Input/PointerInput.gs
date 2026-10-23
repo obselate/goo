@@ -188,6 +188,7 @@ internal partial class PointerInput {
   internal func Dispatch(e QueuedPointerEvent, root Node?, resolver Resolver,
     timeS float64, text TextInput) bool {
       gestureTime = timeS
+      recognizerTime = e.ReceivedTime > 0.0 ? e.ReceivedTime : timeS
     try {
       let createsContact = e.Kind == PointerEventKind.Press
         || (e.Kind == PointerEventKind.Move && e.Device == PointerDevice.Pen)
@@ -223,13 +224,17 @@ internal partial class PointerInput {
           diagnosticsConsumed = hook(root, PointerEventKind.Cancel, e.X, e.Y, e.Button)
         }
         try { return cancelInteraction(root, resolver) || diagnosticsConsumed }
-        finally { if current != mouse { removeCurrentContact() } }
+        finally {
+          if current.Device == PointerDevice.Touch { finishGestureContact(root, current.Id) }
+          if current != mouse { removeCurrentContact() }
+        }
       }
       let hadPress = current.PressChain.Count > 0 || current.DragEntry != nil || current.DragEditor != nil
         || currentOwnsDragState()
       let changed = HandlePointerRelease(root, resolver, e.X, e.Y, e.Button, e.Buttons,
-        e.HasButtons, e.Pressure, e.HasPressure, e.Modifiers) || hadPress
+        e.HasButtons, e.Pressure, e.HasPressure, e.Modifiers, text) || hadPress
       if current.Device == PointerDevice.Touch && current.HeldButtons == PointerButtons.None {
+        finishGestureContact(root, current.Id)
         removeCurrentContact()
       } else if current.Device == PointerDevice.Pen && current.HeldButtons == PointerButtons.None {
         endDeviceSequenceIfIdle(PointerDevice.Pen)
@@ -371,6 +376,7 @@ internal partial class PointerInput {
   private func reset(root Node?, resolver Resolver, preserveNative bool) {
     var failure Exception?
     try {
+      clearGestures(root, GestureCancelReason.FocusLost)
       if !preserveNative || dragSession?.NativeActive != true { cancelDrag(root) }
     } catch (error Exception) {
       failure = error
@@ -523,6 +529,7 @@ internal partial class PointerInput {
 
   internal func AfterTreeUpdated(root Node?, resolver Resolver) {
     if dragSession?.IsPointer == false && root == nil { cancelDrag(root) }
+    refreshGestures(root)
     current = mouse
     afterTreeUpdatedCurrent(root, resolver)
     if let values = contacts {
@@ -621,6 +628,9 @@ internal partial class PointerInput {
       }
       let delta = nextDelta(x, y)
       current.LastModifiers = modifiers
+      if current.Device == PointerDevice.Touch && gestureGroupFor(current.Id)?.Claimed == true {
+        return updateGestures(root, resolver, GestureInputKind.Move, x, y)
+      }
       if touchPanActive() { return updateTouchPan(root, resolver, x, y, false) }
       if hasScrollDrag() {
         clearDragCandidate()
@@ -637,6 +647,11 @@ internal partial class PointerInput {
           terminateDrag(root, DragEndKind.Canceled, DragEffect.None, true, error)
         }
         ExceptionDispatchInfo.Capture(error).Throw()
+      }
+      if prevented || current.CaptureTarget != nil || activeDragMatches() {
+        cancelCurrentGestures(root, GestureCancelReason.LostArbitration)
+      } else if updateGestures(root, resolver, GestureInputKind.Move, x, y) {
+        return true
       }
       if activeDragMatches() {
         if let tree = root {
@@ -655,12 +670,16 @@ internal partial class PointerInput {
         if prevented || current.CaptureTarget != nil || current.DragEntry != nil || current.DragSelectionStarted {
           if dragCandidate != nil && dragPointerMatches() { clearDragCandidate() }
         } else if startDragIfReady(root, x, y, modifiers) {
+          cancelCurrentGestures(root, GestureCancelReason.LostArbitration)
           handleMove(root, resolver, x, y,
             current.Device == PointerDevice.Mouse && !prevented, false)
           return true
         }
       }
-      if updateTouchPan(root, resolver, x, y, prevented) { return true }
+      if updateTouchPan(root, resolver, x, y, prevented) {
+        cancelCurrentGestures(root, GestureCancelReason.LostArbitration)
+        return true
+      }
       let moved = handleMove(root, resolver, x, y,
         current.Device == PointerDevice.Mouse && !prevented,
         isSemanticPrimary() && !prevented)
@@ -805,7 +824,9 @@ internal partial class PointerInput {
       }
 
       if let entry = target {
-        if entry.Kind == NodeKind.Entry {
+        if hasPendingTouchGesture() {
+          current.TouchCaretPending = entry.Kind == NodeKind.Entry || entry.Kind == NodeKind.Editor
+        } else if entry.Kind == NodeKind.Entry {
           let point = TransformGeometry.WindowToNode(entry, x, y)
           if !point.Valid { return false }
           let local = point.X - BoxGeometry.ContentLeft(entry)
@@ -870,6 +891,7 @@ internal partial class PointerInput {
       if button != PointerButton.Primary || prevented {
         return false
       }
+      beginGestures(root, resolver, x, y)
       if semantic {
         if let tree = root {
           if tryBeginScrollInteraction(tree, resolver, x, y) {
@@ -883,7 +905,7 @@ internal partial class PointerInput {
         rememberDragCandidate()
         beginTouchPan(x, y)
       }
-      return handled
+      return updateGestures(root, resolver, GestureInputKind.Down, x, y) || handled
     }
 
   private func HandleRelease(root Node?, resolver Resolver, x float32, y float32,
@@ -901,6 +923,16 @@ internal partial class PointerInput {
           }
         }
       }
+      if let group = gestureGroupFor(current.Id), let pressed = target {
+        for candidate in group.Candidates {
+          if !candidate.Terminal && !candidate.Accepted
+            && Double.IsFinite(candidate.Session.NextDeadlineSeconds()) {
+            group.DeferredClick = pressed
+            target = nil
+            break
+          }
+        }
+      }
       clearPressChain(resolver)
       current.DragEntry = nil
       current.DragEditor = nil
@@ -915,7 +947,7 @@ internal partial class PointerInput {
 
   internal func HandlePointerRelease(root Node?, resolver Resolver, x float32, y float32,
     button PointerButton, buttons PointerButtons, hasButtons bool, eventPressure float32,
-    hasPressure bool, modifiers KeyModifiers) bool{
+    hasPressure bool, modifiers KeyModifiers, text TextInput? = nil) bool{
       if let hook = diagnosticsHook {
         if hook(root, PointerEventKind.Release, x, y, button) { return true }
       }
@@ -932,6 +964,9 @@ internal partial class PointerInput {
       updatePressure(eventPressure, hasPressure)
       let semantic = isSemanticPrimary()
       try {
+        if current.Device == PointerDevice.Touch && gestureGroupFor(current.Id)?.Claimed == true {
+          return updateGestures(root, resolver, GestureInputKind.Up, x, y)
+        }
         if button == PointerButton.Primary && touchPanActive() {
           return finishTouchPan(root, resolver, x, y)
         }
@@ -963,11 +998,24 @@ internal partial class PointerInput {
           return true
         }
         let prevented = dispatchPointer(root, PointerEventKind.Release, x, y, 0.0F, 0.0F, button, modifiers)
+        if prevented || current.CaptureTarget != nil {
+          cancelCurrentGestures(root, GestureCancelReason.LostArbitration)
+        } else if updateGestures(root, resolver, GestureInputKind.Up, x, y) {
+          return true
+        }
+        if !prevented && semantic && current.TouchCaretPending {
+          if let text = text {
+            completingTouchTap = true
+            try { HandlePress(root, resolver, text, x, y, modifiers, true) }
+            finally { completingTouchTap = false }
+          }
+        }
         releaseCaptureAfterUp(button)
         return if button != PointerButton.Primary || !semantic { false } else { HandleRelease(root, resolver, x, y, !prevented) }
       } finally {
         releaseCaptureAfterUp(button)
         if button == PointerButton.Primary {
+          current.TouchCaretPending = false
           clearPressChain(resolver)
           current.DragEntry = nil
           current.DragEditor = nil
@@ -1096,6 +1144,7 @@ internal enum PointerEventKind { Move; Press; Release; Cancel; Wheel; HoverInval
 
 internal data struct QueuedPointerEvent {
   internal var Kind PointerEventKind
+  internal var ReceivedTime float64
   internal var PointerId int64
   internal var Device PointerDevice
   internal var X float32
@@ -1128,6 +1177,7 @@ internal class PointerContact {
   internal var DragEntry Node?
   internal var DragEditor Node?
   internal var DragSelectionStarted bool
+  internal var TouchCaretPending bool
   internal var DragSelectionOrigin TextRange
   internal var LastPressT float64
   internal var LastPressX float32

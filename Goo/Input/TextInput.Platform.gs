@@ -137,7 +137,27 @@ internal partial class TextInput {
     return true
   }
 
-  internal func SetEditorSelection(root Node?, start int32, end int32) bool {
+  internal func EditorSelection() TextSelection? {
+    guard let n = focus.FocusedNode() else { return nil }
+    if !canReceiveInput(n) { return nil }
+    if n.Kind == NodeKind.Entry {
+      return entryComposition?.EffectiveSelection ?? TextSelection{
+        Anchor: TextPosition{ Offset: n.Anchor, Affinity: n.AnchorAffinity },
+        Active: TextPosition{ Offset: n.Caret, Affinity: n.CaretAffinity },
+      }
+    }
+    if n.Kind != NodeKind.Editor { return nil }
+    guard let controller = n.EditorController else { return nil }
+    guard let composition = controller.Composition else { return controller.Selection }
+    return composition.EffectiveSelection ?? TextSelection{
+      Anchor: TextPosition{ Offset: composition.Range.Start + composition.SelectionStart,
+        Affinity: TextAffinity.Upstream },
+      Active: TextPosition{ Offset: composition.Range.Start + composition.SelectionStart
+        + composition.SelectionLength, Affinity: TextAffinity.Downstream },
+    }
+  }
+
+  internal func SetEditorSelection(root Node?, start int32, end int32, selection TextSelection? = nil) bool {
     guard let snapshot = EditorSnapshot(), let n = focus.FocusedNode() else { return false }
     if start < 0 || end < 0 || start > snapshot.Text.Length || end > snapshot.Text.Length {
       return false
@@ -146,8 +166,10 @@ internal partial class TextInput {
     let high = textBoundary(snapshot.Text, Math.Max(start, end), start != end)
     let anchor = start <= end ? low : high
     let active = start <= end ? high : low
+    let anchorAffinity = selection?.Anchor.Affinity ?? TextAffinity.Upstream
+    let activeAffinity = selection?.Active.Affinity ?? TextAffinity.Downstream
     if snapshot.CompositionStart >= 0 {
-      setEffectiveCompositionSelection(n, anchor, active)
+      setEffectiveCompositionSelection(n, anchor, active, anchorAffinity, activeAffinity)
       updateTextInputArea(n)
       return true
     }
@@ -155,12 +177,17 @@ internal partial class TextInput {
     if n.Kind == NodeKind.Editor {
       guard let controller = n.EditorController else { return false }
       controller.Selection = TextSelection{
-        Anchor: TextPosition{ Offset: anchor, Affinity: TextAffinity.Upstream },
-        Active: TextPosition{ Offset: active, Affinity: TextAffinity.Downstream },
+        Anchor: TextPosition{ Offset: anchor, Affinity: anchorAffinity },
+        Active: TextPosition{ Offset: active, Affinity: activeAffinity },
       }
     } else {
       let before = editState(n)
       commitEdit(root, n, before, EditState{ Text: n.Buffer, Anchor: anchor, Caret: active })
+      if selection != nil && snapshot.FocusId == focus.Generation {
+        n.AnchorAffinity = anchorAffinity
+        n.CaretAffinity = activeAffinity
+        FollowCaret(n)
+      }
     }
     if snapshot.FocusId != focus.Generation { return true }
     updateTextInputArea(n)
@@ -472,16 +499,19 @@ internal partial class TextInput {
     return true
   }
 
-  private func setEffectiveCompositionSelection(n Node, anchor int32, active int32) {
+  private func setEffectiveCompositionSelection(n Node, anchor int32, active int32,
+    anchorAffinity TextAffinity = TextAffinity.Upstream, activeAffinity TextAffinity = TextAffinity.Downstream) {
     let selected = TextSelection{
-      Anchor: TextPosition{ Offset: anchor, Affinity: TextAffinity.Upstream },
-      Active: TextPosition{ Offset: active, Affinity: TextAffinity.Downstream },
+      Anchor: TextPosition{ Offset: anchor, Affinity: anchorAffinity },
+      Active: TextPosition{ Offset: active, Affinity: activeAffinity },
     }
     if n.Kind == NodeKind.Editor {
       n.EditorController?.SetEffectiveCompositionSelection(selected)
     } else {
       n.Anchor = anchor
       n.Caret = active
+      n.AnchorAffinity = anchorAffinity
+      n.CaretAffinity = activeAffinity
       guard let current = entryComposition else { return }
       entryComposition = TextComposition{ Range: current.Range, Text: current.Text,
         SelectionStart: current.SelectionStart, SelectionLength: current.SelectionLength,
