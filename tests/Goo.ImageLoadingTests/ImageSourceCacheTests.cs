@@ -432,6 +432,101 @@ public sealed class ImageSourceCacheTests : IDisposable
         Assert.Equal(8, lease.Result()!.Pixels()!.Length);
     }
 
+    [Theory]
+    [InlineData(1, "012345")]
+    [InlineData(2, "210543")]
+    [InlineData(3, "543210")]
+    [InlineData(4, "345012")]
+    [InlineData(5, "031425")]
+    [InlineData(6, "304152")]
+    [InlineData(7, "524130")]
+    [InlineData(8, "251403")]
+    public void ExifOrientationTransformsPngAndJpegPixels(int orientation, string order)
+    {
+        var png = Png(3, 2, 8, 2, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90,
+            0, 100, 110, 120, 130, 140, 150, 160, 170, 180]);
+        var jpeg = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Assets", "local-rgb.jpg"));
+        foreach (var encoded in new[] { png, jpeg })
+        {
+            using var original = ImageSource.Decode(encoded);
+            using var originalLease = original.Acquire();
+            var pixels = originalLease.Result()!.Pixels()!;
+            var expected = order.SelectMany(index => pixels.Skip((index - '0') * 4).Take(4)).ToArray();
+            foreach (var little in new[] { false, true })
+            {
+                using var rotated = ImageSource.Decode(WithExif(encoded, Exif(orientation, little)));
+                using var lease = rotated.Acquire();
+                Assert.Equal(orientation >= 5 ? (2, 3) : (3, 2), (rotated.Width, rotated.Height));
+                Assert.Equal(expected, lease.Result()!.Pixels());
+            }
+        }
+    }
+
+    [Fact]
+    public void OrientedThumbnailUsesDisplayedBoundsAndDecodedLimit()
+    {
+        var png = Png(3, 2, 8, 2, new byte[20]);
+        var path = Write("portrait.png", WithExif(png, Exif(6, true)));
+        using var thumbnail = ImageSource.LoadThumbnail(path, 1, 2,
+            new ImageDecodeLimits { MaxDecodedBytes = 8 }, CancellationToken.None);
+        Assert.Equal((1, 2), (thumbnail.Width, thumbnail.Height));
+    }
+
+    [Fact]
+    public void InvalidExifOffsetsAndOrientationFailBeforePublication()
+    {
+        var png = Png(1, 1, 8, 6, [0, 10, 20, 30, 255]);
+        var invalidOffset = Exif(1, true);
+        invalidOffset.AsSpan(4, 4).Fill(255);
+        foreach (var exif in new[] { invalidOffset, Exif(0, true), Exif(9, false), Exif(1, true)[..^1] })
+            Assert.Throws<InvalidDataException>(() => ImageSource.Decode(WithExif(png, exif)));
+        var once = WithExif(png, Exif(1, true));
+        Assert.Throws<InvalidDataException>(() => ImageSource.Decode(WithExif(once, Exif(6, false))));
+    }
+
+    private static byte[] Exif(int orientation, bool little)
+    {
+        var bytes = new byte[26];
+        bytes[0] = bytes[1] = little ? (byte)73 : (byte)77;
+        void Write16(int offset, ushort value)
+        {
+            if (little) System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(offset), value);
+            else System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(offset), value);
+        }
+        void Write32(int offset, uint value)
+        {
+            if (little) System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(offset), value);
+            else System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(offset), value);
+        }
+        Write16(2, 42);
+        Write32(4, 8);
+        Write16(8, 1);
+        Write16(10, 0x0112);
+        Write16(12, 3);
+        Write32(14, 1);
+        Write16(18, (ushort)orientation);
+        return bytes;
+    }
+
+    private static byte[] WithExif(byte[] encoded, byte[] exif)
+    {
+        using var output = new MemoryStream();
+        if (encoded[0] == 255)
+        {
+            output.Write(encoded.AsSpan(0, 2));
+            output.Write([255, 225, 0, (byte)(exif.Length + 8), 69, 120, 105, 102, 0, 0]);
+            output.Write(exif);
+            output.Write(encoded.AsSpan(2));
+        }
+        else
+        {
+            output.Write(encoded.AsSpan(0, encoded.Length - 12));
+            Chunk(output, "eXIf", exif);
+            output.Write(encoded.AsSpan(encoded.Length - 12));
+        }
+        return output.ToArray();
+    }
+
     private string Write(string name, byte[] bytes)
     {
         var path = Path.Combine(directory, name);
