@@ -184,7 +184,6 @@ static CGRect window_bounds(pid_t pid)
         if (!CGRectMakeWithDictionaryRepresentation((__bridge CFDictionaryRef)window[(__bridge NSString *)kCGWindowBounds], &bounds) || bounds.size.width < 400) continue;
         if (CGRectIsNull(found) || bounds.size.width * bounds.size.height > found.size.width * found.size.height) found = bounds;
     }
-    require(!CGRectIsNull(found), @"Native fixture window bounds are unavailable");
     return found;
 }
 
@@ -200,9 +199,17 @@ static void mouse_event(CGEventType type, CGPoint point)
 static void input_drag(pid_t from_pid, pid_t to_pid, unsigned int hold)
 {
     require(CGPreflightPostEventAccess(), @"The macOS runner requires native input permission for the transfer fixture");
-    CGRect from = window_bounds(from_pid);
-    CGRect to = window_bounds(to_pid);
     [[NSRunningApplication runningApplicationWithProcessIdentifier:from_pid] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+    CGRect from = CGRectNull;
+    CGRect to = CGRectNull;
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        from = window_bounds(from_pid);
+        to = window_bounds(to_pid);
+        if (!CGRectIsNull(from) && !CGRectIsNull(to)) break;
+        usleep(20000);
+    }
+    require(!CGRectIsNull(from), [NSString stringWithFormat:@"Source fixture window bounds are unavailable for %d", from_pid]);
+    require(!CGRectIsNull(to), [NSString stringWithFormat:@"Target fixture window bounds are unavailable for %d", to_pid]);
     CGPoint start = CGPointMake(from.origin.x + 50, from.origin.y + 80);
     CGPoint end = CGPointMake(to.origin.x + 100, to.origin.y + 100);
     mouse_event(kCGEventMouseMoved, start);
