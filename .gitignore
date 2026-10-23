@@ -56,6 +56,7 @@
 !/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
 !/.github/scripts/run-android-native-menus.sh
+!/.github/scripts/check-wayland-data-transfer.sh
 
 !/Goo/
 !/Goo/**

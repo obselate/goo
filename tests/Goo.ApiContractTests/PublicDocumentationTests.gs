@@ -205,6 +205,12 @@ class PublicDocumentationTests {
             "M:Goo.NativeDialogOwnerLease.Dispose",
             "M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)",
             "M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)",
+            "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
+            "M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
+                + "System.Collections.Generic.IReadOnlyList{System.Uri})",
+            "M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})",
+            "M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)",
+            "M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})",
             "M:Goo.AccessibilityActionRequest.#ctor(Goo.AccessibilityAction)",
             "M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)",
             "M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)",
@@ -661,6 +667,14 @@ class PublicDocumentationTests {
             "F:Goo.EnterAction.Send",
             "F:Goo.EnterAction.None",
             "F:Goo.MacOSBackdropMaterial.ContentBackground",
+            "F:Goo.ClipboardIntent.Copy",
+            "F:Goo.ClipboardIntent.Cut",
+            "F:Goo.DataTransferStatus.Success",
+            "F:Goo.DataTransferStatus.Cancelled",
+            "F:Goo.DataTransferStatus.Unsupported",
+            "F:Goo.DataTransferStatus.TooLarge",
+            "F:Goo.DataTransferStatus.Denied",
+            "F:Goo.DataTransferStatus.Failed",
             "F:Goo.MacOSBackdropMaterial.FullScreenUI",
             "F:Goo.MacOSBackdropMaterial.HeaderView",
             "F:Goo.MacOSBackdropMaterial.HudWindow",
@@ -696,6 +710,7 @@ class PublicDocumentationTests {
             "F:Goo.NativeTransferCapabilities.DropPreview",
             "F:Goo.NativeTransferCapabilities.OutboundData",
             "F:Goo.NativeTransferCapabilities.EffectNegotiation",
+            "F:Goo.NativeTransferCapabilities.DataDrop",
             "F:Goo.PortalPlacement.BottomStart",
             "F:Goo.PortalPlacement.Bottom",
             "F:Goo.PortalPlacement.BottomEnd",
@@ -800,6 +815,17 @@ class PublicDocumentationTests {
                 System.Array.Empty[string](),
                 true
             ),
+            ["M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})"] =
+                DocumentationShape([]string{"contentType", "bytes"}, Array.Empty[string](), false),
+            ["M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
+                + "System.Collections.Generic.IReadOnlyList{System.Uri})"] =
+                DocumentationShape([]string{"representations", "uris"}, Array.Empty[string](), false),
+            ["M:Goo.Window.ReadClipboardDataAsync(System.Collections.Generic.IReadOnlyList{System.String})"] =
+                DocumentationShape([]string{"contentTypes"}, Array.Empty[string](), true),
+            ["M:Goo.Window.WriteClipboardAsync(Goo.TransferData,Goo.ClipboardIntent)"] =
+                DocumentationShape([]string{"data", "intent"}, Array.Empty[string](), true),
+            ["M:Goo.Window.SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{System.String})"] =
+                DocumentationShape([]string{"formats"}, Array.Empty[string](), true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = DocumentationShape(
                 []string{"x", "y"},
                 System.Array.Empty[string](),

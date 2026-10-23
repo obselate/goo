@@ -1390,6 +1390,14 @@ Sets the clear and inherited root text colors together on the owner thread. Expl
 
 Runs a callback repeatedly on the UI thread at the requested interval.
 
+### `SetNativeDataDropFormats(System.Collections.Generic.IReadOnlyList{string})`
+
+Enables an exact MIME allow-list for native drops on the owning UI thread.
+
+- `formats`: At most 128 unique MIME names. An empty list disables MIME drops.
+
+Returns: Accepted, Closed, Unsupported or Failed without changing an unsupported host.
+
 ### `SetTimeout(System.Action,float64)`
 
 Runs a callback once on the UI thread after the delay.
@@ -1516,6 +1524,14 @@ Gets the most recent adapter exception. Failed delivery retries on the next UI-t
 ### `LastNativeFileDropError`
 
 Gets the most recent rejected native file-list explanation, cleared when the next offer begins.
+
+### `LastNativeTransferError`
+
+Gets the latest native drop explanation, bounded to 1024 characters.
+
+### `LastNativeTransferStatus`
+
+Gets the latest native drop capture status.
 
 ### `MacOSBackdrop`
 

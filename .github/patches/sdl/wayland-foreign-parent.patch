@@ -212,9 +212,9 @@
 --- a/src/dynapi/SDL_dynapi.sym
 +++ b/src/dynapi/SDL_dynapi.sym
 @@ -1269,6 +1269,7 @@
-     SDL_CreateAnimatedCursor;
-     Goo_StartFileDrag;
-     Goo_CancelFileDrag;
+     Goo_SetDataDropCallback;
+     Goo_ReceiveDataDrop;
+     Goo_FinishDataDrop;
 +    Goo_SetForeignParent;
      SDL_RotateSurface;
      SDL_LoadSurface_IO;
