@@ -72,10 +72,10 @@ public sealed class SpellingTests
             Assert.True(controller.Execute(new TextCommand(TextCommandKind.Insert, "hello\nhello", false)));
             controller.Selection = new TextSelection(new TextPosition(4, TextAffinity.Downstream),
                 new TextPosition(5, TextAffinity.Upstream));
-            Assert.True(controller.Execute(new TextCommand(TextCommandKind.Insert, "", false)));
+            Assert.True(controller.Execute(new TextCommand(TextCommandKind.DeleteForward, "", false)));
             controller.Selection = new TextSelection(new TextPosition(9, TextAffinity.Downstream),
                 new TextPosition(10, TextAffinity.Upstream));
-            Assert.True(controller.Execute(new TextCommand(TextCommandKind.Insert, "", false)));
+            Assert.True(controller.Execute(new TextCommand(TextCommandKind.DeleteForward, "", false)));
             deadline.Restart();
             while (refreshed == null && deadline.Elapsed < TimeSpan.FromSeconds(10))
             {
