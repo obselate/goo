@@ -3,6 +3,7 @@ using Android.Graphics;
 using Android.OS;
 using Android.Views;
 using Android.Views.InputMethods;
+using System.Runtime.CompilerServices;
 using System.Text;
 using AndroidKeyEvent = Android.Views.KeyEvent;
 using AndroidRect = Android.Graphics.Rect;
@@ -11,6 +12,7 @@ namespace Goo.Android;
 
 public sealed class GooView : SurfaceView, ISurfaceHolderCallback
 {
+    private static readonly ConditionalWeakTable<global::Goo.Window, GooView> nativeOwners = new();
     private readonly AndroidVulkanHost host;
     private readonly Handler handler = new(Looper.MainLooper!);
     private readonly FrameCallback frameCallback;
@@ -52,6 +54,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         }
         Holder!.AddCallback(this);
         window.Attach(host);
+        nativeOwners.Add(window, this);
         RefreshPreferences();
         preferenceObserver = new PreferenceObserver(this, handler);
         context.ContentResolver!.RegisterContentObserver(
@@ -72,10 +75,15 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     public bool DismissKeyboardOnSubmit { get; set; } = true;
     internal float Density => Math.Max(Resources?.DisplayMetrics?.Density ?? 1f, 0.1f);
     internal PlatformInput Input => Window.PlatformInput;
+    internal NativeContextMenu? NativeContextMenu { get; set; }
+
+    internal static GooView? TryGetNativeOwner(global::Goo.Window window) =>
+        nativeOwners.TryGetValue(window, out var view) && !view.disposed && view.resumed
+        && view.IsAttachedToWindow && view.host.IsPresentationAttached ? view : null;
 
     public void Resume()
     {
-        if (disposed)
+        if (disposed || !Window.IsOpen)
             return;
         resumed = true;
         RefreshPreferences();
@@ -133,20 +141,21 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         if (disposed)
             return;
         resumed = false;
+        NativeContextMenu?.OwnerClosed();
         CancelFrames();
         host.Suspend();
     }
 
     public void SurfaceCreated(ISurfaceHolder holder)
     {
-        if (disposed || holder.Surface is not { } surface)
+        if (disposed || !Window.IsOpen || holder.Surface is not { } surface)
             return;
         host.AcquireSurface(surface);
     }
 
     public void SurfaceChanged(ISurfaceHolder holder, Format format, int width, int height)
     {
-        if (disposed)
+        if (disposed || !Window.IsOpen)
             return;
         if (holder.Surface is { } surface)
             host.RefreshSurface(surface);
@@ -160,6 +169,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         if (disposed)
             return;
+        NativeContextMenu?.OwnerClosed();
         CancelFrames();
         Input.FocusLost();
         host.DetachPresentation();
@@ -169,12 +179,21 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     public override void OnWindowFocusChanged(bool hasWindowFocus)
     {
         base.OnWindowFocusChanged(hasWindowFocus);
-        if (!disposed)
+        if (!disposed && Window.IsOpen)
             host.SetFocused(hasWindowFocus && resumed);
+    }
+
+    protected override void OnAttachedToWindow()
+    {
+        base.OnAttachedToWindow();
+        if (!disposed && !nativeOwners.TryGetValue(Window, out _))
+            nativeOwners.Add(Window, this);
     }
 
     protected override void OnDetachedFromWindow()
     {
+        nativeOwners.Remove(Window);
+        NativeContextMenu?.OwnerClosed();
         CancelFrames();
         base.OnDetachedFromWindow();
     }
@@ -508,8 +527,10 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             lock (wakeGate)
             {
                 disposed = true;
+                nativeOwners.Remove(Window);
                 handler.RemoveCallbacksAndMessages(null);
             }
+            NativeContextMenu?.OwnerClosed();
             CancelFrames();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
             Context!.ContentResolver!.UnregisterContentObserver(preferenceObserver);

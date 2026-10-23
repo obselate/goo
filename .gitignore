@@ -49,6 +49,7 @@
 !/.github/scripts/validate-onboarding.py
 !/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
+!/.github/scripts/run-android-native-menus.sh
 !/.github/scripts/qualify-linux-runtime.sh
 
 !/Goo/

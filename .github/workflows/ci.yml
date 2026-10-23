@@ -678,7 +678,7 @@ jobs:
             ${{ runner.temp }}/goo-linux-toolchain.tar.gz
 
   linux-packages:
-    needs: [changes, linux-validation, macos-native]
+    needs: [changes, linux-validation, macos-native, android]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -773,11 +773,16 @@ jobs:
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
 
-      - name: Pack optional native menus
+      - name: Download portable native menu package
         if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet pack Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: android-package
+          path: artifacts/portable-native-menus
+
+      - name: Stage portable native menu package
+        if: needs.changes.outputs.full == 'true'
+        run: cp artifacts/portable-native-menus/Goo.NativeMenus.*.nupkg artifacts/packages/
 
       - name: Pack Goo DevTools and template
         if: needs.changes.outputs.full == 'true'
@@ -1476,7 +1481,7 @@ jobs:
 
   release-goo:
     if: github.repository == 'obselate/goo' && startsWith(github.ref, 'refs/tags/v')
-    needs: [changes, quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-consumer, windows-x64]
+    needs: [changes, quality, macos-arm64, linux-validation, linux-fixtures, linux-packages, linux-x64, android, android-consumer, android-native-menus, windows-x64]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     environment: release
@@ -1614,6 +1619,8 @@ jobs:
     needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      GooBuildAndroid: 'true'
     steps:
       - name: No affected inputs
         if: needs.changes.outputs.full != 'true'
@@ -1659,10 +1666,14 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'
         run: dotnet pack Goo.Android/Goo.Android.csproj -c Release --no-build -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+      - name: Pack Android native menus
+        if: needs.changes.outputs.full == 'true'
+        run: dotnet pack Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release --no-build -p:GooBuildAndroid=true -o artifacts/android-packages -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true'
         with:
@@ -1711,6 +1722,29 @@ jobs:
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
             Goo/Runtime/Vulkan/android-*/text-native-build.json
+
+  android-native-menus:
+    needs: [changes, android]
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: android-smoke
+          path: artifacts/android-native-menu-app
+      - name: Enable Android hardware virtualization
+        run: sudo chmod 666 /dev/kvm
+      - name: Check native Android context menus
+        run: |
+          .github/scripts/run-android-native-menus.sh \
+            artifacts/android-native-menu-app/tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*-Signed.apk
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: android-native-menu-results
+          path: artifacts/android-native-menus/logs/
 
   android-consumer:
     needs: [changes, linux-packages, android]
@@ -1769,7 +1803,7 @@ jobs:
           import shutil
           from pathlib import Path
           source = Path('artifacts/android-packages').resolve()
-          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Gestures"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
+          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Gestures"/><package pattern="Goo.NativeMenus"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
           consumer = Path('artifacts/android-consumer')
           for name in ['Goo.AndroidSmoke', 'Goo.AndroidSmoke.Shared']:
               shutil.copytree(Path('tests') / name, consumer / name, ignore=shutil.ignore_patterns('bin', 'obj'))

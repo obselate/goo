@@ -31,12 +31,26 @@ Reference `Goo.NativeMenus`. Share `Command` objects with widgets.
 | macOS | Global bar selected by the key Goo window | NSMenu |
 | Windows | Per-window HMENU | TrackPopupMenuEx |
 | Wayland | Unsupported | Unsupported |
-| Android | Unsupported | Unsupported in this slice |
+| Android | Unsupported | Android ContextMenu |
 
 macOS keeps SDL's application and system menus. `Super` means Command.
 The default bar is restored only while this package still owns the menu.
 Windows uses the active keyboard layout and rebuilds accelerators when it changes.
 `Super` and keys outside that layout return `Unsupported`.
 The official SDL binary supplies the pre-TranslateMessage hook. No SDL patch is required.
+
+Android requires `GooActivity`, which forwards native menu closure to the owner.
+Other Activity hosts return `Unsupported`. Android shortcuts return `Unsupported`.
+Activity teardown completes the menu as `OwnerClosed`.
+Build both package targets with `-p:GooBuildAndroid=true`.
+
+```sh
+dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true
+adb shell am start -n org.goo.androidsmoke/.MainActivity --ez goo.native_menu_smoke true
+adb logcat -s GooNativeMenus
+```
+
+On a Vulkan Android device, open `Actions`, then choose `Select`. Press Back on the cancellation menu.
+The smoke then checks owner-close completion and prints `passed`.
 
 See [API reference](api-native-menus/public.md).

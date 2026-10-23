@@ -1,6 +1,9 @@
 <Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(GooBuildAndroid)' == 'true'">net10.0;net10.0-android</TargetFrameworks>
+    <LanguageTargets Condition="'$(TargetFramework)' == ''">$(MSBuildToolsPath)/Microsoft.Common.CrossTargeting.targets</LanguageTargets>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">33</SupportedOSPlatformVersion>
     <OutputType>Library</OutputType>
     <RootNamespace>Goo</RootNamespace>
     <PackageId>Goo.NativeMenus</PackageId>
@@ -18,6 +21,13 @@
     <ProjectReference Include="../Goo/Goo.gsproj" />
     <None Include="../docs/native-menus.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <ProjectReference Include="../Goo.Android/Goo.Android.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Platform/AndroidMenuBridge.gs" Condition="'$(TargetFramework)' != 'net10.0-android'" />
+    <Compile Remove="Platform/AndroidMenuBridge.Desktop.gs" Condition="'$(TargetFramework)' == 'net10.0-android'" />
+  </ItemGroup>
   <Target Name="IncludeNativeMenuDocumentation" AfterTargets="CoreCompile"
           BeforeTargets="DocumentationProjectOutputGroup" Condition="'$(DocumentationFile)' != ''">
     <ItemGroup>
@@ -26,5 +36,18 @@
       <DocumentationProjectOutputGroupOutput Include="@(DocFileItem->'%(FullPath)')"
           FinalOutputPath="@(FinalDocFile->'%(FullPath)')" TargetPath="@(DocFileItem->'%(Filename)%(Extension)')" />
     </ItemGroup>
+  </Target>
+  <Target Name="NormalizeAndroidMenuReferencePath" AfterTargets="_GsharpGetRefAssemblyForPack"
+          Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <ItemGroup>
+      <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
+    </ItemGroup>
+  </Target>
+  <Target Name="ExcludeImportedMenuNativeLibraries" BeforeTargets="_CreateAarCache"
+          DependsOnTargets="_CategorizeAndroidLibraries" Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <ItemGroup>
+      <EmbeddedNativeLibrary Remove="@(ExtractedNativeLibraryImports)" />
+    </ItemGroup>
+    <Delete Files="$(_AarOutputPath)" />
   </Target>
 </Project>

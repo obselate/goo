@@ -11,6 +11,7 @@ public abstract class GooActivity : Activity
     private static bool processLaunched;
     private GooView? view;
     private InsetsListener? insets;
+    private FrameLayout? content;
 
     /// <summary>Gets the saved activity state passed to CreateWindow, or null for a fresh activity.</summary>
     protected Bundle? SavedInstanceState { get; private set; }
@@ -20,6 +21,14 @@ public abstract class GooActivity : Activity
 
     /// <summary>Gets the result of forwarding the most recent Android activation.</summary>
     public ActivationPostStatus LastActivationStatus { get; private set; } = ActivationPostStatus.NotInitialized;
+    internal bool OwnsNativeContextMenu(GooView candidate) => ReferenceEquals(view, candidate);
+
+    /// <summary>Completes the active native context menu after Android closes it.</summary>
+    public override void OnContextMenuClosed(IMenu menu)
+    {
+        view?.NativeContextMenu?.Closed();
+        base.OnContextMenuClosed(menu);
+    }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -28,7 +37,7 @@ public abstract class GooActivity : Activity
         if (!OperatingSystem.IsAndroidVersionAtLeast(35))
             Window!.SetDecorFitsSystemWindows(false);
         Window!.SetSoftInputMode(SoftInput.AdjustResize);
-        var content = new FrameLayout(this);
+        content = new FrameLayout(this);
         view = new GooView(this, CreateWindow());
         content.AddView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent));
         insets = new InsetsListener();
@@ -101,8 +110,11 @@ public abstract class GooActivity : Activity
 
     protected override void OnDestroy()
     {
+        content?.SetOnApplyWindowInsetsListener(null);
+        if (view is { } current && current.Parent is ViewGroup parent) parent.RemoveView(current);
         view?.Dispose();
         view = null;
+        content = null;
         insets?.Dispose();
         insets = null;
         base.OnDestroy();

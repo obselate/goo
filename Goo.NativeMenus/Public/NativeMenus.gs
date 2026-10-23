@@ -121,6 +121,7 @@ public sealed class NativeMenus {
             }
             let snapshot = NativeMenuSnapshot(items)
             if !owner.IsOpen { return Task.FromResult(NativeMenuResult(NativeMenuStatus.OwnerClosed)) }
+            if OperatingSystem.IsAndroid() { return AndroidMenuBridge.Show(owner, point, snapshot) }
             if !OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows() {
                 return Task.FromResult(NativeMenuResult(NativeMenuStatus.Unsupported))
             }
