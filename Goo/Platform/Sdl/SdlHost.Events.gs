@@ -10,7 +10,8 @@ internal unsafe partial class SdlHost {
   private func Dispatch(nativeEvent SDLEvent) {
     pendingEvents = true
     let eventType = SDLEventType(nativeEvent.Type)
-    if eventType == SDLEventType.SystemThemeChanged {
+    if eventType == SDLEventType.SystemThemeChanged || eventType == SDLEventType.LocaleChanged {
+      if eventType == SDLEventType.LocaleChanged { preferredLocalesRead = false }
       RefreshPreferences(true)
       return
     }

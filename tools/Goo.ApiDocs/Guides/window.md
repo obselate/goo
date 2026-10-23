@@ -154,6 +154,27 @@ when the backend cannot report it.
 Apps choose whether to play UI sounds from `EventSoundsEnabled`.
 This preference does not control media playback or volume.
 
+```gsharp
+window.PreferencesChanged += (preferences PlatformPreferences) -> {
+    if let locales = preferences.PreferredLocales {
+        for tag in locales { Console.WriteLine(tag) }
+    }
+}
+```
+
+`PreferredLocales` contains ordered BCP-47 tags. Nil means unavailable.
+Lists are copied and immutable. Equal lists do not notify.
+
+| Platform | Source and updates |
+| --- | --- |
+| Windows | SDL reads `GetUserPreferredUILanguages`. SDL locale changes refresh the list. |
+| macOS | SDL reads `NSLocale.preferredLanguages`. SDL locale changes refresh the list. |
+| Linux | `LANGUAGE`, then `LC_ALL`, then `LANG`. POSIX names become language tags. SDL is the fallback. |
+| Android | Configuration `LocaleList`, read on attach, resume and configuration changes. |
+
+The settings portal has no preferred-locale key. Apps own translations and choose
+how to apply locale tags to language and direction styles.
+
 ## Native owned and modal windows
 
 Portal backends can set `ForeignParentHandle` to the request's full

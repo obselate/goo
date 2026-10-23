@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Collections.Generic
 import System.Diagnostics
 import System.Threading
 
@@ -113,6 +114,7 @@ internal class EmbeddedHostSmoke {
         TextScaleFactor: 1.0F, ReducedMotion: false})
       Require(notifications == 4 && window.Preferences.Theme == SystemTheme.Dark
           && window.Preferences.HighContrast == true
+
           && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
         "Appearance-only preferences scheduled tree work or lost their notification")
       let preferences = PlatformPreferences{TextScaleFactor: 2.0F, ReducedMotion: true}
@@ -139,6 +141,25 @@ internal class EmbeddedHostSmoke {
       host.UpdatePreferences(PlatformPreferences{})
       Require(notifications == 8 && window.Preferences.AccentColor == nil,
         "An unavailable accent did not clear the previous color")
+      let source = List[string]()
+      source.Add("fr-CA")
+      source.Add("en")
+      let localized = PlatformPreferences{PreferredLocales: source}
+      source[0] = "ja"
+      host.UpdatePreferences(localized)
+      host.UpdatePreferences(PlatformPreferences{PreferredLocales: List[string](localized.PreferredLocales!!)})
+      Require(notifications == 9 && window.Preferences.PreferredLocales!![0] == "fr-CA"
+          && window.Preferences.PreferredLocales!![1] == "en"
+          && Double.IsPositiveInfinity(host.NextFrameDelaySeconds),
+        "Locale preferences lost their order, retained mutable input or duplicated equal lists")
+      source[0] = "en"
+      source[1] = "fr-CA"
+      host.UpdatePreferences(PlatformPreferences{PreferredLocales: source})
+      Require(notifications == 10 && window.Preferences.PreferredLocales!![0] == "en",
+        "A locale-order change did not notify")
+      host.UpdatePreferences(PlatformPreferences{})
+      Require(notifications == 11 && window.Preferences.PreferredLocales == nil,
+        "Unknown preferred locales did not clear the previous list")
       Require(window.Show() == WindowOperationResult.Unsupported
           && window.Hide() == WindowOperationResult.Unsupported,
         "Embedded lifecycle operations claimed native window support")

@@ -111,11 +111,16 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
                 ? global::Goo.Color.Rgba((accent.Data >> 16) & 255, (accent.Data >> 8) & 255,
                     accent.Data & 255, (int)((uint)accent.Data >> 24))
                 : (global::Goo.Color?)null;
+        var locales = configuration?.Locales;
+        var preferredLocales = locales is { IsEmpty: false }
+            ? Enumerable.Range(0, locales.Size()).Select(index => locales.Get(index)!.ToLanguageTag()).ToArray()
+            : null;
         host.UpdatePreferences(new PlatformPreferences
         {
             Theme = mode == global::Android.Content.Res.UiMode.NightYes ? SystemTheme.Dark
                 : mode == global::Android.Content.Res.UiMode.NightNo ? SystemTheme.Light : SystemTheme.Unknown,
             TextScaleFactor = configuration?.FontScale,
+            PreferredLocales = preferredLocales,
             ReducedMotion = !global::Android.Animation.ValueAnimator.AreAnimatorsEnabled(),
             AccentColor = accentColor,
             HighContrast = contrast switch { 0 => false, 1 => true, _ => (bool?)null },
