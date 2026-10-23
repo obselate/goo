@@ -23,6 +23,7 @@
     <Compile Remove="ProfilerSmoke.gs" />
     <Compile Remove="WindowActivationSmoke.gs" />
     <Compile Include="../Shared/RoundedOverflowScene.gs" Link="RoundedOverflowScene.gs" />
+    <Compile Include="../Shared/ClipboardDataSmoke.gs" Link="ClipboardDataSmoke.gs" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="%(Filename)%(Extension)"
