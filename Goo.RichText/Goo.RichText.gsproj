@@ -1,8 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>$(GooReleaseVersion)</Version>
     <PackageId>Goo.RichText</PackageId>
@@ -14,4 +13,11 @@
   <ItemGroup>
     <ProjectReference Include="../Goo/Goo.gsproj" />
   </ItemGroup>
+  <Target Name="RegisterRichTextDocumentation" AfterTargets="CoreCompile" Condition="'$(DocumentationFile)' != ''">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)/Goo.RichText.xml" />
+    </ItemGroup>
+  </Target>
 </Project>
