@@ -11,13 +11,19 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Goo\Goo.gsproj" />
-    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" />
     <ProjectReference Include="../../Goo.Images/Goo.Images.gsproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck\Goo.SpellCheck.csproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck.Hunspell\Goo.SpellCheck.Hunspell.csproj" />
     <ProjectReference Include="..\..\Goo.Printing\Goo.Printing.csproj" />
     <ProjectReference Include="..\..\Goo.NativeDialogs\Goo.NativeDialogs.gsproj" SetTargetFramework="TargetFramework=net10.0" />
+    <ProjectReference Include="..\..\Goo\Goo.gsproj"
+                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj"
+                      Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)"
+                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
+    <PackageReference Include="Goo.NativeMenus" VersionOverride="$(GooReleaseVersion)"
+                      Condition="'$(GooSmokeUsePackages)' == 'true'" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

@@ -1,6 +1,7 @@
 package GooAsyncReadbackSmoke
 
 import Goo
+import GooClipboardFixture
 import GooPrimitiveFixture
 import GooReadbackFixture
 import System
