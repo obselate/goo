@@ -20,7 +20,7 @@ command = [shutil.which("dotnet"), str(program)] if program.suffix == ".dll" els
 identity = "org.goo.activation." + uuid.uuid4().hex
 scheme = "goo-activation-" + uuid.uuid4().hex
 extension = ".gooactivation" + uuid.uuid4().hex
-prefix = command + ["activated", identity, str(session)]
+prefix = command + ["activated", identity, "--output=" + str(session)]
 document = session / ("one document" + extension)
 document.write_text("activation document", encoding="utf-8")
 cleanup = None

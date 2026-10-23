@@ -14,8 +14,9 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        if (args.Length < 3) throw new ArgumentException("mode, identity and output directory are required");
-        string mode = args[0], identity = args[1], root = Path.GetFullPath(args[2]);
+        if (args.Length < 3 || !args[2].StartsWith("--output=", StringComparison.Ordinal))
+            throw new ArgumentException("mode, identity and --output=directory are required");
+        string mode = args[0], identity = args[1], root = Path.GetFullPath(args[2]["--output=".Length..]);
         string tag = args.Length == 4 ? args[3] : mode;
         if (mode == "placement") { RunPlacement(root, tag); return 0; }
         if (mode == "activated") { RunActivated(identity, root, args[3..]); return 0; }
