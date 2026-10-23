@@ -2,6 +2,7 @@ package Goo
 
 import System
 import System.Collections.Generic
+import System.Threading.Tasks
 
 /// Reports a native clipboard query/read outcome independently of payload contents.
 public enum ClipboardReadStatus { Success; Empty; Unsupported; TooLarge; Failed }
@@ -80,7 +81,7 @@ public partial class Window {
   /// @returns An owned format list and explicit query status.
   public func GetClipboardFormats() ClipboardFormats {
     requireClipboardThread("Window.GetClipboardFormats")
-    if embeddedHost != nil { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}, "Embedded clipboard data is host-owned") }
+    if let embedded = embeddedHost { return embedded.QueryClipboardFormats() }
     return ClipboardTransfer.Query()
   }
 
@@ -98,6 +99,30 @@ public partial class Window {
     requireClipboardThread("Window.ReadClipboardImage")
     if embeddedHost != nil { return ClipboardImage(ClipboardReadStatus.Unsupported, error: "Embedded clipboard data is host-owned") }
     return ClipboardTransfer.ReadImage()
+  }
+
+  /// Copies requested available MIME alternatives and URI references from one native clipboard offer.
+  /// @param contentTypes Exact MIME types to read, including text/uri-list for document references.
+  /// @returns Owned data and explicit status, with no partial payload on a native read failure.
+  public func ReadClipboardDataAsync(contentTypes IReadOnlyList[string]) Task[ClipboardDataResult] {
+    requireClipboardThread("Window.ReadClipboardDataAsync")
+    let types = ClipboardTransfer.ValidateTypes(contentTypes)
+    if let embedded = embeddedHost { return embedded.ReadClipboardDataAsync(types) }
+    return Task.FromResult(ClipboardTransfer.ReadTransfer(types))
+  }
+
+  /// Publishes every MIME alternative and URI reference in one native clipboard publication.
+  /// @param data The immutable selection to publish without opening referenced documents.
+  /// @param intent Copy or a supported deferred file-cut hint, never an instruction to delete source files.
+  /// @returns Explicit publication status. Success does not confirm that a paste occurred.
+  public func WriteClipboardAsync(data TransferData, intent ClipboardIntent = ClipboardIntent.Copy) Task[ClipboardWriteResult] {
+    requireClipboardThread("Window.WriteClipboardAsync")
+    if data == nil { throw ArgumentNullException("data") }
+    if intent != ClipboardIntent.Copy && intent != ClipboardIntent.Cut { throw ArgumentOutOfRangeException("intent") }
+    if intent == ClipboardIntent.Cut && data.Uris.Count == 0 { throw ArgumentException("Cut requires document references", "intent") }
+    if data.Representations.Count == 0 && data.Uris.Count == 0 { throw ArgumentException("Clipboard publication requires data", "data") }
+    if let embedded = embeddedHost { return embedded.WriteClipboardAsync(data, intent) }
+    return Task.FromResult(ClipboardTransfer.WriteTransfer(data, intent))
   }
 
   private func requireClipboardThread(operation string) {
