@@ -132,7 +132,8 @@ internal static class Program
     private static void Verify(List<ApplicationActivation> received, string root)
     {
         Require(received.Count == 5, "Activation count changed");
-        Require(received[0].Kind == ApplicationActivationKind.Launch && received[0].IsInitial, "Initial launch changed");
+        Require(received[0].Kind == ApplicationActivationKind.Launch && received[0].IsInitial,
+            $"Initial launch changed: {received[0].Kind}, initial={received[0].IsInitial}, target={received[0].Target}");
         var forwarded = received[1];
         Require(forwarded.Kind == ApplicationActivationKind.Arguments && forwarded.Arguments.SequenceEqual(ExpectedArguments), "Arguments changed");
         Require(received[2].Kind == ApplicationActivationKind.OpenUri && received[2].Target?.OriginalString == Link, "URI changed");
