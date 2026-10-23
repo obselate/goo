@@ -1,20 +1,18 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>$(GooReleaseVersion)</Version>
-    <PackageId>Goo.SpellCheck</PackageId>
-    <Description>Optional system spell checking and editor suggestions for Goo.</Description>
+    <PackageId>Goo.Printing</PackageId>
+    <Description>Optional paginated raster PDF export and native printing for Goo.</Description>
     <Authors>Xaz</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Goo/Goo.gsproj" />
-    <InternalsVisibleTo Include="Goo.SpellCheck.Hunspell" />
-    <InternalsVisibleTo Include="Goo.SpellCheck.Android" />
+    <InternalsVisibleTo Include="Goo.Printing.Android" />
   </ItemGroup>
 </Project>
