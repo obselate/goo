@@ -127,6 +127,7 @@ Menu keep their current in-window behavior.
 Use another PopupWindow as the owner for a submenu. Each owner permits one popup.
 Create a new root and popup for each opening. Close it when its anchor becomes
 invalid. Embedded and Android hosts return `Unsupported`.
+Native dialogs return `Busy` while a popup retires. Launch them after `Dismissed`.
 
 ## Native owned and modal windows
 

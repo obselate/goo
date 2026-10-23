@@ -25,6 +25,7 @@ internal sealed class NativeModalLease : IDisposable {
     }
 }
 
+/// Hosts owner-modal operations from optional native service packages.
 public partial class Window {
     private var nativeModal NativeModalLease?
     private var nativeModalFocus WeakReference?
@@ -51,6 +52,11 @@ public partial class Window {
             return nil
         }
         if IsInputBlocked {
+            status = NativeModalStatus.Busy
+            return nil
+        }
+        if HasChildPopup {
+            DismissChildPopups(PopupDismissReason.OutsideInteraction)
             status = NativeModalStatus.Busy
             return nil
         }
