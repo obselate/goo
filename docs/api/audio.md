@@ -133,7 +133,7 @@ Stops only this owner's playback.
 
 ### `TryOpen`
 
-Opens an optional desktop device with an explicit failure reason.
+Opens an optional platform audio device with an explicit failure reason.
 
 ### `TryPlay(SoundSource,float32)`
 

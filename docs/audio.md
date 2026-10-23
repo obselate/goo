@@ -13,7 +13,7 @@ Keep the player at application scope.
 
 | Operation | Contract |
 | --- | --- |
-| Open and dispose | Use the UI thread, after `Window.ConfigureApplication` if used. Owners share the default desktop device. |
+| Open and dispose | Use the UI thread, after `Window.ConfigureApplication` if used. Owners share the default platform output. |
 | `TryOpen().Status` | `Opened`, `Unsupported`, `SubsystemUnavailable`, or `DeviceUnavailable`. Only `Opened` carries a player. |
 | `TryPlay().Status` | `Queued`, `VoiceLimit`, `QueueBudget`, or `NativeFailure`. Only `Queued` carries playback. |
 | `SoundPlayback.Gain` | Set live gain in [0, 1]. Non-finite or out-of-range gain throws. |
@@ -41,4 +41,5 @@ disposed-owner play calls throw. Completion means drained queues, not exact audi
 - Do not retain the buffer, block, call playback controls, or access UI state.
 - Invalid counts, non-finite samples, and reader exceptions become `SourceFailure`.
 - Consumer code owns compressed decoders, decoder synchronization, looping, seek, and stereo pan.
-- Applications own mute and notification policy. System sounds, output-device selection, and Android support are not included.
+- Android uses AAudio without SDL. Desktop uses SDL.
+- Applications own mute and notification policy. System sounds and output-device selection are not included.

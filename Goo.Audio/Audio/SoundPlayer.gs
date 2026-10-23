@@ -79,8 +79,12 @@ public class SoundPlayer : IDisposable {
     }
 
     shared {
-        /// Opens an optional desktop device with an explicit failure reason.
-        public func TryOpen() SoundOpenResult -> SoundRuntime.Open()
+        /// Opens an optional platform audio device with an explicit failure reason.
+        public func TryOpen() SoundOpenResult -> if OperatingSystem.IsAndroid() {
+            AndroidSoundRuntime.Open()
+        } else {
+            SoundRuntime.Open()
+        }
     }
 
     /// Queues an immutable cue with initial gain from zero through one.

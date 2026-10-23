@@ -17,5 +17,7 @@
     <ProjectReference Include="../../Goo.Android/Goo.Android.csproj" Condition="'$(GooSmokeUsePackages)' != 'true'" />
     <PackageReference Include="Goo.Android" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
     <ProjectReference Include="../Goo.AndroidSmoke.Shared/Goo.AndroidSmoke.Shared.gsproj" />
+    <ProjectReference Include="../../Goo.Audio/Goo.Audio.gsproj" Condition="'$(GooSmokeUsePackages)' != 'true'" />
+    <PackageReference Include="Goo.Audio" Version="$(GooReleaseVersion)" Condition="'$(GooSmokeUsePackages)' == 'true'" />
   </ItemGroup>
 </Project>
