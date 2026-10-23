@@ -60,16 +60,20 @@ Subscribe before opening the first window. Check the returned status.
 - Closing the last window clears pending requests.
 - The same owner thread can initialize a new delivery lifetime.
 - Hosts and optional packages own native associations, IPC and notifications.
+- macOS cold and warm file or URL opens use this event.
+- Native document batches stay separate from drag/drop into a window.
+- Declare URL schemes and document types in the app bundle.
 
 | Post status | Meaning |
 | --- | --- |
 | Accepted | The queue owns the request. |
 | NotInitialized | Call InitializeApplicationActivation first. |
 | Closed | All windows closed. |
-| QueueFull | 64 requests are pending. |
-| TooLarge | More than 256 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
+| QueueFull | 1024 requests are pending. |
+| TooLarge | More than 4096 arguments or documents, 64 KiB per UTF-8 string, or 1 MiB total text. |
 
 Null data and relative URIs are invalid arguments.
+Native requests outside these limits are dropped.
 
 ## Visibility, activation and stacking
 

@@ -458,6 +458,11 @@ func RunDirectDriverSmoke() {
 
 func Main() {
   Window.ConfigureApplication("Goo package smoke", "0.1.0", "io.github.obselate.goo.smoke")
+  let arguments = Environment.GetCommandLineArgs()
+  if arguments.Length == 3 && arguments[1] == "--application-activation-smoke" {
+    RunApplicationActivationSmoke(Path.GetFullPath(arguments[2]))
+    return
+  }
   if Environment.GetEnvironmentVariable("GOO_DIRECT_DRIVER_SMOKE") == "1" {
     RunDirectDriverSmoke()
     return

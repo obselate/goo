@@ -332,8 +332,6 @@ public partial class Window {
       if !IsOpen {
         return
       }
-      Window.DrainApplicationActivations()
-      if !IsOpen { return }
       let imageEpoch = ImageSource.DisposeEpoch
       if imageEpoch != imageDisposeEpoch {
         imageDisposeEpoch = imageEpoch
@@ -359,6 +357,7 @@ public partial class Window {
           }
         }
         if profiling { profiler.BeginFrameTrace() }
+        Window.DrainApplicationActivations()
         let repeatStartTicks = Stopwatch.GetTimestamp()
         if !native.IsClosing && drainCloseRequest() {
           if windowTarget?.PrepareClose() != false {
