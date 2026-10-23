@@ -19,13 +19,18 @@ func RunClipboardDataSmoke() {
         let empty = TransferRepresentation("application/x-goo-empty", ReadOnlyMemory[uint8].Empty)
         let data = TransferData([]TransferRepresentation{plain, html, rtf, png, empty}, []Uri{Uri(path)})
         source[0] = uint8(120)
-        let written = window.WriteClipboardAsync(data, ClipboardIntent.Cut).GetAwaiter().GetResult()
+        let intent = if OperatingSystem.IsMacOS() { ClipboardIntent.Copy } else { ClipboardIntent.Cut }
+        let written = window.WriteClipboardAsync(data, intent).GetAwaiter().GetResult()
         ClipboardDataRequire(written.Status == DataTransferStatus.Success, "MIME clipboard publication failed: " + written.Error)
+        if OperatingSystem.IsMacOS() {
+            let cut = window.WriteClipboardAsync(data, ClipboardIntent.Cut).GetAwaiter().GetResult()
+            ClipboardDataRequire(cut.Status == DataTransferStatus.Unsupported, "macOS file Cut was not reported Unsupported")
+        }
         let types = []string{"text/plain;charset=utf-8", "text/html", "text/rtf", "image/png", "application/x-goo-empty", "text/uri-list"}
         let read = window.ReadClipboardDataAsync(types).GetAwaiter().GetResult()
         ClipboardDataRequire(read.Status == ClipboardReadStatus.Success, "MIME clipboard read failed: " + read.Error)
-        ClipboardDataRequire(read.Intent == ClipboardIntent.Cut && read.Data.Uris.Count == 1 && read.Data.Uris[0].LocalPath == path,
-            "Clipboard file selection or Cut marker changed")
+        ClipboardDataRequire(read.Intent == intent && read.Data.Uris.Count == 1 && read.Data.Uris[0].LocalPath == path,
+            "Clipboard file selection or intent changed")
         ClipboardDataRequire(read.Data.Representations.Count == 5, "A MIME alternative was silently discarded")
         for i in 0 ... data.Representations.Count {
             let expected = data.Representations[i]
@@ -43,7 +48,7 @@ func RunClipboardDataSmoke() {
         let missing = window.ReadClipboardDataAsync([]string{"application/x-goo-missing"}).GetAwaiter().GetResult()
         ClipboardDataRequire(missing.Status == ClipboardReadStatus.Empty && missing.Data.Representations.Count == 0,
             "An absent MIME type was not reported Empty")
-        Console.WriteLine("Clipboard MIME alternatives, PNG, file Cut, empty representation and owned snapshot passed")
+        Console.WriteLine("Clipboard MIME alternatives, PNG, file intent, empty representation and owned snapshot passed")
     } finally {
         if window.IsOpen {
             window.RequestClose()

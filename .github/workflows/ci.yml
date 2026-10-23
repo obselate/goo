@@ -339,6 +339,15 @@ jobs:
           codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             "$RUNNER_TEMP/Consumer Copy.app/Contents/MacOS/Goo.PackageSmoke"
+      - name: Verify native macOS clipboard formats and source exit
+        run: |
+          GOO_CLIPBOARD_DATA_SMOKE=1 \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
+          GOO_CLIPBOARD_CHILD="$PWD/artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke" \
+            dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
+            -c Release -r osx-arm64 --nologo -p:BuildProjectReferences=false \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            --filter FullyQualifiedName~MacClipboardTests
 
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'

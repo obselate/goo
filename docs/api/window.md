@@ -427,14 +427,15 @@ Start clipboard calls on the open window's UI thread. Check `result.Status`.
 | Owned data | Bytes and URI lists stay valid after clipboard replacement or window close. Caller changes cannot alter published bytes. |
 | Text and images | Plain text and HTML use UTF-8 without a terminator. RTF and encoded images keep their bytes. |
 | Files | Put references in `Uris`, not a second URI-list representation. Goo does not open the files. Desktop references must be local file URIs. |
-| Cut | File Cut requires URIs. It requests a move and never deletes sources. Editor Cut writes Copy data, then removes its selection after Success. |
+| Cut | File Cut requires URIs and never deletes sources. macOS returns `Unsupported`. Editor Cut writes Copy data, then removes its selection after Success. |
 | Read status | Missing requested data is `Empty`. A present zero-byte format is `Success`. Failed reads return no partial selection. |
 | Write status | Unsupported formats are not dropped. Native failures can replace or clear the old clipboard. Success does not confirm paste. |
 | Limits | At most 128 MIME names, 256 ASCII bytes per name and 64 MiB total bytes. Text is limited to 16 MiB. Existing file-list bounds apply. |
-| Platforms | These methods support native Windows and Wayland. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
+| Platforms | These methods support native Windows, macOS and Wayland. Other hosts return `Unsupported`. Existing clipboard methods keep their behavior. |
 | Windows formats | HTML, RTF, PNG and files use native formats. PNG, JPEG and GIF also offer a native bitmap. Other MIME types use OLE streams. |
 | Windows limits | MIME names have at most 255 characters and cannot differ only by case. Plain text cannot contain NUL. An incompatible COM apartment returns `Unsupported`. |
-| Lifetime | Windows keeps data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
+| macOS formats | MIME bytes use native pasteboard types. File references use separate NSURL items. All data is copied before publication. |
+| Lifetime | Windows and macOS keep data after app exit. Wayland needs a clipboard manager. A document URI does not grant persistent access. |
 
 
 ## `ClipboardDataResult`
