@@ -94,6 +94,7 @@ print("\n".join(build["commonOptions"] + build["harfbuzzOptions"]))
 PY
 )
 meson setup "$work/build" "$source_root" --cross-file "$work/android.ini" "${options[@]}"
+python3 "$repo_root/tools/Goo.TextNative/validate-build-options.py" "$work/build"
 ninja -C "$work/build" -j"${GOO_NATIVE_JOBS:-4}"
 for name in harfbuzz harfbuzz-gpu; do
   library="$(find "$work/build/src" -maxdepth 1 -type f -name "lib$name.so*" ! -name '*.symbols' -print)"

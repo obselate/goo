@@ -100,6 +100,7 @@ if "$static_enabled"; then library_mode=both; fi
 common_options=(--prefix=/usr --libdir=lib --buildtype=release --default-library="$library_mode" --wrap-mode=nodownload)
 harfbuzz_options=(-Dglib=disabled -Dgobject=disabled -Dcairo=disabled -Dchafa=disabled -Dpng=disabled -Dzlib=disabled -Dicu=disabled -Dgraphite=disabled -Dgraphite2=disabled -Dfreetype=disabled -Dfontations=disabled -Dgdi=disabled -Ddirectwrite=disabled -Dcoretext=disabled -Dharfrust=disabled -Dkbts=disabled -Dwasm=disabled -Draster=disabled -Dvector=disabled -Dgpu=enabled -Dsubset=disabled -Dtests=disabled -Dintrospection=disabled -Ddocs=disabled -Ddoc_tests=false -Dutilities=disabled -Dbenchmark=disabled -Dgpu_demo=disabled -Dwith_libstdcxx=false)
 meson setup "$work/harfbuzz-build" "$work/harfbuzz-15.0.0" "${common_options[@]}" "${harfbuzz_options[@]}"
+python3 "$repo_root/tools/Goo.TextNative/validate-build-options.py" "$work/harfbuzz-build"
 ninja -C "$work/harfbuzz-build" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf 2)"
 harfbuzz_library="$(find "$work/harfbuzz-build" -type f -name 'libharfbuzz.so.*' ! -name '*.symbols' -print | LC_ALL=C sort | tail -n 1)"
 gpu_library="$(find "$work/harfbuzz-build" -type f -name 'libharfbuzz-gpu.so.*' ! -name '*.symbols' -print | LC_ALL=C sort | tail -n 1)"

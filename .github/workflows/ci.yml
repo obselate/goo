@@ -1237,8 +1237,37 @@ jobs:
           if-no-files-found: ignore
           path: artifacts/reports/
 
+  windows-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Rebuild Windows text native libraries
+        run: |
+          mkdir -p artifacts/windows-native
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            -v "$PWD/artifacts/windows-native:/out" \
+            ubuntu:22.04@sha256:3b06811b2afd352be909dd088a004166d665dc76d38b13eada33522a9d915c6f \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                binutils-mingw-w64-x86-64 ca-certificates curl file \
+                gcc-mingw-w64-x86-64-win32 g++-mingw-w64-x86-64-win32 \
+                meson ninja-build patch python3 tar xz-utils
+              /src/.github/scripts/build-text-native-win-x64.sh /out
+            '
+      - name: Compare Windows text native libraries
+        run: |
+          cmp artifacts/windows-native/goo-harfbuzz.dll Goo/Runtime/Vulkan/win-x64/goo-harfbuzz.dll
+          cmp artifacts/windows-native/goo-harfbuzz-gpu.dll Goo/Runtime/Vulkan/win-x64/goo-harfbuzz-gpu.dll
+          python3 .github/scripts/validate-text-native-rebuild.py \
+            Goo/Runtime/Vulkan/win-x64/text-native-build.json \
+            artifacts/windows-native/text-native-build.json
+
   windows-x64:
-    needs: [changes, linux-packages]
+    needs: [changes, linux-packages, windows-native]
     runs-on: ${{ needs.changes.outputs.full == 'true' && 'windows-2022' || 'ubuntu-24.04' }}
     timeout-minutes: 25
     steps:
