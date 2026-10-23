@@ -282,7 +282,8 @@ internal static class Program
         finally { window.RequestClose(); window.Pump(0); }
     }
 
-    private static void PumpUntil(Window window, Func<bool> ready)
+    private static void PumpUntil(Window window, Func<bool> ready,
+        [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(ready))] string? condition = null)
     {
         long deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 15;
         do
@@ -291,7 +292,7 @@ internal static class Program
             if (ready()) return;
             Thread.Sleep(5);
         } while (Stopwatch.GetTimestamp() < deadline);
-        throw new TimeoutException("Native placement did not reach its requested state");
+        throw new TimeoutException($"Native placement did not reach {condition}: {window.Width}x{window.Height}, {window.CapturePlacement().Placement?.State}");
     }
 
     private static void WaitFor(string path)
