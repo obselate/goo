@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "$(uname -s)" == Darwin ]]; then
+  exec "$@"
+fi
+
 runtime_root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/goo-xdg-runtime.XXXXXX")"
 export XDG_RUNTIME_DIR="$runtime_root"
 export WAYLAND_DISPLAY="${GOO_WAYLAND_DISPLAY:-goo-wayland}"
