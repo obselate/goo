@@ -15,6 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.Notifications.Android" />
+    <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <ProjectReference Include="../Goo/Goo.gsproj" />
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.1" />
     <None Include="../docs/notifications.md" Pack="true" PackagePath="README.md" />

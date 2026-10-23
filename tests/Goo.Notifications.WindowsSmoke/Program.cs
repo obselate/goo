@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
-using System.Text.Json;
+using System.Text;
 using System.Xml.Linq;
 using Goo;
 
@@ -15,10 +15,10 @@ if (args.Length == 2 && args[0] == "--goo-notification")
     typeof(Window).GetMethod("DrainApplicationActivations", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null);
     Require(received?.Kind == ApplicationActivationKind.Notification, "Protocol did not raise notification activation");
     string activationOutput = Output(new Uri(args[1]).Scheme);
-    File.WriteAllText(activationOutput + ".new", JsonSerializer.Serialize(new[]
+    File.WriteAllLines(activationOutput + ".new", new[]
     {
         received!.NotificationId, received.ActionId, received.Payload
-    }));
+    }.Select(value => Convert.ToBase64String(Encoding.UTF8.GetBytes(value))));
     File.Move(activationOutput + ".new", activationOutput);
     return;
 }
@@ -56,9 +56,7 @@ if (shown.Status == NotificationStatus.Accepted)
         "Remove failed: " + removed.Status + " / " + removed.Error);
 }
 
-var implementation = typeof(Notifications).Assembly.GetType("Goo.WindowsNotificationService", true)!;
-string xml = (string)implementation.GetMethod("Content", BindingFlags.Static | BindingFlags.NonPublic)!
-    .Invoke(null, new object[] { scheme, message })!;
+string xml = WindowsNotificationService.Content(scheme, message);
 var toast = XElement.Parse(xml);
 Require((string?)toast.Attribute("activationType") == "protocol", "Toast uses a non-protocol activator");
 Require(toast.Descendants("text").First().Value == message.Title, "Toast XML changed plain text");
@@ -70,13 +68,13 @@ try
     var watch = Stopwatch.StartNew();
     while (!File.Exists(output) && watch.Elapsed < TimeSpan.FromSeconds(20)) await Task.Delay(50);
     Require(File.Exists(output), "Registered protocol did not reach its handler");
-    var received = JsonSerializer.Deserialize<string[]>(File.ReadAllText(output))!;
+    var received = File.ReadAllLines(output).Select(value => Encoding.UTF8.GetString(Convert.FromBase64String(value)));
     Require(received.SequenceEqual(new[] { message.Id, "", message.Payload }), "Protocol activation changed notification data");
     Console.WriteLine("protocol: notification event retained ID, empty action and opaque Unicode payload");
 }
 finally { File.Delete(output); }
 
-static string Output(string scheme) => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), scheme + ".json");
+static string Output(string scheme) => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), scheme + ".payload");
 static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);

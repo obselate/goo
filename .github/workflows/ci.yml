@@ -1652,8 +1652,8 @@ jobs:
         shell: pwsh
         run: |
           dotnet publish tests/Goo.Notifications.WindowsSmoke/Goo.Notifications.WindowsSmoke.csproj `
-            -c Release -r win-x64 --self-contained true -m:2 -p:TreatWarningsAsErrors=true `
-            -o artifacts/notifications-windows
+            -c Release -r win-x64 --self-contained true -m:4 -p:TreatWarningsAsErrors=true `
+            -p:PublishAot=true -o artifacts/notifications-windows
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item artifacts/windows-smoke/SDL3.dll artifacts/notifications-windows -Force
           & artifacts/notifications-windows/Goo.Notifications.WindowsSmoke.exe

@@ -58,10 +58,10 @@ internal class WindowsNotificationIdentity {
         }
 
         private func Matches(path string, identifier string) bool {
-            var iid = ToastGuid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")
+            var iid = ToastGuid.Parse("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")
             if SHGetPropertyStoreFromParsingName(path, nint(0), 0u, ref iid, out var store) < 0 { return false }
             try {
-                var key = ToastPropertyKey{ Format: ToastGuid("9f4c2855-9f79-4b39-a8d0-e1d42de1d5f3"), Id: 5u }
+                var key = ToastPropertyKey{ Format: ToastGuid.Parse("9f4c2855-9f79-4b39-a8d0-e1d42de1d5f3"), Id: 5u }
                 let get = WindowsToastNative.Method[ToastPropertyGet](store, 5)
                 if get(store, ref key, out var value) < 0 { return false }
                 try {
