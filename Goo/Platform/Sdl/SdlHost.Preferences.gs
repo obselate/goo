@@ -54,7 +54,7 @@ internal unsafe partial class SdlHost {
           let tag = entry.Split('.')[0].Split('@')[0].Replace('_', '-')
           if tag.Length > 0 && tag != "C" && tag != "POSIX" && !locales.Contains(tag) { locales.Add(tag) }
         }
-        if locales.Count > 0 { return PreferredLocaleList(locales) }
+        return locales.Count == 0 ? nil : PreferredLocaleList(locales)
       }
     }
     var count = 0
