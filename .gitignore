@@ -48,6 +48,7 @@
 !/.github/scripts/validate-onboarding.py
 !/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
+!/.github/scripts/check-wayland-data-transfer.sh
 !/.github/scripts/qualify-linux-runtime.sh
 
 !/Goo/

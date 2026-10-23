@@ -63,13 +63,11 @@ accepts Nemo's plain-text names and tries to decode those names as file URIs,
 producing an empty drop. The build runs `test_sdl_drop.py` against the actual C
 handler; the unpatched handler fails the mixed URI/text case.
 
-`wayland-outbound-file-drag.patch` adds Goo's file-only drag source bridge to the
-pinned SDL Wayland backend. The held pointer's primary-press serial starts a
-Copy `text/uri-list` offer after Goo moves an in-window drag outside its source
-window. Source completion reports acceptance after the Wayland target finishes.
-The bridge uses SDL's existing Wayland seat, data device, and event loop and
-adds no runtime dependency. A same-process return to an SDL window reads its
-owned URI list directly to avoid waiting on its own event loop.
+`wayland-data-transfer.patch` adds MIME drag sources and owned drop captures.
+It uses SDL's Wayland seat, data device and event loop.
+Copy and Move complete only after the target finishes.
+Pipe I/O runs off the UI thread. Same-process drops use the owned data directly.
+The bridge adds no runtime dependency.
 
 `wayland-foreign-parent.patch` exports
 `bool Goo_SetForeignParent(SDL_Window *, const char *bare_handle, Uint8 modal)`.

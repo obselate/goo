@@ -38,7 +38,7 @@ internal partial class PointerInput {
   private var dragHitPath List[Node]?
   private var dragGeneration int64
   private var creatingDrag bool
-  private var nativeDragHost NativeFileDragHost?
+  private var dragHost WindowHost?
   private var resetting bool
 
   internal init(focus FocusManager, queue InputEventQueue) {
@@ -176,7 +176,7 @@ internal partial class PointerInput {
   }
 
   internal func Bind(host WindowHost) {
-    nativeDragHost = host as NativeFileDragHost?
+    dragHost = host
     host.PointerMoved += QueueMoveFromHost
     host.PointerPressed += QueuePressFromHost
     host.PointerReleased += QueueReleaseFromHost

@@ -1,0 +1,564 @@
+diff --git a/src/dynapi/SDL_dynapi.sym b/src/dynapi/SDL_dynapi.sym
+index ec2e97b..40b9906 100644
+--- a/src/dynapi/SDL_dynapi.sym
++++ b/src/dynapi/SDL_dynapi.sym
+@@ -1267,6 +1267,12 @@ SDL3_0.0.0 {
+     SDL_GetSystemPageSize;
+     SDL_GetPenDeviceType;
+     SDL_CreateAnimatedCursor;
++    Goo_GetDataTransferCapabilities;
++    Goo_StartDataDrag;
++    Goo_CancelDataDrag;
++    Goo_SetDataDropCallback;
++    Goo_ReceiveDataDrop;
++    Goo_FinishDataDrop;
+     SDL_RotateSurface;
+     SDL_LoadSurface_IO;
+     SDL_LoadSurface;
+diff --git a/src/video/wayland/SDL_waylanddatamanager.h b/src/video/wayland/SDL_waylanddatamanager.h
+index bdde6a2..9e95eb8 100644
+--- a/src/video/wayland/SDL_waylanddatamanager.h
++++ b/src/video/wayland/SDL_waylanddatamanager.h
+@@ -35,6 +35,7 @@
+ 
+ typedef struct SDL_WaylandDataDevice SDL_WaylandDataDevice;
+ typedef struct SDL_WaylandPrimarySelectionDevice SDL_WaylandPrimarySelectionDevice;
++typedef struct GooDataDropState GooDataDropState;
+ 
+ typedef struct
+ {
+@@ -56,6 +57,12 @@ typedef struct
+     SDL_WaylandDataDevice *data_device;
+     SDL_ClipboardDataCallback callback;
+     SDL_WaylandUserdata userdata;
++    SDL_Window *goo_drag_window;
++    void (SDLCALL *goo_drag_finished)(void *userdata, int status, Uint32 effect, Uint8 source_removal);
++    void (SDLCALL *goo_drag_send)(void *userdata, const char *mime_type, int fd);
++    Uint32 goo_drag_effect;
++    bool goo_drag_accepted;
++    void *goo_drag_userdata;
+ } SDL_WaylandDataSource;
+ 
+ typedef struct
+@@ -76,6 +83,8 @@ typedef struct
+     // Callback data for queued receive.
+     struct wl_callback *callback;
+     int read_fd;
++    Uint32 goo_source_actions;
++    Uint32 goo_action;
+ } SDL_WaylandDataOffer;
+ 
+ typedef struct
+@@ -98,6 +107,8 @@ struct SDL_WaylandDataDevice
+     const char *mime_type;
+     bool has_mime_file, has_mime_text;
+     SDL_Window *dnd_window;
++    SDL_WaylandDataSource *goo_drag_source;
++    GooDataDropState *goo_drop;
+ 
+     // Clipboard and Primary Selection
+     uint32_t selection_serial;
+diff --git a/src/video/wayland/SDL_waylandevents.c b/src/video/wayland/SDL_waylandevents.c
+index 3fe2db2..2031b86 100644
+--- a/src/video/wayland/SDL_waylandevents.c
++++ b/src/video/wayland/SDL_waylandevents.c
+@@ -65,6 +65,7 @@
+ #include "../../events/SDL_keysym_to_scancode_c.h"
+ #include "../../events/imKStoUCS.h"
+ #include <errno.h>
++#include <fcntl.h>
+ #include <poll.h>
+ #include <time.h>
+ #include <sys/mman.h>
+@@ -1059,8 +1060,14 @@ static void pointer_handle_button_common(SDL_WaylandSeat *seat, uint32_t serial,
+         if (state) {
+             Wayland_UpdateImplicitGrabSerial(seat, serial);
+             seat->pointer.buttons_pressed |= SDL_BUTTON_MASK(sdl_button);
++            if (sdl_button == SDL_BUTTON_LEFT) {
++                seat->goo_drag_serial = serial;
++            }
+         } else {
+             seat->pointer.buttons_pressed &= ~(SDL_BUTTON_MASK(sdl_button));
++            if (sdl_button == SDL_BUTTON_LEFT) {
++                seat->goo_drag_serial = 0;
++            }
+         }
+ 
+         if (down && sdl_button != SDL_BUTTON_LEFT) {
+@@ -2616,19 +2623,47 @@ static const struct wl_seat_listener seat_listener = {
+ static void data_source_handle_target(void *data, struct wl_data_source *wl_data_source,
+                                       const char *mime_type)
+ {
++    ((SDL_WaylandDataSource *)data)->goo_drag_accepted = mime_type && *mime_type;
+ }
+ 
+ static void data_source_handle_send(void *data, struct wl_data_source *wl_data_source,
+                                     const char *mime_type, int32_t fd)
+ {
+-    Wayland_data_source_send((SDL_WaylandDataSource *)data, mime_type, fd);
++    SDL_WaylandDataSource *source = data;
++    if (source->goo_drag_send) {
++        int flags = fcntl(fd, F_GETFL);
++        if (flags >= 0) {
++            fcntl(fd, F_SETFL, flags | O_NONBLOCK);
++        }
++        source->goo_drag_send(source->goo_drag_userdata, mime_type, fd);
++    } else {
++        Wayland_data_source_send(source, mime_type, fd);
++    }
++}
++
++static void Goo_FinishDataDrag(SDL_WaylandDataSource *source, int status)
++{
++    void (SDLCALL *callback)(void *, int, Uint32, Uint8) = source->goo_drag_finished;
++    void *userdata = source->goo_drag_userdata;
++    Uint32 effect = source->goo_drag_effect;
++    SDL_Window *window = source->goo_drag_window;
++    if (window && SDL_GetPointerProperty(SDL_GetWindowProperties(window), "Goo.DataDrag.1", NULL) == source) {
++        SDL_ClearProperty(SDL_GetWindowProperties(window), "Goo.DataDrag.1");
++    }
++    if (source->data_device && source->data_device->goo_drag_source == source) {
++        source->data_device->goo_drag_source = NULL;
++    }
++    Wayland_data_source_destroy(source);
++    if (callback) {
++        callback(userdata, status, status == 0 ? effect : 0, status == 0 && effect == 2);
++    }
+ }
+ 
+ static void data_source_handle_cancelled(void *data, struct wl_data_source *wl_data_source)
+ {
+     SDL_WaylandDataSource *source = data;
+     if (source) {
+-        Wayland_data_source_destroy(source);
++        Goo_FinishDataDrag(source, 1);
+     }
+ }
+ 
+@@ -2638,11 +2673,14 @@ static void data_source_handle_dnd_drop_performed(void *data, struct wl_data_sou
+ 
+ static void data_source_handle_dnd_finished(void *data, struct wl_data_source *wl_data_source)
+ {
++    SDL_WaylandDataSource *source = data;
++    Goo_FinishDataDrag(source, source->goo_drag_accepted ? 0 : 1);
+ }
+ 
+ static void data_source_handle_action(void *data, struct wl_data_source *wl_data_source,
+                                       uint32_t dnd_action)
+ {
++    ((SDL_WaylandDataSource *)data)->goo_drag_effect = dnd_action & 3;
+ }
+ 
+ static const struct wl_data_source_listener data_source_listener = {
+@@ -2654,6 +2692,303 @@ static const struct wl_data_source_listener data_source_listener = {
+     data_source_handle_action,             // Version 3
+ };
+ 
++static int Goo_DataDragError(int status, const char *error)
++{
++    SDL_SetError("%s", error);
++    return status;
++}
++
++__attribute__((visibility("default"))) Uint32 SDLCALL Goo_GetDataTransferCapabilities(SDL_Window *window)
++{
++    SDL_VideoDevice *video = SDL_GetVideoDevice();
++    if (!video || !window || !window->internal || SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") != 0) {
++        return 0;
++    }
++    SDL_VideoData *display = video->internal;
++    if (!display->data_device_manager) {
++        return 0;
++    }
++    return wl_data_device_manager_get_version(display->data_device_manager) >= 3 ? 31 : 3;
++}
++
++__attribute__((visibility("default"))) int SDLCALL Goo_StartDataDrag(SDL_Window *window,
++    const char **types, Uint32 count, Uint32 effects, void *native_object,
++    void (SDLCALL *send)(void *, const char *, int),
++    void (SDLCALL *completed)(void *, int, Uint32, Uint8), void *userdata)
++{
++    if (!(Goo_GetDataTransferCapabilities(window) & 4) || !send || !completed || !types || !count || !(effects & 3) || (effects & ~3)) {
++        return Goo_DataDragError(2, "Native MIME drag requires a Wayland v3 window and Copy or Move");
++    }
++    if (count > 128) {
++        return Goo_DataDragError(3, "Native drag exceeds 128 MIME types");
++    }
++    if (SDL_GetPointerProperty(SDL_GetWindowProperties(window), "Goo.DataDrag.1", NULL)) {
++        return Goo_DataDragError(5, "A native drag is already active");
++    }
++    SDL_VideoDevice *video = SDL_GetVideoDevice();
++    SDL_VideoData *display = video->internal;
++    SDL_WindowData *wind = window->internal;
++    SDL_WaylandSeat *seat;
++    wl_list_for_each (seat, &display->seat_list, link) {
++        if (seat->pointer.focus == wind &&
++            (seat->pointer.buttons_pressed & SDL_BUTTON_MASK(SDL_BUTTON_LEFT)) &&
++            seat->goo_drag_serial && seat->data_device && seat->data_device->data_device) {
++            break;
++        }
++    }
++    if (&seat->link == &display->seat_list) {
++        return Goo_DataDragError(4, "Native drag requires a held primary press on this window");
++    }
++    SDL_WaylandDataSource *source = Wayland_data_source_create(video);
++    if (!source) {
++        return 5;
++    }
++    source->data_device = seat->data_device;
++    source->goo_drag_window = window;
++    source->goo_drag_finished = completed;
++    source->goo_drag_send = send;
++    source->goo_drag_userdata = userdata;
++    if (!SDL_SetPointerProperty(SDL_GetWindowProperties(window), "Goo.DataDrag.1", source)) {
++        Wayland_data_source_destroy(source);
++        return 5;
++    }
++    seat->data_device->goo_drag_source = source;
++    for (Uint32 i = 0; i < count; ++i) {
++        wl_data_source_offer(source->source, types[i]);
++    }
++    wl_data_source_set_actions(source->source, effects);
++    wl_data_device_start_drag(seat->data_device->data_device, source->source,
++                              wind->surface, NULL, seat->goo_drag_serial);
++    WAYLAND_wl_display_flush(display->display);
++    return 0;
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_CancelDataDrag(SDL_Window *window)
++{
++    if (window && SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0) {
++        SDL_WaylandDataSource *source = SDL_GetPointerProperty(
++            SDL_GetWindowProperties(window), "Goo.DataDrag.1", NULL);
++        if (source) {
++            Goo_FinishDataDrag(source, 1);
++        }
++    }
++}
++
++typedef Uint32 (SDLCALL *GooDropCallback)(void *, int, float, float, const char **, Uint32, Uint32, Uint64, void *);
++
++struct GooDataDropState {
++    SDL_Window *window;
++    GooDropCallback callback;
++    void *userdata;
++    char **types;
++    Uint32 count;
++    SDL_WaylandDataDevice *device;
++    SDL_WaylandDataOffer *offer;
++    Uint64 token;
++    int refs;
++    bool dropped;
++    bool finished;
++    float x, y;
++};
++
++static Uint64 goo_drop_token;
++
++static void Goo_ReleaseDrop(GooDataDropState *state)
++{
++    if (--state->refs == 0) {
++        for (Uint32 i = 0; i < state->count; ++i) {
++            SDL_free(state->types[i]);
++        }
++        SDL_free(state->types);
++        SDL_free(state);
++    }
++}
++
++static void Goo_ResetDrop(GooDataDropState *state, int kind)
++{
++    Uint64 token = state->token;
++    SDL_WaylandDataOffer *offer = state->offer;
++    SDL_WaylandDataDevice *device = state->device;
++    bool reject = state->dropped && !state->finished;
++    state->offer = NULL;
++    state->device = NULL;
++    state->token = 0;
++    state->dropped = false;
++    state->finished = false;
++    if (device) {
++        if (device->goo_drop == state) {
++            device->goo_drop = NULL;
++        }
++        if (device->drag_offer == offer) {
++            device->drag_offer = NULL;
++        }
++    }
++    if (offer) {
++        if (reject && device) {
++            wl_data_offer_accept(offer->offer, device->drag_serial, NULL);
++            if (wl_data_offer_get_version(offer->offer) >= 3) {
++                wl_data_offer_set_actions(offer->offer, 0, 0);
++            }
++        }
++        Wayland_data_offer_destroy(offer);
++        if (reject && device) {
++            WAYLAND_wl_display_flush(device->seat->display->display);
++        }
++    }
++    if (kind && token && state->callback) {
++        state->callback(state->userdata, kind, 0, 0, NULL, 0, 0, token, NULL);
++    }
++}
++
++static void Goo_CancelDrop(GooDataDropState *state, int kind)
++{
++    ++state->refs;
++    Goo_ResetDrop(state, kind);
++    Goo_ReleaseDrop(state);
++}
++
++static void SDLCALL Goo_DestroyDrop(void *userdata, void *value)
++{
++    GooDataDropState *state = value;
++    state->window = NULL;
++    Goo_CancelDrop(state, 4);
++    Goo_ReleaseDrop(state);
++}
++
++static Uint32 Goo_UpdateDrop(GooDataDropState *state, int kind, float x, float y)
++{
++    ++state->refs;
++    Uint64 token = state->token;
++    Uint32 selected = 0;
++    if (state->window && state->offer && state->callback) {
++        const char *types[128];
++        Uint32 count = 0;
++        for (Uint32 i = 0; i < state->count; ++i) {
++            if (Wayland_data_offer_has_mime(state->offer, state->types[i])) {
++                types[count++] = state->types[i];
++            }
++        }
++        state->x = x;
++        state->y = y;
++        Uint32 allowed = (kind == 3 ? state->offer->goo_action : state->offer->goo_source_actions) & 3;
++        SDL_WaylandDataSource *source = state->device->goo_drag_source;
++        selected = state->callback(state->userdata, kind, x, y, types, count, allowed, token,
++                                   source ? source->goo_drag_userdata : NULL) & allowed;
++        if (selected != 1 && selected != 2) {
++            selected = 0;
++        }
++        if (state->window && state->offer && state->token == token) {
++            if (kind != 3) {
++                wl_data_offer_accept(state->offer->offer, state->device->drag_serial, selected && count ? types[0] : NULL);
++                wl_data_offer_set_actions(state->offer->offer, selected, selected);
++                WAYLAND_wl_display_flush(state->device->seat->display->display);
++            } else if (!selected) {
++                Goo_ResetDrop(state, 4);
++            }
++        }
++    }
++    Goo_ReleaseDrop(state);
++    return selected;
++}
++
++static bool Goo_EnterDrop(SDL_WaylandDataDevice *device, SDL_Window *window, SDL_WaylandDataOffer *offer, float x, float y)
++{
++    GooDataDropState *state = SDL_GetPointerProperty(SDL_GetWindowProperties(window), "Goo.DataDrop.1", NULL);
++    if (!state) {
++        if (device->goo_drag_source) {
++            wl_data_offer_accept(offer->offer, device->drag_serial, NULL);
++            wl_data_offer_set_actions(offer->offer, 0, 0);
++            return true;
++        }
++        return false;
++    }
++    ++state->refs;
++    if (device->goo_drop) {
++        Goo_CancelDrop(device->goo_drop, 4);
++    }
++    if (state->offer) {
++        Goo_CancelDrop(state, 4);
++    }
++    if (state->window) {
++        state->device = device;
++        state->offer = offer;
++        state->token = ++goo_drop_token;
++        device->goo_drop = state;
++        Goo_UpdateDrop(state, 1, x, y);
++    }
++    Goo_ReleaseDrop(state);
++    return true;
++}
++
++__attribute__((visibility("default"))) Uint8 SDLCALL Goo_SetDataDropCallback(SDL_Window *window,
++    GooDropCallback callback, void *userdata, const char **types, Uint32 count)
++{
++    if (!(Goo_GetDataTransferCapabilities(window) & 16) || count > 128 || (count && !types)) {
++        return 0;
++    }
++    SDL_PropertiesID props = SDL_GetWindowProperties(window);
++    if (!callback) {
++        SDL_ClearProperty(props, "Goo.DataDrop.1");
++        return 1;
++    }
++    GooDataDropState *state = SDL_calloc(1, sizeof(*state));
++    if (!state) {
++        return 0;
++    }
++    state->refs = 1;
++    state->window = window;
++    state->callback = callback;
++    state->userdata = userdata;
++    state->types = SDL_calloc(count ? count : 1, sizeof(char *));
++    if (!state->types) {
++        Goo_ReleaseDrop(state);
++        return 0;
++    }
++    for (Uint32 i = 0; i < count; ++i) {
++        state->types[i] = SDL_strdup(types[i]);
++        if (!state->types[i]) {
++            Goo_ReleaseDrop(state);
++            return 0;
++        }
++        ++state->count;
++    }
++    if (!SDL_SetPointerPropertyWithCleanup(props, "Goo.DataDrop.1", state, Goo_DestroyDrop, NULL)) {
++        Goo_ReleaseDrop(state);
++        return 0;
++    }
++    return 1;
++}
++
++__attribute__((visibility("default"))) int SDLCALL Goo_ReceiveDataDrop(SDL_Window *window, Uint64 token, const char *type)
++{
++    GooDataDropState *state = SDL_GetPointerProperty(SDL_GetWindowProperties(window), "Goo.DataDrop.1", NULL);
++    if (!state || !state->offer || !state->dropped || state->token != token || !Wayland_data_offer_has_mime(state->offer, type)) {
++        return -1;
++    }
++    int descriptors[2];
++    if (pipe2(descriptors, O_CLOEXEC | O_NONBLOCK) < 0) {
++        return -1;
++    }
++    wl_data_offer_receive(state->offer->offer, type, descriptors[1]);
++    close(descriptors[1]);
++    WAYLAND_wl_display_flush(state->device->seat->display->display);
++    return descriptors[0];
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_FinishDataDrop(SDL_Window *window, Uint64 token, Uint32 effect)
++{
++    GooDataDropState *state = SDL_GetPointerProperty(SDL_GetWindowProperties(window), "Goo.DataDrop.1", NULL);
++    if (!state || !state->offer || !state->dropped || state->token != token) {
++        return;
++    }
++    if ((effect == 1 || effect == 2) && effect == state->offer->goo_action) {
++        state->finished = true;
++        wl_data_offer_finish(state->offer->offer);
++        WAYLAND_wl_display_flush(state->device->seat->display->display);
++    }
++    Goo_CancelDrop(state, 0);
++}
++
+ static void primary_selection_source_send(void *data, struct zwp_primary_selection_source_v1 *zwp_primary_selection_source_v1,
+                                           const char *mime_type, int32_t fd)
+ {
+@@ -2750,15 +3085,22 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *wl_data_of
+ static void data_offer_handle_source_actions(void *data, struct wl_data_offer *wl_data_offer,
+                                              uint32_t source_actions)
+ {
++    SDL_WaylandDataOffer *offer = data;
++    offer->goo_source_actions = source_actions & 3;
+     SDL_LogTrace(SDL_LOG_CATEGORY_INPUT,
+                  ". In wl_data_offer_listener . data_offer_handle_source_actions on data_offer 0x%08x for Source Actions '%d'",
+                  (wl_data_offer ? WAYLAND_wl_proxy_get_id((struct wl_proxy *)wl_data_offer) : -1),
+                  source_actions);
++    if (offer->data_device->goo_drop && offer->data_device->goo_drop->offer == offer) {
++        GooDataDropState *state = offer->data_device->goo_drop;
++        Goo_UpdateDrop(state, 1, state->x, state->y);
++    }
+ }
+ 
+ static void data_offer_handle_actions(void *data, struct wl_data_offer *wl_data_offer,
+                                       uint32_t dnd_action)
+ {
++    ((SDL_WaylandDataOffer *)data)->goo_action = dnd_action & 3;
+     SDL_LogTrace(SDL_LOG_CATEGORY_INPUT,
+                  ". In wl_data_offer_listener . data_offer_handle_actions on data_offer 0x%08x for DND Actions '%d'",
+                  (wl_data_offer ? WAYLAND_wl_proxy_get_id((struct wl_proxy *)wl_data_offer) : -1),
+@@ -2812,12 +3154,18 @@ static void data_device_handle_enter(void *data, struct wl_data_device *wl_data_
+     SDL_WaylandDataDevice *data_device = data;
+     data_device->has_mime_file = false;
+     data_device->has_mime_text = false;
++    data_device->dnd_window = NULL;
+     uint32_t dnd_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+ 
+     data_device->drag_serial = serial;
+ 
+     if (id) {
+         data_device->drag_offer = wl_data_offer_get_user_data(id);
++        SDL_WindowData *goo_window = surface ? Wayland_GetWindowDataForOwnedSurface(surface) : NULL;
++        if (goo_window && Goo_EnterDrop(data_device, goo_window->sdlwindow, data_device->drag_offer,
++                                       (float)wl_fixed_to_double(x), (float)wl_fixed_to_double(y))) {
++            return;
++        }
+ 
+         // TODO: SDL Support more mime types
+ #ifdef SDL_USE_LIBDBUS
+@@ -2892,6 +3240,12 @@ static void data_device_handle_enter(void *data, struct wl_data_device *wl_data_
+ static void data_device_handle_leave(void *data, struct wl_data_device *wl_data_device)
+ {
+     SDL_WaylandDataDevice *data_device = data;
++    if (data_device->goo_drop) {
++        if (!data_device->goo_drop->dropped) {
++            Goo_CancelDrop(data_device->goo_drop, 2);
++        }
++        return;
++    }
+ 
+     if (data_device->drag_offer) {
+         if (data_device->dnd_window) {
+@@ -2921,6 +3275,13 @@ static void data_device_handle_motion(void *data, struct wl_data_device *wl_data
+                                       uint32_t time, wl_fixed_t x, wl_fixed_t y)
+ {
+     SDL_WaylandDataDevice *data_device = data;
++    if (data_device->goo_drop) {
++        GooDataDropState *state = data_device->goo_drop;
++        if (!state->dropped) {
++            Goo_UpdateDrop(state, 1, (float)wl_fixed_to_double(x), (float)wl_fixed_to_double(y));
++        }
++        return;
++    }
+ 
+     if (data_device->drag_offer && data_device->dnd_window && (data_device->has_mime_file || data_device->has_mime_text)) {
+         const float dx = (float)wl_fixed_to_double(x);
+@@ -2946,6 +3307,13 @@ static void data_device_handle_motion(void *data, struct wl_data_device *wl_data
+ static void data_device_handle_drop(void *data, struct wl_data_device *wl_data_device)
+ {
+     SDL_WaylandDataDevice *data_device = data;
++    if (data_device->goo_drop) {
++        GooDataDropState *state = data_device->goo_drop;
++        state->dropped = true;
++        data_device->drag_offer = NULL;
++        Goo_UpdateDrop(state, 3, state->x, state->y);
++        return;
++    }
+ 
+     if (data_device->drag_offer && data_device->dnd_window && (data_device->has_mime_file || data_device->has_mime_text)) {
+         SDL_LogTrace(SDL_LOG_CATEGORY_INPUT,
+@@ -3716,6 +4084,12 @@ void Wayland_SeatDestroy(SDL_WaylandSeat *seat, bool shutting_down)
+     SDL_free(seat->name);
+ 
+     if (seat->data_device) {
++        if (seat->data_device->goo_drag_source) {
++            Goo_FinishDataDrag(seat->data_device->goo_drag_source, 1);
++        }
++        if (seat->data_device->goo_drop) {
++            Goo_CancelDrop(seat->data_device->goo_drop, 4);
++        }
+         Wayland_data_device_clear_selection(seat->data_device);
+         if (seat->data_device->selection_offer) {
+             Wayland_data_offer_destroy(seat->data_device->selection_offer);
+diff --git a/src/video/wayland/SDL_waylandevents_c.h b/src/video/wayland/SDL_waylandevents_c.h
+index 6a78ea5..57ef79c 100644
+--- a/src/video/wayland/SDL_waylandevents_c.h
++++ b/src/video/wayland/SDL_waylandevents_c.h
+@@ -127,6 +127,7 @@ typedef struct SDL_WaylandSeat
+     struct wl_list link;
+ 
+     Uint32 last_implicit_grab_serial; // The serial of the last implicit grab event for window activation and selection data.
++    Uint32 goo_drag_serial;
+     Uint32 registry_id;               // The ID of the Wayland seat object,
+ 
+     struct
