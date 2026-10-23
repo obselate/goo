@@ -251,6 +251,34 @@ Core creates one session for each owner and interaction.
 Use `PlatformInput.Selection` to read effective positions and affinities.
 Use `SetSelection(TextSelection)` to preserve affinities and normalize grapheme boundaries.
 
+## Use shared recognizers
+
+```gsharp
+import Goo.Gestures
+
+let navigation = TransformGesture(OnViewportGesture)
+let surface = Container{Gestures: []GestureRecognizer{navigation}}
+```
+
+Reference the optional `Goo.Gestures` package.
+Keep one TransformGesture for combined pan, pinch and rotation.
+
+| Recognizer | Behavior |
+| --- | --- |
+| `PanGesture` | Starts after eight logical units. It adds no inertia. |
+| `TransformGesture` | Pans with one contact. A second contact adds scale and clockwise rotation. |
+| `LongPressGesture` | Starts after 500 ms within eight logical units. Movement can continue after acceptance. |
+| `DoubleTapGesture` | Requires two complete taps within 400 ms and four logical units. It defers the first click. |
+
+- Events use Started, Changed, Completed and Canceled phases.
+- Transform scale starts at 1. Rotation uses radians.
+- Lifting either transform contact ends the gesture. Remaining held contacts stay suppressed.
+- `GestureSource.Trackpad` carries SDL's scale-only pinch stream without fake contacts.
+- Trackpad rotation returns `GestureRotationStatus.Unsupported`. Contact rotation returns Available.
+- The trackpad anchor is the mouse pointer position at gesture start, not a contact centroid.
+- SDL 3.4 cannot distinguish a normal trackpad end from native cancellation.
+
+
 
 ## `Command`
 
@@ -670,9 +698,13 @@ Provides callback-lifetime access to an owner's settled contact samples. Do not 
 
 Gets a contact sample by arrival order. An invalid index is an argument error.
 
+### `Anchor`
+
+Gets the owner-local pointer anchor for a scale-only trackpad gesture.
+
 ### `ChangedPointerId`
 
-Gets the changed contact identifier, or -1 for a deadline.
+Gets the changed contact identifier, or -1 when no contact changed.
 
 ### `Kind`
 
@@ -682,9 +714,21 @@ Gets the transition being evaluated.
 
 Gets the number of samples, including the released contact on Up.
 
+### `Scale`
+
+Gets cumulative scale for a trackpad gesture. Contact sessions calculate scale from their samples.
+
+### `Source`
+
+Gets the sample source. Trackpad gestures never create synthetic contacts.
+
 ### `TimeSeconds`
 
 Gets monotonic window time in seconds, shared with session deadlines.
+
+### `WindowAnchor`
+
+Gets the logical-window pointer anchor for a scale-only trackpad gesture.
 
 ## `GestureInputKind`
 
@@ -707,15 +751,15 @@ The session's monotonic deadline was reached.
 
 ### `Down`
 
-A contact was pressed.
+A contact was pressed, or a trackpad pinch began.
 
 ### `Move`
 
-A contact moved.
+A contact moved, or a trackpad pinch scale changed.
 
 ### `Up`
 
-A contact was released.
+A contact was released, or a trackpad pinch ended.
 
 ## `GesturePhase`
 
@@ -787,6 +831,27 @@ Gets the next absolute TimeSeconds deadline, or positive infinity when none is r
 ### `Notify(GesturePhase,GestureCancelReason)`
 
 Delivers a resolved transition. Every session receives exactly one terminal notification. Pending rejection also uses Canceled, but need not produce a public recognizer callback.
+
+## `GestureSource`
+
+Source:
+
+- [`Gesture.gs`](../../Goo/Input/Gesture.gs)
+
+Identifies whether samples are direct contacts or a scale-only trackpad gesture.
+
+### Values
+
+- `Touch`
+- `Trackpad`
+
+### `Touch`
+
+Provides real contact samples through PointerAt.
+
+### `Trackpad`
+
+Provides cumulative scale and a pointer anchor without contact samples.
 
 ## `Key`
 

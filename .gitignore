@@ -53,6 +53,8 @@
 !/Goo/**
 !/Goo.Accessibility/
 !/Goo.Accessibility/**
+!/Goo.Gestures/
+!/Goo.Gestures/**
 !/Goo.Android/
 !/Goo.Android/**
 !/Goo.SpellCheck/
@@ -95,6 +97,7 @@
 !/docs/migrations/**
 
 !/docs/audio.md
+!/docs/gestures.md
 !/docs/assets/
 !/docs/assets/**
 !/docs/api/

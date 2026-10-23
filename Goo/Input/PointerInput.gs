@@ -183,6 +183,7 @@ internal partial class PointerInput {
     host.PointerCanceled += QueueCancel
     host.PointerHoverInvalidated += QueueHoverInvalidation
     host.Wheel += (x, y, dx, dy, modifiers) -> QueueWheel(x / UiScale, y / UiScale, dx, dy, modifiers)
+    if let pinch = host as PinchInputHost? { pinch.Pinch += QueuePinch }
   }
 
   internal func Dispatch(e QueuedPointerEvent, root Node?, resolver Resolver,
@@ -190,6 +191,8 @@ internal partial class PointerInput {
       gestureTime = timeS
       recognizerTime = e.ReceivedTime > 0.0 ? e.ReceivedTime : timeS
     try {
+      if e.Kind == PointerEventKind.PinchBegin || e.Kind == PointerEventKind.PinchUpdate
+        || e.Kind == PointerEventKind.PinchEnd { return DispatchPinch(e, root, resolver) }
       let createsContact = e.Kind == PointerEventKind.Press
         || (e.Kind == PointerEventKind.Move && e.Device == PointerDevice.Pen)
       if e.Device == PointerDevice.Mouse {
@@ -376,7 +379,7 @@ internal partial class PointerInput {
   private func reset(root Node?, resolver Resolver, preserveNative bool) {
     var failure Exception?
     try {
-      clearGestures(root, GestureCancelReason.FocusLost)
+      clearGestures(root, focus.NativeFocusAllowed ? GestureCancelReason.Explicit : GestureCancelReason.FocusLost)
       if !preserveNative || dragSession?.NativeActive != true { cancelDrag(root) }
     } catch (error Exception) {
       failure = error
@@ -891,6 +894,9 @@ internal partial class PointerInput {
       if button != PointerButton.Primary || prevented {
         return false
       }
+      if current.Device == PointerDevice.Touch && nativePinch?.Claimed == true {
+        return cancelInteraction(root, resolver)
+      }
       beginGestures(root, resolver, x, y)
       if semantic {
         if let tree = root {
@@ -1140,7 +1146,9 @@ internal partial class PointerInput {
 
 }
 
-internal enum PointerEventKind { Move; Press; Release; Cancel; Wheel; HoverInvalidation }
+internal enum PointerEventKind {
+  Move; Press; Release; Cancel; Wheel; HoverInvalidation; PinchBegin; PinchUpdate; PinchEnd
+}
 
 internal data struct QueuedPointerEvent {
   internal var Kind PointerEventKind
@@ -1151,6 +1159,7 @@ internal data struct QueuedPointerEvent {
   internal var Y float32
   internal var DX float32
   internal var DY float32
+  internal var PinchScale float32
   internal var Button PointerButton
   internal var Buttons PointerButtons
   internal var HasButtons bool

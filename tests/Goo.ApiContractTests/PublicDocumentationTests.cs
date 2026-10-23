@@ -422,6 +422,8 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedEnumFieldIds =
     {
+        "F:Goo.GestureSource.Touch",
+        "F:Goo.GestureSource.Trackpad",
         "F:Goo.GestureInputKind.Down",
         "F:Goo.GestureInputKind.Move",
         "F:Goo.GestureInputKind.Up",

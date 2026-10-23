@@ -15,6 +15,7 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.Android",
     "Goo.DevTools",
     "Goo.DevTools.App",
+    "Goo.Gestures",
     "Goo.Templates",
 }
 
@@ -73,11 +74,11 @@ def project_versions(version: str, files: list[str]) -> None:
 
 
 def template_version(version: str) -> None:
-    path = ROOT / "templates/Goo.Templates/content/.template.config/template.json"
-    document = json.loads(path.read_text(encoding="utf-8"))
-    symbol = document["symbols"]["goo-version"]
-    if symbol.get("defaultValue") != version or symbol.get("replaces") != version:
-        fail(f"{path.relative_to(ROOT)}: template Goo version must be {version}")
+    for path in (ROOT / "templates/Goo.Templates/content").rglob("template.json"):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        symbol = document["symbols"]["goo-version"]
+        if symbol.get("defaultValue") != version or symbol.get("replaces") != version:
+            fail(f"{path.relative_to(ROOT)}: template Goo version must be {version}")
 
 
 def release_text(version: str) -> None:

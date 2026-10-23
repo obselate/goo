@@ -7,6 +7,6 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Goo" Version="0.7.54" />
+    <PackageReference Include="Goo" Version="0.8.0" />
   </ItemGroup>
 </Project>

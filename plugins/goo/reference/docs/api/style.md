@@ -533,6 +533,22 @@ Source:
 
 Specifies a layout length.
 
+### `Percent(float64)`
+
+Creates a percentage of the available size.
+
+- `value`: percentage of the available size
+
+Returns: a percentage length
+
+### `Pixels(float64)`
+
+Creates an absolute pixel length.
+
+- `value`: length in pixels
+
+Returns: a pixel length
+
 ### `op_Implicit(Length)~Edges`
 
 Converts a length into a uniform edge value.

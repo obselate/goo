@@ -82,7 +82,7 @@ internal sealed class ProtocolConnection : IAsyncDisposable
             ["type"] = "hello",
             ["protocol"] = Discovery.Protocol,
             ["client"] = "goo-cli",
-            ["version"] = "0.7.54",
+            ["version"] = "0.8.0",
             ["capabilities"] = new JsonArray(
                 "tree",
                 "properties",
