@@ -382,6 +382,40 @@ remains compositor-controlled. This API does not enable `CanMove` or switch the
 monitor into an exclusive video mode. `State = WindowState.Fullscreen` remains
 available when no explicit output selection is needed.
 
+## Save and restore placement
+
+```gsharp
+let saved = WindowPlacement{
+    Fields: WindowPlacementFields.NormalSize | WindowPlacementFields.State,
+    NormalBounds: ElementRect{Width: 800, Height: 600},
+    State: WindowState.Maximized,
+}
+let window = Window{Root: Cell{}}
+let result = window.ApplyPlacement(saved)
+if result.Status == WindowOperationResult.Accepted { window.Run() }
+```
+
+Call `CapturePlacement()` on the open window's UI thread before teardown.
+Save its `Placement` only when `Status` is `Accepted`.
+Normal bounds remain separate from maximized, fullscreen and minimized geometry.
+Capturing a minimized window records its last non-minimized state.
+
+`ApplyPlacement()` stages normal size, position and state before `Open`, or applies them to an open window.
+`AppliedFields` lists accepted fields. Fullscreen output selection requires an open window and matching display hints.
+Capture after native configure to observe the result. Accepted does not force compositor placement.
+
+| Host | Supported fields |
+| --- | --- |
+| Windows and macOS | Normal client size, position, state and fullscreen output selection. |
+| Linux Wayland | Normal size, state and fullscreen output selection. No global position. |
+| Android and embedded hosts | Unsupported. The host owns viewport geometry. |
+
+Geometry uses SDL screen units, not framebuffer pixels. Display names, bounds and scale are matching hints.
+Do not persist `WindowDisplayId`, native handles, macOS Spaces or Windows snap groups.
+The app owns its serializer and settings file. NativeAOT serializers need generated metadata.
+Install `Goo.AppHost` for `Placement.Restore`, which matches current displays and clamps usable bounds and size limits.
+Wayland has no direct unminimize request. Restore into a new window or request activation through the app's normal activation route.
+
 ## Observe window notifications
 
 Subscribe to `StateChanged`, `FocusChanged`, and `KeyPressed` with `+=` on the window UI thread. Each event supports independent listeners. Remove listeners with `-=` when their ownership ends.

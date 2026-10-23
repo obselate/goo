@@ -381,6 +381,9 @@ jobs:
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
           python3 .github/scripts/test-macos-app-host.py \
             artifacts/app-host-aot "$RUNNER_TEMP/macos-app-host"
+          python3 .github/scripts/test-window-placement.py \
+            "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
+            "$RUNNER_TEMP/window-placement"
 
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
@@ -655,7 +658,7 @@ jobs:
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
-      - name: Verify Wayland application activation forwarding
+      - name: Verify Wayland application activation and placement
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.csproj -c Release -m:4 \
@@ -665,6 +668,11 @@ jobs:
             python3 .github/scripts/test-wayland-activation.py \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/wayland-activation
+          .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            python3 .github/scripts/test-window-placement.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
+            artifacts/reports/window-placement
 
       - name: Build Goo DevTools app
         if: needs.changes.outputs.full == 'true'
@@ -1599,6 +1607,14 @@ jobs:
           dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify NativeAOT window placement on Windows
+        shell: pwsh
+        run: |
+          foreach ($name in "SDL3.dll", "goo-harfbuzz.dll", "goo-harfbuzz-gpu.dll") {
+            Copy-Item "artifacts/windows-smoke/$name" artifacts/app-host-aot -Force
+          }
+          python .github/scripts/test-window-placement.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/window-placement"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
         if: needs.changes.outputs.full == 'true'

@@ -171,3 +171,34 @@ Use GooActivity Intent activation, not desktop CLI flags.
 Cold and warm VIEW or document requests use the same Window event.
 Provider document URIs remain URIs and do not become filesystem paths.
 
+## Saved window placement
+
+```gsharp
+func RunSaved(saved WindowPlacement) {
+    let window = Window{InitiallyVisible: false, Root: Cell{}}.Open()
+    let result = Placement.Restore(window, saved)
+    if result.Status != WindowOperationResult.Accepted {
+        Console.Error.WriteLine(result.Status.ToString() + ": " + result.Error)
+        window.RequestClose()
+        window.Pump(0.0)
+        return
+    }
+    window.Show()
+    window.Run()
+}
+```
+
+Capture placement on the open window's UI thread before it closes.
+The app owns serialization and the settings file. Use generated serializer metadata for NativeAOT.
+
+- Restore matches the saved display name, bounds and scale against fresh display inventory.
+- A missing display selects the nearest current display. Empty hints use the primary display.
+- Normal geometry is clamped to current usable bounds and the window's scaled size limits.
+- Position follows the selected display's new origin. Wayland reports no applied position bit.
+- Saved Minimized becomes Normal. Native capture retains the last non-minimized state.
+- Invalid geometry returns Failed without applying it. Closing or unsupported hosts return an explicit status.
+- Accepted reports submitted fields, not final placement. Capture after native configure to observe the result.
+
+SDL screen units differ from framebuffer pixels. Restore does not rescale normal geometry from pixel density.
+Wayland cannot directly clear minimized state. A valid activation token and compositor policy control unminimizing an existing window.
+
