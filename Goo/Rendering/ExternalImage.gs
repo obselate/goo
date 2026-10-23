@@ -34,6 +34,7 @@ internal sealed class ExternalFrameLease {
     internal var ReadySemaphore VkSemaphore
     internal var ReadyHandle ExternalNativeHandle?
     internal var Ready bool
+    internal var ReadyResult VkResult = VkConstants.VK_NOT_READY
     internal var Dropped bool
     internal var AcquireCommand VkCommandBuffer
     internal var Retiring bool
