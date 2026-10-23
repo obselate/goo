@@ -79,9 +79,11 @@ and avoids treating public test fixtures as product API.
 
 Edit the explanatory input, window, tree, layout, and accessibility guides in
 [`tools/Goo.ApiDocs/Guides`](tools/Goo.ApiDocs/Guides). Member descriptions belong
-in source XML comments. Regenerate `docs/api` with
-`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release`; do not edit
-generated pages directly. The generator validates all member mappings and parses/formats code
+in source XML comments. Do not commit regenerated `docs/api` pages or
+`plugins/goo/reference` files in PRs, because `main` syncs them after merge.
+For a local preview, run
+`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release` after a
+Release build; do not edit generated pages directly. The generator validates all member mappings and parses/formats code
 examples before replacing output pages. Compile runnable examples against the
 current package to verify their types and behavior.
 
