@@ -1,6 +1,7 @@
 package GooPackageSmoke
 
 import Goo
+import GooClipboardFixture
 import GooPrimitiveFixture
 import System
 import System.Diagnostics
@@ -463,6 +464,10 @@ func Main() {
     return
   }
   VerifyImageDecode()
+  if Environment.GetEnvironmentVariable("GOO_CLIPBOARD_DATA_SMOKE") == "1" {
+    RunClipboardDataSmoke()
+    return
+  }
   if Environment.GetEnvironmentVariable("GOO_APPLICATION_QUIT_SMOKE") == "1" {
     RunApplicationQuitSmoke()
     return

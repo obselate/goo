@@ -986,6 +986,15 @@ jobs:
         run: |
           & artifacts/windows-smoke/run-windows-qualification.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check native Windows clipboard formats
+        shell: pwsh
+        run: |
+          $version = python .github/scripts/release_version.py --print
+          $env:GOO_CLIPBOARD_CHILD = (Resolve-Path artifacts/windows-smoke/Goo.PackageSmoke.exe).Path
+          dotnet restore tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj --configfile tests/Goo.PackageSmoke/NuGet.config -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release --no-restore -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version --filter FullyQualifiedName~WindowsClipboardTests
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
