@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.10.0 - 2026-10-23
+
+- Add external Vulkan image import and retained frame release ownership.
+- Import DMA-BUF images with explicit modifiers and fence readiness.
+- Add retained Metal texture and IOSurface import with shared-event readiness.
+- Add geometry and focus operations for external accessibility hosts.
+- Expose Goo controls as Android virtual accessibility nodes.
+- Preserve Android accessibility identity and geometry across Surface recreation.
+- Android accessibility now sends incremental updates and live-region events.
+- Android accessibility now has native API 36 emulator checks in CI.
+- Bound Android native menu harness startup and cleanup.
+- Fix offscreen and embedded virtual scrolling that stopped realizing rows in Goo 0.8.1.
+- Add bounded offscreen page rendering and retained renderer sessions for native OS services.
+- Add optional spell checking, editor suggestions, raster PDF export and system printing.
+
 ## 0.9.0 - 2026-10-23
 
 - Breaking: FontFamily no longer loads font files from paths. Load them explicitly with the size-bounded FontSource.FromPath factories.
