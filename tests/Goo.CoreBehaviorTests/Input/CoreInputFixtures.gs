@@ -810,7 +810,11 @@ internal class InputFixtures {
 
   private func cancelledPointerRouteIsBalanced(cell InputPointerCancelCell,
     driver InputFixtureDriver, events List[string]) bool{
-      let expected = []string{
+      let expected = cell.Cause == 1 ? []string{
+        "down:child:1:1:15:15:25:25:0:0:1111",
+        "down:root:1:1:25:25:25:25:0:0:1111",
+        "cancel:root:0:0:25:25:25:25:0:0:1111",
+      } : []string{
         "down:child:1:1:15:15:25:25:0:0:1111",
         "down:root:1:1:25:25:25:25:0:0:1111",
         "cancel:child:0:0:15:15:25:25:0:0:1111",
@@ -879,13 +883,13 @@ internal class InputFixtures {
     } catch (e Exception) {
       threw = true
     }
-    if !threw || events.Count != 4 {
+    if !threw || events.Count != 3 {
       return false
     }
     driver.PointerUp(25.0F, 25.0F, PointerButton.Primary)
     driver.Drain()
     driver.Update()
-    return events.Count == 4 && cell.Clicks == 0
+    return events.Count == 3 && cell.Clicks == 0
   }
 
   private func throwingUpStillCleansUp() bool {
