@@ -61,5 +61,6 @@ with (root / "native.log").open("w", encoding="utf-8") as log:
 trace = (root / "native.log").read_text(encoding="utf-8")
 for token in ("goo-native-token-one", "goo-native-token-two"):
     if not re.search(r'xdg_activation_v1[#@]\d+\.activate\("' + token + r'", wl_surface[#@]\d+\)', trace):
+        print(trace, file=sys.stderr)
         raise RuntimeError(f"Wayland did not receive token {token}. See {root / 'native.log'}")
 print("Wayland activation: forwarded tokens reached the compositor on the owner-selected window")
