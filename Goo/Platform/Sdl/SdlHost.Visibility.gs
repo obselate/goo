@@ -45,7 +45,7 @@ internal unsafe partial class SdlHost {
   }
 
   public prop IsVisible bool { get -> !disposed && !IsClosing
-    && (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden)) == 0uL }
+    && (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized)) == 0uL }
 
   public prop Capabilities WindowCapabilities {
     get {
