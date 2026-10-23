@@ -763,30 +763,12 @@ jobs:
           dotnet publish tests/Goo.Gestures.Smoke/Goo.Gestures.Smoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/gesture-nativeaot
-          sudo apt-get install -y --no-install-recommends gdb
-          echo "$RUNNER_TEMP/gesture-core.%p" | sudo tee /proc/sys/kernel/core_pattern
-          ulimit -c unlimited
-          failures=0
           for attempt in {1..50}; do
             echo "Gesture shutdown run $attempt/50"
-            set +e
             LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
               artifacts/gesture-nativeaot/Goo.Gestures.Smoke
-            status=$?
-            set -e
-            if (( status != 0 )); then
-              failures=$((failures + 1))
-              for core in "$RUNNER_TEMP"/gesture-core.*; do
-                test -f "$core" || continue
-                gdb --batch -ex "set pagination off" -ex "thread apply all bt 30" \
-                  -ex "info sharedlibrary" -ex "info proc mappings" \
-                  artifacts/gesture-nativeaot/Goo.Gestures.Smoke "$core"
-                rm "$core"
-              done
-            fi
           done
-          echo "Gesture shutdown: $failures failures in 50 runs"
-          test "$failures" -eq 0
+          echo "Gesture shutdown: 50 runs passed"
 
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
