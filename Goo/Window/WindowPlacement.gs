@@ -5,10 +5,15 @@ import System
 /// Identifies the placement fields retained or accepted by a desktop host.
 @Flags
 public enum WindowPlacementFields {
+    /// No placement fields are present.
     None = 0;
+    /// Normal client width and height are present.
     NormalSize = 1;
+    /// Global desktop position is present. Wayland does not support this field.
     Position = 2;
+    /// Restorable window state is present.
     State = 4;
+    /// A fullscreen display matching hint is present.
     FullscreenDisplay = 8;
 }
 

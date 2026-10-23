@@ -60,6 +60,9 @@ public sealed class PublicDocumentationTests
         "M:Goo.Window.Show(System.Boolean)",
         "M:Goo.Window.Hide",
         "M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])",
+        "M:Goo.WindowPlacement.#ctor",
+        "M:Goo.Window.CapturePlacement",
+        "M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)",
         "M:Goo.Window.GetDisplays",
         "M:Goo.Window.GetCurrentDisplay",
         "M:Goo.Window.TrySetFullscreenDisplay(Goo.WindowDisplayId)",
@@ -442,6 +445,11 @@ public sealed class PublicDocumentationTests
 
     private static readonly string[] ExpectedEnumFieldIds =
     {
+        "F:Goo.WindowPlacementFields.None",
+        "F:Goo.WindowPlacementFields.NormalSize",
+        "F:Goo.WindowPlacementFields.Position",
+        "F:Goo.WindowPlacementFields.State",
+        "F:Goo.WindowPlacementFields.FullscreenDisplay",
         "F:Goo.GestureSource.Touch",
         "F:Goo.GestureSource.Trackpad",
         "F:Goo.GestureInputKind.Down",
@@ -580,6 +588,8 @@ public sealed class PublicDocumentationTests
             ["M:Goo.WindowBackdropMask.#ctor(System.Int32,System.Int32,System.Byte[])"] = new(["width", "height", "alpha"], [], false),
             ["M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)"] = new(["properties"], [], true),
             ["M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)"] = new(["cancellation"], [], true),
+            ["M:Goo.Window.CapturePlacement"] = new([], [], true),
+            ["M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)"] = new(["value"], [], true),
             ["M:Goo.AccessibilityActionRequest.Scroll(System.Double,System.Double)"] = new(["x", "y"], [], false),
             ["M:Goo.Window.AccessibilityHitTest(System.Double,System.Double)"] = new(["x", "y"], [], true),
             ["M:Goo.AccessibilityActionRequest.SetSelection(System.Int32,System.Int32)"] = new(["start", "length"], [], false),

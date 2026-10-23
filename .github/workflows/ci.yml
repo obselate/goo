@@ -336,6 +336,7 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify cold and warm macOS application activation
+        if: needs.changes.outputs.full == 'true'
         run: |
           python3 .github/scripts/test-macos-activation.py \
             artifacts/macos-candidate/Goo.PackageSmoke.app \
@@ -1600,6 +1601,7 @@ jobs:
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify NativeAOT window placement on Windows
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           foreach ($name in "SDL3.dll", "goo-harfbuzz.dll", "goo-harfbuzz-gpu.dll") {
