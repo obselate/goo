@@ -666,14 +666,6 @@ Gets the number of logical lines.
 
 Gets the version represented by this snapshot.
 
-## `TextStyleProperties`
-
-Source:
-
-- [`TextStyleProperties.gs`](../../Goo/Text/TextStyleProperties.gs)
-
-Holds explicit FontFamily, FontSize in pixels, FontWeight, FontStyle, Color and TextDecoration declarations.
-
 ## `TextStyleRange`
 
 Source:
