@@ -447,32 +447,31 @@ public sealed class DevToolsCliEndToEndTests
         var cliTask = RunCliAsync(directory.Path, "capture", "--latest", "--output", outputPath, "--wait", "1");
         await server.WaitForConnectionAsync().WaitAsync(TimeSpan.FromSeconds(5));
         using var reader = new StreamReader(server, leaveOpen: true);
-        using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
-        await ReadLineAsync(reader);
-        await writer.WriteLineAsync(ServerHello());
+        var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
         var requests = 0;
-        while (true)
+        try
         {
-            string? request;
-            try
+            await ReadLineAsync(reader);
+            await writer.WriteLineAsync(ServerHello());
+            while (await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)) is { } request)
             {
-                request = await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                using var document = JsonDocument.Parse(request);
+                await writer.WriteLineAsync(JsonSerializer.Serialize(new
+                {
+                    type = "response",
+                    id = document.RootElement.GetProperty("id").GetString(),
+                    payload = new { command = "capture", pending = true }
+                }));
+                requests++;
             }
-            catch (IOException)
-            {
-                // Unix named pipes may report peer shutdown as ECONNRESET instead of EOF.
-                break;
-            }
-            if (request is null)
-                break;
-            using var document = JsonDocument.Parse(request);
-            await writer.WriteLineAsync(JsonSerializer.Serialize(new
-            {
-                type = "response",
-                id = document.RootElement.GetProperty("id").GetString(),
-                payload = new { command = "capture", pending = true }
-            }));
-            requests++;
+        }
+        catch (IOException)
+        {
+        }
+        finally
+        {
+            try { writer.Dispose(); }
+            catch (IOException) { }
         }
 
         var result = await cliTask;
