@@ -45,10 +45,10 @@ public partial class Window {
     }
 
     internal func BeginNativeModal(out status NativeModalStatus) NativeModalLease? {
+        status = NativeModalStatus.OwnerClosed
         RequireNativeServiceThread()
         if !IsOpen { throw InvalidOperationException("A native service requires an open owner") }
         if NativeOwnerClosing {
-            status = NativeModalStatus.OwnerClosed
             return nil
         }
         if IsInputBlocked {
