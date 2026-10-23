@@ -15,6 +15,7 @@ public class PublicApiTests
         BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
     private const BindingFlags ProtectedDeclared =
         BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+    private static readonly NullabilityInfoContext Nullability = new();
 
     private static readonly string[] ForbiddenNamespaceRoots =
     {
@@ -116,7 +117,7 @@ public class PublicApiTests
         foreach (var name in new[] { "Percent" })
         {
             var method = Assert.Single(packageMethods, method => method.Name == name);
-            records.Add($"function|Goo|{name}|{Visibility(method)}|generic:{DescribeGenericParameters(method.GetGenericArguments())}|({DescribeParameters(method.GetParameters())})->{TypeIdentity(method.ReturnType)}");
+            records.Add($"function|Goo|{name}|{Visibility(method)}|generic:{DescribeGenericParameters(method.GetGenericArguments())}|({DescribeParameters(method.GetParameters())})->{TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}");
         }
 
         var duplicates = records
@@ -176,7 +177,7 @@ public class PublicApiTests
         foreach (var property in properties)
         {
             var accessor = property.GetMethod ?? property.SetMethod!;
-            yield return $"property|{owner}|{property.Name}|{TypeIdentity(property.PropertyType)}|{Scope(accessor)}|{PropertyAccess(property)}|index:({DescribeParameters(property.GetIndexParameters())})";
+            yield return $"property|{owner}|{property.Name}|{TypeIdentity(property.PropertyType, Nullability.Create(property))}|{Scope(accessor)}|{PropertyAccess(property)}|index:({DescribeParameters(property.GetIndexParameters())})";
         }
 
         if (!type.IsEnum)
@@ -185,14 +186,14 @@ public class PublicApiTests
             {
                 var mutability = field.IsLiteral ? "const" : field.IsInitOnly ? "readonly" : "mutable";
                 var value = field.IsLiteral ? $"|value:{FormatValue(field.GetRawConstantValue())}" : "";
-                yield return $"field|{owner}|{field.Name}|{TypeIdentity(field.FieldType)}|{(field.IsStatic ? "static" : "instance")}|{Visibility(field)}|{mutability}{value}";
+                yield return $"field|{owner}|{field.Name}|{TypeIdentity(field.FieldType, Nullability.Create(field))}|{(field.IsStatic ? "static" : "instance")}|{Visibility(field)}|{mutability}{value}";
             }
         }
 
         foreach (var @event in type.GetEvents(PublicDeclared))
         {
             var accessor = @event.AddMethod ?? @event.RemoveMethod!;
-            yield return $"event|{owner}|{@event.Name}|{TypeIdentity(@event.EventHandlerType!)}|{Scope(accessor)}|{EventAccess(@event)}";
+            yield return $"event|{owner}|{@event.Name}|{TypeIdentity(@event.EventHandlerType!, Nullability.Create(@event))}|{Scope(accessor)}|{EventAccess(@event)}";
         }
 
         var accessors = properties
@@ -212,7 +213,7 @@ public class PublicApiTests
         }
         foreach (var method in methods)
         {
-            yield return $"method|{owner}|{method.Name}|{Scope(method)}|{Visibility(method)}|generic:{DescribeGenericParameters(method.GetGenericArguments())}|({DescribeParameters(method.GetParameters())})->{TypeIdentity(method.ReturnType)}";
+            yield return $"method|{owner}|{method.Name}|{Scope(method)}|{Visibility(method)}|generic:{DescribeGenericParameters(method.GetGenericArguments())}|({DescribeParameters(method.GetParameters())})->{TypeIdentity(method.ReturnType, Nullability.Create(method.ReturnParameter))}";
         }
     }
 
@@ -236,7 +237,7 @@ public class PublicApiTests
             ? $"={FormatValue(parameter.DefaultValue)}"
             : "";
         var name = parameter.Name ?? $"arg{parameter.Position}";
-        return $"{modifier}{name}:{TypeIdentity(parameter.ParameterType)}{optional}";
+        return $"{modifier}{name}:{TypeIdentity(parameter.ParameterType, Nullability.Create(parameter))}{optional}";
     }
 
     private static string DescribeGenericParameters(IEnumerable<Type> parameters)
@@ -325,15 +326,20 @@ public class PublicApiTests
         return "instance";
     }
 
-    private static string TypeIdentity(Type type)
+    private static string TypeIdentity(Type type) => TypeIdentity(type, null);
+
+    private static string TypeIdentity(Type type, NullabilityInfo? nullability)
     {
+        var nullable = !type.IsValueType
+            && (nullability?.ReadState == NullabilityState.Nullable || nullability?.WriteState == NullabilityState.Nullable)
+            ? "?" : "";
         if (type.IsGenericParameter)
         {
-            return $"{(type.DeclaringMethod == null ? "!" : "!!")}{type.GenericParameterPosition}";
+            return $"{(type.DeclaringMethod == null ? "!" : "!!")}{type.GenericParameterPosition}{nullable}";
         }
         if (type.IsByRef)
         {
-            return $"{TypeIdentity(type.GetElementType()!)}&";
+            return $"{TypeIdentity(type.GetElementType()!, nullability)}&";
         }
         if (type.IsPointer)
         {
@@ -342,14 +348,17 @@ public class PublicApiTests
         if (type.IsArray)
         {
             var rank = type.GetArrayRank();
-            return $"{TypeIdentity(type.GetElementType()!)}[{new string(',', rank - 1)}]";
+            return $"{TypeIdentity(type.GetElementType()!, nullability?.ElementType)}[{new string(',', rank - 1)}]{nullable}";
         }
         if (type.IsGenericType)
         {
             var definition = type.GetGenericTypeDefinition();
-            return $"{definition.FullName}<{string.Join(",", type.GetGenericArguments().Select(TypeIdentity))}>";
+            var arguments = type.GetGenericArguments().Select((argument, index) =>
+                TypeIdentity(argument, nullability != null && index < nullability.GenericTypeArguments.Length
+                    ? nullability.GenericTypeArguments[index] : null));
+            return $"{definition.FullName}<{string.Join(",", arguments)}>{nullable}";
         }
-        return type.FullName ?? type.Name;
+        return (type.FullName ?? type.Name) + nullable;
     }
 
     private static IEnumerable<(string Location, Type Type)> PublicSignatureTypes(Type type)
