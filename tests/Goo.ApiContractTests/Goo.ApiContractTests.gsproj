@@ -30,6 +30,7 @@
     <PackageReference Include="Goo.SpellCheck.Hunspell" VersionOverride="$(GooReleaseVersion)" />
     <PackageReference Include="Goo.Printing" VersionOverride="$(GooReleaseVersion)" />
     <PackageReference Include="Goo.NativeDialogs" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.Audio" VersionOverride="$(GooReleaseVersion)" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"
