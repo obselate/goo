@@ -202,11 +202,13 @@ Menu keep their current in-window behavior.
 | `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
 | `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
 | `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
-| `Close`, `Dispose` | Request dismissal without blocking on GPU retirement. |
+| `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
 
 Use another PopupWindow as the owner for a submenu. Each owner permits one popup.
 Create a new root and popup for each opening. Close it when its anchor becomes
-invalid. Embedded and Android hosts return `Unsupported`.
+invalid. Android uses a native PopupWindow with a separate GooView surface.
+It follows the owner view's lifecycle and the app's display bounds.
+Other embedded hosts return `Unsupported`.
 Native dialogs return `Busy` while a popup retires. Launch them after `Dismissed`.
 
 ## Native owned and modal windows
@@ -900,9 +902,9 @@ Creates a submenu whose native parent is another open popup.
 
 ### `new(Window,Cell,PopupKind)`
 
-Creates a popup with an independent root and an ordinary desktop owner.
+Creates a popup with an independent root and a desktop or Android owner.
 
-- `owner`: The open desktop owner on the same UI thread.
+- `owner`: The open native owner on the same UI thread.
 - `root`: A root Cell not mounted in another window.
 - `kind`: Interactive menu or input-transparent tooltip.
 
@@ -916,7 +918,7 @@ Requests dismissal and prevents this instance from reopening.
 
 ### `Open(ElementRect,int32,int32,PortalPlacement)`
 
-Opens a desktop popup relative to its parent's content rectangle in layout units. Wayland menus must open from native input or an active parent popup grab.
+Opens a native popup relative to its parent's content rectangle in layout units. Wayland menus must open from native input or an active parent popup grab.
 
 - `anchor`: The finite parent-content anchor rectangle.
 - `width`: Requested positive content width in layout units.

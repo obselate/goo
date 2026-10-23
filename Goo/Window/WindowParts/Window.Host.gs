@@ -229,6 +229,11 @@ public partial class Window {
     IsFocused = focused
     if focused {
       input.FocusGained()
+      let previousPopupFocus = pendingPopupFocus?.Target as Node?
+      pendingPopupFocus = nil
+      if let previous = previousPopupFocus {
+        if !previous.Retired && PopupOwnerOpen && !IsInputBlocked { FocusElement(previous) }
+      }
     } else {
       input.FocusLost(node, resolver)
       markDirtyAndRender()
@@ -687,7 +692,6 @@ public partial class Window {
     requireUiThread("Window.Close")
     if !closeNativeModal() { return }
     if !closeFileDialog() { return }
-    DismissChildPopups(PopupDismissReason.OwnerClosed)
     if !closeOwnedWindows() { return }
     if windowTarget?.PrepareClose() == false {
       host?.Wake()

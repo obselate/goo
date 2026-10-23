@@ -26,6 +26,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     private readonly object wakeGate = new();
     private bool framePosted;
     private bool resumed = true;
+    private bool surfaceReady;
     private volatile bool disposed;
     private long lastFrameTime;
     private long editorFocus;
@@ -62,6 +63,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         accessibility = new GooAccessibilityProvider(this);
         window.Attach(host);
         nativeOwners.Add(window, this);
+        window.EmbeddedPopupFactory = (popup, kind, dismissed) => new AndroidPopupSurface(this, popup, kind, dismissed);
         RefreshPreferences();
         preferenceObserver = new PreferenceObserver(this, handler);
         context.ContentResolver!.RegisterContentObserver(
@@ -83,10 +85,11 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     internal float Density => Math.Max(Resources?.DisplayMetrics?.Density ?? 1f, 0.1f);
     internal PlatformInput Input => Window.PlatformInput;
     internal NativeContextMenu? NativeContextMenu { get; set; }
+    internal void PostPopupClose(Action close) => handler.Post(close);
 
     internal static GooView? TryGetNativeOwner(global::Goo.Window window) =>
         nativeOwners.TryGetValue(window, out var view) && !view.disposed && view.resumed
-        && view.IsAttachedToWindow && view.host.IsPresentationAttached ? view : null;
+        && view.surfaceReady && view.IsAttachedToWindow && view.host.IsPresentationAttached ? view : null;
 
     public override global::Android.Views.Accessibility.AccessibilityNodeProvider? AccessibilityNodeProvider => accessibility;
 
@@ -153,6 +156,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
         resumed = false;
         NativeContextMenu?.OwnerClosed();
         accessibility.SetPresentationReady(false);
+        Window.DismissChildPopups(PopupDismissReason.OwnerHidden);
         CancelFrames();
         host.Suspend();
     }
@@ -175,6 +179,7 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             Math.Max(1, (int)Math.Round(height / Density)), width, height);
         if (!host.IsPresentationAttached && width > 0 && height > 0)
             host.AttachPresentation();
+        surfaceReady = host.IsPresentationAttached && width > 0 && height > 0;
     }
 
     public void SurfaceDestroyed(ISurfaceHolder holder)
@@ -183,6 +188,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
             return;
         NativeContextMenu?.OwnerClosed();
         accessibility.SetPresentationReady(false);
+        surfaceReady = false;
+        Window.DismissChildPopups(PopupDismissReason.OwnerHidden);
         CancelFrames();
         Input.FocusLost();
         host.DetachPresentation();
@@ -217,6 +224,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
     {
         nativeOwners.Remove(Window);
         NativeContextMenu?.OwnerClosed();
+        surfaceReady = false;
+        Window.DismissChildPopups(PopupDismissReason.OwnerHidden);
         CancelFrames();
         accessibility.Detach();
         base.OnDetachedFromWindow();
@@ -616,6 +625,8 @@ public sealed class GooView : SurfaceView, ISurfaceHolderCallback
                 handler.RemoveCallbacksAndMessages(null);
             }
             NativeContextMenu?.OwnerClosed();
+            Window.EmbeddedPopupFactory = null;
+            Window.DismissChildPopups(PopupDismissReason.OwnerClosed);
             CancelFrames();
             Window.PlatformInput.EditorChanged -= OnEditorChanged;
             Context!.ContentResolver!.UnregisterContentObserver(preferenceObserver);

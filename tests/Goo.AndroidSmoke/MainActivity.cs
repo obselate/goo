@@ -13,6 +13,7 @@ public sealed class MainActivity : GooActivity
     private bool inputSmokeStarted;
     private bool menuSmokeStarted;
     private bool nativeDialogSmokeStarted;
+    private bool popupSmokeStarted;
     internal GooView NativeView => GooView;
 
     protected override Goo.Window CreateWindow() => Intent?.GetBooleanExtra("goo.gesture_smoke", false) == true
@@ -22,7 +23,12 @@ public sealed class MainActivity : GooActivity
     protected override void OnResume()
     {
         base.OnResume();
-        if (!inputSmokeStarted && Intent?.GetBooleanExtra("goo.input_smoke", false) == true)
+        if (!popupSmokeStarted && Intent?.GetBooleanExtra("goo.popup_smoke", false) == true)
+        {
+            popupSmokeStarted = true;
+            GooView.PostDelayed(() => RunPopupSmoke(0), 100);
+        }
+        else if (!inputSmokeStarted && Intent?.GetBooleanExtra("goo.input_smoke", false) == true)
         {
             inputSmokeStarted = true;
             GooView.PostDelayed(() => RunInputSmoke(0), 100);
@@ -73,5 +79,14 @@ public sealed class MainActivity : GooActivity
             Intent?.GetBooleanExtra("goo.native_menu_destroy", false) == true ? this : null)) return;
         if (attempt >= 100) throw new InvalidOperationException("Android native menu owner did not attach.");
         GooView.PostDelayed(() => RunMenuSmoke(attempt + 1), 100);
+    }
+
+    private void RunPopupSmoke(int attempt)
+    {
+        if (AndroidPopupSmoke.TryRun(GooView))
+            return;
+        if (attempt >= 100)
+            throw new InvalidOperationException("Android popup smoke did not receive a presentation surface.");
+        GooView.PostDelayed(() => RunPopupSmoke(attempt + 1), 100);
     }
 }

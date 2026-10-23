@@ -15,37 +15,6 @@ internal unsafe partial class SdlHost {
     @DllImport("SDL3", EntryPoint: "Goo_ConfigurePopup", CallingConvention: CallingConvention.Cdecl)
     private func ConfigurePopupNative(parent nint, popup nint, timestamp uint64,
       x int32, y int32, width int32, height int32, placement int32) uint8;
-
-    private func PopupCoordinate(value float64, scale float32) int32 {
-      let result = Math.Round(value * float64(scale))
-      if result < float64(Int32.MinValue) || result > float64(Int32.MaxValue) {
-        throw ArgumentOutOfRangeException("anchor", "Scaled popup coordinates exceed the native range")
-      }
-      return int32(result)
-    }
-
-    internal func PopupPosition(anchor ElementRect, width int32, height int32,
-      placement PortalPlacement, scale float32) Point {
-      let left = PopupCoordinate(anchor.X, scale)
-      let top = PopupCoordinate(anchor.Y, scale)
-      let anchorWidth = PopupCoordinate(anchor.Width, scale)
-      let anchorHeight = PopupCoordinate(anchor.Height, scale)
-      let x = switch placement {
-        case PortalPlacement.Bottom or PortalPlacement.Top: float64(left) + (float64(anchorWidth) - width) / 2.0
-        case PortalPlacement.BottomEnd or PortalPlacement.TopEnd: float64(left) + anchorWidth - width
-        case PortalPlacement.RightStart or PortalPlacement.Right or PortalPlacement.RightEnd: float64(left) + anchorWidth
-        case PortalPlacement.LeftStart or PortalPlacement.Left or PortalPlacement.LeftEnd: float64(left) - width
-        case _: float64(left)
-      }
-      let y = switch placement {
-        case PortalPlacement.TopStart or PortalPlacement.Top or PortalPlacement.TopEnd: float64(top) - height
-        case PortalPlacement.Right or PortalPlacement.Left: float64(top) + (float64(anchorHeight) - height) / 2.0
-        case PortalPlacement.RightEnd or PortalPlacement.LeftEnd: float64(top) + anchorHeight - height
-        case PortalPlacement.RightStart or PortalPlacement.LeftStart: float64(top)
-        case _: float64(top) + anchorHeight
-      }
-      return Point{ X: PopupCoordinate(x, 1.0F), Y: PopupCoordinate(y, 1.0F) }
-    }
   }
 
   private func CreatePopup(parent SdlHost, width int32, height int32, kind PopupKind,
@@ -53,7 +22,7 @@ internal unsafe partial class SdlHost {
     popupParent = parent
     popupKind = kind
     popupTimestamp = timestamp
-    let position = PopupPosition(anchor, width, height, placement, scale)
+    let position = PopupWindow.PopupPosition(anchor, width, height, placement, scale)
     var flags = SDLWindowFlags.HighPixelDensity | SDLWindowFlags.Hidden
     flags = flags | (kind == PopupKind.Menu ? SDLWindowFlags.PopupMenu : SDLWindowFlags.Tooltip)
     if OperatingSystem.IsWindows() && kind == PopupKind.Menu { flags = flags | SDLWindowFlags.NotFocusable }
@@ -67,10 +36,10 @@ internal unsafe partial class SdlHost {
 
   private func ConfigurePopupGrab(anchor ElementRect, placement PortalPlacement, scale float32) bool {
     guard let parent = popupParent else { return false }
-    let x = PopupCoordinate(anchor.X, scale)
-    let y = PopupCoordinate(anchor.Y, scale)
-    let width = PopupCoordinate(anchor.Width, scale)
-    let height = PopupCoordinate(anchor.Height, scale)
+    let x = PopupWindow.PopupCoordinate(anchor.X, scale)
+    let y = PopupWindow.PopupCoordinate(anchor.Y, scale)
+    let width = PopupWindow.PopupCoordinate(anchor.Width, scale)
+    let height = PopupWindow.PopupCoordinate(anchor.Height, scale)
     if x < 0 || y < 0 || int64(x) + width > parent.LogicalWidth || int64(y) + height > parent.LogicalHeight {
       throw ArgumentOutOfRangeException("anchor", "A Wayland popup anchor must be inside its parent")
     }
@@ -90,7 +59,7 @@ internal unsafe partial class SdlHost {
   internal func UpdatePopup(anchor ElementRect, width int32, height int32, placement PortalPlacement,
     scale float32) WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
-    let position = PopupPosition(anchor, width, height, placement, scale)
+    let position = PopupWindow.PopupPosition(anchor, width, height, placement, scale)
     if IsWayland() && !ConfigurePopupGrab(anchor, placement, scale) { return WindowOperationResult.Unsupported }
     if !SDL.SetWindowSize(window, width, height) { return WindowOperationResult.Failed }
     return SDL.SetWindowPosition(window, int32(position.X), int32(position.Y))
