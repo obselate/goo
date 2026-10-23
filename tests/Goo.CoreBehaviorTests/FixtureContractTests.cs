@@ -249,6 +249,7 @@ public sealed class FixtureContractTests
 
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.DescriptorGeometryAndVisibilityContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.ThumbDragHitThicknessAndCancellationContract));
+        yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.VirtualThumbDragSurvivesRowRetirementContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.TrackPagingAndPreventDefaultContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.AutoHoverAndFadeContract));
         yield return Contract<ScrollbarFixtures>(nameof(ScrollbarFixtures.SmoothScrollingWindowPolicyContract));

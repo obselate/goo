@@ -132,10 +132,10 @@ internal partial class PointerInput {
           if n.Kind == NodeKind.Editor { ScrollState.SyncEditor(n) }
           let point = TransformGeometry.WindowToNode(n, x, y)
           if !point.Valid { continue }
-          if tryBeginScrollAxis(n, true, point.X, point.Y, resolver) {
-            return true
-          }
-          if tryBeginScrollAxis(n, false, point.X, point.Y, resolver) {
+          if tryBeginScrollAxis(n, true, point.X, point.Y, resolver)
+            || tryBeginScrollAxis(n, false, point.X, point.Y, resolver) {
+            current.ActiveTarget = n
+            rebuildActivePath(root)
             return true
           }
           if n.IsPortal { break }
