@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.7.54 - 2026-10-22
+
+- Pin CI actions and verify the pinned AccessKit Rust installer download.
+- Reject deeply nested SVG before building the XML tree.
+- Restrict DevTools named pipes to the current user.
+- Bound SVG definitions, gradient references, normalized and inherited dash arrays, and animation value materialization.
+- Store and discover DevTools descriptors in a per-user directory when XDG runtime storage is unavailable.
+- Remove unused path-based capture responses from the DevTools CLI.
+- Restrict VS Code executable settings to machine scope and keep project paths inside the workspace.
+- Prevent gslint --fix and --reduce from rewriting symlink targets discovered inside linted directories.
+- Restrict starter lint and local compiler suggestions to the bundled or user-configured Goo root.
+- Fix the vendored stb_image multi-frame GIF history pointer without changing shipped native binaries.
+- Fix VS Code Goo launch on PowerShell by starting the CLI directly with literal terminal arguments.
+- Reject clipboard text above 16 MiB of UTF-8 before managed SDL conversion and runtime paste processing.
+- Skip relative gslint inputs that traverse symlinks or reparse points and print a warning.
+
 ## 0.7.53 - 2026-10-22
 
 - Avoid boxed collection enumerators in hot grid layout, portal, scrollbar, focus and shaped-text traversals.
