@@ -1,4 +1,4 @@
-package GooWindowsTransferFixture
+package GooNativeTransferFixture
 
 import System
 import System.Diagnostics
@@ -8,11 +8,11 @@ import System.Threading
 import System.Runtime.ExceptionServices
 import Goo
 
-func WindowsTransferRequire(condition bool, message string) {
+func NativeTransferRequire(condition bool, message string) {
     if !condition { throw InvalidOperationException(message) }
 }
 
-func WindowsTransferExpected(directory string, files bool) TransferData {
+func NativeTransferExpected(directory string, files bool) TransferData {
     if files {
         return TransferData(Array.Empty[TransferRepresentation](), []Uri{
             Uri(Path.Combine(directory, "source-0.txt")), Uri(Path.Combine(directory, "source-1.txt"))})
@@ -26,7 +26,7 @@ func WindowsTransferExpected(directory string, files bool) TransferData {
         TransferRepresentation("application/x-goo-empty", ReadOnlyMemory[uint8].Empty)}, Array.Empty[Uri]())
 }
 
-class WindowsTransferTicker : Cell {
+class NativeTransferTicker : Cell {
     internal var Ticks int32
     internal func Advance() {
         Ticks++
@@ -35,7 +35,7 @@ class WindowsTransferTicker : Cell {
     override func Build() Blob -> Text{Content: Ticks.ToString(), FontSize: 24}
 }
 
-class WindowsTransferScene : Cell {
+class NativeTransferScene : Cell {
     internal var Owner Window?
     internal var OnStart Action?
     internal var OnEnd Action?
@@ -77,11 +77,11 @@ class WindowsTransferScene : Cell {
         EndCount++
         Console.WriteLine("source-end " + int32(e.Status).ToString() + " " + int32(e.Effect).ToString() + " " + if e.SourceRemovalRequired { "1" } else { "0" })
         if cancel || reject {
-            WindowsTransferRequire(e.Status == DataTransferStatus.Cancelled && e.Effect == DragEffect.None && !e.SourceRemovalRequired,
+            NativeTransferRequire(e.Status == DataTransferStatus.Cancelled && e.Effect == DragEffect.None && !e.SourceRemovalRequired,
                 "Canceled native source result changed")
         } else {
-            WindowsTransferRequire(e.Status == DataTransferStatus.Success && e.Effect == effect, "Native source effect changed: " + e.Error)
-            WindowsTransferRequire(e.SourceRemovalRequired == (!files && effect == DragEffect.Move), "Native source removal intent changed")
+            NativeTransferRequire(e.Status == DataTransferStatus.Success && e.Effect == effect, "Native source effect changed: " + e.Error)
+            NativeTransferRequire(e.SourceRemovalRequired == (!files && effect == DragEffect.Move), "Native source removal intent changed")
         }
         OnEnd?.Invoke()
         Owner?.RequestClose()
@@ -98,7 +98,7 @@ class WindowsTransferScene : Cell {
     private func Changed(e DragEvent) {
         if let drop = e.Data.Value as NativeDataDrop {
             if drop.IsPreview {
-                WindowsTransferRequire(drop.Data.Representations.Count == 0 && drop.Data.Uris.Count == 0, "Preview exposed final bytes")
+                NativeTransferRequire(drop.Data.Representations.Count == 0 && drop.Data.Uris.Count == 0, "Preview exposed final bytes")
                 Previews++
                 return
             }
@@ -111,7 +111,7 @@ class WindowsTransferScene : Cell {
                 return
             }
             if e.Kind != DragEventKind.Drop { return }
-            WindowsTransferRequire(drop.Paths.Count == 2, "Legacy native file count changed")
+            NativeTransferRequire(drop.Paths.Count == 2, "Legacy native file count changed")
             for i in 0 ... drop.Paths.Count { ReceiveFile(drop.Paths[i], i) }
         } else { return }
         DropCount++
@@ -120,31 +120,35 @@ class WindowsTransferScene : Cell {
     }
 
     internal func Check(data TransferData) {
-        WindowsTransferRequire(data.Representations.Count == expected.Representations.Count && data.Uris.Count == expected.Uris.Count, "Native transfer item count changed")
-        for i in 0 ... expected.Representations.Count {
-            let actual = data.Representations[i]
-            let wanted = expected.Representations[i]
-            WindowsTransferRequire(actual.ContentType == wanted.ContentType && actual.Bytes.Span.SequenceEqual(wanted.Bytes.Span), "Native MIME bytes changed")
+        NativeTransferRequire(data.Representations.Count == expected.Representations.Count && data.Uris.Count == expected.Uris.Count, "Native transfer item count changed")
+        for wanted in expected.Representations {
+            var found = false
+            for actual in data.Representations {
+                if actual.ContentType != wanted.ContentType { continue }
+                NativeTransferRequire(actual.Bytes.Span.SequenceEqual(wanted.Bytes.Span), "Native MIME bytes changed")
+                found = true
+            }
+            NativeTransferRequire(found, "Native MIME type is missing")
         }
         for i in 0 ... data.Uris.Count {
-            WindowsTransferRequire(data.Uris[i] == expected.Uris[i], "Native document URI changed")
+            NativeTransferRequire(data.Uris[i] == expected.Uris[i], "Native document URI changed")
             if DropCount == 0 { ReceiveFile(data.Uris[i].LocalPath, i) }
         }
     }
 
     private func ReceiveFile(path string, index int32) {
-        WindowsTransferRequire(File.ReadAllText(path) == "native file " + index.ToString(), "Native document contents changed")
+        NativeTransferRequire(File.ReadAllText(path) == "native file " + index.ToString(), "Native document contents changed")
         let destination = Path.Combine(directory, "destination-" + index.ToString() + ".txt")
         if effect == DragEffect.Move { File.Move(path, destination, true) }
         else { File.Copy(path, destination, true) }
     }
 }
 
-func RunWindowsDataTransferSmoke() {
-    if Thread.CurrentThread.GetApartmentState() != ApartmentState.STA {
+func RunNativeDataTransferSmoke() {
+    if OperatingSystem.IsWindows() && Thread.CurrentThread.GetApartmentState() != ApartmentState.STA {
         var failure Exception?
         let thread = Thread(() -> {
-            try { RunWindowsDataTransferSmoke() }
+            try { RunNativeDataTransferSmoke() }
             catch (error Exception) { failure = error }
         })
         thread.IsBackground = true
@@ -161,25 +165,25 @@ func RunWindowsDataTransferSmoke() {
     let reject = Environment.GetEnvironmentVariable("GOO_TRANSFER_REJECT") == "1"
     let directory = Environment.GetEnvironmentVariable("GOO_TRANSFER_DIRECTORY")!!
     let effect = DragEffect(int32.Parse(Environment.GetEnvironmentVariable("GOO_TRANSFER_EFFECT")!!))
-    let expected = WindowsTransferExpected(directory, files)
-    let scene = WindowsTransferScene(expected, outgoing, effect, reject, cancel, files, directory)
+    let expected = NativeTransferExpected(directory, files)
+    let scene = NativeTransferScene(expected, outgoing, effect, reject, cancel, files, directory)
     let window = Window{Title: Environment.GetEnvironmentVariable("GOO_TRANSFER_TITLE")!!, Width: 480, Height: 160, Root: scene}
     scene.Owner = window
     var sibling Window?
-    var ticker WindowsTransferTicker?
+    var ticker NativeTransferTicker?
     var startTicks = 0
     try {
         window.Open()
         window.Pump(0.0)
         let all = NativeTransferCapabilities.FileDrop | NativeTransferCapabilities.DropPreview | NativeTransferCapabilities.OutboundData | NativeTransferCapabilities.EffectNegotiation | NativeTransferCapabilities.DataDrop
-        WindowsTransferRequire((window.NativeTransferCapabilities & all) == all, "Native Windows transfer capabilities are incomplete")
+        NativeTransferRequire((window.NativeTransferCapabilities & all) == all, "Native transfer capabilities are incomplete")
         window.NativeFileDropEnabled = true
         if !outgoing && kind != "legacy" {
             let types = if files { []string{"text/uri-list"} } else { []string{"text/plain;charset=utf-8", "image/png", "application/x-goo-transfer-check", "application/x-goo-empty"} }
-            WindowsTransferRequire(window.SetNativeDataDropFormats(types) == WindowOperationResult.Accepted, "Native format allow-list was not accepted")
+            NativeTransferRequire(window.SetNativeDataDropFormats(types) == WindowOperationResult.Accepted, "Native format allow-list was not accepted")
         }
         if cancel {
-            let counter = WindowsTransferTicker{}
+            let counter = NativeTransferTicker{}
             ticker = counter
             let other = Window{Title: "Goo transfer animation", Width: 240, Height: 120, Root: counter}
             sibling = other
@@ -190,14 +194,14 @@ func RunWindowsDataTransferSmoke() {
                 other.SetTimeout(() -> window.RequestClose(), 600.0)
             }
             scene.OnEnd = () -> {
-                WindowsTransferRequire(counter.Ticks - startTicks >= 5, "Stationary native tracking stopped sibling animation")
+                NativeTransferRequire(counter.Ticks - startTicks >= 5, "Stationary native tracking stopped sibling animation")
                 other.RequestClose()
             }
         }
         Console.WriteLine("ready")
         let timeout = Stopwatch.StartNew()
         while window.IsOpen || (sibling?.IsOpen ?? false) {
-            WindowsTransferRequire(timeout.Elapsed < TimeSpan.FromSeconds(45), "Native transfer did not finish")
+            NativeTransferRequire(timeout.Elapsed < TimeSpan.FromSeconds(45), "Native transfer did not finish")
             if window.IsOpen {
                 window.TryPost(() -> {})
                 window.Pump(0.0)
@@ -210,9 +214,9 @@ func RunWindowsDataTransferSmoke() {
             }
             Thread.Sleep(1)
         }
-        if outgoing { WindowsTransferRequire(scene.EndCount == 1, "Native source did not end exactly once") }
+        if outgoing { NativeTransferRequire(scene.EndCount == 1, "Native source did not end exactly once") }
         else {
-            WindowsTransferRequire(scene.Previews > 0 && scene.DropCount == if reject { 0 } else { 1 }, "Native target lifecycle changed")
+            NativeTransferRequire(scene.Previews > 0 && scene.DropCount == if reject { 0 } else { 1 }, "Native target lifecycle changed")
             if let captured = scene.Captured { scene.Check(captured) }
         }
         if let counter = ticker { Console.WriteLine("animation-ticks " + (counter.Ticks - startTicks).ToString()) }

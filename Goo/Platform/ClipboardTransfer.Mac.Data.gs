@@ -30,8 +30,9 @@ internal unsafe partial class ClipboardTransfer {
         private func MacMimeName(formatType nint) string {
             if MacCount(formatType, sel_registerName("length")) > nuint(4096) { throw ClipboardLimitException("Pasteboard type exceeds its text budget") }
             let name = BoundedUtf8(MacSend(formatType, sel_registerName("UTF8String")), 16384)
-            if name == "public.file-url" { return UriList }
-            if name == "public.utf8-plain-text" { return "text/plain;charset=utf-8" }
+            if name == "public.file-url" || name == "NSFilenamesPboardType" { return UriList }
+            if name == "public.utf8-plain-text" || name == "public.utf16-plain-text" ||
+                name == "public.utf16-external-plain-text" { return "text/plain;charset=utf-8" }
             if name.StartsWith(MacMimePrefix, StringComparison.Ordinal) {
                 let encoded = name.Substring(MacMimePrefix.Length)
                 if encoded.Length > 512 { return "" }
@@ -46,10 +47,10 @@ internal unsafe partial class ClipboardTransfer {
             } finally { CFRelease(mime) }
         }
 
-        private func MacQueryFormats() ClipboardFormats {
+        internal func MacQueryFormats(offer nint) ClipboardFormats {
             let pool = objc_autoreleasePoolPush()
             try {
-                let board = MacPasteboard()
+                let board = if offer == nint(0) { MacPasteboard() } else { offer }
                 if board == nint(0) { throw NotSupportedException("The native pasteboard is unavailable") }
                 let generation = MacSend(board, sel_registerName("changeCount"))
                 let types = MacSend(board, sel_registerName("types"))
@@ -176,10 +177,10 @@ internal unsafe partial class ClipboardTransfer {
             return false
         }
 
-        private func MacReadTransfer(types IReadOnlyList[string]) ClipboardDataResult {
+        internal func MacReadTransfer(types IReadOnlyList[string], offer nint) ClipboardDataResult {
             let pool = objc_autoreleasePoolPush()
             try {
-                let board = MacPasteboard()
+                let board = if offer == nint(0) { MacPasteboard() } else { offer }
                 if board == nint(0) { throw NotSupportedException("The native pasteboard is unavailable") }
                 let generation = MacSend(board, sel_registerName("changeCount"))
                 let items = List[TransferRepresentation](types.Count)
@@ -189,7 +190,7 @@ internal unsafe partial class ClipboardTransfer {
                     if contentType == UriList {
                         let files = if MacReadNativeType(board, MacRawType(UriList), MaxFileListBytes, out var encoded) {
                             ParseFiles(utf8.GetString(encoded), false)
-                        } else { MacReadFiles() }
+                        } else { MacReadFiles(board) }
                         for path in files.Paths { uris.Add(Uri(path)) }
                         continue
                     }

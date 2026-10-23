@@ -145,14 +145,16 @@ internal partial class NativeDropState {
     let scale = getScale?.Invoke() ?? 1.0F
     let allowed = DragEffect(effects & uint32(3))
     if allowed == DragEffect.None { return DragEffect.None }
-    if OperatingSystem.IsWindows() && source == nint(0) { throw InvalidDataException("The native OLE offer is missing") }
+    let borrowed = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+    if borrowed && source == nint(0) { throw InvalidDataException("The native data offer is missing") }
     let local NativeDragBinding? = if OperatingSystem.IsLinux() && source != nint(0) { GCHandle.FromIntPtr(source).Target as NativeDragBinding? } else { nil }
     if mimeOffer?.Token != token {
       CancelMimeOffer()
       router.Cancel()
       var available IReadOnlyList[string]
-      if OperatingSystem.IsWindows() {
-        let queried = ClipboardTransfer.WindowsQueryFormats(source)
+      if borrowed {
+        let queried = if OperatingSystem.IsWindows() { ClipboardTransfer.WindowsQueryFormats(source) }
+          else { ClipboardTransfer.MacQueryFormats(source) }
         if queried.Status != ClipboardReadStatus.Success {
           SetTransferResult(if queried.Status == ClipboardReadStatus.TooLarge { DataTransferStatus.TooLarge }
             else if queried.Status == ClipboardReadStatus.Unsupported || queried.Status == ClipboardReadStatus.Empty { DataTransferStatus.Unsupported }
@@ -203,8 +205,9 @@ internal partial class NativeDropState {
     }
     active.Allowed = allowed
     active.Capturing = true
-    if OperatingSystem.IsWindows() {
-      let captured = ClipboardTransfer.WindowsReadTransfer(active.Formats, source)
+    if borrowed {
+      let captured = if OperatingSystem.IsWindows() { ClipboardTransfer.WindowsReadTransfer(active.Formats, source) }
+        else { ClipboardTransfer.MacReadTransfer(active.Formats, source) }
       var outcome = if captured.Status == ClipboardReadStatus.Success { DataTransferStatus.Success }
         else if captured.Status == ClipboardReadStatus.TooLarge { DataTransferStatus.TooLarge }
         else if captured.Status == ClipboardReadStatus.Unsupported { DataTransferStatus.Unsupported }
@@ -332,5 +335,6 @@ internal unsafe partial class SdlHost {
       return }
     FinishDataDropNative(windowHandle, token, uint32(effect))
   }
-  internal func NativeDropModifiers() KeyModifiers -> windowsDrop?.Modifiers ?? MapModifiers(Hexa.NET.SDL3.SDL.GetModState())
+  internal func NativeDropModifiers() KeyModifiers -> if OperatingSystem.IsMacOS() { MacNativeDropModifiers() }
+    else { windowsDrop?.Modifiers ?? MapModifiers(Hexa.NET.SDL3.SDL.GetModState()) }
 }

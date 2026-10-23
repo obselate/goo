@@ -22,7 +22,9 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/cocoa-open-documents.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/cocoa-programmatic-resize.patch"
-cmake -S "$work/src" -B "$work/build" -G Ninja \
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/cocoa-data-transfer.patch"
+nice -n 10 cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$work/install" \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
@@ -44,8 +46,8 @@ cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DSDL_TEST_LIBRARY=OFF \
   -DSDL_TRAY=OFF \
   -DSDL_VULKAN=ON
-cmake --build "$work/build" --parallel "$(sysctl -n hw.logicalcpu)"
-cmake --install "$work/build"
+nice -n 10 cmake --build "$work/build" --parallel 4
+nice -n 10 cmake --install "$work/build"
 
 library="$(find "$work/install" -type f -name 'libSDL3*.dylib' -print | LC_ALL=C sort | head -n 1)"
 [[ -n "$library" ]]
