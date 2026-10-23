@@ -14,7 +14,6 @@ import System.Collections.Generic
 abstract class GooActivity : Activity {
     internal var PermissionsResultReceived Action[int32, []string, []Permission]?
     internal var Destroyed Action?
-
     private var view GooView?
     private var insets InsetsListener?
     private var content FrameLayout?
