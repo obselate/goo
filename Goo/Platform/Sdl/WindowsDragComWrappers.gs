@@ -127,7 +127,10 @@ internal unsafe class WindowsDragComWrappers : ComWrappers {
     }
 
     @UnmanagedCallersOnly(CallConvs: []Type{typeof(CallConvStdcall)})
-    private func DefaultCursor(self nint, effect uint32) int32 -> int32(0x00040102u)
+    private func DefaultCursor(self nint, effect uint32) int32 {
+      Console.WriteLine("drag-feedback " + Environment.TickCount64.ToString())
+      return int32(0x00040102u)
+    }
   }
 
   protected override func ComputeVtables(value object, flags CreateComInterfaceFlags, out count int32) *ComWrappers.ComInterfaceEntry {

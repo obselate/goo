@@ -70,6 +70,7 @@ internal unsafe partial class SdlHost {
     private func KillWindowsDragTimer(window nint, identity nuint) int32;
 
     private func ServiceWindowsDrag(window nint, message uint32, identity nuint, time uint32) {
+      Console.WriteLine("drag-timer-entry " + Environment.CurrentManagedThreadId.ToString() + " " + (windowsTracking != nil).ToString())
       guard let binding = windowsTracking else { return }
       Console.WriteLine("drag-timer " + windowsTrackingTick.ToString() + " " + NativeDropState.CallbackDepth.ToString())
       if windowsTrackingTick || NativeDropState.CallbackDepth != 0 { return }
@@ -145,7 +146,7 @@ internal unsafe partial class SdlHost {
       timer = SetWindowsDragTimer(timerWindow, nuint(WindowsDragTimerId), WindowsDragServiceMilliseconds, windowsTimerAddress)
       if timer == nuint(0) { throw IOException("Cannot start the native drag service timer: " + Marshal.GetLastPInvokeError().ToString()) }
       binding.Started = true
-      Console.WriteLine("drag-modal " + Environment.TickCount64.ToString())
+      Console.WriteLine("drag-modal " + Environment.TickCount64.ToString() + " " + Environment.CurrentManagedThreadId.ToString() + " " + timer.ToString())
       var selected uint32
       let status = WindowsDragComWrappers.Start(binding.WindowsObject, source, uint32(effects), out selected)
       let outcome = if status == int32(0x00040100u) { DataTransferStatus.Success }
