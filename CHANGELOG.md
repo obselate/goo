@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.8.1 - 2026-10-23
+
+- Coalesce scroll-only virtual row work while presentation is blocked, cutting grid thumb-drag p99 and max frame time.
+- Remove revision-only conflicts from bundled docs manifests.
+- Shipped in 0.8.0 without a note: core touch gesture arbitration and selection affinity access (#257), parallel Linux fixture CI jobs (#275).
+- Add optional shared gesture recognizers in Goo.Gestures and SDL scale-only trackpad pinch.
+- Add an Android starter template and shared launch, deep-link and document activation.
+- Add nightly ten-minute generated-input quality checks for SVG, raster images, WAV audio, and fonts.
+- Deliver cold and warm macOS links and document opens through Window.ApplicationActivated.
+- Skip unrelated CI builds for narrow PR changes while keeping affected checks and status names.
+- Correct sibling identity documentation for mixed keyed and unkeyed children.
+
 ## 0.8.0 - 2026-10-23
 
 - Bound text entry undo history to 1,000 groups and 64 MiB of retained text while preserving undo and redo within those limits.
