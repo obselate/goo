@@ -808,7 +808,7 @@ Decodes a stream with cancellation between reads and during validation. Leaves t
 
 ### `Decode(System.ReadOnlyMemory{System.Byte})`
 
-Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source. The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException. Decoding is synchronous. Call from a worker when loading outside the UI thread.
+Decodes PNG, JPEG, or the first GIF frame into an owned premultiplied RGBA source. PNG and JPEG EXIF orientation is applied. Color-profile metadata is not converted. The default ImageDecodeLimits apply. An image that exceeds a limit throws ImageLimitException. Decoding is synchronous. Call from a worker when loading outside the UI thread.
 
 ### `Decode(System.ReadOnlyMemory{System.Byte},ImageDecodeLimits,System.Threading.CancellationToken)`
 
@@ -824,7 +824,7 @@ Releases this source's owner reference. Existing mounted leases stay valid.
 
 ### `LoadThumbnail(string,int32,int32)`
 
-Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail. The image keeps its aspect ratio, never grows, and retains only the reduced pixels. This synchronous operation belongs on a worker outside the UI thread.
+Loads a local PNG, JPEG, or first GIF frame as an owned bounded thumbnail. The image applies EXIF orientation, keeps its displayed aspect ratio, never grows, and retains only reduced pixels. This synchronous operation belongs on a worker outside the UI thread.
 
 ### `LoadThumbnail(string,int32,int32,ImageDecodeLimits,System.Threading.CancellationToken)`
 
