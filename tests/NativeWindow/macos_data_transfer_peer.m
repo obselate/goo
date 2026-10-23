@@ -212,6 +212,10 @@ static void input_drag(pid_t from_pid, pid_t to_pid, unsigned int hold)
     require(!CGRectIsNull(to), [NSString stringWithFormat:@"Target fixture window bounds are unavailable for %d", to_pid]);
     CGPoint start = CGPointMake(from.origin.x + 50, from.origin.y + 80);
     CGPoint end = CGPointMake(to.origin.x + 100, to.origin.y + 100);
+    if (CGRectContainsPoint(from, end)) end.x = CGRectGetMaxX(to) - 50;
+    if (CGRectContainsPoint(from, end)) end.y = CGRectGetMaxY(to) - 30;
+    output([NSString stringWithFormat:@"source=%@ target=%@", NSStringFromRect(from), NSStringFromRect(to)]);
+    require(!CGRectContainsPoint(from, end), @"The native target point is covered by the source window");
     mouse_event(kCGEventMouseMoved, start);
     usleep(150000);
     mouse_event(kCGEventLeftMouseDown, start);
