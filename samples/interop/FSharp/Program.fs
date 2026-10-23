@@ -10,11 +10,11 @@ type Counter() as this =
     override _.Build() =
         Container(Padding = Edges(Length.Pixels 24.), Gap = 12.,
             Children = ResizeArray<Blob>([
-                Text(Content = $"Count: {count}")
+                Text(Content = $"Count: {count}") :> Blob
                 Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10.,
                     TransitionMs = 150., Hover = Style(BackgroundColor = Color.Rgb(74, 125, 255)),
                     OnClick = (fun () -> count <- count + 1; this.Rebuild()),
-                    Children = ResizeArray<Blob>([Text(Content = "Add one")]))
+                    Children = ResizeArray<Blob>([Text(Content = "Add one") :> Blob])) :> Blob
             ]))
 
 let listView (data: seq<string>) =
@@ -24,7 +24,7 @@ let listView (data: seq<string>) =
             yield Text(Content = "Account") :> Blob
             yield! rows
             yield Button(OnClick = (fun () -> printfn "Save"),
-                Children = ResizeArray<Blob>([Text(Content = "Save")])) :> Blob
+                Children = ResizeArray<Blob>([Text(Content = "Save") :> Blob])) :> Blob
         }))
 
 type AccountInput = { Name: string }
@@ -33,7 +33,7 @@ type AccountCell() as this =
     let mutable edits = 0
     override _.Build(input: AccountInput) =
         Button(OnClick = (fun () -> edits <- edits + 1; this.Rebuild()),
-            Children = ResizeArray<Blob>([Text(Content = $"{input.Name}: {edits}")]))
+            Children = ResizeArray<Blob>([Text(Content = $"{input.Name}: {edits}") :> Blob]))
 
 type EqualColumn() =
     interface LayoutAlgorithm with
@@ -64,18 +64,18 @@ type Examples(sample: string) as this =
         | "variants" ->
             let basic = Button(Padding = Edges(Length.Pixels 10.), BorderRadius = Length.Pixels 10., BackgroundColor = Color.Rgb(24, 31, 43))
             Container(Gap = 12., Children = ResizeArray<Blob>([
-                Button(BasedOn = basic, Children = ResizeArray<Blob>([Text(Content = "Base")]))
+                Button(BasedOn = basic, Children = ResizeArray<Blob>([Text(Content = "Base") :> Blob])) :> Blob
                 Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255),
-                    Children = ResizeArray<Blob>([Text(Content = "Primary")]))
+                    Children = ResizeArray<Blob>([Text(Content = "Primary") :> Blob])) :> Blob
             ]))
         | "layout" -> Container(Height = Length.Pixels 200., Layout = EqualColumn(),
-            Children = ResizeArray<Blob>([Text(Content = "One"); Text(Content = "Two")]))
+            Children = ResizeArray<Blob>([Text(Content = "One") :> Blob; Text(Content = "Two") :> Blob]))
         | "dialog" ->
             let dialog = ModalDialog(Open = isOpen, Content = Text(Content = "Save account?"),
                 Padding = Nullable 20., OnClose = Action close, OnCancel = Action close, OnConfirm = Action close)
             Container(Children = ResizeArray<Blob>([
                 Button(OnClick = (fun () -> isOpen <- true; this.Rebuild()),
-                    Children = ResizeArray<Blob>([Text(Content = "Open dialog")])) :> Blob
+                    Children = ResizeArray<Blob>([Text(Content = "Open dialog") :> Blob])) :> Blob
                 Cell.Mount<ModalDialog, ModalDialogHost>("dialog", dialog)
             ]))
         | _ -> Cell.Mount<Counter>("counter")

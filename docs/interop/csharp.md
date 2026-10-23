@@ -4,6 +4,8 @@
 dotnet run --project samples/interop/CSharp -- counter
 ```
 
+Pack Goo into `artifacts/packages` before running the repository sample.
+
 Use .NET 10 and C# 14. The [compiled sample](../../samples/interop/CSharp/Program.cs) also accepts `list`, `variants`, `input`, `virtual`, `dialog` and `layout`.
 
 ## Counter

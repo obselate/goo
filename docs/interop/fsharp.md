@@ -4,6 +4,8 @@
 dotnet run --project samples/interop/FSharp -- counter
 ```
 
+Pack Goo into `artifacts/packages` before running the repository sample.
+
 The [compiled sample](../../samples/interop/FSharp/Program.fs) uses plain F# on .NET 10. It also accepts `list`, `variants`, `input`, `virtual`, `dialog` and `layout`.
 
 ## Counter
@@ -27,14 +29,14 @@ The [compiled sample](../../samples/interop/FSharp/Program.fs) uses plain F# on 
     let mutable count = 0
     override _.Build() =
         Container(Children = ResizeArray&lt;Blob>([
-            Text(Content = $"Count: {count}")
+            Text(Content = $"Count: {count}") :> Blob
             Button(
                 OnClick = (fun () ->
                     count &lt;- count + 1
                     this.Rebuild()),
                 Children = ResizeArray&lt;Blob>([
-                    Text(Content = "Add one")
-                ]))
+                    Text(Content = "Add one") :> Blob
+                ])) :> Blob
         ]))</code></pre></td></tr>
 </table>
 
@@ -63,12 +65,13 @@ let list =
         yield Button(
             OnClick = (fun () -> save()),
             Children = ResizeArray&lt;Blob>([
-                Text(Content = "Save")
+                Text(Content = "Save") :> Blob
             ])) :> Blob
     }))</code></pre></td></tr>
 </table>
 
 `yield!` spreads a sequence. `ResizeArray<Blob>` supplies the mutable `IList<Blob>` that `Children` accepts.
+Upcast child values with `:> Blob` when building the list.
 
 - Keyed and unkeyed siblings can mix. Keys must be unique among siblings.
 - Keys retain identity across moves. Unkeyed entries use their absolute sibling index.
@@ -80,7 +83,7 @@ let list =
 let basic = Button(Padding = Edges(Length.Pixels 10.))
 let primary =
     Button(BasedOn = basic, BackgroundColor = Color.Rgb(74, 125, 255),
-        Children = ResizeArray<Blob>([Text(Content = "Save")]))
+        Children = ResizeArray<Blob>([Text(Content = "Save") :> Blob]))
 let width = Length.Percent 100.
 let color = Color.Parse "#4a7dff"
 ```
@@ -105,7 +108,7 @@ F# turns an omitted out parameter into a tuple result. Goo's `Action` events nee
 
 ```fsharp
 let rows = VirtualLists.Rows(items, 24., itemKey, buildRow)
-let viewport = Container(Height = Length.Pixels 240., Children = ResizeArray<Blob>([rows]))
+let viewport = Container(Height = Length.Pixels 240., Children = ResizeArray<Blob>([rows :> Blob]))
 
 let dialog =
     ModalDialog(Open = isOpen, Padding = Nullable 20.,

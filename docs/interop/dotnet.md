@@ -4,6 +4,8 @@
 dotnet run --project samples/interop/VisualBasic -- counter
 ```
 
+Pack Goo into `artifacts/packages` before running the repository sample.
+
 Goo is a CLR library. Use .NET 10, ordinary objects, delegates and generic calls. See the [VB sample](../../samples/interop/VisualBasic/Program.vb), [C# guide](csharp.md) and [F# guide](fsharp.md).
 
 ## Counter
