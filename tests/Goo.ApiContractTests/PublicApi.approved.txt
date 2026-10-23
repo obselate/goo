@@ -903,7 +903,7 @@ method|Goo.PlatformInput|SetCompositionRange|instance|public|generic:|(start:Sys
 method|Goo.PlatformInput|SetComposition|instance|public|generic:|(value:System.String,selectionStart:System.Int32,selectionLength:System.Int32)->System.Boolean
 method|Goo.PlatformInput|SetSelection|instance|public|generic:|(start:System.Int32,end:System.Int32)->System.Boolean
 method|Goo.PlatformInput|UpdateDrag|instance|public|generic:|(target:Goo.ElementHandle,modifiers:Goo.KeyModifiers=null)->System.Boolean
-method|Goo.PlatformPreferences|Deconstruct|instance|public|generic:|(out theme:Goo.SystemTheme&,out reducedMotion:System.Nullable`1<System.Boolean>&,out highContrast:System.Nullable`1<System.Boolean>&,out textScaleFactor:System.Nullable`1<System.Single>&,out eventSoundsEnabled:System.Nullable`1<System.Boolean>&)->System.Void
+method|Goo.PlatformPreferences|Deconstruct|instance|public|generic:|(out theme:Goo.SystemTheme&,out reducedMotion:System.Nullable`1<System.Boolean>&,out highContrast:System.Nullable`1<System.Boolean>&,out textScaleFactor:System.Nullable`1<System.Single>&,out eventSoundsEnabled:System.Nullable`1<System.Boolean>&,out accentColor:System.Nullable`1<Goo.Color>&)->System.Void
 method|Goo.PlatformPreferences|Equals|instance|public|generic:|(other:Goo.PlatformPreferences)->System.Boolean
 method|Goo.PlatformPreferences|Equals|virtual|public|generic:|(obj:System.Object)->System.Boolean
 method|Goo.PlatformPreferences|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -1486,6 +1486,7 @@ property|Goo.PanelTransform|SkewY|System.Double|instance|get:public,init:public|
 property|Goo.PanelTransform|TranslateX|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.PanelTransform|TranslateY|Goo.Length|instance|get:public,init:public|index:()
 property|Goo.PlatformInput|Editor|System.Nullable`1<Goo.FocusedEditorSnapshot>|instance|get:public|index:()
+property|Goo.PlatformPreferences|AccentColor|System.Nullable`1<Goo.Color>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|EventSoundsEnabled|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|HighContrast|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
 property|Goo.PlatformPreferences|ReducedMotion|System.Nullable`1<System.Boolean>|instance|get:public,init:public|index:()
