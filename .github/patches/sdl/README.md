@@ -108,5 +108,10 @@ input and removed seats return failure instead of opening an ungrabbed menu.
 The same patch carries the anchor rectangle, side and constraints through the
 SDL positioner and reposition paths. Tooltip surfaces remain ungrabbed.
 `test_sdl_popup_handlers.py` compiles the patched handlers and checks exact
-event-to-seat selection and nested grab state. `test_sdl_popup.py` exercises
-the bridge against the built library under an isolated compositor.
+event-to-seat selection and nested grab state. The G# popup check exercises the
+bridge against the built library under an isolated compositor:
+
+```sh
+XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+  dotnet run --project tools/Goo.Investigation -c Release -- popup "$sdl_source" "$sdl_library"
+```
