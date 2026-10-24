@@ -122,7 +122,7 @@ internal class CellFixtures {
         try {
           window.UpdateTree()
         } catch (error Exception) {
-          threw = true
+          threw = error.StackTrace?.Contains("CellSchedulingRecoveryFirst.Build") == true
         }
         if !threw || left.Builds != leftBefore + 1 || right.Builds != rightBefore {
           return false

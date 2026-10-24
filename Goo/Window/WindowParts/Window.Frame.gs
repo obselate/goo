@@ -4,6 +4,7 @@ import System
 import System.Collections.Generic
 import System.Diagnostics
 import System.Numerics
+import System.Runtime.ExceptionServices
 import System.Threading
 
 internal data struct DirtyCellSubmission {
@@ -500,7 +501,7 @@ public partial class Window {
           fiber.RestoreDirtyAndSubmit()
         }
       } finally {
-        throw error
+        ExceptionDispatchInfo.Capture(error).Throw()
       }
     } finally {
       fiberBatch.Clear()
