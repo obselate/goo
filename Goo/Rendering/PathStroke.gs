@@ -17,6 +17,9 @@ internal func resolveShapeStrokeExtent(width float32, join StrokeJoin,
     return 0.0F
   }
 
+internal func resolveShapeStrokeExtent(width float32, join StrokeJoin, miterLimit float32, cap StrokeCap) float32 ->
+MathF.Max(resolveShapeStrokeExtent(width, join, miterLimit), cap == StrokeCap.Square ? width * 0.70710678F : 0.0F)
+
 internal data struct PathStrokePoint {
   internal var X float32
   internal var Y float32
@@ -55,6 +58,7 @@ private sealed class PathStrokeSource {
 private sealed class PathStrokeSubpath {
   internal var Points List[PathStrokePoint]
   internal var Closed bool
+  internal var Tangent PathStrokePoint
 
   internal init() {
     Points = List[PathStrokePoint]()
@@ -63,6 +67,7 @@ private sealed class PathStrokeSubpath {
   internal func Set(points List[PathStrokePoint], closed bool) {
     Points = points
     Closed = closed
+    Tangent = PathStrokePoint{X: 1.0F}
   }
 }
 
@@ -220,6 +225,7 @@ internal sealed class PathStrokeCache {
   private let gate object
   private let scratch PathStrokeScratch
   internal var FlattenCount int32
+  internal var BuildCount uint64
 
   internal init() {
     entries = ConditionalWeakTable[VectorPathData, List[PathStrokeEntry]]()
@@ -396,6 +402,7 @@ internal sealed class PathStrokeCache {
       guard let source = SourceFor(path, data) else {
         return false
       }
+      BuildCount++
       scratch.Begin()
       if !FlattenedFor(source, data.GeometryRevision, scaleX, scaleY) {
         return false
@@ -406,7 +413,8 @@ internal sealed class PathStrokeCache {
       var contourStart float64 = 0.0
       for contour in source.Polylines {
         let contourEnd = contourStart + contour.Length
-        if trimStart >= contourEnd || trimEnd <= contourStart {
+        if (contour.Length == 0.0 && (contourStart < trimStart || contourStart > trimEnd))
+          || (contour.Length > 0.0 && (trimStart >= contourEnd || trimEnd <= contourStart)) {
           contourStart = contourEnd
           continue
         }
@@ -428,9 +436,8 @@ internal sealed class PathStrokeCache {
         let subpaths = SplitDashes(current, dashes)
         var subpathIndex int32 = 0
         while subpathIndex < subpaths.Count {
-          AddStroke(subpaths[subpathIndex].Points,
-            subpaths[subpathIndex].Closed,
-            width, cap, join, miterLimit, scaleX, scaleY, scratch.Commands)
+          AddStroke(subpaths[subpathIndex], width, cap, join, miterLimit,
+            scaleX, scaleY, scratch.Commands)
           subpathIndex++
         }
         contourStart = contourEnd
@@ -692,7 +699,7 @@ internal sealed class PathStrokeCache {
         && SamePoint(points[0], points[points.Count - 1]) {
           points.RemoveAt(points.Count - 1)
         }
-      return if points.Count < 2 { nil } else { scratch.AcquirePolyline(points, contour.Closed) }
+      return if points.Count == 0 { nil } else { scratch.AcquirePolyline(points, contour.Closed) }
     }
 
   private func AppendQuadratic(points List[PathStrokePoint], first PathStrokePoint,
@@ -809,6 +816,12 @@ internal sealed class PathStrokeCache {
     var phase = pattern.Offset % total
     if phase < 0.0 { phase = phase + total }
     var state = StartDash(intervals, intervalCount, phase)
+    if polyline.Points.Count == 1 {
+      if state.On {
+        result.Add(scratch.AcquireSubpath(polyline.Points, polyline.Closed && intervals[state.Index] > 0.0))
+      }
+      return result
+    }
     let edgeCount = polyline.Closed ? polyline.Points.Count : polyline.Points.Count - 1
     var active List[PathStrokePoint]? = nil
     var hadOffDistance bool = false
@@ -822,10 +835,24 @@ internal sealed class PathStrokeCache {
       let length = Math.Sqrt(dx * dx + dy * dy)
       if length > 0.0 {
         var distance float64 = 0.0
-        while distance < length {
+        while distance <= length {
           if state.Remaining <= 0.0 {
+            if state.On && intervals[state.Index] == 0.0 {
+              let points = scratch.AcquirePoints()
+              points.Add(Interpolate(first, last, float32(distance / length)))
+              let dot = scratch.AcquireSubpath(points, false)
+              dot.Tangent = PathStrokePoint{X: float32(dx / length), Y: float32(dy / length)}
+              result.Add(dot)
+            }
+            let wasOn = state.On
             state = AdvanceDash(state, intervals, intervalCount)
+            if wasOn && !state.On && active != nil {
+              result.Add(scratch.AcquireSubpath(active, false))
+              active = nil
+            }
+            continue
           }
+          if distance >= length { break }
           let available = length - distance
           let step = available < state.Remaining ? available : state.Remaining
           if step <= 0.0 {
@@ -852,14 +879,6 @@ internal sealed class PathStrokeCache {
             break
           }
           distance = nextDistance
-          if state.Remaining <= 0.0 {
-            let wasOn = state.On
-            state = AdvanceDash(state, intervals, intervalCount)
-            if wasOn && !state.On && active != nil {
-              result.Add(scratch.AcquireSubpath(active, false))
-              active = nil
-            }
-          }
         }
       }
       edgeIndex++
@@ -877,7 +896,8 @@ internal sealed class PathStrokeCache {
     if polyline.Closed && result.Count > 1 {
       let firstResult = result[0].Points
       let lastResult = result[result.Count - 1].Points
-      if SamePoint(firstResult[0], polyline.Points[0])
+      if firstResult.Count > 1 && lastResult.Count > 1
+        && SamePoint(firstResult[0], polyline.Points[0])
         && SamePoint(lastResult[lastResult.Count - 1], polyline.Points[0]) {
           let merged = scratch.AcquirePoints()
           var lastIndex int32 = 0
@@ -907,7 +927,8 @@ internal sealed class PathStrokeCache {
     var guardCount int32 = 0
     while guardCount < intervalCount * 2 {
       let value = intervals[index]
-      if value > 0.0 && remainingPhase < value {
+      if (value > 0.0 && remainingPhase < value)
+        || (value == 0.0 && remainingPhase == 0.0 && index % 2 == 0) {
         return PathDashState{
           Index: index,
           Remaining: value - remainingPhase,
@@ -925,7 +946,7 @@ internal sealed class PathStrokeCache {
     var index = state.Index + 1 == intervalCount ? 0 : state.Index + 1
     var guardCount int32 = 0
     while guardCount < intervalCount * 2 {
-      if intervals[index] > 0.0 {
+      if intervals[index] > 0.0 || index % 2 == 0 {
         return PathDashState{
           Index: index,
           Remaining: intervals[index],
@@ -944,10 +965,29 @@ internal sealed class PathStrokeCache {
       Y: first.Y + (last.Y - first.Y) * amount,
     }
 
-  private func AddStroke(points List[PathStrokePoint], closed bool, width float32,
+  private func AddStroke(subpath PathStrokeSubpath, width float32,
     cap StrokeCap, join StrokeJoin, miterLimit float32, scaleX float32, scaleY float32,
     commands List[VectorPathCommand]) {
-      let cleaned = CleanPoints(points, closed)
+      let closed = subpath.Closed
+      let cleaned = CleanPoints(subpath.Points, closed)
+      if cleaned.Count == 1 {
+        let center = cleaned[0]
+        let half = width * 0.5F
+        if cap == StrokeCap.Round {
+          AddCap(center, subpath.Tangent, half, true, commands, scaleX, scaleY)
+          AddCap(center, subpath.Tangent, half, false, commands, scaleX, scaleY)
+        } else if cap == StrokeCap.Square {
+          let forward = Scale(subpath.Tangent, half)
+          let normal = PathStrokePoint{X: -forward.Y, Y: forward.X}
+          let polygon = scratch.Polygon
+          polygon.Clear()
+          polygon.Add(Add(center, Add(forward, normal)))
+          polygon.Add(Add(center, Add(forward, Scale(normal, -1.0F))))
+          polygon.Add(Add(center, Scale(Add(forward, normal), -1.0F)))
+          polygon.Add(Add(center, Add(Scale(forward, -1.0F), normal)))
+          AddPolygon(commands, polygon, scaleX, scaleY)
+        }
+      }
       if cleaned.Count < 2 {
         return
       }
@@ -1006,9 +1046,8 @@ internal sealed class PathStrokeCache {
       var joinIndex = firstJoin
       while joinIndex < lastJoin {
         let previousSegment = joinIndex == 0 ? segmentCount - 1 : joinIndex - 1
-        let nextSegment = joinIndex == cleaned.Count - 1 ? 0 : joinIndex
         let tangentBefore = tangents[previousSegment]
-        let tangentAfter = tangents[nextSegment]
+        let tangentAfter = tangents[joinIndex]
         if LengthSquared(tangentBefore) > 0.0F && LengthSquared(tangentAfter) > 0.0F {
           let turn = Cross(tangentBefore, tangentAfter)
           let direction = Dot(tangentBefore, tangentAfter)

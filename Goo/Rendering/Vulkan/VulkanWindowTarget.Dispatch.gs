@@ -175,6 +175,9 @@ internal unsafe partial class VulkanWindowTarget {
     let createGraphicsPipelines = ResolveDeviceProc("vkCreateGraphicsPipelines") as (unmanaged[Cdecl](VkDevice, VkPipelineCache, uint32, *VkGraphicsPipelineCreateInfo, *VkAllocationCallbacks, *VkPipeline) -> VkResult)?
     if createGraphicsPipelines == nil { throw InvalidOperationException("vkCreateGraphicsPipelines is unavailable") }
     dispatch.vkCreateGraphicsPipelines = createGraphicsPipelines
+    let createComputePipelines = ResolveDeviceProc("vkCreateComputePipelines") as (unmanaged[Cdecl](VkDevice, VkPipelineCache, uint32, *VkComputePipelineCreateInfo, *VkAllocationCallbacks, *VkPipeline) -> VkResult)?
+    if createComputePipelines == nil { throw InvalidOperationException("vkCreateComputePipelines is unavailable") }
+    dispatch.vkCreateComputePipelines = createComputePipelines
     let destroyPipeline = ResolveDeviceProc("vkDestroyPipeline") as (unmanaged[Cdecl](VkDevice, VkPipeline, *VkAllocationCallbacks) -> void)?
     if destroyPipeline == nil { throw InvalidOperationException("vkDestroyPipeline is unavailable") }
     dispatch.vkDestroyPipeline = destroyPipeline
@@ -193,6 +196,9 @@ internal unsafe partial class VulkanWindowTarget {
     let draw = ResolveDeviceProc("vkCmdDraw") as (unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, uint32, uint32) -> void)?
     if draw == nil { throw InvalidOperationException("vkCmdDraw is unavailable") }
     dispatch.vkCmdDraw = draw
+    let dispatchCompute = ResolveDeviceProc("vkCmdDispatch") as (unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, uint32) -> void)?
+    if dispatchCompute == nil { throw InvalidOperationException("vkCmdDispatch is unavailable") }
+    dispatch.vkCmdDispatch = dispatchCompute
     let setViewport = ResolveDeviceProc("vkCmdSetViewport") as (unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, *VkViewport) -> void)?
     if setViewport == nil { throw InvalidOperationException("vkCmdSetViewport is unavailable") }
     dispatch.vkCmdSetViewport = setViewport

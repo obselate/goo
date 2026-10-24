@@ -40,7 +40,7 @@ public sealed class VectorStroke {
   private let miterLimit float64
   private let dashes DashPattern?
 
-  /// Gets the non-negative stroke width in view-box units.
+  /// Gets the non-negative stroke width in view-box units, or window logical pixels for NonScalingStroke.
   public prop Width float64{ get -> width }
   /// Gets the stroke paint.
   public prop Paint VectorPaint{ get -> paint }
@@ -51,7 +51,10 @@ public sealed class VectorStroke {
   /// Gets the finite miter limit.
   public prop MiterLimit float64{ get -> miterLimit }
   /// Gets the optional dash pattern.
+  /// NonScalingStroke measures dash lengths in window logical pixels.
   public prop Dashes DashPattern? { get -> dashes }
+  /// Gets the vector effect. The default is None.
+  public prop VectorEffect VectorEffect{ get; init; }
 
   /// Creates a stroke with default cap, join, and miter settings.
   public init(width float64, paint VectorPaint) {

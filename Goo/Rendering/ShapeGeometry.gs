@@ -1,6 +1,7 @@
 package Goo
 
 import Facebook.Yoga
+import System
 
 internal data struct ResolvedShapeGeometry {
   internal let Content Rect
@@ -11,11 +12,23 @@ internal data struct ResolvedShapeGeometry {
   internal let StrokeVisible bool
 }
 
-internal class ShapeGeometry {
+internal data struct PathStrokeStyle {
+  internal let Width float32
+  internal let Cap StrokeCap
+  internal let Join StrokeJoin
+  internal let MiterLimit float32
+  internal let Start float32
+  internal let End float32
+  internal let Dashes DashPattern?
+}
+
+internal partial class ShapeGeometry {
   shared {
     internal func Resolve(n Node, bounds Rect) ResolvedShapeGeometry {
       let strokeWidth = n.BorderLeftWidth.Px
-      let strokeInset = if n.ShapeStrokeInset { strokeWidth } else { 0.0F }
+      let strokeInset = if n.ShapeStrokeInset && n.ShapeVectorEffect == VectorEffect.None {
+        strokeWidth
+      } else { 0.0F }
       let halfStroke = strokeInset * 0.5F
       let left = resolveEdgePadding(n, YGEdge.Left, bounds.W)
       let top = resolveEdgePadding(n, YGEdge.Top, bounds.W)
@@ -38,13 +51,33 @@ internal class ShapeGeometry {
         Path: path,
         StrokeWidth: strokeWidth,
         StrokeExtent: if strokeVisible {
-          resolveShapeStrokeExtent(strokeWidth, n.ShapeStrokeJoin, float32(n.MiterLimit))
+          StrokeExtent(n, strokeWidth)
         } else { 0.0F },
         StrokeVisible: strokeVisible,
       }
     }
 
+    internal func StrokeStyle(n Node) PathStrokeStyle -> if n.ShapeVectorEffect == VectorEffect.NonScalingStroke {
+      PathStrokeStyle{
+        Width: n.BorderLeftWidth.Px, Cap: n.ShapeStrokeCap, Join: n.ShapeStrokeJoin,
+        MiterLimit: float32(n.MiterLimit), Start: float32(n.StrokeStart), End: float32(n.StrokeEnd),
+        Dashes: n.Dashes,
+      }
+    } else { PathStrokeStyle{} }
+
+    internal func StrokeExtent(n Node, width float32) float32 {
+      let extent = resolveShapeStrokeExtent(width, n.ShapeStrokeJoin, float32(n.MiterLimit))
+      if n.ShapeVectorEffect != VectorEffect.NonScalingStroke { return extent }
+      let hostExtent = resolveShapeStrokeExtent(width, n.ShapeStrokeJoin, float32(n.MiterLimit), n.ShapeStrokeCap)
+      let matrix = TransformGeometry.WindowMatrix(n)
+      let determinant = MathF.Abs(matrix.A * matrix.D - matrix.B * matrix.C)
+      if determinant <= 0.000000000001F { return 0.0F }
+      return hostExtent * MathF.Max(MathF.Abs(matrix.D) + MathF.Abs(matrix.B),
+        MathF.Abs(matrix.C) + MathF.Abs(matrix.A)) / determinant
+    }
+
     internal func Stroke(n Node, geometry ResolvedShapeGeometry) VectorPath {
+      if n.ShapeVectorEffect == VectorEffect.NonScalingStroke { return VectorPath.Empty }
       if !geometry.StrokeVisible || geometry.Path.CommandCount == 0 {
         return VectorPath.Empty
       }
@@ -81,6 +114,9 @@ internal class ShapeGeometry {
       let fillHit = PathGeometry.For(geometry.Path).Contains(localX, localY, n.ShapeFillRule)
       if !geometry.StrokeVisible {
         return fillHit
+      }
+      if n.ShapeVectorEffect == VectorEffect.NonScalingStroke {
+        return fillHit || NonScalingStrokeHit(n, geometry, x, y)
       }
       let outline = Stroke(n, geometry)
       let strokeHit = outline.CommandCount != 0

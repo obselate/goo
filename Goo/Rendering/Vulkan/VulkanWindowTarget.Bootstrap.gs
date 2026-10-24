@@ -708,7 +708,8 @@ internal unsafe partial class VulkanWindowTarget {
     while familyIndex < count {
       let family = families[familyIndex]
       if family.queueCount > 0u
-        && (family.queueFlags & uint32(VkConstants.VK_QUEUE_GRAPHICS_BIT)) != 0u {
+        && (family.queueFlags & uint32(VkConstants.VK_QUEUE_GRAPHICS_BIT)) != 0u
+        && (family.queueFlags & uint32(VkConstants.VK_QUEUE_COMPUTE_BIT)) != 0u {
           var supported VkBool32 = VkConstants.VK_FALSE
           let surfaceSupport = instanceDispatch.vkGetPhysicalDeviceSurfaceSupportKHR
           let supportResult = surfaceSupport(

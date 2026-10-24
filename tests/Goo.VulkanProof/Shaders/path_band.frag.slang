@@ -453,13 +453,13 @@ void accumulateVerticalRoot(
     weight = max(weight, clamp(1.0 - abs(distancePixels) * 2.0, 0.0, 1.0));
 }
 
-AnalyticBand horizontalBandAt(float y)
+uint horizontalBandIndexAt(float y)
 {
     uint count = horizontalBandCount();
     uint base = horizontalBandBase();
     if (count == 0u)
     {
-        return readBand(base);
+        return 0u;
     }
     uint low = 0u;
     uint high = count;
@@ -476,8 +476,12 @@ AnalyticBand horizontalBandAt(float y)
             low = middle + 1u;
         }
     }
-    uint index = low < count ? low : count - 1u;
-    return readBand(base + index * BandWordCount);
+    return low < count ? low : count - 1u;
+}
+
+AnalyticBand horizontalBandAt(float y)
+{
+    return readBand(horizontalBandBase() + horizontalBandIndexAt(y) * BandWordCount);
 }
 
 AnalyticBand verticalBandAt(float x)
@@ -1234,6 +1238,10 @@ bool validHeader()
         && curveCount() != 0u;
 }
 
+#ifdef GOO_STROKE
+#include "path_stroke.slang"
+#endif
+
 #ifdef GOO_CLIP_MASK
 float clipBorderCoverage()
 {
@@ -1249,13 +1257,21 @@ float clipBorderCoverage()
 
 void shade()
 {
+#ifdef GOO_STROKE
+    float alpha = validHeader() ? (pc.params.w == 0u ? analyticCoverage() : strokeCoverage()) : 0.0;
+#else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
+#endif
     outColor = float4(alpha * clipBorderCoverage(), 0.0, 0.0, 1.0);
 }
 #else
 void shade()
 {
+#ifdef GOO_STROKE
+    float alpha = validHeader() ? (pc.params.w == 0u ? analyticCoverage() : strokeCoverage()) : 0.0;
+#else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
+#endif
     if (pc.params.z == 0u)
     {
         outColor = float4(0.0, 0.0, 0.0, alpha) * gooClipCoverage();

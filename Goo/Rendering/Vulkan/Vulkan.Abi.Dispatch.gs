@@ -70,12 +70,14 @@ internal unsafe struct VkDeviceDispatch {
   var vkDestroyPipelineCache unmanaged[Cdecl](VkDevice, VkPipelineCache, *VkAllocationCallbacks) -> void
   var vkGetPipelineCacheData unmanaged[Cdecl](VkDevice, VkPipelineCache, *nuint, *void) -> VkResult
   var vkCreateGraphicsPipelines unmanaged[Cdecl](VkDevice, VkPipelineCache, uint32, *VkGraphicsPipelineCreateInfo, *VkAllocationCallbacks, *VkPipeline) -> VkResult
+  var vkCreateComputePipelines unmanaged[Cdecl](VkDevice, VkPipelineCache, uint32, *VkComputePipelineCreateInfo, *VkAllocationCallbacks, *VkPipeline) -> VkResult
   var vkDestroyPipeline unmanaged[Cdecl](VkDevice, VkPipeline, *VkAllocationCallbacks) -> void
   var vkCmdBeginRendering unmanaged[Cdecl](VkCommandBuffer, *VkRenderingInfo) -> void
   var vkCmdEndRendering unmanaged[Cdecl](VkCommandBuffer) -> void
   var vkCmdBindPipeline unmanaged[Cdecl](VkCommandBuffer, VkPipelineBindPoint, VkPipeline) -> void
   var vkCmdPushConstants unmanaged[Cdecl](VkCommandBuffer, VkPipelineLayout, VkShaderStageFlags, uint32, uint32, *void) -> void
   var vkCmdDraw unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, uint32, uint32) -> void
+  var vkCmdDispatch unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, uint32) -> void
   var vkCmdSetViewport unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, *VkViewport) -> void
   var vkCmdSetScissor unmanaged[Cdecl](VkCommandBuffer, uint32, uint32, *VkRect2D) -> void
   var vkCreateImage unmanaged[Cdecl](VkDevice, *VkImageCreateInfo, *VkAllocationCallbacks, *VkImage) -> VkResult

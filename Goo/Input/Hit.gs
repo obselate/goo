@@ -41,7 +41,7 @@ internal class DiagnosticHitIndex {
         if ancestor.IsPortal { break }
         current = ancestor.Parent
       }
-      bounds[index] = if transformed {
+      bounds[index] = if transformed || (n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke) {
         Vector4(Single.NegativeInfinity, Single.NegativeInfinity, Single.PositiveInfinity, Single.PositiveInfinity)
       } else { Vector4(n.Rect.X, n.Rect.Y, n.Rect.X + n.Rect.W, n.Rect.Y + n.Rect.H) }
     } else {
@@ -84,7 +84,15 @@ internal class DiagnosticHitIndex {
   }
 }
 
-private func hitWithinMapped(n Node, x float32, y float32) bool -> !n.PaintInputHidden && n.Rect.Contains(x, y)
+private func hitWithinMapped(n Node, x float32, y float32) bool {
+  if n.PaintInputHidden { return false }
+  if n.Kind == NodeKind.Shape && n.ShapeVectorEffect == VectorEffect.NonScalingStroke {
+    let extent = ShapeGeometry.StrokeExtent(n, n.BorderLeftWidth.Px)
+    return x >= n.Rect.X - extent && y >= n.Rect.Y - extent
+      && x < n.Rect.X + n.Rect.W + extent && y < n.Rect.Y + n.Rect.H + extent
+  }
+  return n.Rect.Contains(x, y)
+}
 
 private func hitCanTraverseMapped(n Node, x float32, y float32) bool {
   if n.PaintInputHidden { return false }

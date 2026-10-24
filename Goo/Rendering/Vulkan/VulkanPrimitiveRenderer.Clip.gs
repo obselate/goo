@@ -139,6 +139,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       throw NotSupportedException("Vulkan clip mask pipeline is unavailable")
     }
     pathDescriptorBound = false
+    strokeDescriptorBound = false
+    boundDescriptorLayout = 0uL
     pathAtlasId = ResourceId{}
     activePipeline = 0uL
     clipDescriptorBound = false
@@ -169,7 +171,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         })
         BeginClipMaskRendering(commandBuffer, atlas, dirty)
         try {
-          EmitClipMask(commandBuffer, extent, value, region, frame, selectedPipeline)
+          EmitClipMask(commandBuffer, extent, value, region, frame, selectedPipeline, maskIndex)
         } finally {
           let endRendering = dispatch.vkCmdEndRendering
           endRendering(commandBuffer)
@@ -288,6 +290,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
     primitiveFrameData.DisposeAfterDeviceLoss()
     textFrameData.DisposeAfterDeviceLoss()
+    pathStrokeFrameData?.DisposeAfterDeviceLoss()
     if let atlas = clipMaskAtlas {
       try { atlas.AbortUsageBatch() } catch (cleanup Exception) { }
     }
@@ -428,8 +431,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   private func EmitClipMask(commandBuffer VkCommandBuffer, extent VkExtent2D,
     value ClipMaskRecord, region VulkanClipMaskRegion, frame SceneFrame,
-    pipeline VkPipeline) {
+    pipeline VkPipeline, index int32) {
       FlushPendingPrimitiveDraw(commandBuffer)
+      let stroke = value.Stroke.Width > 0.0F
+      let layout = if stroke { primitiveState.StrokeMaskPipelineLayout } else { clipMaskPipelineLayout }
+      let selected = if stroke { primitiveState.StrokeMaskPipelineFor(clipMaskAtlas!!.Format) } else { pipeline }
       let transform = ResolveTransform(frame, value.TransformIndex)
       let width = float32(clipMaskAtlas!!.Width)
       let height = float32(clipMaskAtlas!!.Height)
@@ -457,6 +463,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         let inverseDeterminant = 1.0F / MathF.Abs(determinant)
         inflationX = (MathF.Abs(matrix11) + MathF.Abs(matrix01)) * inverseDeterminant
         inflationY = (MathF.Abs(matrix10) + MathF.Abs(matrix00)) * inverseDeterminant
+      }
+      if stroke {
+        let padding = StrokePixelPadding(value.Stroke)
+        inflationX *= padding
+        inflationY *= padding
       }
       push.sampleStep_z = inflationX
       push.sampleStep_w = inflationY
@@ -489,20 +500,26 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_x = value.AtlasWordOffset
       push.params_y = value.FillRule
       push.params_z = 0u
-      push.params_w = 0u
+      push.params_w = if stroke { pathStrokeFrameData!!.StyleOffset(index, true) } else { 0u }
+      EnsurePathDescriptorLayout(layout)
       if !pathDescriptorBound {
-        pathAtlas.BindDescriptor(commandBuffer, clipMaskPipelineLayout)
+        pathAtlas.BindDescriptor(commandBuffer, layout)
         pathDescriptorBound = true
         recordDescriptorChangeCount++
       }
-      if activePipeline != pipeline {
+      if stroke && !strokeDescriptorBound {
+        pathStrokeFrameData!!.Bind(commandBuffer, layout, 1u)
+        strokeDescriptorBound = true
+        recordDescriptorChangeCount++
+      }
+      if activePipeline != selected {
         let bindPipeline = dispatch.vkCmdBindPipeline
-        bindPipeline(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline)
+        bindPipeline(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS, selected)
         recordPipelineChangeCount++
-        activePipeline = pipeline
+        activePipeline = selected
       }
       let pushConstants = dispatch.vkCmdPushConstants
-      pushConstants(commandBuffer, clipMaskPipelineLayout,
+      pushConstants(commandBuffer, layout,
         uint32(VkConstants.VK_SHADER_STAGE_VERTEX_BIT)
         | uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
         0u, 112u, *void(&push))

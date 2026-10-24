@@ -433,6 +433,19 @@ internal partial class VulkanSceneCompiler {
       if node.Kind == NodeKind.Shape {
         hash = MixPathHash(hash, node.ShapeStrokeInset ? 1uL : 0uL)
       }
+      if node.Kind == NodeKind.Shape && node.ShapeVectorEffect == VectorEffect.NonScalingStroke {
+        hash = MixPathHash(hash, uint64(int32(node.ShapeVectorEffect)))
+        hash = HashPathFloat(hash, node.BorderLeftWidth.Px)
+        hash = MixPathHash(hash, uint64(int32(node.ShapeStrokeCap)))
+        hash = MixPathHash(hash, uint64(int32(node.ShapeStrokeJoin)))
+        hash = HashPathFloat(hash, float32(node.MiterLimit))
+        hash = HashPathFloat(hash, float32(node.StrokeStart))
+        hash = HashPathFloat(hash, float32(node.StrokeEnd))
+        if let dashes = node.Dashes {
+          hash = MixPathHash(hash, uint64(uint32(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(dashes))))
+          hash = MixPathHash(hash, dashes.Revision)
+        }
+      }
       hash = HashPathBounds(hash, bounds)
       var index = transformIndex
       var guardCount int32 = 0

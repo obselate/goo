@@ -1051,6 +1051,11 @@ internal partial class Reconciler {
       paintChanged = true
       hitGeometryChanged = true
     }
+    if n.ShapeVectorEffect != s.VectorEffect {
+      n.ShapeVectorEffect = s.VectorEffect
+      paintChanged = true
+      hitGeometryChanged = true
+    }
     if n.MiterLimit != s.MiterLimit {
       n.MiterLimit = s.MiterLimit
       paintChanged = true

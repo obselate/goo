@@ -9,6 +9,7 @@ internal data struct VulkanPathRenderable {
   internal let AtlasId ResourceId
   internal let BaseWord uint32
   internal let WordCount uint32
+  internal let CurveCount uint32
   internal let Bounds ConservativeBounds
   internal let FillRule uint32
   internal let Renderable bool
@@ -678,16 +679,18 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       let uploadRecorded = needsUpload && atlas.UploadRecorded
       let uploadSubmitted = needsUpload && atlas.UploadSubmitted
       let submittedUploadCovers = SubmittedUploadCovers(record)
+      let curveCount = cpuWords[int32(record.BaseWord) + 6]
       return VulkanPathRenderable{
         PathId: record.Identity.PathId,
         GeometryRevision: record.GeometryRevision,
         AtlasId: atlasId,
         BaseWord: record.BaseWord,
         WordCount: record.WordCount,
+        CurveCount: curveCount,
         Bounds: record.Bounds,
         FillRule: fillRuleCode,
         Renderable: (published || submittedUploadCovers || renderAfterPlannedUpload)
-          && supportsFill && !record.Bounds.IsEmpty,
+          && supportsFill && curveCount > 0u,
         Published: published,
         RedrawRequired: needsUpload,
         UploadPending: uploadPending,

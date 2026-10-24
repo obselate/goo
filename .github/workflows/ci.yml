@@ -1252,6 +1252,12 @@ jobs:
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
           .github/scripts/with-headless-wayland.sh env \
+            XDG_CACHE_HOME="$RUNNER_TEMP/non-scaling-stroke-cache" \
+            GOO_VK_DIAGNOSTICS=1 \
+            GOO_NON_SCALING_STROKE_SMOKE=1 \
+            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+
+          .github/scripts/with-headless-wayland.sh env \
             GOO_SVG_MORPH_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 

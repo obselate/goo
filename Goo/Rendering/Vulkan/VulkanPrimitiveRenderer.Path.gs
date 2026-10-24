@@ -7,11 +7,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     commandBuffer VkCommandBuffer,
     extent VkExtent2D,
     value AnalyticPathBandRecord,
-    frame SceneFrame) {
+    frame SceneFrame, index int32) {
       if pathAtlas == nil || pathPipelineLayout == 0uL {
         throw NotSupportedException("Vulkan primitive renderer has no path atlas pipeline")
       }
-      let selectedPipeline = primitivePipelines.PathPipeline
+      let stroke = value.Stroke.Width > 0.0F
+      let strokePipeline = pathStrokeFrameData?.HasStrokes ?? false
+      let layout = if strokePipeline { primitiveState.StrokePipelineLayout } else { pathPipelineLayout }
+      let selectedPipeline = if strokePipeline { primitiveState.StrokePipelineFor(targetFormat) } else { primitivePipelines.PathPipeline }
       ValidateBounds(value.Bounds)
       ValidateTransformIndex(frame, value.TransformIndex)
       if !value.PathId.IsValid || value.PathId.Kind != SceneResourceKind.PathBand {
@@ -70,6 +73,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         inflationX = (MathF.Abs(matrix11) + MathF.Abs(matrix01)) * inverseDeterminant
         inflationY = (MathF.Abs(matrix10) + MathF.Abs(matrix00)) * inverseDeterminant
       }
+      if stroke {
+        let padding = StrokePixelPadding(value.Stroke)
+        inflationX *= padding
+        inflationY *= padding
+      }
       push.sampleStep_z = inflationX
       push.sampleStep_w = inflationY
       let rgba = int32(value.FillColor)
@@ -85,13 +93,18 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_x = value.AtlasWordOffset
       push.params_y = value.FillRule == 1u ? 1u : 0u
       push.params_z = 1u
-      push.params_w = 0u
-      EnsurePathDescriptorLayout()
+      push.params_w = if stroke { pathStrokeFrameData!!.StyleOffset(index, false) } else { 0u }
+      EnsurePathDescriptorLayout(layout)
       if !pathDescriptorBound || !SameResourceId(pathAtlasId, value.AtlasId) {
-        pathAtlas.BindDescriptor(commandBuffer, pathPipelineLayout)
+        pathAtlas.BindDescriptor(commandBuffer, layout)
         recordDescriptorChangeCount++
         pathDescriptorBound = true
         pathAtlasId = value.AtlasId
+      }
+      if strokePipeline && !strokeDescriptorBound {
+        pathStrokeFrameData!!.Bind(commandBuffer, layout, 2u)
+        strokeDescriptorBound = true
+        recordDescriptorChangeCount++
       }
       if activePipeline != selectedPipeline {
         let bindPipeline = dispatch.vkCmdBindPipeline
@@ -101,19 +114,19 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         activePipeline = selectedPipeline
       }
       let pushConstants = dispatch.vkCmdPushConstants
-      pushConstants(commandBuffer, pathPipelineLayout,
+      pushConstants(commandBuffer, layout,
         uint32(VkConstants.VK_SHADER_STAGE_VERTEX_BIT)
         | uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
         0u, PathPushConstantSize, *void(&push))
-      EnsureClipDescriptor(commandBuffer, pathPipelineLayout)
+      EnsureClipDescriptor(commandBuffer, layout)
       let draw = dispatch.vkCmdDraw
       draw(commandBuffer, 6u, 1u, 0u, currentDrawOrdinal)
       RecordImmediateDraw()
     }
 
-  private func EnsurePathDescriptorLayout() {
-    let changed = boundDescriptorLayout != pathPipelineLayout
-    EnsureDescriptorLayout(pathPipelineLayout)
+  private func EnsurePathDescriptorLayout(layout VkPipelineLayout) {
+    let changed = boundDescriptorLayout != layout
+    EnsureDescriptorLayout(layout)
     if changed {
       pathDescriptorBound = false
       pathAtlasId = ResourceId{}

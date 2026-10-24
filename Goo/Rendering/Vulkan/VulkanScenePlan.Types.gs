@@ -374,6 +374,8 @@ internal struct AnalyticPathBandRecord {
   internal var AtlasId ResourceId
   internal var AtlasWordOffset uint32
   internal var AtlasWordCount uint32
+  internal var CurveCount uint32
+  internal var Stroke PathStrokeStyle
   internal var FillColor uint32
   internal var FillRule uint32
   internal var Opacity float32
@@ -411,6 +413,8 @@ internal struct ClipMaskRecord {
   internal var AtlasId ResourceId
   internal var AtlasWordOffset uint32
   internal var AtlasWordCount uint32
+  internal var CurveCount uint32
+  internal var Stroke PathStrokeStyle
   internal var Bounds ConservativeBounds
   internal var PathBounds ConservativeBounds
   internal var Fit ShapeFit

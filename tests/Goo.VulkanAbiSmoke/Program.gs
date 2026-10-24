@@ -672,7 +672,7 @@ internal shared class Program {
             pathBandEncoding.CurveCount != 1028 ||
             pathBandEncoding.HorizontalBandCount != 32 ||
             pathBandEncoding.VerticalBandCount != 32 ||
-            pathBandEncoding.WordCount != 13508 ||
+            pathBandEncoding.WordCount != 15566 ||
             !pathBandEncoding.Supports(FillRule.EvenOdd) {
             throw InvalidOperationException("EvenOdd path encoding gate failed")
         }
@@ -706,8 +706,8 @@ internal shared class Program {
         let largeEncoding = PathBandEncoder.Encode(largePath.Build())
         let bytes = MemoryMarshal.AsBytes(largeEncoding.Words.AsSpan(0, largeEncoding.WordCount))
         let hash = Convert.ToHexString(SHA256.HashData(bytes))
-        if largeEncoding.WordCount != 20262 ||
-            hash != "585C66DFC08DB22ABE2268097928D3019EFB544E33304BB2C7A138A3C8D20560" {
+        if largeEncoding.WordCount != 23336 ||
+            hash != "3A9A16468660B74CEC3A4E2A5FFCB31E6C089371E2AF7E8DEC6080DFAB76BF97" {
             throw InvalidOperationException("Large path encoding changed")
         }
         Console.WriteLine("PATH_LARGE_ENCODING_GATE curves=" + largeEncoding.CurveCount.ToString() + " sha256=" + hash)

@@ -1051,6 +1051,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       return
     }
     boundDescriptorLayout = layout
+    strokeDescriptorBound = false
     clipDescriptorBound = false
     clipDescriptorLayout = 0uL
     clipDescriptorSlot = -1

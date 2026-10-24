@@ -29,6 +29,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private let primitivePipelines VulkanSharedPrimitiveFormatState
   private let primitiveFrameData VulkanPrimitiveFrameData
   private let textFrameData VulkanTextFrameData
+  private var pathStrokeFrameData VulkanPathStrokeFrameData?
+  private let frameAllocator VulkanMemoryAllocator
   private let primitiveFrameSlotCount int32
   private var primitiveFrameSlot int32
   private var textFrameScaleX float32
@@ -56,6 +58,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   private var sampledSamplerMode VulkanImageSamplerMode
   private var sampledGeneration uint64
   private var pathDescriptorBound bool
+  private var strokeDescriptorBound bool
   private var pathAtlasId ResourceId
   private var textDescriptorBound bool
   private var textAtlasId ResourceId
@@ -104,6 +107,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     get {
       var count uint64 = primitiveFrameData.LiveObjectCount
       count = count + textFrameData.LiveObjectCount
+      if let data = pathStrokeFrameData { count += data.LiveObjectCount }
       if let data = clipMaskFrameData {
         count = count + data.LiveObjectCount
       }
@@ -212,6 +216,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       this.textFrameData = VulkanTextFrameData(device, dispatch, suppliedAllocator,
         sharedState.PrimitiveDescriptorSetLayout, nativeMaxStorageBufferRange,
         nativePrimitiveFrameSlotCount, nativeObjectAccounting)
+      frameAllocator = suppliedAllocator
       primitiveFrameSlotCount = nativePrimitiveFrameSlotCount
       textFrameScaleX = 1.0F
       textFrameScaleY = 1.0F
@@ -400,6 +405,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       textFrameScaleY = scaleY
       try {
         textFrameData.Prepare(frame, primitiveFrameSlot, completedSubmissionSerial)
+        pathStrokeFrameData?.Begin(frame.AnalyticPathBandCount, frame.ClipMaskCount)
         primitiveFrameData.BeginPrepare(primitiveFrameSlot, maximumRecordCount,
           frame.ShaderEffectDataByteCount, frame.ShaderEffectDataVersion,
           completedSubmissionSerial)
@@ -421,11 +427,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           EmitPresentEncode(nint(0), extent, nil)
         }
         primitiveFrameData.FinishPrepare()
+        PrepareStrokeMasks(frame)
+        pathStrokeFrameData?.FinishPrepare(primitiveFrameSlot, completedSubmissionSerial)
         primitivePrepared = true
         return primitiveFrameData.LastStats
       } catch (error Exception) {
         try { primitiveFrameData.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
         try { textFrameData.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
+        try { pathStrokeFrameData?.Abort(primitiveFrameSlot) } catch (cleanup Exception) { }
         textFrameScaleX = 1.0F
         textFrameScaleY = 1.0F
         primitivePrepared = false
@@ -442,6 +451,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     imageResources?.RecordExternalAcquires(commandBuffer)
     primitiveFrameData.RecordUpload(commandBuffer)
     textFrameData.RecordUpload(commandBuffer)
+    pathStrokeFrameData?.RecordMetrics(commandBuffer, pathAtlas)
   }
 
   internal func FlushPrimitiveFrameBeforeSubmit() VkResult {
@@ -453,11 +463,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   internal func ValidatePrimitiveFrameSubmission(submissionSerial uint64) {
     primitiveFrameData.ValidateSubmission(primitiveFrameSlot, submissionSerial)
     textFrameData.ValidateSubmission(primitiveFrameSlot, submissionSerial)
+    pathStrokeFrameData?.ValidateSubmission(submissionSerial)
   }
 
   internal func MarkPrimitiveFrameSubmitted(submissionSerial uint64) {
     primitiveFrameData.MarkSubmitted(primitiveFrameSlot, submissionSerial)
     textFrameData.MarkSubmitted(primitiveFrameSlot, submissionSerial)
+    pathStrokeFrameData?.MarkSubmitted(primitiveFrameSlot, submissionSerial)
     primitivePrepared = false
     textFrameScaleX = 1.0F
     textFrameScaleY = 1.0F
@@ -466,6 +478,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   internal func ReconcilePrimitiveFrameSubmitted(submissionSerial uint64) {
     primitiveFrameData.ReconcileSubmitted(primitiveFrameSlot, submissionSerial)
     textFrameData.ReconcileSubmitted(primitiveFrameSlot, submissionSerial)
+    pathStrokeFrameData?.MarkSubmitted(primitiveFrameSlot, submissionSerial)
     primitivePrepared = false
     textFrameScaleX = 1.0F
     textFrameScaleY = 1.0F
@@ -473,6 +486,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
 
   internal func AbortPrimitiveFrame() {
     try {
+      pathStrokeFrameData?.Abort(primitiveFrameSlot)
       try {
         primitiveFrameData.Abort(primitiveFrameSlot)
       } finally {
@@ -488,6 +502,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   internal func CollectPrimitiveFrame(completedSubmissionSerial uint64) {
     primitiveFrameData.Collect(completedSubmissionSerial)
     textFrameData.Collect(completedSubmissionSerial)
+    pathStrokeFrameData?.Collect(completedSubmissionSerial)
   }
 
   internal func RecordInsideRendering(
@@ -559,6 +574,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       sampledSamplerMode = VulkanImageSamplerMode.Nearest
       sampledGeneration = 0uL
       pathDescriptorBound = false
+      strokeDescriptorBound = false
       pathAtlasId = ResourceId{}
       textDescriptorBound = false
       textAtlasId = ResourceId{}
@@ -737,8 +753,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       case SceneDrawKind.AnalyticPathBand {
         RequireRecordIndex(reference.Index, frame.AnalyticPathBandCount, "analytic path band index")
-        if !primitivePrepass {
-          EmitPath(commandBuffer, activeExtent, frame.AnalyticPathBands[reference.Index], frame)
+        if primitivePrepass {
+          if frame.AnalyticPathBands[reference.Index].Stroke.Width > 0.0F {
+            PrepareStroke(reference.Index, false, frame)
+          }
+        } else {
+          EmitPath(commandBuffer, activeExtent, frame.AnalyticPathBands[reference.Index], frame, reference.Index)
         }
       }
       case SceneDrawKind.Shadow {
@@ -1352,6 +1372,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     }
     primitiveFrameData.Dispose()
     textFrameData.Dispose()
+    pathStrokeFrameData?.Dispose()
     disposed = true
   }
 

@@ -72,6 +72,12 @@ internal class TransformGeometry {
       return compose(viewportTransform, authored)
     }
 
+    internal func WindowMatrix(n Node) Affine2D {
+      let local = Matrix(n)
+      if n.IsPortal { return local }
+      return if let parent = n.Parent { compose(WindowMatrix(parent), local) } else { local }
+    }
+
     private func authoredMatrix(n Node, value TransformValue) Affine2D {
       // Fixed pipeline: scale, then skew, then rotation (translation applies last).
       let sx = value.Scale * value.ScaleX

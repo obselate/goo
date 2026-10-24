@@ -210,6 +210,7 @@ enum-underlying|Goo.TextTransform|System.Int32
 enum-underlying|Goo.TextTrimming|System.Int32
 enum-underlying|Goo.TextWrap|System.Int32
 enum-underlying|Goo.TransitionProperty|System.Int32
+enum-underlying|Goo.VectorEffect|System.Int32
 enum-underlying|Goo.Visibility|System.Int32
 enum-underlying|Goo.WindowBackdrop|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
@@ -864,6 +865,8 @@ enum|Goo.TransitionProperty|RowGap|19
 enum|Goo.TransitionProperty|Top|25
 enum|Goo.TransitionProperty|Transform|51
 enum|Goo.TransitionProperty|Width|1
+enum|Goo.VectorEffect|NonScalingStroke|1
+enum|Goo.VectorEffect|None|0
 enum|Goo.Visibility|Hidden|1
 enum|Goo.Visibility|Visible|0
 enum|Goo.WindowBackdrop|Blur|1
@@ -2109,6 +2112,7 @@ property|Goo.Shape|StrokeCap|Goo.StrokeCap|instance|get:public,init:public|index
 property|Goo.Shape|StrokeEnd|System.Double|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeStart|System.Double|instance|get:public,init:public|index:()
+property|Goo.Shape|VectorEffect|Goo.VectorEffect|instance|get:public,init:public|index:()
 property|Goo.SoundOpenResult|Player|Goo.SoundPlayer?|instance|get:public,set:private|index:()
 property|Goo.SoundOpenResult|Status|Goo.SoundOpenStatus|instance|get:public,set:private|index:()
 property|Goo.SoundOutputDevices|Devices|System.Collections.Generic.IReadOnlyList`1<Goo.SoundOutputDevice>|instance|get:public,set:private|index:()
@@ -2370,6 +2374,7 @@ property|Goo.VectorStroke|Dashes|Goo.DashPattern?|instance|get:public|index:()
 property|Goo.VectorStroke|Join|Goo.StrokeJoin|instance|get:public|index:()
 property|Goo.VectorStroke|MiterLimit|System.Double|instance|get:public|index:()
 property|Goo.VectorStroke|Paint|Goo.VectorPaint|instance|get:public|index:()
+property|Goo.VectorStroke|VectorEffect|Goo.VectorEffect|instance|get:public,init:public|index:()
 property|Goo.VectorStroke|Width|System.Double|instance|get:public|index:()
 property|Goo.VirtualChild|Key|System.String|instance|get:public,init:public|index:()
 property|Goo.VirtualChild|Measured|System.Boolean|instance|get:public,init:public|index:()
@@ -2751,6 +2756,7 @@ type|Goo.Text|sealed-class|public|base:Goo.Blob|interfaces:|generic:
 type|Goo.Tokens|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.TransitionProperty|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.VectorAsset|class|public|base:System.Object|interfaces:|generic:
+type|Goo.VectorEffect|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.VectorNodeStyle|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.VectorNode|class|public|base:System.Object|interfaces:|generic:
 type|Goo.VectorPaint|class|public|base:System.Object|interfaces:|generic:

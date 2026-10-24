@@ -760,7 +760,7 @@ internal class PathGeometryBuilder {
 
   private func closePath() {
     if !active { return }
-    if currentX != startX || currentY != startY {
+    if quadratics.Count == contourStart || currentX != startX || currentY != startY {
       lineTo(startX, startY)
     }
     closed = true

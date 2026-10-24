@@ -469,7 +469,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   }
 }
 
-internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
+internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private const FormatCapacity int32 = 2
   private let device VkDevice
   private let dispatch VkDeviceDispatch
@@ -517,12 +517,14 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
     profileBaseline = recorder.BaselineVersion
     for module in []uint64{vertexModule, solidModule, shadowModule, borderModule, linearModule,
       radialModule, sampledModule, blendModule, pathVertexModule, pathFragmentModule,
-      clipMaskVertexModule, clipMaskFragmentModule, textVertexModule, textFragmentModule, textPaintFragmentModule} {
+      clipMaskVertexModule, clipMaskFragmentModule, textVertexModule, textFragmentModule, textPaintFragmentModule,
+      strokeFragmentModule, strokeMaskModule, strokeMetricModule} {
       recorder.Resource(FrameResourceKind.Shader,
         recorder.NativeResource(FrameResourceKind.Shader, uint64(device), module),
         VulkanDiagnosticEventIds.ResourceCreate, "shader.module", device: uint64(device), baseline: true)
     }
-    for pipeline in []uint64{clipMaskR8Pipeline, clipMaskRgba8Pipeline} {
+    for pipeline in []uint64{clipMaskR8Pipeline, clipMaskRgba8Pipeline, strokeRgbaPipeline, strokeBgraPipeline,
+      strokeMaskR8Pipeline, strokeMaskRgbaPipeline, strokeMetricPipeline} {
       recorder.Resource(FrameResourceKind.Pipeline,
         recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
         VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
@@ -579,6 +581,18 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       if clipMaskPipelineLayout != 0uL { count++ }
       if clipMaskR8Pipeline != 0uL { count++ }
       if clipMaskRgba8Pipeline != 0uL { count++ }
+      if strokeFragmentModule != 0uL { count++ }
+      if strokeMaskModule != 0uL { count++ }
+      if strokeMetricModule != 0uL { count++ }
+      if strokeDescriptorLayout != 0uL { count++ }
+      if strokePipelineLayout != 0uL { count++ }
+      if strokeMaskPipelineLayout != 0uL { count++ }
+      if strokeMetricPipelineLayout != 0uL { count++ }
+      if strokeMetricPipeline != 0uL { count++ }
+      if strokeRgbaPipeline != 0uL { count++ }
+      if strokeBgraPipeline != 0uL { count++ }
+      if strokeMaskR8Pipeline != 0uL { count++ }
+      if strokeMaskRgbaPipeline != 0uL { count++ }
       var index int32 = 0
       while index < formatStates.Length {
         if let state = formatStates[index] {
@@ -793,6 +807,7 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
     objectAccounting,
     VkConstants.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
     uint32(VkConstants.VK_SHADER_STAGE_VERTEX_BIT)
+    | uint32(VkConstants.VK_SHADER_STAGE_COMPUTE_BIT)
     | uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT))
 
   private func CreateClipDescriptorSetLayout() VkDescriptorSetLayout {
@@ -953,6 +968,7 @@ internal unsafe sealed class VulkanSharedPrimitiveState : IDisposable {
       }
       index++
     }
+    DisposePathStrokes()
     VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref clipMaskR8Pipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(

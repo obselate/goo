@@ -25,6 +25,7 @@ internal partial class SvgParser {
                     Cap: style.StrokeCap,
                     Join: style.StrokeJoin,
                     DashOffset: style.DashOffset,
+                    VectorEffect: style.VectorEffect,
                     Paint: paint
                 }
                 if let dashes = style.Dashes {
@@ -467,20 +468,15 @@ internal partial class SvgParser {
                         .Trim()
                         .Equals("collapse", StringComparison.OrdinalIgnoreCase)
                 }
-                case "color-interpolation",
-                "color-interpolation-filters",
-                "shape-rendering",
-                "overflow",
-                "enable-background",
-                "vector-effect" {
-                    if pair.Key == "vector-effect" &&
-                        !pair
-                        .Value
-                        .Trim()
-                        .Equals("none", StringComparison.OrdinalIgnoreCase) {
-                        throw Fail(owner, "vector-effect values other than none are not supported")
+                case "vector-effect" {
+                    style.VectorEffect = switch pair.Value.Trim().ToLowerInvariant() {
+                        case "none": Goo.VectorEffect.None
+                        case "non-scaling-stroke": Goo.VectorEffect.NonScalingStroke
+                        default: throw Fail(owner, "vector-effect '${pair.Value}' is not supported")
                     }
                 }
+                case "color-interpolation", "color-interpolation-filters", "shape-rendering",
+                    "overflow", "enable-background" { }
                 case "stop-color", "stop-opacity" { }
                 default {
                     throw Fail(owner, "style property '${pair.Key}' is not supported")
