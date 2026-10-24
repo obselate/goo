@@ -49,8 +49,8 @@ public partial class Window {
     private var nativeModalClosePending bool
     private var nativeWindowGeneration int64
     internal var NativeWindowClosing Action?
-    internal var NativeMessageBox Func[MessageBoxOptions, Action[MessageBoxResult], IDisposable?]?
-    internal var NativeContextMenu Func[Point, NativeMenuSnapshot, Task[NativeMenuResult]]?
+    internal var NativeMessageBox Func[Window, MessageBoxOptions, Action[MessageBoxResult], IDisposable?]?
+    internal var NativeContextMenu Func[Window, Point, NativeMenuSnapshot, Task[NativeMenuResult]]?
     internal prop NativeWindowGeneration int64 { get -> nativeWindowGeneration }
     internal prop NativeOwnerClosing bool { get -> nativeModalClosePending || !IsOpen || host?.IsClosing == true
         || family?.Closing == true || Interlocked.CompareExchange(&closeRequested, 0, 0) != 0 }

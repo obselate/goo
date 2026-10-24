@@ -83,8 +83,8 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             kind PopupKind,
             dismissed(PopupDismissReason) -> void
         ) -> AndroidPopupSurface(this, popup, kind, dismissed)
-        window.NativeMessageBox = (options, complete) -> AndroidMessageBox.Show(window, options, complete)
-        window.NativeContextMenu = (point, snapshot) -> AndroidMenuBridge.Show(window, point, snapshot)
+        window.NativeMessageBox = AndroidMessageBox.Show
+        window.NativeContextMenu = (owner, point, snapshot) -> AndroidMenuBridge.Show(owner, point, snapshot)
         RefreshPreferences()
         preferenceObserver = PreferenceObserver(this, handler)
         context.ContentResolver!!.RegisterContentObserver(

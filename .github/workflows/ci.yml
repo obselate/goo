@@ -1826,8 +1826,6 @@ jobs:
     needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 35
-    env:
-      GooBuildAndroid: 'true'
     steps:
       - name: No affected inputs
         if: needs.changes.outputs.full != 'true'
@@ -1873,7 +1871,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
+          dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           nice -n 10 dotnet build tests/Goo.AndroidClipboardPeer/Goo.AndroidClipboardPeer.gsproj -c Release -m:4 -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
@@ -1918,7 +1916,6 @@ jobs:
             -storepass:file "$RUNNER_TEMP/upload-password" -keypass:file "$RUNNER_TEMP/upload-password"
           export AndroidSdkDirectory="$ANDROID_HOME"
           export JavaSdkDirectory="$JAVA_HOME"
-          export GooBuildAndroid=true
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -m:4
           dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll package \
             --target android --project tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj \
