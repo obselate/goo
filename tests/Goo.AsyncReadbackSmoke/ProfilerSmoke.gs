@@ -503,7 +503,7 @@ internal class ProfilerSmoke {
             var queuedPump = ""
             var queuedFrame = ""
             var sawStartup = false
-            while !holdArmed || remaining {
+            while !holdArmed || remaining || queued == "" || trace.Submitted.Contains(queued) {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
@@ -525,7 +525,7 @@ internal class ProfilerSmoke {
                     }
                     let source = record.GetProperty("source").GetString() ?? ""
                     let submission = record.GetProperty("submissionId").GetString() ?? ""
-                    if source == "submit.enqueue" {
+                    if source == "submit.enqueue" && !trace.Submitted.Contains(submission) {
                         queued = submission
                         queuedPump = record.GetProperty("pumpId").GetString() ?? ""
                         queuedFrame = record.GetProperty("frameId").GetString() ?? ""
@@ -546,6 +546,9 @@ internal class ProfilerSmoke {
                     remaining = true
                 } else if !holdArmed {
                     Require(Stopwatch.GetTimestamp() < holdDeadline, "Posted rebuild has no Build record")
+                }
+                if holdArmed && !remaining && (queued == "" || trace.Submitted.Contains(queued)) {
+                    Require(Stopwatch.GetTimestamp() < holdDeadline, "Held submit enqueue record was not observed")
                 }
             }
             trace.RequireHeld(queued, queuedPump, queuedFrame, buildPump)
