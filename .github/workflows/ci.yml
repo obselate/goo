@@ -151,7 +151,7 @@ jobs:
         run: |
           dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
             -c Release -m:4 -p:TreatWarningsAsErrors=true
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- app-host \
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll "$RUNNER_TEMP/app-host-managed"
 
       - name: Verify NativeAOT application hosting on Linux
@@ -160,9 +160,9 @@ jobs:
           dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
             -c Release -r linux-x64 --self-contained true -m:4 \
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- app-host \
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- desktop \
+          dotnet run --project tools/Goo.HostChecks -c Release -- desktop \
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
@@ -330,7 +330,7 @@ jobs:
       - name: Verify cold and warm macOS application activation
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- macos \
+          dotnet run --project tools/Goo.HostChecks -c Release -- macos \
             artifacts/macos-candidate/Goo.PackageSmoke.app \
             artifacts/macos-activation-results
 
@@ -363,11 +363,11 @@ jobs:
             -c Release -r osx-arm64 --self-contained true -m:4 \
             -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/app-host-aot
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- app-host \
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host \
             artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- macos-host \
+          dotnet run --project tools/Goo.HostChecks -c Release -- macos-host \
             artifacts/app-host-aot "$RUNNER_TEMP/macos-app-host"
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- placement \
+          dotnet run --project tools/Goo.HostChecks -c Release -- placement \
             "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
             "$RUNNER_TEMP/window-placement"
       - name: Verify native macOS clipboard formats and source exit
@@ -696,12 +696,12 @@ jobs:
             -p:TreatWarningsAsErrors=true -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
           GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-            dotnet run --project tools/Goo.ActivationChecks -c Release -- wayland \
+            dotnet run --project tools/Goo.HostChecks -c Release -- wayland \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/wayland-activation
           GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-            dotnet run --project tools/Goo.ActivationChecks -c Release -- placement \
+            dotnet run --project tools/Goo.HostChecks -c Release -- placement \
             tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
             artifacts/reports/window-placement
 
@@ -1534,9 +1534,9 @@ jobs:
             -c Release -r win-x64 --self-contained true -m:4 `
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- app-host artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/app-host-aot"
+          dotnet run --project tools/Goo.HostChecks -c Release -- app-host artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/app-host-aot"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- desktop artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
+          dotnet run --project tools/Goo.HostChecks -c Release -- desktop artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.full == 'true'
@@ -1618,7 +1618,7 @@ jobs:
           foreach ($name in "SDL3.dll", "goo-harfbuzz.dll", "goo-harfbuzz-gpu.dll") {
             Copy-Item "artifacts/windows-smoke/$name" artifacts/app-host-aot -Force
           }
-          dotnet run --project tools/Goo.ActivationChecks -c Release -- placement artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/window-placement"
+          dotnet run --project tools/Goo.HostChecks -c Release -- placement artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/window-placement"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
         if: needs.changes.outputs.full == 'true'

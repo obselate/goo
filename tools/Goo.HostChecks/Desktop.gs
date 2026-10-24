@@ -39,7 +39,7 @@ internal partial class Host {
                         " \"%1\""
                 )
             } else {
-                Require(
+                HostChecks.Require(
                     OperatingSystem.IsLinux(),
                     "This driver qualifies Windows and Linux. macOS uses the signed-bundle driver."
                 )
@@ -107,7 +107,11 @@ internal partial class Host {
             } else {
                 target
             }
-            Run([]string{Executable("gio"), "launch", Path.Combine(Root, name + ".desktop"), value}, 10)
+            HostChecks.Run(
+                []string{Executable("gio"), "launch", Path.Combine(Root, name + ".desktop"), value},
+                10,
+                EnvironmentValues
+            )
         }
     }
 

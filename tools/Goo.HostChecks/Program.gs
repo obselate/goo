@@ -9,7 +9,7 @@ class HostChecks {
     shared {
         public let Root string = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"))
         let Active HashSet[Process] = HashSet[Process]()
-        var Cancelled bool = false
+        public var Cancelled bool = false
 
         public func Require(condition bool, message string) {
             if !condition {
@@ -17,50 +17,70 @@ class HostChecks {
             }
         }
 
-        public func Start(command[]string, environment Dictionary[string, string]? = nil, capture bool = true) Process {
+        public func Start(
+            command[]string,
+            environment Dictionary[string, string?]? = nil,
+            capture bool = true,
+            directory string = ""
+        ) Process {
             let info = ProcessStartInfo{
                 FileName: command[0],
                 UseShellExecute: false,
                 RedirectStandardOutput: capture,
                 RedirectStandardError: capture,
-                WorkingDirectory: Root
+                WorkingDirectory: if directory == "" {
+                    Root
+                } else {
+                    directory
+                }
             }
             for argument in command.Skip(1) {
                 info.ArgumentList.Add(argument)
             }
             if environment != nil {
                 for entry in environment {
-                    info.Environment[entry.Key] = entry.Value
+                    if entry.Value == nil {
+                        info.Environment.Remove(entry.Key)
+                    } else {
+                        info.Environment[entry.Key] = entry.Value
+                    }
                 }
             }
-            let process = Process.Start(info)!!
             lock Active {
                 if Cancelled {
-                    Stop(process)
-                    process.Dispose()
                     throw OperationCanceledException()
                 }
+                let process = Process.Start(info)!!
                 Active.Add(process)
                 process.Disposed += (sender, eventArgs) -> {
                     lock Active {
                         Active.Remove(process)
                     }
                 }
+                return process
             }
-            return process
         }
 
-        public func Stop(process Process) {
+        public func Stop(process Process, seconds int32 = 0) {
             if !process.HasExited {
                 process.Kill(entireProcessTree: true)
-                process.WaitForExit()
             }
+            Require(
+                process.WaitForExit(
+                    if seconds == 0 {
+                        -1
+                    } else {
+                        seconds * 1000
+                    }
+                ),
+                "process tree did not stop"
+            )
         }
 
         public func Run(
             command[]string,
             seconds int32 = 0,
-            environment Dictionary[string, string]? = nil,
+            environment Dictionary[string, string?]? = nil,
             required bool = true
         ) CommandResult {
             using let process = Start(command, environment, capture: !required)
@@ -93,16 +113,8 @@ class HostChecks {
             }
             return CommandResult{
                 Code: process.ExitCode,
-                Output: if stdout == nil {
-                    ""
-                } else {
-                    stdout.GetAwaiter().GetResult()
-                },
-                Error: if stderr == nil {
-                    ""
-                } else {
-                    stderr.GetAwaiter().GetResult()
-                }
+                Output: stdout?.GetAwaiter().GetResult() ?? "",
+                Error: stderr?.GetAwaiter().GetResult() ?? ""
             }
         }
 
@@ -115,7 +127,7 @@ class HostChecks {
             }
             for process in processes {
                 try {
-                    Stop(process)
+                    Stop(process, 10)
                 } catch (error InvalidOperationException) { }
             }
         }
@@ -123,10 +135,7 @@ class HostChecks {
         func Main(arguments[]string) int32 {
             Console.CancelKeyPress += Cancel
             try {
-                Require(
-                    arguments.Length >= 1,
-                    "expected macos-notifications, wayland-notifications, macos-data-transfer, or input-build"
-                )
+                Require(arguments.Length >= 1, "expected a host check subcommand")
                 let args = arguments.Skip(1).ToArray()
                 if arguments[0] == "macos-notifications" {
                     Notifications.MacOs(args)
@@ -136,6 +145,24 @@ class HostChecks {
                     DataTransfer.Run(args)
                 } else if arguments[0] == "input-build" {
                     InputBuild.Run(args)
+                } else if []string{"app-host", "desktop", "macos", "macos-host", "placement", "wayland"}.Contains(
+                    arguments[0]
+                ) {
+                    Require(args.Length == 2, "expected PROGRAM and OUTPUT")
+                    using let host = Host(args[0], args[1])
+                    if arguments[0] == "app-host" {
+                        host.AppHost()
+                    } else if arguments[0] == "desktop" {
+                        host.Desktop()
+                    } else if arguments[0] == "macos" {
+                        host.Macos()
+                    } else if arguments[0] == "macos-host" {
+                        host.MacosHost()
+                    } else if arguments[0] == "placement" {
+                        host.Placement()
+                    } else {
+                        host.Wayland()
+                    }
                 } else {
                     throw ArgumentException("unknown check: " + arguments[0])
                 }

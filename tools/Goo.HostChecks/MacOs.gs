@@ -13,7 +13,7 @@ internal partial class Host {
             }
             let path = Path.Combine(Root, name)
             if File.Exists(path) {
-                Require(File.ReadAllText(path) == "passed", "Unexpected activation result: " + name)
+                HostChecks.Require(File.ReadAllText(path) == "passed", "Unexpected activation result: " + name)
                 return
             }
             System.Threading.Thread.Sleep(50)
@@ -27,7 +27,7 @@ internal partial class Host {
         File.WriteAllText(one, "one")
         File.WriteAllText(two, "two")
         try {
-            Run(
+            HostChecks.Run(
                 []string{
                     "open",
                     "-n",
@@ -41,9 +41,9 @@ internal partial class Host {
                 15
             )
             MacMarker("cold.txt")
-            Run([]string{"open", "-a", Program, "goo-activation-smoke://warm"}, 15)
+            HostChecks.Run([]string{"open", "-a", Program, "goo-activation-smoke://warm"}, 15)
             MacMarker("warm.txt")
-            Run([]string{"open", "-a", Program, one, two}, 15)
+            HostChecks.Run([]string{"open", "-a", Program, one, two}, 15)
             MacMarker("documents.txt")
             MacMarker("passed.txt")
             Console.WriteLine("macOS activation: cold URI, warm URI and document batch passed")
@@ -59,16 +59,16 @@ internal partial class Host {
             return
         }
         let pid = int32.Parse(File.ReadAllText(pidFile)).ToString()
-        let inspect = Start([]string{"ps", "-p", pid, "-o", "command="})
-        Require(inspect.Process.WaitForExit(15000), "Could not inspect activation process")
+        using let inspect = Child([]string{"ps", "-p", pid, "-o", "command="})
+        HostChecks.Require(inspect.Process.WaitForExit(15000), "Could not inspect activation process")
         let command = inspect.Text()
         if command.Contains(executable) && (session.Length == 0 || command.Contains(session)) {
-            let signal = Start([]string{"kill", "-TERM", pid})
-            Require(signal.Process.WaitForExit(15000), "Could not stop activation process")
+            using let signal = Child([]string{"kill", "-TERM", pid})
+            HostChecks.Require(signal.Process.WaitForExit(15000), "Could not stop activation process")
             if signal.Process.ExitCode != 0 {
-                let remaining = Start([]string{"ps", "-p", pid, "-o", "command="})
-                Require(remaining.Process.WaitForExit(15000), "Could not inspect activation process")
-                Require(remaining.Process.ExitCode != 0, signal.Text())
+                using let remaining = Child([]string{"ps", "-p", pid, "-o", "command="})
+                HostChecks.Require(remaining.Process.WaitForExit(15000), "Could not inspect activation process")
+                HostChecks.Require(remaining.Process.ExitCode != 0, signal.Text())
             }
         }
     }
@@ -128,7 +128,7 @@ internal partial class Host {
             documentType.InternalSubset = nil
         }
         plist.Save(plistPath)
-        Run(
+        HostChecks.Run(
             []string{
                 "bash",
                 ".github/scripts/stage-macos-arm64.sh",
@@ -155,14 +155,14 @@ internal partial class Host {
                 OpenMac(app, session, identity, []string{scheme + "://forwarded/" + suffix}, true)
                 let path = WaitFile(Path.Combine(session, "$index.event"), 30, error: Path.Combine(session, "error"))
                 let lines = File.ReadAllLines(path)
-                Require(
+                HostChecks.Require(
                     lines.Length >= 3 && lines[0] == "OpenUri" && lines[1] == "warm",
                     "Forwarded native activation changed: " + string.Join(", ", lines)
                 )
                 forwarded.Add(lines[2])
                 index++
             }
-            Require(
+            HostChecks.Require(
                 forwarded.OrderBy(s -> s).SequenceEqual(
                     []string{scheme + "://forwarded/one", scheme + "://forwarded/two"}
                 ),
@@ -200,13 +200,13 @@ internal partial class Host {
         if fresh {
             args.AddRange([]string{"--args", "activated", identity, "--output=" + session})
         }
-        Run(args.ToArray(), 15)
+        HostChecks.Run(args.ToArray(), 15)
     }
 
     private func MacDocuments(session string, index int32, initial bool, one string, two string) {
         Observed(session, index, "OpenDocuments", initial, one, 30)
         let file = WaitFile(Path.Combine(session, "$index.documents"), 30, error: Path.Combine(session, "error"))
-        Require(
+        HostChecks.Require(
             File.ReadAllLines(file).SequenceEqual([]string{Uri(one).AbsoluteUri, Uri(two).AbsoluteUri}),
             "Native document batch changed"
         )

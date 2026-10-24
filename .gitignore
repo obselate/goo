@@ -131,8 +131,6 @@
 !/tools/Goo.RepositoryChecks/**
 !/tools/Goo.ReleaseCheck/
 !/tools/Goo.ReleaseCheck/**
-!/tools/Goo.ActivationChecks/
-!/tools/Goo.ActivationChecks/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
 !/tools/Goo.Investigation/
