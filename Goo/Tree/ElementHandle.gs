@@ -14,7 +14,7 @@ public class ElementHandle {
   public init() {
   }
 
-  /// Reports whether this handle is currently attached to an element.
+  /// Reports whether this handle is attached to an element.
   public prop IsMounted bool{
     get -> mountedNode() != nil
   }

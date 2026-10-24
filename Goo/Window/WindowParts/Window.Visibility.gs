@@ -33,7 +33,7 @@ public partial class Window {
     }
   }
 
-  /// Gets whether the host currently reports a visible viewport. This does not imply focus or lack of occlusion.
+  /// Gets whether the host reports a visible viewport. This does not imply focus or lack of occlusion.
   public prop IsVisible bool { get -> IsOpen && host?.IsVisible == true }
 
   /// Gets supported native lifecycle operations, or None before Open or Attach.
