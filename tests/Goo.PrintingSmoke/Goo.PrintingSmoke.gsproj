@@ -6,5 +6,6 @@
   <ItemGroup>
     <ProjectReference Include="../../Goo.Printing/Goo.Printing.gsproj" />
     <ProjectReference Include="../../Goo.SpellCheck/Goo.SpellCheck.gsproj" />
+    <ProjectReference Include="../../Goo.RichText/Goo.RichText.gsproj" />
   </ItemGroup>
 </Project>

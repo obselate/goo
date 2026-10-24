@@ -135,6 +135,7 @@ open class PublicApiTests {
             typeof(HunspellSpellingService).Assembly,
             typeof(Printing).Assembly,
             typeof(NativeDialogs).Assembly,
+            typeof(Goo.RichText.RichTextClipboard).Assembly,
             typeof(SoundPlayer).Assembly
         }
             .SelectMany((assembly Assembly) -> assembly.GetExportedTypes())

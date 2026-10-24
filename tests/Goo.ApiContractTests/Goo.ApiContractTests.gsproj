@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\Goo.NativeDialogs\Goo.NativeDialogs.gsproj" SetTargetFramework="TargetFramework=net10.0" />
     <ProjectReference Include="..\..\Goo.Audio\Goo.Audio.gsproj" />
     <ProjectReference Include="..\..\Goo.Notifications\Goo.Notifications.gsproj" />
+    <ProjectReference Include="../../Goo.RichText/Goo.RichText.gsproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(GooSmokeUsePackages)' == 'true'">
     <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)" />
@@ -32,6 +33,7 @@
     <PackageReference Include="Goo.Printing" VersionOverride="$(GooReleaseVersion)" />
     <PackageReference Include="Goo.NativeDialogs" VersionOverride="$(GooReleaseVersion)" />
     <PackageReference Include="Goo.Audio" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.RichText" VersionOverride="$(GooReleaseVersion)" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

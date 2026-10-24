@@ -204,6 +204,9 @@ class PublicDocumentationTests {
             "M:Goo.OffscreenRenderSession.Dispose",
             "M:Goo.NativeDialogOwnerLease.Dispose",
             "M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)",
+            "M:Goo.TextPresentationLayer.GetStyles",
+            "M:Goo.TextPresentationLayer.ApplyTransaction(Goo.TextChange[],System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
+            "M:Goo.TextEditorController.ReplaceSelection(Goo.TextPresentationLayer,System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
             "M:Goo.Window.AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)",
             "M:Goo.TransferRepresentation.#ctor(System.String,System.ReadOnlyMemory{System.Byte})",
             "M:Goo.TransferData.#ctor(System.Collections.Generic.IReadOnlyList{Goo.TransferRepresentation},"
@@ -804,6 +807,15 @@ class PublicDocumentationTests {
                 []string{"width", "height", "alpha"},
                 System.Array.Empty[string](),
                 false
+            ),
+            ["M:Goo.TextPresentationLayer.GetStyles"] = DocumentationShape(
+                System.Array.Empty[string](), System.Array.Empty[string](), true
+            ),
+            ["M:Goo.TextPresentationLayer.ApplyTransaction(Goo.TextChange[],System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})"] = DocumentationShape(
+                []string{"changes", "styles"}, System.Array.Empty[string](), true
+            ),
+            ["M:Goo.TextEditorController.ReplaceSelection(Goo.TextPresentationLayer,System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})"] = DocumentationShape(
+                []string{"layer", "text", "fragmentRelativeStyles"}, System.Array.Empty[string](), true
             ),
             ["M:Goo.Style.TryGetTextStyle(Goo.TextStyleProperties@)"] = DocumentationShape(
                 []string{"properties"},
