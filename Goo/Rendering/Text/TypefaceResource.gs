@@ -16,13 +16,13 @@ internal sealed class TypefaceResource : IDisposable {
   internal prop IsRegistered bool{ get -> sourceId != 0uL }
 
   internal init(family string, bytes []uint8, faceIndex uint32,
-    variations([]VulkanTextVariation)?, sourceId uint64, sourceGeneration uint64) {
+    variations([]VulkanTextVariation)?, sourceId uint64, sourceGeneration uint64, systemWeight int32? = nil) {
       if family == nil { throw ArgumentNullException("family") }
       if bytes.Length == 0 { throw ArgumentException("Font bytes are empty", "bytes") }
       this.family = family
       this.sourceId = sourceId
       this.sourceGeneration = sourceGeneration
-      font = VulkanTextFont(bytes, 1u, faceIndex, variations, family)
+      font = VulkanTextFont(bytes, 1u, faceIndex, variations, family, systemWeight)
     }
 
   internal func Profile(recorder FrameRecorder) { font.Profile(recorder, true) }

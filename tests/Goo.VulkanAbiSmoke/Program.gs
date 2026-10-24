@@ -1,11 +1,16 @@
 import Goo
 import System
+import System.Diagnostics
 import System.IO
 import System.Runtime.InteropServices
 import System.Security.Cryptography
 
 internal shared class Program {
     private func Main() int32 {
+        if Environment.GetEnvironmentVariable("GOO_VK_SYSTEM_FONT_WEIGHT") == "1" {
+            RunSystemFontWeightGate(Path.Combine(AppContext.BaseDirectory, "VendSans-VariableFont_wght.ttf"))
+            return 0
+        }
         if Environment.GetEnvironmentVariable("GOO_VK_DESCRIPTOR_GC") == "1" {
             DescriptorLifetimeRegression.Run()
             return 0
@@ -33,6 +38,7 @@ internal shared class Program {
         }
         RunFontCacheGate(fontPath)
         RunFontRegistrationGate(fontPath)
+        if OperatingSystem.IsLinux() { RunSystemFontWeightGate(fontPath) }
         RunPathMorphGate()
         RunEvenOddPathGate()
         RunPathUploadGate()
@@ -159,6 +165,65 @@ internal shared class Program {
         } finally {
             font?.Dispose()
         }
+    }
+
+    private func RunSystemFontWeightGate(fontPath string) {
+        let family = "GooSystemVariableWeight"
+        let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        if Environment.GetEnvironmentVariable("GOO_VK_SYSTEM_FONT_WEIGHT") != "1" {
+            let root = Path.Combine(home, ".cache", "goo-system-font-" + Guid.NewGuid().ToString("N"))
+            let fonts = Path.Combine(root, ".fonts")
+            Directory.CreateDirectory(fonts)
+            try {
+                File.Copy(fontPath, Path.Combine(fonts, family + ".ttf"))
+                let config = Path.Combine(root, "fonts.conf")
+                File.WriteAllText(config, "<fontconfig><dir>" + System.Security.SecurityElement.Escape(fonts)
+                    + "</dir><cachedir>" + System.Security.SecurityElement.Escape(Path.Combine(root, "cache"))
+                    + "</cachedir></fontconfig>")
+                let start = ProcessStartInfo(Environment.ProcessPath ?? throw InvalidOperationException("No process path"))
+                start.UseShellExecute = false
+                if Path.GetFileNameWithoutExtension(start.FileName) == "dotnet" {
+                    start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Goo.VulkanAbiSmoke.dll"))
+                }
+                start.Environment["HOME"] = root
+                start.Environment["FONTCONFIG_FILE"] = config
+                start.Environment["FONTCONFIG_PATH"] = root
+                start.Environment["XDG_CACHE_HOME"] = Path.Combine(root, "cache")
+                start.Environment["GOO_VK_SYSTEM_FONT_WEIGHT"] = "1"
+                using let child = Process.Start(start) ?? throw InvalidOperationException("Font smoke did not start")
+                child.WaitForExit()
+                if child.ExitCode != 0 { throw InvalidOperationException("System variable font weight smoke failed") }
+            } finally {
+                Directory.Delete(root, true)
+            }
+            return
+        }
+
+        let resolved = SystemFontResolvers.Current().Find(family, 600, false)
+        if resolved != Path.Combine(home, ".fonts", family + ".ttf") {
+            throw InvalidOperationException("System variable font did not resolve to the private fixture")
+        }
+        using let light = TextShaping.Shape("office", family, 32f, 300, false, 0f, 1)
+        using let semibold = TextShaping.Shape("office", family, 32f, 600, false, 0f, 1)
+        using let below = TextShaping.Shape("office", family, 32f, 100, false, 0f, 1)
+        using let maximum = TextShaping.Shape("office", family, 32f, 700, false, 0f, 1)
+        using let above = TextShaping.Shape("office", family, 32f, 900, false, 0f, 1)
+        using let fallback = TextShaping.Shape("office", "MissingWeightFixture, " + family, 32f, 600, false, 0f, 1)
+        if light.HasMissingGlyph || semibold.HasMissingGlyph || light.Width == semibold.Width {
+            throw InvalidOperationException("Requested system variable font weight did not change glyph advances")
+        }
+        if below.Width != light.Width || above.Width != maximum.Width || fallback.Width != semibold.Width {
+            throw InvalidOperationException("System variable font axis clamp or family fallback failed")
+        }
+        using let source = FontSource("GooExplicitVariableWeight", 600, false, File.ReadAllBytes(fontPath),
+            0u, []FontVariation{FontVariation("wght", 300f)})
+        source.Register()
+        using let explicitWeight = TextShaping.Shape("office", source.Family, 32f, 600, false, 0f, 1)
+        if explicitWeight.Width != light.Width {
+            throw InvalidOperationException("Explicit font variations were replaced by the requested weight")
+        }
+        Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
+            + " semibold=" + semibold.Width.ToString() + " clamp=1 fallback=1 explicit=1")
     }
 
     private func RunFontRegistrationGate(fontPath string) {
