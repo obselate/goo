@@ -261,7 +261,6 @@ public data struct ElementMetrics {
   private var contentBox ElementRect
   private var scrollOffset Point
   private var scrollRange Point
-  private var pinned bool
 
   /// Reports whether the element is mounted.
   public prop IsMounted bool{ get -> isMounted init -> isMounted = value }
@@ -273,8 +272,6 @@ public data struct ElementMetrics {
   public prop ScrollOffset Point{ get -> scrollOffset init -> scrollOffset = value }
   /// Gets the maximum legal logical scroll offset.
   public prop ScrollRange Point{ get -> scrollRange init -> scrollRange = value }
-  /// Gets whether PinToBottom is set and the reader has not scrolled away from the end.
-  public prop Pinned bool{ get -> pinned init -> pinned = value }
 }
 
 /// Specifies the coordinate space used by mounted text geometry queries.
@@ -711,7 +708,6 @@ internal class MetricSubscriptions {
         ContentBox: ElementHandles.ContentBox(node),
         ScrollOffset: Point{ X: float64(node.ScrollX), Y: float64(node.ScrollY) },
         ScrollRange: scrollRange(node),
-        Pinned: node.PinToBottom && !node.UserScrolled,
       }
     }
 
@@ -819,7 +815,6 @@ private func sameElementMetrics(left ElementMetrics, right ElementMetrics) bool 
   && sameElementRect(left.ContentBox, right.ContentBox)
   && left.ScrollOffset.X == right.ScrollOffset.X && left.ScrollOffset.Y == right.ScrollOffset.Y
   && left.ScrollRange.X == right.ScrollRange.X && left.ScrollRange.Y == right.ScrollRange.Y
-  && left.Pinned == right.Pinned
 
 private func sameElementRect(left ElementRect, right ElementRect) bool -> left.X == right.X && left.Y == right.Y && left.Width == right.Width && left.Height == right.Height
 

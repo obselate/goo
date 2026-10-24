@@ -213,8 +213,7 @@ internal sealed class VirtualNodeState {
         pendingScrollX = float32(x)
         pendingScrollY = float32(y)
         pendingTargetX = float32(Math.Max(0.0, float64(n.ScrollTargetX) + x - float64(n.ScrollX)))
-        pendingTargetY = if n.PinToBottom && !n.UserScrolled { float32(y) }
-        else { float32(Math.Max(0.0, float64(n.ScrollTargetY) + y - float64(n.ScrollY))) }
+        pendingTargetY = float32(Math.Max(0.0, float64(n.ScrollTargetY) + y - float64(n.ScrollY)))
       }
       return children
     } catch (error Exception) {

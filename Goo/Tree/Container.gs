@@ -27,8 +27,6 @@ public class Container : Blob {
     get -> ContainerVectorViewports.Get(this)
     init -> ContainerVectorViewports.Set(this, value)
   }
-  /// Reports whether scroll content stays pinned to the bottom.
-  public prop PinToBottom bool{ get; init; }
   // Window-domain marker; authored through WindowDragRegion, not directly.
   internal prop DragsWindow bool{ get; set }
   /// Overrides whether this container participates in pointer hit testing.

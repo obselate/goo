@@ -1077,7 +1077,7 @@ method|Goo.ElementHandle|SetTextInputArea|instance|public|generic:|(area:Goo.Ele
 method|Goo.ElementHandle|TryCopyTextRangeRects|instance|public|generic:|(textRange:Goo.TextRange,space:Goo.TextCoordinateSpace,destination:System.Span`1<Goo.ElementRect>,out required:System.Int32&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextCaretRect|instance|public|generic:|(position:Goo.TextPosition,space:Goo.TextCoordinateSpace,out rect:Goo.ElementRect&)->System.Boolean
 method|Goo.ElementHandle|TryGetTextPositionAt|instance|public|generic:|(point:Goo.Point,space:Goo.TextCoordinateSpace,out position:Goo.TextPosition&)->System.Boolean
-method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&,out pinned:System.Boolean&)->System.Void
+method|Goo.ElementMetrics|Deconstruct|instance|public|generic:|(out isMounted:System.Boolean&,out borderBox:Goo.ElementRect&,out contentBox:Goo.ElementRect&,out scrollOffset:Goo.Point&,out scrollRange:Goo.Point&)->System.Void
 method|Goo.ElementMetrics|Equals|instance|public|generic:|(other:Goo.ElementMetrics)->System.Boolean
 method|Goo.ElementMetrics|Equals|virtual|public|generic:|(obj:System.Object?)->System.Boolean
 method|Goo.ElementMetrics|GetHashCode|virtual|public|generic:|()->System.Int32
@@ -1870,7 +1870,6 @@ property|Goo.Command|CanExecute|System.Boolean|instance|get:public|index:()
 property|Goo.Container|Children|System.Collections.Generic.IList`1<Goo.Blob>|instance|get:public,init:public|index:()
 property|Goo.Container|HitTestSelf|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Container|Layout|Goo.LayoutAlgorithm?|instance|get:public,init:public|index:()
-property|Goo.Container|PinToBottom|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Context`1|Window|Goo.Window|instance|get:public|index:()
 property|Goo.DashPattern|Intervals|System.Collections.Generic.IReadOnlyList`1<System.Double>|instance|get:public|index:()
 property|Goo.DashPattern|Offset|System.Double|instance|get:public|index:()
@@ -1920,7 +1919,6 @@ property|Goo.ElementHandle|ScrollRange|Goo.Point|instance|get:public|index:()
 property|Goo.ElementMetrics|BorderBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ContentBox|Goo.ElementRect|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|IsMounted|System.Boolean|instance|get:public,init:public|index:()
-property|Goo.ElementMetrics|Pinned|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ScrollOffset|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.ElementMetrics|ScrollRange|Goo.Point|instance|get:public,init:public|index:()
 property|Goo.ElementRect|Height|System.Double|instance|get:public,init:public|index:()
@@ -2506,12 +2504,10 @@ property|Goo.VirtualViewport|ColumnGap|System.Double|instance|get:public|index:(
 property|Goo.VirtualViewport|ContextVersion|System.Int64|instance|get:public|index:()
 property|Goo.VirtualViewport|Direction|Goo.FlexDirection|instance|get:public|index:()
 property|Goo.VirtualViewport|FocusedChild|System.Int32|instance|get:public|index:()
-property|Goo.VirtualViewport|Pinned|System.Boolean|instance|get:public|index:()
 property|Goo.VirtualViewport|RowGap|System.Double|instance|get:public|index:()
 property|Goo.VirtualViewport|ScrollOffset|Goo.Point|instance|get:public|index:()
 property|Goo.VirtualViewport|Size|Goo.LayoutSize|instance|get:public|index:()
 property|Goo.VirtualViewport|Wrap|Goo.FlexWrap|instance|get:public|index:()
-property|Goo.Virtual|PinToBottom|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.VulkanDrivers|Direct|System.String[]|static|get:public,set:public|index:()
 property|Goo.VulkanExternalImageDescription|AllocationSize|System.UInt64|instance|get:public,init:public|index:()
 property|Goo.VulkanExternalImageDescription|DedicatedAllocation|System.Boolean|instance|get:public,init:public|index:()

@@ -155,7 +155,7 @@ class FixtureContractTests {
             yield Contract[ElementHandleFixtures]("MetricsCallbackRebuildAndBatchContract")
             yield Contract[ElementHandleFixtures]("MetricsCloseContract")
             yield Contract[ElementHandleFixtures]("MetricsContract")
-            yield Contract[ElementHandleFixtures]("MetricsPinContract")
+            yield Contract[ElementHandleFixtures]("MetricsTailFollowContract")
             yield Contract[ElementHandleFixtures]("MetricsScrollFollowerUpdatesRectsInSameFrame")
             yield Contract[ElementHandleFixtures]("OwnerScopeFailureContract")
             yield Contract[ElementHandleFixtures]("PrimitiveMatrixContract")

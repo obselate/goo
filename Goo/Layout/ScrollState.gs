@@ -140,12 +140,11 @@ internal partial class ScrollState {
       SyncEditor(n)
       let previousX = immediate ? n.ScrollX : n.ScrollTargetX
       let previousY = immediate ? n.ScrollY : n.ScrollTargetY
-      setTarget(n, previousX + dx, previousY + dy, immediate, true, dy != 0.0F)
+      setTarget(n, previousX + dx, previousY + dy, immediate, true)
       return Point{X: float64(n.ScrollTargetX - previousX), Y: float64(n.ScrollTargetY - previousY)}
     }
 
-    private func setTarget(n Node, x float32, y float32, immediate bool, activity bool,
-      trackPin bool = true) bool {
+    private func setTarget(n Node, x float32, y float32, immediate bool, activity bool) bool {
         let nextX = clampOffset(x, maxScrollX(n))
         let nextY = clampOffset(y, maxScrollY(n))
         let jump = immediate || n.Kind == NodeKind.Editor
@@ -160,9 +159,6 @@ internal partial class ScrollState {
         }
         if activity && changed {
           touchAxes(n, changedX, changedY)
-          if trackPin && n.PinToBottom {
-            n.UserScrolled = nextY < maxScrollY(n) - 0.5F
-          }
         }
         if let controller = n.EditorController {
           controller.ScrollTo(float64(nextX), float64(nextY))
@@ -198,23 +194,13 @@ internal partial class ScrollState {
       if n.OverflowY != Overflow.Scroll {
         n.ScrollY = 0.0F
         n.ScrollTargetY = 0.0F
-        n.UserScrolled = false
       }
       sync(n)
     }
 
     internal func SetExtent(n Node, width float32, height float32) {
-      let grewY = height > n.ContentH
       n.ContentW = width
       n.ContentH = height
-      // Content that fits leaves nothing to scroll away from, so pinned content follows again when it grows.
-      if maxScrollY(n) <= 0.0F { n.UserScrolled = false }
-      if n.OverflowY == Overflow.Scroll && n.PinToBottom && !n.UserScrolled {
-        n.ScrollTargetY = maxScrollY(n)
-        if grewY {
-          n.ScrollY = n.ScrollTargetY
-        }
-      }
       n.ScrollTargetX = clampOffset(n.ScrollTargetX, maxScrollX(n))
       n.ScrollTargetY = clampOffset(n.ScrollTargetY, maxScrollY(n))
       n.ScrollX = clampOffset(n.ScrollX, maxScrollX(n))
