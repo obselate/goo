@@ -1717,7 +1717,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $version = python .github/scripts/release_version.py --print
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.TraySmoke/Goo.TraySmoke.gsproj -c Release -r win-x64 -m:2 `
             -p:TreatWarningsAsErrors=true -p:GooTrayUsePackages=true `
             -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version `
@@ -2052,21 +2052,20 @@ jobs:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
         run: |
           cp artifacts/main-release/packages/Goo.[0-9]*.nupkg artifacts/main-release/packages/Goo.Templates.*.nupkg artifacts/main-release/packages/Goo.Audio.*.nupkg artifacts/android-packages/
-          python3 - <<'PYCONFIG'
-          import shutil
-          from pathlib import Path
-          source = Path('artifacts/android-packages').resolve()
-          Path('artifacts/android-nuget.config').write_text(f'<configuration><packageSources><clear/><add key="local" value="{source}"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Audio"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>')
-          consumer = Path('artifacts/android-consumer')
-          for name in ['Goo.AndroidSmoke', 'Goo.AndroidSmoke.Shared']:
-              shutil.copytree(Path('tests') / name, consumer / name, ignore=shutil.ignore_patterns('bin', 'obj'))
-          font = Path('Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf')
-          (consumer / font).parent.mkdir(parents=True, exist_ok=True)
-          shutil.copyfile(Path('tests') / font, consumer / font)
-          PYCONFIG
+          printf '%s\n' '<configuration><packageSources><clear/><add key="local" value="android-packages"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="local"><package pattern="Goo"/><package pattern="Goo.Android"/><package pattern="Goo.Audio"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>' > artifacts/android-nuget.config
+          consumer=artifacts/android-consumer
+          mkdir -p "$consumer"
+          set -o pipefail
+          for name in Goo.AndroidSmoke Goo.AndroidSmoke.Shared; do
+            test ! -e "$consumer/$name"
+            tar -C tests --dereference --exclude=bin --exclude=obj -cf - "$name" | tar -C "$consumer" -xf -
+          done
+          font=Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf
+          mkdir -p "$consumer/$(dirname "$font")"
+          cp "tests/$font" "$consumer/$font"
           dotnet build artifacts/android-consumer/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooSmokeUsePackages=true -p:RestoreConfigFile="$PWD/artifacts/android-nuget.config" -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
-          python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
-          python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
       - name: Build Android starter from the packed template
         if: needs.changes.outputs.full == 'true'
