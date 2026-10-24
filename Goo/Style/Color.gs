@@ -18,6 +18,9 @@ public data struct Color {
   /// Gets the normalized alpha channel.
   public prop A float32{ get -> a }
 
+  internal func ContentEquals(other Color) bool ->
+    r.Equals(other.r) && g.Equals(other.g) && b.Equals(other.b) && a.Equals(other.a)
+
   /// Returns this color with a normalized alpha channel.
   /// @param alpha The alpha channel from 0 through 1.
   /// @returns A color with the specified alpha channel.

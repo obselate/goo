@@ -313,6 +313,7 @@ class FixtureContractTests {
             yield Contract[ShapeGeometryFixtures]("AnimatedDashPhaseHasBoundedAllocation")
             yield Contract[ShapeGeometryFixtures]("MutableStrokeGeometryReflattensOnRevision")
             yield Contract[ShapeGeometryFixtures]("RetainedPathReconciliationHasBoundedAllocation")
+            yield Contract[ShapeGeometryFixtures]("EqualPathsAllocateNoMemory")
             yield Contract[ShapeGeometryFixtures]("GeneratedStrokeMappingUsesFullShapeBounds")
             yield Contract[ShapeGeometryFixtures]("MutableOpenContoursRefreshImplicitFillClosure")
             yield Contract[ShapeGeometryFixtures]("OpenContoursRemainOpenForStrokeConstruction")

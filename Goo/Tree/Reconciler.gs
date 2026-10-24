@@ -574,15 +574,15 @@ internal partial class Reconciler {
         n.Placeholder = t.Placeholder
         paintChanged = true
       }
-      if !n.SelectionColor.Equals(t.SelectionColor) {
+      if !n.SelectionColor.ContentEquals(t.SelectionColor) {
         n.SelectionColor = t.SelectionColor
         paintChanged = true
       }
-      if !n.EditorCaretColor.Equals(t.CaretColor) {
+      if !n.EditorCaretColor.ContentEquals(t.CaretColor) {
         n.EditorCaretColor = t.CaretColor
         paintChanged = true
       }
-      if !n.EditorCurrentLineColor.Equals(t.CurrentLineColor) {
+      if !n.EditorCurrentLineColor.ContentEquals(t.CurrentLineColor) {
         n.EditorCurrentLineColor = t.CurrentLineColor
         paintChanged = true
       }
@@ -592,7 +592,7 @@ internal partial class Reconciler {
         paintChanged = true
         inputChanged = true
       }
-      if !n.EditorLineNumberColor.Equals(t.LineNumberColor) {
+      if !n.EditorLineNumberColor.ContentEquals(t.LineNumberColor) {
         n.EditorLineNumberColor = t.LineNumberColor
         paintChanged = true
       }
@@ -668,7 +668,7 @@ internal partial class Reconciler {
       n.Placeholder = t.Placeholder
       paintChanged = true
     }
-    if !n.SelectionColor.Equals(t.SelectionColor) {
+    if !n.SelectionColor.ContentEquals(t.SelectionColor) {
       n.SelectionColor = t.SelectionColor
       paintChanged = true
     }

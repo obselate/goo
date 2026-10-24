@@ -7,7 +7,7 @@ internal enum VectorPathCommandKind {
   MoveTo; LineTo; QuadraticTo; CubicTo; ArcTo; Close
 }
 
-internal data struct VectorPathCommand {
+internal struct VectorPathCommand : IEquatable[VectorPathCommand] {
   internal let Kind VectorPathCommandKind
   internal let X1 float64
   internal let Y1 float64
@@ -20,6 +20,36 @@ internal data struct VectorPathCommand {
   internal let RotationDegrees float64
   internal let LargeArc bool
   internal let SweepClockwise bool
+
+  public func Equals(other VectorPathCommand) bool ->
+    Kind == other.Kind && X1.Equals(other.X1) && Y1.Equals(other.Y1)
+    && X2.Equals(other.X2) && Y2.Equals(other.Y2)
+    && X3.Equals(other.X3) && Y3.Equals(other.Y3)
+    && RadiusX.Equals(other.RadiusX) && RadiusY.Equals(other.RadiusY)
+    && RotationDegrees.Equals(other.RotationDegrees)
+    && LargeArc == other.LargeArc && SweepClockwise == other.SweepClockwise
+
+  public override func Equals(value object?) bool -> switch value {
+    case other is VectorPathCommand: Equals(other)
+    case _: false
+  }
+
+  public override func GetHashCode() int32 {
+    let hash = HashCode()
+    hash.Add(int32(Kind))
+    hash.Add(X1)
+    hash.Add(Y1)
+    hash.Add(X2)
+    hash.Add(Y2)
+    hash.Add(X3)
+    hash.Add(Y3)
+    hash.Add(RadiusX)
+    hash.Add(RadiusY)
+    hash.Add(RotationDegrees)
+    hash.Add(LargeArc)
+    hash.Add(SweepClockwise)
+    return hash.ToHashCode()
+  }
 }
 
 internal class VectorPathData {
@@ -222,12 +252,12 @@ internal class VectorPathData {
           || NormalizedContourCount != other.NormalizedContourCount{ return false }
         var i int32 = 0
         while i < NormalizedQuadraticCount {
-          if quadratics[i] != otherQuadratics[i] { return false }
+          if !quadratics[i].ContentEquals(otherQuadratics[i]) { return false }
           i++
         }
         i = 0
         while i < NormalizedContourCount {
-          if contours[i] != otherContours[i] { return false }
+          if !contours[i].ContentEquals(otherContours[i]) { return false }
           i++
         }
         return true
@@ -238,12 +268,12 @@ internal class VectorPathData {
         || NormalizedContourCount != otherOwner.ContourCount{ return false }
       var i int32 = 0
       while i < NormalizedQuadraticCount {
-        if quadratics[i] != otherOwner.Quadratics[i] { return false }
+        if !quadratics[i].ContentEquals(otherOwner.Quadratics[i]) { return false }
         i++
       }
       i = 0
       while i < NormalizedContourCount {
-        if contours[i] != otherOwner.Contours[i] { return false }
+        if !contours[i].ContentEquals(otherOwner.Contours[i]) { return false }
         i++
       }
       return true
@@ -255,12 +285,12 @@ internal class VectorPathData {
         || owner.ContourCount != other.NormalizedContourCount{ return false }
       var i int32 = 0
       while i < owner.QuadraticCount {
-        if owner.Quadratics[i] != quadratics[i] { return false }
+        if !owner.Quadratics[i].ContentEquals(quadratics[i]) { return false }
         i++
       }
       i = 0
       while i < owner.ContourCount {
-        if owner.Contours[i] != contours[i] { return false }
+        if !owner.Contours[i].ContentEquals(contours[i]) { return false }
         i++
       }
       return true
@@ -274,7 +304,7 @@ internal class VectorPathData {
     let left = Commands
     let right = other.Commands
     while i < left.Length {
-      if left[i] != right[i] { return false }
+      if !left[i].Equals(right[i]) { return false }
       i++
     }
     return true
@@ -285,6 +315,18 @@ internal class VectorPathData {
 /// Coordinates increase rightward on x and downward on y.
 public struct VectorPath {
   internal let payload VectorPathData?
+
+  /// Tests whether another path has the same content.
+  public func Equals(other VectorPath) bool -> Object.Equals(payload, other.payload)
+
+  /// Tests whether an object is a path with the same content.
+  public override func Equals(value object?) bool -> switch value {
+    case other is VectorPath: Equals(other)
+    case _: false
+  }
+
+  /// Gets the content hash code.
+  public override func GetHashCode() int32 -> payload?.GetHashCode() ?? 0
 
   /// Gets the view-box left coordinate.
   public prop ViewBoxX float64{

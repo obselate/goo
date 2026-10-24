@@ -252,6 +252,34 @@ internal class ShapeGeometryFixtures {
       && node.ShapePath.Hash == path.Hash
   }
 
+  func EqualPathsAllocateNoMemory() bool {
+    let nan = VectorPathCommand{ X1: Double.NaN }
+    let same = VectorPathCommand{ X1: Double.NaN, Y1: -0.0 }
+    if !nan.Equals(same) || nan.GetHashCode() != same.GetHashCode()
+      || nan.Equals(VectorPathCommand{ X1: Double.NaN, LargeArc: true })
+      || nan.Equals(VectorPathCommand{ X1: Double.NaN, Kind: VectorPathCommandKind.Close }) {
+      return false
+    }
+    let left = PathBuilder(0.0, 0.0, 128.0, 256.0)
+    let right = PathBuilder(0.0, 0.0, 128.0, 256.0)
+    for index in 0 ... 128 {
+      let x = float64(index % 8 * 16)
+      let y = float64(index / 8 * 16)
+      left.MoveTo(x, y).LineTo(x + 15.0, y).LineTo(x + 15.0, y + 15.0).LineTo(x, y + 15.0).Close()
+      right.MoveTo(x, y).LineTo(x + 15.0, y).LineTo(x + 15.0, y + 15.0).LineTo(x, y + 15.0).Close()
+    }
+    let a = left.Build()
+    let b = right.Build()
+    for index in 0 ... 100 {
+      if !a.Equals(b) { return false }
+    }
+    let before = GC.GetAllocatedBytesForCurrentThread()
+    for index in 0 ... 1000 {
+      if !a.Equals(b) { return false }
+    }
+    return GC.GetAllocatedBytesForCurrentThread() == before
+  }
+
   func OpenContoursUseImplicitFillClosure() bool {
     let path = PathBuilder(0.0, 0.0, 10.0, 10.0).MoveTo(1.0, 1.0).LineTo(9.0, 1.0).LineTo(1.0, 9.0).Build()
     let geometry = PathGeometry.For(path)
