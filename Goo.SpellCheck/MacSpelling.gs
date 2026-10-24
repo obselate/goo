@@ -169,11 +169,17 @@ internal unsafe shared class MacSpelling {
         } else {
             nuint(Send(languages, Selector("count")))
         }
+        let primaryLength = language.IndexOf('-')
         for var index nuint = 0; index < count; index++ {
             let candidate = SendAt(languages, Selector("objectAtIndex:"), index)
-            if string.Equals(ManagedString(candidate).Replace('_', '-'), language, StringComparison.OrdinalIgnoreCase) {
+            let name = ManagedString(candidate).Replace('_', '-')
+            if string.Equals(name, language, StringComparison.OrdinalIgnoreCase) {
                 nativeLanguage = candidate
                 break
+            }
+            if nativeLanguage == 0 && primaryLength > 0 && name.Length == primaryLength &&
+                string.Compare(name, 0, language, 0, primaryLength, StringComparison.OrdinalIgnoreCase) == 0 {
+                nativeLanguage = candidate
             }
         }
         if nativeLanguage == 0 {
