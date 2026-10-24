@@ -328,7 +328,7 @@ let navigation = TransformGesture(OnViewportGesture)
 let surface = Container{Gestures: []GestureRecognizer{navigation}}
 ```
 
-Reference the optional `Goo.Gestures` package.
+Reference `Goo`. Keep the `Goo.Gestures` namespace import.
 Keep one TransformGesture for combined pan, pinch and rotation.
 
 | Recognizer | Behavior |
@@ -367,6 +367,22 @@ Rechecks availability and invokes the action. Returns false when unavailable.
 ### `CanExecute`
 
 Evaluates whether the action can execute now.
+
+## `DoubleTapGesture`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Recognizes two completed direct-touch taps within 400 milliseconds and four logical units. Core defers the first ordinary click only where this recognizer is installed.
+
+### `new(System.Action{Gestures.TapGestureEvent})`
+
+Creates a double-tap recognizer with the shared click-count bounds.
+
+### `CreateSession`
+
+Creates isolated state for one routed interaction.
 
 ## `DragData`
 
@@ -941,6 +957,35 @@ Declares a reusable recognizer whose mutable state belongs to created sessions.
 
 Creates a distinct session for one mounted owner and interaction.
 
+## `GestureRotationResult`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Reports rotation Status and clockwise Radians. Read Radians only when Status is Available.
+
+## `GestureRotationStatus`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Reports whether rotation data is available from this gesture source.
+
+### Values
+
+- `Available`
+- `Unsupported`
+
+### `Available`
+
+Real contact positions provide rotation.
+
+### `Unsupported`
+
+The platform supplies scale without rotation.
+
 ## `GestureSession`
 
 Source:
@@ -1254,6 +1299,22 @@ Reports whether Shift is pressed.
 
 Reports whether Super is pressed.
 
+## `LongPressGesture`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Recognizes a stationary direct-touch hold, then retains ownership until release or cancellation.
+
+### `new(System.Action{Gestures.PressGestureEvent},float64)`
+
+Creates a hold recognizer with eight logical units of movement slop. Duration must be finite and positive, in milliseconds.
+
+### `CreateSession`
+
+Creates isolated state for one routed interaction.
+
 ## `NativeDataDrop`
 
 Source:
@@ -1357,6 +1418,56 @@ No native transfer operation is available.
 ### `OutboundData`
 
 The host can offer application data to other applications.
+
+## `PanAxis`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Restricts pan recognition to both axes or one axis.
+
+### Values
+
+- `Both`
+- `Horizontal`
+- `Vertical`
+
+### `Both`
+
+Recognizes movement in either direction.
+
+### `Horizontal`
+
+Rejects predominantly vertical movement before activation.
+
+### `Vertical`
+
+Rejects predominantly horizontal movement before activation.
+
+## `PanGesture`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Recognizes direct touch movement without adding scrolling or inertia policy.
+
+### `new(System.Action{Gestures.PanGestureEvent},Gestures.PanAxis)`
+
+Creates a pan recognizer with an eight-logical-window-unit activation distance.
+
+### `CreateSession`
+
+Creates isolated state for one routed interaction.
+
+## `PanGestureEvent`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Reports Phase, owner-local Position, WindowPosition, cumulative Translation, per-update Delta and cancellation Reason for a pan.
 
 ## `PlatformInput`
 
@@ -1600,6 +1711,22 @@ Gets normalized pressure in the inclusive range from 0 to 1.
 
 Gets the pointer position in logical window coordinates.
 
+## `PressGestureEvent`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Reports Phase, owner-local Position, WindowPosition and cancellation Reason for a held press.
+
+## `TapGestureEvent`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Reports a recognized double tap's owner-local Position and WindowPosition.
+
 ## `TextCandidateEvent`
 
 Source:
@@ -1639,6 +1766,30 @@ Gets the enter action. Defaults to Done.
 ### `Purpose`
 
 Gets the keyboard purpose. Defaults to Text.
+
+## `TransformGesture`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Recognizes centroid pan, two-contact pinch and rotation as one exclusive interaction.
+
+### `new(System.Action{Gestures.TransformGestureEvent})`
+
+Creates a recognizer which accepts one-contact pan or two separated contacts.
+
+### `CreateSession`
+
+Creates isolated state for one routed interaction.
+
+## `TransformGestureEvent`
+
+Source:
+
+- [`Gestures.gs`](../../Goo/Input/Gestures/Gestures.gs)
+
+Reports Phase, Source, owner-local Center, WindowCenter, cumulative Translation, cumulative Scale, typed Rotation and cancellation Reason.
 
 ## `WheelEvent`
 

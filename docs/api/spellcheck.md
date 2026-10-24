@@ -1,14 +1,38 @@
-# Goo.SpellCheck API
+# SpellCheck API
 
-Generated from `Goo.SpellCheck.xml`. Source declarations supply type ownership and XML-emitter omissions.
+Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo.SpellCheck`](../../Goo.SpellCheck)
+Source: [`Goo/SpellCheck`](../../Goo/SpellCheck)
+
+## `HunspellSpellingService`
+
+Source:
+
+- [`HunspellSpellingService.gs`](../../Goo/SpellCheck/HunspellSpellingService.gs)
+
+Uses the installed Linux Hunspell 1.7 library and app-selected dictionary files. No assets are downloaded.
+
+### `new(string,string,string)`
+
+Configures the explicit BCP 47 language and .aff/.dic paths. Missing native support is an operation status.
+
+### `CheckAsync(TextSnapshot,TextRange,string,System.Threading.CancellationToken)`
+
+Checks dictionary words and returns source UTF-16 ranges without normalizing the input.
+
+### `Dispose`
+
+Waits for any active request and releases the dictionary and system library.
+
+### `SuggestAsync(TextSnapshot,TextRange,string,System.Threading.CancellationToken)`
+
+Gets dictionary suggestions, decoding the dictionary's declared encoding.
 
 ## `ISpellingService`
 
 Source:
 
-- [`Spelling.gs`](../../Goo.SpellCheck/Spelling.gs)
+- [`Spelling.gs`](../../Goo/SpellCheck/Spelling.gs)
 
 Checks immutable text without changing the document or learning words.
 
@@ -24,15 +48,15 @@ Suggests replacements for the word in a UTF-16 source range.
 
 Source:
 
-- [`Spelling.gs`](../../Goo.SpellCheck/Spelling.gs)
+- [`Spelling.gs`](../../Goo/SpellCheck/Spelling.gs)
 
-A misspelled word and its absolute UTF-16 source range.
+A misspelled Word and its absolute UTF-16 source Range.
 
 ## `SpellCheckSession`
 
 Source:
 
-- [`SpellCheckSession.gs`](../../Goo.SpellCheck/SpellCheckSession.gs)
+- [`SpellCheckSession.gs`](../../Goo/SpellCheck/SpellCheckSession.gs)
 
 Maintains an optional misspelling layer and explicit suggestion commands on the owner thread.
 
@@ -76,15 +100,15 @@ Disables applying suggestions without disabling read-only checking.
 
 Source:
 
-- [`Spelling.gs`](../../Goo.SpellCheck/Spelling.gs)
+- [`Spelling.gs`](../../Goo/SpellCheck/Spelling.gs)
 
-Owned spelling results for one immutable document version and language.
+Owned spelling Status, document Version, Language, Errors and optional Error detail.
 
 ## `SpellingStatus`
 
 Source:
 
-- [`Spelling.gs`](../../Goo.SpellCheck/Spelling.gs)
+- [`Spelling.gs`](../../Goo/SpellCheck/Spelling.gs)
 
 Reports a spelling operation independently of the returned words.
 
@@ -135,17 +159,21 @@ The platform or optional native checker is unavailable.
 
 Source:
 
-- [`Spelling.gs`](../../Goo.SpellCheck/Spelling.gs)
+- [`Spelling.gs`](../../Goo/SpellCheck/Spelling.gs)
 
-Owned suggestions for one word at an absolute UTF-16 source range.
+Suggestion Status, document Version, Language, source Range, Word, Values and optional Error detail.
 
 ## `SystemSpellingService`
 
 Source:
 
-- [`SystemSpellingService.gs`](../../Goo.SpellCheck/SystemSpellingService.gs)
+- [`SystemSpellingService.gs`](../../Goo/SpellCheck/SystemSpellingService.gs)
 
 Uses Windows ISpellChecker or macOS NSSpellChecker. Other hosts return Unsupported.
+
+### `new`
+
+Creates a system spelling service without opening a native checker.
 
 ### `CheckAsync(TextSnapshot,TextRange,string,System.Threading.CancellationToken)`
 

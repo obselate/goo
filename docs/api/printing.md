@@ -1,14 +1,14 @@
-# Goo.Printing API
+# Printing API
 
-Generated from `Goo.Printing.xml`. Source declarations supply type ownership and XML-emitter omissions.
+Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo.Printing`](../../Goo.Printing)
+Source: [`Goo/Printing`](../../Goo/Printing)
 
 ## `IPrintDocument`
 
 Source:
 
-- [`PrintDocument.gs`](../../Goo.Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Supplies fresh page cells from a fixed document snapshot on the Goo owner thread.
 
@@ -24,15 +24,15 @@ Recomputes page breaks for paper settings. Page count must be positive on Ready.
 
 Source:
 
-- [`PrintDocument.gs`](../../Goo.Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
-The page count after applying the chosen paper settings.
+Pagination Status, PageCount and optional Error detail for the chosen paper settings.
 
 ## `PrintLayoutStatus`
 
 Source:
 
-- [`PrintDocument.gs`](../../Goo.Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Reports document pagination independently of export or spooler results.
 
@@ -58,23 +58,23 @@ The document can create the stated pages.
 
 Source:
 
-- [`PrintDocument.gs`](../../Goo.Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
-Physical paper and margins in points, with the requested raster resolution in dots per inch.
+Physical WidthPoints and HeightPoints, margins LeftPoints, TopPoints, RightPoints and BottomPoints, and raster resolution DpiX and DpiY in dots per inch.
 
 ## `PrintResult`
 
 Source:
 
-- [`PrintDocument.gs`](../../Goo.Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
-A print outcome with an optional native job id and bounded detail.
+A print Status with an optional native JobId and bounded Error detail.
 
 ## `PrintStatus`
 
 Source:
 
-- [`PrintDocument.gs`](../../Goo.Printing/PrintDocument.gs)
+- [`PrintDocument.gs`](../../Goo/Printing/PrintDocument.gs)
 
 Reports export completion or native submission. Submission does not mean physical printing finished.
 
@@ -130,7 +130,7 @@ The platform print service or requested rendering is unavailable.
 
 Source:
 
-- [`Printing.gs`](../../Goo.Printing/Printing.gs)
+- [`Printing.gs`](../../Goo/Printing/Printing.gs)
 
 Exports raster PDF pages or submits them through the platform print dialog.
 
