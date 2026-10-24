@@ -31,7 +31,7 @@ Goo remains below 1.0.0 while its public contracts mature.
    Run `dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding`.
 4. Push the release commit to `main` and require a green CI run. Wait for the
    generated-docs workflow to sync `docs/api` and `plugins/goo/reference` before tagging.
-5. Confirm that the release-candidates and android-package artifacts contain all eight packages,
+5. Confirm that the release-candidates and android-package artifacts contain all seven packages,
    the Linux and macOS arm64 bundles, and that the clean template and DevTools
    installation steps passed. Confirm that Android native reproducibility and
    Release APK/AAB payload checks passed.

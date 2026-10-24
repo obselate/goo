@@ -6,9 +6,9 @@ CI workflow is the source of truth for complete cross-platform verification.
 ## Managed checks
 
 ```sh
-dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
-dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release
-dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj -c Release
+dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release
+dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj -c Release
+dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj -c Release
 dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.gsproj -c Release
 ```
 
@@ -17,7 +17,7 @@ dotnet test tests/Goo.DevTools.Cli.Tests/Goo.DevTools.Cli.Tests.gsproj -c Releas
 These projects require the platform setup and native assets used by CI:
 
 ```sh
-dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj -c Release
+dotnet build tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.gsproj -c Release
 dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release
 dotnet build tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj -c Release
 ```

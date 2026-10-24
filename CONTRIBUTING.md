@@ -67,8 +67,8 @@ dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
   --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo tests
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
   --strict --severity GL0005=none --severity GL0006=none apps templates plugins/goo/reference/templates
-dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj -c Release
-dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj -c Release
+dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release
+dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj -c Release
 ```
 
 Limit formatting fixes to app samples and examples; do not run a bulk formatter

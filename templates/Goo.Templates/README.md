@@ -18,7 +18,7 @@ Android printing and spell checking are included in `Goo.Android`. No separate f
 
 ```sh
 dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
-dotnet build HelloGoo/HelloGoo.csproj -c Release
+dotnet build HelloGoo/HelloGoo.gsproj -c Release
 ```
 
 - Install the .NET Android workload and its supported Android SDK and JDK.
