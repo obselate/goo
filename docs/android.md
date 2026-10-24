@@ -314,7 +314,7 @@ and scroll container. Both entry projects reference that library.
 
 ```sh
 dotnet run --project tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release
-dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.csproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME"
+dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:GooBuildAndroid=true -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME"
 python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
 python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
 "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk

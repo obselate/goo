@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
@@ -6,13 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>$(GooReleaseVersion)</Version>
-    <PackageId>Goo.SpellCheck.Android</PackageId>
-    <Description>Optional Android SpellCheckerSession backend for Goo.SpellCheck.</Description>
+    <PackageId>Goo.Printing.Android</PackageId>
+    <Description>Optional Android PrintManager adapter for Goo.Printing.</Description>
     <Authors>Xaz</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Goo.SpellCheck/Goo.SpellCheck.gsproj" />
+    <ProjectReference Include="../Goo.Printing/Goo.Printing.gsproj" />
   </ItemGroup>
+  <Target Name="NormalizeAndroidReferencePath" AfterTargets="_GsharpGetRefAssemblyForPack">
+    <ItemGroup>
+      <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
+    </ItemGroup>
+  </Target>
 </Project>

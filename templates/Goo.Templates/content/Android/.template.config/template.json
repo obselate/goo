@@ -24,7 +24,7 @@
       "description": "Android application ID."
     }
   },
-  "primaryOutputs": [{"path": "GooStarter.csproj"}],
+  "primaryOutputs": [{"path": "GooStarter.gsproj"}],
   "sources": [{
     "source": "./",
     "target": "./",
