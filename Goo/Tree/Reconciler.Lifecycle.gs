@@ -4,6 +4,31 @@ import System
 import System.Collections.Generic
 
 internal partial class Reconciler {
+  private func syncElementHandle(n Node, handle ElementHandle?) {
+    pendingHandleMoves?.Remove(n)
+    if let next = handle {
+      let source = next.AttachedNode()
+      if source != nil && source != n && styleRetryRoot != nil {
+        ElementHandles.Detach(n)
+        let pending = pendingHandleMoves ?? Dictionary[Node, ElementHandle]()
+        pending[n] = next
+        pendingHandleMoves = pending
+        return
+      }
+    }
+    ElementHandles.Bind(n, handle, Owner)
+  }
+
+  private func flushHandleMoves() {
+    guard let pending = pendingHandleMoves else { return }
+    for (node, handle) in pending {
+      if !node.Retired {
+        ElementHandles.Bind(node, handle, Owner)
+      }
+    }
+    pending.Clear()
+  }
+
   private func disposeTrees(nodes List[Node]) Exception? {
     var firstError Exception?
     for node in nodes {

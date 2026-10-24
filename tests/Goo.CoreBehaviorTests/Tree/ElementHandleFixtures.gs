@@ -118,6 +118,36 @@ internal class ElementHandleFixtures {
     return remounted && !handle.IsMounted
   }
 
+  func MovesInOneUpdate(scenario string) bool {
+    using let host = ElementHandleEmbeddedHost()
+    host.Resize(100, 60, 100, 60)
+    let cell = ElementHandleMoveCell{ Scenario: scenario }
+    let window = Window{ Root: cell }
+    try {
+      window.Attach(host)
+      window.Pump(0)
+      for step in 0 ... 4 {
+        let previous = cell.Handle.AttachedNode()
+        cell.Moved = !cell.Moved
+        cell.Rebuild()
+        window.Pump(0)
+        let current = cell.Handle.AttachedNode()
+        if !cell.Handle.IsMounted || current == previous
+          || current?.Content != (cell.Moved ? "next" : "prior") {
+          return false
+        }
+      }
+      cell.Duplicate = true
+      cell.Rebuild()
+      try {
+        window.Pump(0)
+        return false
+      } catch (_ InvalidOperationException) {
+        return true
+      }
+    } finally { window.Close() }
+  }
+
   func GeometryContract() bool {
     let handle = ElementHandle{}
     let owner = Window{}
@@ -714,6 +744,40 @@ internal class ElementHandleEmbeddedHost : EmbeddedWindowHost {
     throw NotSupportedException()
   }
   protected override func DestroyVulkanSurface(instance nint, surface uint64) { throw NotSupportedException() }
+}
+
+internal class ElementHandleMoveCell : Cell {
+  internal let Handle ElementHandle = ElementHandle()
+  internal var Scenario string = ""
+  internal var Moved bool
+  internal var Duplicate bool
+
+  override func Build() Blob {
+    let text = Text{
+      Key: Scenario == "element" ? (Moved ? "next" : "prior") : nil,
+      Handle: Handle, Content: Moved ? "next" : "prior",
+    }
+    if Duplicate {
+      return Container(){ Container(){ text, }, Container(){ Text{ Handle: Handle }, }, }
+    }
+    if Scenario == "element" {
+      return text
+    }
+    if Scenario == "parent" {
+      return Moved ? Button(){ text, } : Container(){ text, }
+    }
+    if Scenario == "branch" {
+      return Container(){ Container{ Key: Moved ? "next" : "prior", text, }, }
+    }
+    let first = Container{ Key: Scenario == "keyed" ? "first" : nil }
+    let second = Container{ Key: Scenario == "keyed" ? "second" : nil }
+    if Moved { first.Add(text) } else { second.Add(text) }
+    return if Scenario == "keyed" && !Moved {
+      Container(){ second, first, }
+    } else {
+      Container(){ first, second, }
+    }
+  }
 }
 
 internal class ElementHandleNestedCell : Cell {
