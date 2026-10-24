@@ -194,7 +194,7 @@ Gets or sets the non-negative finite miter limit. The default is 4.
 
 ### `Path`
 
-Gets or sets the vector path to display.
+Gets or sets the vector path to display. Reuse one path and position instances with Transform to share encoded geometry.
 
 ### `StrokeCap`
 
@@ -210,7 +210,11 @@ Gets or sets the stroke join style. The default is Miter.
 
 ### `StrokeStart`
 
-Gets or sets the stroke start in [0, 1]. Lengths use flattened geometry after fit mapping, summed across contours in path order. On mount, StrokeStart must not exceed StrokeEnd.
+Gets or sets the stroke start in [0, 1], summed across contours in path order. None measures flattened geometry after fit mapping. NonScalingStroke measures geometry after the full transform. On mount, StrokeStart must not exceed StrokeEnd.
+
+### `VectorEffect`
+
+Gets or sets the vector effect. The default is None. NonScalingStroke keeps widths and dash lengths in window logical pixels. The stroke stays centered on the path.
 
 ## `ShapeFit`
 
@@ -254,6 +258,19 @@ Selects the join style for stroked paths.
 - `Miter`
 - `Round`
 - `Bevel`
+
+## `VectorEffect`
+
+Source:
+
+- [`Shape.gs`](../../Goo/Shapes/Shape.gs)
+
+Selects whether strokes scale with geometry or remain in window logical pixels.
+
+### Values
+
+- `None`
+- `NonScalingStroke`
 
 ## `VectorNode`
 
@@ -399,6 +416,18 @@ Source:
 
 Represents an immutable vector path in a top-left coordinate system. Coordinates increase rightward on x and downward on y.
 
+### `Equals(VectorPath)`
+
+Tests whether another path has the same content.
+
+### `Equals(System.Object)`
+
+Tests whether an object is a path with the same content.
+
+### `GetHashCode`
+
+Gets the content hash code.
+
 ### `Empty`
 
 Gets an empty path with a unit view box.
@@ -445,7 +474,7 @@ Gets the line cap style.
 
 ### `Dashes`
 
-Gets the optional dash pattern.
+Gets the optional dash pattern. NonScalingStroke measures dash lengths in window logical pixels.
 
 ### `Join`
 
@@ -459,6 +488,10 @@ Gets the finite miter limit.
 
 Gets the stroke paint.
 
+### `VectorEffect`
+
+Gets the vector effect. The default is None.
+
 ### `Width`
 
-Gets the non-negative stroke width in view-box units.
+Gets the non-negative stroke width in view-box units, or window logical pixels for NonScalingStroke.

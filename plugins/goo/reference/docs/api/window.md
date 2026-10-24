@@ -183,6 +183,34 @@ Lists are copied and immutable. Equal lists do not notify.
 The settings portal has no preferred-locale key. Apps own translations and choose
 how to apply locale tags to language and direction styles.
 
+## Native popup surfaces
+
+```gsharp
+using let popup = PopupWindow(window, TooltipCell{}, PopupKind.Tooltip)
+let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
+```
+
+A popup hosts a new Cell root outside its owner's bounds. Portal and widgets
+Menu keep their current in-window behavior.
+
+| Operation | Contract |
+| --- | --- |
+| `Open` | Call once per instance on the owner thread. Use parent-content layout units. Size follows the owner's UiScale. |
+| `PopupKind.Menu` | Receives input. Wayland needs the native button, key or touch event being handled, or a parent popup grab. |
+| `PopupKind.Tooltip` | Receives no input. It needs no grab. |
+| `PopupResult.Status` | `Opened`, `Closed`, `Unsupported`, `RequiresUserAction`, `Busy` or `Failed`. |
+| `Metrics` | Actual logical and framebuffer sizes. Native display bounds can change placement and size. |
+| `UpdatePlacement` | Updates the parent-local anchor and size. Wayland anchors must stay inside the parent. Older compositors can return `Unsupported`. |
+| `Dismissed` | Runs once after descendants and pending GPU work close. The owner hide/close, Escape, outside input or focus loss dismisses the chain. |
+| `Close`, `Dispose` | Request dismissal. The host retires pending GPU work before disposal. |
+
+Use another PopupWindow as the owner for a submenu. Each owner permits one popup.
+Create a new root and popup for each opening. Close it when its anchor becomes
+invalid. Android uses a native PopupWindow with a separate GooView surface.
+It follows the owner view's lifecycle and the app's display bounds.
+Other embedded hosts return `Unsupported`.
+Native dialogs return `Busy` while a popup retires. Launch them after `Dismissed`.
+
 ## Native owned and modal windows
 
 Portal backends can set `ForeignParentHandle` to the request's full
@@ -300,6 +328,40 @@ present. It requires an open desktop window and does not capture a specific prio
 presentation. Embedded hosts return `Unsupported`. The application owns its
 manual clock, sampling of arbitrary scene state, frame ordering and video encoding.
 
+## Render pages without presenting
+
+```gsharp
+let created = window.CreateOffscreenSession()
+if created.Status == OffscreenRenderStatus.Success {
+    using let session = created.Session!!
+    let options = OffscreenRenderOptions(240.0F, 180.0F, 480u, 360u, Color.White, 134217728L)
+    let pending = session.RenderAsync(MyPage(), options, CancellationToken.None)
+    while !pending.IsCompleted {
+        session.Service()
+        Thread.Sleep(1)
+    }
+    let rendered = pending.GetAwaiter().GetResult()
+}
+```
+
+Create the session on the window thread before opening native UI.
+The session keeps the shared renderer, not the native surface.
+It can render while an embedded host is paused or detached.
+Call `Service` from the host's UI scheduler until each page finishes.
+Create, render, service and dispose on the same thread.
+
+Each page uses a fresh, unattached cell.
+Logical size controls layout. Pixel size controls resolution.
+`MaxBytes` bounds new GPU allocations and CPU pixels.
+Pass a previous capture to reuse its pixels at the same size.
+Do not read those pixels until the next render completes.
+
+`window.RenderOffscreenAsync` uses the window's existing renderer instead.
+Keep pumping that window until completion.
+Both paths return an explicit `OffscreenRenderStatus`.
+Closing the owner cancels pending pages.
+`window.Closed` is a cancellation token for optional owner-bound services.
+
 ## Fullscreen displays
 
 Call `window.GetDisplays()` on an open window's UI thread for an owned read-only
@@ -327,11 +389,50 @@ remains compositor-controlled. This API does not enable `CanMove` or switch the
 monitor into an exclusive video mode. `State = WindowState.Fullscreen` remains
 available when no explicit output selection is needed.
 
+## Save and restore placement
+
+```gsharp
+let saved = WindowPlacement{
+    Fields: WindowPlacementFields.NormalSize | WindowPlacementFields.State,
+    NormalBounds: ElementRect{Width: 800, Height: 600},
+    State: WindowState.Maximized,
+}
+let window = Window{Root: Cell{}}
+let result = window.ApplyPlacement(saved)
+if result.Status == WindowOperationResult.Accepted {
+    window.Run()
+}
+```
+
+Call `CapturePlacement()` on the open window's UI thread before teardown.
+Save its `Placement` only when `Status` is `Accepted`.
+Normal bounds remain separate from maximized, fullscreen and minimized geometry.
+Capturing a minimized window records its last non-minimized state.
+
+`ApplyPlacement()` stages normal size, position and state before `Open`, or applies them to an open window.
+`AppliedFields` lists accepted fields. Fullscreen output selection requires an open window and matching display hints.
+Capture after native configure to observe the result. Accepted does not force compositor placement.
+
+| Host | Supported fields |
+| --- | --- |
+| Windows and macOS | Normal client size, position, state and fullscreen output selection. |
+| Linux Wayland | Normal size, state and fullscreen output selection. No global position. |
+| Android and embedded hosts | Unsupported. The host owns viewport geometry. |
+
+Geometry uses SDL screen units, not framebuffer pixels. Display names, bounds and scale are matching hints.
+Do not persist `WindowDisplayId`, native handles, macOS Spaces or Windows snap groups.
+The app owns its serializer and settings file. NativeAOT serializers need generated metadata.
+Install `Goo.AppHost` for `Placement.Restore`, which matches current displays and clamps usable bounds and size limits.
+Wayland has no direct unminimize request. Restore into a new window or request activation through the app's normal activation route.
+
 ## Observe window notifications
 
 Subscribe to `StateChanged`, `FocusChanged`, and `KeyPressed` with `+=` on the window UI thread. Each event supports independent listeners. Remove listeners with `-=` when their ownership ends.
 
 `OnClosing` is different: it is the single close-policy callback, and returning `false` vetoes the pending close request.
+
+`MetricsChanged` includes `UiScale` and runs when that scale changes.
+Raster selection uses `max(DisplayScaleX, DisplayScaleY) * UiScale`.
 
 ## Post UI work
 
@@ -340,6 +441,10 @@ Call `Window.Post` from any thread. Accepted actions use FIFO order. Post accept
 Use `TryPost` when teardown can race the producer. It returns `false` after posting closes instead of throwing. `true` means the action was atomically accepted into the queue, not that it is guaranteed to execute, because later teardown may still discard queued work.
 
 Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
+
+`Window.Closed` is cancelled when owner-thread dispatch stops. Link asynchronous
+package work to this token so its result can complete even when teardown discards
+an accepted action. Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.
 
@@ -728,6 +833,264 @@ Follows native window activation. This is the default.
 
 Uses the inactive material appearance.
 
+## `NativeDialogOwnerKind`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Identifies the borrowed native owner representation.
+
+### Values
+
+- `Win32`
+- `Cocoa`
+- `Wayland`
+
+## `NativeDialogOwnerLease`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Keeps a native dialog owner alive and blocks only that owner's Goo input until disposed.
+
+### `Dispose`
+
+Releases modal ownership on the window thread after native callbacks stop using the owner.
+
+### `Closed`
+
+Gets a token cancelled when the owner requests close. Release the lease after native dismissal.
+
+### `Handle`
+
+Gets the HWND or NSWindow. Wayland owners use Identifier instead.
+
+### `Identifier`
+
+Gets the exported wayland: parent identifier, or an empty string on other hosts.
+
+### `Kind`
+
+Gets the kind of borrowed native owner. The lease never owns the native window.
+
+## `NativeDialogOwnerResult`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Contains Status, an Owner lease on Success and Error detail on failure.
+
+## `NativeDialogOwnerStatus`
+
+Source:
+
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
+
+Reports whether a native service can borrow this window as a modal owner.
+
+### Values
+
+- `Success`
+- `Unsupported`
+- `Busy`
+- `NotReady`
+- `Closed`
+- `Cancelled`
+- `Failed`
+
+## `PopupDismissReason`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Identifies why a complete native popup chain was dismissed.
+
+### Values
+
+- `Programmatic`
+- `Escape`
+- `OutsideInteraction`
+- `FocusLost`
+- `OwnerHidden`
+- `OwnerClosed`
+- `PlatformDismissed`
+
+### `Escape`
+
+Escape dismissed the popup.
+
+### `FocusLost`
+
+Keyboard focus left the owner and popup chain.
+
+### `OutsideInteraction`
+
+Input outside the popup chain dismissed it.
+
+### `OwnerClosed`
+
+The owner closed.
+
+### `OwnerHidden`
+
+The owner became hidden.
+
+### `PlatformDismissed`
+
+The compositor dismissed the popup without a more specific reason.
+
+### `Programmatic`
+
+The application requested dismissal.
+
+## `PopupKind`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Selects an interactive native popup or an input-transparent tooltip.
+
+### Values
+
+- `Menu`
+- `Tooltip`
+
+### `Menu`
+
+Receives input and joins the owner's native popup grab chain.
+
+### `Tooltip`
+
+Does not receive keyboard or pointer input.
+
+## `PopupResult`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Contains a native popup creation outcome and owned failure detail.
+
+### `Error`
+
+Gets native failure detail, or an empty string.
+
+### `Status`
+
+Gets the native creation outcome.
+
+## `PopupStatus`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Reports native popup creation without substituting an ordinary window.
+
+### Values
+
+- `Opened`
+- `Closed`
+- `Unsupported`
+- `RequiresUserAction`
+- `Failed`
+- `Busy`
+
+### `Busy`
+
+The owner already has a popup or modal operation.
+
+### `Closed`
+
+The owner is closed or closing.
+
+### `Failed`
+
+Native creation or presentation initialization failed.
+
+### `Opened`
+
+Native creation and mapping were accepted, subject to compositor policy.
+
+### `RequiresUserAction`
+
+A Wayland menu requires an originating native input event.
+
+### `Unsupported`
+
+The host does not provide the requested native popup operation.
+
+## `PopupWindow`
+
+Source:
+
+- [`PopupWindow.gs`](../../Goo/Window/PopupWindow.gs)
+
+Hosts one new Goo root in a transient native surface outside its owner's bounds. Create a new root and PopupWindow for each opening. Portal ownership is unchanged.
+
+### `Dismissed`
+
+Runs once after the popup and all descendants release their native resources.
+
+### `new(PopupWindow,Cell,PopupKind)`
+
+Creates a submenu whose native parent is another open popup.
+
+- `owner`: The open parent popup on the same UI thread.
+- `root`: A root Cell not mounted in another window.
+- `kind`: Interactive menu or input-transparent tooltip.
+
+### `new(Window,Cell,PopupKind)`
+
+Creates a popup with an independent root and a desktop or Android owner.
+
+- `owner`: The open native owner on the same UI thread.
+- `root`: A root Cell not mounted in another window.
+- `kind`: Interactive menu or input-transparent tooltip.
+
+### `Close`
+
+Requests descendant-first dismissal. GPU retirement can defer native destruction.
+
+### `Dispose`
+
+Requests dismissal and prevents this instance from reopening.
+
+### `Open(ElementRect,int32,int32,PortalPlacement)`
+
+Opens a native popup relative to its parent's content rectangle in layout units. Wayland menus must open from native input or an active parent popup grab.
+
+- `anchor`: The finite parent-content anchor rectangle.
+- `width`: Requested positive content width in layout units.
+- `height`: Requested positive content height in layout units.
+- `placement`: Preferred side and alignment before native display constraints.
+
+Returns: An explicit native creation result, never a top-level-window fallback.
+
+### `UpdatePlacement(ElementRect,int32,int32,PortalPlacement)`
+
+Updates requested size and parent-local placement without changing the root.
+
+- `anchor`: The finite parent-content anchor rectangle.
+- `width`: Requested positive content width in layout units.
+- `height`: Requested positive content height in layout units.
+- `placement`: Preferred side and alignment before native display constraints.
+
+Returns: Accepted, Closed, Unsupported or Failed from the native operation.
+
+### `IsOpen`
+
+Reports whether the surface is open, including deferred GPU retirement during close.
+
+### `Metrics`
+
+Gets the current logical and framebuffer metrics on the owner thread.
+
 ## `WaylandBackdropOptions`
 
 Source:
@@ -751,6 +1114,7 @@ Sources:
 - [`NativeAccessibilityHost.gs`](../../Goo/Accessibility/Native/NativeAccessibilityHost.gs)
 - [`Clipboard.gs`](../../Goo/Window/Clipboard.gs)
 - [`FileDialog.gs`](../../Goo/Window/FileDialog.gs)
+- [`NativeDialogOwner.gs`](../../Goo/Window/NativeDialogOwner.gs)
 - [`NativeFileDrop.gs`](../../Goo/Window/NativeFileDrop.gs)
 - [`Window.gs`](../../Goo/Window/Window.gs)
 - [`Window.Accessibility.gs`](../../Goo/Window/WindowParts/Window.Accessibility.gs)
@@ -763,13 +1127,17 @@ Sources:
 - [`Window.DragRegion.gs`](../../Goo/Window/WindowParts/Window.DragRegion.gs)
 - [`Window.ElementHandle.gs`](../../Goo/Window/WindowParts/Window.ElementHandle.gs)
 - [`Window.Embedded.gs`](../../Goo/Window/WindowParts/Window.Embedded.gs)
+- [`Window.ExternalImages.gs`](../../Goo/Window/WindowParts/Window.ExternalImages.gs)
 - [`Window.Frame.gs`](../../Goo/Window/WindowParts/Window.Frame.gs)
 - [`Window.Host.gs`](../../Goo/Window/WindowParts/Window.Host.gs)
 - [`Window.Images.gs`](../../Goo/Window/WindowParts/Window.Images.gs)
 - [`Window.Input.gs`](../../Goo/Window/WindowParts/Window.Input.gs)
 - [`Window.NativeModal.gs`](../../Goo/Window/WindowParts/Window.NativeModal.gs)
+- [`Window.Offscreen.gs`](../../Goo/Window/WindowParts/Window.Offscreen.gs)
 - [`Window.Ownership.gs`](../../Goo/Window/WindowParts/Window.Ownership.gs)
+- [`Window.Placement.gs`](../../Goo/Window/WindowParts/Window.Placement.gs)
 - [`Window.Platform.gs`](../../Goo/Window/WindowParts/Window.Platform.gs)
+- [`Window.Popup.gs`](../../Goo/Window/WindowParts/Window.Popup.gs)
 - [`Window.Preferences.Layout.gs`](../../Goo/Window/WindowParts/Window.Preferences.Layout.gs)
 - [`Window.Preferences.gs`](../../Goo/Window/WindowParts/Window.Preferences.gs)
 - [`Window.Profile.gs`](../../Goo/Window/WindowParts/Window.Profile.gs)
@@ -810,6 +1178,10 @@ Reports preference changes after affected layout and motion policy are updated o
 
 Occurs on the UI thread through the posted-action queue after Vulkan accepts a present request. Acceptance does not establish a display scanout time.
 
+### `PreviewKeyPressed`
+
+Occurs before KeyPressed and focused-element routing, including in modal scopes. Return true to consume the key and stop later preview handlers.
+
 ### `StateChanged`
 
 Occurs after the native window reports a new window state.
@@ -826,6 +1198,31 @@ Reports observed viewport visibility changes on the owner thread.
 
 Creates a window with default configuration.
 
+### `AccessibilityHitTest(float64,float64)`
+
+Finds the published semantic node at a point in window logical coordinates.
+
+- `x`: The finite horizontal window logical coordinate.
+- `y`: The finite vertical window logical coordinate.
+
+Returns: The topmost semantic identity, or nil outside visible semantic content.
+
+### `AcquireNativeDialogOwnerAsync(System.Threading.CancellationToken)`
+
+Borrows a native owner for one optional package dialog without exposing SDL state.
+
+- `cancellation`: Cancels acquisition before native ownership begins.
+
+Returns: A lease on Success, or an explicit host or lifecycle status.
+
+### `ApplyPlacement(WindowPlacement)`
+
+Applies supported fields on the owner thread, or stages normal size, position and state before Open. Geometry rounds to SDL integer screen units. Wayland never applies global position. Fullscreen display selection requires an open window. Unsupported fields remain absent from AppliedFields. Accepted means the request was accepted, not that the compositor granted its final geometry or state. Applying normal geometry can wait for a finite native window transition. Capture again after native configure to observe the result. Android and embedded hosts return Unsupported.
+
+- `value`: Saved normal geometry, state and display matching hints.
+
+Returns: Applied fields with Accepted, Unsupported, Closed, or Failed for invalid data or native failure.
+
 ### `Attach(EmbeddedWindowHost)`
 
 Attaches this window to an external viewport without creating a desktop window. The host attaches its native presentation surface separately and drives RenderFrame.
@@ -836,6 +1233,12 @@ Cancels delivery of a pending chooser result on the UI thread and requests nativ
 
 Returns: True when a pending native chooser exists, including one already awaiting dismissal.
 
+### `CapturePlacement`
+
+Captures normal client bounds and restorable state from the open native window. Maximized, fullscreen and minimized sizes do not replace normal bounds. Display hints are not permanent monitor IDs. Android and embedded hosts return Unsupported.
+
+Returns: Accepted with owned placement, Closed without an open window, or an explicit host failure.
+
 ### `ConfigureApplication(string,string,string)`
 
 Configures process-wide application identity before SDL initialization.
@@ -843,6 +1246,12 @@ Configures process-wide application identity before SDL initialization.
 - `name`: human-readable application name
 - `version`: application version
 - `identifier`: unique reverse-domain identifier
+
+### `CreateOffscreenSession`
+
+Creates a renderer lease before opening native UI that can remove this window's presentation surface.
+
+Returns: A session on Success, or an explicit renderer status.
 
 ### `DragRegion(Container)`
 
@@ -934,6 +1343,17 @@ Returns: Owned paths and explicit read status; the clipboard may have changed si
 Reads at most 64 MiB of encoded image data; native bitmap conversion also limits decoded RGBA to 64 MiB.
 
 Returns: Owned encoded bytes with a MIME type and explicit read status.
+
+### `RenderOffscreenAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
+
+Renders a fresh, unattached cell at a separate layout size without resizing or presenting this window. Keep pumping the owner until completion. Pixels and new GPU allocations share MaxBytes.
+
+- `root`: The independent page content.
+- `options`: The logical viewport, pixel size, background and memory limit.
+- `cancellation`: Cancels the operation after in-flight GPU work is safe to release.
+- `reusable`: Previous pixels to reuse when the output size matches. Do not access them until completion.
+
+Returns: Owned pixels or an explicit operation status.
 
 ### `RequestActivation`
 
@@ -1032,6 +1452,10 @@ Reports whether programmatic window movement is available.
 ### `Capabilities`
 
 Gets supported native lifecycle operations, or None before Open or Attach.
+
+### `Closed`
+
+Gets a token cancelled when this window stops accepting owner-thread work. A posted action can be discarded during teardown. Use this token to complete pending asynchronous work.
 
 ### `Decorated`
 
@@ -1405,6 +1829,10 @@ Gets the reported logical height.
 
 Gets the reported logical width.
 
+### `UiScale`
+
+Gets the retained UI scale. A default snapshot uses 1.
+
 ## `WindowOperationResult`
 
 Source:
@@ -1419,6 +1847,102 @@ Reports whether a window operation was submitted to the host. Accepted does not 
 - `Closed`
 - `Unsupported`
 - `Failed`
+
+## `WindowPlacement`
+
+Source:
+
+- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
+
+Owns restorable desktop geometry and display matching hints, without process-local display IDs.
+
+### `new`
+
+Creates an empty placement. Set Fields and its corresponding values before applying it.
+
+### `DisplayBounds`
+
+Gets the display bounds used to match a current display after topology changes.
+
+### `DisplayName`
+
+Gets a display name hint, not a unique or permanent monitor identity.
+
+### `DisplayScale`
+
+Gets the display's expected content scale, or zero when unavailable.
+
+### `Fields`
+
+Gets the fields present in this saved placement.
+
+### `NormalBounds`
+
+Gets normal client geometry in SDL integer screen units, not framebuffer pixels. Position is meaningful only when Fields includes Position.
+
+### `State`
+
+Gets the restorable state. Capture records the last non-minimized state for a minimized window.
+
+## `WindowPlacementFields`
+
+Source:
+
+- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
+
+Identifies the placement fields retained or accepted by a desktop host.
+
+### Values
+
+- `None`
+- `NormalSize`
+- `Position`
+- `State`
+- `FullscreenDisplay`
+
+### `FullscreenDisplay`
+
+A fullscreen display matching hint is present.
+
+### `None`
+
+No placement fields are present.
+
+### `NormalSize`
+
+Normal client width and height are present.
+
+### `Position`
+
+Global desktop position is present. Wayland does not support this field.
+
+### `State`
+
+Restorable window state is present.
+
+## `WindowPlacementResult`
+
+Source:
+
+- [`WindowPlacement.gs`](../../Goo/Window/WindowPlacement.gs)
+
+Reports captured placement or the fields accepted by an apply request.
+
+### `AppliedFields`
+
+Gets fields accepted for application. Capture results use None.
+
+### `Error`
+
+Gets bounded failure detail, or an empty string.
+
+### `Placement`
+
+Gets captured placement, or nil for an apply request or a failed capture.
+
+### `Status`
+
+Gets Accepted, Closed, Unsupported or Failed for this placement operation.
 
 ## `WindowPresentationAccepted`
 

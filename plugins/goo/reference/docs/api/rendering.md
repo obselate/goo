@@ -69,6 +69,473 @@ lists use Goo-owned GPU storage and remain a single gradient draw; device storag
 limits still apply. Interpolation uses premultiplied linear color, including
 per-stop alpha and element opacity.
 
+## `ExternalFrameDescription`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Describes visible source pixels. Orientation uses EXIF values 1 through 8.
+
+### `AlphaMode`
+
+Gets the source alpha storage.
+
+### `ColorEncoding`
+
+Gets the source color encoding. HDR samples are not supported.
+
+### `Height`
+
+Gets the crop height in pixels.
+
+### `Orientation`
+
+Gets the EXIF orientation, from 1 through 8.
+
+### `Width`
+
+Gets the crop width in pixels.
+
+### `X`
+
+Gets the crop left edge in pixels.
+
+### `Y`
+
+Gets the crop top edge in pixels.
+
+## `ExternalFrameResult`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Reports the end of a frame lease. Wait the returned dependency before reuse.
+
+### `ReleaseSync`
+
+Gets an owned completion or unused acquire handle. Dispose the handle after use.
+
+### `Status`
+
+Gets the terminal frame status.
+
+### `Value`
+
+Gets the synchronization value for the returned handle, when present.
+
+## `ExternalFrameStatus`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Reports the end of a frame read lease.
+
+### Values
+
+- `Released`
+- `Dropped`
+- `DeviceLost`
+- `Closed`
+
+## `ExternalImage`
+
+Source:
+
+- [`ExternalImage.gs`](../../Goo/Rendering/ExternalImage.gs)
+
+Owns one imported GPU allocation. Dispose retires it after its last frame lease.
+
+### `Dispose`
+
+Stops new publications. Native storage remains alive through existing reads.
+
+### `Height`
+
+Gets the allocation height in pixels.
+
+### `Width`
+
+Gets the allocation width in pixels.
+
+## `ExternalImageAlphaMode`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Identifies source alpha storage.
+
+### Values
+
+- `Premultiplied`
+- `Opaque`
+
+## `ExternalImageColorEncoding`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Identifies the source sample encoding.
+
+### Values
+
+- `Unsupported`
+- `Srgb`
+
+## `ExternalImageHandleKind`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Identifies an exported Vulkan memory handle.
+
+### Values
+
+- `OpaqueFd`
+- `DmaBuf`
+- `OpaqueWin32`
+- `D3D11TextureNt`
+- `D3D12Resource`
+
+## `ExternalImagePlane`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Describes one explicit memory plane.
+
+### `Offset`
+
+Gets the byte offset of this plane.
+
+### `RowPitch`
+
+Gets the row stride in bytes.
+
+## `ExternalImageResult`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Reports an external image import.
+
+### `Detail`
+
+Gets a bounded failure description.
+
+### `Image`
+
+Gets the caller-owned image, only on Success.
+
+### `Status`
+
+Gets the import status.
+
+## `ExternalImageSession`
+
+Sources:
+
+- [`ExternalImageSession.gs`](../../Goo/Rendering/ExternalImageSession.gs)
+- [`ExternalImageSession.Metal.gs`](../../Goo/Rendering/Vulkan/ExternalImageSession.Metal.gs)
+- [`ExternalImageSession.Vulkan.gs`](../../Goo/Rendering/Vulkan/ExternalImageSession.Vulkan.gs)
+
+Imports GPU images for one device generation. Open, import and Dispose require the window owner thread.
+
+### `Invalidated`
+
+Raised once on the owner thread when the session closes or its device is lost.
+
+### `CreateSource`
+
+Creates a bounded latest-frame image provider.
+
+Returns: A caller-owned provider for images from this session.
+
+### `Dispose`
+
+Invalidates this session and retires its native resources. Closed is not a producer completion promise.
+
+### `ImportAndroidHardwareBuffer(System.IntPtr)`
+
+Imports a retained Android hardware buffer when the platform route is available.
+
+- `buffer`: A borrowed AHardwareBuffer pointer.
+
+Returns: Unsupported on platforms without the Android import route.
+
+### `ImportMetalIoSurface(System.IntPtr,int32)`
+
+Imports a retained IOSurface plane when the platform route is available.
+
+- `surface`: A borrowed IOSurface pointer.
+- `plane`: The surface plane index.
+
+Returns: Success with a caller-owned RGBA plane, or an explicit platform or format status.
+
+### `ImportMetalTexture(System.IntPtr)`
+
+Imports a retained Metal texture when the platform route is available.
+
+- `texture`: A borrowed MTLTexture pointer.
+
+Returns: Success with a caller-owned image, or an explicit platform or format status.
+
+### `ImportVulkan(VulkanExternalImageDescription)`
+
+Imports a ring slot. The caller keeps the original memory handle and allocation.
+
+- `description`: Exact exported allocation metadata.
+
+Returns: Success with a caller-owned imported image, or an explicit import status.
+
+### `Open(Window)`
+
+Opens a session after the window has created its presentation device.
+
+- `window`: The owning window.
+
+Returns: Success with a session, or an explicit device or platform status.
+
+### `DeviceUuid`
+
+Gets the 16-byte physical device UUID.
+
+### `DriverUuid`
+
+Gets the 16-byte driver UUID.
+
+### `Generation`
+
+Gets the device generation. Imports never survive a device change.
+
+### `WindowsDevice`
+
+Gets Windows adapter identity, or nil when the driver does not expose a LUID.
+
+## `ExternalImageSessionResult`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Reports opening an external image session.
+
+### `Detail`
+
+Gets a bounded failure description.
+
+### `Session`
+
+Gets the caller-owned session, only on Success.
+
+### `Status`
+
+Gets the session status.
+
+## `ExternalImageSource`
+
+Source:
+
+- [`ExternalImage.gs`](../../Goo/Rendering/ExternalImage.gs)
+
+Supplies a bounded latest external frame to Image.Source. Callbacks run on the session window owner thread.
+
+### `ContentChanged`
+
+Raised on the owner thread when the source changes.
+
+### `Acquire`
+
+Acquires the last complete frame. Producer work is never waited inside painting.
+
+Returns: A retained external frame lease, or a failed lease before the first ready frame.
+
+### `Dispose`
+
+Stops publication and retires the displayed and pending read leases.
+
+### `Publish(ExternalImage,ExternalFrameDescription,ExternalImageSync,System.Action{ExternalFrameResult})`
+
+Publishes one frame without waiting for producer GPU work. Busy preserves caller ownership.
+
+- `image`: An unused image imported by this session.
+- `frame`: The visible sRGB crop and orientation.
+- `ready`: Producer completion and released layout ownership.
+- `released`: Receives exactly one terminal result after a successful publication.
+
+Returns: The publication status. A failure does not take a frame lease.
+
+### `ContentVersion`
+
+Gets the nonzero publication version.
+
+## `ExternalImageStatus`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Reports external image operations.
+
+### Values
+
+- `Success`
+- `Unsupported`
+- `UnsupportedFormat`
+- `UnsupportedSynchronization`
+- `WrongDevice`
+- `StaleGeneration`
+- `Busy`
+- `DeviceLost`
+- `Closed`
+- `Failed`
+
+## `ExternalImageSync`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Describes borrowed producer synchronization. AlreadyComplete requires producer completion before Publish.
+
+### `new`
+
+Creates synchronization metadata. Set the kind, layout and queue family before publication.
+
+### `Handle`
+
+Gets the borrowed semaphore or fence handle.
+
+### `ImageLayout`
+
+Gets the producer's released numeric VkImageLayout.
+
+### `Kind`
+
+Gets the producer completion kind.
+
+### `QueueFamily`
+
+Gets the released external or foreign queue family index.
+
+### `Timeline`
+
+Gets whether the payload is a timeline semaphore.
+
+### `Value`
+
+Gets the required timeline value.
+
+## `ExternalImageSyncKind`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Identifies a producer completion dependency.
+
+### Values
+
+- `OpaqueFdSemaphore`
+- `SyncFd`
+- `OpaqueWin32Semaphore`
+- `D3D12Fence`
+- `MetalSharedEvent`
+- `AlreadyComplete`
+
+## `ExternalImageWindowsDevice`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Identifies a Windows adapter for a D3D external image producer.
+
+### `Luid`
+
+Gets the eight-byte adapter LUID.
+
+### `NodeMask`
+
+Gets the physical device node mask.
+
+## `OffscreenRenderOptions`
+
+Source:
+
+- [`OffscreenRender.gs`](../../Goo/Rendering/OffscreenRender.gs)
+
+Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
+
+## `OffscreenRenderResult`
+
+Source:
+
+- [`OffscreenRender.gs`](../../Goo/Rendering/OffscreenRender.gs)
+
+Contains Status, owned Capture pixels on Success and Error detail on failure.
+
+## `OffscreenRenderSession`
+
+Source:
+
+- [`OffscreenRenderSession.gs`](../../Goo/Rendering/OffscreenRenderSession.gs)
+
+Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
+
+### `Dispose`
+
+Cancels pending pages, waits for safe GPU cleanup and releases this session's runtime lease.
+
+### `RenderAsync(Cell,OffscreenRenderOptions,System.Threading.CancellationToken,WindowCapture)`
+
+Renders a fresh page. The session remains usable while its source window has no presentation surface.
+
+- `root`: Independent, unattached page content.
+- `options`: Logical viewport, output pixels, background and allocation limit.
+- `cancellation`: Cancels after in-flight GPU work is safe to release.
+- `reusable`: Previous pixels to reuse when the output size matches.
+
+Returns: Owned pixels or an explicit render status.
+
+### `Service`
+
+Consumes completed GPU work and starts a queued page without presenting a native window.
+
+## `OffscreenRenderSessionResult`
+
+Source:
+
+- [`OffscreenRenderSession.gs`](../../Goo/Rendering/OffscreenRenderSession.gs)
+
+Contains Status, a Session on Success and Error detail on failure.
+
+## `OffscreenRenderStatus`
+
+Source:
+
+- [`OffscreenRender.gs`](../../Goo/Rendering/OffscreenRender.gs)
+
+Reports an independent render operation without exposing GPU resource handles.
+
+### Values
+
+- `Success`
+- `Busy`
+- `NotReady`
+- `Unsupported`
+- `BudgetExceeded`
+- `DeviceLost`
+- `Cancelled`
+- `Failed`
+
 ## `ShaderEffect`
 
 Source:
@@ -290,3 +757,83 @@ Configures additional Vulkan drivers for the process.
 ### `Direct`
 
 Gets or sets driver DLL paths added to system drivers in inclusive mode on Windows. Set this before opening the first window. Paths are copied and are never read from the environment. Throws PlatformNotSupportedException on other platforms and InvalidOperationException after Vulkan loading starts.
+
+## `VulkanExternalImageDescription`
+
+Source:
+
+- [`ExternalImage.Types.gs`](../../Goo/Rendering/ExternalImage.Types.gs)
+
+Describes a borrowed exportable 2D Vulkan allocation. Goo duplicates Memory before import.
+
+### `new`
+
+Creates allocation metadata. Set all required image and allocation fields before import.
+
+### `AllocationSize`
+
+Gets the exported allocation size in bytes.
+
+### `DedicatedAllocation`
+
+Gets whether the producer used a dedicated image allocation.
+
+### `DeviceUuid`
+
+Gets the producer physical device UUID, exactly 16 bytes.
+
+### `DriverUuid`
+
+Gets the producer driver UUID, exactly 16 bytes.
+
+### `DrmModifier`
+
+Gets the explicit DRM format modifier for DMA-BUF import.
+
+### `Format`
+
+Gets the numeric VkFormat. Supported imports use sRGB RGBA8 or BGRA8.
+
+### `HandleKind`
+
+Gets the native memory handle type.
+
+### `Height`
+
+Gets the allocation height in pixels.
+
+### `ImageCreateFlags`
+
+Gets the matching numeric VkImageCreateFlags.
+
+### `ImageUsage`
+
+Gets the exact numeric VkImageUsageFlags, including sampled usage.
+
+### `KeyedMutex`
+
+Gets whether the producer allocation requires keyed-mutex sharing. This route is unsupported.
+
+### `Memory`
+
+Gets the borrowed memory handle. The caller retains ownership.
+
+### `MemoryOffset`
+
+Gets the image binding offset in bytes.
+
+### `MemoryTypeIndex`
+
+Gets the producer allocation memory type index.
+
+### `Planes`
+
+Gets the explicit DRM plane layouts.
+
+### `Tiling`
+
+Gets the numeric VkImageTiling.
+
+### `Width`
+
+Gets the allocation width in pixels.
