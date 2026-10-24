@@ -27,9 +27,6 @@ class InputBuild {
             if target == "svg" || target == "raster" || target == "wav" {
                 HostChecks.Run(
                     []string{
-                        "nice",
-                        "-n",
-                        "10",
                         "dotnet",
                         "publish",
                         "tools/Goo.InputFuzz/Goo.InputFuzz.gsproj",

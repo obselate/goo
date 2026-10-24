@@ -151,10 +151,15 @@ class DataTransfer {
                     if File.ReadAllText(prefix + ".stdout").Contains("ready") {
                         return child
                     }
-                    HostChecks.Require(
-                        !child.Process.HasExited,
-                        "Fixture exited before ready: $prefix\n" + File.ReadAllText(prefix + ".stderr")
-                    )
+                    if child.Process.HasExited {
+                        child.Wait(1)
+                        if File.ReadAllText(prefix + ".stdout").Contains("ready") {
+                            return child
+                        }
+                        throw InvalidOperationException(
+                            "Fixture exited before ready: $prefix\n" + File.ReadAllText(prefix + ".stderr")
+                        )
+                    }
                     Thread.Sleep(50)
                 }
                 throw InvalidOperationException("Fixture did not become ready: $prefix")

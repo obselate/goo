@@ -197,12 +197,15 @@ class LoggedProcess : IDisposable {
     }
 
     public func Dispose() {
-        HostChecks.Stop(Process)
-        Task.WaitAll(readers)
-        Process.Dispose()
-        stdout.Dispose()
-        if stderr != stdout {
-            stderr.Dispose()
+        try {
+            HostChecks.Stop(Process)
+            Task.WaitAll(readers)
+        } finally {
+            Process.Dispose()
+            stdout.Dispose()
+            if stderr != stdout {
+                stderr.Dispose()
+            }
         }
     }
 
