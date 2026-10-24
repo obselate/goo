@@ -413,7 +413,7 @@ Capture after native configure to observe the result. Accepted does not force co
 Geometry uses SDL screen units, not framebuffer pixels. Display names, bounds and scale are matching hints.
 Do not persist `WindowDisplayId`, native handles, macOS Spaces or Windows snap groups.
 The app owns its serializer and settings file. NativeAOT serializers need generated metadata.
-Install `Goo.AppHost` for `Placement.Restore`, which matches current displays and clamps usable bounds and size limits.
+Use `Placement.Restore` from `Goo` to match current displays and clamp usable bounds and size limits.
 Wayland has no direct unminimize request. Restore into a new window or request activation through the app's normal activation route.
 
 ## Observe window notifications

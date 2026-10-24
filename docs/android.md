@@ -33,7 +33,7 @@ receives a resized viewport while its retained Cells stay mounted.
 ```sh
 dotnet new install Goo.Templates
 dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
-dotnet build HelloGoo/HelloGoo.csproj -c Release
+dotnet build HelloGoo/HelloGoo.gsproj -c Release
 ```
 
 - Requires the .NET Android workload, its supported Android SDK and JDK.

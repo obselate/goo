@@ -137,9 +137,7 @@ internal shared partial class Checks {
     private func MarkdownLinks(tracked[]string) {
         let failures = List[string]()
         for relative in tracked {
-            if !relative.EndsWith(".md") || relative.StartsWith("vendor/") || relative.StartsWith(
-                "plugins/goo/reference/"
-            ) {
+            if !relative.EndsWith(".md") || relative.StartsWith("vendor/") {
                 continue
             }
             let path = Path.Combine(Root, relative)

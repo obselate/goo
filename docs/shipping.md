@@ -50,7 +50,7 @@ validated for this sample.
 ```sh
 bash tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh "$HOME/.cache/goo-android-tools"
 export GOO_BUNDLETOOL="$HOME/.cache/goo-android-tools/bundletool-all-1.18.3.jar"
-goo package --project App.Android.csproj --target android --output artifacts/packages
+goo package --project App.Android.gsproj --target android --output artifacts/packages
 ```
 
 Use an existing `net10.0-android` application with the pinned Android workload,
