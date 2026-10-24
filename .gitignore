@@ -140,6 +140,8 @@
 !/tools/Goo.ConsumerPerformance/**
 !/tools/Goo.Investigation/
 !/tools/Goo.Investigation/**
+!/tools/Goo.HostChecks/
+!/tools/Goo.HostChecks/**
 
 !/integrations/
 !/integrations/**
