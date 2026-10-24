@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.16.1 - 2026-10-24
+
+- Apply requested font weights to system variable fonts, so variable system fonts no longer render at their default weight.
+- Omitted print DPI settings default to 300 for consumers instead of 0.
+- Keep the original Build stack trace when a cell build throws during a frame.
+- Remove Python from notification, data-transfer and input-build host checks, and merge activation checks into one G# host-check tool.
+
 ## 0.16.0 - 2026-10-24
 
 - BREAKING: Remove PinToBottom and Pinned from core and move log tail-following policy to consumer state and Widgets.
