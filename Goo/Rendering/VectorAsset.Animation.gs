@@ -466,21 +466,21 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
     var progress float32 = 0.0F
     var segment int32 = 0
     while segment + 1 < count {
-      let first = asset.PlayerMorphKeyframeAt(start + segment)
-      let second = asset.PlayerMorphKeyframeAt(start + segment + 1)
+      let first = asset.PlayerKeyframeAt(start + segment)
+      let second = asset.PlayerKeyframeAt(start + segment + 1)
       if time < float64(second.Time) {
         firstIndex = segment
         secondIndex = segment + 1
         let span = float64(second.Time - first.Time)
         let rawProgress = span <= 0.0 ? 1.0 : (time - float64(first.Time)) / span
-        progress = easeMorphProgress(asset.PlayerMorphKeyframeAt(start + segment),
+        progress = easeProgress(asset.PlayerKeyframeAt(start + segment),
           clamp01f(float32(rawProgress)))
         break
       }
       segment++
     }
-    let first = asset.PlayerMorphKeyframeAt(start + firstIndex)
-    let second = asset.PlayerMorphKeyframeAt(start + secondIndex)
+    let first = asset.PlayerKeyframeAt(start + firstIndex)
+    let second = asset.PlayerKeyframeAt(start + secondIndex)
     var curveIndex int32 = 0
     while curveIndex < state.CurveCount {
       let firstCurve = asset.PlayerMorphCurveAt(int32(first.TargetCurveStart) + curveIndex)
@@ -643,10 +643,6 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
       let cycle = Math.Floor(elapsed / duration)
       var phase = elapsed - cycle * duration
       if phase < 0.0 { phase = 0.0 }
-      if (track.Flags & VectorAnimationFlags.PingPong) != 0u
-        && Math.Floor(cycle % 2.0) != 0.0 {
-          phase = duration - phase
-        }
       return phase
     }
 
@@ -674,18 +670,6 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
       case _ { return progress }
     }
   }
-
-  private func easeMorphProgress(keyframe VectorAnimationKeyframe,
-    progress float32) float32{
-      switch VectorEasingKind(keyframe.Easing) {
-        case VectorEasingKind.Step { return 0.0F }
-        case VectorEasingKind.Cubic {
-          return cubic(keyframe.ControlA, keyframe.ControlB, keyframe.ControlC,
-            keyframe.ControlD, progress)
-        }
-        case _ { return progress }
-      }
-    }
 
   private func cubic(x1 float32, y1 float32, x2 float32, y2 float32,
     x float32) float32{

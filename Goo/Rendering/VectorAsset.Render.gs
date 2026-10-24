@@ -105,8 +105,6 @@ public sealed class VectorAsset {
 
   internal func PlayerTrackAt(index int32) VectorAnimationTrack -> motion().Tracks[index]
 
-  internal func PlayerMorphKeyframeAt(index int32) VectorAnimationKeyframe -> motion().Keyframes[index]
-
   internal func PlayerMorphCurveAt(index int32) VectorAnimationCurve -> motion().MorphCurves[index]
 
   internal func PlayerMutablePathForNode(index int32) VectorPath {

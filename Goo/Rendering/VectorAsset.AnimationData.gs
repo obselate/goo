@@ -18,7 +18,6 @@ internal class VectorAnimationFlags {
   shared {
     internal const MissingIndex uint32 = 0xffffffffu
     internal const Loop uint32 = 1u
-    internal const PingPong uint32 = 2u
   }
 }
 

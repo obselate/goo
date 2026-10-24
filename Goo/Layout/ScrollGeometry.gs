@@ -184,20 +184,6 @@ private func reservedVerticalGutter(n Node, width float32, height float32) float
 private func reservedHorizontalGutter(n Node, width float32, height float32) float32 ->
   MathF.Max(0.0F, reservedHorizontalSlot(n, width, height) - BoxGeometry.PaddingBottom(n))
 
-private func verticalScrollbarSlot(n Node) float32 {
-  let gutters = scrollbarGutters(n)
-  return reservedVerticalSlot(n,
-    BoxGeometry.ContentWidth(n) - gutters.Vertical,
-    BoxGeometry.ContentHeight(n) - gutters.Horizontal)
-}
-
-private func horizontalScrollbarSlot(n Node) float32 {
-  let gutters = scrollbarGutters(n)
-  return reservedHorizontalSlot(n,
-    BoxGeometry.ContentWidth(n) - gutters.Vertical,
-    BoxGeometry.ContentHeight(n) - gutters.Horizontal)
-}
-
 private func scrollAxisOverflowsX(n Node, viewport float32) bool ->
   viewport > 0.0F && n.ContentW > viewport &&
   (n.OverflowX == Overflow.Scroll || n.Kind == NodeKind.Editor)
