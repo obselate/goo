@@ -5,6 +5,7 @@ import System.Collections.Generic
 import System.Runtime.CompilerServices
 
 /// Represents a consumer-owned handle for one mounted element.
+/// A tree update can move the handle to another element, but cannot attach it to two live elements.
 public class ElementHandle {
   private var node Node?
   private var window Window?

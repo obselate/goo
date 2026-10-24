@@ -12,12 +12,7 @@ internal class InputMetadata {
         || DragDropMetadata.HasNodeBindings(node) || GestureMetadata.Get(node) != nil
     }
 
-    internal func Sync(node Node, blob Blob, owner Window?) bool {
-      if blob.HasElementHandle {
-        ElementHandles.Bind(node, blob.Handle, owner)
-      } else if node.HasElementHandle {
-        ElementHandles.Bind(node, nil, owner)
-      }
+    internal func Sync(node Node, blob Blob) bool {
       let keyboardChanged = InputCallbacks.Sync(node, blob)
       let textChanged = TextInputCallbacks.Sync(node, blob)
       let dragDropChanged = DragDropMetadata.Sync(node, blob)

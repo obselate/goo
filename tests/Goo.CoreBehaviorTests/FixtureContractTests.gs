@@ -24,6 +24,15 @@ class FixtureContractTests {
     @InlineData("diff-duplicate")
     func InvalidChildListsAreRejected(scenario string) -> Assert.True(TreeFixtures().RejectsInvalidChildList(scenario))
 
+    @Theory
+    @InlineData("branch")
+    @InlineData("keyed")
+    @InlineData("unkeyed")
+    @InlineData("parent")
+    @InlineData("element")
+    func ElementHandleMovesInOneUpdate(scenario string) ->
+        Assert.True(ElementHandleFixtures().MovesInOneUpdate(scenario))
+
     @Fact
     func EveryContractIsRegistered() {
         let registered = HashSet[(Type, string)]()

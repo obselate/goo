@@ -51,6 +51,7 @@ internal partial class Reconciler {
   private var fallbackChildScratch ChildDiffScratch?
   private var styleRetryRoot Node?
   private var deferredRetirement Node?
+  private var pendingHandleMoves Dictionary[Node, ElementHandle]?
   internal var Context ContextFrame?
   private var contextCommits ContextReader?
 
@@ -176,12 +177,16 @@ internal partial class Reconciler {
         operationDepth--
         treeDepth = previousDepth
       }
-      if !parts { return nodes }
+      if !parts {
+        flushHandleMoves()
+        return nodes
+      }
     }
   }
 
   internal func DiscardStyles() {
     Res.DiscardPending()
+    pendingHandleMoves?.Clear()
     while let reader = contextCommits {
       contextCommits = reader.NextCommit
       reader.NextCommit = nil
@@ -790,8 +795,11 @@ internal partial class Reconciler {
   }
 
   private func reconcileSparseState(n Node, b Blob) {
+    if b.HasElementHandle || n.HasElementHandle || pendingHandleMoves?.ContainsKey(n) == true {
+      syncElementHandle(n, b.Handle)
+    }
     if b.HasSparseInputState || n.HasSparseInputState {
-      if InputMetadata.Sync(n, b, Owner) {
+      if InputMetadata.Sync(n, b) {
         MarkEffects(ReconcileEffects.Input)
       }
     }
@@ -1185,6 +1193,7 @@ internal partial class Reconciler {
   }
 
   internal func diffChildren(n Node, blobs IList[Blob]) {
+    if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent()
     try {
@@ -1311,9 +1320,6 @@ internal partial class Reconciler {
         }
         i++
       }
-      if scratchScope.HasIncomingHandle {
-        prepareHandleMoves(n, blobs, scratchScope)
-      }
       if childOrderChanged(n.Children, blobs) {
         markStructure()
         childrenChanged = true
@@ -1429,36 +1435,6 @@ internal partial class Reconciler {
     }
   }
 
-  private func prepareHandleMoves(n Node, blobs IList[Blob], scratchScope ChildDiffScratchScope) {
-    var i int32
-    while i < blobs.Count {
-      let blob = blobs[i]
-      if blob.HasElementHandle {
-        guard let handle = blob.Handle else {
-          throw InvalidOperationException("Blob has no ElementHandle")
-        }
-        var destination Node?
-        if let key = blob.Key {
-          if scratchScope.Keyed.TryGetValue(key, out var hit) {
-            destination = hit
-          }
-        } else if i < n.Children.Count && n.Children[i].Key == nil {
-          destination = n.Children[i]
-        }
-        if let source = handle.AttachedNode() {
-          if source.Parent == n && source != destination {
-            ElementHandles.Detach(source)
-            scratchScope.HandleReplacements.Add(ChildDiffHandleReplacement{
-              Old: source,
-              OldHandle: handle,
-            })
-          }
-        }
-      }
-      i++
-    }
-  }
-
   private func keyedScratch() ChildDiffScratch {
     if let shared = ChildScratch {
       return shared
@@ -1476,7 +1452,6 @@ internal partial class Reconciler {
 internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchScope) {
   scratchScope.IncomingKeys.Clear()
   scratchScope.IncomingHandles.Clear()
-  scratchScope.HasIncomingHandle = false
   var i int32
   while i < blobs.Count {
     let blob = blobs[i]
@@ -1486,7 +1461,6 @@ internal func validateChildren(blobs IList[Blob], scratchScope ChildDiffScratchS
       }
     }
     if blob.HasElementHandle {
-      scratchScope.HasIncomingHandle = true
       guard let handle = blob.Handle else {
         throw InvalidOperationException("Blob has no ElementHandle")
       }

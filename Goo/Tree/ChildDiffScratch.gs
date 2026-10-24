@@ -28,7 +28,6 @@ internal class ChildDiffScratchScope {
   internal let Keyed Dictionary[string, Node]
   internal let IncomingKeys HashSet[string]
   internal let IncomingHandles HashSet[ElementHandle]
-  internal var HasIncomingHandle bool
   internal init() {
     Next = List[Node]()
     Provisional = List[Node]()
@@ -49,7 +48,6 @@ internal class ChildDiffScratchScope {
     Keyed.Clear()
     IncomingKeys.Clear()
     IncomingHandles.Clear()
-    HasIncomingHandle = false
   }
 }
 
