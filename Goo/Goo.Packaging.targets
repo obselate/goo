@@ -212,10 +212,6 @@
   </Target>
 
   <Target Name="ValidateGooVulkanPackageAssets" BeforeTargets="Build;Pack">
-    <Error Condition="!Exists('$(GooVulkanShaderRoot)/solid_quad.vert.spv')"
-           Text="Goo Vulkan asset is missing: $(GooVulkanShaderRoot)/solid_quad.vert.spv" />
-    <Error Condition="!Exists('$(GooVulkanShaderRoot)/solid_quad.frag.spv')"
-           Text="Goo Vulkan asset is missing: $(GooVulkanShaderRoot)/solid_quad.frag.spv" />
     <Error Condition="!Exists('$(GooVulkanShaderRoot)/path_band.vert.spv')"
            Text="Goo Vulkan path-band vertex shader is missing: $(GooVulkanShaderRoot)/path_band.vert.spv" />
     <Error Condition="!Exists('$(GooVulkanShaderRoot)/path_band.frag.spv')"
