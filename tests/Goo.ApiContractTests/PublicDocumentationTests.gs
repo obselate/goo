@@ -302,9 +302,6 @@ class PublicDocumentationTests {
             "M:Goo.VectorNodeStyle.#ctor",
             "M:Goo.VectorPaint.#ctor(Goo.Color)",
             "M:Goo.VectorPaint.#ctor(Goo.Gradient)",
-            "M:Goo.VectorPath.Equals(Goo.VectorPath)",
-            "M:Goo.VectorPath.Equals(System.Object)",
-            "M:Goo.VectorPath.GetHashCode",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.Color)",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.VectorPaint)",
             "M:Goo.VectorStroke.#ctor(System.Double,Goo.VectorPaint,Goo.StrokeCap,Goo.StrokeJoin,System.Double,Goo.DashPattern)",
@@ -603,6 +600,9 @@ class PublicDocumentationTests {
             "M:Goo.EmbeddedWindowHost.UnloadVulkanLibrary"
         }
         private let ExpectedEqualityDocumentationIds[]string = []string{
+            "M:Goo.VectorPath.Equals(Goo.VectorPath)",
+            "M:Goo.VectorPath.Equals(System.Object)",
+            "M:Goo.VectorPath.GetHashCode",
             "M:Goo.FontVariation.Deconstruct(System.String@,System.Single@)",
             "M:Goo.FontVariation.Equals(Goo.FontVariation)",
             "M:Goo.FontVariation.Equals(System.Object)",
