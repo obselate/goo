@@ -84,7 +84,10 @@ abstract class GooActivity : Activity {
         ForwardActivation(intent, Goo.Window.IsInitialApplicationActivation)
     }
 
-    /// <inheritdoc />
+    /// Receives native permission results and forwards pending Goo requests.
+    /// @param requestCode The native permission request code.
+    /// @param permissions The requested Android permission names.
+    /// @param grantResults The native result for each permission.
     public open override func OnRequestPermissionsResult(requestCode int32, permissions[]string, grantResults[]Permission) {
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults)
         PermissionsResultReceived?.Invoke(requestCode, permissions, grantResults)

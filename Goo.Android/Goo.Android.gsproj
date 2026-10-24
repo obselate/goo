@@ -14,7 +14,6 @@
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-
     <None Include="../docs/android.md" Pack="true" PackagePath="README.md" />
     <ProjectReference Include="../Goo/Goo.gsproj" />
     <AndroidNativeLibrary Include="../Goo/Runtime/Vulkan/android-arm64/*.so" Abi="arm64-v8a" />
@@ -28,6 +27,13 @@
   <Target Name="NormalizeAndroidReferencePath" AfterTargets="_GsharpGetRefAssemblyForPack">
     <ItemGroup>
       <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
+    </ItemGroup>
+  </Target>
+  <Target Name="RegisterAndroidDocumentation" AfterTargets="CoreCompile">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)$(TargetPlatformVersion)/Goo.Android.xml" />
     </ItemGroup>
   </Target>
 </Project>

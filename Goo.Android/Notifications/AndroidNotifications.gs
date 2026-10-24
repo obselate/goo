@@ -10,6 +10,8 @@ import System
 import System.Threading
 import System.Threading.Tasks
 
+@assembly: UsesPermission("android.permission.POST_NOTIFICATIONS")
+
 /// Opens Android notifications. Calls must run on the activity's UI thread.
 public class AndroidNotifications {
     private init() {}
