@@ -561,6 +561,7 @@ internal class CellFixtures {
       rec.Diff(node, Cell.Mount[FactoryBaseCell](() -> FactoryThrowCell{}, "replacement"))
     } catch (error InvalidOperationException) {
       threw = error.Message == "factory build failure"
+        && error.StackTrace?.Contains("FactoryThrowCell.Build") == true
     }
     return threw
       && node.Fiber == prior
@@ -583,6 +584,7 @@ internal class CellFixtures {
       window.UpdateTree()
     } catch (error InvalidOperationException) {
       threw = error.Message == "root build failure"
+        && error.StackTrace?.Contains("FactoryRootRetryCell.Build") == true
     }
     if !threw || window.Tree != nil { return false }
     window.UpdateTree()
