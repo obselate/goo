@@ -1057,6 +1057,26 @@ internal class InputFixtures {
     return !root.Children[3].Focused && !root.Children[3].FocusVisible
   }
 
+  func KeyboardTraversalRevealsNestedScrollAncestors() bool {
+    let driver = InputFixtureDriver(InputNestedFocusCell(), 100, 100)
+    driver.UseBindings()
+    guard let outer = driver.Window.Tree else { return false }
+    let inner = outer.Children[1]
+    let last = inner.Children[2]
+    driver.Key(Key.Tab, false, false)
+    driver.Step(1.0)
+    driver.Key(Key.Tab, false, false)
+    driver.Step(1.0)
+    if !last.Focused || outer.ScrollY <= 0.0F || inner.ScrollY <= 0.0F { return false }
+    if last.Rect.Y < inner.Rect.Y || last.Rect.Y + last.Rect.H > inner.Rect.Y + inner.Rect.H
+      || last.Rect.Y < outer.Rect.Y || last.Rect.Y + last.Rect.H > outer.Rect.Y + outer.Rect.H {
+      return false
+    }
+    driver.Key(Key.Tab, true, false)
+    driver.Step(1.0)
+    return inner.Children[0].Focused && inner.ScrollY == 0.0F
+  }
+
   func FocusTransferAndTraversal() bool {
     let clear = InputFixtureDriver(InputFocusCell{}, 200, 200)
     clear.UseBindings()
@@ -2888,6 +2908,19 @@ internal class InputTabCell : Cell {
       Container{ Key: "b", Width: 100.0, Height: 30.0, Focusable: true },
       TextEntry{ Key: "c", Width: 100.0, Height: 30.0 },
     }
+}
+
+internal class InputNestedFocusCell : Cell {
+  override func Build() Blob -> Container() {
+    .Width: 100, .Height: 100, .OverflowY: Overflow.Scroll,
+    Container{ Height: 150, FlexShrink: 0 },
+    Container() {
+      .Width: 100, .Height: 100, .FlexShrink: 0, .OverflowY: Overflow.Scroll,
+      Button{ Width: 80, Height: 30, FlexShrink: 0 },
+      Container{ Height: 150, FlexShrink: 0 },
+      Button{ Width: 80, Height: 30, FlexShrink: 0 },
+    },
+  }
 }
 
 internal class InputButtonCell : Cell {
