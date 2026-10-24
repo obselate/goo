@@ -165,7 +165,7 @@ class RichTextClipboard : IDisposable {
             return RichTextCodec.Failure(RichTextStatus.ReadOnly)
         }
         let snapshot = controller.Document.Snapshot()
-        var selection = controller.Selection
+        let selection = controller.Selection
         let revision = layer.Revision
         let capturedGeneration = generation
         let composition = controller.Composition

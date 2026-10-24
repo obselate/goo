@@ -85,7 +85,7 @@ func CheckRichClipboard() {
         Require(pasted.Status == RichTextStatus.Success && controller.Document.GetText() == "rich 😀rich 😀",
             "rich paste did not round-trip")
         Require(controller.Document.Undo() && controller.Document.GetText() == "rich 😀", "rich paste undo failed")
-        Require(commands == 2, "clipboard command interception ran more than once")
+        Require(commands == 2, "clipboard command interception count: $commands, expected 2")
         controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
         let pendingCut = clipboard.CutAsync()
         controller.Selection = TextSelection(TextPosition(7, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
