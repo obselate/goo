@@ -16,7 +16,7 @@ public partial class Window {
         private var activationDelivered bool
         private var deliveringActivation bool
         private var applicationActivated Action[ApplicationActivation]?
-        internal prop CurrentActivationToken string? { get; private set; }
+        internal prop CurrentActivationToken string? { get; set; }
 
         /// Occurs once per application activation on the process UI thread, not once per open window.
         /// Subscribe before initializing activation. Handlers own validation and window selection.

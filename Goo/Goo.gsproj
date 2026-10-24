@@ -25,7 +25,6 @@
     <InternalsVisibleTo Include="Goo.Android" />
     <InternalsVisibleTo Include="Goo.AppHost" />
     <InternalsVisibleTo Include="Goo.Audio" />
-    <InternalsVisibleTo Include="Goo.Tray" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <EmbeddedResource Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json"
                       LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />

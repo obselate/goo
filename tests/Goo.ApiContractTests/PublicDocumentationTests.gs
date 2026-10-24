@@ -185,6 +185,10 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.TrayOptions.#ctor",
+            "M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)",
+            "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
+            "M:Goo.TrayIcon.Dispose",
             "M:Goo.NotificationOptions.#ctor",
             "M:Goo.NotificationMessage.#ctor",
             "M:Goo.NotificationService.GetPermissionAsync",
@@ -669,6 +673,11 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.TrayStatus.Registered",
+            "F:Goo.TrayStatus.NoHost",
+            "F:Goo.TrayStatus.Unsupported",
+            "F:Goo.TrayStatus.Closed",
+            "F:Goo.TrayStatus.Failed",
             "F:Goo.NotificationPermission.NotDetermined",
             "F:Goo.NotificationPermission.Granted",
             "F:Goo.NotificationPermission.Denied",
@@ -867,6 +876,10 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)"] = DocumentationShape(
+                []string{"owner", "options"}, System.Array.Empty[string](), true),
+            ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(
+                []string{"options"}, System.Array.Empty[string](), true),
             ["M:Goo.NotificationService.GetPermissionAsync"] = DocumentationShape(
                 System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.NotificationService.RequestPermissionAsync"] = DocumentationShape(
