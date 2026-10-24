@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Motion`](https://github.com/obselate/goo/tree/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion)
+Source: [`Goo/Motion`](https://github.com/obselate/goo/tree/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion)
 
 ## `Anim<T>`
 
 Source:
 
-- [`Anim.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/Anim.gs)
+- [`Anim.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/Anim.gs)
 
 Bridges scalar simulations to a Cell-owned animated value.
 
@@ -100,7 +100,7 @@ Gets the current velocity in converter-coordinate units per second. A resting or
 
 Source:
 
-- [`LayoutTransition.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/LayoutTransition.gs)
+- [`LayoutTransition.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/LayoutTransition.gs)
 
 Describes an opt-in position transition using DurationMs and Easing, or a custom SimulationFactory.
 
@@ -112,7 +112,7 @@ Creates an optional simulation for each position axis. Omission uses DurationMs 
 
 Source:
 
-- [`Motion.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/Motion.gs)
+- [`Motion.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/Motion.gs)
 
 Configures the animation core. Animation durations use milliseconds. Simulation elapsed time and velocity use seconds.
 
@@ -137,7 +137,7 @@ Gets or sets the global playback rate. 1 is normal speed; 0 or lower lands every
 
 Source:
 
-- [`Motion.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/Motion.gs)
+- [`Motion.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/Motion.gs)
 
 Identifies why an animation reached its terminal value. Finished means all simulations ended naturally. ReducedMotion means the host requested less motion. Disabled means Motion.TimeScale is zero or negative and takes precedence.
 
@@ -151,7 +151,7 @@ Identifies why an animation reached its terminal value. Finished means all simul
 
 Source:
 
-- [`MotionConverter.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/MotionConverter.gs)
+- [`MotionConverter.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/MotionConverter.gs)
 
 Converts an animated value to fixed scalar simulation coordinates.
 
@@ -167,7 +167,7 @@ Creates a converter with a fixed coordinate count and conversion callbacks.
 
 Source:
 
-- [`MotionVelocity.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/MotionVelocity.gs)
+- [`MotionVelocity.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/MotionVelocity.gs)
 
 Specifies initial scalar velocities in converter-coordinate units per second. Create values with Uniform or Components because the default value is invalid.
 
@@ -199,7 +199,7 @@ Returns: a uniform velocity command
 
 Source:
 
-- [`Simulation.gs`](https://github.com/obselate/goo/blob/b4a57ece1552a7ceaa3e5247b222838ccf1a1628/Goo/Motion/Simulation.gs)
+- [`Simulation.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/Motion/Simulation.gs)
 
 Evaluates a closed-form motion at an elapsed time. No numeric integration: every override is a pure function of elapsed seconds, so evaluation is idempotent and safe to repeat within a frame.
 
