@@ -13,7 +13,8 @@
   <ItemGroup>
     <Content Include="Assets/MaterialSymbolsRounded.ttf" Link="MaterialSymbolsRounded.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
     <Content Include="Assets/SpaceGrotesk-Variable.ttf" Link="SpaceGrotesk-Variable.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <Content Include="Assets/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <Content Include="../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt" Link="VendSans-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
   <ItemGroup>
     <GooShaderEffect Include="Shaders/wolfenstein.frag.slang" TargetPath="Shaders/wolfenstein.goo-effect" />
