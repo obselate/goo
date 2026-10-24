@@ -1,6 +1,46 @@
 package Goo
 
 internal class ShapeGeometryFixtures {
+  func LoneMoveToContoursPreserveOtherStrokes() bool {
+    for closed in []bool{ false, true } {
+      for position in 0 ... 3 {
+        let builder = PathBuilder(0.0, 0.0, 100.0, 100.0)
+        let reference = PathBuilder(0.0, 0.0, 100.0, 100.0)
+        for index in 0 ... 3 {
+          if index == position { builder.MoveTo(90.0, 90.0) }
+          if index == 2 { continue }
+          let x = 10.0 + float64(index) * 40.0
+          builder.MoveTo(x, 10.0).LineTo(x + 20.0, 10.0).LineTo(x + 20.0, 40.0)
+          reference.MoveTo(x, 10.0).LineTo(x + 20.0, 10.0).LineTo(x + 20.0, 40.0)
+          if closed {
+            builder.Close()
+            reference.Close()
+          }
+        }
+        let path = builder.Build()
+        let expected = reference.Build()
+        let mapping = PathGeometry.Map(path, ShapeFit.Fill, 0.0F, 0.0F, 100.0F, 100.0F)
+        let cache = PathStrokeCache()
+        for dashes in []DashPattern?{ nil, DashPattern([]float64{ 5.0, 3.0 }, 0.0) } {
+          let actualStroke = cache.Resolve(path, mapping, 4.0F,
+            StrokeCap.Round, StrokeJoin.Round, 4.0F, dashes, 0.0, 1.0)
+          let expectedStroke = cache.Resolve(expected, mapping, 4.0F,
+            StrokeCap.Round, StrokeJoin.Round, 4.0F, dashes, 0.0, 1.0)
+          if actualStroke.CommandCount == 0 || !actualStroke.Equals(expectedStroke) { return false }
+        }
+      }
+    }
+    let lone = PathBuilder(0.0, 0.0, 100.0, 100.0).MoveTo(50.0, 50.0).Build()
+    let point = PathBuilder(0.0, 0.0, 100.0, 100.0)
+      .MoveTo(50.0, 50.0).LineTo(50.0, 50.0).Build()
+    let mapping = PathGeometry.Map(lone, ShapeFit.Fill, 0.0F, 0.0F, 100.0F, 100.0F)
+    let cache = PathStrokeCache()
+    return cache.Resolve(lone, mapping, 4.0F,
+      StrokeCap.Round, StrokeJoin.Round, 4.0F, nil, 0.0, 1.0).CommandCount == 0
+      && cache.Resolve(point, mapping, 4.0F,
+        StrokeCap.Round, StrokeJoin.Round, 4.0F, nil, 0.0, 1.0).CommandCount > 0
+  }
+
   func ReturningQuadraticStrokePreservesExcursionAndTrim() bool {
     let path = PathBuilder(0.0, 0.0, 100.0, 100.0)
       .MoveTo(0.0, 10.0).QuadraticTo(100.0, 10.0, 1.0, 10.0).Build()

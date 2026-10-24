@@ -457,6 +457,10 @@ internal sealed class PathStrokeCache {
     var index int32 = 0
     while index < source.Geometry.ContourCount {
       let contour = source.Geometry.Contours[index]
+      if contour.Start == contour.End {
+        index++
+        continue
+      }
       guard let current = FlattenContour(source.Geometry, contour, scaleX, scaleY) else {
         return false
       }
