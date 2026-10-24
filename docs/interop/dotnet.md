@@ -6,7 +6,7 @@ dotnet run --project samples/interop/VisualBasic -- counter
 
 Pack Goo into `artifacts/packages` before running the repository sample.
 
-Goo is a CLR library. Use .NET 10, ordinary objects, delegates and generic calls. See the [VB sample](../../samples/interop/VisualBasic/Program.vb), [C# guide](csharp.md) and [F# guide](fsharp.md).
+Use Goo from .NET 10 with ordinary objects, delegates and generic calls. See the [VB sample](../../samples/interop/VisualBasic/Program.vb), [C# guide](csharp.md) and [F# guide](fsharp.md).
 
 ## Counter
 
@@ -75,7 +75,7 @@ children.Add(New Button With {
 Dim list = New Container With {.Children = children}</code></pre></td></tr>
 </table>
 
-VB uses `AddRange` where G# uses spread syntax. Keyed and unkeyed siblings can mix. Keys retain identity across moves, while unkeyed entries use their absolute sibling index.
+VB uses `AddRange` where G# uses spread syntax. See [shared API rules](#shared-api-rules) for child identity.
 
 ## Shared API rules
 
@@ -93,6 +93,7 @@ Dim viewport = New Container With {.Height = 240, .Children = New List(Of Blob) 
 | Contract | Rule |
 | --- | --- |
 | Children | Use an `IList<Blob>`. Writable lists are shared. Read-only lists are copied. C# can assign collection expressions and spreads. |
+| Identity | Keyed and unkeyed siblings can mix. Keys must be unique among siblings and retain identity across moves. Unkeyed entries use their absolute sibling index. |
 | Length | Use `Length.Pixels(value)` or `Length.Percent(value)`. |
 | Input | Derive from `Cell(Of TInput)` and mount with `Cell.Mount(Of TInput, TCell)(key, input)`. The cell needs a public parameterless constructor. |
 | Equality | Inputs use `EqualityComparer<T>.Default`. Override `ShouldRebuild` when reference equality is not suitable. |

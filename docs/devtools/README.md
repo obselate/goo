@@ -1,8 +1,7 @@
 # Goo DevTools
 
-Goo DevTools helps you inspect a running application's UI tree, properties,
-layout, logs, and events, and save screenshots. Diagnostics are local and enabled
-when you launch an app through `goo dev`.
+Inspect a running app's UI tree, properties, layout, logs and events, and save
+screenshots. `goo dev` enables local diagnostics.
 
 ## Install
 
@@ -36,7 +35,7 @@ To select a project explicitly:
 goo dev --inspector --project HelloGoo/HelloGoo.gsproj
 ```
 
-You can also supply a launch command:
+Or supply a launch command:
 
 ```sh
 goo dev --inspector -- dotnet run --project HelloGoo/HelloGoo.gsproj

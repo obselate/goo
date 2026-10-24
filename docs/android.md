@@ -1,11 +1,26 @@
 # Android integration
 
+## Android starter
+
+```sh
+dotnet new install Goo.Templates
+dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
+dotnet build HelloGoo/HelloGoo.gsproj -c Release
+```
+
+- Requires the .NET Android workload, its supported Android SDK and JDK.
+- Includes an Activity, a shared G# library, Vulkan manifest rules and ARM64/x64 RIDs.
+- Requires API 33 and a compatible Vulkan 1.3 device.
+- Use `--goo-version` to select the matching Goo and Goo.Android release.
+- Set `AndroidSdkDirectory` and `JavaSdkDirectory` if tool discovery fails.
+
 [API reference](api-android/README.md).
 
-Goo uses the same retained UI and Vulkan renderer on desktop and Android. Put
-application Cells and a Window factory in a shared `net10.0` G# library. The
-desktop entry point calls `window.Run()`. The Android entry point returns that
-same Window from `GooActivity.CreateWindow()`.
+## Shared application
+
+Put application Cells and a Window factory in a shared `net10.0` G# library.
+Desktop calls `window.Run()`. Android returns the same Window from
+`GooActivity.CreateWindow()`:
 
 ```csharp
 using Android.App;
@@ -24,25 +39,9 @@ public sealed class MainActivity : GooActivity
 
 Reference `Goo.Android` from a `net10.0-android` application and set
 `SupportedOSPlatformVersion` to `33`. Use Android RIDs `android-arm64` and
-`android-x64`. The host translates Android events into Goo's shared
-`EmbeddedWindowHost` and `PlatformInput` contracts. Applications do not author a
-second control tree, text editor, renderer, or asset API.
-The sample handles orientation and size changes in the existing activity. Goo
-receives a resized viewport while its retained Cells stay mounted.
-
-## Android starter
-
-```sh
-dotnet new install Goo.Templates
-dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
-dotnet build HelloGoo/HelloGoo.gsproj -c Release
-```
-
-- Requires the .NET Android workload, its supported Android SDK and JDK.
-- Includes an Activity, a shared G# library, Vulkan manifest rules and ARM64/x64 RIDs.
-- Requires API 33 and a compatible Vulkan 1.3 device.
-- Use `--goo-version` to select the matching Goo and Goo.Android release.
-- Set `AndroidSdkDirectory` and `JavaSdkDirectory` if tool discovery fails.
+`android-x64`. Both hosts use the same control tree, editor, renderer, and asset
+API through `EmbeddedWindowHost` and `PlatformInput`. The sample keeps Cells
+mounted during orientation and size changes and resizes the viewport.
 
 ## Launch and document activation
 
@@ -99,23 +98,19 @@ Native payloads support [16 KB page alignment](https://developer.android.com/gui
 
 ## View and lifecycle ownership
 
-`GooActivity` owns a `GooView` and forwards pause, resume, and destruction. Its
-native layout applies system bar, display cutout, and keyboard insets before
-sizing the SurfaceView. The framebuffer and input coordinates therefore cover
-the same content rectangle.
+`GooActivity` owns a `GooView` and forwards pause, resume, and destruction.
+Native layout applies system bar, display cutout, and keyboard insets before
+sizing the SurfaceView. Framebuffer and input coordinates share that content rectangle.
 
-For integration into an existing native activity, construct
-`new GooView(context, window)` on the Android main thread, add it to the native
-layout, and call its `Pause()`, `Resume()`, and `Dispose()` from the matching
-activity callbacks. The native layout must size the view inside any required
-safe or keyboard insets. Do not call `Window.Run()` or `Window.Pump()` for that
-Window. Do not share an attached Window between views.
+In a native activity, construct `new GooView(context, window)` on the Android
+main thread. Add it to the native layout and call `Pause()`, `Resume()`, and
+`Dispose()` from the matching activity callbacks. Size it inside safe and keyboard
+insets. Do not call `Window.Run()` or `Window.Pump()` or attach the Window to another view.
 
-The view retains one ANativeWindow reference while the Surface exists. Surface
-destruction detaches and drains Vulkan presentation before releasing that
-reference. A replacement Surface attaches to the same Window and mounted Cells.
-Full activity destruction closes that Window. Apps that need process or activity
-recreation persistence keep their data in their normal application state owner.
+The view retains one ANativeWindow reference while its Surface exists.
+Surface destruction detaches and drains Vulkan presentation before releasing it.
+A replacement Surface reuses the Window and mounted Cells. Activity destruction
+closes the Window. Keep activity/process recreation data in application state.
 
 ### Activity state restoration
 
@@ -150,20 +145,17 @@ Choreographer runs frames only on demand or at Goo's next animation/timer
 deadline. Pause cancels scheduling and transient input. Resume resets the frame
 clock.
 
-An embedded host may call `ServicePendingSubmission()` on its owner thread when
-a frame wake is delivered, before scheduling the next timed frame. The method
-only advances a completed graphics submission into presentation. It does not
-simulate or render a frame, and presentation completion remains part of the next
-normal frame pump. Goo's Android adapter performs this service automatically.
+An embedded host can call `ServicePendingSubmission()` on its owner thread
+at a frame wake, before scheduling the next timed frame. It presents a completed
+graphics submission without simulation or rendering. Presentation completion
+remains in the next normal frame pump. Goo's Android adapter does this automatically.
 
 `GooView.HasFrameDemand` is true while a Choreographer frame is pending or the
-renderer needs another immediate frame. `FrameDemandChanged` reports changes
-to that value on the Android UI thread. Read the property for the current
-value, then use the event to update native frame-rate hints or other host
-policy. A future animation/timer deadline leaves immediate demand false until
-the frame is scheduled. Pause, surface destruction, view detachment, and
-disposal cancel pending frames and clear demand. The event reports demand
-transitions, not every presented frame.
+renderer needs an immediate frame. Read it, then use `FrameDemandChanged` on the
+Android UI thread to update frame-rate hints or other host policy.
+A future animation/timer deadline leaves demand false until scheduling.
+Pause, Surface destruction, view detachment, and disposal cancel pending frames
+and clear demand. The event reports demand transitions, not every presented frame.
 
 ## Documents and URI streams
 
@@ -216,19 +208,16 @@ TextEntry{
 - `InputPurpose.Password` masks TextEntry like `Password: true`. Use TextEntry for protected values.
 - Desktop ignores other keyboard and autofill hints.
 
-`GooView.DismissKeyboardOnSubmit` defaults to `true`: the IME Done action sends
-the shared Submit command and hides the software keyboard. Set the property to
-`false` for a composer that should keep the keyboard open after submission.
-Submit still runs, and normal focus changes and lifecycle handling still
-control text input. Next and Previous actions continue to move focus.
+`GooView.DismissKeyboardOnSubmit` defaults to `true`. IME Done sends Submit and
+hides the keyboard. Set it to `false` to keep the keyboard open after Submit.
+Focus changes and lifecycle handling still control text input. Next and Previous
+move focus.
 
-Android owns physical key repeat timing. GooView dispatches each native key-down
-event, including repeat events, and releases its mapped Goo key before the
-callback returns. A missing native key-up therefore cannot leave Goo's repeat
-state active or cause a command such as Backspace to repeat indefinitely.
-Mapped key-up events are consumed without issuing another edit. Printable
-characters are committed from each native key-down when Ctrl and Alt are not
-pressed.
+Android owns physical key repeat timing. GooView dispatches each native key-down,
+including repeats, and releases its mapped Goo key before returning.
+A missing key-up cannot leave Goo repeat active. Mapped key-up events are consumed
+without another edit. Each key-down commits printable characters unless Ctrl or
+Alt is pressed.
 
 ## Accessibility
 
@@ -273,6 +262,7 @@ Before release, record the Android and TalkBack versions and check:
 | Edit a password | No document text in speech. |
 | Change a live region | Correct polite or assertive speech. Atomic regions read the whole update. |
 | Scroll, rotate, background and resume | Correct bounds. No stale focus or repeated live update. |
+| Disable or remove controls, then replace the Surface | No stale nodes or focus. Navigation, editing, and activation still work. |
 
 ## Native popup surfaces
 
@@ -291,32 +281,26 @@ let result = popup.Open(anchor.BorderBox, 240, 120, PortalPlacement.BottomStart)
 
 ## Transparent surfaces
 
-Set `Window.Transparent` before constructing GooView. A transparent window uses
-a translucent SurfaceView placed above the native view hierarchy, allowing
-native content beneath it to show through transparent pixels.
+Set `Window.Transparent` before constructing GooView. It places a translucent
+SurfaceView above native views, which show through transparent pixels.
 
-Vulkan presentation prefers premultiplied composite alpha. Android also permits
-inherited composite alpha when the surface exposes that mode, because GooView
-has configured the native compositor for premultiplied transparency. Other
-embedded hosts keep `EmbeddedWindowHost.AllowInheritedCompositeAlpha()` false
-by default; override it only when their native compositor provides that same
-contract. Transparent windows fail swapchain creation if neither a premultiplied
-mode nor explicitly permitted inherited mode is available.
+Vulkan prefers premultiplied composite alpha. Android also allows inherited alpha
+when exposed, because GooView configures premultiplied transparency.
+Other embedded hosts default `EmbeddedWindowHost.AllowInheritedCompositeAlpha()`
+to false. Override it only for the same compositor contract. Swapchain creation
+fails without premultiplied or explicitly permitted inherited alpha.
 
 ## Assets and native payloads
 
-Use existing `FontSource` and premultiplied RGBA `ImageSource` APIs. A shared
-library can embed a font with `EmbeddedResource`, read its bytes, and register a
-FontSource on either platform. Android system `sans-serif` resolves to the
-platform's Roboto font with generic Noto Sans fallback. Runtime Vulkan shaders
-are embedded in Goo.dll, including within an APK. No extraction directory is
-needed.
+Use `FontSource` and premultiplied RGBA `ImageSource`. Shared libraries can embed
+font bytes with `EmbeddedResource` and register them on either platform.
+Android `sans-serif` uses Roboto with generic Noto Sans fallback.
+Goo.dll embeds Vulkan shaders, including in APKs. No extraction directory is needed.
 
-The main Goo package contains HarfBuzz and hb-gpu for both Android RIDs.
-The `Goo.Android` source build creates a native archive for project references.
-Its NuGet package omits that archive and uses Goo's native payloads, which prevents
-duplicate libraries. No SDL, Skia, OpenGL, FreeType, or C++
-runtime payload is added for the Android renderer.
+Goo contains HarfBuzz and hb-gpu for both Android RIDs. `Goo.Android` source builds
+create a native archive for project references. NuGet omits it and uses Goo's
+payloads to avoid duplicate libraries. The renderer adds no SDL, Skia, OpenGL,
+FreeType, or C++ runtime payload.
 
 Build the pinned HarfBuzz 15.0.0 libraries on Linux with Android NDK
 `27.2.12479018`, Meson, Ninja, Python 3, and the normal archive tools:
@@ -378,6 +362,11 @@ The package checker verifies both ABI payloads against build provenance, checks
 dependencies and page alignment, and rejects legacy native renderer libraries.
 For a single-ABI build pass `--abi arm64-v8a` or `--abi x86_64`.
 The separate `zipalign` check verifies 16 KB alignment within the installable APK.
+
+### Device checks
+
+Record OS, device, driver, package version, actions, and results.
+Report untested combinations.
 
 On a compatible device, check first-frame text and image rendering, taps, touch
 scrolling, keyboard entry, selection and composition, password privacy, rotation,
