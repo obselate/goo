@@ -382,7 +382,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw ArgumentOutOfRangeException("scaleY")
       }
       EnsurePrimitivePlanCapacity(frame.DrawRefCount)
-      let maximumRecordCount = ComputeMaximumAnalyticRecordCount(frame)
+      let maximumRecordCount = ComputeMaximumAnalyticRecordCount(frame, scaleX, scaleY)
       +if presentEncode { 1uL } else { 0uL }
       primitivePrepass = true
       primitivePrepared = false
@@ -782,7 +782,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
     primitiveRecordPlan = GrowArray(primitiveRecordPlan,
       primitiveRecordPlan.Length, needed, 8)
   }
-  private func ComputeMaximumAnalyticRecordCount(frame SceneFrame) uint64 {
+  private func ComputeMaximumAnalyticRecordCount(frame SceneFrame, scaleX float32, scaleY float32) uint64 {
     if frame.DrawRefCount < 0 || frame.DrawRefCount > Int32.MaxValue {
       throw ArgumentOutOfRangeException("draw count")
     }
@@ -809,7 +809,12 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         }
         case SceneDrawKind.Underline { count = 1uL }
         case SceneDrawKind.LayerBegin {
-          if BackdropBlurRadius(frame.Layers[frame.DrawRefs[index].Index], frame) > 0.0F { count = 3uL }
+          let layer = frame.Layers[frame.DrawRefs[index].Index]
+          let radius = BackdropBlurRadius(layer, frame)
+          if radius > 0.0F {
+            count = 3uL + uint64(MathF.Ceiling(MathF.Log2(MathF.Max(1.0F, radius * scaleX))))
+              + uint64(MathF.Ceiling(MathF.Log2(MathF.Max(1.0F, radius * scaleY))))
+          }
         }
         case SceneDrawKind.LayerEnd { count = 1uL }
         case SceneDrawKind.GeneratorEffect { count = 1uL }
@@ -927,7 +932,11 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       let borrowsParentBackdrop =
       (record.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) != 0u
-      let target = pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
+      let backdropOnly = BackdropBlurRadius(record, frame) > 0.0F
+        && frame.ShaderEffects[record.EffectIndex].Program == BackdropBlurEffect.Shared
+      let target = if backdropOnly { nil } else {
+        pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
+      }
       let needsBackdrop = record.BlendMode != 0u
         || (record.EffectIndex >= 0
             && (record.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u)
@@ -967,18 +976,26 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
       }
       if needsBackdrop && BackdropBlurRadius(record, frame) > 0.0F {
-        state.BackdropTarget = BlurBackdrop(commandBuffer, record, frame, backdropTarget)
-        state.Record.Flags &= ~uint32(LayerRecordFlags.BorrowsParentBackdrop)
+        let blurred = BlurBackdrop(commandBuffer, record, frame, backdropTarget, backdropOnly)
+        if backdropOnly {
+          state.Target = blurred
+        } else {
+          state.BackdropTarget = blurred
+          state.Record.Flags &= ~uint32(LayerRecordFlags.BorrowsParentBackdrop)
+        }
       }
-      target.TransitionToColorAttachment(commandBuffer)
-      BeginLayerRendering(commandBuffer, target.Extent, target.ImageView, false)
+      guard let layerTarget = state.Target else {
+        throw InvalidOperationException("Vulkan layer target is unavailable")
+      }
+      layerTarget.TransitionToColorAttachment(commandBuffer)
+      BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView, backdropOnly)
       state.TimestampHandle = BeginLayerTimestamp(
         VulkanDiagnosticTimestampStage.Offscreen,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
-      currentTarget = target
+      currentTarget = layerTarget
       currentOriginX = record.OriginX
       currentOriginY = record.OriginY
-      activeExtent = target.Extent
+      activeExtent = layerTarget.Extent
       var clipIndex int32 = 0
       while clipIndex < clipDepth {
         clipStack[clipIndex] = TranslateClip(

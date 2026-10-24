@@ -30,7 +30,8 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         commandBuffer VkCommandBuffer,
         record LayerRecord,
         frame SceneFrame,
-        captured VulkanOffscreenLayerTarget?
+        captured VulkanOffscreenLayerTarget?,
+        preserveCaptured bool = false
     ) VulkanOffscreenLayerTarget? {
         let radius = BackdropBlurRadius(record, frame)
         if radius <= 0.0F {
@@ -38,82 +39,129 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         }
         let blur = backdropBlurEffect ?? LoadBackdropBlur()
         backdropBlurEffect = blur
-        var effect = ShaderEffectRecord{Program: blur}
-        let extent = VkExtent2D{
-            width: Math.Max(1u, (record.ExtentWidth + 3u) / 4u),
-            height: Math.Max(1u, (record.ExtentHeight + 3u) / 4u),
-        }
-        let sigmaX = radius * textFrameScaleX * float32(extent.width) / float32(record.ExtentWidth)
-        let sigmaY = radius * textFrameScaleY * float32(extent.height) / float32(record.ExtentHeight)
-        let layer = LayerRecord{
-            Bounds: ConservativeBounds{
-                X: currentOriginX,
-                Y: currentOriginY,
-                Width: float32(extent.width),
-                Height: float32(extent.height),
-            },
-            OriginX: currentOriginX,
-            OriginY: currentOriginY,
-            ExtentWidth: extent.width,
-            ExtentHeight: extent.height,
-            Opacity: 1.0F,
-        }
+        let sigma = Vector2(radius * textFrameScaleX, radius * textFrameScaleY)
+        let paddingX = MathF.Ceiling(sigma.X * 3.0F)
+        let paddingY = MathF.Ceiling(sigma.Y * 3.0F)
+        let paddedWidth = record.ExtentWidth + uint32(paddingX) * 2u
+        let paddedHeight = record.ExtentHeight + uint32(paddingY) * 2u
+        var extent = VkExtent2D{width: paddedWidth, height: paddedHeight}
+        let identity = Vector4(0.0F, 0.0F, 1.0F, 1.0F)
+        var mapping = Vector4(-paddingX / float32(record.ExtentWidth), -paddingY / float32(record.ExtentHeight),
+            float32(paddedWidth) / float32(record.ExtentWidth), float32(paddedHeight) / float32(record.ExtentHeight))
         let parentExtent = activeExtent
         guard let pool = layerPool else {
             throw InvalidOperationException("Vulkan layer pool is unavailable")
         }
-        var first VulkanOffscreenLayerTarget?
-        var second VulkanOffscreenLayerTarget?
-        if !primitivePrepass {
-            first = pool.Acquire(extent.width, extent.height, completedLayerSerial)
-            second = pool.Acquire(extent.width, extent.height, completedLayerSerial)
-        }
         var source = captured
+        let timestamp = BeginLayerTimestamp(
+            VulkanDiagnosticTimestampStage.Effects,
+            VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
         try {
-            activeExtent = extent
-            for pass in 0 ... 3 {
-                let destination = pass == 1 ? second: first
-                effect.Parameter0 = Vector4(sigmaX, sigmaY, pass == 0 ? 2.0F: float32(pass - 1), 0.0F)
-                if primitivePrepass {
-                    EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect)
-                    continue
+            for axis in 0 ... 2 {
+                let horizontal = axis == 0
+                let original = float32(horizontal ? paddedWidth : paddedHeight)
+                let requested = horizontal ? sigma.X : sigma.Y
+                var dimension = horizontal ? extent.width : extent.height
+                var scale = 1.0F
+                var variance = 0.0F
+                while dimension > 1u {
+                    let nextDimension = (dimension + 1u) / 2u
+                    let nextScale = original / float32(nextDimension)
+                    let nextVariance = variance + 8.25F * scale * scale
+                    let interpolationVariance = (nextScale * nextScale + 0.5F) / 6.0F
+                    if nextVariance + interpolationVariance > 0.81F * requested * requested {
+                        break
+                    }
+                    if horizontal { extent.width = nextDimension } else { extent.height = nextDimension }
+                    let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
+                        Vector4(0.0F, 0.0F, float32(axis + 2), 0.0F), mapping)
+                    if let previous = source {
+                        if previous != captured { pool.ReleaseForReuse(previous) }
+                    }
+                    source = target
+                    mapping = identity
+                    dimension = nextDimension
+                    variance = nextVariance
+                    scale = nextScale
                 }
-                guard let target = destination else {
-                    throw InvalidOperationException("Vulkan blur target is unavailable")
+                let interpolationVariance = if scale > 1.0F { (scale * scale + 0.5F) / 6.0F } else { 0.0F }
+                let residual = if dimension == 1u { 0.0F } else {
+                    MathF.Sqrt(MathF.Max(0.0F, requested * requested - variance - interpolationVariance)) / scale
                 }
-                target.TransitionToColorAttachment(commandBuffer)
-                BeginLayerRendering(commandBuffer, extent, target.ImageView, false)
-                SetLayerViewport(commandBuffer)
-                SetScissor(commandBuffer, FullClip())
-                pool.RecordLayerPass(uint64(extent.width), uint64(extent.height))
-                let timestamp = BeginLayerTimestamp(
-                    VulkanDiagnosticTimestampStage.Effects,
-                    VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-                )
-                EmitShaderEffect(commandBuffer, extent, layer, source, nil, effect)
-                FlushPendingPrimitiveDraw(commandBuffer)
-                EndLayerTimestamp(timestamp, VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
-                let endRendering = dispatch.vkCmdEndRendering
-                endRendering(commandBuffer)
-                target.TransitionToShaderRead(commandBuffer)
+                let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
+                    Vector4(residual, residual, float32(axis), 0.0F), mapping)
+                if let previous = source {
+                    if previous != captured { pool.ReleaseForReuse(previous) }
+                }
                 source = target
+                mapping = identity
             }
-        } catch (error Exception) {
-            if let target = first {
-                pool.ReleaseForReuse(target)
+            let cropped = RenderBackdropBlurPass(commandBuffer,
+                VkExtent2D{width: record.ExtentWidth, height: record.ExtentHeight}, source, blur,
+                Vector4(0.0F, 0.0F, 4.0F, 0.0F),
+                Vector4(paddingX / float32(paddedWidth), paddingY / float32(paddedHeight),
+                    float32(record.ExtentWidth) / float32(paddedWidth), float32(record.ExtentHeight) / float32(paddedHeight)))
+            if let previous = source {
+                if previous != captured { pool.ReleaseForReuse(previous) }
             }
-            throw error
+            source = cropped
+            if !preserveCaptured && (record.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) == 0u {
+                if let target = captured { pool.ReleaseForReuse(target) }
+            }
+            let result = source
+            source = nil
+            return result
         } finally {
+            EndLayerTimestamp(timestamp, VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
             activeExtent = parentExtent
-            if let target = second {
-                pool.ReleaseForReuse(target)
+            if let target = source {
+                if target != captured { pool.ReleaseForReuse(target) }
             }
         }
-        if (record.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) == 0u {
-            if let target = captured {
-                pool.ReleaseForReuse(target)
-            }
+    }
+
+    private func RenderBackdropBlurPass(
+        commandBuffer VkCommandBuffer,
+        extent VkExtent2D,
+        source VulkanOffscreenLayerTarget?,
+        blur ShaderEffect,
+        parameter Vector4,
+        mapping Vector4
+    ) VulkanOffscreenLayerTarget? {
+        let layer = LayerRecord{
+            Bounds: ConservativeBounds{
+                X: currentOriginX, Y: currentOriginY,
+                Width: float32(extent.width), Height: float32(extent.height),
+            },
+            OriginX: currentOriginX, OriginY: currentOriginY,
+            ExtentWidth: extent.width, ExtentHeight: extent.height,
+            Opacity: 1.0F,
         }
-        return first
+        let effect = ShaderEffectRecord{Program: blur, Parameter0: parameter, Parameter1: mapping}
+        activeExtent = extent
+        if primitivePrepass {
+            EmitShaderEffect(commandBuffer, extent, layer, nil, nil, effect)
+            return nil
+        }
+        guard let pool = layerPool else {
+            throw InvalidOperationException("Vulkan layer pool is unavailable")
+        }
+        let target = pool.Acquire(extent.width, extent.height, completedLayerSerial)
+        try {
+            target.TransitionToColorAttachment(commandBuffer)
+            BeginLayerRendering(commandBuffer, extent, target.ImageView, false)
+            SetLayerViewport(commandBuffer)
+            SetScissor(commandBuffer, FullClip())
+            pool.RecordLayerPass(uint64(extent.width), uint64(extent.height))
+            EmitShaderEffect(commandBuffer, extent, layer, source, nil, effect)
+            FlushPendingPrimitiveDraw(commandBuffer)
+            let endRendering = dispatch.vkCmdEndRendering
+            endRendering(commandBuffer)
+            target.TransitionToShaderRead(commandBuffer)
+            return target
+        } catch (error Exception) {
+            pool.ReleaseForReuse(target)
+            throw error
+        }
     }
 }
