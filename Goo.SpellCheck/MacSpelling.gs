@@ -159,7 +159,11 @@ internal unsafe shared class MacSpelling {
         if type == 0 {
             return SpellingStatus.Unsupported
         }
-        let languages = Send(type, Selector("availableLanguages"))
+        checker = Send(type, Selector("sharedSpellChecker"))
+        if checker == 0 {
+            return SpellingStatus.Unsupported
+        }
+        let languages = Send(checker, Selector("availableLanguages"))
         let count = if languages == 0 {
             0
         } else {
@@ -174,10 +178,6 @@ internal unsafe shared class MacSpelling {
         }
         if nativeLanguage == 0 {
             return SpellingStatus.LanguageUnavailable
-        }
-        checker = Send(type, Selector("sharedSpellChecker"))
-        if checker == 0 {
-            return SpellingStatus.Unsupported
         }
         document = Send(type, Selector("uniqueSpellDocumentTag"))
         return SpellingStatus.Success
