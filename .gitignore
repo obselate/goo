@@ -128,6 +128,8 @@
 !/tools/Goo.UnicodeGen/**
 !/tools/Goo.DevTools.Cli/
 !/tools/Goo.DevTools.Cli/**
+!/tools/Goo.PluginMcp/
+!/tools/Goo.PluginMcp/**
 !/tools/Goo.Formatting/
 !/tools/Goo.Formatting/**
 !/tools/Goo.Gslint/

@@ -126,6 +126,10 @@ internal shared class CliApplication {
             }
             return switch commandLine.Command {
                 case "help": PrintHelp()
+                case "mcp": await Goo.PluginMcp.McpHost.RunAsync(
+                    commandLine.Get("plugin-root") ?? throw CliException("Select the plugin directory with --plugin-root."),
+                    commandLine.Has("verify")
+                )
                 case "dev": await RunDevAsync(commandLine)
                 case "attach": await RunAttachAsync(commandLine)
                 case "doctor": await RunDoctorAsync(commandLine)
@@ -1596,6 +1600,7 @@ internal shared class CliApplication {
         Console.WriteLine("  goo doctor [--json]")
         Console.WriteLine("  goo list [--pid PID] [--project PATH] [--json]")
         Console.WriteLine("  goo capture [options]")
+        Console.WriteLine("  goo mcp --plugin-root PATH [--verify]")
         Console.WriteLine(
             "  goo package --target linux|windows|macos|android [--project PATH] [--output PATH] [--json]"
         )
@@ -1611,6 +1616,7 @@ internal shared class CliApplication {
         Console.WriteLine("  capture   Request a screenshot from an attached endpoint.")
         Console.WriteLine("  package   Publish a desktop package or signed Android app bundle.")
         Console.WriteLine("  input     Send an opted-in pointer, wheel, key, text, click, or reset event.")
+        Console.WriteLine("  mcp       Serve the plugin's stdio MCP tools or verify them against a live starter.")
         Console.WriteLine()
         Console.WriteLine("Common options:")
         Console.WriteLine("  --project PATH       Project file or directory.")

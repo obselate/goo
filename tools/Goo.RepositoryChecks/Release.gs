@@ -152,20 +152,29 @@ internal shared partial class Checks {
             1,
             "plugins/goo/README.md: expected one current CLI install version"
         )
-        let server = Path.Combine(Root, "plugins/goo/scripts/server.py")
-        let runtime = ReplaceVersion(
-            File.ReadAllText(server),
-            `("runtime": "Install Goo\.DevTools )[^" ]+( and launch with goo dev --project)`,
+        let documents = Path.Combine(Root, "tools/Goo.PluginMcp/Documents.gs")
+        result[documents] = ReplaceVersion(
+            File.ReadAllText(documents),
+            `(\] = "Install Goo\.DevTools )[^" ]+( and launch with goo dev --project)`,
             version,
             1,
-            "plugins/goo/scripts/server.py: expected one current runtime version"
+            "tools/Goo.PluginMcp/Documents.gs: expected one current runtime version"
         )
-        result[server] = ReplaceVersion(
-            runtime,
+        let runtime = Path.Combine(Root, "tools/Goo.PluginMcp/Runtime.gs")
+        result[runtime] = ReplaceVersion(
+            File.ReadAllText(runtime),
             "(Run `dotnet tool update --global Goo\\.DevTools --version )[^`]+(`\\. Set GOO_CLI only when testing a compatible source build\\.)",
             version,
-            2,
-            "plugins/goo/scripts/server.py: expected two current CLI recovery versions"
+            1,
+            "tools/Goo.PluginMcp/Runtime.gs: expected one current CLI recovery version"
+        )
+        let manifest = Path.Combine(Root, "plugins/goo/mcp.json")
+        result[manifest] = ReplaceVersion(
+            File.ReadAllText(manifest),
+            `(Goo\.DevTools@)[^"]+(")`,
+            version,
+            1,
+            "plugins/goo/mcp.json: expected one pinned Goo.DevTools package"
         )
         return result
     }

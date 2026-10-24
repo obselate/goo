@@ -1,0 +1,10 @@
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
+    <EmbeddedResource Include="Tools.json" />
+    <EmbeddedResource Include="CaseFold.json" />
+  </ItemGroup>
+</Project>

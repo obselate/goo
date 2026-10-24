@@ -3,18 +3,16 @@
   "mcpServers": {
     "goo": {
       "type": "stdio",
-      "command": "uv",
+      "command": "dotnet",
       "args": [
-        "run",
-        "--project",
-        "${PLUGIN_ROOT}",
-        "--locked",
-        "python",
-        "${PLUGIN_ROOT}/scripts/server.py"
-      ],
-      "env": {
-        "UV_PROJECT_ENVIRONMENT": "${PLUGIN_DATA}/runtime-venv"
-      }
+        "tool",
+        "exec",
+        "Goo.DevTools@0.15.0",
+        "--",
+        "mcp",
+        "--plugin-root",
+        "${PLUGIN_ROOT}"
+      ]
     }
   }
 }
