@@ -124,7 +124,7 @@ public sealed class WaylandDataTransferTests {
                 }
             } finally {
                 window.RequestClose()
-                while window.IsOpen { Pump(window) }
+                while window.IsOpen { window.Pump(0) }
             }
             if let captured = scene.Captured { AssertData(captured) }
         }
