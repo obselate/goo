@@ -63,7 +63,7 @@ internal class Program {
             Require(election.Status == SingleInstanceStatus.Primary && election.Lease != nil, "${election.Status}: ${election.Error}")
             using let lease = election.Lease!!
             if mode == "stall" {
-                let implementation = typeof(SingleInstance).Assembly.GetType("Goo.InstancePipe", throwOnError: true)!!
+                let implementation = Type.GetType("Goo.InstancePipe, Goo", throwOnError: true)!!
                 let pipe = implementation.GetField("pipe", BindingFlags.Instance | BindingFlags.NonPublic)!!.GetValue(lease) as NamedPipeServerStream
                 pipe!!.Dispose()
             }
