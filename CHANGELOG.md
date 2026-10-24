@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 0.16.0 - 2026-10-24
+
+- BREAKING: Remove PinToBottom and Pinned from core and move log tail-following policy to consumer state and Widgets.
+- BREAKING: Gestures, Images, NativeDialogs, NativeMenus, Printing, SpellCheck and Notifications are now part of Goo and Goo.Android. Remove those package references. Namespaces are unchanged.
+- BREAKING: Desktop activation, placement and single-instance hosting are included in Goo. Remove the Goo.AppHost package reference.
+- Add MIME clipboard data, native data drag and Android document streams.
+- Add optional native notifications with explicit permission, delivery and activation results.
+- Path encoding allocates about 18% less by passing encoder scratch lists directly instead of copying them to arrays.
+- Reduce Yoga style allocation during virtual grid scrolling with inline style buffers and constant edge names (SWARM B/render down 4 to 6%, GC pause totals down).
+- Unify bounded external input reads, including Android clipboard MIME and document streams.
+- Add native tray icons and platform lifecycle checks to core Goo.
+- Add Android notifications with explicit permission and warm and cold activation.
+- Add managed ICC conversion for RGB matrix/TRC and gray image profiles.
+- Share managed ICC conversion with consumer image decoders.
+- Remove Python and uv from the Goo plugin runtime by shipping its MCP tools in Goo.DevTools.
+- Move production shader authoring inputs into Goo and remove the unused solid-quad pipeline.
+- Add HTML and RTF clipboard editing in Goo.
+- Make repeated registration of identical font sources a no-op.
+- Publish release packages to GitHub Packages as well as NuGet.org.
+- Remove Python from managed-host repository tools, CI qualification and investigation runners.
+
 ## 0.15.0 - 2026-10-24
 
 - Goo 0.14.0 was tagged but never published to NuGet. Its changes ship in this release.
