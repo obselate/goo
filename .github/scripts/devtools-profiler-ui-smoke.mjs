@@ -280,9 +280,9 @@ function validateChrome(trace) {
 }
 
 try {
-    const gallery = launch('apps/Goo.Gallery/bin/Release/net10.0/Goo.Gallery.dll', 'gallery');
-    await snapshot(gallery);
-    const inspector = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'devtools', ['--pid', String(gallery)]);
+    const target = launch('tests/Goo.ProfilerUiFixture/bin/Release/net10.0/Goo.ProfilerUiFixture.dll', 'fixture');
+    await snapshot(target);
+    const inspector = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'devtools', ['--pid', String(target)]);
     await snapshot(inspector);
     await click(inspector, 'tab-profiler');
     await waitSnapshot(inspector, data => content(data).includes('Record a real target trace')
@@ -290,10 +290,10 @@ try {
     'Connected target did not enable Record');
     await click(inspector, 'profiler-record');
     await waitSnapshot(inspector, data => status(data).startsWith('Recording ·') && /[1-9]\d* records/.test(status(data)));
-    for (const key of ['rail-item-1', 'rail-item-7', 'rail-item-5']) await click(gallery, key);
-    await capture(gallery, 'gallery-during-recording');
+    for (let i = 0; i < 3; i++) await click(target, 'profiler-workload');
+    await capture(target, 'fixture-during-recording');
     await writeFile(path.join(output, 'contender-discovery.json'), await command(['list', '--json']));
-    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools', ['--pid', String(gallery)]);
+    const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools', ['--pid', String(target)]);
     await snapshot(contender);
     await click(contender, 'tab-profiler');
     await waitSnapshot(contender, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
@@ -438,14 +438,14 @@ try {
     await click(inspector, 'profiler-lifetimes');
     await capture(inspector, 'selected-resource');
     await writeFile(path.join(output, 'final-snapshot.json'), JSON.stringify(await snapshot(inspector)));
-    const exportedPath = path.join(output, 'Gallery trace ü.json');
+    const exportedPath = path.join(output, 'Fixture trace ü.json');
     await traceFile(inspector, 'Export', exportedPath);
     const exported = JSON.parse(await readFile(exportedPath, 'utf8'));
     validateChrome(exported);
     await click(inspector, 'profiler-clear');
     nodes = await snapshot(inspector);
     assert(content(nodes).includes('Record a real target trace'), 'Clear retained the previous trace');
-    const endpoint = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === gallery);
+    const endpoint = (await request(['list'])).flatMap(item => item.targets).find(item => item.pid === target);
     for (const command of ['snapshot', 'profiler.start']) {
         const proxy = await faultProxy(endpoint.pipe, command);
         const client = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'fault-' + command,
@@ -453,7 +453,7 @@ try {
         await snapshot(client);
         if (command === 'snapshot') {
             await waitSnapshot(client, data => proxy.rejected && !proxy.disconnected && proxy.snapshots >= 4
-                && content(data).includes('Goo UI gallery'), 'Errored snapshot did not resume automatic snapshots');
+                && content(data).includes('Goo profiler fixture'), 'Errored snapshot did not resume automatic snapshots');
         } else {
             await click(client, 'tab-profiler');
             await waitSnapshot(client, data => data.find(node => node.key === 'profiler-record')?.disabled === false);
@@ -467,14 +467,14 @@ try {
         await stopChild(client);
     }
     await stopChild(inspector);
-    await stopChild(gallery);
-    const offline = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'offline-devtools', ['--pid', String(gallery)]);
+    await stopChild(target);
+    const offline = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'offline-devtools', ['--pid', String(target)]);
     await snapshot(offline);
     await click(offline, 'tab-profiler');
     assert.equal((await snapshot(offline)).find(node => node.key === 'profiler-record')?.disabled, true,
         'Offline round trip still had a live recording target');
     await traceFile(offline, 'Import', exportedPath);
-    assert(status(await snapshot(offline)).includes('Imported Gallery trace ü.json'), 'Imported trace identity is not visible');
+    assert(status(await snapshot(offline)).includes('Imported Fixture trace ü.json'), 'Imported trace identity is not visible');
     const roundTripPath = path.join(output, 'round-trip.json');
     await traceFile(offline, 'Export', roundTripPath);
     const roundTrip = JSON.parse(await readFile(roundTripPath, 'utf8'));
@@ -483,7 +483,7 @@ try {
     assert.deepEqual(roundTrip.traceEvents.filter(event => event.goo).map(event => event.goo),
         exported.traceEvents.filter(event => event.goo).map(event => event.goo), 'Round trip lost record details, nulls or correlation ids');
     await capture(offline, 'imported-trace');
-    console.log(`profiler-files: real_gallery_records=${roundTrip.traceEvents.filter(event => event.goo).length} offline_round_trip=lossless chrome_format=validated`);
+    console.log(`profiler-files: real_fixture_records=${roundTrip.traceEvents.filter(event => event.goo).length} offline_round_trip=lossless chrome_format=validated`);
     const precision = structuredClone(exported);
     precision.goo.originTicks = '9007199254740993';
     precision.goo.start.originTicks = precision.goo.originTicks;
@@ -617,7 +617,7 @@ try {
     assert.deepEqual(retained.traceEvents.filter(event => event.goo).map(event => event.goo), externalRecords,
         'Invalid import corrupted the previous trace');
     console.log('profiler-files: chrome_subset=verified crossing_slices=partitioned flow_ids=preserved invalid_imports=atomic file_event_name_limits=verified');
-    console.log('profiler-ui: real_gallery=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=9 clear=verified');
+    console.log('profiler-ui: real_fixture=verified busy=connected owners=8 overview=verified gpu_counter_lane=verified selection=stable clipped_range=verified scrolling=verified tables=verified screenshots=9 clear=verified');
 } catch (error) {
     const inspector = children[1]?.pid;
     if (inspector) {
