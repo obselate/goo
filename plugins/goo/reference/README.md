@@ -69,7 +69,7 @@ are optional and installed separately. The starter template already references
 
 | Package | Purpose | Install |
 | --- | --- | --- |
-| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, images, gestures, native dialogs and menus, notifications, printing, spell checking, desktop instance hosting, and native runtime assets | `dotnet add package Goo` |
+| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, images, gestures, native dialogs and menus, notifications, printing, rich text clipboard, spell checking, desktop instance hosting, and native runtime assets | `dotnet add package Goo` |
 | [Goo.Android](https://www.nuget.org/packages/Goo.Android/) | Android host, printing, and spell checking | `dotnet add package Goo.Android` |
 | [Goo.Audio](https://www.nuget.org/packages/Goo.Audio/) | Audio playback | `dotnet add package Goo.Audio` |
 | [Goo.Accessibility](https://www.nuget.org/packages/Goo.Accessibility/) | Desktop native accessibility adapters | `dotnet add package Goo.Accessibility` |
@@ -81,7 +81,7 @@ Add library packages from your application directory. Install both DevTools
 packages to launch the graphical inspector with `goo dev --inspector`.
 
 Remove references to `Goo.AppHost`, `Goo.Gestures`, `Goo.Images`, `Goo.NativeDialogs`,
-`Goo.NativeMenus`, `Goo.Notifications`, `Goo.Printing`, `Goo.SpellCheck`, and `Goo.SpellCheck.Hunspell`
+`Goo.NativeMenus`, `Goo.Notifications`, `Goo.Printing`, `Goo.RichText`, `Goo.SpellCheck`, and `Goo.SpellCheck.Hunspell`
 when upgrading to the consolidated `Goo` package. Remove `Goo.Printing.Android`
 and `Goo.SpellCheck.Android` when upgrading `Goo.Android`. Keep existing namespace
 imports and type names. The old package IDs no longer publish. System services

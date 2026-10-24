@@ -112,6 +112,151 @@ Gets the four-character variation axis tag.
 
 Gets the variation axis value.
 
+## `RichTextClipboard`
+
+Source:
+
+- [`RichTextClipboard.gs`](../../Goo/Text/RichText/RichTextClipboard.gs)
+
+Binds HTML and RTF clipboard commands to one editor and its persistent style layer.
+
+### `Completed`
+
+Reports commands started by the editor shortcut interceptor, on the owner thread.
+
+### `new(Window,TextEditorController,TextPresentationLayer)`
+
+Installs a command interceptor. Add the supplied persistent layer to TextEditor.Layers.
+
+### `CopyAsync(System.Threading.CancellationToken)`
+
+Publishes the selected source text and persistent inline styles.
+
+### `CutAsync(System.Threading.CancellationToken)`
+
+Publishes Copy intent and deletes only after success while the captured editor state still matches.
+
+### `Dispose`
+
+Cancels pending commands and restores the previous interceptor if this binding still owns it.
+
+### `PasteAsync(System.Threading.CancellationToken)`
+
+Pastes supported rich content, or plain text only when no rich format is present.
+
+### `PastePlainTextAsync(System.Threading.CancellationToken)`
+
+Pastes only the plain-text representation by explicit caller choice.
+
+### `ReadOnly`
+
+Disables Cut and Paste. Set this with TextEditor.ReadOnly.
+
+## `RichTextCodec`
+
+Source:
+
+- [`RichTextCodec.gs`](../../Goo/Text/RichText/RichTextCodec.gs)
+
+Reads and writes the supported inline HTML and RTF clipboard subset.
+
+### `Read(string,System.ReadOnlyMemory{System.Byte})`
+
+Decodes a complete representation before returning an owned fragment.
+
+### `Write(RichText.RichTextFragment)`
+
+Encodes one publication with UTF-8 plain text, HTML and RTF alternatives.
+
+## `RichTextFragment`
+
+Source:
+
+- [`RichText.gs`](../../Goo/Text/RichText/RichText.gs)
+
+Owns source text and persistent, fragment-relative UTF-16 style spans.
+
+### `new(string,System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
+
+Creates an owned fragment. Every range must end on a UTF-16 boundary.
+
+### `Styles`
+
+Gets owned persistent styles. Later spans override earlier declarations.
+
+### `Text`
+
+Gets immutable Unicode source text.
+
+## `RichTextResult`
+
+Source:
+
+- [`RichText.gs`](../../Goo/Text/RichText/RichText.gs)
+
+Contains Status, Fragment and bounded Error detail.
+
+## `RichTextStatus`
+
+Source:
+
+- [`RichText.gs`](../../Goo/Text/RichText/RichText.gs)
+
+Reports rich clipboard parsing, publication or editing.
+
+### Values
+
+- `Success`
+- `PlainText`
+- `Unsupported`
+- `UnsupportedContent`
+- `Empty`
+- `TooLarge`
+- `ReadOnly`
+- `Cancelled`
+- `Stale`
+- `Failed`
+
+### `Cancelled`
+
+The command was cancelled.
+
+### `Empty`
+
+The selection or clipboard has no text.
+
+### `Failed`
+
+The content is malformed or a native operation failed.
+
+### `PlainText`
+
+Plain text was transferred without formatting.
+
+### `ReadOnly`
+
+The editor does not allow this edit.
+
+### `Stale`
+
+The document, selection or formatting changed before completion.
+
+### `Success`
+
+The supported rich content was transferred.
+
+### `TooLarge`
+
+The encoded content, decoded text or style count exceeds its limit.
+
+### `Unsupported`
+
+The host cannot provide the requested transfer.
+
+### `UnsupportedContent`
+
+The content uses document features outside the supported inline subset.
+
 ## `TextChange`
 
 Source:
@@ -416,6 +561,16 @@ Returns: True when default handling ran.
 
 Marks this controller focused.
 
+### `ReplaceSelection(TextPresentationLayer,string,System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
+
+Replaces the selection with source text and persistent fragment-relative styles as one undoable edit.
+
+- `layer`: The persistent formatting layer bound to this controller's document.
+- `text`: The replacement source text.
+- `fragmentRelativeStyles`: The replacement's inline styles, measured from zero.
+
+Returns: True when the Paste interceptor allowed the edit.
+
 ### `ScrollTo(float64,float64)`
 
 Changes the logical scroll target.
@@ -507,6 +662,15 @@ Creates a presentation layer bound to one document.
 
 - `document`: The document whose source ranges this layer references.
 
+### `ApplyTransaction(TextChange[],System.Collections.Generic.IReadOnlyList{TextStyleSpan})`
+
+Commits source changes and the complete final style state as one undoable operation.
+
+- `changes`: Ordered source replacements against the current document.
+- `styles`: The complete post-edit style state. Projections retain normal rebase behavior.
+
+Returns: The committed document change.
+
 ### `Clear`
 
 Removes every style span and atomic projection from this layer.
@@ -514,6 +678,12 @@ Removes every style span and atomic projection from this layer.
 ### `Dispose`
 
 Releases document subscriptions held by this layer.
+
+### `GetStyles`
+
+Returns an owned immutable snapshot of the layer's current source style spans.
+
+Returns: Keyed source spans in declaration order.
 
 ### `Remove(string)`
 
