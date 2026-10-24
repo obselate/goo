@@ -15,7 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Goo.Accessibility\Goo.Accessibility.gsproj" />
     <ProjectReference Include="..\..\Goo\Goo.gsproj"
-                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../Shared/Goo.TestFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"
                       AdditionalProperties="Configuration=TestRelease" />
     <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />

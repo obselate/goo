@@ -12,7 +12,7 @@
     <Compile Remove="**/*.gs" />
     <Compile Include="VulkanProofLauncher.gs" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
-                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../Shared/Goo.TestFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="../../Goo/Shaders/Vulkan/solid_quad.vert.spv" Link="solid_quad.vert.spv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />

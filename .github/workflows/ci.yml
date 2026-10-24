@@ -707,7 +707,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build Goo/Goo.gsproj -c TestRelease -p:TreatWarningsAsErrors=true \
-            -p:IncludeTestFixtures=true -p:GooTestFixturesProps="$PWD/tests/Shared/Goo.TestFixtures.props" \
+            -p:IncludeTestFixtures=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
       - name: Archive Linux build state
