@@ -4,7 +4,6 @@
     <BeforePack>BuildGooShaderEffectToolForPackage;$(BeforePack)</BeforePack>
     <GooVulkanShaderRoot>$(MSBuildProjectDirectory)/Shaders/Vulkan</GooVulkanShaderRoot>
     <GooNativeRuntimeRoot>$(MSBuildProjectDirectory)/Runtime/Vulkan</GooNativeRuntimeRoot>
-    <GooGsharpToolsRoot>$(MSBuildProjectDirectory)/../artifacts/gsharp</GooGsharpToolsRoot>
     <GooEffectiveRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</GooEffectiveRuntimeIdentifier>
     <GooEffectiveRuntimeIdentifier Condition="'$(GooEffectiveRuntimeIdentifier)' == '' and '$(NETCoreSdkRuntimeIdentifier)' != ''">$(NETCoreSdkRuntimeIdentifier)</GooEffectiveRuntimeIdentifier>
   </PropertyGroup>
@@ -113,12 +112,6 @@
     <None Include="$(GooLinuxTextStaticRoot)/libgoo-harfbuzz.a;$(GooLinuxTextStaticRoot)/libgoo-harfbuzz-gpu.a"
           Pack="true" PackagePath="buildTransitive/native/linux-x64/"
           Condition="'$(GooLinuxTextStaticRoot)' != ''" />
-    <None Include="$(GooGsharpToolsRoot)/compiler/**/*.dll;$(GooGsharpToolsRoot)/compiler/*.deps.json;$(GooGsharpToolsRoot)/compiler/*.runtimeconfig.json"
-          Pack="true" PackagePath="tools/gsharp/compiler/%(RecursiveDir)%(Filename)%(Extension)" />
-    <None Include="$(GooGsharpToolsRoot)/formatter/**/*.dll;$(GooGsharpToolsRoot)/formatter/*.deps.json;$(GooGsharpToolsRoot)/formatter/*.runtimeconfig.json"
-          Pack="true" PackagePath="tools/gsharp/formatter/%(RecursiveDir)%(Filename)%(Extension)" />
-    <None Include="$(GooGsharpToolsRoot)/LICENSE;$(GooGsharpToolsRoot)/commit"
-          Pack="true" PackagePath="tools/gsharp/" />
     <None Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll"
           Pack="true" PackagePath="tools/net10.0/any/Goo.ShaderEffectTool.dll" />
     <None Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.deps.json"
@@ -332,10 +325,6 @@
     <Error Condition="!Exists('$(GooXmlSupplement)')"
            Text="Goo XML documentation supplement is missing: $(GooXmlSupplement)" />
     <Exec Command="&quot;$(GooXmlDocsDotNetHost)&quot; exec &quot;$(GooXmlDocsMergePath)&quot; --generated &quot;$(MSBuildProjectDirectory)/$([System.String]::Copy('$(DocumentationFile)').Replace('\', '/'))&quot; --supplement &quot;$(GooXmlSupplement)&quot;" />
-  </Target>
-  <Target Name="ValidateGooAuthoringTools" BeforeTargets="GenerateNuspec">
-    <Error Condition="!Exists('$(GooGsharpToolsRoot)/compiler/gsc.dll') or !Exists('$(GooGsharpToolsRoot)/formatter/gsfmt.dll')"
-           Text="Build the pinned authoring tools before packing: ./bootstrap.sh --gsharp-only or bootstrap.bat --gsharp-only" />
   </Target>
   <Target Name="IncludeGooImplementationAssemblies"
           DependsOnTargets="BuildOnlySettings;ResolveReferences">

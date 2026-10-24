@@ -49,8 +49,7 @@ The compiler and canonical formatter are built without source changes from
 `bootstrap.sh` and `bootstrap.bat` build `src/Compiler/Compiler.csproj` and
 `src/Formatting/Gsfmt.Cli/Gsfmt.Cli.csproj` into ignored
 `artifacts/gsharp/` output. `Goo.Gslint` uses the upstream parser and ADR-0179
-formatter assemblies. Goo redistributes the compiler and formatter under
-`tools/gsharp/`, with the upstream license and commit ID, for build-time use. These tools are not copied into application runtime output.
+formatter assemblies.
 Copyright (C) GSharp Authors. All rights reserved.
 
 - [G# license](https://github.com/DavidObando/gsharp/blob/e170b28640e294924e30adfbbcab0e9da53f7db1/LICENSE)
