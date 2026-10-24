@@ -1405,6 +1405,7 @@ internal shared class Program {
             var partBytes = ReadSourceFile(path)
             var partText = StrictUtf8.GetString(partBytes)
             if part.Path == HarfBuzzFragmentPath {
+                AppendUtf8(output, "#define HB_GPU_NO_MSAA\n#define _hb_gpu_slug gooTextSingleSample\n")
                 const declaration = "uniform isamplerBuffer hb_gpu_atlas;"
                 let qualified = "layout(set=${assembly.AtlasSet},binding=${assembly.AtlasBinding}) uniform isamplerBuffer hb_gpu_atlas;"
                 if CountOccurrences(partText, declaration) != 1 {
@@ -1730,6 +1731,10 @@ internal shared class Program {
             "hb_gpu_draw_fragment",
             []AssemblyPart{
                 AssemblyPart{Path: HarfBuzzFragmentPath, Sha256: HarfBuzzFragmentSha256},
+                AssemblyPart{
+                    Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/shared_text_bands.glsl",
+                    Sha256: "53fc83163776e503661082b7b998a28c5e6018ab62cdd7c2dbd5767058b3544c"
+                },
                 AssemblyPart{Path: HarfBuzzDrawFragmentPath, Sha256: HarfBuzzDrawFragmentSha256},
                 AssemblyPart{
                     Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/clip_chain_text.glsl",
@@ -1746,6 +1751,10 @@ internal shared class Program {
             "hb_gpu_paint_fragment",
             []AssemblyPart{
                 AssemblyPart{Path: HarfBuzzFragmentPath, Sha256: HarfBuzzFragmentSha256},
+                AssemblyPart{
+                    Path: "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/shared_text_bands.glsl",
+                    Sha256: "53fc83163776e503661082b7b998a28c5e6018ab62cdd7c2dbd5767058b3544c"
+                },
                 AssemblyPart{Path: HarfBuzzDrawFragmentPath, Sha256: HarfBuzzDrawFragmentSha256},
                 AssemblyPart{Path: HarfBuzzPaintFragmentPath, Sha256: HarfBuzzPaintFragmentSha256},
                 AssemblyPart{

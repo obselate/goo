@@ -211,6 +211,10 @@
           "sha256": "104eb5b9512467f8dc08c897e03168c001b5b25cccd026fc41da84f1f682c6e3"
         },
         {
+          "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/shared_text_bands.glsl",
+          "sha256": "53fc83163776e503661082b7b998a28c5e6018ab62cdd7c2dbd5767058b3544c"
+        },
+        {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-draw-fragment.glsl",
           "sha256": "cb70fd3b4db78d02652d0e3a419fe859b7ec5d1f30ee97cba7eaa2cf8ed404eb"
         },
@@ -237,6 +241,10 @@
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-fragment.glsl",
           "sha256": "104eb5b9512467f8dc08c897e03168c001b5b25cccd026fc41da84f1f682c6e3"
+        },
+        {
+          "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/adapters/shared_text_bands.glsl",
+          "sha256": "53fc83163776e503661082b7b998a28c5e6018ab62cdd7c2dbd5767058b3544c"
         },
         {
           "path": "tools/Goo.ShaderGen/Vendored/HarfBuzz-14.3.1/src/hb-gpu-draw-fragment.glsl",
@@ -435,9 +443,9 @@
       "output": "hb_gpu_draw.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_draw_fragment",
-      "sourceSha256": "6ba3f1eff9f0c613c188a621d29a97fe8ffc1738e5362093260260a8ca458602",
-      "outputSha256": "eca27f218c0a45ee9efbae0dfca22c04e2e6066494516e8544c3c29cb449d47e",
-      "outputBytes": 168160,
+      "sourceSha256": "976c0d2427c11d01c270b36b44b4b335b9642993d0ee35f353406e378b9e3b5f",
+      "outputSha256": "db8844deda0b30fc7ffb66fc86f8dcc1e15829691e830fc00ee97fe7aaa32097",
+      "outputBytes": 222196,
       "capabilities": [
         1,
         46
@@ -450,9 +458,9 @@
       "output": "hb_gpu_paint.frag.spv",
       "entryPoint": "main",
       "assembly": "hb_gpu_paint_fragment",
-      "sourceSha256": "553cda15767acdde24abd61c5285b4f5f61283688c4f0b6ea4e00b0618bb479a",
-      "outputSha256": "040c5452f8df1c82ec0abf3e42d184cd2ef16613dc299cc84df993f402b1458d",
-      "outputBytes": 284160,
+      "sourceSha256": "1dbd5c39cbd81f6a6c18e6c21191a404ce3d4325c0d22c833a29def8ede61f15",
+      "outputSha256": "c4268831db25d38678e2ea88b584ec66b51588776eff8f579da154332d0b1dc0",
+      "outputBytes": 392004,
       "capabilities": [
         1,
         46
