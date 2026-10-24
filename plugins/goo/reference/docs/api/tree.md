@@ -726,6 +726,42 @@ Gets the maximum encoded input size in bytes. The default is 16 MiB.
 
 Gets the maximum source width and height in pixels. The default is 8192.
 
+## `ImageDecodeResult`
+
+Source:
+
+- [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
+
+Contains the owned image on success and a bounded explanation on failure.
+
+### `Detail`
+
+Gets a bounded failure explanation, or an empty string on success.
+
+### `Source`
+
+Gets the independently disposable source on success, otherwise nil.
+
+### `Status`
+
+Gets the decode outcome.
+
+## `ImageDecodeStatus`
+
+Source:
+
+- [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
+
+Describes a strict image decode outcome without hiding unsupported color profiles.
+
+### Values
+
+- `Success`
+- `InvalidData`
+- `LimitExceeded`
+- `Unsupported`
+- `Cancelled`
+
 ## `ImageFit`
 
 Source:
@@ -777,6 +813,7 @@ Gets the source pixel width, or 0 when the limit was exceeded before the header 
 
 Sources:
 
+- [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
 - [`ImageSource.Decoding.gs`](../../Goo/Tree/ImageSource.Decoding.gs)
 - [`ImageSource.gs`](../../Goo/Tree/ImageSource.gs)
 
@@ -823,6 +860,16 @@ Decodes encoded bytes with the given limits.
 ### `Decode(System.ReadOnlyMemory{System.Byte},System.Threading.CancellationToken)`
 
 Decodes encoded bytes with cancellation during validation and before publication.
+
+### `DecodeColorManaged(System.ReadOnlyMemory{System.Byte},ImageDecodeLimits,System.Threading.CancellationToken)`
+
+Decodes PNG or JPEG with embedded RGB matrix/TRC or gray ICC profiles converted to SDR sRGB. Applies EXIF orientation. LUT and CMYK profiles return Unsupported. Files without an embedded profile use sRGB. Existing Decode overloads keep their sRGB assumption.
+
+- `encoded`: The complete bounded encoded image.
+- `limits`: The encoded and decoded image limits.
+- `cancellationToken`: Cancels validation, color conversion and publication.
+
+Returns: An owned source on success or an explicit failure status.
 
 ### `Dispose`
 

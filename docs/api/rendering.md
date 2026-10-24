@@ -466,6 +466,25 @@ Gets the eight-byte adapter LUID.
 
 Gets the physical device node mask.
 
+## `ImageColorProfile`
+
+Source:
+
+- [`ImageColorProfile.gs`](../../Goo/Rendering/ImageColorProfile.gs)
+
+Converts consumer-decoded straight RGBA samples from bounded ICC profiles to SDR sRGB.
+
+### `ToSrgb(System.ReadOnlyMemory{System.Byte},System.Span{System.Byte},bool,System.Threading.CancellationToken)`
+
+Converts straight RGBA8 samples in place before ImageSource.Transfer or alpha premultiplication. Alpha bytes are unchanged. Failed or cancelled output must not be published.
+
+- `profile`: The complete ICC v2/v4 profile, at most 4 MiB.
+- `straightRgba`: The nonempty RGBA8 buffer. Its length must be divisible by four.
+- `gray`: True for original gray samples replicated into the RGB channels.
+- `cancellationToken`: Cancels conversion before publication.
+
+Returns: Success, InvalidData, Unsupported for LUT or incompatible profiles, or Cancelled.
+
 ## `OffscreenRenderOptions`
 
 Source:
