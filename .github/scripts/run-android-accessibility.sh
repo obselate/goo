@@ -80,3 +80,32 @@ timeout 180 "$adb" -P 5038 -s emulator-5560 shell am instrument -w -r \
 grep -q 'GOO_ACCESSIBILITY_PASS' "$work/logs/instrumentation.txt"
 grep -q 'INSTRUMENTATION_CODE: -1' "$work/logs/instrumentation.txt"
 ! grep -q 'GOO_ACCESSIBILITY_FAIL\|INSTRUMENTATION_FAILED\|INSTRUMENTATION_ABORTED' "$work/logs/instrumentation.txt"
+"$adb" -P 5038 -s emulator-5560 shell pm clear org.goo.androidsmoke
+timeout 180 "$adb" -P 5038 -s emulator-5560 shell am instrument -w -r \
+  org.goo.androidsmoke/org.goo.androidsmoke.NotificationChecks | tee "$work/logs/notifications.txt"
+grep -q 'GOO_NOTIFICATIONS_PASS' "$work/logs/notifications.txt"
+grep -q 'INSTRUMENTATION_CODE: -1' "$work/logs/notifications.txt"
+! grep -q 'GOO_NOTIFICATIONS_FAIL\|INSTRUMENTATION_FAILED\|INSTRUMENTATION_ABORTED' "$work/logs/notifications.txt"
+"$adb" -P 5038 -s emulator-5560 shell input keyevent HOME
+"$adb" -P 5038 -s emulator-5560 shell am kill org.goo.androidsmoke
+! "$adb" -P 5038 -s emulator-5560 shell pidof org.goo.androidsmoke
+"$adb" -P 5038 -s emulator-5560 logcat -c
+"$adb" -P 5038 -s emulator-5560 shell cmd statusbar expand-notifications
+"$adb" -P 5038 -s emulator-5560 shell uiautomator dump /sdcard/goo-notifications.xml
+"$adb" -P 5038 -s emulator-5560 pull /sdcard/goo-notifications.xml "$work/logs/notifications.xml"
+python3 - "$work/logs/notifications.xml" > "$work/logs/notification-tap.txt" <<'PY'
+import re
+import sys
+import xml.etree.ElementTree as ET
+node = next(node for node in ET.parse(sys.argv[1]).iter("node") if node.get("text") == "Goo cold activation")
+x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.attrib["bounds"]))
+print((x1 + x2) // 2, (y1 + y2) // 2)
+PY
+read -r x y < "$work/logs/notification-tap.txt"
+"$adb" -P 5038 -s emulator-5560 shell input tap "$x" "$y"
+for attempt in {1..30}; do
+  "$adb" -P 5038 -s emulator-5560 logcat -d -s GooNotifications:I > "$work/logs/cold-notification.txt"
+  if grep -q 'id=cold payload=cold-payload initial=True action=' "$work/logs/cold-notification.txt"; then break; fi
+  sleep 1
+done
+grep -q 'id=cold payload=cold-payload initial=True action=' "$work/logs/cold-notification.txt"

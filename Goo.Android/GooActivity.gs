@@ -2,6 +2,7 @@ package Goo.Android
 
 import Android.App
 import Android.Content
+import Android.Content.PM
 import Android.OS
 import Android.Views
 import Android.Widget
@@ -11,6 +12,8 @@ import System
 import System.Collections.Generic
 
 abstract class GooActivity : Activity {
+    internal var PermissionsResultReceived Action[int32, []string, []Permission]?
+    internal var Destroyed Action?
     private var view GooView?
     private var insets InsetsListener?
     private var content FrameLayout?
@@ -78,7 +81,16 @@ abstract class GooActivity : Activity {
     protected open override func OnNewIntent(intent Intent?) {
         base.OnNewIntent(intent)
         Intent = intent
-        ForwardActivation(intent, false)
+        ForwardActivation(intent, Goo.Window.IsInitialApplicationActivation)
+    }
+
+    /// Receives native permission results and forwards pending Goo requests.
+    /// @param requestCode The native permission request code.
+    /// @param permissions The requested Android permission names.
+    /// @param grantResults The native result for each permission.
+    public open override func OnRequestPermissionsResult(requestCode int32, permissions[]string, grantResults[]Permission) {
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults)
+        PermissionsResultReceived?.Invoke(requestCode, permissions, grantResults)
     }
 
     private func ForwardActivation(intent Intent?, initial bool) {
@@ -190,6 +202,9 @@ abstract class GooActivity : Activity {
 
     protected open override func OnDestroy() {
         Documents?.Dispose()
+        Destroyed?.Invoke()
+        Destroyed = nil
+        PermissionsResultReceived = nil
         content?.SetOnApplyWindowInsetsListener(nil)
         if view is {} current && current.Parent is ViewGroup parent {
             parent.RemoveView(current)
