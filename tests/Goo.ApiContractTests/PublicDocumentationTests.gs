@@ -600,6 +600,9 @@ class PublicDocumentationTests {
             "M:Goo.EmbeddedWindowHost.UnloadVulkanLibrary"
         }
         private let ExpectedEqualityDocumentationIds[]string = []string{
+            "M:Goo.VectorPath.Equals(Goo.VectorPath)",
+            "M:Goo.VectorPath.Equals(System.Object)",
+            "M:Goo.VectorPath.GetHashCode",
             "M:Goo.FontVariation.Deconstruct(System.String@,System.Single@)",
             "M:Goo.FontVariation.Equals(Goo.FontVariation)",
             "M:Goo.FontVariation.Equals(System.Object)",

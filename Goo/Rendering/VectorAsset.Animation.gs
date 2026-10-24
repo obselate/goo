@@ -520,7 +520,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
       while targetIndex < targets.Count {
         let nodeIndex = targets[targetIndex]
         if let fill = fills[nodeIndex] {
-          if !fill.BackgroundColor.Equals(color) {
+          if !fill.BackgroundColor.ContentEquals(color) {
             fill.BackgroundColor = color
             changed = true
           }
@@ -533,7 +533,7 @@ internal sealed class VectorAnimationPlayer : MotionParticle {
       while targetIndex < targets.Count {
         let nodeIndex = targets[targetIndex]
         if let outline = strokes[nodeIndex] {
-          if !outline.BorderLeftColor.Equals(color) {
+          if !outline.BorderLeftColor.ContentEquals(color) {
             outline.BorderLeftColor = color
             changed = true
           }

@@ -11,12 +11,20 @@ internal data struct PathQuadratic {
   internal let CY float32
   internal let X1 float32
   internal let Y1 float32
+
+  internal func ContentEquals(other PathQuadratic) bool ->
+    X0.Equals(other.X0) && Y0.Equals(other.Y0)
+    && CX.Equals(other.CX) && CY.Equals(other.CY)
+    && X1.Equals(other.X1) && Y1.Equals(other.Y1)
 }
 
 internal data struct PathContour {
   internal let Start int32
   internal let End int32
   internal let Closed bool
+
+  internal func ContentEquals(other PathContour) bool ->
+    Start == other.Start && End == other.End && Closed == other.Closed
 }
 
 internal data struct PathEdge {
