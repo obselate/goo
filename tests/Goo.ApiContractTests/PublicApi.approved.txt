@@ -182,6 +182,7 @@ enum-underlying|Goo.GesturePhase|System.Int32
 enum-underlying|Goo.GestureSource|System.Int32
 enum-underlying|Goo.Gestures.GestureRotationStatus|System.Int32
 enum-underlying|Goo.Gestures.PanAxis|System.Int32
+enum-underlying|Goo.ImageDecodeStatus|System.Int32
 enum-underlying|Goo.ImageFit|System.Int32
 enum-underlying|Goo.Images.ImageAssetStatus|System.Int32
 enum-underlying|Goo.InputPurpose|System.Int32
@@ -485,6 +486,11 @@ enum|Goo.Gestures.GestureRotationStatus|Unsupported|1
 enum|Goo.Gestures.PanAxis|Both|0
 enum|Goo.Gestures.PanAxis|Horizontal|1
 enum|Goo.Gestures.PanAxis|Vertical|2
+enum|Goo.ImageDecodeStatus|Cancelled|4
+enum|Goo.ImageDecodeStatus|InvalidData|1
+enum|Goo.ImageDecodeStatus|LimitExceeded|2
+enum|Goo.ImageDecodeStatus|Success|0
+enum|Goo.ImageDecodeStatus|Unsupported|3
 enum|Goo.ImageFit|Contain|0
 enum|Goo.ImageFit|Cover|1
 enum|Goo.ImageFit|Fill|2
@@ -1229,6 +1235,7 @@ method|Goo.ImageSourceLease|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSourceLease|Fail|instance|public|generic:|()->System.Boolean
 method|Goo.ImageSourceProvider|Acquire|abstract|public|generic:|()->Goo.ImageSourceLease
 method|Goo.ImageSource|Acquire|instance|public|generic:|()->Goo.ImageSourceLease
+method|Goo.ImageSource|DecodeColorManaged|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageDecodeResult
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(encoded:System.ReadOnlyMemory`1<System.Byte>,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
@@ -2095,6 +2102,9 @@ property|Goo.ImageDecodeLimits|Default|Goo.ImageDecodeLimits|static|get:public|i
 property|Goo.ImageDecodeLimits|MaxDecodedBytes|System.Int32|instance|get:public,init:public|index:()
 property|Goo.ImageDecodeLimits|MaxEncodedBytes|System.Int32|instance|get:public,init:public|index:()
 property|Goo.ImageDecodeLimits|MaxPixelsPerSide|System.Int32|instance|get:public,init:public|index:()
+property|Goo.ImageDecodeResult|Detail|System.String|instance|get:public|index:()
+property|Goo.ImageDecodeResult|Source|Goo.ImageSource?|instance|get:public|index:()
+property|Goo.ImageDecodeResult|Status|Goo.ImageDecodeStatus|instance|get:public|index:()
 property|Goo.ImageLimitException|Height|System.Int32|instance|get:public|index:()
 property|Goo.ImageLimitException|Width|System.Int32|instance|get:public|index:()
 property|Goo.ImageSourceLease|IsComplete|System.Boolean|instance|get:public|index:()
@@ -2820,6 +2830,8 @@ type|Goo.Gestures.TransformGesture|class|public|base:Goo.GestureRecognizer|inter
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GradientStop>|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
 type|Goo.ImageDecodeLimits|sealed-class|public|base:System.Object|interfaces:|generic:
+type|Goo.ImageDecodeResult|class|public|base:System.Object|interfaces:|generic:
+type|Goo.ImageDecodeStatus|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ImageFit|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.ImageLimitException|sealed-class|public|base:System.Exception|interfaces:|generic:
 type|Goo.ImageSourceCache|sealed-class|public|base:System.Object|interfaces:System.IDisposable|generic:

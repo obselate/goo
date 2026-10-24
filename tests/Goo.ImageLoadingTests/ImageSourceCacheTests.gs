@@ -911,13 +911,13 @@ class ImageSourceCacheTests : IDisposable {
             return output.ToArray()
         }
 
-        private func WithJpegIcc(jpeg []uint8, sequence int32, count int32, profile []uint8) []uint8 {
+        private func WithJpegIcc(jpeg []uint8, part int32, count int32, profile []uint8) []uint8 {
             using let output = MemoryStream()
             output.Write(jpeg.AsSpan(0, 2))
             let size = profile.Length + 16
             output.Write([]uint8{255, 226, uint8(size >> 8), uint8(size)})
             output.Write(System.Text.Encoding.ASCII.GetBytes("ICC_PROFILE\0"))
-            output.WriteByte(uint8(sequence))
+            output.WriteByte(uint8(part))
             output.WriteByte(uint8(count))
             output.Write(profile)
             output.Write(jpeg.AsSpan(2))
