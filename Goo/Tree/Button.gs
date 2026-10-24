@@ -28,6 +28,8 @@ public class Button : Blob {
   /// Initializes an empty button.
   public init() {
     Focusable = true
+    JustifyContent = JustifyContent.Center
+    AlignItems = AlignItems.Center
   }
 
   /// Adds a child to the end of the ordered child collection.
