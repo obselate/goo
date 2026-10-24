@@ -10,20 +10,18 @@ import System
 import System.Threading
 import System.Threading.Tasks
 
-/// <summary>Opens Android notifications. Calls must run on the activity's UI thread.</summary>
+/// Opens Android notifications. Calls must run on the activity's UI thread.
 public class AndroidNotifications {
     private init() {}
 
     shared {
-        /// <summary>Creates the channel and a service bound to the activity, without requesting permission.</summary>
-        /// <param name="owner">The Goo activity that receives permission results and notification taps.</param>
-        /// <param name="options">The channel ID, channel name and installed drawable small-icon resource name.</param>
-        /// <returns>An owned service on Success, or an identity or native failure.</returns>
-        /// <remarks>
-        /// Subscribe to Window.ApplicationActivated before the activity finishes CreateWindow.
+        /// Creates the channel and a service bound to the activity, without requesting permission.
+        /// @param owner The Goo activity that receives permission results and notification taps.
+        /// @param options The channel ID, channel name and installed drawable small-icon resource name.
+        /// @returns An owned service on Success, or an identity or native failure.
+        /// @remarks Subscribe to Window.ApplicationActivated before the activity finishes CreateWindow.
         /// The service closes when the activity is destroyed. Existing notifications remain in the system.
         /// Activity launch and task policy remain under application control.
-        /// </remarks>
         public func Open(owner GooActivity, options NotificationOptions) NotificationServiceResult {
             ArgumentNullException.ThrowIfNull(owner)
             ArgumentNullException.ThrowIfNull(options)
