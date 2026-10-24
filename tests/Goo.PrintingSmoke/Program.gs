@@ -63,19 +63,6 @@ func CheckSystemSpelling() {
 }
 
 func CheckRichClipboard() {
-    if OperatingSystem.IsWindows() && Thread.CurrentThread.GetApartmentState() != ApartmentState.STA {
-        var failure Exception?
-        let thread = Thread(() -> {
-            try { CheckRichClipboard() }
-            catch (error Exception) { failure = error }
-        })
-        thread.IsBackground = true
-        thread.SetApartmentState(ApartmentState.STA)
-        thread.Start()
-        if !thread.Join(TimeSpan.FromMinutes(2)) { throw InvalidOperationException("Windows rich clipboard smoke timed out") }
-        if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
-        return
-    }
     using let controller = TextEditorController(TextDocument("rich 😀"))
     using let layer = TextPresentationLayer(controller.Document)
     layer.SetStyle("bold", TextRange(0, 7), Style{ FontWeight: 700 })
@@ -164,110 +151,113 @@ internal class Document : IPrintDocument {
     }
 }
 
-let window = Window{Root: Page(32, 32), Width: 96, Height: 96, Title: "Goo print check"}.Open()
+@STAThread
+func Main(args[]string) {
+    let window = Window{Root: Page(32, 32), Width: 96, Height: 96, Title: "Goo print check"}.Open()
 
-try {
-    Settle(window)
-    CheckSystemSpelling()
-    CheckRichClipboard()
-    let ownerWidth = window.Width
-    let ownerHeight = window.Height
-    let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
-    let first = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None))
-    Require(
-        first.Status == OffscreenRenderStatus.Success && first.Capture != nil,
-        "offscreen status: " + first.Status.ToString() + " " + first.Error
-    )
-    let capture = first.Capture!!
-    Require(
-        capture.Width == uint32(480) && capture.Height == uint32(360) &&
-            window.Width == ownerWidth && window.Height == ownerHeight,
-        "page size changed the visible window"
-    )
-    Pixel(capture, 450, 330, 20, 160, 60)
-    Pixel(capture, 8, 8, 210, 30, 40)
-    var ink = 0
-    for y in 40 ... 100 {
-        for x in 30 ... 350 {
-            let index = checked(y * int32(capture.RowBytes) + x * 4)
-            if capture.Pixels[index] < uint8(80) &&
-                capture.Pixels[index + 1] < uint8(80) &&
-                capture.Pixels[index + 2] < uint8(80) {
-                ink++
+    try {
+        Settle(window)
+        CheckSystemSpelling()
+        CheckRichClipboard()
+        let ownerWidth = window.Width
+        let ownerHeight = window.Height
+        let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
+        let first = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None))
+        Require(
+            first.Status == OffscreenRenderStatus.Success && first.Capture != nil,
+            "offscreen status: " + first.Status.ToString() + " " + first.Error
+        )
+        let capture = first.Capture!!
+        Require(
+            capture.Width == uint32(480) && capture.Height == uint32(360) &&
+                window.Width == ownerWidth && window.Height == ownerHeight,
+            "page size changed the visible window"
+        )
+        Pixel(capture, 450, 330, 20, 160, 60)
+        Pixel(capture, 8, 8, 210, 30, 40)
+        var ink = 0
+        for y in 40 ... 100 {
+            for x in 30 ... 350 {
+                let index = checked(y * int32(capture.RowBytes) + x * 4)
+                if capture.Pixels[index] < uint8(80) &&
+                    capture.Pixels[index + 1] < uint8(80) &&
+                    capture.Pixels[index + 2] < uint8(80) {
+                    ink++
+                }
             }
         }
-    }
-    Require(ink > 50, "page text was not uploaded and painted")
-    let second = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None, capture))
-    Require(
-        second.Status == OffscreenRenderStatus.Success && second.Capture != nil && object.ReferenceEquals(
-            capture.Pixels,
-            second.Capture!!.Pixels
-        ),
-        "page reuse status: " + second.Status.ToString() + " " + second.Error
-    )
-    let limited = Pump(
-        window,
-        window.RenderOffscreenAsync(
-            Page(240, 180),
-            OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 1024),
-            CancellationToken.None
+        Require(ink > 50, "page text was not uploaded and painted")
+        let second = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None, capture))
+        Require(
+            second.Status == OffscreenRenderStatus.Success && second.Capture != nil && object.ReferenceEquals(
+                capture.Pixels,
+                second.Capture!!.Pixels
+            ),
+            "page reuse status: " + second.Status.ToString() + " " + second.Error
         )
-    )
-    Require(limited.Status == OffscreenRenderStatus.BudgetExceeded, "page memory limit was not reported")
-    using let cancelled = CancellationTokenSource()
-    cancelled.Cancel()
-    let cancelledPage = window.RenderOffscreenAsync(Page(240, 180), options, cancelled.Token).GetAwaiter().GetResult()
-    Require(cancelledPage.Status == OffscreenRenderStatus.Cancelled, "cancelled page was accepted")
-    using let pdf = MemoryStream()
-    let document = Document()
-    let printed = Pump(
-        window,
-        Printing.ExportPdfAsync(window, document,
-            PrintPageSettings{WidthPoints: 180, HeightPoints: 135, DpiX: 144, DpiY: 144}, pdf)
-    )
-    Require(printed.Status == PrintStatus.Exported, "PDF status: " + printed.Status.ToString() + " " + printed.Error)
-    let text = Encoding.Latin1.GetString(pdf.ToArray())
-    Require(
-        document.Created == 2 && text.Contains("/Count 2") && text.Contains("/MediaBox [0 0 180 135]") && text.EndsWith(
-            "%%EOF\n",
-            StringComparison.Ordinal
-        ),
-        "PDF page structure is incomplete"
-    )
-    if args.Length != 0 {
-        File.WriteAllBytes(args[0], pdf.ToArray())
+        let limited = Pump(
+            window,
+            window.RenderOffscreenAsync(
+                Page(240, 180),
+                OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 1024),
+                CancellationToken.None
+            )
+        )
+        Require(limited.Status == OffscreenRenderStatus.BudgetExceeded, "page memory limit was not reported")
+        using let cancelled = CancellationTokenSource()
+        cancelled.Cancel()
+        let cancelledPage = window.RenderOffscreenAsync(Page(240, 180), options, cancelled.Token).GetAwaiter().GetResult()
+        Require(cancelledPage.Status == OffscreenRenderStatus.Cancelled, "cancelled page was accepted")
+        using let pdf = MemoryStream()
+        let document = Document()
+        let printed = Pump(
+            window,
+            Printing.ExportPdfAsync(window, document,
+                PrintPageSettings{WidthPoints: 180, HeightPoints: 135, DpiX: 144, DpiY: 144}, pdf)
+        )
+        Require(printed.Status == PrintStatus.Exported, "PDF status: " + printed.Status.ToString() + " " + printed.Error)
+        let text = Encoding.Latin1.GetString(pdf.ToArray())
+        Require(
+            document.Created == 2 && text.Contains("/Count 2") && text.Contains("/MediaBox [0 0 180 135]") && text.EndsWith(
+                "%%EOF\n",
+                StringComparison.Ordinal
+            ),
+            "PDF page structure is incomplete"
+        )
+        if args.Length != 0 {
+            File.WriteAllBytes(args[0], pdf.ToArray())
+        }
+        using let a4 = MemoryStream()
+        let fullSize = Pump(
+            window,
+            Printing.ExportPdfAsync(window, Document(),
+                PrintPageSettings{WidthPoints: 595.28, HeightPoints: 841.89, LeftPoints: 36, TopPoints: 36,
+                    RightPoints: 36, BottomPoints: 36, DpiX: 300, DpiY: 300}, a4)
+        )
+        Require(
+            fullSize.Status == PrintStatus.Exported,
+            "A4 PDF status: " + fullSize.Status.ToString() + " " + fullSize.Error
+        )
+        if args.Length != 0 {
+            File.WriteAllBytes(args[0] + ".a4.pdf", a4.ToArray())
+        }
+        let owner = Pump(window, window.AcquireNativeDialogOwnerAsync(CancellationToken.None))
+        if owner.Status == NativeDialogOwnerStatus.Success && owner.Owner != nil {
+            Require(window.IsInputBlocked, "native dialog lease did not block owner input")
+            owner.Owner!!.Dispose()
+            Require(!window.IsInputBlocked, "native dialog lease did not restore owner input")
+        } else {
+            Require(owner.Status == NativeDialogOwnerStatus.Unsupported, "unexpected native dialog owner status")
+        }
+        Console.WriteLine(
+            "printing: 2 PDF pages at 300 DPI A4, independent 480x360 output, $ink text pixels, reused output, bounded memory"
+        )
+    } finally {
+        window.RequestClose()
+        let deadline = Stopwatch.StartNew()
+        while window.IsOpen && deadline.Elapsed < TimeSpan.FromSeconds(20) {
+            window.Pump(0.0)
+        }
+        Require(!window.IsOpen, "owner did not close")
     }
-    using let a4 = MemoryStream()
-    let fullSize = Pump(
-        window,
-        Printing.ExportPdfAsync(window, Document(),
-            PrintPageSettings{WidthPoints: 595.28, HeightPoints: 841.89, LeftPoints: 36, TopPoints: 36,
-                RightPoints: 36, BottomPoints: 36, DpiX: 300, DpiY: 300}, a4)
-    )
-    Require(
-        fullSize.Status == PrintStatus.Exported,
-        "A4 PDF status: " + fullSize.Status.ToString() + " " + fullSize.Error
-    )
-    if args.Length != 0 {
-        File.WriteAllBytes(args[0] + ".a4.pdf", a4.ToArray())
-    }
-    let owner = Pump(window, window.AcquireNativeDialogOwnerAsync(CancellationToken.None))
-    if owner.Status == NativeDialogOwnerStatus.Success && owner.Owner != nil {
-        Require(window.IsInputBlocked, "native dialog lease did not block owner input")
-        owner.Owner!!.Dispose()
-        Require(!window.IsInputBlocked, "native dialog lease did not restore owner input")
-    } else {
-        Require(owner.Status == NativeDialogOwnerStatus.Unsupported, "unexpected native dialog owner status")
-    }
-    Console.WriteLine(
-        "printing: 2 PDF pages at 300 DPI A4, independent 480x360 output, $ink text pixels, reused output, bounded memory"
-    )
-} finally {
-    window.RequestClose()
-    let deadline = Stopwatch.StartNew()
-    while window.IsOpen && deadline.Elapsed < TimeSpan.FromSeconds(20) {
-        window.Pump(0.0)
-    }
-    Require(!window.IsOpen, "owner did not close")
 }
