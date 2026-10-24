@@ -18,7 +18,7 @@ internal shared partial class Checks {
         Require(
             Regex.IsMatch(
                 version,
-                `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`
+                `\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\z`
             ),
             "Directory.Build.props: GooReleaseVersion is missing or invalid"
         )
