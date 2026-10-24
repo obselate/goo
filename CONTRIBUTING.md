@@ -99,7 +99,8 @@ For advisory package-consumer size and runtime measurements, use the isolated
 fixture with an explicit RID, package version, package feed, and new output path:
 
 ```sh
-python3 tools/Goo.ConsumerPerformance/run.py \
+XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+  dotnet run --project tools/Goo.Investigation -c Release -- performance \
   --output /absolute/new/goo-consumer-report \
   --rid linux-x64 \
   --package-version 0.15.0 \

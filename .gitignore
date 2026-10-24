@@ -145,6 +145,8 @@
 !/tools/Goo.VulkanManifest/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
+!/tools/Goo.Investigation/
+!/tools/Goo.Investigation/**
 
 !/integrations/
 !/integrations/**

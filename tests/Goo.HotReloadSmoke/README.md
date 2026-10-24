@@ -21,7 +21,8 @@ dotnet pack Goo/Goo.gsproj -c Release -o artifacts/hot-reload \
   -p:GooLinuxSdlPath=/path/to/linux/libSDL3.so \
   -p:GooWindowsSdlPath=/path/to/windows/SDL3.dll \
   -p:GooMacOsArm64NativeRoot=/path/to/osx-arm64/native
-python3 tests/Goo.HotReloadSmoke/verify.py \
+XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+  dotnet run --project tools/Goo.Investigation -c Release -- hot-reload \
   --runtime /path/to/gsharp/out/bin/Release/Gsharp.HotReload.Runtime/Gsharp.HotReload.Runtime.dll \
   --packages artifacts/hot-reload --goo-version 0.5.0-hotreload-local.20260906
 ```
