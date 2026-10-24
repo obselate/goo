@@ -291,10 +291,6 @@ internal partial class Reconciler {
 
   internal func applyVirtual(n Node, b Virtual, initial bool) VirtualNodeState {
     applyStyle(n, b, b.Focusable, initial)
-    if n.PinToBottom != b.PinToBottom {
-      n.PinToBottom = b.PinToBottom
-      MarkEffects(ReconcileEffects.Layout | ReconcileEffects.Paint)
-    }
     let state = Virtualization.Configure(n)
     state.BindContext(Context, Owner)
     return state
@@ -453,11 +449,6 @@ internal partial class Reconciler {
     if !Transforming.SameVectorViewport(Transforming.GetVectorViewport(n), c.VectorViewport) {
       Transforming.SetVectorViewport(n, c.VectorViewport)
       MarkEffects(ReconcileEffects.Paint | ReconcileEffects.Input)
-    }
-    if n.PinToBottom != c.PinToBottom {
-      n.PinToBottom = c.PinToBottom
-      MarkEffects(ReconcileEffects.Layout)
-      MarkEffects(ReconcileEffects.Paint)
     }
     if n.DragsWindow != c.DragsWindow {
       n.DragsWindow = c.DragsWindow

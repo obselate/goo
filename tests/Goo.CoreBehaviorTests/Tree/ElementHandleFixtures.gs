@@ -396,40 +396,43 @@ internal class ElementHandleFixtures {
     }
   }
 
-  func MetricsPinContract() bool {
+  func MetricsTailFollowContract() bool {
     let cell = ElementMetricsFixtureCell{}
-    cell.Pin = true
     let window = Window{ Root: cell, Width: 100, Height: 60 }
-    window.SmoothScrolling = false
-    let snapshots = List[ElementMetrics]()
-    cell.Handle.MetricsChanged += func(value ElementMetrics) {
-      snapshots.Add(value)
+    var follow = true
+    var lastRange = -1.0
+    cell.Handle.MetricsChanged += value -> {
+      if !value.IsMounted { return }
+      if follow && lastRange != value.ScrollRange.Y {
+        cell.Handle.JumpTo(0, value.ScrollRange.Y)
+      } else {
+        follow = value.ScrollOffset.Y >= value.ScrollRange.Y - 0.5
+      }
+      lastRange = value.ScrollRange.Y
     }
-    window.UpdateTree()
-    if snapshots.Count != 1 || !snapshots[0].Pinned || snapshots[0].ScrollOffset.Y != 140.0 {
-      return false
+    try {
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 140 { return false }
+      cell.ContentHeight = 300
+      cell.Rebuild()
+      window.UpdateTree()
+      if cell.Handle.ScrollOffset.Y != 240 { return false }
+      cell.Handle.JumpTo(0, 100)
+      window.UpdateTree()
+      cell.ContentHeight = 400
+      cell.Rebuild()
+      window.UpdateTree()
+      if follow || cell.Handle.ScrollOffset.Y != 100 { return false }
+      cell.ContentHeight = 20
+      cell.Rebuild()
+      window.UpdateTree()
+      cell.ContentHeight = 500
+      cell.Rebuild()
+      window.UpdateTree()
+      return follow && cell.Handle.ScrollOffset.Y == 440
+    } finally {
+      window.Close()
     }
-    if !cell.Handle.JumpTo(0.0, 139.0) {
-      return false
-    }
-    window.UpdateTree(1.0)
-    if snapshots.Count != 2 || snapshots[1].Pinned || snapshots[1].ScrollOffset.Y != 139.0 {
-      return false
-    }
-    if !cell.Handle.JumpTo(0.0, 140.0) {
-      return false
-    }
-    window.UpdateTree(1.0)
-    if snapshots.Count != 3 || !snapshots[2].Pinned {
-      return false
-    }
-    cell.Pin = false
-    cell.Rebuild()
-    window.UpdateTree()
-    let released = snapshots.Count == 4 && !snapshots[3].Pinned && snapshots[3].ScrollOffset.Y == 140.0
-      && snapshots[3].ScrollRange.Y == 140.0
-    window.Close()
-    return released
   }
 
   func MetricsCallbackRebuildAndBatchContract() bool {
@@ -524,12 +527,12 @@ internal class ElementHandleFixtures {
     let cell = VirtualFixtureCell(1000)
     cell.Inset = 10
     cell.Measure = true
-    cell.Pin = true
+    cell.Jump = Point{ X: 0, Y: 19960 }
     let window = Window{ Root: cell, Width: 100, Height: 60 }
     window.SmoothScrolling = false
     window.UpdateTree()
     // Content coordinates start at the content box, so padding is not part of the scroll range.
-    if cell.Handle.ScrollRange.Y != 19960.0 || cell.Handle.ScrollOffset.Y != 19960.0 || !cell.Pinned
+    if cell.Handle.ScrollRange.Y != 19960.0 || cell.Handle.ScrollOffset.Y != 19960.0
       || !cell.Handles[999].IsMounted
       || cell.Handles[999].BorderBox.Y - cell.Handle.BorderBox.Y != 30.0 { return false }
 
@@ -548,11 +551,10 @@ internal class ElementHandleFixtures {
     if cell.Focused != 1 { return false }
 
     // The scroll offset of a result applies together with its items.
-    cell.Pin = false
     cell.Jump = Point{ X: 0.0, Y: 5000.0 }
     cell.Rebuild()
     window.UpdateTree()
-    let moved = cell.Handle.ScrollOffset.Y == 5000.0 && cell.Handles[250].IsMounted && !cell.Pinned
+    let moved = cell.Handle.ScrollOffset.Y == 5000.0 && cell.Handles[250].IsMounted
     window.Close()
     return moved
   }
@@ -741,7 +743,7 @@ internal class ElementMetricsFixtureCell : Cell {
   internal let Handle ElementHandle
   internal var Width int32
   internal var Attached bool
-  internal var Pin bool
+  internal var ContentHeight int32 = 200
 
   init() {
     Handle = ElementHandle{}
@@ -754,8 +756,7 @@ internal class ElementMetricsFixtureCell : Cell {
       return Container{ Width: Width, Height: 60 }
     }
     return Container() {.Handle: Handle,.Width: Width,.Height: 60,.OverflowY: Overflow.Scroll,
-      .PinToBottom: Pin,
-      Container{ Height: 200 },
+      Container{ Height: ContentHeight },
     }
   }
 }
@@ -807,14 +808,12 @@ internal class VirtualFixtureCell : Cell {
   internal let Handle ElementHandle = ElementHandle{}
   internal var Inset int32
   internal var Role AccessibilityRole = AccessibilityRole.List
-  internal var Pin bool
   internal var Measure bool
   internal var Fresh bool
   internal var Jump Point?
   internal var Retain string?
   internal var Cancels int32
   internal var Disposes int32
-  internal var Pinned bool
   internal var Focused int32
   internal var First VirtualChild
   internal var RowHeight float64 = 13.0
@@ -825,7 +824,7 @@ internal class VirtualFixtureCell : Cell {
   }
 
   override func Build() Blob -> Virtual(VirtualFixtureSource(this)) {
-    Handle = Handle, Width = 100, Height = 60, Padding = Inset, PinToBottom = Pin,
+    Handle = Handle, Width = 100, Height = 60, Padding = Inset,
     Accessibility = Accessibility{ Role: Role },
   }
 
@@ -926,7 +925,6 @@ internal class VirtualFixtureState : VirtualState {
   }
 
   private func observe(viewport VirtualViewport) {
-    cell.Pinned = viewport.Pinned
     cell.Focused = viewport.FocusedChild
     if viewport.ChildCount > 0 { cell.First = viewport.Child(0) }
   }

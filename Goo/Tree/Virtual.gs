@@ -16,9 +16,6 @@ public class Virtual : Blob {
 
   internal prop Source VirtualSource{ get -> source }
 
-  /// Reports whether scroll content stays pinned to the bottom.
-  public prop PinToBottom bool{ get; init; }
-
   /// Initializes a list element that scrolls on both axes.
   /// @param source The item policy. Create a new source on each build to supply new inputs.
   public init(source VirtualSource) {
@@ -161,13 +158,6 @@ public class VirtualViewport {
   public prop Direction FlexDirection{ get -> bound().FlexDirection }
   /// Gets the authored flex wrap.
   public prop Wrap FlexWrap{ get -> bound().FlexWrap }
-  /// Gets whether PinToBottom is set and the reader has not scrolled away from the end.
-  public prop Pinned bool{
-    get {
-      let n = bound()
-      return n.PinToBottom && !n.UserScrolled
-    }
-  }
   /// Gets the number of mounted items.
   public prop ChildCount int32{ get -> bound().Children.Count }
   /// Gets the index of the mounted item that contains keyboard focus, or -1.

@@ -434,8 +434,6 @@ internal class Node {
     get -> ScrollbarStyles.GetY(this)
     set(v) -> ScrollbarStyles.SetY(this, v)
   }
-  internal prop UserScrolled bool{ get; set; }
-  internal prop PinToBottom bool{ get; set; }
   internal prop DragsWindow bool{ get; set }
   internal prop HitTestSelf bool{ get; set; }
   internal prop ShapePath VectorPath{ get; set; }
