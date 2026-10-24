@@ -1678,6 +1678,9 @@ jobs:
         run: |
           dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj -c Release -r win-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/rich-nativeaot
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($name in "SDL3.dll", "goo-harfbuzz.dll", "goo-harfbuzz-gpu.dll") {
+            Copy-Item "artifacts/windows-smoke/$name" artifacts/rich-nativeaot -Force
+          }
           & artifacts/rich-nativeaot/Goo.PrintingSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned consumer installer
