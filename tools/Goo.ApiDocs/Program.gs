@@ -28,7 +28,7 @@ func AppendCellInputGuide(text StringBuilder) {
     )
     text.AppendLine()
     text.AppendLine(
-        "Derive packaged input components as `open class X : Cell<TInput>` with `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy."
+        "Derive packaged components as `open class X : Cell<TInput>` and override `protected Build(input TInput) Blob`. Goo passes the stored immutable input snapshot. Same-assembly components can still override parameterless `Build()`. If both overloads are overridden, the typed overload wins. Override `ShouldRebuild(previous, next)` only when default structural equality does not match the rebuild policy."
     )
 }
 
