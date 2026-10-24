@@ -5,6 +5,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo/Goo.gsproj" />
-    <ProjectReference Include="../../Goo.RichText/Goo.RichText.gsproj" />
   </ItemGroup>
 </Project>

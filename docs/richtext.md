@@ -10,7 +10,8 @@ let editor = TextEditor(controller, []TextPresentationLayer{formatting})
 clipboard.Completed += result -> ShowStatus(result.Status)
 ```
 
-Install `Goo.RichText`. Create and dispose the binding on the window thread. Keep pumping Goo during clipboard requests.
+Rich text clipboard support is included in `Goo`. Remove the old `Goo.RichText` package reference. Keep `import Goo.RichText`.
+Create and dispose the binding on the window thread. Keep pumping Goo during clipboard requests.
 
 ```gsharp
 clipboard.ReadOnly = true
