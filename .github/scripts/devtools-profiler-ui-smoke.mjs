@@ -290,7 +290,14 @@ try {
     'Connected target did not enable Record');
     await click(inspector, 'profiler-record');
     await waitSnapshot(inspector, data => status(data).startsWith('Recording ·') && /[1-9]\d* records/.test(status(data)));
-    for (let i = 0; i < 3; i++) await click(target, 'profiler-workload');
+    const image = (await snapshot(target)).find(node => node.key === 'profiler-workload');
+    for (const opacity of [0.4, 0.6, 0.8]) {
+        await request(['attach', '--pid', String(target), '--once', '--require-override-property', 'Opacity',
+            '--command', 'property.override', '--payload',
+            JSON.stringify({target: image.target, property: 'Opacity', value: String(opacity)})]);
+    }
+    await waitSnapshot(target, data => Math.abs(data.find(node => node.key === 'profiler-workload')?.opacity - 0.8) < 0.000001,
+        'Fixture workload did not update');
     await capture(target, 'fixture-during-recording');
     await writeFile(path.join(output, 'contender-discovery.json'), await command(['list', '--json']));
     const contender = launch('apps/Goo.DevTools/bin/Release/net10.0/Goo.DevTools.dll', 'busy-devtools', ['--pid', String(target)]);
