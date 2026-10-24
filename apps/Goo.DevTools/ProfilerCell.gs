@@ -50,6 +50,7 @@ internal partial class ProfilerCell : Cell {
     private var follow bool = true
     private var lifetimes bool
     private var moreCounters bool
+    private var allocationSamples bool
     private var expandedResource string = ""
     private var revision int32 = -1
     private var tab string = "Phases"
@@ -160,7 +161,7 @@ internal partial class ProfilerCell : Cell {
                     if active {
                         session.StopProfiler()
                     } else {
-                        session.StartProfiler()
+                        session.StartProfiler(allocationSamples)
                         selected = -1
                         selectionStart = 0L
                         selectionEnd = 0L
@@ -171,6 +172,17 @@ internal partial class ProfilerCell : Cell {
                     Rebuild()
                 },
                 !fileBusy && session.State == DiagnosticConnectionState.Connected && session.Capabilities.ProfilerTrace
+            )
+        )
+        controls.Add(
+            Toggle(
+                "profiler-allocation-samples",
+                "Types (10 s)",
+                allocationSamples,
+                () -> {
+                    allocationSamples = !allocationSamples
+                    Rebuild()
+                }
             )
         )
         controls.Add(
@@ -504,7 +516,8 @@ internal partial class ProfilerCell : Cell {
                 }
                 let r = trace.Records[indices[pixel]]
                 let ms = maxima[pixel]
-                let bucket = ms > maximum ? 2: r.Result == 0 ? 3: ms <= 16.7 ? 0: ms <= 33.4 ? 1: 2
+                let bucket = ms > maximum ||
+                    (r.GcPauseTicks ?? 0uL) >= 20000uL ? 2: r.Result == 0 ? 3: ms <= 16.7 ? 0: ms <= 33.4 ? 1: 2
                 let height = Math.Clamp(ms / maximum * 48.0, 1.0, 48.0)
                 Rect(builders[bucket], float64(pixel), 54.0 - height, 2.0, height)
             }
@@ -1194,7 +1207,7 @@ internal partial class ProfilerCell : Cell {
 
     private func Analysis(trace ProfilerTrace) Container {
         let tabs = List[Blob]()
-        for name in[]string{"Phases", "Memory", "Resources"} {
+        for name in[]string{"Phases", "Memory", "Types", "Resources"} {
             let current = name
             tabs.Add(
                 Button{
@@ -1206,7 +1219,7 @@ internal partial class ProfilerCell : Cell {
                     Accessibility: Accessibility{Role: AccessibilityRole.Tab, Name: current, Selected: tab == current},
                     OnClick: () -> {
                         tab = current
-                        sortColumn = current == "Phases" ? 2: 4
+                        sortColumn = current == "Phases" ? 2: current == "Types" ? 1: 4
                         descending = true
                         tableKey = ""
                         Rebuild()
@@ -1215,8 +1228,9 @@ internal partial class ProfilerCell : Cell {
                 }
             )
         }
-        let columns = tab == "Phases" ? []string{"Name", "Count", "Total", "% range", "Average", "Max", "Alloc"}
+        let columns = tab == "Phases" ? []string{"Name (last 240)", "Count", "Total", "p50", "p99", "Max", "Alloc"}
         : tab == "Memory" ? []string{"Counter", "Start", "End", "Δ", "Observed peak"}
+        : tab == "Types" ? []string{"Type", "Samples", "Sampled bytes", "Status", ""}
         : []string{"Start", "Duration", "Kind", "Name", "Bytes", "Owner", "Result"}
         PrepareTable(trace)
         let headers = List[Blob]()
@@ -1269,8 +1283,9 @@ internal partial class ProfilerCell : Cell {
         )
         left.Add(
             Label(
-                tab == "Phases" ? "Inclusive rows overlap. Allocation traffic includes contained phases only."
+                tab == "Phases" ? "Last 240 scopes per row. p50/p99 use complete scopes. Nested elapsed times overlap."
                 : tab == "Memory" ? "Separate accounts. First sample and observed peaks are labelled."
+                : tab == "Types" ? "Runtime allocation samples, not exact object counts. At most 500 types."
                 : resourceTotals
             )
         )
@@ -1462,10 +1477,16 @@ internal partial class ProfilerCell : Cell {
                 if filterWindow != "" && r.Window != "" && r.Window != filterWindow {
                     continue
                 }
-                let name = LaneTitle(trace.EventName(r))
+                var name = LaneTitle(trace.EventName(r))
+                if filterWindow == "" && trace.WindowNames.Count > 1 && r.Window != "" {
+                    name = WindowTitle(r.Window) + " / " + name
+                }
                 if !groups.TryGetValue(name, out var list) {
                     list = List[int32]()
                     groups.Add(name, list)
+                }
+                if list.Count == 240 {
+                    list.RemoveAt(0)
                 }
                 list.Add(index)
             }
@@ -1477,12 +1498,14 @@ internal partial class ProfilerCell : Cell {
                 var allocation uint64 = 0uL
                 var measured = 0
                 var incomplete = false
+                let durations = List[int64](Math.Min(240, pair.Value.Count))
                 for index in pair.Value {
                     let r = trace.Records[index]
                     let duration = Math.Min(hi, r.EndTicks) - Math.Max(lo, r.Ticks)
                     total += duration
                     maximum = Math.Max(maximum, duration)
                     if r.Ticks >= lo && r.EndTicks <= hi {
+                        durations.Add(duration)
                         if let value = r.Allocated {
                             allocation += value
                             measured++
@@ -1498,18 +1521,19 @@ internal partial class ProfilerCell : Cell {
                     buildStyle += total
                 }
                 let count = pair.Value.Count
+                durations.Sort()
+                let p50 = durations.Count == 0 ? -1L: durations[(durations.Count - 1) / 2]
+                let p99 = durations.Count == 0 ? -1L: durations[
+                    int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1
+                ]
                 rows.Add(
                     ProfilerTableRow(
                         []string{
                             pair.Key,
                             count.ToString(),
                             Time(trace, total),
-                            (float64(total) / float64(Math.Max(1L, hi - lo)) * 100.0).ToString(
-                                "G3",
-                                CultureInfo.InvariantCulture
-                            ) +
-                                "%",
-                            Time(trace, total / int64(count)),
+                            p50 < 0L ? "partial": Time(trace, p50),
+                            p99 < 0L ? "partial": Time(trace, p99),
                             Time(trace, maximum),
                             (measured == 0 ? "unmeasured": Bytes(float64(allocation))) +
                                 (incomplete || measured < count ? " *": "")
@@ -1518,8 +1542,8 @@ internal partial class ProfilerCell : Cell {
                             0.0,
                             float64(count),
                             float64(total),
-                            float64(total),
-                            float64(total) / float64(count),
+                            float64(p50),
+                            float64(p99),
                             float64(maximum),
                             measured == 0 ? -1.0: float64(allocation)
                         }
@@ -1532,6 +1556,29 @@ internal partial class ProfilerCell : Cell {
                     ProfilerTableRow(
                         []string{"Diff (derived)", "—", Time(trace, diff), "—", "—", "—", "—"},
                         []float64{0.0, 0.0, float64(diff), 0.0, 0.0, 0.0, -1.0}
+                    )
+                )
+            }
+        } else if tab == "Types" {
+            for index in 0 ... trace.Records.Count {
+                let r = trace.Records[index]
+                if r.Name == "allocation.samples" && r.Validity == "unavailable" {
+                    rows.Add(
+                        ProfilerTableRow(
+                            []string{r.Source, "", "", "Unavailable", ""},
+                            []float64{0.0, 0.0, 0.0, 0.0, 0.0},
+                            index
+                        )
+                    )
+                }
+                if r.Source != "GCAllocationTick_V4 samples" {
+                    continue
+                }
+                rows.Add(
+                    ProfilerTableRow(
+                        []string{r.Name, (r.Value ?? 0uL).ToString(), Bytes(float64(r.Value1 ?? 0uL)), "Sampled", ""},
+                        []float64{0.0, float64(r.Value ?? 0uL), float64(r.Value1 ?? 0uL), 0.0, 0.0},
+                        index
                     )
                 )
             }
@@ -1698,6 +1745,16 @@ internal partial class ProfilerCell : Cell {
                     " (GPU, unaligned)": Time(trace, r.EndTicks - r.Ticks)
             )
         )
+        if let pause = r.GcPauseTicks {
+            let pauseMs = float64(pause) / 10000.0
+            rows.Add(Detail("Process GC pause", pauseMs.ToString("F3") + " ms"))
+            rows.Add(
+                Detail(
+                    "GC-exclusive elapsed",
+                    Math.Max(0.0, trace.Milliseconds(r.EndTicks - r.Ticks) - pauseMs).ToString("F3") + " ms"
+                )
+            )
+        }
         rows.Add(Detail("End", Time(trace, r.EndTicks)))
         if r.Window != "" {
             rows.Add(Detail("Window", WindowTitle(r.Window)))

@@ -148,7 +148,9 @@ internal class WindowScheduler {
         if waitMs == 0 {
           SdlRuntime.PumpEvents(EventBudget)
         } else {
+          for index in 0 ... currentCount { snapshot[index].BeginProfileCapWait(now) }
           SdlRuntime.WaitEventsBounded(waitMs, EventBudget)
+          for index in 0 ... currentCount { snapshot[index].EndProfileCapWait() }
         }
         let afterEventsCount = CaptureSnapshot()
         var afterEventsIndex int32

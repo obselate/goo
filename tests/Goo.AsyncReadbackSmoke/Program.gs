@@ -460,6 +460,15 @@ let modes = []SmokeMode{
   SmokeMode("GOO_EMBEDDED_HOST_SMOKE", "1", () -> EmbeddedHostSmoke.Run()),
   SmokeMode("GOO_DIAGNOSTIC_CAPTURE_BUSY_SMOKE", "1", () -> DiagnosticCaptureFixture.Run()),
   SmokeMode("GOO_PROFILER_SMOKE", "1", () -> ProfilerSmoke.Run()),
+  SmokeMode("GOO_PROFILER_GC_SMOKE", "1", () -> {
+    let root = ProfilerSmokeCell{}
+    let window = Window{Title: "Goo profiler GC scroll smoke", Width: 64, Height: 64, Root: root}.Open()
+    try {
+      ProfilerSmoke.VerifyPauseAndSamples(window, root)
+    } finally {
+      window.Close()
+    }
+  }),
   SmokeMode("GOO_SHADER_EFFECT_SMOKE", "1", () -> RunShaderEffectSmoke()),
   SmokeMode("GOO_SHADER_GENERATOR_SMOKE", "1", () -> RunShaderGeneratorSmoke()),
   SmokeMode("GOO_LIQUID_GLASS_ALPHA_SMOKE", "1", () -> RunLiquidGlassAlphaSmoke()),

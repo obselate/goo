@@ -29,6 +29,7 @@ internal data struct ProfilerRecord {
     var Owner uint64?
     var Result int32
     var Allocated uint64?
+    var GcPauseTicks uint64?
     var Value uint64?
     var Value1 uint64?
     var GpuNs uint64?
@@ -242,6 +243,7 @@ internal partial class ProfilerTrace {
                 Owner: Number(item, "ownerKind"),
                 Result: item.GetProperty("result").GetInt32(),
                 Allocated: Number(item, "allocatedBytes"),
+                GcPauseTicks: Number(item, "gcPauseTicks"),
                 Value: Number(item, "value0"),
                 Value1: Number(item, "value1"),
                 GpuNs: Number(item, "gpuElapsedNs"),

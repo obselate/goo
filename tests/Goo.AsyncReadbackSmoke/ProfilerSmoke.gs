@@ -14,15 +14,26 @@ internal class ProfilerSmokeCell : Cell {
     internal var Frame int32
     internal var Source ImageSource?
     internal var Effect ShaderEffect?
+    internal var Scroll bool
+    internal let ContentHandle ElementHandle = ElementHandle{}
 
-    override func Build() Blob -> Container() {
+    override func Build() Blob -> if Scroll {
+        Container{
+            Width: 64, Height: 64, OverflowY: Overflow.Scroll,
+            Container{
+                Handle: ContentHandle, Width: 48, Height: 2048, FlexShrink: 0.0,
+                BackgroundColor: Color.Rgb(80, 120, 160),
+                Text{Content: "Profiler scroll"},
+            },
+        }
+    } else { Container() {
         .Width: 24 + Frame % 2,
         .Height: 24,
         .BackgroundColor: Color.Rgb(Frame % 255, 80, 120),
         .ShaderEffect: Effect,
         Text{Content: "Profiler"},
         Image{Source: Source, Width: 8, Height: 8},
-    }
+    } }
 }
 
 internal class ProfilerSmokeClient : IDisposable {
@@ -204,6 +215,7 @@ internal class ProfilerSmoke {
                     "profiler-pipe: real_phases=verified queue_links=verified busy=verified stop=verified gaps=verified disconnect=verified startup="
                     + (startup != nil).ToString()
                 )
+                VerifyPauseAndSamples(window, root)
             } finally {
                 WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
                 FrameRecorder.Current?.Stop(true)
@@ -218,6 +230,90 @@ internal class ProfilerSmoke {
                 }
             }
             VerifyCaptures()
+        }
+
+        internal func VerifyPauseAndSamples(window Window, root ProfilerSmokeCell) {
+            WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
+            root.Scroll = true
+            root.Rebuild()
+            WindowReadbackTestFixture.ForceRender(window, 0.0)
+            let before = root.ContentHandle.BorderBox.Y
+            guard let recorder = FrameRecorder.Start(Guid.NewGuid(), FrameRecorder.DefaultBufferBytes) else {
+                throw InvalidOperationException("Allocation sample trace could not start")
+            }
+            recorder.CaptureAllocations(2)
+            Thread.Sleep(300)
+            for frame in 0 ... 240 {
+                window.InputQueueWheelForTest(20.0, 20.0, 0.0, -1.0)
+                if frame == 5 {
+                    window.Post(() -> {
+                        for i in 0 ... 4000 {
+                            let allocation = [16384]uint8
+                            GC.KeepAlive(allocation)
+                        }
+                        GC.Collect(2, GCCollectionMode.Forced, true, true)
+                    })
+                }
+                window.Pump(1.0 / 60.0)
+                Thread.Sleep(10)
+            }
+            Require(root.ContentHandle.BorderBox.Y < before, "Profiler workload did not scroll")
+            recorder.Stop(false)
+            Require(SpinWait.SpinUntil(() -> {
+                recorder.Read(0L, 1, out var next, out var more, out var state, out var dropped)
+                return state == "Complete"
+            }, 2000), "Allocation sample trace did not stop")
+            let records = recorder.Read(0L, 32768, out var next, out var more, out var state, out var dropped)
+            var samples uint64 = 0uL
+            var byteSamples uint64 = 0uL
+            var maximumPause int64 = 0L
+            var pauseFrameMs float64 = 0.0
+            var sampledType FrameTraceRecord
+            let durations = List[int64]()
+            for record in records {
+                if record.Source == "GCAllocationTick_V4 samples" { samples += record.Value0 ?? 0uL }
+                if record.Source == "GCAllocationTick_V4 samples" && record.Name == "System.Byte[]" {
+                    byteSamples += record.Value0 ?? 0uL
+                }
+                if record.Source == "GCAllocationTick_V4 samples" && (record.Value1 ?? 0uL) > (sampledType.Value1 ?? 0uL) {
+                    sampledType = record
+                }
+                if record.Kind == FrameTraceKind.Duration && record.EventId == 0uL {
+                    let pause = record.GcPauseTicks ?? 0L
+                    if pause > maximumPause {
+                        maximumPause = pause
+                        pauseFrameMs = float64(record.EndTicks - record.Ticks) * 1000.0 / float64(Stopwatch.Frequency)
+                    }
+                    if durations.Count < 240 { durations.Add(record.EndTicks - record.Ticks) }
+                }
+            }
+            Require(samples > 0uL, "No runtime allocation samples were captured")
+            Require(byteSamples > 0uL, "Scroll workload byte-array allocations were not sampled")
+            Require(maximumPause > 0L, "Forced GC pause was not associated with a frame")
+            durations.Sort()
+            let scale = 1000.0 / float64(Stopwatch.Frequency)
+            Console.WriteLine("profiler-scroll: samples=" + samples.ToString()
+                + " max_frame_gc_pause_ms=" + (float64(maximumPause) / 10000.0).ToString("F3")
+                + " elapsed_ms=" + pauseFrameMs.ToString("F3")
+                + " gc_exclusive_ms=" + Math.Max(0.0, pauseFrameMs - float64(maximumPause) / 10000.0).ToString("F3")
+                + " p50_ms=" + (float64(durations[(durations.Count - 1) / 2]) * scale).ToString("F3")
+                + " p99_ms=" + (float64(durations[int32(Math.Ceiling(float64(durations.Count) * 0.99)) - 1]) * scale).ToString("F3")
+                + " max_ms=" + (float64(durations[durations.Count - 1]) * scale).ToString("F3"))
+            Console.WriteLine("profiler-type: name=" + sampledType.Name + " samples=" + sampledType.Value0.ToString()
+                + " sampled_bytes=" + sampledType.Value1.ToString())
+            let disabled = FrameProfiler()
+            if !disabled.Enabled {
+                for i in 0 ... 100 {
+                    disabled.Record(FrameProfileStage.Frame, disabled.Start())
+                }
+                let beforeBytes = GC.GetAllocatedBytesForCurrentThread()
+                for i in 0 ... 1000 {
+                    disabled.Record(FrameProfileStage.Frame, disabled.Start())
+                }
+                let allocated = GC.GetAllocatedBytesForCurrentThread() - beforeBytes
+                Require(allocated == 0L, "Disabled profiler allocated per-frame memory")
+                Console.WriteLine("profiler-off: allocation_bytes=" + allocated.ToString())
+            }
         }
 
         private func Capture(window Window) WindowCapture {
@@ -407,7 +503,7 @@ internal class ProfilerSmoke {
             var queuedPump = ""
             var queuedFrame = ""
             var sawStartup = false
-            while !holdArmed || remaining {
+            while !holdArmed || remaining || queued == "" || trace.Submitted.Contains(queued) {
                 using let batch = client.Request("profiler.read", "{" + identity + ",\"afterSeq\":\"" + after + "\"}")
                 let payload = batch.RootElement.GetProperty("payload")
                 ValidateBatch(payload, trace)
@@ -429,7 +525,7 @@ internal class ProfilerSmoke {
                     }
                     let source = record.GetProperty("source").GetString() ?? ""
                     let submission = record.GetProperty("submissionId").GetString() ?? ""
-                    if source == "submit.enqueue" {
+                    if source == "submit.enqueue" && !trace.Submitted.Contains(submission) {
                         queued = submission
                         queuedPump = record.GetProperty("pumpId").GetString() ?? ""
                         queuedFrame = record.GetProperty("frameId").GetString() ?? ""
@@ -450,6 +546,9 @@ internal class ProfilerSmoke {
                     remaining = true
                 } else if !holdArmed {
                     Require(Stopwatch.GetTimestamp() < holdDeadline, "Posted rebuild has no Build record")
+                }
+                if holdArmed && !remaining && (queued == "" || trace.Submitted.Contains(queued)) {
+                    Require(Stopwatch.GetTimestamp() < holdDeadline, "Held submit enqueue record was not observed")
                 }
             }
             trace.RequireHeld(queued, queuedPump, queuedFrame, buildPump)

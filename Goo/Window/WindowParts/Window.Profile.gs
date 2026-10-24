@@ -15,6 +15,19 @@ public partial class Window {
     profiler.Sink?.Sample(recorder, force, includeShared)
   }
 
+  internal func BeginProfileCapWait(now float64) {
+    if !profiler.Active { return }
+    profiler.CapWaitStart = FrameProfilePoint{}
+    if !IsOpen || ExternallyDriven || !IsVisible || !hasDemand() || FramePacing == WindowFramePacing.Uncapped
+      || windowTarget?.QueueWorkPending == true || host?.SchedulerPacingAvailable != true
+      || SchedulerFrameDue(now) { return }
+    profiler.CapWaitStart = profiler.Start()
+  }
+
+  internal func EndProfileCapWait() {
+    if profiler.Active && profiler.CapWaitStart.Ticks > 0L { profiler.Record(FrameProfileStage.CapWait, profiler.CapWaitStart) }
+  }
+
   internal func ProfileMetadata() FrameTraceRecord {
     var value = profiler.Sink?.Describe() ?? FrameTraceRecord{
       Kind: FrameTraceKind.Metadata, Source: "renderer", Validity: "unavailable",
@@ -29,12 +42,13 @@ public partial class Window {
 internal enum FrameProfileStage {
   Frame; Events; Input; Tree; Motion; Reconcile; Build; Diff; StyleResolve;
   Transitions; Layout; InputTree;
-  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; Count
+  Render; TargetBegin; Paint; CanvasFlush; TargetFlush; Present; Virtualization; CapWait; Count
 }
 
 internal data struct FrameProfilePoint {
   internal var Ticks int64
   internal var Bytes int64
+  internal var PauseTicks int64
 }
 
 internal class FrameWorkCounters {
@@ -63,11 +77,22 @@ internal class FrameProfileTotal {
   internal var Ticks int64
   internal var Bytes int64
   internal var Calls int64
+  internal let Samples []int64 = [240]int64
+  internal var FrameTicks int64
+  internal var PauseTicks int64
+  internal var GcExclusiveTicks int64
+  internal var GcMeasured bool
+  internal var PauseFrames int32
 
   internal func Reset() {
     Ticks = 0
     Bytes = 0
     Calls = 0
+    FrameTicks = 0L
+    PauseTicks = 0L
+    GcExclusiveTicks = 0L
+    GcMeasured = false
+    PauseFrames = 0
   }
 }
 
@@ -87,6 +112,7 @@ internal class FrameProfiler {
   private var virtualReuseStart int64
   private var virtualDiscardStart int64
   private var shapeStart int64
+  internal var CapWaitStart FrameProfilePoint
 
   internal prop Context FrameTraceContext { get -> context }
 
@@ -147,6 +173,7 @@ internal class FrameProfiler {
     return FrameProfilePoint{
       Ticks: Stopwatch.GetTimestamp(),
       Bytes: GC.GetAllocatedBytesForCurrentThread(),
+      PauseTicks: GC.GetTotalPauseDuration().Ticks,
     }
   }
 
@@ -160,7 +187,7 @@ internal class FrameProfiler {
     let ticks = end.Ticks - start.Ticks
     let bytes = end.Bytes - start.Bytes
     if enabled {
-      Add(stage, ticks, bytes, 1)
+      Add(stage, ticks, bytes, 1, end.PauseTicks - start.PauseTicks)
     }
     RecordTrace(stage, start, end, result)
     if let current = sink {
@@ -178,7 +205,8 @@ internal class FrameProfiler {
         start
       }
       current.Duration(uint64(int32(stage)), 0uL, context, point.Ticks, end.Ticks,
-        end.Bytes - point.Bytes, result, source: if stage == FrameProfileStage.Paint { "target.render" } else { "cpu.phase" })
+        end.Bytes - point.Bytes, result, source: if stage == FrameProfileStage.Paint { "target.render" } else { "cpu.phase" },
+        gcPauseTicks: Math.Max(0L, end.PauseTicks - point.PauseTicks))
     }
   }
 
@@ -203,7 +231,7 @@ internal class FrameProfiler {
       let safeDiffTicks = diffTicks < 0 ? 0 : diffTicks
       let safeDiffBytes = diffBytes < 0 ? 0 : diffBytes
       if enabled {
-        Add(FrameProfileStage.Reconcile, elapsed.Ticks, elapsed.Bytes, 1)
+        Add(FrameProfileStage.Reconcile, elapsed.Ticks, elapsed.Bytes, 1, end.PauseTicks - start.PauseTicks)
         Add(FrameProfileStage.Build, buildTicks, buildBytes, buildCalls)
         Add(FrameProfileStage.StyleResolve, resolveTicks, resolveBytes, resolveCalls)
         Add(FrameProfileStage.Diff, safeDiffTicks, safeDiffBytes, 1)
@@ -217,12 +245,20 @@ internal class FrameProfiler {
       }
     }
 
-  private func Add(stage FrameProfileStage, ticks int64, bytes int64, calls int64) {
+  private func Add(stage FrameProfileStage, ticks int64, bytes int64, calls int64, pauseTicks int64? = nil) {
     let values = totalsOrCreate()
     let total = values[int32(stage)]
     total.Ticks = total.Ticks + ticks
+    total.FrameTicks += ticks
     total.Bytes = total.Bytes + bytes
     total.Calls = total.Calls + calls
+    if let pause = pauseTicks {
+      total.GcMeasured = true
+      total.PauseTicks += Math.Max(0L, pause)
+      let pausedTicks = int64(float64(Math.Max(0L, pause)) * float64(Stopwatch.Frequency) / float64(TimeSpan.TicksPerSecond))
+      total.GcExclusiveTicks += Math.Max(0L, ticks - pausedTicks)
+      if stage == FrameProfileStage.Frame && pause >= 20000L { total.PauseFrames++ }
+    }
   }
 
   internal func EndFrame(start FrameProfilePoint, didRender bool, deferred bool = false) {
@@ -242,6 +278,10 @@ internal class FrameProfiler {
       warmupFrames--
       Reset()
       return
+    }
+    for total in totalsOrCreate() {
+      total.Samples[frames] = total.FrameTicks
+      total.FrameTicks = 0L
     }
     frames++
     if didRender {
@@ -272,6 +312,22 @@ internal class FrameProfiler {
       sb.Append(" ").Append(stageName(stage)).Append("=").Append(time(stage))
     }
     Console.WriteLine(sb.ToString())
+    for i in 0 ... int32(FrameProfileStage.Count) {
+      let samples = totalsOrCreate()[i].Samples
+      Array.Sort(samples, 0, frames)
+      let scale = 1000.0 / float64(Stopwatch.Frequency)
+      let p50 = (float64(samples[(frames - 1) / 2]) * scale).ToString("F3")
+      let p99 = (float64(samples[int32(Math.Ceiling(float64(frames) * 0.99)) - 1]) * scale).ToString("F3")
+      let maximum = (float64(samples[frames - 1]) * scale).ToString("F3")
+      let name = if i == 0 { "frame" } else { stageName(FrameProfileStage(i)) }
+      Console.WriteLine("[goo.profile.tail_ms/frame] phase=$name window=$frames p50=$p50 p99=$p99 max=$maximum")
+      let total = totalsOrCreate()[i]
+      if total.GcMeasured {
+        let pauseMs = (float64(total.PauseTicks) / 10000.0).ToString("F3")
+        let exclusive = (float64(total.GcExclusiveTicks) * scale / float64(frames)).ToString("F3")
+        Console.WriteLine("[goo.profile.gc] phase=$name process_pause_ms=$pauseMs gc_exclusive_ms/frame=$exclusive frames_pause_ge_2ms=" + total.PauseFrames.ToString())
+      }
+    }
 
     sb.Clear()
     sb.Append("[goo.profile.alloc_B/frame] total=").Append(bytes(FrameProfileStage.Frame))
@@ -301,6 +357,7 @@ internal class FrameProfiler {
     case FrameProfileStage.TargetFlush: "target_flush"
     case FrameProfileStage.Present: "present"
     case FrameProfileStage.Virtualization: "virtualization"
+    case FrameProfileStage.CapWait: "cap_wait"
     default: ""
   }
 

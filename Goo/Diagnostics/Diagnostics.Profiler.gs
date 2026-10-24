@@ -23,6 +23,7 @@ internal partial class DiagnosticPipeHost {
     private func startProfile(client DiagnosticPipeClient, payload JsonElement) string {
         let requested = profileInteger(payload, "bufferBytes", int64(FrameRecorder.DefaultBufferBytes))
         let bufferBytes = int32(Math.Clamp(requested, 65536L, int64(FrameRecorder.DefaultBufferBytes)))
+        let allocationSeconds = profileInteger(payload, "allocationSeconds", 0L)
         lock client {
             if client.IsClosed {
                 throw ObjectDisposedException("DiagnosticPipeClient")
@@ -40,6 +41,9 @@ internal partial class DiagnosticPipeHost {
                 return "{\"command\":\"profiler.start\",\"state\":\"Busy\"}"
             }
             client.Recorder = current
+            if allocationSeconds > 0L {
+                current.CaptureAllocations(int32(Math.Clamp(allocationSeconds, 2L, 60L)))
+            }
             session.SampleProfile(current)
             var device = session.ProfileMetadata()
             device.Ticks = System.Diagnostics.Stopwatch.GetTimestamp() - current.Origin
@@ -78,7 +82,7 @@ internal partial class DiagnosticPipeHost {
                 .Append("}]")
                 .Append(",\"gpuTiming\":\"per-submission-elapsed\",\"baseline\":[]")
                 .Append(
-                ",\"phaseSemantics\":{\"Paint\":\"entire target.Render\",\"Diff\":\"derived, not a duration\",\"Frame\":\"pump work excluding native wait\",\"allocatedBytes\":\"current-thread traffic, nested totals overlap\"}"
+                ",\"phaseSemantics\":{\"Paint\":\"entire target.Render\",\"Diff\":\"derived, not a duration\",\"Frame\":\"pump work excluding native wait\",\"allocatedBytes\":\"current-thread traffic, nested totals overlap\",\"gcPauseTicks\":\"process-wide pause delta in 100ns units, frames >= 2ms marked\",\"gcExclusive\":\"elapsed minus bounded process pause, nested scopes overlap\",\"CapWait\":\"native event wait while a capped window awaits its next frame\",\"allocationSamples\":\"opt-in 2-60s GCAllocationTick_V4 samples, at most 500 types\"}"
             )
                 .Append(
                 ",\"frameResults\":{\"-1\":\"failed\",\"0\":\"skipped\",\"1\":\"rendered\",\"2\":\"deferred\"},\"phaseNames\":["
@@ -281,6 +285,8 @@ internal partial class DiagnosticPipeHost {
             .Append(r.Result)
             .Append(",\"allocatedBytes\":")
             .Append(optional(r.AllocatedBytes))
+            .Append(",\"gcPauseTicks\":")
+            .Append(optional(r.GcPauseTicks))
             .Append(",\"value0\":")
             .Append(optional(r.Value0))
             .Append(",\"value1\":")
