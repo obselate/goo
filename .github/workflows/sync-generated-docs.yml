@@ -58,7 +58,8 @@ jobs:
                   '--source', str(project.parent), '--xml', str(xml), '--output', output,
               ], check=True)
           PY
-          rm -rf docs/api-native-menus docs/api-native-dialogs docs/api-notifications
+          rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
+            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell
           python3 plugins/goo/scripts/sync_docs.py .
 
       - name: Commit generated documentation

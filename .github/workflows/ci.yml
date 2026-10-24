@@ -131,7 +131,8 @@ jobs:
           dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
             --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
             --output docs/api-app-host --source Goo.AppHost
-          rm -rf docs/api-native-menus docs/api-native-dialogs docs/api-notifications
+          rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
+            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell
 
       - name: Validate onboarding and release metadata
         run: |
