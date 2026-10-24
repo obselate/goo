@@ -8,12 +8,11 @@ import System
 import System.Threading.Tasks
 
 internal shared class AndroidNativeMenuSmoke {
-    internal func TryRun(view GooView, ownerActivity Activity? = nil, relaunch bool = false) bool {
-        if !view.IsAttachedToWindow || view.Width == 0 || view.Height == 0 {
+    internal func TryRun(view GooView, finishActivity Activity? = nil) bool {
+        if !view.IsAttachedToWindow || !view.Window.IsVisible || view.Width == 0 || view.Height == 0 {
             return false
         }
-        if ownerActivity != nil {
-            let reason = if relaunch { "activity-relaunch" } else { "activity-close" }
+        if finishActivity != nil {
             let closing = NativeMenus.ShowContextMenuAsync(
                 view.Window,
                 Point(),
@@ -23,18 +22,13 @@ internal shared class AndroidNativeMenuSmoke {
                 (task Task[NativeMenuResult]) -> Log.Info(
                     "GooNativeMenus",
                     if task.Result.Status == NativeMenuStatus.OwnerClosed {
-                        "passed " + reason
+                        "passed activity-close"
                     } else {
-                        "failed " + reason + " " + task.Result.Status.ToString()
+                        "failed activity-close " + task.Result.Status.ToString()
                     }
                 )
             )
-            view.PostDelayed(
-                () -> {
-                    if relaunch { ownerActivity.Recreate() } else { ownerActivity.Finish() }
-                },
-                500
-            )
+            view.PostDelayed(finishActivity.Finish, 500)
             return true
         }
         using let bar = NativeMenuBar(view.Window)
