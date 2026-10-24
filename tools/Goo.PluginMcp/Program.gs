@@ -175,7 +175,10 @@ partial class GooServer {
             return int64(value.GetValue[int32]())
         }
 
-        func B(node JsonNode, key string) bool -> node[key]?.GetValue[bool]() ?? false
+        func B(node JsonNode, key string) bool -> node[key] is JsonValue value && value.TryGetValue[bool](
+            out var boolean
+        ) &&
+            boolean
 
         func Strings(values IEnumerable[string]) JsonArray {
             let result = JsonArray()

@@ -183,10 +183,10 @@ partial class GooServer {
                         }
                         throw GooFailure(
                             Failure(
-                                S(detail, "code", "cli-failed"),
-                                S(detail, "message", "Goo CLI failed."),
-                                S(detail, "phase", phase),
-                                B(detail, "mayHaveApplied"),
+                                ErrorText(detail, "code", "cli-failed"),
+                                ErrorText(detail, "message", "Goo CLI failed."),
+                                ErrorText(detail, "phase", phase),
+                                Truthy(detail["mayHaveApplied"]),
                                 S(detail, "action"),
                                 context
                             )
@@ -274,8 +274,8 @@ partial class GooServer {
             .Select(x -> JsonNode.Parse(x)!!.AsObject())
             .ToArray()
         let hello = messages.FirstOrDefault(x -> S(x, "type") == "hello") ?? JsonObject()
-        let result = messages.LastOrDefault(x -> x["id"] != nil && x["id"]!!.ToJsonString() != "0")
-        if result == nil || !B(result, "ok") || result["error"] != nil || S(result, "type") == "error" {
+        let result = messages.LastOrDefault(x -> Truthy(x["id"]))
+        if result == nil || !B(result, "ok") || Truthy(result["error"]) || S(result, "type") == "error" {
             let detail = if result?["error"] is JsonObject {
                 result!!["error"]!!.AsObject()
             } else {
@@ -284,10 +284,10 @@ partial class GooServer {
             let fallback = "Goo request failed: " + (result?.ToJsonString() ?? "None")
             throw GooFailure(
                 Failure(
-                    S(detail, "code", code),
-                    S(detail, "message", fallback.Substring(0, Math.Min(3000, fallback.Length))),
-                    S(detail, "phase", phase),
-                    B(detail, "mayHaveApplied")
+                    ErrorText(detail, "code", code),
+                    ErrorText(detail, "message", fallback.Substring(0, Math.Min(3000, fallback.Length))),
+                    ErrorText(detail, "phase", phase),
+                    Truthy(detail["mayHaveApplied"])
                 )
             )
         }
@@ -360,6 +360,29 @@ partial class GooServer {
     data class ProcessResult(Code int32, Output string, Error string) { }
     shared {
         const Recovery string = "Run `dotnet tool update --global Goo.DevTools --version 0.15.0`. Set GOO_CLI only when testing a compatible source build."
+
+        func Truthy(value JsonNode?) bool {
+            if value == nil {
+                return false
+            }
+            return switch value.GetValueKind() {
+                case JsonValueKind.True: true
+                case JsonValueKind.Number: value.GetValue[double]() != 0
+                case JsonValueKind.String: value.GetValue[string]() != ""
+                case JsonValueKind.Array: value.AsArray().Count != 0
+                case JsonValueKind.Object: value.AsObject().Count != 0
+                default: false
+            }
+        }
+
+        func ErrorText(detail JsonObject, name string, fallback string) string {
+            let value = S(detail, name)
+            return if value == "" {
+                fallback
+            } else {
+                value
+            }
+        }
 
         func Execute(command IEnumerable[string], timeout double) ProcessResult {
             let parts = command.ToArray()

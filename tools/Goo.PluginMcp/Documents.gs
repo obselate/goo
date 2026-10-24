@@ -30,7 +30,7 @@ partial class GooServer {
 
     func Documents(root string)[]string {
         if root == Bundle {
-            return Manifest["files"]!!.AsObject().Select(x -> x.Key).Order().ToArray()
+            return Manifest["files"]!!.AsObject().Select(x -> x.Key).Order(StringComparer.Ordinal).ToArray()
         }
         let paths = List[string](){
             "README.md",
@@ -47,7 +47,7 @@ partial class GooServer {
                 )
             }
         }
-        return paths.Where(x -> File.Exists(Path.Combine(root, x))).Order().ToArray()
+        return paths.Where(x -> File.Exists(Path.Combine(root, x))).Order(StringComparer.Ordinal).ToArray()
     }
 
     func Document(root string, path string) string {

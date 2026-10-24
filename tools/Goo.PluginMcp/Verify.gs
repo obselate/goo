@@ -90,6 +90,13 @@ class Verify {
                 hashes[path] = GooServer.Hash(File.ReadAllBytes(Path.Combine(root, "reference", path)))
             }
             Check(JsonNode.DeepEquals(hashes, bundled["provenance"]!!["files"]), "Bundle content hashes differ")
+            Check(
+                JsonNode.DeepEquals(
+                    bundled["documents"],
+                    GooServer.Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))
+                ),
+                "Document order differs"
+            )
             Check(GooServer.S(bundled["provenance"]!!, "compilerCommit").Length == 40, "Compiler provenance missing")
             let search = Data(await Call(client, "goo_search", JsonObject(){["query"] = "how do I rebuild a cell"}))
             Check(
@@ -204,9 +211,16 @@ class Verify {
         File.Delete(fresh)
         let outside = Path.Combine(output, "outside.md")
         File.WriteAllText(outside, "Outside selected root")
-        File.CreateSymbolicLink(fresh, outside)
-        await Call(client, "goo_read", JsonObject(){["path"] = "docs/api/new-api.md", ["repository"] = checkout}, true)
-        File.Delete(fresh)
+        if !OperatingSystem.IsWindows() {
+            File.CreateSymbolicLink(fresh, outside)
+            await Call(
+                client,
+                "goo_read",
+                JsonObject(){["path"] = "docs/api/new-api.md", ["repository"] = checkout},
+                true
+            )
+            File.Delete(fresh)
+        }
         return checkout
     }
 
@@ -287,9 +301,6 @@ class Verify {
         }
         let build = GooServer.Execute(
             []string{
-                "nice",
-                "-n",
-                "10",
                 "dotnet",
                 "build",
                 Path.Combine(app, "AgentProbe.gsproj"),
