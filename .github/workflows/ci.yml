@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs tests
+            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs Goo.Printing Goo.SpellCheck Goo.SpellCheck.Hunspell tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -153,11 +153,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libhunspell-1.7-0
-          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.csproj \
+          GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
-          dotnet format Goo.SpellCheck/Goo.SpellCheck.csproj --verify-no-changes --no-restore
-          dotnet format Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.csproj --verify-no-changes --no-restore
-          dotnet format Goo.Printing/Goo.Printing.csproj --verify-no-changes --no-restore
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -624,7 +621,7 @@ jobs:
 
       - name: Verify presentation-independent offscreen pages
         run: |
-          dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.csproj \
+          dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -o artifacts/offscreen-nativeaot
@@ -633,7 +630,7 @@ jobs:
             GOO_VK_DIAGNOSTICS=1 artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
       - name: Verify independent pages and raster PDF
         run: |
-          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.csproj \
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -o artifacts/printing-nativeaot
@@ -792,7 +789,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         run: |
           for project in Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.Printing; do
-            dotnet pack "$project/$project.csproj" -c Release -o artifacts/packages \
+            dotnet pack "$project/$project.gsproj" -c Release -o artifacts/packages \
               -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           done
       - name: Pack optional audio
