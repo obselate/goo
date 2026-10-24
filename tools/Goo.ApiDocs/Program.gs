@@ -384,7 +384,8 @@ func BuildPage(
     matched HashSet[string],
     guideRoot string,
     product string,
-    sourceLink string
+    sourceLink string,
+    isRoot bool
 ) string {
     let text = StringBuilder()
     text.AppendLine("# $directory API")
@@ -393,7 +394,13 @@ func BuildPage(
         "Generated from `$product.xml`. Source declarations supply type ownership and XML-emitter omissions."
     )
     text.AppendLine()
-    text.AppendLine("Source: [`$product/$directory`]($sourceLink/$directory)")
+    text.AppendLine(
+        if isRoot {
+            "Source: [`$product`]($sourceLink)"
+        } else {
+            "Source: [`$product/$directory`]($sourceLink/$directory)"
+        }
+    )
     if directory == "Accessibility" ||
         directory == "Window" ||
         directory == "Input" ||
@@ -608,7 +615,16 @@ let pages = Dictionary[string, string](StringComparer.Ordinal)
 for directoryPath in documentedDirectories {
     let directory = Path.GetFileName(directoryPath)
     let pageTypes = types.Where((type ApiType) -> type.Directory == directory).ToArray()
-    let markdown = BuildPage(directory, pageTypes, members, matched, guideRoot, product, sourceLink)
+    let markdown = BuildPage(
+        directory,
+        pageTypes,
+        members,
+        matched,
+        guideRoot,
+        product,
+        sourceLink,
+        directoryPath == sourceRoot
+    )
     pages.Add(directory.ToLowerInvariant() + ".md", FormatPage(markdown))
 }
 
