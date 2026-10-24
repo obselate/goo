@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.13.0 - 2026-10-23
+
+- Port the repository build tools, linter and package projects to G#.
+- Stop queued application actions from running during deferred owner close.
+- Port the goo CLI and its packaging commands to G#.
+- Add a consumable window key preview for overlay dismissal.
+- Port the core, API, image, gesture, Vulkan ABI and native menu test projects to G#.
+- Port the optional printing and spelling packages and tests to G#, fixing macOS available spelling languages.
+- Remove managed allocations from vector path comparison and hot color comparisons. Comparing two equal 128-rectangle paths drops from 179 us and 502 KB to 18 us and 0 B.
+
 ## 0.12.1 - 2026-10-23
 
 - Publish Goo.Audio without an empty symbol package, so every package publishes. Goo.DevTools, Goo.DevTools.App, Goo.Templates, Goo.SpellCheck and Goo.Printing missed 0.12.0.
