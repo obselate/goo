@@ -30,7 +30,7 @@ internal sealed class ShapedText : IDisposable {
   internal prop GlyphCount int32{
     get {
       var result int32 = 0
-      for run in runs { result = result + run.Glyphs.Length }
+      for index in 0 ... runs.Count { result = result + runs[index].Glyphs.Length }
       return result
     }
   }

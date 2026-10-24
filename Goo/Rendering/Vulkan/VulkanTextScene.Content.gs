@@ -88,7 +88,8 @@ internal unsafe sealed partial class VulkanTextScene {
     color uint32,
     transformIndex int32) {
       if decoration == TextDecoration.None { return }
-      for run in shape.Runs {
+      for index in 0 ... shape.Runs.Count {
+        let run = shape.Runs[index]
         if !HasVisibleGlyph(run) { continue }
         let left = lineX + MathF.Min(run.VisualStart, run.VisualEnd)
         let right = lineX + MathF.Max(run.VisualStart, run.VisualEnd)
@@ -190,7 +191,8 @@ internal unsafe sealed partial class VulkanTextScene {
   }
 
   private func HasVisibleGlyphs(shape ShapedText) bool {
-    for run in shape.Runs {
+    for index in 0 ... shape.Runs.Count {
+      let run = shape.Runs[index]
       if HasVisibleGlyph(run) { return true }
     }
     return false
