@@ -82,10 +82,10 @@ internal partial class Reconciler {
       if seed { if let initialize = declaration.Seed { initialize(cell) } }
       declaration.ApplyInput(cell)
       if let configure = declaration.Configure { configure(cell) }
-    } catch (error Exception) {
+    } catch (_ Exception) {
       cell.contextReader?.Cancel()
       cell.SetRebuildSubmission(CellInvalidated)
-      throw error
+      rethrow
     } finally { ContextEnvironment.Current = previous }
   }
 
@@ -241,9 +241,9 @@ internal partial class Reconciler {
       if !(b is CellElement) {
         reconcileSparseState(result, b)
       }
-    } catch (error Exception) {
+    } catch (_ Exception) {
       NodeLifecycle.DisposeTree(result)
-      throw error
+      rethrow
     }
     markMounted()
     return result
@@ -260,9 +260,9 @@ internal partial class Reconciler {
       cell.SetRebuildSubmission(CellInvalidated)
       cell.mountKey = nil
       return rebuildMounted(nil, cell, nil)
-    } catch (error Exception) {
+    } catch (_ Exception) {
       cell.ReleaseMountClaim()
-      throw error
+      rethrow
     }
   }
 
@@ -288,9 +288,9 @@ internal partial class Reconciler {
       mountChildren(n, children)
       state.Commit()
       return n
-    } catch (error Exception) {
+    } catch (_ Exception) {
       state.Cancel()
-      throw error
+      rethrow
     }
   }
 
@@ -322,9 +322,9 @@ internal partial class Reconciler {
         MarkEffects(ReconcileEffects.Accessibility)
       }
       return n
-    } catch (error Exception) {
+    } catch (_ Exception) {
       state.Cancel()
-      throw error
+      rethrow
     }
   }
 
@@ -347,9 +347,9 @@ internal partial class Reconciler {
         n.Children.Add(mounted)
         if virtualRows { FrameWorkCounters.VirtualMounts++ }
       }
-    } catch (error Exception) {
+    } catch (_ Exception) {
       NodeLifecycle.DisposeTree(n)
-      throw error
+      rethrow
     } finally {
       scratch.Return(scratchScope)
     }
@@ -805,11 +805,11 @@ internal partial class Reconciler {
     let previous = ElementHandles.Detach(n)
     try {
       return mountCore(b)
-    } catch (error Exception) {
+    } catch (_ Exception) {
       if let handle = previous {
         ElementHandles.Bind(n, handle, Owner)
       }
-      throw error
+      rethrow
     }
   }
 
@@ -876,9 +876,9 @@ internal partial class Reconciler {
         old.DisposeMounted()
       }
       return result
-    } catch (error Exception) {
+    } catch (_ Exception) {
       fresh.DisposeMounted()
-      throw error
+      rethrow
     }
   }
 
@@ -1416,13 +1416,13 @@ internal partial class Reconciler {
       if let error = disposeTrees(retire) {
         throw error
       }
-    } catch (error Exception) {
+    } catch (_ Exception) {
       if !committed {
         rollbackReplacements(scratchScope)
         disposeTrees(scratchScope.Provisional)
         rollbackHandleReplacements(scratchScope)
       }
-      throw error
+      rethrow
     }
   }
 
