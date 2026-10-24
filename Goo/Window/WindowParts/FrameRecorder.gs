@@ -43,6 +43,7 @@ internal data struct FrameTraceRecord {
     internal var OwnerKind int32?
     internal var Result int32
     internal var AllocatedBytes int64?
+    internal var GcPauseTicks int64?
     internal var Value0 uint64?
     internal var Value1 uint64?
     internal var GpuElapsedNs uint64?
@@ -144,7 +145,8 @@ internal partial class FrameRecorder {
         end int64,
         bytes int64? = nil,
         result int32 = 0,
-        source string? = nil
+        source string? = nil,
+        gcPauseTicks int64? = nil
     ) {
         if start < Origin || end < start {
             return
@@ -162,6 +164,7 @@ internal partial class FrameRecorder {
                 EventId: eventId,
                 Category: category,
                 AllocatedBytes: bytes,
+                GcPauseTicks: gcPauseTicks,
                 Result: result,
                 Source: source
             }
@@ -267,6 +270,7 @@ internal partial class FrameRecorder {
     }
 
     private func FinishStop() {
+        allocationCapture?.Dispose()
         lock gate {
             if complete { return }
             for pending in pendingGpu.Values {

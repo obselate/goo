@@ -719,7 +719,7 @@ class DiagnosticSession {
         return sent
     }
 
-    internal func StartProfiler() {
+    internal func StartProfiler(allocationSamples bool = false) {
         if !Capabilities.ProfilerTrace || State != DiagnosticConnectionState.Connected || Profiler?.Active == true {
             return
         }
@@ -731,7 +731,14 @@ class DiagnosticSession {
         profilerReadPending = false
         profilerStopSent = false
         profilerCommands = Dictionary[string, string]()
-        if !SendRequest("profiler.start", "{\"bufferBytes\":16777216}") {
+        if !SendRequest(
+            "profiler.start",
+            if allocationSamples {
+                "{\"bufferBytes\":16777216,\"allocationSeconds\":10}"
+            } else {
+                "{\"bufferBytes\":16777216}"
+            }
+        ) {
             FailProfiler("Could not queue profiler.start")
         }
     }

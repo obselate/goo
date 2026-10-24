@@ -63,6 +63,7 @@ internal partial class FrameRecorder {
 
     private func SampleManaged() {
         let ticks = Stopwatch.GetTimestamp()
+        Counter("gc.pause.total", "GC.GetTotalPauseDuration", uint64(GC.GetTotalPauseDuration().Ticks), ticks, unit: "100ns")
         Counter("managed.allocated.total", "GC.GetTotalAllocatedBytes(false)",
             uint64(GC.GetTotalAllocatedBytes(false)), ticks)
         Counter("managed.heap.estimate", "GC.GetTotalMemory(false)", uint64(GC.GetTotalMemory(false)), ticks)
