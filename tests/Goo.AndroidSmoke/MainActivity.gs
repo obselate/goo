@@ -85,14 +85,18 @@ class MainActivity : GooActivity {
         if IsFinishing || IsDestroyed {
             return
         }
+        let destroy = Intent?.GetBooleanExtra("goo.native_menu_destroy", false) == true
+        let relaunch = !destroy && Intent?.GetBooleanExtra("goo.native_menu_relaunched", false) != true
         if AndroidNativeMenuSmoke.TryRun(
             GooView,
-            if Intent?.GetBooleanExtra("goo.native_menu_destroy", false) == true {
+            if destroy || relaunch {
                 this
             } else {
                 default(MainActivity?)
-            }
+            },
+            relaunch
         ) {
+            if relaunch { Intent!!.PutExtra("goo.native_menu_relaunched", true) }
             return
         }
         if attempt >= 100 {
