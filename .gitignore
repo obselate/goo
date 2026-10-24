@@ -27,7 +27,6 @@
 !/.github/patches/accesskit/
 !/.github/patches/accesskit/**
 !/.github/scripts/build-accesskit-linux-x64.sh
-!/.github/scripts/validate-accessibility-package.py
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
 !/.github/scripts/test-macos-activation.py
@@ -45,17 +44,13 @@
 !/.github/scripts/fetch-sdl-win-x64.sh
 !/.github/scripts/install-shader-toolchain-linux-x64.sh
 !/.github/scripts/install-vulkan-validation-layer-linux-x64.sh
-!/.github/scripts/validate-android-package.py
 !/.github/scripts/run-android-accessibility.sh
 !/.github/scripts/check-android-data-transfer.sh
-!/.github/scripts/validate-text-native-rebuild.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
 !/.github/scripts/linux-bundle-files.txt
 !/.github/scripts/stage-macos-arm64.sh
 !/.github/scripts/validate-release.py
-!/.github/scripts/validate-onboarding.py
-!/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
 !/.github/scripts/run-android-native-menus.sh
 !/.github/scripts/check-wayland-data-transfer.sh
@@ -143,6 +138,8 @@
 !/tools/Goo.SyncDocs/**
 !/tools/Goo.VulkanManifest/
 !/tools/Goo.VulkanManifest/**
+!/tools/Goo.RepositoryChecks/
+!/tools/Goo.RepositoryChecks/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
 

@@ -138,7 +138,7 @@ jobs:
       - name: Validate onboarding and release metadata
         run: |
           dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .
-          .github/scripts/validate-onboarding.py
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding
 
       - name: Run focused API contract tests
         if: needs.changes.outputs.api == 'true'
@@ -186,10 +186,6 @@ jobs:
       - name: Validate Goo DevTools integrations
         run: |
           node --check integrations/vscode/extension.js
-          python3 - <<'PY'
-          import xml.etree.ElementTree as element_tree
-          element_tree.parse("integrations/rider/GooDevTools.xml")
-          PY
 
   macos-native:
     needs: changes
@@ -236,14 +232,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
 
-      - name: Load release version
-        if: needs.changes.outputs.full == 'true'
-        run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
-
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
+
+      - name: Load release version
+        if: needs.changes.outputs.full == 'true'
+        run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
 
       - name: Restore pinned G# authoring tools
         if: needs.changes.outputs.full == 'true'
@@ -511,14 +507,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.changes.outputs.full == 'true'
 
-      - name: Load release version
-        if: needs.changes.outputs.full == 'true'
-        run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
-
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
+
+      - name: Load release version
+        if: needs.changes.outputs.full == 'true'
+        run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
 
       - name: Restore pinned G# authoring tools
         if: needs.changes.outputs.full == 'true' && (github.ref_type != 'tag')
@@ -644,7 +640,7 @@ jobs:
             Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz.so
           cmp artifacts/native/text/libgoo-harfbuzz-gpu.so \
             Goo/Runtime/Vulkan/linux-x64/libgoo-harfbuzz-gpu.so
-          python3 .github/scripts/validate-text-native-rebuild.py \
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- text-rebuild \
             Goo/Runtime/Vulkan/linux-x64/text-native-build.json \
             artifacts/native/text/text-native-build.json
 
@@ -830,20 +826,20 @@ jobs:
           name: goo-linux-build
           path: ${{ runner.temp }}/goo-linux-build
 
+      - &linux-dotnet
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
+
       - &linux-build-restore
         if: needs.changes.outputs.full == 'true'
         name: Restore Linux build state
         run: |
           tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-build.tar.gz"
           tar -xzf "$RUNNER_TEMP/goo-linux-build/goo-linux-toolchain.tar.gz" -C "$RUNNER_TEMP"
-          echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
+          echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
           echo "VK_LAYER_PATH=$RUNNER_TEMP/goo-vulkan-validation-layer/vulkan-validationlayers-1.4.313.0/usr/share/vulkan/explicit_layer.d" >> "$GITHUB_ENV"
-
-      - &linux-dotnet
-        if: needs.changes.outputs.full == 'true'
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
-        with:
-          global-json-file: global.json
 
       - *linux-apt-update
       - *linux-apt-cache
@@ -913,7 +909,7 @@ jobs:
         run: |
           dotnet pack Goo.Accessibility/Goo.Accessibility.gsproj -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-          python3 .github/scripts/validate-accessibility-package.py "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- accessibility "artifacts/packages/Goo.Accessibility.$GOO_VERSION.nupkg"
 
       - name: Verify the clean NativeAOT image consumer
         if: needs.changes.outputs.full == 'true'
@@ -982,8 +978,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - *linux-build-download
-      - *linux-build-restore
       - *linux-dotnet
+      - *linux-build-restore
       - *linux-apt-update
       - *linux-apt-cache
       - *linux-dependencies
@@ -1257,8 +1253,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.changes.outputs.full == 'true'
       - *linux-build-download
-      - *linux-build-restore
       - *linux-dotnet
+      - *linux-build-restore
       - *linux-apt-update
       - *linux-apt-cache
       - *linux-dependencies
@@ -1515,6 +1511,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
       - name: Rebuild Windows text native libraries
         run: |
           mkdir -p artifacts/windows-native
@@ -1535,7 +1534,7 @@ jobs:
         run: |
           cmp artifacts/windows-native/goo-harfbuzz.dll Goo/Runtime/Vulkan/win-x64/goo-harfbuzz.dll
           cmp artifacts/windows-native/goo-harfbuzz-gpu.dll Goo/Runtime/Vulkan/win-x64/goo-harfbuzz-gpu.dll
-          python3 .github/scripts/validate-text-native-rebuild.py \
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- text-rebuild \
             Goo/Runtime/Vulkan/win-x64/text-native-build.json \
             artifacts/windows-native/text-native-build.json
 
@@ -1574,7 +1573,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $version = python .github/scripts/release_version.py --print
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/direct-driver-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check elevated app-local direct Vulkan loading without an installed ICD
@@ -1622,7 +1621,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $version = python .github/scripts/release_version.py --print
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
@@ -1660,7 +1659,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $version = python .github/scripts/release_version.py --print
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           $installer = & tools/Goo.DevTools.Cli/Packaging/fetch-inno-setup.ps1 "$env:RUNNER_TEMP/goo-inno"
           $inno = Join-Path $env:RUNNER_TEMP 'goo-inno/compiler'
           $process = Start-Process $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$inno" -Wait -PassThru
@@ -1689,7 +1688,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $version = python .github/scripts/release_version.py --print
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.gsproj -c Release -r win-x64 `
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -p:GooMenuUsePackages=true `
             -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version `
@@ -1701,7 +1700,7 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
-          $version = python .github/scripts/release_version.py --print
+          $version = dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo
           $env:GOO_CLIPBOARD_CHILD = (Resolve-Path artifacts/windows-smoke/Goo.PackageSmoke.exe).Path
           dotnet restore tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj --configfile tests/Goo.PackageSmoke/NuGet.config -p:ImportDirectoryBuildProps=false -p:GooSmokeUsePackages=true -p:GooReleaseVersion=$version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -1747,22 +1746,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Load release version
-        run: echo "GOO_VERSION=$(python3 .github/scripts/release_version.py --print)" >> "$GITHUB_ENV"
-
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+
+      - name: Load release version
+        run: echo "GOO_VERSION=$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)" >> "$GITHUB_ENV"
 
       - name: Validate release tag
         shell: bash
         run: |
           [[ "$GOO_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]
           test "$GITHUB_REF_NAME" = "v$GOO_VERSION"
-          python3 .github/scripts/release_version.py --check
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- release --check
           git fetch origin main --no-tags
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main
-          python3 .github/scripts/release_version.py --notes > "$RUNNER_TEMP/goo-release-notes.md"
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- release --notes > "$RUNNER_TEMP/goo-release-notes.md"
 
       - name: Download release candidates
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -1911,8 +1910,8 @@ jobs:
       - name: Verify Release APK and AAB payloads
         if: needs.changes.outputs.full == 'true'
         run: |
-          python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
-          python3 .github/scripts/validate-android-package.py tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 tests/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: needs.changes.outputs.full == 'true'
@@ -1947,7 +1946,7 @@ jobs:
             --output "$PWD/artifacts/signed-aab"
           bundle="$(find artifacts/signed-aab -name '*.[aA][aA][bB]' -print -quit)"
           test -n "$bundle"
-          python3 .github/scripts/validate-android-package.py "$bundle"
+          dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- android "$bundle"
           java -jar "$GOO_BUNDLETOOL" build-apks --bundle="$bundle" \
             --output="$RUNNER_TEMP/consumer.apks" --mode=universal \
             --ks="$AndroidSigningKeyStore" --ks-key-alias=upload \
