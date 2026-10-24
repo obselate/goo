@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio Goo.AppHost Goo.RichText tests
+            --severity GL0001=none Goo Goo.Audio Goo.AppHost tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -113,7 +113,6 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: |
           dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
-          dotnet build Goo.RichText/Goo.RichText.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
         if: needs.changes.outputs.api == 'true'
@@ -134,7 +133,7 @@ jobs:
             --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
             --output docs/api-app-host --source Goo.AppHost
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
-            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell
+            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-rich-text
 
       - name: Validate onboarding and release metadata
         run: |
@@ -877,11 +876,6 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
-      - name: Pack optional rich text
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet pack Goo.RichText/Goo.RichText.gsproj -c Release -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack optional audio
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1207,7 +1201,6 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.RichText*.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
@@ -1236,7 +1229,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.RichText*.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.AppHost.${{ env.GOO_VERSION }}.nupkg
 
@@ -1833,10 +1825,6 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate --no-symbols
-          dotnet nuget push "artifacts/packages/Goo.RichText.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
