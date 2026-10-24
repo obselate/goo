@@ -83,7 +83,7 @@ the handle. Modal state uses xdg-dialog-v1 when available.
 `tests/NativeWindow/foreign_parent_e2e.c` maps parent and child windows on two
 separate Wayland connections. It checks hidden setup, first show, hide/re-show,
 modal changes, malformed and invalid handles, explicit clearing, and parent
-revocation. Its Python runner compiles against the patched SDL library and
+revocation. Its G# runner compiles against the patched SDL library and
 `wayland-client`, runs xdg-shell and libdecor, and checks protocol traces for
 parenting and modal requests before the initial shell commit. Run it on a
 compositor with xdg-foreign-v2 and installed libdecor:
@@ -91,7 +91,8 @@ compositor with xdg-foreign-v2 and installed libdecor:
 ```sh
 sdl_source=/absolute/path/to/patched/SDL3-3.4.0
 sdl_library=/absolute/path/to/patched/libSDL3.so
-python3 tests/NativeWindow/test_sdl_foreign_parent.py "$sdl_source" "$sdl_library"
+XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+  dotnet run --project tools/Goo.Investigation -c Release -- foreign-parent "$sdl_source" "$sdl_library"
 ```
 
 The fixture checks the actual xdg-surface listener owner to prevent silent

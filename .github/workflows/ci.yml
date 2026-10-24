@@ -1001,7 +1001,7 @@ jobs:
       - name: Collect advisory consumer publish report
         if: needs.changes.outputs.full == 'true'
         run: |
-          python3 tools/Goo.ConsumerPerformance/run.py \
+          dotnet run --project tools/Goo.Investigation -c Release -- performance \
             --output artifacts/consumer-performance \
             --rid linux-x64 \
             --package-version "$GOO_VERSION" \
