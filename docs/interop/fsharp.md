@@ -73,9 +73,7 @@ let list =
 `yield!` spreads a sequence. `ResizeArray<Blob>` supplies the mutable `IList<Blob>` that `Children` accepts.
 Upcast child values with `:> Blob` when building the list.
 
-- Keyed and unkeyed siblings can mix. Keys must be unique among siblings.
-- Keys retain identity across moves. Unkeyed entries use their absolute sibling index.
-- Writable child lists are shared. Read-only child lists are copied.
+See [shared child-list and identity rules](dotnet.md#shared-api-rules).
 
 ## Variants and lengths
 

@@ -80,9 +80,7 @@ var list = new Container
 
 `Children` has an init setter. Both `Children = [..rows]` and `Children = { child }` work.
 
-- Keyed and unkeyed siblings can mix. Keys must be unique among siblings.
-- Keys retain identity across moves. Unkeyed entries use their absolute sibling index.
-- Writable lists supplied to `Children` are shared. Read-only lists are copied.
+See [shared child-list and identity rules](dotnet.md#shared-api-rules).
 
 ## Variants
 

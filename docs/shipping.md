@@ -1,7 +1,7 @@
 # Ship a desktop app
 
-Create the [starter app](../README.md#quick-start) in a directory named `goo-ship`.
-Check the [platform preflight](platform-preflight.md). SVG support is included in `Goo`.
+Create the [starter app](../README.md#quick-start) in `goo-ship`.
+Run [platform preflight](platform-preflight.md). SVG is included in `Goo`.
 
 Create `Assets/icon.svg`:
 
@@ -12,14 +12,14 @@ Create `Assets/icon.svg`:
 </svg>
 ```
 
-Add this item to the project's `ItemGroup` to copy assets to build and publish output:
+Copy assets to build and publish output in the project's `ItemGroup`:
 
 ```xml
 <Content Include="Assets/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 ```
 
-Import `Goo.Svg`, `System` and `System.IO` in `Program.gs`. Retain the asset as a
-field in the starter's `Counter` Cell, rather than loading it inside `Build`:
+Import `Goo.Svg`, `System` and `System.IO`. Retain the asset in the starter's
+`Counter` Cell, not inside `Build`:
 
 ```gsharp
 private var icon VectorAsset = Svg.Load(Path.Combine(AppContext.BaseDirectory, "Assets", "icon.svg"))
@@ -35,10 +35,9 @@ See [SVG support and limits](svg.md).
 dotnet publish -c Release -r linux-x64 --self-contained true -o publish
 ```
 
-Start `publish/goo_ship` from a different directory to check asset lookup.
-The tested Linux self-contained output was about 93 MB. Distribute the whole
-publish directory, including `Assets`, native libraries and license files.
-Self-contained includes .NET, not GPU drivers, Wayland, system fonts or OS libraries.
+Start `publish/goo_ship` from another directory to check asset lookup.
+Distribute the whole publish directory, including `Assets`, native libraries and
+licenses. Self-contained includes .NET, not GPU drivers, Wayland, fonts or OS libraries.
 
 Publish on the target OS with `-r win-x64` for Windows x64 or `-r osx-arm64` for
 Apple silicon. [NativeAOT is the preferred desktop release mode](../CONTRIBUTING.md#source-setup).
@@ -130,10 +129,10 @@ for commercial use.
 
 ## Linux AppImage
 
-`goo package` is part of the optional `Goo.DevTools` dotnet tool. It publishes a
-Release, self-contained NativeAOT app and stages the complete publish tree.
-Normal build, run and publish behavior is unchanged. Packaging currently requires
-Linux x64 and the NativeAOT build tools. No Flatpak or X11 support is added.
+The optional `Goo.DevTools` dotnet tool supplies `goo package`. It publishes
+a Release, self-contained NativeAOT app and stages the complete output.
+Build, run and publish defaults are unchanged. Requires Linux x64 and NativeAOT
+build tools. Flatpak and X11 are not supported.
 
 Set these properties in the application project:
 
@@ -146,12 +145,11 @@ Set these properties in the application project:
 </PropertyGroup>
 ```
 
-Use a stable reverse-DNS ID with lowercase letters, digits, dots and hyphens.
-`Version` must contain three numeric components. `AssemblyName` must be a portable
-filename containing only letters, digits, dots, underscores and hyphens.
-The icon must be an existing PNG, relative to the project directory.
-App-owned assets and notices must already have `CopyToPublishDirectory` metadata.
-They remain beside the executable, including XML data and nested directories.
+Use a stable reverse-DNS ID with lowercase letters, digits, dots and hyphens,
+a three-part numeric `Version`, and an `AssemblyName` containing only letters,
+digits, dots, underscores and hyphens. The PNG icon path is relative to the project.
+Assets and notices need `CopyToPublishDirectory` metadata. They remain beside the
+executable, including XML data and nested directories.
 
 Install the tool, then fetch the pinned AppImage creator and static type-2 runtime.
 From a Goo source checkout:
@@ -163,33 +161,31 @@ export GOO_APPIMAGE_RUNTIME="$HOME/.cache/goo-appimage/runtime-x86_64"
 goo package --project MyApp.gsproj --target linux --output artifacts/packages
 ```
 
-The fetch script is also shipped as `Packaging/fetch-appimage-tools.sh` beside the
-installed tool DLL. It downloads fixed GitHub asset IDs and checks SHA-256 before
-making the creator executable. Packaging checks the same hashes and never downloads
-tools or a moving latest runtime itself.
+The fetch script also ships beside the installed tool DLL in `Packaging`.
+It downloads fixed GitHub asset IDs and checks SHA-256 before making the creator
+executable. Packaging rechecks the hashes and never downloads tools or a moving runtime.
 
 | Input | SHA-256 |
 | --- | --- |
 | [appimagetool asset 610035789](https://api.github.com/repos/AppImage/appimagetool/releases/assets/610035789) | `95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6` |
 | [type-2 runtime asset 657374641](https://api.github.com/repos/AppImage/type2-runtime/releases/assets/657374641) | `617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46` |
 
-Output is `Id-Version-linux-x64.AppImage`, plus a `.symbols.zip` if the publish
-contains debug symbols. A relative output path is relative to the project.
-`--json` reports artifact paths and unsigned status. Expected failures include
-`unsupported-target`, `missing-tool`, `invalid-tool`, `invalid-package-metadata`,
-`publish-failed`, `stage-failed` and `package-failed`.
+Output is `Id-Version-linux-x64.AppImage`, plus `.symbols.zip` when debug symbols
+exist. Relative output paths use the project directory. `--json` reports paths
+and unsigned status. Failures include `unsupported-target`, `missing-tool`,
+`invalid-tool`, `invalid-package-metadata`, `publish-failed`, `stage-failed`
+and `package-failed`.
 
 Run the AppImage from another directory to check asset paths. The runtime does
 not need a separate `libfuse2` install. If FUSE mounts are prohibited, use
 `./MyApp.AppImage --appimage-extract-and-run`. The mounted app is read-only.
 Keep writable application data outside the bundle.
 
-AppImage is not a sandbox, updater, publisher certificate or desktop installation
-service. This command does not install launchers or file/URI associations.
-The host still needs the supported glibc, native Wayland session, fonts, Vulkan
-loader and GPU driver. Packaging does not expand Goo's platform requirements.
-Keep all required application and dependency license notices in the published
-content, including notices required for the embedded AppImage runtime.
+AppImage adds no sandbox, updater, publisher certificate, desktop installation,
+launchers, or file/URI associations. The host still needs supported glibc, native
+Wayland, fonts, a Vulkan loader and GPU driver. Packaging does not expand platform
+support. Include all application and dependency license notices, including those
+for the embedded AppImage runtime.
 
 ## Publish presets
 
@@ -202,25 +198,13 @@ dotnet publish -c Release -p:PublishProfile=Trimmed -o publish/trimmed
 ```
 
 Both profiles target `linux-x64` and include .NET. `NativeAot` compiles native code
-with size optimization. `Trimmed` keeps the runtime and removes unused code.
-Publish on the target OS. Override the RID with `-r win-x64` or `-r osx-arm64`,
-or change `RuntimeIdentifier` in the profile. NativeAOT needs the
+for size. `Trimmed` keeps the runtime and removes unused code.
+Publish on the target OS. Override with `-r win-x64` or `-r osx-arm64`, or change
+the profile's `RuntimeIdentifier`. NativeAOT needs
 [platform build tools](https://learn.microsoft.com/dotnet/core/deploying/native-aot/).
-Check trim and AOT warnings in your app and dependencies, then test the output.
+Check app and dependency trim/AOT warnings, then test the output.
 Neither profile embeds app-owned assets.
 
-Measured on the unmodified Goo 0.7.35 Linux x64 starter with .NET 10.0.12,
-NVIDIA RTX 3080 and isolated virtual KWin:
-
-| Publish mode | Output size | RSS |
-|---|---:|---:|
-| Default, framework-dependent | 25.77 MiB | 195.59 MiB |
-| Trimmed, self-contained | 30.44 MiB | 183.02 MiB |
-| NativeAOT, self-contained | 21.88 MiB | 155.23 MiB |
-
-Output size is the sum of published file lengths, including symbols and native
-payloads. Default output excludes the installed .NET runtime. RSS was read from
-`smaps_rollup` five seconds after the first successful Vulkan present.
-Trimming saved 12.57 MiB RSS and NativeAOT saved 40.37 MiB in this run.
-Both publishes had no trim or AOT warnings. These are idle starter measurements,
-not memory limits. GPU drivers, app content and host state affect the result.
+Output size includes symbols and native payloads. Framework-dependent output
+excludes the installed .NET runtime. Memory and output size depend on GPU drivers,
+app content and host state, not just publish mode.
