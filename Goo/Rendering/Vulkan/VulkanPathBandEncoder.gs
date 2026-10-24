@@ -61,9 +61,9 @@ internal sealed class PathBandEncoder {
       if !BuildScratch(path) { return PathBandEncoding.Empty }
       return PathBandEncoding(
         scratchMinimumX, scratchMinimumY, scratchMaximumX, scratchMaximumY,
-        horizontalBandScratch.ToArray(), verticalBandScratch.ToArray(),
-        horizontalIndexScratch.ToArray(), verticalIndexScratch.ToArray(),
-        curveScratch.ToArray(), NonZeroFillRuleMask | EvenOddFillRuleMask,
+        horizontalBandScratch, verticalBandScratch,
+        horizontalIndexScratch, verticalIndexScratch,
+        curveScratch, NonZeroFillRuleMask | EvenOddFillRuleMask,
         path.GeometryRevision)
     }
 

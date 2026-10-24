@@ -84,18 +84,18 @@ internal sealed class PathBandEncoding {
   private var geometryRevision uint64
 
   internal init(minimumX float32, minimumY float32, maximumX float32, maximumY float32,
-    horizontalBands []PathAnalyticBand, verticalBands []PathAnalyticBand,
-    horizontalCurveIndices []uint32, verticalCurveIndices []uint32,
-    curves []PathAnalyticCurve, fillRuleMask uint32, revision uint64 = 1uL) {
+    horizontalBands IReadOnlyList[PathAnalyticBand], verticalBands IReadOnlyList[PathAnalyticBand],
+    horizontalCurveIndices IReadOnlyList[uint32], verticalCurveIndices IReadOnlyList[uint32],
+    curves IReadOnlyList[PathAnalyticCurve], fillRuleMask uint32, revision uint64 = 1uL) {
       this.minimumX = minimumX
       this.minimumY = minimumY
       this.maximumX = maximumX
       this.maximumY = maximumY
-      horizontalBandBuffer = List[PathAnalyticBand](horizontalBands.Length)
-      verticalBandBuffer = List[PathAnalyticBand](verticalBands.Length)
-      horizontalIndexBuffer = List[uint32](horizontalCurveIndices.Length)
-      verticalIndexBuffer = List[uint32](verticalCurveIndices.Length)
-      curveBuffer = List[PathAnalyticCurve](curves.Length)
+      horizontalBandBuffer = List[PathAnalyticBand](horizontalBands.Count)
+      verticalBandBuffer = List[PathAnalyticBand](verticalBands.Count)
+      horizontalIndexBuffer = List[uint32](horizontalCurveIndices.Count)
+      verticalIndexBuffer = List[uint32](verticalCurveIndices.Count)
+      curveBuffer = List[PathAnalyticCurve](curves.Count)
       this.horizontalBands = ReadOnlyCollection[PathAnalyticBand](horizontalBandBuffer)
       this.verticalBands = ReadOnlyCollection[PathAnalyticBand](verticalBandBuffer)
       this.horizontalCurveIndices = ReadOnlyCollection[uint32](horizontalIndexBuffer)
