@@ -627,10 +627,10 @@ jobs:
           dotnet build apps/Goo.DevTools/Goo.DevTools.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
 
-      - name: Verify real Gallery profiler UI
+      - name: Verify real profiler UI
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet build apps/Goo.Gallery/Goo.Gallery.gsproj \
+          dotnet build tests/Goo.ProfilerUiFixture/Goo.ProfilerUiFixture.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
           dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
