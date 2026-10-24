@@ -11,7 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Goo.Accessibility\Goo.Accessibility.csproj" />
+    <ProjectReference Include="..\..\Goo.Accessibility\Goo.Accessibility.gsproj" />
     <ProjectReference Include="..\..\Goo\Goo.gsproj"
                       AdditionalProperties="Configuration=CoreTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.CoreBehaviorTestFixtures.props" />
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"

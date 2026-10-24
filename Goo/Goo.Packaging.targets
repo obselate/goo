@@ -180,10 +180,10 @@
           Link="Vulkan/Runtime/MoltenVK-LICENSE.txt"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Always" />
-    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj" />
-    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/**/*.cs"
-                                Exclude="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/**/*.cs;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/obj/**/*.cs" />
-    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderGen/SpirvReflection.cs" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.gsproj" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/**/*.gs"
+                                Exclude="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/**/*.gs;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/obj/**/*.gs" />
+    <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../tools/Goo.ShaderGen/SpirvReflection.gs" />
     <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../Directory.Build.props" />
     <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../Directory.Packages.props" />
     <_GooShaderEffectToolSource Include="$(MSBuildProjectDirectory)/../global.json" />
@@ -205,7 +205,7 @@
           DependsOnTargets="_RecordGooShaderEffectToolPackageInputs"
           Inputs="@(_GooShaderEffectToolSource);$(IntermediateOutputPath)Goo.ShaderEffectToolPackage.inputs"
           Outputs="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.deps.json;$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.runtimeconfig.json">
-    <MSBuild Projects="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.csproj"
+    <MSBuild Projects="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/Goo.ShaderEffectTool.gsproj"
              Targets="Restore;Build"
              Properties="Configuration=$(Configuration);TreatWarningsAsErrors=true" />
     <Touch Files="$(MSBuildProjectDirectory)/../tools/Goo.ShaderEffectTool/bin/$(Configuration)/net10.0/Goo.ShaderEffectTool.dll"
@@ -284,7 +284,7 @@
   </Target>
   <PropertyGroup>
     <GooXmlSupplement>$(MSBuildProjectDirectory)/../docs/api/Goo.xml.supplement.xml</GooXmlSupplement>
-    <GooXmlDocsMergeProject>$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/Goo.XmlDocsMerge.csproj</GooXmlDocsMergeProject>
+    <GooXmlDocsMergeProject>$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/Goo.XmlDocsMerge.gsproj</GooXmlDocsMergeProject>
     <GooXmlDocsMergePath>$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/bin/$(Configuration)/net10.0/Goo.XmlDocsMerge.dll</GooXmlDocsMergePath>
     <_GooXmlDocsMergeDeps>$([System.IO.Path]::ChangeExtension('$(GooXmlDocsMergePath)', '.deps.json'))</_GooXmlDocsMergeDeps>
     <_GooXmlDocsMergeRuntimeConfig>$([System.IO.Path]::ChangeExtension('$(GooXmlDocsMergePath)', '.runtimeconfig.json'))</_GooXmlDocsMergeRuntimeConfig>
@@ -292,9 +292,9 @@
     <GooXmlDocsDotNetHost Condition="'$(GooXmlDocsDotNetHost)' == ''">dotnet</GooXmlDocsDotNetHost>
   </PropertyGroup>
   <ItemGroup>
-    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/Goo.XmlDocsMerge.csproj" />
-    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/**/*.cs"
-                            Exclude="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/bin/**/*.cs;$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/obj/**/*.cs" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/Goo.XmlDocsMerge.gsproj" />
+    <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/**/*.gs"
+                            Exclude="$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/bin/**/*.gs;$(MSBuildProjectDirectory)/../tools/Goo.XmlDocsMerge/obj/**/*.gs" />
     <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../Directory.Build.props" />
     <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../Directory.Packages.props" />
     <_GooXmlDocsMergeSource Include="$(MSBuildProjectDirectory)/../global.json" />

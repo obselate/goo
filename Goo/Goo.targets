@@ -28,7 +28,7 @@
     <GooShaderEffectToolPath
         Condition="'$(GooShaderEffectToolPath)' == '' and Exists('$(MSBuildThisFileDirectory)..\tools\net10.0\any\Goo.ShaderEffectTool.dll')">$(MSBuildThisFileDirectory)..\tools\net10.0\any\Goo.ShaderEffectTool.dll</GooShaderEffectToolPath>
     <GooShaderEffectToolProject
-        Condition="'$(GooShaderEffectToolProject)' == '' and Exists('$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\Goo.ShaderEffectTool.csproj')">$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\Goo.ShaderEffectTool.csproj</GooShaderEffectToolProject>
+        Condition="'$(GooShaderEffectToolProject)' == '' and Exists('$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\Goo.ShaderEffectTool.gsproj')">$(MSBuildThisFileDirectory)..\tools\Goo.ShaderEffectTool\Goo.ShaderEffectTool.gsproj</GooShaderEffectToolProject>
     <_GooShaderEffectToolDir Condition="'$(GooShaderEffectToolProject)' != ''">$([System.IO.Path]::GetDirectoryName('$(GooShaderEffectToolProject)'))</_GooShaderEffectToolDir>
     <GooShaderEffectToolPath
         Condition="'$(GooShaderEffectToolPath)' == '' and '$(_GooShaderEffectToolDir)' != ''">$(_GooShaderEffectToolDir)\bin\$(Configuration)\net10.0\Goo.ShaderEffectTool.dll</GooShaderEffectToolPath>
@@ -48,10 +48,10 @@
 
   <ItemGroup Condition="'$(_GooShaderEffectToolDir)' != ''">
     <_GooShaderEffectToolSource Include="$(GooShaderEffectToolProject)" />
-    <_GooShaderEffectToolSource Include="$(_GooShaderEffectToolDir)\**\*.cs"
-                                Exclude="$(_GooShaderEffectToolDir)\bin\**\*.cs;$(_GooShaderEffectToolDir)\obj\**\*.cs" />
-    <_GooShaderEffectToolSource Include="$(_GooShaderEffectToolDir)\..\Goo.ShaderGen\SpirvReflection.cs"
-                                Condition="Exists('$(_GooShaderEffectToolDir)\..\Goo.ShaderGen\SpirvReflection.cs')" />
+    <_GooShaderEffectToolSource Include="$(_GooShaderEffectToolDir)\**\*.gs"
+                                Exclude="$(_GooShaderEffectToolDir)\bin\**\*.gs;$(_GooShaderEffectToolDir)\obj\**\*.gs" />
+    <_GooShaderEffectToolSource Include="$(_GooShaderEffectToolDir)\..\Goo.ShaderGen\SpirvReflection.gs"
+                                Condition="Exists('$(_GooShaderEffectToolDir)\..\Goo.ShaderGen\SpirvReflection.gs')" />
     <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\Directory.Build.props" />
     <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\Directory.Packages.props" />
     <_GooShaderEffectToolSource Include="$(MSBuildThisFileDirectory)..\global.json" />

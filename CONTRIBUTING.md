@@ -62,7 +62,7 @@ See [code conventions](CONVENTIONS.md) for repository rules and native authoring
 Run the focused managed checks for ordinary API or behavior changes:
 
 ```sh
-dotnet build tools/Goo.Gslint/Goo.Gslint.csproj -c Release
+dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj -c Release
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
   --strict --severity GL0001=none --severity GL0005=none --severity GL0006=none Goo tests
 dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
@@ -84,7 +84,7 @@ Edit the explanatory input, window, tree, layout, and accessibility guides in
 in source XML comments. Do not commit regenerated `docs/api` pages or
 `plugins/goo/reference` files in PRs, because `main` syncs them after merge.
 For a local preview, run
-`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release` after a
+`dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release` after a
 Release build; do not edit generated pages directly. The generator validates all member mappings and parses/formats code
 examples before replacing output pages. Compile runnable examples against the
 current package to verify their types and behavior.

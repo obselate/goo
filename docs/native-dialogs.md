@@ -34,7 +34,7 @@ Reference optional `Goo.NativeDialogs`. Call from the open owner's Goo UI thread
 Generate the API reference locally:
 
 ```sh
-dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.csproj -c Release -- \
+dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
   --source Goo.NativeDialogs \
   --xml Goo.NativeDialogs/bin/Release/net10.0/Goo.NativeDialogs.xml \
   --output docs/api-native-dialogs

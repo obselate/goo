@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Gsharp.NET.Sdk/0.5.26">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <PackageId>Goo.Accessibility</PackageId>
@@ -9,6 +9,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/obselate/goo</RepositoryUrl>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
     <NoWarn>$(NoWarn);NU5128</NoWarn>
     <GooAccessibilityRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</GooAccessibilityRid>
     <GooAccessibilityRid Condition="'$(GooAccessibilityRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</GooAccessibilityRid>
