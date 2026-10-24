@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 apk="$(realpath "${1:?APK path is required}")"
-work="$(realpath -m "${2:-artifacts/android-native-menus}")"
+offscreen_apk="$(realpath "${2:?Offscreen APK path is required}")"
+work="$(realpath -m "${3:-artifacts/android-native-menus}")"
 mkdir -p "$work"/{tmp,avd/device,home,user,cache,logs}
 export TMPDIR="$work/tmp" ANDROID_TMP="$work/tmp"
 export ANDROID_AVD_HOME="$work/avd" ANDROID_EMULATOR_HOME="$work/home"
@@ -122,3 +123,14 @@ if 'FATAL EXCEPTION' in final_log or 'UNHANDLED EXCEPTION' in final_log:
     raise RuntimeError(final_log)
 print('GOO_NATIVE_MENUS_PASS')
 PY
+"$adb" -P 5042 -s emulator-5564 install --no-incremental -r "$offscreen_apk"
+"$adb" -P 5042 -s emulator-5564 logcat -c
+"$adb" -P 5042 -s emulator-5564 shell am start \
+    -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p org.goo.offscreenproof
+for _ in {1..90}; do
+    "$adb" -P 5042 -s emulator-5564 logcat -d -s GooOffscreenProof:I '*:S' > "$work/logs/offscreen.txt"
+    if grep -q 'PASS:\|FAIL:' "$work/logs/offscreen.txt"; then break; fi
+    sleep 0.5
+done
+grep -F 'PASS: paused Android activity, destroyed presentation surface' "$work/logs/offscreen.txt"
+echo GOO_OFFSCREEN_ANDROID_PASS
