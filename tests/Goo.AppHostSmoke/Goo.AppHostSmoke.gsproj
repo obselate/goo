@@ -4,6 +4,6 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Goo.AppHost/Goo.AppHost.gsproj" />
+    <ProjectReference Include="../../Goo/Goo.gsproj" />
   </ItemGroup>
 </Project>

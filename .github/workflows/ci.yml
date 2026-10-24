@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio Goo.AppHost tests
+            --severity GL0001=none Goo Goo.Audio tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -117,10 +117,6 @@ jobs:
       - name: Verify shared gesture recognizers
         if: needs.changes.outputs.api == 'true'
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.gsproj -c Release -p:TreatWarningsAsErrors=true
-      - name: Build optional application hosting
-        if: needs.changes.outputs.api == 'true'
-        run: dotnet build Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
-
 
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
@@ -129,11 +125,8 @@ jobs:
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
             --source Goo.Audio --xml Goo.Audio/bin/Release/net10.0/Goo.Audio.xml \
             --output docs/api-audio
-          dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
-            --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
-            --output docs/api-app-host --source Goo.AppHost
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
-            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell
+            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host
 
       - name: Validate onboarding and release metadata
         run: |
@@ -898,12 +891,6 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             artifacts/gesture-nativeaot/Goo.Gestures.Smoke
 
-      - name: Pack optional application hosting
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet pack Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1198,7 +1185,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.AppHost.${{ env.GOO_VERSION }}.nupkg
 
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
@@ -1782,10 +1768,6 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate --no-symbols
-          dotnet nuget push "artifacts/packages/Goo.AppHost.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols

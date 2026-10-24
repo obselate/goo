@@ -12,12 +12,10 @@
   </ItemGroup>
   <ItemGroup Condition="'$(GooSmokeUsePackages)' != 'true'">
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
-    <ProjectReference Include="..\..\Goo.AppHost\Goo.AppHost.gsproj" />
     <ProjectReference Include="..\..\Goo.Audio\Goo.Audio.gsproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(GooSmokeUsePackages)' == 'true'">
     <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)" />
-    <PackageReference Include="Goo.AppHost" VersionOverride="$(GooReleaseVersion)" />
     <PackageReference Include="Goo.Audio" VersionOverride="$(GooReleaseVersion)" />
   </ItemGroup>
   <ItemGroup>

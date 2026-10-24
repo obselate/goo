@@ -189,6 +189,9 @@ class PublicDocumentationTests {
             "M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)",
             "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
             "M:Goo.TrayIcon.Dispose",
+            "M:Goo.ActivationArguments.Read(System.Collections.Generic.IReadOnlyList{System.String},System.String)",
+            "M:Goo.SingleInstance.AcquireAsync(System.String,Goo.ApplicationActivation,System.Int32)",
+            "M:Goo.Placement.Restore(Goo.Window,Goo.WindowPlacement)",
             "M:Goo.NotificationOptions.#ctor",
             "M:Goo.NotificationMessage.#ctor",
             "M:Goo.NotificationService.GetPermissionAsync",
@@ -882,6 +885,12 @@ class PublicDocumentationTests {
                 []string{"owner", "options"}, System.Array.Empty[string](), true),
             ["M:Goo.TrayIcon.Update(Goo.TrayOptions)"] = DocumentationShape(
                 []string{"options"}, System.Array.Empty[string](), true),
+            ["M:Goo.ActivationArguments.Read(System.Collections.Generic.IReadOnlyList{System.String},System.String)"] = DocumentationShape(
+                []string{"arguments", "workingDirectory"}, System.Array.Empty[string](), true),
+            ["M:Goo.SingleInstance.AcquireAsync(System.String,Goo.ApplicationActivation,System.Int32)"] = DocumentationShape(
+                []string{"applicationId", "activation", "timeoutMilliseconds"}, System.Array.Empty[string](), true),
+            ["M:Goo.Placement.Restore(Goo.Window,Goo.WindowPlacement)"] = DocumentationShape(
+                []string{"window", "saved"}, System.Array.Empty[string](), true),
             ["M:Goo.NotificationService.GetPermissionAsync"] = DocumentationShape(
                 System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.NotificationService.RequestPermissionAsync"] = DocumentationShape(

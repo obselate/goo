@@ -23,7 +23,6 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.Android" />
-    <InternalsVisibleTo Include="Goo.AppHost" />
     <InternalsVisibleTo Include="Goo.Audio" />
     <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <EmbeddedResource Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json"
