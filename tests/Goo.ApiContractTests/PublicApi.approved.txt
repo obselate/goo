@@ -1227,6 +1227,7 @@ method|Goo.GradientStop|GetHashCode|virtual|public|generic:|()->System.Int32
 method|Goo.GradientStop|ToString|virtual|public|generic:|()->System.String
 method|Goo.GradientStop|op_Equality|static|public|generic:|(left:Goo.GradientStop,right:Goo.GradientStop)->System.Boolean
 method|Goo.GradientStop|op_Inequality|static|public|generic:|(left:Goo.GradientStop,right:Goo.GradientStop)->System.Boolean
+method|Goo.ImageColorProfile|ToSrgb|static|public|generic:|(profile:System.ReadOnlyMemory`1<System.Byte>,straightRgba:System.Span`1<System.Byte>,gray:System.Boolean,cancellationToken:System.Threading.CancellationToken)->Goo.ImageDecodeStatus
 method|Goo.ImageSourceCache|Dispose|instance|public|generic:|()->System.Void
 method|Goo.ImageSourceCache|LoadAsync|instance|public|generic:|(path:System.String)->System.Threading.Tasks.Task`1<Goo.ImageSource>
 method|Goo.ImageSourceCache|LoadAsync|instance|public|generic:|(path:System.String,cancellationToken:System.Threading.CancellationToken)->System.Threading.Tasks.Task`1<Goo.ImageSource>
@@ -2829,6 +2830,7 @@ type|Goo.Gestures.TransformGestureEvent|struct|public|base:System.ValueType|inte
 type|Goo.Gestures.TransformGesture|class|public|base:Goo.GestureRecognizer|interfaces:|generic:
 type|Goo.GradientStop|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.GradientStop>|generic:
 type|Goo.Gradient|interface|public|base:-|interfaces:|generic:
+type|Goo.ImageColorProfile|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ImageDecodeLimits|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.ImageDecodeResult|class|public|base:System.Object|interfaces:|generic:
 type|Goo.ImageDecodeStatus|enum|public|base:System.Enum|interfaces:|generic:
