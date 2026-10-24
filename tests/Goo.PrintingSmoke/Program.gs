@@ -63,6 +63,19 @@ func CheckSystemSpelling() {
 }
 
 func CheckRichClipboard() {
+    if OperatingSystem.IsWindows() && Thread.CurrentThread.GetApartmentState() != ApartmentState.STA {
+        var failure Exception?
+        let thread = Thread(() -> {
+            try { CheckRichClipboard() }
+            catch (error Exception) { failure = error }
+        })
+        thread.IsBackground = true
+        thread.SetApartmentState(ApartmentState.STA)
+        thread.Start()
+        if !thread.Join(TimeSpan.FromMinutes(2)) { throw InvalidOperationException("Windows rich clipboard smoke timed out") }
+        if let error = failure { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw() }
+        return
+    }
     using let controller = TextEditorController(TextDocument("rich 😀"))
     using let layer = TextPresentationLayer(controller.Document)
     layer.SetStyle("bold", TextRange(0, 7), Style{ FontWeight: 700 })
