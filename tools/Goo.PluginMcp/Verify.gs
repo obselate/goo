@@ -66,40 +66,44 @@ shared class Verify {
             )
         }
         let output = Directory.CreateTempSubdirectory("goo-agent-e2e-").FullName
-        Console.WriteLine("Evidence: " + output)
-        let app = Path.Combine(output, "app")
-        let runtime = Path.Combine(app, ".goo/devtools")
-        Directory.CreateDirectory(runtime)
-        let client = await Client(root, Path.Combine(output, "unused-runtime"))
         try {
-            let tools = await client.ListToolsAsync(ListToolsRequestParams())
-            Check(
-                JsonNode.DeepEquals(
-                    JsonSerializer.SerializeToNode(tools.Tools),
-                    JsonSerializer.SerializeToNode(ToolDefinitions)
-                ),
-                "Tool contracts differ"
-            )
-            File.WriteAllText(Path.Combine(output, "tools.json"), JsonSerializer.Serialize(tools.Tools))
-            await Documents(client, root, output)
-            let checkout = await Checkout(client, output)
-            await Starter(client, root, output, app, checkout)
-            await Live(client, output, app, runtime, false)
-            await Live(client, output, app, runtime, true)
-            let result = JsonObject(){
-                ["passed"] = true,
-                ["tools"] = Strings(tools.Tools.Select(x -> x.Name).Order()),
-                ["fullSnapshots"] = true,
-                ["stableNodeIds"] = true,
-                ["projectLocalDiscovery"] = true,
-                ["inputPermission"] = true,
-                ["clickPointerKeyboard"] = true,
-                ["capture"] = true
+            Console.WriteLine("Evidence: " + output)
+            let app = Path.Combine(output, "app")
+            let runtime = Path.Combine(app, ".goo/devtools")
+            Directory.CreateDirectory(runtime)
+            let client = await Client(root, Path.Combine(output, "unused-runtime"))
+            try {
+                let tools = await client.ListToolsAsync(ListToolsRequestParams())
+                Check(
+                    JsonNode.DeepEquals(
+                        JsonSerializer.SerializeToNode(tools.Tools),
+                        JsonSerializer.SerializeToNode(ToolDefinitions)
+                    ),
+                    "Tool contracts differ"
+                )
+                File.WriteAllText(Path.Combine(output, "tools.json"), JsonSerializer.Serialize(tools.Tools))
+                await Documents(client, root, output)
+                let checkout = await Checkout(client, output)
+                await Starter(client, root, output, app, checkout)
+                await Live(client, output, app, runtime, false)
+                await Live(client, output, app, runtime, true)
+                let result = JsonObject(){
+                    ["passed"] = true,
+                    ["tools"] = Strings(tools.Tools.Select(x -> x.Name).Order()),
+                    ["fullSnapshots"] = true,
+                    ["stableNodeIds"] = true,
+                    ["projectLocalDiscovery"] = true,
+                    ["inputPermission"] = true,
+                    ["clickPointerKeyboard"] = true,
+                    ["capture"] = true
+                }
+                File.WriteAllText(Path.Combine(output, "result.json"), result.ToJsonString())
+                Console.WriteLine(result.ToJsonString())
+            } finally {
+                await client.DisposeAsync()
             }
-            File.WriteAllText(Path.Combine(output, "result.json"), result.ToJsonString())
-            Console.WriteLine(result.ToJsonString())
         } finally {
-            await client.DisposeAsync()
+            Directory.Delete(output, true)
         }
     }
 
