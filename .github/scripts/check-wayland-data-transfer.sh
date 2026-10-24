@@ -23,7 +23,7 @@ output="$root/tests/Goo.ApiContractTests/bin/Release/net10.0"
 for library in libSDL3.so libgoo-harfbuzz.so libgoo-harfbuzz-gpu.so; do
   install -m755 "$native/$library" "$output/$library"
 done
-GOO_HEADLESS_COMPOSITOR=kwin GOO_NATIVE_TRANSFER_INPUT="$work/input" \
+GOO_WAYLAND_COMPOSITOR=kwin GOO_NATIVE_TRANSFER_INPUT="$work/input" \
   GOO_NATIVE_TRANSFER_PEER="$work/peer" \
   nice -n 10 "$root/.github/scripts/with-headless-wayland.sh" \
   dotnet test "$root/tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj" \
