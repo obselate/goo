@@ -196,6 +196,7 @@ sealed class NotificationChecks : Instrumentation {
             using let button = if root == nil { nil } else { FindButton(root, id) }
             return button != nil && button.PerformAction(NodeAction.Click)
         }, "Permission button click failed: " + id)
+        Wait(() -> !HasPermissionButton(id), "Permission dialog did not close.")
     }
 
     private func FindButton(node AccessibilityNodeInfo, id string) AccessibilityNodeInfo? {
