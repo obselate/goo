@@ -222,7 +222,7 @@ func VerifyNonScalingStrokePixels() {
     }
     try {
         window.Open()
-        WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 30.0)
         let creation = window.CreateOffscreenSession()
         Require(
             creation.Status == OffscreenRenderStatus.Success && creation.Session != nil,
