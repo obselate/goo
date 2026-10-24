@@ -152,47 +152,9 @@ public partial class Window {
     requireUiThread("ElementHandle.ScrollIntoView")
     FlushDeferredVirtualization()
     if n.Retired { return false }
-    var subject = n.Rect
-    var parent = n.IsPortal ? nil : n.Parent
-    while parent != nil {
-      let ancestor = parent
-      if ancestor.Kind == NodeKind.Editor || ancestor.OverflowX == Overflow.Scroll
-        || ancestor.OverflowY == Overflow.Scroll{
-          scrollSubjectIntoAncestor(ref subject, ancestor)
-      }
-      parent = ancestor.IsPortal ? nil : ancestor.Parent
-    }
-    accessibility?.MarkDirty()
+    ScrollState.IntoView(n)
+    markDirtyAndRender()
     return true
-  }
-
-  private func scrollSubjectIntoAncestor(ref subject Rect, ancestor Node) {
-    if ancestor.Kind == NodeKind.Editor {
-      ScrollState.SyncEditor(ancestor)
-    }
-    let scrollX = ancestor.ScrollX
-    let scrollY = ancestor.ScrollY
-    let left = BoxGeometry.ContentLeft(ancestor)
-    let top = BoxGeometry.ContentTop(ancestor)
-    let right = left + scrollViewportWidth(ancestor)
-    let bottom = top + scrollViewportHeight(ancestor)
-    var targetX = scrollX
-    var targetY = scrollY
-    if ancestor.OverflowX == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {
-      if subject.X < left { targetX = targetX + subject.X - left }
-      else if subject.X + subject.W > right {
-        targetX = targetX + subject.X + subject.W - right
-      }
-    }
-    if ancestor.OverflowY == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {
-      if subject.Y < top { targetY = targetY + subject.Y - top }
-      else if subject.Y + subject.H > bottom {
-        targetY = targetY + subject.Y + subject.H - bottom
-      }
-    }
-    setElementScrollTarget(ancestor, targetX, targetY)
-    subject.X = subject.X + scrollX - ancestor.ScrollTargetX
-    subject.Y = subject.Y + scrollY - ancestor.ScrollTargetY
   }
 
   private func setElementScrollTarget(n Node, x float32, y float32) {

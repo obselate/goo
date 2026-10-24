@@ -1023,6 +1023,40 @@ internal class InputFixtures {
     return !root.Children[3].Focused && !root.Children[3].FocusVisible
   }
 
+  func KeyboardTraversalRevealsNestedScrollAncestors() bool {
+    let nested = Reconciler{ Res: Resolver{} }.Mount(Container() {
+      .Width: 100, .Height: 100, .OverflowY: Overflow.Scroll,
+      Container{ Height: 150, FlexShrink: 0 },
+      Container() {
+        .Width: 100, .Height: 100, .FlexShrink: 0, .OverflowY: Overflow.Scroll,
+        Button{ Width: 80, Height: 30, FlexShrink: 0 },
+        Container{ Height: 150, FlexShrink: 0 },
+        Button{ Width: 80, Height: 30, FlexShrink: 0 },
+      },
+    })
+    let nestedLayout = Layout()
+    let nestedResolver = Resolver{}
+    let nestedFocus = FocusManager()
+    nestedLayout.Calculate(nested, 100.0F, 100.0F)
+    let inner = nested.Children[1]
+    let last = inner.Children[2]
+    nestedFocus.SetFocus(nestedResolver, last)
+    if nested.ScrollTargetY != 0.0F || inner.ScrollTargetY != 0.0F { return false }
+    nestedFocus.MoveFocus(nested, nestedResolver, false)
+    nestedFocus.MoveFocus(nested, nestedResolver, true)
+    if nestedFocus.FocusedNode() != last || nested.ScrollTargetY <= 0.0F
+      || inner.ScrollTargetY <= 0.0F { return false }
+    nested.ScrollY = nested.ScrollTargetY
+    inner.ScrollY = inner.ScrollTargetY
+    nestedLayout.Calculate(nested, 100.0F, 100.0F)
+    if last.Rect.Y < inner.Rect.Y || last.Rect.Y + last.Rect.H > inner.Rect.Y + inner.Rect.H
+      || last.Rect.Y < nested.Rect.Y || last.Rect.Y + last.Rect.H > nested.Rect.Y + nested.Rect.H {
+      return false
+    }
+    nestedFocus.MoveFocus(nested, nestedResolver, false)
+    return inner.ScrollTargetY == 0.0F
+  }
+
   func FocusTransferAndTraversal() bool {
     let clear = InputFixtureDriver(InputFocusCell{}, 200, 200)
     clear.UseBindings()

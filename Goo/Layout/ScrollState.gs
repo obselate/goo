@@ -35,6 +35,37 @@ internal class ScrollActivityStates {
 
 internal partial class ScrollState {
   shared {
+    internal func IntoView(n Node) {
+      var subject = n.Rect
+      var parent = n.IsPortal ? nil : n.Parent
+      while let ancestor = parent {
+        if ancestor.Kind == NodeKind.Editor || ancestor.OverflowX == Overflow.Scroll
+          || ancestor.OverflowY == Overflow.Scroll {
+          SyncEditor(ancestor)
+          let scrollX = ancestor.ScrollX
+          let scrollY = ancestor.ScrollY
+          let left = BoxGeometry.ContentLeft(ancestor)
+          let top = BoxGeometry.ContentTop(ancestor)
+          let right = left + scrollViewportWidth(ancestor)
+          let bottom = top + scrollViewportHeight(ancestor)
+          var x = scrollX
+          var y = scrollY
+          if ancestor.OverflowX == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {
+            if subject.X < left { x += subject.X - left }
+            else if subject.X + subject.W > right { x += subject.X + subject.W - right }
+          }
+          if ancestor.OverflowY == Overflow.Scroll || ancestor.Kind == NodeKind.Editor {
+            if subject.Y < top { y += subject.Y - top }
+            else if subject.Y + subject.H > bottom { y += subject.Y + subject.H - bottom }
+          }
+          To(ancestor, x, y)
+          subject.X += scrollX - ancestor.ScrollTargetX
+          subject.Y += scrollY - ancestor.ScrollTargetY
+        }
+        parent = ancestor.IsPortal ? nil : ancestor.Parent
+      }
+    }
+
     private func axis(n Node, vertical bool) ScrollAxisActivity {
       let state = ScrollActivityStates.For(n)
       return vertical ? state.Vertical : state.Horizontal

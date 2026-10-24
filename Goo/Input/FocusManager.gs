@@ -124,6 +124,7 @@ internal class FocusManager {
     if order.Count == 0 && scopeRoot.FocusScopeBoundary && CanFocus(scopeRoot) {
       let before = changeGeneration
       SetFocus(resolver, scopeRoot)
+      if focused == scopeRoot { ScrollState.IntoView(scopeRoot) }
       return changeGeneration != before
     }
     if order.Count == 0 {
@@ -139,6 +140,7 @@ internal class FocusManager {
       (current + direction) % order.Count + order.Count) % order.Count
     let before = changeGeneration
     SetFocus(resolver, order[next])
+    if focused == order[next] { ScrollState.IntoView(order[next]) }
     return changeGeneration != before
   }
 

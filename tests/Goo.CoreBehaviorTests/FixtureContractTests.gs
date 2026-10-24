@@ -176,6 +176,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("KeyboardDefaultPreventionPreservesTextAndButtonRelease")
             yield Contract[InputFixtures]("KeyboardShortcutTextAndCompositionArbitration")
             yield Contract[InputFixtures]("KeyboardDrainConsumesThrowingEventOnceAndRetainsRest")
+            yield Contract[InputFixtures]("KeyboardTraversalRevealsNestedScrollAncestors")
             yield Contract[InputFixtures]("KeyboardQueueAndRepeatLifecycle")
             yield Contract[InputFixtures]("KeyboardRepeatCancelsWhenFocusedEntryBecomesUnavailable")
             yield Contract[InputFixtures]("KeyRepeatUsesCurrentModifiersWithoutRestartingDelay")
