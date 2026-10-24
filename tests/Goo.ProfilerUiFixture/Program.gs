@@ -7,7 +7,9 @@ class ProfilerScene : Cell {
     private let image ImageSource
     private var count int32
 
-    init(source ImageSource) { image = source }
+    init(source ImageSource) {
+        image = source
+    }
 
     override func Build() Blob -> Container{
         Width: Percent(100),
@@ -20,7 +22,9 @@ class ProfilerScene : Cell {
             Key: "profiler-workload",
             Padding: 12,
             BackgroundColor: Color.Rgb(74, 125, 255),
-            OnClick: () -> { count++ },
+            OnClick: () -> {
+                count++
+            },
             Text{Content: "Render $count", Color: Color.White},
         },
         Image{Source: image, Width: 160 + count * 16, Height: 160 + count * 16},
