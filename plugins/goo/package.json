@@ -10,7 +10,6 @@
     "pyproject.toml",
     "reference",
     "scripts/server.py",
-    "scripts/sync_docs.py",
     "scripts/verify.py",
     "skills",
     "uv.lock"

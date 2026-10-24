@@ -93,7 +93,7 @@ Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` to use
 
 ## Refresh and verify
 
-Refresh the bundle with `python3 scripts/sync_docs.py /path/to/goo-checkout`.
+Refresh the bundle from a Goo checkout with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- /path/to/goo-checkout`.
 Validate the MCP workflow with:
 
 ```sh

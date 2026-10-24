@@ -8,7 +8,7 @@ install_root="$root/vulkan-validationlayers-1.4.313.0"
 layer_path="$install_root/usr/share/vulkan/explicit_layer.d"
 library_path="$install_root/usr/lib/x86_64-linux-gnu"
 
-for executable in curl dpkg-deb python3 sha256sum
+for executable in curl dpkg-deb dotnet sha256sum
 do
   command -v "$executable" >/dev/null
 done
@@ -29,21 +29,9 @@ test "$(dpkg-deb --field "$archive" Architecture)" = "amd64"
 dpkg-deb --extract "$archive" "$install_root"
 library="$library_path/libVkLayer_khronos_validation.so"
 test -f "$library"
-python3 - "$layer_path/VkLayer_khronos_validation.json" "$library" <<'PY'
-import json
-import pathlib
-import sys
-
-manifest = pathlib.Path(sys.argv[1])
-document = json.loads(manifest.read_text())
-layer = document["layer"]
-assert layer["name"] == "VK_LAYER_KHRONOS_validation"
-assert layer["api_version"] == "1.4.313"
-assert layer["implementation_version"] == "1"
-assert layer["library_path"] == "libVkLayer_khronos_validation.so"
-layer["library_path"] = str(pathlib.Path(sys.argv[2]).resolve())
-manifest.write_text(json.dumps(document, indent=4) + "\n")
-PY
+repository="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+dotnet run --project "$repository/tools/Goo.VulkanManifest/Goo.VulkanManifest.gsproj" \
+  -c Release -- "$layer_path/VkLayer_khronos_validation.json" "$library"
 
 printf 'VK_LAYER_PATH=%s\n' "$layer_path"
 printf 'VK_VALIDATION_LAYER_LIBRARY=%s\n' "$library"

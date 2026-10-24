@@ -60,7 +60,7 @@ jobs:
           PY
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
             docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell
-          python3 plugins/goo/scripts/sync_docs.py .
+          dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .
 
       - name: Commit generated documentation
         run: |

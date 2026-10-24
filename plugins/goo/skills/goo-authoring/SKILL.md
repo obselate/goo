@@ -42,4 +42,4 @@ Read [watch modes and limits](references/watch.md) before choosing watch. The lo
 
 If MCP is unavailable, confirm that Goo is installed and enabled in the host plugin manager, refresh or reinstall it, and start a new session. Do not add a manual MCP command. Until MCP is available, read the bundled `reference/docs/api` files and use `goo list --json`, `goo attach --pid PID --window ID --once --json --payload '{"full":true}'`, `goo input click --pid PID --window ID --node NODE_ID`, and `goo capture --pid PID --window ID --output frame.png` directly. Discovery requires a CLI build whose `goo --version --json` feature list includes the agent runtime contract. See the plugin README for setup.
 
-Refresh bundled docs after framework updates with `python3 <plugin-root>/scripts/sync_docs.py <goo-checkout>`. This records actual file hashes, including any working-tree edits. Reinstall the plugin after changing its source.
+Refresh bundled docs from a Goo checkout with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- <goo-checkout>`. This records actual file hashes, including any working-tree edits. Reinstall the plugin after changing its source.
