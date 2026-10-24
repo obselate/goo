@@ -1,10 +1,10 @@
 {
   "repository": "https://github.com/obselate/goo",
   "files": {
-    "README.md": "d284194add25d3a0cad183b7f82134785f43fdc98b92cc6b5e7f7fb23c2e7438",
-    "CONTRIBUTING.md": "4f7fa2290ca17a9229fb52c742a66571c9c780309c56da209ef5b99f60f188b0",
+    "README.md": "ca5984956882e934a12a7271f1711ea728b6d5f5bd9dffbcd3442ba8b7656883",
+    "CONTRIBUTING.md": "2a3009ea5e4a0ced7cdc05f6faeccba96af9338071d26052bd489e30466dabf3",
     "docs/native-authoring.md": "b6342aa859e0c5293471c1bf16fc757cabafc024a24afb7cc102cfce85b19976",
-    "docs/production-readiness.md": "f13336b9d788097934605c457711a1070ddb1810dab3998317a08ea9188d0743",
+    "docs/production-readiness.md": "c6cb03349dd142d40860983f659fc415fbbfbaf801c7979c715d5c777d9db025",
     "docs/svg.md": "8798ec6ef15b95731356bda1b0fadf8fee650d553efbaad4bc1c697706ab1821",
     "docs/migrations/gcv1.md": "6465b5704a37f637970a80fc8120002bda1cf5e10458d14cc9f71e0f9d4928a6",
     "docs/shipping.md": "7fb106fd8ae8de1e174afcb75e7abc9e40baaabaae44e9166e5c0b80bfd74469",
@@ -25,10 +25,10 @@
     "docs/api/text.md": "1e76cf9c5173ab3a254adc390f32ef82fc87373cc27c927c4ebadaa98bef0299",
     "docs/api/tree.md": "d93163ae14294a775f11133f5603d3d9addfe01e620dfb1d520c2760976be2c3",
     "docs/api/window.md": "3ab8f6dff5eee3501bfb12de83f3c58f45f87dc40ff2d51c83c36c8b9df97032",
-    "docs/devtools/README.md": "303f60396b546d29c9c5d531839fc4b7abc9e769e6d3f10140afef6d90f2f1e0",
+    "docs/devtools/README.md": "4a7536775517c2033fca7e686c1b2197e95d4d78257f82897e4ac46eab9dc037",
     "docs/devtools/development.md": "1a1c5d31b125143ebca5209988c3c21b5e006ea1b8c4973a345f942e5f788098",
-    "docs/devtools/protocol.md": "fa5df1a3da7cb2f951a72cc17497a0db9cf54101d8b31150d037140c0704a6fb",
+    "docs/devtools/protocol.md": "918da611aee49b82165532997bf144aa86e8fce3abb9f967ff105fc3c868fe08",
     "templates/Goo.Templates/content/Program.gs": "6654df447b6b2e79d709b304e9c5bc79ec19bf567f30ac93f1024f45806ca1b1",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "16c142dfbab6dbddc83b68d04397424da1b2db2ef6719512585c8fe408cd1baf"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "8d751f93efc3deebb62f0e229907b7b9728647e45c53fbfa93d75923b5cb30e5"
   }
 }

@@ -10,8 +10,8 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet Goo's [platform requirements](../../README.md#platforms), then install:
 
 ```sh
-dotnet tool install --global Goo.DevTools --version 0.13.0
-dotnet tool install --global Goo.DevTools.App --version 0.13.0
+dotnet tool install --global Goo.DevTools --version 0.14.0
+dotnet tool install --global Goo.DevTools.App --version 0.14.0
 ```
 
 `Goo.DevTools` provides the `goo` CLI. `Goo.DevTools.App` provides the
@@ -108,6 +108,27 @@ several windows.
 Open **Profiler**, press **Record**, exercise the target, then press **Stop**.
 The target must advertise `profiler.trace.v1`. Missing measurements stay
 unavailable. GPU stage values are elapsed times, not CPU-aligned execution slices.
+
+- Frame bars turn red for process-wide GC pauses of at least 2 ms.
+- Phase details keep elapsed time and GC-exclusive elapsed time separate.
+  Nested scopes overlap. GC pause time is process-wide, not thread CPU time.
+- Phase summaries show p50, p99 and max for each row's last 240 scopes.
+  Percentiles use complete scopes in the selected range. Totals and max use the
+  selected portion of boundary scopes. CapWait measures native event wait while
+  a capped window waits for its next frame. Idle waits are excluded.
+- Enable **Types (10 s)** before recording to capture allocation types.
+  The **Types** tab reports runtime allocation samples and sampled bytes, not
+  exact object counts. Capture retains at most 500 types and stops on timeout
+  or recording stop. The protocol accepts `allocationSeconds` from 2 to 60.
+
+NativeAOT supports type samples when the app enables EventSource:
+
+```xml
+<EventSourceSupport>true</EventSourceSupport>
+```
+
+Set this property in the app project. Goo does not enable it for all apps.
+If it is off, capture reports `unavailable: EventSourceSupport is off`.
 
 **Export** saves the whole stopped trace, not only the selected range. Enter a
 JSON file path or use **Browse**, then press **Export** in the file row. The file
