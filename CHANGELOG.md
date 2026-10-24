@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.15.0 - 2026-10-24
+
+- Goo 0.14.0 was tagged but never published to NuGet. Its changes ship in this release.
+- Fix NuGet publishing after GitHub release assets were removed.
+- Add optional desktop instance hosting and supported window placement capture and restore.
+- Fix the generated documentation sync for the optional package API pages.
+- Remove unused qualification files and execute the Android detached-page proof.
+- Remove the stale docs baseline and forthcoming-SVG claim.
+- Fix Android accessibility smoke event synchronization.
+- An ElementHandle can move to another element within one tree update (branch switch, nested keyed reorder, parent replacement) without throwing. Two live elements sharing a handle still throw.
+
 ## 0.14.0 - 2026-10-24
 
 - Fall back to the primary macOS spelling dictionary when the full tag is unavailable.
