@@ -1,7 +1,4 @@
 import Goo
-import Goo.Images
-import Goo.Printing
-import Goo.SpellCheck
 import System
 import System.Collections.Generic
 import System.Globalization
@@ -128,13 +125,6 @@ open class PublicApiTests {
         private func ApiTypes() IEnumerable[Type] -> []Assembly{
             typeof(Window).Assembly,
             typeof(SingleInstance).Assembly,
-            typeof(Notifications).Assembly,
-            typeof(NativeMenus).Assembly,
-            typeof(ImageVariants).Assembly,
-            typeof(SpellCheckSession).Assembly,
-            typeof(HunspellSpellingService).Assembly,
-            typeof(Printing).Assembly,
-            typeof(NativeDialogs).Assembly,
             typeof(SoundPlayer).Assembly
         }
             .SelectMany((assembly Assembly) -> assembly.GetExportedTypes())

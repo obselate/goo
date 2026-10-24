@@ -6,8 +6,10 @@ import System.Reflection
 import System.Text.RegularExpressions
 import System.Xml.Linq
 import Goo
+import Goo.Gestures
+import Goo.Printing
+import Goo.SpellCheck
 import Xunit
-import Goo.Images
 
 class PublicDocumentationTests {
     @Fact
@@ -38,7 +40,7 @@ class PublicDocumentationTests {
     @Fact
     func EnumsInterfacesAndWindowPartialsRequireSourceDocumentation() {
         let supplemented = LoadSupplementMemberIds()
-        let sources = []string{"Goo", "Goo.Images", "Goo.Audio"}
+        let sources = []string{"Goo", "Goo.Audio"}
             .SelectMany(
             (directory string) -> Directory.EnumerateFiles(
                 Path.Combine(FindRepositoryRoot().FullName, directory),
@@ -183,6 +185,49 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.NotificationOptions.#ctor",
+            "M:Goo.NotificationMessage.#ctor",
+            "M:Goo.NotificationService.GetPermissionAsync",
+            "M:Goo.NotificationService.RequestPermissionAsync",
+            "M:Goo.NotificationService.ShowAsync(Goo.NotificationMessage)",
+            "M:Goo.NotificationService.GetStatusAsync(System.String)",
+            "M:Goo.NotificationService.RemoveAsync(System.String)",
+            "M:Goo.Notifications.Open(Goo.NotificationOptions)",
+            "M:Goo.Gestures.DoubleTapGesture.#ctor(System.Action{Goo.Gestures.TapGestureEvent})",
+            "M:Goo.Gestures.DoubleTapGesture.CreateSession",
+            "M:Goo.Gestures.LongPressGesture.#ctor(System.Action{Goo.Gestures.PressGestureEvent},System.Double)",
+            "M:Goo.Gestures.LongPressGesture.CreateSession",
+            "M:Goo.Gestures.PanGesture.#ctor(System.Action{Goo.Gestures.PanGestureEvent},Goo.Gestures.PanAxis)",
+            "M:Goo.Gestures.PanGesture.CreateSession",
+            "M:Goo.Gestures.TransformGesture.#ctor(System.Action{Goo.Gestures.TransformGestureEvent})",
+            "M:Goo.Gestures.TransformGesture.CreateSession",
+            "M:Goo.MessageBoxButton.#ctor",
+            "M:Goo.MessageBoxOptions.#ctor",
+            "M:Goo.NativeDialogs.ShowMessageBoxAsync(Goo.Window,Goo.MessageBoxOptions)",
+            "M:Goo.NativeMenuBar.#ctor(Goo.Window)",
+            "M:Goo.NativeMenuBar.Dispose",
+            "M:Goo.NativeMenuBar.SetItems(System.Collections.Generic.IReadOnlyList{Goo.NativeMenuItem})",
+            "M:Goo.NativeMenuItem.#ctor",
+            "M:Goo.NativeMenus.#ctor",
+            "M:Goo.NativeMenus.ShowContextMenuAsync(Goo.Window,Goo.Point,System.Collections.Generic.IReadOnlyList{Goo.NativeMenuItem})",
+            "M:Goo.Printing.IPrintDocument.CreatePage(System.Int32,Goo.Printing.PrintPageSettings)",
+            "M:Goo.Printing.IPrintDocument.Paginate(Goo.Printing.PrintPageSettings)",
+            "M:Goo.Printing.Printing.ExportPdfAsync(Goo.Window,Goo.Printing.IPrintDocument,Goo.Printing.PrintPageSettings,System.IO.Stream,System.Threading.CancellationToken)",
+            "M:Goo.Printing.Printing.ShowDialogAsync(Goo.Window,Goo.Printing.IPrintDocument,System.String,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.HunspellSpellingService.#ctor(System.String,System.String,System.String)",
+            "M:Goo.SpellCheck.HunspellSpellingService.CheckAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.HunspellSpellingService.Dispose",
+            "M:Goo.SpellCheck.HunspellSpellingService.SuggestAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.ISpellingService.CheckAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.ISpellingService.SuggestAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.SpellCheckSession.#ctor(Goo.Window,Goo.TextEditorController,Goo.SpellCheck.ISpellingService,System.String)",
+            "M:Goo.SpellCheck.SpellCheckSession.ApplySuggestion(Goo.SpellCheck.SpellingSuggestions,System.Int32)",
+            "M:Goo.SpellCheck.SpellCheckSession.CheckAsync(Goo.TextRange,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.SpellCheckSession.Dispose",
+            "M:Goo.SpellCheck.SpellCheckSession.SuggestAsync(Goo.TextPosition,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.SystemSpellingService.#ctor",
+            "M:Goo.SpellCheck.SystemSpellingService.CheckAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
+            "M:Goo.SpellCheck.SystemSpellingService.SuggestAsync(Goo.TextSnapshot,Goo.TextRange,System.String,System.Threading.CancellationToken)",
             "M:Goo.ApplicationActivation.#ctor",
             "M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)",
             "M:Goo.Window.PostApplicationActivation(Goo.ApplicationActivation)",
@@ -624,6 +669,53 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.NotificationPermission.NotDetermined",
+            "F:Goo.NotificationPermission.Granted",
+            "F:Goo.NotificationPermission.Denied",
+            "F:Goo.NotificationPermission.Disabled",
+            "F:Goo.NotificationPermission.Unknown",
+            "F:Goo.NotificationPermission.Unsupported",
+            "F:Goo.NotificationDelivery.Unknown",
+            "F:Goo.NotificationDelivery.Accepted",
+            "F:Goo.NotificationDelivery.PresentInCenter",
+            "F:Goo.NotificationDelivery.Removed",
+            "F:Goo.NotificationDelivery.Failed",
+            "F:Goo.NotificationActivationSupport.None",
+            "F:Goo.NotificationActivationSupport.WarmOnly",
+            "F:Goo.NotificationActivationSupport.WarmAndCold",
+            "F:Goo.NotificationStatus.Success",
+            "F:Goo.NotificationStatus.Accepted",
+            "F:Goo.NotificationStatus.PermissionRequired",
+            "F:Goo.NotificationStatus.Denied",
+            "F:Goo.NotificationStatus.Disabled",
+            "F:Goo.NotificationStatus.MissingIdentity",
+            "F:Goo.NotificationStatus.Unsupported",
+            "F:Goo.NotificationStatus.Failed",
+            "F:Goo.Gestures.GestureRotationStatus.Available",
+            "F:Goo.Gestures.GestureRotationStatus.Unsupported",
+            "F:Goo.Gestures.PanAxis.Both",
+            "F:Goo.Gestures.PanAxis.Horizontal",
+            "F:Goo.Gestures.PanAxis.Vertical",
+            "F:Goo.Printing.PrintLayoutStatus.Cancelled",
+            "F:Goo.Printing.PrintLayoutStatus.Failed",
+            "F:Goo.Printing.PrintLayoutStatus.Ready",
+            "F:Goo.Printing.PrintStatus.BudgetExceeded",
+            "F:Goo.Printing.PrintStatus.Busy",
+            "F:Goo.Printing.PrintStatus.Cancelled",
+            "F:Goo.Printing.PrintStatus.DeviceLost",
+            "F:Goo.Printing.PrintStatus.Exported",
+            "F:Goo.Printing.PrintStatus.Failed",
+            "F:Goo.Printing.PrintStatus.NotReady",
+            "F:Goo.Printing.PrintStatus.Submitted",
+            "F:Goo.Printing.PrintStatus.Unsupported",
+            "F:Goo.SpellCheck.SpellingStatus.Cancelled",
+            "F:Goo.SpellCheck.SpellingStatus.Disabled",
+            "F:Goo.SpellCheck.SpellingStatus.Failed",
+            "F:Goo.SpellCheck.SpellingStatus.LanguageUnavailable",
+            "F:Goo.SpellCheck.SpellingStatus.Stale",
+            "F:Goo.SpellCheck.SpellingStatus.Success",
+            "F:Goo.SpellCheck.SpellingStatus.TooLarge",
+            "F:Goo.SpellCheck.SpellingStatus.Unsupported",
             "F:Goo.GestureSource.Touch",
             "F:Goo.GestureSource.Trackpad",
             "F:Goo.GestureInputKind.Down",
@@ -740,6 +832,17 @@ class PublicDocumentationTests {
             "F:Goo.PopupDismissReason.PlatformDismissed"
         }
         private let SynthesizedPrimaryDataTypes HashSet[Type] = HashSet[Type]{
+            typeof(PanGestureEvent),
+            typeof(GestureRotationResult),
+            typeof(TransformGestureEvent),
+            typeof(PressGestureEvent),
+            typeof(TapGestureEvent),
+            typeof(PrintResult),
+            typeof(PrintPageSettings),
+            typeof(PrintLayoutResult),
+            typeof(Misspelling),
+            typeof(SpellingResult),
+            typeof(SpellingSuggestions),
             typeof(FocusedEditorSnapshot),
             typeof(GesturePointer),
             typeof(OffscreenRenderOptions),
@@ -764,8 +867,28 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.NotificationService.GetPermissionAsync"] = DocumentationShape(
+                System.Array.Empty[string](), System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.RequestPermissionAsync"] = DocumentationShape(
+                System.Array.Empty[string](), System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.ShowAsync(Goo.NotificationMessage)"] = DocumentationShape(
+                []string{"message"}, System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.GetStatusAsync(System.String)"] = DocumentationShape(
+                []string{"id"}, System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.RemoveAsync(System.String)"] = DocumentationShape(
+                []string{"id"}, System.Array.Empty[string](), true),
+            ["M:Goo.Notifications.Open(Goo.NotificationOptions)"] = DocumentationShape(
+                []string{"options"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.CapturePlacement"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
+            ["M:Goo.NativeDialogs.ShowMessageBoxAsync(Goo.Window,Goo.MessageBoxOptions)"] = DocumentationShape(
+                []string{"owner", "options"}, System.Array.Empty[string](), true),
+            ["M:Goo.NativeMenuBar.#ctor(Goo.Window)"] = DocumentationShape(
+                []string{"owner"}, System.Array.Empty[string](), false),
+            ["M:Goo.NativeMenuBar.SetItems(System.Collections.Generic.IReadOnlyList{Goo.NativeMenuItem})"] = DocumentationShape(
+                []string{"items"}, System.Array.Empty[string](), true),
+            ["M:Goo.NativeMenus.ShowContextMenuAsync(Goo.Window,Goo.Point,System.Collections.Generic.IReadOnlyList{Goo.NativeMenuItem})"] = DocumentationShape(
+                []string{"owner", "point", "items"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.InitializeApplicationActivation(Goo.ApplicationActivation)"] = DocumentationShape(
                 []string{"initial"},
                 System.Array.Empty[string](),
@@ -1884,6 +2007,7 @@ class PublicDocumentationTests {
                 .ToHashSet(StringComparer.Ordinal)
             let coreTypes = apiTypes.Select((type Type) -> type.FullName).ToHashSet(StringComparer.Ordinal)
             let generatedNames = HashSet[string](StringComparer.Ordinal){
+                "<Clone>$",
                 "Deconstruct",
                 "Equals",
                 "GetHashCode",
@@ -1933,7 +2057,6 @@ class PublicDocumentationTests {
 
         private func ApiTypes() IEnumerable[Type] -> []Assembly{
             typeof(Window).Assembly,
-            typeof(ImageVariants).Assembly,
             typeof(SoundPlayer).Assembly
         }
             .SelectMany((assembly Assembly) -> assembly.GetExportedTypes())
@@ -1942,7 +2065,6 @@ class PublicDocumentationTests {
 
         private func LoadDocumentationMembers() Dictionary[string, XElement] -> []Assembly{
             typeof(Window).Assembly,
-            typeof(ImageVariants).Assembly,
             typeof(SoundPlayer).Assembly
         }
             .Select((assembly Assembly) -> Path.ChangeExtension(assembly.Location, ".xml"))

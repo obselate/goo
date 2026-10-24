@@ -11,7 +11,7 @@ if opened.Status != NotificationStatus.Success {
 using let notifications = opened.Service!!
 ```
 
-Install `Goo.Notifications` for desktop. Subscribe to `Window.ApplicationActivated` and initialize application activation first. Configure the installed application ID with `Window.ConfigureApplication`.
+Reference `Goo` for desktop notifications. Subscribe to `Window.ApplicationActivated` and initialize application activation first. Configure the installed application ID with `Window.ConfigureApplication`.
 
 Call `Open` and `Dispose` on the UI thread. On macOS, open before `SingleInstance.AcquireAsync` and before the first window opens. The service does not keep the application running.
 

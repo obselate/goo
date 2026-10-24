@@ -28,14 +28,14 @@ public enum SpellingStatus {
     Failed
 }
 
-/// A misspelled word and its absolute UTF-16 source range.
+/// A misspelled Word and its absolute UTF-16 source Range.
 public data struct Misspelling(Range TextRange, Word string) { }
 
-/// Owned spelling results for one immutable document version and language.
+/// Owned spelling Status, document Version, Language, Errors and optional Error detail.
 public data class SpellingResult(Status SpellingStatus, Version int64, Language string,
     Errors IReadOnlyList[Misspelling], Error string = "") { }
 
-/// Owned suggestions for one word at an absolute UTF-16 source range.
+/// Suggestion Status, document Version, Language, source Range, Word, Values and optional Error detail.
 public data class SpellingSuggestions(Status SpellingStatus, Version int64, Language string,
     Range TextRange, Word string, Values IReadOnlyList[string], Error string = "") { }
 

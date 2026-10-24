@@ -24,10 +24,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.Android" />
     <InternalsVisibleTo Include="Goo.AppHost" />
-    <InternalsVisibleTo Include="Goo.NativeDialogs" />
-    <InternalsVisibleTo Include="Goo.NativeMenus" />
     <InternalsVisibleTo Include="Goo.Audio" />
-    <InternalsVisibleTo Include="Goo.Notifications" />
+    <InternalsVisibleTo Include="Goo.Tray" />
+    <InternalsVisibleTo Include="Goo.Notifications.WindowsSmoke" />
     <EmbeddedResource Include="Shaders/Vulkan/*.spv;Shaders/Vulkan/shader-manifest.json"
                       LogicalName="Goo.Vulkan.Shaders.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Shaders/Effects/*.goo-effect"
@@ -38,6 +37,7 @@
                       PrivateAssets="all" />
     <PackageReference Include="Hexa.NET.SDL3" ExcludeAssets="native" />
     <PackageReference Include="Unicode.Bidi" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
   </ItemGroup>
   <Import Project="$(GooTestFixturesProps)"
           Condition="'$(IncludeTestFixtures)' == 'true' and '$(GooTestFixturesProps)' != ''" />

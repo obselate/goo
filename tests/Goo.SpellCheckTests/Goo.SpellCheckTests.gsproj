@@ -9,6 +9,6 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
-    <ProjectReference Include="../../Goo.SpellCheck.Hunspell/Goo.SpellCheck.Hunspell.gsproj" />
+    <ProjectReference Include="../../Goo/Goo.gsproj" />
   </ItemGroup>
 </Project>

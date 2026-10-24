@@ -69,13 +69,23 @@ are optional and installed separately. The starter template already references
 
 | Package | Purpose | Install |
 | --- | --- | --- |
-| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, [SVG loading](docs/svg.md), and native runtime assets | `dotnet add package Goo` |
+| [Goo](https://www.nuget.org/packages/Goo/) | UI framework, renderer, images, gestures, native dialogs and menus, notifications, printing, spell checking, and native runtime assets | `dotnet add package Goo` |
+| [Goo.Android](https://www.nuget.org/packages/Goo.Android/) | Android host, printing, and spell checking | `dotnet add package Goo.Android` |
+| [Goo.Audio](https://www.nuget.org/packages/Goo.Audio/) | Audio playback | `dotnet add package Goo.Audio` |
+| [Goo.Accessibility](https://www.nuget.org/packages/Goo.Accessibility/) | Desktop native accessibility adapters | `dotnet add package Goo.Accessibility` |
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
 | [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
 | [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
 Add library packages from your application directory. Install both DevTools
 packages to launch the graphical inspector with `goo dev --inspector`.
+
+Remove references to `Goo.Gestures`, `Goo.Images`, `Goo.NativeDialogs`,
+`Goo.NativeMenus`, `Goo.Notifications`, `Goo.Printing`, `Goo.SpellCheck`, and `Goo.SpellCheck.Hunspell`
+when upgrading to the consolidated `Goo` package. Remove `Goo.Printing.Android`
+and `Goo.SpellCheck.Android` when upgrading `Goo.Android`. Keep existing namespace
+imports and type names. The old package IDs no longer publish. System services
+and native libraries load only when used. Hunspell includes no library or dictionaries.
 
 ## Goo Extras
 

@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" Condition="'$(GooMenuUsePackages)' != 'true'" />
-    <PackageReference Include="Goo.NativeMenus" Version="$(GooReleaseVersion)" Condition="'$(GooMenuUsePackages)' == 'true'" />
+    <ProjectReference Include="../../Goo/Goo.gsproj" Condition="'$(GooMenuUsePackages)' != 'true'" />
+    <PackageReference Include="Goo" Version="$(GooReleaseVersion)" Condition="'$(GooMenuUsePackages)' == 'true'" />
   </ItemGroup>
 </Project>

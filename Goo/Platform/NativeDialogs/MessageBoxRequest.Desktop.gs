@@ -23,6 +23,14 @@ internal struct SdlMessageBoxButton {
 
 internal sealed partial class MessageBoxRequest {
     private func Show() {
+        if let show = owner.NativeMessageBox {
+            nativeDialog = show(owner, options, Finish)
+            if finished {
+                nativeDialog?.Dispose()
+                nativeDialog = nil
+            }
+            return
+        }
         if lease.SDLWindow == nint(0) {
             Finish(MessageBoxResult(MessageBoxStatus.Unsupported))
             return
