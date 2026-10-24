@@ -153,6 +153,25 @@ public sealed class FontSource : IDisposable {
     get { lock (gate) { return registered && !disposed && payload != nil } }
   }
 
+  internal func MatchesRegistration(registration FontRegistration) bool {
+    lock (gate) {
+      if disposed { throw ObjectDisposedException("FontSource") }
+      let current = payload ?? throw ObjectDisposedException("FontSource")
+      let count = current.NativeVariations?.Length ?? 0
+      if faceIndex != registration.FaceIndex
+        || count != (registration.Variations?.Length ?? 0)
+        || !current.Bytes.AsSpan().SequenceEqual(registration.Bytes.AsSpan()) {
+        return false
+      }
+      for var index = 0; index < count; index++ {
+        let left = current.NativeVariations!![index]
+        let right = registration.Variations!![index]
+        if left.Tag != right.Tag || left.Value != right.Value { return false }
+      }
+      return true
+    }
+  }
+
   internal func BeginRegistration(generation uint64) FontRegistration? {
     lock (gate) {
       if disposed { throw ObjectDisposedException("FontSource") }
@@ -239,6 +258,7 @@ internal sealed class FontRegistry {
         if hasValues {
           for current in values {
             if current.Weight == source.Weight && current.Italic == source.Italic {
+              if source.MatchesRegistration(current) { return }
               throw InvalidOperationException("A font source is already registered for this family, weight, and style")
             }
           }

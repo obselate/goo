@@ -32,6 +32,7 @@ internal shared class Program {
             throw FileNotFoundException("Vulkan text provider smoke font is missing", fontPath)
         }
         RunFontCacheGate(fontPath)
+        RunFontRegistrationGate(fontPath)
         RunPathMorphGate()
         RunEvenOddPathGate()
         RunPathUploadGate()
@@ -158,6 +159,46 @@ internal shared class Program {
         } finally {
             font?.Dispose()
         }
+    }
+
+    private func RunFontRegistrationGate(fontPath string) {
+        let bytes = File.ReadAllBytes(fontPath)
+        let variations = []FontVariation{FontVariation("wght", 400f)}
+        using let source = FontSource("GooAbiRegistration", 400, false, bytes, 0u, variations)
+        source.Register()
+        let generation = FontRegistry.Generation
+        source.Register()
+        using let repeated = FontSource(" gooabiregistration ", 400, false, bytes, 0u, variations)
+        repeated.Register()
+        repeated.Dispose()
+        if !source.IsRegistered || FontRegistry.Generation != generation {
+            throw InvalidOperationException("Repeated font registration changed the existing registration")
+        }
+        let differentBytes = [bytes.Length + 1]uint8
+        Array.Copy(bytes, differentBytes, bytes.Length)
+        for candidate in []FontSource{
+            FontSource(source.Family, 400, false, differentBytes, 0u, variations),
+            FontSource(source.Family, 400, false, bytes, 1u, variations),
+            FontSource(source.Family, 400, false, bytes, 0u, []FontVariation{FontVariation("wdth", 400f)}),
+            FontSource(source.Family, 400, false, bytes, 0u, []FontVariation{FontVariation("wght", 500f)}),
+            FontSource(source.Family, 400, false, bytes)
+        } {
+            using let _ = candidate
+            var rejected = false
+            try {
+                candidate.Register()
+            } catch (InvalidOperationException) {
+                rejected = true
+            }
+            if !rejected || candidate.IsRegistered || FontRegistry.Generation != generation {
+                throw InvalidOperationException("A different font source replaced an existing registration")
+            }
+        }
+        using let shaped = TextShaping.Shape("office", source.Family, 16f, 400, false, 0f, 1)
+        if shaped.HasMissingGlyph || shaped.GlyphCount <= 0 {
+            throw InvalidOperationException("Repeated registration lost the original font")
+        }
+        Console.WriteLine("FONT_REGISTRATION_SMOKE repeated=1 conflicting=5")
     }
 
     private func RunFontCacheGate(fontPath string) {

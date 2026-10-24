@@ -41,9 +41,16 @@ class MainActivity : GooActivity {
             nativeDialogSmokeStarted = true
             GooView.PostDelayed(() -> RunNativeDialogSmoke(0), 100)
         }
-        if !menuSmokeStarted && Intent?.GetBooleanExtra("goo.native_menu_smoke", false) == true {
+        if !menuSmokeStarted && Intent is {} intent && intent.GetBooleanExtra("goo.native_menu_smoke", false) {
             menuSmokeStarted = true
-            GooView.PostDelayed(() -> RunMenuSmoke(0), 100)
+            let destroy = intent.GetBooleanExtra("goo.native_menu_destroy", false)
+            if !destroy && !intent.GetBooleanExtra("goo.native_menu_relaunched", false) {
+                intent.PutExtra("goo.native_menu_relaunched", true)
+                Recreate()
+            } else {
+                if !destroy { Log.Info("GooNativeMenus", "passed activity-relaunch") }
+                GooView.PostDelayed(() -> RunMenuSmoke(0), 100)
+            }
         }
     }
 

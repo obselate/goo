@@ -90,6 +90,8 @@ started = run('shell', 'am', 'start', '-n', 'org.goo.androidsmoke/org.goo.androi
     '--ez', 'goo.native_menu_smoke', 'true')
 if started.returncode or 'Error' in started.stderr:
     raise RuntimeError(started.stdout + started.stderr)
+until(lambda: 'passed activity-relaunch' in run('logcat', '-d', '-s', 'GooNativeMenus:I', '*:S').stdout,
+    'Android native menu Activity did not relaunch')
 until(lambda: 'selection-ready' in run('logcat', '-d', '-s', 'GooNativeMenus:I', '*:S').stdout,
     'Android native menu selection did not become ready')
 def item(text):

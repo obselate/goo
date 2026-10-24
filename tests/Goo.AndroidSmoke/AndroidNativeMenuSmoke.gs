@@ -9,7 +9,7 @@ import System.Threading.Tasks
 
 internal shared class AndroidNativeMenuSmoke {
     internal func TryRun(view GooView, finishActivity Activity? = nil) bool {
-        if !view.IsAttachedToWindow || view.Width == 0 || view.Height == 0 {
+        if !view.IsAttachedToWindow || !view.Window.IsVisible || view.Width == 0 || view.Height == 0 {
             return false
         }
         if finishActivity != nil {
