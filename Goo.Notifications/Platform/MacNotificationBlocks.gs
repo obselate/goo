@@ -58,7 +58,7 @@ internal class MacNotificationBlockLease : IDisposable {
         let handle = GCHandle.Alloc(this)
         try {
             block = Marshal.AllocHGlobal(Marshal.SizeOf[MacNotificationBlock]())
-            Marshal.StructureToPtr(MacNotificationBlock {
+            Marshal.StructureToPtr[MacNotificationBlock](MacNotificationBlock {
                 Isa: StackBlock, Flags: 1 << 25,
                 Invoke: if mode == 2 { AuthorizationPointer } else { ObjectPointer },
                 Descriptor: Descriptor, Context: GCHandle.ToIntPtr(handle),
@@ -90,7 +90,7 @@ internal class MacNotificationBlockLease : IDisposable {
 
         private func CreateDescriptor() nint {
             let pointer = Marshal.AllocHGlobal(Marshal.SizeOf[MacNotificationBlockDescriptor]())
-            Marshal.StructureToPtr(MacNotificationBlockDescriptor {
+            Marshal.StructureToPtr[MacNotificationBlockDescriptor](MacNotificationBlockDescriptor {
                 Size: nuint(Marshal.SizeOf[MacNotificationBlock]()),
                 Copy: Marshal.GetFunctionPointerForDelegate(CopyCallback),
                 Dispose: Marshal.GetFunctionPointerForDelegate(DisposeCallback),
