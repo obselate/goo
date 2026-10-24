@@ -51,7 +51,8 @@ internal class TextGeometry {
         try {
           for run in runs {
             AddRun(run, upstream, downstream, boxes, ref boxIndex,
-              scratch.GraphemeScalars, scratch.GlyphStarts)
+              scratch.GraphemeScalars, scratch.GlyphStarts,
+              scratch.BeginVisualClusters(run.Clusters.Length), scratch.BeginLogicalClusters(run.Clusters.Length))
           }
 
           let fallback = rightToLeft ? width : 0.0F
@@ -460,9 +461,8 @@ internal func directClusterX(run ShapedRun, glyph int32, next int32, ratio float
 
 internal func AddRun(run ShapedRun, upstream []float32, downstream []float32,
   boxes []TextGlyphBox, ref boxIndex int32, scalars List[UnicodeGraphemeScalar],
-  graphemeStarts List[int32]) {
+  graphemeStarts List[int32], visualClusters List[TextVisualCluster], logicalClusters List[int32]) {
     if run.Text.Length == 0 { return }
-    let visualClusters = List[TextVisualCluster](run.Clusters.Length)
     var glyph int32 = 0
     while glyph < run.Clusters.Length {
       let cluster = int32(run.Clusters[glyph])
@@ -472,7 +472,6 @@ internal func AddRun(run ShapedRun, upstream []float32, downstream []float32,
       glyph = next
     }
 
-    let logicalClusters = List[int32](visualClusters.Count)
     for cluster in visualClusters { logicalClusters.Add(cluster.LogicalStart) }
     logicalClusters.Sort()
     var uniqueCount int32 = 0
