@@ -16,6 +16,7 @@ EXPECTED_PACKAGE_IDS = {
     "Goo.Android",
     "Goo.Images",
     "Goo.NativeDialogs",
+    "Goo.AppHost",
     "Goo.DevTools",
     "Goo.DevTools.App",
     "Goo.Gestures",

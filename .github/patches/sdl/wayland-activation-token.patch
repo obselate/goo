@@ -1,0 +1,45 @@
+diff --git a/src/video/wayland/SDL_waylandwindow.c b/src/video/wayland/SDL_waylandwindow.c
+index 51246ea..9f575ba 100644
+--- a/src/video/wayland/SDL_waylandwindow.c
++++ b/src/video/wayland/SDL_waylandwindow.c
+@@ -1842,6 +1842,21 @@ static struct wl_callback_listener show_hide_sync_listener = {
+     show_hide_sync_handler
+ };
+ 
++static bool Wayland_ApplyGooActivationToken(SDL_VideoDevice *_this, SDL_Window *window)
++{
++    static const char property[] = "Goo.Wayland.ActivationToken.1";
++    SDL_VideoData *data = _this->internal;
++    SDL_WindowData *wind = window->internal;
++    SDL_PropertiesID properties = SDL_GetWindowProperties(window);
++    const char *token = SDL_GetStringProperty(properties, property, NULL);
++    if (!token || !data->activation_manager) {
++        return false;
++    }
++    xdg_activation_v1_activate(data->activation_manager, token, wind->surface);
++    SDL_ClearProperty(properties, property);
++    return true;
++}
++
+ static void exported_handle_handler(void *data, struct zxdg_exported_v2 *zxdg_exported_v2, const char *handle)
+ {
+     SDL_WindowData *wind = (SDL_WindowData *)data;
+@@ -2107,7 +2122,7 @@ void Wayland_ShowWindow(SDL_VideoDevice *_this, SDL_Window *window)
+     Wayland_SetWindowResizable(_this, window, !!(window->flags & SDL_WINDOW_RESIZABLE));
+ 
+     // We're finally done putting the window together, raise if possible
+-    if (c->activation_manager) {
++    if (c->activation_manager && !Wayland_ApplyGooActivationToken(_this, window)) {
+         /* Note that we don't check for empty strings, as that is still
+          * considered a valid activation token!
+          */
+@@ -2325,6 +2340,9 @@ static void Wayland_activate_window(SDL_VideoData *data, SDL_WindowData *target_
+ 
+ void Wayland_RaiseWindow(SDL_VideoDevice *_this, SDL_Window *window)
+ {
++    if (Wayland_ApplyGooActivationToken(_this, window)) {
++        return;
++    }
+     Wayland_activate_window(_this->internal, window->internal, true);
+ }
+ 

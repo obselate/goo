@@ -1,0 +1,12 @@
+--- a/src/video/cocoa/SDL_cocoawindow.m
++++ b/src/video/cocoa/SDL_cocoawindow.m
+@@ -1259,7 +1259,8 @@
+          * and fullscreen windows are considered zoomed.
+          */
+         if ((window->flags & SDL_WINDOW_RESIZABLE) && [nswindow isZoomed] &&
+-            !(window->flags & SDL_WINDOW_FULLSCREEN) && ![self isInFullscreenSpace]) {
++            !(window->flags & SDL_WINDOW_FULLSCREEN) && ![self isInFullscreenSpace] &&
++            !(window->last_size_pending && w == window->pending.w && h == window->pending.h)) {
+             zoomed = YES;
+         } else {
+             zoomed = NO;

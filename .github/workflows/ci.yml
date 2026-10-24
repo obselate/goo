@@ -28,7 +28,7 @@ env:
     libdbus-1-dev libdecor-0-dev libgl1-mesa-dev libgl1-mesa-dri
     libegl1 libfontconfig1 libibus-1.0-dev libwayland-dev
     libxkbcommon-dev mesa-vulkan-drivers vulkan-tools
-    wayland-protocols weston
+    kwin-wayland wayland-protocols weston
 
 jobs:
   changes:
@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs Goo.Printing Goo.SpellCheck Goo.SpellCheck.Hunspell tests
+            --severity GL0001=none Goo Goo.Audio Goo.Images Goo.Gestures Goo.NativeDialogs Goo.Printing Goo.SpellCheck Goo.SpellCheck.Hunspell Goo.AppHost tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -125,6 +125,9 @@ jobs:
       - name: Build optional native menus
         if: needs.changes.outputs.api == 'true'
         run: dotnet build Goo.NativeMenus/Goo.NativeMenus.gsproj -c Release -p:TreatWarningsAsErrors=true
+      - name: Build optional application hosting
+        if: needs.changes.outputs.api == 'true'
+        run: dotnet build Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
 
       - name: Regenerate API documentation
         if: needs.changes.outputs.api == 'true'
@@ -139,6 +142,9 @@ jobs:
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
             --source Goo.Audio --xml Goo.Audio/bin/Release/net10.0/Goo.Audio.xml \
             --output docs/api-audio
+          dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
+            --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
+            --output docs/api-app-host --source Goo.AppHost
 
       - name: Validate onboarding and release metadata
         run: |
@@ -158,6 +164,24 @@ jobs:
           sudo apt-get install -y libhunspell-1.7-0
           GOO_REQUIRE_HUNSPELL=1 dotnet test tests/Goo.SpellCheckTests/Goo.SpellCheckTests.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
+      - name: Verify application hosting process ownership
+        if: needs.changes.outputs.api == 'true'
+        run: |
+          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
+            -c Release -m:4 -p:TreatWarningsAsErrors=true
+          python3 .github/scripts/test-app-host.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll "$RUNNER_TEMP/app-host-managed"
+
+      - name: Verify NativeAOT application hosting on Linux
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
+            -c Release -r linux-x64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
+          python3 .github/scripts/test-app-host.py \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
+          python3 .github/scripts/test-desktop-activation.py \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/desktop-activation"
       - name: Build Goo DevTools CLI
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -346,6 +370,20 @@ jobs:
           codesign --verify --deep --strict "$RUNNER_TEMP/Consumer Copy.app"
           GOO_PRIMITIVE_SMOKE=1 GOO_VK_DIAGNOSTICS=1 \
             "$RUNNER_TEMP/Consumer Copy.app/Contents/MacOS/Goo.PackageSmoke"
+      - name: Verify NativeAOT application hosting on macOS
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj \
+            -c Release -r osx-arm64 --self-contained true -m:4 \
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/app-host-aot
+          python3 .github/scripts/test-app-host.py \
+            artifacts/app-host-aot/Goo.AppHostSmoke "$RUNNER_TEMP/app-host-aot"
+          python3 .github/scripts/test-macos-app-host.py \
+            artifacts/app-host-aot "$RUNNER_TEMP/macos-app-host"
+          python3 .github/scripts/test-window-placement.py \
+            "$RUNNER_TEMP/macos-app-host/Goo.AppHostSmoke.app/Contents/MacOS/Goo.AppHostSmoke" \
+            "$RUNNER_TEMP/window-placement"
 
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
@@ -620,6 +658,21 @@ jobs:
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
+      - name: Verify Wayland application activation and placement
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet build tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj -c Release -m:4 \
+            -p:TreatWarningsAsErrors=true -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            python3 .github/scripts/test-wayland-activation.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
+            artifacts/reports/wayland-activation
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            python3 .github/scripts/test-window-placement.py \
+            tests/Goo.AppHostSmoke/bin/Release/net10.0/Goo.AppHostSmoke.dll \
+            artifacts/reports/window-placement
 
       - name: Build Goo DevTools app
         if: needs.changes.outputs.full == 'true'
@@ -817,6 +870,12 @@ jobs:
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/gesture-nativeaot
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
             artifacts/gesture-nativeaot/Goo.Gestures.Smoke
+
+      - name: Pack optional application hosting
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
@@ -1149,6 +1208,7 @@ jobs:
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Images.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.AppHost.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1475,6 +1535,18 @@ jobs:
         if: needs.changes.outputs.full == 'true'
         with:
           global-json-file: global.json
+      - name: Verify NativeAOT application hosting on Windows
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          dotnet publish tests/Goo.AppHostSmoke/Goo.AppHostSmoke.gsproj `
+            -c Release -r win-x64 --self-contained true -m:4 `
+            -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/app-host-aot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python .github/scripts/test-app-host.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/app-host-aot"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python .github/scripts/test-desktop-activation.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/desktop-activation"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         if: needs.changes.outputs.full == 'true'
         with:
@@ -1536,6 +1608,15 @@ jobs:
           dotnet restore tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -r win-x64 -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version --configfile tests/Goo.PackageSmoke/NuGet.config
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet publish tests/Goo.PackageSmoke/Goo.PackageSmoke.gsproj -c Release -r win-x64 --self-contained true --no-restore -p:PublishAot=true -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version -o artifacts/windows-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify NativeAOT window placement on Windows
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          foreach ($name in "SDL3.dll", "goo-harfbuzz.dll", "goo-harfbuzz-gpu.dll") {
+            Copy-Item "artifacts/windows-smoke/$name" artifacts/app-host-aot -Force
+          }
+          python .github/scripts/test-window-placement.py artifacts/app-host-aot/Goo.AppHostSmoke.exe "$env:RUNNER_TEMP/window-placement"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check Windows rendering, resize, scrolling, multiple windows and allocations
         if: needs.changes.outputs.full == 'true'
@@ -1690,6 +1771,10 @@ jobs:
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
+          dotnet nuget push "artifacts/packages/Goo.AppHost.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate --no-symbols
           dotnet nuget push "artifacts/packages/Goo.DevTools.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
@@ -1717,6 +1802,7 @@ jobs:
           if [[ "$GOO_VERSION" == *-* ]]; then
             release_flags+=(--prerelease)
           fi
+
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --notes-file "$notes_file"
           else

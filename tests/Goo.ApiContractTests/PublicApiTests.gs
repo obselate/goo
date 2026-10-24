@@ -127,6 +127,7 @@ open class PublicApiTests {
 
         private func ApiTypes() IEnumerable[Type] -> []Assembly{
             typeof(Window).Assembly,
+            typeof(SingleInstance).Assembly,
             typeof(NativeMenus).Assembly,
             typeof(ImageVariants).Assembly,
             typeof(SpellCheckSession).Assembly,

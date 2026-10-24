@@ -68,8 +68,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
             Require(SDL.SetWindowPosition(window, x, y), "SDL_SetWindowPosition")
           }
           SetBorder(decorated, resizable)
+          ObserveNormalPlacement()
           SetState(state)
         }
+
         SetVSync(vsync)
         RefreshMetrics()
         if LogicalWidth > 0 && FramebufferWidth > 0 {
@@ -298,6 +300,10 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func RequestActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if OperatingSystem.IsLinux() && Window.CurrentActivationToken != nil {
+      if !SDL.SetStringProperty(SDL.GetWindowProperties(window), "Goo.Wayland.ActivationToken.1",
+        Window.CurrentActivationToken!!) { return WindowOperationResult.Failed }
+    }
     if deferFirstShow {
       firstShowRequested = true
       Wake()
@@ -411,6 +417,13 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       SDL_SetWindowHitTestRaw(windowHandle, nint(0), nint(0))
     }
     if !window.IsNull {
+      if OperatingSystem.IsMacOS() {
+        SDL.SyncWindow(window)
+        if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
+          SDL.SetWindowFullscreen(window, false)
+          SDL.SyncWindow(window)
+        }
+      }
       SDL.DestroyWindow(window)
       window = SDLWindowPtr.Null
       windowHandle = nint(0)

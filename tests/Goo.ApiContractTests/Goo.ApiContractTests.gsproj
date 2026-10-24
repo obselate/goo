@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
+    <ProjectReference Include="..\..\Goo.AppHost\Goo.AppHost.gsproj" />
     <ProjectReference Include="../../Goo.NativeMenus/Goo.NativeMenus.gsproj" />
     <ProjectReference Include="../../Goo.Images/Goo.Images.gsproj" />
     <ProjectReference Include="..\..\Goo.SpellCheck\Goo.SpellCheck.gsproj" />
