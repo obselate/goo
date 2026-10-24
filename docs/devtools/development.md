@@ -11,13 +11,13 @@ Run commands below from the repository root.
 The CLI can run directly from source:
 
 ```sh
-dotnet run --project tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -- doctor
+dotnet run --project tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -- doctor
 ```
 
 To create its local tool package:
 
 ```sh
-dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release -o artifacts/devtools
+dotnet pack tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release -o artifacts/devtools
 ```
 
 The graphical inspector is a Goo application. Run the repository bootstrap from

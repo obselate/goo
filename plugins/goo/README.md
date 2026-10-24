@@ -81,7 +81,7 @@ The installed CLI is the normal path. To test a Goo source checkout, build its C
 and set `GOO_CLI` in the MCP server environment:
 
 ```sh
-dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.csproj -c Release
+dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release
 export GOO_CLI=/absolute/path/to/goo/tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll
 ```
 

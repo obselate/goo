@@ -35,8 +35,8 @@ LITERAL_VERSION_FILES = (
     "integrations/vscode/README.md",
     "integrations/vscode/package.json",
     "templates/Goo.Templates/README.md",
-    "tools/Goo.DevTools.Cli/CliApplication.cs",
-    "tools/Goo.DevTools.Cli/ProtocolConnection.cs",
+    "tools/Goo.DevTools.Cli/CliApplication.gs",
+    "tools/Goo.DevTools.Cli/ProtocolConnection.gs",
 )
 
 
