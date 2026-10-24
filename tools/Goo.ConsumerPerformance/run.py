@@ -23,6 +23,8 @@ PUBLIC_FEED = "https://api.nuget.org/v3/index.json"
 PROJECT_NAME = "Goo.ConsumerPerformance"
 FONT_SHA256 = "71ffd45fe736c7d26eeae2d7cb9e62e09b80901ad3df9a564b3662876c717666"
 LICENSE_SHA256 = "699a9438baec27664f784dd36c51b128fb3632622ffd2537d69475d2e44eded0"
+FONT_PATH = "../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
+LICENSE_PATH = "../../tests/Goo.VulkanProof/Assets/Text/VendSans-OFL.txt"
 MODES = ("nativeaot", "trimmed-jit")
 SOURCE_FILES = (
     "Program.gs",
@@ -32,8 +34,8 @@ SOURCE_FILES = (
     "global.json",
     "NuGet.Config",
     "run.py",
-    "Assets/VendSans-VariableFont_wght.ttf",
-    "Assets/VendSans-OFL.txt",
+    FONT_PATH,
+    LICENSE_PATH,
 )
 CONTROLLED_GOO_ENVIRONMENT = (
     "GOO_CONSUMER_READY_DELAY_MS",
@@ -828,8 +830,8 @@ class Benchmark:
 def main():
     args = parse_args()
     benchmark = Benchmark(args)
-    font = benchmark.root / "Assets" / "VendSans-VariableFont_wght.ttf"
-    license_path = benchmark.root / "Assets" / "VendSans-OFL.txt"
+    font = benchmark.root / FONT_PATH
+    license_path = benchmark.root / LICENSE_PATH
     if sha256(font) != FONT_SHA256 or sha256(license_path) != LICENSE_SHA256:
         raise RuntimeError("benchmark font or license hash does not match the fixture contract")
     source_identity = {
@@ -875,9 +877,9 @@ def main():
         "packages": packages,
         "source": source_identity,
         "font": {
-            "path": "Assets/VendSans-VariableFont_wght.ttf",
+            "path": FONT_PATH,
             "sha256": FONT_SHA256,
-            "license": "Assets/VendSans-OFL.txt",
+            "license": LICENSE_PATH,
             "licenseSha256": LICENSE_SHA256,
         },
         "host": host_provenance(),

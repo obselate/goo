@@ -7,6 +7,6 @@
     <ProjectReference Include="../../../Goo/Goo.gsproj" />
     <Compile Remove="Frames.gs" />
     <ProjectReference Include="$(WidgetsProject)" />
-    <Content Include="../Assets/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../tests/Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf" Link="VendSans-VariableFont_wght.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
