@@ -58,12 +58,6 @@ internal partial class ScrollbarParts {
             }
         }
 
-        internal func PropagateInherited(resolver Resolver, owner Node, field StyleField) {
-            var fields = StyleMask{}
-            fields = styleMaskWith(fields, field)
-            InvalidateInherited(resolver, owner, fields)
-        }
-
         internal func Children(owner Node) IList[Node] {
             guard let state = stateFor(owner, false) else {
                 return empty
@@ -83,11 +77,6 @@ internal partial class ScrollbarParts {
             }
             return state.Active
         }
-
-        internal func HasActive(owner Node) bool -> ActiveChildren(owner).Count != 0
-
-        internal func IsDirectChild(owner Node, target Node) bool -> owner.Children.Contains(target)
-        || Children(owner).Contains(target)
 
         internal func Contains(owner Node, target Node) bool {
             if owner == target {

@@ -413,11 +413,6 @@ internal class Node {
       MathF.Max(state.Horizontal.Alpha, state.Vertical.Alpha)
     } else { 0.0F }
   }
-  internal prop ScrollIdle float32{
-    get -> if let state = ScrollActivityStates.TryGet(this) {
-      MathF.Max(state.Horizontal.Idle, state.Vertical.Idle)
-    } else { 0.0F }
-  }
   internal prop ScrollbarVisibilityX ScrollbarVisibility{
     get -> ScrollbarStyles.GetVisibilityX(this)
     set(v) -> ScrollbarStyles.SetVisibilityX(this, v)

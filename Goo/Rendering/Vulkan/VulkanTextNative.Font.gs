@@ -541,19 +541,6 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   }
 }
 
-internal func LoadVulkanTextFont(path string, pixelHeight uint32) VulkanTextFont -> LoadVulkanTextFont(path, pixelHeight, 0u, nil)
-
-internal func LoadVulkanTextFont(
-  path string,
-  pixelHeight uint32,
-  faceIndex uint32,
-  variations([]VulkanTextVariation)?) VulkanTextFont{
-    if path == nil {
-      throw ArgumentNullException("path")
-    }
-    return VulkanTextFont(VulkanTextFont.ReadBytes(path), pixelHeight, faceIndex, variations)
-  }
-
 internal func VulkanTextTag(value string) uint32 {
   if value == nil || value.Length != 4 {
     throw ArgumentException("OpenType tags must contain four characters", "value")

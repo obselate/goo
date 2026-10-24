@@ -4,8 +4,6 @@ import System.Collections.Generic
 
 internal class CellOwnership {
   shared {
-    internal func Inherit(node Node, inherited Cell?) Cell ? -> node.Fiber ?? inherited
-
     internal func Nearest(node Node) Cell? {
       var current Node? = node
       while let value = current {

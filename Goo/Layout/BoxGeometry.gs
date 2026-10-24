@@ -38,10 +38,6 @@ internal class BoxGeometry {
 
     internal func PaddingBottom(n Node) float32 -> padding(n, YGEdge.Bottom)
 
-    internal func ViewportLeft(n Node) float32 -> ContentLeft(n)
-
-    internal func ViewportTop(n Node) float32 -> ContentTop(n)
-
     internal func ViewportWidth(n Node) float32 -> scrollViewportWidth(n)
 
     internal func ViewportHeight(n Node) float32 -> scrollViewportHeight(n)
