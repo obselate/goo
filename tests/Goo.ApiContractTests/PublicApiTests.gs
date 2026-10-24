@@ -82,7 +82,7 @@ open class PublicApiTests {
 
     private class CancelledPrintDocument : IPrintDocument {
         public func Paginate(settings PrintPageSettings) PrintLayoutResult ->
-            PrintLayoutResult(PrintLayoutStatus.Ready, 1)
+            PrintLayoutResult{Status: PrintLayoutStatus.Ready, PageCount: 1}
         public func CreatePage(index int32, settings PrintPageSettings) Cell {
             throw InvalidOperationException("A cancelled export must not create pages.")
         }
