@@ -25,15 +25,13 @@ partial class GooServer {
         action string = "",
         context JsonObject? = nil
     ) JsonObject {
-        let detail = JsonObject(){
-            ["code"] = code,
-            ["message"] = message,
-            ["phase"] = phase,
-            ["mayHaveApplied"] = uncertain,
-            ["pluginVersion"] = Version,
-            ["cliVersion"] = "unavailable",
-            ["runtime"] = RuntimeStatus(JsonObject())
-        }
+        let detail = Template("error")
+        detail["code"] = code
+        detail["message"] = message
+        detail["phase"] = phase
+        detail["mayHaveApplied"] = uncertain
+        detail["pluginVersion"] = Version
+        detail["runtime"] = Template("runtime")
         if action != "" {
             detail["action"] = action
         }
@@ -69,15 +67,7 @@ partial class GooServer {
             try {
                 let command = Cli()
                 let executable = FileInfo(command.Last())
-                let key = string.Join("\0", command) +
-                    executable
-                    .LastWriteTimeUtc
-                    .Ticks
-                    .ToString() +
-                    ":" +
-                    executable
-                    .Length
-                    .ToString()
+                let key = "${string.Join("\0", command)}:${executable.LastWriteTimeUtc.Ticks}:${executable.Length}"
                 if CachedStatus != nil && CachedKey == key {
                     return CachedStatus!!.DeepClone().AsObject()
                 }
@@ -89,10 +79,8 @@ partial class GooServer {
                     }
                 } catch (JsonException) { }
                 let raw = version["features"]
-                let features = if raw is JsonArray && raw.AsArray().All(
-                    x -> x != nil && x.GetValueKind() == JsonValueKind.String
-                ) {
-                    raw.AsArray().Select(x -> x.GetValue[string]()).ToArray()
+                let features = if StringList(raw) {
+                    raw!!.AsArray().Select(x -> x.GetValue[string]()).ToArray()
                 } else {
                     []string{}
                 }
@@ -101,48 +89,39 @@ partial class GooServer {
                     []string{"list", "input", "dev.input", "errors.structured", "process-tree-cleanup"}.All(
                     x -> features.Contains(x)
                 )
+                let issues = JsonArray()
+                let actions = JsonArray()
+                if !compatible {
+                    issues.Add("The configured Goo CLI is missing required agent features.")
+                    actions.Add(Recovery)
+                }
                 let status = JsonObject(){
                     ["available"] = available,
                     ["compatible"] = compatible,
                     ["command"] = command.Last(),
                     ["version"] = S(version, "version", "unavailable"),
                     ["features"] = Strings(features.Order()),
-                    ["issues"] = Strings(
-                        if compatible {
-                            []string{}
-                        } else {
-                            []string{"The configured Goo CLI is missing required agent features."}
-                        }
-                    ),
-                    ["actions"] = Strings(
-                        if compatible {
-                            []string{}
-                        } else {
-                            []string{Recovery}
-                        }
-                    )
+                    ["issues"] = issues,
+                    ["actions"] = actions
                 }
                 CachedKey = key
                 CachedStatus = status.DeepClone().AsObject()
                 return status
-            } catch (error GooFailure) {
-                return JsonObject(){
-                    ["available"] = false,
-                    ["version"] = "unavailable",
-                    ["features"] = JsonObject(),
-                    ["issues"] = Strings([]string{S(error.Detail, "message")}),
-                    ["actions"] = Strings([]string{S(error.Detail, "action")})
-                }
             } catch (error Exception) {
-                return JsonObject(){
-                    ["available"] = false,
-                    ["version"] = "unavailable",
-                    ["features"] = JsonObject(),
-                    ["issues"] = Strings([]string{error.Message}),
-                    ["actions"] = Strings(
-                        []string{"Install Goo.DevTools or set GOO_CLI to a compatible executable or built CLI DLL."}
-                    )
+                let status = Template("cliUnavailable")
+                status["issues"] = Strings(
+                    []string{
+                        if error is GooFailure {
+                            S(error.Detail, "message")
+                        } else {
+                            error.Message
+                        }
+                    }
+                )
+                if error is GooFailure {
+                    status["actions"] = Strings([]string{S(error.Detail, "action")})
                 }
+                return status
             }
         }
     }
@@ -224,9 +203,7 @@ partial class GooServer {
 
     func Targets(a JsonObject) JsonObject {
         let pid = I(a, "pid")
-        if pid < 0 {
-            throw ArgumentException("pid must be positive, or zero to list all live targets")
-        }
+        Require(pid >= 0, "pid must be positive, or zero to list all live targets")
         let arguments = List[string](){"list", "--json"}
         if pid != 0 {
             arguments.Add("--pid")
@@ -254,21 +231,18 @@ partial class GooServer {
             timeout,
             phase: "snapshot"
         )
-        let messages = Lines(output)
-            .Where(x -> !string.IsNullOrWhiteSpace(x))
-            .Select(x -> JsonNode.Parse(x)!!.AsObject())
-            .ToArray()
-        let hello = messages.FirstOrDefault(x -> S(x, "type") == "hello") ?? JsonObject()
-        let result = Response(output, "snapshot", "snapshot-failed")
-        if result["payload"] is not JsonObject || !B(result["payload"]!!, "full") {
-            throw ArgumentException(
-                "The runtime returned an incomplete tree. Update Goo to a version supporting full snapshot requests."
-            )
-        }
+        let (result, hello) = ReadResponse(output, "snapshot", "snapshot-failed", false)
+        Require(
+            result["payload"] is JsonObject && B(result["payload"]!!, "full"),
+            "The runtime returned an incomplete tree. Update Goo to a version supporting full snapshot requests."
+        )
         return (result, hello)
     }
 
-    func Response(output string, phase string, code string = "request-failed") JsonObject {
+    func ReadResponse(output string, phase string, code string = "request-failed", includeRuntime bool = true)(
+        JsonObject,
+        JsonObject
+    ) {
         let messages = Lines(output)
             .Where(x -> !string.IsNullOrWhiteSpace(x))
             .Select(x -> JsonNode.Parse(x)!!.AsObject())
@@ -291,10 +265,10 @@ partial class GooServer {
                 )
             )
         }
-        if !result.ContainsKey("runtime") {
+        if includeRuntime && !result.ContainsKey("runtime") {
             result["runtime"] = RuntimeStatus(hello)
         }
-        return result
+        return (result, hello)
     }
 
     func Capabilities(a JsonObject) JsonObject {
@@ -346,9 +320,10 @@ partial class GooServer {
             let path = Path.Combine(directory, "frame.png")
             Run([]string{"capture", "--output", path, "--wait", "10"}.Concat(TargetArgs(a)), phase: "capture")
             let data = File.ReadAllBytes(path)
-            if data.Length < 8 || !data.Take(8).SequenceEqual([]byte{137, 80, 78, 71, 13, 10, 26, 10}) {
-                throw ArgumentException("Goo CLI did not produce a PNG")
-            }
+            Require(
+                data.Length >= 8 && data.Take(8).SequenceEqual([]byte{137, 80, 78, 71, 13, 10, 26, 10}),
+                "Goo CLI did not produce a PNG"
+            )
             let content = List[ContentBlock]()
             content.Add(ImageContentBlock.FromBytes(ReadOnlyMemory[byte](data), "image/png"))
             return CallToolResult(){Content = content}
@@ -406,9 +381,7 @@ partial class GooServer {
         }
 
         func TargetArgs(a JsonObject) List[string] {
-            if I(a, "pid") <= 0 {
-                throw ArgumentException("Provide the positive PID of the intended running Goo application")
-            }
+            Require(I(a, "pid") > 0, "Provide the positive PID of the intended running Goo application")
             let result = List[string](){"--pid", I(a, "pid").ToString(CultureInfo.InvariantCulture)}
             if S(a, "window") != "" {
                 result.Add("--window=" + S(a, "window"))
@@ -428,32 +401,33 @@ partial class GooServer {
         )
 
         func RuntimeStatus(hello JsonObject) JsonObject {
+            let status = Template("runtime")
+            for name in[]string{"runtimeVersion", "protocol", "inspectMode"} {
+                if hello[name] != nil {
+                    status[name] = hello[name]?.DeepClone()
+                }
+            }
+            if hello["version"] != nil {
+                status["protocolVersion"] = hello["version"]?.DeepClone()
+            }
             let valid = StringList(hello["capabilities"])
-            let identity = JsonObject()
+            if valid {
+                status["capabilities"] = hello["capabilities"]?.DeepClone()
+            }
+            let identity = status["identity"]!!.AsObject()
             for name in[]string{"pid", "windowId", "sessionId"} {
                 if hello[name] != nil {
                     identity[name] = hello[name]?.DeepClone()
                 }
             }
-            return JsonObject(){
-                ["runtimeVersion"] = hello["runtimeVersion"]?.DeepClone() ?? JsonValue.Create("unavailable"),
-                ["protocol"] = hello["protocol"]?.DeepClone() ?? JsonValue.Create("unavailable"),
-                ["protocolVersion"] = hello["version"]?.DeepClone() ?? JsonValue.Create("unavailable"),
-                ["capabilities"] = if valid {
-                    hello["capabilities"]?.DeepClone()
-                } else {
-                    JsonArray()
-                },
-                ["identity"] = identity,
-                ["inputPermission"] = if !valid {
-                    "unavailable"
-                } else if Has(hello["capabilities"], "input") {
+            if valid {
+                status["inputPermission"] = if Has(hello["capabilities"], "input") {
                     "enabled"
                 } else {
                     "disabled"
-                },
-                ["inspectMode"] = hello["inspectMode"]?.DeepClone() ?? JsonValue.Create("unavailable")
+                }
             }
+            return status
         }
     }
 }

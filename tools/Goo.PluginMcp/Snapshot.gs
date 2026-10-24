@@ -14,18 +14,13 @@ partial class GooServer {
         let after = I(a, "after_sequence")
         let wait = S(a, "wait")
         let timeout = I(a, "timeout_ms")
-        if offset < 0 || limit < 1 || limit > 200 || after < 0 {
-            throw ArgumentException("offset and after_sequence must be nonnegative; limit must be 1-200")
-        }
-        if wait != "" && (timeout < 1 || timeout > 10000) {
-            throw ArgumentException("wait requires timeout_ms from 1 through 10000")
-        }
-        if wait == "" && timeout != 0 {
-            throw ArgumentException("timeout_ms requires wait")
-        }
-        if wait == "" && after != 0 {
-            throw ArgumentException("after_sequence requires wait")
-        }
+        Require(
+            offset >= 0 && limit >= 1 && limit <= 200 && after >= 0,
+            "offset and after_sequence must be nonnegative; limit must be 1-200"
+        )
+        Require(wait == "" || timeout >= 1 && timeout <= 10000, "wait requires timeout_ms from 1 through 10000")
+        Require(wait != "" || timeout == 0, "timeout_ms requires wait")
+        Require(wait != "" || after == 0, "after_sequence requires wait")
         let query = B(a, "compact") ||
             a["text"] != nil ||
             a["value"] != nil ||
@@ -65,11 +60,10 @@ partial class GooServer {
                 projected["outcome"] = "timeout"
                 return projected
             }
-            if !Has(hello["capabilities"], "target.handles") || !Has(hello["capabilities"], "tree.resolved-semantics") {
-                throw ArgumentException(
-                    "This runtime does not support compact resolved semantic snapshots. Update Goo."
-                )
-            }
+            Require(
+                Has(hello["capabilities"], "target.handles") && Has(hello["capabilities"], "tree.resolved-semantics"),
+                "This runtime does not support compact resolved semantic snapshots. Update Goo."
+            )
             let current = result["payload"]?["targetIdentity"]?["sessionId"]?.GetValue[string]()
             if session == nil {
                 session = current
@@ -272,9 +266,7 @@ partial class GooServer {
                 )
                 if exact && B(node, "textTruncated") {
                     throw ArgumentException(
-                        "Cannot prove exact " +
-                            name +
-                            " equality from truncated text; narrow the subtree or inspect application state another way"
+                        "Cannot prove exact $name equality from truncated text; narrow the subtree or inspect application state another way"
                     )
                 }
                 let matched = if exact {
@@ -284,9 +276,7 @@ partial class GooServer {
                 }
                 if !matched && B(node, "textTruncated") {
                     throw ArgumentException(
-                        "Cannot prove " +
-                            name +
-                            " absence from truncated text; narrow the subtree or inspect application state another way"
+                        "Cannot prove $name absence from truncated text; narrow the subtree or inspect application state another way"
                     )
                 }
                 if !matched {

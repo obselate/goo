@@ -53,19 +53,13 @@ partial class GooServer {
     let Manifest JsonObject
     let Version string
     let LoadedFingerprint string
-    let Tools List[Tool]
-    let Definitions JsonArray
+    let Tools List[Tool] = ToolDefinitions
 
     init(root string) {
         Root = Resolve(root)
         Bundle = Path.Combine(Root, "reference")
         Manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(Bundle, "manifest.json")))!!.AsObject()
         Version = JsonNode.Parse(File.ReadAllText(Path.Combine(Root, "plugin.json")))!!["version"]!!.GetValue[string]()
-        using let resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("Goo.PluginMcp.Tools.json")!!
-        using let reader = StreamReader(resource)
-        let definitions = reader.ReadToEnd()
-        Definitions = JsonNode.Parse(definitions)!!.AsArray()
-        Tools = JsonSerializer.Deserialize[List[Tool]](definitions)
         LoadedFingerprint = Fingerprint()
     }
 
@@ -107,61 +101,77 @@ partial class GooServer {
     }
 
     func Arguments(name string, arguments IDictionary[string, JsonElement]?) JsonObject {
-        let definition = Definitions.FirstOrDefault(x -> S(x, "name") == name)
-        if definition == nil {
+        let tool = Tools.FirstOrDefault(x -> x.Name == name)
+        if tool == nil {
             throw ArgumentException("Unknown tool: " + name)
         }
-        let schema = definition["inputSchema"]!!
         let result = JsonObject()
-        for property in schema["properties"]!!.AsObject() {
+        for property in tool.InputSchema.GetProperty("properties").EnumerateObject() {
             let spec = property.Value
-            var value JsonNode? = nil
-            if arguments != nil && arguments.TryGetValue(property.Key, out var supplied) {
-                value = JsonNode.Parse(supplied.GetRawText())
-            } else if spec.AsObject().ContainsKey("default") {
-                value = spec["default"]?.DeepClone()
-            } else {
-                throw ArgumentException("Missing required argument: " + property.Key)
+            var value JsonElement
+            if arguments != nil && arguments.TryGetValue(property.Name, out value) { } else if !spec.TryGetProperty(
+                "default",
+                out value
+            ) {
+                throw ArgumentException("Missing required argument: " + property.Name)
             }
-            let type = S(spec, "type")
-            let nullable = spec["anyOf"] is JsonArray
+            let nullable = spec.TryGetProperty("anyOf", out var alternatives)
             let expected = if nullable {
-                S(spec["anyOf"]!![0]!!, "type")
+                alternatives[0].GetProperty("type").GetString()
             } else {
-                type
+                spec.GetProperty("type").GetString()
             }
-            if value == nil {
-                if !nullable {
-                    throw ArgumentException(property.Key + " must be " + expected)
-                }
+            let kind = value.ValueKind
+            let valid = switch expected {
+                case "string": kind == JsonValueKind.String
+                case "boolean": kind == JsonValueKind.True || kind == JsonValueKind.False
+                case "integer": kind == JsonValueKind.Number && value.TryGetDecimal(out var number) && decimal.Truncate(
+                    number
+                ) == number
+                case "number": kind == JsonValueKind.Number && double.IsFinite(value.GetDouble())
+                default: false
+            }
+            if !valid && !(kind == JsonValueKind.Null && nullable) {
+                throw ArgumentException(property.Name + " must be " + expected)
+            }
+            if spec.TryGetProperty("enum", out var choices) && !choices.EnumerateArray().Any(
+                x -> JsonElement.DeepEquals(x, value)
+            ) {
+                throw ArgumentException("Invalid " + property.Name + ": " + value.GetRawText())
+            }
+            result[property.Name] = if expected == "integer" && kind != JsonValueKind.Null {
+                JsonValue.Create(checked(int64(value.GetDecimal())))
             } else {
-                let kind = value.GetValueKind()
-                let valid = switch expected {
-                    case "string": kind == JsonValueKind.String
-                    case "boolean": kind == JsonValueKind.True || kind == JsonValueKind.False
-                    case "integer": kind == JsonValueKind.Number && value.AsValue().TryGetValue[decimal](
-                        out var number
-                    ) &&
-                        decimal.Truncate(number) == number
-                    case "number": kind == JsonValueKind.Number && double.IsFinite(value.GetValue[double]())
-                    default: false
-                }
-                if !valid {
-                    throw ArgumentException(property.Key + " must be " + expected)
-                }
-                if expected == "integer" {
-                    value = JsonValue.Create(checked(int64(value.GetValue[decimal]())))
-                }
-                if spec["enum"] is JsonArray && !spec["enum"]!!.AsArray().Any(x -> JsonNode.DeepEquals(x, value)) {
-                    throw ArgumentException("Invalid " + property.Key + ": " + value!!.ToJsonString())
-                }
+                JsonValue.Create(value.Clone())
             }
-            result[property.Key] = value
         }
         return result
     }
 
     shared {
+        private let Resource JsonElement = LoadResource()
+        let ToolDefinitions List[Tool] = JsonSerializer.Deserialize[List[Tool]](Resource.GetProperty("tools"))
+
+        func LoadResource() JsonElement {
+            using let stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Goo.PluginMcp.Tools.json")!!
+            using let document = JsonDocument.Parse(stream)
+            return document.RootElement.Clone()
+        }
+
+        func Template(name string) JsonObject -> JsonSerializer.Deserialize[JsonObject](
+            Resource.GetProperty("defaults").GetProperty(name)
+        )
+
+        func Fixture(name string) JsonObject -> JsonSerializer.Deserialize[JsonObject](
+            Resource.GetProperty("verification").GetProperty(name)
+        )
+
+        func Require(condition bool, message string) {
+            if !condition {
+                throw ArgumentException(message)
+            }
+        }
+
         func S(node JsonNode, key string, fallback string = "") string -> node[key]?.GetValue[string]() ?? fallback
 
         func I(node JsonNode, key string, fallback int64 = 0) int64 {

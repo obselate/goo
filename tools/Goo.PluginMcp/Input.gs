@@ -16,13 +16,13 @@ partial class GooServer {
 
     func Input(a JsonObject) JsonObject {
         let event_ = S(a, "event")
-        if a["target"] != nil && a["node_id"] != nil {
-            throw ArgumentException("Use target or node_id, not both")
-        }
-        if ![]string{"click", "pointer.move", "pointer.down", "pointer.up", "wheel"}.Contains(event_) &&
-            (a["target"] != nil || a["node_id"] != nil) {
-            throw ArgumentException("target and node_id apply only to pointer and wheel events")
-        }
+        Require(a["target"] == nil || a["node_id"] == nil, "Use target or node_id, not both")
+        Require(
+            []string{"click", "pointer.move", "pointer.down", "pointer.up", "wheel"}.Contains(event_) ||
+                a["target"] == nil &&
+                a["node_id"] == nil,
+            "target and node_id apply only to pointer and wheel events"
+        )
         let key = I(a, "pid").ToString() + "\0" + S(a, "window") + "\0" + S(a, "project")
         var gate object
         lock GestureGate {
@@ -45,41 +45,32 @@ partial class GooServer {
             if gesture != nil {
                 arguments.Add("--gesture=" + gesture)
             }
-            for name in[]string{
-                "target",
-                "node_id",
-                "x",
-                "y",
-                "offset_x",
-                "offset_y",
-                "delta_x",
-                "delta_y",
-                "button",
-                "key",
-                "text"
-            } {
-                if a[name] != nil {
+            for item in a {
+                let name = item.Key
+                if item.Value == nil || []string{"pid", "event", "window", "project"}.Contains(name) {
+                    continue
+                }
+                if item.Value.GetValueKind() == JsonValueKind.True || item.Value.GetValueKind() == JsonValueKind.False {
+                    if B(a, name) {
+                        arguments.Add("--" + name)
+                    }
+                } else {
                     let option = if name == "node_id" {
                         "node"
                     } else {
                         name.Replace('_', '-')
                     }
-                    let value = if a[name]!!.GetValueKind() == System.Text.Json.JsonValueKind.String {
-                        a[name]!!.GetValue[string]()
+                    let value = if item.Value.GetValueKind() == JsonValueKind.String {
+                        item.Value.GetValue[string]()
                     } else {
-                        a[name]!!.ToJsonString()
+                        item.Value.ToJsonString()
                     }
                     arguments.Add("--" + option + "=" + value)
                 }
             }
-            for name in[]string{"alt", "ctrl", "shift", "super"} {
-                if B(a, name) {
-                    arguments.Add("--" + name)
-                }
-            }
             var result JsonObject
             try {
-                result = Response(Run(arguments, uncertain: true, phase: "input"), "input")
+                result = ReadResponse(Run(arguments, uncertain: true, phase: "input"), "input").Item1
             } catch (error GooFailure) {
                 if error.Message.Contains("gesture-owned") || error.Message.Contains("gesture-expired") {
                     lock GestureGate {
@@ -89,9 +80,10 @@ partial class GooServer {
                 rethrow
             }
             let payload = result["payload"]?.AsObject() ?? JsonObject()
-            if !B(payload, "applied") {
-                throw ArgumentException("Input was not acknowledged as applied. Inspect state before another action.")
-            }
+            Require(
+                B(payload, "applied"),
+                "Input was not acknowledged as applied. Inspect state before another action."
+            )
             lock GestureGate {
                 if B(payload, "gestureActive") && S(payload, "gestureId") != "" {
                     Gestures[key] = S(payload, "gestureId")
@@ -139,9 +131,7 @@ partial class GooServer {
             )
         }
         let body = RequestJson(payload)
-        if body.Length > 65536 {
-            throw ArgumentException("Request exceeds the endpoint request limit")
-        }
+        Require(body.Length <= 65536, "Request exceeds the endpoint request limit")
         let arguments = List[string](){
             "attach",
             "--once",
@@ -160,34 +150,29 @@ partial class GooServer {
             arguments.Add(property)
         }
         arguments.AddRange(selected)
-        return Response(Run(arguments, uncertain: true, phase: command), command)
+        return ReadResponse(Run(arguments, uncertain: true, phase: command), command).Item1
     }
 
     func Inspect(a JsonObject) JsonObject {
         let action = S(a, "action")
         let selector = []string{"target", "node_id", "x", "y"}.Any(x -> a[x] != nil)
         if action != "select" {
-            if selector {
-                throw ArgumentException("Inspection selectors apply only to select")
-            }
+            Require(!selector, "Inspection selectors apply only to select")
             return Mutation(a, "inspect." + action, JsonObject(), List[string](){"inspect." + action})
         }
         var payload JsonObject
         var required List[string]
         if a["target"] != nil || a["node_id"] != nil {
-            if a["x"] != nil || a["y"] != nil {
-                throw ArgumentException("Use target, node_id, or x/y, not a mixture")
-            }
+            Require(a["x"] == nil && a["y"] == nil, "Use target, node_id, or x/y, not a mixture")
             let selected = MutationTarget(a)
             payload = selected.Item1
             required = selected.Item2
         } else {
-            if a["x"] == nil || a["y"] == nil {
-                throw ArgumentException("select requires target, node_id, or both x and y")
-            }
-            if !double.IsFinite(a["x"]!!.GetValue[double]()) || !double.IsFinite(a["y"]!!.GetValue[double]()) {
-                throw ArgumentException("x and y must be finite")
-            }
+            Require(a["x"] != nil && a["y"] != nil, "select requires target, node_id, or both x and y")
+            Require(
+                double.IsFinite(a["x"]!!.GetValue[double]()) && double.IsFinite(a["y"]!!.GetValue[double]()),
+                "x and y must be finite"
+            )
             payload = JsonObject(){["x"] = a["x"]?.DeepClone(), ["y"] = a["y"]?.DeepClone()}
             required = List[string]()
         }
@@ -197,12 +182,11 @@ partial class GooServer {
 
     func Style(a JsonObject, reset bool) JsonObject {
         let property = S(a, "property")
-        if reset && a["property"] != nil && string.IsNullOrWhiteSpace(property) {
-            throw ArgumentException("property must not be empty")
-        }
-        if !reset && (string.IsNullOrWhiteSpace(property) || string.IsNullOrWhiteSpace(S(a, "value"))) {
-            throw ArgumentException("property and value must not be empty")
-        }
+        Require(!reset || a["property"] == nil || !string.IsNullOrWhiteSpace(property), "property must not be empty")
+        Require(
+            reset || !string.IsNullOrWhiteSpace(property) && !string.IsNullOrWhiteSpace(S(a, "value")),
+            "property and value must not be empty"
+        )
         let (payload, required) = MutationTarget(a)
         if !reset || a["property"] != nil {
             payload["property"] = property
@@ -244,19 +228,13 @@ partial class GooServer {
         }
 
         func MutationTarget(a JsonObject)(JsonObject, List[string]) {
-            if (a["target"] == nil) == (a["node_id"] == nil) {
-                throw ArgumentException("Provide exactly one of target or node_id")
-            }
+            Require((a["target"] == nil) != (a["node_id"] == nil), "Provide exactly one of target or node_id")
             if a["target"] != nil {
                 let target = S(a, "target")
-                if target.Length == 0 || target.Length > 128 {
-                    throw ArgumentException("target must contain 1-128 characters")
-                }
+                Require(target.Length > 0 && target.Length <= 128, "target must contain 1-128 characters")
                 return (JsonObject(){["target"] = target}, List[string](){"target.handles"})
             }
-            if I(a, "node_id") <= 0 {
-                throw ArgumentException("node_id must be positive")
-            }
+            Require(I(a, "node_id") > 0, "node_id must be positive")
             return (JsonObject(){["nodeId"] = I(a, "node_id")}, List[string]())
         }
     }

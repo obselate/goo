@@ -17,9 +17,10 @@ partial class GooServer {
         let query = S(a, "query")
         let terms = SearchTerms(query)
         let limit = I(a, "limit")
-        if terms.Count == 0 || query.Length > 256 || limit < 1 || limit > 20 {
-            throw ArgumentException("Supply a query of 1-256 characters and a limit of 1-20")
-        }
+        Require(
+            terms.Count > 0 && query.Length <= 256 && limit >= 1 && limit <= 20,
+            "Supply a query of 1-256 characters and a limit of 1-20"
+        )
         let root = Source(S(a, "repository"))
         let matches = List[SearchHit]()
         for relative in Documents(root).Where(x -> x.EndsWith(".md")) {

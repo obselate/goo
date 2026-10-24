@@ -1,5 +1,6 @@
 package Goo.PluginMcp
 
+import Goo.PluginMcp.GooServer
 import ModelContextProtocol.Client
 import ModelContextProtocol.Protocol
 import System
@@ -12,33 +13,35 @@ import System.Text.Json
 import System.Text.Json.Nodes
 import System.Threading.Tasks
 
-shared
-class Verify {
-    func Check(ok bool, detail string) {
+shared class Verify {
+    func Check(ok bool, detail object) {
         if !ok {
-            throw InvalidOperationException(detail)
+            throw InvalidOperationException(detail.ToString() ?? "")
         }
     }
 
     func Data(result CallToolResult) JsonObject -> JsonNode.Parse(
-        if result.StructuredContent != nil {
-            result.StructuredContent.Value.GetRawText()
-        } else {
-            TextContentBlock(result.Content[0]).Text
-        }
+        result.StructuredContent?.GetRawText() ?? TextContentBlock(result.Content[0]).Text
     )!!.AsObject()
 
-    async func Call(client McpClient, name string, args JsonObject? = nil, rejected bool = false) CallToolResult {
-        let parameters = CallToolRequestParams(){
-            Name = name,
-            Arguments = JsonSerializer.Deserialize[Dictionary[string, JsonElement]](
-                (args ?? JsonObject()).ToJsonString()
-            )
+    async func Call(client McpClient, name string, target JsonObject? = nil, rejected bool = false) CallToolResult {
+        let request = Fixture(name)
+        let args = request["arguments"]!!.AsObject()
+        if target != nil {
+            for item in target {
+                if !args.ContainsKey(item.Key) {
+                    args[item.Key] = item.Value?.DeepClone()
+                }
+            }
         }
-        let result = await client.CallToolAsync(parameters)
+        let result = await client.CallToolAsync(JsonSerializer.Deserialize[CallToolRequestParams](request))
         Check((result.IsError == true) == rejected, name + ": " + JsonSerializer.Serialize(result))
         return result
     }
+
+    async func Read(client McpClient, name string, target JsonObject? = nil) JsonObject -> Data(
+        await Call(client, name, target)
+    )
 
     async func Client(root string, runtime string, source string? = nil) McpClient {
         let environment = Dictionary[string, string?](){["GOO_DEVTOOLS_DIR"] = runtime}
@@ -59,7 +62,7 @@ class Verify {
     async func Run(root string) {
         if OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("GOO_HEADLESS_WAYLAND") != "1" {
             throw InvalidOperationException(
-                "Run verification under .github/scripts/with-headless-wayland.sh with a private XDG_CACHE_HOME."
+                "Run under .github/scripts/with-headless-wayland.sh with a private XDG_CACHE_HOME."
             )
         }
         let output = Directory.CreateTempSubdirectory("goo-agent-e2e-").FullName
@@ -70,67 +73,22 @@ class Verify {
         let client = await Client(root, Path.Combine(output, "unused-runtime"))
         try {
             let tools = await client.ListToolsAsync(ListToolsRequestParams())
-            let expected = GooServer(root).Tools
             Check(
                 JsonNode.DeepEquals(
                     JsonSerializer.SerializeToNode(tools.Tools),
-                    JsonSerializer.SerializeToNode(expected)
+                    JsonSerializer.SerializeToNode(ToolDefinitions)
                 ),
-                "Tool names, schemas, descriptions or annotations differ"
+                "Tool contracts differ"
             )
             File.WriteAllText(Path.Combine(output, "tools.json"), JsonSerializer.Serialize(tools.Tools))
-            let context = await Call(client, "goo_context")
-            File.WriteAllText(Path.Combine(output, "context.json"), JsonSerializer.Serialize(context))
-            let bundled = Data(context)
-            Check(GooServer.S(bundled["provenance"]!!, "kind") == "bundle", "Expected bundled provenance")
-            Check(GooServer.B(bundled["preflight"]!!["configuration"]!!, "configured"), bundled.ToJsonString())
-            let hashes = JsonObject()
-            for document in bundled["documents"]!!.AsArray() {
-                let path = document.GetValue[string]()
-                hashes[path] = GooServer.Hash(File.ReadAllBytes(Path.Combine(root, "reference", path)))
-            }
-            Check(JsonNode.DeepEquals(hashes, bundled["provenance"]!!["files"]), "Bundle content hashes differ")
-            Check(
-                JsonNode.DeepEquals(
-                    bundled["documents"],
-                    GooServer.Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))
-                ),
-                "Document order differs"
-            )
-            Check(GooServer.S(bundled["provenance"]!!, "compilerCommit").Length == 40, "Compiler provenance missing")
-            let search = Data(await Call(client, "goo_search", JsonObject(){["query"] = "how do I rebuild a cell"}))
-            Check(
-                GooServer.S(search, "mode") == "exact" && JsonNode.DeepEquals(
-                    search["queryTerms"],
-                    GooServer.Strings([]string{"rebuild", "cell"})
-                ),
-                search.ToJsonString()
-            )
-            Check(
-                GooServer.S(search["results"]!![0]!!, "path") == "docs/api/cell.md" && GooServer.S(
-                    search["results"]!![0]!!,
-                    "sha256"
-                )
-                    .Length == 64,
-                search.ToJsonString()
-            )
-            let missing = Data(await Call(client, "goo_search", JsonObject(){["query"] = "QuantumBananaTeleportation"}))
-            Check(
-                GooServer.S(missing, "mode") == "none" && GooServer.I(missing, "total") == 0 &&
-                    missing["results"]!!
-                    .AsArray().Count == 0,
-                missing.ToJsonString()
-            )
-            await Call(client, "goo_read", JsonObject(){["path"] = "docs/api/cell.md", ["count"] = 25})
-            await Call(client, "goo_read", JsonObject(){["path"] = "../../.ssh/id_rsa"}, true)
+            await Documents(client, root, output)
             let checkout = await Checkout(client, output)
             await Starter(client, root, output, app, checkout)
-            Console.WriteLine("MCP tool contracts, checkout discovery, path rejection and starter build passed")
             await Live(client, output, app, runtime, false)
             await Live(client, output, app, runtime, true)
             let result = JsonObject(){
                 ["passed"] = true,
-                ["tools"] = GooServer.Strings(tools.Tools.Select(x -> x.Name).Order()),
+                ["tools"] = Strings(tools.Tools.Select(x -> x.Name).Order()),
                 ["fullSnapshots"] = true,
                 ["stableNodeIds"] = true,
                 ["projectLocalDiscovery"] = true,
@@ -145,95 +103,87 @@ class Verify {
         }
     }
 
+    async func Documents(client McpClient, root string, output string) {
+        let context = await Call(client, "context")
+        File.WriteAllText(Path.Combine(output, "context.json"), JsonSerializer.Serialize(context))
+        let bundled = Data(context)
+        let provenance = bundled["provenance"]!!
+        Check(S(provenance, "kind") == "bundle", bundled)
+        Check(B(bundled["preflight"]!!["configuration"]!!, "configured"), bundled)
+        let hashes = JsonObject()
+        for document in bundled["documents"]!!.AsArray() {
+            let path = document.GetValue[string]()
+            hashes[path] = Hash(File.ReadAllBytes(Path.Combine(root, "reference", path)))
+        }
+        Check(JsonNode.DeepEquals(hashes, provenance["files"]), "Bundle hashes differ")
+        Check(
+            JsonNode.DeepEquals(bundled["documents"], Strings(hashes.Select(x -> x.Key).Order(StringComparer.Ordinal))),
+            bundled
+        )
+        Check(S(provenance, "compilerCommit").Length == 40, provenance)
+        let search = await Read(client, "cellSearch")
+        Check(
+            S(search, "mode") == "exact" && JsonNode.DeepEquals(
+                search["queryTerms"],
+                Strings([]string{"rebuild", "cell"})
+            ),
+            search
+        )
+        let first = search["results"]!![0]!!
+        Check(S(first, "path") == "docs/api/cell.md" && S(first, "sha256").Length == 64, search)
+        let missing = await Read(client, "missingSearch")
+        Check(
+            S(missing, "mode") == "none" && I(missing, "total") == 0 && missing["results"]!!.AsArray().Count == 0,
+            missing
+        )
+        await Call(client, "cellRead")
+        await Call(client, "outsideRead", rejected: true)
+    }
+
     async func Checkout(client McpClient, output string) string {
         let checkout = Path.Combine(output, "checkout")
+        let repository = JsonObject(){["repository"] = checkout}
         Directory.CreateDirectory(Path.Combine(checkout, "Goo"))
         File.WriteAllText(Path.Combine(checkout, "Goo/Goo.gsproj"), "")
         Directory.CreateDirectory(Path.Combine(checkout, "docs/api"))
         let fresh = Path.Combine(checkout, "docs/api/new-api.md")
         File.WriteAllText(fresh, "# Newly added API\n\n## Probe\n\nAgentFreshDocument\n")
-        let current = Data(await Call(client, "goo_context", JsonObject(){["repository"] = checkout}))
+        let current = await Read(client, "context", repository)
+        Check(JsonNode.DeepEquals(current["documents"], Strings([]string{"docs/api/new-api.md"})), current)
+        Check(S(current["provenance"]!!, "kind") == "checkout", current)
+        let found = await Read(client, "freshSearch", repository)
+        Check(I(found, "total") == 1, found)
         Check(
-            JsonNode.DeepEquals(current["documents"], GooServer.Strings([]string{"docs/api/new-api.md"})),
-            current.ToJsonString()
-        )
-        Check(GooServer.S(current["provenance"]!!, "kind") == "checkout", current.ToJsonString())
-        Check(
-            GooServer.I(
-                Data(
-                    await Call(
-                        client,
-                        "goo_search",
-                        JsonObject(){["query"] = "how do I find AgentFreshDocument", ["repository"] = checkout}
-                    )
-                ),
-                "total"
-            ) == 1,
-            "Fresh checkout search failed"
-        )
-        Check(
-            GooServer.S(
-                Data(
-                    await Call(
-                        client,
-                        "goo_read",
-                        JsonObject(){["path"] = "docs/api/new-api.md", ["repository"] = checkout}
-                    )
-                ),
-                "text"
-            )
-                .Contains("AgentFreshDocument"),
-            "Fresh checkout read failed"
+            S(await Read(client, "freshRead", repository), "text").Contains("AgentFreshDocument"),
+            "Fresh read failed"
         )
         File.Delete(fresh)
-        Check(
-            GooServer.I(
-                Data(
-                    await Call(
-                        client,
-                        "goo_search",
-                        JsonObject(){["query"] = "AgentFreshDocument", ["repository"] = checkout}
-                    )
-                ),
-                "total"
-            ) == 0,
-            "Deleted document remained discoverable"
-        )
+        let deleted = await Read(client, "deletedSearch", repository)
+        Check(I(deleted, "total") == 0, deleted)
         File.WriteAllText(fresh, "# Straße\n\nﬃ Σς\n\n")
-        let unicode = Data(
-            await Call(client, "goo_search", JsonObject(){["query"] = "STRASSE", ["repository"] = checkout})
-        )
-        Check(GooServer.I(unicode, "total") == 1, unicode.ToJsonString())
-        let lines = Data(
-            await Call(client, "goo_read", JsonObject(){["path"] = "docs/api/new-api.md", ["repository"] = checkout})
-        )
-        Check(GooServer.I(lines, "totalLines") == 4, lines.ToJsonString())
+        let unicode = await Read(client, "unicodeSearch", repository)
+        Check(I(unicode, "total") == 1, unicode)
+        let lines = await Read(client, "freshRead", repository)
+        Check(I(lines, "totalLines") == 4, lines)
         File.Delete(fresh)
-        let outside = Path.Combine(output, "outside.md")
-        File.WriteAllText(outside, "Outside selected root")
         if !OperatingSystem.IsWindows() {
+            let outside = Path.Combine(output, "outside.md")
+            File.WriteAllText(outside, "Outside selected root")
             File.CreateSymbolicLink(fresh, outside)
-            await Call(
-                client,
-                "goo_read",
-                JsonObject(){["path"] = "docs/api/new-api.md", ["repository"] = checkout},
-                true
-            )
+            await Call(client, "freshRead", repository, true)
             File.Delete(fresh)
         }
         return checkout
     }
 
     async func Starter(client McpClient, root string, output string, app string, checkout string) {
-        let starter = Data(await Call(client, "goo_starter", JsonObject(){["name"] = "AgentProbe"}))
-        Check(GooServer.S(starter, "run").Contains("--no-watch"), starter.ToJsonString())
+        let starter = await Read(client, "starter")
+        Check(S(starter, "run").Contains("--no-watch"), starter)
+        Check(S(starter, "build") == "dotnet build AgentProbe.gsproj -c Release --nologo -warnaserror", starter)
+        Check(S(starter, "lint") == "unavailable", starter)
+        let provenance = starter["provenance"]!!
         Check(
-            GooServer.S(starter, "build") == "dotnet build AgentProbe.gsproj -c Release --nologo -warnaserror",
-            starter.ToJsonString()
-        )
-        Check(GooServer.S(starter, "lint") == "unavailable", starter.ToJsonString())
-        Check(
-            starter["provenance"]!!["sourceFiles"]!!
+            provenance["sourceFiles"]!!
                 .AsObject()
                 .Select(x -> x.Key)
                 .Order()
@@ -243,17 +193,17 @@ class Verify {
                     "templates/Goo.Templates/content/Program.gs"
                 }
             ),
-            starter.ToJsonString()
+            starter
         )
         Check(
-            starter["provenance"]!!["generatedFiles"]!!
+            provenance["generatedFiles"]!!
                 .AsObject()
                 .Select(x -> x.Key)
                 .Order()
                 .SequenceEqual([]string{"AgentProbe.gsproj", "Program.gs"}),
-            starter.ToJsonString()
+            starter
         )
-        for source in starter["provenance"]!!["sourceFiles"]!!.AsObject() {
+        for source in provenance["sourceFiles"]!!.AsObject() {
             let path = Path.Combine(checkout, source.Key)
             Directory.CreateDirectory(Path.GetDirectoryName(path)!!)
             File.Copy(Path.Combine(root, "reference", source.Key), path)
@@ -264,34 +214,18 @@ class Verify {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!!)
             File.WriteAllText(path, "")
         }
-        let untrusted = Data(
-            await Call(client, "goo_starter", JsonObject(){["name"] = "AgentProbe", ["repository"] = checkout})
-        )
-        Check(
-            GooServer.S(untrusted, "lint") == "unavailable" && GooServer.S(untrusted, "build") == GooServer.S(
-                starter,
-                "build"
-            ),
-            untrusted.ToJsonString()
-        )
+        let untrusted = await Read(client, "starter", JsonObject(){["repository"] = checkout})
+        Check(S(untrusted, "lint") == "unavailable" && S(untrusted, "build") == S(starter, "build"), untrusted)
         let configured = await Client(root, Path.Combine(output, "unused-runtime"), checkout)
         try {
             for explicitSource in[]bool{false, true} {
-                let args = JsonObject(){["name"] = "AgentProbe"}
+                let args = JsonObject()
                 if explicitSource {
                     args["repository"] = checkout
                 }
-                let trusted = Data(await Call(configured, "goo_starter", args))
-                Check(
-                    GooServer.S(trusted, "lint").StartsWith("dotnet run --project " + linter + " "),
-                    trusted.ToJsonString()
-                )
-                Check(
-                    GooServer.S(trusted, "build") == GooServer.S(starter, "build") +
-                        " -p:GsharpCompilerFullPath=" +
-                        compiler,
-                    trusted.ToJsonString()
-                )
+                let trusted = await Read(configured, "starter", args)
+                Check(S(trusted, "lint").StartsWith("dotnet run --project " + linter + " "), trusted)
+                Check(S(trusted, "build") == S(starter, "build") + " -p:GsharpCompilerFullPath=" + compiler, trusted)
             }
         } finally {
             await configured.DisposeAsync()
@@ -299,7 +233,7 @@ class Verify {
         for file in starter["files"]!!.AsObject() {
             File.WriteAllText(Path.Combine(app, file.Key), file.Value.GetValue[string]())
         }
-        let build = GooServer.Execute(
+        let build = Execute(
             []string{
                 "dotnet",
                 "build",
@@ -338,61 +272,47 @@ class Verify {
         using let process = Process.Start(start)!!
         let stdout = process.StandardOutput.ReadToEndAsync()
         let stderr = process.StandardError.ReadToEndAsync()
-        let pid = process.Id
+        let target = JsonObject(){["pid"] = process.Id, ["project"] = app}
         try {
             let clock = Stopwatch.StartNew()
             var targets = JsonArray()
             while clock.Elapsed.TotalSeconds < 30 {
                 Check(!process.HasExited, "Starter exited before discovery")
-                targets = Data(await Call(client, "goo_targets", JsonObject(){["pid"] = pid, ["project"] = app}))[
-                    "targets"
-                ]!!.AsArray()
+                let discovered = await Read(client, "targets", target)
+                targets = discovered["targets"]!!.AsArray()
                 if targets.Count != 0 {
                     break
                 }
                 await Task.Delay(250)
             }
-            Check(targets.Count == 1 && GooServer.S(targets[0]!!, "window") != "", targets.ToJsonString())
-            let target = JsonObject(){
-                ["pid"] = pid,
-                ["window"] = GooServer.S(targets[0]!!, "window"),
-                ["project"] = app
-            }
+            Check(targets.Count == 1 && S(targets[0]!!, "window") != "", targets)
+            target["window"] = S(targets[0]!!, "window")
             let before = await Snapshot(client, target)
             let again = await Snapshot(client, target)
+            let nodes = before["added"]!!.AsArray()
             Check(
-                before["added"]!!.AsArray()
-                    .Count > 0 &&
-                    before["added"]!!
-                    .AsArray()
-                    .Select(x -> GooServer.I(x, "id"))
+                nodes.Count > 0 &&
+                    nodes
+                    .Select(x -> I(x, "id"))
                     .Order()
-                    .SequenceEqual(again["added"]!!.AsArray().Select(x -> GooServer.I(x, "id")).Order()),
+                    .SequenceEqual(again["added"]!!.AsArray().Select(x -> I(x, "id")).Order()),
                 "Node IDs changed"
             )
-            Check(before["added"]!!.AsArray().Any(x -> GooServer.S(x, "content") == "Count: 0"), before.ToJsonString())
-            let button = GooServer.I(before["added"]!!.AsArray().First(x -> GooServer.S(x, "kind") == "Button"), "id")
+            Check(nodes.Any(x -> S(x, "content") == "Count: 0"), before)
+            let button = I(nodes.First(x -> S(x, "kind") == "Button"), "id")
             await Observe(client, target, button, output, label)
             File.WriteAllText(Path.Combine(output, label + "-before.json"), before.ToJsonString())
-            if !enabled {
-                let error = await Call(
-                    client,
-                    "goo_input",
-                    Merge(target, JsonObject(){["event"] = "click", ["node_id"] = button}),
-                    true
-                )
+            let selected = Merge(target, JsonObject(){["node_id"] = button})
+            if enabled {
+                await EnabledInput(client, target, selected, output)
+            } else {
+                let error = await Call(client, "click", selected, true)
                 Check(
                     JsonSerializer.Serialize(error).Contains("does not permit input"),
                     JsonSerializer.Serialize(error)
                 )
-                Check(
-                    (await Snapshot(client, target))["added"]!!.AsArray().Any(
-                        x -> GooServer.S(x, "content") == "Count: 0"
-                    ),
-                    "Input changed inspection-only app"
-                )
-            } else {
-                await EnabledInput(client, target, button, output)
+                let unchanged = await Snapshot(client, target)
+                Check(unchanged["added"]!!.AsArray().Any(x -> S(x, "content") == "Count: 0"), unchanged)
             }
         } finally {
             if !process.HasExited {
@@ -401,55 +321,41 @@ class Verify {
             await process.WaitForExitAsync()
             File.WriteAllText(Path.Combine(output, label + ".log"), await stdout + await stderr)
         }
-        Check(
-            Data(await Call(client, "goo_targets", JsonObject(){["pid"] = pid, ["project"] = app}))["targets"]!!
-                .AsArray().Count == 0,
-            "Dead process is still discoverable"
-        )
+        let dead = await Read(client, "targets", target)
+        Check(dead["targets"]!!.AsArray().Count == 0, dead)
         Console.WriteLine(label + " passed")
     }
 
-    async func EnabledInput(client McpClient, target JsonObject, button int64, output string) {
-        await Diagnostics(client, target, button)
-        await Call(
-            client,
-            "goo_input",
-            Merge(target, JsonObject(){["pid"] = 0, ["event"] = "click", ["node_id"] = button}),
-            true
-        )
-        let stale = await Call(
-            client,
-            "goo_input",
-            Merge(target, JsonObject(){["event"] = "click", ["node_id"] = long.MaxValue}),
-            true
-        )
+    async func EnabledInput(client McpClient, target JsonObject, selected JsonObject, output string) {
+        await Diagnostics(client, target, selected)
+        await Call(client, "invalidPid", selected, true)
+        let stale = await Call(client, "staleInput", target, true)
         Check(JsonSerializer.Serialize(stale).Contains("stale-target"), JsonSerializer.Serialize(stale))
-        await Call(client, "goo_input", Merge(target, JsonObject(){["event"] = "not-an-event"}), true)
+        await Call(client, "unknownInput", target, true)
         let beforePng = await Capture(client, target)
         File.WriteAllBytes(Path.Combine(output, "before.png"), beforePng)
         for event_ in[]string{"click", "pointer.down", "pointer.up", "key.down", "key.up"} {
-            let args = JsonObject(){["event"] = event_}
-            if event_.StartsWith("key.") {
-                args["key"] = "Space"
-            } else {
-                args["node_id"] = button
-            }
-            let applied = Data(await Call(client, "goo_input", Merge(target, args)))
-            Check(GooServer.B(applied, "ok") && GooServer.B(applied["payload"]!!, "applied"), applied.ToJsonString())
+            let applied = await Read(
+                client,
+                event_,
+                if event_.StartsWith("key.") {
+                    target
+                } else {
+                    selected
+                }
+            )
+            Check(B(applied, "ok") && B(applied["payload"]!!, "applied"), applied)
         }
         var after = await Snapshot(client, target)
-        Check(after["added"]!!.AsArray().Any(x -> GooServer.S(x, "content") == "Count: 2"), after.ToJsonString())
+        Check(after["added"]!!.AsArray().Any(x -> S(x, "content") == "Count: 2"), after)
         Check(
-            after["added"]!!.AsArray().Any(x -> GooServer.I(x, "id") == button && GooServer.S(x, "kind") == "Button"),
+            after["added"]!!.AsArray().Any(x -> I(x, "id") == I(selected, "node_id") && S(x, "kind") == "Button"),
             "Button ID changed"
         )
-        await Call(client, "goo_input", Merge(target, JsonObject(){["event"] = "pointer.cancel"}))
-        await Call(client, "goo_input", Merge(target, JsonObject(){["event"] = "reset"}))
+        await Call(client, "pointer.cancel", target)
+        await Call(client, "reset", target)
         after = await Snapshot(client, target)
-        Check(
-            !after["added"]!!.AsArray().Any(x -> GooServer.B(x, "focused") || GooServer.B(x, "pressed")),
-            "Input reset failed"
-        )
+        Check(!after["added"]!!.AsArray().Any(x -> B(x, "focused") || B(x, "pressed")), "Input reset failed")
         File.WriteAllText(Path.Combine(output, "after.json"), after.ToJsonString())
         let afterPng = await Capture(client, target)
         Check(!afterPng.SequenceEqual(beforePng), "Capture did not change after input")
@@ -457,111 +363,64 @@ class Verify {
     }
 
     async func Snapshot(client McpClient, target JsonObject) JsonObject {
-        let result = Data(await Call(client, "goo_snapshot", target))
-        Check(GooServer.B(result, "ok") && GooServer.B(result["payload"]!!, "full"), result.ToJsonString())
+        let result = await Read(client, "snapshot", target)
+        Check(B(result, "ok") && B(result["payload"]!!, "full"), result)
         return result["payload"]!!.AsObject()
     }
 
     async func Observe(client McpClient, target JsonObject, button int64, output string, label string) {
-        let capabilities = Data(await Call(client, "goo_capabilities", target))
-        Check(capabilities["runtime"]!!["capabilities"] is JsonArray, capabilities.ToJsonString())
-        let query = Merge(
-            target,
-            JsonObject(){["compact"] = true, ["role"] = "button", ["match"] = "exact", ["limit"] = 1}
-        )
-        let compact = Data(await Call(client, "goo_snapshot", query))
-        Check(
-            GooServer.I(compact, "matchedCount") == 1 && GooServer.S(compact, "outcome") == "matched",
-            compact.ToJsonString()
-        )
-        Check(GooServer.I(compact["nodes"]!![0]!!, "id") == button, compact.ToJsonString())
-        let handle = GooServer.S(compact["nodes"]!![0]!!, "target")
-        Check(handle != "", compact.ToJsonString())
+        let capabilities = await Read(client, "capabilities", target)
+        Check(capabilities["runtime"]!!["capabilities"] is JsonArray, capabilities)
+        let compact = await Read(client, "compact", target)
+        Check(I(compact, "matchedCount") == 1 && S(compact, "outcome") == "matched", compact)
+        Check(I(compact["nodes"]!![0]!!, "id") == button, compact)
+        let handle = S(compact["nodes"]!![0]!!, "target")
+        Check(handle != "", compact)
         File.WriteAllText(Path.Combine(output, label + "-compact.json"), compact.ToJsonString())
-        let exists = Data(
-            await Call(client, "goo_snapshot", Merge(query, JsonObject(){["wait"] = "exists", ["timeout_ms"] = 1000}))
-        )
-        Check(GooServer.S(exists, "outcome") == "matched", exists.ToJsonString())
-        let missing = Data(
-            await Call(
-                client,
-                "goo_snapshot",
-                Merge(
-                    target,
-                    JsonObject(){
-                        ["compact"] = true,
-                        ["text"] = "QuantumBananaTeleportation",
-                        ["wait"] = "missing",
-                        ["timeout_ms"] = 1000
-                    }
-                )
+        for wait in[]string{"exists", "missing", "timeout"} {
+            let observed = await Read(client, wait, target)
+            Check(
+                S(observed, "outcome") == if wait == "timeout" {
+                    "timeout"
+                } else {
+                    "matched"
+                },
+                observed
             )
-        )
-        Check(
-            GooServer.S(missing, "outcome") == "matched" && GooServer.I(missing, "matchedCount") == 0,
-            missing.ToJsonString()
-        )
-        let timeout = Data(
-            await Call(
-                client,
-                "goo_snapshot",
-                Merge(
-                    query,
-                    JsonObject(){["wait"] = "exists", ["timeout_ms"] = 250, ["after_sequence"] = long.MaxValue}
-                )
-            )
-        )
-        Check(GooServer.S(timeout, "outcome") == "timeout", timeout.ToJsonString())
-        let subtree = Data(
-            await Call(
-                client,
-                "goo_snapshot",
-                Merge(target, JsonObject(){["compact"] = true, ["subtree"] = handle, ["fields"] = "target,id,parentId"})
-            )
-        )
-        Check(subtree["nodes"]!!.AsArray().Any(x -> GooServer.I(x, "id") == button), subtree.ToJsonString())
-        await Call(client, "goo_snapshot", Merge(query, JsonObject(){["fields"] = "unknown"}), true)
-        await Call(client, "goo_snapshot", Merge(query, JsonObject(){["subtree"] = "not-a-target"}), true)
-        await Call(client, "goo_snapshot", Merge(query, JsonObject(){["timeout_ms"] = 1}), true)
-        await Call(client, "goo_snapshot", Merge(query, JsonObject(){["after_sequence"] = 1}), true)
-        await Call(client, "goo_snapshot", Merge(query, JsonObject(){["limit"] = 201}), true)
+            if wait == "missing" {
+                Check(I(observed, "matchedCount") == 0, observed)
+            }
+        }
+        let subtree = await Read(client, "subtree", Merge(target, JsonObject(){["subtree"] = handle}))
+        Check(subtree["nodes"]!!.AsArray().Any(x -> I(x, "id") == button), subtree)
+        for name in[]string{
+            "invalidFields",
+            "unknownSubtree",
+            "timeoutWithoutWait",
+            "sequenceWithoutWait",
+            "oversizedPage"
+        } {
+            await Call(client, name, target, true)
+        }
     }
 
-    async func Diagnostics(client McpClient, target JsonObject, button int64) {
-        await Call(client, "goo_inspect", Merge(target, JsonObject(){["action"] = "enter"}))
-        await Call(client, "goo_inspect", Merge(target, JsonObject(){["action"] = "select", ["node_id"] = button}))
-        await Call(client, "goo_inspect", Merge(target, JsonObject(){["action"] = "clear"}))
-        await Call(client, "goo_inspect", Merge(target, JsonObject(){["action"] = "exit"}))
-        await Call(client, "goo_inspect", Merge(target, JsonObject(){["action"] = "enter", ["node_id"] = button}), true)
-        await Call(
-            client,
-            "goo_inspect",
-            Merge(target, JsonObject(){["action"] = "select", ["node_id"] = button, ["x"] = 0}),
-            true
-        )
-        await Call(
-            client,
-            "goo_style_override",
-            Merge(target, JsonObject(){["node_id"] = button, ["property"] = "Width", ["value"] = "180px"})
-        )
-        await Call(client, "goo_style_reset", Merge(target, JsonObject(){["node_id"] = button, ["property"] = "Width"}))
-        await Call(client, "goo_style_reset", Merge(target, JsonObject(){["node_id"] = button}))
-        await Call(
-            client,
-            "goo_style_override",
-            Merge(target, JsonObject(){["node_id"] = button, ["property"] = "unknown", ["value"] = "1"}),
-            true
-        )
-        await Call(
-            client,
-            "goo_style_override",
-            Merge(target, JsonObject(){["property"] = "Width", ["value"] = "1px"}),
-            true
-        )
+    async func Diagnostics(client McpClient, target JsonObject, selected JsonObject) {
+        await Call(client, "inspectEnter", target)
+        await Call(client, "inspectSelect", selected)
+        for name in[]string{"inspectClear", "inspectExit"} {
+            await Call(client, name, target)
+        }
+        await Call(client, "inspectEnter", selected, true)
+        await Call(client, "inspectMixed", selected, true)
+        for name in[]string{"overrideWidth", "resetWidth", "resetAll"} {
+            await Call(client, name, selected)
+        }
+        await Call(client, "invalidProperty", selected, true)
+        await Call(client, "overrideWithoutSelector", target, true)
     }
 
     async func Capture(client McpClient, target JsonObject)[]byte {
-        let result = await Call(client, "goo_capture", target)
+        let result = await Call(client, "capture", target)
         let image = result.Content.OfType[ImageContentBlock]().Single()
         let pixels = image.DecodedData.ToArray()
         Check(

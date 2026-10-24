@@ -22,9 +22,10 @@ partial class GooServer {
             return Bundle
         }
         let root = Resolve(chosen)
-        if !File.Exists(Path.Combine(root, "Goo/Goo.gsproj")) {
-            throw ArgumentException("Expected a standalone Goo checkout containing Goo/Goo.gsproj")
-        }
+        Require(
+            File.Exists(Path.Combine(root, "Goo/Goo.gsproj")),
+            "Expected a standalone Goo checkout containing Goo/Goo.gsproj"
+        )
         return root
     }
 
@@ -51,13 +52,12 @@ partial class GooServer {
     }
 
     func Document(root string, path string) string {
-        if !Documents(root).Contains(path) {
-            throw ArgumentException("Unknown document. Use goo_context to list document paths.")
-        }
+        Require(Documents(root).Contains(path), "Unknown document. Use goo_context to list document paths.")
         let target = Resolve(Path.Combine(root, path))
-        if !target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal) {
-            throw ArgumentException("Document resolves outside the selected source root")
-        }
+        Require(
+            target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal),
+            "Document resolves outside the selected source root"
+        )
         return target
     }
 
@@ -152,63 +152,47 @@ partial class GooServer {
                 .DeepEquals(server["args"], expected) {
                 issues.Add("The Goo MCP manifest does not declare the pinned Goo.DevTools MCP command.")
             }
-            if server?["env"] is JsonObject && server?["env"]?.AsObject().ContainsKey(
-                "UV_PROJECT_ENVIRONMENT"
-            ) == true {
-                issues.Add("The Goo MCP manifest still configures a Python environment.")
-            }
         } catch (error Exception) {
             issues.Add("The Goo MCP manifest is unreadable: " + error.Message)
         }
-        return JsonObject(){
-            ["configured"] = issues.Count == 0,
-            ["manifest"] = path,
-            ["runtimeEnvironment"] = AppContext.BaseDirectory,
-            ["issues"] = Strings(issues),
-            ["actions"] = Strings(
-                if issues.Count == 0 {
-                    []string{}
-                } else {
-                    []string{"Refresh or reinstall Goo through the host plugin manager, then start a new session."}
-                }
-            )
+        let status = Template("configuration")
+        status["configured"] = issues.Count == 0
+        status["manifest"] = path
+        status["runtimeEnvironment"] = AppContext.BaseDirectory
+        status["issues"] = Strings(issues)
+        if issues.Count == 0 {
+            status["actions"] = JsonArray()
         }
+        return status
     }
 
     func Context(repository string) JsonObject {
         let root = Source(repository)
         let fingerprint = Fingerprint()
-        return JsonObject(){
-            ["source"] = root,
-            ["bundled"] = root == Bundle,
-            ["provenance"] = Provenance(root),
-            ["documents"] = Strings(Documents(root)),
-            [
-                "runtime"
-            ] = "Install Goo.DevTools 0.15.0 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option.",
-            ["preflight"] = JsonObject(){
-                ["plugin"] = JsonObject(){
-                    ["version"] = Version,
-                    ["loadedSource"] = Root,
-                    ["loadedFingerprint"] = LoadedFingerprint,
-                    ["diskFingerprint"] = fingerprint,
-                    ["restartRequired"] = fingerprint != LoadedFingerprint
-                },
-                ["configuration"] = Configuration(),
-                ["cli"] = CliPreflight(),
-                [
-                    "scope"
-                ] = "This process reports its own loaded plugin and configured CLI. It cannot inspect plugin definitions loaded by other sessions."
-            }
-        }
+        let result = Template("context")
+        result["source"] = root
+        result["bundled"] = root == Bundle
+        result["provenance"] = Provenance(root)
+        result["documents"] = Strings(Documents(root))
+        result[
+            "runtime"
+        ] = "Install Goo.DevTools 0.15.0 and launch with goo dev --project App.gsproj. Add --no-watch when hot reload is not needed and --input to enable agent interaction. Use goo_targets to discover live windows, then pass an explicit PID and window ID. GOO_CLI may specify a goo executable or built Goo.DevTools.Cli.dll. Use a CLI build with the list command and dev --input option."
+        let preflight = result["preflight"]!!
+        let plugin = preflight["plugin"]!!
+        plugin["version"] = Version
+        plugin["loadedSource"] = Root
+        plugin["loadedFingerprint"] = LoadedFingerprint
+        plugin["diskFingerprint"] = fingerprint
+        plugin["restartRequired"] = fingerprint != LoadedFingerprint
+        preflight["configuration"] = Configuration()
+        preflight["cli"] = CliPreflight()
+        return result
     }
 
     func Read(a JsonObject) JsonObject {
         let line = I(a, "line")
         let count = I(a, "count")
-        if line < 1 || count < 1 || count > 240 {
-            throw ArgumentException("line must be positive and count must be 1-240")
-        }
+        Require(line >= 1 && count >= 1 && count <= 240, "line must be positive and count must be 1-240")
         let root = Source(S(a, "repository"))
         let data = File.ReadAllBytes(Document(root, S(a, "path")))
         let lines = Lines(Encoding.UTF8.GetString(data))
@@ -224,9 +208,10 @@ partial class GooServer {
 
     func Starter(a JsonObject) JsonObject {
         let name = S(a, "name")
-        if !Regex.IsMatch(name, "^[A-Za-z][A-Za-z0-9_]{0,63}$") {
-            throw ArgumentException("Use a simple identifier starting with an ASCII letter, up to 64 characters")
-        }
+        Require(
+            Regex.IsMatch(name, "^[A-Za-z][A-Za-z0-9_]{0,63}$"),
+            "Use a simple identifier starting with an ASCII letter, up to 64 characters"
+        )
         let root = Source(S(a, "repository"))
         let files = JsonObject()
         let sourceFiles = JsonObject()
