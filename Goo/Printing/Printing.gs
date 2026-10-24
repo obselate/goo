@@ -62,7 +62,7 @@ public shared class Printing {
         ArgumentNullException.ThrowIfNull(owner)
         ArgumentNullException.ThrowIfNull(document)
         ArgumentNullException.ThrowIfNull(destination)
-        Validate(settings)
+        settings = ResolveSettings(settings)
         if !destination.CanWrite || destination.CanSeek && (destination.Position != 0 || destination.Length != 0) {
             throw ArgumentException("PDF output requires an empty writable stream.", nameof(destination))
         }
@@ -91,7 +91,7 @@ public shared class Printing {
     internal async func RenderPageAsync(owner Window, document IPrintDocument, index int32,
         settings PrintPageSettings, reusable WindowCapture?, cancellation CancellationToken,
         session OffscreenRenderSession? = nil, post ((Action) -> bool)? = nil) OffscreenRenderResult {
-        Validate(settings)
+        settings = ResolveSettings(settings)
         let width = settings.WidthPoints * settings.DpiX / PointsPerInch
         let height = settings.HeightPoints * settings.DpiY / PointsPerInch
         if width > uint32.MaxValue || height > uint32.MaxValue || width * height > MaxPageBytes / 12.0 {
@@ -149,6 +149,15 @@ public shared class Printing {
     internal func LayoutFailure(layout PrintLayoutResult) PrintResult -> PrintResult(
         if layout.Status == PrintLayoutStatus.Cancelled { PrintStatus.Cancelled } else { PrintStatus.Failed },
         Error: if string.IsNullOrEmpty(layout.Error) { "The document has no printable pages." } else { Detail(layout.Error) })
+
+    private func ResolveSettings(settings PrintPageSettings) PrintPageSettings {
+        let resolved = settings with{
+            DpiX = settings.DpiX == 0 ? 300: settings.DpiX,
+            DpiY = settings.DpiY == 0 ? 300: settings.DpiY,
+        }
+        Validate(resolved)
+        return resolved
+    }
 
     internal func Validate(settings PrintPageSettings) {
         if !float64.IsFinite(settings.WidthPoints) || !float64.IsFinite(settings.HeightPoints) ||

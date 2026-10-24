@@ -1,4 +1,5 @@
 import Goo
+import Goo.Printing
 import System
 import System.Collections.Generic
 import System.Globalization
@@ -7,6 +8,8 @@ import System.Linq
 import System.Reflection
 import System.Runtime.CompilerServices
 import System.Text
+import System.Threading
+import System.Threading.Tasks
 import Xunit
 
 open class PublicApiTests {
@@ -66,6 +69,23 @@ open class PublicApiTests {
     @Fact
     func TextDecorationIsAFlagsEnum() {
         Assert.True(typeof(TextDecoration).IsDefined(typeof(FlagsAttribute), false))
+    }
+
+    @Fact
+    async func OmittedPrintResolutionUsesTheDefault() Task {
+        using let output = MemoryStream()
+        let settings = PrintPageSettings{WidthPoints: 72.0, HeightPoints: 72.0}
+        let result = await Printing.ExportPdfAsync(Window{}, CancelledPrintDocument{}, settings,
+            output, CancellationToken(true))
+        Assert.Equal(PrintStatus.Cancelled, result.Status)
+    }
+
+    private class CancelledPrintDocument : IPrintDocument {
+        public func Paginate(settings PrintPageSettings) PrintLayoutResult ->
+            PrintLayoutResult(PrintLayoutStatus.Ready, 1)
+        public func CreatePage(index int32, settings PrintPageSettings) Cell {
+            throw InvalidOperationException("A cancelled export must not create pages.")
+        }
     }
 
     shared {
