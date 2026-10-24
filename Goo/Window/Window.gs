@@ -386,7 +386,7 @@ public partial class Window {
     }
   }
 
-  /// Reports whether the window currently holds native input focus.
+  /// Reports whether the window holds native input focus.
   public prop IsFocused bool{ get; private set; }
 
   /// Occurs after the native window reports a new window state.

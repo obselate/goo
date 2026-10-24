@@ -25,7 +25,7 @@ cd hello-goo
 dotnet new goo
 ```
 
-Run the provided Goo template app with
+Run the app:
 
 ```sh
 dotnet run
@@ -33,11 +33,9 @@ dotnet run
 
 ### Build the source Gallery
 
-The Gallery gives you a representative preview of Goo's capabilities. 
-Install .NET 10 SDK 10.0.401 and Git. Then download both pinned [custom shader tools](#custom-shaders) 
-for your platform and set their SDK environment variables. 
-
-The Gallery compiles its shaders during the build.
+Install .NET SDK 10.0.401 and Git. Download both pinned
+[shader tools](#custom-shaders) and set their SDK environment variables.
+The Gallery compiles shaders during its build.
 
 ### On Linux:
 
@@ -63,9 +61,8 @@ software globally.
 
 ## Packages
 
-`Goo` is the framework package referenced by your application. The other packages
-are optional and installed separately. The starter template already references
-`Goo`.
+Applications reference `Goo`. The starter already includes it.
+Install other packages separately as needed.
 
 | Package | Purpose | Install |
 | --- | --- | --- |
@@ -89,10 +86,7 @@ and native libraries load only when used. Hunspell includes no library or dictio
 
 ## Goo Extras
 
-Goo is built on a core that exposes APIs for the broadest cases. As a result, goo may
-end up being verbose if written from core alone. The idea is that the core is the
-"substrate" that other packages and libraries can be built on. For both convenience
-and as a working example, there are a few published libraries that work with Goo:
+Goo core supplies primitives. Use optional libraries for widgets and animation composition:
 
 | Package | Purpose | Install |
 | --- | --- | --- |
@@ -140,16 +134,12 @@ Continue with [After the counter](docs/getting-started.md), then
 [edit and inspect](docs/edit-and-inspect.md). The [app-author documentation index](docs/README.md)
 links core, widgets, assets, shipping and plugin guides with their version baselines.
 
-Concepts that may be confusing at first:
+Core concepts:
 
-`Blob` is a UI primitive. Goo core only contains UI primitives that have unique behavior
-that cannot be satisfied with composition with the exception of the semantic `Button`.
+- `Blob` is a UI primitive. Core adds behavior that cannot be composed, plus the semantic `Button`.
+- `Cell` owns UI state, identity, and rebuilding. Input callbacks rebuild their owning Cell, so the template button only changes `count`.
 
-`Cell` is a state management primitive. It encapsulates UI state, identity, and rebuild behaviors.
-In the template app, input callbacks automatically rebuild their owning `Cell`, so the button only changes `count`.
-
-UI elements can be composed and reused through ordinary functions and methods, with built-in overrides
-for changing specific properties using `with`:
+Compose reusable UI with functions and methods. Use `with` to override properties:
 
 ```gsharp
 let baseButton = ActionButton{Height: 38.0, MinWidth: 112.0, OnClick: () -> { },}

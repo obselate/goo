@@ -144,7 +144,7 @@ public class TextEditorController : IDisposable {
   public prop ScrollTargetX float64{ get -> scrollTargetX }
   /// Gets the vertical scroll target in logical pixels.
   public prop ScrollTargetY float64{ get -> scrollTargetY }
-  /// Gets whether this controller currently owns editor focus.
+  /// Gets whether this controller owns editor focus.
   public prop IsFocused bool{ get -> focused }
   /// Gets the transient IME composition, or nil when none is active.
   public prop Composition TextComposition? { get -> composition }
@@ -378,7 +378,7 @@ public class TextEditorController : IDisposable {
     }
   }
 
-  /// Creates an undo boundary without ending a currently active group.
+  /// Creates an undo boundary without ending an active group.
   public func BreakUndoGroup() {
     breakUndoGroup()
   }

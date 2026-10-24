@@ -1,13 +1,10 @@
-Thank you for submitting a pull request for goo! I appreciate your willingness to improve the codebase and look forward to reading your PR.
-
 ## Issue
 
-Describe the issue that is the impetous for this pull request.
-Link any issues that may be linked to this pull request.
+Describe the issue. Link related issues.
 
 ## Change
 
-Describe your proposed change to goo core and why you are proposing this change.
+Describe the core change and why it is needed.
 
 ## Verification
 
