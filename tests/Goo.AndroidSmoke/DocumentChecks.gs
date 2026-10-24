@@ -112,7 +112,7 @@ public sealed class DocumentChecks : Instrumentation {
             using let stream = limited.Stream!!
             var rejected bool
             try {
-                using let image = ImageSource.Decode(stream, ImageDecodeLimits{MaxEncodedBytes: 32})
+                using let image = ImageSource.Decode(stream, ImageDecodeLimits{MaxEncodedBytes: 32}, CancellationToken.None)
             } catch (error ImageLimitException) {
                 rejected = error.Message == "Encoded image exceeds 32 bytes"
             }
