@@ -24,4 +24,11 @@
       <TfmSpecificPackageFile Update="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)$(TargetPlatformVersion)/" />
     </ItemGroup>
   </Target>
+  <Target Name="RegisterNotificationDocumentation" AfterTargets="CoreCompile">
+    <ItemGroup>
+      <DocFileItem Include="$(DocumentationFile)" />
+      <FinalDocFile Include="$(OutDir)$([System.IO.Path]::GetFileName('$(DocumentationFile)'))" />
+      <None Include="$(DocumentationFile)" Pack="true" PackagePath="lib/$(TargetFramework)$(TargetPlatformVersion)/Goo.Notifications.Android.xml" />
+    </ItemGroup>
+  </Target>
 </Project>
