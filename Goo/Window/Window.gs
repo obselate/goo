@@ -105,6 +105,8 @@ public data struct WindowMetrics {
 internal struct WindowNotifications {
   private event stateChanged Action[WindowState]
   private event keyPressed Action[Key, KeyModifiers]
+  private event previewKeyPressed Func[Key, KeyModifiers, bool]
+  private var previewKeyPressedCallbacks ([]Delegate)?
   private event focusChanged Action[bool]
   private event visibilityChanged Action[bool]
   private event preferencesChanged Action[PlatformPreferences]
@@ -118,6 +120,23 @@ internal struct WindowNotifications {
   internal func AddKeyPressed(callback Action[Key, KeyModifiers]) { keyPressed += callback }
   internal func RemoveKeyPressed(callback Action[Key, KeyModifiers]) { keyPressed -= callback }
   internal prop KeyPressedCallbacks Action[Key, KeyModifiers]? { get -> keyPressed }
+
+  internal func AddPreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
+    previewKeyPressed += callback
+    previewKeyPressedCallbacks = previewKeyPressed?.GetInvocationList()
+  }
+  internal func RemovePreviewKeyPressed(callback Func[Key, KeyModifiers, bool]) {
+    previewKeyPressed -= callback
+    previewKeyPressedCallbacks = previewKeyPressed?.GetInvocationList()
+  }
+  internal func PreviewKeyPress(key Key, modifiers KeyModifiers) bool {
+    guard let callbacks = previewKeyPressedCallbacks else { return false }
+    for callback in callbacks {
+      let handler = (callback as Func[Key, KeyModifiers, bool])!!
+      if handler(key, modifiers) { return true }
+    }
+    return false
+  }
 
   internal func AddFocusChanged(callback Action[bool]) { focusChanged += callback }
   internal func RemoveFocusChanged(callback Action[bool]) { focusChanged -= callback }
@@ -390,6 +409,18 @@ public partial class Window {
     remove{
       requireUiThread("Window.KeyPressed")
       notifications.RemoveKeyPressed(value)
+    }
+  }
+  /// Occurs before KeyPressed and focused-element routing, including in modal scopes.
+  /// Return true to consume the key and stop later preview handlers.
+  public event PreviewKeyPressed Func[Key, KeyModifiers, bool]{
+    add{
+      requireUiThread("Window.PreviewKeyPressed")
+      notifications.AddPreviewKeyPressed(value)
+    }
+    remove{
+      requireUiThread("Window.PreviewKeyPressed")
+      notifications.RemovePreviewKeyPressed(value)
     }
   }
   /// Gets or sets the close-request handler. Return false to veto closure.

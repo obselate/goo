@@ -108,6 +108,7 @@ internal class KeyboardInput {
       if let hook = diagnosticsHook {
         if hook(e.Key, e.Modifiers) { return true }
       }
+      if resolver.Owner?.PreviewKeyPress(e.Key, e.Modifiers) == true { return true }
       if root == nil || FocusScopes.ModalRoot(root) == nil {
         onKeyPress?.Invoke(e.Key, e.Modifiers)
       }
