@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/obselate/goo",
   "files": {
-    "README.md": "af838b52a7b33ee7bcbe4fb83a50aad9cfb9c2a03cc43defc4cbfbef7c68be25",
+    "README.md": "6b96c4698d94eff0a4b8781d9297b8a14d517e2ac55726b91a808d171286e6fd",
     "CONTRIBUTING.md": "ec658b2463061611a0bcbe765ae85671f54927f795471aa15f9dc929d024aea6",
     "docs/native-authoring.md": "b6342aa859e0c5293471c1bf16fc757cabafc024a24afb7cc102cfce85b19976",
     "docs/production-readiness.md": "c6cb03349dd142d40860983f659fc415fbbfbaf801c7979c715d5c777d9db025",
@@ -9,8 +9,9 @@
     "docs/migrations/gcv1.md": "6465b5704a37f637970a80fc8120002bda1cf5e10458d14cc9f71e0f9d4928a6",
     "docs/shipping.md": "7fb106fd8ae8de1e174afcb75e7abc9e40baaabaae44e9166e5c0b80bfd74469",
     "docs/platform-preflight.md": "2f2965953a07c346f9a38805c8cbede18aceeb724226aa550870a0b6d746caf1",
-    "docs/api/README.md": "96fc9ec38d49279717b36437c97e5d28fdb862d702bfb1369299baf1fe0aed12",
+    "docs/api/README.md": "6d272d909a1c6d03efb9477de0367aa527b26d7fadf046ba49426b88de2e6b42",
     "docs/api/accessibility.md": "adb65188f056b178a1e0df8c3844d6c252448cf366a1511de7b174411e9df699",
+    "docs/api/apphost.md": "152ab4a78ce71bdb1f480911832607eb71e4a7affb1915f3bfd3e959bffbe972",
     "docs/api/cell.md": "dd8bfdadb0b442c5a3b8027041367eb7fc1c4827661e544963c69e1491442fd7",
     "docs/api/diagnostics.md": "4cfe078e236e6a9252e69674b4c41533e2ac6fe6ecfb20d78729008844c9d351",
     "docs/api/images.md": "656e0a17581983bcbcde5a87f4e71e20180c4000621f7f7e174e4c92f884f0a5",

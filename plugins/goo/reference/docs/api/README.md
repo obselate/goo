@@ -3,6 +3,7 @@
 These pages are generated from the Release `Goo.xml` file.
 
 - [Accessibility](accessibility.md)
+- [AppHost](apphost.md)
 - [Cell](cell.md)
 - [Diagnostics](diagnostics.md)
 - [Images](images.md)
