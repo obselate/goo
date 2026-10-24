@@ -608,7 +608,7 @@ Gets the transformed content box in window logical coordinates. An unmounted han
 
 ### `IsMounted`
 
-Reports whether this handle is currently attached to an element.
+Reports whether this handle is attached to an element.
 
 ### `ScrollOffset`
 

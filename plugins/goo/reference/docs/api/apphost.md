@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/AppHost`](https://github.com/obselate/goo/tree/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost)
+Source: [`Goo/AppHost`](https://github.com/obselate/goo/tree/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost)
 
 ## `ActivationArguments`
 
 Source:
 
-- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/ActivationArguments.gs)
+- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/ActivationArguments.gs)
 
 Converts explicit desktop association arguments without changing the current directory.
 
@@ -25,7 +25,7 @@ Returns: An owned initial activation, or Rejected for malformed or oversized ass
 
 Source:
 
-- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/ActivationArguments.gs)
+- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/ActivationArguments.gs)
 
 Contains owned startup data or an explicit rejection.
 
@@ -45,7 +45,7 @@ Gets whether the arguments formed a valid bounded request.
 
 Source:
 
-- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/ActivationArguments.gs)
+- [`ActivationArguments.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/ActivationArguments.gs)
 
 Reports whether desktop startup arguments form an owned activation request.
 
@@ -58,7 +58,7 @@ Reports whether desktop startup arguments form an owned activation request.
 
 Source:
 
-- [`Placement.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/Placement.gs)
+- [`Placement.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/Placement.gs)
 
 Restores app-owned placement against the current desktop display inventory.
 
@@ -75,7 +75,7 @@ Returns: Accepted with the applied mask, Closed, Unsupported, or Failed for inva
 
 Source:
 
-- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/SingleInstance.gs)
+- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/SingleInstance.gs)
 
 Elects one desktop instance and forwards typed requests to its activation queue.
 
@@ -93,7 +93,7 @@ Returns: A primary lease or an explicit forwarding, timeout, unsupported, reject
 
 Source:
 
-- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/SingleInstance.gs)
+- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/SingleInstance.gs)
 
 Owns the primary lifetime or reports why a request was not forwarded.
 
@@ -113,7 +113,7 @@ Gets the election or forwarding outcome.
 
 Source:
 
-- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/Goo/AppHost/SingleInstance.gs)
+- [`SingleInstance.gs`](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/Goo/AppHost/SingleInstance.gs)
 
 Reports primary ownership or the outcome of forwarding to the existing instance.
 

@@ -517,7 +517,7 @@ Clears focus and cancels transient IME composition.
 
 ### `BreakUndoGroup`
 
-Creates an undo boundary without ending a currently active group.
+Creates an undo boundary without ending an active group.
 
 ### `CommitComposition`
 
@@ -606,7 +606,7 @@ Gets or sets the number of columns in one indentation level.
 
 ### `IsFocused`
 
-Gets whether this controller currently owns editor focus.
+Gets whether this controller owns editor focus.
 
 ### `OnCommand`
 

@@ -25,7 +25,7 @@ cd hello-goo
 dotnet new goo
 ```
 
-Run the provided Goo template app with
+Run the app:
 
 ```sh
 dotnet run
@@ -33,11 +33,9 @@ dotnet run
 
 ### Build the source Gallery
 
-The Gallery gives you a representative preview of Goo's capabilities. 
-Install .NET 10 SDK 10.0.401 and Git. Then download both pinned [custom shader tools](#custom-shaders) 
-for your platform and set their SDK environment variables. 
-
-The Gallery compiles its shaders during the build.
+Install .NET SDK 10.0.401 and Git. Download both pinned
+[shader tools](#custom-shaders) and set their SDK environment variables.
+The Gallery compiles shaders during its build.
 
 ### On Linux:
 
@@ -63,9 +61,8 @@ software globally.
 
 ## Packages
 
-`Goo` is the framework package referenced by your application. The other packages
-are optional and installed separately. The starter template already references
-`Goo`.
+Applications reference `Goo`. The starter already includes it.
+Install other packages separately as needed.
 
 | Package | Purpose | Install |
 | --- | --- | --- |
@@ -74,8 +71,8 @@ are optional and installed separately. The starter template already references
 | [Goo.Audio](https://www.nuget.org/packages/Goo.Audio/) | Audio playback | `dotnet add package Goo.Audio` |
 | [Goo.Accessibility](https://www.nuget.org/packages/Goo.Accessibility/) | Desktop native accessibility adapters | `dotnet add package Goo.Accessibility` |
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
-| [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
-| [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
+| [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
+| [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
 Add library packages from your application directory. Install both DevTools
 packages to launch the graphical inspector with `goo dev --inspector`.
@@ -89,10 +86,7 @@ and native libraries load only when used. Hunspell includes no library or dictio
 
 ## Goo Extras
 
-Goo is built on a core that exposes APIs for the broadest cases. As a result, goo may
-end up being verbose if written from core alone. The idea is that the core is the
-"substrate" that other packages and libraries can be built on. For both convenience
-and as a working example, there are a few published libraries that work with Goo:
+Goo core supplies primitives. Use optional libraries for widgets and animation composition:
 
 | Package | Purpose | Install |
 | --- | --- | --- |
@@ -136,20 +130,16 @@ func Main() {
 }
 ```
 
-Continue with [After the counter](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/docs/getting-started.md), then
-[edit and inspect](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/docs/edit-and-inspect.md). The [app-author documentation index](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/docs/README.md)
+Continue with [After the counter](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/docs/getting-started.md), then
+[edit and inspect](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/docs/edit-and-inspect.md). The [app-author documentation index](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/docs/README.md)
 links core, widgets, assets, shipping and plugin guides with their version baselines.
 
-Concepts that may be confusing at first:
+Core concepts:
 
-`Blob` is a UI primitive. Goo core only contains UI primitives that have unique behavior
-that cannot be satisfied with composition with the exception of the semantic `Button`.
+- `Blob` is a UI primitive. Core adds behavior that cannot be composed, plus the semantic `Button`.
+- `Cell` owns UI state, identity, and rebuilding. Input callbacks rebuild their owning Cell, so the template button only changes `count`.
 
-`Cell` is a state management primitive. It encapsulates UI state, identity, and rebuild behaviors.
-In the template app, input callbacks automatically rebuild their owning `Cell`, so the button only changes `count`.
-
-UI elements can be composed and reused through ordinary functions and methods, with built-in overrides
-for changing specific properties using `with`:
+Compose reusable UI with functions and methods. Use `with` to override properties:
 
 ```gsharp
 let baseButton = ActionButton{Height: 38.0, MinWidth: 112.0, OnClick: () -> { },}
@@ -190,7 +180,7 @@ and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
 - Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
   identity presentation support. The `Goo.Android` adapter hosts the same
   application in an Android activity or native view. See
-  [Android integration](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/docs/android.md).
+  [Android integration](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/docs/android.md).
 
 ### Custom shaders
 
@@ -211,7 +201,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 - [Ship a desktop app](docs/shipping.md)
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
-- [Goo agent plugin for Codex and OMP](https://github.com/obselate/goo/blob/982c051bb4f76c26899c31c0900873db79297ae2/plugins/goo/README.md)
+- [Goo agent plugin for Codex and OMP](https://github.com/obselate/goo/blob/450e6947afa632bb4dadc22c378c1e6c8bdc984d/plugins/goo/README.md)
 - [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
 - [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)
 - [Production desktop and mobile priorities](docs/production-readiness.md)

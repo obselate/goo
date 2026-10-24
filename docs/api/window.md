@@ -1645,7 +1645,7 @@ Gets or sets the native desktop material. Blur requests per-pixel transparency a
 
 ### `BackdropAvailable`
 
-Reports whether the open native host accepts blur and currently advertises support. The compositor can still vary or suppress its material according to system policy.
+Reports whether the open native host accepts blur and advertises support. The compositor can still vary or suppress its material according to system policy.
 
 ### `BackdropFallbackColor`
 
@@ -1705,7 +1705,7 @@ Gets or sets whether Open shows the desktop window. Configure before Open.
 
 ### `IsFocused`
 
-Reports whether the window currently holds native input focus.
+Reports whether the window holds native input focus.
 
 ### `IsInputBlocked`
 
@@ -1717,7 +1717,7 @@ Reports whether the window is open.
 
 ### `IsVisible`
 
-Gets whether the host currently reports a visible viewport. This does not imply focus or lack of occlusion.
+Gets whether the host reports a visible viewport. This does not imply focus or lack of occlusion.
 
 ### `LastAccessibilityError`
 
