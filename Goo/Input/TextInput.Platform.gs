@@ -375,6 +375,8 @@ internal partial class TextInput {
     if command.Kind == TextCommandKind.Insert {
       return HandleChar(root, command.Text ?? "")
     }
+    if command.Kind == TextCommandKind.Paste && command.Text != nil
+      && (command.Text == "" || !ClipboardTransfer.TextFits(command.Text)) { return false }
     if n.Kind == NodeKind.Editor && command.Kind == TextCommandKind.Paste {
       if n.EditorReadOnly { return false }
       guard let controller = n.EditorController else { return false }
