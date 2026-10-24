@@ -329,7 +329,7 @@ internal partial class Reconciler {
 
   internal func mountButton(b Button) Node {
     let n = Node{ Kind: NodeKind.Button, Key: b.Key }
-    applyButton(n, b, true)
+    applyStyle(n, b, b.Focusable, true)
     mountChildren(n, b.Children)
     return n
   }
@@ -463,29 +463,6 @@ internal partial class Reconciler {
       n.DragsWindow = c.DragsWindow
       MarkEffects(ReconcileEffects.Input)
     }
-  }
-
-  internal func applyButton(n Node, b Button, initial bool) {
-    let justify = StyleEntry{
-      Field: StyleField.JustifyContent,
-      A: float32(int32(JustifyContent.Center)),
-    }
-    let align = StyleEntry{
-      Field: StyleField.AlignItems,
-      A: float32(int32(AlignItems.Center)),
-    }
-    let author = b.Entries()
-    var entries = n.BaseStyle
-    if !sameButtonStyleEntries(entries, justify, align, author) {
-      let changed = StyleEntries{}
-      changed.Add(justify)
-      changed.Add(align)
-      if let authored = author {
-        changed.AddRange(authored)
-      }
-      entries = changed
-    }
-    applyStyleEntries(n, b, entries, b.Focusable, initial)
   }
 
   internal func applyText(n Node, t Text, initial bool) {
@@ -1189,7 +1166,7 @@ internal partial class Reconciler {
     if !canReuseNode(n, b) {
       return replace(n, b)
     }
-    applyButton(n, b, false)
+    applyStyle(n, b, b.Focusable, false)
     diffChildren(n, b.Children)
     return n
   }
@@ -1552,41 +1529,6 @@ internal func sameStyleEntries(a StyleEntries?, b StyleEntries?) bool {
   }
   return true
 }
-
-internal func sameButtonStyleEntries(entries StyleEntries?, justify StyleEntry,
-  align StyleEntry, author StyleEntries?) bool{
-    guard let current = entries else {
-      return false
-    }
-    let authorCount = if let authored = author { authored.Count } else { 0 }
-    if current.Count != authorCount + 2 {
-      return false
-    }
-    let currentJustify = current.At(0)
-    if currentJustify.Field != justify.Field || !sameStyleEntry(currentJustify, justify) {
-      return false
-    }
-    let currentAlign = current.At(1)
-    if currentAlign.Field != align.Field || !sameStyleEntry(currentAlign, align) {
-      return false
-    }
-    guard let authored = author else {
-      return true
-    }
-    var currentCursor = current.Cursor()
-    currentCursor.MoveNext()
-    currentCursor.MoveNext()
-    var authoredCursor = authored.Cursor()
-    while authoredCursor.MoveNext() && currentCursor.MoveNext() {
-      let currentEntry = currentCursor.Current
-      let authoredEntry = authoredCursor.Current
-      if currentEntry.Field != authoredEntry.Field
-        || !sameStyleEntry(currentEntry, authoredEntry) {
-          return false
-        }
-    }
-    return true
-  }
 
 internal func sameDashPattern(a DashPattern?, b DashPattern?) bool {
   if a == b {
