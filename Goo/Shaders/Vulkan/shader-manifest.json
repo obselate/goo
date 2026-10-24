@@ -259,32 +259,6 @@
   ],
   "shaders": [
     {
-      "id": "solid_quad_vertex",
-      "stage": "vertex",
-      "source": "solid_quad.vert.slang",
-      "output": "solid_quad.vert.spv",
-      "entryPoint": "main",
-      "sourceSha256": "c0542586c790766cba354cb851f921d608bea597918b1f673954aa85c318e8fd",
-      "outputSha256": "e0e912d13fba1dd63d03004703f504fadbf2cf5459e2ca58796ccf0a69194808",
-      "outputBytes": 1240,
-      "capabilities": [
-        1
-      ]
-    },
-    {
-      "id": "solid_quad_fragment",
-      "stage": "fragment",
-      "source": "solid_quad.frag.slang",
-      "output": "solid_quad.frag.spv",
-      "entryPoint": "main",
-      "sourceSha256": "7887580842206d0f9edaf2914d77603a430a8908a29e680220bb511a7d7e4bc5",
-      "outputSha256": "c211387d97990e1b1f36ac27f87a99ea0cef30a75e6fa467e8cd72624b8dfde9",
-      "outputBytes": 372,
-      "capabilities": [
-        1
-      ]
-    },
-    {
       "id": "analytic_vertex",
       "stage": "vertex",
       "source": "analytic.vert.slang",
@@ -525,78 +499,6 @@
     }
   ],
   "pipelines": [
-    {
-      "id": "solid_quad",
-      "topology": "triangle-list",
-      "vertexInput": "none",
-      "pushConstants": {
-        "offset": 0,
-        "size": 32,
-        "stages": [
-          "vertex"
-        ],
-        "members": [
-          {
-            "name": "rect",
-            "offset": 0,
-            "type": "vec4"
-          },
-          {
-            "name": "color",
-            "offset": 16,
-            "type": "vec4"
-          }
-        ]
-      },
-      "descriptorCount": 0,
-      "descriptors": [],
-      "stages": [
-        {
-          "shader": "solid_quad_vertex",
-          "stage": "vertex",
-          "entryPoint": "main",
-          "inputs": [],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "color"
-            }
-          ]
-        },
-        {
-          "shader": "solid_quad_fragment",
-          "stage": "fragment",
-          "entryPoint": "main",
-          "inputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "color"
-            }
-          ],
-          "outputs": [
-            {
-              "location": 0,
-              "type": "vec4",
-              "name": "outColor"
-            }
-          ]
-        }
-      ],
-      "colorFormat": "swapchain-sRGB",
-      "sampleCount": 1,
-      "blend": "disabled",
-      "depthStencil": "disabled",
-      "cullMode": "none",
-      "frontFace": "counter-clockwise",
-      "hostPacking": {
-        "path": "SolidQuadPushConstants.Generated.gs",
-        "typeName": "SolidQuadPushConstants",
-        "sha256": "51942abdd30fed34744bacea82eab2c4ea100de769b1f14fbd48f086af3c70b7",
-        "bytes": 460
-      }
-    },
     {
       "id": "analytic_solid",
       "topology": "triangle-strip",

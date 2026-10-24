@@ -1186,7 +1186,7 @@ internal shared class Program {
         }
     }
 
-    private const ShaderDirectory string = "tests/Goo.VulkanProof/Shaders"
+    private const ShaderDirectory string = "Goo/Shaders/Vulkan/Source"
     private const ProductionDirectory string = "Goo/Shaders/Vulkan"
     private const ManifestName string = "shader-manifest.json"
     private const HarfBuzzTag string = "14.3.1"
@@ -1751,83 +1751,69 @@ internal shared class Program {
                 }
             }
         )
-        if manifest.Shaders.Count != 20 {
-            throw InvalidOperationException("shaders must contain exactly twenty entries")
+        if manifest.Shaders.Count != 18 {
+            throw InvalidOperationException("shaders must contain exactly eighteen entries")
         }
-        RequireShader(
-            manifest.Shaders[0],
-            "solid_quad_vertex",
-            "vertex",
-            "solid_quad.vert.slang",
-            "solid_quad.vert.spv"
-        )
+        RequireShader(manifest.Shaders[0], "analytic_vertex", "vertex", "analytic.vert.slang", "analytic.vert.spv")
         RequireShader(
             manifest.Shaders[1],
-            "solid_quad_fragment",
-            "fragment",
-            "solid_quad.frag.slang",
-            "solid_quad.frag.spv"
-        )
-        RequireShader(manifest.Shaders[2], "analytic_vertex", "vertex", "analytic.vert.slang", "analytic.vert.spv")
-        RequireShader(
-            manifest.Shaders[3],
             "analytic_solid_fragment",
             "fragment",
             "analytic_solid.frag.slang",
             "analytic_solid.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[4],
+            manifest.Shaders[2],
             "analytic_shadow_fragment",
             "fragment",
             "analytic_shadow.frag.slang",
             "analytic_shadow.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[5],
+            manifest.Shaders[3],
             "analytic_border_fragment",
             "fragment",
             "analytic_border.frag.slang",
             "analytic_border.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[6],
+            manifest.Shaders[4],
             "analytic_linear4_fragment",
             "fragment",
             "analytic_linear4.frag.slang",
             "analytic_linear4.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[7],
+            manifest.Shaders[5],
             "analytic_radial4_fragment",
             "fragment",
             "analytic_radial4.frag.slang",
             "analytic_radial4.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[8],
+            manifest.Shaders[6],
             "analytic_sampled_image_fragment",
             "fragment",
             "analytic_sampled_image.frag.slang",
             "analytic_sampled_image.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[9],
+            manifest.Shaders[7],
             "analytic_blend_fragment",
             "fragment",
             "analytic_blend.frag.slang",
             "analytic_blend.frag.spv"
         )
-        RequireShader(manifest.Shaders[10], "path_band_vertex", "vertex", "path_band.vert.slang", "path_band.vert.spv")
+        RequireShader(manifest.Shaders[8], "path_band_vertex", "vertex", "path_band.vert.slang", "path_band.vert.spv")
         RequireShader(
-            manifest.Shaders[11],
+            manifest.Shaders[9],
             "path_band_fragment",
             "fragment",
             "path_band.frag.slang",
             "path_band.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[12],
+            manifest.Shaders[10],
             "hb_gpu_vertex",
             "vertex",
             "hb_gpu.vert.wrapper.glsl",
@@ -1835,7 +1821,7 @@ internal shared class Program {
             "hb_gpu_vertex"
         )
         RequireShader(
-            manifest.Shaders[13],
+            manifest.Shaders[11],
             "hb_gpu_draw_fragment",
             "fragment",
             "hb_gpu_draw.frag.wrapper.glsl",
@@ -1843,67 +1829,47 @@ internal shared class Program {
             "hb_gpu_draw_fragment"
         )
         RequireShader(
-            manifest.Shaders[14],
+            manifest.Shaders[12],
             "hb_gpu_paint_fragment",
             "fragment",
             "hb_gpu_paint.frag.wrapper.glsl",
             "hb_gpu_paint.frag.spv",
             "hb_gpu_paint_fragment"
         )
-        RequireShader(manifest.Shaders[15], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv")
+        RequireShader(manifest.Shaders[13], "clip_mask_vertex", "vertex", "clip_mask.vert.slang", "clip_mask.vert.spv")
         RequireShader(
-            manifest.Shaders[16],
+            manifest.Shaders[14],
             "clip_mask_fragment",
             "fragment",
             "clip_mask.frag.slang",
             "clip_mask.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[17],
+            manifest.Shaders[15],
             "path_stroke_fragment",
             "fragment",
             "path_stroke.frag.slang",
             "path_stroke.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[18],
+            manifest.Shaders[16],
             "stroke_mask_fragment",
             "fragment",
             "stroke_mask.frag.slang",
             "stroke_mask.frag.spv"
         )
         RequireShader(
-            manifest.Shaders[19],
+            manifest.Shaders[17],
             "path_stroke_compute",
             "compute",
             "path_stroke.comp.slang",
             "path_stroke.comp.spv"
         )
-        if manifest.Pipelines.Count != 15 {
-            throw InvalidOperationException("pipelines must contain exactly fifteen entries")
+        if manifest.Pipelines.Count != 14 {
+            throw InvalidOperationException("pipelines must contain exactly fourteen entries")
         }
         RequirePipeline(
             manifest.Pipelines[0],
-            "solid_quad",
-            "SolidQuadPushConstants.Generated.gs",
-            "SolidQuadPushConstants",
-            32,
-            []PushConstantMember{
-                PushConstantMember{Name: "rect", Offset: 0, Type: "vec4"},
-                PushConstantMember{Name: "color", Offset: 16, Type: "vec4"}
-            },
-            []string{"vertex"},
-            "disabled",
-            nil,
-            "solid_quad_vertex",
-            "solid_quad_fragment",
-            "vec4",
-            "color",
-            Array.Empty[Descriptor](),
-            false
-        )
-        RequirePipeline(
-            manifest.Pipelines[1],
             "analytic_solid",
             "AnalyticSolidPushConstants.Generated.gs",
             "AnalyticSolidPushConstants",
@@ -1928,7 +1894,7 @@ internal shared class Program {
             AnalyticDescriptors()
         )
         RequirePipeline(
-            manifest.Pipelines[2],
+            manifest.Pipelines[1],
             "analytic_shadow",
             "AnalyticSolidPushConstants.Generated.gs",
             "AnalyticSolidPushConstants",
@@ -1953,7 +1919,7 @@ internal shared class Program {
             AnalyticDescriptors()
         )
         RequirePipeline(
-            manifest.Pipelines[3],
+            manifest.Pipelines[2],
             "analytic_border",
             "AnalyticBorderPushConstants.Generated.gs",
             "AnalyticBorderPushConstants",
@@ -1978,7 +1944,7 @@ internal shared class Program {
             AnalyticDescriptors()
         )
         RequirePipeline(
-            manifest.Pipelines[4],
+            manifest.Pipelines[3],
             "analytic_linear4",
             "AnalyticLinear4PushConstants.Generated.gs",
             "AnalyticLinear4PushConstants",
@@ -2003,7 +1969,7 @@ internal shared class Program {
             AnalyticDescriptors()
         )
         RequirePipeline(
-            manifest.Pipelines[5],
+            manifest.Pipelines[4],
             "analytic_radial4",
             "AnalyticRadial4PushConstants.Generated.gs",
             "AnalyticRadial4PushConstants",
@@ -2028,7 +1994,7 @@ internal shared class Program {
             AnalyticDescriptors()
         )
         RequirePipeline(
-            manifest.Pipelines[6],
+            manifest.Pipelines[5],
             "analytic_sampled_image",
             "SampledImagePushConstants.Generated.gs",
             "SampledImagePushConstants",
@@ -2076,7 +2042,7 @@ internal shared class Program {
             }
         )
         RequirePipeline(
-            manifest.Pipelines[7],
+            manifest.Pipelines[6],
             "analytic_blend",
             "SampledImagePushConstants.Generated.gs",
             "SampledImagePushConstants",
@@ -2131,7 +2097,7 @@ internal shared class Program {
             }
         )
         RequirePipeline(
-            manifest.Pipelines[8],
+            manifest.Pipelines[7],
             "path_band",
             "PathBandPushConstants.Generated.gs",
             "PathBandPushConstants",
@@ -2169,7 +2135,7 @@ internal shared class Program {
             }
         )
         RequireHbGpuPipeline(
-            manifest.Pipelines[9],
+            manifest.Pipelines[8],
             "hb_gpu_draw",
             "HbGpuTextFrameConstants.Generated.gs",
             "HbGpuTextFrameConstants",
@@ -2177,7 +2143,7 @@ internal shared class Program {
             "hb_gpu_draw_fragment"
         )
         RequireHbGpuPipeline(
-            manifest.Pipelines[10],
+            manifest.Pipelines[9],
             "hb_gpu_paint",
             "HbGpuTextFrameConstants.Generated.gs",
             "HbGpuTextFrameConstants",
@@ -2185,7 +2151,7 @@ internal shared class Program {
             "hb_gpu_paint_fragment"
         )
         RequirePipeline(
-            manifest.Pipelines[11],
+            manifest.Pipelines[10],
             "clip_mask",
             "ClipMaskPushConstants.Generated.gs",
             "ClipMaskPushConstants",
@@ -2219,12 +2185,12 @@ internal shared class Program {
             "r8-unorm"
         )
         RequirePipeline(
-            manifest.Pipelines[12],
+            manifest.Pipelines[11],
             "path_stroke",
             "PathBandPushConstants.Generated.gs",
             "PathBandPushConstants",
             80,
-            manifest.Pipelines[8].PushConstants.Members,
+            manifest.Pipelines[7].PushConstants.Members,
             []string{"vertex", "fragment"},
             "source-over-premultiplied-linear",
             "path-band-premultiplied-linear",
@@ -2252,12 +2218,12 @@ internal shared class Program {
             }
         )
         RequirePipeline(
-            manifest.Pipelines[13],
+            manifest.Pipelines[12],
             "stroke_mask",
             "ClipMaskPushConstants.Generated.gs",
             "ClipMaskPushConstants",
             112,
-            manifest.Pipelines[11].PushConstants.Members,
+            manifest.Pipelines[10].PushConstants.Members,
             []string{"vertex", "fragment"},
             "disabled",
             "clip-mask-r8-coverage",
@@ -2278,7 +2244,7 @@ internal shared class Program {
             false,
             "r8-unorm"
         )
-        let metrics = manifest.Pipelines[14]
+        let metrics = manifest.Pipelines[13]
         Require(metrics.Id == "path_stroke_metrics", "pipeline.path_stroke_metrics.id", "path_stroke_metrics")
         Require(
             metrics.Topology == "compute" && metrics.VertexInput == "none",
