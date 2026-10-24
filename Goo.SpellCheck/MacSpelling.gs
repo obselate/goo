@@ -8,9 +8,9 @@ import System.Threading
 
 internal unsafe shared class MacSpelling {
     @StructLayout(LayoutKind.Sequential)
-    private struct Range(location nuint, length nuint) {
-        internal let Location nuint = location
-        internal let Length nuint = length
+    private struct Range {
+        internal var Location nuint
+        internal var Length nuint
     }
 
     private const ObjectiveC string = "/usr/lib/libobjc.A.dylib"
@@ -112,7 +112,7 @@ internal unsafe shared class MacSpelling {
             let array = Guesses(
                 checker,
                 Selector("guessesForWordRange:inString:language:inSpellDocumentWithTag:"),
-                MacSpelling.Range(0, nuint(word.Length)),
+                MacSpelling.Range{Location: 0, Length: nuint(word.Length)},
                 MacSpelling.String(word),
                 nativeLanguage,
                 document
@@ -216,7 +216,7 @@ internal unsafe shared class MacSpelling {
                         source,
                         Selector("getCharacters:range:"),
                         characters,
-                        MacSpelling.Range(0, nuint(destination.Length))
+                        MacSpelling.Range{Location: 0, Length: nuint(destination.Length)}
                     )
                 }
             }
