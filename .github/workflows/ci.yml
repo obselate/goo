@@ -216,7 +216,7 @@ jobs:
   macos-arm64:
     needs: [changes, macos-native]
     runs-on: ${{ needs.changes.outputs.full == 'true' && 'macos-15' || 'ubuntu-24.04' }}
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: No affected inputs
