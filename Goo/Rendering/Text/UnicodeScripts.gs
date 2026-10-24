@@ -24,6 +24,8 @@ internal sealed class UnicodeTextAnalysisScratchScope {
   internal let ScriptPairs List[UnicodeScriptPair]
   internal let ScriptRuns List[UnicodeScriptRun]
   internal let FallbackCandidates List[TypefaceLease]
+  internal let VisualClusters List[TextVisualCluster]
+  internal let LogicalClusters List[int32]
 
   internal init() {
     GraphemeScalars = List[UnicodeGraphemeScalar]()
@@ -36,6 +38,8 @@ internal sealed class UnicodeTextAnalysisScratchScope {
     ScriptPairs = List[UnicodeScriptPair]()
     ScriptRuns = List[UnicodeScriptRun]()
     FallbackCandidates = List[TypefaceLease]()
+    VisualClusters = List[TextVisualCluster]()
+    LogicalClusters = List[int32]()
   }
 
   internal func BeginGraphemeScalars(required int32) List[UnicodeGraphemeScalar] -> begin(GraphemeScalars, required)
@@ -56,6 +60,10 @@ internal sealed class UnicodeTextAnalysisScratchScope {
 
   internal func BeginScriptRuns(required int32) List[UnicodeScriptRun] -> begin(ScriptRuns, required)
 
+  internal func BeginVisualClusters(required int32) List[TextVisualCluster] -> begin(VisualClusters, required)
+
+  internal func BeginLogicalClusters(required int32) List[int32] -> begin(LogicalClusters, required)
+
   internal func BeginFallbackCandidates() List[TypefaceLease] {
     FallbackCandidates.Clear()
     return FallbackCandidates
@@ -72,6 +80,8 @@ internal sealed class UnicodeTextAnalysisScratchScope {
     ScriptPairs.Clear()
     ScriptRuns.Clear()
     FallbackCandidates.Clear()
+    VisualClusters.Clear()
+    LogicalClusters.Clear()
   }
 
   private func begin[T](values List[T], required int32) List[T] {
