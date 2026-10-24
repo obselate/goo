@@ -50,7 +50,7 @@
 !/.github/scripts/stage-linux-x64.sh
 !/.github/scripts/linux-bundle-files.txt
 !/.github/scripts/stage-macos-arm64.sh
-!/.github/scripts/validate-release.py
+
 !/.github/scripts/with-headless-wayland.sh
 !/.github/scripts/run-android-native-menus.sh
 !/.github/scripts/check-wayland-data-transfer.sh
@@ -140,6 +140,8 @@
 !/tools/Goo.VulkanManifest/**
 !/tools/Goo.RepositoryChecks/
 !/tools/Goo.RepositoryChecks/**
+!/tools/Goo.ReleaseCheck/
+!/tools/Goo.ReleaseCheck/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
 !/tools/Goo.Investigation/
