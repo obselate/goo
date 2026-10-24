@@ -143,9 +143,14 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
       }
     }
 
-  internal init(testWordCapacity VkDeviceSize) {
-    if testWordCapacity == 0uL || testWordCapacity > MaxWordCapacity {
-      throw ArgumentOutOfRangeException("testWordCapacity")
+  internal convenience init(testWordCapacity VkDeviceSize) {
+    init(testWordCapacity, MaxWordCapacity)
+  }
+
+  internal init(testWordCapacity VkDeviceSize, testMaximumWordCapacity VkDeviceSize) {
+    if testWordCapacity == 0uL || testWordCapacity > testMaximumWordCapacity
+      || testMaximumWordCapacity > MaxWordCapacity {
+        throw ArgumentOutOfRangeException("testWordCapacity")
     }
     device = nint(1)
     dispatch = VkDeviceDispatch{}
@@ -154,7 +159,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
     testMode = true
     wordCapacity = testWordCapacity
     byteCapacity = testWordCapacity * WordBytes
-    maximumWordCapacity = MaxWordCapacity
+    maximumWordCapacity = testMaximumWordCapacity
     descriptorSetLayout = 1uL
   }
 
@@ -165,7 +170,7 @@ internal unsafe partial class VulkanPathAtlas : IDisposable {
         throw ArgumentOutOfRangeException("replacementWordCapacity")
       }
     if testMode {
-      return VulkanPathAtlas(replacementWordCapacity)
+      return VulkanPathAtlas(replacementWordCapacity, maximumWordCapacity)
     }
     return VulkanPathAtlas(
       device,

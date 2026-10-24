@@ -916,9 +916,16 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
   }
 
   private func ReclaimInactiveRecords(required uint32) bool {
-    if !HasInactiveRecords() {
-      return false
+    var candidate = leastRecentlyUsed
+    var found = false
+    while let record = candidate {
+      if CanReclaim(record) {
+        found = true
+        break
+      }
+      candidate = record.Next
     }
+    if !found { return false }
     let atlasStats = atlas.Stats
     if atlasStats.UploadPending {
       if atlasStats.UploadSubmitted {
@@ -932,14 +939,16 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
         queuedUploadEnd = 0u
       }
     }
+    let target = if uint64(nextWordOffset) + uint64(required) > atlas.MaximumWordCapacity {
+      atlas.WordCapacity
+    } else {
+      Math.Max(uint64(required), atlas.WordCapacity / 2uL)
+    }
     var reclaimed = false
-    while !HasFreeRange(required) {
-      var candidate = leastRecentlyUsed
-      while let record = candidate {
-        if CanReclaim(record) { break }
-        candidate = record.Next
-      }
-      guard let record = candidate else { break }
+    while let record = candidate {
+      if uint64(freeWordCount) + atlas.WordCapacity - uint64(nextWordOffset) >= target { break }
+      candidate = record.Next
+      if !CanReclaim(record) { continue }
       if record.Retired {
         retiredRecords.Remove(record)
         retiredWordCount = retiredWordCount - uint64(record.WordCount)
@@ -955,10 +964,10 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
       ClearWords(record.BaseWord, record.WordCount)
       liveWordCount = liveWordCount - record.WordCount
       RecycleRecord(record)
-      MergeFreeRanges()
       reclaimed = true
     }
     if !reclaimed { return false }
+    MergeFreeRanges()
     if compactionCount == uint64.MaxValue {
       throw OverflowException("Vulkan path compaction count overflow")
     }
@@ -1089,15 +1098,6 @@ internal unsafe sealed class VulkanPathResources : IDisposable {
     record.LastUseFence <= completedSubmissionFence
     && !(if record.Retired { IsPathRevisionActive(record.Identity.PathId) }
       else { activePathOwners.ContainsKey(record.Identity.PathId.LogicalId) })
-
-  private func HasInactiveRecords() bool {
-    var candidate = leastRecentlyUsed
-    while let record = candidate {
-      if CanReclaim(record) { return true }
-      candidate = record.Next
-    }
-    return false
-  }
 
   private func HasFreeRange(required uint32) bool {
     if uint64(nextWordOffset) + uint64(required) <= atlas.WordCapacity {

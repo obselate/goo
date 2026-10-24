@@ -1,5 +1,6 @@
 import Goo
 import System
+import System.Diagnostics
 import System.IO
 import System.Runtime.InteropServices
 import System.Security.Cryptography
@@ -16,9 +17,14 @@ internal shared class Program {
         if Environment.GetEnvironmentVariable("GOO_VK_SCENE_ALLOC") == "1" {
             return RunSceneAllocationGate()
         }
+        if Environment.GetEnvironmentVariable("GOO_VK_PATH_PRESSURE_GATE") == "1" {
+            RunPathPressureGate()
+            return 0
+        }
         if Environment.GetEnvironmentVariable("GOO_VK_PATH_UPLOAD_GATE") == "1" {
             RunPathUploadGate()
             RunPathEvictionGate()
+            RunPathPressureGate()
             return 0
         }
         DescriptorLifetimeRegression.Run()
@@ -36,6 +42,7 @@ internal shared class Program {
         RunEvenOddPathGate()
         RunPathUploadGate()
         RunPathEvictionGate()
+        RunPathPressureGate()
         RunUploadRingGrowthGate()
         RunRetainedPrimitiveSpanGate()
         var font VulkanTextFont? = nil
@@ -631,10 +638,11 @@ internal shared class Program {
                 "Retained paths registered again after fresh paths: " + registrations.ToString()
             )
         }
-        if resources.Stats.GrowthCount != uint64(1) || resources.Stats.EvictionCount != uint64(4) {
-            throw InvalidOperationException("Path pressure did not reclaim only the required paths")
+        if resources.Stats.GrowthCount != uint64(1) || resources.Stats.EvictionCount != uint64(16) {
+            throw InvalidOperationException("Path pressure did not reclaim half the atlas: growth=" +
+                resources.Stats.GrowthCount.ToString() + " eviction=" + resources.Stats.EvictionCount.ToString())
         }
-        if !resources.Resolve(MakePath(24), FillRule.NonZero).Published || resources.Resolve(
+        if !resources.Resolve(MakePath(36), FillRule.NonZero).Published || resources.Resolve(
             MakePath(20),
             FillRule.NonZero
         )
@@ -648,8 +656,144 @@ internal shared class Program {
                 .Stats
                 .GrowthCount
                 .ToString() +
-                " demandLimited=1 lru=1"
+                " halfCapacity=1 lru=1"
         )
+    }
+
+    private func RunPathPressureGate() {
+        let nodes = [1152]Node
+        for index in 0 ... nodes.Length {
+            let builder = PathBuilder(0.0, 0.0, 100.0, 100.0)
+            for contour in 0 ... 32 {
+                let x = float64(contour % 8) * 12.0
+                let y = float64(contour / 8) * 24.0 + float64(index) / 10000.0
+                builder.MoveTo(x, y).LineTo(x + 10.0, y).LineTo(x + 5.0, y + 20.0).Close()
+            }
+            nodes[index] = Node(){
+                Kind = NodeKind.Shape,
+                Rect = Rect{ W: 100.0F, H: 100.0F },
+                ShapePath = builder.Build(),
+                ShapeFit = ShapeFit.Fill,
+                BackgroundColor = Color.White,
+            }
+        }
+        let words = uint64(PathBandEncoder.Encode(nodes[0].ShapePath).WordCount)
+        using let resources = VulkanPathResources(VulkanPathAtlas(words * 1024uL), VulkanPathIdentityRegistry())
+        using let scene = VulkanPathScene(resources)
+        let compiler = VulkanSceneCompiler()
+        compiler.SetPathScene(scene)
+        let root = Node(){ Kind = NodeKind.Container, Rect = Rect{ W: 100.0F, H: 100.0F } }
+        for index in 0 ... 1024 {
+            root.Children.Add(nodes[index])
+        }
+        compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+        let _ = scene.CurrentPathCount
+        resources.PrepareUpload()
+        SubmitPathUpload(resources, 1uL)
+        resources.Collect(1uL)
+        root.Children.Clear()
+        for index in 0 ... 256 {
+            root.Children.Add(nodes[index])
+        }
+        compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+        let _ = scene.CurrentPathCount
+        let before = resources.Stats
+        root.Children.Clear()
+        for index in 1024 ... 1152 {
+            root.Children.Add(nodes[index])
+        }
+        for index in 0 ... 256 {
+            root.Children.Add(nodes[index])
+        }
+        let started = Stopwatch.GetTimestamp()
+        compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+        let currentCount = scene.CurrentPathCount
+        let elapsed = Stopwatch.GetElapsedTime(started).TotalMilliseconds
+        let after = resources.Stats
+        if currentCount != 384 || after.GrowthCount != before.GrowthCount {
+            throw InvalidOperationException("Path pressure did not preserve the live set at capacity")
+        }
+        if after.PressureEventCount - before.PressureEventCount != 1uL ||
+            after.CompactionCount - before.CompactionCount != 1uL ||
+            after.EvictionCount - before.EvictionCount != 512uL {
+            throw InvalidOperationException("Path pressure repeated reclamation within one burst: pressure=" +
+                (after.PressureEventCount - before.PressureEventCount).ToString() + " compaction=" +
+                (after.CompactionCount - before.CompactionCount).ToString() + " eviction=" +
+                (after.EvictionCount - before.EvictionCount).ToString())
+        }
+        resources.PrepareUpload()
+        SubmitPathUpload(resources, 2uL)
+        resources.Collect(2uL)
+        let scrollBackWords = resources.LiveWordCount
+        for index in 768 ... 896 {
+            root.Children.Add(nodes[index])
+        }
+        let scrollBackStarted = Stopwatch.GetTimestamp()
+        compiler.Compile(root, Color.Transparent, 100.0F, 100.0F)
+        let _ = scene.CurrentPathCount
+        let scrollBackElapsed = Stopwatch.GetElapsedTime(scrollBackStarted).TotalMilliseconds
+        if resources.LiveWordCount != scrollBackWords {
+            throw InvalidOperationException("Path pressure discarded the warm scroll-back paths")
+        }
+        Console.WriteLine(
+            "PATH_PRESSURE_GATE capacity=" + before.WordCapacity.ToString() +
+            " planCompileMs=" + elapsed.ToString("F3") +
+            " pressure=" + (after.PressureEventCount - before.PressureEventCount).ToString() +
+            " compaction=" + (after.CompactionCount - before.CompactionCount).ToString() +
+            " eviction=" + (after.EvictionCount - before.EvictionCount).ToString() +
+            " scrollBackMs=" + scrollBackElapsed.ToString("F3") +
+            " scrollBackRegistrations=0 retained=256 burst=128")
+        RunPathPressureHardLimitGate(nodes, words)
+    }
+
+    private func RunPathPressureHardLimitGate(nodes []Node, words uint64) {
+        let builder = PathBuilder(0.0, 0.0, 100.0, 100.0)
+        for contour in 0 ... 192 {
+            let x = float64(contour % 8) * 12.0
+            let y = float64(contour % 32 / 8) * 24.0
+            builder.MoveTo(x, y).LineTo(x + 10.0, y).LineTo(x + 5.0, y + 20.0).Close()
+        }
+        let large = builder.Build()
+        let required = uint64(PathBandEncoder.Encode(large).WordCount)
+        if required <= words * 4uL || required > words * 8uL {
+            throw InvalidOperationException("Hard-limit path does not span the fragmented free ranges")
+        }
+        using let resources = VulkanPathResources(
+            VulkanPathAtlas(words * 16uL, words * 16uL), VulkanPathIdentityRegistry())
+        using let scene = VulkanPathScene(resources)
+        scene.BeginCompile()
+        for index in 0 ... 16 {
+            scene.Emit(nodes[index].ShapePath, FillRule.NonZero)
+        }
+        let _ = scene.CurrentPathCount
+        resources.PrepareUpload()
+        SubmitPathUpload(resources, 1uL)
+        resources.Collect(1uL)
+        scene.BeginCompile()
+        for index in 0 ... 4 {
+            scene.Emit(nodes[index * 2].ShapePath, FillRule.NonZero)
+        }
+        let _ = scene.CurrentPathCount
+        scene.BeginCompile()
+        scene.Emit(large, FillRule.NonZero)
+        for index in 0 ... 4 {
+            scene.Emit(nodes[index * 2].ShapePath, FillRule.NonZero)
+        }
+        let count = scene.CurrentPathCount
+        resources.PrepareUpload()
+        SubmitPathUpload(resources, 2uL)
+        resources.Collect(2uL)
+        if count != 5 || resources.Stats.EvictionCount != 12uL ||
+            resources.Stats.CompactionCount != 1uL || resources.Stats.PressureEventCount != 1uL ||
+            resources.Stats.GrowthCount != 0uL || !resources.Resolve(large, FillRule.NonZero).Published {
+            throw InvalidOperationException("Path pressure failed at the fragmented hard limit")
+        }
+        for index in 0 ... 4 {
+            if !resources.Resolve(nodes[index * 2].ShapePath, FillRule.NonZero).Published {
+                throw InvalidOperationException("Path pressure evicted an active path at the hard limit")
+            }
+        }
+        Console.WriteLine("PATH_PRESSURE_HARD_LIMIT_GATE pressure=1 compaction=1 eviction=12 growth=0 active=4")
     }
 
     private func RunEvenOddPathGate() {
