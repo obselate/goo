@@ -1258,7 +1258,7 @@ float clipBorderCoverage()
 void shade()
 {
 #ifdef GOO_STROKE
-    float alpha = validHeader() ? strokeCoverage() : 0.0;
+    float alpha = validHeader() ? (pc.params.w == 0u ? analyticCoverage() : strokeCoverage()) : 0.0;
 #else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
 #endif
@@ -1268,7 +1268,7 @@ void shade()
 void shade()
 {
 #ifdef GOO_STROKE
-    float alpha = validHeader() ? strokeCoverage() : 0.0;
+    float alpha = validHeader() ? (pc.params.w == 0u ? analyticCoverage() : strokeCoverage()) : 0.0;
 #else
     float alpha = validHeader() ? analyticCoverage() : 0.0;
 #endif

@@ -7,34 +7,39 @@ import System.Collections.Generic
 import System.Diagnostics
 import System.Globalization
 import System.IO
+import System.Threading
 
 class NonScalingStrokeCell : Cell {
-    internal var Source VectorPath = PathBuilder(0.0, 0.0, 200.0, 200.0)
-        .MoveTo(20.0, 20.0)
-        .LineTo(50.0, 20.0)
-        .QuadraticTo(80.0, 20.0, 65.0, 40.0)
-        .LineTo(25.0, 45.0)
-        .MoveTo(25.0, 60.0)
-        .LineTo(60.0, 55.0)
-        .LineTo(65.0, 80.0)
-        .Close()
-        .MoveTo(85.0, 30.0)
-        .LineTo(85.0, 30.0)
-        .Build()
-    private let clip VectorPath = PathBuilder(0.0, 0.0, 200.0, 200.0)
-        .MoveTo(25.0, 25.0)
-        .LineTo(180.0, 25.0)
-        .LineTo(180.0, 185.0)
-        .LineTo(25.0, 185.0)
-        .Close()
-        .Build()
-    private let dash DashPattern = DashPattern([]float64{10.0, 6.0}, 2.0)
-    private let dots DashPattern = DashPattern([]float64{0.0, 9.0}, 0.0)
-    private let odd DashPattern = DashPattern([]float64{8.0, 3.0, 2.0}, -3.0)
+    shared {
+        private let defaultSource VectorPath = PathBuilder(0.0, 0.0, 200.0, 200.0)
+            .MoveTo(20.0, 20.0)
+            .LineTo(50.0, 20.0)
+            .QuadraticTo(80.0, 20.0, 65.0, 40.0)
+            .LineTo(25.0, 45.0)
+            .MoveTo(25.0, 60.0)
+            .LineTo(60.0, 55.0)
+            .LineTo(65.0, 80.0)
+            .Close()
+            .MoveTo(85.0, 30.0)
+            .LineTo(85.0, 30.0)
+            .Build()
+        private let clip VectorPath = PathBuilder(0.0, 0.0, 200.0, 200.0)
+            .MoveTo(25.0, 25.0)
+            .LineTo(180.0, 25.0)
+            .LineTo(180.0, 185.0)
+            .LineTo(25.0, 185.0)
+            .Close()
+            .Build()
+        private let dash DashPattern = DashPattern([]float64{10.0, 6.0}, 2.0)
+        private let dots DashPattern = DashPattern([]float64{0.0, 9.0}, 0.0)
+        private let odd DashPattern = DashPattern([]float64{8.0, 3.0, 2.0}, -3.0)
+    }
+    internal var Source VectorPath = defaultSource
     internal var Reference VectorPath = VectorPath.Empty
     internal var Pose PanelTransform = PanelTransform{TranslateX: 20, TranslateY: 20}
     internal var Style int32
     internal var Stretch bool
+    internal var ShadowOffset bool
 
     override func Build() Blob -> Container{
         Width: 400,
@@ -84,7 +89,7 @@ class NonScalingStrokeCell : Cell {
         TransformOriginX: 0,
         TransformOriginY: 0,
         Transform: pose,
-        BoxShadow: BoxShadow{Color: Color.Rgb(255, 0, 0)},
+        BoxShadow: BoxShadow{Color: Color.Rgb(255, 0, 0), OffsetX: ShadowOffset ? 10: 0, OffsetY: ShadowOffset ? 8: 0,},
     }
 }
 
@@ -140,14 +145,17 @@ class NonScalingStrokeBenchCell : Cell {
 
 func RunNonScalingStrokeSmoke() {
     Require(Environment.GetEnvironmentVariable("GOO_VK_DIAGNOSTICS") == "1", "GOO_VK_DIAGNOSTICS=1 is required")
+    let measure = Environment.GetEnvironmentVariable("GOO_NON_SCALING_STROKE_MEASURE")
     let errors = StringWriter()
     let previousError = Console.Error
     try {
         Console.SetError(errors)
-        VectorRetainSmoke.VerifyNonScalingStrokeHitBounds()
-        VerifyNonScalingStrokeSvgStyle()
-        VerifyNonScalingStrokePixels()
-        if Environment.GetEnvironmentVariable("GOO_NON_SCALING_STROKE_MEASURE") != "0" {
+        if measure != "only" {
+            VectorRetainSmoke.VerifyNonScalingStrokeHitBounds()
+            VerifyNonScalingStrokeSvgStyle()
+            VerifyNonScalingStrokePixels()
+        }
+        if measure != "0" {
             let asset = Svg.Parse(
                 "<svg viewBox='0 0 12 12'><path d='M1 10 L6 1 L11 10 Z'"
                 + " fill='#40c080' stroke='white' stroke-width='1' vector-effect='non-scaling-stroke'/></svg>"
@@ -166,9 +174,11 @@ func RunNonScalingStrokeSmoke() {
         Console.SetError(previousError)
     }
     ReadbackValidateCommonDiagnostics(errors.ToString())
-    Console.WriteLine(
-        "non-scaling-stroke: pixels=77 dpi=1,1.5,2 fit=1 flat=5 hit=1 transform_style_dpi_encodes=0 validation=0 cleanup=1"
-    )
+    if measure != "only" {
+        Console.WriteLine(
+            "non-scaling-stroke: pixels=77 dpi=1,1.5,2 fit=1 flat=5 hit=1 transform_style_dpi_encodes=0 validation=0 cleanup=1"
+        )
+    }
 }
 
 func VerifyNonScalingStrokeSvgStyle() {
@@ -211,46 +221,44 @@ func VerifyNonScalingStrokePixels() {
     }
     try {
         window.Open()
-        for frame in 0 ... 3 {
-            WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
-        }
-        for dpi in[]float64{1.0, 1.5, 2.0} {
-            let resizeBuilds = PathBandEncoder.BuildCount
-            if dpi != 1.0 {
-                Require(
-                    WindowReadbackTestFixture.Resize(window, 400, 200, int32(400.0 * dpi), int32(200.0 * dpi)),
-                    "Stroke proof display-scale resize failed"
-                )
+        WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+        let creation = window.CreateOffscreenSession()
+        Require(
+            creation.Status == OffscreenRenderStatus.Success && creation.Session != nil,
+            "Stroke offscreen session creation failed"
+        )
+        using let session = creation.Session!!
+        for poseIndex in 0 ... poses.Length {
+            for style in 0 ... 4 {
+                let builds = PathBandEncoder.BuildCount
+                root.Pose = poses[poseIndex]
+                root.Style = style
+                root.Stretch = poseIndex == 5
+                root.ShadowOffset = poseIndex == 1
+                root.Rebuild()
                 WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
-                Require(PathBandEncoder.BuildCount == resizeBuilds, "Display scale encoded path geometry")
-            }
-            for poseIndex in 0 ... poses.Length {
-                for style in 0 ... 4 {
-                    let builds = PathBandEncoder.BuildCount
-                    root.Reference = VectorPath.Empty
-                    root.Pose = poses[poseIndex]
-                    root.Style = style
-                    root.Stretch = poseIndex == 5
-                    root.Rebuild()
-                    WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
-                    Require(
-                        PathBandEncoder.BuildCount == builds,
-                        "Transform or stroke style encoded centerline geometry"
-                    )
-                    guard let shape = FindNonScalingStrokeNode(window.PathProbeNodeForTest()!!) else {
-                        throw InvalidOperationException("Non-scaling proof shape was not retained")
-                    }
-                    let matrix = NonScalingStrokeHostMatrix(shape)
-                    if style == 0 {
-                        VerifyNonScalingStrokeHostHit(shape, matrix)
-                    }
-                    root.Reference = NonScalingStrokeHostPath(root.Source, matrix)
-                    root.Rebuild()
-                    CaptureNonScalingStrokePair(
-                        window,
+                Require(PathBandEncoder.BuildCount == builds, "Transform or stroke style encoded centerline geometry")
+                let shape = FindNonScalingStrokeNode(window.PathProbeNodeForTest()!!)!!
+                let matrix = NonScalingStrokeHostMatrix(shape)
+                if style == 0 {
+                    VerifyNonScalingStrokeHostHit(shape, matrix)
+                }
+                let reference = NonScalingStrokeHostPath(root.Source, matrix)
+                var dpiBuilds uint64
+                for dpi in[]float64{1.0, 1.5, 2.0} {
+                    RenderNonScalingStrokePair(
+                        session,
+                        root,
+                        reference,
+                        dpi,
                         "dpi=" + dpi.ToString(CultureInfo.InvariantCulture)
                         + " pose=" + poseIndex.ToString() + " style=" + style.ToString()
                     )
+                    if dpi == 1.0 {
+                        dpiBuilds = PathBandEncoder.BuildCount
+                    } else {
+                        Require(PathBandEncoder.BuildCount == dpiBuilds, "Display scale encoded path geometry")
+                    }
                 }
             }
         }
@@ -268,9 +276,9 @@ func VerifyNonScalingStrokePixels() {
         }
         for index in 0 ... flat.Length {
             root.Source = flat[index]
-            root.Reference = VectorPath.Empty
             root.Style = index == 4 ? 1: 3
             root.Stretch = false
+            root.ShadowOffset = true
             root.Pose = PanelTransform{TranslateX: 20, TranslateY: 20}
             root.Rebuild()
             WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
@@ -280,30 +288,50 @@ func VerifyNonScalingStrokePixels() {
             WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
             Require(PathBandEncoder.BuildCount == builds, "Flat stroke translation encoded geometry")
             let shape = FindNonScalingStrokeNode(window.PathProbeNodeForTest()!!)!!
-            root.Reference = NonScalingStrokeHostPath(root.Source, NonScalingStrokeHostMatrix(shape))
-            root.Rebuild()
-            CaptureNonScalingStrokePair(window, "flat=" + index.ToString())
+            let reference = NonScalingStrokeHostPath(root.Source, NonScalingStrokeHostMatrix(shape))
+            RenderNonScalingStrokePair(session, root, reference, 2.0, "flat=" + index.ToString())
         }
     } finally {
         window.Close()
     }
 }
 
-func CaptureNonScalingStrokePair(window Window, context string) {
-    WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
-    let metrics = WindowReadbackTestFixture.Metrics(window)
-    try {
-        ReadbackRequestReadbackUntilAccepted(window, uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
-    } catch (error Exception) {
-        let actual = WindowReadbackTestFixture.CaptureTarget(window)!!.FramebufferExtentForTest()
-        throw InvalidOperationException("Stroke capture failed: " + context
-            + " requested=" + metrics.FramebufferWidth.ToString() + "x" + metrics.FramebufferHeight.ToString()
-            + " actual=" + actual.Width.ToString() + "x" + actual.Height.ToString(), error)
+func RenderNonScalingStrokePair(
+    session OffscreenRenderSession,
+    source NonScalingStrokeCell,
+    reference VectorPath,
+    dpi float64,
+    context string
+) {
+    let page = NonScalingStrokeCell{
+        Source: source.Source,
+        Reference: reference,
+        Pose: source.Pose,
+        Style: source.Style,
+        Stretch: source.Stretch,
+        ShadowOffset: source.ShadowOffset,
     }
-    ReadbackAwaitReadbackReady(window, 10000)
-    let frame = ReadbackTakeReadback(window)
-    PrimitiveValidateResult(frame, metrics)
-    CompareNonScalingStrokePixels(frame, context)
+    let options = OffscreenRenderOptions(
+        400.0F,
+        200.0F,
+        uint32(400.0 * dpi),
+        uint32(200.0 * dpi),
+        Color.Black,
+        134217728L
+    )
+    let pending = session.RenderAsync(page, options, CancellationToken.None)
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 30L
+    while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline {
+        session.Service()
+        Thread.Sleep(1)
+    }
+    Require(pending.IsCompleted, "Offscreen stroke did not complete: " + context)
+    let result = pending.GetAwaiter().GetResult()
+    Require(
+        result.Status == OffscreenRenderStatus.Success && result.Capture != nil,
+        "Offscreen stroke failed: " + context + " " + result.Status.ToString() + " " + result.Error
+    )
+    CompareNonScalingStrokePixels(result.Capture!!, context)
 }
 
 func NonScalingStrokeHostMatrix(shape Node) Affine2D {
@@ -379,10 +407,11 @@ func VerifyNonScalingStrokeHostHit(shape Node, matrix Affine2D) {
     )
 }
 
-func CompareNonScalingStrokePixels(frame VulkanReadbackResult, context string) {
+func CompareNonScalingStrokePixels(frame WindowCapture, context string) {
     let width = int32(frame.Width)
     let height = int32(frame.Height)
     let half = width / 2
+    let rowBytes = int32(frame.RowBytes)
     var interior = 0
     for y in 1 ... height - 1 {
         for x in 1 ... half - 1 {
@@ -390,12 +419,12 @@ func CompareNonScalingStrokePixels(frame VulkanReadbackResult, context string) {
             var maximum = 0
             for dy in -1 ... 2 {
                 for dx in -1 ... 2 {
-                    let value = int32(frame.Pixels[((y + dy) * width + half + x + dx) * 4])
+                    let value = int32(frame.Pixels[(y + dy) * rowBytes + (half + x + dx) * 4])
                     minimum = Math.Min(minimum, value)
                     maximum = Math.Max(maximum, value)
                 }
             }
-            let actual = int32(frame.Pixels[(y * width + x) * 4])
+            let actual = int32(frame.Pixels[y * rowBytes + x * 4])
             if minimum >= 224 {
                 interior++
             }
@@ -403,12 +432,12 @@ func CompareNonScalingStrokePixels(frame VulkanReadbackResult, context string) {
                 throw InvalidOperationException(
                     "Non-scaling stroke differs from host-space CPU stroke: " + context
                     + " x=" + x.ToString() + " y=" + y.ToString() + " actual=" + actual.ToString()
-                    + "/" + frame.Pixels[(y * width + x) * 4 + 1].ToString()
-                    + "/" + frame.Pixels[(y * width + x) * 4 + 2].ToString()
+                    + "/" + frame.Pixels[y * rowBytes + x * 4 + 1].ToString()
+                    + "/" + frame.Pixels[y * rowBytes + x * 4 + 2].ToString()
                     + " reference=" + minimum.ToString() + "/" + maximum.ToString()
-                    + " center=" + frame.Pixels[(y * width + half + x) * 4].ToString()
-                    + "/" + frame.Pixels[(y * width + half + x) * 4 + 1].ToString()
-                    + "/" + frame.Pixels[(y * width + half + x) * 4 + 2].ToString()
+                    + " center=" + frame.Pixels[y * rowBytes + (half + x) * 4].ToString()
+                    + "/" + frame.Pixels[y * rowBytes + (half + x) * 4 + 1].ToString()
+                    + "/" + frame.Pixels[y * rowBytes + (half + x) * 4 + 2].ToString()
                 )
             }
         }
@@ -464,6 +493,7 @@ func MeasureNonScalingStroke(path VectorPath, count int32, nonScaling bool) {
             )
         }
         Array.Sort(samples)
+        let frames = float64(finalCounters.recordCount - counters.recordCount)
         Console.WriteLine(
             "NON_SCALING_STROKE_ZOOM instances=" + count.ToString()
             + " non_scaling=" + nonScaling.ToString() + " frames=300 encode_builds="
@@ -472,12 +502,22 @@ func MeasureNonScalingStroke(path VectorPath, count int32, nonScaling bool) {
             + " stroke_builds=" + (PathStrokeCache.Shared.BuildCount - strokeBuilds).ToString()
             + " flattens=" + (PathStrokeCache.Shared.FlattenCount - flattens).ToString()
             + " gpu_metric_builds=" + (VulkanPathStrokeFrameData.MetricBuildCount - metricBuilds).ToString()
+            + " draws_per_frame=" + (float64(finalCounters.drawCount - counters.drawCount) / frames).ToString(
+                "F1",
+                CultureInfo.InvariantCulture
+            )
             +
-                " draws_per_frame=" +
-                (
-                float64(finalCounters.drawCount - counters.drawCount)
-                / float64(finalCounters.recordCount - counters.recordCount)
-            ).ToString("F1", CultureInfo.InvariantCulture)
+                " pipeline_binds_per_frame=" +
+                (float64(finalCounters.pipelineChangeCount - counters.pipelineChangeCount) / frames).ToString(
+                "F1",
+                CultureInfo.InvariantCulture
+            )
+            +
+                " descriptor_binds_per_frame=" +
+                (float64(finalCounters.descriptorChangeCount - counters.descriptorChangeCount) / frames).ToString(
+                "F1",
+                CultureInfo.InvariantCulture
+            )
             + " p50_ms=" + samples[150].ToString("F3", CultureInfo.InvariantCulture)
             + " p95_ms=" + samples[284].ToString("F3", CultureInfo.InvariantCulture)
         )
@@ -520,6 +560,7 @@ func ProfileNonScalingStroke(window Window, root NonScalingStrokeBenchCell) {
             root.Zoom = 0.75 + float64(frame % 100) / 200.0
             root.Rebuild()
             WindowReadbackTestFixture.ForceRender(window, 0.0, 10.0)
+            var paintMs = 0.0
             var more = true
             while more {
                 let records = recorder.Read(after, 10000, out after, out more, out var state, out var dropped)
@@ -530,7 +571,7 @@ func ProfileNonScalingStroke(window Window, root NonScalingStrokeBenchCell) {
                 for record in records {
                     if record.Kind == FrameTraceKind.Duration && record.Source == "target.render"
                     && record.EventId == uint64(int32(FrameProfileStage.Paint)) {
-                        paint.Add(float64(record.EndTicks - record.Ticks) * 1000.0 / float64(Stopwatch.Frequency))
+                        paintMs += float64(record.EndTicks - record.Ticks) * 1000.0 / float64(Stopwatch.Frequency)
                     }
                     if record.Source == "vulkan.timestamp.elapsed"
                     && record.EventId == VulkanDiagnosticEventIds.MainPass {
@@ -539,6 +580,9 @@ func ProfileNonScalingStroke(window Window, root NonScalingStrokeBenchCell) {
                         }
                     }
                 }
+            }
+            if frame >= 4 {
+                paint.Add(paintMs)
             }
         }
         Require(paint.Count >= 30 && gpu.Count >= 28, "Stroke timing samples are missing")

@@ -79,6 +79,10 @@ internal unsafe class VulkanPathStrokeFrameData : IDisposable {
     private var preparedBytes uint64
     private var disposed bool
 
+    internal prop HasStrokes bool {
+        get -> requestCount > 0
+    }
+
     internal prop LiveObjectCount uint64 {
         get {
             var count = descriptors.LiveObjectCount

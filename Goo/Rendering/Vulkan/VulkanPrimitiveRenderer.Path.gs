@@ -12,8 +12,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         throw NotSupportedException("Vulkan primitive renderer has no path atlas pipeline")
       }
       let stroke = value.Stroke.Width > 0.0F
-      let layout = if stroke { primitiveState.StrokePipelineLayout } else { pathPipelineLayout }
-      let selectedPipeline = if stroke { primitiveState.StrokePipelineFor(targetFormat) } else { primitivePipelines.PathPipeline }
+      let strokePipeline = pathStrokeFrameData?.HasStrokes ?? false
+      let layout = if strokePipeline { primitiveState.StrokePipelineLayout } else { pathPipelineLayout }
+      let selectedPipeline = if strokePipeline { primitiveState.StrokePipelineFor(targetFormat) } else { primitivePipelines.PathPipeline }
       ValidateBounds(value.Bounds)
       ValidateTransformIndex(frame, value.TransformIndex)
       if !value.PathId.IsValid || value.PathId.Kind != SceneResourceKind.PathBand {
@@ -100,7 +101,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         pathDescriptorBound = true
         pathAtlasId = value.AtlasId
       }
-      if stroke && !strokeDescriptorBound {
+      if strokePipeline && !strokeDescriptorBound {
         pathStrokeFrameData!!.Bind(commandBuffer, layout, 2u)
         strokeDescriptorBound = true
         recordDescriptorChangeCount++
