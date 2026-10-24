@@ -136,12 +136,13 @@ public sealed class DocumentChecks : Instrumentation {
         selected = Main[Task[DocumentPickerResult]](
             () -> activity!!.Documents.ShowPickerAsync(FileDialogKind.OpenFile, OpenOptions()))
         Wait(() -> Exists(FirstDocument), "Recreation picker did not open")
-        let monitor = AddMonitor(activity!!.ComponentName!!.ClassName, nil, false)
+        let monitor = AddMonitor(activity!!.Class.Name, nil, false)
         try {
             RunOnMainSync(activity!!.Recreate)
             Require(Await(selected).Status == FileDialogStatus.Cancelled,
                 "Activity recreation did not cancel its owned picker")
-            activity = (WaitForMonitorWithTimeout(monitor, UiTimeoutMilliseconds) as MainActivity)
+            let replacement = WaitForMonitorWithTimeout(monitor, UiTimeoutMilliseconds)
+            activity = (replacement as MainActivity)
                 ?? throw InvalidOperationException("Replacement Activity did not start")
         } finally { RemoveMonitor(monitor) }
         let unsupported = Await(activity!!.Documents.OpenReadAsync(Uri("file:///document.txt")))
