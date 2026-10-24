@@ -5,9 +5,9 @@
     <RootNamespace>GooGestureSmoke</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Goo.Gestures" Version="$(GooReleaseVersion)"
+    <PackageReference Include="Goo" Version="$(GooReleaseVersion)"
                       Condition="'$(GooUseProjectReference)' != 'true'" />
-    <ProjectReference Include="../../Goo.Gestures/Goo.Gestures.gsproj"
+    <ProjectReference Include="../../Goo/Goo.gsproj"
                       Condition="'$(GooUseProjectReference)' == 'true'" />
     <None Include="$(GooLinuxSdlPath)" Link="libSDL3.so"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"

@@ -22,7 +22,7 @@ internal sealed class AndroidMenuBridge {
             let completion = TaskCompletionSource[NativeMenuResult](TaskCreationOptions.RunContinuationsAsynchronously)
             var session NativeContextMenu?
             var completed = false
-            let finish Action[AndroidContextMenuStatus, string, string] = (nativeStatus, id, error) -> {
+            let finish = (nativeStatus AndroidContextMenuStatus, id string, error string) -> {
                 if completed { return }
                 completed = true
                 let closing = lease.IsOwnerClosing

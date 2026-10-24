@@ -31,14 +31,14 @@ sealed class Page(string text, PrintPageSettings settings) : Cell
 }
 ```
 
-Install `Goo.Printing`. Call from the window thread and keep pumping Goo while awaiting the result.
+Reference `Goo`. Keep the `Goo.Printing` namespace import. Call from the window thread and keep pumping Goo while awaiting the result.
 
 | Platform | Print dialog |
 | --- | --- |
 | Windows | Windows print dialog and GDI spooler |
 | macOS | System print panel and PDFKit |
 | Linux Wayland | XDG desktop print portal and system `libdbus-1.so.3` |
-| Android | `Goo.Printing.Android` and `PrintManager` |
+| Android | `Goo.Android` and `PrintManager` |
 
 ## PDF export
 

@@ -6,8 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo/Goo.gsproj" Condition="'$(GooImageUsePackages)' != 'true'" />
-    <ProjectReference Include="../../Goo.Images/Goo.Images.gsproj" Condition="'$(GooImageUsePackages)' != 'true'" />
-    <PackageReference Include="Goo.Images" Version="$(GooReleaseVersion)" Condition="'$(GooImageUsePackages)' == 'true'" />
+    <PackageReference Include="Goo" Version="$(GooReleaseVersion)" Condition="'$(GooImageUsePackages)' == 'true'" />
     <Content Include="../Shared/Assets/local-rgba.png" Link="Assets/local-rgba.png"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/local-*.jpg;../Shared/Assets/local-*.gif" Link="Assets/%(Filename)%(Extension)"

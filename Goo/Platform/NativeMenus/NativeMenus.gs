@@ -106,6 +106,9 @@ public sealed class NativeMenuBar : IDisposable {
 
 /// Opens operating-system context menus. No managed-widget fallback is implicit.
 public sealed class NativeMenus {
+    /// Creates a native menu service.
+    public init() { }
+
     shared {
         /// Queues native tracking on the owner thread. Desktop tracking blocks the Goo scheduler.
         /// @param owner The open owner on its UI thread.
@@ -121,7 +124,10 @@ public sealed class NativeMenus {
             }
             let snapshot = NativeMenuSnapshot(items)
             if !owner.IsOpen { return Task.FromResult(NativeMenuResult(NativeMenuStatus.OwnerClosed)) }
-            if OperatingSystem.IsAndroid() { return AndroidMenuBridge.Show(owner, point, snapshot) }
+            if OperatingSystem.IsAndroid() {
+                return owner.NativeContextMenu?.Invoke(point, snapshot)
+                    ?? Task.FromResult(NativeMenuResult(NativeMenuStatus.Unsupported))
+            }
             if !OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows() {
                 return Task.FromResult(NativeMenuResult(NativeMenuStatus.Unsupported))
             }

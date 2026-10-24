@@ -7,6 +7,9 @@ import System.Threading.Tasks
 
 /// Uses Windows ISpellChecker or macOS NSSpellChecker. Other hosts return Unsupported.
 class SystemSpellingService : ISpellingService {
+    /// Creates a system spelling service without opening a native checker.
+    init() { }
+
     /// Checks a snapshot range using an installed dictionary for the explicit language.
     func CheckAsync(
         snapshot TextSnapshot,

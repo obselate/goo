@@ -24,7 +24,7 @@ public enum PrintStatus {
     Failed
 }
 
-/// A print outcome with an optional native job id and bounded detail.
+/// A print Status with an optional native JobId and bounded Error detail.
 public data class PrintResult(Status PrintStatus, JobId string = "", Error string = "") { }
 
 /// Reports document pagination independently of export or spooler results.
@@ -37,12 +37,13 @@ public enum PrintLayoutStatus {
     Failed
 }
 
-/// Physical paper and margins in points, with the requested raster resolution in dots per inch.
+/// Physical WidthPoints and HeightPoints, margins LeftPoints, TopPoints, RightPoints and BottomPoints,
+/// and raster resolution DpiX and DpiY in dots per inch.
 public data struct PrintPageSettings(WidthPoints float64, HeightPoints float64,
     LeftPoints float64, TopPoints float64, RightPoints float64, BottomPoints float64,
     DpiX int32 = 300, DpiY int32 = 300) { }
 
-/// The page count after applying the chosen paper settings.
+/// Pagination Status, PageCount and optional Error detail for the chosen paper settings.
 public data struct PrintLayoutResult(Status PrintLayoutStatus, PageCount int32, Error string = "") { }
 
 /// Supplies fresh page cells from a fixed document snapshot on the Goo owner thread.

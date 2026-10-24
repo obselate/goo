@@ -14,7 +14,7 @@ if result.Status == MessageBoxStatus.Success {
 }
 ```
 
-Reference optional `Goo.NativeDialogs`. Call from the open owner's Goo UI thread. Options are copied before launch.
+Reference `Goo`, or `Goo.Android` on Android. Call from the open owner's Goo UI thread. Options are copied before launch.
 
 | Platform | Behavior |
 | --- | --- |
@@ -34,10 +34,7 @@ Reference optional `Goo.NativeDialogs`. Call from the open owner's Goo UI thread
 Generate the API reference locally:
 
 ```sh
-dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
-  --source Goo.NativeDialogs \
-  --xml Goo.NativeDialogs/bin/Release/net10.0/Goo.NativeDialogs.xml \
-  --output docs/api-native-dialogs
+dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release
 ```
 
-Build the package first. Set `GooBuildAndroid=true` to build both targets. The Android target needs the Android workload.
+Build `Goo` first. Android apps also reference `Goo.Android` and need the Android workload.

@@ -87,7 +87,7 @@ if result.Status == ImageAssetStatus.Success {
 }
 ```
 
-- Reference the optional `Goo.Images` package.
+- Reference `Goo`. Keep the `Goo.Images` namespace import.
 - Pass the latest `Window.MetricsChanged` snapshot. It includes `UiScale`.
 - Selection uses the smallest density at least as large as the window scale, else the largest.
 - Each variant must have the same logical size. A 128-pixel 2x source measures 64 logical units.

@@ -15,10 +15,6 @@
                       Condition="'$(GooUseProjectReference)' != 'true'" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
                       Condition="'$(GooUseProjectReference)' == 'true'" />
-    <PackageReference Include="Goo.NativeDialogs" Version="$(GooReleaseVersion)"
-                      Condition="'$(GooUseProjectReference)' != 'true'" />
-    <ProjectReference Include="../../Goo.NativeDialogs/Goo.NativeDialogs.gsproj"
-                      Condition="'$(GooUseProjectReference)' == 'true'" />
     <None Include="run-windows-qualification.ps1"
           Condition="'$(RuntimeIdentifier)' == 'win-x64'"
           CopyToOutputDirectory="PreserveNewest"

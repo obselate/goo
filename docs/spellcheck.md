@@ -11,9 +11,9 @@ Create and use the session on the window thread. Dispose it when the editor is r
 
 | Package | Checker |
 | --- | --- |
-| `Goo.SpellCheck` | Windows ISpellChecker and macOS NSSpellChecker |
-| `Goo.SpellCheck.Hunspell` | System `libhunspell-1.7.so.0` and app-selected `.aff`/`.dic` files |
-| `Goo.SpellCheck.Android` | User-enabled Android SpellCheckerSession |
+| `Goo` | Windows ISpellChecker and macOS NSSpellChecker |
+| `Goo` | System `libhunspell-1.7.so.0` and app-selected `.aff`/`.dic` files |
+| `Goo.Android` | User-enabled Android SpellCheckerSession |
 
 ```cs
 using var service = new HunspellSpellingService("en-US", affPath, dictionaryPath);
@@ -23,7 +23,7 @@ using var service = new HunspellSpellingService("en-US", affPath, dictionaryPath
 var service = new AndroidSpellingService(context);
 ```
 
-Choose one service. Hunspell ships no native library or dictionaries.
+Choose one service. Keep the `Goo.SpellCheck` namespace import. Hunspell ships no native library or dictionaries.
 
 ## Suggestions
 

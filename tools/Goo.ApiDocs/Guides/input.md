@@ -306,7 +306,7 @@ let navigation = TransformGesture(OnViewportGesture)
 let surface = Container{Gestures: []GestureRecognizer{navigation}}
 ```
 
-Reference the optional `Goo.Gestures` package.
+Reference `Goo`. Keep the `Goo.Gestures` namespace import.
 Keep one TransformGesture for combined pan, pinch and rotation.
 
 | Recognizer | Behavior |

@@ -8,6 +8,7 @@ let navigation = TransformGesture(UpdateViewport)
 let surface = Container{Gestures: []GestureRecognizer{navigation}}
 ```
 
+- Reference `Goo`. No separate gesture package is needed.
 - Keep recognizer instances stable across rebuilds. Core owns arbitration and cancellation.
 - Use `TransformGesture` for combined pan, pinch and rotation.
 - `PanGesture`, `LongPressGesture` and `DoubleTapGesture` provide separate interactions.
