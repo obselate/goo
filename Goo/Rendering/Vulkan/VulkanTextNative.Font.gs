@@ -71,7 +71,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     bytes []uint8,
     pixelHeight uint32,
     selectedFaceIndex uint32,
-    selectedVariations([]VulkanTextVariation)?, family string? = nil) {
+    selectedVariations([]VulkanTextVariation)?, family string? = nil, systemWeight int32? = nil) {
       profileName = family
       let recorder = FrameRecorder.Current
       let profileStart = if recorder != nil { Stopwatch.GetTimestamp() } else { 0L }
@@ -114,7 +114,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         let scale = int32(pixelHeight * 64u)
         hb_font_set_scale(harfBuzzFont, scale, scale)
         hb_ot_font_set_funcs(harfBuzzFont)
-        ApplyVariations(harfBuzzFont, variations)
+        ApplyVariations(harfBuzzFont, variations, systemWeight)
         harfBuzzDesignFont = hb_font_create(harfBuzzFace)
         if harfBuzzDesignFont == nint(0) {
           throw InvalidOperationException("hb_font_create design font failed")
@@ -122,7 +122,7 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
         harfBuzzDesignScale = int32(upem)
         hb_font_set_scale(harfBuzzDesignFont, harfBuzzDesignScale, harfBuzzDesignScale)
         hb_ot_font_set_funcs(harfBuzzDesignFont)
-        ApplyVariations(harfBuzzDesignFont, variations)
+        ApplyVariations(harfBuzzDesignFont, variations, systemWeight)
         metrics = ReadMetrics(harfBuzzDesignFont)
         if let current = recorder {
           Profile(current, false)
@@ -472,8 +472,12 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
     return copy
   }
 
-  private func ApplyVariations(font nint, values([]VulkanTextVariation)?) {
+  private func ApplyVariations(font nint, values([]VulkanTextVariation)?, systemWeight int32?) {
     if values == nil || values.Length == 0 {
+      if let weight = systemWeight {
+        var variation = VulkanTextVariation{ Tag: VulkanTextTag("wght"), Value: float32(weight) }
+        hb_font_set_variations(font, nint(&variation), 1u)
+      }
       return
     }
     let pin = GCHandle.Alloc(values, GCHandleType.Pinned)

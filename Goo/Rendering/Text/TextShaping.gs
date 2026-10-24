@@ -645,7 +645,7 @@ internal partial class TextShaping {
       var lease TypefaceLease
       lock (PrimaryFacesLock) {
         if PrimaryFaces.TryGetValue(key, out var cached) { return cached.Lease() }
-        let resource = CreateTypefaceResource(selection)
+        let resource = CreateTypefaceResource(selection, weight)
         if resource.ByteSize > PrimaryFaceCacheByteBudget {
           lease = resource.Lease()
           uncached = resource
@@ -680,7 +680,7 @@ internal partial class TextShaping {
       return lease
     }
 
-    private func CreateTypefaceResource(selection TextFontSelection) TypefaceResource {
+    private func CreateTypefaceResource(selection TextFontSelection, weight int32) TypefaceResource {
       if let registration = selection.Registration {
         return TypefaceResource(selection.Family, registration.Bytes, registration.FaceIndex,
           registration.Variations, registration.SourceId, registration.Generation)
@@ -689,7 +689,7 @@ internal partial class TextShaping {
         throw InvalidOperationException("System font selection has no path")
       }
       guard let recorder = FrameRecorder.Current else {
-        return TypefaceResource(selection.Family, VulkanTextFont.ReadBytes(path), 0u, nil, 0uL, 0uL)
+        return TypefaceResource(selection.Family, VulkanTextFont.ReadBytes(path), 0u, nil, 0uL, 0uL, weight)
       }
       let start = Stopwatch.GetTimestamp()
       var bytes []uint8
@@ -703,7 +703,7 @@ internal partial class TextShaping {
       recorder.Resource(FrameResourceKind.Font, id, VulkanDiagnosticEventIds.ResourceCreate, "font.bytes",
         name: path, bytes: uint64(bytes.Length))
       recorder.ResourceDuration(FrameResourceKind.Font, id, "font.read", start, bytes: uint64(bytes.Length), end: end)
-      return TypefaceResource(selection.Family, bytes, 0u, nil, 0uL, 0uL)
+      return TypefaceResource(selection.Family, bytes, 0u, nil, 0uL, 0uL, weight)
     }
 
     internal func ProfileResources(recorder FrameRecorder) {
