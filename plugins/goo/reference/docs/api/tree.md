@@ -488,7 +488,7 @@ Source:
 
 - [`ElementHandle.gs`](../../Goo/Tree/ElementHandle.gs)
 
-Represents a consumer-owned handle for one mounted element.
+Represents a consumer-owned handle for one mounted element. A tree update can move the handle to another element, but cannot attach it to two live elements.
 
 ### `MetricsChanged`
 
