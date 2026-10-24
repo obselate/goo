@@ -298,12 +298,21 @@ func ReadSourceSummary(source string, declarationStart int32) string {
 
 func ReadTypes(directoryPath string, sourceRoot string) IEnumerable[ApiType] {
     let typePattern = Regex(
-        "(?m)^public\\s+(?:(?:partial|sealed|open|data)\\s+)*(?<kind>class|struct|enum|interface|func)\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)(?<generic>\\[[^\\]\\r\\n]+\\])?",
+        "(?m)^(?:public\\s+)?(?:(?:partial|sealed|open|data|shared|unsafe)\\s+)*" +
+            "(?<kind>class|struct|enum|interface|func)\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)" +
+            "(?<generic>\\[[^\\]\\r\\n]+\\])?",
         RegexOptions.CultureInvariant
     )
-    for file in Directory.EnumerateFiles(directoryPath, "*.gs", SearchOption.AllDirectories).Order(
-        StringComparer.Ordinal
-    ) {
+    for file in Directory.EnumerateFiles(
+        directoryPath,
+        "*.gs",
+        if directoryPath == sourceRoot {
+            SearchOption.TopDirectoryOnly
+        } else {
+            SearchOption.AllDirectories
+        }
+    )
+        .Order(StringComparer.Ordinal) {
         let source = File.ReadAllText(file)
         let package_ = Regex.Match(source, "(?m)^package\\s+([A-Za-z_][A-Za-z0-9_.]*)").Groups[1].Value
         for match Match in typePattern.Matches(source) {
@@ -375,7 +384,8 @@ func BuildPage(
     matched HashSet[string],
     guideRoot string,
     product string,
-    sourceLink string
+    sourceLink string,
+    isRoot bool
 ) string {
     let text = StringBuilder()
     text.AppendLine("# $directory API")
@@ -384,7 +394,13 @@ func BuildPage(
         "Generated from `$product.xml`. Source declarations supply type ownership and XML-emitter omissions."
     )
     text.AppendLine()
-    text.AppendLine("Source: [`$product/$directory`]($sourceLink/$directory)")
+    text.AppendLine(
+        if isRoot {
+            "Source: [`$product`]($sourceLink)"
+        } else {
+            "Source: [`$product/$directory`]($sourceLink/$directory)"
+        }
+    )
     if directory == "Accessibility" ||
         directory == "Window" ||
         directory == "Input" ||
@@ -545,6 +561,7 @@ if !File.Exists(xmlPath) {
 let sourceDirectories = Directory
     .EnumerateDirectories(sourceRoot)
     .Where((path string) -> Path.GetFileName(path) is not("bin" or "obj"))
+    .Prepend(sourceRoot)
     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
     .ToArray()
 
@@ -598,7 +615,16 @@ let pages = Dictionary[string, string](StringComparer.Ordinal)
 for directoryPath in documentedDirectories {
     let directory = Path.GetFileName(directoryPath)
     let pageTypes = types.Where((type ApiType) -> type.Directory == directory).ToArray()
-    let markdown = BuildPage(directory, pageTypes, members, matched, guideRoot, product, sourceLink)
+    let markdown = BuildPage(
+        directory,
+        pageTypes,
+        members,
+        matched,
+        guideRoot,
+        product,
+        sourceLink,
+        directoryPath == sourceRoot
+    )
     pages.Add(directory.ToLowerInvariant() + ".md", FormatPage(markdown))
 }
 
