@@ -11,7 +11,7 @@ dotnet run
 
 The generated project targets .NET 10, uses `Gsharp.NET.Sdk`, and references Goo 0.15.0. Use `--goo-version` to select another compatible Goo package version.
 
-Images, gestures, native dialogs and menus, notifications, printing, and spell checking are included in `Goo`.
+Images, gestures, native dialogs and menus, notifications, printing, spell checking, and desktop instance hosting are included in `Goo`.
 Android printing and spell checking are included in `Goo.Android`. No separate feature packages are needed.
 
 ## Android

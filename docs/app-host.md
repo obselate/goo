@@ -33,8 +33,8 @@ func Main() {
 }
 ```
 
-Install `Goo.AppHost` only when the app needs desktop instance ownership.
-Its types use namespace `Goo`.
+Reference `Goo` for desktop instance ownership. These types use namespace `Goo`.
+Remove the old `Goo.AppHost` package reference. No source changes are needed.
 
 - Subscribe and initialize activation on the UI thread before acquisition.
 - Keep the primary lease until shutdown. Dispose it before a later acquisition.
@@ -57,7 +57,7 @@ Its types use namespace `Goo`.
 | Failed | An OS operation failed. Error contains bounded detail. |
 
 A lost acknowledgement does not prove that the primary ignored the request.
-The package does not resend an accepted or unacknowledged request.
+Goo does not resend an accepted or unacknowledged request.
 Closing the last window still ends `Run`. The lease does not add a background application lifetime.
 
 ## Platform scope

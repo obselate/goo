@@ -6,6 +6,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo/Goo.gsproj" />
-    <ProjectReference Include="../../Goo.AppHost/Goo.AppHost.gsproj" />
   </ItemGroup>
 </Project>
