@@ -11,13 +11,13 @@ internal unsafe partial class ClipboardTransfer {
 
     @DllImport("/usr/lib/libobjc.A.dylib") private func objc_getClass(name string) nint;
     @DllImport("/usr/lib/libobjc.A.dylib") private func sel_registerName(name string) nint;
-    @DllImport("/usr/lib/libobjc.A.dylib") private func objc_autoreleasePoolPush() nint;
-    @DllImport("/usr/lib/libobjc.A.dylib") private func objc_autoreleasePoolPop(pool nint);
+    @DllImport("/usr/lib/libobjc.A.dylib") internal func objc_autoreleasePoolPush() nint;
+    @DllImport("/usr/lib/libobjc.A.dylib") internal func objc_autoreleasePoolPop(pool nint);
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacSend(receiver nint, selector nint) nint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacSendArg(receiver nint, selector nint, argument nint) nint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacCount(receiver nint, selector nint) nuint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacAt(receiver nint, selector nint, index nuint) nint;
-    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacContains(receiver nint, selector nint, argument nint) uint8;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func MacBoolArg(receiver nint, selector nint, argument nint) uint8;
     @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation") private func CFRelease(value nint);
     @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation") private func CFDataCreate(allocator nint, bytes * uint8, length nint) nint;
     @DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation") private func CFDataCreateMutable(allocator nint, capacity nint) nint;
@@ -44,16 +44,18 @@ internal unsafe partial class ClipboardTransfer {
       let pool = objc_autoreleasePoolPush()
       try {
         let types = MacSend(MacPasteboard(), sel_registerName("types"))
-        return MacContains(types, sel_registerName("containsObject:"), MacString("public.file-url")) != 0
+        return MacBoolArg(types, sel_registerName("containsObject:"), MacString("public.file-url")) != 0 ||
+          MacBoolArg(types, sel_registerName("containsObject:"), MacString("NSFilenamesPboardType")) != 0
       } finally { objc_autoreleasePoolPop(pool) }
     }
 
-    private func MacReadFiles() ClipboardFiles {
+    private func MacReadFiles(offer nint) ClipboardFiles {
       let pool = objc_autoreleasePoolPush()
       try {
-        let items = MacSend(MacPasteboard(), sel_registerName("pasteboardItems"))
+        let board = if offer == nint(0) { MacPasteboard() } else { offer }
+        let items = MacSend(board, sel_registerName("pasteboardItems"))
         let count = MacCount(items, sel_registerName("count"))
-        if count > nuint(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Clipboard exceeds 4096 pasteboard items") }
+        if count > nuint(NativeFilePaths.MaxCount + 1) { throw ClipboardLimitException("Clipboard exceeds 4097 pasteboard items") }
         let paths = List[string](int32(count))
         let formatType = MacString("public.file-url")
         var units = 0
@@ -65,6 +67,21 @@ internal unsafe partial class ClipboardTransfer {
           let uri = BoundedUtf8(MacSend(value, sel_registerName("UTF8String")), 524288)
           let parsed = ParseFiles(uri, false)
           for path in parsed.Paths { NativeFilePaths.Add(paths, path, ref units) }
+        }
+        if paths.Count == 0 {
+          let names = MacSendArg(board, sel_registerName("propertyListForType:"), MacString("NSFilenamesPboardType"))
+          if names != nint(0) {
+            if MacBoolArg(names, sel_registerName("isKindOfClass:"), objc_getClass("NSArray")) == 0 { throw IOException("Native file names are not an array") }
+            let length = MacCount(names, sel_registerName("count"))
+            if length > nuint(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Native file list exceeds 4096 paths") }
+            paths.EnsureCapacity(int32(length))
+            for i in 0 ... int32(length) {
+              let name = MacAt(names, sel_registerName("objectAtIndex:"), nuint(i))
+              if MacBoolArg(name, sel_registerName("isKindOfClass:"), objc_getClass("NSString")) == 0 { throw IOException("Native file path is not text") }
+              if MacCount(name, sel_registerName("length")) > nuint(NativeFilePaths.MaxPathUnits) { throw ClipboardLimitException("Native file path exceeds its text budget") }
+              NativeFilePaths.Add(paths, BoundedUtf8(MacSend(name, sel_registerName("UTF8String")), NativeFilePaths.MaxUtf8Bytes), ref units)
+            }
+          }
         }
         return ClipboardFiles(if paths.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, paths.ToArray())
       } finally { objc_autoreleasePoolPop(pool) }

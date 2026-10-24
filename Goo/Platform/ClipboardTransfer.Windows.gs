@@ -33,22 +33,26 @@ internal unsafe partial class ClipboardTransfer {
       try {
         let drop = WinClipboardData(15u)
         if drop == nint(0) { throw IOException("CF_HDROP read failed: " + Marshal.GetLastWin32Error().ToString()) }
-        let count = WinDropFile(drop, uint32.MaxValue, nint(0), 0u)
-        if count > uint32(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Clipboard exceeds 4096 file paths") }
-        let paths = List[string](int32(count))
-        var units = 0
-        for i in 0 ... int32(count) {
-          let length = WinDropFile(drop, uint32(i), nint(0), 0u)
-          if length > uint32(NativeFilePaths.MaxPathUnits) || length > uint32(NativeFilePaths.MaxTotalUnits - units) { throw ClipboardLimitException("Clipboard paths exceed the text budget") }
-          let buffer = Marshal.AllocHGlobal((int32(length) + 1) * 2)
-          try {
-            let written = WinDropFile(drop, uint32(i), buffer, length + 1u)
-            if written != length { throw IOException("CF_HDROP path changed while reading") }
-            NativeFilePaths.Add(paths, Marshal.PtrToStringUni(buffer, int32(length)), ref units)
-          } finally { Marshal.FreeHGlobal(buffer) }
-        }
-        return ClipboardFiles(if paths.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, paths.ToArray())
+        return WindowsReadDrop(drop)
       } finally { WinCloseClipboard() }
+    }
+
+    private func WindowsReadDrop(drop nint) ClipboardFiles {
+      let count = WinDropFile(drop, uint32.MaxValue, nint(0), 0u)
+      if count > uint32(NativeFilePaths.MaxCount) { throw ClipboardLimitException("Clipboard exceeds 4096 file paths") }
+      let paths = List[string](int32(count))
+      var units = 0
+      for i in 0 ... int32(count) {
+        let length = WinDropFile(drop, uint32(i), nint(0), 0u)
+        if length > uint32(NativeFilePaths.MaxPathUnits) || length > uint32(NativeFilePaths.MaxTotalUnits - units) { throw ClipboardLimitException("Clipboard paths exceed the text budget") }
+        let buffer = Marshal.AllocHGlobal((int32(length) + 1) * 2)
+        try {
+          let written = WinDropFile(drop, uint32(i), buffer, length + 1u)
+          if written != length { throw IOException("CF_HDROP path changed while reading") }
+          NativeFilePaths.Add(paths, Marshal.PtrToStringUni(buffer, int32(length)), ref units)
+        } finally { Marshal.FreeHGlobal(buffer) }
+      }
+      return ClipboardFiles(if paths.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, paths.ToArray())
     }
 
     private func WindowsReadImageData(formatType string, limit int32) []uint8 {
@@ -58,31 +62,35 @@ internal unsafe partial class ClipboardTransfer {
         else if WinClipboardAvailable(17u) != 0 { 17u } else { 8u }
         let memory = WinClipboardData(format)
         if memory == nint(0) { throw IOException("Native image clipboard data is unavailable") }
-        let size = WinGlobalSize(memory)
-        let prefix = if formatType == "image/bmp" { 14 } else { 0 }
-        if size > nuint(limit - prefix) { throw ClipboardLimitException("Clipboard image exceeds 64 MiB") }
-        let native = WinGlobalLock(memory)
-        if native == nint(0) { throw IOException("Native clipboard image could not be locked") }
-        try {
-          let bytes = [int32(size) + prefix]uint8
-          Marshal.Copy(native, bytes, prefix, int32(size))
-          if prefix == 0 { return bytes }
-          if size < nuint(40) { throw InvalidDataException("Truncated native DIB") }
-          let header = BitConverter.ToUInt32(bytes, 14)
-          let bits = BitConverter.ToUInt16(bytes, 28)
-          let compression = BitConverter.ToUInt32(bytes, 30)
-          let used = BitConverter.ToUInt32(bytes, 46)
-          let colors = if used != 0u { int64(used) } else if bits <= 8 { int64(1 << int32(bits)) } else { 0L }
-          let masks = if header == 40u && compression == 3u { 12 } else if header == 40u && compression == 6u { 16 } else { 0 }
-          let offset = 14 + int64(header) + colors * 4 + masks
-          if header < 40u || offset > bytes.Length { throw InvalidDataException("Invalid native DIB palette") }
-          bytes[0] = 66
-          bytes[1] = 77
-          BitConverter.GetBytes(uint32(bytes.Length)).CopyTo(bytes, 2)
-          BitConverter.GetBytes(uint32(offset)).CopyTo(bytes, 10)
-          return bytes
-        } finally { WinGlobalUnlock(memory) }
+        return WindowsReadImageMemory(memory, formatType == "image/bmp", limit)
       } finally { WinCloseClipboard() }
+    }
+
+    private func WindowsReadImageMemory(memory nint, bitmap bool, limit int32) []uint8 {
+      let size = WinGlobalSize(memory)
+      let prefix = if bitmap { 14 } else { 0 }
+      if limit < prefix || size > nuint(limit - prefix) { throw ClipboardLimitException("Clipboard image exceeds its byte budget") }
+      let native = WinGlobalLock(memory)
+      if native == nint(0) { throw IOException("Native clipboard image could not be locked") }
+      try {
+        let bytes = [int32(size) + prefix]uint8
+        Marshal.Copy(native, bytes, prefix, int32(size))
+        if prefix == 0 { return bytes }
+        if size < nuint(40) { throw InvalidDataException("Truncated native DIB") }
+        let header = BitConverter.ToUInt32(bytes, 14)
+        let bits = BitConverter.ToUInt16(bytes, 28)
+        let compression = BitConverter.ToUInt32(bytes, 30)
+        let used = BitConverter.ToUInt32(bytes, 46)
+        let colors = if used != 0u { int64(used) } else if bits <= 8 { int64(1 << int32(bits)) } else { 0L }
+        let masks = if header == 40u && compression == 3u { 12 } else if header == 40u && compression == 6u { 16 } else { 0 }
+        let offset = 14 + int64(header) + colors * 4 + masks
+        if header < 40u || offset > bytes.Length { throw InvalidDataException("Invalid native DIB palette") }
+        bytes[0] = 66
+        bytes[1] = 77
+        BitConverter.GetBytes(uint32(bytes.Length)).CopyTo(bytes, 2)
+        BitConverter.GetBytes(uint32(offset)).CopyTo(bytes, 10)
+        return bytes
+      } finally { WinGlobalUnlock(memory) }
     }
   }
 }

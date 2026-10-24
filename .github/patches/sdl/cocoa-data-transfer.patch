@@ -1,0 +1,451 @@
+diff --git a/src/video/cocoa/SDL_cocoadatatransfer.h b/src/video/cocoa/SDL_cocoadatatransfer.h
+new file mode 100644
+index 0000000..2c16c62
+--- /dev/null
++++ b/src/video/cocoa/SDL_cocoadatatransfer.h
+@@ -0,0 +1,12 @@
++#ifndef SDL_cocoadatatransfer_h_
++#define SDL_cocoadatatransfer_h_
++
++#include "SDL_cocoawindow.h"
++
++extern bool Cocoa_GooDataDropEnabled(SDL_Window *window);
++extern NSDragOperation Cocoa_GooDataDrop(SDL_Window *window, id<NSDraggingInfo> sender, int kind);
++extern NSArray<NSPasteboardType> *Cocoa_GooDragTypes(SDL_Window *window);
++extern void Cocoa_GooMouseEvent(SDL_Window *window, NSEvent *event);
++extern void Cocoa_GooDestroyDataTransfer(SDL_Window *window);
++
++#endif
+diff --git a/src/video/cocoa/SDL_cocoadatatransfer.m b/src/video/cocoa/SDL_cocoadatatransfer.m
+new file mode 100644
+index 0000000..1e1cde0
+--- /dev/null
++++ b/src/video/cocoa/SDL_cocoadatatransfer.m
+@@ -0,0 +1,304 @@
++#include "SDL_internal.h"
++
++#ifdef SDL_VIDEO_DRIVER_COCOA
++
++#include "SDL_cocoavideo.h"
++#include "SDL_cocoadatatransfer.h"
++#include <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
++
++typedef Uint32 (SDLCALL *Goo_CocoaDropCallback)(void *, int, float, float, const char **, Uint32, Uint32, Uint64, void *);
++typedef void (SDLCALL *Goo_CocoaDragCompleted)(void *, Sint32, Uint32, Uint8);
++typedef void (SDLCALL *Goo_CocoaDragService)(void *);
++
++typedef struct Goo_CocoaDragOffer {
++    void *writers;
++    Goo_CocoaDragService service;
++} Goo_CocoaDragOffer;
++
++@class Goo_CocoaDragSource;
++
++@interface Goo_CocoaDataTransfer : NSObject
++@property(nonatomic) Goo_CocoaDropCallback callback;
++@property(nonatomic) void *userdata;
++@property(nonatomic) Uint64 token;
++@property(nonatomic) NSInteger sequence;
++@property(nonatomic) Uint32 allowed;
++@property(nonatomic) Uint32 committed;
++@property(nonatomic) BOOL dropping;
++@property(nonatomic, strong) NSArray<NSPasteboardType> *types;
++@property(nonatomic, strong) Goo_CocoaDragSource *source;
++@end
++
++@implementation Goo_CocoaDataTransfer
++@end
++
++@interface Goo_CocoaDragSource : NSObject<NSDraggingSource>
++@property(nonatomic) Goo_CocoaDragCompleted completed;
++@property(nonatomic) Goo_CocoaDragService service;
++@property(nonatomic) void *userdata;
++@property(nonatomic) void *lifetime;
++@property(nonatomic) Uint32 effects;
++@property(nonatomic) BOOL cancelled;
++@property(nonatomic) BOOL files;
++@property(nonatomic) BOOL servicing;
++@property(nonatomic, weak) Goo_CocoaDataTransfer *owner;
++@property(nonatomic, strong) NSTimer *timer;
++- (void)serviceTimer:(NSTimer *)timer;
++@end
++
++@implementation Goo_CocoaDragSource
++- (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
++{
++    (void)session;
++    (void)context;
++    if (self.cancelled) return NSDragOperationNone;
++    return ((self.effects & 1) ? NSDragOperationCopy : 0) | ((self.effects & 2) ? NSDragOperationMove : 0);
++}
++
++- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session
++{
++    (void)session;
++    return NO;
++}
++
++- (void)serviceTimer:(NSTimer *)timer
++{
++    (void)timer;
++    Goo_CocoaDragSource *keep = self;
++    if (!keep.service || keep.servicing) return;
++    keep.servicing = YES;
++    keep.service(keep.userdata);
++    keep.servicing = NO;
++}
++
++- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)point operation:(NSDragOperation)operation
++{
++    (void)session;
++    (void)point;
++    Goo_CocoaDragSource *keep = self;
++    Goo_CocoaDragCompleted completed = keep.completed;
++    void *userdata = keep.userdata;
++    void *lifetime = keep.lifetime;
++    keep.completed = NULL;
++    keep.service = NULL;
++    keep.userdata = NULL;
++    keep.lifetime = NULL;
++    [keep.timer invalidate];
++    keep.timer = nil;
++    Goo_CocoaDataTransfer *owner = keep.owner;
++    if (owner.source == keep) owner.source = nil;
++    const Uint32 effect = (operation & NSDragOperationMove) ? 2 : (operation & NSDragOperationCopy) ? 1 : 0;
++    if (completed) completed(userdata, effect ? 0 : 1, effect, effect == 2 && !keep.files);
++    if (lifetime) CFRelease(lifetime);
++}
++@end
++
++static Goo_CocoaDataTransfer *Goo_CocoaTransfer(SDL_Window *window, bool create)
++{
++    if (!window || !window->internal) return nil;
++    SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
++    Goo_CocoaDataTransfer *transfer = data.goo_transfer;
++    if (!transfer && create) {
++        transfer = [Goo_CocoaDataTransfer new];
++        data.goo_transfer = transfer;
++    }
++    return transfer;
++}
++
++bool Cocoa_GooDataDropEnabled(SDL_Window *window)
++{
++    return Goo_CocoaTransfer(window, false).callback != NULL;
++}
++
++NSArray<NSPasteboardType> *Cocoa_GooDragTypes(SDL_Window *window)
++{
++    return Goo_CocoaTransfer(window, false).types;
++}
++
++void Cocoa_GooMouseEvent(SDL_Window *window, NSEvent *event)
++{
++    if (!window || !window->internal) return;
++    SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
++    if (event.type == NSEventTypeLeftMouseDown) {
++        data.goo_drag_event = event;
++    } else if (event.type == NSEventTypeLeftMouseUp) {
++        data.goo_drag_event = nil;
++    }
++}
++
++void Cocoa_GooDestroyDataTransfer(SDL_Window *window)
++{
++    Goo_CocoaDataTransfer *transfer = Goo_CocoaTransfer(window, false);
++    transfer.source.cancelled = YES;
++    transfer.source = nil;
++    transfer.callback = NULL;
++    transfer.userdata = NULL;
++    if (window && window->internal) {
++        SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
++        data.goo_transfer = nil;
++        data.goo_drag_event = nil;
++    }
++}
++
++NSDragOperation Cocoa_GooDataDrop(SDL_Window *window, id<NSDraggingInfo> sender, int kind)
++{
++    Goo_CocoaDataTransfer *transfer = Goo_CocoaTransfer(window, false);
++    if (!transfer.callback) return NSDragOperationNone;
++    const NSDragOperation native = sender.draggingSourceOperationMask;
++    const Uint32 allowed = ((native & NSDragOperationCopy) ? 1 : 0) | ((native & NSDragOperationMove) ? 2 : 0);
++    if (kind != 2 && (kind == 0 || transfer.sequence != sender.draggingSequenceNumber || transfer.allowed != allowed)) {
++        transfer.token++;
++        if (!transfer.token) transfer.token++;
++        transfer.sequence = sender.draggingSequenceNumber;
++        transfer.allowed = allowed;
++    }
++    const NSPoint point = sender.draggingLocation;
++    const float x = (float)point.x;
++    const float y = (float)window->h - (float)point.y;
++    if (kind == 3) {
++        transfer.committed = 0;
++        transfer.dropping = YES;
++    }
++    const Uint32 selected = transfer.callback(transfer.userdata, kind, x, y, NULL, 0, allowed,
++        transfer.token, (__bridge void *)sender.draggingPasteboard);
++    transfer.dropping = NO;
++    const Uint32 effect = kind == 3 ? transfer.committed : selected;
++    return (effect & 2) ? NSDragOperationMove : (effect & 1) ? NSDragOperationCopy : NSDragOperationNone;
++}
++
++static NSString *Goo_CocoaRawType(const char *mime)
++{
++    const size_t length = SDL_strlen(mime);
++    char text[sizeof("io.github.obselate.goo.mime.") + 512];
++    const char hex[] = "0123456789ABCDEF";
++    size_t offset = SDL_strlcpy(text, "io.github.obselate.goo.mime.", sizeof(text));
++    for (size_t i = 0; i < length; ++i) {
++        const unsigned char value = (unsigned char)mime[i];
++        text[offset++] = hex[value >> 4];
++        text[offset++] = hex[value & 15];
++    }
++    text[offset] = 0;
++    return [NSString stringWithUTF8String:text];
++}
++
++__attribute__((visibility("default"))) Uint32 SDLCALL Goo_GetDataTransferCapabilities(SDL_Window *window)
++{
++    const char *driver = SDL_GetCurrentVideoDriver();
++    return window && window->internal && driver && SDL_strcmp(driver, "cocoa") == 0 ? 31 : 0;
++}
++
++__attribute__((visibility("default"))) bool SDLCALL Goo_SetDataDropCallback(SDL_Window *window, Goo_CocoaDropCallback callback,
++    void *userdata, const char **types, Uint32 count)
++{
++    if (!Goo_GetDataTransferCapabilities(window) || count > 128) return SDL_SetError("Invalid Cocoa data drop configuration");
++    @autoreleasepool {
++        Goo_CocoaDataTransfer *transfer = Goo_CocoaTransfer(window, true);
++        NSMutableArray<NSPasteboardType> *native = [NSMutableArray arrayWithCapacity:count * 2];
++        for (Uint32 i = 0; i < count; ++i) {
++            if (!types || !types[i] || SDL_strlen(types[i]) > 256) return SDL_SetError("Invalid Cocoa MIME name");
++            NSString *name = [NSString stringWithUTF8String:types[i]];
++            [native addObject:Goo_CocoaRawType(types[i])];
++            if ([name isEqualToString:@"text/uri-list"]) {
++                [native addObject:NSPasteboardTypeFileURL];
++                [native addObject:NSFilenamesPboardType];
++            } else if ([name isEqualToString:@"text/plain"] || [name isEqualToString:@"text/plain;charset=utf-8"]) {
++                [native addObject:NSPasteboardTypeString];
++                [native addObject:@"public.utf16-plain-text"];
++                [native addObject:@"public.utf16-external-plain-text"];
++            } else if ([name isEqualToString:@"text/rtf"] || [name isEqualToString:@"application/rtf"]) {
++                [native addObject:NSPasteboardTypeRTF];
++            } else {
++                UTType *type = [UTType typeWithMIMEType:name];
++                if (type) [native addObject:type.identifier];
++            }
++        }
++        transfer.types = native;
++        transfer.callback = callback;
++        transfer.userdata = userdata;
++        Cocoa_AcceptDragAndDrop(window, callback || SDL_EventEnabled(SDL_EVENT_DROP_FILE) || SDL_EventEnabled(SDL_EVENT_DROP_TEXT));
++        return true;
++    }
++}
++
++__attribute__((visibility("default"))) int SDLCALL Goo_ReceiveDataDrop(SDL_Window *window, Uint64 token, const char *mime)
++{
++    (void)window;
++    (void)token;
++    (void)mime;
++    SDL_SetError("Cocoa drag data uses a borrowed pasteboard");
++    return -1;
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_FinishDataDrop(SDL_Window *window, Uint64 token, Uint32 effect)
++{
++    Goo_CocoaDataTransfer *transfer = Goo_CocoaTransfer(window, false);
++    if (transfer.dropping && transfer.token == token) transfer.committed = effect & transfer.allowed & 3;
++}
++
++__attribute__((visibility("default"))) void SDLCALL Goo_CancelDataDrag(SDL_Window *window)
++{
++    Goo_CocoaTransfer(window, false).source.cancelled = YES;
++}
++
++__attribute__((visibility("default"))) Uint32 SDLCALL Goo_StartDataDrag(SDL_Window *window, const char **types, Uint32 count,
++    Uint32 effects, void *native_offer, void *send, Goo_CocoaDragCompleted completed, void *userdata)
++{
++    (void)types;
++    (void)send;
++    if (!Goo_GetDataTransferCapabilities(window) || !native_offer || !completed || !count || count > 128 || !(effects & 3)) {
++        SDL_SetError("Invalid Cocoa drag source configuration");
++        return 5;
++    }
++    @autoreleasepool {
++        SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
++        Goo_CocoaDataTransfer *transfer = Goo_CocoaTransfer(window, true);
++        if (transfer.source) {
++            SDL_SetError("A Cocoa drag is already active");
++            return 5;
++        }
++        NSEvent *event = data.goo_drag_event;
++        if (!event || event.window != data.nswindow || !([NSEvent pressedMouseButtons] & 1)) return 1;
++        Goo_CocoaDragOffer *offer = native_offer;
++        NSArray<id<NSPasteboardWriting>> *writers = (__bridge NSArray *)offer->writers;
++        if (!writers.count || writers.count > 4097 || !data.nswindow.contentView) return 1;
++        NSMutableArray<NSDraggingItem *> *items = [NSMutableArray arrayWithCapacity:writers.count];
++        NSView *view = data.nswindow.contentView;
++        const NSPoint point = [view convertPoint:event.locationInWindow fromView:nil];
++        BOOL files = NO;
++        for (id<NSPasteboardWriting> writer in writers) {
++            if ([(NSObject *)writer isKindOfClass:[NSURL class]]) files = YES;
++            NSDraggingItem *item = [[NSDraggingItem alloc] initWithPasteboardWriter:writer];
++            [item setDraggingFrame:NSMakeRect(point.x, point.y, 24, 24) contents:[NSImage imageNamed:NSImageNameMultipleDocuments]];
++            [items addObject:item];
++        }
++        Goo_CocoaDragSource *source = [Goo_CocoaDragSource new];
++        source.completed = completed;
++        source.service = offer->service;
++        source.userdata = userdata;
++        source.effects = effects & 3;
++        source.files = files;
++        source.owner = transfer;
++        source.lifetime = (void *)CFBridgingRetain(source);
++        transfer.source = source;
++        source.timer = [NSTimer timerWithTimeInterval:0.016 target:source selector:@selector(serviceTimer:) userInfo:nil repeats:YES];
++        [[NSRunLoop mainRunLoop] addTimer:source.timer forMode:NSRunLoopCommonModes];
++        [[NSRunLoop mainRunLoop] addTimer:source.timer forMode:NSEventTrackingRunLoopMode];
++        NSDraggingSession *session = nil;
++        NSString *failure = nil;
++        @try { session = [view beginDraggingSessionWithItems:items event:event source:source]; }
++        @catch (NSException *error) { failure = error.reason; }
++        if (!session) {
++            [source.timer invalidate];
++            source.timer = nil;
++            transfer.source = nil;
++            if (source.lifetime) CFRelease(source.lifetime);
++            source.lifetime = NULL;
++            SDL_SetError("%s", failure.UTF8String ?: "AppKit did not create a dragging session");
++            return 5;
++        }
++        session.animatesToStartingPositionsOnCancelOrFail = NO;
++        return 0;
++    }
++}
++
++#endif
+diff --git a/src/video/cocoa/SDL_cocoawindow.h b/src/video/cocoa/SDL_cocoawindow.h
+index f5ca4ab..5d2b1e4 100644
+--- a/src/video/cocoa/SDL_cocoawindow.h
++++ b/src/video/cocoa/SDL_cocoawindow.h
+@@ -32,6 +32,7 @@
+ #define SDL_METALVIEW_TAG 255
+ 
+ @class SDL_CocoaWindowData;
++@class Goo_CocoaDataTransfer;
+ 
+ typedef enum
+ {
+@@ -155,6 +156,8 @@ typedef enum
+ @property(nonatomic) bool pending_position;
+ @property(nonatomic) bool border_toggled;
+ @property(nonatomic) bool has_modal_dialog;
++@property(nonatomic, strong) Goo_CocoaDataTransfer *goo_transfer;
++@property(nonatomic, strong) NSEvent *goo_drag_event;
+ 
+ #ifdef SDL_VIDEO_OPENGL_EGL
+ @property(nonatomic) EGLSurface egl_surface;
+diff --git a/src/video/cocoa/SDL_cocoawindow.m b/src/video/cocoa/SDL_cocoawindow.m
+index d377bdb..c47de48 100644
+--- a/src/video/cocoa/SDL_cocoawindow.m
++++ b/src/video/cocoa/SDL_cocoawindow.m
+@@ -35,6 +35,7 @@
+ #include "SDL_cocoaopengl.h"
+ #include "SDL_cocoaopengles.h"
+ #include "SDL_cocoavideo.h"
++#include "SDL_cocoadatatransfer.h"
+ 
+ #if 0
+ #define DEBUG_COCOAWINDOW
+@@ -163,6 +164,8 @@
+ 
+ - (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender
+ {
++    SDL_Window *window = [self findSDLWindow];
++    if (Cocoa_GooDataDropEnabled(window)) return Cocoa_GooDataDrop(window, sender, 0);
+     if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) == NSDragOperationGeneric) {
+         return NSDragOperationGeneric;
+     } else if (([sender draggingSourceOperationMask] & NSDragOperationCopy) == NSDragOperationCopy) {
+@@ -175,11 +178,17 @@
+ - (void)draggingExited:(id<NSDraggingInfo>)sender
+ {
+     SDL_Window *sdlwindow = [self findSDLWindow];
++    if (Cocoa_GooDataDropEnabled(sdlwindow)) {
++        Cocoa_GooDataDrop(sdlwindow, sender, 2);
++        return;
++    }
+     SDL_SendDropComplete(sdlwindow);
+ }
+ 
+ - (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender
+ {
++    SDL_Window *window = [self findSDLWindow];
++    if (Cocoa_GooDataDropEnabled(window)) return Cocoa_GooDataDrop(window, sender, 1);
+     if (([sender draggingSourceOperationMask] & NSDragOperationGeneric) == NSDragOperationGeneric) {
+         SDL_Window *sdlwindow = [self findSDLWindow];
+         NSPoint point = [sender draggingLocation];
+@@ -203,6 +212,8 @@
+ 
+ - (BOOL)performDragOperation:(id<NSDraggingInfo>)sender
+ {
++    SDL_Window *window = [self findSDLWindow];
++    if (Cocoa_GooDataDropEnabled(window)) return Cocoa_GooDataDrop(window, sender, 3) != NSDragOperationNone;
+     SDL_LogTrace(SDL_LOG_CATEGORY_INPUT,
+                  ". [SDL] In performDragOperation, draggingSourceOperationMask %lx, "
+                  "expected Generic %lx, others Copy %lx, Link %lx, Private %lx, Move %lx, Delete %lx\n",
+@@ -321,7 +332,7 @@
+ 
+ - (BOOL)wantsPeriodicDraggingUpdates
+ {
+-    return NO;
++    return Cocoa_GooDataDropEnabled([self findSDLWindow]);
+ }
+ 
+ - (SDL_Window *)findSDLWindow
+@@ -1741,6 +1752,7 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
+     if (Cocoa_HandlePenEvent(_data, theEvent)) {
+         return;  // pen code handled it.
+     }
++    Cocoa_GooMouseEvent(_data.window, theEvent);
+ 
+     SDL_Mouse *mouse = SDL_GetMouse();
+     int button;
+@@ -1802,6 +1814,7 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
+     if (Cocoa_HandlePenEvent(_data, theEvent)) {
+         return;  // pen code handled it.
+     }
++    Cocoa_GooMouseEvent(_data.window, theEvent);
+ 
+     SDL_Mouse *mouse = SDL_GetMouse();
+     int button;
+@@ -1865,7 +1878,8 @@ static void Cocoa_SendMouseButtonClicks(SDL_Mouse *mouse, NSEvent *theEvent, SDL
+         return;
+     }
+ 
+-    if (!Cocoa_GetMouseFocus()) {
++    if (!Cocoa_GetMouseFocus() && !mouse->capture_window &&
++        !SDL_GetMouseState(NULL, NULL)) {
+         // The mouse is no longer over any window in the application
+         SDL_SetMouseFocus(NULL);
+         return;
+@@ -3204,6 +3218,7 @@ bool Cocoa_SetWindowMouseGrab(SDL_VideoDevice *_this, SDL_Window *window, bool g
+ void Cocoa_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
+ {
+     @autoreleasepool {
++        Cocoa_GooDestroyDataTransfer(window);
+         SDL_CocoaWindowData *data = (SDL_CocoaWindowData *)CFBridgingRelease(window->internal);
+ 
+         if (data) {
+@@ -3313,6 +3328,10 @@ void Cocoa_AcceptDragAndDrop(SDL_Window *window, bool accept)
+ {
+     @autoreleasepool {
+         SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
++        if (Cocoa_GooDataDropEnabled(window)) {
++            [data.nswindow registerForDraggedTypes:Cocoa_GooDragTypes(window)];
++            return;
++        }
+         if (accept) {
+             [data.nswindow registerForDraggedTypes:@[ (NSString *)kUTTypeFileURL,
+                                                       (NSString *)kUTTypeUTF8PlainText ]];

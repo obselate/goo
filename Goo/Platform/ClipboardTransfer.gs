@@ -13,6 +13,7 @@ internal unsafe partial class ClipboardTransfer {
     internal const MaxFileListBytes int32 = 1048576
     internal const MaxTextBytes int32 = 16777216
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
+    private let unicode UnicodeEncoding = UnicodeEncoding(false, false, true)
     private let imageTypes []string = []string{"image/png", "image/jpeg", "image/gif", "image/bmp", "image/tiff"}
 
     internal func TextFits(value string) bool ->
@@ -34,19 +35,19 @@ internal unsafe partial class ClipboardTransfer {
 
     internal func Query() ClipboardFormats {
       if !Supported() { return ClipboardFormats(ClipboardReadStatus.Unsupported, []string{}) }
+      if OperatingSystem.IsWindows() { return WindowsQueryFormats(nint(0)) }
+      if OperatingSystem.IsMacOS() { return MacQueryFormats(nint(0)) }
       SDL.ClearError()
       var count nuint
       let native = SDL.GetClipboardMimeTypes(&count)
       try {
         if native == nil && (SDL.GetErrorS() ?? "") != "" { return ClipboardFormats(ClipboardReadStatus.Failed, []string{}, (SDL.GetErrorS() ?? "")) }
         if count > nuint(128) { return ClipboardFormats(ClipboardReadStatus.TooLarge, []string{}, "Clipboard exceeds 128 MIME types") }
-        let formats = List[string](int32(count) + 1)
+        let formats = List[string](int32(count))
         for i in 0 ... int32(count) {
           let value = BoundedUtf8(Marshal.ReadIntPtr(nint(native), i * nint.Size), 256)
           if !formats.Contains(value) { formats.Add(value) }
         }
-        let nativeFiles = (OperatingSystem.IsWindows() && WindowsHasFiles()) || (OperatingSystem.IsMacOS() && MacHasFiles())
-        if nativeFiles && !formats.Contains("text/uri-list") { formats.Add("text/uri-list") }
         return ClipboardFormats(if formats.Count == 0 { ClipboardReadStatus.Empty } else { ClipboardReadStatus.Success }, formats.ToArray())
       } catch (error ClipboardLimitException) { return ClipboardFormats(ClipboardReadStatus.TooLarge, []string{}, error.Message) }
       catch (error Exception) { return ClipboardFormats(ClipboardReadStatus.Failed, []string{}, error.Message) }
@@ -57,7 +58,7 @@ internal unsafe partial class ClipboardTransfer {
       if !Supported() { return ClipboardFiles(ClipboardReadStatus.Unsupported, []string{}) }
       try {
         if OperatingSystem.IsWindows() && WindowsHasFiles() { return WindowsReadFiles() }
-        if OperatingSystem.IsMacOS() && MacHasFiles() { return MacReadFiles() }
+        if OperatingSystem.IsMacOS() && MacHasFiles() { return MacReadFiles(nint(0)) }
         let formats = Query()
         if formats.Status != ClipboardReadStatus.Success { return ClipboardFiles(formats.Status, []string{}, formats.Error) }
         let formatType = FileFormat(formats.Formats)
@@ -111,7 +112,11 @@ internal unsafe partial class ClipboardTransfer {
       SDL.ClearError()
       var size nuint
       let native = SDL.GetClipboardData(formatType, &size)
-      if native == nil { throw IOException("Native clipboard read failed: " + (SDL.GetErrorS() ?? "")) }
+      if native == nil {
+        let error = SDL.GetErrorS() ?? ""
+        if size == nuint(0) && error == "" { return Array.Empty[uint8]() }
+        throw IOException("Native clipboard read failed: " + error)
+      }
       try {
         if size > nuint(limit) { throw ClipboardLimitException("Clipboard payload exceeds its byte budget") }
         let bytes = [int32(size)]uint8

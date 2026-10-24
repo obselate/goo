@@ -20,6 +20,7 @@ internal class PointerDragSession {
   internal var Negotiating bool
   internal var EndDelivered bool
   internal var NativeActive bool
+  internal var NativeCompletion NativeTransferResult?
 
   internal init(source Node, data DragData, pointerId int64, device PointerDevice, isPointer bool) {
     Source = source
@@ -127,6 +128,7 @@ internal partial class PointerInput {
       }
       try {
         updateDragTarget(tree, x, y, modifiers, true)
+        promoteNativeDrag(tree, x, y)
       } catch (error Exception) {
         terminateDrag(tree, DragEndKind.Canceled, DragEffect.None, true, error)
       }
@@ -142,23 +144,39 @@ internal partial class PointerInput {
     || (dragCandidate != nil && dragPointerMatches())
 
   private func promoteNativeDrag(root Node, x float32, y float32) bool {
-    guard let session = dragSession, let files = session.Data.NativeFiles,
-      let host = nativeDragHost else { return false }
+    guard let session = dragSession, let host = dragHost else { return false }
+    let generalized = session.Data.NativeData != nil
+    if !generalized && session.Data.NativeFiles == nil { return false }
     if session.NativeActive || !session.IsPointer || session.Device != PointerDevice.Mouse
       || (x >= 0.0F && y >= 0.0F && x < float32(host.LogicalWidth) / UiScale
         && y < float32(host.LogicalHeight) / UiScale) { return false }
+    var data = session.Data.NativeData
+    if data == nil {
+      let files = session.Data.NativeFiles!!
+      let uris = [files.Paths.Count]Uri
+      for i in 0 ... uris.Length { uris[i] = Uri(files.Paths[i]) }
+      try { data = TransferData(Array.Empty[TransferRepresentation](), uris) }
+      catch (_ ArgumentOutOfRangeException) { return false }
+    }
     session.NativeActive = true
-    let started = host.BeginNativeFileDrag(files, (accepted bool) -> {
-      if dragSession != session || !session.NativeActive { return }
-      let previous = current
-      current = mouse
-      try {
-        terminateDrag(root, accepted ? DragEndKind.Dropped : DragEndKind.Canceled,
-          accepted ? DragEffect.Copy : DragEffect.None, false, nil)
-      } finally { current = previous }
-    })
-    if !started { session.NativeActive = false
-      return false }
+    let started = (host as NativeDragHost?)?.BeginNativeDrag(data!!, if generalized { session.Data.AllowedEffects } else { DragEffect.Copy },
+      (result NativeTransferResult) -> {
+        if dragSession != session || !session.NativeActive { return }
+        session.NativeCompletion = result
+        let previous = current
+        current = mouse
+        try {
+          terminateDrag(root, if result.Status == DataTransferStatus.Success { DragEndKind.Dropped } else { DragEndKind.Canceled },
+            result.Effect, false, nil)
+        } finally { current = previous }
+      }) ?? NativeTransferResult(DataTransferStatus.Unsupported, error: "This host does not support native drags")
+    if started.Status != DataTransferStatus.Success {
+      session.NativeActive = false
+      if !generalized { return false }
+      session.NativeCompletion = started
+      terminateDrag(root, DragEndKind.Canceled, DragEffect.None, false, nil)
+      return true
+    }
     clearCapture()
     current.ClickTarget = nil
     return true
@@ -384,7 +402,12 @@ internal partial class PointerInput {
                 if let callback = source.End {
                   let owner = CellOwnership.Within(tree, session.Source)
                   try {
-                    try { callback(DragEndEvent{ Kind: kind, Effect: effect }) }
+                    try { callback(DragEndEvent{
+                      Kind: kind, Effect: effect,
+                      Status: session.NativeCompletion?.Status ?? (kind == DragEndKind.Dropped ? DataTransferStatus.Success : DataTransferStatus.Cancelled),
+                      Error: session.NativeCompletion?.Error ?? "",
+                      SourceRemovalRequired: effect == DragEffect.Move && (session.NativeCompletion?.SourceRemovalRequired ?? true)
+                    }) }
                     finally { owner?.Rebuild() }
                   } catch (error Exception) {
                     if failure == nil { failure = error }
@@ -415,7 +438,7 @@ internal partial class PointerInput {
     guard let session = dragSession else { return false }
     if session.Terminating { return false }
     if session.NativeActive {
-      nativeDragHost?.CancelNativeFileDrag()
+      (dragHost as NativeDragHost?)?.CancelNativeDrag()
       if dragSession == session { terminateDrag(root, DragEndKind.Canceled, DragEffect.None, false, nil) }
       return true
     }

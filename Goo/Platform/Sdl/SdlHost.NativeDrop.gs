@@ -17,7 +17,7 @@ internal class NativeDropOffer {
   internal var Modifiers KeyModifiers
 }
 
-internal class NativeDropState {
+internal partial class NativeDropState {
   private let router NativeDropRouter
   private var native SdlHost?
   private var offer NativeDropOffer?
@@ -28,7 +28,7 @@ internal class NativeDropState {
     private let utf8 UTF8Encoding = UTF8Encoding(false, true)
     private let preview DragData = DragData(NativeFileDrop([]string{}, true), DragEffect.Copy)
     internal func Dispatch(host SdlHost, kind SDLEventType, data nint, x float32, y float32, modifiers KeyModifiers) {
-      if bindings.TryGetValue(host, out var state) { state.Receive(kind, data, x, y, modifiers) }
+      if bindings.TryGetValue(host, out var state) && state.FileEnabled && !state.boundData { state.Receive(kind, data, x, y, modifiers) }
     }
   }
 
@@ -44,8 +44,11 @@ internal class NativeDropState {
     Unbind()
     native = host
     bindings.Add(host, this)
+    if !ConfigureDataDrop() { Unbind()
+      throw NotSupportedException("Native MIME drop registration failed") }
   }
   internal func Unbind() {
+    UnbindDataDrop()
     if let host = native { bindings.Remove(host) }
     native = nil
     offer = nil
@@ -121,12 +124,12 @@ internal class NativeDropState {
 internal unsafe partial class SdlHost {
   internal func TransferCapabilities() NativeTransferCapabilities {
     ThrowIfDisposed()
+    if OperatingSystem.IsWindows() { return WindowsTransferCapabilities() }
+    try { return NativeTransferCapabilities(GetDataTransferCapabilities(windowHandle)) }
+    catch (_ DllNotFoundException) { }
+    catch (_ EntryPointNotFoundException) { }
     let driver = SDL.GetCurrentVideoDriverS()
-    if driver == "wayland" {
-      return NativeTransferCapabilities.FileDrop | NativeTransferCapabilities.DropPreview |
-        NativeTransferCapabilities.OutboundData
-    }
-    return if driver == "x11" || driver == "windows" || driver == "cocoa" {
+    return if driver == "wayland" || driver == "windows" || driver == "cocoa" {
       NativeTransferCapabilities.FileDrop | NativeTransferCapabilities.DropPreview
     } else { NativeTransferCapabilities.None }
   }

@@ -29,6 +29,7 @@ import System.Threading
 
 class GooView : SurfaceView, ISurfaceHolderCallback {
     private let host AndroidVulkanHost
+    internal prop Clipboard AndroidClipboard { get; }
     private let handler Handler = Handler(Looper.MainLooper!!)
     private let frameCallback FrameCallback
     private let preferenceObserver PreferenceObserver
@@ -60,6 +61,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             throw InvalidOperationException("GooView owns the window accessibility adapter.")
         }
         Window = window
+        Clipboard = AndroidClipboard(this)
         host = AndroidVulkanHost(this)
         frameCallback = FrameCallback(this)
         scheduleFrame = Runnable(ScheduleFrame)
@@ -796,6 +798,7 @@ class GooView : SurfaceView, ISurfaceHolderCallback {
             this.Window.EmbeddedPopupFactory = nil
             Window.DismissChildPopups(PopupDismissReason.OwnerClosed)
             CancelFrames()
+            Clipboard.Dispose()
             Window.PlatformInput.EditorChanged -= OnEditorChanged
             Context!!.ContentResolver!!.UnregisterContentObserver(preferenceObserver)
             preferenceObserver.Dispose()

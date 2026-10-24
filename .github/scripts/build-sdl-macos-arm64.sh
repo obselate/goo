@@ -8,7 +8,7 @@ deployment_target=14.0
 work="$(mktemp -d -t goo-sdl-macos.XXXXXX)"
 trap 'rm -rf -- "$work"' EXIT
 
-for command_name in awk cmake codesign curl file install_name_tool lipo otool patch shasum tar; do
+for command_name in awk cmake codesign curl file install_name_tool lipo nm otool patch shasum tar; do
   command -v "$command_name" >/dev/null || { printf 'required command missing: %s\n' "$command_name" >&2; exit 1; }
 done
 
@@ -22,7 +22,9 @@ patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/cocoa-open-documents.patch"
 patch -d "$work/src" -p1 --fuzz=0 < \
   "$(dirname "$0")/../patches/sdl/cocoa-programmatic-resize.patch"
-cmake -S "$work/src" -B "$work/build" -G Ninja \
+patch -d "$work/src" -p1 --fuzz=0 < \
+  "$(dirname "$0")/../patches/sdl/cocoa-data-transfer.patch"
+nice -n 10 cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$work/install" \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
@@ -44,8 +46,8 @@ cmake -S "$work/src" -B "$work/build" -G Ninja \
   -DSDL_TEST_LIBRARY=OFF \
   -DSDL_TRAY=OFF \
   -DSDL_VULKAN=ON
-cmake --build "$work/build" --parallel "$(sysctl -n hw.logicalcpu)"
-cmake --install "$work/build"
+nice -n 10 cmake --build "$work/build" --parallel 4
+nice -n 10 cmake --install "$work/build"
 
 library="$(find "$work/install" -type f -name 'libSDL3*.dylib' -print | LC_ALL=C sort | head -n 1)"
 [[ -n "$library" ]]
@@ -57,3 +59,8 @@ file "$output" | grep -Fq 'Mach-O 64-bit dynamically linked shared library arm64
 [[ "$(lipo -archs "$output")" == arm64 ]]
 minos="$(otool -l "$output" | awk '$1 == "minos" { print $2; exit }')"
 [[ "$minos" == "$deployment_target" ]]
+symbols="$(nm -gjU "$output")"
+for symbol in Goo_GetDataTransferCapabilities Goo_StartDataDrag Goo_CancelDataDrag \
+    Goo_SetDataDropCallback Goo_ReceiveDataDrop Goo_FinishDataDrop; do
+  grep -Fxq "_$symbol" <<< "$symbols" || { printf 'missing SDL transfer entry: %s\n' "$symbol" >&2; exit 1; }
+done

@@ -45,6 +45,7 @@
 !/.github/scripts/install-vulkan-validation-layer-linux-x64.sh
 !/.github/scripts/validate-android-package.py
 !/.github/scripts/run-android-accessibility.sh
+!/.github/scripts/check-android-data-transfer.sh
 !/.github/scripts/validate-text-native-rebuild.py
 !/.github/scripts/fetch-moltenvk-macos-arm64.sh
 !/.github/scripts/stage-linux-x64.sh
@@ -55,6 +56,9 @@
 !/.github/scripts/release_version.py
 !/.github/scripts/with-headless-wayland.sh
 !/.github/scripts/run-android-native-menus.sh
+!/.github/scripts/check-wayland-data-transfer.sh
+!/.github/scripts/check-windows-data-transfer.ps1
+!/.github/scripts/check-macos-data-transfer.py
 
 !/Goo/
 !/Goo/**
