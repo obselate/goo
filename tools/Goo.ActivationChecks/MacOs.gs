@@ -124,6 +124,9 @@ internal partial class Host {
             )
         )
         let plistPath = Path.Combine(Root, "Info.plist")
+        if let documentType = plist.DocumentType {
+            documentType.InternalSubset = nil
+        }
         plist.Save(plistPath)
         Run(
             []string{
