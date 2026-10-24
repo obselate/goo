@@ -132,7 +132,7 @@ float edgePhase(uint edge)
     return 0.0;
 }
 
-void renderRectangular(float2 point, float2 size)
+void renderRectangular(float2 point, float2 size, float2 footprint)
 {
     uint edge = selectedEdge(point, size);
     if (edge == 4u)
@@ -152,13 +152,13 @@ void renderRectangular(float2 point, float2 size)
     float along = edgeAlong(edge, point, size);
     float across = edgeAcross(edge, point, size);
     float phase = edgePhase(edge);
-    float edgeAa = max(fwidth(across), 0.0001);
+    float edgeAa = max((edge & 1u) == 0u ? footprint.y : footprint.x, 0.0001);
     float edgeCoverage = 1.0 - smoothstep(width - edgeAa, width + edgeAa, across);
     float patternCoverage = 1.0;
     if (pc.packedColorsExtra.w == 1u)
     {
         float patternCoordinate = fmod(along + phase, period);
-        float patternAa = max(fwidth(along), 0.0001);
+        float patternAa = max((edge & 1u) == 0u ? footprint.x : footprint.y, 0.0001);
         float dash = 1.0 - smoothstep(onLength - patternAa, onLength + patternAa, patternCoordinate);
         float wrap = smoothstep(period - patternAa, period, patternCoordinate);
         patternCoverage = max(dash, wrap);
@@ -172,7 +172,7 @@ void renderRectangular(float2 point, float2 size)
         axial = min(axial, period - axial);
         float transverse = abs(across - width * 0.5);
         float dotDistance = length(float2(axial, transverse));
-        float dotAa = max(max(fwidth(axial), fwidth(transverse)), 0.0001);
+        float dotAa = max(max(footprint.x, footprint.y), 0.0001);
         patternCoverage = 1.0 - smoothstep(dotRadius - dotAa, dotRadius + dotAa, dotDistance);
     }
     outColor = edgeColor(edge) * edgeCoverage * patternCoverage;
@@ -301,25 +301,42 @@ float3 roundedContour(float2 point, float2 size, float4 radii, float4 widths, ou
     return float3(along, perimeter, across);
 }
 
+float2 roundedNormal(float2 point, float2 size, float4 radii)
+{
+    float2 centered = point - size * 0.5;
+    float radius = centered.x < 0.0
+        ? (centered.y < 0.0 ? radii.x : radii.w)
+        : (centered.y < 0.0 ? radii.y : radii.z);
+    float2 q = abs(centered) - size * 0.5 + radius;
+    float2 normal = max(q, 0.0);
+    normal = dot(normal, normal) > 0.0
+        ? normalize(normal)
+        : (q.x > q.y ? float2(1.0, 0.0) : float2(0.0, 1.0));
+    return normal * sign(centered);
+}
+
 void shade()
 {
     float2 size = pc.rect.zw;
     float2 point = uv * size;
+    float2 pointDx = ddx(point);
+    float2 pointDy = ddy(point);
+    float2 footprint = abs(pointDx) + abs(pointDy);
     if (max(max(pc.stopPositions.x, pc.stopPositions.y), max(pc.stopPositions.z, pc.stopPositions.w)) <= 0.0)
     {
-        renderRectangular(point, size);
+        renderRectangular(point, size, footprint);
         outColor *= gooClipCoverage();
         return;
     }
 
-    float2 footprint = abs(ddx(point)) + abs(ddy(point));
     float4 outerRadii = gooNormalizeRadii(size, pc.stopPositions);
     float top = min(max(pc.radii.x, 0.0), size.y);
     float right = min(max(pc.radii.y, 0.0), size.x);
     float bottom = min(max(pc.radii.z, 0.0), max(size.y - top, 0.0));
     float left = min(max(pc.radii.w, 0.0), max(size.x - right, 0.0));
     float outerDistance = gooRoundedRectDistance(point, size, outerRadii);
-    float outerAa = max(length(float2(ddx(outerDistance), ddy(outerDistance))), 0.0001);
+    float2 outerNormal = roundedNormal(point, size, outerRadii);
+    float outerAa = max(length(float2(dot(outerNormal, pointDx), dot(outerNormal, pointDy))), 0.0001);
     float outerCoverage = 1.0 - smoothstep(-0.5 * outerAa, 0.5 * outerAa, outerDistance);
     float2 innerSize = max(size - float2(left + right, top + bottom), float2(0.0));
     float innerCoverage = 1.0;
@@ -330,7 +347,8 @@ void shade()
             max(bottom, right), max(bottom, left)), float4(0.0));
         innerRadii = gooNormalizeRadii(innerSize, innerRadii);
         float innerDistance = gooRoundedRectDistance(point - float2(left, top), innerSize, innerRadii);
-        float innerAa = max(length(float2(ddx(innerDistance), ddy(innerDistance))), 0.0001);
+        float2 innerNormal = roundedNormal(point - float2(left, top), innerSize, innerRadii);
+        float innerAa = max(length(float2(dot(innerNormal, pointDx), dot(innerNormal, pointDy))), 0.0001);
         innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
     }
     // The border is the outer shape minus the nested inner shape. Subtracting coverage keeps sides
