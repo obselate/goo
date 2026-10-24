@@ -51,24 +51,12 @@ internal partial class VulkanSceneCompiler {
       let originY = MathF.Floor(capture.Y)
       let extentWidth = MathF.Max(1.0F, MathF.Ceiling(capture.Right) - originX)
       let extentHeight = MathF.Max(1.0F, MathF.Ceiling(capture.Bottom) - originY)
-      let horizontal = BackdropBlurLayer(ownerId | OverflowClipMaskBit, ConservativeBounds{
-          X: originX,
-          Y: originY,
-          Width: extentWidth,
-          Height: extentHeight,
-        }, 1.0F, uint32(LayerRecordFlags.SamplesBackdrop) | uint32(LayerRecordFlags.BorrowsParentBackdrop),
-        Vector4(sigma / extentWidth, sigma / extentHeight, 0.0F, 0.0F),
-        originX, originY, extentWidth, extentHeight)
-      let vertical = BackdropBlurLayer(ownerId | BackdropBlurMaskBit, visible, opacity,
-        uint32(LayerRecordFlags.SamplesBackdrop),
-        Vector4(sigma / extentWidth, sigma / extentHeight, 1.0F, 0.0F),
+      let layer = BackdropBlurLayer(ownerId | BackdropBlurMaskBit, visible, opacity, sigma,
         originX, originY, extentWidth, extentHeight)
       frame.SetActiveClipChain(0)
-      frame.AddLayerBegin(vertical)
-      frame.AddLayerBegin(horizontal)
-      frame.AddLayerEnd(horizontal)
+      frame.AddLayerBegin(layer)
       frame.SetActiveClipChain(clipChainId)
-      frame.AddLayerEnd(vertical)
+      frame.AddLayerEnd(layer)
       frame.SetActiveClipChain(context.ParentPathClipChainId)
     }
 
@@ -76,8 +64,7 @@ internal partial class VulkanSceneCompiler {
     targetId uint64,
     bounds ConservativeBounds,
     opacity float32,
-    flags uint32,
-    parameter Vector4,
+    sigma float32,
     originX float32,
     originY float32,
     extentWidth float32,
@@ -98,9 +85,10 @@ internal partial class VulkanSceneCompiler {
             ProgramId: effect.ProgramId,
             Version: 1uL,
             SamplesBackdrop: true,
-            Parameter0: parameter,
+            BackdropBlur: sigma,
+            Parameter0: Vector4(1.0F, 0.0F, 0.0F, 0.0F),
           }),
-        Flags: flags,
+        Flags: uint32(LayerRecordFlags.SamplesBackdrop),
         TransformIndex: -1,
         OriginX: originX,
         OriginY: originY,
