@@ -77,7 +77,7 @@ internal shared partial class ReleaseCheck {
         }
         for resource in resources {
             Require(
-                ContainsBytes(goo, Encoding.UTF8.GetBytes(resource)),
+                goo.AsSpan().IndexOf(Encoding.UTF8.GetBytes(resource).AsSpan()) >= 0,
                 "packaged Goo.dll is missing embedded shader resources: " + resource
             )
         }
@@ -202,6 +202,4 @@ internal shared partial class ReleaseCheck {
     }
 
     private func StartsWithBytes(bytes[]byte, prefix[]byte) bool -> bytes.AsSpan().StartsWith(prefix.AsSpan())
-
-    private func ContainsBytes(bytes[]byte, value[]byte) bool -> bytes.AsSpan().IndexOf(value.AsSpan()) >= 0
 }

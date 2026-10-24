@@ -23,11 +23,8 @@ internal shared partial class ReleaseCheck {
         let values = Dictionary[string, string](StringComparer.Ordinal)
         var index = 0
         while index < arguments.Length {
-            Require(
-                index + 1 < arguments.Length && !values.ContainsKey(arguments[index]),
-                "Expected unique option and path pairs"
-            )
-            values.Add(arguments[index], arguments[index + 1])
+            Require(index + 1 < arguments.Length, "Expected option and path pairs")
+            values[arguments[index]] = arguments[index + 1]
             index += 2
         }
         if values.ContainsKey("--manifests") {
