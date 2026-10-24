@@ -417,10 +417,12 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       SDL_SetWindowHitTestRaw(windowHandle, nint(0), nint(0))
     }
     if !window.IsNull {
-      if OperatingSystem.IsMacOS()
-        && (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
-        SDL.SetWindowFullscreen(window, false)
+      if OperatingSystem.IsMacOS() {
         SDL.SyncWindow(window)
+        if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
+          SDL.SetWindowFullscreen(window, false)
+          SDL.SyncWindow(window)
+        }
       }
       SDL.DestroyWindow(window)
       window = SDLWindowPtr.Null
