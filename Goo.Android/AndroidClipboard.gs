@@ -5,7 +5,6 @@ import Android.OS
 import Android.Text
 import Goo
 import System
-import System.Buffers
 import System.Collections.Generic
 import System.IO
 import System.Linq
@@ -186,43 +185,11 @@ internal sealed class AndroidClipboard : IDisposable {
         using let asset = context.ContentResolver!!.OpenTypedAssetFileDescriptor(uri, type, nil)
             ?? throw IOException("Clipboard MIME stream is unavailable")
         using let stream = asset.CreateInputStream() ?? throw IOException("Clipboard MIME stream could not be opened")
-        let length = asset.DeclaredLength
-        if length > limit { throw ClipboardLimitException("Clipboard data exceeds its byte budget") }
-        if length >= 0 {
-            let bytes = [int32(length)]uint8
-            stream.ReadExactly(bytes)
-            return bytes
-        }
-        let chunks = List[[]uint8]()
-        var total int32
+        if asset.DeclaredLength > limit { throw ClipboardLimitException("Clipboard data exceeds $limit bytes") }
         try {
-            var complete bool
-            while !complete {
-                let chunk = ArrayPool[uint8].Shared.Rent(StreamChunkBytes)
-                chunks.Add(chunk)
-                var used int32
-                while used < StreamChunkBytes {
-                    let count = stream.Read(chunk, used, Math.Min(StreamChunkBytes - used, limit - total + 1))
-                    if count == 0 {
-                        complete = true
-                        break
-                    }
-                    used += count
-                    total += count
-                    if total > limit { throw ClipboardLimitException("Clipboard data exceeds its byte budget") }
-                }
-            }
-            let bytes = [total]uint8
-            var offset int32
-            for chunk in chunks {
-                let count = Math.Min(StreamChunkBytes, total - offset)
-                if count == 0 { break }
-                Buffer.BlockCopy(chunk, 0, bytes, offset, count)
-                offset += count
-            }
-            return bytes
-        } finally {
-            for chunk in chunks { ArrayPool[uint8].Shared.Return(chunk) }
+            return BoundedInput.ReadAll(stream, limit, "Clipboard data")
+        } catch (error InvalidDataException) {
+            throw ClipboardLimitException(error.Message)
         }
     }
 
@@ -362,7 +329,6 @@ internal sealed class AndroidClipboard : IDisposable {
         private const ContentScheme string = "content"
         private const MimeKey string = "io.github.obselate.goo.clipboard.mime"
         private const MaxMimeTypes int32 = 128
-        private const StreamChunkBytes int32 = 65536
         private const MaxInlineTextBytes int32 = 65536
         private const MaxMetadataBytes int32 = 524288
         private let Utf8 UTF8Encoding = UTF8Encoding(false, true)

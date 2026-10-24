@@ -106,6 +106,18 @@ public sealed class DocumentChecks : Instrumentation {
             Require(stream.ReadByte() == -1, "Stream document length changed")
             for i in 0 ... bytes.Length { Require(bytes[i] == uint8(i), "Stream document bytes changed") }
         }
+        let limited = Await(activity!!.Documents.OpenReadAsync(selection.Uris.Single()))
+        Require(limited.Status == DocumentStatus.Success, "Bounded document stream did not open: " + limited.Error)
+        {
+            using let stream = limited.Stream!!
+            var rejected bool
+            try {
+                using let image = ImageSource.Decode(stream, ImageDecodeLimits{MaxEncodedBytes: 32})
+            } catch (error ImageLimitException) {
+                rejected = error.Message == "Encoded image exceeds 32 bytes"
+            }
+            Require(rejected && stream.CanRead, "Document input limit failed or closed the caller stream")
+        }
 
         let defaults = OpenOptions(access: DocumentAccess.Read | DocumentAccess.Write)
         let save = DocumentPickerOptions{InitialUri: defaults.InitialUri, Access: defaults.Access,
