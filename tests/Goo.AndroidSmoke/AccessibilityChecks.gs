@@ -157,13 +157,18 @@ class AccessibilityChecks : Instrumentation {
         )
         Drain()
         using let serviced = ManualResetEventSlim()
-        RunOnMainSync(() -> activity!!.NativeView.Window.Post(serviced.Set))
-        Require(serviced.Wait(TimeSpan.FromSeconds(5)), "Unchanged frame was not serviced.")
-        automation!!.WaitForIdle(250, 5000)
-        Require(
-            !events.Any((e EventRecord) -> e.Type == EventTypes.WindowContentChanged),
-            "An unchanged frame emitted a content refresh."
+        using let command = Runnable(
+            () -> {
+                RunOnMainSync(() -> activity!!.NativeView.Window.Post(serviced.Set))
+                Require(serviced.Wait(TimeSpan.FromSeconds(5)), "Unchanged frame was not serviced.")
+            }
         )
+        try {
+            using let changed = automation!!.ExecuteAndWaitForEvent(command, listener, 250)
+        } catch (Java.Util.Concurrent.TimeoutException) {
+            return
+        }
+        throw InvalidOperationException("An unchanged frame emitted a content refresh.")
     }
 
     private func CheckTouchExploration() {
@@ -519,7 +524,11 @@ class AccessibilityChecks : Instrumentation {
         .Lang
         .Object,
     UiAutomation
-        .IOnAccessibilityEventListener {
+        .IOnAccessibilityEventListener,
+    UiAutomation.IAccessibilityEventFilter {
+        func Accept(e AccessibilityEvent?) bool -> e?.PackageName == "org.goo.androidsmoke" &&
+            e!!.EventType == EventTypes.WindowContentChanged
+
         func OnAccessibilityEvent(e AccessibilityEvent?) {
             if e?.PackageName != "org.goo.androidsmoke" {
                 return
