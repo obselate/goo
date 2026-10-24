@@ -13,10 +13,12 @@
   <ItemGroup Condition="'$(GooSmokeUsePackages)' != 'true'">
     <ProjectReference Include="..\..\Goo\Goo.gsproj" />
     <ProjectReference Include="..\..\Goo.Audio\Goo.Audio.gsproj" />
+    <ProjectReference Include="../../Goo.RichText/Goo.RichText.gsproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(GooSmokeUsePackages)' == 'true'">
     <PackageReference Include="Goo" VersionOverride="$(GooReleaseVersion)" />
     <PackageReference Include="Goo.Audio" VersionOverride="$(GooReleaseVersion)" />
+    <PackageReference Include="Goo.RichText" VersionOverride="$(GooReleaseVersion)" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PublicApi.approved.txt"

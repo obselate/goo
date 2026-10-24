@@ -104,7 +104,7 @@ jobs:
             --strict \
             --severity GL0005=none \
             --severity GL0006=none \
-            --severity GL0001=none Goo Goo.Audio tests
+            --severity GL0001=none Goo Goo.Audio Goo.RichText tests
           dotnet tools/Goo.Gslint/bin/Release/net10.0/Goo.Gslint.dll \
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
@@ -113,6 +113,7 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: |
           dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
+          dotnet build Goo.RichText/Goo.RichText.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
         if: needs.changes.outputs.api == 'true'
@@ -405,6 +406,15 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/notifications-nativeaot
           python3 .github/scripts/test-macos-notifications.py \
             artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications"
+
+      - name: Verify native rich clipboard editing on macOS
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/rich-nativeaot
+          artifacts/rich-nativeaot/Goo.PrintingSmoke
 
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
@@ -860,6 +870,11 @@ jobs:
             -p:GooWindowsSdlPath="$PWD/artifacts/native/win-x64/SDL3.dll" \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
 
+      - name: Pack optional rich text
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet pack Goo.RichText/Goo.RichText.gsproj -c Release -o artifacts/packages \
+            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack optional audio
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1156,6 +1171,7 @@ jobs:
           path: |
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.RichText*.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
@@ -1184,6 +1200,7 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.snupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
+            artifacts/packages/Goo.RichText*.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
 
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
@@ -1618,6 +1635,14 @@ jobs:
           $env:GOO_NATIVE_DIALOGS_SMOKE = "1"
           & artifacts/windows-smoke/Goo.PackageSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify native rich clipboard editing on Windows
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj -c Release -r win-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/rich-nativeaot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & artifacts/rich-nativeaot/Goo.PrintingSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned consumer installer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
@@ -1768,6 +1793,10 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           dotnet nuget push "artifacts/packages/Goo.Audio.$GOO_VERSION.nupkg" \
+            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate --no-symbols
+          dotnet nuget push "artifacts/packages/Goo.RichText.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols

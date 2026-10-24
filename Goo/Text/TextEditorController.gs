@@ -211,8 +211,8 @@ public class TextEditorController : IDisposable {
     return ExecuteIntercepted(command)
   }
 
-  internal func InterceptPaste() bool {
-    let args = TextCommandEvent(TextCommand{ Kind: TextCommandKind.Paste })
+  internal func InterceptPaste(command TextCommand) bool {
+    let args = TextCommandEvent(command)
     onCommand?.Invoke(args)
     return !args.Cancel
   }
