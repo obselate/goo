@@ -1,6 +1,7 @@
 import Goo
 import Goo.Printing
 import Goo.SpellCheck
+import Goo.RichText
 import System
 import System.Diagnostics
 import System.IO
@@ -61,6 +62,76 @@ func CheckSystemSpelling() {
     Console.WriteLine("spelling: native dictionary, UTF-16 ranges and suggestions")
 }
 
+func CheckRichClipboard() {
+    using let controller = TextEditorController(TextDocument("rich 😀"))
+    using let layer = TextPresentationLayer(controller.Document)
+    layer.SetStyle("bold", TextRange(0, 7), Style{ FontWeight: 700 })
+    let handle = ElementHandle()
+    let owner = Window{ Width: 240, Height: 180, Root: EditorPage(controller, layer, handle) }.Open()
+
+    try {
+        Settle(owner)
+        Require(handle.Focus(), "rich editor did not focus")
+        var commands = 0
+        controller.OnCommand = _ -> { commands++ }
+        using let clipboard = RichTextClipboard(owner, controller, layer)
+        var completed TaskCompletionSource[RichTextResult]?
+        clipboard.Completed += result -> { completed?.TrySetResult(result) }
+        controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+        let copied = Pump(owner, clipboard.CopyAsync())
+        Require(copied.Status == RichTextStatus.Success, "rich copy failed: ${copied.Status} ${copied.Error}")
+        controller.Selection = TextSelection(TextPosition(7, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+        let pasted = Pump(owner, clipboard.PasteAsync())
+        Require(pasted.Status == RichTextStatus.Success && controller.Document.GetText() == "rich 😀rich 😀",
+            "rich paste did not round-trip")
+        Require(controller.Document.Undo() && controller.Document.GetText() == "rich 😀", "rich paste undo failed")
+        Require(commands == 2, "clipboard command interception ran more than once")
+        controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+        let pendingCut = clipboard.CutAsync()
+        controller.Selection = TextSelection(TextPosition(7, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+        Require(Pump(owner, pendingCut).Status == RichTextStatus.Stale && controller.Document.GetText() == "rich 😀",
+            "stale cut deleted the current selection")
+        clipboard.ReadOnly = true
+        Require(Pump(owner, clipboard.PasteAsync()).Status == RichTextStatus.ReadOnly, "read-only paste was accepted")
+        clipboard.ReadOnly = false
+
+        for contentType in []string{ "text/html", "text/rtf" } {
+            let data = RichTextCodec.Write(RichTextFragment("only",
+                []TextStyleSpan{ TextStyleSpan("only", TextRange(0, 4), Style{ FontWeight: 700 }) }))
+            let representation = data.Representations.Single(item -> item.ContentType == contentType)
+            let written = Pump(owner, owner.WriteClipboardAsync(
+                TransferData([]TransferRepresentation{ representation }, []Uri{})))
+            Require(written.Status == DataTransferStatus.Success, "single-format publication failed")
+            controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+            completed = TaskCompletionSource[RichTextResult](TaskCreationOptions.RunContinuationsAsynchronously)
+            Require(!owner.PlatformInput.Execute(TextCommand{ Kind: TextCommandKind.Paste }), "rich paste was not intercepted")
+            let result = Pump(owner, completed.Task)
+            Require(result.Status == RichTextStatus.Success && controller.Document.GetText() == "only",
+                "single-format paste failed: $contentType")
+            Require(controller.Document.Undo(), "single-format undo failed")
+        }
+
+        controller.Selection = TextSelection(TextPosition(7, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+        Require(owner.PlatformInput.Execute(TextCommand(TextCommandKind.Paste, "literal", false))
+            && controller.Document.GetText() == "rich 😀literal", "supplied paste text read the clipboard")
+        Require(controller.Document.Undo(), "supplied paste undo failed")
+        controller.Selection = TextSelection(TextPosition(0, TextAffinity.Upstream), TextPosition(7, TextAffinity.Downstream))
+        Require(controller.ReplaceSelection(layer, "", []TextStyleSpan{}) && controller.Document.Length == 0,
+            "empty styled replacement read the clipboard")
+        Require(controller.Document.Undo(), "empty replacement undo failed")
+        Console.WriteLine("rich clipboard: HTML/RTF, rich-only native paste, explicit text, stale cut, read-only and atomic undo")
+    } finally {
+        owner.RequestClose()
+        let deadline = Stopwatch.StartNew()
+        while owner.IsOpen && deadline.Elapsed < TimeSpan.FromSeconds(20) { owner.Pump(0.0) }
+        Require(!owner.IsOpen, "rich editor did not close")
+    }
+}
+
+internal class EditorPage(controller TextEditorController, layer TextPresentationLayer, handle ElementHandle) : Cell {
+    override func Build() Blob -> TextEditor(controller, []TextPresentationLayer{ layer }) { Handle = handle }
+}
+
 internal class Page(width int32, height int32) : Cell {
     override func Build() Blob {
         let root = Container{Width: width, Height: height, BackgroundColor: Color.Rgb(20, 160, 60)}
@@ -85,6 +156,7 @@ let window = Window{Root: Page(32, 32), Width: 96, Height: 96, Title: "Goo print
 try {
     Settle(window)
     CheckSystemSpelling()
+    CheckRichClipboard()
     let ownerWidth = window.Width
     let ownerHeight = window.Height
     let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
