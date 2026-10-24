@@ -116,8 +116,10 @@ jobs:
           dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
+        if: needs.changes.outputs.api == 'true'
         run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.gsproj -c Release -p:TreatWarningsAsErrors=true
       - name: Build optional native dialogs
+        if: needs.changes.outputs.api == 'true'
         run: dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0 -p:TreatWarningsAsErrors=true
 
       - name: Build optional native menus
@@ -150,6 +152,7 @@ jobs:
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify optional spell checking
+        if: needs.changes.outputs.api == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y libhunspell-1.7-0
@@ -248,6 +251,7 @@ jobs:
           path: artifacts/macos-candidate/native
 
       - name: Verify Metal external image lifecycle
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet build tests/Goo.VulkanProof/Goo.VulkanProof.gsproj -c Release --nologo -warnaserror \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native"
@@ -314,6 +318,7 @@ jobs:
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke
 
       - name: Verify cold and warm macOS application activation
+        if: needs.changes.outputs.full == 'true'
         run: |
           python3 .github/scripts/test-macos-activation.py \
             artifacts/macos-candidate/Goo.PackageSmoke.app \
@@ -620,6 +625,7 @@ jobs:
           dotnet build Goo/Goo.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify presentation-independent offscreen pages
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet publish tests/Goo.OffscreenSmoke/Goo.OffscreenSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -629,6 +635,7 @@ jobs:
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             GOO_VK_DIAGNOSTICS=1 artifacts/offscreen-nativeaot/Goo.OffscreenSmoke
       - name: Verify independent pages and raster PDF
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
@@ -812,11 +819,13 @@ jobs:
           done
 
       - name: Pack shared gesture recognizers
+        if: needs.changes.outputs.full == 'true'
         run: |
           dotnet pack Goo.Gestures/Goo.Gestures.gsproj -c Release -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
       - name: Verify packed NativeAOT gesture consumer
+        if: needs.changes.outputs.full == 'true'
         env:
           NUGET_PACKAGES: ${{ runner.temp }}/gesture-nuget
           XDG_CACHE_HOME: ${{ runner.temp }}/gesture-cache
@@ -1561,6 +1570,7 @@ jobs:
           & artifacts/windows-smoke/Goo.PackageSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned consumer installer
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
@@ -1589,6 +1599,7 @@ jobs:
           if (!(Test-Path $setup)) { throw 'Consumer installer missing' }
           if ((Get-AuthenticodeSignature $setup).Status -ne 'NotSigned') { throw 'Expected unsigned installer' }
       - name: Verify packaged NativeAOT Windows menus
+        if: needs.changes.outputs.full == 'true'
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
@@ -1860,6 +1871,7 @@ jobs:
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
             Goo/Runtime/Vulkan/android-*/text-native-build.json
       - name: Package signed consumer AAB
+        if: needs.changes.outputs.full == 'true'
         run: |
           bash tools/Goo.DevTools.Cli/Packaging/fetch-bundletool.sh "$RUNNER_TEMP/android-tools"
           export GOO_BUNDLETOOL="$RUNNER_TEMP/android-tools/bundletool-all-1.18.3.jar"
@@ -1914,7 +1926,8 @@ jobs:
           path: artifacts/android-native-menus/logs/
 
   android-accessibility:
-    needs: android
+    needs: [changes, android]
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -2003,6 +2016,7 @@ jobs:
           python3 .github/scripts/validate-android-package.py artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke.aab
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 artifacts/android-consumer/Goo.AndroidSmoke/bin/Release/net10.0-android/org.goo.androidsmoke-Signed.apk
       - name: Build Android starter from the packed template
+        if: needs.changes.outputs.full == 'true'
         env:
           NUGET_PACKAGES: ${{ github.workspace }}/artifacts/android-consumer-cache
         run: |
