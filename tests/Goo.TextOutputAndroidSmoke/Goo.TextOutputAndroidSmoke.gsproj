@@ -14,8 +14,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo.Android/Goo.Android.gsproj" />
-    <ProjectReference Include="../../Goo.Printing.Android/Goo.Printing.Android.gsproj" />
-    <ProjectReference Include="../../Goo.SpellCheck.Android/Goo.SpellCheck.Android.gsproj" />
     <ProjectReference Include="../../Goo.RichText/Goo.RichText.gsproj" />
   </ItemGroup>
 </Project>
