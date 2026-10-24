@@ -3,13 +3,13 @@
 Install the package and create a Goo application:
 
 ```sh
-dotnet new install Goo.Templates@0.13.0
+dotnet new install Goo.Templates@0.14.0
 dotnet new goo --name HelloGoo
 cd HelloGoo
 dotnet run
 ```
 
-The generated project targets .NET 10, uses `Gsharp.NET.Sdk`, and references Goo 0.13.0. Use `--goo-version` to select another compatible Goo package version.
+The generated project targets .NET 10, uses `Gsharp.NET.Sdk`, and references Goo 0.14.0. Use `--goo-version` to select another compatible Goo package version.
 
 ## Android
 
