@@ -62,18 +62,18 @@ public shared class Printing {
         ArgumentNullException.ThrowIfNull(owner)
         ArgumentNullException.ThrowIfNull(document)
         ArgumentNullException.ThrowIfNull(destination)
-        Validate(settings)
+        let resolved = ResolveSettings(settings)
         if !destination.CanWrite || destination.CanSeek && (destination.Position != 0 || destination.Length != 0) {
             throw ArgumentException("PDF output requires an empty writable stream.", nameof(destination))
         }
         try {
             using let linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, owner.Closed)
-            let layout = await OnOwnerAsync(owner, () -> document.Paginate(settings), linked.Token).ConfigureAwait(false)
+            let layout = await OnOwnerAsync(owner, () -> document.Paginate(resolved), linked.Token).ConfigureAwait(false)
             if layout.Status != PrintLayoutStatus.Ready || layout.PageCount <= 0 { return LayoutFailure(layout) }
-            let pdf = RasterPdf(destination, layout.PageCount, settings)
+            let pdf = RasterPdf(destination, layout.PageCount, resolved)
             var reusable WindowCapture? = nil
             for index in 0 ... layout.PageCount {
-                let result = await RenderPageAsync(owner, document, index, settings, reusable, linked.Token)
+                let result = await RenderPageAsync(owner, document, index, resolved, reusable, linked.Token)
                     .ConfigureAwait(false)
                 if result.Status != OffscreenRenderStatus.Success || result.Capture == nil { return RenderFailure(result) }
                 reusable = result.Capture
@@ -91,17 +91,17 @@ public shared class Printing {
     internal async func RenderPageAsync(owner Window, document IPrintDocument, index int32,
         settings PrintPageSettings, reusable WindowCapture?, cancellation CancellationToken,
         session OffscreenRenderSession? = nil, post ((Action) -> bool)? = nil) OffscreenRenderResult {
-        Validate(settings)
-        let width = settings.WidthPoints * settings.DpiX / PointsPerInch
-        let height = settings.HeightPoints * settings.DpiY / PointsPerInch
+        let resolved = ResolveSettings(settings)
+        let width = resolved.WidthPoints * resolved.DpiX / PointsPerInch
+        let height = resolved.HeightPoints * resolved.DpiY / PointsPerInch
         if width > uint32.MaxValue || height > uint32.MaxValue || width * height > MaxPageBytes / 12.0 {
             return OffscreenRenderResult{Status: OffscreenRenderStatus.BudgetExceeded, Error: "The page exceeds 128 MiB."}
         }
-        let options = OffscreenRenderOptions(float32(settings.WidthPoints * LogicalUnitsPerInch / PointsPerInch),
-            float32(settings.HeightPoints * LogicalUnitsPerInch / PointsPerInch),
+        let options = OffscreenRenderOptions(float32(resolved.WidthPoints * LogicalUnitsPerInch / PointsPerInch),
+            float32(resolved.HeightPoints * LogicalUnitsPerInch / PointsPerInch),
             checked(uint32(Math.Ceiling(width))), checked(uint32(Math.Ceiling(height))), Color.Rgb(255, 255, 255), MaxPageBytes)
         let pending = await OnOwnerAsync(owner, () -> {
-            let page = document.CreatePage(index, settings)
+            let page = document.CreatePage(index, resolved)
             return if session == nil { owner.RenderOffscreenAsync(page, options, cancellation, reusable) }
                 else { session.RenderAsync(page, options, cancellation, reusable) }
         }, cancellation, post).ConfigureAwait(false)
@@ -149,6 +149,15 @@ public shared class Printing {
     internal func LayoutFailure(layout PrintLayoutResult) PrintResult -> PrintResult(
         if layout.Status == PrintLayoutStatus.Cancelled { PrintStatus.Cancelled } else { PrintStatus.Failed },
         Error: if string.IsNullOrEmpty(layout.Error) { "The document has no printable pages." } else { Detail(layout.Error) })
+
+    private func ResolveSettings(settings PrintPageSettings) PrintPageSettings {
+        let resolved = settings with{
+            DpiX = settings.DpiX == 0 ? 300: settings.DpiX,
+            DpiY = settings.DpiY == 0 ? 300: settings.DpiY,
+        }
+        Validate(resolved)
+        return resolved
+    }
 
     internal func Validate(settings PrintPageSettings) {
         if !float64.IsFinite(settings.WidthPoints) || !float64.IsFinite(settings.HeightPoints) ||
