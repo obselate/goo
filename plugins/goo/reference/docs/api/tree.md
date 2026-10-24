@@ -194,7 +194,7 @@ Goo wraps each item in a keyed, absolutely positioned element. The wrapper has t
 
 Goo calls `NeedsRealize` after each layout and scroll. A true result runs `Realize` again in the same frame, for at most three passes, and then in the next frames.
 
-Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. `Virtual.PinToBottom` keeps the end in view until the reader scrolls away, and `viewport.Pinned` reports that state.
+Set `output.ScrollOffset` to move the scroll position together with the items, for example to keep an anchor row in place when rows above it change size. A scroll in progress keeps its remaining distance. Own tail-following state in the list or log view. `ElementHandle.MetricsChanged` reports scroll range changes, and `JumpTo` can move to the new end before paint.
 
 ## Animate computed position changes
 
@@ -478,10 +478,6 @@ Overrides whether this container participates in pointer hit testing. When omitt
 
 Gets the optional retained measure/arrange policy. Nil uses the normal flex layout; replace the immutable policy when its configuration changes.
 
-### `PinToBottom`
-
-Reports whether scroll content stays pinned to the bottom.
-
 ## `ElementHandle`
 
 Source:
@@ -641,10 +637,6 @@ Gets the transformed content box in window logical coordinates.
 ### `IsMounted`
 
 Reports whether the element is mounted.
-
-### `Pinned`
-
-Gets whether PinToBottom is set and the reader has not scrolled away from the end.
 
 ### `ScrollOffset`
 
@@ -1233,10 +1225,6 @@ Initializes a list element that scrolls on both axes.
 
 - `source`: The item policy. Create a new source on each build to supply new inputs.
 
-### `PinToBottom`
-
-Reports whether scroll content stays pinned to the bottom.
-
 ## `VirtualChild`
 
 Source:
@@ -1414,10 +1402,6 @@ Gets the authored flex direction.
 ### `FocusedChild`
 
 Gets the index of the mounted item that contains keyboard focus, or -1.
-
-### `Pinned`
-
-Gets whether PinToBottom is set and the reader has not scrolled away from the end.
 
 ### `RowGap`
 
