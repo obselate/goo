@@ -7,13 +7,18 @@ internal partial class Reconciler {
   private func syncElementHandle(n Node, handle ElementHandle?) {
     pendingHandleMoves?.Remove(n)
     if let next = handle {
-      let source = next.AttachedNode()
-      if source != nil && source != n && styleRetryRoot != nil {
-        ElementHandles.Detach(n)
-        let pending = pendingHandleMoves ?? Dictionary[Node, ElementHandle]()
-        pending[n] = next
-        pendingHandleMoves = pending
-        return
+      var current = next.AttachedNode()
+      if current != n && styleRetryRoot != nil {
+        while let source = current {
+          if source == styleRetryRoot {
+            ElementHandles.Detach(n)
+            let pending = pendingHandleMoves ?? Dictionary[Node, ElementHandle]()
+            pending[n] = next
+            pendingHandleMoves = pending
+            return
+          }
+          current = source.Parent
+        }
       }
     }
     ElementHandles.Bind(n, handle, Owner)

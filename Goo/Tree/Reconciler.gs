@@ -1193,6 +1193,7 @@ internal partial class Reconciler {
   }
 
   internal func diffChildren(n Node, blobs IList[Blob]) {
+    if styleRetryRoot == nil { rememberStyleRetryRoot(n) }
     let scratch = keyedScratch()
     let scratchScope = scratch.Rent()
     try {
