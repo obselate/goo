@@ -202,6 +202,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("PointerResetStartsTheNextTouchSequence")
             yield Contract[InputFixtures]("PointerSelectsDeepestResolvedCursorAndClearsIt")
             yield Contract[InputFixtures]("RoutedKeyCallbackRebuildStaysPresentationIdle")
+            yield Contract[InputFixtures]("RoundedCornersRouteToUnderlyingNode")
             yield Contract[InputFixtures]("ScrollStateSurvivesRebuild")
             yield Contract[InputFixtures]("ShapeStrokeHitChangesInvalidateInputContract")
             yield Contract[InputFixtures]("TextEntryCommandsAndSanitization")

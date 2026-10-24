@@ -38,7 +38,7 @@ internal class InputFixtures {
     return words == 2 && characters == 1
   }
 
-  func TransformRoutesHitsAndLocalPositions() bool {
+  func RoundedCornersRouteToUnderlyingNode() bool {
     var underneathClicks int32
     var roundedClicks int32
     let roundedTree = Reconciler{ Res: Resolver{} }.Mount(Container() {
@@ -69,7 +69,10 @@ internal class InputFixtures {
     rounded.BorderTopLeftRadius = 10
     if hitTopmost(roundedTree, 10.0F, 10.0F) != rounded
       || hitTopmost(roundedTree, 1.0F, 1.0F) != underneath { return false }
+    return true
+  }
 
+  func TransformRoutesHitsAndLocalPositions() bool {
     let events = List[string]()
     let tree = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
