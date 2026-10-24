@@ -131,7 +131,7 @@ jobs:
           dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
             --xml Goo.AppHost/bin/Release/net10.0/Goo.AppHost.xml \
             --output docs/api-app-host --source Goo.AppHost
-          rm -rf docs/api-native-menus docs/api-native-dialogs
+          rm -rf docs/api-native-menus docs/api-native-dialogs docs/api-notifications
 
       - name: Validate onboarding and release metadata
         run: |
@@ -898,12 +898,6 @@ jobs:
           dotnet pack Goo.AppHost/Goo.AppHost.gsproj -c Release -m:4 -o artifacts/packages \
             -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
 
-      - name: Pack optional notifications
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet pack Goo.Notifications/Goo.Notifications.gsproj -c Release -m:4 -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-
       - name: Pack and validate native accessibility runtimes
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -1210,7 +1204,6 @@ jobs:
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.AppHost.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.Notifications.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.DevTools.App.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Templates.${{ env.GOO_VERSION }}.nupkg
@@ -1782,10 +1775,6 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols
           dotnet nuget push "artifacts/packages/Goo.AppHost.$GOO_VERSION.nupkg" \
-            --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate --no-symbols
-          dotnet nuget push "artifacts/packages/Goo.Notifications.$GOO_VERSION.nupkg" \
             --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate --no-symbols

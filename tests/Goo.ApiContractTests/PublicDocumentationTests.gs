@@ -185,6 +185,14 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.NotificationOptions.#ctor",
+            "M:Goo.NotificationMessage.#ctor",
+            "M:Goo.NotificationService.GetPermissionAsync",
+            "M:Goo.NotificationService.RequestPermissionAsync",
+            "M:Goo.NotificationService.ShowAsync(Goo.NotificationMessage)",
+            "M:Goo.NotificationService.GetStatusAsync(System.String)",
+            "M:Goo.NotificationService.RemoveAsync(System.String)",
+            "M:Goo.Notifications.Open(Goo.NotificationOptions)",
             "M:Goo.Gestures.DoubleTapGesture.#ctor(System.Action{Goo.Gestures.TapGestureEvent})",
             "M:Goo.Gestures.DoubleTapGesture.CreateSession",
             "M:Goo.Gestures.LongPressGesture.#ctor(System.Action{Goo.Gestures.PressGestureEvent},System.Double)",
@@ -661,6 +669,28 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.NotificationPermission.NotDetermined",
+            "F:Goo.NotificationPermission.Granted",
+            "F:Goo.NotificationPermission.Denied",
+            "F:Goo.NotificationPermission.Disabled",
+            "F:Goo.NotificationPermission.Unknown",
+            "F:Goo.NotificationPermission.Unsupported",
+            "F:Goo.NotificationDelivery.Unknown",
+            "F:Goo.NotificationDelivery.Accepted",
+            "F:Goo.NotificationDelivery.PresentInCenter",
+            "F:Goo.NotificationDelivery.Removed",
+            "F:Goo.NotificationDelivery.Failed",
+            "F:Goo.NotificationActivationSupport.None",
+            "F:Goo.NotificationActivationSupport.WarmOnly",
+            "F:Goo.NotificationActivationSupport.WarmAndCold",
+            "F:Goo.NotificationStatus.Success",
+            "F:Goo.NotificationStatus.Accepted",
+            "F:Goo.NotificationStatus.PermissionRequired",
+            "F:Goo.NotificationStatus.Denied",
+            "F:Goo.NotificationStatus.Disabled",
+            "F:Goo.NotificationStatus.MissingIdentity",
+            "F:Goo.NotificationStatus.Unsupported",
+            "F:Goo.NotificationStatus.Failed",
             "F:Goo.Gestures.GestureRotationStatus.Available",
             "F:Goo.Gestures.GestureRotationStatus.Unsupported",
             "F:Goo.Gestures.PanAxis.Both",
@@ -837,6 +867,18 @@ class PublicDocumentationTests {
         private let Shapes IReadOnlyDictionary[string, DocumentationShape] = Dictionary[string, DocumentationShape](
             StringComparer.Ordinal
         ){
+            ["M:Goo.NotificationService.GetPermissionAsync"] = DocumentationShape(
+                System.Array.Empty[string](), System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.RequestPermissionAsync"] = DocumentationShape(
+                System.Array.Empty[string](), System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.ShowAsync(Goo.NotificationMessage)"] = DocumentationShape(
+                []string{"message"}, System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.GetStatusAsync(System.String)"] = DocumentationShape(
+                []string{"id"}, System.Array.Empty[string](), true),
+            ["M:Goo.NotificationService.RemoveAsync(System.String)"] = DocumentationShape(
+                []string{"id"}, System.Array.Empty[string](), true),
+            ["M:Goo.Notifications.Open(Goo.NotificationOptions)"] = DocumentationShape(
+                []string{"options"}, System.Array.Empty[string](), true),
             ["M:Goo.Window.CapturePlacement"] = DocumentationShape(System.Array.Empty[string](), System.Array.Empty[string](), true),
             ["M:Goo.Window.ApplyPlacement(Goo.WindowPlacement)"] = DocumentationShape([]string{"value"}, System.Array.Empty[string](), true),
             ["M:Goo.NativeDialogs.ShowMessageBoxAsync(Goo.Window,Goo.MessageBoxOptions)"] = DocumentationShape(

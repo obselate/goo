@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Goo.Notifications/Goo.Notifications.gsproj" />
+    <ProjectReference Include="../../Goo/Goo.gsproj" />
     <ProjectReference Include="../../Goo.AppHost/Goo.AppHost.gsproj" />
   </ItemGroup>
 </Project>
