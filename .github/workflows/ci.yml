@@ -109,6 +109,21 @@ jobs:
             --strict --severity GL0005=none --severity GL0006=none \
             apps templates plugins/goo/reference/templates
 
+      - name: Install Android documentation toolchain
+        if: needs.changes.outputs.api == 'true'
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build Android documentation target
+        if: needs.changes.outputs.api == 'true'
+        run: |
+          dotnet workload install android
+          dotnet build Goo.Android/Goo.Android.gsproj -c Release \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" \
+            -p:TreatWarningsAsErrors=true
+
       - name: Build Goo and optional packages with warnings as errors
         if: needs.changes.outputs.api == 'true'
         run: |
@@ -125,6 +140,9 @@ jobs:
           dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
             --source Goo.Audio --xml Goo.Audio/bin/Release/net10.0/Goo.Audio.xml \
             --output docs/api-audio
+          dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release -- \
+            --source Goo.Android --xml Goo.Android/bin/Release/net10.0-android/Goo.Android.xml \
+            --output docs/api-android
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
             docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host docs/api-rich-text
 

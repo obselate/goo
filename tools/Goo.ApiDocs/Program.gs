@@ -298,7 +298,7 @@ func ReadSourceSummary(source string, declarationStart int32) string {
 
 func ReadTypes(directoryPath string, sourceRoot string) IEnumerable[ApiType] {
     let typePattern = Regex(
-        "(?m)^(?:public\\s+)?(?:(?:partial|sealed|open|data|shared|unsafe)\\s+)*" +
+        "(?m)^(?:public\\s+)?(?:(?:partial|sealed|open|abstract|data|shared|unsafe)\\s+)*" +
             "(?<kind>class|struct|enum|interface|func)\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)" +
             "(?<generic>\\[[^\\]\\r\\n]+\\])?",
         RegexOptions.CultureInvariant
@@ -431,16 +431,12 @@ func BuildPage(
         text.AppendLine()
         text.AppendLine("## `${type.DisplayName}`")
         text.AppendLine()
-        text.AppendLine(
-            if type.Sources.Count == 1 {
-                "Source:"
-            } else {
-                "Sources:"
+        if type.Sources.Count != 0 {
+            text.AppendLine(if type.Sources.Count == 1 { "Source:" } else { "Sources:" })
+            text.AppendLine()
+            for source in type.Sources {
+                text.AppendLine("- [`${source.FileName}`]($sourceLink/${source.RelativeFile})")
             }
-        )
-        text.AppendLine()
-        for source in type.Sources {
-            text.AppendLine("- [`${source.FileName}`]($sourceLink/${source.RelativeFile})")
         }
         let typeId = "T:" + type.XmlName
         let typeMember ApiMember? = members.SingleOrDefault((member ApiMember) -> member.Id == typeId)
@@ -565,7 +561,7 @@ let sourceDirectories = Directory
     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
     .ToArray()
 
-let types = sourceDirectories
+var types = sourceDirectories
     .SelectMany((path string) -> ReadTypes(path, sourceRoot))
     .GroupBy((type ApiType) -> type.XmlName, StringComparer.Ordinal)
     .Select(
@@ -587,8 +583,6 @@ let types = sourceDirectories
         }
     )
 )
-    .OrderBy((type ApiType) -> type.Directory, StringComparer.Ordinal)
-    .ThenBy((type ApiType) -> type.DisplayName, StringComparer.Ordinal)
     .ToArray()
 
 let members = XDocument
@@ -600,6 +594,17 @@ let members = XDocument
         element
     )
 )
+    .ToArray()
+
+types = types.Concat(members
+    .Where(member -> member.Id.StartsWith("T:", StringComparison.Ordinal) &&
+        !types.Any(type -> type.XmlName == member.Id[2..]))
+    .Select(member -> ApiType(
+        Path.GetFileName(sourceRoot), member.Id[(member.Id.LastIndexOf('.') + 1)..],
+        member.Id[2..], "", []string{}, []ApiSource{}, false
+    )))
+    .OrderBy(type -> type.Directory, StringComparer.Ordinal)
+    .ThenBy(type -> type.DisplayName, StringComparer.Ordinal)
     .ToArray()
 
 let guideRoot = Path.Combine(repositoryRoot, "tools", "Goo.ApiDocs", "Guides")

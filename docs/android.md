@@ -1,5 +1,7 @@
 # Android integration
 
+[API reference](api-android/README.md).
+
 Goo uses the same retained UI and Vulkan renderer on desktop and Android. Put
 application Cells and a Window factory in a shared `net10.0` G# library. The
 desktop entry point calls `window.Run()`. The Android entry point returns that

@@ -11,6 +11,7 @@ import Java.Lang
 import System
 import System.Collections.Generic
 
+/// Hosts a Goo window and forwards Android activity lifecycle and activation events.
 abstract class GooActivity : Activity {
     internal var PermissionsResultReceived Action[int32, []string, []Permission]?
     internal var Destroyed Action?

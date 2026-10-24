@@ -29,6 +29,11 @@ jobs:
         with:
           global-json-file: global.json
 
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: artifacts/gsharp
@@ -36,6 +41,13 @@ jobs:
 
       - name: Build pinned upstream G# authoring tools
         run: ./bootstrap.sh --gsharp-only
+
+      - name: Build Android documentation target
+        run: |
+          dotnet workload install android
+          dotnet build Goo.Android/Goo.Android.gsproj -c Release \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" \
+            -p:TreatWarningsAsErrors=true
 
       - name: Regenerate documentation
         run: |
@@ -45,6 +57,7 @@ jobs:
             name="$(basename "$project" .gsproj)"
             source="$(dirname "$project")"
             xml="$source/bin/Release/net10.0/$name.xml"
+            if [ "$name" = Goo.Android ]; then xml="$source/bin/Release/net10.0-android/$name.xml"; fi
             test -f "$xml" || continue
             slug="$(printf '%s' "${name#Goo.}" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')"
             output="docs/api-$slug"

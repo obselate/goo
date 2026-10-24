@@ -27,6 +27,7 @@ import Java.Lang
 import System
 import System.Threading
 
+/// Presents a Goo window on an Android surface and forwards input and accessibility events.
 class GooView : SurfaceView, ISurfaceHolderCallback {
     private let host AndroidVulkanHost
     internal prop Clipboard AndroidClipboard { get; }
