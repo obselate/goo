@@ -33,7 +33,7 @@ void shade()
 {
     float2 direction = pc.params.zw - pc.params.xy;
     float amount = dot(uv - pc.params.xy, direction) / max(dot(direction, direction), 0.0001);
-    outColor = interpolateStops(clamp(amount, 0.0, 1.0)) * roundedCoverage() * gooClipCoverage();
+    outColor = ditherGradient(interpolateStops(clamp(amount, 0.0, 1.0))) * roundedCoverage() * gooClipCoverage();
 }
 
 #include "analytic_fragment_entry.slang"

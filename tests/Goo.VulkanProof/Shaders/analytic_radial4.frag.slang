@@ -33,7 +33,7 @@ void shade()
 {
     float2 radius = max(pc.params.zw, float2(0.0001));
     float amount = length((uv - pc.params.xy) / radius);
-    outColor = interpolateStops(clamp(amount, 0.0, 1.0)) * roundedCoverage() * gooClipCoverage();
+    outColor = ditherGradient(interpolateStops(clamp(amount, 0.0, 1.0))) * roundedCoverage() * gooClipCoverage();
 }
 
 #include "analytic_fragment_entry.slang"
