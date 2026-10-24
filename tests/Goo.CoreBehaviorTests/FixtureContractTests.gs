@@ -302,6 +302,7 @@ class FixtureContractTests {
             yield Contract[ScrollbarFixtures]("PartDisposalContinuesAfterCallbackFailure")
             yield Contract[ScrollbarFixtures]("PublicMetricsAndJumpContract")
             yield Contract[ShapeGeometryFixtures]("LargeStrokeConstructionHasBoundedAllocation")
+            yield Contract[ShapeGeometryFixtures]("LoneMoveToContoursPreserveOtherStrokes")
             yield Contract[ShapeGeometryFixtures]("ReturningQuadraticStrokePreservesExcursionAndTrim")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimUsesGlobalContourLengthAndHitGeometry")
             yield Contract[ShapeGeometryFixtures]("StrokeTrimPreservesFillAndOpensPartialClosedContour")
