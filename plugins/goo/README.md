@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-Standalone G# Goo authoring guidance and twelve stdio MCP tools. Goo applications and the plugin require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.16.1. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. Python and uv are not required.
+G# Goo authoring guidance and twelve stdio MCP tools. Requires .NET 10, the [Goo platform requirements](../../README.md#platforms), and Goo.DevTools 0.16.1. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. No Python or uv is needed.
 
 | Tool | Purpose |
 | --- | --- |
@@ -46,11 +46,11 @@ codex plugin marketplace add obselate/goo
 codex plugin add goo@obselate-goo
 ```
 
-Git and network access are required while Codex downloads the marketplace.
-Codex installs the portable package, discovers its `goo-authoring` skill, and
-starts its MCP server from the installed plugin path. Start a new Codex session
-after installation. The host runs the pinned Goo.DevTools package through
-`dotnet tool exec`. No Python environment or manual MCP configuration is needed.
+Codex requires Git and network access to download the marketplace. It installs
+the portable package, finds `goo-authoring`, and starts the MCP server from the
+plugin path. Start a new session after installation. The host runs the pinned
+Goo.DevTools package through `dotnet tool exec`. No Python environment or manual
+MCP configuration is needed.
 
 ## Use
 
@@ -77,8 +77,7 @@ inspection, style, and watch details.
 
 ## Source checkout
 
-The installed CLI is the normal path. To test a Goo source checkout, build its CLI
-and set `GOO_CLI` in the MCP server environment:
+To test a source checkout, build its CLI and set `GOO_CLI` in the server environment:
 
 ```sh
 dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release
@@ -89,7 +88,7 @@ Set `GOO_DEVTOOLS_DIR` in both the app and server environments only when testing
 a custom descriptor directory. Pass a project path to runtime tools for
 project-local discovery.
 
-Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` to use a current checkout. `goo_context` reports bundle file hashes or checkout revision and dirty state, plus the compiler pin. Search ignores conversational stop words, splits symbol names, and reports exact or relaxed term coverage plus document hashes. An empty result applies only to the selected documents. `goo_starter` reports its SDK, Goo package, compiler pin, source hashes, generated hashes, and available lint/build commands. Checkout-backed builds select the pinned compiler. Its generated project includes a source Watch item but launches with `--no-watch`.
+Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` for a checkout. `goo_context` reports bundle hashes or checkout revision and dirty state, plus the compiler pin. Search ignores stop words, splits symbol names, and reports exact/relaxed term coverage and document hashes. Empty results apply only to the selected documents. `goo_starter` reports SDK, package, compiler pin, source/generated hashes, and lint/build commands. Checkout builds select the pinned compiler. Generated projects include a source Watch item but launch with `--no-watch`.
 
 ## Refresh and verify
 

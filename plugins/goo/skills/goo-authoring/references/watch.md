@@ -1,9 +1,7 @@
 # G# watch modes and limits
 
-Method edits apply in the same process. The window shows them on the next event,
-such as a click. A fix is in progress.
 See [Edit and inspect](https://github.com/obselate/goo/blob/main/docs/edit-and-inspect.md)
-for the app-author workflow.
+for the app-author workflow and current refresh limit.
 
 ## Choose run or watch
 
