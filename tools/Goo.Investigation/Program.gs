@@ -151,7 +151,7 @@ class Runner {
         func Main(arguments[]string) int32 {
             Console.CancelKeyPress += Cancel
             try {
-                Require(arguments.Length > 0, "expected grid-scroll, hot-reload, foreign-parent, or performance")
+                Require(arguments.Length > 0, "expected grid-scroll, hot-reload, foreign-parent, popup, or performance")
                 let rest = arguments.Skip(1).ToArray()
                 if arguments[0] == "grid-scroll" {
                     GridScroll.Run(Options(rest, arguments[0]))
@@ -159,6 +159,8 @@ class Runner {
                     HotReload.Run(Options(rest, arguments[0]))
                 } else if arguments[0] == "foreign-parent" {
                     ForeignParent.Run(rest)
+                } else if arguments[0] == "popup" {
+                    Popup.Run(rest)
                 } else if arguments[0] == "performance" {
                     Performance.Run(Options(rest, arguments[0]))
                 } else {
