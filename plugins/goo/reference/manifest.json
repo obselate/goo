@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/obselate/goo",
   "files": {
-    "README.md": "9474ab5c255ce26e7c7c542bbab941e8dbb64198d17247dcc273814696452473",
-    "CONTRIBUTING.md": "ec658b2463061611a0bcbe765ae85671f54927f795471aa15f9dc929d024aea6",
+    "README.md": "6f49cdc1dd2901a77e6aada667d42b5adf2d7ac480d78e61a9cc0766e83ad07c",
+    "CONTRIBUTING.md": "557f313b0efbcc1dde0a58836d2feffe6e2ad72874cbca5affa6e22725320b83",
     "docs/native-authoring.md": "b6342aa859e0c5293471c1bf16fc757cabafc024a24afb7cc102cfce85b19976",
     "docs/production-readiness.md": "c6cb03349dd142d40860983f659fc415fbbfbaf801c7979c715d5c777d9db025",
     "docs/svg.md": "a9bbb86376595820912d04b79fd886a7c560cabb7061e1de4651019df27a070d",
@@ -28,10 +28,10 @@
     "docs/api/text.md": "acf985b4aa45f1295521476ca0622852fde7988cda1ec00e99900fc102867ae1",
     "docs/api/tree.md": "829acf848edfd7e62dcd59565e05d0e4fbe992b4e42df55bd000aea893f70ea6",
     "docs/api/window.md": "34c6b68e2cc331b22a8ef9a7aee334f412e543414cd3904775243be1b75123a6",
-    "docs/devtools/README.md": "12b451e564e4695de8a4e145c18c25cdbc53feb7fc2052508a24809a7593d326",
+    "docs/devtools/README.md": "832916cd6b6144e1a8e55c41c6ca7a2896c9ec5256ab15830c29130014ea3f29",
     "docs/devtools/development.md": "1a1c5d31b125143ebca5209988c3c21b5e006ea1b8c4973a345f942e5f788098",
-    "docs/devtools/protocol.md": "6a2dfefebd378f97bc54b28a8bef4cfabd1cd31c54bb9e9a3f191b5fdad575eb",
+    "docs/devtools/protocol.md": "9e35dc5cd7875a4555506cb0aabf742159a61e654eace4e96179db706d2b6180",
     "templates/Goo.Templates/content/Program.gs": "6654df447b6b2e79d709b304e9c5bc79ec19bf567f30ac93f1024f45806ca1b1",
-    "templates/Goo.Templates/content/GooStarter.gsproj": "df9cea6ef981029c7f008dbffd9a1af52d4065a536579467c0e807123d00bd99"
+    "templates/Goo.Templates/content/GooStarter.gsproj": "e536de966acc7757e0a22d0d27dc137550fcdcb9b2eca948a1df5ffef9731c2b"
   }
 }
