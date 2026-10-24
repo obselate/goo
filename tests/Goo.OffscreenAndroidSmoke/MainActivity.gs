@@ -16,6 +16,7 @@ import System.Threading
 import System.Threading.Tasks
 
 @Activity(
+    Name = "org.goo.offscreenproof.MainActivity",
     Label = "Goo offscreen proof",
     MainLauncher = true,
     Exported = true,

@@ -126,7 +126,7 @@ PY
 "$adb" -P 5042 -s emulator-5564 install --no-incremental -r "$offscreen_apk"
 "$adb" -P 5042 -s emulator-5564 logcat -c
 "$adb" -P 5042 -s emulator-5564 shell am start \
-    -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p org.goo.offscreenproof
+    -n org.goo.offscreenproof/org.goo.offscreenproof.MainActivity
 for _ in {1..90}; do
     "$adb" -P 5042 -s emulator-5564 logcat -d -s GooOffscreenProof:I '*:S' > "$work/logs/offscreen.txt"
     if grep -q 'PASS:\|FAIL:' "$work/logs/offscreen.txt"; then break; fi
