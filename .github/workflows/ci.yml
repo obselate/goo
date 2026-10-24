@@ -1898,6 +1898,7 @@ jobs:
           path: |
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.apk
             tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*.aab
+            tests/Goo.OffscreenAndroidSmoke/bin/Release/net10.0-android/*-Signed.apk
             Goo/Runtime/Vulkan/android-*/text-native-build.json
       - name: Package signed consumer AAB
         if: needs.changes.outputs.full == 'true'
@@ -1944,10 +1945,11 @@ jobs:
           path: artifacts/android-native-menu-app
       - name: Enable Android hardware virtualization
         run: sudo chmod 666 /dev/kvm
-      - name: Check native Android context menus
+      - name: Check native Android context menus and detached pages
         run: |
           .github/scripts/run-android-native-menus.sh \
-            artifacts/android-native-menu-app/tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*-Signed.apk
+            artifacts/android-native-menu-app/tests/Goo.AndroidSmoke/bin/Release/net10.0-android/*-Signed.apk \
+            artifacts/android-native-menu-app/tests/Goo.OffscreenAndroidSmoke/bin/Release/net10.0-android/*-Signed.apk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
