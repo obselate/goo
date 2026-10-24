@@ -400,19 +400,19 @@ public open class Style {
     }
     if value.HasTop {
       pushCheckedLength(padding ? StyleField.PaddingTop : StyleField.MarginTop,
-        value.Top, name + ".Top", allowNegative, true, false)
+        value.Top, padding ? "Padding.Top" : "Margin.Top", allowNegative, true, false)
     }
     if value.HasRight {
       pushCheckedLength(padding ? StyleField.PaddingRight : StyleField.MarginRight,
-        value.Right, name + ".Right", allowNegative, true, false)
+        value.Right, padding ? "Padding.Right" : "Margin.Right", allowNegative, true, false)
     }
     if value.HasBottom {
       pushCheckedLength(padding ? StyleField.PaddingBottom : StyleField.MarginBottom,
-        value.Bottom, name + ".Bottom", allowNegative, true, false)
+        value.Bottom, padding ? "Padding.Bottom" : "Margin.Bottom", allowNegative, true, false)
     }
     if value.HasLeft {
       pushCheckedLength(padding ? StyleField.PaddingLeft : StyleField.MarginLeft,
-        value.Left, name + ".Left", allowNegative, true, false)
+        value.Left, padding ? "Padding.Left" : "Margin.Left", allowNegative, true, false)
     }
   }
 

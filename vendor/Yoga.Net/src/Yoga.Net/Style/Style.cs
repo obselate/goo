@@ -6,6 +6,24 @@ namespace Facebook.Yoga
 {
     public class Style
     {
+        [InlineArray(9)]
+        private struct EdgeHandles
+        {
+            private StyleValueHandle first;
+        }
+
+        [InlineArray(3)]
+        private struct GapHandles
+        {
+            private StyleValueHandle first;
+        }
+
+        [InlineArray(2)]
+        private struct DimensionHandles
+        {
+            private StyleValueHandle first;
+        }
+
         public const float DefaultFlexGrow = 0.0f;
         public const float DefaultFlexShrink = 0.0f;
         public const float WebDefaultFlexShrink = 1.0f;
@@ -28,15 +46,14 @@ namespace Facebook.Yoga
         private StyleValueHandle _flexGrow;
         private StyleValueHandle _flexShrink;
         private StyleValueHandle _flexBasis = StyleValueHandle.OfAuto();
-        private readonly StyleValueHandle[] _margin = new StyleValueHandle[9];
-        private readonly StyleValueHandle[] _position = new StyleValueHandle[9];
-        private readonly StyleValueHandle[] _padding = new StyleValueHandle[9];
-        private readonly StyleValueHandle[] _border = new StyleValueHandle[9];
-        private readonly StyleValueHandle[] _gap = new StyleValueHandle[3];
-        private static readonly StyleValueHandle[] DefaultDimensions = new StyleValueHandle[2] { StyleValueHandle.OfAuto(), StyleValueHandle.OfAuto() };
-        private readonly StyleValueHandle[] _dimensions = new StyleValueHandle[2];
-        private readonly StyleValueHandle[] _minDimensions = new StyleValueHandle[2];
-        private readonly StyleValueHandle[] _maxDimensions = new StyleValueHandle[2];
+        private EdgeHandles _margin;
+        private EdgeHandles _position;
+        private EdgeHandles _padding;
+        private EdgeHandles _border;
+        private GapHandles _gap;
+        private DimensionHandles _dimensions;
+        private DimensionHandles _minDimensions;
+        private DimensionHandles _maxDimensions;
         private StyleValueHandle _aspectRatio;
 
         // Grid properties
@@ -53,7 +70,8 @@ namespace Facebook.Yoga
 
         public Style()
         {
-            Array.Copy(DefaultDimensions, _dimensions, 2);
+            _dimensions[0] = StyleValueHandle.OfAuto();
+            _dimensions[1] = StyleValueHandle.OfAuto();
         }
 
         public Direction Direction
@@ -713,14 +731,14 @@ namespace Facebook.Yoga
             clone._flexBasis = _flexBasis;
             clone._aspectRatio = _aspectRatio;
 
-            Array.Copy(_margin, clone._margin, _margin.Length);
-            Array.Copy(_position, clone._position, _position.Length);
-            Array.Copy(_padding, clone._padding, _padding.Length);
-            Array.Copy(_border, clone._border, _border.Length);
-            Array.Copy(_gap, clone._gap, _gap.Length);
-            Array.Copy(_dimensions, clone._dimensions, _dimensions.Length);
-            Array.Copy(_minDimensions, clone._minDimensions, _minDimensions.Length);
-            Array.Copy(_maxDimensions, clone._maxDimensions, _maxDimensions.Length);
+            clone._margin = _margin;
+            clone._position = _position;
+            clone._padding = _padding;
+            clone._border = _border;
+            clone._gap = _gap;
+            clone._dimensions = _dimensions;
+            clone._minDimensions = _minDimensions;
+            clone._maxDimensions = _maxDimensions;
 
             clone._gridTemplateColumns = new GridTrackList(_gridTemplateColumns);
             clone._gridTemplateRows = new GridTrackList(_gridTemplateRows);
@@ -808,7 +826,7 @@ namespace Facebook.Yoga
                    (lhsPool.GetLength(lhsHandle) == rhsPool.GetLength(rhsHandle));
         }
 
-        private static bool LengthsEqual(StyleValueHandle[] lhs, StyleValuePool lhsPool, StyleValueHandle[] rhs, StyleValuePool rhsPool)
+        private static bool LengthsEqual(ReadOnlySpan<StyleValueHandle> lhs, StyleValuePool lhsPool, ReadOnlySpan<StyleValueHandle> rhs, StyleValuePool rhsPool)
         {
             if (lhs.Length != rhs.Length)
                 return false;
@@ -846,7 +864,7 @@ namespace Facebook.Yoga
             }
         }
 
-        private StyleLength ComputeLeftEdge(StyleValueHandle[] edges, Direction layoutDirection)
+        private StyleLength ComputeLeftEdge(ReadOnlySpan<StyleValueHandle> edges, Direction layoutDirection)
         {
             if (layoutDirection == Direction.LTR &&
                 edges[YogaEnums.ToUnderlying(Edge.Start)].IsDefined)
@@ -872,7 +890,7 @@ namespace Facebook.Yoga
             }
         }
 
-        private StyleLength ComputeTopEdge(StyleValueHandle[] edges)
+        private StyleLength ComputeTopEdge(ReadOnlySpan<StyleValueHandle> edges)
         {
             if (edges[YogaEnums.ToUnderlying(Edge.Top)].IsDefined)
             {
@@ -888,7 +906,7 @@ namespace Facebook.Yoga
             }
         }
 
-        private StyleLength ComputeRightEdge(StyleValueHandle[] edges, Direction layoutDirection)
+        private StyleLength ComputeRightEdge(ReadOnlySpan<StyleValueHandle> edges, Direction layoutDirection)
         {
             if (layoutDirection == Direction.LTR &&
                 edges[YogaEnums.ToUnderlying(Edge.End)].IsDefined)
@@ -914,7 +932,7 @@ namespace Facebook.Yoga
             }
         }
 
-        private StyleLength ComputeBottomEdge(StyleValueHandle[] edges)
+        private StyleLength ComputeBottomEdge(ReadOnlySpan<StyleValueHandle> edges)
         {
             if (edges[YogaEnums.ToUnderlying(Edge.Bottom)].IsDefined)
             {
