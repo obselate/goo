@@ -1,5 +1,19 @@
 # Android integration
 
+## Android starter
+
+```sh
+dotnet new install Goo.Templates
+dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
+dotnet build HelloGoo/HelloGoo.gsproj -c Release
+```
+
+- Requires the .NET Android workload, its supported Android SDK and JDK.
+- Includes an Activity, a shared G# library, Vulkan manifest rules and ARM64/x64 RIDs.
+- Requires API 33 and a compatible Vulkan 1.3 device.
+- Use `--goo-version` to select the matching Goo and Goo.Android release.
+- Set `AndroidSdkDirectory` and `JavaSdkDirectory` if tool discovery fails.
+
 [API reference](api-android/README.md).
 
 ## Shared application
@@ -28,20 +42,6 @@ Reference `Goo.Android` from a `net10.0-android` application and set
 `android-x64`. Both hosts use the same control tree, editor, renderer, and asset
 API through `EmbeddedWindowHost` and `PlatformInput`. The sample keeps Cells
 mounted during orientation and size changes and resizes the viewport.
-
-## Android starter
-
-```sh
-dotnet new install Goo.Templates
-dotnet new goo-android --name HelloGoo --application-id com.example.hellogoo
-dotnet build HelloGoo/HelloGoo.gsproj -c Release
-```
-
-- Requires the .NET Android workload, its supported Android SDK and JDK.
-- Includes an Activity, a shared G# library, Vulkan manifest rules and ARM64/x64 RIDs.
-- Requires API 33 and a compatible Vulkan 1.3 device.
-- Use `--goo-version` to select the matching Goo and Goo.Android release.
-- Set `AndroidSdkDirectory` and `JavaSdkDirectory` if tool discovery fails.
 
 ## Launch and document activation
 
