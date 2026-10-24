@@ -85,6 +85,8 @@ let window = Window{Root: Page(32, 32), Width: 96, Height: 96, Title: "Goo print
 try {
     Settle(window)
     CheckSystemSpelling()
+    let ownerWidth = window.Width
+    let ownerHeight = window.Height
     let options = OffscreenRenderOptions(240f, 180f, 480, 360, Color.Rgb(255, 255, 255), 134217728)
     let first = Pump(window, window.RenderOffscreenAsync(Page(240, 180), options, CancellationToken.None))
     Require(
@@ -93,7 +95,8 @@ try {
     )
     let capture = first.Capture!!
     Require(
-        capture.Width == uint32(480) && capture.Height == uint32(360) && window.Width == 96 && window.Height == 96,
+        capture.Width == uint32(480) && capture.Height == uint32(360) &&
+            window.Width == ownerWidth && window.Height == ownerHeight,
         "page size changed the visible window"
     )
     Pixel(capture, 450, 330, 20, 160, 60)
