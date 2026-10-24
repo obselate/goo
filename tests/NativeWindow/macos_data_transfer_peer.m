@@ -269,7 +269,10 @@ int main(int argc, const char **argv)
                 return 0;
             }
             if ([mode isEqualToString:@"close"]) {
-                require([[NSRunningApplication runningApplicationWithProcessIdentifier:atoi(argv[2])] terminate], @"Cannot close the fixture app");
+                NSRunningApplication *application =
+                    [NSRunningApplication runningApplicationWithProcessIdentifier:atoi(argv[2])];
+                require(application == nil || [application isTerminated] ||
+                    [application terminate] || [application isTerminated], @"Cannot close the fixture app");
                 return 0;
             }
             require(argc == 7, @"Peer requires title, effect, kind, directory and PNG");
