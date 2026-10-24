@@ -11,7 +11,11 @@ internal partial class Host {
         EnvironmentValues["GOO_ACTIVATION_NATIVE_WINDOW"] = "1"
         EnvironmentValues["WAYLAND_DEBUG"] = "client"
         let log = Path.Combine(Root, "native.log")
-        let primary = Start(Command([]string{"activated", identity, "--output=" + Root}))
+        let primary = Child(
+            Command([]string{"activated", identity, "--output=" + Root}),
+            environment: EnvironmentValues
+        )
+        Children.Add(primary)
         var failed = true
         try {
             WaitFile(Path.Combine(Root, "1.event"), 30, primary, Path.Combine(Root, "error"))
@@ -20,7 +24,7 @@ internal partial class Host {
             for token in tokens {
                 let environment = Dictionary[string, string?](EnvironmentValues)
                 environment["XDG_ACTIVATION_TOKEN"] = token
-                Run(
+                let forwarded = Child(
                     Command(
                         []string{
                             "activated",
@@ -30,13 +34,13 @@ internal partial class Host {
                             "goo-token-test://route/$index"
                         }
                     ),
-                    15,
-                    environment,
-                    capture: true
+                    environment: environment
                 )
+                Children.Add(forwarded)
+                forwarded.Complete(15)
                 let path = WaitFile(Path.Combine(Root, "$index.event"), 30, primary, Path.Combine(Root, "error"))
                 let lines = File.ReadAllLines(path)
-                Require(
+                HostChecks.Require(
                     lines.SequenceEqual([]string{"OpenUri", "warm", "goo-token-test://route/$index"}),
                     "Native token activation changed: " + string.Join(", ", lines)
                 )
@@ -46,7 +50,7 @@ internal partial class Host {
             primary.Complete(15)
             failed = false
         } finally {
-            primary.Stop()
+            HostChecks.Stop(primary.Process, 10)
             let text = string.Concat(Children.Select(child -> child.Text()))
             File.WriteAllText(log, text)
             if failed {

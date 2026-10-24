@@ -14,14 +14,17 @@ internal partial class Host {
         if tag != "" {
             arguments = arguments.Concat([]string{tag}).ToArray()
         }
-        return Start(
+        let child = Child(
             Command(arguments),
             if directory == "" {
                 output
             } else {
                 directory
-            }
+            },
+            EnvironmentValues
         )
+        Children.Add(child)
+        return child
     }
 
     internal func AppHost() {
@@ -38,7 +41,7 @@ internal partial class Host {
         WaitFile(Path.Combine(output, "closed.ready"), 25, primary, interval: 10)
         Launch("closed", identity, output, directory: sender).Complete(30)
         primary.Complete(30)
-        Require(File.Exists(Path.Combine(output, "passed")), "Activation checks did not finish")
+        HostChecks.Require(File.Exists(Path.Combine(output, "passed")), "Activation checks did not finish")
         Console.WriteLine(
             "single-instance: arguments, URI, documents, notification, UI thread and queue rejection passed"
         )
@@ -55,7 +58,7 @@ internal partial class Host {
         let restartIdentity = "org.goo.tests." + Guid.NewGuid().ToString("N")
         let first = Launch("hold", restartIdentity, restart, "first")
         WaitFile(Path.Combine(restart, "first.ready"), 25, first, interval: 10)
-        first.Stop()
+        HostChecks.Stop(first.Process, 10)
         let second = Launch("hold", restartIdentity, restart, "second")
         WaitFile(Path.Combine(restart, "second.ready"), 25, second, interval: 10)
         Touch(Path.Combine(restart, "stop"))
@@ -81,7 +84,7 @@ internal partial class Host {
             File.ReadAllText(Path.Combine(output, "two.status"))
         }
             .OrderBy(s -> s).ToArray()
-        Require(
+        HostChecks.Require(
             statuses.SequenceEqual([]string{"Forwarded", "Primary"}),
             "Concurrent ownership changed: " + string.Join(", ", statuses)
         )
@@ -94,7 +97,7 @@ internal partial class Host {
     internal func Placement() {
         let states = []string{"normal", "max", "full"}
         for state in states {
-            Run(Command([]string{"placement", "native", "--output=" + Root, state}), 60)
+            HostChecks.Run(Command([]string{"placement", "native", "--output=" + Root, state}), 60)
         }
     }
 }
