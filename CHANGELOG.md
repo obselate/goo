@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.14.0 - 2026-10-24
+
+- Fall back to the primary macOS spelling dictionary when the full tag is unavailable.
+- GitHub releases now contain notes only. Packages stay on NuGet.
+- Add SVG-aligned non-scaling vector strokes with retained local geometry.
+- Keep dashed and dotted border patterns evenly spaced through rounded corners.
+- Remove the unused bundled G# compiler and formatter from the Goo package, cutting it from 16.1 MB to 12.8 MB.
+- Remove unused internal helpers without changing the public API.
+- Smooth large analytic gradients with static output-space dithering.
+- Use ordinary style entries for Button centering defaults and remove the special reconciler path.
+- Fix API documentation mapping for root G# package declarations.
+- Cut backdrop blur GPU cost with an alpha-preserving Gaussian mip chain (3x faster at sigma 16, 6-7x at sigma 64-128 on an RTX 3080), shared by both blur paths.
+- Add GC pause attribution, bounded tail summaries, cap-wait timing and opt-in allocation type samples to the profiler.
+- Fix border antialiasing across fragment quad lanes and make coverage derivatives safe on RDNA2 and MoltenVK.
+- Fix path-filtered CI jobs running repository commands without checkout.
+- Reuse one test-enabled Goo assembly across Linux fixture lanes.
+- Remove Gallery dependencies from shader and profiler UI qualification.
+- Share one Vend Sans source font and license across demos and benchmarks.
+- Match ordinary node hit regions to painted rounded corners.
+- Port first-party Android code to G#.
+- Reveal keyboard focus targets through nested scroll regions.
+- A contour with only a MoveTo no longer makes the rest of the path's stroke disappear.
+- Building unchanged decorated text no longer allocates per frame (160 B to 0 B), and changed text allocates less (2,768 B to 2,184 B).
+
 ## 0.13.0 - 2026-10-23
 
 - Port the repository build tools, linter and package projects to G#.
