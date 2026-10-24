@@ -72,7 +72,6 @@
 !/Goo.Android/**
 !/Goo.AppHost/
 !/Goo.AppHost/**
-
 !/tests/
 !/tests/**
 /tests/GooExtended.Tests/

@@ -3,41 +3,41 @@ package Goo
 import System
 import System.Collections.Generic
 
-/// <summary>Reports native tray registration, not whether the user can see the icon.</summary>
+/// Reports native tray registration, not whether the user can see the icon.
 public enum TrayStatus {
-    /// <summary>The native host accepted the icon.</summary>
+    /// The native host accepted the icon.
     Registered;
-    /// <summary>No tray host is available. The live icon registers when a host appears.</summary>
+    /// No tray host is available. The live icon registers when a host appears.
     NoHost;
-    /// <summary>The platform or requested menu feature is not supported.</summary>
+    /// The platform or requested menu feature is not supported.
     Unsupported;
-    /// <summary>The icon or its owner is closed.</summary>
+    /// The icon or its owner is closed.
     Closed;
-    /// <summary>The native operation failed.</summary>
+    /// The native operation failed.
     Failed;
 }
 
-/// <summary>Describes a tray icon. Create and Update copy the pixels and menu before returning.</summary>
+/// Describes a tray icon. Create and Update copy the pixels and menu before returning.
 public class TrayOptions {
-    /// <summary>Gets the stable icon identity. Use a globally unique name of at most 255 UTF-16 units.</summary>
+    /// Gets the stable icon identity. Use a globally unique name of at most 255 UTF-16 units.
     public prop Id string { get; init; }
 
-    /// <summary>Gets the pixel width, from 1 to 512.</summary>
+    /// Gets the pixel width, from 1 to 512.
     public prop Width int32 { get; init; }
 
-    /// <summary>Gets the pixel height, from 1 to 512.</summary>
+    /// Gets the pixel height, from 1 to 512.
     public prop Height int32 { get; init; }
 
-    /// <summary>Gets Width * Height * 4 straight-alpha sRGB bytes in red, green, blue, alpha order.</summary>
+    /// Gets Width * Height * 4 straight-alpha sRGB bytes in red, green, blue, alpha order.
     public prop Rgba IReadOnlyList[uint8] { get; init; }
 
-    /// <summary>Gets the tooltip, with at most 127 UTF-16 units and no NUL characters. Hosts may hide it.</summary>
+    /// Gets the tooltip, with at most 127 UTF-16 units and no NUL characters. Hosts may hide it.
     public prop Tooltip string { get; init; }
 
-    /// <summary>Gets the native menu. Include an Open command because some hosts consume primary clicks.</summary>
+    /// Gets the native menu. Include an Open command because some hosts consume primary clicks.
     public prop Menu IReadOnlyList[NativeMenuItem] { get; init; }
 
-    /// <summary>Creates empty options. Set Id, Width, Height and Rgba before use.</summary>
+    /// Creates empty options. Set Id, Width, Height and Rgba before use.
     public init() {
         Id = ""
         Tooltip = ""
@@ -46,15 +46,15 @@ public class TrayOptions {
     }
 }
 
-/// <summary>Reports tray creation. NoHost can return a live Icon that observes host availability.</summary>
+/// Reports tray creation. NoHost can return a live Icon that observes host availability.
 public class TrayResult {
-    /// <summary>Gets the creation status.</summary>
+    /// Gets the creation status.
     public prop Status TrayStatus { get; }
 
-    /// <summary>Gets the owned icon for Registered or NoHost, otherwise nil.</summary>
+    /// Gets the owned icon for Registered or NoHost, otherwise nil.
     public prop Icon TrayIcon? { get; }
 
-    /// <summary>Gets bounded native failure detail, or an empty string.</summary>
+    /// Gets bounded native failure detail, or an empty string.
     public prop Error string { get; }
 
     internal init(status TrayStatus, icon TrayIcon? = nil, error string = "") {
@@ -64,28 +64,26 @@ public class TrayResult {
     }
 }
 
-/// <summary>Owns a native tray icon on an open desktop Window's UI thread.</summary>
-/// <remarks>
-/// Keep the owner open and pump its scheduler, even when it is hidden. Closing the last Window still ends Run.
+/// Owns a native tray icon on an open desktop Window's UI thread.
+/// @remarks Keep the owner open and pump its scheduler, even when it is hidden. Closing the last Window still ends Run.
 /// Native callbacks are queued to the owner and do not run user code inside native menu tracking.
-/// Android and embedded owners return Unsupported. This package does not show notifications or launch a closed app.
-/// </remarks>
+/// Android and embedded owners return Unsupported. Tray icons do not show notifications or launch a closed app.
 public class TrayIcon : IDisposable {
     internal let Owner Window
     private let id string
     private var backend TrayBackend?
     private var status TrayStatus
 
-    /// <summary>Gets the current registration status on the owner UI thread.</summary>
+    /// Gets the current registration status on the owner UI thread.
     public prop Status TrayStatus { get -> status }
 
-    /// <summary>Occurs on the owner UI thread when registration changes.</summary>
+    /// Occurs on the owner UI thread when registration changes.
     public event StatusChanged Action[TrayStatus]
 
-    /// <summary>Occurs on the owner UI thread after native primary activation. A menu can consume this gesture.</summary>
+    /// Occurs on the owner UI thread after native primary activation. A menu can consume this gesture.
     public event Activated Action
 
-    /// <summary>Occurs on the owner UI thread after a native menu selects a stable item ID.</summary>
+    /// Occurs on the owner UI thread after a native menu selects a stable item ID.
     public event CommandActivated Action[string]
 
     private init(owner Window, identity string) {
@@ -93,8 +91,10 @@ public class TrayIcon : IDisposable {
         id = identity
     }
 
-    /// <summary>Replaces icon pixels, tooltip and menu. Id must remain unchanged.</summary>
-    /// <remarks>A failed update does not dispose the icon. StatusChanged reports later host changes.</remarks>
+    /// Replaces icon pixels, tooltip and menu. Id must remain unchanged.
+    /// @param options The replacement pixels, tooltip and menu.
+    /// @returns The native update status.
+    /// @remarks A failed update does not dispose the icon. StatusChanged reports later host changes.
     public func Update(options TrayOptions) TrayStatus {
         Owner.RequireNativeServiceThread()
         if status == TrayStatus.Closed { return TrayStatus.Closed }
@@ -105,7 +105,7 @@ public class TrayIcon : IDisposable {
         return result
     }
 
-    /// <summary>Unregisters the icon on its owner UI thread. Repeated calls have no effect.</summary>
+    /// Unregisters the icon on its owner UI thread. Repeated calls have no effect.
     public func Dispose() {
         Owner.RequireNativeServiceThread()
         if status == TrayStatus.Closed { return }
@@ -146,11 +146,12 @@ public class TrayIcon : IDisposable {
     }
 
     shared {
-        /// <summary>Creates an icon for an open desktop owner. Native failures return a typed result.</summary>
-        /// <remarks>
-        /// Call on the owner UI thread. KDE supports StatusNotifierItem. GNOME needs an installed SNI extension.
+        /// Creates an icon for an open desktop owner. Native failures return a typed result.
+        /// @param owner The open desktop window that owns the icon and its callbacks.
+        /// @param options The icon identity, pixels, tooltip and menu.
+        /// @returns A typed registration result with an owned icon when the host can be observed.
+        /// @remarks Call on the owner UI thread. KDE supports StatusNotifierItem. GNOME needs an installed SNI extension.
         /// Registration does not prove visibility. This method does not install or enable a tray host.
-        /// </remarks>
         public func Create(owner Window, options TrayOptions) TrayResult {
             ArgumentNullException.ThrowIfNull(owner)
             owner.RequireNativeServiceThread()

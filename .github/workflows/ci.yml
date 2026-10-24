@@ -931,12 +931,6 @@ jobs:
             -o artifacts/image-assets-nativeaot
           artifacts/image-assets-nativeaot/Goo.ImageLoadingSmoke
 
-      - name: Pack optional native tray icons
-        if: needs.changes.outputs.full == 'true'
-        run: |
-          dotnet pack Goo.Tray/Goo.Tray.gsproj -c Release -m:2 -o artifacts/packages \
-            -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
-
       - name: Verify packed tray on private Linux session
         if: needs.changes.outputs.full == 'true'
         env:
@@ -1203,7 +1197,6 @@ jobs:
             artifacts/packages/Goo.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Accessibility.${{ env.GOO_VERSION }}.nupkg
             artifacts/packages/Goo.Audio.${{ env.GOO_VERSION }}.nupkg
-            artifacts/packages/Goo.Tray.${{ env.GOO_VERSION }}.nupkg
             artifacts/linux-x64/
             artifacts/reports/
             artifacts/consumer-performance/*.json

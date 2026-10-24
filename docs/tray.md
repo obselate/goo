@@ -11,7 +11,7 @@ if let icon = result.Icon {
 }
 ```
 
-Reference `Goo.Tray`. Keep the icon and its owner alive. Pump the owner on its UI thread.
+Reference `Goo`. Keep the icon and its owner alive. Pump the owner on its UI thread.
 Call `Update` to replace pixels, tooltip and menu. Call `Dispose` to unregister.
 Closing the owner also disposes the icon.
 

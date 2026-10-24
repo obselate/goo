@@ -7,7 +7,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Goo.Tray/Goo.Tray.gsproj" Condition="'$(GooTrayUsePackages)' != 'true'" />
-    <PackageReference Include="Goo.Tray" Version="$(GooReleaseVersion)" Condition="'$(GooTrayUsePackages)' == 'true'" />
+    <ProjectReference Include="../../Goo/Goo.gsproj" Condition="'$(GooTrayUsePackages)' != 'true'" />
+    <PackageReference Include="Goo" Version="$(GooReleaseVersion)" Condition="'$(GooTrayUsePackages)' == 'true'" />
   </ItemGroup>
 </Project>
