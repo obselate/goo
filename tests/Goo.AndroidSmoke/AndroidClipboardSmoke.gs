@@ -78,8 +78,10 @@ internal class AndroidClipboardSmoke {
                     "A filesystem path was accepted as an Android document")
                 let repeated = [RepeatedUris]Uri
                 Array.Fill(repeated, reference)
-                let inline = TransferRepresentation("text/html",
-                    ReadOnlyMemory[uint8](Encoding.UTF8.GetBytes(String('a', InlineBytes))))
+                let metadata = [InlineBytes]uint8
+                Array.Fill(metadata, uint8('a'))
+                let inline = TransferRepresentation("text/html", ReadOnlyMemory[uint8](metadata))
+                Require(inline.Bytes.Length == InlineBytes, "Inline metadata fixture was not retained")
                 result = await view.Window.WriteClipboardAsync(TransferData([]TransferRepresentation{inline}, repeated))
                 Require(result.Status == DataTransferStatus.TooLarge,
                     "Large Binder metadata: ${result.Status} ${result.Error}")
