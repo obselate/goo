@@ -6,6 +6,8 @@ import System.Globalization
 import System.IO
 import System.Linq
 import System.Reflection
+import PEReaderExtensions = System.Reflection.Metadata.PEReaderExtensions
+import System.Reflection.PortableExecutable
 import System.Runtime.CompilerServices
 import System.Text
 import System.Threading
@@ -105,6 +107,23 @@ open class PublicApiTests {
 
         private func DescribePublicSurface() string {
             let records = ApiTypes().SelectMany(DescribeType).ToList()
+            let android = Path.GetFullPath(Path.Combine(
+                Path.GetDirectoryName(FindSourceBaseline())!!, "../../Goo.Android/bin/Release/net10.0-android/Goo.Android.dll"
+            ))
+            using let stream = File.OpenRead(android)
+            using let pe = PEReader(stream)
+            let metadata = PEReaderExtensions.GetMetadataReader(pe)
+            for handle in metadata.TypeDefinitions {
+                var type = metadata.GetTypeDefinition(handle)
+                var name = metadata.GetString(type.Name)
+                while (type.Attributes & TypeAttributes.VisibilityMask) == TypeAttributes.NestedPublic {
+                    type = metadata.GetTypeDefinition(type.GetDeclaringType())
+                    name = metadata.GetString(type.Name) + "+" + name
+                }
+                if (type.Attributes & TypeAttributes.VisibilityMask) == TypeAttributes.Public {
+                    records.Add("android-type|${metadata.GetString(type.Namespace)}.$name")
+                }
+            }
             let autoKeyOwners = typeof(Window)
                 .Assembly
                 .GetTypes()

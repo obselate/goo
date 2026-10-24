@@ -97,6 +97,28 @@ class PublicDocumentationTests {
     }
 
     @Fact
+    func AndroidPublicTypesHaveGeneratedDocumentation() {
+        let root = FindRepositoryRoot().FullName
+        let types = File.ReadLines(Path.Combine(AppContext.BaseDirectory, "PublicApi.approved.txt"))
+            .Where(line -> line.StartsWith("android-type|", StringComparison.Ordinal))
+            .Select(line -> line.Split('|')[1])
+            .ToArray()
+        Assert.NotEmpty(types)
+        let members = XDocument.Load(Path.Combine(root, "Goo.Android/bin/Release/net10.0-android/Goo.Android.xml"))
+            .Descendants("member")
+            .ToDictionary(member -> member.Attribute("name")!!.Value, StringComparer.Ordinal)
+        let pages = string.Join("\n", Directory.GetFiles(Path.Combine(root, "docs/api-android"), "*.md")
+            .Select(File.ReadAllText))
+        for type in types {
+            Assert.True(members.TryGetValue("T:${type.Replace('+', '.')}", out var member), "$type needs XML documentation.")
+            let summary = Regex.Replace(member.Element("summary")?.Value ?? "", "\\s+", " ").Trim()
+            Assert.NotEmpty(summary)
+            Assert.Contains("## `${type[(type.LastIndexOfAny([]char{'.', '+'}) + 1)..]}`", pages, StringComparison.Ordinal)
+            Assert.Contains(summary, pages, StringComparison.Ordinal)
+        }
+    }
+
+    @Fact
     func ApiReferenceDocumentsUniformShapeStrokeContract() {
         let shapes = ReadApiPage("shapes.md")
         let style = ReadApiPage("style.md")

@@ -1,4 +1,17 @@
 absent|generated-package-containers|member|AutoKey
+android-type|Goo.Android.AndroidDocuments
+android-type|Goo.Android.DocumentAccess
+android-type|Goo.Android.DocumentOperationResult
+android-type|Goo.Android.DocumentPickerOptions
+android-type|Goo.Android.DocumentPickerResult
+android-type|Goo.Android.DocumentStatus
+android-type|Goo.Android.DocumentStreamResult
+android-type|Goo.Android.GooActivity
+android-type|Goo.Android.GooView
+android-type|Goo.Android.Resource
+android-type|Goo.AndroidNotifications
+android-type|Goo.Printing.AndroidPrinting
+android-type|Goo.SpellCheck.AndroidSpellingService
 ctor|Goo.AccessibilityActionRequest|public|(action:Goo.AccessibilityAction)
 ctor|Goo.AccessibilityId|public|(Value:System.Int64)
 ctor|Goo.AccessibilityRelationships|public|()
