@@ -1112,8 +1112,8 @@ jobs:
           install -m0755 artifacts/publish-nativeaot/Goo.PackageSmoke \
             artifacts/nativeaot-onefile/Goo.PackageSmoke
           if readelf -d artifacts/nativeaot-onefile/Goo.PackageSmoke \
-            | grep -Eq 'libSDL3|libgoo-harfbuzz'; then
-            echo 'NativeAOT consumer retains a Goo native shared dependency' >&2
+            | grep -Eq 'libSDL3|libgoo-harfbuzz|libhunspell|libdbus|libobjc|AppKit|PDFKit'; then
+            echo 'NativeAOT consumer retains a bundled or optional Goo native shared dependency' >&2
             exit 1
           fi
           LIBGL_ALWAYS_SOFTWARE=1 .github/scripts/with-headless-wayland.sh \
