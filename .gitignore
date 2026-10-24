@@ -99,8 +99,6 @@
 !/docs/production-readiness.md
 !/docs/android.md
 !/docs/native-menus.md
-!/docs/api-native-menus/
-!/docs/api-native-menus/**
 !/docs/images.md
 !/docs/svg.md
 !/docs/spellcheck.md
@@ -112,11 +110,9 @@
 !/docs/gestures.md
 !/docs/assets/
 !/docs/assets/**
-!/docs/api/
-!/docs/api/**
+!/docs/api*/
+!/docs/api*/**
 !/docs/native-dialogs.md
-!/docs/api-native-dialogs/
-!/docs/api-native-dialogs/**
 !/docs/devtools/
 !/docs/devtools/**
 !/docs/perf/
