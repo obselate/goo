@@ -11,7 +11,7 @@ if [[ $# -eq 6 ]]; then
   version="$6"
   identity="-"
 else
-  version="$(python3 .github/scripts/release_version.py --print)"
+  version="$(dotnet msbuild Directory.Build.props -getProperty:GooReleaseVersion -nologo)"
 fi
 bundle_version="${version%%-*}"
 macos="$app/Contents/MacOS"

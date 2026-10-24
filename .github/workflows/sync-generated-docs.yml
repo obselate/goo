@@ -41,23 +41,17 @@ jobs:
         run: |
           dotnet build tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          import subprocess
-
-          for project in sorted(Path('.').glob('Goo*/*.gsproj')):
-              xml = project.parent / 'bin' / 'Release' / 'net10.0' / f'{project.stem}.xml'
-              if not xml.is_file():
-                  continue
-              package = project.stem.removeprefix('Goo.')
-              slug = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', package).lower()
-              output = 'docs/api' if project.stem == 'Goo' else f'docs/api-{slug}'
-              subprocess.run([
-                  'dotnet', 'tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll',
-                  '--source', str(project.parent), '--xml', str(xml), '--output', output,
-              ], check=True)
-          PY
+          for project in Goo*/*.gsproj; do
+            name="$(basename "$project" .gsproj)"
+            source="$(dirname "$project")"
+            xml="$source/bin/Release/net10.0/$name.xml"
+            test -f "$xml" || continue
+            slug="$(printf '%s' "${name#Goo.}" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')"
+            output="docs/api-$slug"
+            if [ "$name" = Goo ]; then output=docs/api; fi
+            dotnet tools/Goo.ApiDocs/bin/Release/net10.0/Goo.ApiDocs.dll \
+              --source "$source" --xml "$xml" --output "$output"
+          done
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
             docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell
           dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .

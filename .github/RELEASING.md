@@ -20,7 +20,7 @@ Goo remains below 1.0.0 while its public contracts mature.
 ## Release
 
 1. Update `GooReleaseVersion` once in `Directory.Build.props`.
-2. Run `python3 .github/scripts/release_version.py --write` to synchronize the
+2. Run `dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- release --write` to synchronize the
    application template, app identities, protocol strings, install commands,
    and integration metadata.
 3. Add the dated release entry to `CHANGELOG.md`. The tag workflow publishes
@@ -28,7 +28,7 @@ Goo remains below 1.0.0 while its public contracts mature.
    regenerate API documentation with `dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release`,
    and refresh the plugin reference with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .`.
    The release helper also runs the reference sync before its release checks.
-   Run `.github/scripts/validate-onboarding.py`.
+   Run `dotnet run --project tools/Goo.RepositoryChecks/Goo.RepositoryChecks.gsproj -c Release -- onboarding`.
 4. Push the release commit to `main` and require a green CI run. Wait for the
    generated-docs workflow to sync `docs/api` and `plugins/goo/reference` before tagging.
 5. Confirm that the release-candidates and android-package artifacts contain all eight packages,
