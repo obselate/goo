@@ -1456,6 +1456,8 @@ jobs:
           path: artifacts/reports/
 
   windows-native:
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
