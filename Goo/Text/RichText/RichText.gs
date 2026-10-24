@@ -66,7 +66,7 @@ public class RichTextFragment {
     }
 }
 
-/// Contains the operation status, captured fragment and bounded detail.
+/// Contains Status, Fragment and bounded Error detail.
 public data class RichTextResult(Status RichTextStatus, Fragment RichTextFragment, Error string = "") { }
 
 internal shared class RichInput {

@@ -185,6 +185,15 @@ class PublicDocumentationTests {
     shared {
         private const PublicDeclared BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly
         private let ExpectedMethodIds[]string = []string{
+            "M:Goo.RichText.RichTextClipboard.#ctor(Goo.Window,Goo.TextEditorController,Goo.TextPresentationLayer)",
+            "M:Goo.RichText.RichTextClipboard.CopyAsync(System.Threading.CancellationToken)",
+            "M:Goo.RichText.RichTextClipboard.CutAsync(System.Threading.CancellationToken)",
+            "M:Goo.RichText.RichTextClipboard.Dispose",
+            "M:Goo.RichText.RichTextClipboard.PasteAsync(System.Threading.CancellationToken)",
+            "M:Goo.RichText.RichTextClipboard.PastePlainTextAsync(System.Threading.CancellationToken)",
+            "M:Goo.RichText.RichTextCodec.Read(System.String,System.ReadOnlyMemory{System.Byte})",
+            "M:Goo.RichText.RichTextCodec.Write(Goo.RichText.RichTextFragment)",
+            "M:Goo.RichText.RichTextFragment.#ctor(System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
             "M:Goo.TrayOptions.#ctor",
             "M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)",
             "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
@@ -678,6 +687,16 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.RichText.RichTextStatus.Success",
+            "F:Goo.RichText.RichTextStatus.PlainText",
+            "F:Goo.RichText.RichTextStatus.Unsupported",
+            "F:Goo.RichText.RichTextStatus.UnsupportedContent",
+            "F:Goo.RichText.RichTextStatus.Empty",
+            "F:Goo.RichText.RichTextStatus.TooLarge",
+            "F:Goo.RichText.RichTextStatus.ReadOnly",
+            "F:Goo.RichText.RichTextStatus.Cancelled",
+            "F:Goo.RichText.RichTextStatus.Stale",
+            "F:Goo.RichText.RichTextStatus.Failed",
             "F:Goo.TrayStatus.Registered",
             "F:Goo.TrayStatus.NoHost",
             "F:Goo.TrayStatus.Unsupported",
@@ -846,6 +865,7 @@ class PublicDocumentationTests {
             "F:Goo.PopupDismissReason.PlatformDismissed"
         }
         private let SynthesizedPrimaryDataTypes HashSet[Type] = HashSet[Type]{
+            typeof(Goo.RichText.RichTextResult),
             typeof(PanGestureEvent),
             typeof(GestureRotationResult),
             typeof(TransformGestureEvent),
