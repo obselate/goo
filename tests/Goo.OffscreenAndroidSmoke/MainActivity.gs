@@ -24,6 +24,7 @@ import System.Threading.Tasks
 )
 class MainActivity : GooActivity {
     internal var Paused bool
+    internal var Session OffscreenRenderSession?
     private var started bool
     protected override func CreateWindow() Window -> Window{Root: Page()}
     internal prop HasSurface bool -> GooView.Holder?.Surface?.IsValid == true
@@ -34,11 +35,14 @@ class MainActivity : GooActivity {
         if started {
             return
         }
-        started = true
         GooView.PostDelayed(StartProof, 500)
     }
 
     private func StartProof() {
+        if started || Paused || IsDestroyed || IsFinishing {
+            return
+        }
+        started = true
         let result = GooView.Window.CreateOffscreenSession()
         if result.Status != OffscreenRenderStatus.Success || result.Session == nil {
             throw InvalidOperationException("session creation: " + result.Status.ToString())
@@ -50,32 +54,68 @@ class MainActivity : GooActivity {
 
     protected override func OnPause() {
         Paused = true
+        GooView.RemoveCallbacks(StartProof)
         base.OnPause()
+    }
+
+    protected override func OnDestroy() {
+        GooView.RemoveCallbacks(StartProof)
+        Session?.Dispose()
+        Session = nil
+        if object.ReferenceEquals(Source, this) {
+            Source = nil
+        }
+        base.OnDestroy()
     }
 
     shared {
         internal var Source MainActivity?
-        internal var Session OffscreenRenderSession?
     }
 }
 
 @Activity(Label = "Offscreen page proof", Exported = false)
 class PageActivity : Android.App.Activity {
     private let handler Handler = Handler(Looper.MainLooper!!)
+    private var source MainActivity?
+    private var session OffscreenRenderSession?
 
     protected override func OnCreate(savedInstanceState Bundle?) {
         base.OnCreate(savedInstanceState)
+        guard let owner = MainActivity.Source, let pending = owner.Session else {
+            Finish()
+            return
+        }
+        source = owner
+        session = pending
+        owner.Session = nil
         SetContentView(TextView(this){Text = "Rendering a page with no Goo surface"})
         handler.PostDelayed(RunProof, 750)
     }
 
+    protected override func OnDestroy() {
+        handler.RemoveCallbacksAndMessages(nil)
+        session?.Dispose()
+        session = nil
+        source = nil
+        base.OnDestroy()
+    }
+
     private async func RunProof() void {
+        guard let source = this.source, let pending = session else {
+            return
+        }
+        this.source = nil
+        session = nil
         try {
-            let source = MainActivity.Source!!
-            using let session = MainActivity.Session!!
+            using let session = pending
             let deadline = Stopwatch.StartNew()
-            while (!source.Paused || source.HasSurface) && deadline.Elapsed < TimeSpan.FromSeconds(10) {
+            while !source.IsDestroyed && !IsDestroyed && (!source.Paused || source.HasSurface)
+            && deadline.Elapsed < TimeSpan.FromSeconds(10) {
                 await Task.Delay(20)
+            }
+            if source.IsDestroyed || IsDestroyed {
+                Finish()
+                return
             }
             Require(source.Paused && !source.HasSurface, "source activity did not lose its surface")
             let task = session.RenderAsync(
@@ -84,9 +124,14 @@ class PageActivity : Android.App.Activity {
                 CancellationToken.None
             )
             deadline.Restart()
-            while !task.IsCompleted && deadline.Elapsed < TimeSpan.FromSeconds(30) {
+            while !source.IsDestroyed && !IsDestroyed && !task.IsCompleted
+            && deadline.Elapsed < TimeSpan.FromSeconds(30) {
                 session.Service()
                 await Task.Delay(1)
+            }
+            if source.IsDestroyed || IsDestroyed {
+                Finish()
+                return
             }
             Require(task.IsCompleted, "detached page render did not complete")
             let rendered = await task
