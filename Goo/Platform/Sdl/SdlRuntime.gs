@@ -54,6 +54,8 @@ internal unsafe partial class SdlRuntime {
     private var applicationVersion string?
     private var applicationIdentifier string?
 
+    internal prop ApplicationIdentifier string { get -> applicationIdentifier ?? "" }
+
     private func ConfigureStaticLink() bool {
       if OperatingSystem.IsLinux() && !RuntimeFeature.IsDynamicCodeSupported {
         let handle = OpenMainModule(nint(0), 2)
