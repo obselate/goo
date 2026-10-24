@@ -298,12 +298,21 @@ func ReadSourceSummary(source string, declarationStart int32) string {
 
 func ReadTypes(directoryPath string, sourceRoot string) IEnumerable[ApiType] {
     let typePattern = Regex(
-        "(?m)^public\\s+(?:(?:partial|sealed|open|data)\\s+)*(?<kind>class|struct|enum|interface|func)\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)(?<generic>\\[[^\\]\\r\\n]+\\])?",
+        "(?m)^(?:public\\s+)?(?:(?:partial|sealed|open|data|shared|unsafe)\\s+)*" +
+            "(?<kind>class|struct|enum|interface|func)\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)" +
+            "(?<generic>\\[[^\\]\\r\\n]+\\])?",
         RegexOptions.CultureInvariant
     )
-    for file in Directory.EnumerateFiles(directoryPath, "*.gs", SearchOption.AllDirectories).Order(
-        StringComparer.Ordinal
-    ) {
+    for file in Directory.EnumerateFiles(
+        directoryPath,
+        "*.gs",
+        if directoryPath == sourceRoot {
+            SearchOption.TopDirectoryOnly
+        } else {
+            SearchOption.AllDirectories
+        }
+    )
+        .Order(StringComparer.Ordinal) {
         let source = File.ReadAllText(file)
         let package_ = Regex.Match(source, "(?m)^package\\s+([A-Za-z_][A-Za-z0-9_.]*)").Groups[1].Value
         for match Match in typePattern.Matches(source) {
@@ -545,6 +554,7 @@ if !File.Exists(xmlPath) {
 let sourceDirectories = Directory
     .EnumerateDirectories(sourceRoot)
     .Where((path string) -> Path.GetFileName(path) is not("bin" or "obj"))
+    .Prepend(sourceRoot)
     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
     .ToArray()
 
