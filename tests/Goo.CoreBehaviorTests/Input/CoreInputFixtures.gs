@@ -46,7 +46,7 @@ internal class InputFixtures {
       Button{ Position: PositionType.Absolute, Width: 100, Height: 100,
         OnClick: () -> { underneathClicks++ } },
       Button{ Position: PositionType.Absolute, Width: 100, Height: 100,
-        BorderRadius: Percent(50), OnClick: () -> { roundedClicks++ } },
+        BorderRadius: 50, OnClick: () -> { roundedClicks++ } },
     })
     Layout().Calculate(roundedTree, 100.0F, 100.0F)
     let rounded = roundedTree.Children[1]
