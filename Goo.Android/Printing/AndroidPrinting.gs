@@ -26,7 +26,7 @@ class AndroidPrinting {
         this.activity = activity
     }
 
-    /// Starts printing on the Android main thread. Keep the Goo owner active until the result completes.
+    /// Starts printing on the Android main thread. Keep the Activity and Goo owner alive until completion.
     func ShowDialogAsync(
         owner Window,
         document IPrintDocument,
@@ -36,6 +36,9 @@ class AndroidPrinting {
         ArgumentNullException.ThrowIfNull(owner, paramName: "owner")
         ArgumentNullException.ThrowIfNull(document, paramName: "document")
         ArgumentException.ThrowIfNullOrWhiteSpace(title, paramName: "title")
+        if title.Length > 256 || title.Contains('\0') {
+            throw ArgumentException("The print title exceeds 256 characters or contains NUL.", "title")
+        }
         if Looper.MyLooper() != Looper.MainLooper {
             throw InvalidOperationException("Start Android printing on the main thread.")
         }
@@ -49,7 +52,12 @@ class AndroidPrinting {
         if manager == nil {
             return Task.FromResult(PrintResult(PrintStatus.Unsupported))
         }
-        let adapter = DocumentAdapter(owner, document, title, cancellation)
+        let created = owner.CreateOffscreenSession()
+        if created.Status != OffscreenRenderStatus.Success || created.Session == nil {
+            manager.Dispose()
+            return Task.FromResult(Printing.RenderFailure(OffscreenRenderResult{Status: created.Status, Error: created.Error}))
+        }
+        let adapter = DocumentAdapter(owner, document, title, cancellation, created.Session!!)
         try {
             adapter.Job = manager.Print(title, adapter, nil)
             if adapter.Job == nil {
@@ -61,6 +69,9 @@ class AndroidPrinting {
         } catch (error IllegalStateException) {
             adapter.Release()
             return Task.FromResult(PrintResult(PrintStatus.NotReady, Error: Printing.Detail(error.Message ?? "")))
+        } catch (error Java.Lang.RuntimeException) {
+            adapter.Release()
+            return Task.FromResult(PrintResult(PrintStatus.Failed, Error: Printing.Detail(error.Message ?? "")))
         } finally {
             manager.Dispose()
         }
@@ -71,6 +82,8 @@ class AndroidPrinting {
         private let document IPrintDocument
         private let title string
         private let handler Handler = Handler(Looper.MainLooper!!)
+        private let renderer OffscreenRenderSession
+        private var writing Task = Task.CompletedTask
         private let lifetime CancellationTokenSource
         private let cancellation CancellationTokenRegistration
         private var settings PrintPageSettings
@@ -84,10 +97,12 @@ class AndroidPrinting {
             TaskCreationOptions.RunContinuationsAsynchronously
         )
 
-        internal init(owner Window, document IPrintDocument, title string, cancellation CancellationToken) {
+        internal init(owner Window, document IPrintDocument, title string, cancellation CancellationToken,
+            renderer OffscreenRenderSession) {
             this.owner = owner
             this.document = document
             this.title = title
+            this.renderer = renderer
             lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellation, owner.Closed)
             this.cancellation = lifetime.Token.Register(() -> handler.Post(CheckCancellation))
         }
@@ -166,7 +181,8 @@ class AndroidPrinting {
                 callback!!.OnWriteCancelled()
                 return
             }
-            let _ = WriteAsync(
+            writing = WriteAsync(
+                writing,
                 pages ?? System.Array.Empty[PageRange](),
                 destination!!,
                 cancellationSignal!!,
@@ -178,6 +194,7 @@ class AndroidPrinting {
         }
 
         private async func WriteAsync(
+            previous Task,
             pages[]PageRange,
             destination ParcelFileDescriptor,
             signal CancellationSignal,
@@ -196,6 +213,8 @@ class AndroidPrinting {
                 if signal.IsCanceled || finished {
                     cancelled.Cancel()
                 }
+                await previous.ConfigureAwait(false)
+                cancelled.Token.ThrowIfCancellationRequested()
                 let selected = List[int32]()
                 let written = List[PageRange]()
                 for range_ in pages {
@@ -221,15 +240,10 @@ class AndroidPrinting {
                     if finished || generation != Volatile.Read(&layoutGeneration) {
                         throw OperationCanceledException(cancelled.Token)
                     }
-                    let rendered = await Printing.RenderPageAsync(
-                        owner,
-                        document,
-                        page,
-                        pageSettings,
-                        reusable,
-                        cancelled.Token
-                    )
-                        .ConfigureAwait(false)
+                    let pending = Printing.RenderPageAsync(owner, document, page, pageSettings, reusable,
+                        cancelled.Token, renderer, action -> handler.Post(action))
+                    Pump(pending)
+                    let rendered = await pending.ConfigureAwait(false)
                     if rendered.Status != OffscreenRenderStatus.Success || rendered.Capture == nil {
                         renderFailure = Printing.RenderFailure(rendered)
                         throw IOException(
@@ -274,6 +288,19 @@ class AndroidPrinting {
             )
         }
 
+        private func Pump(pending Task) {
+            var poll Java.Lang.Runnable? = nil
+            poll = Java.Lang.Runnable(() -> {
+                if released || pending.IsCompleted {
+                    poll!!.Dispose()
+                    return
+                }
+                renderer.Service()
+                handler.PostDelayed(poll!!, 1)
+            })
+            handler.Post(poll)
+        }
+
         override func OnFinish() {
             finished = true
             ObserveJob()
@@ -314,6 +341,8 @@ class AndroidPrinting {
             }
             released = true
             cancellation.Dispose()
+            lifetime.Cancel()
+            renderer.Dispose()
             lifetime.Dispose()
             Job?.Dispose()
             Job = nil
