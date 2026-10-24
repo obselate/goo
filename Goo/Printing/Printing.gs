@@ -89,7 +89,8 @@ public shared class Printing {
     }
 
     internal async func RenderPageAsync(owner Window, document IPrintDocument, index int32,
-        settings PrintPageSettings, reusable WindowCapture?, cancellation CancellationToken) OffscreenRenderResult {
+        settings PrintPageSettings, reusable WindowCapture?, cancellation CancellationToken,
+        session OffscreenRenderSession? = nil, post ((Action) -> bool)? = nil) OffscreenRenderResult {
         Validate(settings)
         let width = settings.WidthPoints * settings.DpiX / PointsPerInch
         let height = settings.HeightPoints * settings.DpiY / PointsPerInch
@@ -99,13 +100,16 @@ public shared class Printing {
         let options = OffscreenRenderOptions(float32(settings.WidthPoints * LogicalUnitsPerInch / PointsPerInch),
             float32(settings.HeightPoints * LogicalUnitsPerInch / PointsPerInch),
             checked(uint32(Math.Ceiling(width))), checked(uint32(Math.Ceiling(height))), Color.Rgb(255, 255, 255), MaxPageBytes)
-        let pending = await OnOwnerAsync(owner, () ->
-            owner.RenderOffscreenAsync(document.CreatePage(index, settings), options, cancellation, reusable), cancellation)
-            .ConfigureAwait(false)
+        let pending = await OnOwnerAsync(owner, () -> {
+            let page = document.CreatePage(index, settings)
+            return if session == nil { owner.RenderOffscreenAsync(page, options, cancellation, reusable) }
+                else { session.RenderAsync(page, options, cancellation, reusable) }
+        }, cancellation, post).ConfigureAwait(false)
         return await pending.ConfigureAwait(false)
     }
 
-    internal func OnOwnerAsync[T](owner Window, action () -> T, cancellation CancellationToken) Task[T] {
+    internal func OnOwnerAsync[T](owner Window, action () -> T, cancellation CancellationToken,
+        post ((Action) -> bool)? = nil) Task[T] {
         if cancellation.IsCancellationRequested { return Task.FromCanceled[T](cancellation) }
         let ownerClosed = owner.Closed
         if ownerClosed.IsCancellationRequested { return Task.FromCanceled[T](ownerClosed) }
@@ -123,11 +127,12 @@ public shared class Printing {
                 closed.Dispose()
             }
         }
-        if !owner.TryPost(() -> {
+        let run Action = () -> {
             if Interlocked.CompareExchange(&claimed, 1, 0) != 0 { return }
             try { completion.TrySetResult(action()) }
             catch (error Exception) { completion.TrySetException(error) }
-        }) { cancel(CancellationToken(true)) }
+        }
+        if !(if post == nil { owner.TryPost(run) } else { post(run) }) { cancel(CancellationToken(true)) }
         return complete()
     }
 

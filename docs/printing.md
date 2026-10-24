@@ -70,3 +70,4 @@ var result = await printing.ShowDialogAsync(window, new Report("Hello"), "Report
 ```
 
 Call from the Activity main thread. Android controls paper, page ranges and the destination.
+Keep the Activity and Goo window alive until completion. Pages render through an independent session while the Activity is paused.

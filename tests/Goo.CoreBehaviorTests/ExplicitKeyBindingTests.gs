@@ -88,9 +88,10 @@ class ExplicitKeyBindingTests {
             }
             for text in[]string{String('\t', 16777217), String('é', 8388609)} {
                 window.InputForTest.SetClipboardFallback(text)
+                let before = intercepted
                 Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Paste}))
                 Assert.False(input.Execute(TextCommand{Kind: TextCommandKind.Paste, Text: text}))
-                Assert.Equal(0, intercepted)
+                Assert.Equal(before + (if editor { 1 } else { 0 }), intercepted)
                 Assert.Equal(
                     "keep",
                     if editor {

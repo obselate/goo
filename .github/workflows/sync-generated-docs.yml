@@ -53,7 +53,7 @@ jobs:
               --source "$source" --xml "$xml" --output "$output"
           done
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
-            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host
+            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host docs/api-rich-text
           dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .
 
       - name: Commit generated documentation

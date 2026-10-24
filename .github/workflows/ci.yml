@@ -126,7 +126,7 @@ jobs:
             --source Goo.Audio --xml Goo.Audio/bin/Release/net10.0/Goo.Audio.xml \
             --output docs/api-audio
           rm -rf docs/api-gestures docs/api-images docs/api-native-menus docs/api-native-dialogs \
-            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host
+            docs/api-notifications docs/api-printing docs/api-spell-check docs/api-spell-check.hunspell docs/api-app-host docs/api-rich-text
 
       - name: Validate onboarding and release metadata
         run: |
@@ -406,6 +406,15 @@ jobs:
           python3 .github/scripts/test-macos-notifications.py \
             artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications"
 
+      - name: Verify native rich clipboard editing on macOS
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj \
+            -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
+            -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
+            -o artifacts/rich-nativeaot
+          artifacts/rich-nativeaot/Goo.PrintingSmoke
+
       - name: Verify NativeAOT UI audio on macOS
         if: needs.changes.outputs.full == 'true'
         run: |
@@ -675,7 +684,7 @@ jobs:
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -o artifacts/printing-nativeaot
-          .github/scripts/with-headless-wayland.sh env \
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env \
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
@@ -1618,6 +1627,17 @@ jobs:
           $env:GOO_NATIVE_DIALOGS_SMOKE = "1"
           & artifacts/windows-smoke/Goo.PackageSmoke.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify native rich clipboard editing on Windows
+        if: needs.changes.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          dotnet publish tests/Goo.PrintingSmoke/Goo.PrintingSmoke.gsproj -c Release -r win-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true -o artifacts/rich-nativeaot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($name in "SDL3.dll", "goo-harfbuzz.dll", "goo-harfbuzz-gpu.dll") {
+            Copy-Item "artifacts/windows-smoke/$name" artifacts/rich-nativeaot -Force
+          }
+          & artifacts/rich-nativeaot/Goo.PrintingSmoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build unsigned consumer installer
         if: needs.changes.outputs.full == 'true'
         shell: pwsh
@@ -1856,6 +1876,7 @@ jobs:
           dotnet build tests/Goo.AndroidSmoke.Desktop/Goo.AndroidSmoke.Desktop.gsproj -c Release -p:TreatWarningsAsErrors=true
           dotnet build tests/Goo.AndroidSmoke/Goo.AndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
           dotnet build tests/Goo.OffscreenAndroidSmoke/Goo.OffscreenAndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
+          dotnet build tests/Goo.TextOutputAndroidSmoke/Goo.TextOutputAndroidSmoke.gsproj -c Release -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true
           nice -n 10 dotnet build tests/Goo.AndroidClipboardPeer/Goo.AndroidClipboardPeer.gsproj -c Release -m:4 -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true -p:RepositoryCommit="$GITHUB_SHA"
       - name: Pack Android adapter
         if: needs.changes.outputs.full == 'true'

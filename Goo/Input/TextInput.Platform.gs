@@ -375,6 +375,13 @@ internal partial class TextInput {
     if command.Kind == TextCommandKind.Insert {
       return HandleChar(root, command.Text ?? "")
     }
+    if command.Kind == TextCommandKind.Paste && command.Text != nil
+      && (command.Text == "" || !ClipboardTransfer.TextFits(command.Text)) { return false }
+    if n.Kind == NodeKind.Editor && command.Kind == TextCommandKind.Paste {
+      if n.EditorReadOnly { return false }
+      guard let controller = n.EditorController else { return false }
+      if !controller.InterceptPaste(command) { return false }
+    }
     if command.Kind == TextCommandKind.Paste && command.Text == nil {
       command = TextCommand{ Kind: TextCommandKind.Paste, Text: clipboardGet() }
     }
@@ -395,7 +402,8 @@ internal partial class TextInput {
         if value != "" { clipboardSet(value) }
         return true
       }
-      let result = controller.Execute(command)
+      let result = command.Kind == TextCommandKind.Paste
+        ? controller.ExecuteIntercepted(command) : controller.Execute(command)
       if result {
         n.BlinkT = 0.0
         updateTextInputArea(n)
