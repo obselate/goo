@@ -1,0 +1,44 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)FixtureAssemblyInfo.gs" Link="FixtureAssemblyInfo.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Platform/ApplicationActivationFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Accessibility/AccessibilityFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/CellFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/ContextFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/FixtureKeyBindings.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/CoreInputFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/DragDropFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/TextInputPrimitivesFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/TextEditorInputFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/TextPresentationLayerFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/ClipPathInputFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/ScrollbarFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Layout/LayoutFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Motion/MotionFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/TreeFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/ElementHandleFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Tree/PortalFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Style/StyleFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/ShapeGeometryFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/PathBuilderFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Diagnostics/DiagnosticsFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Diagnostics/DevToolsInputFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/GradientFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/VulkanQueueWorkerFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Rendering/VulkanSceneCompilerFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/ClickSequenceFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Input/GestureFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.VulkanAbiSmoke/TextShapingFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.VulkanAbiSmoke/DescriptorLifetimeFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.VulkanAbiSmoke/DescriptorLifetimeRegression.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/WindowReadbackFixture.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/DiagnosticCaptureSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/EmbeddedHostSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/ProfilerSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/WindowActivationSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/PopupWindowSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.AsyncReadbackSmoke/VectorRetainSmoke.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.VulkanProof/*.gs"
+             Exclude="$(MSBuildThisFileDirectory)../Goo.VulkanProof/VulkanProofLauncher.gs" />
+  </ItemGroup>
+</Project>

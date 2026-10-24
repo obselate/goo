@@ -11,7 +11,7 @@
   <ItemGroup>
     <Compile Remove="TextShapingFixtures.gs;DescriptorLifetimeFixtures.gs;DescriptorLifetimeRegression.gs" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
-                      AdditionalProperties="Configuration=VulkanAbiTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.VulkanAbiFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../Shared/Goo.TestFixtures.props" />
     <Content Include="../Goo.VulkanProof/Assets/Text/VendSans-VariableFont_wght.ttf"
              Link="VendSans-VariableFont_wght.ttf"
              CopyToOutputDirectory="PreserveNewest"

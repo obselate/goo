@@ -38,7 +38,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Goo.Accessibility/Goo.Accessibility.gsproj" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
-                      AdditionalProperties="Configuration=AsyncReadbackTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.AsyncReadbackFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../Shared/Goo.TestFixtures.props" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForAsyncReadbackSmoke"
           AfterTargets="CopyFilesToOutputDirectory"

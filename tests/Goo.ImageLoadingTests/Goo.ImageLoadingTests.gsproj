@@ -11,8 +11,8 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <ProjectReference Include="../../Goo/Goo.gsproj"
-                      AdditionalProperties="Configuration=ImageTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.ImageLoadingFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../Shared/Goo.TestFixtures.props" />
     <ProjectReference Include="../../Goo.Images/Goo.Images.gsproj"
-                      AdditionalProperties="Configuration=ImageTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.ImageLoadingFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/../Shared/Goo.TestFixtures.props" />
   </ItemGroup>
 </Project>
