@@ -115,7 +115,7 @@ private func hitsMapped(n Node, x float32, y float32) bool {
   if !hitWithinMapped(n, x, y) || !n.HitTestSelf {
     return false
   }
-  return if n.Kind == NodeKind.Shape { ShapeGeometry.HitTest(n, x, y) } else { true }
+  return if n.Kind == NodeKind.Shape { ShapeGeometry.HitTest(n, x, y) } else { BoxGeometry.ContainsRounded(n, x, y) }
 }
 
 internal func hitTopmost(root Node, x float32, y float32, semantics AccessibilityManager? = nil) Node? {

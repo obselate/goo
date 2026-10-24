@@ -1206,12 +1206,8 @@ internal partial class VulkanSceneCompiler {
     || Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds) > 0.0F
     || Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds) > 0.0F
 
-  private func Radius(value Length, fallback Length, bounds ConservativeBounds) float32 {
-    let source = value.HasMagnitude ? value : fallback
-    let radius = ResolveLength(source, MinDimension(bounds))
-    let limit = MinDimension(bounds) * 0.5F
-    return radius > limit ? limit : radius
-  }
+  private func Radius(value Length, fallback Length, bounds ConservativeBounds) float32 ->
+    BoxGeometry.Radius(value, fallback, bounds.Width, bounds.Height)
 
   private func ResolveLength(value Length, basis float32) float32 {
     if !value.HasMagnitude || !finiteVulkanSceneValue(value.Value) {

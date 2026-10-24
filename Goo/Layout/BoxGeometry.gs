@@ -1,9 +1,33 @@
 package Goo
 
 import Facebook.Yoga
+import System
 
 internal class BoxGeometry {
   shared {
+    internal func Radius(value Length, fallback Length, width float32, height float32) float32 {
+      let source = value.HasMagnitude ? value : fallback
+      if !source.HasMagnitude || !Single.IsFinite(source.Value) { return 0.0F }
+      let basis = MathF.Min(width, height)
+      let radius = source.Unit == LengthUnit.Percent ? basis * source.Value / 100.0F : source.Value
+      return !Single.IsFinite(radius) || radius <= 0.0F ? 0.0F : MathF.Min(radius, basis * 0.5F)
+    }
+
+    internal func ContainsRounded(n Node, x float32, y float32) bool {
+      let localX = x - n.Rect.X
+      let localY = y - n.Rect.Y
+      let corner = if localY < n.Rect.H * 0.5F {
+        localX < n.Rect.W * 0.5F ? n.BorderTopLeftRadius : n.BorderTopRightRadius
+      } else {
+        localX < n.Rect.W * 0.5F ? n.BorderBottomLeftRadius : n.BorderBottomRightRadius
+      }
+      let radius = Radius(corner, n.BorderRadius, n.Rect.W, n.Rect.H)
+      if radius <= 0.0F { return true }
+      let dx = MathF.Max(radius - MathF.Min(localX, n.Rect.W - localX), 0.0F)
+      let dy = MathF.Max(radius - MathF.Min(localY, n.Rect.H - localY), 0.0F)
+      return dx * dx + dy * dy <= radius * radius
+    }
+
     internal func ContentLeft(n Node) float32 -> n.Rect.X + borderPx(n, YGEdge.Left) + padding(n, YGEdge.Left)
 
     internal func ContentTop(n Node) float32 -> n.Rect.Y + borderPx(n, YGEdge.Top) + padding(n, YGEdge.Top)

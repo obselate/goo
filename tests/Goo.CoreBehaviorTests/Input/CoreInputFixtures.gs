@@ -39,6 +39,37 @@ internal class InputFixtures {
   }
 
   func TransformRoutesHitsAndLocalPositions() bool {
+    var underneathClicks int32
+    var roundedClicks int32
+    let roundedTree = Reconciler{ Res: Resolver{} }.Mount(Container() {
+      .Width: 100, .Height: 100,
+      Button{ Position: PositionType.Absolute, Width: 100, Height: 100,
+        OnClick: () -> { underneathClicks++ } },
+      Button{ Position: PositionType.Absolute, Width: 100, Height: 100,
+        BorderRadius: Percent(50), OnClick: () -> { roundedClicks++ } },
+    })
+    Layout().Calculate(roundedTree, 100.0F, 100.0F)
+    let rounded = roundedTree.Children[1]
+    let underneath = roundedTree.Children[0]
+    let roundedInput = InputCoordinator()
+    let roundedResolver = Resolver{}
+    let corners = []Point{ Point{X: 1, Y: 1}, Point{X: 99, Y: 1},
+      Point{X: 1, Y: 99}, Point{X: 99, Y: 99} }
+    for point in corners {
+      if hitTopmost(roundedTree, float32(point.X), float32(point.Y)) != underneath { return false }
+      if DiagnosticHitIndex(roundedTree).Hit(float32(point.X), float32(point.Y)) != underneath { return false }
+      roundedInput.QueuePointerPress(float32(point.X), float32(point.Y))
+      roundedInput.QueuePointerRelease(float32(point.X), float32(point.Y))
+      roundedInput.Drain(roundedTree, roundedResolver, 0.0, nil)
+    }
+    roundedInput.QueuePointerPress(50.0F, 50.0F)
+    roundedInput.QueuePointerRelease(50.0F, 50.0F)
+    roundedInput.Drain(roundedTree, roundedResolver, 0.0, nil)
+    if underneathClicks != 4 || roundedClicks != 1 { return false }
+    rounded.BorderTopLeftRadius = 10
+    if hitTopmost(roundedTree, 10.0F, 10.0F) != rounded
+      || hitTopmost(roundedTree, 1.0F, 1.0F) != underneath { return false }
+
     let events = List[string]()
     let tree = Reconciler{ Res: Resolver{} }.Mount(Container{
       Width: 20, Height: 20,
