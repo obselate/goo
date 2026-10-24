@@ -856,3 +856,140 @@ Identifies the platform's preferred application color theme.
 - `Unknown`
 - `Light`
 - `Dark`
+
+## `TrayIcon`
+
+Source:
+
+- [`Tray.gs`](../../Goo/Platform/Tray/Tray.gs)
+
+Owns a native tray icon on an open desktop Window's UI thread.
+
+### `Activated`
+
+Occurs on the owner UI thread after native primary activation. A menu can consume this gesture.
+
+### `CommandActivated`
+
+Occurs on the owner UI thread after a native menu selects a stable item ID.
+
+### `StatusChanged`
+
+Occurs on the owner UI thread when registration changes.
+
+### `Create(Window,TrayOptions)`
+
+Creates an icon for an open desktop owner. Native failures return a typed result.
+
+- `owner`: The open desktop window that owns the icon and its callbacks.
+- `options`: The icon identity, pixels, tooltip and menu.
+
+Returns: A typed registration result with an owned icon when the host can be observed.
+
+### `Dispose`
+
+Unregisters the icon on its owner UI thread. Repeated calls have no effect.
+
+### `Update(TrayOptions)`
+
+Replaces icon pixels, tooltip and menu. Id must remain unchanged.
+
+- `options`: The replacement pixels, tooltip and menu.
+
+Returns: The native update status.
+
+### `Status`
+
+Gets the current registration status on the owner UI thread.
+
+## `TrayOptions`
+
+Source:
+
+- [`Tray.gs`](../../Goo/Platform/Tray/Tray.gs)
+
+Describes a tray icon. Create and Update copy the pixels and menu before returning.
+
+### `new`
+
+Creates empty options. Set Id, Width, Height and Rgba before use.
+
+### `Height`
+
+Gets the pixel height, from 1 to 512.
+
+### `Id`
+
+Gets the stable icon identity. Use a globally unique name of at most 255 UTF-16 units.
+
+### `Menu`
+
+Gets the native menu. Include an Open command because some hosts consume primary clicks.
+
+### `Rgba`
+
+Gets Width * Height * 4 straight-alpha sRGB bytes in red, green, blue, alpha order.
+
+### `Tooltip`
+
+Gets the tooltip, with at most 127 UTF-16 units and no NUL characters. Hosts may hide it.
+
+### `Width`
+
+Gets the pixel width, from 1 to 512.
+
+## `TrayResult`
+
+Source:
+
+- [`Tray.gs`](../../Goo/Platform/Tray/Tray.gs)
+
+Reports tray creation. NoHost can return a live Icon that observes host availability.
+
+### `Error`
+
+Gets bounded native failure detail, or an empty string.
+
+### `Icon`
+
+Gets the owned icon for Registered or NoHost, otherwise nil.
+
+### `Status`
+
+Gets the creation status.
+
+## `TrayStatus`
+
+Source:
+
+- [`Tray.gs`](../../Goo/Platform/Tray/Tray.gs)
+
+Reports native tray registration, not whether the user can see the icon.
+
+### Values
+
+- `Registered`
+- `NoHost`
+- `Unsupported`
+- `Closed`
+- `Failed`
+
+### `Closed`
+
+The icon or its owner is closed.
+
+### `Failed`
+
+The native operation failed.
+
+### `NoHost`
+
+No tray host is available. The live icon registers when a host appears.
+
+### `Registered`
+
+The native host accepted the icon.
+
+### `Unsupported`
+
+The platform or requested menu feature is not supported.
