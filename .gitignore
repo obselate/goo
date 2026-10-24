@@ -29,8 +29,6 @@
 !/.github/scripts/build-accesskit-linux-x64.sh
 !/.github/scripts/build-sdl-linux-x64.sh
 !/.github/scripts/build-sdl-macos-arm64.sh
-!/.github/scripts/test-wayland-notifications.py
-!/.github/scripts/test-macos-notifications.py
 !/.github/scripts/build-text-native-linux-x64.sh
 !/.github/scripts/build-text-native-macos-arm64.sh
 !/.github/scripts/build-text-native-win-x64.sh
@@ -49,7 +47,6 @@
 !/.github/scripts/run-android-native-menus.sh
 !/.github/scripts/check-wayland-data-transfer.sh
 !/.github/scripts/check-windows-data-transfer.ps1
-!/.github/scripts/check-macos-data-transfer.py
 
 !/Goo/
 !/Goo/**
