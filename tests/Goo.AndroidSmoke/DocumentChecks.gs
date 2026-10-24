@@ -101,6 +101,7 @@ public sealed class DocumentChecks : Instrumentation {
             "The provider pipe did not open: " + opened.Error)
         {
             using let stream = opened.Stream!!
+            Require(!stream.CanSeek, "A provider pipe reported seek support")
             let bytes = [StreamBytes]uint8
             stream.ReadExactly(bytes)
             Require(stream.ReadByte() == -1, "Stream document length changed")
