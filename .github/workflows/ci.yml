@@ -116,7 +116,7 @@ jobs:
           dotnet build Goo.Audio/Goo.Audio.gsproj -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify shared gesture recognizers
-        run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
+        run: dotnet test tests/Goo.Gestures.Tests/Goo.Gestures.Tests.gsproj -c Release -p:TreatWarningsAsErrors=true
       - name: Build optional native dialogs
         run: dotnet build Goo.NativeDialogs/Goo.NativeDialogs.gsproj -c Release -f net10.0 -p:TreatWarningsAsErrors=true
 
@@ -146,7 +146,7 @@ jobs:
       - name: Run focused API contract tests
         if: needs.changes.outputs.api == 'true'
         run: |
-          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.csproj \
+          dotnet test tests/Goo.ApiContractTests/Goo.ApiContractTests.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
 
       - name: Verify optional spell checking
@@ -289,7 +289,7 @@ jobs:
       - name: Verify NativeAOT native menus on macOS
         if: needs.changes.outputs.full == 'true'
         run: |
-          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.csproj \
+          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.gsproj \
             -c Release -r osx-arm64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" \
             -o artifacts/native-menu-smoke
@@ -1188,15 +1188,15 @@ jobs:
       matrix:
         include:
           - lane: abi
-            project: tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.csproj
+            project: tests/Goo.VulkanAbiSmoke/Goo.VulkanAbiSmoke.gsproj
           - lane: proof
             project: tests/Goo.VulkanProof/Goo.VulkanProof.gsproj
           - lane: async-readback
             project: tests/Goo.AsyncReadbackSmoke/Goo.AsyncReadbackSmoke.gsproj
           - lane: core
-            project: tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj
+            project: tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj
           - lane: image
-            project: tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj
+            project: tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj
     steps:
       - name: No affected inputs
         if: needs.changes.outputs.full != 'true'
@@ -1422,14 +1422,14 @@ jobs:
             LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-            dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.csproj \
+            dotnet test tests/Goo.CoreBehaviorTests/Goo.CoreBehaviorTests.gsproj \
               -c Release --no-build -p:TreatWarningsAsErrors=true \
               -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
 
       - name: Run local PNG decoder and cache tests
         if: needs.changes.outputs.full == 'true' && (matrix.lane == 'image')
         run: |
-          dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.csproj \
+          dotnet test tests/Goo.ImageLoadingTests/Goo.ImageLoadingTests.gsproj \
             -c Release --no-build -p:TreatWarningsAsErrors=true
 
       - name: Verify NativeAOT local PNG loading
@@ -1595,7 +1595,7 @@ jobs:
         shell: pwsh
         run: |
           $version = python .github/scripts/release_version.py --print
-          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.csproj -c Release -r win-x64 `
+          dotnet publish tests/Goo.NativeMenuSmoke/Goo.NativeMenuSmoke.gsproj -c Release -r win-x64 `
             -p:PublishAot=true -p:TreatWarningsAsErrors=true -p:GooMenuUsePackages=true `
             -p:ImportDirectoryBuildProps=false -p:GooReleaseVersion=$version `
             --configfile tests/Goo.PackageSmoke/NuGet.config -o artifacts/native-menu-smoke
