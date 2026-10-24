@@ -19,6 +19,11 @@ class Notifications {
             Directory.CreateDirectory(root)
             HostChecks.Run([]string{Path.Combine(publish, Executable), "missing"}, 40)
             let plist = XDocument.Load(Path.Combine(HostChecks.Root, "tests/Goo.PackageSmoke/Info.plist"))
+            if let declaration = plist.DocumentType {
+                declaration.ReplaceWith(
+                    XDocumentType(declaration.Name, declaration.PublicId, declaration.SystemId, nil)
+                )
+            }
             let dictionary = plist.Root!!.Element("dict")!!
             for key in[]string{"CFBundleURLTypes", "CFBundleDocumentTypes", "UTExportedTypeDeclarations"} {
                 let item = dictionary.Elements("key").FirstOrDefault(x -> x.Value == key)
