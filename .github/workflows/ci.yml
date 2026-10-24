@@ -685,7 +685,7 @@ jobs:
             -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" \
             -o artifacts/printing-nativeaot
-          .github/scripts/with-headless-wayland.sh env \
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env \
             SDL_VIDEODRIVER=wayland LIBGL_ALWAYS_SOFTWARE=1 \
             VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
             artifacts/printing-nativeaot/Goo.PrintingSmoke artifacts/reports/printing.pdf
