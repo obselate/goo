@@ -33,6 +33,8 @@ aspect ratio. Strokes, clips, and nested transforms scale with the document.
 
 Text, stream, and file loading use the same runtime parser. `Load(Stream)` reads from
 the current stream position and leaves the caller's stream open.
+Input is limited to 16 MiB. Known stream lengths are checked before allocation.
+Forward-only and growing streams are bounded while reading. XML depth limits are separate.
 
 The supported subset includes paths, groups, affine transforms, opacity, solid paints,
 linear and radial gradients, strokes, dashes, user-space clips, controlled transform,

@@ -17,7 +17,7 @@ public sealed class ShaderEffectProgram {
   private const RecordBytes int32 = 8
   private const MaximumArtifactCount int32 = 8
   private const MaximumArtifactByteCount int32 = 4194304
-  private const MaximumProgramByteCount int32 = 8388608
+  internal const MaximumProgramByteCount int32 = 8388608
   private let artifacts []ShaderEffectProgramArtifact
   private let vulkanSpirv([]uint8)?
   private let vulkanSpirvDigest([]uint8)?
@@ -35,7 +35,7 @@ public sealed class ShaderEffectProgram {
     }
 
     public func Load(path string) ShaderEffectProgram ->
-    ShaderEffectProgram(File.ReadAllBytes(path))
+    ShaderEffectProgram(BoundedInput.ReadFile(path, MaximumProgramByteCount, "Shader effect program"))
   }
 
   public init(program []uint8, replacesBackdrop bool = false) {

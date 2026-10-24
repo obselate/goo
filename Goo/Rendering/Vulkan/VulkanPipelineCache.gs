@@ -225,11 +225,7 @@ internal unsafe sealed class VulkanPipelineCache : IDisposable {
         if !File.Exists(cachePath) {
           return []uint8{}
         }
-        let info = FileInfo(cachePath)
-        if info.Length < int64(HeaderBytes) || info.Length > int64(MaximumCacheBytes) {
-          return []uint8{}
-        }
-        let data = File.ReadAllBytes(cachePath)
+        let data = BoundedInput.ReadFile(cachePath, MaximumCacheBytes, "Vulkan pipeline cache")
         if data.Length < HeaderBytes
           || ReadUInt32(data, 0) != uint32(HeaderBytes)
           || ReadUInt32(data, 4) != 1u

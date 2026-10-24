@@ -14,9 +14,8 @@ internal unsafe partial class VulkanPrimitiveRenderer {
         if stream == nil {
             throw FileNotFoundException("Goo backdrop blur effect is missing")
         }
-        using let output = MemoryStream()
-        stream.CopyTo(output)
-        return ShaderEffect(ShaderEffectProgram(output.ToArray()))
+        return ShaderEffect(ShaderEffectProgram(
+            BoundedInput.ReadAll(stream, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
     }
 
     private func BackdropBlurRadius(record LayerRecord, frame SceneFrame) float32 ->

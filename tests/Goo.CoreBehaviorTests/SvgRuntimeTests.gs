@@ -59,10 +59,13 @@ class SvgRuntimeTests {
         Assert.Equal(translateY, transform.TranslateY.Magnitude, 4)
     }
 
-    @Fact
-    func StreamLoadMatchesTextAndLeavesCallerStreamOpen() {
+    @Theory
+    @InlineData(true, false)
+    @InlineData(true, true)
+    @InlineData(false, false)
+    func StreamLoadMatchesTextAndLeavesCallerStreamOpen(seekable bool, growing bool) {
         let bytes = Encoding.UTF8.GetBytes(BasicSvg)
-        using let stream = MemoryStream(bytes, writable: false)
+        using let stream = ReportedLengthStream(bytes, seekable, if growing { 1L } else { int64(bytes.Length) })
         let fromStream = Svg.Load(stream)
         let fromText = Svg.Parse(BasicSvg)
         Assert.Equal(fromText.NodeCount, fromStream.NodeCount)
@@ -70,6 +73,25 @@ class SvgRuntimeTests {
         Assert.Equal(fromText.CurveCount, fromStream.CurveCount)
         Assert.Equal(fromText.PaintCount, fromStream.PaintCount)
         Assert.True(stream.CanRead)
+    }
+
+    @Theory
+    @InlineData(true, int64(16777217), int32(0))
+    @InlineData(true, int64(1), int32(16777217))
+    @InlineData(false, int64(0), int32(16777217))
+    func StreamLoadRejectsOversizedKnownGrowingAndForwardOnlyInput(seekable bool, length int64, readBytes int32) {
+        let bytes = if readBytes == 0 { Encoding.UTF8.GetBytes(BasicSvg) } else { [readBytes]uint8 }
+        using let stream = ReportedLengthStream(bytes, seekable, length)
+        let error = Assert.Throws[SvgParseException](() -> Svg.Load(stream))
+        Assert.Contains("SVG input exceeds 16777216 bytes", error.Message)
+        Assert.Equal(int64(readBytes), stream.Position)
+        Assert.True(stream.CanRead)
+    }
+
+    private class ReportedLengthStream(bytes []uint8, seekable bool, length int64) : MemoryStream(bytes) {
+        override prop CanSeek bool -> seekable
+
+        override prop Length int64 -> length
     }
 
     @Fact

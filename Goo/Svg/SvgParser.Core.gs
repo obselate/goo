@@ -297,24 +297,11 @@ internal partial class SvgParser {
                 sourceName = "<stream>"
             }
             try {
-                using let copy = MemoryStream()
-                let buffer = [81920]uint8
-                var total = 0
-                while true {
-                    let read = stream.Read(buffer, 0, buffer.Length)
-                    if read == 0 {
-                        break
-                    }
-                    if total > MaxInputBytes - read {
-                        throw SvgParseException("input exceeds $MaxInputBytes bytes")
-                    }
-                    copy.Write(buffer, 0, read)
-                    total += read
-                }
-                return ParseBytes(copy.ToArray(), sourceName)
+                return ParseBytes(BoundedInput.ReadAll(stream, MaxInputBytes, "SVG input"), sourceName)
             } catch (SvgParseException) {
                 rethrow
             } catch (exception Exception) when exception is IOException ||
+                exception is InvalidDataException ||
                 exception is UnauthorizedAccessException ||
                 exception is ObjectDisposedException ||
                 exception is NotSupportedException {

@@ -4,6 +4,8 @@ import Android.App
 import Android.Content
 import Android.OS
 import Android.Provider
+import Android.Runtime
+import Android.Systems
 import Goo
 import System
 import System.Collections.Generic
@@ -331,11 +333,14 @@ public sealed class AndroidDocuments {
                     return DocumentStreamResult(DocumentStatus.Failed,
                         error: "The document provider did not open a stream")
                 }
+                let retained Stream = if !write && stream is InputStreamInvoker input {
+                    AndroidInputStream(input.BaseInputStream)
+                } else { stream }
                 if Volatile.Read(ref disposed) || cancellation.IsCancellationRequested {
-                    stream.Dispose()
+                    retained.Dispose()
                     return DocumentStreamResult(DocumentStatus.Cancelled)
                 }
-                return DocumentStreamResult(DocumentStatus.Success, stream)
+                return DocumentStreamResult(DocumentStatus.Success, retained)
             } catch (error Exception) when (Known(error)) {
                 return DocumentStreamResult(Status(error), error: error.Message)
             }
@@ -453,5 +458,20 @@ public sealed class AndroidDocuments {
             else if error is Android.OS.OperationCanceledException || error is System.OperationCanceledException {
                 DocumentStatus.Cancelled
             } else { DocumentStatus.Failed }
+    }
+}
+
+internal sealed class AndroidInputStream(input Java.IO.InputStream) : InputStreamInvoker(input) {
+    public override prop CanSeek bool {
+        get {
+            if BaseInputStream is not Java.IO.FileInputStream file { return false }
+            using let descriptor = file.FD!!
+            try {
+                Os.Lseek(descriptor, 0L, OsConstants.SeekCur)
+                return true
+            } catch (error ErrnoException) when (error.Errno == OsConstants.Espipe) {
+                return false
+            }
+        }
     }
 }

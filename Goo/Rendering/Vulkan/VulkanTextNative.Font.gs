@@ -38,14 +38,8 @@ internal unsafe sealed class VulkanTextFont : IDisposable, VulkanTextProvider {
   public prop AbiVersion uint32{ get -> VulkanTextProviderAbi.Version }
 
   shared {
-    internal func ReadBytes(path string) []uint8 {
-      using let stream = File.OpenRead(path)
-      let length = stream.Length
-      if length > MaxFontBytes { throw InvalidDataException("Font exceeds 64 MiB") }
-      let bytes = [int32(length)]uint8
-      stream.ReadExactly(bytes, 0, bytes.Length)
-      return bytes
-    }
+    internal func ReadBytes(path string) []uint8 ->
+    BoundedInput.ReadFile(path, MaxFontBytes, "Font")
 
     internal func ValidateFace(bytes []uint8, selectedFaceIndex uint32) uint32 {
       if bytes.Length == 0 {
