@@ -3,6 +3,7 @@ package Goo.Android
 import Android.Content
 import Android.OS
 import Android.Text
+import Android.Runtime
 import Goo
 import System
 import System.Collections.Generic
@@ -184,7 +185,9 @@ internal sealed class AndroidClipboard : IDisposable {
     private func ReadUri(uri AndroidUri, type string, limit int32) []uint8 {
         using let asset = context.ContentResolver!!.OpenTypedAssetFileDescriptor(uri, type, nil)
             ?? throw IOException("Clipboard MIME stream is unavailable")
-        using let stream = asset.CreateInputStream() ?? throw IOException("Clipboard MIME stream could not be opened")
+        let opened = asset.CreateInputStream() ?? throw IOException("Clipboard MIME stream could not be opened")
+        using let stream = if opened is InputStreamInvoker input { AndroidInputStream(input.BaseInputStream) }
+            else { opened }
         if asset.DeclaredLength > limit { throw ClipboardLimitException("Clipboard data exceeds $limit bytes") }
         try {
             return BoundedInput.ReadAll(stream, limit, "Clipboard data")
