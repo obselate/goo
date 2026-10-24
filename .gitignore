@@ -136,6 +136,12 @@
 !/tools/Goo.Formatting/**
 !/tools/Goo.Gslint/
 !/tools/Goo.Gslint/**
+!/tools/Goo.Gslint.Tests/
+!/tools/Goo.Gslint.Tests/**
+!/tools/Goo.SyncDocs/
+!/tools/Goo.SyncDocs/**
+!/tools/Goo.VulkanManifest/
+!/tools/Goo.VulkanManifest/**
 !/tools/Goo.ConsumerPerformance/
 !/tools/Goo.ConsumerPerformance/**
 

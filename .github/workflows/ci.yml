@@ -95,7 +95,7 @@ jobs:
           dotnet build tools/Goo.Gslint/Goo.Gslint.gsproj \
             -c Release -p:TreatWarningsAsErrors=true
           dotnet artifacts/gsharp/formatter/gsfmt.dll --check tools/Goo.Gslint/Program.gs
-          python3 tools/Goo.Gslint/test.py
+          dotnet run --project tools/Goo.Gslint.Tests/Goo.Gslint.Tests.gsproj -c Release
 
       - name: Enforce strict G# lint
         if: needs.changes.outputs.lint == 'true'
@@ -136,7 +136,7 @@ jobs:
 
       - name: Validate onboarding and release metadata
         run: |
-          python3 plugins/goo/scripts/sync_docs.py .
+          dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .
           .github/scripts/validate-onboarding.py
 
       - name: Run focused API contract tests

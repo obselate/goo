@@ -26,7 +26,7 @@ Goo remains below 1.0.0 while its public contracts mature.
 3. Add the dated release entry to `CHANGELOG.md`. The tag workflow publishes
    only this version's entry as the GitHub Release notes. Build Goo in Release mode,
    regenerate API documentation with `dotnet run --project tools/Goo.ApiDocs/Goo.ApiDocs.gsproj -c Release`,
-   and refresh the plugin reference with `python3 plugins/goo/scripts/sync_docs.py .`.
+   and refresh the plugin reference with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- .`.
    The release helper also runs the reference sync before its release checks.
    Run `.github/scripts/validate-onboarding.py`.
 4. Push the release commit to `main` and require a green CI run. Wait for the
