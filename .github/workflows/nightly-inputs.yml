@@ -29,7 +29,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
-        if: matrix.target != 'native-image' && matrix.target != 'font'
         with:
           global-json-file: global.json
 
@@ -44,7 +43,7 @@ jobs:
         run: nice -n 10 ./bootstrap.sh --gsharp-only
 
       - name: Build input target
-        run: nice -n 10 python3 tools/Goo.InputFuzz/build.py '${{ matrix.target }}'
+        run: nice -n 10 dotnet run --project tools/Goo.HostChecks -c Release -- input-build '${{ matrix.target }}'
 
       - name: Generate and test inputs for ten minutes
         run: nice -n 10 tools/Goo.InputFuzz/run.sh '${{ matrix.target }}'

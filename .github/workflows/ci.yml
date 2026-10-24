@@ -387,6 +387,10 @@ jobs:
           python3 .github/scripts/check-macos-data-transfer.py \
             artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke \
             artifacts/macos-transfer-results
+          nice -n 10 dotnet build tools/Goo.HostChecks/Goo.HostChecks.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
+          dotnet tools/Goo.HostChecks/bin/Release/net10.0/Goo.HostChecks.dll macos-data-transfer \
+            artifacts/macos-candidate/Goo.PackageSmoke.app/Contents/MacOS/Goo.PackageSmoke \
+            artifacts/macos-transfer-results-gsharp
 
       - name: Upload macOS transfer proof
         if: needs.changes.outputs.full == 'true' && (always())
@@ -405,6 +409,8 @@ jobs:
             -p:GooMacOsArm64NativeRoot="$PWD/artifacts/macos-candidate/native" -o artifacts/notifications-nativeaot
           python3 .github/scripts/test-macos-notifications.py \
             artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications"
+          dotnet tools/Goo.HostChecks/bin/Release/net10.0/Goo.HostChecks.dll macos-notifications \
+            artifacts/notifications-nativeaot "$RUNNER_TEMP/macos-notifications-gsharp"
 
       - name: Verify native rich clipboard editing on macOS
         if: needs.changes.outputs.full == 'true'
@@ -714,10 +720,15 @@ jobs:
             -p:PublishAot=true -p:TreatWarningsAsErrors=true \
             -p:GooNativeAotStaticRoot="$PWD/artifacts/notifications-static" \
             -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so" -o artifacts/notifications-nativeaot
+          nice -n 10 dotnet build tools/Goo.HostChecks/Goo.HostChecks.gsproj -c Release -m:4 -p:TreatWarningsAsErrors=true
           GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
             LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
             dbus-run-session -- python3 .github/scripts/test-wayland-notifications.py \
             artifacts/notifications-nativeaot/Goo.Notifications.Smoke artifacts/reports/wayland-notifications
+          GOO_WAYLAND_COMPOSITOR=kwin .github/scripts/with-headless-wayland.sh env LIBGL_ALWAYS_SOFTWARE=1 \
+            LD_LIBRARY_PATH="$PWD/artifacts/native${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            dbus-run-session -- dotnet tools/Goo.HostChecks/bin/Release/net10.0/Goo.HostChecks.dll wayland-notifications \
+            artifacts/notifications-nativeaot/Goo.Notifications.Smoke artifacts/reports/wayland-notifications-gsharp
       - name: Build Goo DevTools app
         if: needs.changes.outputs.full == 'true'
         run: |
