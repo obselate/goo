@@ -685,6 +685,13 @@ jobs:
             exit 1
           fi
 
+      - name: Build shared Goo test assembly
+        if: needs.changes.outputs.full == 'true'
+        run: |
+          dotnet build Goo/Goo.gsproj -c TestRelease -p:TreatWarningsAsErrors=true \
+            -p:IncludeTestFixtures=true \
+            -p:GooLinuxSdlPath="$PWD/artifacts/native/libSDL3.so"
+
       - name: Archive Linux build state
         if: needs.changes.outputs.full == 'true'
         run: |

@@ -3,7 +3,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Goo.FSharpInterop</RootNamespace>
     <AssemblyName>Goo.FSharpInterop</AssemblyName>
-    <GooCoreBehaviorFixturesPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../Goo.CoreBehaviorTests/Goo.CoreBehaviorTestFixtures.props'))</GooCoreBehaviorFixturesPath>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -14,6 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Goo/Goo.gsproj"
-                      AdditionalProperties="Configuration=CoreTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(GooCoreBehaviorFixturesPath)" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
   </ItemGroup>
 </Project>

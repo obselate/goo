@@ -15,9 +15,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Goo.Accessibility\Goo.Accessibility.gsproj" />
     <ProjectReference Include="..\..\Goo\Goo.gsproj"
-                      AdditionalProperties="Configuration=CoreTestRelease;IncludeTestFixtures=true;GooTestFixturesProps=$(MSBuildProjectDirectory)/Goo.CoreBehaviorTestFixtures.props" />
+                      AdditionalProperties="Configuration=TestRelease;IncludeTestFixtures=true" />
     <ProjectReference Include="..\Goo.FSharpInterop\Goo.FSharpInterop.fsproj"
-                      AdditionalProperties="Configuration=CoreTestRelease" />
+                      AdditionalProperties="Configuration=TestRelease" />
     <None Update="Assets/*.svg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="UseGooLinuxSdlForTests"

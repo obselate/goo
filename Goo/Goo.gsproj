@@ -19,6 +19,7 @@
     <DebugType>embedded</DebugType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GooTestFixturesProps Condition="'$(GooTestFixturesProps)' == ''">$(MSBuildThisFileDirectory)../tests/Shared/Goo.TestFixtures.props</GooTestFixturesProps>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Goo.Android" />
