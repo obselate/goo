@@ -362,8 +362,8 @@ public partial class Window {
         let repeatStartTicks = Stopwatch.GetTimestamp()
         nativeModal?.DrainCompletion()
         if IsOpen && !native.IsClosing && drainCloseRequest() {
+          stopPosts()
           if windowTarget?.PrepareClose() != false {
-            stopPosts()
             native.BeginClose()
           }
         }

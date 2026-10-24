@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Numerics
 
 internal class CellFixtures {
   func InputEqualitySchedulesOneBuild() bool {
@@ -278,7 +279,7 @@ internal class CellFixtures {
     } catch (error InvalidOperationException) {
       threw = true
     }
-    return threw && calls == 1
+    return threw && calls == 1 && Window{}.DeferredCloseStopsPostsForTest()
   }
 
   func DirectCompositionAddsNoRenderNode() bool {
@@ -1115,3 +1116,51 @@ internal class WindowCleanupParent : Cell {
     Cell.Mount[string, RetirementDisposableCell]("first", "first"),
     Cell.Mount[string, RetirementDisposableCell]("later", "later"),
   } }
+
+public partial class Window {
+  internal func DeferredCloseStopsPostsForTest() bool {
+    Width = 100
+    Height = 100
+    let pending = DeferredCloseTarget()
+    host = EmbeddedWindowBridge(ElementHandleEmbeddedHost(), this)
+    windowTarget = pending
+    IsOpen = true
+    var calls = 0
+    Post(() -> { calls++ })
+    RequestClose()
+    try {
+      PumpScheduled(0.0)
+      return pending.CloseChecks > 0 && IsOpen && calls == 0 && !TryPost(() -> { calls++ })
+    } finally {
+      windowTarget = nil
+      Close()
+    }
+  }
+}
+
+internal class DeferredCloseTarget : WindowRenderTarget {
+  internal var CloseChecks int32
+  public event PresentationAccepted Action[int64]
+  public prop ProfileSink FrameProfileSink { get -> throw NotSupportedException() }
+  public prop NeedsRender bool { get -> false }
+  public prop LastFrameSubmitted bool { get -> false }
+  public prop QueueWorkPending bool { get -> true }
+  public prop RetirementWorkPending bool { get -> true }
+  public func PrepareClose() bool {
+    CloseChecks++
+    return false
+  }
+  public func SetVSync(value bool) { }
+  public func SetHidden(value bool) { }
+  public func BeginFrame() { }
+  public func Render(root Node?, portalRoot Node?, background Color, dpi Vector2, overlay DiagnosticOverlay?) { }
+  public func Present() { }
+  public func ServicePendingSubmission() bool -> false
+  public func PollQueueCompletion() bool -> false
+  public func Resize(width int32, height int32) bool -> true
+  public func RequestCapture(root Node?, portalRoot Node?, background Color, dpi Vector2,
+    reusablePixels([]uint8)? = nil) WindowReadbackRequestStatus -> WindowReadbackRequestStatus.NotReady
+  public func PollCapture() WindowReadbackPollStatus -> WindowReadbackPollStatus.NotReady
+  public func TakeCaptureResult() WindowReadbackResult? -> nil
+  public func Dispose() { }
+}
