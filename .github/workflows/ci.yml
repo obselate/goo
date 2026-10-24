@@ -1027,30 +1027,7 @@ jobs:
 
       - name: Validate DevTools package manifests
         if: needs.changes.outputs.full == 'true'
-        run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          from zipfile import ZipFile
-
-          version = os.environ["GOO_VERSION"]
-          expected = {
-              f"Goo.DevTools.{version}.nupkg": ("Goo.DevTools", "DotnetTool"),
-              f"Goo.DevTools.App.{version}.nupkg": ("Goo.DevTools.App", "DotnetTool"),
-              f"Goo.Templates.{version}.nupkg": ("Goo.Templates", "Template"),
-          }
-          root = Path("artifacts/packages")
-          for package, (package_id, package_type) in expected.items():
-              with ZipFile(root / package) as archive:
-                  nuspecs = [name for name in archive.namelist() if name.endswith(".nuspec")]
-                  if len(nuspecs) != 1:
-                      raise RuntimeError(f"{package}: expected one nuspec, found {nuspecs}")
-                  text = archive.read(nuspecs[0]).decode("utf-8")
-                  if f'<id>{package_id}</id>' not in text:
-                      raise RuntimeError(f"{package}: package id is missing")
-                  if f'<packageType name="{package_type}"' not in text:
-                      raise RuntimeError(f"{package}: package type is missing")
-          PY
+        run: dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- --manifests artifacts/packages --version "$GOO_VERSION"
 
       - name: Generate, build and publish Goo template
         if: needs.changes.outputs.full == 'true'
@@ -1171,7 +1148,7 @@ jobs:
       - name: Validate package, native ABI, checksums, and bundle size
         if: needs.changes.outputs.full == 'true'
         run: |
-          .github/scripts/validate-release.py \
+          dotnet run --project tools/Goo.ReleaseCheck/Goo.ReleaseCheck.gsproj -c Release -- \
             --package "artifacts/packages/Goo.$GOO_VERSION.nupkg" \
             --symbols "artifacts/packages/Goo.$GOO_VERSION.snupkg" \
             --bundle artifacts/linux-x64
