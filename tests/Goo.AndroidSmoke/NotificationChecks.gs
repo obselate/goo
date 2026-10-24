@@ -191,10 +191,11 @@ sealed class NotificationChecks : Instrumentation {
     }
 
     private func ClickPermission(id string) {
-        Wait(() -> HasPermissionButton(id), "Permission button did not appear: " + id)
-        using let root = automation!!.RootInActiveWindow!!
-        using let button = FindButton(root, id)!!
-        Require(button.PerformAction(NodeAction.Click), "Permission button click failed.")
+        Wait(() -> {
+            using let root = automation!!.RootInActiveWindow
+            using let button = if root == nil { nil } else { FindButton(root, id) }
+            return button != nil && button.PerformAction(NodeAction.Click)
+        }, "Permission button click failed: " + id)
     }
 
     private func FindButton(node AccessibilityNodeInfo, id string) AccessibilityNodeInfo? {
