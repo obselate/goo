@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-Standalone G# Goo authoring guidance and twelve stdio MCP tools. The plugin requires [uv](https://docs.astral.sh/uv/), which manages its required Python runtime and locked environment. Goo applications require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.15.0. The server uses the official MCP Python SDK.
+Standalone G# Goo authoring guidance and twelve stdio MCP tools. Goo applications and the plugin require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.15.0. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. Python and uv are not required.
 
 | Tool | Purpose |
 | --- | --- |
@@ -49,8 +49,8 @@ codex plugin add goo@obselate-goo
 Git and network access are required while Codex downloads the marketplace.
 Codex installs the portable package, discovers its `goo-authoring` skill, and
 starts its MCP server from the installed plugin path. Start a new Codex session
-after installation. No manual MCP configuration, checkout mutation, directory
-change, or absolute path is required.
+after installation. The host runs the pinned Goo.DevTools package through
+`dotnet tool exec`. No Python environment or manual MCP configuration is needed.
 
 ## Use
 
@@ -94,11 +94,19 @@ Pass `repository` to documentation/starter tools or set `GOO_SOURCE_ROOT` to use
 ## Refresh and verify
 
 Refresh the bundle from a Goo checkout with `dotnet run --project tools/Goo.SyncDocs/Goo.SyncDocs.gsproj -c Release -- /path/to/goo-checkout`.
-Validate the MCP workflow with:
+Build and verify from the repository root:
 
 ```sh
-GOO_CLI=/absolute/path/to/Goo.DevTools.Cli.dll uv run --locked python scripts/verify.py
+dotnet build tools/Goo.DevTools.Cli/Goo.DevTools.Cli.gsproj -c Release --nologo -m:4 -warnaserror
+XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
+  dotnet tools/Goo.DevTools.Cli/bin/Release/net10.0/Goo.DevTools.Cli.dll \
+  mcp --plugin-root plugins/goo --verify
 ```
+
+For a local MCP host, use `dotnet` with the built CLI DLL followed by
+`mcp --plugin-root /absolute/path/to/plugins/goo`. The portable manifest uses
+the released package. Ship plugin changes with the Goo.DevTools release that
+contains the matching server.
 
 For OMP, run `omp plugin doctor goo-agent-plugin`. Reinstall or refresh the
 plugin through the host plugin manager after changing its source, then start a

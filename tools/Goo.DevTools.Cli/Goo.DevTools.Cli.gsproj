@@ -26,6 +26,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Goo.PluginMcp/Goo.PluginMcp.gsproj" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="$(MSBuildProjectDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
     <None Include="../../.github/scripts/stage-linux-x64.sh" Link="Packaging/stage-linux-x64.sh" CopyToOutputDirectory="PreserveNewest" />

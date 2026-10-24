@@ -55,6 +55,7 @@ internal class CommandLine {
             StringComparer.OrdinalIgnoreCase
         ){
             ["help"] = OptionSet([]string{}, []string{"json"}),
+            ["mcp"] = OptionSet([]string{"plugin-root"}, []string{"verify"}),
             ["dev"] = OptionSet(
                 []string{"project", "configuration", "env", "wait"},
                 []string{"watch", "no-watch", "input", "inspector", "focus"}
