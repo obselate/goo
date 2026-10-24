@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-Standalone G# Goo authoring guidance and twelve stdio MCP tools. Goo applications and the plugin require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.16.0. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. Python and uv are not required.
+Standalone G# Goo authoring guidance and twelve stdio MCP tools. Goo applications and the plugin require the .NET 10 SDK, the platform requirements in the main Goo README, and Goo.DevTools 0.16.1. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. Python and uv are not required.
 
 | Tool | Purpose |
 | --- | --- |
@@ -19,7 +19,7 @@ Standalone G# Goo authoring guidance and twelve stdio MCP tools. Goo application
 
 ## Install
 
-Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.16.0`.
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.16.1`.
 Confirm it is available:
 
 ```sh
