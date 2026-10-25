@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.18.0 - 2026-10-25
+
+- Add `PlaceholderColor` to `TextEntry` and `TextEditor`.
+
 ## 0.17.0 - 2026-10-25
 
 - Fix the native transfer check when its peer exits before the close request.
