@@ -10,6 +10,7 @@ class Fade : Cell {
 
 - `AnimateValue(initial)` does not rebuild its Cell. `Animate(initial)` still rebuilds. Both own and dispose the Anim.
 - Slots are inherited from `Style` by every primitive. Use `OpacityAnim`, `BackgroundColorAnim`, `BorderColorAnim`, `BorderStartColorAnim`, `BorderEndColorAnim`, `OutlineColorAnim`, `ColorAnim` or `TextStrokeColorAnim`.
+- Slots bind mounted elements, not inline text ranges or text presentation styles.
 - `TranslateAnim` takes `Anim<Point>` in pixels. `ScaleAnim` takes a uniform factor. Other `Transform` components stay declared. No layout fields have slots.
 - A slot wins over the field's declaration and `TransitionMs`. Ticks change paint without Build or layout. Inherited text colors reach descendants without their own color declaration or slot.
 - Rebuilding with the same Anim keeps the binding. Removing the slot or disposing its Anim restores the latest declaration under normal transition rules. Completion and pause keep the value bound.

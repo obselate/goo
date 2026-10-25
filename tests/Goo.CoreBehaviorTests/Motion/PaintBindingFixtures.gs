@@ -176,6 +176,8 @@ internal class PaintBindingFixtures {
       cell.Colour.Set(Color.White)
       window.UpdateTree()
       let n = cell.Handle.AttachedNode()!!
+      let style = Style{ ColorAnim: cell.Colour }
+      if style.TryGetTextStyle(out var properties) { return false }
       return n.Color == Color.White && n.Children[0].Color == Color.White
         && n.Children[1].Color == Color.Black && cell.Builds == 1
     } finally {

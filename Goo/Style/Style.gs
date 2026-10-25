@@ -31,7 +31,7 @@ public open class Style {
   }
 
   /// Reads explicit inline declarations without resolving inherited values.
-  /// Returns false when the style contains other fields or a non-pixel font size.
+  /// Returns false for paint slots, other fields, or a non-pixel font size.
   /// @param properties The supported declarations, or an empty value on failure.
   /// @returns True when every declaration can be represented.
   public func TryGetTextStyle(out properties TextStyleProperties) bool {
@@ -46,6 +46,7 @@ public open class Style {
       var cursor = values.Cursor()
       while cursor.MoveNext() {
         let entry = cursor.Current
+        if entry.Payload is PaintBinding { return false }
         switch entry.Field {
           case StyleField.FontFamily { family = entryText(entry) }
           case StyleField.FontSize {
