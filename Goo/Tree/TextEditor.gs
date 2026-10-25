@@ -26,6 +26,8 @@ public class TextEditor : Blob {
   public prop ReadOnly bool{ get; init; }
   /// Gets the placeholder shown for an empty document.
   public prop Placeholder string{ get; init; }
+  /// Gets the placeholder color. Nil draws Color at 45% opacity.
+  public prop PlaceholderColor Color? { get; init; }
   /// Gets optional software keyboard and autofill hints.
   public prop InputOptions TextInputOptions? { get; init; }
   /// Gets the selection highlight color.

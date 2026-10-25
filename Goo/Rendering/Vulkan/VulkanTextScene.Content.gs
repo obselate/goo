@@ -233,12 +233,14 @@ internal unsafe sealed partial class VulkanTextScene {
             node.SelectionColor, opacity, parentTransformIndex)
         }
       var result = true
-      let textOpacity = if node.Buffer == "" { opacity * 0.45F } else { opacity }
-      let color = PackedColor(node.Color, textOpacity)
+      let placeholderColor = node.Buffer == "" ? node.PlaceholderColor : nil
+      let textColor = placeholderColor ?? node.Color
+      let textOpacity = if node.Buffer == "" && placeholderColor == nil { opacity * 0.45F } else { opacity }
+      let color = PackedColor(textColor, textOpacity)
       result = EmitShapeWithStyle(frame, paintShape, TextLayouts.fontSize(node),
-        originX, baseline, node.Color, textOpacity, parentTransformIndex,
+        originX, baseline, textColor, textOpacity, parentTransformIndex,
         node.TextStrokeWidth.Px, node.TextStrokeColor, node.TextShadows)
-      if result && node.Color.A > 0.0F {
+      if result && textColor.A > 0.0F {
         AddPlainDecorations(frame, paintShape, originX, baseline,
           node.TextDecoration, color, parentTransformIndex)
       }
@@ -404,12 +406,14 @@ internal unsafe sealed partial class VulkanTextScene {
           let natural = value.Descent - value.Ascent
           let baseline = contentY + line.Top - scrollY
           +(line.Height - natural) * 0.5F - value.Ascent
-          let color = PackedColor(node.Color, opacity * 0.45F)
+          let placeholderColor = node.PlaceholderColor ?? node.Color
+          let placeholderOpacity = node.PlaceholderColor == nil ? opacity * 0.45F : opacity
+          let color = PackedColor(placeholderColor, placeholderOpacity)
           if !EmitShapeWithStyle(frame, value, TextLayouts.fontSize(node), lineX,
-            baseline, node.Color, opacity * 0.45F, transformIndex,
+            baseline, placeholderColor, placeholderOpacity, transformIndex,
             node.TextStrokeWidth.Px, node.TextStrokeColor, node.TextShadows) {
               result = false
-            } else if node.Color.A > 0.0F {
+            } else if placeholderColor.A > 0.0F {
               AddPlainDecorations(frame, value, lineX, baseline,
                 node.TextDecoration, color, transformIndex)
             }

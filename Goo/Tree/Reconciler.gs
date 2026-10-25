@@ -547,6 +547,10 @@ internal partial class Reconciler {
         n.Placeholder = t.Placeholder
         paintChanged = true
       }
+      if n.PlaceholderColor != t.PlaceholderColor {
+        n.PlaceholderColor = t.PlaceholderColor
+        paintChanged = true
+      }
       if !n.SelectionColor.ContentEquals(t.SelectionColor) {
         n.SelectionColor = t.SelectionColor
         paintChanged = true
@@ -639,6 +643,10 @@ internal partial class Reconciler {
     }
     if n.Placeholder != t.Placeholder {
       n.Placeholder = t.Placeholder
+      paintChanged = true
+    }
+    if n.PlaceholderColor != t.PlaceholderColor {
+      n.PlaceholderColor = t.PlaceholderColor
       paintChanged = true
     }
     if !n.SelectionColor.ContentEquals(t.SelectionColor) {

@@ -18,6 +18,8 @@ public class TextEntry : Blob {
   }
   /// Gets the placeholder shown for an empty value.
   public prop Placeholder string{ get; init; }
+  /// Gets the placeholder color. Nil draws Color at 45% opacity.
+  public prop PlaceholderColor Color? { get; init; }
   /// Reports whether the value is presented as protected text.
   public prop Password bool{ get; init; }
   /// Gets optional software keyboard and autofill hints.
