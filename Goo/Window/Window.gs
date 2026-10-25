@@ -532,6 +532,8 @@ public partial class Window {
   private var resolver Resolver
   private let profiler FrameProfiler
   private let motionPump MotionPump
+  internal prop PaintMotionPump MotionPump { get -> motionPump }
+  private func wakePaintMotion() { enqueueRetainedInvalidation(ReconcileEffects.Paint) }
   private var timeS float64
 
   private var input InputCoordinator
@@ -616,6 +618,7 @@ public partial class Window {
     profiler = FrameProfiler()
     motionPump = MotionPump()
     motionPump.Wake = requestReconcile
+    motionPump.PaintWake = wakePaintMotion
 
     input = InputCoordinator()
 

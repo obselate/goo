@@ -282,6 +282,26 @@ public open class Cell {
     }
   }
 
+  /// Creates a Cell-owned number animation without rebuilding this component.
+  public func AnimateValue(initial float64) Anim[float64] ->
+    registerAnim[float64](Anim[float64](initial, MotionConverters.Float64, nil, nil))
+
+  /// Creates a Cell-owned point animation without rebuilding this component.
+  public func AnimateValue(initial Point) Anim[Point] ->
+    registerAnim[Point](Anim[Point](initial, MotionConverters.Point, nil, nil))
+
+  /// Creates a Cell-owned color animation without rebuilding this component.
+  public func AnimateValue(initial Color) Anim[Color] ->
+    registerAnim[Color](Anim[Color](initial, MotionConverters.Color, nil, nil))
+
+  /// Creates a Cell-owned fixed-unit length animation without rebuilding this component.
+  public func AnimateValue(initial Length) Anim[Length] ->
+    registerAnim[Length](Anim[Length](initial, MotionConverters.ForLength(initial), nil, nil))
+
+  /// Creates a Cell-owned custom-coordinate animation without rebuilding this component.
+  public func AnimateValue[T](initial T, converter MotionConverter[T]) Anim[T] ->
+    registerAnim[T](Anim[T](initial, converter, nil, nil))
+
   /// Creates a number animated by this component.
   /// @param initial initial value
   /// @returns an animation bridge owned by this component

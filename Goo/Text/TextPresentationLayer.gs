@@ -760,7 +760,7 @@ private func validatePresentationStyle(style Style) {
     var cursor = entries.Cursor()
     while cursor.MoveNext() {
       let entry = cursor.Current
-      if !inlinePresentationStyleField(entry.Field) {
+      if entry.Payload is PaintBinding || !inlinePresentationStyleField(entry.Field) {
         throw ArgumentException("Text presentation styles support inline text fields only", "style")
       }
     }

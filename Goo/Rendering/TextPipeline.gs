@@ -159,7 +159,7 @@ internal class PassiveTextPresentations {
             if field == StyleField.TextTransform {
               throw ArgumentException("Text style ranges do not support TextTransform", "StyleRanges")
             }
-            if !inlinePresentationStyleField(field) {
+            if cursor.Current.Payload is PaintBinding || !inlinePresentationStyleField(field) {
               throw ArgumentException("Text style ranges support inline text fields only",
                 "StyleRanges")
             }

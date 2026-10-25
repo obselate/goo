@@ -89,6 +89,7 @@ internal class MotionPump {
   private var nextGeneration int64
 
   internal prop Wake(() -> void)? { get; set; }
+  internal prop PaintWake Action? { get; set; }
 
   internal init() {
     clock = MotionClock()
