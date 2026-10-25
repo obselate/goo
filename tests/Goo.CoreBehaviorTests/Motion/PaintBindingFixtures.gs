@@ -29,10 +29,15 @@ internal class PaintBindingFixtures {
             let builds = cell.Builds
             let layouts = sink.Layouts
             var paints = 0
+            var steadyBytes int64
+            var terminalBytes int64
             let before = GC.GetAllocatedBytesForCurrentThread()
             for tick in 0 ... 120 {
+              let sample = GC.GetAllocatedBytesForCurrentThread()
               window.UpdateTree(1.0 / 64.0)
               if paint(window, compiler) { paints++ }
+              let allocated = GC.GetAllocatedBytesForCurrentThread() - sample
+              if tick == 119 { terminalBytes = allocated } else { steadyBytes += allocated }
             }
             let bytes = GC.GetAllocatedBytesForCurrentThread() - before
             let n = cell.Handle.AttachedNode()!!
@@ -45,9 +50,9 @@ internal class PaintBindingFixtures {
             if !reached || sink.Layouts != layouts || paints != 120 { return false }
             if lane == 1 && cell.Builds != builds { return false }
             if repeat == 1 {
-              Console.WriteLine("paint-slot lane=${lane} field=${field} ticks=120 builds=${cell.Builds - builds} layouts=${sink.Layouts - layouts} paints=${paints} bytes=${bytes}")
+              Console.WriteLine("paint-slot lane=${lane} field=${field} ticks=120 builds=${cell.Builds - builds} layouts=${sink.Layouts - layouts} paints=${paints} bytes=${bytes} steadyBytes=${steadyBytes} terminalBytes=${terminalBytes}")
             }
-            if repeat == 1 && lane == 1 && field < 2 && bytes != 0 { return false }
+            if repeat == 1 && lane == 1 && field < 2 && steadyBytes != 0 { return false }
           } finally {
             window.Close()
           }

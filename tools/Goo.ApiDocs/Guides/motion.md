@@ -2,7 +2,8 @@
 
 ```gsharp
 class Fade : Cell {
-  let fade = AnimateValue(1.0)
+  let fade Anim[float64]
+  init() { fade = AnimateValue(1.0) }
   override func Build() Blob -> Container{ Opacity: 1.0, OpacityAnim: fade }
   func Hide() { fade.To(0.0, Motion.Tween(200.0)) }
 }
