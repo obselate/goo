@@ -1202,6 +1202,10 @@ Gets the logical-line overscan used by viewport layout.
 
 Gets the placeholder shown for an empty document.
 
+### `PlaceholderColor`
+
+Gets the placeholder color. Nil draws Color at 45% opacity.
+
 ### `ReadOnly`
 
 Gets whether editing commands are disabled.
@@ -1249,6 +1253,10 @@ Reports whether the value is presented as protected text.
 ### `Placeholder`
 
 Gets the placeholder shown for an empty value.
+
+### `PlaceholderColor`
+
+Gets the placeholder color. Nil draws Color at 45% opacity.
 
 ### `SelectionColor`
 
