@@ -26,6 +26,8 @@ internal class Node {
   internal prop ScenePaintVersion uint64{ get -> scenePaintVersion }
   internal var VulkanOwnerToken object?
   internal var VulkanOwner VulkanSceneOwnerId?
+  internal var PaintBindings List[PaintBinding]?
+  internal var PaintBindingResolver Resolver?
 
   internal func BumpScenePaintVersion() {
     scenePaintVersion = scenePaintVersion == uint64.MaxValue

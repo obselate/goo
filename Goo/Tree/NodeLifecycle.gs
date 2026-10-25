@@ -20,6 +20,7 @@ internal class NodeLifecycle {
         }
       }
       n.Retired = true
+      n.PaintBindingResolver?.ForgetPaintBindings(n)
       n.Context = nil
       ElementHandles.Detach(n)
       if n.HasAccessibilityDeclaration {

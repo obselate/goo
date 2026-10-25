@@ -70,6 +70,7 @@ public class Anim[T] {
   private var memoValue T
   private var memoValid bool
   private var pendingCompletion MotionCompletionReason?
+  private var paintReferences int32
 
   /// Reports completion once after the owning motion pump settles, on its UI thread.
   /// Retarget, Set, Snap, and disposal cancel pending delivery. A handler may retarget
@@ -148,6 +149,20 @@ public class Anim[T] {
   public prop IsDisposed bool{ get -> disposed }
 
   internal prop Handle MotionParticle{ get -> handle }
+  internal prop PaintPump MotionPump? { get -> boundPump }
+
+  internal func BindPaint(pump MotionPump) {
+    if boundPump != pump {
+      throw InvalidOperationException("A paint animation must belong to the element's window")
+    }
+    paintReferences++
+  }
+
+  internal func UnbindPaint() { paintReferences-- }
+
+  private func wakePaint() {
+    if paintReferences > 0 { boundPump?.PaintWake?.Invoke() }
+  }
 
   /// Animates toward target with Motion.Default.
   /// @param target value to animate toward
@@ -282,6 +297,7 @@ public class Anim[T] {
       if let owner = handle.registrationPump {
         owner.Deregister(handle)
       }
+      wakePaint()
       if notify {
         notifyChange(value)
       }
@@ -438,6 +454,7 @@ public class Anim[T] {
       return
     }
     disposed = true
+    wakePaint()
     try {
       if running {
         currentT = Value
@@ -508,6 +525,7 @@ public class Anim[T] {
       rebuild()
     }
     notifyChange(value)
+    wakePaint()
   }
 
   private func notifyChange(value T) {
@@ -539,6 +557,9 @@ public class Anim[T] {
   private func bindInternal(pump MotionPump) {
     if disposed || boundPump == pump {
       return
+    }
+    if paintReferences > 0 && boundPump != pump {
+      throw InvalidOperationException("A paint animation cannot move to another window while bound")
     }
     if let owner = handle.registrationPump {
       owner.Deregister(handle)

@@ -238,6 +238,8 @@ public open class Style {
   public prop Cursor Cursor{ init -> pushEnumOrdinal(StyleField.Cursor, int32(value)) }
   /// Sets the background color.
   public prop BackgroundColor Color{ init -> pushColor(StyleField.BackgroundColor, value) }
+  /// Binds the background color without rebuilding or changing layout.
+  public prop BackgroundColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.BackgroundColor, value) }
   /// Sets or explicitly clears the background gradient.
   /// A non-nil gradient wins over BackgroundColor when both apply.
   public prop BackgroundGradient Gradient? { init -> pushGradient(StyleField.BackgroundGradient, value) }
@@ -283,10 +285,23 @@ public open class Style {
   /// Sets box border colors in CSS top, right, bottom, left order.
   /// A uniform value also sets the Shape stroke color.
   public prop BorderColor Edges[Color]{ init -> pushBorderColors(value) }
+  /// Binds all border colors, including the Shape stroke.
+  public prop BorderColorAnim Anim[Color]? {
+    init {
+      pushPaintColor(StyleField.ShapeStrokeColor, value)
+      pushPaintColor(StyleField.BorderTopColor, value)
+      pushPaintColor(StyleField.BorderRightColor, value)
+      pushPaintColor(StyleField.BorderBottomColor, value)
+    }
+  }
   /// Sets the box border color at the inline start edge.
   public prop BorderStartColor Color{ init -> pushColor(StyleField.BorderStartColor, value) }
+  /// Binds the border color at the inline start edge.
+  public prop BorderStartColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.BorderStartColor, value) }
   /// Sets the box border color at the inline end edge.
   public prop BorderEndColor Color{ init -> pushColor(StyleField.BorderEndColor, value) }
+  /// Binds the border color at the inline end edge.
+  public prop BorderEndColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.BorderEndColor, value) }
   /// Sets how box border edges paint. Dashed and Dotted stroke one ring
   /// using the top border width and color. Shape strokes are unchanged.
   public prop BorderStyle BorderStyle{ init -> pushEnumOrdinal(StyleField.BorderStyle, int32(value)) }
@@ -295,10 +310,14 @@ public open class Style {
   public prop OutlineWidth Length{ init -> pushCheckedLength(StyleField.OutlineWidth, value, "OutlineWidth", false, false, false) }
   /// Sets the color of the box outline.
   public prop OutlineColor Color{ init -> pushColor(StyleField.OutlineColor, value) }
+  /// Binds the outline color without rebuilding or changing layout.
+  public prop OutlineColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.OutlineColor, value) }
   /// Sets the signed pixel offset from the border edge. Positive values move the outline outward.
   public prop OutlineOffset Length{ init -> pushCheckedLength(StyleField.OutlineOffset, value, "OutlineOffset", true, false, false) }
   /// Sets opacity from 0 through 1.
   public prop Opacity float64{ init -> pushScalar(StyleField.Opacity, normalizeOpacity(value)) }
+  /// Binds opacity. The animation wins over Opacity and TransitionMs until removed.
+  public prop OpacityAnim Anim[float64]? { init -> pushPaintNumber(StyleField.Opacity, value) }
   /// Sets the Gaussian blur radius, from 0 through 64 pixels, applied to the window
   /// content behind the border box. BorderRadius, clips and Opacity apply to the blur.
   public prop BackdropBlur float64{ init -> pushScalar(StyleField.BackdropBlur, normalizeBackdropBlur(value)) }
@@ -310,6 +329,19 @@ public open class Style {
   /// Sets a layout-neutral 2D transform for this element and its descendants.
   /// Components interpolate only when their length units match.
   public prop Transform PanelTransform{ init -> pushTransform(value) }
+  /// Binds translation in pixels without changing layout. Other Transform components remain declared.
+  public prop TranslateAnim Anim[Point]? {
+    init {
+      if let source = value {
+        addEntry(StyleEntry{ Field: StyleField.TransformTranslateX,
+          Payload: PaintBinding(StyleField.TransformTranslateX, translation: source) })
+        addEntry(StyleEntry{ Field: StyleField.TransformTranslateY,
+          Payload: PaintBinding(StyleField.TransformTranslateY, translation: source) })
+      }
+    }
+  }
+  /// Binds the uniform scale factor without changing layout.
+  public prop ScaleAnim Anim[float64]? { init -> pushPaintNumber(StyleField.TransformScale, value) }
   /// Sets the horizontal transform origin. The default is 50 percent.
   public prop TransformOriginX Length{
     init -> pushLength(StyleField.TransformOriginX, normalizeTransformOrigin(value, "TransformOriginX"))
@@ -346,6 +378,8 @@ public open class Style {
   public prop FontSize Length{ init -> pushCheckedLength(StyleField.FontSize, value, "FontSize", false, false, false) }
   /// Sets the text color.
   public prop Color Color{ init -> pushColor(StyleField.Color, value) }
+  /// Binds the inherited text color without rebuilding or changing layout.
+  public prop ColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.Color, value) }
   /// Sets the inherited non-negative pixel width of the glyph stroke.
   /// The stroke is paint-only, outlines glyphs only, and snaps during transitions.
   public prop TextStrokeWidth Length{
@@ -356,6 +390,8 @@ public open class Style {
   }
   /// Sets the inherited glyph stroke color without changing text layout.
   public prop TextStrokeColor Color{ init -> pushColor(StyleField.TextStrokeColor, value) }
+  /// Binds the inherited glyph stroke color without changing text layout.
+  public prop TextStrokeColorAnim Anim[Color]? { init -> pushPaintColor(StyleField.TextStrokeColor, value) }
   /// Sets the font weight.
   public prop FontWeight float64{ init -> pushScalar(StyleField.FontWeight, checkedNonNegative(value, "FontWeight")) }
   /// Sets the font style.
@@ -390,6 +426,18 @@ public open class Style {
   }
   /// Sets inherited invariant casing for static Text. TextEntry is unchanged.
   public prop TextTransform TextTransform{ init -> pushEnumOrdinal(StyleField.TextTransform, int32(value)) }
+
+  internal func pushPaintNumber(field StyleField, value Anim[float64]?) {
+    if let source = value {
+      addEntry(StyleEntry{ Field: field, Payload: PaintBinding(field, number: source) })
+    }
+  }
+
+  internal func pushPaintColor(field StyleField, value Anim[Color]?) {
+    if let source = value {
+      addEntry(StyleEntry{ Field: field, Payload: PaintBinding(field, colour: source) })
+    }
+  }
 
   internal func pushEdges(value Edges, padding bool) {
     let name = padding ? "Padding" : "Margin"

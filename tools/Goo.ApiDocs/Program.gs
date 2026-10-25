@@ -405,7 +405,8 @@ func BuildPage(
         directory == "Window" ||
         directory == "Input" ||
         directory == "Tree" ||
-        directory == "Layout" {
+        directory == "Layout" ||
+        directory == "Motion" {
         text.AppendLine()
         text.Append(File.ReadAllText(Path.Combine(guideRoot, directory.ToLowerInvariant() + ".md")))
     }

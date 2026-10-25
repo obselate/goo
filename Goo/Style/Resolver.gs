@@ -203,7 +203,8 @@ internal partial class Resolver {
     let remap = (n.Direction == Direction.RightToLeft) != (direction == Direction.RightToLeft)
     writeField(n, StyleEntry{ Field: StyleField.Direction,
       A: float32(int32(direction)) }, initial)
-    var localMask = StyleMask{}
+    let paintMask = updatePaintBindings(n)
+    var localMask = paintMask
     // Higher active layers shadow lower entries before transition retargeting.
     let hoverMask = !n.Disabled && n.Hovered ? fieldsMask(n, n.HoverStyle) : StyleMask{}
     let focusMask = !n.Disabled && n.FocusVisible ? fieldsMask(n, n.FocusStyle) : StyleMask{}
@@ -238,6 +239,7 @@ internal partial class Resolver {
     }
     n.AppliedMask = mask
     n.AppliedMask = styleMaskUnion(n.AppliedMask, applyDebugOverrides(this, n))
+    samplePaintBindings(n)
   }
 
   internal func applyInherited(n Node, localMask StyleMask, initial bool) StyleMask {
@@ -272,6 +274,7 @@ internal partial class Resolver {
     var m = StyleMask{}
     var cursor = list.Cursor()
     while cursor.MoveNext() {
+      if cursor.Current.Payload is PaintBinding { continue }
       let field = cursor.Current.Field
       if !styleFieldApplies(n, field) { continue }
       if field == StyleField.Margin {
@@ -298,6 +301,7 @@ internal partial class Resolver {
     guard let list = entries else { return mask }
     var cursor = list.Cursor()
     while cursor.MoveNext() {
+      if cursor.Current.Payload is PaintBinding { continue }
       let i = cursor.Index
       let field = cursor.Current.Field
       if !styleFieldApplies(n, field) { continue }
@@ -315,6 +319,7 @@ internal partial class Resolver {
     while cursor.MoveNext() {
       let i = cursor.Index
       var e = cursor.Current
+      if e.Payload is PaintBinding { continue }
       let logical = isLogicalStyleField(e.Field)
       if !styleFieldApplies(n, e.Field) {
         continue
@@ -412,6 +417,10 @@ internal partial class Resolver {
   // Direct write on initial resolve, non-animatable fields, or when transitions
   // are off; otherwise starts (or retargets) a lerp from the displayed value.
   internal func writeField(n Node, e StyleEntry, initial bool) {
+    if hasPaintBinding(n, e.Field) {
+      finishTransition(n, e.Field)
+      return
+    }
     if !styleFieldApplies(n, e.Field) {
       finishTransition(n, e.Field)
       return
@@ -531,6 +540,7 @@ internal partial class Resolver {
   }
 
   internal func Advance(dt float64) {
+    advancePaintBindings()
     for var ni = Animating.Count; ni > 0; ni-- {
       let n = Animating[ni - 1]
       if n.Retired {

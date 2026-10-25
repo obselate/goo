@@ -236,6 +236,10 @@ internal func entryShaderEffect(entry StyleEntry) ShaderEffect ? -> entry.Payloa
 internal func entryScrollbar(entry StyleEntry) Scrollbar ? -> entry.Payload as Scrollbar?
 
 internal func sameStyleEntry(left StyleEntry, right StyleEntry) bool {
+  if let binding = left.Payload as PaintBinding? {
+    return binding.Same(right.Payload as PaintBinding?)
+  }
+  if right.Payload is PaintBinding { return false }
   if left.A != right.A || left.B != right.B || left.C != right.C || left.D != right.D {
     return false
   }
