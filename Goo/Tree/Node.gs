@@ -473,6 +473,7 @@ internal class Node {
   internal prop BlinkT float64{ get; set; }
   internal prop PreFocus string{ get; set; }
   internal prop Placeholder string{ get; set; }
+  internal prop PlaceholderColor Color? { get; set; }
   internal prop SelectionColor Color{ get; set; }
   internal prop OnChange Action[string]? { get; set; }
   internal prop OnSubmit Action[string]? { get; set; }
