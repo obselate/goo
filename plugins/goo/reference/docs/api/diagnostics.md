@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Diagnostics`](https://github.com/obselate/goo/tree/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Diagnostics)
+Source: [`Goo/Diagnostics`](https://github.com/obselate/goo/tree/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Diagnostics)
 
 ## `DevTools`
 
 Source:
 
-- [`DevTools.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Diagnostics/DevTools.gs)
+- [`DevTools.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Diagnostics/DevTools.gs)
 
 Attaches Goo DevTools diagnostics to a window.
 
