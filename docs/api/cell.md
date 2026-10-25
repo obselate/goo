@@ -144,6 +144,26 @@ Creates a number animation that reports values without rebuilding this component
 
 Returns: an animation bridge owned by this component
 
+### `AnimateValue(Color)`
+
+Creates a Cell-owned color animation without rebuilding this component.
+
+### `AnimateValue(Length)`
+
+Creates a Cell-owned fixed-unit length animation without rebuilding this component.
+
+### `AnimateValue(Point)`
+
+Creates a Cell-owned point animation without rebuilding this component.
+
+### `AnimateValue(float64)`
+
+Creates a Cell-owned number animation without rebuilding this component.
+
+### `AnimateValue``1(``0,MotionConverter{``0})`
+
+Creates a Cell-owned custom-coordinate animation without rebuilding this component.
+
 ### `Animate``1(T,MotionConverter{T})`
 
 Creates a value animated by this component with custom coordinates.

@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Cell)
+Source: [`Goo/Cell`](https://github.com/obselate/goo/tree/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Cell)
 
 ## Build input cells
 
@@ -68,7 +68,7 @@ Capturing factories inside parent builds can allocate delegates and closures eve
 
 Source:
 
-- [`Cell.gs`](https://github.com/obselate/goo/blob/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Cell/Cell.gs)
+- [`Cell.gs`](https://github.com/obselate/goo/blob/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Cell/Cell.gs)
 
 Defines a stateful Goo component.
 
@@ -143,6 +143,26 @@ Creates a number animation that reports values without rebuilding this component
 - `onChange`: receives values from Set and each motion tick
 
 Returns: an animation bridge owned by this component
+
+### `AnimateValue(Color)`
+
+Creates a Cell-owned color animation without rebuilding this component.
+
+### `AnimateValue(Length)`
+
+Creates a Cell-owned fixed-unit length animation without rebuilding this component.
+
+### `AnimateValue(Point)`
+
+Creates a Cell-owned point animation without rebuilding this component.
+
+### `AnimateValue(float64)`
+
+Creates a Cell-owned number animation without rebuilding this component.
+
+### `AnimateValue``1(``0,MotionConverter{``0})`
+
+Creates a Cell-owned custom-coordinate animation without rebuilding this component.
 
 ### `Animate``1(T,MotionConverter{T})`
 
@@ -238,7 +258,7 @@ Requests a rebuild of this component.
 
 Source:
 
-- [`InputCell.gs`](https://github.com/obselate/goo/blob/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Cell/InputCell.gs)
+- [`InputCell.gs`](https://github.com/obselate/goo/blob/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Cell/InputCell.gs)
 
 Defines a stateful Goo component with an immutable input snapshot.
 
@@ -262,7 +282,7 @@ Gets the current immutable input snapshot.
 
 Source:
 
-- [`Context.gs`](https://github.com/obselate/goo/blob/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Cell/Context.gs)
+- [`Context.gs`](https://github.com/obselate/goo/blob/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Cell/Context.gs)
 
 Identifies one retained value independently of other keys of the same type.
 

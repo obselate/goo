@@ -836,7 +836,7 @@ Creates an empty write-only style declaration sink.
 
 ### `TryGetTextStyle(TextStyleProperties@)`
 
-Reads explicit inline declarations without resolving inherited values. Returns false when the style contains other fields or a non-pixel font size.
+Reads explicit inline declarations without resolving inherited values. Returns false for paint slots, other fields, or a non-pixel font size.
 
 - `properties`: The supported declarations, or an empty value on failure.
 
@@ -865,6 +865,10 @@ Sets the Gaussian blur radius, from 0 through 64 pixels, applied to the window c
 ### `BackgroundColor`
 
 Sets the background color.
+
+### `BackgroundColorAnim`
+
+Binds the background color without rebuilding or changing layout.
 
 ### `BackgroundGradient`
 
@@ -902,9 +906,17 @@ Sets the bottom-right border radius.
 
 Sets box border colors in CSS top, right, bottom, left order. A uniform value also sets the Shape stroke color.
 
+### `BorderColorAnim`
+
+Binds all border colors, including the Shape stroke.
+
 ### `BorderEndColor`
 
 Sets the box border color at the inline end edge.
+
+### `BorderEndColorAnim`
+
+Binds the border color at the inline end edge.
 
 ### `BorderEndWidth`
 
@@ -917,6 +929,10 @@ Sets the radius of all border corners.
 ### `BorderStartColor`
 
 Sets the box border color at the inline start edge.
+
+### `BorderStartColorAnim`
+
+Binds the border color at the inline start edge.
 
 ### `BorderStartWidth`
 
@@ -965,6 +981,10 @@ Sets how ClipPath maps into the element border box. The default is Fill.
 ### `Color`
 
 Sets the text color.
+
+### `ColorAnim`
+
+Binds the inherited text color without rebuilding or changing layout.
 
 ### `ColumnGap`
 
@@ -1082,9 +1102,17 @@ Sets the minimum width.
 
 Sets opacity from 0 through 1.
 
+### `OpacityAnim`
+
+Binds opacity. The animation wins over Opacity and TransitionMs until removed.
+
 ### `OutlineColor`
 
 Sets the color of the box outline.
+
+### `OutlineColorAnim`
+
+Binds the outline color without rebuilding or changing layout.
 
 ### `OutlineOffset`
 
@@ -1129,6 +1157,10 @@ Sets the right position offset.
 ### `RowGap`
 
 Sets the gap between rows.
+
+### `ScaleAnim`
+
+Binds the uniform scale factor without changing layout.
 
 ### `Scrollbar`
 
@@ -1186,6 +1218,10 @@ Sets the defensively copied inherited front-to-back text shadow stack. An empty 
 
 Sets the inherited glyph stroke color without changing text layout.
 
+### `TextStrokeColorAnim`
+
+Binds the inherited glyph stroke color without changing text layout.
+
 ### `TextStrokeWidth`
 
 Sets the inherited non-negative pixel width of the glyph stroke. The stroke is paint-only, outlines glyphs only, and snaps during transitions.
@@ -1217,6 +1253,10 @@ Sets the horizontal transform origin. The default is 50 percent.
 ### `TransformOriginY`
 
 Sets the vertical transform origin. The default is 50 percent.
+
+### `TranslateAnim`
+
+Binds translation in pixels without changing layout. Other Transform components remain declared.
 
 ### `Visibility`
 

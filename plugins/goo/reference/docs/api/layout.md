@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Layout`](https://github.com/obselate/goo/tree/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Layout)
+Source: [`Goo/Layout`](https://github.com/obselate/goo/tree/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Layout)
 
 ## Padding and margin
 
@@ -134,7 +134,7 @@ flow through the normal layout and paint passes.
 
 Source:
 
-- [`CustomLayout.gs`](https://github.com/obselate/goo/blob/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Layout/CustomLayout.gs)
+- [`CustomLayout.gs`](https://github.com/obselate/goo/blob/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Layout/CustomLayout.gs)
 
 Measures and arranges the existing children of a Container. Implementations must be immutable and must not mutate UI state during layout.
 
@@ -158,7 +158,7 @@ Returns: A finite, nonnegative desired content size, clamped by the parent const
 
 Source:
 
-- [`CustomLayout.gs`](https://github.com/obselate/goo/blob/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Layout/CustomLayout.gs)
+- [`CustomLayout.gs`](https://github.com/obselate/goo/blob/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Layout/CustomLayout.gs)
 
 Provides bounded access to retained children during custom measure and arrange callbacks.
 
@@ -186,7 +186,7 @@ Gets the number of retained direct children. Access outside a layout callback th
 
 Source:
 
-- [`CustomLayout.gs`](https://github.com/obselate/goo/blob/fe7b66e8ed581f921e8a7c2543e61e87607f0b9c/Goo/Layout/CustomLayout.gs)
+- [`CustomLayout.gs`](https://github.com/obselate/goo/blob/752ff8505b2aad7c53246a64b30066040ff46af6/Goo/Layout/CustomLayout.gs)
 
 Describes a logical size, or available constraints with positive infinity on unbounded axes.
 
