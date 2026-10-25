@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Accessibility`](https://github.com/obselate/goo/tree/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility)
+Source: [`Goo/Accessibility`](https://github.com/obselate/goo/tree/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility)
 
 ## Use accessibility semantics
 
@@ -104,7 +104,7 @@ the item semantics. Its items then have no role, and the content of each item ge
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Defines accessibility data for a Blob without selecting a platform backend.
 
@@ -224,7 +224,7 @@ Gets the string value.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Selects a command routed from an accessibility adapter.
 
@@ -248,7 +248,7 @@ Selects a command routed from an accessibility adapter.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Carries optional data for one accessibility action request.
 
@@ -318,7 +318,7 @@ Gets text supplied for SetValue.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Receives retained semantic-tree updates from a Window.
 
@@ -332,7 +332,7 @@ Receives the current mutable retained semantic tree on the UI thread.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Describes a checkable widget state.
 
@@ -347,7 +347,7 @@ Describes a checkable widget state.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Identifies one semantic node by its stable Value for one mounted Window lifetime.
 
@@ -355,7 +355,7 @@ Identifies one semantic node by its stable Value for one mounted Window lifetime
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Selects the announcement priority for a live region.
 
@@ -369,7 +369,7 @@ Selects the announcement priority for a live region.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Represents one retained semantic node. Adapters may retain this mutable view.
 
@@ -537,7 +537,7 @@ Gets the conservatively clipped window logical bounds, or nil when outside the v
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Selects a widget orientation.
 
@@ -551,7 +551,7 @@ Selects a widget orientation.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Reports resolved relationship IDs for one retained semantic node.
 
@@ -587,7 +587,7 @@ Gets owned targets in declaration order.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Defines stable mounted-element relationships for one semantic declaration.
 
@@ -627,7 +627,7 @@ Gets or sets the elements owned by this element.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Selects the semantic role exposed to an accessibility adapter.
 
@@ -675,7 +675,7 @@ Selects the semantic role exposed to an accessibility adapter.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Reports logical scroll offsets, targets, limits, and viewport dimensions.
 
@@ -715,7 +715,7 @@ Gets the current vertical offset.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Represents the retained semantic tree delivered to an AccessibilityAdapter.
 
@@ -731,7 +731,7 @@ Gets the monotonic version for retained-tree mutations.
 
 Source:
 
-- [`Accessibility.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Accessibility.gs)
+- [`Accessibility.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Accessibility.gs)
 
 Describes one range value exposed by a semantic widget.
 
@@ -759,11 +759,11 @@ Gets the localized value text, when one exists.
 
 Sources:
 
-- [`NativeAccessibilityActions.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Native/NativeAccessibilityActions.gs)
-- [`NativeAccessibilityAdapter.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Native/NativeAccessibilityAdapter.gs)
-- [`NativeAccessibilityText.Geometry.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Native/NativeAccessibilityText.Geometry.gs)
-- [`NativeAccessibilityText.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Native/NativeAccessibilityText.gs)
-- [`NativeAccessibilityTree.gs`](https://github.com/obselate/goo/blob/dec7a1b15715922089faddbe47a8a4430b6501dc/Goo/Accessibility/Native/NativeAccessibilityTree.gs)
+- [`NativeAccessibilityActions.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Native/NativeAccessibilityActions.gs)
+- [`NativeAccessibilityAdapter.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Native/NativeAccessibilityAdapter.gs)
+- [`NativeAccessibilityText.Geometry.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Native/NativeAccessibilityText.Geometry.gs)
+- [`NativeAccessibilityText.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Native/NativeAccessibilityText.gs)
+- [`NativeAccessibilityTree.gs`](https://github.com/obselate/goo/blob/9e4745962fb68163cecb2bf1eac60aeccab7ad0b/Goo/Accessibility/Native/NativeAccessibilityTree.gs)
 
 Publishes a desktop window to AT-SPI, UI Automation, or macOS Accessibility through AccessKit. Assign before Window.Open. Requires the optional Goo.Accessibility native runtime package.
 

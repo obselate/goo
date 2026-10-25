@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.17.0 - 2026-10-25
+
+- Fix the native transfer check when its peer exits before the close request.
+- Keep the original stack for failures in reconciler mount and factory-build paths.
+- Fix documentation commands, navigation, sibling-key guidance and plugin reference links.
+- Add Android API reference generation and public-type documentation checks.
+- Trim readmes, authoring guidance and public summaries.
+- Trim guides and consolidate shared checklists.
+- Add declarative paint animation slots and non-rebuilding Cell.AnimateValue factories.
+
 ## 0.16.1 - 2026-10-24
 
 - Apply requested font weights to system variable fonts, so variable system fonts no longer render at their default weight.
