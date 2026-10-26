@@ -408,7 +408,7 @@ public partial class Window {
   private func VulkanTargetForTest() VulkanWindowTarget ? ->
   windowTarget as VulkanWindowTarget?
 
-  private func SdlHostForTest() SdlHost ? -> host as SdlHost?
+  internal func SdlHostForTest() SdlHost ? -> host as SdlHost?
   internal func NativeHitTestForTest(x int32, y int32) SDLHitTestResult {
     guard let host = SdlHostForTest() else {
       throw InvalidOperationException("Native hit test requires an SDL host")

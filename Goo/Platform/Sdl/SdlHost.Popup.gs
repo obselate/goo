@@ -52,6 +52,7 @@ internal unsafe partial class SdlHost {
     if OperatingSystem.IsWindows() && popupKind == PopupKind.Menu {
       Require(SDL.RaiseWindow(popupParent!!.window), "SDL_RaiseWindow")
     }
+    firstShowMapping = true
     Require(SDL.ShowWindow(window), "SDL_ShowWindow")
     if OperatingSystem.IsWindows() && popupKind == PopupKind.Menu {
       Require(SDL.RaiseWindow(window), "SDL_RaiseWindow")

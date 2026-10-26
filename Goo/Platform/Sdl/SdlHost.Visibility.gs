@@ -21,24 +21,19 @@ internal unsafe partial class SdlHost {
 
   internal func PrepareFirstPresent() bool {
     if deferFirstShow {
-      if !firstShowRequested {
-        deferFirstShow = false
-        return true
-      }
-      let properties = SDL.GetWindowProperties(window)
-      Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShow.1", true),
-        "SDL_SetBooleanProperty")
-      Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.InitialConfigurePending.1", true),
-        "SDL_SetBooleanProperty")
       deferFirstShow = false
-      firstShowMapping = true
-      if RequestActivation() != WindowOperationResult.Accepted {
-        throw InvalidOperationException("Native secondary window show failed")
+      if firstShowRequested {
+        let properties = SDL.GetWindowProperties(window)
+        Require(SDL.SetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShow.1", true),
+          "SDL_SetBooleanProperty")
+        if RequestActivation() != WindowOperationResult.Accepted {
+          throw InvalidOperationException("Native secondary window show failed")
+        }
       }
     }
     if firstShowMapping {
       if SDL.GetBooleanProperty(SDL.GetWindowProperties(window),
-        "Goo.Wayland.InitialConfigurePending.1", true) { return false }
+        "Goo.Wayland.InitialConfigurePending.1", false) { return false }
       firstShowMapping = false
     }
     return true
@@ -83,6 +78,7 @@ internal unsafe partial class SdlHost {
       return WindowOperationResult.Unsupported
     }
     try {
+      firstShowMapping = true
       if !SDL.ShowWindow(window) { return WindowOperationResult.Failed }
       return WindowOperationResult.Accepted
     } finally {
