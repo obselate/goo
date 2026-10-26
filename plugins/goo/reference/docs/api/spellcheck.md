@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/SpellCheck`](https://github.com/obselate/goo/tree/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck)
+Source: [`Goo/SpellCheck`](https://github.com/obselate/goo/tree/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck)
 
 ## `HunspellSpellingService`
 
 Source:
 
-- [`HunspellSpellingService.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/HunspellSpellingService.gs)
+- [`HunspellSpellingService.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/HunspellSpellingService.gs)
 
 Uses the installed Linux Hunspell 1.7 library and app-selected dictionary files. No assets are downloaded.
 
@@ -32,7 +32,7 @@ Gets dictionary suggestions, decoding the dictionary's declared encoding.
 
 Source:
 
-- [`Spelling.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/Spelling.gs)
+- [`Spelling.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/Spelling.gs)
 
 Checks immutable text without changing the document or learning words.
 
@@ -48,7 +48,7 @@ Suggests replacements for the word in a UTF-16 source range.
 
 Source:
 
-- [`Spelling.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/Spelling.gs)
+- [`Spelling.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/Spelling.gs)
 
 A misspelled Word and its absolute UTF-16 source Range.
 
@@ -56,7 +56,7 @@ A misspelled Word and its absolute UTF-16 source Range.
 
 Source:
 
-- [`SpellCheckSession.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/SpellCheckSession.gs)
+- [`SpellCheckSession.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/SpellCheckSession.gs)
 
 Maintains an optional misspelling layer and explicit suggestion commands on the owner thread.
 
@@ -100,7 +100,7 @@ Disables applying suggestions without disabling read-only checking.
 
 Source:
 
-- [`Spelling.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/Spelling.gs)
+- [`Spelling.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/Spelling.gs)
 
 Owned spelling Status, document Version, Language, Errors and optional Error detail.
 
@@ -108,7 +108,7 @@ Owned spelling Status, document Version, Language, Errors and optional Error det
 
 Source:
 
-- [`Spelling.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/Spelling.gs)
+- [`Spelling.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/Spelling.gs)
 
 Reports a spelling operation independently of the returned words.
 
@@ -159,7 +159,7 @@ The platform or optional native checker is unavailable.
 
 Source:
 
-- [`Spelling.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/Spelling.gs)
+- [`Spelling.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/Spelling.gs)
 
 Suggestion Status, document Version, Language, source Range, Word, Values and optional Error detail.
 
@@ -167,7 +167,7 @@ Suggestion Status, document Version, Language, source Range, Word, Values and op
 
 Source:
 
-- [`SystemSpellingService.gs`](https://github.com/obselate/goo/blob/56fde6c3c7c1f73af21738c32f0a785bd2a1c222/Goo/SpellCheck/SystemSpellingService.gs)
+- [`SystemSpellingService.gs`](https://github.com/obselate/goo/blob/d784bd784d2d51389b13aea32e02b2ac2907a7d3/Goo/SpellCheck/SystemSpellingService.gs)
 
 Uses Windows ISpellChecker or macOS NSSpellChecker. Other hosts return Unsupported.
 
