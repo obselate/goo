@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.19.0 - 2026-10-26
+
+- Window.FrameTheme, ContentUnderTitlebar and TitlebarControlsRect for native dark frames and macOS full-size content
+
 ## 0.18.1 - 2026-10-26
 
 - Enable the SDL tray API on Linux.
