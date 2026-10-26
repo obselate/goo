@@ -69,7 +69,7 @@ class FragmentCorrectnessCell : Cell {
         Path: square, UseCurrentColor: true, BorderWidth: 2, BorderColor: Color.Rgb(0, 255, 0),
       },
     },
-  }
+    }
   }
 }
 
