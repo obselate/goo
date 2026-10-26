@@ -18,6 +18,8 @@ internal partial class PointerInput {
   private var cursorValid bool
   private let queue InputEventQueue
   private var hoverChain List[Node]
+  private var hoverOwners List[Cell?] = List[Cell?]()
+  private var scratchHoverOwners List[Cell?] = List[Cell?]()
   private var hoverGeneration int64
   private var scratchChain List[Node]
   private var hitChain List[Node]
@@ -446,17 +448,22 @@ internal partial class PointerInput {
     hoverGeneration++
     let generation = hoverGeneration
     let shared = sharedHoverPrefix(hoverChain, scratchChain)
+    CellOwnership.CaptureRoute(scratchChain, scratchHoverOwners)
     setHoverState(hoverChain, shared, hoverChain.Count, false, resolver)
     setHoverState(scratchChain, shared, scratchChain.Count, true, resolver)
     let tmp = hoverChain
     hoverChain = scratchChain
     scratchChain = tmp
-    let leaveFailure = dispatchHoverLeaves(scratchChain, shared, x, y)
+    let oldOwners = hoverOwners
+    hoverOwners = scratchHoverOwners
+    scratchHoverOwners = oldOwners
+    let leaveFailure = dispatchHoverLeaves(scratchChain, scratchHoverOwners, shared, x, y)
+    scratchHoverOwners.Clear()
     if generation != hoverGeneration {
       if let error = leaveFailure { ExceptionDispatchInfo.Capture(error).Throw() }
       return
     }
-    let enterFailure = dispatchHoverEnters(hoverChain, shared, x, y)
+    let enterFailure = dispatchHoverEnters(hoverChain, hoverOwners, shared, x, y)
     if let error = leaveFailure ?? enterFailure { ExceptionDispatchInfo.Capture(error).Throw() }
   }
 
@@ -480,13 +487,13 @@ internal partial class PointerInput {
       }
     }
 
-  private func dispatchHoverLeaves(route List[Node], shared int32, x float32, y float32) Exception? {
+  private func dispatchHoverLeaves(route List[Node], owners List[Cell?], shared int32, x float32, y float32) Exception? {
     var failure Exception?
     let generation = hoverGeneration
     for var i = route.Count; i > shared; i-- {
       let n = route[i - 1]
       if let callback = InputCallbacks.PointerLeave(n) {
-        let owner = CellOwnership.InRoute(route, i - 1)
+        let owner = owners[i - 1]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
         finally { owner?.Rebuild() }
@@ -496,13 +503,13 @@ internal partial class PointerInput {
     return failure
   }
 
-  private func dispatchHoverEnters(route List[Node], shared int32, x float32, y float32) Exception? {
+  private func dispatchHoverEnters(route List[Node], owners List[Cell?], shared int32, x float32, y float32) Exception? {
     var failure Exception?
     let generation = hoverGeneration
     for i in shared ... route.Count {
       let n = route[i]
       if let callback = InputCallbacks.PointerEnter(n) {
-        let owner = CellOwnership.InRoute(route, i)
+        let owner = owners[i]
         try { callback(hoverEvent(n, x, y)) }
         catch (error Exception) { failure ??= error }
         finally { owner?.Rebuild() }
@@ -712,6 +719,7 @@ internal partial class PointerInput {
         if changed {
           commitHoverRoute(resolver, x, y)
         } else {
+          CellOwnership.CaptureRoute(scratchChain, hoverOwners)
           scratchChain.Clear()
         }
       }

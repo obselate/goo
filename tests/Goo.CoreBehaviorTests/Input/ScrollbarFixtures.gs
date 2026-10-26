@@ -187,6 +187,24 @@ internal class ScrollbarFixtures {
     return true
   }
 
+  func RetiredVirtualRowHoverKeepsCellOwnerContract() bool {
+    let parent = RetiredHoverParent()
+    let window = Window{ Root: parent, Width: 100, Height: 20 }
+    try {
+      window.UpdateTree()
+      let row = window.Tree!!.Children[0]
+      window.PlatformInput.PointerMove(1, PointerDevice.Mouse, 10, 5, KeyModifiers{}, 0)
+      window.UpdateTree()
+      let before = parent.Builds
+      if parent.Enters != 1 || parent.Leaves != 0 || !parent.Handle.JumpTo(0, 40) {
+        return false
+      }
+      window.UpdateTree()
+      window.UpdateTree()
+      return row.Retired && parent.Leaves == 1 && parent.Enters == 2 && parent.Builds == before
+    } finally { window.Close() }
+  }
+
   func TrackPagingAndPreventDefaultContract() bool {
     let paged = mountScrollViewport(false, ScrollbarVisibility.Always)
     let resolver = Resolver{}
@@ -794,5 +812,44 @@ internal class ScrollbarVirtualDragCell : Cell {
     Width = 75, Height = 60,
     ScrollbarY = Scrollbar{ Thickness: 4, Inset: 0, MinThumbLength: 24, Thumb: Container{} },
     ScrollbarVisibilityY = ScrollbarVisibility.Always,
+  }
+}
+
+internal class RetiredHoverParent : Cell, VirtualSource {
+  internal let Handle ElementHandle = ElementHandle()
+  internal var Builds int32
+  internal var Enters int32
+  internal var Leaves int32
+
+  override func Build() Blob {
+    Builds++
+    return Virtual(this){ Handle = Handle, Width = 100, Height = 20 }
+  }
+
+  public func State(current VirtualState?) VirtualState -> current ?? RetiredHoverRows(this)
+}
+
+internal class RetiredHoverRows(parent RetiredHoverParent) : VirtualState {
+  private var offset float64 = -1
+
+  public override func NeedsRealize(viewport VirtualViewport) bool -> offset != viewport.ScrollOffset.Y
+
+  public override func Realize(viewport VirtualViewport, output VirtualOutput) {
+    offset = viewport.ScrollOffset.Y
+    let index = int32(offset / 20)
+    output.Add(VirtualItem{ Key: index.ToString(), Index: index, Y: float64(index * 20),
+      Width: 100, Height: 20,
+      Content: Cell.Mount[RetiredHoverParent, RetiredHoverRow](index.ToString(), parent),
+    })
+    output.ContentSize = LayoutSize{ Width: 100, Height: 20000 }
+    output.ItemCount = 1000
+  }
+}
+
+internal class RetiredHoverRow : Cell[RetiredHoverParent] {
+  protected override func Build(parent RetiredHoverParent) Blob -> Container{
+    Width: 100, Height: 20,
+    OnPointerEnter: e -> { parent.Enters++ },
+    OnPointerLeave: e -> { parent.Leaves++ },
   }
 }

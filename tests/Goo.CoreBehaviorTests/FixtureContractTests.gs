@@ -305,6 +305,7 @@ class FixtureContractTests {
             yield Contract[ScrollbarFixtures]("DescriptorGeometryAndVisibilityContract")
             yield Contract[ScrollbarFixtures]("ThumbDragHitThicknessAndCancellationContract")
             yield Contract[ScrollbarFixtures]("VirtualThumbDragSurvivesRowRetirementContract")
+            yield Contract[ScrollbarFixtures]("RetiredVirtualRowHoverKeepsCellOwnerContract")
             yield Contract[ScrollbarFixtures]("TrackPagingAndPreventDefaultContract")
             yield Contract[ScrollbarFixtures]("AutoHoverAndFadeContract")
             yield Contract[ScrollbarFixtures]("SmoothScrollingWindowPolicyContract")
