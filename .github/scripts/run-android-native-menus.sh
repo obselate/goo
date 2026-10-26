@@ -80,6 +80,8 @@ def until(check, label):
         time.sleep(0.5)
     raise RuntimeError(label)
 until(lambda: run('shell', 'getprop', 'sys.boot_completed').stdout.strip() == '1', 'Android did not boot')
+subprocess.run([adb, '-P', '5042', '-s', 'emulator-5564', 'shell', 'am',
+                'wait-for-broadcast-idle', '--flush-broadcast-loopers'], check=True, timeout=180)
 installed = run('install', '--no-incremental', '-r', apk)
 if installed.returncode:
     raise RuntimeError(installed.stdout + installed.stderr)

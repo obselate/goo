@@ -74,6 +74,7 @@ done
 "$adb" -P 5038 -s emulator-5560 shell settings put global window_animation_scale 0
 "$adb" -P 5038 -s emulator-5560 shell settings put global transition_animation_scale 0
 "$adb" -P 5038 -s emulator-5560 shell settings put global animator_duration_scale 0
+timeout 180 "$adb" -P 5038 -s emulator-5560 shell am wait-for-broadcast-idle --flush-broadcast-loopers
 "$adb" -P 5038 -s emulator-5560 install --no-incremental -r "$apk"
 timeout 180 "$adb" -P 5038 -s emulator-5560 shell am instrument -w -r \
   org.goo.androidsmoke/org.goo.androidsmoke.AccessibilityChecks | tee "$work/logs/instrumentation.txt"
@@ -91,13 +92,25 @@ grep -q 'INSTRUMENTATION_CODE: -1' "$work/logs/notifications.txt"
 ! "$adb" -P 5038 -s emulator-5560 shell pidof org.goo.androidsmoke
 "$adb" -P 5038 -s emulator-5560 logcat -c
 "$adb" -P 5038 -s emulator-5560 shell cmd statusbar expand-notifications
-"$adb" -P 5038 -s emulator-5560 shell uiautomator dump /sdcard/goo-notifications.xml
-"$adb" -P 5038 -s emulator-5560 pull /sdcard/goo-notifications.xml "$work/logs/notifications.xml"
-python3 - "$work/logs/notifications.xml" > "$work/logs/notification-tap.txt" <<'PY'
+python3 - "$adb" "$work/logs/notifications.xml" > "$work/logs/notification-tap.txt" <<'PY'
 import re
+import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
-node = next(node for node in ET.parse(sys.argv[1]).iter("node") if node.get("text") == "Goo cold activation")
+device = [sys.argv[1], '-P', '5038', '-s', 'emulator-5560']
+deadline = time.monotonic() + 30
+while time.monotonic() < deadline:
+    subprocess.run([*device, 'shell', 'uiautomator', 'dump', '/sdcard/goo-notifications.xml'],
+                   check=True, capture_output=True, timeout=30)
+    subprocess.run([*device, 'pull', '/sdcard/goo-notifications.xml', sys.argv[2]],
+                   check=True, capture_output=True, timeout=30)
+    node = next((node for node in ET.parse(sys.argv[2]).iter("node")
+                 if node.get("text") == "Goo cold activation"), None)
+    if node is not None:
+        break
+else:
+    raise RuntimeError("Cold activation notification did not appear")
 x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.attrib["bounds"]))
 print((x1 + x2) // 2, (y1 + y2) // 2)
 PY

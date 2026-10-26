@@ -1138,6 +1138,7 @@ jobs:
         env:
           GooPackageId: org.goo.packagesmoke
           Product: Goo Package Smoke
+          GH_TOKEN: ${{ github.token }}
         run: |
           bash tools/Goo.DevTools.Cli/Packaging/fetch-appimage-tools.sh "$RUNNER_TEMP/appimage-tools"
           export GOO_APPIMAGETOOL="$RUNNER_TEMP/appimage-tools/appimagetool-x86_64.AppImage"

@@ -3,10 +3,14 @@ set -euo pipefail
 
 destination="${1:?usage: fetch-appimage-tools.sh OUTPUT_DIR}"
 mkdir -p "$destination"
-curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --header 'Accept: application/octet-stream' \
+headers=(--header 'Accept: application/octet-stream')
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  headers+=(--header "Authorization: Bearer $GH_TOKEN")
+fi
+curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 "${headers[@]}" \
   https://api.github.com/repos/AppImage/appimagetool/releases/assets/610035789 \
   --output "$destination/appimagetool-x86_64.AppImage"
-curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 --header 'Accept: application/octet-stream' \
+curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 "${headers[@]}" \
   https://api.github.com/repos/AppImage/type2-runtime/releases/assets/657374641 \
   --output "$destination/runtime-x86_64"
 printf '%s  %s\n' \
