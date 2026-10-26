@@ -3,9 +3,16 @@ package GooAsyncReadbackSmoke
 import Goo
 import System
 import System.IO
+import System.Numerics
 import System.Text
 
 class RoundedOverflowCoverageCell : Cell {
+  private let replacementEffect ShaderEffect
+
+  init(effect ShaderEffect) {
+    replacementEffect = effect
+  }
+
   private func BuildWindowChrome(left float64, hover bool, nested bool) Blob -> Container() {
     .Position: PositionType.Absolute, .Left: left, .Top: 16, .Width: 96, .Height: 64,
     .BorderRadius: 10, .Overflow: Overflow.Hidden, .BackgroundColor: Color.Rgb(24, 24, 24),
@@ -23,7 +30,8 @@ class RoundedOverflowCoverageCell : Cell {
     },
   }
 
-  private func BuildBackdropComparison(left float64, top float64, alpha int32, clipped bool) Blob -> Container() {
+  private func BuildBackdropComparison(left float64, top float64, alpha int32,
+    clipped bool, replacementOnly bool = false) Blob -> Container() {
     .Position: PositionType.Absolute, .Left: left, .Top: top, .Width: 96, .Height: 80,
     Container{
       Position: PositionType.Absolute, Left: 0, Top: 0, Width: 48, Height: 80,
@@ -38,11 +46,14 @@ class RoundedOverflowCoverageCell : Cell {
       .Overflow: clipped ? Overflow.Hidden : Overflow.Visible,
       Container{
         Position: PositionType.Absolute, Left: 12, Top: 12, Width: 72, Height: 28,
-        BackdropBlur: 3, BackgroundColor: Color.Rgba(255, 255, 255, 26),
+        BackdropBlur: replacementOnly ? 0 : 3,
+        ShaderEffect: replacementOnly ? replacementEffect : nil,
+        BackgroundColor: Color.Rgba(255, 255, 255, 26),
       },
       Container{
         Position: PositionType.Absolute, Left: 0, Top: 48, Width: 96, Height: 32,
-        BlendMode: BlendMode.Multiply, BackgroundColor: Color.Rgba(0, 0, 0, 26),
+        BlendMode: replacementOnly ? BlendMode.Normal : BlendMode.Multiply,
+        BackgroundColor: Color.Rgba(0, 0, 0, 26),
       },
     },
   }
@@ -78,16 +89,22 @@ class RoundedOverflowCoverageCell : Cell {
     BuildBackdropComparison(128, 208, 254, true),
     BuildBackdropComparison(352, 208, 255, false),
     BuildBackdropComparison(464, 208, 255, true),
+    BuildBackdropComparison(240, 112, 255, false, true),
+    BuildBackdropComparison(240, 208, 255, true, true),
   }
 }
 
 func RunRoundedOverflowCoverageSmoke() {
   let capturedError = StringWriter()
   let originalError = Console.Error
+  let shaderPath = Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")
+  Require(File.Exists(shaderPath), "Replacement effect asset is missing")
+  let replacementEffect = ShaderEffect(ShaderEffectProgram(File.ReadAllBytes(shaderPath), true), false)
+  replacementEffect.SetParameter(0, Vector4(1.0F, 1.0F, 1.0F, 0.0F))
   let opened = Window{
     Title: "Goo rounded overflow gate", Width: 608, Height: 304,
     VSync: false, Decorated: false, Transparent: true,
-    Root: RoundedOverflowCoverageCell(), Background: Color.Transparent,
+    Root: RoundedOverflowCoverageCell(replacementEffect), Background: Color.Transparent,
   }
   Console.SetError(capturedError)
   try {
@@ -186,6 +203,15 @@ func RunRoundedOverflowCoverageSmoke() {
       "Backdrop comparison did not exercise Multiply")
     Console.WriteLine("rounded-overflow-backdrop: maximum_error=" + backdropError.ToString())
     Require(backdropError <= 3, "Rounded overflow changed blur, blend, or backdrop alpha")
+    let replacementReference = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 288.0, 136.0)
+    let replacementClipped = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 288.0, 232.0)
+    Require(replacementReference[3] == uint8(26) && replacementClipped[3] == uint8(26),
+      "Rounded overflow did not preserve an alpha-reducing replacement effect: "
+        + PrimitivePixelText(replacementReference) + "/" + PrimitivePixelText(replacementClipped))
+    for channel in 0 ... 3 {
+      Require(Math.Abs(int32(replacementReference[channel]) - int32(replacementClipped[channel])) <= 3,
+        "Rounded overflow changed a replacement effect color")
+    }
   } finally {
     if opened.IsOpen {
       opened.RequestClose()
