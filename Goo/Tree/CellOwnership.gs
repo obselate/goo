@@ -48,6 +48,15 @@ internal class CellOwnership {
       return nil
     }
 
+    internal func CaptureRoute(route List[Node], owners List[Cell?]) {
+      owners.Clear()
+      var owner Cell?
+      for node in route {
+        owner = renderingCell(node) ?? owner
+        owners.Add(owner)
+      }
+    }
+
     private func renderingCell(node Node) Cell? {
       var owner = node.Fiber
       while let child = owner?.directChild {
