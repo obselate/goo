@@ -705,7 +705,7 @@ public partial class Window {
 internal unsafe partial class SdlRuntime {
   shared {
     internal func PendingWakeEventsForTest() int32 ->
-    SDL.PeepEventsNative(nil, 0, SDLEventAction.Peekevent, wakeEventType, wakeEventType)
+    SDL.PeepEvents(SDLEventPtr{}, 0, SDLEventAction.Peekevent, wakeEventType, wakeEventType)
 
     internal func WaitForWakeForTest(deadline int64) bool {
       RequireMainThread("queue completion wake test")
