@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Tree`](https://github.com/obselate/goo/tree/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree)
+Source: [`Goo/Tree`](https://github.com/obselate/goo/tree/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree)
 
 ## Present content above the normal tree
 
@@ -274,7 +274,7 @@ A 128-by-64 source at density 2 measures 64-by-32 logical units.
 
 Source:
 
-- [`Blob.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Blob.gs)
+- [`Blob.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Blob.gs)
 
 Defines the common surface for Goo-owned declarative elements.
 
@@ -426,7 +426,7 @@ Gets a defensive copy of the style properties selected for transitions. All inte
 
 Source:
 
-- [`Button.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Button.gs)
+- [`Button.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Button.gs)
 
 Defines a semantic button container with pointer and keyboard activation.
 
@@ -452,7 +452,7 @@ Gets the shared activation action, taking precedence over OnClick. Availability 
 
 Source:
 
-- [`Container.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Container.gs)
+- [`Container.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Container.gs)
 
 Defines an element that contains child blobs.
 
@@ -482,7 +482,7 @@ Gets the optional retained measure/arrange policy. Nil uses the normal flex layo
 
 Source:
 
-- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ElementHandle.gs)
+- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ElementHandle.gs)
 
 Represents a consumer-owned handle for one mounted element. A tree update can move the handle to another element, but cannot attach it to two live elements.
 
@@ -622,7 +622,7 @@ Gets the maximum legal logical scroll offset. An unmounted handle returns the or
 
 Source:
 
-- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ElementHandle.gs)
+- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ElementHandle.gs)
 
 Describes one stable mounted-element geometry snapshot.
 
@@ -650,7 +650,7 @@ Gets the maximum legal logical scroll offset.
 
 Source:
 
-- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ElementHandle.gs)
+- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ElementHandle.gs)
 
 Represents an axis-aligned rectangle in the requested logical coordinate space.
 
@@ -674,7 +674,7 @@ Gets the vertical origin.
 
 Source:
 
-- [`Image.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Image.gs)
+- [`Image.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Image.gs)
 
 Defines a local bitmap image element.
 
@@ -702,7 +702,7 @@ Gets the owned or provider-backed image source. It wins over Path when set.
 
 Source:
 
-- [`ImageDecodeLimits.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageDecodeLimits.gs)
+- [`ImageDecodeLimits.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageDecodeLimits.gs)
 
 Sets the size limits for one image decode.
 
@@ -730,7 +730,7 @@ Gets the maximum source width and height in pixels. The default is 8192.
 
 Source:
 
-- [`ImageDecodeResult.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageDecodeResult.gs)
+- [`ImageDecodeResult.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageDecodeResult.gs)
 
 Contains the owned image on success and a bounded explanation on failure.
 
@@ -750,7 +750,7 @@ Gets the decode outcome.
 
 Source:
 
-- [`ImageDecodeResult.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageDecodeResult.gs)
+- [`ImageDecodeResult.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageDecodeResult.gs)
 
 Describes a strict image decode outcome without hiding unsupported color profiles.
 
@@ -766,7 +766,7 @@ Describes a strict image decode outcome without hiding unsupported color profile
 
 Source:
 
-- [`Image.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Image.gs)
+- [`Image.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Image.gs)
 
 Controls how an image fits its destination box.
 
@@ -797,7 +797,7 @@ Paints the image at its intrinsic size without scaling.
 
 Source:
 
-- [`ImageDecodeLimits.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageDecodeLimits.gs)
+- [`ImageDecodeLimits.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageDecodeLimits.gs)
 
 Reports an image that exceeds an ImageDecodeLimits value.
 
@@ -813,9 +813,9 @@ Gets the source pixel width, or 0 when the limit was exceeded before the header 
 
 Sources:
 
-- [`ImageDecodeResult.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageDecodeResult.gs)
-- [`ImageSource.Decoding.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageSource.Decoding.gs)
-- [`ImageSource.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageSource.gs)
+- [`ImageDecodeResult.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageDecodeResult.gs)
+- [`ImageSource.Decoding.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageSource.Decoding.gs)
+- [`ImageSource.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageSource.gs)
 
 Owns one immutable premultiplied RGBA image resource.
 
@@ -918,7 +918,7 @@ Gets this immutable source's pixel width.
 
 Source:
 
-- [`ImageSourceCache.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageSourceCache.gs)
+- [`ImageSourceCache.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageSourceCache.gs)
 
 Loads local PNG, JPEG, and static GIF assets outside painting and shares immutable decoded pixels. Each result is an independently disposable owner. Mounted leases survive both result and cache disposal. Paths are snapshots; create a new cache to reload.
 
@@ -942,7 +942,7 @@ Loads a local PNG, JPEG, or static GIF with cancellation before reading, during 
 
 Source:
 
-- [`ImageSource.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageSource.gs)
+- [`ImageSource.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageSource.gs)
 
 Owns one provider result while it is mounted by Goo.
 
@@ -988,7 +988,7 @@ Gets whether this binding completed without an image.
 
 Source:
 
-- [`ImageSource.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ImageSource.gs)
+- [`ImageSource.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ImageSource.gs)
 
 Supplies one image binding when a Goo element mounts.
 
@@ -1008,7 +1008,7 @@ Gets the content version used to invalidate mounted image bindings.
 
 Source:
 
-- [`Portal.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Portal.gs)
+- [`Portal.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Portal.gs)
 
 Defines a logical child subtree that is laid out against the window viewport and presented in its Window's shared overlay after the normal tree. The subtree retains its declaration-site ownership, event route, Cell lifecycle, focus, and accessibility relationships. An optional Anchor changes only its border-box placement, not that logical ownership.
 
@@ -1034,7 +1034,7 @@ Gets the preferred side and alignment used when Anchor is mounted in this Window
 
 Source:
 
-- [`Portal.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Portal.gs)
+- [`Portal.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Portal.gs)
 
 Specifies the preferred side and alignment of an anchored Portal before automatic edge flipping and viewport containment.
 
@@ -1105,7 +1105,7 @@ Places the Portal above its anchor and aligns their inline-start edges.
 
 Source:
 
-- [`Text.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Text.gs)
+- [`Text.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Text.gs)
 
 Defines a text element.
 
@@ -1131,7 +1131,7 @@ Gets ordered passive inline styles in UTF-16 source offsets. A cluster uses the 
 
 Source:
 
-- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/ElementHandle.gs)
+- [`ElementHandle.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/ElementHandle.gs)
 
 Specifies the coordinate space used by mounted text geometry queries.
 
@@ -1145,7 +1145,7 @@ Specifies the coordinate space used by mounted text geometry queries.
 
 Source:
 
-- [`TextEditor.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/TextEditor.gs)
+- [`TextEditor.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/TextEditor.gs)
 
 Defines a retained multiline text editor.
 
@@ -1222,7 +1222,7 @@ Gets whether logical line numbers are shown outside the document.
 
 Source:
 
-- [`TextEntry.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/TextEntry.gs)
+- [`TextEntry.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/TextEntry.gs)
 
 Defines an editable single-line text element.
 
@@ -1270,7 +1270,7 @@ Gets the value used while unfocused, or also while focused when Controlled is tr
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Defines a scrolling element that takes its children from a VirtualSource and mounts only the items that the source places. Items use content coordinates: the origin is the start of the content box at scroll offset zero, so a scroll offset is also the content coordinate at the start of the viewport. The element has the list role and each item has the list item role. With another role, or with Accessibility set to nil, items have no role and the content of each item gets the item position.
 
@@ -1284,7 +1284,7 @@ Initializes a list element that scrolls on both axes.
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Describes a mounted item of a Virtual element.
 
@@ -1304,7 +1304,7 @@ Gets the size of the item from its last layout.
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Places one item of a Virtual element.
 
@@ -1340,7 +1340,7 @@ Gets the vertical content coordinate.
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Receives the result of a VirtualState.Realize call. Access outside that call throws.
 
@@ -1366,7 +1366,7 @@ Gets or sets the scroll offset to apply together with the items. Nil keeps the c
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Supplies the inputs of one build of a Virtual element. Implementations must be immutable.
 
@@ -1382,7 +1382,7 @@ Returns: current with the inputs of this source pending when it can continue fro
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Places the items of one mounted Virtual element. Goo retains one state for each element.
 
@@ -1426,7 +1426,7 @@ Adds each item to mount and sets the content size. All changes, including the in
 
 Source:
 
-- [`Virtual.gs`](https://github.com/obselate/goo/blob/f9f3b66d7e0f43e6a4d30dafe9f81e42141dddd3/Goo/Tree/Virtual.gs)
+- [`Virtual.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Tree/Virtual.gs)
 
 Describes a Virtual element to its state. Access outside the call that receives it throws.
 

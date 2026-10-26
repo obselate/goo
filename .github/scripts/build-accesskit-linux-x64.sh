@@ -4,7 +4,7 @@ set -euo pipefail
 accesskit_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 accesskit_work="$accesskit_root/artifacts/accesskit-build"
 mkdir -p "$accesskit_work"
-curl --fail --location --silent --show-error https://github.com/AccessKit/accesskit-c/archive/refs/tags/0.23.0.tar.gz -o "$accesskit_work/source.tar.gz"
+curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 https://github.com/AccessKit/accesskit-c/archive/refs/tags/0.23.0.tar.gz -o "$accesskit_work/source.tar.gz"
 printf '%s  %s\n' ee989c2b98bdd201ce026237214c98c39b2f6e40182b6df311a193780e63d075 "$accesskit_work/source.tar.gz" | sha256sum --check
 mkdir -p "$accesskit_work/output"
 cp "$accesskit_root/.github/patches/accesskit/atspi-cache-signal-arguments.patch" "$accesskit_work/atspi-cache-signal-arguments.patch"
@@ -13,7 +13,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends build-essential curl ca-certificates pkg-config
-curl --proto "=https" --tlsv1.2 -fsS https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init -o /tmp/rustup-init
+curl --proto "=https" --tlsv1.2 -fsS --retry 5 --retry-connrefused --retry-delay 2 https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init -o /tmp/rustup-init
 printf "%s  %s\n" 20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c /tmp/rustup-init | sha256sum --check
 chmod +x /tmp/rustup-init
 /tmp/rustup-init -y --profile minimal --default-toolchain 1.98.0

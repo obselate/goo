@@ -166,5 +166,10 @@ int main(void)
     configure_pending = true;
     handle_xdg_surface_configure(&data, &surface, 104);
     assert(!configure_pending && acks == 2 && exposes == 3);
+    data.shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE;
+    nonblocking_first_show = false;
+    configure_pending = true;
+    handle_xdg_surface_configure(&data, &surface, 105);
+    assert(!configure_pending && acks == 3);
     puts("SDL Wayland titlebar and resize regression checks passed");
 }

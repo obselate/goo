@@ -17,7 +17,7 @@ test "$(uname -s)" = "Linux"
 test "$(uname -m)" = "x86_64"
 test ! -e "$install_root"
 mkdir -p "$root" "$install_root"
-curl --fail --location --retry 3 --retry-all-errors \
+curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
   --connect-timeout 20 --max-time 120 \
   --output "$archive" \
   "https://packages.lunarg.com/vulkan/1.4.313/pool/main/v/vulkan-validationlayers/vulkan-validationlayers_${version}_amd64.deb"

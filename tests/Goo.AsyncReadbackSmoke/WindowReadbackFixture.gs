@@ -408,7 +408,7 @@ public partial class Window {
   private func VulkanTargetForTest() VulkanWindowTarget ? ->
   windowTarget as VulkanWindowTarget?
 
-  private func SdlHostForTest() SdlHost ? -> host as SdlHost?
+  internal func SdlHostForTest() SdlHost ? -> host as SdlHost?
   internal func NativeHitTestForTest(x int32, y int32) SDLHitTestResult {
     guard let host = SdlHostForTest() else {
       throw InvalidOperationException("Native hit test requires an SDL host")
@@ -704,6 +704,9 @@ public partial class Window {
 }
 internal unsafe partial class SdlRuntime {
   shared {
+    internal func PendingWakeEventsForTest() int32 ->
+    SDL.PeepEvents(SDLEventPtr{}, 0, SDLEventAction.Peekevent, wakeEventType, wakeEventType)
+
     internal func WaitForWakeForTest(deadline int64) bool {
       RequireMainThread("queue completion wake test")
       var nativeEvent SDLEvent
@@ -1145,6 +1148,8 @@ internal class WindowReadbackTestFixture {
     internal func DeferSchedulerFrame(window Window, seconds float64) {
       window.DeferSchedulerFrameForTest(seconds)
     }
+
+    internal func PendingWakeEvents() int32 -> SdlRuntime.PendingWakeEventsForTest()
 
     internal func AwaitQueueCompletionWake(window Window, timeoutMs int32) bool {
       let deadline = Environment.TickCount64 + int64(timeoutMs)

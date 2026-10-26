@@ -375,6 +375,9 @@ public partial class Window {
       }
       let queueCompletedAtEntry = windowTarget?.PollQueueCompletion() == true
       if native.IsClosing {
+        if waitForEvents {
+          native.PollEvents()
+        }
         if windowTarget?.PrepareClose() == false {
           native.Wake()
           return
@@ -416,9 +419,7 @@ public partial class Window {
         nativeModal?.DrainCompletion()
         if IsOpen && !native.IsClosing && drainCloseRequest() {
           stopPosts()
-          if windowTarget?.PrepareClose() != false {
-            native.BeginClose()
-          }
+          native.BeginClose()
         }
         if native.IsClosing || !IsOpen {
           try {

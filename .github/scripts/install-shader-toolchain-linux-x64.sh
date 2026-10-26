@@ -16,7 +16,7 @@ done
 
 rm -rf "$slang_sdk" "$spirv_source" "$spirv_build" "$vulkan_sdk"
 mkdir -p "$root" "$slang_sdk"
-curl --fail --location --retry 3 \
+curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
   --output "$archive" \
   https://github.com/shader-slang/slang/releases/download/v2026.16/slang-2026.16-linux-x86_64-glibc-2.27.tar.gz
 echo "b9c5e195ce9a7124147d47febe78b7f8c59c96829add50b0938bd04b8056fb88  $archive" \
