@@ -112,7 +112,7 @@ find "$work/src/wayland-protocols" -type f -name '*.xml' \
   -DSDL_SHARED=ON \
   -DSDL_STATIC="$static_enabled" \
   -DSDL_TEST_LIBRARY=OFF \
-  -DSDL_TRAY=OFF \
+  -DSDL_TRAY=ON \
   -DSDL_VULKAN=ON \
   -DSDL_WAYLAND=ON \
   -DSDL_X11=OFF

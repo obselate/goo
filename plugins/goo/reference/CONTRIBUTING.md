@@ -29,7 +29,7 @@ Set `SLANG_SDK` and `VULKAN_SDK` to their SDK roots, or put `slangc` and
 
 Linux Vulkan runs also need a native Wayland session, a Vulkan 1.3 driver, and
 a TrueType or OpenType sans-serif font. The CI dependency list in
-[ci.yml](https://github.com/obselate/goo/blob/b4baf92b00820800fe2520217344d1f53622899b/.github/workflows/ci.yml) is the authoritative Ubuntu 24.04 setup.
+[ci.yml](https://github.com/obselate/goo/blob/483bf5d410b6588f154fb2b9fc436e8e46b1d765/.github/workflows/ci.yml) is the authoritative Ubuntu 24.04 setup.
 Windows builds have been tested on Windows 11 with current vendor Vulkan
 drivers. A minimum supported Windows version has not yet been established.
 
@@ -55,7 +55,7 @@ repository default. Do not replace it with filename-based XML deletion:
 generic staging must preserve arbitrary XML, notices, licenses, globalization
 data, and features.
 
-See [code conventions](https://github.com/obselate/goo/blob/b4baf92b00820800fe2520217344d1f53622899b/CONVENTIONS.md) for repository rules and native authoring.
+See [code conventions](https://github.com/obselate/goo/blob/483bf5d410b6588f154fb2b9fc436e8e46b1d765/CONVENTIONS.md) for repository rules and native authoring.
 
 ## Verification
 
@@ -80,7 +80,7 @@ The API snapshot marks nullable reference types with `?`, including array elemen
 and generic arguments. Value types and non-null reference types keep their existing spelling.
 
 Edit the explanatory input, window, tree, layout, and accessibility guides in
-[`tools/Goo.ApiDocs/Guides`](https://github.com/obselate/goo/tree/b4baf92b00820800fe2520217344d1f53622899b/tools/Goo.ApiDocs/Guides). Member descriptions belong
+[`tools/Goo.ApiDocs/Guides`](https://github.com/obselate/goo/tree/483bf5d410b6588f154fb2b9fc436e8e46b1d765/tools/Goo.ApiDocs/Guides). Member descriptions belong
 in source XML comments. Do not commit regenerated `docs/api` pages or
 `plugins/goo/reference` files in PRs, because `main` syncs them after merge.
 For a local preview, run
@@ -103,7 +103,7 @@ XDG_CACHE_HOME="$(mktemp -d)" .github/scripts/with-headless-wayland.sh \
   dotnet run --project tools/Goo.Investigation -c Release -- performance \
   --output /absolute/new/goo-consumer-report \
   --rid linux-x64 \
-  --package-version 0.18.0 \
+  --package-version 0.18.1 \
   --package-source /absolute/path/to/package-feed
 ```
 
@@ -126,8 +126,8 @@ dotnet pack Goo/Goo.gsproj -c Release \
 ```
 
 The pinned Windows SDL fetch and Linux SDL build are implemented in
-[fetch-sdl-win-x64.sh](https://github.com/obselate/goo/blob/b4baf92b00820800fe2520217344d1f53622899b/.github/scripts/fetch-sdl-win-x64.sh) and
-[build-sdl-linux-x64.sh](https://github.com/obselate/goo/blob/b4baf92b00820800fe2520217344d1f53622899b/.github/scripts/build-sdl-linux-x64.sh).
+[fetch-sdl-win-x64.sh](https://github.com/obselate/goo/blob/483bf5d410b6588f154fb2b9fc436e8e46b1d765/.github/scripts/fetch-sdl-win-x64.sh) and
+[build-sdl-linux-x64.sh](https://github.com/obselate/goo/blob/483bf5d410b6588f154fb2b9fc436e8e46b1d765/.github/scripts/build-sdl-linux-x64.sh).
 
 ## Submitting changes
 

@@ -56,7 +56,7 @@ internal shared class CliApplication {
 
     private data class DoctorCheck(Name string, Detail string, Ok bool) : IEquatable[DoctorCheck] { }
 
-    private const Version string = "0.18.0"
+    private const Version string = "0.18.1"
 
     internal func SelectInspectorDescriptor(
         descriptors IReadOnlyList[DiscoveryDescriptor],
@@ -1592,7 +1592,7 @@ internal shared class CliApplication {
     }
 
     private func PrintHelp() int32 {
-        Console.WriteLine("Goo DevTools CLI 0.18.0")
+        Console.WriteLine("Goo DevTools CLI 0.18.1")
         Console.WriteLine()
         Console.WriteLine("Usage:")
         Console.WriteLine("  goo dev [options] -- <command> [args]")

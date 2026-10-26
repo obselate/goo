@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.18.1 - 2026-10-26
+
+- Enable the SDL tray API on Linux.
+
 ## 0.18.0 - 2026-10-25
 
 - Add `PlaceholderColor` to `TextEntry` and `TextEditor`.
