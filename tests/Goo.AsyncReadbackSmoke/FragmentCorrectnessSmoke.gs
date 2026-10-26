@@ -156,6 +156,7 @@ func RunFragmentCorrectnessSmoke() {
     Console.WriteLine("fragment-correctness-smoke: crt=" + crtSamples)
     let buildCount = cell.BuildCount
     let pathBuildCount = PathBandEncoder.BuildCount
+    let paintSamples = []Point{Point{X: 82.0, Y: 110.0}, Point{X: 110.0, Y: 101.0}}
     for phase in 0 ... 3 {
       WindowReadbackTestFixture.InputQueuePointerMove(opened, phase == 1 ? 26.0 : 140.0, 110.0)
       WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
@@ -172,7 +173,7 @@ func RunFragmentCorrectnessSmoke() {
       let fixedFill = PrimitiveLogicalPixel(painted.Pixels, painted.Width, metrics, 54.0, 110.0)
       Require(fixedFill[0] >= uint8(250) && fixedFill[1] >= uint8(250) && fixedFill[2] >= uint8(250),
         "Default-false shape changed its explicit fill: " + PrimitivePixelText(fixedFill))
-      for point in []Point{Point{X: 82.0, Y: 110.0}, Point{X: 110.0, Y: 101.0}} {
+      for point in paintSamples {
         let pixel = PrimitiveLogicalPixel(painted.Pixels, painted.Width, metrics, point.X, point.Y)
         Require(pixel[1] >= uint8(250) && pixel[0] <= uint8(4) && pixel[2] <= uint8(4),
           "Inherited shape fill changed an explicit gradient or stroke: " + PrimitivePixelText(pixel))
