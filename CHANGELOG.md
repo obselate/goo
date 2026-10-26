@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Shape.UseCurrentColor to fill solid shapes with inherited Color.
+
 ## 0.19.1 - 2026-10-26
 
 - Hover callbacks on retired virtual rows no longer rebuild the parent Cell
