@@ -313,8 +313,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if (flags & uint64(SDLWindowFlags.Minimized)) != 0uL && !SDL.RestoreWindow(window) {
       return WindowOperationResult.Failed
     }
-    if (flags & uint64(SDLWindowFlags.Hidden)) != 0uL && !SDL.ShowWindow(window) {
-      return WindowOperationResult.Failed
+    if (flags & uint64(SDLWindowFlags.Hidden)) != 0uL {
+      firstShowMapping = true
+      if !SDL.ShowWindow(window) { return WindowOperationResult.Failed }
     }
     return SDL.RaiseWindow(window) ? WindowOperationResult.Accepted : WindowOperationResult.Failed
   }

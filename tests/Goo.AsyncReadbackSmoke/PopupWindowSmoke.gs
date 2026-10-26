@@ -48,7 +48,6 @@ internal class PopupWindowSmoke {
       }
       try {
         PumpUntil(owner, nil, () -> owner.IsVisible)
-        WindowReadbackTestFixture.ForceRender(owner, 0.0, 15.0)
         using let noInput = PopupWindow(owner, PopupSmokeCell{})
         if SdlHost.IsWayland() {
           let denied = noInput.Open(ElementRect{ X: 20.0, Y: 20.0, Width: 20.0, Height: 20.0 }, 100, 80)
@@ -57,6 +56,11 @@ internal class PopupWindowSmoke {
         }
         let result = popup.Open(ElementRect{ X: 190.0, Y: 110.0, Width: 20.0, Height: 20.0 }, 100, 80)
         Require(result.Status == PopupStatus.Opened, "Tooltip open failed: " + result.Error)
+        if SdlHost.IsWayland() {
+          Require(!popup.HostedWindowForTest.SdlHostForTest()!!.PrepareFirstPresent(),
+            "Native popup could present before its owner's first frame and initial configure")
+        }
+        WindowReadbackTestFixture.ForceRender(owner, 0.0, 15.0)
         PumpUntil(owner, popup, () -> root.Host?.IsVisible == true)
         WindowReadbackTestFixture.ForceRender(root.Host!!, 0.0, 15.0)
         Require(popup.Metrics.LogicalWidth == 150 && popup.Metrics.LogicalHeight == 120
