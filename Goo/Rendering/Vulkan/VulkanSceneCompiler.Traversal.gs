@@ -110,8 +110,10 @@ internal partial class VulkanSceneCompiler {
         && node.BlendMode != BlendMode.Normal
       let combinesEffectAndBlend = shaderEffect != nil && isolatesBlend
       let isolates = isolatesOpacity || isolatesBlend || shaderEffect != nil
-      let samplesBackdrop = if let effect = shaderEffect { effect.SamplesBackdrop } else { false }
-      if node.BackdropBlur > 0.0F || isolatesBlend || samplesBackdrop {
+      let usesBackdrop = if let effect = shaderEffect {
+        effect.SamplesBackdrop || effect.Program.ReplacesBackdrop
+      } else { false }
+      if node.BackdropBlur > 0.0F || isolatesBlend || usesBackdrop {
         var clipLayerId = context.RoundedOverflowLayerId
         while clipLayerId != 0 {
           var clipLayer = frame.Layers[clipLayerId - 1]
