@@ -17,7 +17,7 @@ class QueueWakeCell : Cell {
 }
 
 func RunQueueWakeSmoke() {
-  for phase in 0 ... 2 {
+  for phase in 0 ... 4 {
     let root = QueueWakeCell{}
     let window = Window{
       Title: "Goo queue completion wake",
@@ -39,7 +39,7 @@ func RunQueueWakeSmoke() {
       Require(WindowReadbackTestFixture.SchedulerFrameDue(window, 0.0),
         "Uncapped pacing still waited for the display frame")
       window.FramePacing = WindowFramePacing.Display
-      if phase == 0 {
+      if phase % 2 == 0 {
         WindowReadbackTestFixture.RuntimeHoldNextQueueSubmit(window)
       } else {
         WindowReadbackTestFixture.RuntimeHoldNextQueuePresent(window)
@@ -58,12 +58,14 @@ func RunQueueWakeSmoke() {
       WindowReadbackTestFixture.DeferSchedulerFrame(window, 30.0)
       Require(WindowReadbackTestFixture.SchedulerWaitMs(window, 0.0) > 0,
         "A held queue must leave the scheduler able to sleep")
-      let builds = root.Builds
-      window.RequestClose()
-      root.Rebuild()
-      WindowReadbackTestFixture.Pump(window, 0.0)
-      Require(window.IsOpen && root.Builds == builds,
-        "A deferred close admitted another tree update")
+      if phase >= 2 {
+        let builds = root.Builds
+        window.RequestClose()
+        root.Rebuild()
+        WindowReadbackTestFixture.Pump(window, 0.0)
+        Require(window.IsOpen && root.Builds == builds,
+          "A deferred close admitted another tree update")
+      }
       let release = Thread(() -> WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall())
       worker = release
       release.IsBackground = true
@@ -73,12 +75,14 @@ func RunQueueWakeSmoke() {
       release.Join()
       Require(captured && !pending,
         "Queue completion waited for the next frame or idle timeout: phase " + phase.ToString())
-      let deadline = Environment.TickCount64 + 10000
-      while window.IsOpen && Environment.TickCount64 < deadline {
-        window.Pump(0.0)
-        Thread.Yield()
+      if phase >= 2 {
+        let deadline = Environment.TickCount64 + 10000
+        while window.IsOpen && Environment.TickCount64 < deadline {
+          window.Pump(0.0)
+          Thread.Yield()
+        }
+        Require(!window.IsOpen, "A deferred close did not drain after queue completion")
       }
-      Require(!window.IsOpen, "A deferred close did not drain after queue completion")
     } finally {
       WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall()
       worker?.Join()
