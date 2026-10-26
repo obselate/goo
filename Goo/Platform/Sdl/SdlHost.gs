@@ -495,6 +495,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   private func RefreshMetrics() {
+    if contentUnderTitlebar && !MacBackdrop.HasFullSizeContent(macWindow) {
+      MacBackdrop.SetContentUnderTitlebar(macWindow, true)
+    }
     RefreshLogical()
     RefreshFramebuffer()
     RefreshTitlebarControls()

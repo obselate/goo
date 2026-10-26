@@ -95,6 +95,9 @@ internal class MacBackdrop : NativeBackdrop {
       SetValue(window, sel_registerName("setTitleVisibility:"), enabled ? nint(1) : nint(0))
     }
 
+    internal func HasFullSizeContent(window nint) bool
+      -> (Send(window, sel_registerName("styleMask")) & nint(32768)) != nint(0)
+
     internal func ContentBounds(window nint, pixels bool = false) BackdropMacRect {
       var bounds = ReadRect(Send(window, sel_registerName("contentView")), "bounds")
       if pixels {

@@ -293,7 +293,6 @@ internal unsafe partial class SdlHost {
       placementRestoredState = WindowState.Fullscreen
       RefreshDisplayPacing(true)
       if contentUnderTitlebar {
-        MacBackdrop.SetContentUnderTitlebar(macWindow, true)
         RefreshMetrics()
         RaiseMetrics()
       }
@@ -302,7 +301,6 @@ internal unsafe partial class SdlHost {
       placementRestoredState = WindowState.Normal
       RefreshDisplayPacing(true)
       if contentUnderTitlebar {
-        MacBackdrop.SetContentUnderTitlebar(macWindow, true)
         RefreshMetrics()
         RaiseMetrics()
       }
