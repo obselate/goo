@@ -63,8 +63,14 @@ func RunQueueWakeSmoke() {
         window.RequestClose()
         root.Rebuild()
         WindowReadbackTestFixture.Pump(window, 0.0)
+        for pump in 0 ... 16 {
+          window.Pump(0.0)
+        }
         Require(window.IsOpen && root.Builds == builds,
           "A deferred close admitted another tree update")
+        let wakes = WindowReadbackTestFixture.PendingWakeEvents()
+        Require(wakes >= 0 && wakes <= 1,
+          "A deferred close retained native wake events: " + wakes.ToString())
       }
       let release = Thread(() -> WindowReadbackTestFixture.RuntimeReleaseHeldQueueCall())
       worker = release

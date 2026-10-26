@@ -375,6 +375,9 @@ public partial class Window {
       }
       let queueCompletedAtEntry = windowTarget?.PollQueueCompletion() == true
       if native.IsClosing {
+        if waitForEvents {
+          native.PollEvents()
+        }
         if windowTarget?.PrepareClose() == false {
           native.Wake()
           return
