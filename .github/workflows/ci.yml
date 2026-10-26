@@ -553,6 +553,7 @@ jobs:
         name: Update Linux package lists
         id: linux-apt
         run: |
+          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
           sudo apt-get update
           mkdir -p "$RUNNER_TEMP/goo-apt-archives"
           sudo apt-get --print-uris --yes --no-install-recommends install $GOO_LINUX_APT_PACKAGES \
@@ -627,7 +628,7 @@ jobs:
             artifacts/native/libSDL3.so
             artifacts/native/libSDL3.a
             artifacts/native/text
-          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/**', 'tools/Goo.TextNative/**') }}
+          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/test_sdl_*.py', 'tests/NativeWindow/*_harness.c', 'tools/Goo.TextNative/**') }}
 
       - name: Build glibc 2.27 native payloads
         if: needs.changes.outputs.full == 'true' && (steps.glibc-native.outputs.cache-hit != 'true')
