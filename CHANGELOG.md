@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.0 - 2026-10-26
+
 - Add Shape.UseCurrentColor to fill solid shapes with inherited Color.
 
 ## 0.19.1 - 2026-10-26
