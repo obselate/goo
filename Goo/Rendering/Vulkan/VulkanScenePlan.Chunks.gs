@@ -105,6 +105,7 @@ internal partial class SceneFrame {
         result = Mix(result, uint64(value.BottomColor))
         result = Mix(result, uint64(value.LeftColor))
         result = Mix(result, uint64(value.Style))
+        result = Mix(result, value.ClipOwnsOuterCoverage ? 1uL : 0uL)
         return HashTransformIndex(result, value.TransformIndex)
       }
       case SceneDrawKind.LinearGradient {

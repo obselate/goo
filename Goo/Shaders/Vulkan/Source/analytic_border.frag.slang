@@ -340,6 +340,7 @@ void shade()
     float outerCoverage = 1.0 - smoothstep(-0.5 * outerAa, 0.5 * outerAa, outerDistance);
     float2 innerSize = max(size - float2(left + right, top + bottom), float2(0.0));
     float innerCoverage = 1.0;
+    float conditionalCoverage = 1.0;
     float borderWidth = max(edgeWidth(roundedEdge(point, size), size), 0.0001);
     if (innerSize.x > 0.0 && innerSize.y > 0.0)
     {
@@ -350,10 +351,13 @@ void shade()
         float2 innerNormal = roundedNormal(point - float2(left, top), innerSize, innerRadii);
         float innerAa = max(length(float2(dot(innerNormal, pointDx), dot(innerNormal, pointDy))), 0.0001);
         innerCoverage = smoothstep(-0.5 * innerAa, 0.5 * innerAa, innerDistance);
+        conditionalCoverage = innerDistance > outerDistance ? innerCoverage : 0.0;
     }
     // The border is the outer shape minus the nested inner shape. Subtracting coverage keeps sides
     // without a border empty where the two edges coincide; multiplying would paint about a quarter there.
     float coverage = max(outerCoverage - (1.0 - innerCoverage), 0.0);
+    if (pc.packedColorsExtra.z != 0u)
+        coverage = outerCoverage > 0.0 ? coverage / outerCoverage : conditionalCoverage;
     uint edge = roundedEdge(point, size);
     if (edge == 4u)
     {

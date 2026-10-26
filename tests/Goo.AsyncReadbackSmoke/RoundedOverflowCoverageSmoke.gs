@@ -1,0 +1,135 @@
+package GooAsyncReadbackSmoke
+
+import Goo
+import System
+import System.IO
+import System.Text
+
+class RoundedOverflowCoverageCell : Cell {
+  private func BuildWindowChrome(left float64, hover bool, nested bool) Blob -> Container() {
+    .Position: PositionType.Absolute, .Left: left, .Top: 16, .Width: 96, .Height: 64,
+    .BorderRadius: 10, .Overflow: Overflow.Hidden, .BackgroundColor: Color.Rgb(24, 24, 24),
+    Container() {
+      .Width: Percent(100), .Height: Percent(100), .BorderRadius: 10,
+      .Overflow: nested ? Overflow.Hidden : Overflow.Visible,
+      Container{
+        Position: PositionType.Absolute, Right: 0, Top: 0, Width: 36, Height: 36,
+        BackgroundColor: hover ? Color.Rgb(255, 32, 128) : Color.Transparent,
+      },
+      Container{
+        Position: PositionType.Absolute, Left: 0, Top: 0, Right: 0, Bottom: 0,
+        BorderRadius: 10, BorderWidth: 1, BorderColor: Color.Rgb(160, 160, 160), ZIndex: 30,
+      },
+    },
+  }
+
+  override func Build() Blob -> Container() {
+    .Width: Percent(100), .Height: Percent(100),
+    Container{
+      Position: PositionType.Absolute, Left: 16, Top: 16, Width: 96, Height: 64,
+      BorderRadius: 10, Overflow: Overflow.Hidden, BackgroundColor: Color.Rgb(160, 160, 160),
+    },
+    BuildWindowChrome(128, false, false),
+    BuildWindowChrome(240, true, false),
+    BuildWindowChrome(352, true, true),
+    Container() {
+      .Position: PositionType.Absolute, .Left: 464, .Top: 16, .Width: 96, .Height: 64,
+      .BorderRadius: 14, .Overflow: Overflow.Hidden,
+      .Transform: PanelTransform{TranslateX: 4, TranslateY: 4},
+      Container() {
+        .Position: PositionType.Absolute, .Left: 24, .Top: 0, .Width: 96, .Height: 64,
+        .BorderRadius: 10, .Overflow: Overflow.Hidden,
+        Container{Width: Percent(100), Height: Percent(100), BackgroundColor: Color.Rgb(255, 32, 128)},
+        Container{
+          Position: PositionType.Absolute, Left: 0, Top: 0, Right: 0, Bottom: 0,
+          BorderRadius: 10, BorderWidth: 1, BorderColor: Color.Rgb(160, 160, 160), ZIndex: 30,
+        },
+      },
+    },
+  }
+}
+
+func RunRoundedOverflowCoverageSmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  let opened = Window{
+    Title: "Goo rounded overflow gate", Width: 608, Height: 96,
+    VSync: false, Decorated: false, Transparent: true,
+    Root: RoundedOverflowCoverageCell(), Background: Color.Transparent,
+  }
+  Console.SetError(capturedError)
+  try {
+    opened.Open()
+    WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
+    WindowReadbackTestFixture.ForceRender(opened, 0.0166666666666667, 10.0)
+    let metrics = WindowReadbackTestFixture.Metrics(opened)
+    ReadbackRequestReadbackUntilAccepted(opened,
+      uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+    ReadbackAwaitReadbackReady(opened, 10000)
+    let frame = ReadbackTakeReadback(opened)
+    PrimitiveValidateResult(frame, metrics)
+    let scale = float64(metrics.FramebufferWidth) / float64(metrics.LogicalWidth)
+    let output = Environment.GetEnvironmentVariable("GOO_ROUNDED_OVERFLOW_OUTPUT") ?? ""
+    if output != "" {
+      let _ = Directory.CreateDirectory(output)
+      let prefix = Path.Combine(output, "rounded-overflow-" + Math.Round(scale * 100.0).ToString())
+      File.WriteAllBytes(prefix + ".rgba", frame.Pixels)
+      let cyan = [int32(frame.Width * frame.Height) * 3]uint8
+      for index in 0 ... int32(frame.Width * frame.Height) {
+        let alpha = int32(frame.Pixels[index * 4 + 3])
+        cyan[index * 3] = frame.Pixels[index * 4]
+        cyan[index * 3 + 1] = uint8(Math.Min(255, int32(frame.Pixels[index * 4 + 1]) + 255 - alpha))
+        cyan[index * 3 + 2] = uint8(Math.Min(255, int32(frame.Pixels[index * 4 + 2]) + 255 - alpha))
+      }
+      using let stream = File.Create(prefix + "-cyan.ppm")
+      let header = Encoding.ASCII.GetBytes("P6\n" + frame.Width.ToString() + " " + frame.Height.ToString() + "\n255\n")
+      stream.Write(header, 0, header.Length)
+      stream.Write(cyan, 0, cyan.Length)
+      Console.WriteLine("rounded-overflow-capture: path=" + prefix + " width="
+        + frame.Width.ToString() + " height=" + frame.Height.ToString())
+    }
+    var samples = 0
+    var alphaError = 0
+    var colorError = 0
+    let originX = int32(Math.Round(16.0 * scale))
+    let originY = int32(Math.Round(16.0 * scale))
+    let size = int32(Math.Round(96.0 * scale))
+    let corner = int32(Math.Ceiling(12.0 * scale))
+    for y in 0 ... corner {
+      for x in size - corner ... size {
+        let reference = PrimitivePixelIndex(frame.Width, originX + x, originY + y)
+        let alpha = int32(frame.Pixels[reference + 3])
+        if alpha <= 2 || alpha >= 192 { continue }
+        samples += 1
+        for panel in 1 ... 4 {
+          let sample = PrimitivePixelIndex(frame.Width,
+            originX + int32(Math.Round(float64(panel) * 112.0 * scale)) + x, originY + y)
+          alphaError = Math.Max(alphaError, Math.Abs(int32(frame.Pixels[sample + 3]) - alpha))
+          for channel in 0 ... 3 {
+            colorError = Math.Max(colorError,
+              Math.Abs(int32(frame.Pixels[sample + channel]) - int32(frame.Pixels[reference + channel])))
+          }
+        }
+      }
+    }
+    Console.WriteLine("rounded-overflow-smoke: scale=" + scale.ToString() + " samples=" + samples.ToString()
+      + " alpha_error=" + alphaError.ToString() + " color_error=" + colorError.ToString())
+    Require(samples >= 3, "Rounded overflow gate did not sample the outer antialias edge")
+    Require(alphaError <= 2, "Rounded overflow changed transparent outer coverage")
+    Require(colorError <= 4, "Rounded overlay border left a color fringe at the outer edge")
+    let inside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 548.0, 48.0)
+    Require(inside[0] >= uint8(240) && inside[3] >= uint8(250),
+      "Transformed nonmatching ancestor clip removed interior content")
+    let outside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 572.0, 48.0)
+    Require(outside[3] <= uint8(2), "Transformed nonmatching ancestor clip leaked content")
+  } finally {
+    if opened.IsOpen {
+      opened.RequestClose()
+      WindowReadbackTestFixture.ForceRender(opened, 0.0)
+    }
+    Console.SetError(originalError)
+  }
+  Require(WindowReadbackTestFixture.ResidentResourceBytes(opened) == 0uL,
+    "Rounded overflow gate resources remain resident after close")
+  ReadbackValidateCommonDiagnostics(capturedError.ToString())
+}

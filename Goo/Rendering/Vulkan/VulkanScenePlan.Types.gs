@@ -305,6 +305,7 @@ internal struct PerEdgeBorderRecord {
   internal var BottomColor uint32
   internal var LeftColor uint32
   internal var Style uint32
+  internal var ClipOwnsOuterCoverage bool
   internal var TransformIndex int32
 }
 

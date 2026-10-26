@@ -199,4 +199,5 @@ func RunFragmentCorrectnessSmoke() {
       }
     }
   }
+  RunRoundedOverflowCoverageSmoke()
 }
