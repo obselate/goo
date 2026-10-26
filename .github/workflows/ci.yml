@@ -553,6 +553,7 @@ jobs:
         name: Update Linux package lists
         id: linux-apt
         run: |
+          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
           sudo apt-get update
           mkdir -p "$RUNNER_TEMP/goo-apt-archives"
           sudo apt-get --print-uris --yes --no-install-recommends install $GOO_LINUX_APT_PACKAGES \
