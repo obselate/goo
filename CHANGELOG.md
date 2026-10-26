@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.19.1 - 2026-10-26
+
+- Hover callbacks on retired virtual rows no longer rebuild the parent Cell
+
 ## 0.19.0 - 2026-10-26
 
 - Window.FrameTheme, ContentUnderTitlebar and TitlebarControlsRect for native dark frames and macOS full-size content
