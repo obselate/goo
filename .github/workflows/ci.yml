@@ -627,7 +627,7 @@ jobs:
             artifacts/native/libSDL3.so
             artifacts/native/libSDL3.a
             artifacts/native/text
-          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/**', 'tools/Goo.TextNative/**') }}
+          key: glibc227-native-dca176c9-${{ hashFiles('.github/scripts/build-sdl-linux-x64.sh', '.github/scripts/build-text-native-linux-x64.sh', '.github/patches/sdl/**', 'tests/NativeWindow/test_sdl_*.py', 'tests/NativeWindow/*_harness.c', 'tools/Goo.TextNative/**') }}
 
       - name: Build glibc 2.27 native payloads
         if: needs.changes.outputs.full == 'true' && (steps.glibc-native.outputs.cache-hit != 'true')
