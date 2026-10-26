@@ -17,6 +17,10 @@ class NativeBackdropProbe {
                 var material int32
                 BackdropRequire(DwmGetWindowAttribute(native, 38u, out material, 4u) >= 0
                     && material == windowsMaterial, "DWM did not apply the requested material")
+                var dark int32
+                let theme = window.FrameTheme == SystemTheme.Unknown ? window.Preferences.Theme : window.FrameTheme
+                BackdropRequire(DwmGetWindowAttribute(native, 20u, out dark, 4u) >= 0
+                    && (dark != 0) == (theme == SystemTheme.Dark), "DWM did not apply the requested frame theme")
             }
             if OperatingSystem.IsMacOS() {
                 let windows = Send(Send(objc_getClass("NSApplication"), sel_registerName("sharedApplication")),
@@ -27,6 +31,16 @@ class NativeBackdropProbe {
                     let native = SendArg(windows, sel_registerName("objectAtIndex:"), nint(i))
                     let title = Send(Send(native, sel_registerName("title")), sel_registerName("UTF8String"))
                     if Marshal.PtrToStringUTF8(title) != window.Title { continue }
+                    let appearance = Send(native, sel_registerName("appearance"))
+                    if window.FrameTheme == SystemTheme.Unknown {
+                        BackdropRequire(appearance == nint(0), "AppKit appearance did not return to system policy")
+                    } else {
+                        let name = Send(Send(appearance, sel_registerName("name")), sel_registerName("UTF8String"))
+                        let expected = window.FrameTheme == SystemTheme.Dark ? "NSAppearanceNameDarkAqua" : "NSAppearanceNameAqua"
+                        BackdropRequire(Marshal.PtrToStringUTF8(name) == expected, "AppKit frame theme did not update")
+                    }
+                    BackdropRequire(((Send(native, sel_registerName("styleMask")) & nint(32768)) != nint(0))
+                        == window.ContentUnderTitlebar, "AppKit full-size content style did not update")
                     let views = Send(Send(native, sel_registerName("contentView")), sel_registerName("subviews"))
                     let viewCount = int32(Send(views, sel_registerName("count")))
                     for j in 0 ... viewCount {

@@ -84,6 +84,12 @@ internal class WindowsBackdrop : NativeBackdrop {
   }
 
   shared {
+    internal func SetFrameTheme(window nint, theme SystemTheme) {
+      if window == nint(0) { return }
+      var dark = theme == SystemTheme.Dark ? 1 : 0
+      DwmSetWindowAttribute(window, 20u, ref dark, 4u)
+    }
+
     @DllImport("dwmapi.dll") private func DwmSetWindowAttribute(window nint, attribute uint32, ref value int32, size uint32) int32;
     @DllImport("dwmapi.dll") private func DwmExtendFrameIntoClientArea(window nint, ref margins BackdropWindowsMargins) int32;
     @DllImport("user32.dll", EntryPoint: "SystemParametersInfoW")

@@ -181,6 +181,41 @@ public partial class Window {
   private var windowsBackdrop WindowsBackdropOptions
   private var macOSBackdrop MacOSBackdropOptions
   private var waylandBackdrop WaylandBackdropOptions
+  private var frameTheme SystemTheme
+  private var contentUnderTitlebar bool
+
+  /// Gets or sets the native frame and material appearance. Unknown follows the system.
+  /// Applies immediately on Windows and macOS. Other platforms ignore it.
+  public prop FrameTheme SystemTheme {
+    get -> frameTheme
+    set(value) {
+      requireUiThread("Window.FrameTheme")
+      if !Enum.IsDefined[SystemTheme](value) { throw ArgumentOutOfRangeException("value") }
+      if frameTheme == value { return }
+      frameTheme = value
+      if let native = host as SdlHost? { native.SetFrameTheme(value) }
+      requestRender()
+    }
+  }
+
+  /// Gets or sets whether macOS content extends under the transparent titlebar. Defaults to false.
+  /// Keeps native window controls. Other platforms ignore it.
+  public prop ContentUnderTitlebar bool {
+    get -> contentUnderTitlebar
+    set(value) {
+      requireUiThread("Window.ContentUnderTitlebar")
+      if contentUnderTitlebar == value { return }
+      contentUnderTitlebar = value
+      if let native = host as SdlHost? { native.SetContentUnderTitlebar(value) }
+      requestRender()
+    }
+  }
+
+  /// Gets the macOS window controls' bounds in top-left window logical pixels, including titlebar height.
+  /// Returns nil without overlapping native controls, including fullscreen and other platforms.
+  public prop TitlebarControlsRect ElementRect? {
+    get -> (host as SdlHost?)?.TitlebarControlsRect
+  }
 
   /// Gets or sets Windows-only material options. Changes apply to an open window immediately.
   public prop WindowsBackdrop WindowsBackdropOptions {

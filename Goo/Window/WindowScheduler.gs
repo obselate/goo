@@ -101,7 +101,7 @@ internal class WindowScheduler {
   internal func RequestHotReload() {
     let pending = List[Window]()
     lock windowsGate { pending.AddRange(windows) }
-    for window in pending { window.TryPost(window.RebuildAfterHotReload) }
+    for window in pending { window.TryPost(window.RebuildAllCells) }
   }
   internal func ProfileWindows(recorder FrameRecorder, exceptWindowId string) {
     let pending = List[Window]()

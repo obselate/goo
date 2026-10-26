@@ -1667,6 +1667,10 @@ Gets supported native lifecycle operations, or None before Open or Attach.
 
 Gets a token cancelled when this window stops accepting owner-thread work. A posted action can be discarded during teardown. Use this token to complete pending asynchronous work.
 
+### `ContentUnderTitlebar`
+
+Gets or sets whether macOS content extends under the transparent titlebar. Defaults to false. Keeps native window controls. Other platforms ignore it.
+
 ### `Decorated`
 
 Gets or sets whether the system draws window decorations.
@@ -1690,6 +1694,10 @@ Gets or sets a portal parent identifier before Open, such as wayland: followed b
 ### `FramePacing`
 
 Gets or sets the frame pacing used by Window.Run. Uncapped still honors GPU queue readiness and the selected presentation mode.
+
+### `FrameTheme`
+
+Gets or sets the native frame and material appearance. Unknown follows the system. Applies immediately on Windows and macOS. Other platforms ignore it.
 
 ### `Height`
 
@@ -1810,6 +1818,10 @@ Gets or sets the window state.
 ### `Title`
 
 Gets or sets the window title.
+
+### `TitlebarControlsRect`
+
+Gets the macOS window controls' bounds in top-left window logical pixels, including titlebar height. Returns nil without overlapping native controls, including fullscreen and other platforms.
 
 ### `Topmost`
 

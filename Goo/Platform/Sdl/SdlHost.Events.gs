@@ -255,14 +255,18 @@ internal unsafe partial class SdlHost {
         placementWidth = nativeEvent.Data1
         placementHeight = nativeEvent.Data2
       }
-      LogicalWidth = nativeEvent.Data1
-      LogicalHeight = nativeEvent.Data2
-      RefreshFramebuffer()
+      if contentUnderTitlebar { RefreshMetrics() }
+      else {
+        LogicalWidth = nativeEvent.Data1
+        LogicalHeight = nativeEvent.Data2
+        RefreshFramebuffer()
+      }
       RaiseMetrics()
     } else if eventType == SDLEventType.WindowPixelSizeChanged {
       FramebufferWidth = nativeEvent.Data1
       FramebufferHeight = nativeEvent.Data2
       RefreshLogical()
+      if contentUnderTitlebar { RefreshMetrics() }
       RaiseMetrics()
     } else if eventType == SDLEventType.WindowDisplayChanged ||
     eventType == SDLEventType.WindowDisplayScaleChanged{
@@ -288,10 +292,18 @@ internal unsafe partial class SdlHost {
     } else if eventType == SDLEventType.WindowEnterFullscreen {
       placementRestoredState = WindowState.Fullscreen
       RefreshDisplayPacing(true)
+      if contentUnderTitlebar {
+        RefreshMetrics()
+        RaiseMetrics()
+      }
       StateChanged?.Invoke(WindowState.Fullscreen)
     } else if eventType == SDLEventType.WindowLeaveFullscreen {
       placementRestoredState = WindowState.Normal
       RefreshDisplayPacing(true)
+      if contentUnderTitlebar {
+        RefreshMetrics()
+        RaiseMetrics()
+      }
       StateChanged?.Invoke(WindowState.Normal)
     } else if eventType == SDLEventType.WindowFocusGained {
       FocusChanged?.Invoke(true)

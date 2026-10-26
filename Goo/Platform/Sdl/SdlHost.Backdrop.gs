@@ -1,5 +1,6 @@
 package Goo
 
+import Hexa.NET.SDL3
 import System
 import System.Runtime.InteropServices
 
@@ -10,6 +11,47 @@ internal interface NativeBackdrop : IDisposable {
 internal unsafe partial class SdlHost {
   private var nativeBackdrop NativeBackdrop?
   internal prop BackdropAvailable bool { get; private set }
+  private var frameTheme SystemTheme
+  private var contentUnderTitlebar bool
+  private var macWindow nint
+  internal prop TitlebarControlsRect ElementRect? { get; private set }
+  internal event TitlebarControlsChanged Action
+
+  internal func SetFrameTheme(value SystemTheme) {
+    ThrowIfDisposed()
+    frameTheme = value
+    RefreshPreferences(false)
+    ApplyFrameTheme()
+  }
+
+  private func ApplyFrameTheme() {
+    let properties = BackdropProperties(WindowHandle)
+    if OperatingSystem.IsWindows() {
+      WindowsBackdrop.SetFrameTheme(BackdropPointer(properties, "SDL.window.win32.hwnd", nint(0)),
+        frameTheme == SystemTheme.Unknown ? preferences.Theme : frameTheme)
+    } else if OperatingSystem.IsMacOS() {
+      MacBackdrop.SetFrameTheme(BackdropPointer(properties, "SDL.window.cocoa.window", nint(0)), frameTheme)
+    }
+  }
+
+  internal func SetContentUnderTitlebar(value bool) {
+    ThrowIfDisposed()
+    if !OperatingSystem.IsMacOS() { return }
+    contentUnderTitlebar = value
+    macWindow = BackdropPointer(BackdropProperties(WindowHandle), "SDL.window.cocoa.window", nint(0))
+    MacBackdrop.SetContentUnderTitlebar(macWindow, value)
+    if value { EnableHitTest() }
+    else if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Borderless)) == 0uL { DisableHitTest() }
+    RefreshMetrics()
+    RaiseMetrics()
+  }
+
+  private func RefreshTitlebarControls() {
+    let rect = contentUnderTitlebar ? MacBackdrop.ControlsRect(macWindow) : nil
+    if TitlebarControlsRect == rect { return }
+    TitlebarControlsRect = rect
+    TitlebarControlsChanged?.Invoke()
+  }
 
   internal func SetBackdrop(enabled bool, windows WindowsBackdropOptions,
     macOS MacOSBackdropOptions, wayland WaylandBackdropOptions) {
