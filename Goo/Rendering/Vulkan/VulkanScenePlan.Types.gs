@@ -466,6 +466,7 @@ internal enum LayerRecordFlags {
   None = 0;
   SamplesBackdrop = 1;
   BorrowsParentBackdrop = 2;
+  PreservesBackdrop = 4;
 }
 
 internal struct LayerRecord {
@@ -476,6 +477,7 @@ internal struct LayerRecord {
   internal var ExtentHeight uint32
   internal var Opacity float32
   internal var BlendMode uint32
+  internal var ParentClipLayerId int32
   internal var OffscreenTargetId ResourceId
   internal var EffectProgramId uint64
   internal var EffectVersion uint64

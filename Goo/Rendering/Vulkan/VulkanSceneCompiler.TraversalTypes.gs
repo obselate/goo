@@ -140,6 +140,7 @@ internal struct VulkanSceneTraversalContext {
   internal var ParentIsolation bool
   internal var RoundedOverflowOwner Node?
   internal var RoundedOverflowTransformIndex int32
+  internal var RoundedOverflowLayerId int32
   internal var ExactCullContextSafe bool
   internal var ActiveClipBounds ConservativeBounds
 }

@@ -23,6 +23,30 @@ class RoundedOverflowCoverageCell : Cell {
     },
   }
 
+  private func BuildBackdropComparison(left float64, top float64, alpha int32, clipped bool) Blob -> Container() {
+    .Position: PositionType.Absolute, .Left: left, .Top: top, .Width: 96, .Height: 80,
+    Container{
+      Position: PositionType.Absolute, Left: 0, Top: 0, Width: 48, Height: 80,
+      BackgroundColor: Color.Rgba(220, 80, 40, alpha),
+    },
+    Container{
+      Position: PositionType.Absolute, Left: 48, Top: 0, Width: 48, Height: 80,
+      BackgroundColor: Color.Rgba(40, 160, 240, alpha),
+    },
+    Container() {
+      .Width: Percent(100), .Height: Percent(100), .BorderRadius: 10,
+      .Overflow: clipped ? Overflow.Hidden : Overflow.Visible,
+      Container{
+        Position: PositionType.Absolute, Left: 12, Top: 12, Width: 72, Height: 28,
+        BackdropBlur: 3, BackgroundColor: Color.Rgba(255, 255, 255, 26),
+      },
+      Container{
+        Position: PositionType.Absolute, Left: 0, Top: 48, Width: 96, Height: 32,
+        BlendMode: BlendMode.Multiply, BackgroundColor: Color.Rgba(0, 0, 0, 26),
+      },
+    },
+  }
+
   override func Build() Blob -> Container() {
     .Width: Percent(100), .Height: Percent(100),
     Container{
@@ -46,6 +70,14 @@ class RoundedOverflowCoverageCell : Cell {
         },
       },
     },
+    BuildBackdropComparison(16, 112, 0, false),
+    BuildBackdropComparison(128, 112, 0, true),
+    BuildBackdropComparison(352, 112, 128, false),
+    BuildBackdropComparison(464, 112, 128, true),
+    BuildBackdropComparison(16, 208, 254, false),
+    BuildBackdropComparison(128, 208, 254, true),
+    BuildBackdropComparison(352, 208, 255, false),
+    BuildBackdropComparison(464, 208, 255, true),
   }
 }
 
@@ -53,7 +85,7 @@ func RunRoundedOverflowCoverageSmoke() {
   let capturedError = StringWriter()
   let originalError = Console.Error
   let opened = Window{
-    Title: "Goo rounded overflow gate", Width: 608, Height: 96,
+    Title: "Goo rounded overflow gate", Width: 608, Height: 304,
     VSync: false, Decorated: false, Transparent: true,
     Root: RoundedOverflowCoverageCell(), Background: Color.Transparent,
   }
@@ -122,6 +154,38 @@ func RunRoundedOverflowCoverageSmoke() {
       "Transformed nonmatching ancestor clip removed interior content")
     let outside = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 572.0, 48.0)
     Require(outside[3] <= uint8(2), "Transformed nonmatching ancestor clip leaked content")
+    let comparisonOrigins = []Point{
+      Point{X: 16, Y: 112}, Point{X: 352, Y: 112},
+      Point{X: 16, Y: 208}, Point{X: 352, Y: 208},
+    }
+    let backdropSamples = []Point{
+      Point{X: 47, Y: 24}, Point{X: 48, Y: 24}, Point{X: 49, Y: 24},
+      Point{X: 24, Y: 58}, Point{X: 72, Y: 58}, Point{X: 24, Y: 44},
+    }
+    var backdropError = 0
+    for origin in comparisonOrigins {
+      for point in backdropSamples {
+        let reference = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
+          origin.X + point.X, origin.Y + point.Y)
+        let clipped = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics,
+          origin.X + point.X + 112.0, origin.Y + point.Y)
+        for channel in 0 ... 4 {
+          backdropError = Math.Max(backdropError,
+            Math.Abs(int32(reference[channel]) - int32(clipped[channel])))
+        }
+      }
+    }
+    let unblurred = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 63.0, 252.0)
+    let blurred = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 63.0, 232.0)
+    Require(unblurred[3] == uint8(254), "Near-opaque backdrop did not retain alpha 254/255")
+    Require(Math.Abs(int32(unblurred[0]) - int32(blurred[0])) >= 10,
+      "Backdrop comparison did not exercise blur across the color boundary")
+    let unchanged = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 88.0, 252.0)
+    let multiplied = PrimitiveLogicalPixel(frame.Pixels, frame.Width, metrics, 88.0, 266.0)
+    Require(int32(unchanged[2]) - int32(multiplied[2]) >= 4,
+      "Backdrop comparison did not exercise Multiply")
+    Console.WriteLine("rounded-overflow-backdrop: maximum_error=" + backdropError.ToString())
+    Require(backdropError <= 3, "Rounded overflow changed blur, blend, or backdrop alpha")
   } finally {
     if opened.IsOpen {
       opened.RequestClose()

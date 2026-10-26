@@ -952,12 +952,13 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       let borrowsParentBackdrop =
       (record.Flags & uint32(LayerRecordFlags.BorrowsParentBackdrop)) != 0u
+      let preservesBackdrop = (record.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u
       let backdropOnly = BackdropBlurRadius(record, frame) > 0.0F
         && frame.ShaderEffects[record.EffectIndex].Program == BackdropBlurEffect.Shared
       let target = if backdropOnly { nil } else {
         pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
       }
-      let needsBackdrop = record.BlendMode != 0u
+      let needsBackdrop = preservesBackdrop || record.BlendMode != 0u
         || (record.EffectIndex >= 0
             && (record.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u)
       let backdropTarget = if borrowsParentBackdrop {
@@ -1007,8 +1008,10 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       guard let layerTarget = state.Target else {
         throw InvalidOperationException("Vulkan layer target is unavailable")
       }
+      if preservesBackdrop { CopyBackdrop(commandBuffer, record, layerTarget) }
       layerTarget.TransitionToColorAttachment(commandBuffer)
-      BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView, backdropOnly)
+      BeginLayerRendering(commandBuffer, layerTarget.Extent, layerTarget.ImageView,
+        backdropOnly || preservesBackdrop)
       state.TimestampHandle = BeginLayerTimestamp(
         VulkanDiagnosticTimestampStage.Offscreen,
         VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)

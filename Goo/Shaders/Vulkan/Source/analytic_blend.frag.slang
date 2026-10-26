@@ -158,6 +158,11 @@ void shade()
     float2 sourceUv = pc.params.xy + uv * pc.params.zw;
     float4 source = sourceTexture.Sample(sourceUv);
     float4 backdrop = backdropTexture.Sample(sourceUv);
+    if (pc.packedColorsExtra.z != 0u)
+    {
+        outColor = lerp(backdrop, source, gooClipCoverage() * clamp(pc.radii.x, 0.0, 1.0));
+        return;
+    }
     float sourceAlpha = clamp(source.a * clamp(pc.radii.x, 0.0, 1.0), 0.0, 1.0);
     float backdropAlpha = clamp(backdrop.a, 0.0, 1.0);
     float3 sourceColor = sourceAlpha > 1e-6 ? source.rgb / max(source.a, 1e-6) : float3(0.0);

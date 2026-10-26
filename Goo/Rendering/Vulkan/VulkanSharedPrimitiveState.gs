@@ -113,6 +113,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   private var radialPipeline VkPipeline
   private var sampledPipeline VkPipeline
   private var blendPipeline VkPipeline
+  private var clipCompositePipeline VkPipeline
   private var pathPipeline VkPipeline
   private var textPipeline VkPipeline
   private var textPaintPipeline VkPipeline
@@ -130,7 +131,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
   internal func ProfileResources(recorder FrameRecorder) {
     lock pipelineGate {
       for pipeline in []uint64{solidPipeline, shadowPipeline, borderPipeline, linearPipeline,
-        radialPipeline, sampledPipeline, blendPipeline, pathPipeline, textPipeline, textPaintPipeline} {
+        radialPipeline, sampledPipeline, blendPipeline, clipCompositePipeline,
+        pathPipeline, textPipeline, textPaintPipeline} {
         recorder.Resource(FrameResourceKind.Pipeline,
           recorder.NativeResource(FrameResourceKind.Pipeline, uint64(device), pipeline),
           VulkanDiagnosticEventIds.PipelineCreate, "pipeline", device: uint64(device), baseline: true)
@@ -168,6 +170,10 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
     get -> ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
       blendPipelineLayout, true, true)
   }
+  internal prop ClipCompositePipeline VkPipeline{
+    get -> ResolvePipeline(ref clipCompositePipeline, analyticVertexModule, blendModule,
+      blendPipelineLayout, false, true)
+  }
   internal prop PathPipeline VkPipeline{
     get -> ResolvePipeline(ref pathPipeline, pathVertexModule, pathFragmentModule,
       pathPipelineLayout, true, false)
@@ -190,6 +196,7 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       if radialPipeline != 0uL { count++ }
       if sampledPipeline != 0uL { count++ }
       if blendPipeline != 0uL { count++ }
+      if clipCompositePipeline != 0uL { count++ }
       if pathPipeline != 0uL { count++ }
       if textPipeline != 0uL { count++ }
       if textPaintPipeline != 0uL { count++ }
@@ -450,6 +457,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       device, dispatch.vkDestroyPipeline, objectAccounting, ref sampledPipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref blendPipeline)
+    VulkanNativeHandleDestroyer.DestroyPipeline(
+      device, dispatch.vkDestroyPipeline, objectAccounting, ref clipCompositePipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(
       device, dispatch.vkDestroyPipeline, objectAccounting, ref pathPipeline)
     VulkanNativeHandleDestroyer.DestroyPipeline(

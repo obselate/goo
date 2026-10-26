@@ -528,7 +528,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         EmitShaderEffectLayer(commandBuffer, extent, value, target, backdrop, frame)
         return
       }
-      if value.BlendMode != 0u {
+      if value.BlendMode != 0u
+        || (value.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u {
         guard let backdropTarget = backdrop else {
           if !primitivePrepass {
             throw InvalidOperationException("Vulkan blend layer backdrop is unavailable")
@@ -720,6 +721,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       push.params_z = value.Bounds.Width / targetWidth
       push.params_w = value.Bounds.Height / targetHeight
       push.packedColorsExtra_w = value.BlendMode
+      let preservesBackdrop = (value.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u
+      push.packedColorsExtra_z = preservesBackdrop ? 1u : 0u
       if !primitivePrepass {
         FlushPendingPrimitiveDraw(commandBuffer)
         EnsureDescriptorLayout(blendPipelineLayout)
@@ -740,7 +743,9 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         textDescriptorBound = false
         textAtlasId = ResourceId{}
       }
-      BindPrimitiveAndDraw(commandBuffer, primitivePipelines.BlendPipeline,
+      let pipeline = preservesBackdrop
+        ? primitivePipelines.ClipCompositePipeline : primitivePipelines.BlendPipeline
+      BindPrimitiveAndDraw(commandBuffer, pipeline,
         blendPipelineLayout, *void(&push), 3u)
     }
 
