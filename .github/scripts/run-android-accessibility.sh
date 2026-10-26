@@ -12,14 +12,14 @@ adb="${ANDROID_HOME:?ANDROID_HOME must name the Android SDK}/platform-tools/adb"
 image=x86_64-36_r07.zip
 image_hash=c6bf44bdcd885bb902b4ba752d111a073ad7a817
 if [[ -z "${GOO_EMULATOR_DIRECTORY:-}" ]]; then
-  curl --fail --location --retry 3 https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip -o "$work/emulator.zip"
+  curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip -o "$work/emulator.zip"
   printf '%s  %s\n' cd7362ea55dfb86a418958138dc396e74165dd01 "$work/emulator.zip" | sha1sum -c -
   unzip -q "$work/emulator.zip" -d "$work/runtime"
   rm "$work/emulator.zip"
   GOO_EMULATOR_DIRECTORY="$work/runtime/emulator"
 fi
 if [[ -z "${GOO_ANDROID_IMAGE_DIRECTORY:-}" ]]; then
-  curl --fail --location --retry 3 "https://dl.google.com/android/repository/sys-img/google_apis/$image" -o "$work/image.zip"
+  curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 "https://dl.google.com/android/repository/sys-img/google_apis/$image" -o "$work/image.zip"
   printf '%s  %s\n' "$image_hash" "$work/image.zip" | sha1sum -c -
   unzip -q "$work/image.zip" -d "$work/image"
   rm "$work/image.zip"

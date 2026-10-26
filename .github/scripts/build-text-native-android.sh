@@ -45,7 +45,7 @@ for key in ("archiveUrl", "archiveSha256", "version"):
     print(value[key])
 PY
 )
-curl -fsSL --retry 3 --retry-delay 2 "${source[0]}" -o "$work/harfbuzz.tar.xz"
+curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "${source[0]}" -o "$work/harfbuzz.tar.xz"
 printf '%s  %s\n' "${source[1]}" "$work/harfbuzz.tar.xz" | sha256sum -c -
 tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
 source_root="$work/harfbuzz-${source[2]}"

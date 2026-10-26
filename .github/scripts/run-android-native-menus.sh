@@ -10,14 +10,14 @@ export ANDROID_USER_HOME="$work/user" XDG_CACHE_HOME="$work/cache"
 export ADB_SERVER_SOCKET=tcp:localhost:5042 ANDROID_ADB_SERVER_PORT=5042
 adb="${ANDROID_HOME:?ANDROID_HOME is required}/platform-tools/adb"
 if [[ -z "${GOO_EMULATOR_DIRECTORY:-}" ]]; then
-    curl --fail --location --retry 3 https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip -o "$work/emulator.zip"
+    curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 https://dl.google.com/android/repository/emulator-linux_x64-16428233.zip -o "$work/emulator.zip"
     printf '%s  %s\n' cd7362ea55dfb86a418958138dc396e74165dd01 "$work/emulator.zip" | sha1sum -c -
     unzip -q "$work/emulator.zip" -d "$work/runtime"
     rm "$work/emulator.zip"
     GOO_EMULATOR_DIRECTORY="$work/runtime/emulator"
 fi
 if [[ -z "${GOO_ANDROID_IMAGE_DIRECTORY:-}" ]]; then
-    curl --fail --location --retry 3 https://dl.google.com/android/repository/sys-img/google_apis/x86_64-36_r07.zip -o "$work/image.zip"
+    curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 https://dl.google.com/android/repository/sys-img/google_apis/x86_64-36_r07.zip -o "$work/image.zip"
     printf '%s  %s\n' c6bf44bdcd885bb902b4ba752d111a073ad7a817 "$work/image.zip" | sha1sum -c -
     unzip -q "$work/image.zip" -d "$work/image"
     rm "$work/image.zip"

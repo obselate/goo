@@ -8,7 +8,7 @@ dll_sha256=2632e21625861a0dc106f2b1abb649e610d8be88534ba74c76a763abe5aefaa3
 temporary="$(mktemp -d)"
 trap 'rm -rf "$temporary"' EXIT
 
-curl --fail --location --silent --show-error \
+curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
   "https://github.com/libsdl-org/SDL/releases/download/release-$version/SDL3-$version-win32-x64.zip" \
   --output "$temporary/SDL3.zip"
 printf '%s  %s\n' "$archive_sha256" "$temporary/SDL3.zip" | sha256sum --check --status
