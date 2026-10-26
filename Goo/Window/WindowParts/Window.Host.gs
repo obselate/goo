@@ -416,9 +416,7 @@ public partial class Window {
         nativeModal?.DrainCompletion()
         if IsOpen && !native.IsClosing && drainCloseRequest() {
           stopPosts()
-          if windowTarget?.PrepareClose() != false {
-            native.BeginClose()
-          }
+          native.BeginClose()
         }
         if native.IsClosing || !IsOpen {
           try {
