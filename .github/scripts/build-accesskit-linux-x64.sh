@@ -13,7 +13,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends build-essential curl ca-certificates pkg-config
-curl --proto "=https" --tlsv1.2 -fsS --retry 5 --retry-all-errors --retry-delay 2 https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init -o /tmp/rustup-init
+curl --proto "=https" --tlsv1.2 -fsS --retry 5 --retry-connrefused --retry-delay 2 https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init -o /tmp/rustup-init
 printf "%s  %s\n" 20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c /tmp/rustup-init | sha256sum --check
 chmod +x /tmp/rustup-init
 /tmp/rustup-init -y --profile minimal --default-toolchain 1.98.0

@@ -72,7 +72,7 @@ for legacy in libharfbuzz.so libfreetype.so libgoo-text.so libgoo-freetype.so li
 done
 staging="$work/output"
 mkdir -p "$staging"
-curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "$hb_url" -o "$work/harfbuzz.tar.xz"
+curl -fsSL --retry 5 --retry-connrefused --retry-delay 2 "$hb_url" -o "$work/harfbuzz.tar.xz"
 printf '%s  %s\n' "$hb_sha256" "$work/harfbuzz.tar.xz" | sha256sum -c -
 tar -xJf "$work/harfbuzz.tar.xz" -C "$work"
 python3 "$repo_root/tools/Goo.TextNative/apply-source-patches.py" --manifest "$manifest" --source-root "$work/harfbuzz-15.0.0"

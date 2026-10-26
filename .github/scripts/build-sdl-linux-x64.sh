@@ -20,7 +20,7 @@ for command_name in curl meson ninja patch pkg-config python3 readelf sha256sum 
   }
 done
 
-curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+curl -fsSL --retry 5 --retry-connrefused --retry-delay 2 \
   "https://github.com/Kitware/CMake/releases/download/v${cmake_version}/cmake-${cmake_version}-linux-x86_64.tar.gz" \
   -o "$work/cmake.tar.gz"
 printf '%s  %s\n' "$cmake_sha256" "$work/cmake.tar.gz" | sha256sum -c -
@@ -28,7 +28,7 @@ mkdir "$work/cmake"
 tar -xzf "$work/cmake.tar.gz" -C "$work/cmake" --strip-components=1
 cmake="$work/cmake/bin/cmake"
 
-curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+curl -fsSL --retry 5 --retry-connrefused --retry-delay 2 \
   "https://wayland.freedesktop.org/releases/wayland-${wayland_version}.tar.xz" \
   -o "$work/wayland.tar.xz"
 printf '%s  %s\n' "$wayland_sha256" "$work/wayland.tar.xz" | sha256sum -c -
@@ -42,7 +42,7 @@ ninja -C "$work/wayland-build" install
 export PATH="$work/wayland-install/bin:$PATH"
 export PKG_CONFIG_PATH="$work/wayland-install/lib/x86_64-linux-gnu/pkgconfig:$work/wayland-install/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 
-curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 "https://github.com/libsdl-org/SDL/releases/download/release-${version}/SDL3-${version}.tar.gz" \
+curl -fsSL --retry 5 --retry-connrefused --retry-delay 2 "https://github.com/libsdl-org/SDL/releases/download/release-${version}/SDL3-${version}.tar.gz" \
   -o "$work/SDL3.tar.gz"
 printf '%s  %s\n' "$sha256" "$work/SDL3.tar.gz" | sha256sum -c -
 mkdir "$work/src"
