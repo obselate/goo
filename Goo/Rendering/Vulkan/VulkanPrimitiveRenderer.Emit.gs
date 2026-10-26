@@ -486,7 +486,257 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       if !primitivePrepass {
         EnsureDescriptorLayout(pipelineLayout)
-[…251ln elided…]
+        let sameDescriptor = sampledDescriptorBound
+          && SameResourceId(sampledImageId, value.ImageId)
+          && SameResourceId(sampledSamplerId, value.SamplerId)
+          && sampledSamplerMode == samplerMode
+          && sampledGeneration == resourceGeneration
+        if !sameDescriptor {
+          FlushPendingPrimitiveDraw(commandBuffer)
+          imageResources!!.BindDescriptor(commandBuffer, pipelineLayout, value.ImageId,
+            value.SamplerId, samplerMode, resourceGeneration)
+          recordDescriptorChangeCount++
+          sampledDescriptorBound = true
+          sampledImageId = value.ImageId
+          sampledSamplerId = value.SamplerId
+          sampledSamplerMode = samplerMode
+          sampledGeneration = resourceGeneration
+        }
+      }
+      BindPrimitiveAndDraw(commandBuffer, primitivePipelines.SampledPipeline,
+        pipelineLayout, *void(&push), 1u)
+    }
+
+  private func EmitLayer(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    value LayerRecord,
+    target VulkanOffscreenLayerTarget?,
+    backdrop VulkanOffscreenLayerTarget?,
+    frame SceneFrame) {
+      ValidateBounds(value.Bounds)
+      ValidateOpacity(value.Opacity)
+      ValidateFinite(value.OriginX, "layer origin x")
+      ValidateFinite(value.OriginY, "layer origin y")
+      if !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
+        throw InvalidOperationException("Vulkan layer target descriptor is unavailable")
+      }
+      if value.Bounds.IsEmpty {
+        return
+      }
+      if value.EffectIndex >= 0 {
+        EmitShaderEffectLayer(commandBuffer, extent, value, target, backdrop, frame)
+        return
+      }
+      if value.BlendMode != 0u {
+        guard let backdropTarget = backdrop else {
+          if !primitivePrepass {
+            throw InvalidOperationException("Vulkan blend layer backdrop is unavailable")
+          }
+          EmitBlendLayer(commandBuffer, extent, value, nil, nil)
+          return
+        }
+        EmitBlendLayer(commandBuffer, extent, value, target, backdropTarget)
+        return
+      }
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      push.radii_x = value.Opacity
+      push.radii_y = 1.0F
+      let targetWidth = float32(value.ExtentWidth)
+      let targetHeight = float32(value.ExtentHeight)
+      push.params_x = (value.Bounds.X - value.OriginX) / targetWidth
+      push.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
+      push.params_z = value.Bounds.Width / targetWidth
+      push.params_w = value.Bounds.Height / targetHeight
+      DrawSampledTarget(commandBuffer, &push, target)
+    }
+
+  private func EmitPresentEncode(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    target VulkanOffscreenLayerTarget?) {
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, ConservativeBounds{
+          X: 0.0F,
+          Y: 0.0F,
+          Width: float32(extent.width),
+          Height: float32(extent.height),
+        }, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      push.radii_x = 1.0F
+      push.radii_y = 1.0F
+      push.radii_z = 1.0F
+      push.params_z = 1.0F
+      push.params_w = 1.0F
+      DrawSampledTarget(commandBuffer, &push, target)
+    }
+
+  private func DrawSampledTarget(
+    commandBuffer VkCommandBuffer,
+    push * VulkanPrimitiveGpuRecord,
+    target VulkanOffscreenLayerTarget?) {
+      if !primitivePrepass {
+        FlushPendingPrimitiveDraw(commandBuffer)
+        EnsureDescriptorLayout(pipelineLayout)
+        var descriptorSet = target!!.DescriptorSet
+        let bindDescriptors = dispatch.vkCmdBindDescriptorSets
+        bindDescriptors(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
+          pipelineLayout, 0u, 1u, &descriptorSet, 0u, nil)
+        recordDescriptorChangeCount++
+        sampledDescriptorBound = false
+        sampledImageId = ResourceId{}
+        sampledSamplerId = ResourceId{}
+        sampledSamplerMode = VulkanImageSamplerMode.Nearest
+        sampledGeneration = 0uL
+        pathDescriptorBound = false
+        pathAtlasId = ResourceId{}
+        textDescriptorBound = false
+        textAtlasId = ResourceId{}
+      }
+      BindPrimitiveAndDraw(commandBuffer, primitivePipelines.SampledPipeline,
+        pipelineLayout, *void(push), 1u)
+    }
+
+  private func EmitShaderEffectLayer(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    value LayerRecord,
+    target VulkanOffscreenLayerTarget?,
+    backdrop VulkanOffscreenLayerTarget?,
+    frame SceneFrame,
+    generator bool = false) {
+      RequireRecordIndex(value.EffectIndex, frame.ShaderEffectCount, "shader effect index")
+      let effect = frame.ShaderEffects[value.EffectIndex]
+      if effect.ProgramId != value.EffectProgramId || effect.Version != value.EffectVersion {
+        throw InvalidOperationException("Vulkan shader effect snapshot does not match its layer")
+      }
+      EmitShaderEffect(commandBuffer, extent, value, target, backdrop, effect, generator)
+    }
+
+  private func EmitShaderEffect(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    value LayerRecord,
+    target VulkanOffscreenLayerTarget?,
+    backdrop VulkanOffscreenLayerTarget?,
+    effect ShaderEffectRecord,
+    generator bool = false) {
+      guard let program = effect.Program else {
+        throw InvalidOperationException("Vulkan shader effect program is unavailable")
+      }
+      if generator != program.SourceIndependent {
+        throw InvalidOperationException("Vulkan shader effect source mode does not match")
+      }
+      if value.BlendMode != 0u {
+        throw NotSupportedException("ShaderEffect cannot be combined with a non-normal BlendMode")
+      }
+      if !generator && !primitivePrepass && (target == nil || target.DescriptorSet == 0uL) {
+        throw InvalidOperationException("Vulkan shader effect source is unavailable")
+      }
+      if effect.SamplesBackdrop && !primitivePrepass
+        && (backdrop == nil || backdrop.DescriptorSet == 0uL) {
+          throw InvalidOperationException("Vulkan shader effect backdrop is unavailable")
+        }
+      let effectPipeline = primitivePipelines.ResolveShaderEffectPipeline(program)
+      var primitive = VulkanPrimitiveGpuRecord{}
+      FillTransform(&primitive.Geometry, value.Bounds,
+        PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      primitive.radii_x = value.Opacity
+      let targetWidth = float32(value.ExtentWidth)
+      let targetHeight = float32(value.ExtentHeight)
+      primitive.params_x = (value.Bounds.X - value.OriginX) / targetWidth
+      primitive.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
+      primitive.params_z = value.Bounds.Width / targetWidth
+      primitive.params_w = value.Bounds.Height / targetHeight
+      primitive.packedColorsExtra_w = primitiveFrameData.EffectDataWordOffset
+      +effect.DataWordOffset
+      primitive.stopPositions_x = effect.ElapsedSeconds
+      if !primitivePrepass {
+        FlushPendingPrimitiveDraw(commandBuffer)
+        EnsureDescriptorLayout(blendPipelineLayout)
+        if !generator {
+          var descriptorSets = stackalloc[2]VkDescriptorSet
+          descriptorSets[0] = target!!.DescriptorSet
+          descriptorSets[1] = if let backdropTarget = backdrop {
+            backdropTarget.DescriptorSet
+          } else { target!!.DescriptorSet }
+          let bindDescriptors = dispatch.vkCmdBindDescriptorSets
+          bindDescriptors(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
+            blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
+          recordDescriptorChangeCount++
+        }
+        var parameters = VulkanShaderEffectPushConstants{
+          Parameter0: effect.Parameter0,
+          Parameter1: effect.Parameter1,
+          Parameter2: effect.Parameter2,
+          Parameter3: effect.Parameter3,
+          Parameter4: effect.Parameter4,
+          Parameter5: effect.Parameter5,
+          Parameter6: effect.Parameter6,
+          Parameter7: effect.Parameter7,
+        }
+        let pushConstants = dispatch.vkCmdPushConstants
+        pushConstants(commandBuffer, blendPipelineLayout,
+          uint32(VkConstants.VK_SHADER_STAGE_FRAGMENT_BIT),
+          0u, 128u, *void(&parameters))
+        sampledDescriptorBound = false
+        sampledImageId = ResourceId{}
+        sampledSamplerId = ResourceId{}
+        sampledSamplerMode = VulkanImageSamplerMode.Nearest
+        sampledGeneration = 0uL
+        pathDescriptorBound = false
+        pathAtlasId = ResourceId{}
+        textDescriptorBound = false
+        textAtlasId = ResourceId{}
+      }
+      if !primitivePrepass {
+        primitiveFrameData.BindEffectData(commandBuffer, blendPipelineLayout, 4u)
+        recordDescriptorChangeCount++
+      }
+      BindPrimitiveAndDraw(commandBuffer, effectPipeline, blendPipelineLayout,
+        *void(&primitive), 3u)
+    }
+
+  private func EmitBlendLayer(
+    commandBuffer VkCommandBuffer,
+    extent VkExtent2D,
+    value LayerRecord,
+    target VulkanOffscreenLayerTarget?,
+    backdrop VulkanOffscreenLayerTarget?) {
+      if !primitivePrepass && (target == nil || backdrop == nil
+          || target.DescriptorSet == 0uL || backdrop.DescriptorSet == 0uL) {
+            throw InvalidOperationException("Vulkan blend layer descriptor is unavailable")
+          }
+      if value.BlendMode > uint32(int32(BlendMode.Luminosity)) {
+        throw NotSupportedException("Vulkan blend mode is unavailable")
+      }
+      var push = VulkanPrimitiveGpuRecord{}
+      FillTransform(&push.Geometry, value.Bounds, PrimitiveTransform{ A: 1.0F, D: 1.0F }, extent)
+      push.radii_x = value.Opacity
+      let targetWidth = float32(value.ExtentWidth)
+      let targetHeight = float32(value.ExtentHeight)
+      push.params_x = (value.Bounds.X - value.OriginX) / targetWidth
+      push.params_y = (value.Bounds.Y - value.OriginY) / targetHeight
+      push.params_z = value.Bounds.Width / targetWidth
+      push.params_w = value.Bounds.Height / targetHeight
+      push.packedColorsExtra_w = value.BlendMode
+      if !primitivePrepass {
+        FlushPendingPrimitiveDraw(commandBuffer)
+        EnsureDescriptorLayout(blendPipelineLayout)
+        var descriptorSets = stackalloc[2]VkDescriptorSet
+        descriptorSets[0] = target!!.DescriptorSet
+        descriptorSets[1] = backdrop!!.DescriptorSet
+        let bindDescriptors = dispatch.vkCmdBindDescriptorSets
+        bindDescriptors(commandBuffer, VkConstants.VK_PIPELINE_BIND_POINT_GRAPHICS,
+          blendPipelineLayout, 0u, 2u, &descriptorSets[0], 0u, nil)
+        recordDescriptorChangeCount++
+        sampledDescriptorBound = false
+        sampledImageId = ResourceId{}
+        sampledSamplerId = ResourceId{}
+        sampledSamplerMode = VulkanImageSamplerMode.Nearest
+        sampledGeneration = 0uL
+        pathDescriptorBound = false
+        pathAtlasId = ResourceId{}
         textDescriptorBound = false
         textAtlasId = ResourceId{}
       }
@@ -985,6 +1235,3 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
   }
 
 }
-
-
-[Showing lines 1-488 and 740-1238 of 1238; 251 middle lines (10.6KB) elided. Read artifact://21080 for full output]
