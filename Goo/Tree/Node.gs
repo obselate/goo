@@ -436,6 +436,7 @@ internal class Node {
   internal prop ShapePath VectorPath{ get; set; }
   internal prop ShapeFit ShapeFit{ get; set; }
   internal prop ShapeFillRule FillRule{ get; set; }
+  internal prop ShapeUseCurrentColor bool{ get; set; }
   internal prop ShapeStrokeCap StrokeCap{ get; set; }
   internal prop ShapeStrokeJoin StrokeJoin{ get; set; }
   internal prop ShapeVectorEffect VectorEffect{ get; set; }

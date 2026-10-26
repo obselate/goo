@@ -2373,6 +2373,7 @@ property|Goo.Shape|StrokeCap|Goo.StrokeCap|instance|get:public,init:public|index
 property|Goo.Shape|StrokeEnd|System.Double|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeJoin|Goo.StrokeJoin|instance|get:public,init:public|index:()
 property|Goo.Shape|StrokeStart|System.Double|instance|get:public,init:public|index:()
+property|Goo.Shape|UseCurrentColor|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.Shape|VectorEffect|Goo.VectorEffect|instance|get:public,init:public|index:()
 property|Goo.SingleInstanceResult|Error|System.String|instance|get:public|index:()
 property|Goo.SingleInstanceResult|Lease|System.IDisposable?|instance|get:public|index:()

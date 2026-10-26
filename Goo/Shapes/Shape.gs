@@ -35,6 +35,9 @@ public class Shape : Blob {
   public prop Fit ShapeFit{ get; init; }
   /// Gets or sets the fill rule. The default is NonZero.
   public prop FillRule FillRule{ get; init; }
+  /// Uses the inherited Color for solid fill when true. The default is false.
+  /// BackgroundGradient and stroke colors are unchanged.
+  public prop UseCurrentColor bool{ get; init; }
   /// Gets or sets the stroke cap style. The default is Butt.
   public prop StrokeCap StrokeCap{ get; init; }
   /// Gets or sets the stroke join style. The default is Miter.

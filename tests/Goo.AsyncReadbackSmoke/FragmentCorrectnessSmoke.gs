@@ -10,13 +10,18 @@ class FragmentCorrectnessCell : Cell {
   private let crtEffect ShaderEffect
   internal var PixelOffset float64
   internal var IconSize float64 = 24
+  internal var BuildCount int32
+  private let square VectorPath = PathBuilder(0.0, 0.0, 16.0, 16.0)
+    .MoveTo(0.0, 0.0).LineTo(16.0, 0.0).LineTo(16.0, 16.0).LineTo(0.0, 16.0).Close().Build()
   private let outline VectorPath = Svg.Parse("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'><path d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm280-80h280v-560H480v560Z'/></svg>").PathForNode(1)
 
   init(effect ShaderEffect) {
     crtEffect = effect
   }
 
-  override func Build() Blob -> Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
+  override func Build() Blob {
+    BuildCount++
+    return Container() {.Width: Percent(100),.Height: Percent(100),.Position: PositionType.Relative,.BackgroundColor: Color.Transparent,
     Shape{
       Position: PositionType.Absolute, Left: 16, Top: 16, Width: IconSize, Height: IconSize,
       Path: outline, BackgroundColor: Color.White,
@@ -43,6 +48,28 @@ class FragmentCorrectnessCell : Cell {
             BackgroundColor: Color.Rgb(8, 32, 248),
       },
     },
+    Container{
+      Position: PositionType.Absolute, Left: 16, Top: 100, Width: 112, Height: 24,
+      Color: Color.Rgb(0, 0, 255), Hover: Style{Color: Color.Rgb(255, 0, 0)},
+      Shape{
+        Position: PositionType.Absolute, Left: 0, Width: 20, Height: 20,
+        Path: square, UseCurrentColor: true, BackgroundColor: Color.Transparent,
+      },
+      Shape{
+        Position: PositionType.Absolute, Left: 28, Width: 20, Height: 20,
+        Path: square, UseCurrentColor: false, BackgroundColor: Color.White,
+      },
+      Shape{
+        Position: PositionType.Absolute, Left: 56, Width: 20, Height: 20,
+        Path: square, UseCurrentColor: true,
+        BackgroundGradient: LinearGradient(Color.Rgb(0, 255, 0), Color.Rgb(0, 255, 0)),
+      },
+      Shape{
+        Position: PositionType.Absolute, Left: 84, Width: 20, Height: 20,
+        Path: square, UseCurrentColor: true, BorderWidth: 2, BorderColor: Color.Rgb(0, 255, 0),
+      },
+    },
+    }
   }
 }
 
@@ -127,6 +154,33 @@ func RunFragmentCorrectnessSmoke() {
       crtSamples += x.ToString() + "=" + PrimitivePixelText(sample)
     }
     Console.WriteLine("fragment-correctness-smoke: crt=" + crtSamples)
+    let buildCount = cell.BuildCount
+    let pathBuildCount = PathBandEncoder.BuildCount
+    let paintSamples = []Point{Point{X: 82.0, Y: 110.0}, Point{X: 110.0, Y: 101.0}}
+    for phase in 0 ... 3 {
+      WindowReadbackTestFixture.InputQueuePointerMove(opened, phase == 1 ? 26.0 : 140.0, 110.0)
+      WindowReadbackTestFixture.ForceRender(opened, 0.0, 10.0)
+      ReadbackRequestReadbackUntilAccepted(opened,
+        uint32(metrics.FramebufferWidth), uint32(metrics.FramebufferHeight))
+      ReadbackAwaitReadbackReady(opened, 10000)
+      let painted = ReadbackTakeReadback(opened)
+      for x in []float64{26.0, 110.0} {
+        let pixel = PrimitiveLogicalPixel(painted.Pixels, painted.Width, metrics, x, 110.0)
+        Require(pixel[phase == 1 ? 0 : 2] >= uint8(250)
+            && pixel[phase == 1 ? 2 : 0] <= uint8(4) && pixel[1] <= uint8(4),
+          "Inherited shape fill did not follow normal/hover/reset Color: " + PrimitivePixelText(pixel))
+      }
+      let fixedFill = PrimitiveLogicalPixel(painted.Pixels, painted.Width, metrics, 54.0, 110.0)
+      Require(fixedFill[0] >= uint8(250) && fixedFill[1] >= uint8(250) && fixedFill[2] >= uint8(250),
+        "Default-false shape changed its explicit fill: " + PrimitivePixelText(fixedFill))
+      for point in paintSamples {
+        let pixel = PrimitiveLogicalPixel(painted.Pixels, painted.Width, metrics, point.X, point.Y)
+        Require(pixel[1] >= uint8(250) && pixel[0] <= uint8(4) && pixel[2] <= uint8(4),
+          "Inherited shape fill changed an explicit gradient or stroke: " + PrimitivePixelText(pixel))
+      }
+      Require(cell.BuildCount == buildCount, "Inherited shape hover rebuilt its Cell")
+      Require(PathBandEncoder.BuildCount == pathBuildCount, "Inherited shape hover encoded geometry")
+    }
     opened.RequestClose()
     WindowReadbackTestFixture.ForceRender(opened, 0.0)
     Require(!opened.IsOpen, "Fragment correctness gate window did not close")

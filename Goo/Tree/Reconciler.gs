@@ -1025,6 +1025,11 @@ internal partial class Reconciler {
       paintChanged = true
       hitGeometryChanged = true
     }
+    if n.ShapeUseCurrentColor != s.UseCurrentColor {
+      n.ShapeUseCurrentColor = s.UseCurrentColor
+      n.BumpScenePaintVersion()
+      paintChanged = true
+    }
     if n.ShapeStrokeCap != s.StrokeCap {
       n.ShapeStrokeCap = s.StrokeCap
       paintChanged = true

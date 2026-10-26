@@ -391,7 +391,8 @@ internal partial class VulkanSceneCompiler {
       let hasBackgroundImage = node.HasBackgroundImageState
         && (BackgroundImageLayouts.Path(node) != ""
             || BackgroundImageLayouts.Source(node) != nil)
-      let fillVisible = node.BackgroundColor.A > 0.0F
+      let fillColor = node.ShapeUseCurrentColor ? node.Color : node.BackgroundColor
+      let fillVisible = fillColor.A > 0.0F
         || node.BackgroundGradient != nil
         || hasBackgroundImage
       let strokeVisible = geometry.StrokeVisible
@@ -409,7 +410,7 @@ internal partial class VulkanSceneCompiler {
         if let gradient = node.BackgroundGradient {
           PaintGradient(node, gradient, bounds, opacity, transformIndex)
         } else {
-          PaintSolid(node.BackgroundColor, node, bounds, opacity, transformIndex)
+          PaintSolid(fillColor, node, bounds, opacity, transformIndex)
         }
         if let scene = imageScene {
           scene.Emit(
@@ -430,7 +431,7 @@ internal partial class VulkanSceneCompiler {
             AtlasId: path.AtlasId,
             AtlasWordOffset: path.BaseWord,
             AtlasWordCount: path.WordCount,
-            FillColor: node.BackgroundColor.ToPackedRgba(),
+            FillColor: fillColor.ToPackedRgba(),
             FillRule: path.FillRule,
             Opacity: opacity,
             ScaleX: mapping.ScaleX,
@@ -588,7 +589,8 @@ internal partial class VulkanSceneCompiler {
         || shapePath.CommandCount == 0 {
         return
       }
-      let fillVisible = (node.BackgroundColor.A > 0.0F
+      let fillColor = node.ShapeUseCurrentColor ? node.Color : node.BackgroundColor
+      let fillVisible = (fillColor.A > 0.0F
           || node.BackgroundGradient != nil
           || node.HasBackgroundImageState)
         && PathGeometry.For(shapePath).HasFillContour
