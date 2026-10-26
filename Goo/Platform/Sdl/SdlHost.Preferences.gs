@@ -40,6 +40,7 @@ internal unsafe partial class SdlHost {
       else { PlatformPreferences{Theme: theme} }) with{PreferredLocales = preferredLocales}
     if preferences == value { return }
     preferences = value
+    if frameTheme == SystemTheme.Unknown && OperatingSystem.IsWindows() { ApplyFrameTheme() }
     PreferencesChanged?.Invoke(value)
   }
 

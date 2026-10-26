@@ -76,6 +76,71 @@ internal class MacBackdrop : NativeBackdrop {
   }
 
   shared {
+    internal func SetFrameTheme(window nint, theme SystemTheme) {
+      if window == nint(0) { return }
+      var appearance nint
+      if theme != SystemTheme.Unknown {
+        let name = theme == SystemTheme.Dark ? "NSAppearanceNameDarkAqua" : "NSAppearanceNameAqua"
+        let text = SendText(objc_getClass("NSString"), sel_registerName("stringWithUTF8String:"), name)
+        appearance = SendValue(objc_getClass("NSAppearance"), sel_registerName("appearanceNamed:"), text)
+      }
+      SetValue(window, sel_registerName("setAppearance:"), appearance)
+    }
+
+    internal func SetContentUnderTitlebar(window nint, enabled bool) {
+      if window == nint(0) { return }
+      let style = Send(window, sel_registerName("styleMask"))
+      SetValue(window, sel_registerName("setStyleMask:"), enabled ? style | nint(32768) : style & ~nint(32768))
+      SetBool(window, sel_registerName("setTitlebarAppearsTransparent:"), enabled ? uint8(1) : uint8(0))
+      SetValue(window, sel_registerName("setTitleVisibility:"), enabled ? nint(1) : nint(0))
+    }
+
+    internal func ContentBounds(window nint, pixels bool = false) BackdropMacRect {
+      var bounds = ReadRect(Send(window, sel_registerName("contentView")), "bounds")
+      if pixels {
+        let scale = GetDouble(window, sel_registerName("backingScaleFactor"))
+        bounds.Width *= scale
+        bounds.Height *= scale
+      }
+      return bounds
+    }
+
+    internal func ControlsRect(window nint) ElementRect? {
+      if window == nint(0) || (Send(window, sel_registerName("styleMask")) & nint(16384)) != nint(0) { return nil }
+      let content = Send(window, sel_registerName("contentView"))
+      if content == nint(0) { return nil }
+      let bounds = ReadRect(content, "bounds")
+      let layout = ReadRect(window, "contentLayoutRect")
+      var left = Double.PositiveInfinity
+      var right = 0.0
+      var height = bounds.Height - layout.Y - layout.Height
+      for index in 0 ... 3 {
+        let button = SendValue(window, sel_registerName("standardWindowButton:"), nint(index))
+        if button == nint(0) || GetBool(button, sel_registerName("isHiddenOrHasHiddenAncestor")) != uint8(0) { continue }
+        let rect = ReadRect(button, "frame")
+        let parent = Send(button, sel_registerName("superview"))
+        let point = ConvertPoint(parent, sel_registerName("convertPoint:toView:"),
+          SdlTitlebarMacPoint{X: rect.X, Y: rect.Y}, content)
+        let opposite = ConvertPoint(parent, sel_registerName("convertPoint:toView:"),
+          SdlTitlebarMacPoint{X: rect.X + rect.Width, Y: rect.Y + rect.Height}, content)
+        left = Math.Min(left, Math.Min(point.X, opposite.X))
+        right = Math.Max(right, Math.Max(point.X, opposite.X))
+        let top = GetBool(content, sel_registerName("isFlipped")) != uint8(0)
+          ? Math.Max(point.Y, opposite.Y) : bounds.Height - Math.Min(point.Y, opposite.Y)
+        height = Math.Max(height, top)
+      }
+      return Double.IsPositiveInfinity(left) ? nil : ElementRect{X: left, Width: right - left, Height: height}
+    }
+
+    private func ReadRect(receiver nint, name string) BackdropMacRect {
+      let selector = sel_registerName(name)
+      if RuntimeInformation.ProcessArchitecture == Architecture.X64 {
+        GetRectX64(out var rect, receiver, selector)
+        return rect
+      }
+      return GetRect(receiver, selector)
+    }
+
     private func CreateMask(mask WindowBackdropMask) nint {
       let colorSpace = CGColorSpaceCreateDeviceRGB()
       if colorSpace == nint(0) { throw InvalidOperationException("Unable to create backdrop mask color space") }
@@ -112,6 +177,13 @@ internal class MacBackdrop : NativeBackdrop {
     @DllImport("/usr/lib/libobjc.A.dylib") private func sel_registerName(name string) nint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func Send(receiver nint, selector nint) nint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func GetBool(receiver nint, selector nint) uint8;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func GetDouble(receiver nint, selector nint) float64;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func SendValue(receiver nint, selector nint, value nint) nint;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func SendText(receiver nint, selector nint, value string) nint;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func GetRect(receiver nint, selector nint) BackdropMacRect;
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend_stret") private func GetRectX64(out rect BackdropMacRect, receiver nint, selector nint);
+    @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func ConvertPoint(receiver nint, selector nint,
+      point SdlTitlebarMacPoint, view nint) SdlTitlebarMacPoint;
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func SetValue(receiver nint, selector nint, value nint);
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func SetBool(receiver nint, selector nint, value uint8);
     @DllImport("/usr/lib/libobjc.A.dylib", EntryPoint: "objc_msgSend") private func InitImage(receiver nint, selector nint, image nint, size BackdropMacSize) nint;

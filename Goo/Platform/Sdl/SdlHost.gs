@@ -326,7 +326,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
     Require(SDL.SetWindowBordered(window, decorated), "SDL_SetWindowBordered")
     Require(SDL.SetWindowResizable(window, resizable), "SDL_SetWindowResizable")
-    if decorated {
+    if contentUnderTitlebar { MacBackdrop.SetContentUnderTitlebar(macWindow, true) }
+    if decorated && !contentUnderTitlebar {
       DisableHitTest()
     }
   }
@@ -496,6 +497,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private func RefreshMetrics() {
     RefreshLogical()
     RefreshFramebuffer()
+    RefreshTitlebarControls()
   }
 
   public func RefreshMetricsIfChanged() {
@@ -517,6 +519,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     var width int32 = 0
     var height int32 = 0
     Require(SDL.GetWindowSize(window, &width, &height), "SDL_GetWindowSize")
+    if contentUnderTitlebar && macWindow != nint(0) {
+      let bounds = MacBackdrop.ContentBounds(macWindow)
+      width = int32(Math.Round(bounds.Width))
+      height = int32(Math.Round(bounds.Height))
+    }
     LogicalWidth = width
     LogicalHeight = height
   }
@@ -525,6 +532,11 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     var width int32 = 0
     var height int32 = 0
     Require(SDL.GetWindowSizeInPixels(window, &width, &height), "SDL_GetWindowSizeInPixels")
+    if contentUnderTitlebar && macWindow != nint(0) {
+      let bounds = MacBackdrop.ContentBounds(macWindow, true)
+      width = int32(Math.Round(bounds.Width))
+      height = int32(Math.Round(bounds.Height))
+    }
     FramebufferWidth = width
     FramebufferHeight = height
   }

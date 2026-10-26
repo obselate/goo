@@ -12,7 +12,7 @@ public partial class Window {
   private var imageDisposeEpoch int64
   private var schedulerSimulationBank float64
 
-  internal func RebuildAfterHotReload() {
+  internal func RebuildAllCells() {
     if !IsOpen { return }
     Root?.Rebuild()
     if let tree = node {
@@ -153,6 +153,9 @@ public partial class Window {
       }
       SyncTitlebarHook()
       configureOwnership(native)
+      native.SetFrameTheme(frameTheme)
+      native.SetContentUnderTitlebar(contentUnderTitlebar)
+      native.TitlebarControlsChanged += RebuildAllCells
       if minWidth != 0 || minHeight != 0 || maxWidth != 0 || maxHeight != 0 { pushSize() }
       if maxWidth != 0 || maxHeight != 0 { native.SetMaximumSize(scaledSize(maxWidth), scaledSize(maxHeight)) }
       let target = VulkanWindowTarget(native)

@@ -5,6 +5,16 @@ import System
 import System.Diagnostics
 import System.Threading
 
+class TitlebarProbeCell : Cell {
+    internal var Host Window?
+    internal var Controls ElementRect?
+
+    override func Build() Blob {
+        Controls = Host?.TitlebarControlsRect
+        return Container{}
+    }
+}
+
 func BackdropRequire(value bool, message string) {
     if !value {
         throw InvalidOperationException(message)
@@ -63,11 +73,14 @@ func RunNativeBackdropSmoke() {
     let mask = WindowBackdropMask(2, 2, maskAlpha)
     Array.Clear(maskAlpha)
     for opening in 0 ... 3 {
+        let root = TitlebarProbeCell{}
         let window = Window{
             Title: "Goo native backdrop smoke",
             Width: 320,
             Height: 200,
             Backdrop: WindowBackdrop.Blur,
+            FrameTheme: SystemTheme.Dark,
+            ContentUnderTitlebar: true,
             WindowsBackdrop: WindowsBackdropOptions{Material: WindowsBackdropMaterial.Mica},
             MacOSBackdrop: MacOSBackdropOptions{
                 Material: MacOSBackdropMaterial.Sidebar,
@@ -78,8 +91,9 @@ func RunNativeBackdropSmoke() {
             WaylandBackdrop: WaylandBackdropOptions{CornerRadius: 12, Region: ElementRect{X: 8.5, Y: 12.5, Width: 143, Height: 95}},
             BackdropFallbackColor: Color.Rgb(18, 52, 86),
             Background: Color.Rgb(9, 11, 16).WithAlpha(0.35),
-            Root: Cell{},
+            Root: root,
         }
+        root.Host = window
         BackdropRequire(!window.BackdropAvailable, "Unopened window advertised native blur")
         window.Open()
         try {
@@ -94,6 +108,24 @@ func RunNativeBackdropSmoke() {
             }
             BackdropCapture(window, !available)
             NativeBackdropProbe.Verify(window, 2, 7, 1, true, true)
+            if OperatingSystem.IsMacOS() {
+                BackdropRequire(root.Controls != nil, "Build did not see native titlebar controls")
+                for target in []WindowState{WindowState.Fullscreen, WindowState.Normal} {
+                    window.State = target
+                    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 15
+                    while Stopwatch.GetTimestamp() < deadline {
+                        window.Pump(0.0)
+                        if window.State == target && (root.Controls == nil) == (target == WindowState.Fullscreen) { break }
+                        Thread.Sleep(2)
+                    }
+                    BackdropRequire(window.State == target
+                        && (root.Controls == nil) == (target == WindowState.Fullscreen),
+                        "Build retained stale native titlebar controls after fullscreen changed")
+                }
+            } else {
+                BackdropRequire(window.TitlebarControlsRect == nil, "Other platforms exposed native titlebar controls")
+            }
+            window.FrameTheme = SystemTheme.Light
             window.WindowsBackdrop = WindowsBackdropOptions{Material: WindowsBackdropMaterial.MicaAlt}
             window.MacOSBackdrop = MacOSBackdropOptions{
                 Material: MacOSBackdropMaterial.HudWindow,
@@ -104,6 +136,7 @@ func RunNativeBackdropSmoke() {
             NativeBackdropProbe.Verify(window, 4, 13, 2, false, false)
             BackdropRequire(window.BackdropAvailable == available, "Live native options changed support")
             window.WindowsBackdrop = WindowsBackdropOptions{Material: WindowsBackdropMaterial.Automatic}
+            window.FrameTheme = SystemTheme.Unknown
             window.WaylandBackdrop = WaylandBackdropOptions{Region: ElementRect{X: 0.5, Width: 0, Height: 50}}
             BackdropPump(window)
             NativeBackdropProbe.Verify(window, 0, 13, 2, false, false)
@@ -119,6 +152,9 @@ func RunNativeBackdropSmoke() {
             window.Height = 220 + opening * 8
             BackdropPump(window)
             BackdropRequire(window.BackdropAvailable == available, "Backdrop support changed after resize")
+            window.ContentUnderTitlebar = false
+            BackdropRequire(window.TitlebarControlsRect == nil, "Disabled full-size content retained titlebar controls")
+            window.ContentUnderTitlebar = true
             NativeBackdropProbe.Verify(window, 3, 21, 0, false, false)
             BackdropRequire(window.Hide() == WindowOperationResult.Accepted, "Backdrop window did not hide")
             BackdropPump(window)

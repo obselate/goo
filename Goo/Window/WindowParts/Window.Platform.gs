@@ -18,10 +18,9 @@ public partial class Window {
           host?.DisplayScale ?? 0.0F))
     }
 
-  // Custom chrome hit routing: only undecorated windows own their edges and
-  // drag regions; the system chrome handles both otherwise.
   internal func hitTest(x int32, y int32) WindowHitResult {
-    if decorated || IsInputBlocked {
+    let fullSizeContent = decorated && contentUnderTitlebar && OperatingSystem.IsMacOS()
+    if (decorated && !fullSizeContent) || IsInputBlocked {
       return WindowHitResult.Normal
     }
 
@@ -30,7 +29,14 @@ public partial class Window {
     }
     let px = float32(x)
     let py = float32(y)
-    if resizable && state == WindowState.Normal {
+    if fullSizeContent {
+      if let controls = TitlebarControlsRect {
+        if px >= controls.X && px < controls.X + controls.Width && py < controls.Height {
+          return WindowHitResult.Normal
+        }
+      }
+    }
+    if !decorated && resizable && state == WindowState.Normal {
       let band = resizeBand
       let logicalWidth = float32(Width)
       let logicalHeight = float32(Height)
@@ -68,7 +74,8 @@ public partial class Window {
     if info.HasContent {
       return WindowHitResult.Normal
     }
-    return info.DragsWindow
-    ? WindowHitResult.Draggable : WindowHitResult.Normal
+    let titlebarHeight = TitlebarControlsRect?.Height ?? 0.0
+    return info.DragsWindow || (fullSizeContent && py < titlebarHeight)
+      ? WindowHitResult.Draggable : WindowHitResult.Normal
   }
 }
