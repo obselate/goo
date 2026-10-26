@@ -75,7 +75,7 @@ func RunNativeBackdropSmoke() {
     for opening in 0 ... 3 {
         let root = TitlebarProbeCell{}
         let window = Window{
-            Title: "Goo native backdrop smoke",
+            Title: "Goo native backdrop smoke " + opening.ToString(),
             Width: 320,
             Height: 200,
             Backdrop: WindowBackdrop.Blur,
