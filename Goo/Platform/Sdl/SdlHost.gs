@@ -309,7 +309,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     if disposed || IsClosing { return WindowOperationResult.Closed }
     if let layer = layerWindow {
       if !SDL.ShowWindow(window) { return WindowOperationResult.Failed }
-      layer.Show()
+      layer.Show(ReadLayerOutput(layer.Output))
       RefreshMetricsIfChanged()
       VisibilityChanged?.Invoke()
       return WindowOperationResult.Accepted
@@ -490,12 +490,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       let native = SDL.GetWindowProperties(window)
       let display = SDL.GetPointerProperty(native, "SDL.window.wayland.display", nil)
       let surface = SDL.GetPointerProperty(native, "SDL.window.wayland.surface", nil)
-      var output nint
-      if let target = options.Output {
-        if !HasDisplay(target.NativeValue) { throw ArgumentException("The layer-shell target display is unavailable") }
-        output = nint(SDL.GetPointerProperty(SDL.GetDisplayProperties(target.NativeValue), "SDL.display.wayland.wl_output", nil))
-        if output == nint(0) { throw NotSupportedException("The target display has no Wayland output") }
-      }
+      let output = ReadLayerOutput(options.Output)
       layerWindow = WaylandLayerWindow(nint(display), nint(surface), output, options,
         (configuredWidth int32, configuredHeight int32) -> {
           Require(SDL.SetWindowSize(window, configuredWidth, configuredHeight), "SDL_SetWindowSize")
@@ -506,6 +501,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       window = SDL.CreateWindow(title, width, height, uint64(flags))
       if window.IsNull { ThrowSdl("SDL_CreateWindow") }
     }
+  }
+
+  private func ReadLayerOutput(id WindowDisplayId?) nint {
+    guard let target = id else { return nint(0) }
+    if !HasDisplay(target.NativeValue) { throw ArgumentException("The layer-shell target display is unavailable") }
+    let output = nint(SDL.GetPointerProperty(SDL.GetDisplayProperties(target.NativeValue), "SDL.display.wayland.wl_output", nil))
+    if output == nint(0) { throw NotSupportedException("The target display has no Wayland output") }
+    return output
   }
 
   internal func SetIconPng(bytes []uint8) {

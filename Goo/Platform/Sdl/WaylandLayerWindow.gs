@@ -12,7 +12,6 @@ internal delegate LayerWaylandClosed(data nint, layerSurface nint);
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private let display nint
   private let surface nint
-  private let output nint
   private let options LayerWindowOptions
   private let resize Action[int32, int32]
   private let requestClose Action
@@ -26,6 +25,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var registry nint
   private var manager nint
   private var layerSurface nint
+  private var surfaceListener nint
+  private var namespaceText nint
   private var managerInterface nint
   private var surfaceInterface nint
   private var version uint32
@@ -34,12 +35,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var failure Exception?
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
+  internal prop Output WindowDisplayId? { get -> options.Output }
 
   internal init(display nint, surface nint, output nint, options LayerWindowOptions,
     resize Action[int32, int32], requestClose Action) {
     this.display = display
     this.surface = surface
-    this.output = output
     this.options = options
     this.resize = resize
     this.requestClose = requestClose
@@ -47,12 +48,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     onRemove = Remove
     onConfigure = Configure
     onClosed = Closed
-    try { Initialize() }
+    try { Initialize(output) }
     catch (error Exception) { Dispose()
       throw error }
   }
 
-  private func Initialize() {
+  private func Initialize(output nint) {
     library = NativeLibrary.Load("libwayland-client.so.0")
     queue = WaylandBackdrop.wl_display_create_queue(display)
     if queue == nint(0) { throw InvalidOperationException("Cannot create the layer-shell event queue") }
@@ -77,24 +78,30 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if options.KeyboardInteractivity == LayerWindowKeyboardInteractivity.OnDemand && version < 4u {
       throw NotSupportedException("On-demand keyboard interactivity requires layer-shell version 4")
     }
+    namespaceText = Text(options.Namespace)
+    surfaceListener = Allocate(IntPtr.Size * 2)
+    Marshal.WriteIntPtr(surfaceListener, Marshal.GetFunctionPointerForDelegate(onConfigure))
+    Marshal.WriteIntPtr(surfaceListener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onClosed))
+    CreateLayerSurface(output)
+  }
+
+  private func CreateLayerSurface(output nint) {
     let arguments * BackdropWaylandArgument = stackalloc[5]BackdropWaylandArgument
     arguments[0].Value = nint(0)
     arguments[1].Value = surface
     arguments[2].Value = output
     arguments[3].Value = nint(uint32(options.Layer))
-    arguments[4].Value = Text(options.Namespace)
+    arguments[4].Value = namespaceText
     layerSurface = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(manager, 0u, arguments, surfaceInterface, version)
     if layerSurface == nint(0) { throw InvalidOperationException("Cannot create the layer-shell surface") }
-    let surfaceListener = Allocate(IntPtr.Size * 2)
-    Marshal.WriteIntPtr(surfaceListener, Marshal.GetFunctionPointerForDelegate(onConfigure))
-    Marshal.WriteIntPtr(surfaceListener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onClosed))
     if WaylandBackdrop.wl_proxy_add_listener(layerSurface, surfaceListener, nint(0)) != 0 {
       throw InvalidOperationException("Cannot listen to the layer-shell surface")
     }
   }
 
-  internal func Show() {
+  internal func Show(output nint) {
     if mapped { return }
+    if layerSurface == nint(0) { CreateLayerSurface(output) }
     let arguments * BackdropWaylandArgument = stackalloc[4]BackdropWaylandArgument
     arguments[0].Value = nint(options.Width)
     arguments[1].Value = nint(options.Height)
@@ -126,6 +133,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     mapped = false
     Configured = false
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 7u, nil)
+    WaylandBackdrop.wl_proxy_destroy(layerSurface)
+    layerSurface = nint(0)
     Roundtrip()
   }
 

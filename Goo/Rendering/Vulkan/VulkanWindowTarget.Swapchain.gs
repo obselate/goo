@@ -1,6 +1,5 @@
 package Goo
 
-import System.Threading
 import System.Threading.Tasks
 
 internal unsafe partial class VulkanWindowTarget {
@@ -24,27 +23,6 @@ internal unsafe partial class VulkanWindowTarget {
     forceFullRedraw = true
     PollQueueCompletion()
     host.Wake()
-  }
-
-  internal func PrepareHide() {
-    while QueueWorkPending {
-      PollQueueCompletion()
-      if QueueWorkPending { Thread.Sleep(1) }
-    }
-    var result = WaitForOwnedWorkCompletion()
-    while result == VkConstants.VK_NOT_READY {
-      Thread.Sleep(1)
-      result = WaitForOwnedWorkCompletion()
-    }
-    if result == VkConstants.VK_ERROR_FEATURE_NOT_PRESENT { result = WaitDeviceIdleResult() }
-    if result != VkConstants.VK_SUCCESS {
-      throw System.InvalidOperationException("Vulkan presentation wait failed: " + result.ToString())
-    }
-    SetHidden(true)
-    while RetirementWorkPending {
-      PollQueueCompletion()
-      if RetirementWorkPending { Thread.Sleep(1) }
-    }
   }
 
   private func ReleaseHiddenResources() {
