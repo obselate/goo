@@ -503,6 +503,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       layerWindow = WaylandLayerWindow(nint(display), nint(surface), output, options,
         (configuredWidth int32, configuredHeight int32) -> {
           Require(SDL.SetWindowSize(window, configuredWidth, configuredHeight), "SDL_SetWindowSize")
+          pixelDensityChange = true
           pendingEvents = true
         }, () -> CloseRequested?.Invoke(WindowCloseReason.Terminating))
     } else {

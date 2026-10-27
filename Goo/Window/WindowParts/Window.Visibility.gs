@@ -123,6 +123,7 @@ public partial class Window {
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
     if Modal || IsInputBlocked { return WindowOperationResult.Unsupported }
+    if LayerShell != nil { windowTarget?.WaitForPresentation() }
     let result = native.Hide()
     if result == WindowOperationResult.Accepted { windowTarget?.SetHidden(true) }
     observeVisibility()

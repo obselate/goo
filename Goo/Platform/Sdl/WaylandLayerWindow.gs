@@ -117,6 +117,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   internal func Hide() {
     if !mapped { return }
+    Pump()
     let arguments * BackdropWaylandArgument = stackalloc[3]BackdropWaylandArgument
     arguments[0].Value = nint(0)
     arguments[1].Value = nint(0)
@@ -125,7 +126,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     wl_proxy_marshal_array(surface, 6u, nil)
     mapped = false
     Configured = false
-    wl_display_flush(display)
+    Roundtrip()
   }
 
   internal func Pump() {
@@ -142,6 +143,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   }
 
   private func Configure(data nint, proxy nint, serial uint32, width uint32, height uint32) {
+    if !mapped { return }
     try {
       var argument = BackdropWaylandArgument{Value: nint(serial)}
       wl_proxy_marshal_array(proxy, 6u, &argument)
