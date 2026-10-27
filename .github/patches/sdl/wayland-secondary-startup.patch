@@ -72,6 +72,13 @@
  
      data->shell_surface_status = WAYLAND_SHELL_SURFACE_STATUS_WAITING_FOR_CONFIGURE;
  
+@@ -2030,5 +2050,6 @@
+ 
+             Goo_GrabPopup(window, data->shell_surface.xdg.popup.xdg_popup);
++            wl_surface_commit(data->surface);
+             if (window->flags & SDL_WINDOW_TOOLTIP) {
+                 struct wl_region *region;
+ 
 @@ -2194,7 +2214,7 @@
  #ifdef HAVE_LIBDECOR_H
      if (data->shell_surface_type == WAYLAND_SHELL_SURFACE_TYPE_LIBDECOR) {
