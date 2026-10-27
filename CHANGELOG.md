@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `Window.LayerShell` for Wayland panels and overlays with output anchors, reserved space and keyboard focus.
+
 ## 0.21.0 - 2026-10-27
 
 - Add ImageSource.EncodePng for PNG export from premultiplied RGBA images.

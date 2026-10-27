@@ -159,6 +159,10 @@ internal struct WindowNotifications {
 /// Hosts a Goo tree on one process-wide UI thread.
 /// After Open or Attach, only Post and RequestClose are safe from another thread.
 public partial class Window {
+  /// Configures this window as a Wayland layer-shell surface before Open.
+  /// Unsupported platforms and compositors fail without a normal-window fallback.
+  public prop LayerShell LayerWindowOptions? { get; init; }
+
   /// Gets or sets the window clear color. The default is white.
   public prop Background Color{
     get -> background
@@ -268,6 +272,7 @@ public partial class Window {
       if width == v {
         return
       }
+      if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
       width = v
       pushSize()
       MetricSubscriptions.MarkWindowDirty(this)
@@ -283,6 +288,7 @@ public partial class Window {
       if height == v {
         return
       }
+      if host != nil && LayerShell != nil { throw NotSupportedException("Layer-shell sizes are configured by the compositor") }
       height = v
       pushSize()
       MetricSubscriptions.MarkWindowDirty(this)
@@ -352,10 +358,10 @@ public partial class Window {
       if decorated == v {
         return
       }
-      decorated = v
       if let native = host {
-        native.SetBorder(decorated, resizable)
+        native.SetBorder(v, resizable)
       }
+      decorated = v
     }
   }
 
@@ -367,10 +373,10 @@ public partial class Window {
       if resizable == v {
         return
       }
-      resizable = v
       if let native = host {
-        native.SetBorder(decorated, resizable)
+        native.SetBorder(decorated, v)
       }
+      resizable = v
     }
   }
 

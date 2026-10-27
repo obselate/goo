@@ -84,6 +84,7 @@ internal unsafe partial class SdlHost {
 
   public func TrySetFullscreenDisplay(display WindowDisplayId) WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if layerWindow != nil { return WindowOperationResult.Unsupported }
     let id = display.NativeValue
     if id == 0u || !HasDisplay(id) { return WindowOperationResult.Failed }
     let position = int32(CenteredDisplayMask | id)
