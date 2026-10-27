@@ -145,7 +145,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
             else { EmitLookup(frame, bounds, cachedLookup, fit, opacity, transformIndex, pixelsPerUnit) }
         }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
-        generation, ImageFormat, imageResources)
+        generation, ImageFormat)
       let source = VulkanResourceSource{
         ProviderId: identity.ProviderId,
         SourceId: identity.SourceId,
@@ -194,7 +194,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       if external.Terminal || external.Source.Session.IsClosed || !external.Ready
         || external.Image.Native.Runtime.Generation != generation { return false }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
-        generation, external.Image.Native.Format, imageResources)
+        generation, external.Image.Native.Format)
       let source = VulkanResourceSource{
         ProviderId: identity.ProviderId, SourceId: identity.SourceId,
         Version: binding.Version,

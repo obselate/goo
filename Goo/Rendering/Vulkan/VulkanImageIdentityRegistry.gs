@@ -110,8 +110,7 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     provider ImageSourceProvider,
     contentVersion uint64,
     generation uint64,
-    format VkFormat,
-    resources VulkanImageResources) VulkanImageResourceIdentity{
+    format VkFormat) VulkanImageResourceIdentity{
       EnsureOpen()
       if provider == nil {
         throw ArgumentNullException("provider")
@@ -122,7 +121,7 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
       if generation == 0uL {
         throw ArgumentOutOfRangeException("generation")
       }
-      let providerIdentity = ProviderIdentity(provider, resources)
+      let providerIdentity = ProviderIdentity(provider)
       if providerIdentity.LatestContentVersion != 0uL
         && contentVersion < providerIdentity.LatestContentVersion{
           throw InvalidOperationException("Vulkan image content version rolled back")
@@ -256,13 +255,11 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     providerRecordCount = 0
   }
 
-  private func ProviderIdentity(provider ImageSourceProvider,
-    resources VulkanImageResources) VulkanImageProviderIdentity {
+  private func ProviderIdentity(provider ImageSourceProvider) VulkanImageProviderIdentity {
     if providerIdentities.TryGetValue(provider, out var existing) {
       return existing
     }
     releaseDeferred = true
-    ReleaseDisposedProviders(resources)
     if providerRecordCount >= providerRecords.Length {
       throw InvalidOperationException("Vulkan image provider identity capacity reached")
     }
