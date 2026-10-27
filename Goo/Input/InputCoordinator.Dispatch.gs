@@ -34,7 +34,8 @@ internal partial class InputCoordinator {
           changed = true
           continue
         }
-        if !focus.NativeFocusAllowed { continue }
+        if !focus.NativeFocusAllowed && !(e.IsPointer && (e.Pointer.Kind == PointerEventKind.Move
+          || e.Pointer.Kind == PointerEventKind.Wheel || e.Pointer.Kind == PointerEventKind.HoverInvalidation)) { continue }
         if !e.IsPointer || !pointer.CanDeferVirtualization(e.Pointer) {
           if let owner = resolver.Owner {
             owner.FlushDeferredVirtualization()

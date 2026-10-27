@@ -1204,6 +1204,42 @@ internal class InputFixtures {
     return focusedKey(driver.Window.Tree) == "first"
   }
 
+  func UnfocusedPointerHoverPreservesKeyboardAndPressFocusGate() bool {
+    var keyEvents int32
+    var clicks int32
+    let resolver = Resolver{}
+    let root = Reconciler{ Res: resolver }.Mount(Button{
+      Width: 100, Height: 50, Hover: Style{ Opacity: 0.5 },
+      OnKeyDown: (e KeyEvent) -> { keyEvents++ },
+      OnClick: () -> { clicks++ },
+    })
+    Layout().Calculate(root, 100.0F, 50.0F)
+    let input = InputCoordinator()
+    let onKeyPress = (key Key, modifiers KeyModifiers) -> { keyEvents++ }
+    input.FocusLost(root, resolver)
+    input.QueuePointerMove(25.0F, 25.0F)
+    input.Drain(root, resolver, 0.0, onKeyPress)
+    if !root.Hovered { return false }
+    input.QueueKeyPress(Key.Tab, KeyModifiers{})
+    input.QueueKeyRelease(Key.Tab)
+    input.Drain(root, resolver, 0.0, onKeyPress)
+    if keyEvents != 0 || root.Focused { return false }
+    input.QueuePointerPress(25.0F, 25.0F)
+    input.QueuePointerRelease(25.0F, 25.0F)
+    input.Drain(root, resolver, 0.0, onKeyPress)
+    if root.Focused || root.Pressed || clicks != 0 || input.FocusedNode() != nil {
+      return false
+    }
+    input.QueuePointerMove(25.0F, 25.0F)
+    input.FocusGained()
+    input.QueuePointerPress(25.0F, 25.0F)
+    input.Drain(root, resolver, 0.0, onKeyPress)
+    if !root.Focused || !root.Pressed || input.FocusedNode() != root { return false }
+    input.QueuePointerRelease(25.0F, 25.0F)
+    input.Drain(root, resolver, 0.0, onKeyPress)
+    return root.Focused && !root.Pressed && clicks == 1 && keyEvents == 0
+  }
+
   func FocusReplacementDropsStaleFocus() bool {
     let cell = InputFocusReplacementCell{}
     let driver = InputFixtureDriver(cell, 200, 200)
