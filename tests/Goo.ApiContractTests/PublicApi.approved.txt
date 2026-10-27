@@ -1287,6 +1287,7 @@ method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream)->
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Decode|static|public|generic:|(stream:System.IO.Stream,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|Dispose|instance|public|generic:|()->System.Void
+method|Goo.ImageSource|EncodePng|instance|public|generic:|()->System.Byte[]
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource
 method|Goo.ImageSource|LoadThumbnail|static|public|generic:|(path:System.String,maxWidth:System.Int32,maxHeight:System.Int32,limits:Goo.ImageDecodeLimits,cancellationToken:System.Threading.CancellationToken)->Goo.ImageSource

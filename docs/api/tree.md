@@ -815,6 +815,7 @@ Sources:
 
 - [`ImageDecodeResult.gs`](../../Goo/Tree/ImageDecodeResult.gs)
 - [`ImageSource.Decoding.gs`](../../Goo/Tree/ImageSource.Decoding.gs)
+- [`ImageSource.Encoding.gs`](../../Goo/Tree/ImageSource.Encoding.gs)
 - [`ImageSource.gs`](../../Goo/Tree/ImageSource.gs)
 
 Owns one immutable premultiplied RGBA image resource.
@@ -874,6 +875,12 @@ Returns: An owned source on success or an explicit failure status.
 ### `Dispose`
 
 Releases this source's owner reference. Existing mounted leases stay valid.
+
+### `EncodePng`
+
+Encodes this source as owned PNG bytes with straight RGBA pixels. Encoding is synchronous and can run outside the UI thread.
+
+Returns: The encoded PNG bytes.
 
 ### `LoadThumbnail(string,int32,int32)`
 
