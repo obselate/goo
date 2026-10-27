@@ -308,6 +308,12 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public func RequestActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
     if let layer = layerWindow {
+      if let target = layer.Output {
+        if !HasDisplay(target.NativeValue) {
+          CloseRequested?.Invoke(WindowCloseReason.Terminating)
+          return WindowOperationResult.Closed
+        }
+      }
       if !SDL.ShowWindow(window) { return WindowOperationResult.Failed }
       layer.Show(ReadLayerOutput(layer.Output))
       RefreshMetricsIfChanged()
