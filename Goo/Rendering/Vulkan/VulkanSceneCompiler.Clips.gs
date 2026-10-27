@@ -115,6 +115,54 @@ internal partial class VulkanSceneCompiler {
     }
 
   private func ShapePaintMaskId(node Node) uint64 -> OwnerId(node) | ShapePaintMaskBit
+  private func MatchesRoundedOverflow(
+    node Node,
+    bounds ConservativeBounds,
+    transformIndex int32,
+    context VulkanSceneTraversalContext) bool {
+      guard let owner = context.RoundedOverflowOwner else { return false }
+      if !HasRadius(node, bounds) { return false }
+      let ownerBounds = NodeBounds(owner)
+      let clipBounds = PaddingEdgeBounds(owner, ownerBounds)
+      if bounds.IsEmpty || clipBounds.IsEmpty { return false }
+      let transform = ResolveCompilerFrameTransform(transformIndex)
+      let clipTransform = ResolveCompilerFrameTransform(context.RoundedOverflowTransformIndex)
+      if transform.A * bounds.Width != clipTransform.A * clipBounds.Width
+        || transform.B * bounds.Width != clipTransform.B * clipBounds.Width
+        || transform.C * bounds.Height != clipTransform.C * clipBounds.Height
+        || transform.D * bounds.Height != clipTransform.D * clipBounds.Height
+        || transform.A * bounds.X + transform.C * bounds.Y + transform.TX
+          != clipTransform.A * clipBounds.X + clipTransform.C * clipBounds.Y + clipTransform.TX
+        || transform.B * bounds.X + transform.D * bounds.Y + transform.TY
+          != clipTransform.B * clipBounds.X + clipTransform.D * clipBounds.Y + clipTransform.TY {
+          return false
+        }
+      let topLeft = PaddingEdgeRadius(owner, owner.BorderTopLeftRadius,
+        owner.BorderRadius, ownerBounds, clipBounds, true, true)
+      let topRight = PaddingEdgeRadius(owner, owner.BorderTopRightRadius,
+        owner.BorderRadius, ownerBounds, clipBounds, false, true)
+      let bottomRight = PaddingEdgeRadius(owner, owner.BorderBottomRightRadius,
+        owner.BorderRadius, ownerBounds, clipBounds, false, false)
+      let bottomLeft = PaddingEdgeRadius(owner, owner.BorderBottomLeftRadius,
+        owner.BorderRadius, ownerBounds, clipBounds, true, false)
+      return Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds) / bounds.Width
+          == topLeft / clipBounds.Width
+        && Radius(node.BorderTopLeftRadius, node.BorderRadius, bounds) / bounds.Height
+          == topLeft / clipBounds.Height
+        && Radius(node.BorderTopRightRadius, node.BorderRadius, bounds) / bounds.Width
+          == topRight / clipBounds.Width
+        && Radius(node.BorderTopRightRadius, node.BorderRadius, bounds) / bounds.Height
+          == topRight / clipBounds.Height
+        && Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds) / bounds.Width
+          == bottomRight / clipBounds.Width
+        && Radius(node.BorderBottomRightRadius, node.BorderRadius, bounds) / bounds.Height
+          == bottomRight / clipBounds.Height
+        && Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds) / bounds.Width
+          == bottomLeft / clipBounds.Width
+        && Radius(node.BorderBottomLeftRadius, node.BorderRadius, bounds) / bounds.Height
+          == bottomLeft / clipBounds.Height
+    }
+
 
   private func ResolveRoundedOverflowClip(
     node Node,

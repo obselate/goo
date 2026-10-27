@@ -55,6 +55,9 @@ internal partial class VulkanSceneCompiler {
         ParentPathClipChainId: activePathClipChainId,
         ParentIsolation: context.ParentIsolation || transform.Index != context.ParentTransformIndex
           || node.HasClipPath || ownerClipIndex >= 0,
+        RoundedOverflowOwner: context.RoundedOverflowOwner,
+        RoundedOverflowTransformIndex: context.RoundedOverflowTransformIndex,
+        RoundedOverflowLayerId: context.RoundedOverflowLayerId,
         ExactCullContextSafe: context.ExactCullContextSafe,
         ActiveClipBounds: activeBounds,
       }
@@ -107,6 +110,19 @@ internal partial class VulkanSceneCompiler {
         && node.BlendMode != BlendMode.Normal
       let combinesEffectAndBlend = shaderEffect != nil && isolatesBlend
       let isolates = isolatesOpacity || isolatesBlend || shaderEffect != nil
+      let usesBackdrop = if let effect = shaderEffect {
+        effect.SamplesBackdrop || effect.Program.ReplacesBackdrop
+      } else { false }
+      if node.BackdropBlur > 0.0F || isolatesBlend || usesBackdrop {
+        var clipLayerId = context.RoundedOverflowLayerId
+        while clipLayerId != 0 {
+          var clipLayer = frame.Layers[clipLayerId - 1]
+          if (clipLayer.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u { break }
+          clipLayer.Flags |= uint32(LayerRecordFlags.PreservesBackdrop)
+          frame.Layers[clipLayerId - 1] = clipLayer
+          clipLayerId = clipLayer.ParentClipLayerId
+        }
+      }
       visibleNodeCount = visibleNodeCount + 1
       if node.ScrollX != 0.0F || node.ScrollY != 0.0F {
         scrollNodeCount = scrollNodeCount + 1
@@ -269,8 +285,9 @@ internal partial class VulkanSceneCompiler {
           frame.AddLayerBegin(layerRecord)
         }
       }
-      let pathClip = ResolvePathClip(node, bounds, transform.Index, context.ParentPathClipChainId)
-      var activePathClipChainId = context.ParentPathClipChainId
+      let pathClipParent = isolates && !generatorEffect ? 0 : context.ParentPathClipChainId
+      let pathClip = ResolvePathClip(node, bounds, transform.Index, pathClipParent)
+      var activePathClipChainId = pathClipParent
       if node.HasClipPath && ClipPaths.Path(node).CommandCount != 0 {
         if pathClip.Emitted {
           activePathClipChainId = pathClip.ChainIndex
@@ -290,7 +307,12 @@ internal partial class VulkanSceneCompiler {
       var overflowPathClipChainId = activePathClipChainId
       var roundedOverflowClip = false
       var mixedOverflowClip = false
-      if hasRadius {
+      let matchesParentOverflow = shaderEffect == nil
+        && MatchesRoundedOverflow(node, bounds, transform.Index, context)
+      let coincidentOverflow = hasRadius && !HasBorderWidth(node, bounds) && matchesParentOverflow
+      if coincidentOverflow {
+        roundedOverflowClip = true
+      } else if hasRadius {
         let roundedClip = ResolveRoundedOverflowClip(node, bounds, paddingEdgeBounds,
           transform.Index, activePathClipChainId)
         if roundedClip.Emitted {
@@ -340,6 +362,35 @@ internal partial class VulkanSceneCompiler {
           return
         }
       }
+      let contentOpacity = isolates ? 1.0F : opacity
+      let roundedCompositeClipChainId = overflowPathClipChainId
+      let roundedLayer = roundedOverflowClip && (!coincidentOverflow || activePathClipChainId != 0)
+      let backgroundInRoundedLayer = roundedLayer && !HasBorderWidth(node, bounds)
+      let outerPathClipChainId = activePathClipChainId
+      var roundedLayerRecord LayerRecord
+      var roundedLayerIndex int32 = -1
+      if roundedLayer {
+        if node.Kind != NodeKind.Shape {
+          frame.SetActiveClipChain(activePathClipChainId)
+          if backgroundInRoundedLayer {
+            PaintBoxShadows(node, bounds, contentOpacity, transform.Index, false)
+          } else {
+            PaintNodeBackground(node, bounds, contentOpacity, transform.Index, matchesParentOverflow)
+            if node.Kind != NodeKind.Image {
+              PaintBorder(node, bounds, contentOpacity, transform.Index, matchesParentOverflow)
+            }
+          }
+        }
+        let layerBounds = IntersectBounds(context.ActiveClipBounds,
+          TransformCompilerBounds(paddingEdgeBounds,
+            ResolveCompilerFrameTransform(transform.Index)).Inflate(1.0F))
+        roundedLayerRecord = MakeLayerRecord(ownerId, layerBounds, 1.0F, BlendMode.Normal, nil)
+        roundedLayerRecord.ParentClipLayerId = isolates ? 0 : context.RoundedOverflowLayerId
+        frame.SetActiveClipChain(0)
+        roundedLayerIndex = frame.AddLayerBegin(roundedLayerRecord)
+        activePathClipChainId = 0
+        overflowPathClipChainId = 0
+      }
     let shapeGeometry = node.Kind == NodeKind.Shape
     ? ShapeGeometry.Resolve(
       node,
@@ -359,12 +410,12 @@ internal partial class VulkanSceneCompiler {
         }
       }
       frame.SetActiveClipChain(paintPathClipChainId)
-      let contentOpacity = isolates ? 1.0F : opacity
-      if node.Kind != NodeKind.Shape {
-        PaintNodeBackground(node, bounds, contentOpacity, transform.Index)
-        if node.Kind != NodeKind.Image && HasBorderWidth(node, bounds) {
+      if node.Kind != NodeKind.Shape && (!roundedLayer || backgroundInRoundedLayer) {
+        PaintNodeBackground(node, bounds, contentOpacity, transform.Index,
+          backgroundInRoundedLayer || matchesParentOverflow, !backgroundInRoundedLayer)
+        if !roundedLayer && node.Kind != NodeKind.Image && HasBorderWidth(node, bounds) {
           frame.SetActiveClipChain(activePathClipChainId)
-          PaintBorder(node, bounds, contentOpacity, transform.Index)
+          PaintBorder(node, bounds, contentOpacity, transform.Index, matchesParentOverflow)
         }
       }
       var clipIndex int32 = -1
@@ -497,11 +548,11 @@ internal partial class VulkanSceneCompiler {
         childClipBounds = IntersectBounds(childClipBounds,
           EmittedPathClipBounds(pathClip))
       }
-      if roundedOverflowClip {
+      if roundedOverflowClip && !coincidentOverflow {
         childClipBounds = IntersectBounds(childClipBounds,
           EmittedPathClipBounds(VulkanScenePathClipResult{
             Emitted: true,
-            ChainIndex: overflowPathClipChainId,
+            ChainIndex: roundedCompositeClipChainId,
           }))
       }
       if mixedOverflowClip {
@@ -528,6 +579,12 @@ internal partial class VulkanSceneCompiler {
           || node.HasClipPath || clipsX || clipsY || node.ScrollX != 0.0F
           || node.ScrollY != 0.0F || node.BlendMode != BlendMode.Normal
           || editorContentClipIndex >= 0,
+        RoundedOverflowOwner: roundedLayer ? node
+          : shaderEffect == nil ? context.RoundedOverflowOwner : nil,
+        RoundedOverflowTransformIndex: roundedLayer
+          ? transform.Index : context.RoundedOverflowTransformIndex,
+        RoundedOverflowLayerId: roundedLayer ? roundedLayerIndex + 1
+          : isolates ? 0 : context.RoundedOverflowLayerId,
         ExactCullContextSafe: childExactCullContextSafe,
         ActiveClipBounds: childClipBounds,
       }
@@ -568,16 +625,37 @@ internal partial class VulkanSceneCompiler {
         }
         frame.EndChunk()
       }
+      if roundedLayer {
+        var scrollbarContext = context
+        scrollbarContext.RoundedOverflowOwner = childContext.RoundedOverflowOwner
+        scrollbarContext.RoundedOverflowTransformIndex = childContext.RoundedOverflowTransformIndex
+        scrollbarContext.RoundedOverflowLayerId = childContext.RoundedOverflowLayerId
+        CompileScrollbarParts(node, scrollbarParts, ownerId, bounds, scrollbarContext, transform,
+          activePathClipChainId, clipIndex, contentOpacity)
+        roundedLayerRecord = frame.Layers[roundedLayerIndex]
+        if (roundedLayerRecord.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u {
+          frame.Chunks[chunk].ContentKey = frame.ChunkContentDigest(chunk)
+        }
+        frame.SetActiveClipChain(roundedCompositeClipChainId)
+        frame.SetActiveTransform(-1)
+        frame.BeginChunk(ownerId, frameVersion, roundedLayerRecord.Bounds, false)
+        frame.AddLayerEnd(roundedLayerRecord)
+        frame.EndChunk()
+        activePathClipChainId = outerPathClipChainId
+        frame.SetActiveTransform(transform.Index)
+      }
       if node.Kind == NodeKind.Image && (HasBorderWidth(node, bounds)
         || boxShadowCount(node.BoxShadows) != 0) {
           frame.SetActiveClipChain(activePathClipChainId)
           frame.BeginChunk(ownerId, frameVersion, bounds, true)
           PaintBoxShadows(node, bounds, contentOpacity, transform.Index, true)
-          PaintBorder(node, bounds, contentOpacity, transform.Index)
+          PaintBorder(node, bounds, contentOpacity, transform.Index, matchesParentOverflow)
           frame.EndChunk()
         }
-      CompileScrollbarParts(node, scrollbarParts, ownerId, bounds, context, transform,
-        activePathClipChainId, clipIndex, contentOpacity)
+      if !roundedLayer {
+        CompileScrollbarParts(node, scrollbarParts, ownerId, bounds, context, transform,
+          activePathClipChainId, clipIndex, contentOpacity)
+      }
       let outlineBounds = OutlineBounds(node, bounds)
       if !outlineBounds.IsEmpty {
         frame.SetActiveClipChain(activePathClipChainId)
@@ -590,7 +668,9 @@ internal partial class VulkanSceneCompiler {
         frame.SetActiveTransform(-1)
         frame.BeginChunk(ownerId, frameVersion, subtreeBounds, false)
         if combinesEffectAndBlend {
+          frame.SetActiveClipChain(0)
           frame.AddLayerEnd(innerLayerRecord)
+          frame.SetActiveClipChain(context.ParentPathClipChainId)
           frame.AddLayerEnd(outerLayerRecord)
         } else {
           frame.AddLayerEnd(layerRecord)
