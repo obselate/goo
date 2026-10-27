@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Release cached GPU images before reclaiming dead image-provider identities.
+- Cancel `Window.Closed` after the native window is destroyed, not when closing starts.
+
 ## 0.22.0 - 2026-10-27
 
 - Add `Window.LayerShell` for Wayland panels and overlays with output anchors, reserved space and keyboard focus.

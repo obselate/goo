@@ -97,6 +97,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public event VisibilityChanged Action
   public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action[WindowCloseReason]
+  public event Closed Action?
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]
@@ -467,6 +468,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       runtimeOwned = false
       SdlRuntime.Release()
     }
+    let closed = Closed
+    Closed = nil
+    closed?.Invoke()
   }
 
   public prop CanMove bool{

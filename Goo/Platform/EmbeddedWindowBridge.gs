@@ -17,6 +17,7 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public event VisibilityChanged Action
   public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action[WindowCloseReason]
+  public event Closed Action?
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]
@@ -108,7 +109,12 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public func GetClipboardText() string -> host.ClipboardText()
   public func SetClipboardText(value string) { host.CopyText(value) }
   public func BeginClose() { closing = true }
-  public func Dispose() { host.Unbind() }
+  public func Dispose() {
+    host.Unbind()
+    let closed = Closed
+    Closed = nil
+    closed?.Invoke()
+  }
   public func LoadVulkanLibrary() bool -> host.LoadLoader()
   public func GetVulkanGetInstanceProcAddr() nint -> host.LookupLoader()
   public func UnloadVulkanLibrary() { host.UnloadLoader() }

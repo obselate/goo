@@ -110,7 +110,8 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     provider ImageSourceProvider,
     contentVersion uint64,
     generation uint64,
-    format VkFormat) VulkanImageResourceIdentity{
+    format VkFormat,
+    resources VulkanImageResources) VulkanImageResourceIdentity{
       EnsureOpen()
       if provider == nil {
         throw ArgumentNullException("provider")
@@ -121,7 +122,7 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
       if generation == 0uL {
         throw ArgumentOutOfRangeException("generation")
       }
-      let providerIdentity = ProviderIdentity(provider)
+      let providerIdentity = ProviderIdentity(provider, resources)
       if providerIdentity.LatestContentVersion != 0uL
         && contentVersion < providerIdentity.LatestContentVersion{
           throw InvalidOperationException("Vulkan image content version rolled back")
@@ -255,11 +256,13 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     providerRecordCount = 0
   }
 
-  private func ProviderIdentity(provider ImageSourceProvider) VulkanImageProviderIdentity {
+  private func ProviderIdentity(provider ImageSourceProvider,
+    resources VulkanImageResources) VulkanImageProviderIdentity {
     if providerIdentities.TryGetValue(provider, out var existing) {
       return existing
     }
-    SweepDeadProviderRecords()
+    releaseDeferred = true
+    ReleaseDisposedProviders(resources)
     if providerRecordCount >= providerRecords.Length {
       throw InvalidOperationException("Vulkan image provider identity capacity reached")
     }
@@ -283,23 +286,6 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     }
     providerRecordCount++
     return created
-  }
-
-  private func SweepDeadProviderRecords() {
-    var index int32 = 0
-    while index < providerRecords.Length {
-      let record = providerRecords[index]
-      if let reference = record.Reference {
-        if !reference.IsAlive || reference.Target == nil {
-          if let identity = record.Identity {
-            ReclaimProvider(identity.ProviderId, identity.SourceId)
-          }
-          providerRecords[index] = VulkanImageProviderRecord{}
-          providerRecordCount--
-        }
-      }
-      index++
-    }
   }
 
   private func ReclaimProvider(providerId uint64, sourceId uint64) {

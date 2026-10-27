@@ -35,6 +35,7 @@ internal interface WindowHost {
   event VisibilityChanged Action
   event PreferencesChanged Action[PlatformPreferences]
   event CloseRequested Action[WindowCloseReason]
+  event Closed Action?
   event Exposed Action
   event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]

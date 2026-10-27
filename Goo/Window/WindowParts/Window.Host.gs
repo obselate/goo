@@ -698,7 +698,6 @@ public partial class Window {
   internal func teardownNative() {
     requireUiThread("Window teardown")
     var firstError Exception?
-    firstError = captureCleanupError(firstError, () -> stopPosts())
     if let adapter = accessibility?.Adapter as NativeAccessibilityAdapter? { firstError = captureCleanupError(firstError, () -> adapter.Unbind()) }
     if let drop = family?.NativeDrop { firstError = captureCleanupError(firstError, () -> drop.Unbind()) }
     firstError = captureCleanupError(firstError, () -> input.Reset(node, resolver))
@@ -736,7 +735,10 @@ public partial class Window {
       firstError = captureCleanupError(firstError, () -> current.Dispose())
     }
     if let current = native {
+      current.Closed += completeClose
       firstError = captureCleanupError(firstError, () -> current.Dispose())
+    } else {
+      firstError = captureCleanupError(firstError, () -> completeClose())
     }
     if let error = firstError {
       throw error
