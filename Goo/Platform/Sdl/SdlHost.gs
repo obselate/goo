@@ -504,7 +504,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         (configuredWidth int32, configuredHeight int32) -> {
           Require(SDL.SetWindowSize(window, configuredWidth, configuredHeight), "SDL_SetWindowSize")
           pendingEvents = true
-        }, () -> CloseRequested?.Invoke(WindowCloseReason.WindowRequest))
+        }, () -> CloseRequested?.Invoke(WindowCloseReason.Terminating))
     } else {
       window = SDL.CreateWindow(title, width, height, uint64(flags))
       if window.IsNull { ThrowSdl("SDL_CreateWindow") }

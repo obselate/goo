@@ -67,6 +67,7 @@ ctor|Goo.ImageSource|public|(width:System.Int32,height:System.Int32,pixels:Syste
 ctor|Goo.Images.ImageVariants|public|(variants:System.Collections.Generic.IReadOnlyList`1<Goo.Images.ImageVariant>,limits:Goo.ImageDecodeLimits?=null)
 ctor|Goo.Images.ImageVariant|public|(path:System.String,pixelsPerUnit:System.Single)
 ctor|Goo.Image|public|()
+ctor|Goo.LayerWindowOptions|public|()
 ctor|Goo.LayoutTransition|public|(DurationMs:System.Double,Easing:Goo.Easing)
 ctor|Goo.LinearGradient|public|(angle:System.Double,params colors:Goo.Color[])
 ctor|Goo.LinearGradient|public|(angle:System.Double,stops:Goo.GradientStop[])
@@ -205,6 +206,8 @@ enum-underlying|Goo.Images.ImageAssetStatus|System.Int32
 enum-underlying|Goo.InputPurpose|System.Int32
 enum-underlying|Goo.JustifyContent|System.Int32
 enum-underlying|Goo.Key|System.Int32
+enum-underlying|Goo.LayerWindowAnchor|System.Int32
+enum-underlying|Goo.LayerWindowKeyboardInteractivity|System.Int32
 enum-underlying|Goo.MacOSBackdropMaterial|System.Int32
 enum-underlying|Goo.MacOSBackdropState|System.Int32
 enum-underlying|Goo.MessageBoxIcon|System.Int32
@@ -260,6 +263,7 @@ enum-underlying|Goo.WindowBackdrop|System.Int32
 enum-underlying|Goo.WindowCapabilities|System.Int32
 enum-underlying|Goo.WindowCaptureRequestStatus|System.Int32
 enum-underlying|Goo.WindowFramePacing|System.Int32
+enum-underlying|Goo.WindowLayer|System.Int32
 enum-underlying|Goo.WindowOperationResult|System.Int32
 enum-underlying|Goo.WindowPlacementFields|System.Int32
 enum-underlying|Goo.WindowState|System.Int32
@@ -658,6 +662,14 @@ enum|Goo.Key|W|41
 enum|Goo.Key|X|42
 enum|Goo.Key|Y|43
 enum|Goo.Key|Z|44
+enum|Goo.LayerWindowAnchor|Bottom|2
+enum|Goo.LayerWindowAnchor|Left|4
+enum|Goo.LayerWindowAnchor|None|0
+enum|Goo.LayerWindowAnchor|Right|8
+enum|Goo.LayerWindowAnchor|Top|1
+enum|Goo.LayerWindowKeyboardInteractivity|Exclusive|1
+enum|Goo.LayerWindowKeyboardInteractivity|None|0
+enum|Goo.LayerWindowKeyboardInteractivity|OnDemand|2
 enum|Goo.MacOSBackdropMaterial|ContentBackground|18
 enum|Goo.MacOSBackdropMaterial|FullScreenUI|15
 enum|Goo.MacOSBackdropMaterial|HeaderView|10
@@ -994,6 +1006,10 @@ enum|Goo.WindowCaptureRequestStatus|NotReady|3
 enum|Goo.WindowCaptureRequestStatus|Unsupported|6
 enum|Goo.WindowFramePacing|Display|0
 enum|Goo.WindowFramePacing|Uncapped|1
+enum|Goo.WindowLayer|Background|0
+enum|Goo.WindowLayer|Bottom|1
+enum|Goo.WindowLayer|Overlay|3
+enum|Goo.WindowLayer|Top|2
 enum|Goo.WindowOperationResult|Accepted|0
 enum|Goo.WindowOperationResult|Closed|1
 enum|Goo.WindowOperationResult|Failed|3
@@ -2205,6 +2221,18 @@ property|Goo.KeyModifiers|Alt|System.Boolean|instance|get:public,init:public|ind
 property|Goo.KeyModifiers|Ctrl|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyModifiers|Shift|System.Boolean|instance|get:public,init:public|index:()
 property|Goo.KeyModifiers|Super|System.Boolean|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|Anchors|Goo.LayerWindowAnchor|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|ExclusiveZone|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|Height|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|KeyboardInteractivity|Goo.LayerWindowKeyboardInteractivity|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|Layer|Goo.WindowLayer|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|MarginBottom|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|MarginLeft|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|MarginRight|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|MarginTop|System.Int32|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|Namespace|System.String|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|Output|System.Nullable`1<Goo.WindowDisplayId>|instance|get:public,init:public|index:()
+property|Goo.LayerWindowOptions|Width|System.Int32|instance|get:public,init:public|index:()
 property|Goo.LayoutContext|ChildCount|System.Int32|instance|get:public|index:()
 property|Goo.LayoutSize|Height|System.Double|instance|get:public,init:public|index:()
 property|Goo.LayoutSize|Width|System.Double|instance|get:public,init:public|index:()
@@ -2778,6 +2806,7 @@ property|Goo.Window|LastAccessibilityError|System.Exception?|instance|get:public
 property|Goo.Window|LastNativeFileDropError|System.String?|instance|get:public|index:()
 property|Goo.Window|LastNativeTransferError|System.String|instance|get:public|index:()
 property|Goo.Window|LastNativeTransferStatus|Goo.DataTransferStatus|instance|get:public|index:()
+property|Goo.Window|LayerShell|Goo.LayerWindowOptions?|instance|get:public,init:public|index:()
 property|Goo.Window|MacOSBackdrop|Goo.MacOSBackdropOptions|instance|get:public,set:public|index:()
 property|Goo.Window|MaxHeight|System.Int32|instance|get:public,set:public|index:()
 property|Goo.Window|MaxWidth|System.Int32|instance|get:public,set:public|index:()
@@ -2948,6 +2977,9 @@ type|Goo.KeyBinding|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyEvent|struct|public|base:System.ValueType|interfaces:|generic:
 type|Goo.KeyModifiers|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.KeyModifiers>|generic:
 type|Goo.Key|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayerWindowAnchor|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayerWindowKeyboardInteractivity|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.LayerWindowOptions|class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutAlgorithm|interface|public|base:-|interfaces:|generic:
 type|Goo.LayoutContext|sealed-class|public|base:System.Object|interfaces:|generic:
 type|Goo.LayoutSize|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.LayoutSize>|generic:
@@ -3134,6 +3166,7 @@ type|Goo.WindowCapture|class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowDisplayId|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowDisplayId>|generic:
 type|Goo.WindowDisplay|class|public|base:System.Object|interfaces:|generic:
 type|Goo.WindowFramePacing|enum|public|base:System.Enum|interfaces:|generic:
+type|Goo.WindowLayer|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowMetrics|struct|public|base:System.ValueType|interfaces:System.IEquatable`1<Goo.WindowMetrics>|generic:
 type|Goo.WindowOperationResult|enum|public|base:System.Enum|interfaces:|generic:
 type|Goo.WindowPlacementFields|enum|public|base:System.Enum|interfaces:|generic:
