@@ -2,7 +2,7 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Rendering`](https://github.com/obselate/goo/tree/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering)
+Source: [`Goo/Rendering`](https://github.com/obselate/goo/tree/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering)
 
 ## Apply fragment shaders to retained elements
 
@@ -73,7 +73,7 @@ per-stop alpha and element opacity.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes visible source pixels. Orientation uses EXIF values 1 through 8.
 
@@ -109,7 +109,7 @@ Gets the crop top edge in pixels.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports the end of a frame lease. Wait the returned dependency before reuse.
 
@@ -129,7 +129,7 @@ Gets the synchronization value for the returned handle, when present.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports the end of a frame read lease.
 
@@ -144,7 +144,7 @@ Reports the end of a frame read lease.
 
 Source:
 
-- [`ExternalImage.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.gs)
+- [`ExternalImage.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.gs)
 
 Owns one imported GPU allocation. Dispose retires it after its last frame lease.
 
@@ -164,7 +164,7 @@ Gets the allocation width in pixels.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies source alpha storage.
 
@@ -177,7 +177,7 @@ Identifies source alpha storage.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies the source sample encoding.
 
@@ -190,7 +190,7 @@ Identifies the source sample encoding.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies an exported Vulkan memory handle.
 
@@ -206,7 +206,7 @@ Identifies an exported Vulkan memory handle.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes one explicit memory plane.
 
@@ -222,7 +222,7 @@ Gets the row stride in bytes.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports an external image import.
 
@@ -242,9 +242,9 @@ Gets the import status.
 
 Sources:
 
-- [`ExternalImageSession.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImageSession.gs)
-- [`ExternalImageSession.Metal.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/Vulkan/ExternalImageSession.Metal.gs)
-- [`ExternalImageSession.Vulkan.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/Vulkan/ExternalImageSession.Vulkan.gs)
+- [`ExternalImageSession.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImageSession.gs)
+- [`ExternalImageSession.Metal.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/Vulkan/ExternalImageSession.Metal.gs)
+- [`ExternalImageSession.Vulkan.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/Vulkan/ExternalImageSession.Vulkan.gs)
 
 Imports GPU images for one device generation. Open, import and Dispose require the window owner thread.
 
@@ -323,7 +323,7 @@ Gets Windows adapter identity, or nil when the driver does not expose a LUID.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports opening an external image session.
 
@@ -343,7 +343,7 @@ Gets the session status.
 
 Source:
 
-- [`ExternalImage.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.gs)
+- [`ExternalImage.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.gs)
 
 Supplies a bounded latest external frame to Image.Source. Callbacks run on the session window owner thread.
 
@@ -380,7 +380,7 @@ Gets the nonzero publication version.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Reports external image operations.
 
@@ -401,7 +401,7 @@ Reports external image operations.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes borrowed producer synchronization. AlreadyComplete requires producer completion before Publish.
 
@@ -437,7 +437,7 @@ Gets the required timeline value.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies a producer completion dependency.
 
@@ -454,7 +454,7 @@ Identifies a producer completion dependency.
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Identifies a Windows adapter for a D3D external image producer.
 
@@ -470,7 +470,7 @@ Gets the physical device node mask.
 
 Source:
 
-- [`ImageColorProfile.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ImageColorProfile.gs)
+- [`ImageColorProfile.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ImageColorProfile.gs)
 
 Converts consumer-decoded straight RGBA samples from bounded ICC profiles to SDR sRGB.
 
@@ -489,7 +489,7 @@ Returns: Success, InvalidData, Unsupported for LUT or incompatible profiles, or 
 
 Source:
 
-- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/OffscreenRender.gs)
+- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/OffscreenRender.gs)
 
 Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and the MaxBytes allocation limit.
 
@@ -497,7 +497,7 @@ Specifies LogicalWidth, LogicalHeight, PixelWidth, PixelHeight, Background and t
 
 Source:
 
-- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/OffscreenRender.gs)
+- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/OffscreenRender.gs)
 
 Contains Status, owned Capture pixels on Success and Error detail on failure.
 
@@ -505,7 +505,7 @@ Contains Status, owned Capture pixels on Success and Error detail on failure.
 
 Source:
 
-- [`OffscreenRenderSession.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/OffscreenRenderSession.gs)
+- [`OffscreenRenderSession.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/OffscreenRenderSession.gs)
 
 Holds a shared renderer alive without owning a native presentation surface. Create, render, service and dispose it on the creating thread. Service while awaiting page completion.
 
@@ -532,7 +532,7 @@ Consumes completed GPU work and starts a queued page without presenting a native
 
 Source:
 
-- [`OffscreenRenderSession.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/OffscreenRenderSession.gs)
+- [`OffscreenRenderSession.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/OffscreenRenderSession.gs)
 
 Contains Status, a Session on Success and Error detail on failure.
 
@@ -540,7 +540,7 @@ Contains Status, a Session on Success and Error detail on failure.
 
 Source:
 
-- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/OffscreenRender.gs)
+- [`OffscreenRender.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/OffscreenRender.gs)
 
 Reports an independent render operation without exposing GPU resource handles.
 
@@ -559,7 +559,7 @@ Reports an independent render operation without exposing GPU resource handles.
 
 Source:
 
-- [`ShaderEffect.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ShaderEffect.gs)
+- [`ShaderEffect.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ShaderEffect.gs)
 
 Owns retained parameter state for one backend-neutral shader effect program.
 
@@ -602,7 +602,7 @@ Gets or sets whether Goo advances ElapsedSeconds and renders attached effects co
 
 Source:
 
-- [`ShaderEffectData.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ShaderEffectData.gs)
+- [`ShaderEffectData.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ShaderEffectData.gs)
 
 Owns one retained byte sequence for ShaderEffect data inputs.
 
@@ -661,7 +661,7 @@ Gets whether this source has released its current publication.
 
 Source:
 
-- [`ShaderEffectProgram.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ShaderEffectProgram.gs)
+- [`ShaderEffectProgram.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ShaderEffectProgram.gs)
 
 Owns one immutable compiled shader effect program with backend-specific artifacts.
 
@@ -684,7 +684,7 @@ Returns: The immutable compiled program.
 
 Source:
 
-- [`TextMetrics.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/TextMetrics.gs)
+- [`TextMetrics.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/TextMetrics.gs)
 
 Specifies the visual side of a text position at a directional boundary.
 
@@ -697,7 +697,7 @@ Specifies the visual side of a text position at a directional boundary.
 
 Source:
 
-- [`VectorAsset.Render.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/VectorAsset.Render.gs)
+- [`VectorAsset.Render.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/VectorAsset.Render.gs)
 
 Owns an immutable vector document shared by authored and runtime SVG assets.
 
@@ -769,7 +769,7 @@ Gets the view-box y origin.
 
 Source:
 
-- [`VulkanDrivers.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/Vulkan/VulkanDrivers.gs)
+- [`VulkanDrivers.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/Vulkan/VulkanDrivers.gs)
 
 Configures additional Vulkan drivers for the process.
 
@@ -781,7 +781,7 @@ Gets or sets driver DLL paths added to system drivers in inclusive mode on Windo
 
 Source:
 
-- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/c39451ddcf8a90ed9ff0c9d1cc528d0c31935387/Goo/Rendering/ExternalImage.Types.gs)
+- [`ExternalImage.Types.gs`](https://github.com/obselate/goo/blob/889fd5d253d926dda0aef104823e8790ff82be6c/Goo/Rendering/ExternalImage.Types.gs)
 
 Describes a borrowed exportable 2D Vulkan allocation. Goo duplicates Memory before import.
 
