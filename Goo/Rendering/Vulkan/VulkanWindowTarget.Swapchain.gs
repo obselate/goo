@@ -26,7 +26,7 @@ internal unsafe partial class VulkanWindowTarget {
     host.Wake()
   }
 
-  internal func WaitForPresentation() {
+  internal func PrepareHide() {
     while QueueWorkPending {
       PollQueueCompletion()
       if QueueWorkPending { Thread.Sleep(1) }
@@ -39,6 +39,11 @@ internal unsafe partial class VulkanWindowTarget {
     if result == VkConstants.VK_ERROR_FEATURE_NOT_PRESENT { result = WaitDeviceIdleResult() }
     if result != VkConstants.VK_SUCCESS {
       throw System.InvalidOperationException("Vulkan presentation wait failed: " + result.ToString())
+    }
+    SetHidden(true)
+    while RetirementWorkPending {
+      PollQueueCompletion()
+      if RetirementWorkPending { Thread.Sleep(1) }
     }
   }
 
