@@ -317,6 +317,8 @@
 - Fix Weston 13 popup crashes with the initial SDL popup commit.
 - Keep hover active in unfocused windows while keyboard and press input stay blocked.
 
+- Keep native close requests for owned secondary windows local instead of also requesting application exit.
+
 ## 0.20.0 - 2026-10-26
 
 - Add Shape.UseCurrentColor to fill solid shapes with inherited Color.
