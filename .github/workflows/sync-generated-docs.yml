@@ -71,6 +71,7 @@ jobs:
 
       - name: Commit generated documentation
         run: |
+          source_commit="$(git rev-parse HEAD)"
           git add -A -- 'docs/api*' plugins/goo/reference
           if git diff --cached --quiet; then
             exit 0
@@ -78,4 +79,10 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m "Sync generated docs"
-          git push origin HEAD:main
+          push_status=0
+          push_output="$(git push --porcelain --force-with-lease="refs/heads/main:$source_commit" origin HEAD:main)" || push_status=$?
+          printf '%s\n' "$push_output"
+          if [ "$push_status" -ne 0 ]; then
+            grep -Fxq $'!\tHEAD:refs/heads/main\t[rejected] (stale info)' <<< "$push_output" || exit "$push_status"
+            echo "Main changed. A newer sync run will regenerate documentation."
+          fi
