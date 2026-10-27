@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Shapes`](https://github.com/obselate/goo/tree/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes)
+Source: [`Goo/Shapes`](https://github.com/obselate/goo/tree/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes)
 
 ## `DashPattern`
 
 Source:
 
-- [`DashPattern.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/DashPattern.gs)
+- [`DashPattern.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/DashPattern.gs)
 
 Specifies logical-pixel dash intervals and their phase offset. Empty intervals produce a solid stroke. Odd interval counts repeat once.
 
@@ -31,7 +31,7 @@ Gets the finite dash phase offset in logical pixels.
 
 Source:
 
-- [`Shape.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Shape.gs)
+- [`Shape.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Shape.gs)
 
 Selects the rule for filling overlapping path regions.
 
@@ -44,7 +44,7 @@ Selects the rule for filling overlapping path regions.
 
 Source:
 
-- [`PathBuilder.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/PathBuilder.gs)
+- [`PathBuilder.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/PathBuilder.gs)
 
 Builds an immutable vector path from drawing commands.
 
@@ -148,7 +148,7 @@ Returns: This builder.
 
 Source:
 
-- [`Point.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Point.gs)
+- [`Point.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Point.gs)
 
 Represents an immutable two-dimensional point.
 
@@ -164,7 +164,7 @@ Gets the y coordinate.
 
 Source:
 
-- [`Shape.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Shape.gs)
+- [`Shape.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Shape.gs)
 
 Displays a vector path with fill and one uniform stroke. Side-specific border declarations apply to boxes only.
 
@@ -212,6 +212,10 @@ Gets or sets the stroke join style. The default is Miter.
 
 Gets or sets the stroke start in [0, 1], summed across contours in path order. None measures flattened geometry after fit mapping. NonScalingStroke measures geometry after the full transform. On mount, StrokeStart must not exceed StrokeEnd.
 
+### `UseCurrentColor`
+
+Uses the inherited Color for solid fill when true. The default is false. BackgroundGradient and stroke colors are unchanged.
+
 ### `VectorEffect`
 
 Gets or sets the vector effect. The default is None. NonScalingStroke keeps widths and dash lengths in window logical pixels. The stroke stays centered on the path.
@@ -220,7 +224,7 @@ Gets or sets the vector effect. The default is None. NonScalingStroke keeps widt
 
 Source:
 
-- [`Shape.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Shape.gs)
+- [`Shape.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Shape.gs)
 
 Selects how path geometry maps into the padded layout bounds. Contain is the centered aspect-preserving default.
 
@@ -235,7 +239,7 @@ Selects how path geometry maps into the padded layout bounds. Contain is the cen
 
 Source:
 
-- [`Shape.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Shape.gs)
+- [`Shape.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Shape.gs)
 
 Selects the cap style for stroked paths.
 
@@ -249,7 +253,7 @@ Selects the cap style for stroked paths.
 
 Source:
 
-- [`Shape.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Shape.gs)
+- [`Shape.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Shape.gs)
 
 Selects the join style for stroked paths.
 
@@ -263,7 +267,7 @@ Selects the join style for stroked paths.
 
 Source:
 
-- [`Shape.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/Shape.gs)
+- [`Shape.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/Shape.gs)
 
 Selects whether strokes scale with geometry or remain in window logical pixels.
 
@@ -276,7 +280,7 @@ Selects whether strokes scale with geometry or remain in window logical pixels.
 
 Source:
 
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/VectorAssetModel.gs)
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/VectorAssetModel.gs)
 
 Describes one immutable vector node and its composed children.
 
@@ -344,7 +348,7 @@ Gets this node's local transform.
 
 Source:
 
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/VectorAssetModel.gs)
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/VectorAssetModel.gs)
 
 Describes immutable paint and composition options for a vector node.
 
@@ -388,7 +392,7 @@ Gets this node's local transform.
 
 Source:
 
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/VectorAssetModel.gs)
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/VectorAssetModel.gs)
 
 Describes one immutable vector fill paint.
 
@@ -412,7 +416,7 @@ Gets the gradient, or nil for a solid paint.
 
 Source:
 
-- [`VectorPath.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/VectorPath.gs)
+- [`VectorPath.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/VectorPath.gs)
 
 Represents an immutable vector path in a top-left coordinate system. Coordinates increase rightward on x and downward on y.
 
@@ -452,7 +456,7 @@ Gets the view-box top coordinate.
 
 Source:
 
-- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/Goo/Shapes/VectorAssetModel.gs)
+- [`VectorAssetModel.gs`](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/Goo/Shapes/VectorAssetModel.gs)
 
 Describes one immutable vector stroke.
 

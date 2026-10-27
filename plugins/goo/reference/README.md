@@ -18,7 +18,7 @@ Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 and meet the [platform requirements](#platforms), then:
 
 ```sh
-dotnet new install Goo.Templates@0.19.1
+dotnet new install Goo.Templates@0.20.0
 
 mkdir hello-goo
 cd hello-goo
@@ -71,8 +71,8 @@ Install other packages separately as needed.
 | [Goo.Audio](https://www.nuget.org/packages/Goo.Audio/) | Audio playback | `dotnet add package Goo.Audio` |
 | [Goo.Accessibility](https://www.nuget.org/packages/Goo.Accessibility/) | Desktop native accessibility adapters | `dotnet add package Goo.Accessibility` |
 | [Goo.DevTools](https://www.nuget.org/packages/Goo.DevTools/) | [Launch, attach, and capture](docs/devtools/README.md) with the `goo` CLI | `dotnet tool install --global Goo.DevTools` |
-| [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
-| [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
+| [Goo.DevTools.App](https://www.nuget.org/packages/Goo.DevTools.App/) | [Graphical inspector](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/apps/Goo.DevTools/README.md), launched with `goo-devtools` | `dotnet tool install --global Goo.DevTools.App` |
+| [Goo.Templates](https://www.nuget.org/packages/Goo.Templates/) | [Create starter projects](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/templates/Goo.Templates/README.md) with `dotnet new goo` | `dotnet new install Goo.Templates` |
 
 Add library packages from your application directory. Install both DevTools
 packages to launch the graphical inspector with `goo dev --inspector`.
@@ -130,8 +130,8 @@ func Main() {
 }
 ```
 
-Continue with [After the counter](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/docs/getting-started.md), then
-[edit and inspect](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/docs/edit-and-inspect.md). The [app-author documentation index](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/docs/README.md)
+Continue with [After the counter](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/docs/getting-started.md), then
+[edit and inspect](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/docs/edit-and-inspect.md). The [app-author documentation index](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/docs/README.md)
 links core, widgets, assets, shipping and plugin guides with their version baselines.
 
 Core concepts:
@@ -180,7 +180,7 @@ and Android x64. The renderer requires the Vulkan 1.3 feature set used by Goo.
 - Android requires Android 13 (API 33) or newer and a Vulkan 1.3 device with
   identity presentation support. The `Goo.Android` adapter hosts the same
   application in an Android activity or native view. See
-  [Android integration](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/docs/android.md).
+  [Android integration](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/docs/android.md).
 
 ### Custom shaders
 
@@ -201,7 +201,7 @@ also accepts `slangc` and `spirv-val` on `PATH`.
 - [Ship a desktop app](docs/shipping.md)
 - [API documentation](https://github.com/obselate/goo/tree/main/docs/api)
 - [DevTools](https://github.com/obselate/goo/tree/main/docs/devtools)
-- [Goo agent plugin for Codex and OMP](https://github.com/obselate/goo/blob/d6099a4268d148253a82e6d53a56cba17134c7fc/plugins/goo/README.md)
+- [Goo agent plugin for Codex and OMP](https://github.com/obselate/goo/blob/f0a5af7e8ce1d57b930f3bbb954ac1637e2706d3/plugins/goo/README.md)
 - [Shader effects](https://github.com/obselate/goo/blob/main/docs/api/rendering.md#apply-fragment-shaders-to-retained-elements)
 - [Testing and verification](https://github.com/obselate/goo/blob/main/tests/README.md)
 - [Production desktop and mobile priorities](docs/production-readiness.md)

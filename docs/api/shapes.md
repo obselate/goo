@@ -212,6 +212,10 @@ Gets or sets the stroke join style. The default is Miter.
 
 Gets or sets the stroke start in [0, 1], summed across contours in path order. None measures flattened geometry after fit mapping. NonScalingStroke measures geometry after the full transform. On mount, StrokeStart must not exceed StrokeEnd.
 
+### `UseCurrentColor`
+
+Uses the inherited Color for solid fill when true. The default is false. BackgroundGradient and stroke colors are unchanged.
+
 ### `VectorEffect`
 
 Gets or sets the vector effect. The default is None. NonScalingStroke keeps widths and dash lengths in window logical pixels. The stroke stays centered on the path.
