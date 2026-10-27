@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.20.1 - 2026-10-27
+
+- Prevent stale generated-doc pushes and retry hdiutil verification only for the exact EAGAIN error.
+- Fix Weston 13 popup crashes with the initial SDL popup commit.
+- Keep hover active in unfocused windows while keyboard and press input stay blocked.
+
 ## 0.20.0 - 2026-10-26
 
 - Add Shape.UseCurrentColor to fill solid shapes with inherited Color.
