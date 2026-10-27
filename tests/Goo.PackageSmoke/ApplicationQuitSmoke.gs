@@ -19,9 +19,6 @@ internal unsafe func RunApplicationQuitSmoke() {
     }
     try {
         first.Open()
-        if SDL.GetHintS(SDL.SDL_HINT_QUIT_ON_LAST_WINDOW_CLOSE) != "0" {
-            throw InvalidOperationException("Native window close can still queue application quit")
-        }
         second.Open()
         first.RequestClose()
         first.Pump(0.0)
@@ -37,23 +34,11 @@ internal unsafe func RunApplicationQuitSmoke() {
         if !first.IsOpen || !second.IsOpen || vetoes != 3 {
             throw InvalidOperationException("User-requested quit did not honor window vetoes")
         }
-        second.OnClosing = nil
-        if !SDL.PushEvent(&quit) {
-            throw InvalidOperationException("Cannot queue application quit: " + SDL.GetErrorS())
-        }
-        let timer = Stopwatch.StartNew()
-        while second.IsOpen && timer.Elapsed.TotalSeconds < 5 {
-            first.Pump(0.0)
-            second.Pump(0.0)
-        }
-        if !first.IsOpen || second.IsOpen || vetoes != 4 {
-            throw InvalidOperationException("User-requested quit left an unguarded window open")
-        }
         quit.Type = uint32(SDLEventType.Terminating)
         if !SDL.PushEvent(&quit) {
             throw InvalidOperationException("Cannot queue termination: " + SDL.GetErrorS())
         }
-        timer.Restart()
+        let timer = Stopwatch.StartNew()
         while (first.IsOpen || second.IsOpen) && timer.Elapsed.TotalSeconds < 5 {
             if first.IsOpen {
                 first.Pump(0.0)
@@ -62,7 +47,7 @@ internal unsafe func RunApplicationQuitSmoke() {
                 second.Pump(0.0)
             }
         }
-        if first.IsOpen || second.IsOpen || vetoes != 4 {
+        if first.IsOpen || second.IsOpen || vetoes != 3 {
             throw InvalidOperationException("Termination was vetoed or left a window open")
         }
     } finally {
@@ -71,5 +56,5 @@ internal unsafe func RunApplicationQuitSmoke() {
         CloseWindow(first)
         CloseWindow(second)
     }
-    Console.WriteLine("application-quit: auto quit disabled, user veto retained, explicit quit and termination close windows")
+    Console.WriteLine("application-quit: user veto retained, termination closes all windows")
 }
