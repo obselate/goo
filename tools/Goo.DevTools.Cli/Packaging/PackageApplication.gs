@@ -348,7 +348,7 @@ Categories=Utility;
         }
         {
             using let _ = process
-            let error = process.StandardError.BaseStream.CopyToAsync(Console.OpenStandardError())
+            let error = process.StandardError.ReadToEndAsync()
             let output Task[string]? = if capture {
                 process.StandardOutput.ReadToEndAsync()
             } else {
@@ -360,14 +360,20 @@ Categories=Utility;
                 process.StandardOutput.BaseStream.CopyToAsync(Console.OpenStandardError())
             }
             await process.WaitForExitAsync()
-            await Task.WhenAll(error, forward)
+            await forward
+            let errorOutput = await error
+            Console.Error.Write(errorOutput)
             let result = if output == nil {
                 ""
             } else {
                 await output
             }
             if process.ExitCode != 0 {
-                throw CliException("${Path.GetFileName(file)} exited with code ${process.ExitCode}.", code, "package")
+                throw CliException(
+                    "${Path.GetFileName(file)} exited with code ${process.ExitCode}. ${result}${errorOutput}",
+                    code,
+                    "package"
+                )
             }
             return result
         }
