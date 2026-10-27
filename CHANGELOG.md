@@ -2,7 +2,12 @@
 
 ## Unreleased
 
+## 0.21.0 - 2026-10-27
+
 - Add ImageSource.EncodePng for PNG export from premultiplied RGBA images.
+- Prevent stale generated-doc pushes and retry hdiutil verification only for the exact EAGAIN error.
+- Fix Weston 13 popup crashes with the initial SDL popup commit.
+- Keep hover active in unfocused windows while keyboard and press input stay blocked.
 
 ## 0.20.0 - 2026-10-26
 
