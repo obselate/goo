@@ -841,6 +841,96 @@ Distinguishes selected paths, cancellation, unavailable backends, excessive resu
 - `TooLarge`
 - `Failed`
 
+## `LayerWindowAnchor`
+
+Source:
+
+- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
+
+Selects the output edges to which a layer-shell window is anchored.
+
+### Values
+
+- `None`
+- `Top`
+- `Bottom`
+- `Left`
+- `Right`
+
+## `LayerWindowKeyboardInteractivity`
+
+Source:
+
+- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
+
+Controls keyboard focus for a layer-shell window.
+
+### Values
+
+- `None`
+- `Exclusive`
+- `OnDemand`
+
+## `LayerWindowOptions`
+
+Source:
+
+- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
+
+Configures a Wayland layer-shell surface before Window.Open. Sizes and margins use compositor logical units. Zero sizes require opposite anchors.
+
+### `new`
+
+Creates layer-shell options with a 640 by 480 top-layer surface.
+
+### `Anchors`
+
+Gets the output anchor edges.
+
+### `ExclusiveZone`
+
+Gets the reserved edge distance. Zero avoids reserved areas. Minus one ignores them.
+
+### `Height`
+
+Gets the requested height. Zero fills the vertical anchors.
+
+### `KeyboardInteractivity`
+
+Gets the keyboard focus policy.
+
+### `Layer`
+
+Gets the compositor layer. The default is Top.
+
+### `MarginBottom`
+
+Gets the bottom margin.
+
+### `MarginLeft`
+
+Gets the left margin.
+
+### `MarginRight`
+
+Gets the right margin.
+
+### `MarginTop`
+
+Gets the top margin.
+
+### `Namespace`
+
+Gets the compositor namespace. The default is goo.
+
+### `Output`
+
+Gets the target display. Null lets the compositor choose.
+
+### `Width`
+
+Gets the requested width. Zero fills the horizontal anchors.
+
 ## `MacOSBackdropMaterial`
 
 Source:
@@ -1743,6 +1833,10 @@ Gets the latest native drop explanation, bounded to 1024 characters.
 
 Gets the latest native drop capture status.
 
+### `LayerShell`
+
+Configures this window as a Wayland layer-shell surface before Open. Unsupported platforms and compositors fail without a normal-window fallback.
+
 ### `MacOSBackdrop`
 
 Gets or sets macOS-only material, activation, emphasis and mask options. Changes apply immediately. The native view samples behind the window. Use Style.ShaderEffect to sample Goo content within it.
@@ -2026,6 +2120,21 @@ Controls how Window.Run schedules frames that have visual demand.
 
 - `Display`
 - `Uncapped`
+
+## `WindowLayer`
+
+Source:
+
+- [`LayerWindowOptions.gs`](../../Goo/Window/LayerWindowOptions.gs)
+
+Selects the compositor layer for a Wayland layer-shell window.
+
+### Values
+
+- `Background`
+- `Bottom`
+- `Top`
+- `Overlay`
 
 ## `WindowMetrics`
 

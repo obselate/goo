@@ -33,4 +33,4 @@ spread that copies its contents.
 
 ## Repository rules
 
-See [code conventions](https://github.com/obselate/goo/blob/1dd630a042e30d48fc9e749c9dcbb1de4a75414d/CONVENTIONS.md) for G# idioms, layout and verification.
+See [code conventions](https://github.com/obselate/goo/blob/15da971be3c0b37e38e4b7c8a76defb29d18cd95/CONVENTIONS.md) for G# idioms, layout and verification.
