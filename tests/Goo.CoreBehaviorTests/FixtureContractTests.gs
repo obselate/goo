@@ -224,6 +224,7 @@ class FixtureContractTests {
             yield Contract[InputFixtures]("TouchPrimaryWaitsForAllContactsToEnd")
             yield Contract[InputFixtures]("TransformRoutesHitsAndLocalPositions")
             yield Contract[InputFixtures]("UnhandledWheelStaysPresentationIdle")
+            yield Contract[InputFixtures]("UnfocusedPointerHoverPreservesKeyboardAndPressFocusGate")
             yield Contract[LayoutFixtures]("ComposedTreeMapsDeclarationsAndRelayouts")
             yield Contract[LayoutFixtures]("KeyedReorderRetainsYogaLayouts")
             yield Contract[LayoutFixtures]("LayoutIsStableAcrossRoots")
