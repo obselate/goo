@@ -433,8 +433,8 @@ Use `TryPost` when teardown can race the producer. It returns `false` after post
 
 Each `Pump` drains one fixed accepted batch after close decisions and native metrics, and before input. Posts made while that batch runs wait for the next `Pump`. When native closing or teardown starts, Goo discards queued work. Teardown is terminal and later `Post` calls throw `InvalidOperationException`.
 
-`Window.Closed` is cancelled after native teardown completes. Dispatch stops earlier
-and can discard an accepted action. Link asynchronous package work to this token.
+`Window.Closed` is cancelled after native teardown finishes or fails. Dispatch stops
+earlier and can discard an accepted action. Link asynchronous package work to this token.
 Cancellation callbacks must not throw or use torn-down UI state.
 
 Pump removes an action before it calls the action. If it throws, Pump throws the same exception and later queued actions remain for the next direct `Pump`. `Run` propagates the exception, then closes the window and discards queued work. Accessibility adapters can use `Post` before calling Window accessibility APIs.

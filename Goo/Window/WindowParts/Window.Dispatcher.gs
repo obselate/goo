@@ -9,7 +9,7 @@ public partial class Window {
   private var closedSource CancellationTokenSource?
   private var nativeClosed bool
 
-  /// Gets a token cancelled after this window's native teardown has completed.
+  /// Gets a token cancelled after this window's native teardown finishes or fails.
   /// Posted work stops earlier and can be discarded while the window is closing.
   public prop Closed CancellationToken{
     get {
