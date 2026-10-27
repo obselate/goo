@@ -110,6 +110,7 @@ public partial class Window {
   }
 
   private func pushSize() {
+    if LayerShell != nil { return }
     if let native = host {
       constrainSize()
       native.SetSize(width, height)

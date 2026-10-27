@@ -11,6 +11,7 @@ internal unsafe partial class SdlHost {
   internal prop FirstShowPending bool { get -> deferFirstShow && firstShowRequested }
 
   internal func DeferFirstShow() bool {
+    if layerWindow != nil { return false }
     let properties = SDL.GetWindowProperties(window)
     if !SDL.GetBooleanProperty(properties, "Goo.Wayland.NonblockingFirstShowAvailable.1", false) {
       return false
@@ -20,6 +21,7 @@ internal unsafe partial class SdlHost {
   }
 
   internal func PrepareFirstPresent() bool {
+    if let layer = layerWindow { return layer.Visible }
     if deferFirstShow {
       deferFirstShow = false
       if firstShowRequested {
@@ -39,11 +41,12 @@ internal unsafe partial class SdlHost {
     return true
   }
 
-  public prop IsVisible bool { get -> !disposed && !IsClosing
-    && (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized)) == 0uL }
+  public prop IsVisible bool { get -> !disposed && !IsClosing && (layerWindow?.Visible
+    ?? ((SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Hidden | SDLWindowFlags.Minimized)) == 0uL)) }
 
   public prop Capabilities WindowCapabilities {
     get {
+      if layerWindow != nil { return WindowCapabilities.Visibility | WindowCapabilities.ShowWithoutActivation }
       let driver = SDL.GetCurrentVideoDriverS()
       return if driver == "windows" || driver == "cocoa" || driver == "x11" {
         WindowCapabilities.Visibility | WindowCapabilities.ShowWithoutActivation
@@ -70,6 +73,7 @@ internal unsafe partial class SdlHost {
 
   public func ShowWithoutActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if layerWindow != nil { return RequestActivation() }
     if (Capabilities & WindowCapabilities.ShowWithoutActivation) == WindowCapabilities.None {
       return WindowOperationResult.Unsupported
     }
@@ -89,6 +93,12 @@ internal unsafe partial class SdlHost {
 
   public func Hide() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if let layer = layerWindow {
+      layer.Hide()
+      let result = SDL.HideWindow(window) ? WindowOperationResult.Accepted : WindowOperationResult.Failed
+      VisibilityChanged?.Invoke()
+      return result
+    }
     if deferFirstShow {
       firstShowRequested = false
       return WindowOperationResult.Accepted

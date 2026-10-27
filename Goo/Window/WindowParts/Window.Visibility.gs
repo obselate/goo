@@ -1,6 +1,7 @@
 package Goo
 
 import System
+import System.Threading
 
 /// Reports whether a window operation was submitted to the host.
 /// Accepted does not guarantee that desktop policy grants activation or stacking.
@@ -123,8 +124,21 @@ public partial class Window {
     guard let native = host else { return WindowOperationResult.Closed }
     if !IsOpen || native.IsClosing { return WindowOperationResult.Closed }
     if Modal || IsInputBlocked { return WindowOperationResult.Unsupported }
+    if LayerShell != nil {
+      let target = windowTarget!!
+      while target.QueueWorkPending {
+        target.PollQueueCompletion()
+        if target.QueueWorkPending { Thread.Sleep(1) }
+      }
+      target.SetHidden(true)
+      while target.RetirementWorkPending {
+        target.PollQueueCompletion()
+        if target.RetirementWorkPending { Thread.Sleep(1) }
+      }
+    }
     let result = native.Hide()
     if result == WindowOperationResult.Accepted { windowTarget?.SetHidden(true) }
+    else if LayerShell != nil { windowTarget?.SetHidden(false) }
     observeVisibility()
     return result
   }

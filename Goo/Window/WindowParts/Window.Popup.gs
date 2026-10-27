@@ -12,7 +12,7 @@ public partial class Window {
   internal prop NativePopupPlacement PortalPlacement { get -> popupPlacement }
 
   internal prop PopupOwnerOpen bool { get -> IsOpen && !NativeOwnerClosing }
-  internal prop PopupOwnerSupported bool { get -> EmbeddedPopupFactory != nil || (embeddedHost == nil && host is SdlHost) }
+  internal prop PopupOwnerSupported bool { get -> LayerShell == nil && (EmbeddedPopupFactory != nil || (embeddedHost == nil && host is SdlHost)) }
   internal prop PopupFocusedNode Node? { get -> input.FocusedNode() }
 
   internal prop HasChildPopup bool {
@@ -43,7 +43,7 @@ public partial class Window {
     return SdlHost(Title, Width, Height, x, y, positionSet, State, decorated, resizable,
       transparent || backdrop == WindowBackdrop.Blur, VSync,
       (px int32, py int32) -> hitTest(px, py), parent, popup?.Kind ?? PopupKind.Menu,
-      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, UiScale)
+      popup?.NativeTimestamp ?? 0uL, popupAnchor, popupPlacement, UiScale, LayerShell)
   }
 
   internal func ShowNativePopup() {

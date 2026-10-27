@@ -34,13 +34,14 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   Dictionary[TouchContactKey, int64]()
   private var penPressures Dictionary[int64, float32]?
   private var nextTouchPointerId int64 = Int64.MinValue
+  private var layerWindow WaylandLayerWindow?
 
   internal init(title string, width int32, height int32, x int32, y int32,
     positionSet bool, state WindowState, decorated bool, resizable bool,
     transparent bool, vsync bool, hitTest((int32, int32) -> WindowHitResult),
     popupParent SdlHost? = nil, popupKind PopupKind = PopupKind.Menu, popupTimestamp uint64 = 0uL,
     popupAnchor ElementRect = default(ElementRect), popupPlacement PortalPlacement = PortalPlacement.BottomStart,
-    popupScale float32 = 1.0F) {
+    popupScale float32 = 1.0F, layerOptions LayerWindowOptions? = nil) {
       this.hitTest = hitTest
       hitTestRawDelegate = HitTest
       hitTestCallbackAddress = Marshal.GetFunctionPointerForDelegate(hitTestRawDelegate)
@@ -53,7 +54,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         vulkanOwned = true
         if let parent = popupParent {
           CreatePopup(parent, width, height, popupKind, popupTimestamp, popupAnchor, popupPlacement, popupScale)
-        } else { CreateWindow(title, width, height, transparent) }
+        } else { CreateWindow(title, width, height, transparent, layerOptions) }
         windowId = SDL.GetWindowID(window)
         if windowId == 0u {
           ThrowSdl("SDL_GetWindowID")
@@ -63,13 +64,16 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
           ThrowSdl("SDL_GetWindowFromID")
         }
         SdlRuntime.Register(windowId, Dispatch)
-        if popupParent == nil {
+        if popupParent == nil && layerWindow == nil {
           if positionSet && CanMove {
             Require(SDL.SetWindowPosition(window, x, y), "SDL_SetWindowPosition")
           }
           SetBorder(decorated, resizable)
           ObserveNormalPlacement()
           SetState(state)
+        }
+        if layerWindow != nil && state != WindowState.Normal {
+          throw NotSupportedException("Layer-shell windows do not support normal window states")
         }
 
         SetVSync(vsync)
@@ -268,11 +272,13 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func SetMinimumSize(width int32, height int32) {
     ThrowIfDisposed()
+    if layerWindow != nil { return }
     Require(SDL.SetWindowMinimumSize(window, width, height), "SDL_SetWindowMinimumSize")
   }
 
   public func SetMaximumSize(width int32, height int32) {
     ThrowIfDisposed()
+    if layerWindow != nil { return }
     Require(SDL.SetWindowMaximumSize(window, width, height), "SDL_SetWindowMaximumSize")
   }
 
@@ -285,6 +291,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func SetState(value WindowState) {
     ThrowIfDisposed()
+    if layerWindow != nil { throw NotSupportedException("Layer-shell windows do not support normal window states") }
     if value == WindowState.Normal || value == WindowState.Minimized ||
     value == WindowState.Maximized{
       Require(SDL.SetWindowFullscreen(window, false), "SDL_SetWindowFullscreen")
@@ -300,6 +307,19 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func RequestActivation() WindowOperationResult {
     if disposed || IsClosing { return WindowOperationResult.Closed }
+    if let layer = layerWindow {
+      if let target = layer.Output {
+        if !HasDisplay(target.NativeValue) {
+          CloseRequested?.Invoke(WindowCloseReason.Terminating)
+          return WindowOperationResult.Closed
+        }
+      }
+      if !SDL.ShowWindow(window) { return WindowOperationResult.Failed }
+      layer.Show(ReadLayerOutput(layer.Output))
+      RefreshMetricsIfChanged()
+      VisibilityChanged?.Invoke()
+      return WindowOperationResult.Accepted
+    }
     if OperatingSystem.IsLinux() && Window.CurrentActivationToken != nil {
       if !SDL.SetStringProperty(SDL.GetWindowProperties(window), "Goo.Wayland.ActivationToken.1",
         Window.CurrentActivationToken!!) { return WindowOperationResult.Failed }
@@ -322,6 +342,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func SetBorder(decorated bool, resizable bool) {
     ThrowIfDisposed()
+    if layerWindow != nil { throw NotSupportedException("Layer-shell windows do not support window decorations") }
     if !decorated {
       EnableHitTest()
     }
@@ -410,6 +431,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     nativeBackdrop?.Dispose()
     nativeBackdrop = nil
     BackdropAvailable = false
+    layerWindow?.Dispose()
+    layerWindow = nil
     disposed = true
     SdlTitlebarHooks.Unbind(this)
     if windowId != 0u {
@@ -453,12 +476,45 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
     }
   }
 
-  private func CreateWindow(title string, width int32, height int32, transparent bool) {
+  private func CreateWindow(title string, width int32, height int32, transparent bool,
+    layerOptions LayerWindowOptions?) {
     let flags = BuildWindowFlags(transparent)
-    window = SDL.CreateWindow(title, width, height, uint64(flags))
-    if window.IsNull {
-      ThrowSdl("SDL_CreateWindow")
+    if let options = layerOptions {
+      options.Validate()
+      if !IsWayland() { throw NotSupportedException("Layer-shell windows require Wayland") }
+      let properties = SDL.CreateProperties()
+      if properties == 0u { ThrowSdl("SDL_CreateProperties") }
+      try {
+        Require(SDL.SetStringProperty(properties, "SDL.window.create.title", title), "SDL_SetStringProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.width", Math.Max(1, options.Width)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", Math.Max(1, options.Height)), "SDL_SetNumberProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
+        Require(SDL.SetBooleanProperty(properties, "SDL.window.create.wayland.surface_role_custom", true), "SDL_SetBooleanProperty")
+        window = SDL.CreateWindowWithProperties(properties)
+      } finally { SDL.DestroyProperties(properties) }
+      if window.IsNull { ThrowSdl("SDL_CreateWindowWithProperties") }
+      let native = SDL.GetWindowProperties(window)
+      let display = SDL.GetPointerProperty(native, "SDL.window.wayland.display", nil)
+      let surface = SDL.GetPointerProperty(native, "SDL.window.wayland.surface", nil)
+      let output = ReadLayerOutput(options.Output)
+      layerWindow = WaylandLayerWindow(nint(display), nint(surface), output, options,
+        (configuredWidth int32, configuredHeight int32) -> {
+          Require(SDL.SetWindowSize(window, configuredWidth, configuredHeight), "SDL_SetWindowSize")
+          pixelDensityChange = true
+          pendingEvents = true
+        }, () -> CloseRequested?.Invoke(WindowCloseReason.Terminating))
+    } else {
+      window = SDL.CreateWindow(title, width, height, uint64(flags))
+      if window.IsNull { ThrowSdl("SDL_CreateWindow") }
     }
+  }
+
+  private func ReadLayerOutput(id WindowDisplayId?) nint {
+    guard let target = id else { return nint(0) }
+    if !HasDisplay(target.NativeValue) { throw ArgumentException("The layer-shell target display is unavailable") }
+    let output = nint(SDL.GetPointerProperty(SDL.GetDisplayProperties(target.NativeValue), "SDL.display.wayland.wl_output", nil))
+    if output == nint(0) { throw NotSupportedException("The target display has no Wayland output") }
+    return output
   }
 
   internal func SetIconPng(bytes []uint8) {
@@ -505,6 +561,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   public func RefreshMetricsIfChanged() {
+    layerWindow?.Pump()
     RefreshPreferences(false)
     RefreshBackdrop()
     let logicalWidth = LogicalWidth

@@ -217,6 +217,7 @@ class PublicDocumentationTests {
             "M:Goo.RichText.RichTextCodec.Write(Goo.RichText.RichTextFragment)",
             "M:Goo.RichText.RichTextFragment.#ctor(System.String,System.Collections.Generic.IReadOnlyList{Goo.TextStyleSpan})",
             "M:Goo.TrayOptions.#ctor",
+            "M:Goo.LayerWindowOptions.#ctor",
             "M:Goo.TrayIcon.Create(Goo.Window,Goo.TrayOptions)",
             "M:Goo.TrayIcon.Update(Goo.TrayOptions)",
             "M:Goo.TrayIcon.Dispose",

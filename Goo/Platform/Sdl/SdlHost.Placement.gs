@@ -38,6 +38,7 @@ internal unsafe partial class SdlHost {
 
     public func CapturePlacement() WindowPlacementResult {
         if disposed || IsClosing { return WindowPlacementResult(WindowOperationResult.Closed) }
+        if layerWindow != nil { return WindowPlacementResult(WindowOperationResult.Unsupported) }
         try {
             let flags = ObserveNormalPlacement()
             if placementWidth <= 0 || placementHeight <= 0 {
@@ -64,6 +65,7 @@ internal unsafe partial class SdlHost {
 
     public func ApplyPlacement(value WindowPlacement) WindowPlacementResult {
         if disposed || IsClosing { return WindowPlacementResult(WindowOperationResult.Closed) }
+        if layerWindow != nil { return WindowPlacementResult(WindowOperationResult.Unsupported) }
         var applied = WindowPlacementFields.None
         try {
             let original = NativePlacementState(SDL.GetWindowFlags(window))
