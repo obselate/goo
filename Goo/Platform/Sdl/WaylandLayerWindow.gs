@@ -54,22 +54,22 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   private func Initialize() {
     library = NativeLibrary.Load("libwayland-client.so.0")
-    queue = wl_display_create_queue(display)
+    queue = WaylandBackdrop.wl_display_create_queue(display)
     if queue == nint(0) { throw InvalidOperationException("Cannot create the layer-shell event queue") }
     CreateInterfaces()
-    let wrapper = wl_proxy_create_wrapper(display)
+    let wrapper = WaylandBackdrop.wl_proxy_create_wrapper(display)
     if wrapper == nint(0) { throw InvalidOperationException("Cannot wrap the Wayland display") }
     try {
-      wl_proxy_set_queue(wrapper, queue)
+      WaylandBackdrop.wl_proxy_set_queue(wrapper, queue)
       var argument = BackdropWaylandArgument{}
-      registry = wl_proxy_marshal_array_constructor_versioned(wrapper, 1u, &argument,
+      registry = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(wrapper, 1u, &argument,
         NativeLibrary.GetExport(library, "wl_registry_interface"), 1u)
-    } finally { wl_proxy_wrapper_destroy(wrapper) }
+    } finally { WaylandBackdrop.wl_proxy_wrapper_destroy(wrapper) }
     if registry == nint(0) { throw InvalidOperationException("Cannot obtain the Wayland registry") }
     let listener = Allocate(IntPtr.Size * 2)
     Marshal.WriteIntPtr(listener, Marshal.GetFunctionPointerForDelegate(onGlobal))
     Marshal.WriteIntPtr(listener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onRemove))
-    if wl_proxy_add_listener(registry, listener, nint(0)) != 0 {
+    if WaylandBackdrop.wl_proxy_add_listener(registry, listener, nint(0)) != 0 {
       throw InvalidOperationException("Cannot listen to the Wayland registry")
     }
     Roundtrip()
@@ -83,12 +83,12 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     arguments[2].Value = output
     arguments[3].Value = nint(uint32(options.Layer))
     arguments[4].Value = Text(options.Namespace)
-    layerSurface = wl_proxy_marshal_array_constructor_versioned(manager, 0u, arguments, surfaceInterface, version)
+    layerSurface = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(manager, 0u, arguments, surfaceInterface, version)
     if layerSurface == nint(0) { throw InvalidOperationException("Cannot create the layer-shell surface") }
     let surfaceListener = Allocate(IntPtr.Size * 2)
     Marshal.WriteIntPtr(surfaceListener, Marshal.GetFunctionPointerForDelegate(onConfigure))
     Marshal.WriteIntPtr(surfaceListener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onClosed))
-    if wl_proxy_add_listener(layerSurface, surfaceListener, nint(0)) != 0 {
+    if WaylandBackdrop.wl_proxy_add_listener(layerSurface, surfaceListener, nint(0)) != 0 {
       throw InvalidOperationException("Cannot listen to the layer-shell surface")
     }
   }
@@ -98,20 +98,20 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     let arguments * BackdropWaylandArgument = stackalloc[4]BackdropWaylandArgument
     arguments[0].Value = nint(options.Width)
     arguments[1].Value = nint(options.Height)
-    wl_proxy_marshal_array(layerSurface, 0u, arguments)
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 0u, arguments)
     arguments[0].Value = nint(uint32(options.Anchors))
-    wl_proxy_marshal_array(layerSurface, 1u, arguments)
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 1u, arguments)
     arguments[0].Value = nint(options.ExclusiveZone)
-    wl_proxy_marshal_array(layerSurface, 2u, arguments)
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 2u, arguments)
     arguments[0].Value = nint(options.MarginTop)
     arguments[1].Value = nint(options.MarginRight)
     arguments[2].Value = nint(options.MarginBottom)
     arguments[3].Value = nint(options.MarginLeft)
-    wl_proxy_marshal_array(layerSurface, 3u, arguments)
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 3u, arguments)
     arguments[0].Value = nint(uint32(options.KeyboardInteractivity))
-    wl_proxy_marshal_array(layerSurface, 4u, arguments)
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 4u, arguments)
     mapped = true
-    wl_proxy_marshal_array(surface, 6u, nil)
+    WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     Roundtrip()
   }
 
@@ -122,8 +122,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     arguments[0].Value = nint(0)
     arguments[1].Value = nint(0)
     arguments[2].Value = nint(0)
-    wl_proxy_marshal_array(surface, 1u, arguments)
-    wl_proxy_marshal_array(surface, 6u, nil)
+    WaylandBackdrop.wl_proxy_marshal_array(surface, 1u, arguments)
+    WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     mapped = false
     Configured = false
     Roundtrip()
@@ -131,14 +131,14 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
 
   internal func Pump() {
     if disposed { return }
-    if wl_display_dispatch_queue_pending(display, queue) < 0 {
+    if WaylandBackdrop.wl_display_dispatch_queue_pending(display, queue) < 0 {
       throw InvalidOperationException("Layer-shell event dispatch failed")
     }
     if let error = failure { throw error }
   }
 
   private func Roundtrip() {
-    if wl_display_roundtrip_queue(display, queue) < 0 { throw InvalidOperationException("Layer-shell Wayland roundtrip failed") }
+    if WaylandBackdrop.wl_display_roundtrip_queue(display, queue) < 0 { throw InvalidOperationException("Layer-shell Wayland roundtrip failed") }
     if let error = failure { throw error }
   }
 
@@ -146,11 +146,11 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if !mapped { return }
     try {
       var argument = BackdropWaylandArgument{Value: nint(serial)}
-      wl_proxy_marshal_array(proxy, 6u, &argument)
+      WaylandBackdrop.wl_proxy_marshal_array(proxy, 6u, &argument)
       resize(width == 0u ? Math.Max(1, options.Width) : checked(int32(width)),
         height == 0u ? Math.Max(1, options.Height) : checked(int32(height)))
       Configured = true
-      wl_display_flush(display)
+      WaylandBackdrop.wl_display_flush(display)
     } catch (error Exception) { failure = error }
   }
 
@@ -168,7 +168,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     arguments[1].Value = interfaceName
     arguments[2].Value = nint(version)
     arguments[3].Value = nint(0)
-    manager = wl_proxy_marshal_array_constructor_versioned(registry, 0u, arguments, managerInterface, version)
+    manager = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(registry, 0u, arguments, managerInterface, version)
   }
 
   private func Remove(data nint, registry nint, name uint32) { }
@@ -177,16 +177,16 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     if disposed { return }
     disposed = true
     if layerSurface != nint(0) {
-      wl_proxy_marshal_array(layerSurface, 7u, nil)
-      wl_proxy_destroy(layerSurface)
+      WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 7u, nil)
+      WaylandBackdrop.wl_proxy_destroy(layerSurface)
     }
     if manager != nint(0) {
-      if version >= 3u { wl_proxy_marshal_array(manager, 1u, nil) }
-      wl_proxy_destroy(manager)
+      if version >= 3u { WaylandBackdrop.wl_proxy_marshal_array(manager, 1u, nil) }
+      WaylandBackdrop.wl_proxy_destroy(manager)
     }
-    if registry != nint(0) { wl_proxy_destroy(registry) }
-    if queue != nint(0) { wl_event_queue_destroy(queue) }
-    if display != nint(0) { wl_display_flush(display) }
+    if registry != nint(0) { WaylandBackdrop.wl_proxy_destroy(registry) }
+    if queue != nint(0) { WaylandBackdrop.wl_event_queue_destroy(queue) }
+    if display != nint(0) { WaylandBackdrop.wl_display_flush(display) }
     for allocation in allocations { Marshal.FreeHGlobal(allocation) }
     if library != nint(0) { NativeLibrary.Free(library) }
     GC.KeepAlive(onGlobal)
@@ -248,18 +248,4 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     return text
   }
 
-  shared {
-    @DllImport("libwayland-client.so.0") private func wl_display_create_queue(display nint) nint;
-    @DllImport("libwayland-client.so.0") private func wl_event_queue_destroy(queue nint);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_create_wrapper(proxy nint) nint;
-    @DllImport("libwayland-client.so.0") private func wl_proxy_wrapper_destroy(proxy nint);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_set_queue(proxy nint, queue nint);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_add_listener(proxy nint, listener nint, data nint) int32;
-    @DllImport("libwayland-client.so.0") private func wl_proxy_marshal_array_constructor_versioned(proxy nint, opcode uint32, arguments * BackdropWaylandArgument, nativeInterface nint, version uint32) nint;
-    @DllImport("libwayland-client.so.0") private func wl_proxy_marshal_array(proxy nint, opcode uint32, arguments * BackdropWaylandArgument);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_destroy(proxy nint);
-    @DllImport("libwayland-client.so.0") private func wl_display_roundtrip_queue(display nint, queue nint) int32;
-    @DllImport("libwayland-client.so.0") private func wl_display_dispatch_queue_pending(display nint, queue nint) int32;
-    @DllImport("libwayland-client.so.0") private func wl_display_flush(display nint) int32;
-  }
 }

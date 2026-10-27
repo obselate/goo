@@ -250,17 +250,17 @@ internal unsafe class WaylandBackdrop : NativeBackdrop {
       wl_proxy_marshal_array(proxy, 0u, nil)
       wl_proxy_destroy(proxy)
     }
-    @DllImport("libwayland-client.so.0") private func wl_display_create_queue(display nint) nint;
-    @DllImport("libwayland-client.so.0") private func wl_event_queue_destroy(queue nint);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_create_wrapper(proxy nint) nint;
-    @DllImport("libwayland-client.so.0") private func wl_proxy_wrapper_destroy(proxy nint);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_set_queue(proxy nint, queue nint);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_add_listener(proxy nint, listener nint, data nint) int32;
-    @DllImport("libwayland-client.so.0") private func wl_proxy_marshal_array_constructor_versioned(proxy nint, opcode uint32, arguments * BackdropWaylandArgument, nativeInterface nint, version uint32) nint;
-    @DllImport("libwayland-client.so.0") private func wl_proxy_marshal_array(proxy nint, opcode uint32, arguments * BackdropWaylandArgument);
-    @DllImport("libwayland-client.so.0") private func wl_proxy_destroy(proxy nint);
-    @DllImport("libwayland-client.so.0") private func wl_display_roundtrip_queue(display nint, queue nint) int32;
-    @DllImport("libwayland-client.so.0") private func wl_display_dispatch_queue_pending(display nint, queue nint) int32;
-    @DllImport("libwayland-client.so.0") private func wl_display_flush(display nint) int32;
+    @DllImport("libwayland-client.so.0") internal func wl_display_create_queue(display nint) nint;
+    @DllImport("libwayland-client.so.0") internal func wl_event_queue_destroy(queue nint);
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_create_wrapper(proxy nint) nint;
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_wrapper_destroy(proxy nint);
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_set_queue(proxy nint, queue nint);
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_add_listener(proxy nint, listener nint, data nint) int32;
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_marshal_array_constructor_versioned(proxy nint, opcode uint32, arguments * BackdropWaylandArgument, nativeInterface nint, version uint32) nint;
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_marshal_array(proxy nint, opcode uint32, arguments * BackdropWaylandArgument);
+    @DllImport("libwayland-client.so.0") internal func wl_proxy_destroy(proxy nint);
+    @DllImport("libwayland-client.so.0") internal func wl_display_roundtrip_queue(display nint, queue nint) int32;
+    @DllImport("libwayland-client.so.0") internal func wl_display_dispatch_queue_pending(display nint, queue nint) int32;
+    @DllImport("libwayland-client.so.0") internal func wl_display_flush(display nint) int32;
   }
 }

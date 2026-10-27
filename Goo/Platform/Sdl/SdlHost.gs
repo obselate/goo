@@ -267,7 +267,6 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
 
   public func SetSize(width int32, height int32) {
     ThrowIfDisposed()
-    if layerWindow != nil { return }
     Require(SDL.SetWindowSize(window, width, height), "SDL_SetWindowSize")
   }
 
@@ -483,10 +482,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         Require(SDL.SetStringProperty(properties, "SDL.window.create.title", title), "SDL_SetStringProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.width", Math.Max(1, options.Width)), "SDL_SetNumberProperty")
         Require(SDL.SetNumberProperty(properties, "SDL.window.create.height", Math.Max(1, options.Height)), "SDL_SetNumberProperty")
-        Require(SDL.SetBooleanProperty(properties, "SDL.window.create.hidden", true), "SDL_SetBooleanProperty")
-        Require(SDL.SetBooleanProperty(properties, "SDL.window.create.high_pixel_density", true), "SDL_SetBooleanProperty")
-        Require(SDL.SetBooleanProperty(properties, "SDL.window.create.vulkan", !VulkanDrivers.Enabled), "SDL_SetBooleanProperty")
-        Require(SDL.SetBooleanProperty(properties, "SDL.window.create.transparent", transparent), "SDL_SetBooleanProperty")
+        Require(SDL.SetNumberProperty(properties, "SDL.window.create.flags", int64(flags)), "SDL_SetNumberProperty")
         Require(SDL.SetBooleanProperty(properties, "SDL.window.create.wayland.surface_role_custom", true), "SDL_SetBooleanProperty")
         window = SDL.CreateWindowWithProperties(properties)
       } finally { SDL.DestroyProperties(properties) }
