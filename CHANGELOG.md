@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add ImageSource.EncodePng for PNG export from premultiplied RGBA images.
+
 ## 0.20.0 - 2026-10-26
 
 - Add Shape.UseCurrentColor to fill solid shapes with inherited Color.

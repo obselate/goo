@@ -486,6 +486,7 @@ class PublicDocumentationTests {
             "M:Goo.ImageSource.Acquire",
             "M:Goo.ImageSourceProvider.Acquire",
             "M:Goo.ImageSource.Dispose",
+            "M:Goo.ImageSource.EncodePng",
             "M:Goo.ImageSource.Transfer(System.Int32,System.Int32,System.Byte[],System.Action)",
             "M:Goo.ImageSource.Decode(System.ReadOnlyMemory{System.Byte})",
             "M:Goo.ImageSource.Decode(System.ReadOnlyMemory{System.Byte},System.Threading.CancellationToken)",
@@ -1436,6 +1437,11 @@ class PublicDocumentationTests {
                 false
             ),
             ["M:Goo.ImageSource.Acquire"] = DocumentationShape(
+                System.Array.Empty[string](),
+                System.Array.Empty[string](),
+                true
+            ),
+            ["M:Goo.ImageSource.EncodePng"] = DocumentationShape(
                 System.Array.Empty[string](),
                 System.Array.Empty[string](),
                 true
