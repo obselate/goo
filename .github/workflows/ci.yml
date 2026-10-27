@@ -1368,10 +1368,47 @@ jobs:
             GOO_WINDOW_ACTIVATION_SMOKE=1 \
             dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
 
-          .github/scripts/with-headless-wayland.sh env \
-            GOO_VK_DIAGNOSTICS=1 \
-            GOO_NATIVE_POPUP_SMOKE=1 \
-            dotnet tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll
+          (
+            reports="$PWD/artifacts/reports/native-popup"
+            mkdir -p "$reports"
+            dpkg-query -W -f '${binary:Package}\t${Version}\n' weston libweston-13-0 \
+              > "$reports/packages.txt"
+            command -v gdb >/dev/null || sudo apt-get install -y --no-install-recommends gdb
+            core_pattern="$(cat /proc/sys/kernel/core_pattern)"
+            trap 'status=$?; printf "%s\n" "$core_pattern" | sudo tee /proc/sys/kernel/core_pattern >/dev/null; exit "$status"' EXIT
+            printf '%s\n' "$reports/core.%e.%p" | sudo tee /proc/sys/kernel/core_pattern >/dev/null
+            ulimit -S -c 131072
+            status=0
+            .github/scripts/with-headless-wayland.sh env \
+              GOO_VK_DIAGNOSTICS=1 \
+              GOO_NATIVE_POPUP_SMOKE=1 \
+              WAYLAND_DEBUG=client \
+              bash -c 'ulimit -c 0; exec dotnet "$@"' bash \
+              tests/Goo.AsyncReadbackSmoke/bin/Release/net10.0/Goo.AsyncReadbackSmoke.dll \
+              2> "$reports/client-protocol.log" || status=$?
+            if (( status != 0 )); then
+              cat "$reports/client-protocol.log"
+              for core in "$reports"/core.*; do
+                [[ -f "$core" ]] || continue
+                if [[ "$core" != "$reports"/core.weston.* ]]; then
+                  rm -f -- "$core"
+                  continue
+                fi
+                if DEBUGINFOD_URLS=https://debuginfod.ubuntu.com DEBUGINFOD_TIMEOUT=15 \
+                  timeout --kill-after=5s 120s gdb -q -nx -batch \
+                  -iex 'set debuginfod enabled on' \
+                  -ex 'set pagination off' -ex 'set backtrace limit 64' \
+                  -ex 'set print elements 64' -ex 'info sharedlibrary' \
+                  -ex 'thread apply all bt full' /usr/bin/weston "$core" \
+                  > "$reports/weston-backtrace.txt" 2>&1 \
+                  && grep -q '^#0 ' "$reports/weston-backtrace.txt" \
+                  && ! grep -q '??' "$reports/weston-backtrace.txt"; then
+                  rm -f -- "$core"
+                fi
+              done
+            fi
+            exit "$status"
+          )
 
           .github/scripts/with-headless-wayland.sh env \
             GOO_VK_DIAGNOSTICS=1 \

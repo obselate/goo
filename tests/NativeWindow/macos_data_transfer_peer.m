@@ -271,8 +271,11 @@ int main(int argc, const char **argv)
             if ([mode isEqualToString:@"close"]) {
                 NSRunningApplication *application =
                     [NSRunningApplication runningApplicationWithProcessIdentifier:atoi(argv[2])];
-                require(application == nil || [application isTerminated] ||
-                    [application terminate] || [application isTerminated], @"Cannot close the fixture app");
+                [application terminate];
+                NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:15];
+                while (application != nil && !application.terminated && deadline.timeIntervalSinceNow > 0)
+                    [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+                require(application == nil || application.terminated, @"Cannot close the fixture app");
                 return 0;
             }
             require(argc == 7, @"Peer requires title, effect, kind, directory and PNG");
