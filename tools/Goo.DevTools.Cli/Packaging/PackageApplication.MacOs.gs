@@ -69,29 +69,33 @@ internal shared partial class PackageApplication {
         )
         Directory.CreateSymbolicLink(Path.Combine(source, "Applications"), "/Applications")
         let artifact = Path.Combine(workspace, "${metadata.Id}-${metadata.Version}-osx-arm64.dmg")
-        await ExecuteAsync(
-            "hdiutil",
-            []string{"create", "-volname", metadata.Name, "-srcfolder", source, "-format", "UDZO", artifact},
-            workspace,
-            "package-failed"
-        )
-        for attempt in 0 ... 5 {
-            try {
-                Console.Error.Write(
-                    await ExecuteAsync(
-                        "hdiutil",
-                        []string{"verify", artifact},
-                        workspace,
-                        "package-failed",
-                        capture: true
+        for operation in []string{"create", "verify"} {
+            let arguments = if operation == "create" {
+                []string{"create", "-volname", metadata.Name, "-srcfolder", source, "-format", "UDZO", artifact}
+            } else {
+                []string{"verify", artifact}
+            }
+            for attempt in 0 ... 5 {
+                try {
+                    Console.Error.Write(
+                        await ExecuteAsync(
+                            "hdiutil",
+                            arguments,
+                            workspace,
+                            "package-failed",
+                            capture: true
+                        )
                     )
-                )
-                break
-            } catch (exception CliException) when attempt < 4 && exception.Message.Contains(
-                "Resource temporarily unavailable",
-                StringComparison.Ordinal
-            ) {
-                await Task.Delay(1000)
+                    break
+                } catch (exception CliException) when attempt < 4 && (
+                    exception.Message.Contains("Resource busy", StringComparison.Ordinal) ||
+                        exception.Message.Contains("Resource temporarily unavailable", StringComparison.Ordinal)
+                ) {
+                    if operation == "create" {
+                        File.Delete(artifact)
+                    }
+                    await Task.Delay(1000)
+                }
             }
         }
         return artifact
