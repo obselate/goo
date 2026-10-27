@@ -5,6 +5,7 @@ import System
 import System.Collections.Generic
 import System.IO
 import System.Linq
+import System.Threading.Tasks
 
 internal shared partial class PackageApplication {
     private async func PackageMacOsAsync(publish string, workspace string, symbols string, metadata Metadata) string {
@@ -74,7 +75,25 @@ internal shared partial class PackageApplication {
             workspace,
             "package-failed"
         )
-        await ExecuteAsync("hdiutil", []string{"verify", artifact}, workspace, "package-failed")
+        for attempt in 0 ... 5 {
+            try {
+                Console.Error.Write(
+                    await ExecuteAsync(
+                        "hdiutil",
+                        []string{"verify", artifact},
+                        workspace,
+                        "package-failed",
+                        capture: true
+                    )
+                )
+                break
+            } catch (exception CliException) when attempt < 4 && exception.Message.Contains(
+                "Resource temporarily unavailable",
+                StringComparison.Ordinal
+            ) {
+                await Task.Delay(1000)
+            }
+        }
         return artifact
     }
 }
