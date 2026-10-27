@@ -234,6 +234,7 @@ internal unsafe partial class SdlRuntime {
                 "Goo requires native Wayland on Linux, but SDL rejected the Wayland video driver selection.")
             }
           SDL.SetHint(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")
+          SDL.SetHint(SDL.SDL_HINT_QUIT_ON_LAST_WINDOW_CLOSE, "0")
           if !SDL.InitSubSystem(requiredSubsystems) {
             if requiresWayland {
               throw PlatformNotSupportedException(
