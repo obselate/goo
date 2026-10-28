@@ -125,7 +125,7 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
       srcStageMask,
       srcAccessMask,
       VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-      VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
+      VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VkConstants.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
     imageLayout = VkConstants.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
   }
 
