@@ -157,6 +157,11 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
     }
 
     internal func TryAcquire() VulkanSharedLease? {
+      if current?.DeviceLost == true {
+        if !VulkanDeviceRecoveryCoordinator.Recover(VkConstants.VK_ERROR_DEVICE_LOST) {
+          throw InvalidOperationException("Vulkan device recovery failed")
+        }
+      }
       if let owner = current {
         if owner.DeviceLost {
           throw InvalidOperationException("Vulkan shared runtime device is lost")
