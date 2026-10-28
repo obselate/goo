@@ -77,7 +77,7 @@ internal unsafe sealed partial class VulkanTextScene {
         bounds.Height = nextBottom - nextTop
       }
       segment.Records[index].transform_m31 = originY
-      segment.Records[index].runOrigin_y = 0.0F * record.runOrigin_x + baseline + 0.0F
+      segment.Records[index].runOrigin_y = baseline
     }
     segment.Bounds = bounds
     segment.Baseline = baseline
