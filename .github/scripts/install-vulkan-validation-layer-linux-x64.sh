@@ -17,10 +17,12 @@ test "$(uname -s)" = "Linux"
 test "$(uname -m)" = "x86_64"
 test ! -e "$install_root"
 mkdir -p "$root" "$install_root"
-curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
-  --connect-timeout 20 --max-time 120 \
-  --output "$archive" \
-  "https://packages.lunarg.com/vulkan/1.4.313/pool/main/v/vulkan-validationlayers/vulkan-validationlayers_${version}_amd64.deb"
+if [[ ! -f "$archive" ]]; then
+  curl --fail --location --retry 5 --retry-all-errors --retry-delay 2 \
+    --connect-timeout 20 --speed-limit 1024 --speed-time 30 \
+    --output "$archive" \
+    "https://packages.lunarg.com/vulkan/1.4.313/pool/main/v/vulkan-validationlayers/vulkan-validationlayers_${version}_amd64.deb"
+fi
 echo "b100bfafac3df98c5d8ef5a572b423bcd9ebf3fab963e2e68957f4bf6f2423f0  $archive" \
   | sha256sum --check -
 test "$(dpkg-deb --field "$archive" Package)" = "vulkan-validationlayers"

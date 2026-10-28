@@ -586,6 +586,13 @@ jobs:
           test -f "${icds[0]}"
           echo "VK_DRIVER_FILES=${icds[0]}" >> "$GITHUB_ENV"
 
+      - name: Restore pinned Vulkan validation layer archive
+        if: needs.changes.outputs.full == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ runner.temp }}/goo-vulkan-validation-layer/vulkan-validationlayers_1.4.313.0~rc2-1lunarg24.04-1_amd64.deb
+          key: vulkan-validation-layer-linux-x64-${{ hashFiles('.github/scripts/install-vulkan-validation-layer-linux-x64.sh') }}
+
       - name: Install pinned Vulkan validation layer
         if: needs.changes.outputs.full == 'true'
         run: |
