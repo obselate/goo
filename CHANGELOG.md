@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reduce large backdrop blur work with a two-axis downsample pyramid.
+
 ## 0.22.1 - 2026-10-27
 
 - Release cached GPU images before reclaiming dead image-provider identities.
