@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Improve backdrop copy performance by skipping clears when the copy overwrites the full destination.
+- Skip fully overwritten backdrop clears and synchronize resumed color attachment loads.
 
 ## 0.23.0 - 2026-10-28
 
