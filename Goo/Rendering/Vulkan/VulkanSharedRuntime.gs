@@ -285,7 +285,6 @@ internal unsafe sealed class VulkanSharedRuntime : IDisposable {
             createdPipelineCache,
             createdImageResources,
             generationSeed,
-            nativeFacts.DeviceType == int32(VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU),
             nativeSharedObjectAccounting)
           primitiveState = createdPrimitiveState
           let retainedPathIdentities = if let retained = logicalPathIdentityRegistry {

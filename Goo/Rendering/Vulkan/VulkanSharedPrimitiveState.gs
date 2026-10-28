@@ -288,11 +288,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       shaderEffectPipelines = [ShaderEffectCapacity]VulkanShaderEffectPipelineEntry?
       shaderEffectPipelineAliases = ConditionalWeakTable[ShaderEffectProgram,
         VulkanShaderEffectPipelineEntry]()
-      ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
-        pipelineLayout, true, true)
     }
   internal func MaterializePipelines() {
     ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
+      pipelineLayout, true, true)
+    ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
       pipelineLayout, true, true)
     ResolvePipeline(ref borderPipeline, analyticVertexModule, borderModule,
       pipelineLayout, true, true)
@@ -488,7 +488,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private let generation uint64
   private let formatStates []VulkanSharedPrimitiveFormatState?
   private let clipPipelineGate object
-  private let eagerPipelineCreation bool
   private var vertexModule VkShaderModule
   private var solidModule VkShaderModule
   private var shadowModule VkShaderModule
@@ -619,7 +618,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     nativePipelineCache VulkanPipelineCache,
     nativeImageResources VulkanImageResources,
     nativeGeneration uint64,
-    createPipelinesEagerly bool,
     nativeObjectAccounting VulkanObjectAccounting?) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
@@ -639,7 +637,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       imageResources = nativeImageResources
       objectAccounting = nativeObjectAccounting
       generation = nativeGeneration
-      eagerPipelineCreation = createPipelinesEagerly
       formatStates = [FormatCapacity]VulkanSharedPrimitiveFormatState?
       clipPipelineGate = Object()
       let vertexCode = LoadShaderCode("analytic.vert.spv")
@@ -683,10 +680,10 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         pathPipelineLayout = CreatePathPipelineLayout()
         textPipelineLayout = CreateTextPipelineLayout()
         clipMaskPipelineLayout = CreateClipMaskPipelineLayout()
-        if eagerPipelineCreation {
-          clipMaskR8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8_UNORM)
-          clipMaskRgba8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-        }
+        clipMaskR8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8_UNORM)
+        clipMaskRgba8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB)
       } catch (error Exception) {
         Dispose()
         throw error
@@ -729,10 +726,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       textFragmentModule,
       textPaintFragmentModule,
       objectAccounting)
-    if eagerPipelineCreation {
-      created.MaterializePipelines()
-    }
     formatStates[slot] = created
+    created.MaterializePipelines()
     return created
   }
 
