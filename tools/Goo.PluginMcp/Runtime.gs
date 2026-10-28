@@ -334,7 +334,7 @@ partial class GooServer {
 
     data class ProcessResult(Code int32, Output string, Error string) { }
     shared {
-        const Recovery string = "Run `dotnet tool update --global Goo.DevTools --version 0.23.0`. Set GOO_CLI only when testing a compatible source build."
+        const Recovery string = "Run `dotnet tool update --global Goo.DevTools --version 0.23.1`. Set GOO_CLI only when testing a compatible source build."
 
         func Truthy(value JsonNode?) bool {
             if value == nil {
