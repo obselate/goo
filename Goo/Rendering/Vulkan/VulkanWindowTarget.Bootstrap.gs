@@ -658,6 +658,7 @@ internal unsafe partial class VulkanWindowTarget {
       VendorId: properties.vendorID,
       DeviceId: properties.deviceID,
       DeviceType: properties.deviceType,
+      DeviceName: Marshal.PtrToStringUTF8(nint(&properties.deviceName[0])) ?? "",
       TimestampValidBits: timestampValidBits,
       TimestampPeriod: timestampPeriod,
       TimestampComputeAndGraphics: timestampComputeAndGraphics,

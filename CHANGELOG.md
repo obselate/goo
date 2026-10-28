@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expose the selected rendering device and observed window occlusion with UI-thread notifications.
 - Recover the shared Vulkan device when opening a window while all existing windows are hidden.
 - Keep damage clipping inside offscreen opacity and rounded-overflow layers.
 

@@ -33,6 +33,7 @@ internal interface WindowHost {
   event StateChanged Action[WindowState]
   event FocusChanged Action[bool]
   event VisibilityChanged Action
+  event OcclusionChanged Action[WindowOcclusion]
   event PreferencesChanged Action[PlatformPreferences]
   event CloseRequested Action[WindowCloseReason]
   event Closed Action?

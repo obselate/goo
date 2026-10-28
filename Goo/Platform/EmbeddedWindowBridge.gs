@@ -3,7 +3,7 @@ package Goo
 import System
 import System.Collections.Generic
 
-internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
+internal partial class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   private let host EmbeddedWindowHost
   internal let Owner Window
   private var closing bool
@@ -15,6 +15,7 @@ internal class EmbeddedWindowBridge : WindowHost, VulkanSurfaceHost {
   public event StateChanged Action[WindowState]
   public event FocusChanged Action[bool]
   public event VisibilityChanged Action
+  public event OcclusionChanged Action[WindowOcclusion]
   public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action[WindowCloseReason]
   public event Closed Action?
