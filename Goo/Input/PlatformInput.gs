@@ -137,7 +137,7 @@ public class PlatformInput {
     modifiers KeyModifiers) {
       requireInput(false)
       input.QueuePointerWheel(x / owner.UiScale, y / owner.UiScale, deltaX, deltaY, modifiers)
-      drain()
+      drain(false)
     }
 
   /// Dispatches a physical key press through the existing keyboard routing.
@@ -277,18 +277,19 @@ public class PlatformInput {
     if owner.IsInputBlocked { throw InvalidOperationException("Window input is blocked by its modal child") }
   }
 
-  private func drain() {
+  private func drain(invalidate bool = true) {
+    var changed = invalidate
     try {
       let nowTicks = Stopwatch.GetTimestamp()
-      input.Drain(owner.Tree, resolver, float64(nowTicks) / float64(Stopwatch.Frequency),
-        owner.PlatformKeyPressedCallbacks, owner.IsOpen ? nowTicks : 0)
-    } finally { finish() }
+      changed = input.Drain(owner.Tree, resolver, float64(nowTicks) / float64(Stopwatch.Frequency),
+        owner.PlatformKeyPressedCallbacks, owner.IsOpen ? nowTicks : 0) || changed
+    } finally { finish(changed) }
   }
 
-  private func finish() {
+  private func finish(invalidate bool = true) {
     if input.IsDispatching { return }
     resolver.Flush()
-    owner.InvalidatePlatformInput()
+    if invalidate { owner.InvalidatePlatformInput() }
     Refresh()
   }
 }

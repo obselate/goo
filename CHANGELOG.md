@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Avoid repainting platform wheel input when the scroll offset and visual state do not change.
+
 ## 0.22.3 - 2026-10-28
 
 - Read configured fallback fonts in the background before their first layout.
