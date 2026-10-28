@@ -41,6 +41,51 @@ internal unsafe sealed partial class VulkanTextScene {
         && SameTextFloat(segment.ParentTransform.TY, parentTransform.TY)
     }
 
+  private func MoveSegmentBaseline(
+    segment VulkanRetainedTextSegment,
+    baseline float32) bool {
+    if !FiniteValue(baseline) || segment.Version == uint64.MaxValue { return false }
+    let validated = segment.SceneValidationVersion == segment.Version
+    var bounds = segment.Bounds
+    for index in 0 ... segment.RecordCount {
+      let record = segment.Records[index]
+      let originY = baseline - segment.GlyphPointY[index]
+      let y0 = record.transform_m01 * record.glyphBounds_x
+        + record.transform_m11 * record.glyphBounds_y + originY
+      let y1 = record.transform_m01 * record.glyphBounds_z
+        + record.transform_m11 * record.glyphBounds_y + originY
+      let y2 = record.transform_m01 * record.glyphBounds_x
+        + record.transform_m11 * record.glyphBounds_w + originY
+      let y3 = record.transform_m01 * record.glyphBounds_z
+        + record.transform_m11 * record.glyphBounds_w + originY
+      let top = MathF.Min(MathF.Min(y0, y1), MathF.Min(y2, y3))
+      let bottom = MathF.Max(MathF.Max(y0, y1), MathF.Max(y2, y3))
+      if !FiniteValue(originY) || !FiniteValue(top)
+        || !FiniteValue(bottom) || bottom <= top {
+        segment.Shape = nil
+        return false
+      }
+      let glyphTop = top - 1.0F
+      let glyphHeight = bottom - top + 2.0F
+      if index == 0 {
+        bounds.Y = glyphTop
+        bounds.Height = glyphHeight
+      } else {
+        let nextTop = MathF.Min(bounds.Y, glyphTop)
+        let nextBottom = MathF.Max(bounds.Bottom, glyphTop + glyphHeight)
+        bounds.Y = nextTop
+        bounds.Height = nextBottom - nextTop
+      }
+      segment.Records[index].transform_m31 = originY
+      segment.Records[index].runOrigin_y = 0.0F * record.runOrigin_x + baseline + 0.0F
+    }
+    segment.Bounds = bounds
+    segment.Baseline = baseline
+    segment.Version += 1uL
+    if validated { segment.SceneValidationVersion = segment.Version }
+    return true
+  }
+
   private func GetNodeSegmentCache(node Node, gutter bool = false) VulkanTextNodeSegmentCache {
     let table = gutter ? gutterSegments : nodeSegments
     if table.TryGetValue(node, out var existing) {
@@ -80,6 +125,7 @@ internal unsafe sealed partial class VulkanTextScene {
     }
     let workspace = buildWorkspace
     if segment.Version != 0uL && SameSegmentContent(segment, workspace) {
+      Array.Copy(workspace.GlyphPointY, segment.GlyphPointY, workspace.RecordCount)
       return
     }
     if segment.Version == uint64.MaxValue {
@@ -94,6 +140,7 @@ internal unsafe sealed partial class VulkanTextScene {
     Array.Copy(workspace.Records, segment.Records, workspace.RecordCount)
     Array.Copy(workspace.GlyphResources, segment.GlyphResources,
       workspace.GlyphResourceCount)
+    Array.Copy(workspace.GlyphPointY, segment.GlyphPointY, workspace.RecordCount)
     Array.Copy(workspace.GlyphAtlasTexelOffsets, segment.GlyphAtlasTexelOffsets,
       workspace.GlyphResourceCount)
     Array.Copy(workspace.GlyphAtlasTexelCounts, segment.GlyphAtlasTexelCounts,

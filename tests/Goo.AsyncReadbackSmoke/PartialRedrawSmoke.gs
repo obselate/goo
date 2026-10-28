@@ -50,7 +50,7 @@ class PartialPlainCell : Cell {
     Text{
       Position: PositionType.Absolute,
       Left: 256,
-      Top: 30,
+      Top: Step >= 2 ? 31.25 : 30,
       Content: "Over a box",
       FontFamily: "ReadbackGateFont",
       FontSize: 16,
