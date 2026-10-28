@@ -104,6 +104,16 @@ internal unsafe sealed partial class VulkanTextScene {
           frame.AddCachedTextSegment(segment.CreateReference())
           return true
         }
+      if activeSegmentReuse && parentTransformIndex == -1
+        && segment.BaselineReusable && effectMode == TextEffectFill
+        && IsExactSegmentHit(segment, frame, shape,
+          fontSize, lineX, segment.Baseline, color, effectMode, effectRadiusPixels,
+          effectOffsetX, effectOffsetY, parentTransform)
+        && ProtectSegmentAtlases(segment)
+        && MoveSegmentBaseline(segment, baseline) {
+        frame.AddCachedTextSegment(segment.CreateReference())
+        return true
+      }
       buildWorkspace.BeginBuild(ResourceGeneration, frame.ActiveClipChainId)
       let workspace = buildWorkspace
       let parentScale = ParentTransformMinimumScale(frame, parentTransformIndex)
@@ -234,6 +244,7 @@ internal unsafe sealed partial class VulkanTextScene {
               }
               let recordIndex = workspace.RecordCount
               workspace.EnsureRecordCapacity(recordIndex + 1)
+              workspace.GlyphPointY[recordIndex] = point.Y
               var foregroundR float32
               var foregroundG float32
               var foregroundB float32
@@ -321,6 +332,7 @@ internal unsafe sealed partial class VulkanTextScene {
         segment.EffectOffsetX = effectOffsetX
         segment.EffectOffsetY = effectOffsetY
         segment.ParentTransform = parentTransform
+        segment.BaselineReusable = parentTransformIndex == -1
         frame.AddCachedTextSegment(segment.CreateReference())
       }
       return result

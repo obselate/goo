@@ -12,6 +12,7 @@ internal struct VulkanTextSegmentRun {
 
 internal open class VulkanTextSegmentStorage {
   internal var Records []HbGpuTextInstanceRecord
+  internal var GlyphPointY []float32
   internal var RecordCount int32
   internal var Runs []VulkanTextSegmentRun
   internal var RunCount int32
@@ -30,6 +31,7 @@ internal open class VulkanTextSegmentStorage {
     var resolvedCapacity = capacity
     if resolvedCapacity <= 0 { resolvedCapacity = 1 }
     Records = [resolvedCapacity]HbGpuTextInstanceRecord
+    GlyphPointY = [resolvedCapacity]float32
     Runs = [1]VulkanTextSegmentRun
     GlyphResources = [resolvedCapacity]ResourceId
     GlyphAtlasTexelOffsets = [resolvedCapacity]uint32
@@ -42,18 +44,21 @@ internal open class VulkanTextSegmentStorage {
     if required <= Records.Length { return }
     let next = ArrayGrowthCapacity(Records.Length, required, 1)
     let expandedRecords = [next]HbGpuTextInstanceRecord
+    let expandedPointY = [next]float32
     let expandedResources = [next]ResourceId
     let expandedOffsets = [next]uint32
     let expandedCounts = [next]uint32
     let expandedEffectOffsets = [next]uint32
     let expandedEffectCounts = [next]uint32
     Array.Copy(Records, expandedRecords, RecordCount)
+    Array.Copy(GlyphPointY, expandedPointY, RecordCount)
     Array.Copy(GlyphResources, expandedResources, GlyphResourceCount)
     Array.Copy(GlyphAtlasTexelOffsets, expandedOffsets, GlyphResourceCount)
     Array.Copy(GlyphAtlasTexelCounts, expandedCounts, GlyphResourceCount)
     Array.Copy(GlyphEffectAtlasTexelOffsets, expandedEffectOffsets, GlyphResourceCount)
     Array.Copy(GlyphEffectAtlasTexelCounts, expandedEffectCounts, GlyphResourceCount)
     Records = expandedRecords
+    GlyphPointY = expandedPointY
     GlyphResources = expandedResources
     GlyphAtlasTexelOffsets = expandedOffsets
     GlyphAtlasTexelCounts = expandedCounts
@@ -83,6 +88,7 @@ internal sealed class VulkanRetainedTextSegment : VulkanTextSegmentStorage {
   internal var EffectOffsetX float32
   internal var EffectOffsetY float32
   internal var ParentTransform TransformRecord
+  internal var BaselineReusable bool
   internal var SceneValidationVersion uint64
   internal var RendererValidationVersion uint64
   internal var RendererValidationAtlasGeneration uint64
