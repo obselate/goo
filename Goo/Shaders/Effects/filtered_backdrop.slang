@@ -15,21 +15,17 @@ float4 gooEffect(float2 uv, float4 source, float4 backdrop)
     {
         return gooSourceTexture.SampleLevel(clamp(uv, edge, 1.0 - edge), 0.0);
     }
-    bool vertical = control.z == 1.0 || control.z == 3.0;
-    float2 axis = vertical ? float2(0.0, texel.y) : float2(texel.x, 0.0);
-    float4 total = gooSourceTexture.SampleLevel(uv, 0.0);
     if (control.z >= 2.0)
     {
-        total *= 70.0 / 256.0;
-        static const float weights[4] = {56.0 / 256.0, 28.0 / 256.0, 8.0 / 256.0, 1.0 / 256.0};
-        for (int pair = 0; pair < 4; pair++)
-        {
-            float2 offset = axis * float(2 * (pair + 1));
-            total += (gooSourceTexture.SampleLevel(clamp(uv + offset, edge, 1.0 - edge), 0.0)
-                + gooSourceTexture.SampleLevel(clamp(uv - offset, edge, 1.0 - edge), 0.0)) * weights[pair];
-        }
-        return total;
+        float2 offset = texel * control.xy;
+        return (gooSourceTexture.SampleLevel(clamp(uv + offset, edge, 1.0 - edge), 0.0)
+            + gooSourceTexture.SampleLevel(clamp(uv - offset, edge, 1.0 - edge), 0.0)
+            + gooSourceTexture.SampleLevel(clamp(uv + float2(offset.x, -offset.y), edge, 1.0 - edge), 0.0)
+            + gooSourceTexture.SampleLevel(clamp(uv + float2(-offset.x, offset.y), edge, 1.0 - edge), 0.0)) * 0.25;
     }
+    bool vertical = control.z == 1.0;
+    float2 axis = vertical ? float2(0.0, texel.y) : float2(texel.x, 0.0);
+    float4 total = gooSourceTexture.SampleLevel(uv, 0.0);
     float sigma = max(vertical ? control.y : control.x, 0.001);
     float weight = 1.0;
     float ratio = exp(-0.5 / (sigma * sigma));

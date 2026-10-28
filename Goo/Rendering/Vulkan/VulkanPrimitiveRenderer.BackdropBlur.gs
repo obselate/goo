@@ -56,36 +56,45 @@ internal unsafe partial class VulkanPrimitiveRenderer {
             VulkanDiagnosticTimestampStage.Effects,
             VkConstants.VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT)
         try {
+            var scale = Vector2.One
+            var variance = Vector2.Zero
+            while extent.width > 1u || extent.height > 1u {
+                let nextWidth = (extent.width + 1u) / 2u
+                let nextHeight = (extent.height + 1u) / 2u
+                let nextScale = Vector2(float32(paddedWidth) / float32(nextWidth),
+                    float32(paddedHeight) / float32(nextHeight))
+                let nextVariance = variance + 1.25F * scale * scale
+                let interpolation = (nextScale * nextScale + Vector2(0.5F)) / 6.0F
+                let downX = extent.width > 1u && nextVariance.X + interpolation.X <= 0.81F * sigma.X * sigma.X
+                let downY = extent.height > 1u && nextVariance.Y + interpolation.Y <= 0.81F * sigma.Y * sigma.Y
+                if !downX && !downY { break }
+                if downX {
+                    extent.width = nextWidth
+                    scale.X = nextScale.X
+                    variance.X = nextVariance.X
+                }
+                if downY {
+                    extent.height = nextHeight
+                    scale.Y = nextScale.Y
+                    variance.Y = nextVariance.Y
+                }
+                let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
+                    Vector4(downX ? 1.0F: 0.0F, downY ? 1.0F: 0.0F, 2.0F, 0.0F), mapping)
+                if let previous = source {
+                    if previous != captured { pool.ReleaseForReuse(previous) }
+                }
+                source = target
+                mapping = identity
+            }
             for axis in 0 ... 2 {
                 let horizontal = axis == 0
-                let original = float32(horizontal ? paddedWidth : paddedHeight)
-                let requested = horizontal ? sigma.X : sigma.Y
-                var dimension = horizontal ? extent.width : extent.height
-                var scale = 1.0F
-                var variance = 0.0F
-                while dimension > 1u {
-                    let nextDimension = (dimension + 1u) / 2u
-                    let nextScale = original / float32(nextDimension)
-                    let nextVariance = variance + 8.25F * scale * scale
-                    let interpolationVariance = (nextScale * nextScale + 0.5F) / 6.0F
-                    if nextVariance + interpolationVariance > 0.81F * requested * requested {
-                        break
-                    }
-                    if horizontal { extent.width = nextDimension } else { extent.height = nextDimension }
-                    let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
-                        Vector4(0.0F, 0.0F, float32(axis + 2), 0.0F), mapping)
-                    if let previous = source {
-                        if previous != captured { pool.ReleaseForReuse(previous) }
-                    }
-                    source = target
-                    mapping = identity
-                    dimension = nextDimension
-                    variance = nextVariance
-                    scale = nextScale
-                }
-                let interpolationVariance = if scale > 1.0F { (scale * scale + 0.5F) / 6.0F } else { 0.0F }
+                let requested = horizontal ? sigma.X: sigma.Y
+                let dimension = horizontal ? extent.width: extent.height
+                let axisScale = horizontal ? scale.X: scale.Y
+                let axisVariance = horizontal ? variance.X: variance.Y
+                let interpolationVariance = if axisScale > 1.0F { (axisScale * axisScale + 0.5F) / 6.0F } else { 0.0F }
                 let residual = if dimension == 1u { 0.0F } else {
-                    MathF.Sqrt(MathF.Max(0.0F, requested * requested - variance - interpolationVariance)) / scale
+                    MathF.Sqrt(MathF.Max(0.0F, requested * requested - axisVariance - interpolationVariance)) / axisScale
                 }
                 let target = RenderBackdropBlurPass(commandBuffer, extent, source, blur,
                     Vector4(residual, residual, float32(axis), 0.0F), mapping)
