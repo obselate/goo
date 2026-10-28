@@ -680,18 +680,20 @@ internal partial class TextShaping {
           Interlocked.Increment(&primaryFaceDisposals)
         }
       }
-      PreloadFallbacks(families, weight, italic)
+      PreloadFallbacks(families, weight, italic, lease.Family)
       return lease
     }
 
-    private func PreloadFallbacks(families string, weight int32, italic bool) {
+    private func PreloadFallbacks(families string, weight int32, italic bool, primaryFamily string) {
       if families.IndexOf(',') < 0 { return }
+      let primaryName = normalizeFamily(primaryFamily)
       lock PrimaryFacesLock {
         if pendingFallbackPreloads >= PrimaryFaceCacheCapacity { return }
         pendingFallbackPreloads++
         fallbackPreload = fallbackPreload.ContinueWith((previous Task) -> {
           try {
             for name in SplitFamilies(families) {
+              if normalizeFamily(name) == primaryName { continue }
               using let face = ResolveCachedPrimary(name, weight, italic)
             }
           } finally {

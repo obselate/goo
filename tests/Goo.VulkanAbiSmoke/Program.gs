@@ -226,30 +226,32 @@ internal shared class Program {
         if explicitWeight.Width != light.Width {
             throw InvalidOperationException("Explicit font variations were replaced by the requested weight")
         }
-        let families = source.Family + ", " + family
-        for weight in []int32{400, 700} {
-            TextShaping.Metrics(families, 14f, weight, false)
-            TextShaping.FallbackPreloadForTests().GetAwaiter().GetResult()
-        }
-        let retainedPath = Path.Combine(home, ".fonts", family + ".ttf")
-        File.Move(retainedPath, retainedPath + ".retained")
-        try {
-            for pass in 0 ... 8 {
-                for weight in []int32{400, 700} {
-                    let text = "备注 页面切换输入 " + pass.ToString()
-                    if TextShaping.MeasureLineUncached(text, 0, text.Length, families, 14f, weight, false, 0f, 1) <= 0f {
-                        throw InvalidOperationException("Mixed-weight fallback layout did not retain its font")
+        for families in []string{source.Family + ", " + family, family + ", MissingPreloadFixture"} {
+            for weight in []int32{400, 700} {
+                TextShaping.Metrics(families, 14f, weight, false)
+                TextShaping.FallbackPreloadForTests().GetAwaiter().GetResult()
+            }
+            let retainedPath = Path.Combine(home, ".fonts", family + ".ttf")
+            File.Move(retainedPath, retainedPath + ".retained")
+            try {
+                for pass in 0 ... 8 {
+                    for weight in []int32{400, 700} {
+                        let text = "备注 页面切换输入 " + pass.ToString()
+                        if TextShaping.MeasureLineUncached(text, 0, text.Length,
+                            families, 14f, weight, false, 0f, 1) <= 0f {
+                            throw InvalidOperationException("Mixed-weight fallback layout did not retain its font")
+                        }
                     }
                 }
+                if TextShaping.PrimaryFaceCacheBytesForTests() > TextShaping.PrimaryFaceCacheByteBudgetForTests() {
+                    throw InvalidOperationException("Mixed-weight fallback cache exceeded its byte budget")
+                }
+            } finally {
+                File.Move(retainedPath + ".retained", retainedPath)
             }
-            if TextShaping.PrimaryFaceCacheBytesForTests() > TextShaping.PrimaryFaceCacheByteBudgetForTests() {
-                throw InvalidOperationException("Mixed-weight fallback cache exceeded its byte budget")
-            }
-        } finally {
-            File.Move(retainedPath + ".retained", retainedPath)
         }
         Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE backgroundPreload=1 warmFileRemoved=1"
-            + " layouts=16 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
+            + " layouts=32 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
         Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
             + " semibold=" + semibold.Width.ToString() + " clamp=1 fallback=1 explicit=1")
     }
