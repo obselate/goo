@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep damage clipping inside offscreen opacity and rounded-overflow layers.
+
 ## 0.22.3 - 2026-10-28
 
 - Read configured fallback fonts in the background before their first layout.
