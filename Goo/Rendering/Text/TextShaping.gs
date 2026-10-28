@@ -52,7 +52,7 @@ internal partial class TextShaping {
     private var primaryFaceDisposals int32
     private var primaryFaceCacheBytes int64
     private const PrimaryFaceCacheCapacity int32 = 64
-    private const PrimaryFaceCacheByteBudget int64 = 33554432L
+    private const PrimaryFaceCacheByteBudget int64 = 50331648L
     private const ShapingWorkspaceRetainedCapacity int32 = 4096
     @ThreadStatic
     private var shapingWorkspace VulkanTextShapingWorkspace?
