@@ -98,6 +98,14 @@ only when the compositor supports `xdg-toplevel-icon-v1`.
 the mounted tree, cancels transient input and suspends presentation. Callbacks and
 timers still run while hidden. Hidden windows remain open until closed.
 
+Initial presentation waits for pending images for up to 500 ms. Layer-shell windows
+repeat this wait after `Show`. Later frames keep asynchronous image updates.
+After that budget, presentation proceeds even if an image is not ready. In-flight
+GPU work must still finish before the next frame can be presented.
+
+Layer-shell windows require protocol version 2 or newer. `Hide` retains the native
+layer role. `Show` restores its layer and placement before mapping it again.
+
 `Show`, `Hide` and `RequestActivation` return `WindowOperationResult`: `Accepted`, `Closed`,
 `Unsupported` or `Failed`. Accepted means the native request was submitted.
 Observe `IsVisible` and `VisibilityChanged` for visibility, and `IsFocused` and
