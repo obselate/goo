@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recover the shared Vulkan device when opening a window while all existing windows are hidden.
+
 ## 0.22.2 - 2026-10-28
 
 - Reduce large backdrop blur work with a two-axis downsample pyramid.
