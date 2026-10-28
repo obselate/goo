@@ -197,6 +197,7 @@ internal unsafe partial class VulkanWindowTarget {
     }
     if let activeRuntime = runtime {
       if activeRuntime.DeviceLost || activeRuntime.Terminal {
+        CancelDeferredInitialFrame()
         return
       }
       if frameRenderDeferred && activeRuntime.HasUnsubmittedRecordedSharedUpload {

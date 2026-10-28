@@ -33,7 +33,7 @@ internal unsafe partial class VulkanWindowTarget {
     AbortUnsubmittedTextUpload()
     AbortUnsubmittedImageUploads()
     AbortUnsubmittedPathUpload()
-    AbandonRecordedFrameForRetry()
+    if runtime?.DeviceLost != true && runtime?.Terminal != true { AbandonRecordedFrameForRetry() }
     CloseDiagnosticFrame(false)
     ClearActiveFrame()
   }
