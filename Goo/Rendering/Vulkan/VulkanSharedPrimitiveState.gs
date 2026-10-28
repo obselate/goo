@@ -78,7 +78,7 @@ internal sealed class VulkanShaderEffectPipelineEntry {
 }
 
 internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposable {
-  private const ShaderEffectCapacity int32 = 32
+  private const ShaderEffectCapacity int32 = 32 + 2
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let pipelineCache VulkanPipelineCache
@@ -304,6 +304,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       pipelineLayout, true, true)
     ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
       blendPipelineLayout, true, true)
+    ResolvePipeline(ref clipCompositePipeline, analyticVertexModule, blendModule,
+      blendPipelineLayout, false, true)
     ResolvePipeline(ref pathPipeline, pathVertexModule, pathFragmentModule,
       pathPipelineLayout, true, false)
     ResolvePipeline(ref textPipeline, textVertexModule, textFragmentModule,
@@ -488,7 +490,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
   private let generation uint64
   private let formatStates []VulkanSharedPrimitiveFormatState?
   private let clipPipelineGate object
-  private let eagerPipelineCreation bool
   private var vertexModule VkShaderModule
   private var solidModule VkShaderModule
   private var shadowModule VkShaderModule
@@ -619,7 +620,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
     nativePipelineCache VulkanPipelineCache,
     nativeImageResources VulkanImageResources,
     nativeGeneration uint64,
-    createPipelinesEagerly bool,
     nativeObjectAccounting VulkanObjectAccounting?) {
       if nativeDevice == nint(0) {
         throw ArgumentException("Vulkan device is null", "nativeDevice")
@@ -639,7 +639,6 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       imageResources = nativeImageResources
       objectAccounting = nativeObjectAccounting
       generation = nativeGeneration
-      eagerPipelineCreation = createPipelinesEagerly
       formatStates = [FormatCapacity]VulkanSharedPrimitiveFormatState?
       clipPipelineGate = Object()
       let vertexCode = LoadShaderCode("analytic.vert.spv")
@@ -683,10 +682,17 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         pathPipelineLayout = CreatePathPipelineLayout()
         textPipelineLayout = CreateTextPipelineLayout()
         clipMaskPipelineLayout = CreateClipMaskPipelineLayout()
-        if eagerPipelineCreation {
-          clipMaskR8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8_UNORM)
-          clipMaskRgba8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-        }
+        clipMaskR8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8_UNORM)
+        clipMaskRgba8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
+        using let backdrop = typeof(VulkanSharedPrimitiveState).Assembly.GetManifestResourceStream(
+          "Goo.Effects.filtered_backdrop.goo-effect")
+        if backdrop == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
+        let blur = ShaderEffect(ShaderEffectProgram(
+          BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(blur)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(blur)
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       } catch (error Exception) {
         Dispose()
         throw error
@@ -729,10 +735,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
       textFragmentModule,
       textPaintFragmentModule,
       objectAccounting)
-    if eagerPipelineCreation {
-      created.MaterializePipelines()
-    }
     formatStates[slot] = created
+    created.MaterializePipelines()
     return created
   }
 

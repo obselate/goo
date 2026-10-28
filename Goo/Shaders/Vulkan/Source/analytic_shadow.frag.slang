@@ -99,6 +99,14 @@ float shapeMaskSample(float2 screenPoint)
     return clamp(gooClipMaskAtlas.Sample(float3(atlasUv, float(layer))).r, 0.0, 1.0);
 }
 
+static const float2 shadowOffsets[8] =
+{
+    float2(1.0, 0.0), float2(-1.0, 0.0),
+    float2(0.0, 1.0), float2(0.0, -1.0),
+    float2(1.0, 1.0), float2(-1.0, 1.0),
+    float2(1.0, -1.0), float2(-1.0, -1.0)
+};
+
 float shapeMaskSpread(float2 point, float spread)
 {
     float center = shapeMaskSample(point);
@@ -107,30 +115,13 @@ float shapeMaskSpread(float2 point, float spread)
         return center;
     }
     float distance = abs(spread);
-    float horizontal;
-    float vertical;
-    float diagonal;
-    if (spread > 0.0)
+    [loop]
+    for (int index = 0; index < 8; index++)
     {
-        horizontal = max(shapeMaskSample(point + float2(distance, 0.0)),
-            shapeMaskSample(point - float2(distance, 0.0)));
-        vertical = max(shapeMaskSample(point + float2(0.0, distance)),
-            shapeMaskSample(point - float2(0.0, distance)));
-        diagonal = max(shapeMaskSample(point + float2(distance, distance)),
-            shapeMaskSample(point + float2(-distance, distance)));
-        diagonal = max(diagonal, shapeMaskSample(point + float2(distance, -distance)));
-        diagonal = max(diagonal, shapeMaskSample(point - float2(distance, distance)));
-        return max(center, max(max(horizontal, vertical), diagonal));
+        float coverage = shapeMaskSample(point + shadowOffsets[index] * distance);
+        center = spread > 0.0 ? max(center, coverage) : min(center, coverage);
     }
-    horizontal = min(shapeMaskSample(point + float2(distance, 0.0)),
-        shapeMaskSample(point - float2(distance, 0.0)));
-    vertical = min(shapeMaskSample(point + float2(0.0, distance)),
-        shapeMaskSample(point - float2(0.0, distance)));
-    diagonal = min(shapeMaskSample(point + float2(distance, distance)),
-        shapeMaskSample(point + float2(-distance, distance)));
-    diagonal = min(diagonal, shapeMaskSample(point + float2(distance, -distance)));
-    diagonal = min(diagonal, shapeMaskSample(point - float2(distance, distance)));
-    return min(center, min(min(horizontal, vertical), diagonal));
+    return center;
 }
 
 float shapeShadowCoverage(float2 point, float spread, float blur)
@@ -141,14 +132,12 @@ float shapeShadowCoverage(float2 point, float spread, float blur)
     }
     float radius = max(blur * 0.75, 0.5);
     float result = shapeMaskSpread(point, spread) * 0.25;
-    result += shapeMaskSpread(point + float2(radius, 0.0), spread) * 0.125;
-    result += shapeMaskSpread(point + float2(-radius, 0.0), spread) * 0.125;
-    result += shapeMaskSpread(point + float2(0.0, radius), spread) * 0.125;
-    result += shapeMaskSpread(point + float2(0.0, -radius), spread) * 0.125;
-    result += shapeMaskSpread(point + float2(radius, radius), spread) * 0.0625;
-    result += shapeMaskSpread(point + float2(-radius, radius), spread) * 0.0625;
-    result += shapeMaskSpread(point + float2(radius, -radius), spread) * 0.0625;
-    result += shapeMaskSpread(point - float2(radius, radius), spread) * 0.0625;
+    [loop]
+    for (int index = 0; index < 8; index++)
+    {
+        float weight = index < 4 ? 0.125 : 0.0625;
+        result += shapeMaskSpread(point + shadowOffsets[index] * radius, spread) * weight;
+    }
     return clamp(result, 0.0, 1.0);
 }
 
@@ -160,14 +149,12 @@ float shapeInsetCoverage(float2 point, float spread, float blur)
         return 0.0;
     }
     float radius = max(max(abs(spread), blur), 1.0);
-    float neighbor = shapeMaskSpread(point + float2(radius, 0.0), spread);
-    neighbor = min(neighbor, shapeMaskSpread(point + float2(-radius, 0.0), spread));
-    neighbor = min(neighbor, shapeMaskSpread(point + float2(0.0, radius), spread));
-    neighbor = min(neighbor, shapeMaskSpread(point + float2(0.0, -radius), spread));
-    neighbor = min(neighbor, shapeMaskSpread(point + float2(radius, radius), spread));
-    neighbor = min(neighbor, shapeMaskSpread(point + float2(-radius, radius), spread));
-    neighbor = min(neighbor, shapeMaskSpread(point + float2(radius, -radius), spread));
-    neighbor = min(neighbor, shapeMaskSpread(point - float2(radius, radius), spread));
+    float neighbor = 1.0;
+    [loop]
+    for (int index = 0; index < 8; index++)
+    {
+        neighbor = min(neighbor, shapeMaskSpread(point + shadowOffsets[index] * radius, spread));
+    }
     return clamp(center - neighbor, 0.0, 1.0);
 }
 

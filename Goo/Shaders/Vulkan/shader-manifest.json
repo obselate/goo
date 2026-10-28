@@ -290,9 +290,9 @@
       "source": "analytic_shadow.frag.slang",
       "output": "analytic_shadow.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "1fc3e219f0ea4d9805aff29ebe5521b0377afd9ccad44bac9591ac6fb7c5c842",
-      "outputSha256": "748c46d783db98321f4240505d3214953ab539008078e2ad3b6ed7a874c6be18",
-      "outputBytes": 558212,
+      "sourceSha256": "03f0c770721cbca0124b0c44a47bbeca1987e2d80402b461591e3b26152e2b7c",
+      "outputSha256": "d5e2d049f1f1306d8a08821b6ae1a500b2389c54c5d5443601e8e58ad6cb1b9e",
+      "outputBytes": 39224,
       "capabilities": [
         1
       ]
