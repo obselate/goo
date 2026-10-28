@@ -304,6 +304,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       pipelineLayout, true, true)
     ResolvePipeline(ref blendPipeline, analyticVertexModule, blendModule,
       blendPipelineLayout, true, true)
+    ResolvePipeline(ref clipCompositePipeline, analyticVertexModule, blendModule,
+      blendPipelineLayout, false, true)
     ResolvePipeline(ref pathPipeline, pathVertexModule, pathFragmentModule,
       pathPipelineLayout, true, false)
     ResolvePipeline(ref textPipeline, textVertexModule, textFragmentModule,
@@ -682,8 +684,13 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
         clipMaskPipelineLayout = CreateClipMaskPipelineLayout()
         clipMaskR8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8_UNORM)
         clipMaskRgba8Pipeline = CreateClipMaskPipeline(VkConstants.VK_FORMAT_R8G8B8A8_UNORM)
-        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB)
-        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB)
+        using let backdrop = typeof(VulkanSharedPrimitiveState).Assembly.GetManifestResourceStream(
+          "Goo.Effects.filtered_backdrop.goo-effect")
+        if backdrop == nil { throw FileNotFoundException("Goo backdrop blur effect is missing") }
+        let blur = ShaderEffect(ShaderEffectProgram(
+          BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(blur)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(blur)
       } catch (error Exception) {
         Dispose()
         throw error
