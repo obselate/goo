@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include text decorations in partial-redraw damage bounds.
+
 ## 0.23.0 - 2026-10-28
 
 - Expose the selected rendering device and observed window occlusion with UI-thread notifications.

@@ -594,6 +594,8 @@ internal partial class SceneFrame {
   internal func AddUnderline(value UnderlineRecord) int32 {
     RequireOpenChunk()
     ValidateTransformIndex(value.TransformIndex)
+    let bounds = chunks[activeChunk].Bounds
+    chunks[activeChunk].Bounds = bounds.IsEmpty ? value.Bounds : unionVulkanSceneBounds(bounds, value.Bounds)
     let index = AppendRecord(&underlines, &underlineCount, value)
     AppendDrawRef(DrawRef{ Kind: SceneDrawKind.Underline, Index: index, Flags: 0u, ClipChainId: 0 })
     return index
