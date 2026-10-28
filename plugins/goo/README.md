@@ -1,6 +1,6 @@
 # Goo agent plugin
 
-G# Goo authoring guidance and twelve stdio MCP tools. Requires .NET 10, the [Goo platform requirements](../../README.md#platforms), and Goo.DevTools 0.22.2. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. No Python or uv is needed.
+G# Goo authoring guidance and twelve stdio MCP tools. Requires .NET 10, the [Goo platform requirements](../../README.md#platforms), and Goo.DevTools 0.22.3. The server uses the official ModelContextProtocol .NET SDK inside Goo.DevTools. No Python or uv is needed.
 
 | Tool | Purpose |
 | --- | --- |
@@ -19,7 +19,7 @@ G# Goo authoring guidance and twelve stdio MCP tools. Requires .NET 10, the [Goo
 
 ## Install
 
-Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.22.2`.
+Install the runtime CLI with `dotnet tool install --global Goo.DevTools --version 0.22.3`.
 Confirm it is available:
 
 ```sh
