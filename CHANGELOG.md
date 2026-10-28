@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expose the selected rendering device and observed window occlusion with UI-thread notifications.
+
 ## 0.22.2 - 2026-10-28
 
 - Reduce large backdrop blur work with a two-axis downsample pyramid.

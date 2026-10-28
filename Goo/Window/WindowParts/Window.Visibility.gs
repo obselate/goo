@@ -23,6 +23,7 @@ public partial class Window {
   private var focusable bool = true
   private var topmost bool
   private var observedVisible bool
+  private var observedOcclusion WindowOcclusion
 
   /// Gets or sets whether Open shows the desktop window. Configure before Open.
   public prop InitiallyVisible bool {
@@ -36,6 +37,21 @@ public partial class Window {
 
   /// Gets whether the host reports a visible viewport. This does not imply focus or lack of occlusion.
   public prop IsVisible bool { get -> IsOpen && host?.IsVisible == true }
+
+  /// Gets occlusion on macOS, Wayland suspended surfaces and X11 hidden windows. Windows, embedded, Android and unreported states are Unknown.
+  public prop Occlusion WindowOcclusion { get -> IsOpen ? observedOcclusion : WindowOcclusion.Unknown }
+
+  /// Reports observed occlusion changes on the UI thread.
+  public event OcclusionChanged Action[WindowOcclusion] {
+    add {
+      requireUiThread("Window.OcclusionChanged")
+      notifications.AddOcclusionChanged(value)
+    }
+    remove {
+      requireUiThread("Window.OcclusionChanged")
+      notifications.RemoveOcclusionChanged(value)
+    }
+  }
 
   /// Gets supported native lifecycle operations, or None before Open or Attach.
   public prop Capabilities WindowCapabilities { get -> host?.Capabilities ?? WindowCapabilities.None }
@@ -141,6 +157,13 @@ public partial class Window {
     else if LayerShell != nil { windowTarget?.SetHidden(false) }
     observeVisibility()
     return result
+  }
+
+  private func observeOcclusion(value WindowOcclusion) {
+    requireUiThread("Window.OcclusionChanged")
+    if observedOcclusion == value { return }
+    observedOcclusion = value
+    notifications.RaiseOcclusionChanged(value)
   }
 
   private func observeVisibility() {

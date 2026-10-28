@@ -2,6 +2,7 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)FixtureAssemblyInfo.gs" Link="FixtureAssemblyInfo.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Platform/ApplicationActivationFixtures.gs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Platform/WindowOcclusionFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Accessibility/AccessibilityFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/CellFixtures.gs" />
     <Compile Include="$(MSBuildThisFileDirectory)../Goo.CoreBehaviorTests/Cell/ContextFixtures.gs" />

@@ -35,6 +35,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   private var penPressures Dictionary[int64, float32]?
   private var nextTouchPointerId int64 = Int64.MinValue
   private var layerWindow WaylandLayerWindow?
+  private let occlusionSupported bool
 
   internal init(title string, width int32, height int32, x int32, y int32,
     positionSet bool, state WindowState, decorated bool, resizable bool,
@@ -47,6 +48,8 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       hitTestCallbackAddress = Marshal.GetFunctionPointerForDelegate(hitTestRawDelegate)
       SdlRuntime.Acquire()
       runtimeOwned = true
+      let driver = SDL.GetCurrentVideoDriverS()
+      occlusionSupported = driver == "wayland" || driver == "cocoa" || driver == "x11"
       try {
         if !SdlRuntime.AcquireVulkan() {
           ThrowSdl("SDL_Vulkan_LoadLibrary")
@@ -95,6 +98,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public event StateChanged Action[WindowState]
   public event FocusChanged Action[bool]
   public event VisibilityChanged Action
+  public event OcclusionChanged Action[WindowOcclusion]
   public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action[WindowCloseReason]
   public event Closed Action?

@@ -10,6 +10,43 @@ public enum WindowState { Normal; Minimized; Maximized; Fullscreen }
 /// Controls how Window.Run schedules frames that have visual demand.
 public enum WindowFramePacing { Display; Uncapped }
 
+/// Identifies the selected Vulkan physical device type.
+public enum RenderingDeviceKind {
+  /// No rendering device is available.
+  Unknown;
+  /// An integrated GPU.
+  IntegratedGpu;
+  /// A discrete GPU.
+  DiscreteGpu;
+  /// A virtual GPU.
+  VirtualGpu;
+  /// A CPU renderer, including llvmpipe and lavapipe.
+  Cpu;
+  /// A device with another Vulkan physical device type.
+  Other;
+}
+
+/// Describes the selected rendering device.
+public data struct RenderingDeviceInfo {
+  private var kind RenderingDeviceKind
+  private var name string?
+
+  /// Gets the selected physical device type, or Unknown when unavailable.
+  public prop Kind RenderingDeviceKind{ get -> kind init -> kind = value }
+  /// Gets the selected device name, or an empty string when unavailable.
+  public prop Name string{ get -> name ?? "" init -> name = value }
+}
+
+/// Reports observed occlusion, not visibility or focus.
+public enum WindowOcclusion {
+  /// The host has not reported occlusion or does not support it.
+  Unknown;
+  /// The host reports that the window is not occluded.
+  Unoccluded;
+  /// The host reports that the window is occluded.
+  Occluded;
+}
+
 /// Reports a successful queue-present handoff, not display scanout.
 public data struct WindowPresentationAccepted {
   private var frameIndex uint64
@@ -109,6 +146,7 @@ internal struct WindowNotifications {
   private var previewKeyPressedCallbacks ([]Delegate)?
   private event focusChanged Action[bool]
   private event visibilityChanged Action[bool]
+  private event occlusionChanged Action[WindowOcclusion]
   private event preferencesChanged Action[PlatformPreferences]
   private event presentationAccepted Action[WindowPresentationAccepted]
   private event displayChanged Action
@@ -144,6 +182,9 @@ internal struct WindowNotifications {
   internal func AddVisibilityChanged(callback Action[bool]) { visibilityChanged += callback }
   internal func RemoveVisibilityChanged(callback Action[bool]) { visibilityChanged -= callback }
   internal func RaiseVisibilityChanged(value bool) { visibilityChanged?.Invoke(value) }
+  internal func AddOcclusionChanged(callback Action[WindowOcclusion]) { occlusionChanged += callback }
+  internal func RemoveOcclusionChanged(callback Action[WindowOcclusion]) { occlusionChanged -= callback }
+  internal func RaiseOcclusionChanged(value WindowOcclusion) { occlusionChanged?.Invoke(value) }
   internal func AddPreferencesChanged(callback Action[PlatformPreferences]) { preferencesChanged += callback }
   internal func RemovePreferencesChanged(callback Action[PlatformPreferences]) { preferencesChanged -= callback }
   internal func RaisePreferencesChanged(value PlatformPreferences) { preferencesChanged?.Invoke(value) }
@@ -162,6 +203,11 @@ public partial class Window {
   /// Configures this window as a Wayland layer-shell surface before Open.
   /// Unsupported platforms and compositors fail without a normal-window fallback.
   public prop LayerShell LayerWindowOptions? { get; init; }
+
+  /// Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
+  public prop RenderingDevice RenderingDeviceInfo{
+    get -> (windowTarget as VulkanWindowTarget?)?.RenderingDevice ?? default(RenderingDeviceInfo)
+  }
 
   /// Gets or sets the window clear color. The default is white.
   public prop Background Color{
