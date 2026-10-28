@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expose the selected rendering device and observed window occlusion with UI-thread notifications.
+- Recover the shared Vulkan device when opening a window while all existing windows are hidden.
 - Avoid repainting platform wheel input when the scroll offset and visual state do not change.
 
 ## 0.22.3 - 2026-10-28

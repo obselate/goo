@@ -1328,6 +1328,63 @@ Reports whether the surface is open, including deferred GPU retirement during cl
 
 Gets the current logical and framebuffer metrics on the owner thread.
 
+## `RenderingDeviceInfo`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Describes the selected rendering device.
+
+### `Kind`
+
+Gets the selected physical device type, or Unknown when unavailable.
+
+### `Name`
+
+Gets the selected device name, or an empty string when unavailable.
+
+## `RenderingDeviceKind`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Identifies the selected Vulkan physical device type.
+
+### Values
+
+- `Unknown`
+- `IntegratedGpu`
+- `DiscreteGpu`
+- `VirtualGpu`
+- `Cpu`
+- `Other`
+
+### `Cpu`
+
+A CPU renderer, including llvmpipe and lavapipe.
+
+### `DiscreteGpu`
+
+A discrete GPU.
+
+### `IntegratedGpu`
+
+An integrated GPU.
+
+### `Other`
+
+A device with another Vulkan physical device type.
+
+### `Unknown`
+
+No rendering device is available.
+
+### `VirtualGpu`
+
+A virtual GPU.
+
 ## `TransferData`
 
 Source:
@@ -1452,6 +1509,10 @@ Occurs for each physical key press before focused-element routing.
 ### `MetricsChanged`
 
 Occurs after the native window reports a new stable size or display scale. Callbacks run on the window UI thread after native metrics and layout settle.
+
+### `OcclusionChanged`
+
+Reports observed occlusion changes on the UI thread.
 
 ### `PreferencesChanged`
 
@@ -1877,6 +1938,10 @@ Enables native file-drop ingress before Open or on the owning UI thread; disable
 
 Gets the current native transfer capabilities; closed and embedded windows return None.
 
+### `Occlusion`
+
+Gets occlusion on macOS, Wayland suspended surfaces and X11 hidden windows. Windows, embedded, Android and unreported states are Unknown.
+
 ### `OnClosing`
 
 Gets or sets the close-request handler. Return false to veto closure. OS termination bypasses this handler. Accepted requests do not invoke the handler again while teardown finishes.
@@ -1896,6 +1961,10 @@ Gets the current host snapshot. Unsupported preferences remain unknown.
 ### `QueueWorkPending`
 
 Reports whether the native target has pending GPU submit or present work. Use Pump(0) to service pending work without advancing the simulation.
+
+### `RenderingDevice`
+
+Gets the selected rendering device, or Unknown with an empty name before Open or when unavailable.
 
 ### `Resizable`
 
@@ -2179,6 +2248,32 @@ Gets the reported logical width.
 ### `UiScale`
 
 Gets the retained UI scale. A default snapshot uses 1.
+
+## `WindowOcclusion`
+
+Source:
+
+- [`Window.gs`](../../Goo/Window/Window.gs)
+
+Reports observed occlusion, not visibility or focus.
+
+### Values
+
+- `Unknown`
+- `Unoccluded`
+- `Occluded`
+
+### `Occluded`
+
+The host reports that the window is occluded.
+
+### `Unknown`
+
+The host has not reported occlusion or does not support it.
+
+### `Unoccluded`
+
+The host reports that the window is not occluded.
 
 ## `WindowOperationResult`
 

@@ -140,6 +140,20 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
 
   public prop ProfileSink FrameProfileSink{ get -> this }
 
+  internal prop RenderingDevice RenderingDeviceInfo{
+    get {
+      if disposed || runtime == nil || runtime?.DeviceLost == true { return default(RenderingDeviceInfo) }
+      let kind = switch deviceFacts.DeviceType {
+        case VkConstants.VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: RenderingDeviceKind.IntegratedGpu
+        case VkConstants.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: RenderingDeviceKind.DiscreteGpu
+        case VkConstants.VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: RenderingDeviceKind.VirtualGpu
+        case VkConstants.VK_PHYSICAL_DEVICE_TYPE_CPU: RenderingDeviceKind.Cpu
+        default: RenderingDeviceKind.Other
+      }
+      return RenderingDeviceInfo{Kind: kind, Name: deviceFacts.DeviceName ?? ""}
+    }
+  }
+
   public prop NeedsRender bool{
     get {
       if let activeRuntime = runtime {

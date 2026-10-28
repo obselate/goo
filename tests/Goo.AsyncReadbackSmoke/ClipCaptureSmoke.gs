@@ -237,3 +237,73 @@ func RunHideResourcesSmoke() {
   ReadbackValidateCommonDiagnostics(capturedError.ToString())
   Console.WriteLine("hide-resources-gate: hidden_swapchains=0 hidden_clip_layers=0 minimize=retained pending_capture=valid queued_present=safe show_capture=identical validation=0")
 }
+
+func RunHiddenDeviceRecoverySmoke() {
+  let capturedError = StringWriter()
+  let originalError = Console.Error
+  let hiddenWindow = Window{
+    Title: "Goo hidden device recovery",
+    Width: 300,
+    Height: 170,
+    VSync: false,
+    Background: Color.Rgb(12, 20, 32),
+    Root: RoundedResizeFirstFrameCell{},
+  }
+  let newWindow = Window{
+    Title: "Goo new window device recovery",
+    Width: 300,
+    Height: 170,
+    VSync: false,
+    Background: Color.Rgb(12, 20, 32),
+    Root: RoundedResizeFirstFrameCell{},
+  }
+  try {
+    Console.SetError(capturedError)
+    hiddenWindow.Open()
+    WindowReadbackTestFixture.ForceRender(hiddenWindow, 0.0)
+    guard let hiddenTarget = WindowReadbackTestFixture.CaptureTarget(hiddenWindow),
+      let oldRuntime = hiddenTarget.RecoveryRuntime() else {
+      throw InvalidOperationException("Hidden window runtime is unavailable")
+    }
+    let oldGeneration = oldRuntime.Generation
+    Require(hiddenWindow.Hide() == WindowOperationResult.Accepted
+        && !hiddenWindow.IsVisible, "Recovery window did not hide")
+    AwaitHiddenResources(hiddenWindow)
+    VulkanSharedRuntime.FailNextGraphicsSubmissionForTest()
+    let pending = hiddenWindow.RenderOffscreenAsync(ReadbackSmokeCell{},
+      OffscreenRenderOptions(64.0F, 64.0F, 64u, 64u, Color.Black, 16777216L),
+      CancellationToken.None)
+    let deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 10L
+    while !pending.IsCompleted && Stopwatch.GetTimestamp() < deadline {
+      WindowReadbackTestFixture.PollQueueCompletion(hiddenWindow)
+      Thread.Yield()
+    }
+    Require(pending.IsCompleted
+        && pending.GetAwaiter().GetResult().Status == OffscreenRenderStatus.DeviceLost
+        && oldRuntime.DeviceLost, "Hidden window did not detect the injected device loss")
+    newWindow.Open()
+    WindowReadbackTestFixture.ForceRender(newWindow, 0.0)
+    guard let newTarget = WindowReadbackTestFixture.CaptureTarget(newWindow),
+      let recoveredRuntime = newTarget.RecoveryRuntime() else {
+      throw InvalidOperationException("New window runtime is unavailable")
+    }
+    Require(recoveredRuntime.Generation > oldGeneration
+        && hiddenTarget.RecoveryRuntime()?.Generation == recoveredRuntime.Generation,
+      "New and hidden windows did not acquire the recovered device")
+    Require(!hiddenWindow.IsVisible, "Recovery showed the hidden window")
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(newWindow,
+      WindowReadbackTestFixture.Metrics(newWindow)),
+      WindowReadbackTestFixture.Metrics(newWindow), 0)
+    Require(hiddenWindow.Show() == WindowOperationResult.Accepted, "Recovered window did not show")
+    WindowReadbackTestFixture.ForceRender(hiddenWindow, 0.0)
+    RoundedResizeRequireFirstFrame(ClipCaptureReadback(hiddenWindow,
+      WindowReadbackTestFixture.Metrics(hiddenWindow)),
+      WindowReadbackTestFixture.Metrics(hiddenWindow), 0)
+  } finally {
+    newWindow.Close()
+    hiddenWindow.Close()
+    Console.SetError(originalError)
+  }
+  ReadbackValidateCommonDiagnostics(capturedError.ToString())
+  Console.WriteLine("hidden-device-recovery: new_window=presented hidden_window=restored pixels=validated")
+}

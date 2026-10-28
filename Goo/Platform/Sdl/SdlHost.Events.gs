@@ -312,7 +312,12 @@ internal unsafe partial class SdlHost {
       FocusChanged?.Invoke(false)
     } else if eventType == SDLEventType.WindowCloseRequested {
       RequestClose()
+    } else if eventType == SDLEventType.WindowOccluded {
+      if occlusionSupported { OcclusionChanged?.Invoke(WindowOcclusion.Occluded) }
     } else if eventType == SDLEventType.WindowExposed {
+      if occlusionSupported {
+        OcclusionChanged?.Invoke(WindowOcclusion.Unoccluded)
+      }
       RefreshDisplayPacing(true)
       Exposed?.Invoke()
     }
