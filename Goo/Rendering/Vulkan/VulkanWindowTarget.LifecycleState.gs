@@ -95,6 +95,10 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var renderingBegun bool
   private var frameRendered bool
   private var frameRenderDeferred bool
+  private const InitialImageWaitMilliseconds int32 = 500
+  private var firstPresentationPending bool = true
+  private var initialImageWaitStarted int64
+  private var initialImageUploadFrame bool
   private var activeDamageRegion VulkanDamageRegion
   private var activePartialRedraw bool
   private var activeSceneVersion uint64
@@ -115,6 +119,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   private var vsync bool
   private var surfaceLost bool
   private var disposed bool
+  private var closing bool
   private const QueueStageIdle int32 = 0
   private const QueueStageSubmit int32 = 1
   private const QueueStagePresentPrepare int32 = 2
@@ -142,7 +147,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
           return true
         }
       }
-      return pageCompletion != nil || queuedPage != nil || textRedrawPending || imageRedrawPending || pathRedrawPending
+      return frameRenderDeferred || pageCompletion != nil || queuedPage != nil || textRedrawPending || imageRedrawPending || pathRedrawPending
         || clipMaskRedrawPending
         || forceFullRedraw
         || sceneCompiler.Frame.ShaderPlaybackActive
@@ -158,8 +163,10 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
   }
 
   public func PrepareClose() bool {
+    closing = true
     CancelQueuedPage()
     if pageCompletion != nil { Interlocked.Exchange(ref pageCancelled, 1) }
+    CancelDeferredInitialFrame()
     if startupState != VulkanWindowStartupState.None {
       startupState = VulkanWindowStartupState.Closing
       if !DrainStartup() { return false }

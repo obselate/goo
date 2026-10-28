@@ -9,6 +9,7 @@ internal unsafe partial class SdlHost {
   private var firstShowMapping bool
 
   internal prop FirstShowPending bool { get -> deferFirstShow && firstShowRequested }
+  internal prop IsLayerWindow bool { get -> layerWindow != nil }
 
   internal func DeferFirstShow() bool {
     if layerWindow != nil { return false }
@@ -21,7 +22,10 @@ internal unsafe partial class SdlHost {
   }
 
   internal func PrepareFirstPresent() bool {
-    if let layer = layerWindow { return layer.Visible }
+    if let layer = layerWindow {
+      if layer.Visible { layer.Presented = true }
+      return layer.Visible
+    }
     if deferFirstShow {
       deferFirstShow = false
       if firstShowRequested {

@@ -31,6 +31,7 @@ internal unsafe partial class VulkanWindowTarget {
     requestedHeight = height
     framebufferWidth = width
     framebufferHeight = height
+    CancelDeferredInitialFrame()
     if startupState == VulkanWindowStartupState.Pending {
       recreatePending = true
       return true

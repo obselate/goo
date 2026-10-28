@@ -199,10 +199,16 @@ internal unsafe partial class VulkanWindowTarget {
       if activeRuntime.DeviceLost || activeRuntime.Terminal {
         return
       }
+      if frameRenderDeferred && activeRuntime.HasUnsubmittedRecordedSharedUpload {
+        host.Wake()
+        return
+      }
     }
     guard let renderer = primitiveRenderer else {
       return
     }
+    frameRenderDeferred = false
+    initialImageUploadFrame = false
     try {
       let scaleX = ResolveScale(dpi.X)
       let scaleY = ResolveScale(dpi.Y)
@@ -242,46 +248,12 @@ internal unsafe partial class VulkanWindowTarget {
       textRedrawPending = textScene?.RedrawRequired == true
       imageRedrawPending = imageScene?.RedrawRequired == true
       pathRedrawPending = pathScene?.RedrawRequired == true
-      ScaleFrame(sceneCompiler.Frame, scaleX, scaleY)
-      guard let current = generation else {
-        return
+      var deferInitialPresentation bool
+      if firstPresentationPending && imageScene?.PendingImages == true {
+        if initialImageWaitStarted == 0 { initialImageWaitStarted = Stopwatch.GetTimestamp() }
+        deferInitialPresentation = Stopwatch.GetElapsedTime(initialImageWaitStarted).TotalMilliseconds
+          < float64(InitialImageWaitMilliseconds)
       }
-      activeSceneVersion = compileResult.FrameVersion
-      if TraceRecorder != nil { activeTraceContext.SceneVersion = activeSceneVersion }
-      var damageRegion VulkanDamageRegion
-      var fullRedraw bool
-      var hasDamage = sceneCompiler.BuildDamage(
-        activeAppliedSceneVersion,
-        activeSceneVersion,
-        scaleX,
-        scaleY,
-        current.Extent.width,
-        current.Extent.height,
-        out damageRegion,
-        out fullRedraw)
-      if forceFullRedraw || textRedrawPending || imageRedrawPending
-        || pathRedrawPending || clipMaskRedrawPending{
-          fullRedraw = true
-          hasDamage = true
-          damageRegion = VulkanDamageRegion{
-            X: 0,
-            Y: 0,
-            Width: int32(current.Extent.width),
-            Height: int32(current.Extent.height),
-          }
-        } else if !hasDamage {
-          fullRedraw = true
-          hasDamage = true
-          damageRegion = VulkanDamageRegion{
-            X: 0,
-            Y: 0,
-            Width: int32(current.Extent.width),
-            Height: int32(current.Extent.height),
-          }
-        }
-      activeDamageRegion = damageRegion
-      activePartialRedraw = hasDamage && !fullRedraw
-      RecordDiagnosticDamage(damageRegion, hasDamage)
       let uploadStart = DiagnosticTimestamp()
       var uploadBytes uint64 = 0uL
       if let resources = imageResources {
@@ -337,6 +309,53 @@ internal unsafe partial class VulkanWindowTarget {
         }
       }
       RecordDiagnosticUpload(uploadStart, uploadBytes)
+      if deferInitialPresentation {
+        initialImageUploadFrame = uploadBytes != 0uL
+        frameRendered = initialImageUploadFrame
+        frameRenderDeferred = true
+        host.Wake()
+        return
+      }
+      ScaleFrame(sceneCompiler.Frame, scaleX, scaleY)
+      guard let current = generation else {
+        return
+      }
+      activeSceneVersion = compileResult.FrameVersion
+      if TraceRecorder != nil { activeTraceContext.SceneVersion = activeSceneVersion }
+      var damageRegion VulkanDamageRegion
+      var fullRedraw bool
+      var hasDamage = sceneCompiler.BuildDamage(
+        activeAppliedSceneVersion,
+        activeSceneVersion,
+        scaleX,
+        scaleY,
+        current.Extent.width,
+        current.Extent.height,
+        out damageRegion,
+        out fullRedraw)
+      if forceFullRedraw || textRedrawPending || imageRedrawPending
+        || pathRedrawPending || clipMaskRedrawPending{
+          fullRedraw = true
+          hasDamage = true
+          damageRegion = VulkanDamageRegion{
+            X: 0,
+            Y: 0,
+            Width: int32(current.Extent.width),
+            Height: int32(current.Extent.height),
+          }
+        } else if !hasDamage {
+          fullRedraw = true
+          hasDamage = true
+          damageRegion = VulkanDamageRegion{
+            X: 0,
+            Y: 0,
+            Width: int32(current.Extent.width),
+            Height: int32(current.Extent.height),
+          }
+        }
+      activeDamageRegion = damageRegion
+      activePartialRedraw = hasDamage && !fullRedraw
+      RecordDiagnosticDamage(damageRegion, hasDamage)
       if let current = generation {
         if let slot = activeFrameSlot {
           let recordStart = DiagnosticTimestamp()

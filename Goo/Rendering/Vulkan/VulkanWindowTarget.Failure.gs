@@ -11,6 +11,8 @@ internal unsafe partial class VulkanWindowTarget {
     frameBegun = false
     renderingBegun = false
     frameRendered = false
+    frameRenderDeferred = false
+    initialImageUploadFrame = false
     frameFailureRetryable = false
     clipMaskFrameStarted = false
     clipMaskFramePrepared = false
@@ -24,6 +26,16 @@ internal unsafe partial class VulkanWindowTarget {
     pendingPresentStart = 0uL
     pendingPresentFence = 0uL
     frameSlots.Advance()
+  }
+
+  private func CancelDeferredInitialFrame() {
+    if !frameBegun || queueStage != QueueStageIdle || !frameRenderDeferred { return }
+    AbortUnsubmittedTextUpload()
+    AbortUnsubmittedImageUploads()
+    AbortUnsubmittedPathUpload()
+    AbandonRecordedFrameForRetry()
+    CloseDiagnosticFrame(false)
+    ClearActiveFrame()
   }
 
   private func PublishLastPresentedImageState(

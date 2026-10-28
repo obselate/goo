@@ -24,6 +24,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
   private var cachedLookupState int32
   private var referencesCommitted bool
   private var redrawRequired bool
+  private var pendingImages bool
   private var disposed bool
 
   internal prop RedrawRequired bool{
@@ -32,6 +33,8 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       return redrawRequired
     }
   }
+
+  internal prop PendingImages bool { get -> pendingImages }
 
   internal init(
     nativeIdentities VulkanImageIdentityRegistry,
@@ -64,6 +67,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
     cachedLookupState = 0
     referencesCommitted = false
     redrawRequired = false
+    pendingImages = false
   }
 
   internal func Emit(
@@ -113,6 +117,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
       }
       let lease = binding.Lease
       if !lease.IsComplete {
+        pendingImages = true
         return false
       }
       if lease.IsFailed {
@@ -161,6 +166,7 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         identities.LinearSamplerId,
         VulkanImageSamplerMode.Linear)
       if !lookup.Renderable {
+        pendingImages = true
         if lookup.Found {
           fixed sourcePixels * uint8 = pixels{
             imageResources.QueueUpload(
@@ -191,8 +197,12 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
   private func EmitExternal(frame SceneFrame, bounds ConservativeBounds,
     binding ImageSourceBindingToken, external ExternalFrameLease, fit ImageFit,
     opacity float32, transformIndex int32, pixelsPerUnit float32) bool {
-      if external.Terminal || external.Source.Session.IsClosed || !external.Ready
+      if external.Terminal || external.Source.Session.IsClosed
         || external.Image.Native.Runtime.Generation != generation { return false }
+      if !external.Ready {
+        pendingImages = true
+        return false
+      }
       let identity = identities.ResolveImage(binding.Source, binding.Version,
         generation, external.Image.Native.Format)
       let source = VulkanResourceSource{
@@ -201,7 +211,10 @@ internal unsafe sealed class VulkanImageScene : IDisposable {
         Bytes: uint64(external.Image.Width) * uint64(external.Image.Height) * 4uL,
       }
       let lookup = imageResources.RegisterExternal(identity.ImageId, source, identities.LinearSamplerId, external)
-      if !lookup.Renderable { return false }
+      if !lookup.Renderable {
+        pendingImages = true
+        return false
+      }
       let emitted = EmitLookup(frame, bounds, lookup, fit, opacity, transformIndex, pixelsPerUnit)
       if emitted { imageResources.PromoteSourceVersion(source) }
       return emitted
