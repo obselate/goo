@@ -78,7 +78,7 @@ internal sealed class VulkanShaderEffectPipelineEntry {
 }
 
 internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposable {
-  private const ShaderEffectCapacity int32 = 32
+  private const ShaderEffectCapacity int32 = 32 + 2
   private let device VkDevice
   private let dispatch VkDeviceDispatch
   private let pipelineCache VulkanPipelineCache
@@ -691,6 +691,8 @@ internal unsafe sealed partial class VulkanSharedPrimitiveState : IDisposable {
           BoundedInput.ReadAll(backdrop, ShaderEffectProgram.MaximumProgramByteCount, "Shader effect program")))
         PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(blur)
         PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(blur)
+        PipelinesFor(VkConstants.VK_FORMAT_R8G8B8A8_SRGB).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
+        PipelinesFor(VkConstants.VK_FORMAT_B8G8R8A8_SRGB).ResolveShaderEffectPipeline(BackdropBlurEffect.Shared)
       } catch (error Exception) {
         Dispose()
         throw error
