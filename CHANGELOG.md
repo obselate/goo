@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 0.23.1 - 2026-10-28
+
 - Skip fully overwritten backdrop clears and synchronize resumed color attachment loads.
+- Include text decorations in partial-redraw damage bounds.
 
 ## 0.23.0 - 2026-10-28
 
