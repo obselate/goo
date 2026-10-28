@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Recover the shared Vulkan device when opening a window while all existing windows are hidden.
 - Keep damage clipping inside offscreen opacity and rounded-overflow layers.
 
 ## 0.22.3 - 2026-10-28
