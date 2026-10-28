@@ -6,6 +6,7 @@ import System.Diagnostics
 import System.IO
 import System.Text
 import System.Threading
+import System.Threading.Tasks
 
 private data struct TextFontSelection(Family string, Path string?, Registration FontRegistration?) { }
 private data struct TextProviderShapeResult(Workspace VulkanTextShapingWorkspace, Count int32) { }
@@ -51,6 +52,8 @@ internal partial class TextShaping {
     private let PrimaryFacesLock object = Object()
     private var primaryFaceDisposals int32
     private var primaryFaceCacheBytes int64
+    private var fallbackPreload Task = Task.CompletedTask
+    private var pendingFallbackPreloads int32
     private const PrimaryFaceCacheCapacity int32 = 64
     private const PrimaryFaceCacheByteBudget int64 = 50331648L
     private const ShapingWorkspaceRetainedCapacity int32 = 4096
@@ -677,7 +680,25 @@ internal partial class TextShaping {
           Interlocked.Increment(&primaryFaceDisposals)
         }
       }
+      PreloadFallbacks(families, weight, italic)
       return lease
+    }
+
+    private func PreloadFallbacks(families string, weight int32, italic bool) {
+      if families.IndexOf(',') < 0 { return }
+      lock PrimaryFacesLock {
+        if pendingFallbackPreloads >= PrimaryFaceCacheCapacity { return }
+        pendingFallbackPreloads++
+        fallbackPreload = fallbackPreload.ContinueWith((previous Task) -> {
+          try {
+            for name in SplitFamilies(families) {
+              using let face = ResolveCachedPrimary(name, weight, italic)
+            }
+          } finally {
+            lock PrimaryFacesLock { pendingFallbackPreloads-- }
+          }
+        }, TaskScheduler.Default)
+      }
     }
 
     private func CreateTypefaceResource(selection TextFontSelection, weight int32) TypefaceResource {

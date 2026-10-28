@@ -227,9 +227,9 @@ internal shared class Program {
             throw InvalidOperationException("Explicit font variations were replaced by the requested weight")
         }
         let families = source.Family + ", " + family
-        let warmText = "金额 0.12345678"
         for weight in []int32{400, 700} {
-            TextShaping.MeasureLineUncached(warmText, 0, warmText.Length, families, 14f, weight, false, 0f, 1)
+            TextShaping.Metrics(families, 14f, weight, false)
+            TextShaping.FallbackPreloadForTests().GetAwaiter().GetResult()
         }
         let retainedPath = Path.Combine(home, ".fonts", family + ".ttf")
         File.Move(retainedPath, retainedPath + ".retained")
@@ -248,8 +248,8 @@ internal shared class Program {
         } finally {
             File.Move(retainedPath + ".retained", retainedPath)
         }
-        Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE warmFileRemoved=1 layouts=16 cacheBytes="
-            + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
+        Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE backgroundPreload=1 warmFileRemoved=1"
+            + " layouts=16 cacheBytes=" + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
         Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
             + " semibold=" + semibold.Width.ToString() + " clamp=1 fallback=1 explicit=1")
     }

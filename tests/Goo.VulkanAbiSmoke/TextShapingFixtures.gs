@@ -1,5 +1,7 @@
 package Goo
 
+import System.Threading.Tasks
+
 internal partial class TextShaping {
   shared {
     internal func PrimaryFaceCacheCountForTests() int32 {
@@ -10,6 +12,10 @@ internal partial class TextShaping {
 
     internal func PrimaryFaceCacheBytesForTests() int64 {
       lock (PrimaryFacesLock) { return primaryFaceCacheBytes }
+    }
+
+    internal func FallbackPreloadForTests() Task {
+      lock PrimaryFacesLock { return fallbackPreload }
     }
   }
 }
