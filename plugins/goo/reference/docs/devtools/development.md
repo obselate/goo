@@ -74,5 +74,5 @@ Cells and native windows remain mounted. Diagnostics are optional.
 
 This requires a G# runtime that dispatches `MetadataUpdateHandlerAttribute`
 callbacks after applying deltas. The
-[local integration test](https://github.com/obselate/goo/blob/d379d7642b5a5e64add27fab70810e6a9ae4eabf/tests/Goo.HotReloadSmoke/README.md) explains how
+[local integration test](https://github.com/obselate/goo/blob/4a30e771a65a1b97cfeca97b77018448c1bce5df/tests/Goo.HotReloadSmoke/README.md) explains how
 to build and select a compatible runtime and records the supported edit scope.
