@@ -212,6 +212,8 @@ public partial class Window {
       if key == Key.Escape { popup?.Dismiss(PopupDismissReason.Escape) }
     }
     native.VisibilityChanged += observeVisibility
+    observedOcclusion = WindowOcclusion.Unknown
+    native.OcclusionChanged += observeOcclusion
     native.MetricsChanged += (logicalWidth int32, logicalHeight int32,
       nativeWidth int32, nativeHeight int32) -> {
         queueNativeMetrics(logicalWidth, logicalHeight, nativeWidth, nativeHeight)

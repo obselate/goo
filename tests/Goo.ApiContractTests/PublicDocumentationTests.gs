@@ -719,6 +719,15 @@ class PublicDocumentationTests {
             "M:Goo.PanelTransform.op_Inequality(Goo.PanelTransform,Goo.PanelTransform)"
         }
         private let ExpectedEnumFieldIds[]string = []string{
+            "F:Goo.RenderingDeviceKind.Unknown",
+            "F:Goo.RenderingDeviceKind.IntegratedGpu",
+            "F:Goo.RenderingDeviceKind.DiscreteGpu",
+            "F:Goo.RenderingDeviceKind.VirtualGpu",
+            "F:Goo.RenderingDeviceKind.Cpu",
+            "F:Goo.RenderingDeviceKind.Other",
+            "F:Goo.WindowOcclusion.Unknown",
+            "F:Goo.WindowOcclusion.Unoccluded",
+            "F:Goo.WindowOcclusion.Occluded",
             "F:Goo.RichText.RichTextStatus.Success",
             "F:Goo.RichText.RichTextStatus.PlainText",
             "F:Goo.RichText.RichTextStatus.Unsupported",
