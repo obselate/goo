@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recover the shared Vulkan device when opening a window while all existing windows are hidden.
+
 ## 0.22.3 - 2026-10-28
 
 - Read configured fallback fonts in the background before their first layout.
