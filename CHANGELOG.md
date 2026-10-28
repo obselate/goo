@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+## 0.23.0 - 2026-10-28
+
 - Expose the selected rendering device and observed window occlusion with UI-thread notifications.
 - Recover the shared Vulkan device when opening a window while all existing windows are hidden.
 - Keep damage clipping inside offscreen opacity and rounded-overflow layers.
+- Reuse retained text geometry when vertical scrolling changes only its baseline.
+- Avoid repainting platform wheel input when the scroll offset and visual state do not change.
 
 ## 0.22.3 - 2026-10-28
 
