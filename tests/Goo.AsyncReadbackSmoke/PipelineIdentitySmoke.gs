@@ -125,6 +125,7 @@ func RunPipelineIdentitySmoke() {
   try {
     Console.SetError(capturedError)
     window.Open()
+    let preparedEntryCount = WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(window)
     WindowReadbackTestFixture.ForceRender(window, 0.0)
     WindowReadbackTestFixture.ForceRender(window, 0.0166666666666667)
     let metrics = WindowReadbackTestFixture.Metrics(window)
@@ -174,7 +175,7 @@ func RunPipelineIdentitySmoke() {
     }
     let identity = WindowReadbackTestFixture.ResolvePipelineIdentity(window,
       identical.ToArray(), first)
-    Require(identity.EntryCount == 1 && identity.UniquePipelineCount == 1
+    Require(identity.EntryCount == preparedEntryCount + 1 && identity.UniquePipelineCount == 1
         && identity.FirstPipeline != 0uL && identity.AllHandlesEqual
         && identity.SameObjectStable,
       "Identical shader bundles did not resolve to one stable native pipeline")
@@ -185,7 +186,7 @@ func RunPipelineIdentitySmoke() {
     let modifiedPipeline = WindowReadbackTestFixture.ResolveShaderEffectPipeline(
       window, modifiedEffect)
     Require(modifiedPipeline != identity.FirstPipeline
-        && WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(window) == 2,
+        && WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(window) == preparedEntryCount + 2,
       "Byte-distinct valid SPIR-V reused an existing native pipeline")
     Require(WindowReadbackTestFixture.VerifyShaderEffectDigestCollision(window,
       ShaderEffectProgram(PipelineIdentityClone(bundle)),
@@ -217,11 +218,12 @@ func RunPipelineIdentitySmoke() {
     }
     try {
       reopened.Open()
+      let recreatedPreparedCount = WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(reopened)
       WindowReadbackTestFixture.ForceRender(reopened, 0.0)
       WindowReadbackTestFixture.ForceRender(reopened, 0.0166666666666667)
       let recreatedPipeline = WindowReadbackTestFixture.ResolveShaderEffectPipeline(reopened, first)
       Require(recreatedPipeline != 0uL
-          && WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(reopened) == 1,
+          && WindowReadbackTestFixture.ShaderEffectPipelineEntryCount(reopened) == recreatedPreparedCount + 1,
         "Runtime recreation did not rebuild one deduplicated shader pipeline")
       let recreatedMetrics = WindowReadbackTestFixture.Metrics(reopened)
       let recreated = PrimitiveReadback(reopened, recreatedMetrics)
