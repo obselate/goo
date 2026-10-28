@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.22.1 - 2026-10-27
+
 - Release cached GPU images before reclaiming dead image-provider identities.
 - Cancel `Window.Closed` after native teardown finishes or fails, not when closing starts.
 
