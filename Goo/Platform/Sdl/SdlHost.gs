@@ -97,6 +97,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   public event VisibilityChanged Action
   public event PreferencesChanged Action[PlatformPreferences]
   public event CloseRequested Action[WindowCloseReason]
+  public event Closed Action?
   public event Exposed Action
   public event PointerMoved Action[int64, PointerDevice, float32, float32,
     PointerButtons, float32, KeyModifiers]
@@ -425,47 +426,53 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
       windowsDragDisposePending = true
       return
     }
-    windowsDrop?.Dispose()
-    windowsDrop = nil
-    ReleasePreferencePortal()
-    nativeBackdrop?.Dispose()
-    nativeBackdrop = nil
-    BackdropAvailable = false
-    layerWindow?.Dispose()
-    layerWindow = nil
-    disposed = true
-    SdlTitlebarHooks.Unbind(this)
-    if windowId != 0u {
-      SdlRuntime.Unregister(windowId)
-      windowId = 0u
-    }
-    if textInputActive && !window.IsNull {
-      SDL.StopTextInput(window)
-      textInputActive = false
-    }
-    if hitTestEnabled && !window.IsNull {
-      hitTestEnabled = false
-      SDL_SetWindowHitTestRaw(windowHandle, nint(0), nint(0))
-    }
-    if !window.IsNull {
-      if OperatingSystem.IsMacOS() {
-        SDL.SyncWindow(window)
-        if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
-          SDL.SetWindowFullscreen(window, false)
-          SDL.SyncWindow(window)
-        }
+    try {
+      windowsDrop?.Dispose()
+      windowsDrop = nil
+      ReleasePreferencePortal()
+      nativeBackdrop?.Dispose()
+      nativeBackdrop = nil
+      BackdropAvailable = false
+      layerWindow?.Dispose()
+      layerWindow = nil
+      disposed = true
+      SdlTitlebarHooks.Unbind(this)
+      if windowId != 0u {
+        SdlRuntime.Unregister(windowId)
+        windowId = 0u
       }
-      SDL.DestroyWindow(window)
-      window = SDLWindowPtr.Null
-      windowHandle = nint(0)
-    }
-    if vulkanOwned {
-      vulkanOwned = false
-      SdlRuntime.ReleaseVulkan()
-    }
-    if runtimeOwned {
-      runtimeOwned = false
-      SdlRuntime.Release()
+      if textInputActive && !window.IsNull {
+        SDL.StopTextInput(window)
+        textInputActive = false
+      }
+      if hitTestEnabled && !window.IsNull {
+        hitTestEnabled = false
+        SDL_SetWindowHitTestRaw(windowHandle, nint(0), nint(0))
+      }
+      if !window.IsNull {
+        if OperatingSystem.IsMacOS() {
+          SDL.SyncWindow(window)
+          if (SDL.GetWindowFlags(window) & uint64(SDLWindowFlags.Fullscreen)) != 0uL {
+            SDL.SetWindowFullscreen(window, false)
+            SDL.SyncWindow(window)
+          }
+        }
+        SDL.DestroyWindow(window)
+        window = SDLWindowPtr.Null
+        windowHandle = nint(0)
+      }
+      if vulkanOwned {
+        vulkanOwned = false
+        SdlRuntime.ReleaseVulkan()
+      }
+      if runtimeOwned {
+        runtimeOwned = false
+        SdlRuntime.Release()
+      }
+    } finally {
+      let closed = Closed
+      Closed = nil
+      closed?.Invoke()
     }
   }
 

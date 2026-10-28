@@ -259,7 +259,7 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     if providerIdentities.TryGetValue(provider, out var existing) {
       return existing
     }
-    SweepDeadProviderRecords()
+    releaseDeferred = true
     if providerRecordCount >= providerRecords.Length {
       throw InvalidOperationException("Vulkan image provider identity capacity reached")
     }
@@ -283,23 +283,6 @@ internal unsafe sealed class VulkanImageIdentityRegistry : IDisposable {
     }
     providerRecordCount++
     return created
-  }
-
-  private func SweepDeadProviderRecords() {
-    var index int32 = 0
-    while index < providerRecords.Length {
-      let record = providerRecords[index]
-      if let reference = record.Reference {
-        if !reference.IsAlive || reference.Target == nil {
-          if let identity = record.Identity {
-            ReclaimProvider(identity.ProviderId, identity.SourceId)
-          }
-          providerRecords[index] = VulkanImageProviderRecord{}
-          providerRecordCount--
-        }
-      }
-      index++
-    }
   }
 
   private func ReclaimProvider(providerId uint64, sourceId uint64) {

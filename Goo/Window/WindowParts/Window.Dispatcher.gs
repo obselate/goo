@@ -6,16 +6,17 @@ import System.Threading
 
 /// Hosts a Goo tree in a native window.
 public partial class Window {
-  private var postsStopped CancellationTokenSource?
+  private var closedSource CancellationTokenSource?
+  private var nativeClosed bool
 
-  /// Gets a token cancelled when this window stops accepting owner-thread work.
-  /// A posted action can be discarded during teardown. Use this token to complete pending asynchronous work.
+  /// Gets a token cancelled after this window's native teardown finishes or fails.
+  /// Posted work stops earlier and can be discarded while the window is closing.
   public prop Closed CancellationToken{
     get {
       lock cellQueueGate {
-        if !acceptingPosts { return CancellationToken(true) }
-        postsStopped ??= CancellationTokenSource()
-        return postsStopped!!.Token
+        if nativeClosed { return CancellationToken(true) }
+        closedSource ??= CancellationTokenSource()
+        return closedSource!!.Token
       }
     }
   }
@@ -52,13 +53,19 @@ public partial class Window {
   }
 
   private func stopPosts() {
-    var cancellation CancellationTokenSource?
     lock cellQueueGate {
       acceptingPosts = false
       postedActions?.Clear()
       postedActions = nil
       Interlocked.Exchange(&pendingPostedActions, 0)
-      cancellation = postsStopped
+    }
+  }
+
+  private func completeClose() {
+    var cancellation CancellationTokenSource?
+    lock cellQueueGate {
+      nativeClosed = true
+      cancellation = closedSource
     }
     cancellation?.Cancel()
   }
