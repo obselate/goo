@@ -170,12 +170,12 @@ Run `goo doctor` to check the SDK, project, and inspector installation.
 
 ## IDE integration
 
-See the setup guides for [VS Code](https://github.com/obselate/goo/blob/46b3307ea91d03b72fccb9b0076c69bc27c8ee97/integrations/vscode/README.md) and
-[Rider](https://github.com/obselate/goo/blob/46b3307ea91d03b72fccb9b0076c69bc27c8ee97/integrations/rider/README.md).
+See the setup guides for [VS Code](https://github.com/obselate/goo/blob/2133b88fc1b254113497b20875ae40c5b06b95d6/integrations/vscode/README.md) and
+[Rider](https://github.com/obselate/goo/blob/2133b88fc1b254113497b20875ae40c5b06b95d6/integrations/rider/README.md).
 
 For work on DevTools itself, see [development](development.md) and the
 [local protocol](protocol.md).
 
-For AI agents, the [Goo plugin](https://github.com/obselate/goo/blob/46b3307ea91d03b72fccb9b0076c69bc27c8ee97/plugins/goo/README.md) exposes documentation,
+For AI agents, the [Goo plugin](https://github.com/obselate/goo/blob/2133b88fc1b254113497b20875ae40c5b06b95d6/plugins/goo/README.md) exposes documentation,
 starter generation, live target discovery, full snapshots, screenshots, and
 separately opted-in application input as MCP tools.
