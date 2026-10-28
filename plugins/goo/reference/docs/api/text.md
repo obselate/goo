@@ -2,13 +2,13 @@
 
 Generated from `Goo.xml`. Source declarations supply type ownership and XML-emitter omissions.
 
-Source: [`Goo/Text`](https://github.com/obselate/goo/tree/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text)
+Source: [`Goo/Text`](https://github.com/obselate/goo/tree/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text)
 
 ## `FontSource`
 
 Source:
 
-- [`FontSource.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/FontSource.gs)
+- [`FontSource.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/FontSource.gs)
 
 Owns one font face and its registration state.
 
@@ -68,7 +68,7 @@ Gets the font weight.
 
 Source:
 
-- [`FontSource.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/FontSource.gs)
+- [`FontSource.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/FontSource.gs)
 
 Stores one four-character font variation axis and value.
 
@@ -116,7 +116,7 @@ Gets the variation axis value.
 
 Source:
 
-- [`RichTextClipboard.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/RichText/RichTextClipboard.gs)
+- [`RichTextClipboard.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/RichText/RichTextClipboard.gs)
 
 Binds HTML and RTF clipboard commands to one editor and its persistent style layer.
 
@@ -156,7 +156,7 @@ Disables Cut and Paste. Set this with TextEditor.ReadOnly.
 
 Source:
 
-- [`RichTextCodec.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/RichText/RichTextCodec.gs)
+- [`RichTextCodec.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/RichText/RichTextCodec.gs)
 
 Reads and writes the supported inline HTML and RTF clipboard subset.
 
@@ -172,7 +172,7 @@ Encodes one publication with UTF-8 plain text, HTML and RTF alternatives.
 
 Source:
 
-- [`RichText.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/RichText/RichText.gs)
+- [`RichText.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/RichText/RichText.gs)
 
 Owns source text and persistent, fragment-relative UTF-16 style spans.
 
@@ -192,7 +192,7 @@ Gets immutable Unicode source text.
 
 Source:
 
-- [`RichText.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/RichText/RichText.gs)
+- [`RichText.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/RichText/RichText.gs)
 
 Contains Status, Fragment and bounded Error detail.
 
@@ -200,7 +200,7 @@ Contains Status, Fragment and bounded Error detail.
 
 Source:
 
-- [`RichText.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/RichText/RichText.gs)
+- [`RichText.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/RichText/RichText.gs)
 
 Reports rich clipboard parsing, publication or editing.
 
@@ -261,7 +261,7 @@ The content uses document features outside the supported inline subset.
 
 Source:
 
-- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.Models.gs)
+- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.Models.gs)
 
 Specifies one replacement with a Range and InsertedText.
 
@@ -269,7 +269,7 @@ Specifies one replacement with a Range and InsertedText.
 
 Source:
 
-- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextEditorController.gs)
+- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextEditorController.gs)
 
 Describes an operation with a Kind, Text, ExtendSelection flag, and optional Position.
 
@@ -281,7 +281,7 @@ Gets the optional source position for SelectWord or SelectLine. Omission uses th
 
 Source:
 
-- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextEditorController.gs)
+- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextEditorController.gs)
 
 Provides mutable cancellation state before a text-editor command runs.
 
@@ -297,7 +297,7 @@ Gets the semantic command being dispatched.
 
 Source:
 
-- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextEditorController.gs)
+- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextEditorController.gs)
 
 Selects a semantic text-editor operation.
 
@@ -359,7 +359,7 @@ Selects the word, whitespace, punctuation, or symbol run at Position or the care
 
 Source:
 
-- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextEditorController.gs)
+- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextEditorController.gs)
 
 Describes preedit Range, Text, SelectionStart, and SelectionLength values.
 
@@ -367,7 +367,7 @@ Describes preedit Range, Text, SelectionStart, and SelectionLength values.
 
 Source:
 
-- [`TextDocument.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.gs)
+- [`TextDocument.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.gs)
 
 Stores editable text and versioned immutable snapshots.
 
@@ -493,7 +493,7 @@ Gets the monotonically increasing document version.
 
 Source:
 
-- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.Models.gs)
+- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.Models.gs)
 
 Describes a transaction with BeforeVersion, AfterVersion, and Changes.
 
@@ -501,7 +501,7 @@ Describes a transaction with BeforeVersion, AfterVersion, and Changes.
 
 Source:
 
-- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextEditorController.gs)
+- [`TextEditorController.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextEditorController.gs)
 
 Owns editing state and semantic commands for one text document view.
 
@@ -644,7 +644,7 @@ Gets or sets whether indentation inserts tabs instead of spaces.
 
 Source:
 
-- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.Models.gs)
+- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.Models.gs)
 
 Specifies a caret position with an Offset and Affinity.
 
@@ -652,7 +652,7 @@ Specifies a caret position with an Offset and Affinity.
 
 Source:
 
-- [`TextPresentationLayer.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextPresentationLayer.gs)
+- [`TextPresentationLayer.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextPresentationLayer.gs)
 
 Owns keyed text styles and atomic source projections for one document.
 
@@ -766,7 +766,7 @@ Gets the monotonic revision of presentation-layer mutations.
 
 Source:
 
-- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.Models.gs)
+- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.Models.gs)
 
 Specifies a UTF-16 range with a Start offset and Length.
 
@@ -774,7 +774,7 @@ Specifies a UTF-16 range with a Start offset and Length.
 
 Source:
 
-- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.Models.gs)
+- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.Models.gs)
 
 Specifies an Anchor and Active position for one text selection.
 
@@ -782,7 +782,7 @@ Specifies an Anchor and Active position for one text selection.
 
 Source:
 
-- [`TextDocument.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.gs)
+- [`TextDocument.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.gs)
 
 Provides an immutable, thread-safe view of one text document version.
 
@@ -840,7 +840,7 @@ Gets the version represented by this snapshot.
 
 Source:
 
-- [`TextStyleProperties.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextStyleProperties.gs)
+- [`TextStyleProperties.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextStyleProperties.gs)
 
 Holds explicit FontFamily, FontSize in pixels, FontWeight, FontStyle, Color and TextDecoration declarations.
 
@@ -848,7 +848,7 @@ Holds explicit FontFamily, FontSize in pixels, FontWeight, FontStyle, Color and 
 
 Source:
 
-- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextDocument.Models.gs)
+- [`TextDocument.Models.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextDocument.Models.gs)
 
 Specifies one ordered passive Text Style over a Range in source UTF-16 offsets. Later overlapping ranges override earlier fields. Use Text.TextTransform for transformations.
 
@@ -856,6 +856,6 @@ Specifies one ordered passive Text Style over a Range in source UTF-16 offsets. 
 
 Source:
 
-- [`TextPresentationLayer.gs`](https://github.com/obselate/goo/blob/8b3ba527ce1c67ef999e3e9f8a43f4edd19e1482/Goo/Text/TextPresentationLayer.gs)
+- [`TextPresentationLayer.gs`](https://github.com/obselate/goo/blob/8881173d29efbc01911781a257ecf5ac28928692/Goo/Text/TextPresentationLayer.gs)
 
 Specifies a Key, source Range, and inline Style for one document span.
