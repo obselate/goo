@@ -288,11 +288,11 @@ internal unsafe sealed partial class VulkanSharedPrimitiveFormatState : IDisposa
       shaderEffectPipelines = [ShaderEffectCapacity]VulkanShaderEffectPipelineEntry?
       shaderEffectPipelineAliases = ConditionalWeakTable[ShaderEffectProgram,
         VulkanShaderEffectPipelineEntry]()
+      ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
+        pipelineLayout, true, true)
     }
   internal func MaterializePipelines() {
     ResolvePipeline(ref solidPipeline, analyticVertexModule, solidModule,
-      pipelineLayout, true, true)
-    ResolvePipeline(ref shadowPipeline, analyticVertexModule, shadowModule,
       pipelineLayout, true, true)
     ResolvePipeline(ref borderPipeline, analyticVertexModule, borderModule,
       pipelineLayout, true, true)
