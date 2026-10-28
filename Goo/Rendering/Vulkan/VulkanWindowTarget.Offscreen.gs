@@ -224,6 +224,7 @@ internal unsafe partial class VulkanWindowTarget {
   }
 
   private func StartQueuedPage() {
+    if queuedPage != nil { CancelDeferredInitialFrame() }
     if queuedPage == nil || frameBegun || queueStage != QueueStageIdle
       || runtime?.QueueWorker.HasOutstandingWork == true { return }
     let start = queuedPage

@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Reduce large backdrop blur work with a two-axis downsample pyramid.
+- Wait for pending images before the first presentation and after showing a layer window, with a 500 ms image-wait budget.
+- Keep layer-shell roles across Hide/Show and restore their requested layer. Layer-shell windows now require protocol version 2 or newer.
 
 ## 0.22.1 - 2026-10-27
 

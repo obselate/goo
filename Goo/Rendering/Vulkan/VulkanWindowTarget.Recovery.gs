@@ -257,6 +257,8 @@ internal unsafe partial class VulkanWindowTarget {
     frameBegun = false
     renderingBegun = false
     frameRendered = false
+    frameRenderDeferred = false
+    initialImageUploadFrame = false
     clipMaskFrameStarted = false
     clipMaskFramePrepared = false
     activeFrameSlot = nil

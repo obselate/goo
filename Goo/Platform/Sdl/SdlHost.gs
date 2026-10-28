@@ -316,7 +316,7 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
         }
       }
       if !SDL.ShowWindow(window) { return WindowOperationResult.Failed }
-      layer.Show(ReadLayerOutput(layer.Output))
+      layer.Show()
       RefreshMetricsIfChanged()
       VisibilityChanged?.Invoke()
       return WindowOperationResult.Accepted
@@ -568,7 +568,9 @@ internal unsafe partial class SdlHost : IDisposable, WindowHost, VulkanSurfaceHo
   }
 
   public func RefreshMetricsIfChanged() {
+    let layerVisible = layerWindow?.Visible
     layerWindow?.Pump()
+    if layerVisible != layerWindow?.Visible { VisibilityChanged?.Invoke() }
     RefreshPreferences(false)
     RefreshBackdrop()
     let logicalWidth = LogicalWidth

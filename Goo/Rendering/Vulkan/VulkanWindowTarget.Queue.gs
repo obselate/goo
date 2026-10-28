@@ -8,7 +8,8 @@ import System.Threading
 
 internal unsafe partial class VulkanWindowTarget {
   public func Present() {
-    if disposed || !frameBegun || queueStage != QueueStageIdle {
+    if disposed || !frameBegun || queueStage != QueueStageIdle
+      || (frameRenderDeferred && !initialImageUploadFrame) {
       return
     }
     guard let current = generation, let slot = activeFrameSlot, let mailbox = queueMailbox,
@@ -19,19 +20,21 @@ internal unsafe partial class VulkanWindowTarget {
       return
     }
     try {
-      if !renderingBegun {
-        if activeDamageRegion.IsEmpty {
-          activeDamageRegion = VulkanDamageRegion{
-            X: 0,
-            Y: 0,
-            Width: int32(current.Extent.width),
-            Height: int32(current.Extent.height),
+      if !initialImageUploadFrame {
+        if !renderingBegun {
+          if activeDamageRegion.IsEmpty {
+            activeDamageRegion = VulkanDamageRegion{
+              X: 0,
+              Y: 0,
+              Width: int32(current.Extent.width),
+              Height: int32(current.Extent.height),
+            }
           }
+          BeginRendering(current, slot, activeImageIndex, activeDamageRegion)
         }
-        BeginRendering(current, slot, activeImageIndex, activeDamageRegion)
+        EndRendering(current, slot)
       }
       let endStart = DiagnosticTimestamp()
-      EndRendering(current, slot)
       let endCommandBuffer = dispatch.vkEndCommandBuffer
       let endResult = endCommandBuffer(slot.CommandBuffer)
       RecordDiagnosticResult(VulkanDiagnosticEventIds.CommandRecord, endResult)
@@ -84,8 +87,8 @@ internal unsafe partial class VulkanWindowTarget {
         HandleFrameFailure(prepareSubmit, VulkanDiagnosticEventIds.Submit)
         return
       }
-      mailbox.PrepareSubmit(slot.CommandBuffer, slot.AcquireSemaphore,
-        current.RenderSemaphore(activeImageIndex))
+      mailbox.PrepareSubmit(slot.CommandBuffer, slot.SubmitWaitSemaphore,
+        if initialImageUploadFrame { 0uL } else { current.RenderSemaphore(activeImageIndex) })
       imageResources?.AppendExternalWaits(mailbox, slot.CommandBuffer)
       if !mailbox.BeginSubmit() {
         throw InvalidOperationException("Vulkan queue mailbox rejected graphics submission")
@@ -279,9 +282,9 @@ internal unsafe partial class VulkanWindowTarget {
       }
       return
     }
-    lastFrameSubmitted = true
+    lastFrameSubmitted = !initialImageUploadFrame
     try {
-      layerPool?.MarkSubmitted(pendingGlobalSubmissionSerial)
+      if !initialImageUploadFrame { layerPool?.MarkSubmitted(pendingGlobalSubmissionSerial) }
       if clipMaskFramePrepared {
         if let renderer = primitiveRenderer {
           renderer.MarkClipFrameSubmitted(int32(activeFrameSlotIndex), pendingGlobalSubmissionSerial)
@@ -293,7 +296,7 @@ internal unsafe partial class VulkanWindowTarget {
       if let resources = imageResources {
         resources.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial, resources.Generation)
         var imageIndex int32 = 0
-        while imageIndex < sceneCompiler.Frame.CachedImageCount {
+        while !initialImageUploadFrame && imageIndex < sceneCompiler.Frame.CachedImageCount {
           let image = sceneCompiler.Frame.CachedImages[imageIndex]
           if image.ImageId.IsValid {
             resources.MarkUsed(image.ImageId, resources.Generation, pendingGlobalSubmissionSerial)
@@ -306,7 +309,7 @@ internal unsafe partial class VulkanWindowTarget {
       if let atlas = textAtlas {
         atlas.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
         var segmentIndex int32 = 0
-        while segmentIndex < sceneCompiler.Frame.CachedTextSegmentCount {
+        while !initialImageUploadFrame && segmentIndex < sceneCompiler.Frame.CachedTextSegmentCount {
           let reference = sceneCompiler.Frame.CachedTextSegments[segmentIndex]
           guard let segment = reference.Segment else {
             throw InvalidOperationException("cached text segment is unavailable at submit")
@@ -323,7 +326,7 @@ internal unsafe partial class VulkanWindowTarget {
       if let resources = pathScene {
         resources.MarkSubmitted(slot.CommandBuffer, pendingGlobalSubmissionSerial)
       }
-      if activeImageLayout == VkConstants.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR {
+      if !initialImageUploadFrame && activeImageLayout == VkConstants.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR {
         presentationRetirement.TryBindPriorSameImageToCompletion(current.Generation,
           activeImageIndex, activeFrameSlotIndex, slot.SubmissionSerial)
       }
@@ -344,6 +347,42 @@ internal unsafe partial class VulkanWindowTarget {
       throw error
     }
     TryQueuePresent()
+  }
+
+  private func ReplayInitialImageFrame() {
+    guard let slot = activeFrameSlot, let mailbox = queueMailbox else { return }
+    let ready = slot.PrepareAcquiredImageReplay()
+    RecordDiagnosticResult(VulkanDiagnosticEventIds.PresentWait, ready)
+    if ready == VkConstants.VK_NOT_READY || ready == VkConstants.VK_TIMEOUT {
+      host.Wake()
+      return
+    }
+    mailbox.ResetSubmitCompletion()
+    queueStage = QueueStageIdle
+    if ready != VkConstants.VK_SUCCESS {
+      try { HandleFrameFailure(ready, VulkanDiagnosticEventIds.PresentWait) }
+      finally { FinishFailedFrame() }
+      return
+    }
+    if hidden || closing || recreatePending {
+      AbandonRecordedFrameForRetry()
+      CloseDiagnosticFrame(false)
+      ClearActiveFrame()
+      return
+    }
+    completedGraphicsSubmissionSerial = slot.LastCompletedGlobalSubmissionSerial
+    ResolveDiagnosticTimestamp(slot, activeFrameSlotIndex)
+    imageResources?.Collect(completedGraphicsSubmissionSerial)
+    textAtlas?.Collect(completedGraphicsSubmissionSerial)
+    textScene?.PublishCompletedUploads()
+    pathScene?.Collect(completedGraphicsSubmissionSerial)
+    frameRendered = false
+    renderingBegun = false
+    frameRenderDeferred = true
+    initialImageUploadFrame = false
+    forceFullRedraw = true
+    BeginCommandBuffer(slot)
+    host.Wake()
   }
 
   private func TryQueuePresent() {
@@ -367,6 +406,10 @@ internal unsafe partial class VulkanWindowTarget {
     }
     if activeRuntime.QueueWorker.HasOutstandingWork {
       host.Wake()
+      return
+    }
+    if initialImageUploadFrame {
+      ReplayInitialImageFrame()
       return
     }
     if host is SdlHost && !host.PrepareFirstPresent() { return }
@@ -524,7 +567,11 @@ internal unsafe partial class VulkanWindowTarget {
       CloseDiagnosticFrame(completed)
       ClearActiveFrame()
     }
-    if completed { PresentationAccepted?.Invoke(acceptedTicks) }
+    if completed {
+      firstPresentationPending = false
+      initialImageWaitStarted = 0
+      PresentationAccepted?.Invoke(acceptedTicks)
+    }
     return completed
   }
 

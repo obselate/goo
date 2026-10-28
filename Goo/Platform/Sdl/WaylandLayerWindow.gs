@@ -3,11 +3,15 @@ package Goo
 import System
 import System.Collections.Generic
 import System.Runtime.InteropServices
+import System.Diagnostics
+import System.Threading
 
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
 internal delegate LayerWaylandConfigure(data nint, layerSurface nint, serial uint32, width uint32, height uint32);
 @UnmanagedFunctionPointer(CallingConvention.Cdecl)
 internal delegate LayerWaylandClosed(data nint, layerSurface nint);
+@UnmanagedFunctionPointer(CallingConvention.Cdecl)
+internal delegate LayerWaylandFrame(data nint, callback nint, time uint32);
 
 internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private let display nint
@@ -20,6 +24,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private let onRemove BackdropWaylandRemove
   private let onConfigure LayerWaylandConfigure
   private let onClosed LayerWaylandClosed
+  private let onFrame LayerWaylandFrame
   private var library nint
   private var queue nint
   private var registry nint
@@ -33,6 +38,9 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   private var mapped bool
   private var disposed bool
   private var failure Exception?
+  private var frameListener nint
+  private var framePending bool
+  internal prop Presented bool { get; set; }
   internal prop Configured bool { get; private set; }
   internal prop Visible bool { get -> mapped && Configured }
   internal prop Output WindowDisplayId? { get -> options.Output }
@@ -48,6 +56,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     onRemove = Remove
     onConfigure = Configure
     onClosed = Closed
+    onFrame = (data nint, callback nint, time uint32) -> { framePending = false }
     try { Initialize(output) }
     catch (error Exception) { Dispose()
       throw error }
@@ -75,6 +84,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     }
     Roundtrip()
     if manager == nint(0) { throw NotSupportedException("The Wayland compositor does not support zwlr_layer_shell_v1") }
+    if version < 2u { throw NotSupportedException("Layer-shell version 2 or newer is required") }
     if options.KeyboardInteractivity == LayerWindowKeyboardInteractivity.OnDemand && version < 4u {
       throw NotSupportedException("On-demand keyboard interactivity requires layer-shell version 4")
     }
@@ -82,6 +92,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     surfaceListener = Allocate(IntPtr.Size * 2)
     Marshal.WriteIntPtr(surfaceListener, Marshal.GetFunctionPointerForDelegate(onConfigure))
     Marshal.WriteIntPtr(surfaceListener, IntPtr.Size, Marshal.GetFunctionPointerForDelegate(onClosed))
+    frameListener = Allocate(IntPtr.Size)
+    Marshal.WriteIntPtr(frameListener, Marshal.GetFunctionPointerForDelegate(onFrame))
     CreateLayerSurface(output)
   }
 
@@ -99,9 +111,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     }
   }
 
-  internal func Show(output nint) {
+  internal func Show() {
     if mapped { return }
-    if layerSurface == nint(0) { CreateLayerSurface(output) }
     let arguments * BackdropWaylandArgument = stackalloc[4]BackdropWaylandArgument
     arguments[0].Value = nint(options.Width)
     arguments[1].Value = nint(options.Height)
@@ -117,6 +128,8 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 3u, arguments)
     arguments[0].Value = nint(uint32(options.KeyboardInteractivity))
     WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 4u, arguments)
+    arguments[0].Value = nint(uint32(options.Layer))
+    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 8u, arguments)
     mapped = true
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     Roundtrip()
@@ -125,6 +138,7 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
   internal func Hide() {
     if !mapped { return }
     Pump()
+    if Presented { DrainFrame() }
     let arguments * BackdropWaylandArgument = stackalloc[3]BackdropWaylandArgument
     arguments[0].Value = nint(0)
     arguments[1].Value = nint(0)
@@ -133,10 +147,28 @@ internal unsafe sealed class WaylandLayerWindow : IDisposable {
     WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
     mapped = false
     Configured = false
-    WaylandBackdrop.wl_proxy_marshal_array(layerSurface, 7u, nil)
-    WaylandBackdrop.wl_proxy_destroy(layerSurface)
-    layerSurface = nint(0)
+    Presented = false
     Roundtrip()
+  }
+
+  private func DrainFrame() {
+    var argument = BackdropWaylandArgument{}
+    let callback = WaylandBackdrop.wl_proxy_marshal_array_constructor_versioned(surface, 3u, &argument,
+      NativeLibrary.GetExport(library, "wl_callback_interface"), 1u)
+    if callback == nint(0) { throw InvalidOperationException("Cannot create the layer frame callback") }
+    try {
+      WaylandBackdrop.wl_proxy_set_queue(callback, queue)
+      if WaylandBackdrop.wl_proxy_add_listener(callback, frameListener, nint(0)) != 0 {
+        throw InvalidOperationException("Cannot listen to the layer frame callback")
+      }
+      framePending = true
+      WaylandBackdrop.wl_proxy_marshal_array(surface, 6u, nil)
+      let started = Stopwatch.GetTimestamp()
+      while framePending && Stopwatch.GetElapsedTime(started).TotalMilliseconds < 500.0 {
+        Roundtrip()
+        if framePending { Thread.Sleep(1) }
+      }
+    } finally { WaylandBackdrop.wl_proxy_destroy(callback) }
   }
 
   internal func Pump() {

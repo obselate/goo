@@ -11,6 +11,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
   private var acquireSemaphore VkSemaphore
   private var acquirePrepared bool
   private var acquired bool
+  private var acquireWaitPending bool
   private var submitPrepared bool
   private var inFlight bool
   private var submissionFailed bool
@@ -22,6 +23,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
 
   internal prop CommandBuffer VkCommandBuffer{ get -> commandBuffer }
   internal prop AcquireSemaphore VkSemaphore{ get -> acquireSemaphore }
+  internal prop SubmitWaitSemaphore VkSemaphore { get -> if acquireWaitPending { acquireSemaphore } else { 0uL } }
   internal prop InFlight bool{ get -> inFlight }
   internal prop SubmissionSerial uint64{ get -> submissionSerial }
   internal prop NextSubmissionSerial uint64{ get -> submissionSerial + 1uL }
@@ -117,6 +119,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     acquirePrepared = false
     if acquireResult == VkConstants.VK_SUCCESS || acquireResult == VkConstants.VK_SUBOPTIMAL_KHR {
       acquired = true
+      acquireWaitPending = true
     }
     return acquireResult
   }
@@ -159,6 +162,7 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
       submitPrepared = false
       submissionFailed = true
     }
+    acquireWaitPending = false
     return submitResult
   }
 
@@ -172,6 +176,18 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     acquirePrepared = false
   }
 
+  internal func PrepareAcquiredImageReplay() VkResult {
+    if disposed { throw ObjectDisposedException("VulkanFrameSlot") }
+    if submissionFailed || acquirePrepared || acquired || submitPrepared {
+      throw InvalidOperationException("VulkanFrameSlot cannot replay acquired work")
+    }
+    let completed = PollForCompletion()
+    if completed != VkConstants.VK_SUCCESS { return completed }
+    let reset = dispatch.vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags(0u))
+    if reset == VkConstants.VK_SUCCESS { acquired = true }
+    return reset
+  }
+
   internal func AbandonAcquiredForSwapchainRetirement() VkResult {
     if disposed {
       throw ObjectDisposedException("VulkanFrameSlot")
@@ -179,11 +195,13 @@ internal unsafe partial class VulkanFrameSlot : IDisposable {
     if submissionFailed || !acquired || inFlight {
       throw InvalidOperationException("VulkanFrameSlot has no abandonable acquired work")
     }
-    let drainResult = sharedLease.DrainAcquiredSemaphore(acquireSemaphore)
+    let drainResult = if acquireWaitPending { sharedLease.DrainAcquiredSemaphore(acquireSemaphore) }
+      else { VkConstants.VK_SUCCESS }
     if drainResult != VkConstants.VK_SUCCESS {
       return drainResult
     }
     acquired = false
+    acquireWaitPending = false
     acquirePrepared = false
     submitPrepared = false
     return VkConstants.VK_SUCCESS
