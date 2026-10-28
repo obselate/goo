@@ -4,6 +4,12 @@
 
 - Expose the selected rendering device and observed window occlusion with UI-thread notifications.
 
+## 0.22.3 - 2026-10-28
+
+- Read configured fallback fonts in the background before their first layout.
+- Avoid duplicate font reads when preloading a large primary family.
+- Reduce GPU work for large rounded borders without changing their pixels.
+
 ## 0.22.2 - 2026-10-28
 
 - Reduce large backdrop blur work with a two-axis downsample pyramid.
