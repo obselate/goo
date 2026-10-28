@@ -275,36 +275,29 @@ internal unsafe partial class SdlHost {
       RefreshMetrics()
       RaiseMetrics()
       DisplayChanged?.Invoke()
-    } else if eventType == SDLEventType.WindowMinimized {
-      StateChanged?.Invoke(WindowState.Minimized)
-    } else if eventType == SDLEventType.WindowMaximized {
-      placementRestoredState = WindowState.Maximized
-      StateChanged?.Invoke(WindowState.Maximized)
     } else if eventType == SDLEventType.WindowShown {
       RefreshDisplayPacing(true)
       VisibilityChanged?.Invoke()
     } else if eventType == SDLEventType.WindowHidden {
       VisibilityChanged?.Invoke()
-    } else if eventType == SDLEventType.WindowRestored {
-      placementRestoredState = WindowState.Normal
-      RefreshDisplayPacing(true)
-      StateChanged?.Invoke(WindowState.Normal)
-    } else if eventType == SDLEventType.WindowEnterFullscreen {
-      placementRestoredState = WindowState.Fullscreen
-      RefreshDisplayPacing(true)
-      if contentUnderTitlebar {
+    } else if eventType == SDLEventType.WindowMinimized ||
+      eventType == SDLEventType.WindowMaximized ||
+      eventType == SDLEventType.WindowRestored ||
+      eventType == SDLEventType.WindowEnterFullscreen ||
+      eventType == SDLEventType.WindowLeaveFullscreen {
+      let state = NativePlacementState(SDL.GetWindowFlags(window))
+      if state != WindowState.Minimized { placementRestoredState = state }
+      if eventType == SDLEventType.WindowRestored ||
+        eventType == SDLEventType.WindowEnterFullscreen ||
+        eventType == SDLEventType.WindowLeaveFullscreen {
+        RefreshDisplayPacing(true)
+      }
+      if contentUnderTitlebar && (eventType == SDLEventType.WindowEnterFullscreen ||
+        eventType == SDLEventType.WindowLeaveFullscreen) {
         RefreshMetrics()
         RaiseMetrics()
       }
-      StateChanged?.Invoke(WindowState.Fullscreen)
-    } else if eventType == SDLEventType.WindowLeaveFullscreen {
-      placementRestoredState = WindowState.Normal
-      RefreshDisplayPacing(true)
-      if contentUnderTitlebar {
-        RefreshMetrics()
-        RaiseMetrics()
-      }
-      StateChanged?.Invoke(WindowState.Normal)
+      StateChanged?.Invoke(state)
     } else if eventType == SDLEventType.WindowFocusGained {
       FocusChanged?.Invoke(true)
     } else if eventType == SDLEventType.WindowMouseEnter {

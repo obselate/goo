@@ -46,6 +46,17 @@ internal class WindowDisplaySmoke {
           "Unknown display ID did not fail")
         Require(window.State == WindowState.Normal,
           "Failed fullscreen display request changed the window state")
+        Require(window.Show() == WindowOperationResult.Accepted,
+          "Showing the window for native state verification failed")
+        window.State = WindowState.Maximized
+        let maximizeDeadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 5
+        while Stopwatch.GetTimestamp() < maximizeDeadline {
+          window.Pump(0.0)
+          if window.CapturePlacement().Placement?.State == WindowState.Maximized { break }
+          Thread.Sleep(1)
+        }
+        Require(window.CapturePlacement().Placement?.State == WindowState.Maximized,
+          "Native window did not maximize before fullscreen")
         var observedFullscreenEvent bool
         window.StateChanged += (value WindowState) -> {
           if value == WindowState.Fullscreen { observedFullscreenEvent = true }
@@ -72,6 +83,8 @@ internal class WindowDisplaySmoke {
         Require(observedFullscreenEvent && nativeState.Fullscreen
             && nativeState.DisplayId == targetId,
           "Native fullscreen did not reach the selected display")
+        Require(window.State == WindowState.Fullscreen,
+          "Native fullscreen was overwritten by a restore notification")
         let observedDisplayId = nativeState.DisplayId
         let retarget = if displays.Count > 1 { display } else { target }
         let retargetId = retarget.Id.NativeValue
@@ -85,6 +98,9 @@ internal class WindowDisplaySmoke {
         }
         Require(nativeState.Fullscreen,
           "Accepted fullscreen display request left the native window out of fullscreen")
+        Require(window.State == WindowState.Fullscreen
+            && window.CapturePlacement().Placement?.State == WindowState.Fullscreen,
+          "Managed fullscreen state or restored placement diverged from native fullscreen")
         Console.WriteLine("window-display: selected_display="+targetId.ToString()
           +" observed_display="+observedDisplayId.ToString()
           +" retarget_display="+retargetId.ToString()
