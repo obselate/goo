@@ -1627,12 +1627,14 @@ jobs:
           $principal = [Security.Principal.WindowsPrincipal]::new($identity)
           if (!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw "Direct driver smoke must run elevated" }
           $mesa = Join-Path $env:RUNNER_TEMP "mesa3d-26.2.4-release-msvc.7z"
-          Invoke-WebRequest https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z -OutFile $mesa
+          curl.exe --fail --location --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 30 --output $mesa https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ((Get-FileHash $mesa -Algorithm SHA256).Hash -ne "351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695") { throw "Mesa SHA256 mismatch" }
           7z e $mesa x64/vulkan_lvp.dll -oartifacts/direct-driver-smoke -y
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $runtime = Join-Path $env:RUNNER_TEMP "VulkanRT-X64-1.4.363.0-Components.zip"
-          Invoke-WebRequest https://sdk.lunarg.com/sdk/download/1.4.363.0/windows/VulkanRT-X64-1.4.363.0-Components.zip -OutFile $runtime
+          curl.exe --fail --location --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 30 --output $runtime https://sdk.lunarg.com/sdk/download/1.4.363.0/windows/VulkanRT-X64-1.4.363.0-Components.zip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ((Get-FileHash $runtime -Algorithm SHA256).Hash -ne "a25a927aa8b9f0371048f1861cf88ac3b9bc9b1fb332c42d897c8ab32695769a") { throw "Vulkan runtime SHA256 mismatch" }
           Expand-Archive $runtime -DestinationPath "$env:RUNNER_TEMP/direct-vulkan-runtime"
           Copy-Item "$env:RUNNER_TEMP/direct-vulkan-runtime/VulkanRT-X64-1.4.363.0-Components/x64/vulkan-1.dll" artifacts/direct-driver-smoke
