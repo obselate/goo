@@ -182,7 +182,7 @@ internal unsafe partial class VulkanWindowTarget : IDisposable, FrameProfileSink
       return false
     }
     if let activeRuntime = runtime {
-      if activeRuntime.Terminal {
+      if activeRuntime.DeviceLost || activeRuntime.Terminal {
         return true
       }
       if activeRuntime.QueueWorker.HasOutstandingWork {
