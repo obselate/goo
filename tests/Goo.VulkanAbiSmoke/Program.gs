@@ -171,11 +171,15 @@ internal shared class Program {
         let family = "GooSystemVariableWeight"
         let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
         if Environment.GetEnvironmentVariable("GOO_VK_SYSTEM_FONT_WEIGHT") != "1" {
-            let root = Path.Combine(home, ".cache", "goo-system-font-" + Guid.NewGuid().ToString("N"))
+            let root = Path.Combine(home, "scratch", "goo-system-font-" + Guid.NewGuid().ToString("N"))
             let fonts = Path.Combine(root, ".fonts")
             Directory.CreateDirectory(fonts)
             try {
                 File.Copy(fontPath, Path.Combine(fonts, family + ".ttf"))
+                {
+                    using let padded = File.OpenWrite(Path.Combine(fonts, family + ".ttf"))
+                    padded.SetLength(20L * 1024L * 1024L)
+                }
                 let config = Path.Combine(root, "fonts.conf")
                 File.WriteAllText(config, "<fontconfig><dir>" + System.Security.SecurityElement.Escape(fonts)
                     + "</dir><cachedir>" + System.Security.SecurityElement.Escape(Path.Combine(root, "cache"))
@@ -222,6 +226,30 @@ internal shared class Program {
         if explicitWeight.Width != light.Width {
             throw InvalidOperationException("Explicit font variations were replaced by the requested weight")
         }
+        let families = source.Family + ", " + family
+        let warmText = "金额 0.12345678"
+        for weight in []int32{400, 700} {
+            TextShaping.MeasureLineUncached(warmText, 0, warmText.Length, families, 14f, weight, false, 0f, 1)
+        }
+        let retainedPath = Path.Combine(home, ".fonts", family + ".ttf")
+        File.Move(retainedPath, retainedPath + ".retained")
+        try {
+            for pass in 0 ... 8 {
+                for weight in []int32{400, 700} {
+                    let text = "备注 页面切换输入 " + pass.ToString()
+                    if TextShaping.MeasureLineUncached(text, 0, text.Length, families, 14f, weight, false, 0f, 1) <= 0f {
+                        throw InvalidOperationException("Mixed-weight fallback layout did not retain its font")
+                    }
+                }
+            }
+            if TextShaping.PrimaryFaceCacheBytesForTests() > TextShaping.PrimaryFaceCacheByteBudgetForTests() {
+                throw InvalidOperationException("Mixed-weight fallback cache exceeded its byte budget")
+            }
+        } finally {
+            File.Move(retainedPath + ".retained", retainedPath)
+        }
+        Console.WriteLine("MIXED_WEIGHT_FALLBACK_CACHE_SMOKE warmFileRemoved=1 layouts=16 cacheBytes="
+            + TextShaping.PrimaryFaceCacheBytesForTests().ToString())
         Console.WriteLine("SYSTEM_VARIABLE_FONT_WEIGHT_SMOKE light=" + light.Width.ToString()
             + " semibold=" + semibold.Width.ToString() + " clamp=1 fallback=1 explicit=1")
     }
