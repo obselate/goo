@@ -303,9 +303,9 @@
       "source": "analytic_border.frag.slang",
       "output": "analytic_border.frag.spv",
       "entryPoint": "main",
-      "sourceSha256": "d403df21b8c01a6118a24a93ae4824d18a9a37d5ade006f9d39067c829367ed5",
-      "outputSha256": "798b865ef5824b0c21de77d9cdb42f17c8f7597652429951853115de5caaa8d9",
-      "outputBytes": 49520,
+      "sourceSha256": "628e6c7fa35384d0b0ea734cc3d032f6f2f2429fd105048507c854c56dae2ea9",
+      "outputSha256": "dca065fe6e43c75a0a38526fdd82284c86df6a119d99f3922094c7fbe1fb0533",
+      "outputBytes": 49492,
       "capabilities": [
         1
       ]

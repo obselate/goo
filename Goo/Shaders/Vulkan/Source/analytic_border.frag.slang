@@ -334,6 +334,14 @@ void shade()
     float right = min(max(pc.radii.y, 0.0), size.x);
     float bottom = min(max(pc.radii.z, 0.0), max(size.y - top, 0.0));
     float left = min(max(pc.radii.w, 0.0), max(size.x - right, 0.0));
+    float radius = max(max(outerRadii.x, outerRadii.y), max(outerRadii.z, outerRadii.w));
+    float inset = max(max(top, right), max(bottom, left));
+    float interior = max(radius, inset) + length(footprint);
+    if (all(point > interior) && all(point < size - interior))
+    {
+        outColor = float4(0.0);
+        return;
+    }
     float outerDistance = gooRoundedRectDistance(point, size, outerRadii);
     float2 outerNormal = roundedNormal(point, size, outerRadii);
     float outerAa = max(length(float2(dot(outerNormal, pointDx), dot(outerNormal, pointDy))), 0.0001);
