@@ -1247,38 +1247,45 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       if copySourceY + copyHeight > sourceHeight {
         copyHeight = sourceHeight - copySourceY
       }
+      let clearBackdrop = copyDestinationX != 0 || copyDestinationY != 0
+        || copyWidth != int32(destination.Extent.width)
+        || copyHeight != int32(destination.Extent.height)
       destination.TransitionToTransferDestination(commandBuffer)
-      var clear = VkClearColorValue{}
-      clear.float32.values[0] = 0.0F
-      clear.float32.values[1] = 0.0F
-      clear.float32.values[2] = 0.0F
-      clear.float32.values[3] = 0.0F
-      var subresourceRange = VkImageSubresourceRange{}
-      subresourceRange.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
-      subresourceRange.baseMipLevel = 0u
-      subresourceRange.levelCount = 1u
-      subresourceRange.baseArrayLayer = 0u
-      subresourceRange.layerCount = 1u
-      let clearImage = dispatch.vkCmdClearColorImage
-      clearImage(commandBuffer, destination.Image,
-        VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1u, &subresourceRange)
+      if clearBackdrop {
+        var clear = VkClearColorValue{}
+        clear.float32.values[0] = 0.0F
+        clear.float32.values[1] = 0.0F
+        clear.float32.values[2] = 0.0F
+        clear.float32.values[3] = 0.0F
+        var subresourceRange = VkImageSubresourceRange{}
+        subresourceRange.aspectMask = uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT)
+        subresourceRange.baseMipLevel = 0u
+        subresourceRange.levelCount = 1u
+        subresourceRange.baseArrayLayer = 0u
+        subresourceRange.layerCount = 1u
+        let clearImage = dispatch.vkCmdClearColorImage
+        clearImage(commandBuffer, destination.Image,
+          VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1u, &subresourceRange)
+      }
       if let parent = currentTarget {
         parent.TransitionToTransferSource(commandBuffer)
       } else {
         TransitionRootToTransferSource(commandBuffer)
       }
       if copyWidth > 0 && copyHeight > 0 {
-        VulkanTransitions.RecordImage(
-          commandBuffer,
-          dispatch.vkCmdPipelineBarrier2,
-          destination.Image,
-          VulkanTransitions.ColorSubresourceRange(),
-          VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-          VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-          VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-          VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
-          VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-          VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT)
+        if clearBackdrop {
+          VulkanTransitions.RecordImage(
+            commandBuffer,
+            dispatch.vkCmdPipelineBarrier2,
+            destination.Image,
+            VulkanTransitions.ColorSubresourceRange(),
+            VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VkConstants.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+            VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+            VkConstants.VK_ACCESS_2_TRANSFER_WRITE_BIT)
+        }
         var region = VkImageCopy{}
         region.srcSubresource = VkImageSubresourceLayers{
           aspectMask: uint32(VkConstants.VK_IMAGE_ASPECT_COLOR_BIT),

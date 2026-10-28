@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve backdrop copy performance by skipping clears when the copy overwrites the full destination.
+
 ## 0.23.0 - 2026-10-28
 
 - Expose the selected rendering device and observed window occlusion with UI-thread notifications.
