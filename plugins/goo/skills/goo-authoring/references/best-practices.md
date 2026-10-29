@@ -110,22 +110,33 @@ Fan out with `scope` inside the `go` child, never in a handler:
 
 ```gsharp
 private func Rank(batches IReadOnlyList[Batch], id int32) {
-    let output = chan[Score](batches.Count)
-    scope {
-        for batch in batches {
-            go ScoreBatch(batch, output)
+    try {
+        let output = chan[Score](batches.Count)
+        scope {
+            for batch in batches {
+                go ScoreBatch(batch, output)
+            }
         }
-    }
-    let scores = List[Score](batches.Count)
-    for i in 0 ... batches.Count {
-        scores.Add(<-output)
-    }
-    window.TryPost(() -> {
-        if id == generation {
-            ranked = scores
-            Rebuild()
+        let scores = List[Score](batches.Count)
+        for i in 0 ... batches.Count {
+            scores.Add(<-output)
         }
-    })
+        window.TryPost(() -> {
+            if id == generation {
+                ranked = scores
+                Rebuild()
+            }
+        })
+    } catch (error OperationCanceledException) {
+    } catch (error Exception) {
+        let message = error.Message
+        window.TryPost(() -> {
+            if id == generation {
+                status = message
+                Rebuild()
+            }
+        })
+    }
 }
 ```
 
