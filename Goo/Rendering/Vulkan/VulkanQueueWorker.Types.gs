@@ -27,6 +27,7 @@ internal unsafe sealed class VulkanQueueMailbox {
   private let signalInfos []VkSemaphoreSubmitInfo = [2]VkSemaphoreSubmitInfo
   private let waitPins []object? = [ExternalSemaphoreCapacity]object?
   private var externalWaitCount int32
+  private var presentDamageRegion VulkanDamageRegion
 
   internal var SubmitCommandBuffer VkCommandBuffer
   internal var SubmitWaitSemaphore VkSemaphore
@@ -98,12 +99,13 @@ internal unsafe sealed class VulkanQueueMailbox {
   }
 
   internal func PreparePresent(swapchain VkSwapchainKHR, imageIndex uint32,
-    waitSemaphore VkSemaphore, fence VkFence, fenceEnabled bool) {
+    waitSemaphore VkSemaphore, fence VkFence, fenceEnabled bool, damageRegion VulkanDamageRegion) {
       PresentSwapchain = swapchain
       PresentImageIndex = imageIndex
       PresentWaitSemaphore = waitSemaphore
       PresentFence = fence
       PresentFenceEnabled = fenceEnabled
+      presentDamageRegion = damageRegion
     }
 
   internal func BeginSubmit() bool {
@@ -237,6 +239,18 @@ internal unsafe sealed class VulkanQueueMailbox {
       fenceInfo.pFences = &presentFence
       presentInfo.pNext = *void(&fenceInfo)
     }
+    var rectangle = VkRectLayerKHR{
+      offset: VkOffset2D{x: presentDamageRegion.X, y: presentDamageRegion.Y},
+      extent: VkExtent2D{width: uint32(presentDamageRegion.Width), height: uint32(presentDamageRegion.Height)},
+    }
+    var region = VkPresentRegionKHR{rectangleCount: 1u, pRectangles: &rectangle}
+    var regions = VkPresentRegionsKHR{
+      sType: VkConstants.VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR,
+      pNext: presentInfo.pNext,
+      swapchainCount: 1u,
+      pRegions: &region,
+    }
+    if !presentDamageRegion.IsEmpty { presentInfo.pNext = *void(&regions) }
     presentInfo.waitSemaphoreCount = 1u
     presentInfo.pWaitSemaphores = &waitSemaphore
     presentInfo.swapchainCount = 1u

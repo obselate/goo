@@ -436,7 +436,8 @@ internal unsafe partial class VulkanWindowTarget {
         presentationRetirement.CompletePresent(completedPresentId)
       }
       mailbox.PreparePresent(current.Handle, activeImageIndex,
-        current.RenderSemaphore(activeImageIndex), pendingPresentFence, current.PresentFenceEnabled)
+        current.RenderSemaphore(activeImageIndex), pendingPresentFence, current.PresentFenceEnabled,
+        if deviceFacts.IncrementalPresentEnabled && activePartialRedraw { activeDamageRegion } else { VulkanDamageRegion{} })
     } catch (error Exception) {
       frameFailed = true
       recreatePending = true

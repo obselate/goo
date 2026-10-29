@@ -338,6 +338,27 @@ internal unsafe struct VkPresentInfoKHR {
 }
 
 @StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkPresentRegionsKHR {
+  var sType VkStructureType
+  var pNext * void
+  var swapchainCount uint32
+  var pRegions * VkPresentRegionKHR
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal unsafe struct VkPresentRegionKHR {
+  var rectangleCount uint32
+  var pRectangles * VkRectLayerKHR
+}
+
+@StructLayout(LayoutKind.Sequential)
+internal struct VkRectLayerKHR {
+  var offset VkOffset2D
+  var extent VkExtent2D
+  var layer uint32
+}
+
+@StructLayout(LayoutKind.Sequential)
 internal unsafe struct VkPushConstantRange {
   var stageFlags VkShaderStageFlags
   var offset uint32

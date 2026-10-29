@@ -6,7 +6,7 @@ import System.Runtime.InteropServices
 
 internal unsafe partial class VulkanWindowTarget {
     private const ExternalExtensionCount int32 = 6
-    private const DeviceExtensionCapacity int32 = 4 + ExternalExtensionCount
+    private const DeviceExtensionCapacity int32 = 5 + ExternalExtensionCount
     private var externalMemoryExtension string = ""
     private var externalSemaphoreExtension string = ""
     private var externalDmaExtension string = ""

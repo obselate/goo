@@ -14,6 +14,7 @@ internal data struct VulkanSharedDeviceFacts {
   var TimestampValidBits uint32
   var TimestampPeriod float32
   var TimestampComputeAndGraphics VkBool32
+  var IncrementalPresentEnabled bool
 }
 
 internal data struct VulkanGraphicsQueueCore(Timeline VkSemaphore, Worker VulkanQueueWorker) { }
