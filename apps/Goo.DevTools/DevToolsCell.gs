@@ -32,7 +32,7 @@ class DevToolsCell : Cell {
     private var showActivity bool
     private var showOverrides bool
     private var detailsHidden bool
-    private var detailsRatio float64 = 0.6
+    private var detailsWidth float64 = 440.0
     private var layoutWidth float64 = 1540.0
 
     public init(sessionValue DiagnosticSession) {
@@ -48,9 +48,7 @@ class DevToolsCell : Cell {
             let nextWidth = float64(metrics.LogicalWidth)
             if nextWidth != layoutWidth {
                 layoutWidth = nextWidth
-                if showProfiler {
-                    Rebuild()
-                }
+                Rebuild()
             }
         }
         session.BindWake(
@@ -149,13 +147,14 @@ class DevToolsCell : Cell {
                 SplitPaneInput{
                     First: tree,
                     Second: BuildInspector(theme),
-                    Value: detailsRatio,
+                    Value: layoutWidth - detailsWidth,
+                    Unit: SplitUnit.Pixels,
                     MinimumFirst: 280.0,
                     MinimumSecond: 320.0,
                     HandleSize: theme.Spacing,
                     AccessibilityName: "Resize details",
                     OnChange: (value float64) -> {
-                        detailsRatio = value
+                        detailsWidth = layoutWidth - value
                         Rebuild()
                     },
                 }
@@ -541,11 +540,13 @@ class DevToolsCell : Cell {
                 Id: section + ":" + label,
                 Label: label,
                 Section: unset ? "Unset": section,
-                Editor: Typography{
+                Editor: Text{
                     Content: value,
-                    Variant: TextVariant.Code,
+                    FontFamily: theme.MonoFontFamily,
+                    FontSize: theme.CodeFontSize,
                     Color: unset ? theme.FaintTextColor: theme.TextColor,
-                }.Build(),
+                    TextWrap: TextWrap.Wrap,
+                },
             }
         )
     }
