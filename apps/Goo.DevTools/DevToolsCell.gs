@@ -781,7 +781,6 @@ class DevToolsCell : Cell {
                 FontSize: theme.CodeFontSize,
                 TextWrap: TextWrap.NoWrap,
             },
-            Text{Key: "capture-size", Content: capture.Bytes, Color: theme.MutedTextColor, TextWrap: TextWrap.NoWrap},
         }
     }
 }
