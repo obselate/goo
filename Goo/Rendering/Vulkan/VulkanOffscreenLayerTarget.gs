@@ -31,6 +31,8 @@ internal unsafe sealed class VulkanOffscreenLayerTarget : IDisposable {
   internal prop Bytes VkDeviceSize{ get -> bytes }
   internal prop LastUseSerial uint64{ get -> lastUseSerial }
   internal prop ImageLayout VkImageLayout{ get -> imageLayout }
+  internal var RetainedBackdrop LayerRecord
+  internal var RetainedBackdropSource bool
 
   internal init(
     nativeDevice VkDevice,
@@ -458,6 +460,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     while index < targets.Length {
       if !leased[index] {
         if let target = targets[index] {
+          if target.RetainedBackdrop.BackdropVersion != 0uL {
+            index++
+            continue
+          }
           let extent = target.Extent
           let sameCommand = inFrame[index]
           if extent.width == width && extent.height == height
@@ -552,6 +558,46 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     return created
   }
 
+  internal func FindBackdrop(record LayerRecord, source bool = false, acquire bool = false) VulkanOffscreenLayerTarget? {
+    for index in 0 ... targets.Length {
+      guard let target = targets[index] else { continue }
+      let cached = target.RetainedBackdrop
+      if target.RetainedBackdropSource != source { continue }
+      if cached.BackdropVersion == 0uL || cached.BackdropVersion != record.BackdropVersion
+        || cached.OffscreenTargetId.LogicalId != record.OffscreenTargetId.LogicalId
+        || cached.OriginX != record.OriginX || cached.OriginY != record.OriginY
+        || cached.ExtentWidth != record.ExtentWidth || cached.ExtentHeight != record.ExtentHeight { continue }
+      if acquire {
+        leased[index] = true
+        inFrame[index] = true
+        target.BeginLease()
+      }
+      return target
+    }
+    return nil
+  }
+
+  internal func DiscardBackdrops(frame SceneFrame, discardAll bool) {
+    for target in targets {
+      if target == nil || target.RetainedBackdrop.BackdropVersion == 0uL { continue }
+      var retained = false
+      for index in 0 ... (discardAll ? 0 : frame.LayerCount) {
+        let layer = frame.Layers[index]
+        if layer.BackdropVersion != 0uL
+          && layer.OffscreenTargetId.LogicalId == target.RetainedBackdrop.OffscreenTargetId.LogicalId
+          && layer.BackdropVersion == target.RetainedBackdrop.BackdropVersion
+          && layer.OriginX == target.RetainedBackdrop.OriginX
+          && layer.OriginY == target.RetainedBackdrop.OriginY
+          && layer.ExtentWidth == target.RetainedBackdrop.ExtentWidth
+          && layer.ExtentHeight == target.RetainedBackdrop.ExtentHeight {
+          retained = true
+          break
+        }
+      }
+      if !retained { target.RetainedBackdrop = LayerRecord{} }
+    }
+  }
+
   internal func ReleaseForReuse(target VulkanOffscreenLayerTarget) {
     EnsureOpen()
     if target == nil {
@@ -581,6 +627,11 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
     while index < targets.Length {
       if !leased[index] && !inFrame[index] {
         if let target = targets[index] {
+          if discardCompleted { target.RetainedBackdrop = LayerRecord{} }
+          if target.RetainedBackdrop.BackdropVersion != 0uL {
+            index++
+            continue
+          }
           let lastUse = target.LastUseSerial
           let retire = lastUse == 0uL
             || (selectedSerial >= lastUse
@@ -623,6 +674,7 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       if inFrame[index] {
         if let target = targets[index] {
           target.RestoreLeaseLayout()
+          target.RetainedBackdrop = LayerRecord{}
         }
         leased[index] = false
         inFrame[index] = false
@@ -868,6 +920,10 @@ internal unsafe sealed class VulkanOffscreenLayerPool : IDisposable {
       while index < targets.Length {
         if !leased[index] && !inFrame[index] {
           if let target = targets[index] {
+            if target.RetainedBackdrop.BackdropVersion != 0uL {
+              index++
+              continue
+            }
             if target.LastUseSerial <= completedSerial {
               RetireTarget(index, target)
               evicted = true

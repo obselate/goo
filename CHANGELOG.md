@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep backdrop blur unchanged when only foreground children change, and limit their redraw damage to their bounds.
+
 ## 0.23.1 - 2026-10-28
 
 - Skip fully overwritten backdrop clears and synchronize resumed color attachment loads.

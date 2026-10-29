@@ -488,6 +488,8 @@ internal struct LayerRecord {
   internal var EffectProgramId uint64
   internal var EffectVersion uint64
   internal var EffectIndex int32
+  internal var BackdropVersion uint64
+  internal var DrawOrdinal int32
   internal var Flags uint32
   internal var TransformIndex int32
 }

@@ -557,6 +557,8 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
           throw ArgumentOutOfRangeException("damage")
         }
 
+      reuseBackdrops = partial
+      layerPool?.DiscardBackdrops(frame, !partial)
       layerDepth = 0
       currentTarget = nil
       currentOriginX = 0.0F
@@ -955,13 +957,16 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       let preservesBackdrop = (record.Flags & uint32(LayerRecordFlags.PreservesBackdrop)) != 0u
       let backdropOnly = BackdropBlurRadius(record, frame) > 0.0F
         && frame.ShaderEffects[record.EffectIndex].Program == BackdropBlurEffect.Shared
-      let target = if backdropOnly { nil } else {
+      let cached = if backdropOnly && reuseBackdrops { pool.FindBackdrop(record, acquire: true) } else { nil }
+      let target = if backdropOnly { cached } else {
         pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
       }
       let needsBackdrop = preservesBackdrop || record.BlendMode != 0u
         || (record.EffectIndex >= 0
             && (record.Flags & uint32(LayerRecordFlags.SamplesBackdrop)) != 0u)
-      let backdropTarget = if borrowsParentBackdrop {
+      let backdropTarget = if cached != nil {
+        pool.FindBackdrop(record, true, true)
+      } else if borrowsParentBackdrop {
         borrowedBackdrop
       } else if needsBackdrop {
         pool.Acquire(record.ExtentWidth, record.ExtentHeight, completedLayerSerial)
@@ -986,7 +991,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       let endRendering = dispatch.vkCmdEndRendering
       endRendering(commandBuffer)
-      if needsBackdrop && !borrowsParentBackdrop {
+      if needsBackdrop && !borrowsParentBackdrop && cached == nil {
         guard let capturedBackdrop = backdropTarget else {
           throw InvalidOperationException("Vulkan layer backdrop target is unavailable")
         }
@@ -996,7 +1001,7 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
         CopyBackdrop(commandBuffer, record, capturedBackdrop)
         EndLayerTimestamp(effectHandle, VkConstants.VK_PIPELINE_STAGE_2_TRANSFER_BIT)
       }
-      if needsBackdrop && BackdropBlurRadius(record, frame) > 0.0F {
+      if needsBackdrop && BackdropBlurRadius(record, frame) > 0.0F && cached == nil {
         let blurred = BlurBackdrop(commandBuffer, record, frame, backdropTarget, backdropOnly)
         if backdropOnly {
           state.Target = blurred
@@ -1007,6 +1012,14 @@ internal unsafe partial class VulkanPrimitiveRenderer : IDisposable {
       }
       guard let layerTarget = state.Target else {
         throw InvalidOperationException("Vulkan layer target is unavailable")
+      }
+      if backdropOnly {
+        layerTarget.RetainedBackdrop = record
+        layerTarget.RetainedBackdropSource = false
+        if let backdrop = state.BackdropTarget {
+          backdrop.RetainedBackdrop = record
+          backdrop.RetainedBackdropSource = true
+        }
       }
       if preservesBackdrop { CopyBackdrop(commandBuffer, record, layerTarget) }
       layerTarget.TransitionToColorAttachment(commandBuffer)

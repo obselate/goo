@@ -467,6 +467,26 @@ class PartialLayerCell : Cell {
   }
 }
 
+class PartialBackdropCell : Cell {
+  internal var Step int32
+
+  override func Build() Blob -> Container() {
+    .Width: Percent(100), .Height: Percent(100), .BackgroundColor: Color.Rgb(12, 20, 32),
+    Container{
+      Position: PositionType.Absolute, Left: 40, Top: 40, Width: 40, Height: 30,
+      BackgroundColor: Step >= 2 ? Color.Rgb(80, 200, 100) : Color.Rgb(220, 60, 40),
+    },
+    Container() {
+      .Position: PositionType.Absolute, .Left: 20, .Top: 20, .Width: 120, .Height: 80,
+      .BorderRadius: 12, .BackdropBlur: 4,
+      Container{
+        Position: PositionType.Absolute, Left: 30, Top: 20, Width: 30, Height: 20,
+        BackgroundColor: Step >= 1 ? Color.Rgba(40, 100, 220, 128) : Color.Rgb(220, 200, 40),
+      },
+    },
+  }
+}
+
 func PartialRedrawLayerCell() PartialLayerCell {
   let control = ShaderEffect(ShaderEffectProgram.Load(
       Path.Combine(AppContext.BaseDirectory, "control_effect.frag.goo-effect")), true, 20.0F)
@@ -662,9 +682,14 @@ func RunPartialRedrawSmoke() {
     })
     let layer = PartialRedrawLayerCell()
     failures = failures + PartialRedrawScene("layer", layer, 7, () -> layer.Advance())
+    let backdrop = PartialBackdropCell{}
+    failures = failures + PartialRedrawScene("backdrop", backdrop, 2, () -> {
+      backdrop.Step++
+      backdrop.Rebuild()
+    })
   } finally {
     font.Dispose()
   }
   Require(failures == 0, "Partial redraw proof failed in " + failures.ToString() + " cases")
-  Console.WriteLine("partial-redraw: scenes=6 pixels=identical")
+  Console.WriteLine("partial-redraw: scenes=7 pixels=identical")
 }

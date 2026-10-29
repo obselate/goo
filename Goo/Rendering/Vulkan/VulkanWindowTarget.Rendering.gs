@@ -335,7 +335,8 @@ internal unsafe partial class VulkanWindowTarget {
         out damageRegion,
         out fullRedraw)
       if forceFullRedraw || textRedrawPending || imageRedrawPending
-        || pathRedrawPending || clipMaskRedrawPending{
+        || pathRedrawPending || clipMaskRedrawPending
+        || (hasDamage && !fullRedraw && !renderer.CanRedrawBackdrops(sceneCompiler.Frame, damageRegion)) {
           fullRedraw = true
           hasDamage = true
           damageRegion = VulkanDamageRegion{

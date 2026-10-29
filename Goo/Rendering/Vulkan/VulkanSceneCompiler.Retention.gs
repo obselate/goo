@@ -449,44 +449,56 @@ internal partial class VulkanSceneCompiler {
         fullRedraw = true
         return true
       }
-      if tracked && !fullRedraw {
-        region = GrowDamageToEffectLayers(region, int32(extentWidth), int32(extentHeight))
-      }
       return tracked
     }
 
-  private func GrowDamageToEffectLayers(region VulkanDamageRegion,
-    extentWidth int32, extentHeight int32) VulkanDamageRegion{
-      var left = region.X
-      var top = region.Y
-      var right = region.Right
-      var bottom = region.Bottom
-      var grown = true
-      while grown {
-        grown = false
-        var index int32 = 0
-        while index < frame.LayerCount {
-          let layer = frame.Layers[index]
-          if layer.EffectIndex >= 0
-            && frame.ShaderEffects[layer.EffectIndex].Program?.SourceIndependent != true {
-              let layerLeft = Math.Max(0, int32(layer.OriginX))
-              let layerTop = Math.Max(0, int32(layer.OriginY))
-              let layerRight = Math.Min(extentWidth, int32(layer.OriginX) + int32(layer.ExtentWidth))
-              let layerBottom = Math.Min(extentHeight, int32(layer.OriginY) + int32(layer.ExtentHeight))
-              if layerRight > left && layerLeft < right && layerBottom > top && layerTop < bottom
-                && (layerLeft < left || layerTop < top || layerRight > right || layerBottom > bottom) {
-                  left = Math.Min(left, layerLeft)
-                  top = Math.Min(top, layerTop)
-                  right = Math.Max(right, layerRight)
-                  bottom = Math.Max(bottom, layerBottom)
-                  grown = true
-                }
-            }
-          index = index + 1
+  private func GrowDamageToEffectLayers(bounds ConservativeBounds, firstDraw int32) ConservativeBounds{
+    if frame.LayerCount == 0 || bounds.IsEmpty { return bounds }
+    var result = bounds
+    var grown = true
+    while grown {
+      grown = false
+      for index in 0 ... frame.LayerCount {
+        let layer = frame.Layers[index]
+        if layer.EffectIndex < 0 { continue }
+        let effect = frame.ShaderEffects[layer.EffectIndex]
+        if effect.Program?.SourceIndependent == true
+          || (effect.Program == BackdropBlurEffect.Shared && layer.DrawOrdinal < firstDraw) { continue }
+        let capture = ConservativeBounds{
+          X: layer.OriginX, Y: layer.OriginY,
+          Width: float32(layer.ExtentWidth), Height: float32(layer.ExtentHeight),
+        }
+        if !IntersectBounds(result, capture).IsEmpty {
+          let expanded = unionVulkanSceneBounds(result, capture)
+          if !ExactBounds(result, expanded) {
+            result = expanded
+            grown = true
+          }
         }
       }
-      return VulkanDamageRegion{ X: left, Y: top, Width: right - left, Height: bottom - top }
     }
+    return result
+  }
+
+  private func UpdateBackdropVersions() {
+    if frame.LayerCount == 0 { return }
+    for index in 0 ... frame.LayerCount {
+      let layer = frame.Layers[index]
+      if layer.EffectIndex < 0
+        || frame.ShaderEffects[layer.EffectIndex].Program != BackdropBlurEffect.Shared { continue }
+      let capture = ConservativeBounds{X: layer.OriginX, Y: layer.OriginY,
+        Width: float32(layer.ExtentWidth), Height: float32(layer.ExtentHeight)}
+      var version = 1uL
+      for chunkIndex in 0 ... frame.ChunkCount {
+        let chunk = frame.Chunks[chunkIndex]
+        if chunk.FirstDraw > layer.DrawOrdinal { break }
+        if !IntersectBounds(GrowDamageToEffectLayers(chunk.Bounds, chunk.FirstDraw), capture).IsEmpty {
+          version = Math.Max(version, chunk.Version)
+        }
+      }
+      frame.Layers[index].BackdropVersion = version
+    }
+  }
 
   private func ClassifyRetainedChunks() {
     guard let journal = damageJournal else {
@@ -550,13 +562,16 @@ internal partial class VulkanSceneCompiler {
         let current = frame.Chunks[index]
         let prior = retainedChunks[index]
         if current.TransformKey != prior.TransformKey {
-          journal.AddChange(prior.Bounds, true, current.Bounds, true)
+          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
+            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
         }
         if IsPlaceholderChunkTransition(current, prior) {
-          journal.AddChange(prior.Bounds, true, current.Bounds, true)
+          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
+            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
           frame.Chunks[index].Dirty = true
         } else if current.RetentionState == SceneChunkRetentionState.ExactLeafRebuild {
-          journal.AddChange(prior.Bounds, true, current.Bounds, true)
+          journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
+            GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
         } else if (current.RetentionState == SceneChunkRetentionState.ExactLeafHit
             && prior.RetentionState != SceneChunkRetentionState.Generic)
           || (current.ContentKey == prior.ContentKey
@@ -566,7 +581,8 @@ internal partial class VulkanSceneCompiler {
                     frame.Chunks[index].Version = prior.Version
                     frame.Chunks[index].Dirty = false
                   } else {
-                    journal.AddChange(prior.Bounds, true, current.Bounds, true)
+                    journal.AddChange(GrowDamageToEffectLayers(prior.Bounds, current.FirstDraw), true,
+                      GrowDamageToEffectLayers(current.Bounds, current.FirstDraw), true)
                   }
         index = index + 1
       }
@@ -577,6 +593,7 @@ internal partial class VulkanSceneCompiler {
       journal.MarkFullRedraw()
     }
     journal.EndVersion()
+    UpdateBackdropVersions()
     proofs.Capture(frame)
   }
 
